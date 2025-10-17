@@ -711,35 +711,32 @@
 	data-state={$showSidebar}
 >
 	<div
-		class="py-2 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] overflow-x-hidden z-50 {$showSidebar
+		class="py-2 flex flex-col justify-start h-screen max-h-[100dvh] w-[260px] overflow-x-hidden z-50 {$showSidebar
 			? ''
 			: 'invisible'}"
 	>
-		<div class="px-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
-			<button
-				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-				on:click={() => {
-					showSidebar.set(!$showSidebar);
-				}}
-			>
-				<div class=" m-auto self-center">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="2"
-						stroke="currentColor"
-						class="size-5"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
-						/>
-					</svg>
-				</div>
-			</button>
+		<!-- Top element with hamburger menu, title, and fill space -->
+	<div class="px-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
+		<button
+			class="cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+			on:click={() => {
+				showSidebar.set(!$showSidebar);
+			}}
+		>
+			<div class="m-auto self-center">
+				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-5">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"></path>
+				</svg>
+			</div>
+		</button>
+		<h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide flex items-center">
+			Assignment Steps
+		</h3>
+		<div class="flex-1 min-h-0"></div>
+	</div>
 
+			<!-- Hidden New Chat button -->
+			<!--
 			<a
 				id="sidebar-new-chat-button"
 				class="flex justify-between items-center flex-1 rounded-lg px-2 py-1 h-full text-right hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
@@ -774,121 +771,11 @@
 					<PencilSquare className=" size-5" strokeWidth="2" />
 				</div>
 			</a>
-		</div>
+			-->
 
-		<!-- Assignment Navigation - always show -->
-		{#if true}
-			<div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-				<h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-					Assignment Steps
-				</h3>
-			</div>
 
-			<!-- Step 1: Child Profile -->
-			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-				<div class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {assignmentStep >= 1 ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}">
-					<button
-						class="flex items-center space-x-3 flex-1"
-						on:click={() => goto('/kids/profile')}
-						disabled={assignmentStep < 1}
-					>
-						<div class="self-center">
-							<div class="w-6 h-6 rounded-full flex items-center justify-center {assignmentStep >= 1 ? 'bg-blue-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-500'}">
-								{#if assignmentStep > 1}
-									<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-										<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-									</svg>
-								{:else}
-									<span class="text-xs font-bold">1</span>
-								{/if}
-							</div>
-						</div>
-						<div class="flex self-center translate-y-[0.5px]">
-							<div class="font-medium text-sm font-primary">Child Profile</div>
-						</div>
-					</button>
-					
-					<!-- Edit button -->
-					<div class="flex space-x-1 ml-auto">
-						<a
-							href="/kids/profile"
-							on:click={() => {
-								selectedChatId = null;
-								chatId.set('');
-
-								if ($mobile) {
-									showSidebar.set(false);
-								}
-							}}
-							class="bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs font-medium px-2 py-1 rounded hover:from-blue-600 hover:to-purple-700 transition-all duration-200"
-							title="Edit Profile"
-						>
-							Edit
-						</a>
-					</div>
-				</div>
-			</div>
-
-			<!-- Step 2: Moderation Scenarios -->
-			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-				<button
-					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {assignmentStep >= 2 ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}"
-					on:click={() => {
-						if (assignmentStep >= 2) {
-							localStorage.setItem('moderationScenariosAccessed', 'true');
-							goto('/moderation-scenario');
-						}
-					}}
-					disabled={assignmentStep < 2}
-				>
-					<div class="self-center">
-						<div class="w-6 h-6 rounded-full flex items-center justify-center {assignmentStep >= 2 ? 'bg-purple-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-500'}">
-							{#if assignmentStep > 2}
-								<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-									<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-								</svg>
-							{:else}
-								<span class="text-xs font-bold">2</span>
-							{/if}
-						</div>
-					</div>
-					<div class="flex self-center translate-y-[0.5px]">
-						<div class="font-medium text-sm font-primary">Moderation Scenarios</div>
-					</div>
-				</button>
-			</div>
-
-			<!-- Step 3: Exit Survey -->
-			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-				<button
-					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {assignmentStep >= 3 && moderationScenariosAccessed ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}"
-					on:click={() => goToStep(3)}
-					disabled={assignmentStep < 3 || !moderationScenariosAccessed}
-				>
-					<div class="self-center">
-						<div class="w-6 h-6 rounded-full flex items-center justify-center {assignmentStep >= 3 && moderationScenariosAccessed ? 'bg-green-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-500'}">
-							{#if assignmentCompleted}
-								<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-									<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-								</svg>
-							{:else}
-								<span class="text-xs font-bold">3</span>
-							{/if}
-						</div>
-					</div>
-					<div class="flex self-center translate-y-[0.5px]">
-						<div class="font-medium text-sm font-primary">Exit Survey</div>
-					</div>
-				</button>
-			</div>
-
-			<div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 mt-4">
-				<h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-					Chat History
-				</h3>
-			</div>
-		{/if}
-
+		<!-- Hidden pinned models section -->
+		<!--
 		<div class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
 			{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
 				<div class="mt-0.5">
@@ -929,7 +816,10 @@
 					{/each}
 				</div>
 			{/if}
+		-->
 
+		<!-- Hidden channels section -->
+		<!--
 			{#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0)}
 				<Folder
 					className="px-2 mt-0.5"
@@ -956,7 +846,10 @@
 					{/each}
 				</Folder>
 			{/if}
+		-->
 
+		<!-- Hidden chat history section -->
+		{#if false}
 			<Folder
 				className="px-2 mt-0.5"
 				name={$i18n.t('Chats')}
@@ -1117,24 +1010,6 @@
 											: 'pt-5'} pb-1.5"
 									>
 										{$i18n.t(chat.time_range)}
-										<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
-							{$i18n.t('Today')}
-							{$i18n.t('Yesterday')}
-							{$i18n.t('Previous 7 days')}
-							{$i18n.t('Previous 30 days')}
-							{$i18n.t('January')}
-							{$i18n.t('February')}
-							{$i18n.t('March')}
-							{$i18n.t('April')}
-							{$i18n.t('May')}
-							{$i18n.t('June')}
-							{$i18n.t('July')}
-							{$i18n.t('August')}
-							{$i18n.t('September')}
-							{$i18n.t('October')}
-							{$i18n.t('November')}
-							{$i18n.t('December')}
-							-->
 									</div>
 								{/if}
 
@@ -1185,12 +1060,161 @@
 					</div>
 				</div>
 			</Folder>
-		</div>
+		{/if}
 
 		<div class="px-2">
 			<div class="flex flex-col font-primary">
-				{#if $user !== undefined && $user !== null}
-					<UserMenu
+			<!-- Assignment Navigation - moved to bottom -->
+			{#if true}
+
+					<!-- Grey divider above instructions -->
+					<div class="px-4 py-2">
+						<div class="border-b border-gray-200 dark:border-gray-700"></div>
+					</div>
+
+					<!-- Instructions Tab -->
+					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+						<a
+							href="/assignment-instructions"
+							class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							on:click={() => {
+								selectedChatId = null;
+								chatId.set('');
+
+								if ($mobile) {
+									showSidebar.set(false);
+								}
+							}}
+						>
+							<div class="self-center">
+								<div class="w-6 h-6 rounded-full flex items-center justify-center bg-gray-500 text-white">
+									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+									</svg>
+								</div>
+							</div>
+							<div class="flex self-center translate-y-[0.5px]">
+								<div class="font-medium text-sm font-primary">Instructions</div>
+							</div>
+						</a>
+					</div>
+
+					<!-- Grey divider below instructions and above assignment steps -->
+					<div class="px-4 py-2">
+						<div class="border-b border-gray-200 dark:border-gray-700"></div>
+					</div>
+
+					<!-- Step 1: Child Profile -->
+					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+						<div class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {assignmentStep >= 1 ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}">
+							<button
+								class="flex items-center space-x-3 flex-1"
+								on:click={() => goto('/kids/profile')}
+								disabled={assignmentStep < 1}
+							>
+								<div class="self-center">
+									<div class="w-6 h-6 rounded-full flex items-center justify-center {assignmentStep >= 1 ? 'bg-blue-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-500'}">
+										{#if assignmentStep > 1}
+											<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+												<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+											</svg>
+										{:else}
+											<span class="text-xs font-bold">1</span>
+										{/if}
+									</div>
+								</div>
+								<div class="flex self-center translate-y-[0.5px]">
+									<div class="font-medium text-sm font-primary">Child Profile</div>
+								</div>
+							</button>
+							
+							<!-- Hidden Edit button -->
+							<!--
+							<div class="flex space-x-1 ml-auto">
+								<a
+									href="/kids/profile"
+									on:click={() => {
+										selectedChatId = null;
+										chatId.set('');
+
+										if ($mobile) {
+											showSidebar.set(false);
+										}
+									}}
+									class="bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs font-medium px-2 py-1 rounded hover:from-blue-600 hover:to-purple-700 transition-all duration-200"
+									title="Edit Profile"
+								>
+									Edit
+								</a>
+							</div>
+							-->
+						</div>
+					</div>
+
+					<!-- Step 2: Moderation Scenarios -->
+					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+						<button
+							class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {assignmentStep >= 2 ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}"
+							on:click={() => {
+								if (assignmentStep >= 2) {
+									localStorage.setItem('moderationScenariosAccessed', 'true');
+									goto('/moderation-scenario');
+								}
+							}}
+							disabled={assignmentStep < 2}
+						>
+							<div class="self-center">
+								<div class="w-6 h-6 rounded-full flex items-center justify-center {assignmentStep >= 2 ? 'bg-purple-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-500'}">
+									{#if assignmentStep > 2}
+										<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+											<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+										</svg>
+									{:else}
+										<span class="text-xs font-bold">2</span>
+									{/if}
+								</div>
+							</div>
+							<div class="flex self-center translate-y-[0.5px]">
+								<div class="font-medium text-sm font-primary">Moderation Scenarios</div>
+							</div>
+						</button>
+					</div>
+
+					<!-- Step 3: Exit Survey -->
+					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+						<button
+							class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {assignmentStep >= 3 && moderationScenariosAccessed ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}"
+							on:click={() => goToStep(3)}
+							disabled={assignmentStep < 3 || !moderationScenariosAccessed}
+						>
+							<div class="self-center">
+								<div class="w-6 h-6 rounded-full flex items-center justify-center {assignmentStep >= 3 && moderationScenariosAccessed ? 'bg-green-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-500'}">
+									{#if assignmentCompleted}
+										<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+											<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+										</svg>
+									{:else}
+										<span class="text-xs font-bold">3</span>
+									{/if}
+								</div>
+							</div>
+							<div class="flex self-center translate-y-[0.5px]">
+								<div class="font-medium text-sm font-primary">Exit Survey</div>
+							</div>
+						</button>
+					</div>
+
+			{/if}
+			</div>
+		</div>
+
+		<!-- Spacer to push user profile to bottom -->
+		<div class="flex-1 min-h-0"></div>
+
+		<div class="px-2">
+			<div class="flex flex-col font-primary">
+			{#if $user !== undefined && $user !== null}
+				<UserMenu
 						role={$user?.role}
 						on:show={(e) => {
 							if (e.detail === 'archived-chat') {
@@ -1216,6 +1240,8 @@
 					</UserMenu>
 				{/if}
 
+				<!-- Hidden character store -->
+				<!--
 				{#if currentPersonal}
 					<div class="current-personal" on:click={() => showPersonalStore = true}>
 						<span class="personal-avatar">{currentPersonal.avatar}</span>
@@ -1228,6 +1254,7 @@
 						<span class="personal-name">Choose Character</span>
 					</div>
 				{/if}
+				-->
 			</div>
 		</div>
 	</div>

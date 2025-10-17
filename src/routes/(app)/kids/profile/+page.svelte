@@ -25,9 +25,9 @@
 	let selectedChildIndex: number = -1; // Start with no selection
 	let showProfileModal: boolean = false;
 	let editInModal: boolean = false;
-	let showAddProfileModal: boolean = false;
 	let showForm: boolean = false; // Control form visibility
 	let showConfirmationModal: boolean = false; // Confirmation modal for workflow progression
+	let isEditing: boolean = false; // Track edit mode
 
 	function getChildGridTemplate(): string {
 		const cols = Math.max(1, Math.min((childProfiles?.length || 0) + 1, 5));
@@ -89,14 +89,15 @@
 		}
 	}
 
-	function openAddProfileModal() {
+	function addNewProfile() {
 		// Reset form fields
 		childName = '';
 		childAge = '';
 		childGender = '';
 		childCharacteristics = '';
 		parentingStyle = '';
-		showAddProfileModal = true;
+		showForm = true;
+		isEditing = true; // Set editing mode
 	}
 
 	async function saveNewProfile() {
@@ -126,11 +127,7 @@
 			childProfiles = [...childProfiles, newChild];
 			selectedChildIndex = childProfiles.length - 1;
 			showForm = true;
-			showAddProfileModal = false;
 			toast.success('Child profile created successfully!');
-			
-			// Show confirmation modal after creating new profile
-			showConfirmationModal = true;
 		} catch (error) {
 			console.error('Failed to create child profile:', error);
 			toast.error('Failed to create child profile');
@@ -138,19 +135,28 @@
 	}
 
 	function cancelAddProfile() {
-		showAddProfileModal = false;
-		// Reset form fields
-		childName = '';
-		childAge = '';
-		childGender = '';
-		childCharacteristics = '';
-		parentingStyle = '';
+		if (childProfiles.length > 0) {
+			// If profiles exist, return to view mode
+			showForm = false;
+			isEditing = false;
+			hydrateFormFromSelectedChild();
+		} else {
+			// If no profiles, just hide form
+			showForm = false;
+			isEditing = false;
+			childName = '';
+			childAge = '';
+			childGender = '';
+			childCharacteristics = '';
+			parentingStyle = '';
+		}
 	}
 
 	function selectChild(index: number) {
 		selectedChildIndex = index;
 		hydrateFormFromSelectedChild();
-		showForm = true;
+		showForm = false;
+		isEditing = false;
 	}
 
 	async function loadChildProfile() {
@@ -164,9 +170,15 @@
 				childProfiles = [];
 			}
 			
-			// Don't automatically show form - user must click on a child
-			showForm = false;
-			selectedChildIndex = -1;
+			// Autoselect first profile if profiles exist
+			if (childProfiles.length > 0) {
+				selectedChildIndex = 0;
+				hydrateFormFromSelectedChild();
+				showForm = false; // Don't show form initially, wait for Edit click
+			} else {
+				selectedChildIndex = -1;
+				showForm = false;
+			}
 		} catch (error) {
 			console.error('Failed to load child profiles:', error);
 			// Fallback to empty array
@@ -220,8 +232,9 @@
 			
 			toast.success('Child profile saved successfully!');
 			
-			// Show confirmation modal for workflow progression
-			showConfirmationModal = true;
+			// Exit edit mode after saving
+			isEditing = false;
+			showForm = false;
 		} catch (error) {
 			console.error('Failed to save child profile:', error);
 			toast.error('Failed to save child profile');
@@ -236,6 +249,16 @@
 
 	function continueEditing() {
 		showConfirmationModal = false;
+	}
+
+	function startEditing() {
+		isEditing = true;
+		showForm = true;
+	}
+
+	function handleDone() {
+		toast.success('Task 1 Complete');
+		showConfirmationModal = true;
 	}
 
 	function formatDisplayValue(value: string, type: string): string {
@@ -293,24 +316,7 @@
 	<div class="flex-1 max-h-full overflow-y-auto bg-gray-50 dark:bg-gray-900">
 		<div class="max-w-4xl mx-auto px-4 py-8">
 		<!-- Header -->
-		<div class="mb-8">
-			<div class="flex items-center justify-between">
-				<div>
-					<p class="text-gray-600 dark:text-gray-400">
-						Set up your profile to personalize your AI learning experience.
-					</p>
-				</div>
-				<button
-					on:click={() => goto('/')}
-					class="flex items-center space-x-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-				>
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-					</svg>
-					<span>Back to Chat</span>
-				</button>
-			</div>
-		</div>
+		<div class="mb-8"></div>
 
 		<!-- Child Selection -->
 		{#if childProfiles && childProfiles.length > 0}
@@ -338,7 +344,7 @@
 						<button 
 							type="button" 
 							class="px-6 py-4 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg ring-1 ring-emerald-400/30 hover:from-emerald-400 hover:to-teal-500 hover:ring-emerald-300/50 hover:scale-105 transition-all duration-200" 
-							on:click={openAddProfileModal}>
+							on:click={addNewProfile}>
 							<span class="font-medium">+ Add Profile</span>
 						</button>
 					</div>
@@ -360,114 +366,162 @@
 					<button 
 						type="button" 
 						class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
-						on:click={openAddProfileModal}>
+						on:click={addNewProfile}>
 						+ Add Your First Child Profile
 					</button>
 				</div>
 			</div>
 		{/if}
 
-		<!-- Profile Form - Only show when a child is selected -->
-		{#if showForm && selectedChildIndex >= 0}
+		<!-- Profile Display (Read-only when not editing) -->
+		{#if childProfiles.length > 0 && selectedChildIndex >= 0 && !showForm}
+		<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8">
+			<div class="flex justify-between items-start mb-6">
+				<h3 class="text-xl font-semibold text-gray-900 dark:text-white">Profile Information</h3>
+				<button
+					type="button"
+					on:click={startEditing}
+					class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition"
+				>
+					Edit
+				</button>
+			</div>
+			<div class="space-y-4">
+				<div>
+					<label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Name</label>
+					<p class="text-gray-900 dark:text-white">{childProfiles[selectedChildIndex]?.name || 'Not specified'}</p>
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Age</label>
+					<p class="text-gray-900 dark:text-white">{childProfiles[selectedChildIndex]?.child_age || 'Not specified'}</p>
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Gender</label>
+					<p class="text-gray-900 dark:text-white">{childProfiles[selectedChildIndex]?.child_gender || 'Not specified'}</p>
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Characteristics & Interests</label>
+					<p class="text-gray-900 dark:text-white whitespace-pre-wrap">{childProfiles[selectedChildIndex]?.child_characteristics || 'Not specified'}</p>
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Parenting Style</label>
+					<p class="text-gray-900 dark:text-white whitespace-pre-wrap">{childProfiles[selectedChildIndex]?.parenting_style || 'Not specified'}</p>
+				</div>
+			</div>
+		</div>
+		
+		<!-- Floating Done Button Overlay -->
+		<div class="fixed bottom-4 right-4 z-50">
+			<button
+				type="button"
+				on:click={handleDone}
+				class="px-4 py-2 rounded-lg font-medium transition-all shadow-lg bg-green-500 text-white hover:bg-green-600"
+			>
+				Done
+			</button>
+		</div>
+		{/if}
+
+		<!-- Profile Form - Show when form should be displayed -->
+		{#if showForm && isEditing}
 		<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8">
 			<form on:submit|preventDefault={saveChildProfile} class="space-y-6">
-				<!-- Child Information Section -->
-				<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-					<!-- Left Column: Child Data -->
-					<div class="space-y-6">
-						<h3 class="text-xl font-semibold text-gray-900 dark:text-white">Child Information</h3>
-						
-						<div>
-							<label for="childName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-								Name
-							</label>
-							<input
-								type="text"
-								id="childName"
-								bind:value={childName}
-								placeholder="Enter child's name"
-								class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-							/>
-						</div>
-
-						<div>
-							<label for="childAge" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-								Age
-							</label>
-							<select
-								id="childAge"
-								bind:value={childAge}
-								class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-							>
-								<option value="">Select age</option>
-								<option value="6 years old">6 years old</option>
-								<option value="7 years old">7 years old</option>
-								<option value="8 years old">8 years old</option>
-								<option value="9 years old">9 years old</option>
-								<option value="10 years old">10 years old</option>
-								<option value="11 years old">11 years old</option>
-								<option value="12 years old">12 years old</option>
-								<option value="13 years old">13 years old</option>
-								<option value="14 years old">14 years old</option>
-								<option value="15 years old">15 years old</option>
-								<option value="16 years old">16 years old</option>
-								<option value="17 years old">17 years old</option>
-								<option value="18 years old">18 years old</option>
-							</select>
-						</div>
-
-						<div>
-							<label for="childGender" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-								Gender
-							</label>
-							<select
-								id="childGender"
-								bind:value={childGender}
-								class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-							>
-								<option value="">Select gender</option>
-								<option value="Male">Male</option>
-								<option value="Female">Female</option>
-								<option value="Non-binary">Non-binary</option>
-								<option value="Prefer not to say">Prefer not to say</option>
-							</select>
-						</div>
-
-						<div>
-							<label for="childCharacteristics" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-								Characteristics & Interests
-							</label>
-							<textarea
-								id="childCharacteristics"
-								bind:value={childCharacteristics}
-								rows="4"
-								placeholder="Describe your child's personality, interests, learning style, etc."
-								class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-							></textarea>
-						</div>
+				<!-- Form Fields -->
+				<div class="space-y-6">
+					<h3 class="text-xl font-semibold text-gray-900 dark:text-white">Child Information</h3>
+					
+					<div>
+						<label for="childName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+							Name
+						</label>
+						<input
+							type="text"
+							id="childName"
+							bind:value={childName}
+							placeholder="Enter child's name"
+							class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+						/>
 					</div>
 
-					<!-- Right Column: Parent Information -->
-					<div class="space-y-6">
-						<h3 class="text-xl font-semibold text-gray-900 dark:text-white">Parent Information</h3>
-						
-						<div>
-							<label for="parentingStyle" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-								Parenting Style
-							</label>
-							<textarea
-								id="parentingStyle"
-								bind:value={parentingStyle}
-								rows="4"
-								placeholder="Describe your parenting approach and values"
-								class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-							></textarea>
-						</div>
+					<div>
+						<label for="childAge" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+							Age
+						</label>
+						<select
+							id="childAge"
+							bind:value={childAge}
+							class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+						>
+							<option value="">Select age</option>
+							<option value="6 years old">6 years old</option>
+							<option value="7 years old">7 years old</option>
+							<option value="8 years old">8 years old</option>
+							<option value="9 years old">9 years old</option>
+							<option value="10 years old">10 years old</option>
+							<option value="11 years old">11 years old</option>
+							<option value="12 years old">12 years old</option>
+							<option value="13 years old">13 years old</option>
+							<option value="14 years old">14 years old</option>
+							<option value="15 years old">15 years old</option>
+							<option value="16 years old">16 years old</option>
+							<option value="17 years old">17 years old</option>
+							<option value="18 years old">18 years old</option>
+						</select>
+					</div>
+
+					<div>
+						<label for="childGender" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+							Gender
+						</label>
+						<select
+							id="childGender"
+							bind:value={childGender}
+							class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+						>
+							<option value="">Select gender</option>
+							<option value="Male">Male</option>
+							<option value="Female">Female</option>
+							<option value="Non-binary">Non-binary</option>
+							<option value="Prefer not to say">Prefer not to say</option>
+						</select>
+					</div>
+
+					<div>
+						<label for="childCharacteristics" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+							Characteristics & Interests
+						</label>
+						<textarea
+							id="childCharacteristics"
+							bind:value={childCharacteristics}
+							rows="4"
+							placeholder="Describe your child's personality, interests, learning style, etc."
+							class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+						></textarea>
+					</div>
+
+					<div>
+						<label for="parentingStyle" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+							Parenting Style
+						</label>
+						<textarea
+							id="parentingStyle"
+							bind:value={parentingStyle}
+							rows="4"
+							placeholder="Describe your parenting approach and values for this child"
+							class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+						></textarea>
 					</div>
 				</div>
 
 				<!-- Save Button -->
-				<div class="flex justify-end pt-6">
+				<div class="flex justify-end space-x-3 pt-6">
+					<button
+						type="button"
+						on:click={cancelAddProfile}
+						class="bg-gray-500 hover:bg-gray-600 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200"
+					>
+						Cancel
+					</button>
 					<button
 						type="submit"
 						class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
@@ -475,146 +529,10 @@
 						Save Profile
 					</button>
 				</div>
-			</form>
-		</div>
-		{/if}
-
-		<!-- Add Profile Modal -->
-		{#if showAddProfileModal}
-		<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" on:click={cancelAddProfile}>
-			<div class="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-2xl w-full mx-4 shadow-2xl relative" on:click|stopPropagation>
-				<div class="flex items-center justify-between mb-6">
-					<h3 class="text-xl font-semibold text-gray-900 dark:text-white">
-						Add New Child Profile
-					</h3>
-					<button
-						type="button"
-						on:click={cancelAddProfile}
-						class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-						aria-label="Close dialog"
-					>
-						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-						</svg>
-					</button>
-				</div>
-				
-				<form on:submit|preventDefault={saveNewProfile} class="space-y-6">
-					<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-						<!-- Child Information -->
-						<div class="space-y-4">
-							<h4 class="text-lg font-medium text-gray-900 dark:text-white">Child Information</h4>
-							
-							<div>
-								<label for="modalChildName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-									Name *
-								</label>
-								<input
-									type="text"
-									id="modalChildName"
-									bind:value={childName}
-									placeholder="Enter child's name"
-									required
-									class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-								/>
-							</div>
-
-							<div>
-								<label for="modalChildAge" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-									Age *
-								</label>
-								<select
-									id="modalChildAge"
-									bind:value={childAge}
-									required
-									class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-								>
-									<option value="">Select age</option>
-									<option value="6 years old">6 years old</option>
-									<option value="7 years old">7 years old</option>
-									<option value="8 years old">8 years old</option>
-									<option value="9 years old">9 years old</option>
-									<option value="10 years old">10 years old</option>
-									<option value="11 years old">11 years old</option>
-									<option value="12 years old">12 years old</option>
-									<option value="13 years old">13 years old</option>
-									<option value="14 years old">14 years old</option>
-									<option value="15 years old">15 years old</option>
-									<option value="16 years old">16 years old</option>
-									<option value="17 years old">17 years old</option>
-								</select>
-							</div>
-
-							<div>
-								<label for="modalChildGender" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-									Gender *
-								</label>
-								<select
-									id="modalChildGender"
-									bind:value={childGender}
-									required
-									class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-								>
-									<option value="">Select gender</option>
-									<option value="Male">Male</option>
-									<option value="Female">Female</option>
-									<option value="Other">Other</option>
-									<option value="Prefer not to say">Prefer not to say</option>
-								</select>
-							</div>
-						</div>
-
-						<!-- Parent Information -->
-						<div class="space-y-4">
-							<h4 class="text-lg font-medium text-gray-900 dark:text-white">Parent Information</h4>
-							
-							<div>
-								<label for="modalChildCharacteristics" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-									Characteristics & Interests
-								</label>
-								<textarea
-									id="modalChildCharacteristics"
-									bind:value={childCharacteristics}
-									rows="4"
-									placeholder="Describe your child's personality, interests, learning style, etc."
-									class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-								></textarea>
-							</div>
-
-							<div>
-								<label for="modalParentingStyle" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-									Parenting Style
-								</label>
-								<textarea
-									id="modalParentingStyle"
-									bind:value={parentingStyle}
-									rows="4"
-									placeholder="Describe your parenting approach and values"
-									class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-								></textarea>
-							</div>
-						</div>
-					</div>
-
-					<div class="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
-						<button
-							type="button"
-							on:click={cancelAddProfile}
-							class="px-6 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-						>
-							Cancel
-						</button>
-						<button
-							type="submit"
-							class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
-						>
-							Create Profile
-						</button>
-					</div>
 				</form>
-			</div>
 		</div>
 		{/if}
+
 
 		<!-- Confirmation Modal for Workflow Progression -->
 		{#if showConfirmationModal}
@@ -627,7 +545,7 @@
 						</svg>
 					</div>
 					<h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-						Profile Saved!
+						Task 1 Complete
 					</h3>
 					<p class="text-gray-600 dark:text-gray-400">
 						Would you like to proceed to the next step?
@@ -639,7 +557,7 @@
 						on:click={proceedToNextStep}
 						class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
 					>
-						Yes, Continue to Moderation Scenarios
+						Yes, Proceed to the Next Step
 					</button>
 					<button
 						on:click={continueEditing}

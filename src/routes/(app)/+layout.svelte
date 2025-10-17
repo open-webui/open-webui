@@ -229,9 +229,10 @@
 				}
 			});
 
-			if ($user?.role === 'admin' && ($settings?.showChangelog ?? true)) {
-				showChangelog.set($settings?.version !== $config.version);
-			}
+			// Disabled: What's New popup
+			// if ($user?.role === 'admin' && ($settings?.showChangelog ?? true)) {
+			// 	showChangelog.set($settings?.version !== $config.version);
+			// }
 
 			if ($user?.role === 'admin' || ($user?.permissions?.chat?.temporary ?? true)) {
 				if ($page.url.searchParams.get('temporary-chat') === 'true') {
@@ -243,20 +244,20 @@
 				}
 			}
 
-			// Check for version updates
-			if ($user?.role === 'admin' && $config?.features?.enable_version_update_check) {
-				// Check if the user has dismissed the update toast in the last 24 hours
-				if (localStorage.dismissedUpdateToast) {
-					const dismissedUpdateToast = new Date(Number(localStorage.dismissedUpdateToast));
-					const now = new Date();
+			// Disabled: Version update checking
+			// if ($user?.role === 'admin' && $config?.features?.enable_version_update_check) {
+			// 	// Check if the user has dismissed the update toast in the last 24 hours
+			// 	if (localStorage.dismissedUpdateToast) {
+			// 		const dismissedUpdateToast = new Date(Number(localStorage.dismissedUpdateToast));
+			// 		const now = new Date();
 
-					if (now - dismissedUpdateToast > 24 * 60 * 60 * 1000) {
-						checkForVersionUpdates();
-					}
-				} else {
-					checkForVersionUpdates();
-				}
-			}
+			// 		if (now - dismissedUpdateToast > 24 * 60 * 60 * 1000) {
+			// 			checkForVersionUpdates();
+			// 		}
+			// 	} else {
+			// 		checkForVersionUpdates();
+			// 	}
+			// }
 			await tick();
 		}
 
@@ -279,6 +280,11 @@
 		
 		// Allow navigation to home/intro page
 		if (currentPath === '/') {
+			return;
+		}
+		
+		// Allow access to assignment instructions page
+		if (currentPath === '/assignment-instructions') {
 			return;
 		}
 		
@@ -321,7 +327,7 @@
 <SettingsModal bind:show={$showSettings} />
 <ChangelogModal bind:show={$showChangelog} />
 
-{#if version && compareVersion(version.latest, version.current) && ($settings?.showUpdateToast ?? true)}
+{#if false}
 	<div class=" absolute bottom-8 right-8 z-50" in:fade={{ duration: 100 }}>
 		<UpdateInfoToast
 			{version}

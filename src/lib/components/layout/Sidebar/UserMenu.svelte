@@ -71,6 +71,8 @@
 			align="start"
 			transition={(e) => fade(e, { duration: 100 })}
 		>
+			<!-- Disabled Settings button -->
+			<!--
 			<DropdownMenu.Item
 				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
 				on:click={async () => {
@@ -89,7 +91,10 @@
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Settings')}</div>
 			</DropdownMenu.Item>
+			-->
 
+			<!-- Disabled Archived Chats button -->
+			<!--
 			<DropdownMenu.Item
 				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
 				on:click={async () => {
@@ -109,7 +114,10 @@
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Archived Chats')}</div>
 			</DropdownMenu.Item>
+			-->
 
+			<!-- Disabled Parent Dashboard button -->
+			<!--
 			<button
 				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={() => {
@@ -127,6 +135,7 @@
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Parent Dashboard')}</div>
 			</button>
+			-->
 
 			{#if role === 'admin'}
 				<DropdownMenu.Item
@@ -238,6 +247,8 @@
 				<div class=" self-center truncate">{$i18n.t('Sign Out')}</div>
 			</DropdownMenu.Item>
 
+			<!-- Disabled Active Users section -->
+			<!--
 			{#if usage}
 				{#if usage?.user_ids?.length > 0}
 					<hr class=" border-gray-50 dark:border-gray-800 my-1 p-0" />
@@ -274,6 +285,7 @@
 					</Tooltip>
 				{/if}
 			{/if}
+			-->
 
 			<!-- <DropdownMenu.Item class="flex items-center py-1.5 px-3 text-sm ">
 				<div class="flex items-center">Profile</div>
