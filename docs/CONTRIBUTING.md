@@ -24,6 +24,10 @@ Noticed something off? Have an idea? Check our [Issues tab](https://github.com/o
 > - **Template Compliance:** Please be aware that failure to follow the provided issue template, or not providing the requested information at all, will likely result in your issue being closed without further consideration. This approach is critical for maintaining the manageability and integrity of issue tracking.
 > - **Detail is Key:** To ensure your issue is understood and can be effectively addressed, it's imperative to include comprehensive details. Descriptions should be clear, including steps to reproduce, expected outcomes, and actual results. Lack of sufficient detail may hinder our ability to resolve your issue.
 
+> [!WARNING]
+> Reporting vulnerabilities is not wanted through Issues!
+> Instead, [use the security reporting functionality](https://github.com/open-webui/open-webui/security) and ensure you comply with the outlined requirements.
+
 ### 🧭 Scope of Support
 
 We've noticed an uptick in issues not directly related to Open WebUI but rather to the environment it's run in, especially Docker setups. While we strive to support Docker deployment, understanding Docker fundamentals is crucial for a smooth experience.
@@ -31,6 +35,8 @@ We've noticed an uptick in issues not directly related to Open WebUI but rather 
 - **Docker Deployment Support**: Open WebUI supports Docker deployment. Familiarity with Docker is assumed. For Docker basics, please refer to the [official Docker documentation](https://docs.docker.com/get-started/overview/).
 
 - **Advanced Configurations**: Setting up reverse proxies for HTTPS and managing Docker deployments requires foundational knowledge. There are numerous online resources available to learn these skills. Ensuring you have this knowledge will greatly enhance your experience with Open WebUI and similar projects.
+
+- **Check the documentation and help improve it**: [Our documentation](https://docs.openwebui.com) has ever growing troubleshooting guides and detailed installation tutorials. Please verify if it is of help to your issue and help expand it by submitting issues and PRs on our [Docs Repository](https://github.com/open-webui/docs).
 
 ## 💡 Contributing
 
@@ -46,9 +52,15 @@ We welcome pull requests. Before submitting one, please:
 4. Write clear, descriptive commit messages.
 5. It's essential to complete your pull request in a timely manner. We move fast, and having PRs hang around too long is not feasible. If you can't get it done within a reasonable time frame, we may have to close it to keep the project moving forward.
 
+> [!NOTE]
+> The Pull Request Template has various requirements outlined. Go through the PR-checklist one by one and ensure you completed all steps before submitting your PR for review (you can open it as draft otherwise!).
+
 ### 📚 Documentation & Tutorials
 
-Help us make Open WebUI more accessible by improving documentation, writing tutorials, or creating guides on setting up and optimizing the web UI.
+Help us make Open WebUI more accessible by improving the documentation, writing tutorials, or creating guides on setting up and optimizing the Web UI.
+
+Help expand our documentation by submitting issues and PRs on our [Docs Repository](https://github.com/open-webui/docs).
+We welcome tutorials, guides and other documentation improvements!
 
 ### 🌐 Translations and Internationalization
 
@@ -64,7 +76,7 @@ To add a new language:
 
 ### 🤔 Questions & Feedback
 
-Got questions or feedback? Join our [Discord community](https://discord.gg/5rJgQTnV4s) or open an issue. We're here to help!
+Got questions or feedback? Join our [Discord community](https://discord.gg/5rJgQTnV4s) or open an issue or discussion. We're here to help!
 
 ## 🙏 Thank You!
 
