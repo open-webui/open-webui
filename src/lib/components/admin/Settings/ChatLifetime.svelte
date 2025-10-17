@@ -284,7 +284,13 @@
 		<hr class=" dark:border-gray-850" />
 
 		<div class=" space-y-3">
-			<div class="text-xs font-medium">{$i18n.t('Manual Cleanup Operations')}</div>
+			<div class="text-xs font-medium">
+				{#if config.enabled}
+					{$i18n.t('Automatic Cleanup Operations')}
+				{:else}
+					{$i18n.t('Manual Cleanup Operations')}
+				{/if}
+			</div>
 			<div class=" text-xs text-gray-400">
 				{#if config.enabled}
 					{$i18n.t(

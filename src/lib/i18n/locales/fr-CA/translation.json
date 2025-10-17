@@ -121,6 +121,7 @@
 	"Autocomplete Generation": "Génération automatique",
 	"Autocomplete Generation Input Max Length": "Longueur maximale d'entrée de génération automatique",
 	"Automatic cleanup is active based on your configured lifetime settings. No manual intervention required.": "Le nettoyage automatique est actif selon vos paramètres de durée de vie configurés. Aucune intervention manuelle requise.",
+	"Automatic Cleanup Operations": "Opérations de nettoyage automatique",
 	"Automatic1111": "Automatic1111",
 	"AUTOMATIC1111 Api Auth String": "AUTOMATIC1111 Chaîne d'authentification de l'API",
 	"AUTOMATIC1111 Base URL": "URL de base AUTOMATIC1111",
