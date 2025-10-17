@@ -10,7 +10,6 @@
 	import {
 		getChatLifetimeConfig,
 		updateChatLifetimeConfig,
-		triggerChatCleanup,
 		triggerComprehensiveCleanup,
 		getChatLifetimeSchedule,
 		type ChatLifetimeConfig,
