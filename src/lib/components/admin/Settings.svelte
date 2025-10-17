@@ -17,6 +17,7 @@
 	import Documents from './Settings/Documents.svelte';
 	import WebSearch from './Settings/WebSearch.svelte';
 	import Grounding from './Settings/Grounding.svelte';
+	import ChatLifetime from './Settings/ChatLifetime.svelte';
 	import ChartBar from '../icons/ChartBar.svelte';
 	import DocumentChartBar from '../icons/DocumentChartBar.svelte';
 	import Evaluations from './Settings/Evaluations.svelte';
@@ -378,6 +379,32 @@
 			</div>
 			<div class=" self-center">{$i18n.t('Database')}</div>
 		</button>
+
+		<button
+			class="px-0.5 py-1 min-w-0 rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+			'chatlifetime'
+				? ''
+				: ' text-gray-600 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+			on:click={() => {
+				selectedTab = 'chatlifetime';
+			}}
+		>
+			<div class=" self-center mr-2">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 16 16"
+					fill="currentColor"
+					class="w-4 h-4"
+				>
+					<path
+						fill-rule="evenodd"
+						d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8Zm7.75-4.25a.75.75 0 0 0-1.5 0V8c0 .414.336.75.75.75h3a.75.75 0 0 0 0-1.5H8.75V3.75Z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+			</div>
+			<div class="self-center flex-1 leading-tight">{$i18n.t('Chat Lifetime')}</div>
+		</button>
 	</div>
 
 	<div class="flex-1 mt-3 lg:mt-0 overflow-y-scroll pr-1 scrollbar-hidden">
@@ -453,6 +480,12 @@
 			/>
 		{:else if selectedTab === 'db'}
 			<Database
+				saveHandler={() => {
+					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'chatlifetime'}
+			<ChatLifetime
 				saveHandler={() => {
 					toast.success($i18n.t('Settings saved successfully!'));
 				}}

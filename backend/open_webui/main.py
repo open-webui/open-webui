@@ -264,6 +264,11 @@ from open_webui.config import (
     JIRA_USERNAME,
     JIRA_API_TOKEN,
     JIRA_PROJECT_KEY,
+    # Chat Lifetime
+    CHAT_LIFETIME_ENABLED,
+    CHAT_LIFETIME_DAYS,
+    CHAT_CLEANUP_PRESERVE_PINNED,
+    CHAT_CLEANUP_PRESERVE_ARCHIVED,
 )
 from open_webui.env import (
     CHANGELOG,
@@ -403,6 +408,15 @@ async def lifespan(app: FastAPI):
     # Start periodic cleanup task in background (should not affect app lifecycle)
     cleanup_task = asyncio.create_task(periodic_usage_pool_cleanup())
 
+    # Initialize chat lifetime scheduler
+    try:
+        from open_webui.scheduler import start_chat_lifetime_scheduler
+
+        start_chat_lifetime_scheduler()
+        log.info("Chat lifetime scheduler initialized")
+    except Exception as e:
+        log.error(f"Failed to initialize chat lifetime scheduler: {e}")
+
     # Add task completion callback to log if it exits
     def on_cleanup_done(task):
         try:
@@ -453,6 +467,15 @@ async def lifespan(app: FastAPI):
                 log.info("MCP manager cleanup completed")
             except Exception as e:
                 log.error(f"Error during MCP manager cleanup: {e}")
+
+        # Cleanup chat lifetime scheduler
+        try:
+            from open_webui.scheduler import stop_chat_lifetime_scheduler
+
+            stop_chat_lifetime_scheduler()
+            log.info("Chat lifetime scheduler cleanup completed")
+        except Exception as e:
+            log.error(f"Error during chat lifetime scheduler cleanup: {e}")
 
 
 app = FastAPI(
@@ -564,6 +587,12 @@ app.state.config.LDAP_SEARCH_FILTERS = LDAP_SEARCH_FILTERS
 app.state.config.LDAP_USE_TLS = LDAP_USE_TLS
 app.state.config.LDAP_CA_CERT_FILE = LDAP_CA_CERT_FILE
 app.state.config.LDAP_CIPHERS = LDAP_CIPHERS
+
+# Chat Lifetime Configuration
+app.state.config.CHAT_LIFETIME_ENABLED = CHAT_LIFETIME_ENABLED
+app.state.config.CHAT_LIFETIME_DAYS = CHAT_LIFETIME_DAYS
+app.state.config.CHAT_CLEANUP_PRESERVE_PINNED = CHAT_CLEANUP_PRESERVE_PINNED
+app.state.config.CHAT_CLEANUP_PRESERVE_ARCHIVED = CHAT_CLEANUP_PRESERVE_ARCHIVED
 
 
 app.state.AUTH_TRUSTED_EMAIL_HEADER = WEBUI_AUTH_TRUSTED_EMAIL_HEADER
