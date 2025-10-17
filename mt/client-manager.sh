@@ -95,14 +95,6 @@ create_new_deployment() {
         return 1
     fi
 
-    # Check if client already exists
-    if docker ps -a --filter "name=openwebui-${client_name}" --format "{{.Names}}" | grep -q "openwebui-${client_name}"; then
-        echo "❌ Client '${client_name}' already exists!"
-        echo "Press Enter to continue..."
-        read
-        return 1
-    fi
-
     # Get next available port
     echo "Finding next available port..."
     port=$(get_next_available_port)
@@ -160,18 +152,32 @@ create_new_deployment() {
         fi
     fi
 
+    # Sanitize domain for container naming (replace dots and colons with dashes)
+    sanitized_fqdn=$(echo "$resolved_domain" | sed 's/\./-/g' | sed 's/:/-/g')
+    container_name="openwebui-${sanitized_fqdn}"
+    volume_name="${container_name}-data"
+
+    # Check if container already exists
+    if docker ps -a --filter "name=${container_name}" --format "{{.Names}}" | grep -q "^${container_name}$"; then
+        echo "❌ Container '${container_name}' already exists!"
+        echo "   (FQDN: ${resolved_domain})"
+        echo "Press Enter to continue..."
+        read
+        return 1
+    fi
+
     # Show configuration summary
     echo
     echo "╔════════════════════════════════════════╗"
     echo "║         Deployment Summary             ║"
     echo "╚════════════════════════════════════════╝"
     echo "Client Name:   $client_name"
-    echo "Container:     openwebui-$client_name"
+    echo "FQDN:          $resolved_domain"
+    echo "Container:     $container_name"
     echo "Port:          $port"
-    echo "Domain:        $resolved_domain"
     echo "Environment:   $environment"
     echo "Redirect URI:  $redirect_uri"
-    echo "Volume:        openwebui-${client_name}-data"
+    echo "Volume:        $volume_name"
     echo
     echo -n "Create this deployment? (y/N): "
     read confirm
@@ -181,11 +187,8 @@ create_new_deployment() {
         echo "Creating deployment..."
 
         # Create the deployment using the template script
-        if [ "$domain" = "auto-detect" ]; then
-            "${SCRIPT_DIR}/start-template.sh" "$client_name" "$port"
-        else
-            "${SCRIPT_DIR}/start-template.sh" "$client_name" "$port" "$domain"
-        fi
+        # Pass: CLIENT_NAME PORT DOMAIN CONTAINER_NAME FQDN
+        "${SCRIPT_DIR}/start-template.sh" "$client_name" "$port" "$resolved_domain" "$container_name" "$resolved_domain"
 
         if [ $? -eq 0 ]; then
             echo "✅ Deployment created successfully!"
@@ -427,8 +430,13 @@ manage_sync_node() {
 
 # Sync Management submenu for client deployments
 sync_management_menu() {
-    local client_name="$1"
-    local container_name="openwebui-${client_name}"
+    local container_name="$1"
+
+    # Extract client_name from container environment
+    local client_name=$(docker exec "$container_name" env 2>/dev/null | grep "^CLIENT_NAME=" | cut -d'=' -f2- 2>/dev/null || echo "")
+    if [[ -z "$client_name" ]]; then
+        client_name="${container_name#openwebui-}"
+    fi
 
     while true; do
         clear
@@ -1570,14 +1578,14 @@ manage_deployment_menu() {
         echo "╚════════════════════════════════════════╝"
         echo
 
-        # List available clients (exclude sync-nodes)
+        # List available clients (exclude sync-nodes, keep full container names)
         echo "Available client deployments:"
-        all_containers=($(docker ps -a --filter "name=openwebui-" --format "{{.Names}}" | sed 's/openwebui-//'))
+        all_containers=($(docker ps -a --filter "name=openwebui-" --format "{{.Names}}"))
 
         # Filter out sync-nodes
         clients=()
         for container in "${all_containers[@]}"; do
-            if [[ "$container" != "sync-node-a" ]] && [[ "$container" != "sync-node-b" ]]; then
+            if [[ "$container" != "openwebui-sync-node-a" ]] && [[ "$container" != "openwebui-sync-node-b" ]]; then
                 clients+=("$container")
             fi
         done
@@ -1593,18 +1601,30 @@ manage_deployment_menu() {
         fi
 
         for i in "${!clients[@]}"; do
-            status=$(docker ps -a --filter "name=openwebui-${clients[$i]}" --format "{{.Status}}")
+            container_name="${clients[$i]}"
+            status=$(docker ps -a --filter "name=${container_name}" --format "{{.Status}}")
 
-            # Try to get the redirect URI from container environment to extract domain
-            redirect_uri=$(docker exec "openwebui-${clients[$i]}" env 2>/dev/null | grep "GOOGLE_REDIRECT_URI=" | cut -d'=' -f2- 2>/dev/null || echo "")
+            # Try to get client_name and FQDN from container environment
+            client_name=$(docker exec "${container_name}" env 2>/dev/null | grep "^CLIENT_NAME=" | cut -d'=' -f2- 2>/dev/null || echo "")
+            fqdn=$(docker exec "${container_name}" env 2>/dev/null | grep "^FQDN=" | cut -d'=' -f2- 2>/dev/null || echo "")
 
-            if [[ -n "$redirect_uri" ]]; then
-                # Extract domain from redirect URI (remove http/https and /oauth/google/callback)
-                domain=$(echo "$redirect_uri" | sed -E 's|https?://||' | sed 's|/oauth/google/callback||')
-                echo "$((i+1))) ${clients[$i]} → $domain ($status)"
+            # Fallback to extracting from GOOGLE_REDIRECT_URI
+            if [[ -z "$fqdn" ]]; then
+                redirect_uri=$(docker exec "${container_name}" env 2>/dev/null | grep "GOOGLE_REDIRECT_URI=" | cut -d'=' -f2- 2>/dev/null || echo "")
+                if [[ -n "$redirect_uri" ]]; then
+                    fqdn=$(echo "$redirect_uri" | sed -E 's|https?://||' | sed 's|/oauth/google/callback||')
+                fi
+            fi
+
+            # Display format: CLIENT_NAME (FQDN) [status]
+            if [[ -n "$client_name" ]] && [[ -n "$fqdn" ]]; then
+                echo "$((i+1))) $client_name → $fqdn ($status)"
+            elif [[ -n "$fqdn" ]]; then
+                echo "$((i+1))) $fqdn ($status)"
             else
-                # Fallback if we can't get the redirect URI
-                echo "$((i+1))) ${clients[$i]} ($status)"
+                # Ultimate fallback: show container name
+                display_name="${container_name#openwebui-}"
+                echo "$((i+1))) $display_name ($status)"
             fi
         done
 
@@ -1625,15 +1645,21 @@ manage_deployment_menu() {
 }
 
 manage_single_deployment() {
-    local client_name="$1"
-    local container_name="openwebui-${client_name}"
+    local container_name="$1"
+
+    # Extract client_name from container environment
+    local client_name=$(docker exec "$container_name" env 2>/dev/null | grep "^CLIENT_NAME=" | cut -d'=' -f2- 2>/dev/null || echo "")
+
+    # Fallback: extract from container name (strip openwebui- prefix)
+    if [[ -z "$client_name" ]]; then
+        client_name="${container_name#openwebui-}"
+    fi
 
     # Detect container type and route to appropriate menu
-    local container_type=$(detect_container_type "$client_name")
-
-    if [[ "$container_type" == "sync-node" ]]; then
-        # Route to sync-node management menu
-        manage_sync_node "$client_name"
+    if [[ "$container_name" == *"sync-node"* ]]; then
+        # Route to sync-node management menu (expects short name like "sync-node-a")
+        local sync_node_name="${container_name#openwebui-}"
+        manage_sync_node "$sync_node_name"
         return
     fi
 
@@ -1646,9 +1672,28 @@ manage_single_deployment() {
 
     while true; do
         clear
+
+        # Extract FQDN for display
+        local fqdn=$(docker exec "$container_name" env 2>/dev/null | grep "^FQDN=" | cut -d'=' -f2- 2>/dev/null || echo "")
+        if [[ -z "$fqdn" ]]; then
+            # Fallback to extracting from GOOGLE_REDIRECT_URI
+            local redirect_uri=$(docker exec "$container_name" env 2>/dev/null | grep "GOOGLE_REDIRECT_URI=" | cut -d'=' -f2- 2>/dev/null || echo "")
+            if [[ -n "$redirect_uri" ]]; then
+                fqdn=$(echo "$redirect_uri" | sed -E 's|https?://||' | sed 's|/oauth/google/callback||')
+            fi
+        fi
+
         echo "╔════════════════════════════════════════╗"
-        # Calculate padding for client name to align properly
-        local title="     Managing: $client_name"
+        # Display client name and FQDN in title
+        if [[ -n "$fqdn" ]]; then
+            local title="   Managing: $client_name ($fqdn)"
+        else
+            local title="   Managing: $client_name"
+        fi
+        # Truncate title if too long
+        if [ ${#title} -gt 36 ]; then
+            title="${title:0:33}..."
+        fi
         local padding=$((38 - ${#title}))
         printf "║%s%*s║\n" "$title" $padding ""
         echo "╚════════════════════════════════════════╝"
@@ -1657,13 +1702,6 @@ manage_single_deployment() {
         # Show status
         local status=$(docker ps -a --filter "name=$container_name" --format "{{.Status}}")
         local ports=$(docker ps -a --filter "name=$container_name" --format "{{.Ports}}")
-
-        # Get FQDN from redirect URI
-        local redirect_uri=$(docker exec "$container_name" env 2>/dev/null | grep "GOOGLE_REDIRECT_URI=" | cut -d'=' -f2- 2>/dev/null || echo "")
-        local fqdn=""
-        if [[ -n "$redirect_uri" ]]; then
-            fqdn=$(echo "$redirect_uri" | sed -E 's|https?://||' | sed 's|/oauth/google/callback||')
-        fi
 
         echo "Status: $status"
         echo "Ports:  $ports"
@@ -1861,7 +1899,10 @@ manage_single_deployment() {
 
                     # Recreate container with new domains
                     echo "Creating new container with updated domains..."
-                    volume_name="openwebui-${client_name}-data"
+                    volume_name="${container_name}-data"
+
+                    # Extract FQDN from redirect URI
+                    local new_fqdn=$(echo "$redirect_uri" | sed -E 's|https?://||' | sed 's|/oauth/google/callback||')
 
                     docker run -d \
                         --name "$container_name" \
@@ -1874,6 +1915,8 @@ manage_single_deployment() {
                         -e OPENID_PROVIDER_URL=https://accounts.google.com/.well-known/openid-configuration \
                         -e WEBUI_NAME="$webui_name" \
                         -e USER_PERMISSIONS_CHAT_CONTROLS=false \
+                        -e FQDN="$new_fqdn" \
+                        -e CLIENT_NAME="$client_name" \
                         -v "${volume_name}:/app/backend/data" \
                         --restart unless-stopped \
                         ghcr.io/imagicrafter/open-webui:main
@@ -1992,10 +2035,13 @@ manage_single_deployment() {
                     echo "Removing old container..."
                     docker rm "$container_name" 2>/dev/null
 
-                    # Rename volume to new client name
-                    old_volume_name="openwebui-${client_name}-data"
-                    new_volume_name="openwebui-${new_client_name}-data"
-                    new_container_name="openwebui-${new_client_name}"
+                    # Calculate new FQDN and container/volume names
+                    local new_fqdn=$(echo "$new_redirect_uri" | sed -E 's|https?://||' | sed 's|/oauth/google/callback||')
+                    local sanitized_new_fqdn=$(echo "$new_fqdn" | sed 's/\./-/g' | sed 's/:/-/g')
+
+                    old_volume_name="${container_name}-data"
+                    new_container_name="openwebui-${sanitized_new_fqdn}"
+                    new_volume_name="${new_container_name}-data"
 
                     echo "Renaming data volume..."
                     # Create temporary container to rename volume
@@ -2022,6 +2068,8 @@ manage_single_deployment() {
                         -e OPENID_PROVIDER_URL=https://accounts.google.com/.well-known/openid-configuration \
                         -e WEBUI_NAME="$new_webui_name" \
                         -e USER_PERMISSIONS_CHAT_CONTROLS=false \
+                        -e FQDN="$new_fqdn" \
+                        -e CLIENT_NAME="$new_client_name" \
                         -v "${new_volume_name}:/app/backend/data" \
                         --restart unless-stopped \
                         ghcr.io/imagicrafter/open-webui:main
@@ -2066,7 +2114,7 @@ manage_single_deployment() {
                 ;;
             8)
                 # Sync Management
-                sync_management_menu "$client_name"
+                sync_management_menu "$container_name"
                 ;;
             9)
                 # Database Migration / Configuration Viewer
@@ -2274,9 +2322,9 @@ generate_nginx_config() {
     echo "╚════════════════════════════════════════╝"
     echo
 
-    # List available clients (exclude sync nodes)
+    # List available clients (exclude sync nodes, keep full container names)
     echo "Available deployments:"
-    clients=($(docker ps -a --filter "name=openwebui-" --format "{{.Names}}" | grep -v "openwebui-sync-node-" | sed 's/openwebui-//'))
+    clients=($(docker ps -a --filter "name=openwebui-" --format "{{.Names}}" | grep -v "openwebui-sync-node-"))
 
     if [ ${#clients[@]} -eq 0 ]; then
         echo "No deployments found. Create a deployment first."
@@ -2286,35 +2334,42 @@ generate_nginx_config() {
     fi
 
     for i in "${!clients[@]}"; do
-        ports=$(docker ps -a --filter "name=openwebui-${clients[$i]}" --format "{{.Ports}}" | grep -o '0.0.0.0:[0-9]*' | cut -d: -f2)
+        container_name="${clients[$i]}"
+        ports=$(docker ps -a --filter "name=${container_name}" --format "{{.Ports}}" | grep -o '0.0.0.0:[0-9]*' | cut -d: -f2)
 
-        # Try to get the redirect URI from container environment to extract domain
-        redirect_uri=$(docker exec "openwebui-${clients[$i]}" env 2>/dev/null | grep "GOOGLE_REDIRECT_URI=" | cut -d'=' -f2- 2>/dev/null || echo "")
+        # Try to get FQDN from container environment
+        fqdn=$(docker exec "${container_name}" env 2>/dev/null | grep "^FQDN=" | cut -d'=' -f2- 2>/dev/null || echo "")
+
+        # Fallback to extracting from GOOGLE_REDIRECT_URI
+        if [[ -z "$fqdn" ]]; then
+            redirect_uri=$(docker exec "${container_name}" env 2>/dev/null | grep "GOOGLE_REDIRECT_URI=" | cut -d'=' -f2- 2>/dev/null || echo "")
+            if [[ -n "$redirect_uri" ]]; then
+                fqdn=$(echo "$redirect_uri" | sed -E 's|https?://||' | sed 's|/oauth/google/callback||')
+            fi
+        fi
 
         # Check if nginx configuration exists
         # TODO: This section currently assumes nginx is not containerized.
         # Future enhancement needed to support dockerized nginx deployments.
         nginx_status="❌ Not configured"
 
-        # Extract domain for config filename check
-        config_domain=""
-        if [[ -n "$redirect_uri" ]]; then
-            config_domain=$(echo "$redirect_uri" | sed -E 's|https?://||' | sed 's|/oauth/google/callback||')
-        fi
-
-        if [[ -n "$config_domain" ]] && [ -f "/etc/nginx/sites-available/${config_domain}" ]; then
+        if [[ -n "$fqdn" ]] && [ -f "/etc/nginx/sites-available/${fqdn}" ]; then
             nginx_status="✅ Configured"
-        elif [[ -n "$config_domain" ]] && [ -f "${SCRIPT_DIR}/nginx/sites-available/${config_domain}" ]; then
+        elif [[ -n "$fqdn" ]] && [ -f "${SCRIPT_DIR}/nginx/sites-available/${fqdn}" ]; then
             nginx_status="🔧 Local config"
         fi
 
-        if [[ -n "$redirect_uri" ]]; then
-            # Extract domain from redirect URI
-            domain=$(echo "$redirect_uri" | sed -E 's|https?://||' | sed 's|/oauth/google/callback||')
-            echo "$((i+1))) ${clients[$i]} → $domain (port: $ports) [$nginx_status]"
+        # Extract client_name for display
+        client_name=$(docker exec "${container_name}" env 2>/dev/null | grep "^CLIENT_NAME=" | cut -d'=' -f2- 2>/dev/null || echo "")
+        if [[ -z "$client_name" ]]; then
+            client_name="${container_name#openwebui-}"
+        fi
+
+        if [[ -n "$fqdn" ]]; then
+            echo "$((i+1))) $client_name → $fqdn (port: $ports) [$nginx_status]"
         else
-            # Fallback if we can't get the redirect URI
-            echo "$((i+1))) ${clients[$i]} (port: $ports) [$nginx_status]"
+            # Fallback if we can't get the FQDN
+            echo "$((i+1))) $client_name (port: $ports) [$nginx_status]"
         fi
     done
 
@@ -2324,8 +2379,22 @@ generate_nginx_config() {
     read selection
 
     if [[ "$selection" =~ ^[0-9]+$ ]] && [ "$selection" -gt 0 ] && [ "$selection" -le ${#clients[@]} ]; then
-        local client_name="${clients[$((selection-1))]}"
-        local port=$(docker ps -a --filter "name=openwebui-${client_name}" --format "{{.Ports}}" | grep -o '0.0.0.0:[0-9]*' | cut -d: -f2)
+        local container_name="${clients[$((selection-1))]}"
+        local port=$(docker ps -a --filter "name=${container_name}" --format "{{.Ports}}" | grep -o '0.0.0.0:[0-9]*' | cut -d: -f2)
+
+        # Extract client_name and FQDN for this container
+        local client_name=$(docker exec "${container_name}" env 2>/dev/null | grep "^CLIENT_NAME=" | cut -d'=' -f2- 2>/dev/null || echo "")
+        if [[ -z "$client_name" ]]; then
+            client_name="${container_name#openwebui-}"
+        fi
+
+        local current_fqdn=$(docker exec "${container_name}" env 2>/dev/null | grep "^FQDN=" | cut -d'=' -f2- 2>/dev/null || echo "")
+        if [[ -z "$current_fqdn" ]]; then
+            local redirect_uri=$(docker exec "${container_name}" env 2>/dev/null | grep "GOOGLE_REDIRECT_URI=" | cut -d'=' -f2- 2>/dev/null || echo "")
+            if [[ -n "$redirect_uri" ]]; then
+                current_fqdn=$(echo "$redirect_uri" | sed -E 's|https?://||' | sed 's|/oauth/google/callback||')
+            fi
+        fi
 
         echo
         echo
@@ -2338,8 +2407,12 @@ generate_nginx_config() {
 
         case "$config_type" in
             1)
-                # Auto-detect production domain
-                default_production_domain="${client_name}.quantabase.io"
+                # Use current FQDN or default to client_name.quantabase.io
+                if [[ -n "$current_fqdn" ]] && [[ "$current_fqdn" != localhost* ]]; then
+                    default_production_domain="$current_fqdn"
+                else
+                    default_production_domain="${client_name}.quantabase.io"
+                fi
                 echo -n "Production domain (press Enter for '${default_production_domain}'): "
                 read domain
                 if [[ -z "$domain" ]]; then

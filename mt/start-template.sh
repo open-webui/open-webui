@@ -1,65 +1,31 @@
 #!/bin/bash
 
 # Multi-Client Open WebUI Template Script
-# Usage: ./start-template.sh CLIENT_NAME PORT [DOMAIN]
-# If DOMAIN is not provided, auto-detects environment
+# Usage: ./start-template.sh CLIENT_NAME PORT DOMAIN CONTAINER_NAME FQDN
+# FQDN-based container naming for multi-tenant deployments
 
-if [ $# -lt 2 ]; then
-    echo "Usage: $0 CLIENT_NAME PORT [DOMAIN]"
+if [ $# -lt 5 ]; then
+    echo "Usage: $0 CLIENT_NAME PORT DOMAIN CONTAINER_NAME FQDN"
     echo "Examples:"
-    echo "  $0 acme-corp 8081                    # Auto-detect environment"
-    echo "  $0 acme-corp 8081 acme.example.com   # Force production domain"
+    echo "  $0 chat 8081 chat.client-a.com openwebui-chat-client-a-com chat.client-a.com"
+    echo "  $0 chat 8082 localhost:8082 openwebui-localhost-8082 localhost:8082"
     exit 1
 fi
 
 CLIENT_NAME=$1
 PORT=$2
 DOMAIN=$3
-CONTAINER_NAME="openwebui-${CLIENT_NAME}"
-VOLUME_NAME="openwebui-${CLIENT_NAME}-data"
+CONTAINER_NAME=$4
+FQDN=$5
+VOLUME_NAME="${CONTAINER_NAME}-data"
 
-# Auto-detect environment if domain not provided
-if [ -z "$DOMAIN" ]; then
-    # Check if we're in a production environment
-    # Multiple ways to detect production
-    if [ -f "/etc/hostname" ] && grep -q "droplet\|server\|prod\|ubuntu\|digital" /etc/hostname 2>/dev/null; then
-        # Production environment - use production domain
-        DOMAIN="${CLIENT_NAME}.quantabase.io"
-        REDIRECT_URI="https://${DOMAIN}/oauth/google/callback"
-        ENVIRONMENT="production"
-    # Check for other production indicators
-    elif [ -d "/etc/nginx/sites-available" ] && [ -f "/etc/nginx/sites-available/quantabase" ]; then
-        # Has nginx and quantabase config = production server
-        DOMAIN="${CLIENT_NAME}.quantabase.io"
-        REDIRECT_URI="https://${DOMAIN}/oauth/google/callback"
-        ENVIRONMENT="production"
-    # Check for cloud provider metadata
-    elif curl -s --max-time 2 http://169.254.169.254/metadata/v1/ >/dev/null 2>&1; then
-        # Digital Ocean metadata service available = cloud server
-        DOMAIN="${CLIENT_NAME}.quantabase.io"
-        REDIRECT_URI="https://${DOMAIN}/oauth/google/callback"
-        ENVIRONMENT="production"
-    else
-        # Development environment - use localhost
-        DOMAIN="localhost:${PORT}"
-        REDIRECT_URI="http://127.0.0.1:${PORT}/oauth/google/callback"
-        ENVIRONMENT="development"
-        # Check if nginx proxy is running on port 80
-        if netstat -ln 2>/dev/null | grep -q ":80 " || lsof -i :80 >/dev/null 2>&1; then
-            echo "Detected nginx proxy on port 80 - configuring for proxy mode"
-            REDIRECT_URI="http://localhost/oauth/google/callback"
-            BASE_URL="http://localhost"
-        fi
-    fi
+# Set redirect URI and environment based on domain type
+if [[ "$DOMAIN" == localhost* ]] || [[ "$DOMAIN" == 127.0.0.1* ]]; then
+    REDIRECT_URI="http://${DOMAIN}/oauth/google/callback"
+    ENVIRONMENT="development"
 else
-    # Domain explicitly provided
-    if [[ "$DOMAIN" == localhost* ]] || [[ "$DOMAIN" == 127.0.0.1* ]]; then
-        REDIRECT_URI="http://${DOMAIN}/oauth/google/callback"
-        ENVIRONMENT="development"
-    else
-        REDIRECT_URI="https://${DOMAIN}/oauth/google/callback"
-        ENVIRONMENT="production"
-    fi
+    REDIRECT_URI="https://${DOMAIN}/oauth/google/callback"
+    ENVIRONMENT="production"
 fi
 
 echo "Starting Open WebUI for client: ${CLIENT_NAME}"
@@ -86,7 +52,9 @@ docker_cmd="docker run -d \
     -e OAUTH_ALLOWED_DOMAINS=martins.net \
     -e OPENID_PROVIDER_URL=https://accounts.google.com/.well-known/openid-configuration \
     -e WEBUI_NAME=\"QuantaBase - ${CLIENT_NAME}\" \
-    -e USER_PERMISSIONS_CHAT_CONTROLS=false"
+    -e USER_PERMISSIONS_CHAT_CONTROLS=false \
+    -e FQDN=\"${FQDN}\" \
+    -e CLIENT_NAME=\"${CLIENT_NAME}\""
 
 # Add BASE_URL if set (for nginx proxy mode)
 if [[ -n "$BASE_URL" ]]; then

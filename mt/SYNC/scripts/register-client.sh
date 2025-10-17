@@ -402,24 +402,87 @@ PYEOF
 
     log_info "Using host_id: $HOST_ID"
 
+    # Extract FQDN from container environment variables
+    log_info "Extracting FQDN from container..."
+    FQDN=$(docker exec "$CONTAINER_NAME" env 2>/dev/null | grep "^FQDN=" | cut -d'=' -f2- || echo "")
+
+    # Fallback: extract from GOOGLE_REDIRECT_URI if FQDN not set
+    if [[ -z "$FQDN" ]]; then
+        redirect_uri=$(docker exec "$CONTAINER_NAME" env 2>/dev/null | grep "^GOOGLE_REDIRECT_URI=" | cut -d'=' -f2- || echo "")
+        if [[ -n "$redirect_uri" ]]; then
+            FQDN=$(echo "$redirect_uri" | sed -E 's|https?://||' | sed 's|/oauth/google/callback||')
+        fi
+    fi
+
+    # Extract port from container if applicable
+    PORT=$(docker exec "$CONTAINER_NAME" env 2>/dev/null | grep "^PORT=" | cut -d'=' -f2- || echo "")
+    if [[ -z "$PORT" ]]; then
+        # Try to get port from docker ps
+        PORT=$(docker ps -a --filter "name=${CONTAINER_NAME}" --format "{{.Ports}}" | grep -o '0.0.0.0:[0-9]*' | cut -d: -f2 || echo "")
+    fi
+
+    if [[ -n "$FQDN" ]]; then
+        log_success "Detected FQDN: $FQDN"
+    else
+        log_warning "Could not detect FQDN (will be NULL in database)"
+    fi
+
     # Build config JSON with SQLite path
     CONFIG_JSON="{\"sqlite_path\": \"${SQLITE_PATH}\"}"
 
-    REGISTER_SQL="
-    INSERT INTO sync_metadata.client_deployments
-    (deployment_id, client_name, container_name, host_id, database_type, sync_enabled, sync_interval, last_sync_status, status, config)
-    VALUES
-    (gen_random_uuid(), '${CLIENT_NAME}', '${CONTAINER_NAME}', '${HOST_ID}'::uuid, 'postgresql', true, 300, 'pending', 'active', '${CONFIG_JSON}'::jsonb)
-    ON CONFLICT (client_name) DO UPDATE
-    SET
-        host_id = EXCLUDED.host_id,
-        container_name = EXCLUDED.container_name,
-        sync_enabled = true,
-        status = 'active',
-        config = EXCLUDED.config,
-        updated_at = NOW()
-    RETURNING deployment_id, client_name, sync_enabled;
-    "
+    # Build SQL with FQDN and port
+    if [[ -n "$FQDN" ]] && [[ -n "$PORT" ]]; then
+        REGISTER_SQL="
+        INSERT INTO sync_metadata.client_deployments
+        (deployment_id, client_name, container_name, fqdn, port, host_id, database_type, sync_enabled, sync_interval, last_sync_status, status, config)
+        VALUES
+        (gen_random_uuid(), '${CLIENT_NAME}', '${CONTAINER_NAME}', '${FQDN}', ${PORT}, '${HOST_ID}'::uuid, 'postgresql', true, 300, 'pending', 'active', '${CONFIG_JSON}'::jsonb)
+        ON CONFLICT (client_name) DO UPDATE
+        SET
+            host_id = EXCLUDED.host_id,
+            container_name = EXCLUDED.container_name,
+            fqdn = EXCLUDED.fqdn,
+            port = EXCLUDED.port,
+            sync_enabled = true,
+            status = 'active',
+            config = EXCLUDED.config,
+            updated_at = NOW()
+        RETURNING deployment_id, client_name, sync_enabled;
+        "
+    elif [[ -n "$FQDN" ]]; then
+        REGISTER_SQL="
+        INSERT INTO sync_metadata.client_deployments
+        (deployment_id, client_name, container_name, fqdn, host_id, database_type, sync_enabled, sync_interval, last_sync_status, status, config)
+        VALUES
+        (gen_random_uuid(), '${CLIENT_NAME}', '${CONTAINER_NAME}', '${FQDN}', '${HOST_ID}'::uuid, 'postgresql', true, 300, 'pending', 'active', '${CONFIG_JSON}'::jsonb)
+        ON CONFLICT (client_name) DO UPDATE
+        SET
+            host_id = EXCLUDED.host_id,
+            container_name = EXCLUDED.container_name,
+            fqdn = EXCLUDED.fqdn,
+            sync_enabled = true,
+            status = 'active',
+            config = EXCLUDED.config,
+            updated_at = NOW()
+        RETURNING deployment_id, client_name, sync_enabled;
+        "
+    else
+        REGISTER_SQL="
+        INSERT INTO sync_metadata.client_deployments
+        (deployment_id, client_name, container_name, host_id, database_type, sync_enabled, sync_interval, last_sync_status, status, config)
+        VALUES
+        (gen_random_uuid(), '${CLIENT_NAME}', '${CONTAINER_NAME}', '${HOST_ID}'::uuid, 'postgresql', true, 300, 'pending', 'active', '${CONFIG_JSON}'::jsonb)
+        ON CONFLICT (client_name) DO UPDATE
+        SET
+            host_id = EXCLUDED.host_id,
+            container_name = EXCLUDED.container_name,
+            sync_enabled = true,
+            status = 'active',
+            config = EXCLUDED.config,
+            updated_at = NOW()
+        RETURNING deployment_id, client_name, sync_enabled;
+        "
+    fi
 
     SQL_QUERY="$REGISTER_SQL" execute_sql "" 2>/dev/null
 
