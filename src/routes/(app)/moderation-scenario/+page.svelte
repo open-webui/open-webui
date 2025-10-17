@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, getContext } from 'svelte';
+	import { onMount, onDestroy, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { showSidebar, user } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
@@ -90,6 +90,11 @@
 	}
 	
 	let scenarioStates: Map<number, ScenarioState> = new Map();
+
+	// Timer state - track time spent on each scenario
+	let scenarioTimers: Map<number, number> = new Map(); // Store accumulated time in seconds
+	let timerInterval: NodeJS.Timeout | null = null;
+	let currentTimerStart: number | null = null;
 
 	// Current scenario state
 	let moderationLoading: boolean = false;
@@ -210,6 +215,48 @@
 		return getHighlightedHTML(originalResponse1, highlightedTexts1);
 	})();
 
+	// Timer management functions
+	function startTimer(scenarioIndex: number) {
+		stopTimer(); // Stop any existing timer
+		currentTimerStart = Date.now();
+		
+		// Initialize timer for this scenario if it doesn't exist
+		if (!scenarioTimers.has(scenarioIndex)) {
+			scenarioTimers.set(scenarioIndex, 0);
+		}
+		
+		// Update timer every second
+		timerInterval = setInterval(() => {
+			if (currentTimerStart) {
+				const elapsed = Math.floor((Date.now() - currentTimerStart) / 1000);
+				const existingTime = scenarioTimers.get(scenarioIndex) || 0;
+				scenarioTimers = new Map(scenarioTimers.set(scenarioIndex, existingTime + elapsed));
+				currentTimerStart = Date.now(); // Reset start for next interval
+			}
+		}, 1000);
+	}
+	
+	function stopTimer() {
+		if (timerInterval) {
+			clearInterval(timerInterval);
+			timerInterval = null;
+		}
+		
+		// Save final elapsed time before stopping
+		if (currentTimerStart !== null) {
+			const elapsed = Math.floor((Date.now() - currentTimerStart) / 1000);
+			const existingTime = scenarioTimers.get(selectedScenarioIndex) || 0;
+			scenarioTimers = new Map(scenarioTimers.set(selectedScenarioIndex, existingTime + elapsed));
+			currentTimerStart = null;
+		}
+	}
+	
+	function formatTime(seconds: number): string {
+		const mins = Math.floor(seconds / 60);
+		const secs = seconds % 60;
+		return `${mins}:${secs.toString().padStart(2, '0')}`;
+	}
+
 	function saveCurrentScenarioState() {
 		const currentState: ScenarioState = {
 			versions: [...versions],
@@ -277,6 +324,9 @@
 		originalResponse1 = response;
 		selectionButtonsVisible1 = false;
 		currentSelection1 = '';
+		
+		// Start timer for the new scenario
+		startTimer(index);
 	}
 
 	function resetConversation() {
@@ -586,6 +636,14 @@
 			goto('/kids/profile');
 			return;
 		}
+		
+		// Start timer for the initial scenario
+		startTimer(selectedScenarioIndex);
+	});
+	
+	onDestroy(() => {
+		// Clean up timer on component destroy
+		stopTimer();
 	});
 </script>
 
@@ -679,20 +737,30 @@
 								<p class="text-sm font-medium text-gray-900 dark:text-white line-clamp-2 leading-tight">
 									{prompt}
 								</p>
-								<p class="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 mt-1">
-									{response.substring(0, 50)}{response.length > 50 ? '...' : ''}
-								</p>
 							</div>
 						</div>
 						
-						{#if selectedScenarioIndex === index}
-							<div class="mt-2 flex items-center space-x-1 text-xs text-blue-600 dark:text-blue-400">
-								<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-									<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-								</svg>
-								<span>Currently viewing</span>
-							</div>
-						{/if}
+						<div class="mt-2 flex items-center justify-between">
+							{#if selectedScenarioIndex === index}
+								<div class="flex items-center space-x-1 text-xs text-blue-600 dark:text-blue-400">
+									<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+										<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+									</svg>
+									<span>Currently viewing</span>
+								</div>
+							{:else}
+								<div></div>
+							{/if}
+							
+							{#if scenarioTimers.has(index) && (scenarioTimers.get(index) || 0) > 0}
+								<div class="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
+									<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+										<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+									</svg>
+									<span>{formatTime(scenarioTimers.get(index) || 0)}</span>
+								</div>
+							{/if}
+						</div>
 					</button>
 				{/each}
 			</div>
