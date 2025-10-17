@@ -527,7 +527,12 @@
 		if (isAttentionCheckScenario()) {
 			// Verify they answered "Yes" to applicability question
 			if (applicabilityAnswered && isApplicable === true) {
-				// User passed the attention check!
+				// User passed the attention check! Mark as completed first
+				hasInitialDecision = true;
+				acceptedOriginal = true;
+				confirmedVersionIndex = -1;
+				saveCurrentScenarioState(); // Save the completion state
+				
 				toast.success('You passed! Proceed to the next scenario.');
 				console.log('[ATTENTION_CHECK] User passed attention check at scenario:', selectedScenarioIndex);
 				
