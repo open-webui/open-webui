@@ -9,6 +9,7 @@ from open_webui.models.tags import TagModel, Tag, Tags
 from open_webui.models.folders import Folders
 from open_webui.env import SRC_LOG_LEVELS
 
+from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, Index
 from sqlalchemy import or_, func, select, and_, text
@@ -440,11 +441,14 @@ class ChatTable:
                 order_by = filter.get("order_by")
                 direction = filter.get("direction")
 
-                if order_by and direction and getattr(Chat, order_by):
+                if order_by and direction:
+                    col = getattr(Chat, order_by, None)
+                    if col is None:
+                        raise HTTPException(status_code=422, detail="Invalid 'order_by' value")
                     if direction.lower() == "asc":
-                        query = query.order_by(getattr(Chat, order_by).asc())
+                        query = query.order_by(col.asc())
                     elif direction.lower() == "desc":
-                        query = query.order_by(getattr(Chat, order_by).desc())
+                        query = query.order_by(col.desc())
                     else:
                         raise ValueError("Invalid direction for ordering")
             else:
