@@ -40,7 +40,10 @@ from open_webui.routers.tasks import (
     generate_image_prompt,
     generate_chat_tags,
 )
-from open_webui.routers.retrieval import process_web_search, SearchForm
+from open_webui.routers.retrieval import (
+    process_web_search,
+    SearchForm,
+)
 from open_webui.routers.images import (
     load_b64_image_data,
     image_generations,
@@ -76,14 +79,17 @@ from open_webui.utils.task import (
 )
 from open_webui.utils.misc import (
     deep_update,
+    extract_urls,
     get_message_list,
     add_or_update_system_message,
     add_or_update_user_message,
     get_last_user_message,
+    get_last_user_message_item,
     get_last_assistant_message,
     get_system_message,
     prepend_to_first_user_message_content,
     convert_logit_bias_input_to_json,
+    get_content_from_message,
 )
 from open_webui.utils.tools import get_tools
 from open_webui.utils.plugin import load_function_module_by_id
@@ -133,6 +139,149 @@ DEFAULT_SOLUTION_TAGS = [("<|begin_of_solution|>", "<|end_of_solution|>")]
 DEFAULT_CODE_INTERPRETER_TAGS = [("<code_interpreter>", "</code_interpreter>")]
 
 
+def process_tool_result(
+    request,
+    tool_function_name,
+    tool_result,
+    tool_type,
+    direct_tool=False,
+    metadata=None,
+    user=None,
+):
+    tool_result_embeds = []
+
+    if isinstance(tool_result, HTMLResponse):
+        content_disposition = tool_result.headers.get("Content-Disposition", "")
+        if "inline" in content_disposition:
+            content = tool_result.body.decode("utf-8", "replace")
+            tool_result_embeds.append(content)
+
+            if 200 <= tool_result.status_code < 300:
+                tool_result = {
+                    "status": "success",
+                    "code": "ui_component",
+                    "message": f"{tool_function_name}: Embedded UI result is active and visible to the user.",
+                }
+            elif 400 <= tool_result.status_code < 500:
+                tool_result = {
+                    "status": "error",
+                    "code": "ui_component",
+                    "message": f"{tool_function_name}: Client error {tool_result.status_code} from embedded UI result.",
+                }
+            elif 500 <= tool_result.status_code < 600:
+                tool_result = {
+                    "status": "error",
+                    "code": "ui_component",
+                    "message": f"{tool_function_name}: Server error {tool_result.status_code} from embedded UI result.",
+                }
+            else:
+                tool_result = {
+                    "status": "error",
+                    "code": "ui_component",
+                    "message": f"{tool_function_name}: Unexpected status code {tool_result.status_code} from embedded UI result.",
+                }
+        else:
+            tool_result = tool_result.body.decode("utf-8", "replace")
+
+    elif (tool_type == "external" and isinstance(tool_result, tuple)) or (
+        direct_tool and isinstance(tool_result, list) and len(tool_result) == 2
+    ):
+        tool_result, tool_response_headers = tool_result
+
+        try:
+            if not isinstance(tool_response_headers, dict):
+                tool_response_headers = dict(tool_response_headers)
+        except Exception as e:
+            tool_response_headers = {}
+            log.debug(e)
+
+        if tool_response_headers and isinstance(tool_response_headers, dict):
+            content_disposition = tool_response_headers.get(
+                "Content-Disposition",
+                tool_response_headers.get("content-disposition", ""),
+            )
+
+            if "inline" in content_disposition:
+                content_type = tool_response_headers.get(
+                    "Content-Type",
+                    tool_response_headers.get("content-type", ""),
+                )
+                location = tool_response_headers.get(
+                    "Location",
+                    tool_response_headers.get("location", ""),
+                )
+
+                if "text/html" in content_type:
+                    # Display as iframe embed
+                    tool_result_embeds.append(tool_result)
+                    tool_result = {
+                        "status": "success",
+                        "code": "ui_component",
+                        "message": f"{tool_function_name}: Embedded UI result is active and visible to the user.",
+                    }
+                elif location:
+                    tool_result_embeds.append(location)
+                    tool_result = {
+                        "status": "success",
+                        "code": "ui_component",
+                        "message": f"{tool_function_name}: Embedded UI result is active and visible to the user.",
+                    }
+
+    tool_result_files = []
+
+    if isinstance(tool_result, list):
+        if tool_type == "mcp":  # MCP
+            tool_response = []
+            for item in tool_result:
+                if isinstance(item, dict):
+                    if item.get("type") == "text":
+                        text = item.get("text", "")
+                        if isinstance(text, str):
+                            try:
+                                text = json.loads(text)
+                            except json.JSONDecodeError:
+                                pass
+                        tool_response.append(text)
+                    elif item.get("type") in ["image", "audio"]:
+                        file_url = get_file_url_from_base64(
+                            request,
+                            f"data:{item.get('mimeType')};base64,{item.get('data', item.get('blob', ''))}",
+                            {
+                                "chat_id": metadata.get("chat_id", None),
+                                "message_id": metadata.get("message_id", None),
+                                "session_id": metadata.get("session_id", None),
+                                "result": item,
+                            },
+                            user,
+                        )
+
+                        tool_result_files.append(
+                            {
+                                "type": item.get("type", "data"),
+                                "url": file_url,
+                            }
+                        )
+            tool_result = tool_response[0] if len(tool_response) == 1 else tool_response
+        else:  # OpenAPI
+            for item in tool_result:
+                if isinstance(item, str) and item.startswith("data:"):
+                    tool_result_files.append(
+                        {
+                            "type": "data",
+                            "content": item,
+                        }
+                    )
+                    tool_result.remove(item)
+
+    if isinstance(tool_result, list):
+        tool_result = {"results": tool_result}
+
+    if isinstance(tool_result, dict) or isinstance(tool_result, list):
+        tool_result = json.dumps(tool_result, indent=2, ensure_ascii=False)
+
+    return tool_result, tool_result_files, tool_result_embeds
+
+
 async def chat_completion_tools_handler(
     request: Request, body: dict, extra_params: dict, user: UserModel, models, tools
 ) -> tuple[dict, dict]:
@@ -140,7 +289,7 @@ async def chat_completion_tools_handler(
         content = None
         if hasattr(response, "body_iterator"):
             async for chunk in response.body_iterator:
-                data = json.loads(chunk.decode("utf-8"))
+                data = json.loads(chunk.decode("utf-8", "replace"))
                 content = data["choices"][0]["message"]["content"]
 
             # Cleanup any remaining background tasks if necessary
@@ -155,7 +304,7 @@ async def chat_completion_tools_handler(
 
         recent_messages = messages[-4:] if len(messages) > 4 else messages
         chat_history = "\n".join(
-            f"{message['role'].upper()}: \"\"\"{message['content']}\"\"\""
+            f"{message['role'].upper()}: \"\"\"{get_content_from_message(message)}\"\"\""
             for message in recent_messages
         )
 
@@ -172,6 +321,7 @@ async def chat_completion_tools_handler(
         }
 
     event_caller = extra_params["__event_call__"]
+    event_emitter = extra_params["__event_emitter__"]
     metadata = extra_params["__metadata__"]
 
     task_model_id = get_task_model_id(
@@ -226,8 +376,14 @@ async def chat_completion_tools_handler(
 
                 tool_function_params = tool_call.get("parameters", {})
 
+                tool = None
+                tool_type = ""
+                direct_tool = False
+
                 try:
                     tool = tools[tool_function_name]
+                    tool_type = tool.get("type", "")
+                    direct_tool = tool.get("direct", False)
 
                     spec = tool.get("spec", {})
                     allowed_params = (
@@ -259,18 +415,46 @@ async def chat_completion_tools_handler(
                 except Exception as e:
                     tool_result = str(e)
 
-                tool_result_files = []
-                if isinstance(tool_result, list):
-                    for item in tool_result:
-                        # check if string
-                        if isinstance(item, str) and item.startswith("data:"):
-                            tool_result_files.append(item)
-                            tool_result.remove(item)
+                tool_result, tool_result_files, tool_result_embeds = (
+                    process_tool_result(
+                        request,
+                        tool_function_name,
+                        tool_result,
+                        tool_type,
+                        direct_tool,
+                        metadata,
+                        user,
+                    )
+                )
 
-                if isinstance(tool_result, dict) or isinstance(tool_result, list):
-                    tool_result = json.dumps(tool_result, indent=2)
+                if event_emitter:
+                    if tool_result_files:
+                        await event_emitter(
+                            {
+                                "type": "files",
+                                "data": {
+                                    "files": tool_result_files,
+                                },
+                            }
+                        )
 
-                if isinstance(tool_result, str):
+                    if tool_result_embeds:
+                        await event_emitter(
+                            {
+                                "type": "embeds",
+                                "data": {
+                                    "embeds": tool_result_embeds,
+                                },
+                            }
+                        )
+
+                print(
+                    f"Tool {tool_function_name} result: {tool_result}",
+                    tool_result_files,
+                    tool_result_embeds,
+                )
+
+                if tool_result:
                     tool = tools[tool_function_name]
                     tool_id = tool.get("tool_id", "")
 
@@ -284,18 +468,19 @@ async def chat_completion_tools_handler(
                     sources.append(
                         {
                             "source": {
-                                "name": (f"TOOL:{tool_name}"),
+                                "name": (f"{tool_name}"),
                             },
-                            "document": [tool_result],
+                            "document": [str(tool_result)],
                             "metadata": [
                                 {
-                                    "source": (f"TOOL:{tool_name}"),
+                                    "source": (f"{tool_name}"),
                                     "parameters": tool_function_params,
                                 }
                             ],
                             "tool_result": True,
                         }
                     )
+
                     # Citation is not enabled for this tool
                     body["messages"] = add_or_update_user_message(
                         f"\nTool `{tool_name}` Output: {tool_result}",
@@ -674,10 +859,6 @@ async def chat_completion_files_handler(
             except:
                 pass
 
-        if len(queries) == 0:
-            queries = [get_last_user_message(body["messages"])]
-
-        if not all_full_context:
             await __event_emitter__(
                 {
                     "type": "status",
@@ -688,6 +869,9 @@ async def chat_completion_files_handler(
                     },
                 }
             )
+
+        if len(queries) == 0:
+            queries = [get_last_user_message(body["messages"])]
 
         try:
             # Offload get_sources_from_items to a separate thread
@@ -727,7 +911,6 @@ async def chat_completion_files_handler(
         log.debug(f"rag_contexts:sources: {sources}")
 
         unique_ids = set()
-
         for source in sources or []:
             if not source or len(source.keys()) == 0:
                 continue
@@ -746,7 +929,6 @@ async def chat_completion_files_handler(
                 unique_ids.add(_id)
 
         sources_count = len(unique_ids)
-
         await __event_emitter__(
             {
                 "type": "status",
@@ -820,11 +1002,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     log.debug(f"form_data: {form_data}")
 
     system_message = get_system_message(form_data.get("messages", []))
-    if system_message:
+    if system_message:  # Chat Controls/User Settings
         try:
             form_data = apply_system_prompt_to_body(
-                system_message.get("content"), form_data, metadata, user
-            )
+                system_message.get("content"), form_data, metadata, user, replace=True
+            )  # Required to handle system prompt variables
         except:
             pass
 
@@ -989,8 +1171,28 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     tool_ids = form_data.pop("tool_ids", None)
     files = form_data.pop("files", None)
 
-    # Remove files duplicates
+    prompt = get_last_user_message(form_data["messages"])
+    # TODO: re-enable URL extraction from prompt
+    # urls = []
+    # if prompt and len(prompt or "") < 500 and (not files or len(files) == 0):
+    #     urls = extract_urls(prompt)
+
     if files:
+        if not files:
+            files = []
+
+        for file_item in files:
+            if file_item.get("type", "file") == "folder":
+                # Get folder files
+                folder_id = file_item.get("id", None)
+                if folder_id:
+                    folder = Folders.get_folder_by_id_and_user_id(folder_id, user.id)
+                    if folder and folder.data and "files" in folder.data:
+                        files = [f for f in files if f.get("id", None) != folder_id]
+                        files = [*files, *folder.data["files"]]
+
+        # files = [*files, *[{"type": "url", "url": url, "name": url} for url in urls]]
+        # Remove duplicate files based on their content
         files = list({json.dumps(f, sort_keys=True): f for f in files}.values())
 
     metadata = {
@@ -1010,7 +1212,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     tools_dict = {}
 
-    mcp_clients = []
+    mcp_clients = {}
     mcp_tools_dict = {}
 
     if tool_ids:
@@ -1071,35 +1273,38 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             log.error(f"Error getting OAuth token: {e}")
                             oauth_token = None
 
-                    mcp_client = MCPClient()
-                    await mcp_client.connect(
+                    mcp_clients[server_id] = MCPClient()
+                    await mcp_clients[server_id].connect(
                         url=mcp_server_connection.get("url", ""),
                         headers=headers if headers else None,
                     )
 
-                    tool_specs = await mcp_client.list_tool_specs()
+                    tool_specs = await mcp_clients[server_id].list_tool_specs()
                     for tool_spec in tool_specs:
 
-                        def make_tool_function(function_name):
+                        def make_tool_function(client, function_name):
                             async def tool_function(**kwargs):
-                                return await mcp_client.call_tool(
+                                return await client.call_tool(
                                     function_name,
                                     function_args=kwargs,
                                 )
 
                             return tool_function
 
-                        tool_function = make_tool_function(tool_spec["name"])
+                        tool_function = make_tool_function(
+                            mcp_clients[server_id], tool_spec["name"]
+                        )
 
-                        mcp_tools_dict[tool_spec["name"]] = {
-                            "spec": tool_spec,
+                        mcp_tools_dict[f"{server_id}_{tool_spec['name']}"] = {
+                            "spec": {
+                                **tool_spec,
+                                "name": f"{server_id}_{tool_spec['name']}",
+                            },
                             "callable": tool_function,
                             "type": "mcp",
-                            "client": mcp_client,
+                            "client": mcp_clients[server_id],
                             "direct": False,
                         }
-
-                    mcp_clients.append(mcp_client)
                 except Exception as e:
                     log.debug(e)
                     continue
@@ -1140,7 +1345,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 {"type": "function", "function": tool.get("spec", {})}
                 for tool in tools_dict.values()
             ]
-
         else:
             # If the function calling is not native, then call the tools function calling handler
             try:
@@ -1165,9 +1369,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         citation_idx_map = {}
 
         for source in sources:
-            is_tool_result = source.get("tool_result", False)
-
-            if "document" in source and not is_tool_result:
+            if "document" in source:
                 for document_text, document_metadata in zip(
                     source["document"], source["metadata"]
                 ):
@@ -1188,8 +1390,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     )
 
         context_string = context_string.strip()
-
-        prompt = get_last_user_message(form_data["messages"])
         if prompt is None:
             raise Exception("No user message found")
 
@@ -1235,10 +1435,13 @@ async def process_chat_response(
     request, response, form_data, user, metadata, model, events, tasks
 ):
     async def background_tasks_handler():
-        messages_map = Chats.get_messages_map_by_chat_id(metadata["chat_id"])
-        message = messages_map.get(metadata["message_id"]) if messages_map else None
+        message = None
+        messages = []
 
-        if message:
+        if "chat_id" in metadata and not metadata["chat_id"].startswith("local:"):
+            messages_map = Chats.get_messages_map_by_chat_id(metadata["chat_id"])
+            message = messages_map.get(metadata["message_id"]) if messages_map else None
+
             message_list = get_message_list(messages_map, metadata["message_id"])
 
             # Remove details tags and files from the messages.
@@ -1271,7 +1474,14 @@ async def process_chat_response(
                         "content": content,
                     }
                 )
+        else:
+            # Local temp chat, get the model and message from the form_data
+            message = get_last_user_message_item(form_data.get("messages", []))
+            messages = form_data.get("messages", [])
+            if message:
+                message["model"] = form_data.get("model")
 
+        if message and "model" in message:
             if tasks and messages:
                 if (
                     TASKS.FOLLOW_UP_GENERATION in tasks
@@ -1290,11 +1500,13 @@ async def process_chat_response(
 
                     if res and isinstance(res, dict):
                         if len(res.get("choices", [])) == 1:
-                            follow_ups_string = (
-                                res.get("choices", [])[0]
-                                .get("message", {})
-                                .get("content", "")
+                            response_message = res.get("choices", [])[0].get(
+                                "message", {}
                             )
+
+                            follow_ups_string = response_message.get(
+                                "content"
+                            ) or response_message.get("reasoning_content", "")
                         else:
                             follow_ups_string = ""
 
@@ -1307,15 +1519,6 @@ async def process_chat_response(
                             follow_ups = json.loads(follow_ups_string).get(
                                 "follow_ups", []
                             )
-
-                            Chats.upsert_message_to_chat_by_id_and_message_id(
-                                metadata["chat_id"],
-                                metadata["message_id"],
-                                {
-                                    "followUps": follow_ups,
-                                },
-                            )
-
                             await event_emitter(
                                 {
                                     "type": "chat:message:follow_ups",
@@ -1324,17 +1527,96 @@ async def process_chat_response(
                                     },
                                 }
                             )
+
+                            if not metadata.get("chat_id", "").startswith("local:"):
+                                Chats.upsert_message_to_chat_by_id_and_message_id(
+                                    metadata["chat_id"],
+                                    metadata["message_id"],
+                                    {
+                                        "followUps": follow_ups,
+                                    },
+                                )
+
                         except Exception as e:
                             pass
 
-                if TASKS.TITLE_GENERATION in tasks:
-                    user_message = get_last_user_message(messages)
-                    if user_message and len(user_message) > 100:
-                        user_message = user_message[:100] + "..."
+                if not metadata.get("chat_id", "").startswith(
+                    "local:"
+                ):  # Only update titles and tags for non-temp chats
+                    if (
+                        TASKS.TITLE_GENERATION in tasks
+                        and tasks[TASKS.TITLE_GENERATION]
+                    ):
+                        user_message = get_last_user_message(messages)
+                        if user_message and len(user_message) > 100:
+                            user_message = user_message[:100] + "..."
 
-                    if tasks[TASKS.TITLE_GENERATION]:
+                        if tasks[TASKS.TITLE_GENERATION]:
 
-                        res = await generate_title(
+                            res = await generate_title(
+                                request,
+                                {
+                                    "model": message["model"],
+                                    "messages": messages,
+                                    "chat_id": metadata["chat_id"],
+                                },
+                                user,
+                            )
+
+                            if res and isinstance(res, dict):
+                                if len(res.get("choices", [])) == 1:
+                                    response_message = res.get("choices", [])[0].get(
+                                        "message", {}
+                                    )
+
+                                    title_string = (
+                                        response_message.get("content")
+                                        or response_message.get(
+                                            "reasoning_content",
+                                        )
+                                        or message.get("content", user_message)
+                                    )
+                                else:
+                                    title_string = ""
+
+                                title_string = title_string[
+                                    title_string.find("{") : title_string.rfind("}") + 1
+                                ]
+
+                                try:
+                                    title = json.loads(title_string).get(
+                                        "title", user_message
+                                    )
+                                except Exception as e:
+                                    title = ""
+
+                                if not title:
+                                    title = messages[0].get("content", user_message)
+
+                                Chats.update_chat_title_by_id(
+                                    metadata["chat_id"], title
+                                )
+
+                                await event_emitter(
+                                    {
+                                        "type": "chat:title",
+                                        "data": title,
+                                    }
+                                )
+                        elif len(messages) == 2:
+                            title = messages[0].get("content", user_message)
+
+                            Chats.update_chat_title_by_id(metadata["chat_id"], title)
+
+                            await event_emitter(
+                                {
+                                    "type": "chat:title",
+                                    "data": message.get("content", user_message),
+                                }
+                            )
+
+                    if TASKS.TAGS_GENERATION in tasks and tasks[TASKS.TAGS_GENERATION]:
+                        res = await generate_chat_tags(
                             request,
                             {
                                 "model": message["model"],
@@ -1346,89 +1628,34 @@ async def process_chat_response(
 
                         if res and isinstance(res, dict):
                             if len(res.get("choices", [])) == 1:
-                                title_string = (
-                                    res.get("choices", [])[0]
-                                    .get("message", {})
-                                    .get(
-                                        "content", message.get("content", user_message)
-                                    )
+                                response_message = res.get("choices", [])[0].get(
+                                    "message", {}
                                 )
-                            else:
-                                title_string = ""
 
-                            title_string = title_string[
-                                title_string.find("{") : title_string.rfind("}") + 1
+                                tags_string = response_message.get(
+                                    "content"
+                                ) or response_message.get("reasoning_content", "")
+                            else:
+                                tags_string = ""
+
+                            tags_string = tags_string[
+                                tags_string.find("{") : tags_string.rfind("}") + 1
                             ]
 
                             try:
-                                title = json.loads(title_string).get(
-                                    "title", user_message
+                                tags = json.loads(tags_string).get("tags", [])
+                                Chats.update_chat_tags_by_id(
+                                    metadata["chat_id"], tags, user
+                                )
+
+                                await event_emitter(
+                                    {
+                                        "type": "chat:tags",
+                                        "data": tags,
+                                    }
                                 )
                             except Exception as e:
-                                title = ""
-
-                            if not title:
-                                title = messages[0].get("content", user_message)
-
-                            Chats.update_chat_title_by_id(metadata["chat_id"], title)
-
-                            await event_emitter(
-                                {
-                                    "type": "chat:title",
-                                    "data": title,
-                                }
-                            )
-                    elif len(messages) == 2:
-                        title = messages[0].get("content", user_message)
-
-                        Chats.update_chat_title_by_id(metadata["chat_id"], title)
-
-                        await event_emitter(
-                            {
-                                "type": "chat:title",
-                                "data": message.get("content", user_message),
-                            }
-                        )
-
-                if TASKS.TAGS_GENERATION in tasks and tasks[TASKS.TAGS_GENERATION]:
-                    res = await generate_chat_tags(
-                        request,
-                        {
-                            "model": message["model"],
-                            "messages": messages,
-                            "chat_id": metadata["chat_id"],
-                        },
-                        user,
-                    )
-
-                    if res and isinstance(res, dict):
-                        if len(res.get("choices", [])) == 1:
-                            tags_string = (
-                                res.get("choices", [])[0]
-                                .get("message", {})
-                                .get("content", "")
-                            )
-                        else:
-                            tags_string = ""
-
-                        tags_string = tags_string[
-                            tags_string.find("{") : tags_string.rfind("}") + 1
-                        ]
-
-                        try:
-                            tags = json.loads(tags_string).get("tags", [])
-                            Chats.update_chat_tags_by_id(
-                                metadata["chat_id"], tags, user
-                            )
-
-                            await event_emitter(
-                                {
-                                    "type": "chat:tags",
-                                    "data": tags,
-                                }
-                            )
-                        except Exception as e:
-                            pass
+                                pass
 
     event_emitter = None
     event_caller = None
@@ -1456,7 +1683,9 @@ async def process_chat_response(
                         response.body, bytes
                     ):
                         try:
-                            response_data = json.loads(response.body.decode("utf-8"))
+                            response_data = json.loads(
+                                response.body.decode("utf-8", "replace")
+                            )
                         except json.JSONDecodeError:
                             response_data = {
                                 "error": {"detail": "Invalid JSON response"}
@@ -2090,7 +2319,11 @@ async def process_chat_response(
                             last_delta_data = None
 
                     async for line in response.body_iterator:
-                        line = line.decode("utf-8") if isinstance(line, bytes) else line
+                        line = (
+                            line.decode("utf-8", "replace")
+                            if isinstance(line, bytes)
+                            else line
+                        )
                         data = line
 
                         # Skip empty lines
@@ -2443,10 +2676,10 @@ async def process_chat_response(
                     results = []
 
                     for tool_call in response_tool_calls:
-
-                        print("tool_call", tool_call)
                         tool_call_id = tool_call.get("id", "")
-                        tool_name = tool_call.get("function", {}).get("name", "")
+                        tool_function_name = tool_call.get("function", {}).get(
+                            "name", ""
+                        )
                         tool_args = tool_call.get("function", {}).get("arguments", "{}")
 
                         tool_function_params = {}
@@ -2476,10 +2709,16 @@ async def process_chat_response(
                         )
 
                         tool_result = None
+                        tool = None
+                        tool_type = None
+                        direct_tool = False
 
-                        if tool_name in tools:
-                            tool = tools[tool_name]
+                        if tool_function_name in tools:
+                            tool = tools[tool_function_name]
                             spec = tool.get("spec", {})
+
+                            tool_type = tool.get("type", "")
+                            direct_tool = tool.get("direct", False)
 
                             try:
                                 allowed_params = (
@@ -2494,13 +2733,13 @@ async def process_chat_response(
                                     if k in allowed_params
                                 }
 
-                                if tool.get("direct", False):
+                                if direct_tool:
                                     tool_result = await event_caller(
                                         {
                                             "type": "execute:tool",
                                             "data": {
                                                 "id": str(uuid4()),
-                                                "name": tool_name,
+                                                "name": tool_function_name,
                                                 "params": tool_function_params,
                                                 "server": tool.get("server", {}),
                                                 "session_id": metadata.get(
@@ -2519,151 +2758,17 @@ async def process_chat_response(
                             except Exception as e:
                                 tool_result = str(e)
 
-                        tool_result_embeds = []
-                        if isinstance(tool_result, HTMLResponse):
-                            content_disposition = tool_result.headers.get(
-                                "Content-Disposition", ""
+                        tool_result, tool_result_files, tool_result_embeds = (
+                            process_tool_result(
+                                request,
+                                tool_function_name,
+                                tool_result,
+                                tool_type,
+                                direct_tool,
+                                metadata,
+                                user,
                             )
-                            if "inline" in content_disposition:
-                                content = tool_result.body.decode("utf-8")
-                                tool_result_embeds.append(content)
-
-                                if 200 <= tool_result.status_code < 300:
-                                    tool_result = {
-                                        "status": "success",
-                                        "code": "ui_component",
-                                        "message": "Embedded UI result is active and visible to the user.",
-                                    }
-                                elif 400 <= tool_result.status_code < 500:
-                                    tool_result = {
-                                        "status": "error",
-                                        "code": "ui_component",
-                                        "message": f"Client error {tool_result.status_code} from embedded UI result.",
-                                    }
-                                elif 500 <= tool_result.status_code < 600:
-                                    tool_result = {
-                                        "status": "error",
-                                        "code": "ui_component",
-                                        "message": f"Server error {tool_result.status_code} from embedded UI result.",
-                                    }
-                                else:
-                                    tool_result = {
-                                        "status": "error",
-                                        "code": "ui_component",
-                                        "message": f"Unexpected status code {tool_result.status_code} from embedded UI result.",
-                                    }
-                            else:
-                                tool_result = tool_result.body.decode("utf-8")
-
-                        elif (
-                            tool.get("type") == "external"
-                            and isinstance(tool_result, tuple)
-                        ) or (
-                            tool.get("direct", True)
-                            and isinstance(tool_result, list)
-                            and len(tool_result) == 2
-                        ):
-                            tool_result, tool_response_headers = tool_result
-
-                            if tool_response_headers:
-                                content_disposition = tool_response_headers.get(
-                                    "Content-Disposition",
-                                    tool_response_headers.get(
-                                        "content-disposition", ""
-                                    ),
-                                )
-
-                                if "inline" in content_disposition:
-                                    content_type = tool_response_headers.get(
-                                        "Content-Type",
-                                        tool_response_headers.get("content-type", ""),
-                                    )
-                                    location = tool_response_headers.get(
-                                        "Location",
-                                        tool_response_headers.get("location", ""),
-                                    )
-
-                                    if "text/html" in content_type:
-                                        # Display as iframe embed
-                                        tool_result_embeds.append(tool_result)
-                                        tool_result = {
-                                            "status": "success",
-                                            "code": "ui_component",
-                                            "message": "Embedded UI result is active and visible to the user.",
-                                        }
-                                    elif location:
-                                        tool_result_embeds.append(location)
-                                        tool_result = {
-                                            "status": "success",
-                                            "code": "ui_component",
-                                            "message": "Embedded UI result is active and visible to the user.",
-                                        }
-
-                        tool_result_files = []
-                        if isinstance(tool_result, list):
-                            for item in tool_result:
-                                # check if string
-                                if isinstance(item, str) and item.startswith("data:"):
-                                    tool_result_files.append(
-                                        {
-                                            "type": "data",
-                                            "content": item,
-                                        }
-                                    )
-                                    tool_result.remove(item)
-
-                                if tool.get("type") == "mcp":
-                                    if isinstance(item, dict):
-                                        if (
-                                            item.get("type") == "image"
-                                            or item.get("type") == "audio"
-                                        ):
-                                            file_url = get_file_url_from_base64(
-                                                request,
-                                                f"data:{item.get('mimeType')};base64,{item.get('data', item.get('blob', ''))}",
-                                                {
-                                                    "chat_id": metadata.get(
-                                                        "chat_id", None
-                                                    ),
-                                                    "message_id": metadata.get(
-                                                        "message_id", None
-                                                    ),
-                                                    "session_id": metadata.get(
-                                                        "session_id", None
-                                                    ),
-                                                    "result": item,
-                                                },
-                                                user,
-                                            )
-
-                                            tool_result_files.append(
-                                                {
-                                                    "type": item.get("type", "data"),
-                                                    "url": file_url,
-                                                }
-                                            )
-                                            tool_result.remove(item)
-
-                        if tool_result_files:
-                            if not isinstance(tool_result, list):
-                                tool_result = [
-                                    tool_result,
-                                ]
-
-                            for file in tool_result_files:
-                                tool_result.append(
-                                    {
-                                        "type": file.get("type", "data"),
-                                        "content": "Result is being displayed as a file.",
-                                    }
-                                )
-
-                        if isinstance(tool_result, dict) or isinstance(
-                            tool_result, list
-                        ):
-                            tool_result = json.dumps(
-                                tool_result, indent=2, ensure_ascii=False
-                            )
+                        )
 
                         results.append(
                             {
@@ -2683,7 +2788,6 @@ async def process_chat_response(
                         )
 
                     content_blocks[-1]["results"] = results
-
                     content_blocks.append(
                         {
                             "type": "text",
@@ -2702,9 +2806,9 @@ async def process_chat_response(
 
                     try:
                         new_form_data = {
+                            **form_data,
                             "model": model_id,
                             "stream": True,
-                            "tools": form_data["tools"],
                             "messages": [
                                 *form_data["messages"],
                                 *convert_content_blocks_to_messages(
@@ -2878,6 +2982,7 @@ async def process_chat_response(
 
                         try:
                             new_form_data = {
+                                **form_data,
                                 "model": model_id,
                                 "stream": True,
                                 "messages": [

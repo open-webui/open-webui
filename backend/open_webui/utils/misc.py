@@ -136,6 +136,14 @@ def update_message_content(message: dict, content: str, append: bool = True) -> 
     return message
 
 
+def replace_system_message_content(content: str, messages: list[dict]) -> dict:
+    for message in messages:
+        if message["role"] == "system":
+            message["content"] = content
+            break
+    return messages
+
+
 def add_or_update_system_message(
     content: str, messages: list[dict], append: bool = False
 ):
@@ -391,17 +399,10 @@ def parse_ollama_modelfile(model_text):
         "top_k": int,
         "top_p": float,
         "num_keep": int,
-        "typical_p": float,
         "presence_penalty": float,
         "frequency_penalty": float,
-        "penalize_newline": bool,
-        "numa": bool,
         "num_batch": int,
         "num_gpu": int,
-        "main_gpu": int,
-        "low_vram": bool,
-        "f16_kv": bool,
-        "vocab_only": bool,
         "use_mmap": bool,
         "use_mlock": bool,
         "num_thread": int,
@@ -530,3 +531,11 @@ def throttle(interval: float = 10.0):
         return wrapper
 
     return decorator
+
+
+def extract_urls(text: str) -> list[str]:
+    # Regex pattern to match URLs
+    url_pattern = re.compile(
+        r"(https?://[^\s]+)", re.IGNORECASE
+    )  # Matches http and https URLs
+    return url_pattern.findall(text)

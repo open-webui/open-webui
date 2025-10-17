@@ -399,6 +399,26 @@
 								>{$i18n.t("'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.")}</span
 							>
 						</div>
+
+						{#if adminConfig.JWT_EXPIRES_IN === '-1'}
+							<div class="mt-2 text-xs">
+								<div
+									class=" bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-lg px-3 py-2"
+								>
+									<div>
+										<span class=" font-medium">{$i18n.t('Warning')}:</span>
+										<span
+											><a
+												href="https://docs.openwebui.com/getting-started/env-configuration#jwt_expires_in"
+												target="_blank"
+												class=" underline"
+												>{$i18n.t('No expiration can pose security risks.')}
+											</a></span
+										>
+									</div>
+								</div>
+							</div>
+						{/if}
 					</div>
 
 					<div class=" space-y-3">

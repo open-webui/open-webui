@@ -12,6 +12,7 @@ from open_webui.models.folders import (
     FolderForm,
     FolderUpdateForm,
     FolderModel,
+    FolderNameIdResponse,
     Folders,
 )
 from open_webui.models.chats import Chats
@@ -44,12 +45,20 @@ router = APIRouter()
 ############################
 
 
-@router.get("/", response_model=list[FolderModel])
+@router.get("/", response_model=list[FolderNameIdResponse])
 async def get_folders(user=Depends(get_verified_user)):
     folders = Folders.get_folders_by_user_id(user.id)
 
     # Verify folder data integrity
+    folder_list = []
     for folder in folders:
+        if folder.parent_id and not Folders.get_folder_by_id_and_user_id(
+            folder.parent_id, user.id
+        ):
+            folder = Folders.update_folder_parent_id_by_id_and_user_id(
+                folder.id, user.id, None
+            )
+
         if folder.data:
             if "files" in folder.data:
                 valid_files = []
@@ -73,20 +82,9 @@ async def get_folders(user=Depends(get_verified_user)):
                     folder.id, user.id, FolderUpdateForm(data=folder.data)
                 )
 
-    return [
-        {
-            **folder.model_dump(),
-            "items": {
-                "chats": [
-                    {"title": chat.title, "id": chat.id, "updated_at": chat.updated_at}
-                    for chat in Chats.get_chats_by_folder_id_and_user_id(
-                        folder.id, user.id
-                    )
-                ]
-            },
-        }
-        for folder in folders
-    ]
+        folder_list.append(FolderNameIdResponse(**folder.model_dump()))
+
+    return folder_list
 
 
 ############################
@@ -272,21 +270,31 @@ async def delete_folder_by_id(
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
 
-    folder = Folders.get_folder_by_id_and_user_id(id, user.id)
-    if folder:
-        try:
-            folder_ids = Folders.delete_folder_by_id_and_user_id(id, user.id)
-            for folder_id in folder_ids:
-                Chats.delete_chats_by_user_id_and_folder_id(user.id, folder_id)
+    folders = []
+    folders.append(Folders.get_folder_by_id_and_user_id(id, user.id))
+    while folders:
+        folder = folders.pop()
+        if folder:
+            try:
+                folder_ids = Folders.delete_folder_by_id_and_user_id(id, user.id)
+                for folder_id in folder_ids:
+                    Chats.delete_chats_by_user_id_and_folder_id(user.id, folder_id)
 
-            return True
-        except Exception as e:
-            log.exception(e)
-            log.error(f"Error deleting folder: {id}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("Error deleting folder"),
-            )
+                return True
+            except Exception as e:
+                log.exception(e)
+                log.error(f"Error deleting folder: {id}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT("Error deleting folder"),
+                )
+            finally:
+                # Get all subfolders
+                subfolders = Folders.get_folders_by_parent_id_and_user_id(
+                    folder.id, user.id
+                )
+                folders.extend(subfolders)
+
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

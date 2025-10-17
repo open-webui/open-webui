@@ -62,6 +62,7 @@ from open_webui.env import (
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
     ENABLE_OAUTH_ID_TOKEN_COOKIE,
+    ENABLE_OAUTH_EMAIL_FALLBACK,
     OAUTH_CLIENT_INFO_ENCRYPTION_KEY,
 )
 from open_webui.utils.misc import parse_duration
@@ -81,6 +82,8 @@ class OAuthClientInformationFull(OAuthClientMetadata):
     client_secret: str | None = None
     client_id_issued_at: int | None = None
     client_secret_expires_at: int | None = None
+
+    server_metadata: Optional[OAuthMetadata] = None  # Fetched from the OAuth server
 
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
@@ -198,13 +201,25 @@ def get_parsed_and_base_url(server_url) -> tuple[urllib.parse.ParseResult, str]:
 
 
 def get_discovery_urls(server_url) -> list[str]:
-    urls = []
     parsed, base_url = get_parsed_and_base_url(server_url)
 
-    urls.append(
-        urllib.parse.urljoin(base_url, "/.well-known/oauth-authorization-server")
-    )
-    urls.append(urllib.parse.urljoin(base_url, "/.well-known/openid-configuration"))
+    urls = [
+        urllib.parse.urljoin(base_url, "/.well-known/oauth-authorization-server"),
+        urllib.parse.urljoin(base_url, "/.well-known/openid-configuration"),
+    ]
+
+    if parsed.path and parsed.path != "/":
+        urls.append(
+            urllib.parse.urljoin(
+                base_url,
+                f"/.well-known/oauth-authorization-server{parsed.path.rstrip('/')}",
+            )
+        )
+        urls.append(
+            urllib.parse.urljoin(
+                base_url, f"/.well-known/openid-configuration{parsed.path.rstrip('/')}"
+            )
+        )
 
     return urls
 
@@ -284,6 +299,7 @@ async def get_oauth_client_info_with_dynamic_client_registration(
                         {
                             **registration_response_json,
                             **{"issuer": oauth_server_metadata_url},
+                            **{"server_metadata": oauth_server_metadata},
                         }
                     )
                     log.info(
@@ -319,20 +335,34 @@ class OAuthClientManager:
         self.clients = {}
 
     def add_client(self, client_id, oauth_client_info: OAuthClientInformationFull):
-        self.clients[client_id] = {
-            "client": self.oauth.register(
-                name=client_id,
-                client_id=oauth_client_info.client_id,
-                client_secret=oauth_client_info.client_secret,
-                client_kwargs=(
-                    {"scope": oauth_client_info.scope}
-                    if oauth_client_info.scope
-                    else {}
-                ),
-                server_metadata_url=(
-                    oauth_client_info.issuer if oauth_client_info.issuer else None
-                ),
+        kwargs = {
+            "name": client_id,
+            "client_id": oauth_client_info.client_id,
+            "client_secret": oauth_client_info.client_secret,
+            "client_kwargs": (
+                {"scope": oauth_client_info.scope} if oauth_client_info.scope else {}
             ),
+            "server_metadata_url": (
+                oauth_client_info.issuer if oauth_client_info.issuer else None
+            ),
+        }
+
+        if (
+            oauth_client_info.server_metadata
+            and oauth_client_info.server_metadata.code_challenge_methods_supported
+        ):
+            if (
+                isinstance(
+                    oauth_client_info.server_metadata.code_challenge_methods_supported,
+                    list,
+                )
+                and "S256"
+                in oauth_client_info.server_metadata.code_challenge_methods_supported
+            ):
+                kwargs["code_challenge_method"] = "S256"
+
+        self.clients[client_id] = {
+            "client": self.oauth.register(**kwargs),
             "client_info": oauth_client_info,
         }
         return self.clients[client_id]
@@ -355,8 +385,8 @@ class OAuthClientManager:
         if client_id in self.clients:
             client = self.clients[client_id]
             return (
-                client.server_metadata_url
-                if hasattr(client, "server_metadata_url")
+                client._server_metadata_url
+                if hasattr(client, "_server_metadata_url")
                 else None
             )
         return None
@@ -548,7 +578,17 @@ class OAuthClientManager:
 
         error_message = None
         try:
-            token = await client.authorize_access_token(request)
+            client_info = self.get_client_info(client_id)
+            token_params = {}
+            if (
+                client_info
+                and hasattr(client_info, "client_id")
+                and hasattr(client_info, "client_secret")
+            ):
+                token_params["client_id"] = client_info.client_id
+                token_params["client_secret"] = client_info.client_secret
+
+            token = await client.authorize_access_token(request, **token_params)
             if token:
                 try:
                     # Add timestamp for tracking
@@ -603,8 +643,14 @@ class OAuthManager:
         self.app = app
 
         self._clients = {}
-        for _, provider_config in OAUTH_PROVIDERS.items():
-            provider_config["register"](self.oauth)
+
+        for name, provider_config in OAUTH_PROVIDERS.items():
+            if "register" not in provider_config:
+                log.error(f"OAuth provider {name} missing register function")
+                continue
+
+            client = provider_config["register"](self.oauth)
+            self._clients[name] = client
 
     def get_client(self, provider_name):
         if provider_name not in self._clients:
@@ -615,8 +661,8 @@ class OAuthManager:
         if provider_name in self._clients:
             client = self._clients[provider_name]
             return (
-                client.server_metadata_url
-                if hasattr(client, "server_metadata_url")
+                client._server_metadata_url
+                if hasattr(client, "_server_metadata_url")
                 else None
             )
         return None
@@ -1135,6 +1181,8 @@ class OAuthManager:
                     except Exception as e:
                         log.warning(f"Error fetching GitHub email: {e}")
                         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+                elif ENABLE_OAUTH_EMAIL_FALLBACK:
+                    email = f"{provider_sub}.local"
                 else:
                     log.warning(f"OAuth callback failed, email is missing: {user_data}")
                     raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)

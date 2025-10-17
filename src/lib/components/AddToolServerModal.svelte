@@ -1,4 +1,9 @@
 <script lang="ts">
+	import { v4 as uuidv4 } from 'uuid';
+
+	import fileSaver from 'file-saver';
+	const { saveAs } = fileSaver;
+
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
@@ -27,10 +32,15 @@
 	export let direct = false;
 	export let connection = null;
 
-	let url = '';
-	let path = 'openapi.json';
+	let inputElement = null;
 
 	let type = 'openapi'; // 'openapi', 'mcp'
+
+	let url = '';
+
+	let spec_type = 'url'; // 'url', 'json'
+	let spec = ''; // used when spec_type is 'json'
+	let path = 'openapi.json';
 
 	let auth_type = 'bearer';
 	let key = '';
@@ -88,9 +98,16 @@
 			return;
 		}
 
-		if (path === '') {
-			toast.error($i18n.t('Please enter a valid path'));
-			return;
+		if (['openapi', ''].includes(type)) {
+			if (spec_type === 'json' && spec === '') {
+				toast.error($i18n.t('Please enter a valid JSON spec'));
+				return;
+			}
+
+			if (spec_type === 'url' && path === '') {
+				toast.error($i18n.t('Please enter a valid path'));
+				return;
+			}
 		}
 
 		if (direct) {
@@ -132,6 +149,84 @@
 		}
 	};
 
+	const importHandler = async (e) => {
+		const file = e.target.files[0];
+		if (!file) return;
+
+		const reader = new FileReader();
+		reader.onload = (event) => {
+			const json = event.target.result;
+			console.log('importHandler', json);
+
+			try {
+				let data = JSON.parse(json);
+				// validate data
+				if (Array.isArray(data)) {
+					if (data.length === 0) {
+						toast.error($i18n.t('Please select a valid JSON file'));
+						return;
+					}
+					data = data[0];
+				}
+
+				if (data.type) type = data.type;
+				if (data.url) url = data.url;
+
+				if (data.spec_type) spec_type = data.spec_type;
+				if (data.spec) spec = data.spec;
+				if (data.path) path = data.path;
+
+				if (data.auth_type) auth_type = data.auth_type;
+				if (data.key) key = data.key;
+
+				if (data.info) {
+					id = data.info.id ?? '';
+					name = data.info.name ?? '';
+					description = data.info.description ?? '';
+				}
+
+				if (data.config) {
+					enable = data.config.enable ?? true;
+					accessControl = data.config.access_control ?? {};
+				}
+
+				toast.success($i18n.t('Import successful'));
+			} catch (error) {
+				toast.error($i18n.t('Please select a valid JSON file'));
+			}
+		};
+		reader.readAsText(file);
+	};
+
+	const exportHandler = async () => {
+		// export current connection as json file
+		const json = JSON.stringify([
+			{
+				type,
+				url,
+
+				spec_type,
+				spec,
+				path,
+
+				auth_type,
+				key,
+
+				info: {
+					id: id,
+					name: name,
+					description: description
+				}
+			}
+		]);
+
+		const blob = new Blob([json], {
+			type: 'application/json'
+		});
+
+		saveAs(blob, `tool-server-${id || name || 'export'}.json`);
+	};
+
 	const submitHandler = async () => {
 		loading = true;
 
@@ -149,10 +244,26 @@
 			return;
 		}
 
+		// validate spec
+		if (spec_type === 'json') {
+			try {
+				const specJSON = JSON.parse(spec);
+				spec = JSON.stringify(specJSON, null, 2);
+			} catch (e) {
+				toast.error($i18n.t('Please enter a valid JSON spec'));
+				loading = false;
+				return;
+			}
+		}
+
 		const connection = {
-			url,
-			path,
 			type,
+			url,
+
+			spec_type,
+			spec,
+			path,
+
 			auth_type,
 			key,
 			config: {
@@ -173,9 +284,12 @@
 		show = false;
 
 		// reset form
-		url = '';
-		path = 'openapi.json';
 		type = 'openapi';
+		url = '';
+
+		spec_type = 'url';
+		spec = '';
+		path = 'openapi.json';
 
 		key = '';
 		auth_type = 'bearer';
@@ -191,10 +305,13 @@
 
 	const init = () => {
 		if (connection) {
+			type = connection?.type ?? 'openapi';
 			url = connection.url;
+
+			spec_type = connection?.spec_type ?? 'url';
+			spec = connection?.spec ?? '';
 			path = connection?.path ?? 'openapi.json';
 
-			type = connection?.type ?? 'openapi';
 			auth_type = connection?.auth_type ?? 'bearer';
 			key = connection?.key ?? '';
 
@@ -227,19 +344,47 @@
 					{$i18n.t('Add Connection')}
 				{/if}
 			</h1>
-			<button
-				class="self-center"
-				aria-label={$i18n.t('Close Configure Connection Modal')}
-				on:click={() => {
-					show = false;
-				}}
-			>
-				<XMark className={'size-5'} />
-			</button>
+
+			<div class="flex items-center gap-3">
+				<div class="flex gap-1.5 text-xs justify-end">
+					<button
+						class=" hover:underline"
+						type="button"
+						on:click={() => {
+							inputElement?.click();
+						}}
+					>
+						{$i18n.t('Import')}
+					</button>
+
+					<button class=" hover:underline" type="button" on:click={exportHandler}>
+						{$i18n.t('Export')}
+					</button>
+				</div>
+				<button
+					class="self-center"
+					aria-label={$i18n.t('Close Configure Connection Modal')}
+					on:click={() => {
+						show = false;
+					}}
+				>
+					<XMark className={'size-5'} />
+				</button>
+			</div>
 		</div>
 
 		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
+				<input
+					bind:this={inputElement}
+					type="file"
+					hidden
+					accept=".json"
+					on:change={(e) => {
+						importHandler(e);
+					}}
+				/>
+
 				<form
 					class="flex flex-col w-full"
 					on:submit={(e) => {
@@ -326,35 +471,81 @@
 										<Switch bind:state={enable} />
 									</Tooltip>
 								</div>
-
-								{#if ['', 'openapi'].includes(type)}
-									<div class="flex-1 flex items-center">
-										<label for="url-or-path" class="sr-only"
-											>{$i18n.t('openapi.json URL or Path')}</label
-										>
-										<input
-											class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-											type="text"
-											id="url-or-path"
-											bind:value={path}
-											placeholder={$i18n.t('openapi.json URL or Path')}
-											autocomplete="off"
-											required
-										/>
-									</div>
-								{/if}
 							</div>
 						</div>
 
 						{#if ['', 'openapi'].includes(type)}
-							<div
-								class={`text-xs mt-1 ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-							>
-								{$i18n.t(`WebUI will make requests to "{{url}}"`, {
-									url: path.includes('://')
-										? path
-										: `${url}${path.startsWith('/') ? '' : '/'}${path}`
-								})}
+							<div class="flex gap-2 mt-2">
+								<div class="flex flex-col w-full">
+									<div class="flex justify-between items-center mb-0.5">
+										<div class="flex gap-2 items-center">
+											<div
+												for="select-bearer-or-session"
+												class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+											>
+												{$i18n.t('OpenAPI Spec')}
+											</div>
+										</div>
+									</div>
+
+									<div class="flex gap-2">
+										<div class="flex-shrink-0 self-start">
+											<select
+												id="select-bearer-or-session"
+												class={`w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+												bind:value={spec_type}
+											>
+												<option value="url">{$i18n.t('URL')}</option>
+												<option value="json">{$i18n.t('JSON')}</option>
+											</select>
+										</div>
+
+										<div class="flex flex-1 items-center">
+											{#if spec_type === 'url'}
+												<div class="flex-1 flex items-center">
+													<label for="url-or-path" class="sr-only"
+														>{$i18n.t('openapi.json URL or Path')}</label
+													>
+													<input
+														class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+														type="text"
+														id="url-or-path"
+														bind:value={path}
+														placeholder={$i18n.t('openapi.json URL or Path')}
+														autocomplete="off"
+														required
+													/>
+												</div>
+											{:else if spec_type === 'json'}
+												<div
+													class={`text-xs w-full self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+												>
+													<label for="url-or-path" class="sr-only">{$i18n.t('JSON Spec')}</label>
+													<textarea
+														class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 text-black dark:text-white'}`}
+														bind:value={spec}
+														placeholder={$i18n.t('JSON Spec')}
+														autocomplete="off"
+														required
+														rows="5"
+													/>
+												</div>
+											{/if}
+										</div>
+									</div>
+
+									{#if ['', 'url'].includes(spec_type)}
+										<div
+											class={`text-xs mt-1 ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										>
+											{$i18n.t(`WebUI will make requests to "{{url}}"`, {
+												url: path.includes('://')
+													? path
+													: `${url}${path.startsWith('/') ? '' : '/'}${path}`
+											})}
+										</div>
+									{/if}
+								</div>
 							</div>
 						{/if}
 
@@ -566,35 +757,38 @@
 						</div>
 					{/if}
 
-					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
-						{#if edit}
-							<button
-								class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-900 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
-								type="button"
-								on:click={() => {
-									onDelete();
-									show = false;
-								}}
-							>
-								{$i18n.t('Delete')}
-							</button>
-						{/if}
-
-						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
-								? ' cursor-not-allowed'
-								: ''}"
-							type="submit"
-							disabled={loading}
-						>
-							{$i18n.t('Save')}
-
-							{#if loading}
-								<div class="ml-2 self-center">
-									<Spinner />
-								</div>
+					<div class="flex justify-between pt-3 text-sm font-medium gap-1.5">
+						<div></div>
+						<div class="flex gap-1.5">
+							{#if edit}
+								<button
+									class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-900 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+									type="button"
+									on:click={() => {
+										onDelete();
+										show = false;
+									}}
+								>
+									{$i18n.t('Delete')}
+								</button>
 							{/if}
-						</button>
+
+							<button
+								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
+									? ' cursor-not-allowed'
+									: ''}"
+								type="submit"
+								disabled={loading}
+							>
+								{$i18n.t('Save')}
+
+								{#if loading}
+									<div class="ml-2 self-center">
+										<Spinner />
+									</div>
+								{/if}
+							</button>
+						</div>
 					</div>
 				</form>
 			</div>

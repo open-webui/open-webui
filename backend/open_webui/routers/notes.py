@@ -180,6 +180,18 @@ async def update_note_by_id(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
 
+    # Check if user can share publicly
+    if (
+        user.role != "admin"
+        and form_data.access_control == None
+        and not has_permission(
+            user.id,
+            "sharing.public_notes",
+            request.app.state.config.USER_PERMISSIONS,
+        )
+    ):
+        form_data.access_control = {}
+
     try:
         note = Notes.update_note_by_id(id, form_data)
         await sio.emit(

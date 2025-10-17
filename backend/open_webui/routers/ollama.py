@@ -1090,6 +1090,10 @@ class GenerateEmbedForm(BaseModel):
     options: Optional[dict] = None
     keep_alive: Optional[Union[int, str]] = None
 
+    model_config = ConfigDict(
+        extra="allow",
+    )
+
 
 @router.post("/api/embed")
 @router.post("/api/embed/{url_idx}")
