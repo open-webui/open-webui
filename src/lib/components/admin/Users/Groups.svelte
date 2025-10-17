@@ -193,9 +193,9 @@
 
 					<div class="w-76">Users</div>
 
-					<div class="w-144">Last Active</div>
+					<div class="w-136">Last Active</div>
 
-					<div class="w-144">Created At</div>
+					<div class="w-136">Created At</div>
 					<div class="w-full">Actions</div>
 				</div>
 
