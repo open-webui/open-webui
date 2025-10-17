@@ -42,9 +42,25 @@ if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     exit 1
 fi
 
+# Detect if nginx is containerized
+NGINX_CONTAINERIZED=false
+NETWORK_CONFIG=""
+PORT_CONFIG="-p ${PORT}:8080"
+
+if docker ps --filter "name=openwebui-nginx" --format "{{.Names}}" | grep -q "^openwebui-nginx$"; then
+    NGINX_CONTAINERIZED=true
+    NETWORK_CONFIG="--network openwebui-network"
+    PORT_CONFIG=""  # No port mapping needed for containerized nginx
+    echo "✓ Detected containerized nginx - deploying on openwebui-network"
+    echo "  (No port mapping needed - container-to-container communication)"
+else
+    echo "ℹ️  Using host nginx mode - deploying with port mapping"
+fi
+
 docker_cmd="docker run -d \
     --name ${CONTAINER_NAME} \
-    -p ${PORT}:8080 \
+    ${PORT_CONFIG} \
+    ${NETWORK_CONFIG} \
     -e GOOGLE_CLIENT_ID=1063776054060-2fa0vn14b7ahi1tmfk49cuio44goosc1.apps.googleusercontent.com \
     -e GOOGLE_CLIENT_SECRET=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 \
     -e GOOGLE_REDIRECT_URI=${REDIRECT_URI} \
@@ -70,9 +86,24 @@ eval $docker_cmd
 
 if [ $? -eq 0 ]; then
     echo "✅ ${CLIENT_NAME} Open WebUI started successfully!"
-    echo "📱 Internal: http://localhost:${PORT}"
-    echo "🌐 External: https://${DOMAIN}"
+
+    if [ "$NGINX_CONTAINERIZED" = true ]; then
+        echo "🌐 Access: https://${DOMAIN}"
+        echo "   (Container accessible only via nginx - no direct port access)"
+    else
+        echo "📱 Internal: http://localhost:${PORT}"
+        echo "🌐 External: https://${DOMAIN}"
+    fi
+
     echo "📦 Volume: ${VOLUME_NAME}"
+    echo "🐳 Container: ${CONTAINER_NAME}"
+
+    if [ "$NGINX_CONTAINERIZED" = true ]; then
+        echo ""
+        echo "Next steps:"
+        echo "1. Configure nginx for ${DOMAIN} using client-manager.sh option 5"
+        echo "2. Set up SSL certificate for ${DOMAIN}"
+    fi
 else
     echo "❌ Failed to start container for ${CLIENT_NAME}"
     exit 1
