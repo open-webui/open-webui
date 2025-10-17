@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { onMount, getContext } from 'svelte';
+	import { onMount, onDestroy, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { showSidebar, user } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import { applyModeration, generateFollowUpPrompt, type ModerationResponse } from '$lib/apis/moderation';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -26,6 +27,25 @@
 		'Defer to Resources',
 		'Custom'
 	];
+
+	// Tooltips for each moderation strategy
+	const moderationTooltips: Record<string, string> = {
+		'Refuse Response and Explain': 'Decline to provide an answer when the question is inappropriate or harmful, with a clear explanation why.',
+		'Remove Harmful Phrases': 'Identify and remove any language that could be damaging, triggering, or inappropriate for children.',
+		'Omit Unprompted Suggestions': 'Remove any advice or suggestions that weren\'t specifically requested by the child.',
+		'Do Not Suggest Workarounds': 'Avoid providing alternative ways to accomplish potentially harmful or inappropriate goals.',
+		'Clarify Child\'s Intent': 'Ask clarifying questions to better understand what the child is really asking for or trying to achieve.',
+		'Emphasize Emotional Support': 'Focus on validating feelings and providing emotional comfort before offering practical advice.',
+		'Explain Problems in Prompt': 'Point out any concerning or problematic aspects of the child\'s question itself.',
+		'Emphasize Risk Awareness': 'Highlight potential dangers, consequences, or things to be cautious about in the situation.',
+		'Redirect with Alternatives': 'Suggest safer, healthier, or more appropriate alternative actions or perspectives.',
+		'Remind Model is Not Human': 'Clarify that the AI is not a person and has limitations in understanding complex human situations.',
+		'Encourage Introspection': 'Prompt the child to think deeper about their feelings, motivations, or the situation.',
+		'Tailor to Age Group': 'Adjust language complexity, examples, and advice to be appropriate for the child\'s age level.',
+		'Defer to Parents': 'Suggest that the child discuss this matter with their parents or guardians for guidance.',
+		'Defer to Resources': 'Recommend professional resources, hotlines, or trusted adults who can provide specialized help.',
+		'Custom': 'Create your own moderation instruction tailored to this specific scenario.'
+	};
 
 	// Scenarios for parent moderation practice
 	const scenarios = {
@@ -63,9 +83,18 @@
 		selectedModerations: Set<string>;
 		customInstructions: Array<{id: string, text: string}>;
 		showOriginal1: boolean;
+		hasInitialDecision: boolean;
+		acceptedOriginal: boolean;
+		attentionCheckSelected: boolean;
+		markedNotApplicable: boolean;
 	}
 	
 	let scenarioStates: Map<number, ScenarioState> = new Map();
+
+	// Timer state - track time spent on each scenario
+	let scenarioTimers: Map<number, number> = new Map(); // Store accumulated time in seconds
+	let timerInterval: NodeJS.Timeout | null = null;
+	let currentTimerStart: number | null = null;
 
 	// Current scenario state
 	let moderationLoading: boolean = false;
@@ -73,6 +102,7 @@
 	let showCustomModal: boolean = false;
 	let customInstructionInput: string = '';
 	let customInstructions: Array<{id: string, text: string}> = [];
+	let attentionCheckSelected: boolean = false;
 	
 	// Version management state
 	let versions: ModerationVersion[] = [];
@@ -94,7 +124,10 @@
 	// UI state
 	let showOriginal1: boolean = false;
 	let showConfirmationModal: boolean = false;
-	let moderationPanelVisible: boolean = true;
+	let moderationPanelVisible: boolean = false;
+	let hasInitialDecision: boolean = false;
+	let acceptedOriginal: boolean = false;
+	let markedNotApplicable: boolean = false;
 
 	// Helper function to handle text selection
 	function handleTextSelection(event: MouseEvent) {
@@ -182,6 +215,48 @@
 		return getHighlightedHTML(originalResponse1, highlightedTexts1);
 	})();
 
+	// Timer management functions
+	function startTimer(scenarioIndex: number) {
+		stopTimer(); // Stop any existing timer
+		currentTimerStart = Date.now();
+		
+		// Initialize timer for this scenario if it doesn't exist
+		if (!scenarioTimers.has(scenarioIndex)) {
+			scenarioTimers.set(scenarioIndex, 0);
+		}
+		
+		// Update timer every second
+		timerInterval = setInterval(() => {
+			if (currentTimerStart) {
+				const elapsed = Math.floor((Date.now() - currentTimerStart) / 1000);
+				const existingTime = scenarioTimers.get(scenarioIndex) || 0;
+				scenarioTimers = new Map(scenarioTimers.set(scenarioIndex, existingTime + elapsed));
+				currentTimerStart = Date.now(); // Reset start for next interval
+			}
+		}, 1000);
+	}
+	
+	function stopTimer() {
+		if (timerInterval) {
+			clearInterval(timerInterval);
+			timerInterval = null;
+		}
+		
+		// Save final elapsed time before stopping
+		if (currentTimerStart !== null) {
+			const elapsed = Math.floor((Date.now() - currentTimerStart) / 1000);
+			const existingTime = scenarioTimers.get(selectedScenarioIndex) || 0;
+			scenarioTimers = new Map(scenarioTimers.set(selectedScenarioIndex, existingTime + elapsed));
+			currentTimerStart = null;
+		}
+	}
+	
+	function formatTime(seconds: number): string {
+		const mins = Math.floor(seconds / 60);
+		const secs = seconds % 60;
+		return `${mins}:${secs.toString().padStart(2, '0')}`;
+	}
+
 	function saveCurrentScenarioState() {
 		const currentState: ScenarioState = {
 			versions: [...versions],
@@ -190,7 +265,11 @@
 			highlightedTexts1: [...highlightedTexts1],
 			selectedModerations: new Set(selectedModerations),
 			customInstructions: [...customInstructions],
-			showOriginal1
+			showOriginal1,
+			hasInitialDecision,
+			acceptedOriginal,
+			attentionCheckSelected,
+			markedNotApplicable
 		};
 		scenarioStates.set(selectedScenarioIndex, currentState);
 	}
@@ -212,9 +291,13 @@
 			selectedModerations = new Set(savedState.selectedModerations);
 			customInstructions = [...savedState.customInstructions];
 			showOriginal1 = savedState.showOriginal1;
+			hasInitialDecision = savedState.hasInitialDecision;
+			acceptedOriginal = savedState.acceptedOriginal;
+			attentionCheckSelected = savedState.attentionCheckSelected || false;
+			markedNotApplicable = savedState.markedNotApplicable || false;
 			
-			// Set moderation panel visibility based on confirmation state
-			moderationPanelVisible = confirmedVersionIndex === null;
+			// Set moderation panel visibility based on confirmation state and initial decision
+			moderationPanelVisible = confirmedVersionIndex === null && hasInitialDecision && !acceptedOriginal && !markedNotApplicable;
 			
 			// Auto-populate moderation panel if viewing a version
 			if (currentVersionIndex >= 0 && currentVersionIndex < versions.length) {
@@ -230,13 +313,20 @@
 			selectedModerations = new Set();
 			customInstructions = [];
 			showOriginal1 = false;
-			moderationPanelVisible = true;
+			moderationPanelVisible = false;
+			hasInitialDecision = false;
+			acceptedOriginal = false;
+			attentionCheckSelected = false;
+			markedNotApplicable = false;
 		}
 		
 		childPrompt1 = prompt;
 		originalResponse1 = response;
 		selectionButtonsVisible1 = false;
 		currentSelection1 = '';
+		
+		// Start timer for the new scenario
+		startTimer(index);
 	}
 
 	function resetConversation() {
@@ -247,7 +337,11 @@
 		selectedModerations = new Set();
 		customInstructions = [];
 		showOriginal1 = false;
-		moderationPanelVisible = true;
+		moderationPanelVisible = false;
+		hasInitialDecision = false;
+		acceptedOriginal = false;
+		attentionCheckSelected = false;
+		markedNotApplicable = false;
 		selectionButtonsVisible1 = false;
 		scenarioStates.delete(selectedScenarioIndex);
 	}
@@ -310,10 +404,23 @@
 			return;
 		}
 		
+		// Special handling for attention check
+		if (option === 'ATTENTION_CHECK') {
+			attentionCheckSelected = !attentionCheckSelected;
+			// Log attention check selection for research purposes
+			console.log('[ATTENTION_CHECK] Scenario:', selectedScenarioIndex, 'Selected:', attentionCheckSelected, 'Timestamp:', new Date().toISOString());
+			return;
+		}
+		
 		// Toggle selection for standard options and saved customs
 		if (selectedModerations.has(option)) {
 			selectedModerations.delete(option);
 		} else {
+			// Check if limit of 3 is reached
+			if (selectedModerations.size >= 3) {
+				toast.error('Limit of 3 moderation strategies per scenario');
+				return;
+			}
 			selectedModerations.add(option);
 		}
 		selectedModerations = selectedModerations;  // Trigger reactivity
@@ -353,16 +460,74 @@
 		customInstructionInput = '';
 	}
 
+	function acceptOriginalResponse() {
+		hasInitialDecision = true;
+		acceptedOriginal = true;
+		confirmedVersionIndex = -1; // Mark as confirmed (original accepted)
+		moderationPanelVisible = false;
+		highlightedTexts1 = []; // Clear any highlighted concerns
+		toast.success('Original response accepted');
+	}
+
+	function startModerating() {
+		hasInitialDecision = true;
+		acceptedOriginal = false;
+		confirmedVersionIndex = null; // Reset confirmation if changing from accepted
+		moderationPanelVisible = true;
+		showOriginal1 = true; // Show original so they can highlight text
+	}
+
+	function satisfiedWithOriginalFromPanel() {
+		// Mark as accepted and close panel
+		acceptOriginalResponse();
+		// Don't clear versions - keep them in case parent changes their mind
+		// Just hide them by showing original view
+		showOriginal1 = true;
+		// Log that they chose this from within the moderation panel
+		console.log('User selected "I\'m Satisfied With Original" from moderation panel');
+	}
+
+	function markNotApplicable() {
+		hasInitialDecision = true;
+		markedNotApplicable = true;
+		acceptedOriginal = false;
+		confirmedVersionIndex = -1; // Mark as decided
+		moderationPanelVisible = false;
+		toast.success('Scenario marked as not applicable');
+		console.log('User marked scenario as not applicable:', selectedScenarioIndex);
+	}
+
+	function unmarkNotApplicable() {
+		hasInitialDecision = false;
+		markedNotApplicable = false;
+		toast.info('Scenario unmarked - please make a decision');
+		console.log('User unmarked scenario as not applicable:', selectedScenarioIndex);
+	}
+
 	function clearSelections() {
 		selectedModerations.clear();
 		customInstructions = [];  // Clear custom instructions too
+		attentionCheckSelected = false;
 		selectedModerations = selectedModerations;  // Trigger reactivity
 	}
 
 	async function applySelectedModerations() {
-		if (selectedModerations.size === 0) {
+		// Check if only attention check is selected or no real strategies selected
+		if (selectedModerations.size === 0 && !attentionCheckSelected) {
 			toast.error('Please select at least one moderation strategy');
 			return;
+		}
+		
+		if (selectedModerations.size === 0 && attentionCheckSelected) {
+			toast.error('Please select at least one moderation strategy');
+			// Log attention check attempt for research
+			console.log('[ATTENTION_CHECK] User attempted to generate version with only attention check selected. Scenario:', selectedScenarioIndex);
+			return;
+		}
+
+		// Log if attention check is selected along with other strategies
+		if (attentionCheckSelected) {
+			console.log('[ATTENTION_CHECK] User selected attention check along with', selectedModerations.size, 'other strategies. Scenario:', selectedScenarioIndex);
 		}
 
 		console.log('Applying moderations:', Array.from(selectedModerations).join(', '));
@@ -415,6 +580,7 @@
 				// Clear current selections for next iteration
 				selectedModerations = new Set();
 				customInstructions = [];
+				attentionCheckSelected = false; // Clear attention check
 				
 				const total = standardStrategies.length + customTexts.length;
 				toast.success(`Created version ${versions.length} with ${total} moderation strateg${total === 1 ? 'y' : 'ies'}`);
@@ -432,6 +598,21 @@
 	function completeModeration() {
 		// Save current scenario state
 		saveCurrentScenarioState();
+		
+		// Count moderated scenarios (only those where a moderated version was confirmed)
+		let moderatedCount = 0;
+		scenarioStates.forEach((state) => {
+			// Only count as moderated if confirmedVersionIndex >= 0 (not -1 for original accepted)
+			if (state.confirmedVersionIndex !== null && state.confirmedVersionIndex >= 0) {
+				moderatedCount++;
+			}
+		});
+		
+		// Check if user has moderated at least 3 scenarios
+		if (moderatedCount < 3) {
+			toast.error('Must have at least 3 moderated scenarios');
+			return;
+		}
 		
 		// Show confirmation modal
 		showConfirmationModal = true;
@@ -455,6 +636,14 @@
 			goto('/kids/profile');
 			return;
 		}
+		
+		// Start timer for the initial scenario
+		startTimer(selectedScenarioIndex);
+	});
+	
+	onDestroy(() => {
+		// Clean up timer on component destroy
+		stopTimer();
 	});
 </script>
 
@@ -488,12 +677,6 @@
 				<div class="flex items-center text-xl font-semibold">
 					Moderation Scenarios
 				</div>
-				<button
-					on:click={completeModeration}
-					class="px-4 py-2 rounded-lg font-medium transition-all shadow-lg bg-purple-500 text-white hover:bg-purple-600"
-				>
-					✅ Done and Last Step
-				</button>
 			</div>
 		</div>
 	</nav>
@@ -502,18 +685,28 @@
 		<!-- Left Sidebar: Scenario List -->
 		<div class="w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-gray-50 dark:bg-gray-900">
 			<div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-800 p-4">
-				<h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">Scenarios</h2>
-				<p class="text-xs text-gray-600 dark:text-gray-400 mb-2">
-					Select a conversation to review
+				<h1 class="text-xl font-bold text-gray-900 dark:text-white">Scenarios</h1>
+				<p class="text-sm text-gray-600 dark:text-gray-400">
+					{(() => {
+						// Count reviewed scenarios (those with a decision made)
+						const reviewedCount = scenarioStates.size + (hasInitialDecision && !scenarioStates.has(selectedScenarioIndex) ? 1 : 0);
+						
+						// Count moderated scenarios (only those where a moderated version was confirmed)
+						let moderatedCount = 0;
+						scenarioStates.forEach((state) => {
+							// Only count as moderated if confirmedVersionIndex >= 0 (not -1 for original accepted)
+							if (state.confirmedVersionIndex !== null && state.confirmedVersionIndex >= 0) {
+								moderatedCount++;
+							}
+						});
+						// Check current scenario if it has a confirmed moderated version and isn't saved yet
+						if (!scenarioStates.has(selectedScenarioIndex) && confirmedVersionIndex !== null && confirmedVersionIndex >= 0) {
+							moderatedCount++;
+						}
+						
+						return `${reviewedCount} of ${scenarioList.length} reviewed, ${moderatedCount} moderated`;
+					})()}
 				</p>
-				<div class="flex items-center justify-between text-xs">
-					<span class="text-gray-500 dark:text-gray-400">
-						Total: {scenarioList.length}
-					</span>
-					<span class="px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 font-medium">
-						{scenarioStates.size + (versions.length > 0 && !scenarioStates.has(selectedScenarioIndex) ? 1 : 0)} Moderated
-					</span>
-				</div>
 			</div>
 
 			<div class="flex-1 overflow-y-auto p-3 space-y-2">
@@ -535,8 +728,8 @@
 								}">
 									{index + 1}
 								</div>
-								{#if scenarioStates.has(index) || (selectedScenarioIndex === index && versions.length > 0)}
-									<div class="absolute -top-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full" title="Has moderation work"></div>
+								{#if scenarioStates.has(index) || (selectedScenarioIndex === index && hasInitialDecision)}
+									<div class="absolute -top-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full" title="Reviewed"></div>
 								{/if}
 							</div>
 							
@@ -544,20 +737,30 @@
 								<p class="text-sm font-medium text-gray-900 dark:text-white line-clamp-2 leading-tight">
 									{prompt}
 								</p>
-								<p class="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 mt-1">
-									{response.substring(0, 50)}{response.length > 50 ? '...' : ''}
-								</p>
 							</div>
 						</div>
 						
-						{#if selectedScenarioIndex === index}
-							<div class="mt-2 flex items-center space-x-1 text-xs text-blue-600 dark:text-blue-400">
-								<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-									<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-								</svg>
-								<span>Currently viewing</span>
-							</div>
-						{/if}
+						<div class="mt-2 flex items-center justify-between">
+							{#if selectedScenarioIndex === index}
+								<div class="flex items-center space-x-1 text-xs text-blue-600 dark:text-blue-400">
+									<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+										<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+									</svg>
+									<span>Currently viewing</span>
+								</div>
+							{:else}
+								<div></div>
+							{/if}
+							
+							{#if scenarioTimers.has(index) && (scenarioTimers.get(index) || 0) > 0}
+								<div class="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
+									<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+										<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+									</svg>
+									<span>{formatTime(scenarioTimers.get(index) || 0)}</span>
+								</div>
+							{/if}
+						</div>
 					</button>
 				{/each}
 			</div>
@@ -579,7 +782,9 @@
 		<div class="flex-1 flex flex-col">
 			<div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-800 p-4">
 				<h1 class="text-xl font-bold text-gray-900 dark:text-white">Conversation Review</h1>
-				<p class="text-sm text-gray-600 dark:text-gray-400">Review and moderate AI responses</p>
+				<p class="text-sm text-gray-600 dark:text-gray-400">
+					Read the conversation below, then decide if you're satisfied with the AI's response, want to moderate it, or if it's not applicable to you.
+				</p>
 			</div>
 
 			<div class="flex-1 overflow-y-auto p-6 space-y-4">
@@ -630,25 +835,69 @@
 								</div>
 							{/if}
 							
-							<!-- Version Navigation and View Toggle -->
-							{#if versions.length > 0}
-								<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600 flex items-center justify-between">
-									<button
-										on:click={() => {
-											showOriginal1 = !showOriginal1;
-											// When switching back to moderated view, ensure we're showing a valid version
-											if (!showOriginal1 && currentVersionIndex < 0) {
-												currentVersionIndex = versions.length - 1;
-											}
-										}}
-										class="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center space-x-1"
-									>
-										<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+						<!-- Original Accepted Indicator -->
+						{#if acceptedOriginal}
+							<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
+								<div class="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
+									<div class="flex items-center space-x-2">
+										<svg class="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
 										</svg>
-										<span>{showOriginal1 ? 'View Moderated Version(s)' : 'View Original'}</span>
+										<span class="text-xs font-medium text-green-700 dark:text-green-300">
+											Original response accepted as satisfactory
+										</span>
+									</div>
+									<button
+										on:click={startModerating}
+										class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+									>
+										Change & Moderate
 									</button>
+								</div>
+							</div>
+						{/if}
+						
+					<!-- Not Applicable Indicator -->
+					{#if markedNotApplicable}
+						<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
+							<div class="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+								<div class="flex items-center space-x-2">
+									<svg class="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+									</svg>
+									<span class="text-xs font-medium text-gray-700 dark:text-gray-300">
+										Marked as not applicable
+									</span>
+								</div>
+								<button
+									on:click={unmarkNotApplicable}
+									class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+								>
+									Unmark
+								</button>
+							</div>
+						</div>
+					{/if}
+							
+						<!-- Version Navigation and View Toggle -->
+						{#if versions.length > 0 && !acceptedOriginal}
+							<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600 flex items-center justify-between">
+								<button
+									on:click={() => {
+										showOriginal1 = !showOriginal1;
+										// When switching back to moderated view, ensure we're showing a valid version
+										if (!showOriginal1 && currentVersionIndex < 0) {
+											currentVersionIndex = versions.length - 1;
+										}
+									}}
+									class="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center space-x-1"
+								>
+									<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+									</svg>
+									<span>{showOriginal1 ? 'View Moderated Version(s)' : 'View Original'}</span>
+								</button>
 									
 									<!-- Version Navigation Controls -->
 									<div class="flex items-center space-x-2 {showOriginal1 ? 'opacity-30 pointer-events-none' : ''}">
@@ -700,92 +949,167 @@
 								</div>
 							{/if}
 							
-							<!-- Applied Strategies Display (below response) -->
-							{#if versions.length > 0 && !showOriginal1 && currentVersionIndex >= 0 && currentVersionIndex < versions.length}
-								<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
-									<p class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-										Applied Strategies:
-									</p>
-									<div class="flex flex-wrap gap-1">
-										{#each versions[currentVersionIndex].strategies as strategy}
-											<span class="inline-flex items-center px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded">
-												{strategy}
-											</span>
-										{/each}
-										{#each versions[currentVersionIndex].customInstructions as custom}
-											<span class="inline-flex items-center px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 rounded">
-												Custom: {custom.text}
-											</span>
-										{/each}
-									</div>
+						<!-- Applied Strategies Display (below response) -->
+						{#if versions.length > 0 && !showOriginal1 && !acceptedOriginal && currentVersionIndex >= 0 && currentVersionIndex < versions.length}
+							<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
+								<p class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+									Applied Strategies:
+								</p>
+								<div class="flex flex-wrap gap-1">
+									{#each versions[currentVersionIndex].strategies as strategy}
+										<span class="inline-flex items-center px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded">
+											{strategy}
+										</span>
+									{/each}
+									{#each versions[currentVersionIndex].customInstructions as custom}
+										<span class="inline-flex items-center px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 rounded">
+											Custom: {custom.text}
+										</span>
+									{/each}
 								</div>
-							{/if}
+							</div>
+						{/if}
 						</div>
 					</div>
 
-				<!-- Confirmation Button -->
-				{#if versions.length > 0}
-					<div class="flex justify-center">
+			<!-- Initial Decision Buttons -->
+			{#if !hasInitialDecision}
+				<div class="flex justify-center mt-6">
+					<div class="flex flex-col sm:flex-row gap-3 w-full max-w-3xl px-4">
 						<button
-							on:click={confirmCurrentVersion}
-							class="px-6 py-2 rounded-lg font-medium transition-all duration-200 {
-								confirmedVersionIndex === null
-									? 'bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl'
-									: confirmedVersionIndex === currentVersionIndex
-									? 'bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl'
-									: 'bg-gray-400 text-gray-600 cursor-not-allowed'
-							}"
-							disabled={confirmedVersionIndex !== null && confirmedVersionIndex !== currentVersionIndex}
+							on:click={acceptOriginalResponse}
+							class="flex-1 px-6 py-4 rounded-lg font-medium transition-all duration-200 bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
 						>
-							{#if confirmedVersionIndex === null}
-								✓ Set as Preferred
-							{:else if confirmedVersionIndex === currentVersionIndex}
-								✓ Unconfirm
-							{:else}
-								Version Confirmed
-							{/if}
+							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+							</svg>
+							<span>I am satisfied with this response</span>
+						</button>
+						<button
+							on:click={startModerating}
+							class="flex-1 px-6 py-4 rounded-lg font-medium transition-all duration-200 bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+						>
+							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+							</svg>
+							<span>I'd like to moderate this response</span>
+						</button>
+						<button
+							on:click={markNotApplicable}
+							class="flex-1 px-6 py-4 rounded-lg font-medium transition-all duration-200 bg-gray-500 hover:bg-gray-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+						>
+							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+							</svg>
+							<span>This interaction is not applicable to me</span>
 						</button>
 					</div>
-				{/if}
+				</div>
+			{/if}
+
+			<!-- Confirmation Button -->
+			{#if versions.length > 0 && !showOriginal1}
+				<div class="flex justify-center">
+					<button
+						on:click={confirmCurrentVersion}
+						class="px-6 py-2 rounded-lg font-medium transition-all duration-200 {
+							confirmedVersionIndex === null
+								? 'bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl'
+								: confirmedVersionIndex === currentVersionIndex
+								? 'bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl'
+								: 'bg-gray-400 text-gray-600 cursor-not-allowed'
+						}"
+						disabled={confirmedVersionIndex !== null && confirmedVersionIndex !== currentVersionIndex}
+					>
+						{#if confirmedVersionIndex === null}
+							✓ Set as Preferred
+						{:else if confirmedVersionIndex === currentVersionIndex}
+							✓ Unconfirm
+						{:else}
+							Version Confirmed
+						{/if}
+					</button>
+				</div>
+			{/if}
 
 				<!-- Moderation Panel -->
 				{#if moderationPanelVisible}
 					<div class="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-						<h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Select Moderation Strategies</h3>
+						<h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">Select Moderation Strategies</h3>
+						<p class="text-xs text-gray-600 dark:text-gray-400 mb-3">
+							Choose up to 3 strategies to improve the AI's response. Hover over each option for details, or highlight concerning text in the original response above.
+						</p>
 						
-						<!-- Strategy Count -->
-						<div class="flex items-center justify-between mb-3">
-							<span class="text-xs text-gray-600 dark:text-gray-400">
-								{selectedModerations.size} selected
-							</span>
-							{#if selectedModerations.size > 0}
-								<button
-									on:click={clearSelections}
-									class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-								>
-									Clear All
-								</button>
-							{/if}
-						</div>
+					<!-- Strategy Count -->
+					<div class="flex items-center justify-between mb-3">
+						<span class="text-xs text-gray-600 dark:text-gray-400">
+							{selectedModerations.size} selected{selectedModerations.size === 3 ? ' (maximum reached)' : ''}
+						</span>
+						{#if selectedModerations.size > 0 || attentionCheckSelected}
+							<button
+								on:click={clearSelections}
+								class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+							>
+								Clear All
+							</button>
+						{/if}
+					</div>
 
-						<!-- Strategy Grid -->
-						<div class="grid grid-cols-3 gap-2 mb-3">
-							{#each moderationOptions as option}
+					<!-- Strategy Grid -->
+					<div class="grid grid-cols-3 gap-2">
+						{#each moderationOptions as option}
+							<Tooltip
+								content={moderationTooltips[option] || ''}
+								placement="top-end"
+								className="w-full"
+								tippyOptions={{ delay: [200, 0] }}
+							>
 								<button
 									on:click={() => toggleModerationSelection(option)}
 									disabled={moderationLoading}
-									class="p-3 text-xs font-medium text-center rounded-lg transition-all {
-										option === 'Custom'
-											? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600'
-											: selectedModerations.has(option)
+									class="w-full p-3 text-xs font-medium text-center rounded-lg transition-all {
+										selectedModerations.has(option)
 											? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400'
 											: 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600'
 									} disabled:opacity-50"
 								>
-									{option === 'Custom' ? '✨ Custom' : option}
+									{option === 'Custom' ? 'Create Custom' : option}
 								</button>
-							{/each}
-						</div>
+							</Tooltip>
+						{/each}
+					</div>
+					
+					<!-- Bottom Row: Attention Check and Satisfied Button -->
+					<div class="grid grid-cols-3 gap-2 mt-2 mb-3">
+						<!-- Attention Check Button (1 column) -->
+						<button
+							on:click={() => toggleModerationSelection('ATTENTION_CHECK')}
+							disabled={moderationLoading}
+							class="p-3 text-xs font-medium text-center rounded-lg transition-all {
+								attentionCheckSelected
+									? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400'
+									: 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600'
+							} disabled:opacity-50"
+						>
+							Select This Every Time
+						</button>
+						
+						<!-- Satisfied With Original Button (2 columns) -->
+						<Tooltip
+							content="Accept the original response without any modifications and close the moderation panel"
+							placement="top-end"
+							className="col-span-2 w-full"
+							tippyOptions={{ delay: [200, 0] }}
+						>
+							<button
+								on:click={satisfiedWithOriginalFromPanel}
+								disabled={moderationLoading}
+								class="w-full p-3 text-xs font-medium text-center rounded-lg transition-all bg-green-500 text-white hover:bg-green-600 shadow-md hover:shadow-lg disabled:opacity-50"
+							>
+								I'm Satisfied With Original
+							</button>
+						</Tooltip>
+					</div>
 
 						<!-- Custom Instructions -->
 						{#if customInstructions.length > 0}
@@ -842,7 +1166,7 @@
 						<!-- Apply Button -->
 						<button
 							on:click={applySelectedModerations}
-							disabled={moderationLoading || selectedModerations.size === 0}
+							disabled={moderationLoading || (selectedModerations.size === 0 && !attentionCheckSelected) || (selectedModerations.size === 0 && attentionCheckSelected)}
 							class="w-full px-4 py-2.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center space-x-2"
 						>
 							{#if moderationLoading}
@@ -855,6 +1179,49 @@
 					</div>
 				{/if}
 
+			</div>
+
+			<!-- Footer with Navigation -->
+			<div class="flex-shrink-0 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+				<div class="flex items-center justify-between">
+					<!-- Previous Scenario Button -->
+					{#if selectedScenarioIndex > 0}
+						<button
+							on:click={() => loadScenario(selectedScenarioIndex - 1)}
+							class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center space-x-2"
+						>
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+							</svg>
+							<span>Previous</span>
+						</button>
+					{:else}
+						<div></div>
+					{/if}
+
+					<!-- Next Scenario or Done Button -->
+					{#if selectedScenarioIndex < scenarioList.length - 1}
+						<button
+							on:click={() => loadScenario(selectedScenarioIndex + 1)}
+							class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center space-x-2"
+						>
+							<span>Next</span>
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+							</svg>
+						</button>
+					{:else}
+						<button
+							on:click={completeModeration}
+							class="px-6 py-2 text-sm font-medium rounded-lg transition-all shadow-lg bg-purple-500 text-white hover:bg-purple-600 flex items-center space-x-2"
+						>
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+							</svg>
+							<span>Done</span>
+						</button>
+					{/if}
+				</div>
 			</div>
 		</div>
 	</div>
@@ -937,3 +1304,4 @@
 		color: #fef3c7;
 	}
 </style>
+
