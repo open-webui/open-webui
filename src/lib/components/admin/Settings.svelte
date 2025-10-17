@@ -381,7 +381,7 @@
 		</button>
 
 		<button
-			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			class="px-0.5 py-1 min-w-0 rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 			'chatlifetime'
 				? ''
 				: ' text-gray-600 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -403,7 +403,7 @@
 					/>
 				</svg>
 			</div>
-			<div class=" self-center">{$i18n.t('Chat Lifetime')}</div>
+			<div class="self-center flex-1 leading-tight">{$i18n.t('Chat Lifetime')}</div>
 		</button>
 	</div>
 

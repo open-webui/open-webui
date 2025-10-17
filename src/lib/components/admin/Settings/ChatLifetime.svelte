@@ -186,21 +186,28 @@
 		<hr class=" dark:border-gray-850" />
 
 		<div class=" space-y-3">
-			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
-					{$i18n.t('Enable Chat Lifetime')}
-				</div>
-				<Tooltip
-					content={$i18n.t(
-						'When enabled, chats older than the specified number of days will be automatically deleted during cleanup operations.'
-					)}
-				>
+			<div class="flex flex-col w-full space-y-2">
+				<div class="flex justify-between items-center">
+					<div class="text-xs font-medium">
+						{$i18n.t('Enable Chat Lifetime')}
+					</div>
 					<Switch
 						state={config.enabled}
 						on:change={(e) => {
 							config.enabled = e.detail;
 						}}
 					/>
+				</div>
+				<Tooltip
+					content={$i18n.t(
+						'When enabled, chats older than the specified number of days will be automatically deleted during cleanup operations.'
+					)}
+				>
+					<div class="text-xs text-gray-400">
+						{$i18n.t(
+							'When enabled, chats older than the specified number of days will be automatically deleted during cleanup operations.'
+						)}
+					</div>
 				</Tooltip>
 			</div>
 
@@ -234,40 +241,42 @@
 					</div>
 				</div>
 
-				<div class="flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">
-						{$i18n.t('Preserve Pinned Chats')}
-					</div>
-					<Tooltip
-						content={$i18n.t(
-							'When enabled, pinned chats will be excluded from automatic cleanup even if they exceed the lifetime threshold.'
-						)}
-					>
+				<div class="flex flex-col w-full space-y-2">
+					<div class="flex justify-between items-center">
+						<div class="text-xs font-medium">
+							{$i18n.t('Preserve Pinned Chats')}
+						</div>
 						<Switch
 							state={config.preserve_pinned}
 							on:change={(e) => {
 								config.preserve_pinned = e.detail;
 							}}
 						/>
-					</Tooltip>
+					</div>
+					<div class="text-xs text-gray-400">
+						{$i18n.t(
+							'When enabled, pinned chats will be excluded from automatic cleanup even if they exceed the lifetime threshold.'
+						)}
+					</div>
 				</div>
 
-				<div class="flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">
-						{$i18n.t('Preserve Archived Chats')}
-					</div>
-					<Tooltip
-						content={$i18n.t(
-							'When enabled, archived chats will be excluded from automatic cleanup even if they exceed the lifetime threshold.'
-						)}
-					>
+				<div class="flex flex-col w-full space-y-2">
+					<div class="flex justify-between items-center">
+						<div class="text-xs font-medium">
+							{$i18n.t('Preserve Archived Chats')}
+						</div>
 						<Switch
 							state={config.preserve_archived}
 							on:change={(e) => {
 								config.preserve_archived = e.detail;
 							}}
 						/>
-					</Tooltip>
+					</div>
+					<div class="text-xs text-gray-400">
+						{$i18n.t(
+							'When enabled, archived chats will be excluded from automatic cleanup even if they exceed the lifetime threshold.'
+						)}
+					</div>
 				</div>
 			{/if}
 		</div>
