@@ -7,6 +7,52 @@ This guide walks you through deploying Open WebUI multi-tenant setup on a fresh 
 - Digital Ocean account
 - Domain name(s) configured with DNS pointing to your server
 - Google OAuth credentials (optional, for authentication)
+- SSH key pair for secure authentication
+
+## Security Note: Use a Dedicated Deployment User ⭐ Recommended
+
+**For production deployments, avoid using root**. Instead, create a dedicated deployment user with appropriate permissions.
+
+**Why?**
+- ✅ Better security (limited privileges)
+- ✅ Clear audit trail
+- ✅ Easier to manage and revoke access
+- ✅ Industry best practice
+
+**Two Options:**
+
+### Option A: Automated Setup (Cloud-Init) - Recommended for New Droplets
+
+Use cloud-init to automatically create the deployment user during droplet creation. See **[mt/setup/README.md](setup/README.md)** for detailed instructions.
+
+**Quick version:**
+1. Edit `mt/setup/cloud-init-user-data.yaml` with your SSH public key
+2. Paste the entire file as "User Data" when creating your droplet
+3. SSH as `deployer` user (root is automatically disabled)
+
+### Option B: Manual Setup - For Existing Droplets
+
+If you already created a droplet or prefer manual setup:
+
+```bash
+ssh root@YOUR_DROPLET_IP
+git clone https://github.com/imagicrafter/open-webui.git
+cd open-webui/mt/setup
+chmod +x create-deployment-user.sh
+sudo ./create-deployment-user.sh
+# Follow interactive prompts
+# Test SSH as deployer before disabling root
+```
+
+**See [mt/setup/README.md](setup/README.md) for complete documentation.**
+
+---
+
+**The rest of this guide uses `/root/` paths for simplicity. If using the deployer user (recommended), replace:**
+- `/root/` → `/home/deployer/` or `~/`
+- `ssh root@IP` → `ssh deployer@IP`
+
+---
 
 ## Step 1: Create Digital Ocean Droplet
 
