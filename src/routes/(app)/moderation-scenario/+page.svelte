@@ -4,30 +4,46 @@
 	import { showSidebar, user } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
-import { applyModeration, generateFollowUpPrompt, type ModerationResponse, upsertScenario, patchScenario, upsertAnswer, createVersion, confirmVersion } from '$lib/apis/moderation';
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { applyModeration, generateFollowUpPrompt, type ModerationResponse, upsertScenario, patchScenario, upsertAnswer, createVersion, confirmVersion } from '$lib/apis/moderation';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import { toggleTheme, getEffectiveTheme } from '$lib/utils/theme';
 
 	const i18n = getContext('i18n');
 
-	// Moderation options - matching the backend MODERATION_INSTRUCTIONS
-	const moderationOptions = [
-		'Refuse Response and Explain',
-		'Remove Harmful Phrases',
-		'Omit Unprompted Suggestions',
-		'Do Not Suggest Workarounds',
-		'Clarify Child\'s Intent',
-		'Emphasize Emotional Support',
-		'Explain Problems in Prompt',
-		'Emphasize Risk Awareness',
-		'Redirect with Alternatives',
-		'Remind Model is Not Human',
-		'Encourage Introspection',
-		'Tailor to Age Group',
-		'Defer to Parents',
-		'Defer to Resources',
-		'Custom'
-	];
+	// Moderation options - grouped by category
+	const moderationOptions = {
+		'Refuse and Remove': [
+			'Refuse Response and Explain',
+			'Remove Harmful Phrases',
+			'Omit Unprompted Suggestions',
+			'Do Not Suggest Workarounds'
+		],
+		'Investigate and Empathize': [
+			'Clarify Child\'s Intent',
+			'Emphasize Emotional Support'
+		],
+		'Correct their Understanding': [
+			'Explain Problems in Prompt',
+			'Emphasize Risk Awareness',
+			'Redirect with Alternatives',
+			'Remind Model is Not Human',
+			'Encourage Introspection'
+		],
+		'Match their Age': [
+			'Tailor to Age Group'
+		],
+		'Defer to Support': [
+			'Defer to Parents',
+			'Defer to Resources'
+		],
+		'Custom': [
+			'Custom'
+		]
+	};
+
+	// Convert to array for compatibility with existing code
+	$: moderationOptionsArray = Object.values(moderationOptions).flat();
 
 	// Tooltips for each moderation strategy
 	const moderationTooltips: Record<string, string> = {
@@ -66,6 +82,9 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 	
 	let selectedScenarioIndex: number = 0;
 	let scenarioList = Object.entries(scenarios);
+	
+	// Reactive statement to get effective theme
+	$: effectiveTheme = getEffectiveTheme();
 	
 	// Attention check helper
 	const ATTENTION_CHECK_PROMPT = "How are you doing with this interview?";
@@ -167,6 +186,7 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 	// UI state
 	let showOriginal1: boolean = false;
 	let showConfirmationModal: boolean = false;
+	let showResetConfirmationModal: boolean = false;
 	let moderationPanelVisible: boolean = false;
 	let highlightingMode: boolean = false;
 	let hasInitialDecision: boolean = false;
@@ -371,12 +391,31 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 			markedNotApplicable
 		};
 		scenarioStates.set(selectedScenarioIndex, currentState);
+		
+		// Save to localStorage for persistence across navigation
+		try {
+			const serializedStates = new Map();
+			scenarioStates.forEach((state, index) => {
+				serializedStates.set(index, {
+					...state,
+					selectedModerations: Array.from(state.selectedModerations) // Convert Set to Array for JSON
+				});
+			});
+			localStorage.setItem('moderationScenarioStates', JSON.stringify(Array.from(serializedStates.entries())));
+			localStorage.setItem('moderationScenarioTimers', JSON.stringify(Array.from(scenarioTimers.entries())));
+			localStorage.setItem('moderationCurrentScenario', selectedScenarioIndex.toString());
+			console.log('Saved moderation states to localStorage');
+		} catch (e) {
+			console.error('Failed to save moderation states to localStorage:', e);
+		}
 	}
 
 	function loadScenario(index: number) {
 		if (index === selectedScenarioIndex) return;
 		
+		// Save current state before switching
 		saveCurrentScenarioState();
+		
 		selectedScenarioIndex = index;
 		const [prompt, response] = scenarioList[index];
 		
@@ -423,9 +462,66 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 		
 		// Start timer for the new scenario
 		startTimer(index);
+		
+		// Save the new scenario state immediately
+		saveCurrentScenarioState();
+	}
+
+	function showResetConfirmation() {
+		showResetConfirmationModal = true;
+	}
+
+	function confirmReset() {
+		showResetConfirmationModal = false;
+		resetConversation();
+	}
+
+	function cancelReset() {
+		showResetConfirmationModal = false;
+	}
+
+	function loadSavedStates() {
+		try {
+			// Load scenario states
+			const savedStates = localStorage.getItem('moderationScenarioStates');
+			if (savedStates) {
+				const parsedStates = new Map(JSON.parse(savedStates));
+				scenarioStates.clear();
+				parsedStates.forEach((state: any, index: any) => {
+					scenarioStates.set(index, {
+						...state,
+						selectedModerations: new Set(state.selectedModerations) // Convert Array back to Set
+					});
+				});
+				console.log('Loaded saved scenario states from localStorage');
+			}
+			
+			// Load timers
+			const savedTimers = localStorage.getItem('moderationScenarioTimers');
+			if (savedTimers) {
+				scenarioTimers = new Map(JSON.parse(savedTimers));
+				console.log('Loaded saved timers from localStorage');
+			}
+			
+			// Load current scenario
+			const savedCurrentScenario = localStorage.getItem('moderationCurrentScenario');
+			if (savedCurrentScenario) {
+				const scenarioIndex = parseInt(savedCurrentScenario);
+				if (scenarioIndex >= 0 && scenarioIndex < scenarioList.length) {
+					selectedScenarioIndex = scenarioIndex;
+					const [prompt, response] = scenarioList[scenarioIndex];
+					childPrompt1 = prompt;
+					originalResponse1 = response;
+					console.log('Restored current scenario:', scenarioIndex);
+				}
+			}
+		} catch (e) {
+			console.error('Failed to load saved states from localStorage:', e);
+		}
 	}
 
 	function resetConversation() {
+		// Reset current scenario state
 		highlightedTexts1 = [];
 		versions = [];
 		currentVersionIndex = -1;
@@ -440,7 +536,29 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 		attentionCheckSelected = false;
 		markedNotApplicable = false;
 		selectionButtonsVisible1 = false;
-		scenarioStates.delete(selectedScenarioIndex);
+		
+		// Reset ALL scenario states
+		scenarioStates.clear();
+		
+		// Reset ALL timers
+		scenarioTimers.clear();
+		stopTimer();
+		
+		// Clear localStorage
+		localStorage.removeItem('moderationScenarioStates');
+		localStorage.removeItem('moderationScenarioTimers');
+		localStorage.removeItem('moderationCurrentScenario');
+		
+		// Reset to first scenario
+		selectedScenarioIndex = 0;
+		const [prompt, response] = scenarioList[0];
+		childPrompt1 = prompt;
+		originalResponse1 = response;
+		
+		// Start fresh timer for first scenario
+		startTimer(0);
+		
+		console.log('All scenarios reset - cleared states, timers, and returned to scenario 1');
 	}
 
 	// Version navigation functions
@@ -824,14 +942,36 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 	}
 
 	onMount(() => {
-	// Guard navigation if user tries to jump ahead
-	const step = parseInt(localStorage.getItem('assignmentStep') || '0');
-	if (step < 1) {
-		goto('/kids/profile');
-		return;
-	}
+		// Guard navigation if user tries to jump ahead
+		const step = parseInt(localStorage.getItem('assignmentStep') || '0');
+		if (step < 1) {
+			goto('/kids/profile');
+			return;
+		}
 		
-		// Start timer for the initial scenario
+		// Load saved states from localStorage
+		loadSavedStates();
+		
+		// Load the current scenario state if it exists
+		const savedState = scenarioStates.get(selectedScenarioIndex);
+		if (savedState) {
+			versions = [...savedState.versions];
+			currentVersionIndex = savedState.currentVersionIndex;
+			confirmedVersionIndex = savedState.confirmedVersionIndex;
+			highlightedTexts1 = [...savedState.highlightedTexts1];
+			selectedModerations = new Set(savedState.selectedModerations);
+			customInstructions = [...savedState.customInstructions];
+			showOriginal1 = savedState.showOriginal1;
+			hasInitialDecision = savedState.hasInitialDecision;
+			acceptedOriginal = savedState.acceptedOriginal;
+			attentionCheckSelected = savedState.attentionCheckSelected || false;
+			markedNotApplicable = savedState.markedNotApplicable || false;
+			
+			// Set moderation panel visibility based on confirmation state and initial decision
+			moderationPanelVisible = confirmedVersionIndex === null && hasInitialDecision && !acceptedOriginal && !markedNotApplicable;
+		}
+		
+		// Start timer for the current scenario
 		startTimer(selectedScenarioIndex);
 
 		// Bootstrap scenario persistence
@@ -850,9 +990,16 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 	});
 	
 	onDestroy(() => {
+		// Save current state before leaving
+		saveCurrentScenarioState();
 		// Clean up timer on component destroy
 		stopTimer();
 	});
+
+	// Reactive statements to save state when changes occur
+	$: if (highlightedTexts1.length > 0 || selectedModerations.size > 0 || customInstructions.length > 0 || hasInitialDecision || acceptedOriginal || markedNotApplicable) {
+		saveCurrentScenarioState();
+	}
 </script>
 
 <svelte:head>
@@ -884,6 +1031,29 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 		<div class="flex w-full items-center justify-between">
 			<div class="flex items-center text-xl font-semibold">
 				Moderation Scenarios
+			</div>
+			
+			<!-- Theme Toggle Button -->
+			<div class="flex items-center">
+				<button
+					class="flex cursor-pointer px-3 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition-all duration-200 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+					on:click={() => {
+						toggleTheme();
+					}}
+					aria-label={effectiveTheme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+				>
+					<div class="m-auto self-center">
+						{#if effectiveTheme === 'dark'}
+							<svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+							</svg>
+						{:else}
+							<svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+							</svg>
+						{/if}
+					</div>
+				</button>
 			</div>
 		</div>
 		</div>
@@ -987,13 +1157,13 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 			<div class="flex-shrink-0 border-t border-gray-200 dark:border-gray-800 p-4">
 				<button
-					on:click={resetConversation}
-					class="w-full px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors flex items-center justify-center space-x-2"
+					on:click={showResetConfirmation}
+					class="w-full px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex items-center justify-center space-x-2"
 				>
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
 					</svg>
-					<span>Reset Scenario</span>
+					<span>Restart All Scenarios</span>
 				</button>
 			</div>
 		</div>
@@ -1433,27 +1603,53 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 						{/if}
 					</div>
 
-				<!-- Strategy Grid -->
-				<div class="grid grid-cols-3 gap-2 mb-4">
-					{#each moderationOptions as option}
-							<Tooltip
-								content={moderationTooltips[option] || ''}
-								placement="top-end"
-								className="w-full"
-								tippyOptions={{ delay: [200, 0] }}
-							>
-								<button
-									on:click={() => toggleModerationSelection(option)}
-									disabled={moderationLoading}
-									class="w-full p-3 text-xs font-medium text-center rounded-lg transition-all min-h-[60px] flex items-center justify-center {
-										selectedModerations.has(option)
-											? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400'
-											: 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600'
-									} disabled:opacity-50"
-								>
-									{option === 'Custom' ? 'Create Custom' : option}
-								</button>
-				</Tooltip>
+				<!-- Grouped Strategy Options -->
+				<div class="space-y-6 mb-4">
+					{#each Object.entries(moderationOptions) as [category, options]}
+						<div class="border-2 {
+							category === 'Refuse and Remove' ? 'border-red-500 dark:border-red-600' :
+							category === 'Investigate and Empathize' ? 'border-blue-500 dark:border-blue-600' :
+							category === 'Correct their Understanding' ? 'border-green-500 dark:border-green-600' :
+							category === 'Match their Age' ? 'border-yellow-500 dark:border-yellow-600' :
+							category === 'Defer to Support' ? 'border-purple-500 dark:border-purple-600' :
+							'border-pink-500 dark:border-pink-600'
+						} rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
+							<h4 class="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center">
+								<span class="w-3 h-3 rounded-full mr-3 {
+									category === 'Refuse and Remove' ? 'bg-red-500' :
+									category === 'Investigate and Empathize' ? 'bg-blue-500' :
+									category === 'Correct their Understanding' ? 'bg-green-500' :
+									category === 'Match their Age' ? 'bg-yellow-500' :
+									category === 'Defer to Support' ? 'bg-purple-500' :
+									'bg-pink-500'
+								}"></span>
+								{category}
+							</h4>
+							<div class="grid grid-cols-2 gap-3">
+								{#each options as option}
+									<Tooltip
+										content={moderationTooltips[option] || ''}
+										placement="top-end"
+										className="w-full"
+										tippyOptions={{ delay: [200, 0] }}
+									>
+										<button
+											on:click={() => toggleModerationSelection(option)}
+											disabled={moderationLoading}
+											class="p-3 text-sm font-medium text-center rounded-lg transition-all min-h-[50px] flex items-center justify-center {
+												option === 'Custom'
+													? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-lg'
+													: selectedModerations.has(option)
+													? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400 shadow-lg'
+												: 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'
+											} disabled:opacity-50"
+										>
+											{option === 'Custom' ? '✨ Custom' : option}
+										</button>
+									</Tooltip>
+								{/each}
+							</div>
+						</div>
 					{/each}
 				</div>
 
@@ -1632,6 +1828,42 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 				class="px-6 py-3 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
 			>
 				No, Continue Working on Scenarios
+			</button>
+		</div>
+	</div>
+</div>
+{/if}
+
+<!-- Reset Confirmation Modal -->
+{#if showResetConfirmationModal}
+<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" on:click={cancelReset} role="dialog" aria-modal="true" aria-labelledby="reset-confirmation-modal-title">
+	<div class="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl" on:click|stopPropagation>
+		<div class="text-center mb-6">
+			<div class="w-16 h-16 bg-gradient-to-r from-red-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
+				<svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+				</svg>
+			</div>
+			<h3 id="reset-confirmation-modal-title" class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+				Restart All Scenarios?
+			</h3>
+			<p class="text-gray-600 dark:text-gray-400">
+				This will reset all your progress, including completed scenarios, timers, and moderation work. This action cannot be undone.
+			</p>
+		</div>
+
+		<div class="flex flex-col space-y-3">
+			<button
+				on:click={confirmReset}
+				class="bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+			>
+				Yes, Restart All Scenarios
+			</button>
+			<button
+				on:click={cancelReset}
+				class="px-6 py-3 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+			>
+				No, Keep My Progress
 			</button>
 		</div>
 	</div>

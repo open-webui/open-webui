@@ -321,36 +321,105 @@ $: {
 
 	let loading = true;
 	
-	// Parent mode toggle state
+	// Parent mode toggle state - persist in localStorage
 	let parentMode = false;
 
-	// Check for triggerParentMode flag on mount
+	// Check for triggerParentMode flag on mount and restore parentMode state
 	onMount(() => {
 		const triggerParentMode = localStorage.getItem('triggerParentMode');
 		if (triggerParentMode === 'true') {
 			parentMode = true;
 			localStorage.removeItem('triggerParentMode');
 		}
+		
+		// Restore parentMode state from localStorage if it exists
+		const savedParentMode = localStorage.getItem('parentMode');
+		if (savedParentMode === 'true') {
+			parentMode = true;
+		}
+		
+		// Restore scenario states from localStorage
+		const savedStates = localStorage.getItem('moderationScenarioStates');
+		if (savedStates) {
+			try {
+				const parsedStates = JSON.parse(savedStates);
+				scenarioStates = new Map(parsedStates.map(([index, state]) => [
+					index,
+					{
+						...state,
+						selectedModerations: new Set(state.selectedModerations), // Convert Array back to Set
+					}
+				]));
+				console.log('Loaded scenario states from localStorage:', scenarioStates.size, 'scenarios');
+				
+				// Restore the current scenario's state if it exists
+				const currentScenarioState = scenarioStates.get(selectedScenarioIndex);
+				if (currentScenarioState) {
+					highlightedTexts1 = [...currentScenarioState.highlightedTexts1];
+					moderationResult1 = currentScenarioState.moderationResult1;
+					highlightedTexts2 = [...currentScenarioState.highlightedTexts2];
+					moderationResult2 = currentScenarioState.moderationResult2;
+					childPrompt2 = currentScenarioState.childPrompt2;
+					originalResponse2 = currentScenarioState.originalResponse2;
+					showSecondPass = currentScenarioState.showSecondPass;
+					selectedModerations = new Set(currentScenarioState.selectedModerations);
+					customInstructions = [...currentScenarioState.customInstructions];
+					showOriginal1 = currentScenarioState.showOriginal1;
+					showOriginal2 = currentScenarioState.showOriginal2;
+					console.log('Restored current scenario state for index', selectedScenarioIndex);
+				}
+			} catch (e) {
+				console.error('Error parsing saved scenario states:', e);
+			}
+		} else {
+			console.log('No saved scenario states found in localStorage');
+		}
+
+		// Listen for save event before navigation
+		const handleSaveState = () => {
+			saveCurrentScenarioState();
+		};
+		
+		window.addEventListener('save-moderation-state', handleSaveState);
+		
+		return () => {
+			window.removeEventListener('save-moderation-state', handleSaveState);
+		};
 	});
 
 	// ====== PARENT MODE: MODERATION STATE ======
-	const moderationOptions = [
-		'Refuse Response and Explain',
-		'Remove Harmful Phrases',
-		'Omit Unprompted Suggestions',
-		'Do Not Suggest Workarounds',
-		'Clarify Child\'s Intent',
-		'Emphasize Emotional Support',
-		'Explain Problems in Prompt',
-		'Emphasize Risk Awareness',
-		'Redirect with Alternatives',
-		'Remind Model is Not Human',
-		'Encourage Introspection',
-		'Tailor to Age Group',
-		'Defer to Parents',
-		'Defer to Resources',
-		'Custom'
-	];
+	const moderationOptions = {
+		'Refuse and Remove': [
+			'Refuse Response and Explain',
+			'Remove Harmful Phrases',
+			'Omit Unprompted Suggestions',
+			'Do Not Suggest Workarounds'
+		],
+		'Investigate and Empathize': [
+			'Clarify Child\'s Intent',
+			'Emphasize Emotional Support'
+		],
+		'Correct their Understanding': [
+			'Explain Problems in Prompt',
+			'Emphasize Risk Awareness',
+			'Redirect with Alternatives',
+			'Remind Model is Not Human',
+			'Encourage Introspection'
+		],
+		'Match their Age': [
+			'Tailor to Age Group'
+		],
+		'Defer to Support': [
+			'Defer to Parents',
+			'Defer to Resources'
+		],
+		'Custom': [
+			'Custom'
+		]
+	};
+
+	// Convert to array for easier iteration
+	$: moderationCategories = Object.entries(moderationOptions);
 
 	// Scenarios for parent moderation practice
 	const scenarios = {
@@ -2793,6 +2862,9 @@ Key guidelines:
 					moderationResult2 = result;
 				}
 				
+				// Auto-save state after moderation is applied
+				saveCurrentScenarioState();
+				
 				const total = standardStrategies.length + customTexts.length;
 				toast.success(`Applied ${total} moderation strateg${total === 1 ? 'y' : 'ies'} (Pass ${passNumber})`);
 			} else {
@@ -2897,6 +2969,31 @@ Key guidelines:
 		};
 		
 		scenarioStates.set(selectedScenarioIndex, currentState);
+		
+		// Persist to localStorage for navigation persistence
+		const serializedStates = Array.from(scenarioStates.entries()).map(([index, state]) => [
+			index, 
+			{
+				...state,
+				selectedModerations: Array.from(state.selectedModerations), // Convert Set to Array for JSON
+				moderationResult1: state.moderationResult1 ? {
+					...state.moderationResult1,
+					// Ensure all properties are serializable
+				} : null,
+				moderationResult2: state.moderationResult2 ? {
+					...state.moderationResult2,
+					// Ensure all properties are serializable
+				} : null
+			}
+		]);
+		localStorage.setItem('moderationScenarioStates', JSON.stringify(serializedStates));
+		
+		// Debug: Log what we're saving
+		console.log('Saving scenario state for index', selectedScenarioIndex, ':', {
+			hasModerationResult1: !!moderationResult1,
+			hasModerationResult2: !!moderationResult2,
+			totalStates: scenarioStates.size
+		});
 	}
 
 	function loadScenario(index: number) {
@@ -3136,6 +3233,19 @@ Key guidelines:
 		return processedText;
 	}
 	
+	// Auto-save state whenever any moderation work changes
+	$: if (highlightedTexts1.length > 0 || highlightedTexts2.length > 0 || 
+		   moderationResult1 || moderationResult2 || 
+		   selectedModerations.size > 0 || customInstructions.length > 0) {
+		saveCurrentScenarioState();
+	}
+
+	// Save state before component is destroyed (when navigating away)
+	onDestroy(() => {
+		saveCurrentScenarioState();
+	});
+
+
 	// Reactive computed HTML for responses with highlights
 	$: response1HTML = (() => {
 		console.log('Computing response1HTML with:', {
@@ -3235,6 +3345,9 @@ Key guidelines:
 				<button
 					on:click={() => {
 						parentMode = !parentMode;
+						// Save parentMode state to localStorage
+						localStorage.setItem('parentMode', parentMode.toString());
+						
 						if (!parentMode) {
 							// When exiting parent mode, update assignment step to 3 (completed moderation)
 							localStorage.setItem('assignmentStep', '3');
@@ -3481,24 +3594,48 @@ Key guidelines:
 								{/if}
 							</div>
 
-						<!-- Strategy Grid (3 columns for better use of space) -->
-						<div class="grid grid-cols-3 gap-2 mb-3">
-								{#each moderationOptions as option}
-									<button
-										on:click={() => toggleModerationSelection(option)}
-										disabled={moderationLoading}
-									class="p-3 text-xs font-medium text-center rounded-lg transition-all {
-											option === 'Custom'
-												? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600'
-												: selectedModerations.has(option)
-												? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400'
-											: 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600'
-										} disabled:opacity-50"
-									>
-										{option === 'Custom' ? '✨ Custom' : option}
-									</button>
-								{/each}
-							</div>
+						<!-- Grouped Strategy Options -->
+						<div class="space-y-6 mb-4">
+							{#each moderationCategories as [category, options]}
+								<div class="border-2 {
+									category === 'Refuse and Remove' ? 'border-red-500 dark:border-red-600' :
+									category === 'Investigate and Empathize' ? 'border-blue-500 dark:border-blue-600' :
+									category === 'Correct their Understanding' ? 'border-green-500 dark:border-green-600' :
+									category === 'Match their Age' ? 'border-yellow-500 dark:border-yellow-600' :
+									category === 'Defer to Support' ? 'border-purple-500 dark:border-purple-600' :
+									'border-pink-500 dark:border-pink-600'
+								} rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
+									<h4 class="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center">
+										<span class="w-3 h-3 rounded-full mr-3 {
+											category === 'Refuse and Remove' ? 'bg-red-500' :
+											category === 'Investigate and Empathize' ? 'bg-blue-500' :
+											category === 'Correct their Understanding' ? 'bg-green-500' :
+											category === 'Match their Age' ? 'bg-yellow-500' :
+											category === 'Defer to Support' ? 'bg-purple-500' :
+											'bg-pink-500'
+										}"></span>
+										{category}
+									</h4>
+									<div class="grid grid-cols-2 gap-3">
+										{#each options as option}
+											<button
+												on:click={() => toggleModerationSelection(option)}
+												disabled={moderationLoading}
+												class="p-3 text-sm font-medium text-center rounded-lg transition-all min-h-[50px] flex items-center justify-center {
+													option === 'Custom'
+														? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-lg'
+														: selectedModerations.has(option)
+														? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400 shadow-lg'
+													: 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'
+												} disabled:opacity-50"
+											>
+												{option === 'Custom' ? '✨ Custom' : option}
+											</button>
+										{/each}
+									</div>
+								</div>
+							{/each}
+						</div>
 
 							<!-- Custom Instructions -->
 							{#if customInstructions.length > 0}
@@ -3728,24 +3865,34 @@ Key guidelines:
 							{/if}
 						</div>
 									
-									<!-- Strategy Grid (3 columns for better use of space) -->
-									<div class="grid grid-cols-3 gap-2 mb-3">
-										{#each moderationOptions as option}
-											<button
-												on:click={() => toggleModerationSelection(option)}
-												disabled={moderationLoading}
-												class="p-3 text-xs font-medium text-center rounded-lg transition-all {
-													option === 'Custom'
-														? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600'
-														: selectedModerations.has(option)
-														? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400'
-														: 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600'
-												} disabled:opacity-50"
-											>
-												{option === 'Custom' ? '✨ Custom' : option}
-											</button>
+									<!-- Grouped Strategy Options -->
+									<div class="space-y-4 mb-3">
+										{#each moderationCategories as [category, options]}
+											<div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+												<h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center">
+													<span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+													{category}
+												</h4>
+												<div class="grid grid-cols-2 gap-2">
+													{#each options as option}
+														<button
+															on:click={() => toggleModerationSelection(option)}
+															disabled={moderationLoading}
+															class="p-2 text-xs font-medium text-center rounded-lg transition-all {
+																option === 'Custom'
+																	? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600'
+																	: selectedModerations.has(option)
+																	? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400'
+																	: 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600'
+															} disabled:opacity-50"
+														>
+															{option === 'Custom' ? '✨ Custom' : option}
+														</button>
+													{/each}
+												</div>
+											</div>
 										{/each}
-					</div>
+									</div>
 									
 									<!-- Custom Instructions -->
 									{#if customInstructions.length > 0}

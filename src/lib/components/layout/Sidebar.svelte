@@ -90,6 +90,34 @@
 	let currentChild: ChildProfile | null = null;
 	let selectedChildIndex: number = 0;
 
+	// Reactive statement to update currentChild when childProfiles changes
+	$: {
+		if (childProfiles && childProfiles.length > 0) {
+			const currentChildId = childProfileSync.getCurrentChildId();
+			if (currentChildId) {
+				const index = childProfiles.findIndex(child => child.id === currentChildId);
+				if (index !== -1) {
+					selectedChildIndex = index;
+					currentChild = childProfiles[index];
+				} else {
+					// Current child ID doesn't exist in profiles, use first available
+					selectedChildIndex = 0;
+					currentChild = childProfiles[0];
+					childProfileSync.setCurrentChildId(childProfiles[0].id);
+				}
+			} else {
+				// No current child selected, use first available
+				selectedChildIndex = 0;
+				currentChild = childProfiles[0];
+				childProfileSync.setCurrentChildId(childProfiles[0].id);
+			}
+		} else {
+			// No child profiles available
+			currentChild = null;
+			selectedChildIndex = 0;
+		}
+	}
+
     // Assignment workflow state
     let assignmentStep: number = 1; // 1: child-profile, 2: moderation-scenario, 3: exit-survey
     let showAssignmentSetup: boolean = false;
@@ -619,6 +647,15 @@
 
 		loadCurrentPersonal();
 		await loadChildProfiles();
+		
+		// Listen for child profile changes
+		const handleChildProfileChange = () => {
+			loadChildProfiles();
+		};
+		window.addEventListener('child-profiles-updated', handleChildProfileChange);
+		
+		// Store the handler for cleanup
+		window._childProfileChangeHandler = handleChildProfileChange;
 	});
 
 	onDestroy(() => {
@@ -629,6 +666,11 @@
 		window.removeEventListener('touchend', onTouchEnd);
 
 		window.removeEventListener('focus', onFocus);
+		
+		// Clean up child profile change listener
+		if (window._childProfileChangeHandler) {
+			window.removeEventListener('child-profiles-updated', window._childProfileChangeHandler);
+		}
 		window.removeEventListener('blur', onBlur);
 
 		const dropZone = document.getElementById('sidebar');
@@ -1154,7 +1196,13 @@
 						<div class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {assignmentStep >= 1 && instructionsCompleted && unlock_kids ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}">
 							<button
 								class="flex items-center space-x-3 flex-1"
-								on:click={() => goto('/kids/profile')}
+								on:click={() => {
+									// Save current moderation state before navigating
+									if (typeof window !== 'undefined') {
+										window.dispatchEvent(new CustomEvent('save-moderation-state'));
+									}
+									goto('/kids/profile');
+								}}
 								disabled={assignmentStep < 1 || !instructionsCompleted || !unlock_kids}
 							>
 								<div class="self-center">
@@ -1262,6 +1310,33 @@
 
 		<div class="px-2">
 			<div class="flex flex-col font-primary">
+			
+			<!-- Child Profile Preview -->
+			{#if currentChild}
+				<div class="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+					<div class="flex items-center space-x-3">
+						<div class="flex-shrink-0">
+							<div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+								<span class="text-white font-semibold text-sm">
+									{currentChild.name?.charAt(0) || '👶'}
+								</span>
+							</div>
+						</div>
+						<div class="flex-1 min-w-0">
+							<p class="text-sm font-medium text-blue-900 dark:text-blue-100 truncate">
+								{currentChild.name}
+							</p>
+							<p class="text-xs text-blue-700 dark:text-blue-300">
+								Age: {currentChild.child_age || 'N/A'} • {currentChild.child_gender || 'N/A'}
+							</p>
+						</div>
+					</div>
+					<div class="mt-2 text-xs text-blue-600 dark:text-blue-400">
+						Survey participant
+					</div>
+				</div>
+			{/if}
+			
 			{#if $user !== undefined && $user !== null}
 				<UserMenu
 						role={$user?.role}

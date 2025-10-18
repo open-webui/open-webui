@@ -225,19 +225,20 @@
 						</Tooltip>
 					{/if}
 
-					<Tooltip content={effectiveTheme === 'dark' ? $i18n.t('Switch to Light Mode') : $i18n.t('Switch to Dark Mode')}>
+					<!-- Theme Toggle Button -->
+					<Tooltip content={effectiveTheme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
 						<button
-							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+							class="flex cursor-pointer px-3 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition-all duration-200 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
 							on:click={() => {
 								toggleTheme();
 							}}
 							aria-label={effectiveTheme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
 						>
-							<div class=" m-auto self-center">
+							<div class="m-auto self-center">
 								{#if effectiveTheme === 'dark'}
-									<Sun className=" size-5" strokeWidth="2" />
+									<Sun className="size-5 text-yellow-500" strokeWidth="2" />
 								{:else}
-									<Moon className=" size-5" strokeWidth="2" />
+									<Moon className="size-5 text-blue-600" strokeWidth="2" />
 								{/if}
 							</div>
 						</button>
