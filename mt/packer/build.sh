@@ -72,8 +72,8 @@ IMAGE_NAME="${IMAGE_NAME:-open-webui-multitenant}"
 read -p "Build region (default: nyc3): " REGION
 REGION="${REGION:-nyc3}"
 
-read -p "Droplet size (default: s-2vcpu-2gb): " SIZE
-SIZE="${SIZE:-s-2vcpu-2gb}"
+read -p "Droplet size (default: s-1vcpu-2gb): " SIZE
+SIZE="${SIZE:-s-1vcpu-2gb}"
 
 read -p "Repository branch (default: main): " BRANCH
 BRANCH="${BRANCH:-main}"

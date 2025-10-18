@@ -40,7 +40,7 @@ variable "region" {
 variable "size" {
   type        = string
   description = "Droplet size for building (recommend at least 2GB RAM)"
-  default     = "s-2vcpu-2gb"
+  default     = "s-1vcpu-2gb"
 }
 
 variable "repo_url" {
