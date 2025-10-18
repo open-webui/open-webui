@@ -17,10 +17,6 @@
 		mounted = true;
 	});
 
-	$: if (name === 'newChat' || name === 'search') {
-		isVisible = $settings?.showSidebarHotkeyHints !== false;
-	}
-
 	function formatKey(key: string): string {
 		const lowerKey = key.toLowerCase();
 

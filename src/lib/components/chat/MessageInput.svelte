@@ -1051,6 +1051,12 @@
 								dispatch('submit', prompt);
 							}}
 						>
+							<button
+								id="generate-message-pair-button"
+								class="hidden"
+								on:click={() => createMessagePair(prompt)}
+							/>
+
 							<div
 								id="message-input-container"
 								class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border {$temporaryChatEnabled
@@ -1253,24 +1259,6 @@
 
 															if (e.key === 'Escape') {
 																stopResponse();
-															}
-
-															// Command/Ctrl + Shift + Enter to submit a message pair
-															if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
-																e.preventDefault();
-																createMessagePair(prompt);
-															}
-
-															// Check if Ctrl + R is pressed
-															if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
-																e.preventDefault();
-																console.log('regenerate');
-
-																const regenerateButton = [
-																	...document.getElementsByClassName('regenerate-response-button')
-																]?.at(-1);
-
-																regenerateButton?.click();
 															}
 
 															if (prompt === '' && e.key == 'ArrowUp') {
