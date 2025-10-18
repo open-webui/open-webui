@@ -1356,9 +1356,23 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 			<div class="flex justify-center mt-6">
 				<div class="w-full max-w-md px-4">
 					<div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-						<p class="text-sm font-medium text-blue-900 dark:text-blue-200 mb-3 text-center">
-							If there is any text you would change in the prompt or response, if at all, please highlight it by dragging over it and then selecting "Highlight". If not, click "Done" to continue.
-						</p>
+						<div class="flex items-center justify-between mb-3">
+							<p class="text-sm font-medium text-blue-900 dark:text-blue-200">
+								If there is any text you would change in the prompt or response, if at all, please highlight it by dragging over it and then selecting "Highlight". If not, click "Done" to continue.
+							</p>
+							<button
+								on:click={() => {
+									highlightingMode = false;
+									hasInitialDecision = false;
+								}}
+								class="ml-3 px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 flex-shrink-0"
+							>
+								<svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+								</svg>
+								<span>Back</span>
+							</button>
+						</div>
 						<button
 							on:click={finishHighlighting}
 							class="w-full px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg transition-colors"
@@ -1419,7 +1433,20 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 				<div class="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
 					<div class="flex items-center justify-between mb-1">
 						<h3 class="text-sm font-semibold text-gray-900 dark:text-white">Select Moderation Strategies</h3>
-						<!-- Back button removed -->
+						<button
+							on:click={() => {
+								moderationPanelVisible = false;
+								highlightingMode = false;
+								hasInitialDecision = false;
+							}}
+							disabled={moderationLoading}
+							class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 disabled:opacity-50"
+						>
+							<svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+							</svg>
+							<span>Back</span>
+						</button>
 					</div>
 					<p class="text-xs text-gray-600 dark:text-gray-400 mb-3">
 						Choose up to 3 strategies to improve the AI's response. Hover over each option for details, or highlight concerning text in the original response above.
