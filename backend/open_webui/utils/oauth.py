@@ -401,8 +401,19 @@ class OAuthClientManager:
         return self.clients[client_id]
 
     def remove_client(self, client_id):
+        removed = False
         if client_id in self.clients:
             del self.clients[client_id]
+            removed = True
+        if hasattr(self.oauth, "_clients"):
+            if client_id in self.oauth._clients:
+                self.oauth._clients.pop(client_id, None)
+                removed = True
+        if hasattr(self.oauth, "_registry"):
+            if client_id in self.oauth._registry:
+                self.oauth._registry.pop(client_id, None)
+                removed = True
+        if removed:
             log.info(f"Removed OAuth client {client_id}")
         return True
 
