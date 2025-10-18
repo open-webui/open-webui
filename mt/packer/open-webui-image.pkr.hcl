@@ -67,6 +67,9 @@ source "digitalocean" "open-webui" {
   # Droplet settings
   droplet_name = "packer-build-open-webui-${formatdate("YYYYMMDDhhmmss", timestamp())}"
 
+  # SSH settings - increase timeout for cloud-init
+  ssh_timeout = "10m"
+
   # Tags for organization
   tags = ["packer", "open-webui", "golden-image"]
 }
@@ -81,8 +84,12 @@ build {
     inline = [
       "echo 'Waiting for cloud-init to complete...'",
       "cloud-init status --wait || true",
-      "sleep 10"
+      "echo 'Cloud-init finished. Waiting for system to stabilize...'",
+      "sleep 30"
     ]
+    # Retry if cloud-init is still running
+    max_retries = 3
+    pause_before = "30s"
   }
 
   # Update system and install base packages
