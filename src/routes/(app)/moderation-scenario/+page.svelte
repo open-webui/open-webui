@@ -1136,7 +1136,7 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 										on:click={unmarkSatisfaction}
 										class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
 									>
-										Unmark
+										Undo
 									</button>
 								</div>
 							</div>
@@ -1158,7 +1158,7 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 									on:click={unmarkNotApplicable}
 									class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
 								>
-									Unmark
+									Undo
 								</button>
 							</div>
 						</div>
