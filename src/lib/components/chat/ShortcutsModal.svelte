@@ -2,6 +2,7 @@
 	import { getContext, onMount } from 'svelte';
 	import Modal from '../common/Modal.svelte';
 	import { shortcuts } from '$lib/shortcuts';
+	import { settings } from '$lib/stores';
 	import ShortcutItem from './ShortcutItem.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
@@ -21,7 +22,15 @@
 
 	onMount(() => {
 		isMac = /Mac/i.test(navigator.userAgent);
-		const allShortcuts = Object.values(shortcuts);
+	});
+
+	$: {
+		const allShortcuts = Object.values(shortcuts).filter((shortcut) => {
+			if (!shortcut.setting) {
+				return true;
+			}
+			return $settings[shortcut.setting.id] === shortcut.setting.value;
+		});
 
 		const result = allShortcuts.reduce((acc, shortcut) => {
 			const category = shortcut.category;
@@ -32,20 +41,22 @@
 			return acc;
 		}, {});
 
+		const newCategorizedShortcuts = {};
 		for (const category in result) {
 			const half = Math.ceil(result[category].length / 2);
-			categorizedShortcuts[category] = {
+			newCategorizedShortcuts[category] = {
 				left: result[category].slice(0, half),
 				right: result[category].slice(half)
 			};
 		}
-	});
+		categorizedShortcuts = newCategorizedShortcuts;
+	}
 </script>
 
 <Modal bind:show>
 	<div class="text-gray-700 dark:text-gray-100">
 		<div class="flex justify-between dark:text-gray-300 px-5 pt-4">
-			<div class="text-lg font-medium self-center">{$i18n.t('Shortcuts')}</div>
+			<div class="text-lg font-medium self-center">{$i18n.t('Keyboard Shortcuts')}</div>
 			<button class="self-center" on:click={() => (show = false)}>
 				<XMark className={'size-5'} />
 			</button>

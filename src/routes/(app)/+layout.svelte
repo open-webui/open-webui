@@ -245,7 +245,7 @@ const setupKeyboardShortcuts = () => {
 						showShortcuts.set(false);
 						break;
 					case Shortcut.NEW_TEMPORARY_CHAT:
-							event.preventDefault();
+						event.preventDefault();
 						if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
 							temporaryChatEnabled.set(true);
 						} else {
@@ -256,14 +256,20 @@ const setupKeyboardShortcuts = () => {
 							document.getElementById('new-chat-button')?.click();
 						}, 0);
 						break;
-					case Shortcut.GENERATE_PROMPT_PAIR:
-						// Placeholder for future implementation
+					case Shortcut.GENERATE_MESSAGE_PAIR:
+						event.preventDefault();
+						document.getElementById('generate-message-pair-button')?.click();
+						break;
+
+					case Shortcut.REGENERATE_RESPONSE:
+						event.preventDefault();
+						[...document.getElementsByClassName('regenerate-response-button')]?.at(-1)?.click();
 						break;
 					case Shortcut.STOP_GENERATING:
 						// Placeholder for future implementation
 						break;
 					case Shortcut.PREVENT_FILE_CREATION:
-							// This shortcut is handled by the paste event in MessageInput.svelte
+						// This shortcut is handled by the paste event in MessageInput.svelte
 						break;
 				}
 			}

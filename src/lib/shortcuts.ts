@@ -1,9 +1,13 @@
 type ShortcutRegistry = {
-	[key in Shortcut]: {
+	[key in Shortcut]?: {
 		name: string;
 		keys: string[];
 		category: string;
 		tooltip?: string;
+		setting?: {
+			id: string;
+			value: any;
+		};
 	};
 };
 
@@ -12,7 +16,6 @@ export enum Shortcut {
 	NEW_CHAT = 'newChat',
 	NEW_TEMPORARY_CHAT = 'newTemporaryChat',
 	DELETE_CHAT = 'deleteChat',
-	GENERATE_PROMPT_PAIR = 'generatePromptPair',
 
 	//Global
 	SEARCH = 'search',
@@ -26,11 +29,15 @@ export enum Shortcut {
 	ACCEPT_AUTOCOMPLETE = 'acceptAutocomplete',
 	PREVENT_FILE_CREATION = 'preventFileCreation',
 	NAVIGATE_PROMPT_HISTORY_UP = 'navigatePromptHistoryUp',
+	SEND_MESSAGE_NORMAL = 'sendMessageNormal',
+	SEND_MESSAGE_MOD = 'sendMessageMod',
 	ATTACH_FILE = 'attachFile',
 	ADD_PROMPT = 'addPrompt',
 	TALK_TO_MODEL = 'talkToModel',
 
 	//Message
+	GENERATE_MESSAGE_PAIR = 'generateMessagePair',
+	REGENERATE_RESPONSE = 'regenerateResponse',
 	COPY_LAST_CODE_BLOCK = 'copyLastCodeBlock',
 	COPY_LAST_RESPONSE = 'copyLastResponse',
 	STOP_GENERATING = 'stopGenerating'
@@ -50,14 +57,8 @@ export const shortcuts: ShortcutRegistry = {
 	},
 	[Shortcut.DELETE_CHAT]: {
 		name: 'Delete Chat',
-		keys: ['mod', 'shift', 'Backspace'],
+		keys: ['mod', 'shift', 'Backspace', 'Delete'],
 		category: 'Chat'
-	},
-	[Shortcut.GENERATE_PROMPT_PAIR]: {
-		name: 'Generate Prompt Pair',
-		keys: ['mod', 'shift', 'Enter'],
-		category: 'Chat',
-        tooltip: 'Only active when the chat input is in focus and an LLM is generating a response.'
 	},
 
 	//Global
@@ -89,7 +90,7 @@ export const shortcuts: ShortcutRegistry = {
 
 	//Input
 	[Shortcut.FOCUS_INPUT]: {
-		name: 'Focus Text Area',
+		name: 'Focus Chat Input',
 		keys: ['shift', 'Escape'],
 		category: 'Input'
 	},
@@ -104,11 +105,25 @@ export const shortcuts: ShortcutRegistry = {
 		category: 'Input',
 		tooltip: 'Only active when "Paste Large Text as File" setting is toggled on.'
 	},
-	[Shortcut.NAVIGATE_PROMPT_HISTORY_UP]: {
-		name: 'Edit Last Message',
-		keys: ['ArrowUp'],
+	[Shortcut.SEND_MESSAGE_NORMAL]: {
+		name: 'Send Message',
+		keys: ['Enter'],
 		category: 'Input',
-        tooltip: 'Only can be triggered when the chat input is in focus.'
+		tooltip: 'The behavior of this shortcut is determined by the "Enter Key Behavior" setting.',
+		setting: {
+			id: 'ctrlEnterToSend',
+			value: false
+		}
+	},
+	[Shortcut.SEND_MESSAGE_MOD]: {
+		name: 'Send Message',
+		keys: ['mod', 'Enter'],
+		category: 'Input',
+		tooltip: 'The behavior of this shortcut is determined by the "Enter Key Behavior" setting.',
+		setting: {
+			id: 'ctrlEnterToSend',
+			value: true
+		}
 	},
 	[Shortcut.ATTACH_FILE]: {
 		name: 'Attach File From Knowledge',
@@ -127,14 +142,15 @@ export const shortcuts: ShortcutRegistry = {
 	},
 
 	//Message
-	[Shortcut.COPY_LAST_CODE_BLOCK]: {
-		name: 'Copy Last Code Block',
-		keys: ['mod', 'shift', 'Semicolon'],
-		category: 'Message'
+	[Shortcut.GENERATE_MESSAGE_PAIR]: {
+		name: 'Generate Message Pair',
+		keys: ['mod', 'shift', 'Enter'],
+		category: 'Message',
+		tooltip: 'Only active when the chat input is in focus.'
 	},
-	[Shortcut.COPY_LAST_RESPONSE]: {
-		name: 'Copy Last Response',
-		keys: ['mod', 'shift', 'KeyC'],
+	[Shortcut.REGENERATE_RESPONSE]: {
+		name: 'Regenerate Response',
+		keys: ['mod', 'KeyR'],
 		category: 'Message'
 	},
 	[Shortcut.STOP_GENERATING]: {
@@ -142,5 +158,21 @@ export const shortcuts: ShortcutRegistry = {
 		keys: ['Escape'],
 		category: 'Message',
 		tooltip: 'Only active when the chat input is in focus and an LLM is generating a response.'
+	},
+    	[Shortcut.NAVIGATE_PROMPT_HISTORY_UP]: {
+		name: 'Edit Last Message',
+		keys: ['ArrowUp'],
+		category: 'Message',
+        tooltip: 'Only can be triggered when the chat input is in focus.'
+	},
+	[Shortcut.COPY_LAST_RESPONSE]: {
+		name: 'Copy Last Response',
+		keys: ['mod', 'shift', 'KeyC'],
+		category: 'Message'
+	},
+    [Shortcut.COPY_LAST_CODE_BLOCK]: {
+		name: 'Copy Last Code Block',
+		keys: ['mod', 'shift', 'Semicolon'],
+		category: 'Message'
 	}
 };

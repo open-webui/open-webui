@@ -11,26 +11,39 @@
 	function formatKey(key: string): string {
 		const lowerKey = key.toLowerCase();
 
-		if (lowerKey === 'mod') return isMac ? '⌘' : 'Ctrl/⌘';
-		if (lowerKey === 'shift') return isMac ? '⇧' : 'Shift';
-		if (lowerKey === 'backspace') return '⌫/Delete';
-		if (lowerKey === 'escape') return 'Esc';
-		if (lowerKey === 'enter') return 'Enter';
-		if (lowerKey === 'tab') return 'Tab';
-		if (lowerKey === 'arrowup') return '↑';
-		if (lowerKey === 'arrowdown') return '↓';
-
-		// For keys like 'KeyK', 'KeyO', etc., we just want the last character.
-		if (lowerKey.startsWith('key')) return key.slice(-1);
-		// For keys like 'Digit2', 'Digit3', etc.
-		if (lowerKey.startsWith('digit')) return key.slice(-1);
-		// For other special keys
-		if (lowerKey === 'quote') return "'";
-		if (lowerKey === 'period') return '.';
-		if (lowerKey === 'slash') return '/';
-		if (lowerKey === 'semicolon') return ';';
-
-		return key.toUpperCase();
+		switch (lowerKey) {
+			case 'mod':
+				return isMac ? '⌘' : 'Ctrl';
+			case 'shift':
+				return isMac ? '⇧' : 'Shift';
+			case 'alt':
+				return isMac ? '⌥' : 'Alt';
+			case 'backspace':
+			case 'delete':
+				return isMac ? '⌫' : 'Delete';
+			case 'escape':
+				return 'Esc';
+			case 'enter':
+				return isMac ? '↩' : 'Enter';
+			case 'tab':
+				return isMac ? '⇥' : 'Tab';
+			case 'arrowup':
+				return '↑';
+			case 'arrowdown':
+				return '↓';
+			case 'quote':
+				return "'";
+			case 'period':
+				return '.';
+			case 'slash':
+				return '/';
+			case 'semicolon':
+				return ';';
+			default:
+				if (lowerKey.startsWith('key')) return key.slice(-1);
+				if (lowerKey.startsWith('digit')) return key.slice(-1);
+				return key.toUpperCase();
+		}
 	}
 </script>
 
@@ -46,8 +59,8 @@
 			{$i18n.t(shortcut.name)}
 		{/if}
 	</div>
-	<div class="flex-shrink-0 flex items-center self-center space-x-1 text-xs">
-		{#each shortcut.keys as key}
+	<div class="flex-shrink-0 flex flex-wrap justify-end items-center self-center space-x-1 text-xs">
+		{#each shortcut.keys.filter(key => !(key.toLowerCase() === 'delete' && shortcut.keys.includes('Backspace'))) as key}
 			<div
 				class="h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
 			>
