@@ -1289,7 +1289,7 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 		<!-- Initial Decision Buttons -->
 		{#if !hasInitialDecision}
 			<div class="flex justify-center mt-4">
-				<div class="flex flex-row space-x-2 w-full max-w-4xl px-4">
+				<div class="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 w-full max-w-4xl px-4">
 					<button
 						on:click={() => {
 							acceptOriginalResponse();
