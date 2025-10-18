@@ -1289,7 +1289,7 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 		<!-- Initial Decision Buttons -->
 		{#if !hasInitialDecision}
 			<div class="flex justify-center mt-4">
-				<div class="flex flex-col space-y-2 w-full max-w-md px-4">
+				<div class="flex flex-row space-x-2 w-full max-w-4xl px-4">
 					<button
 						on:click={() => {
 							acceptOriginalResponse();
@@ -1306,42 +1306,42 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 								console.error('Failed to persist satisfied decision', e);
 							}
 						}}
-						class="w-full px-6 py-4 rounded-lg font-medium transition-all duration-200 bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
-					>
-					<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-					</svg>
-					<span>I am not concerned with this response</span>
-				</button>
-				
-				<button
-					on:click={() => {
-						startModerating();
-						// Persist decision
-						try {
-							const scenarioId = `scenario_${selectedScenarioIndex}`;
-							upsertAnswer(localStorage.token, scenarioId, {
-								scenario_id: scenarioId,
-								question_key: 'satisfaction',
-								value: 'moderate',
-								answered_at: Date.now()
-							});
-						} catch (e) {
-							console.error('Failed to persist moderate decision', e);
-						}
-					}}
-					class="w-full px-6 py-4 rounded-lg font-medium transition-all duration-200 bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+					class="flex-1 px-6 py-4 rounded-lg font-medium transition-all duration-200 bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
 				>
-					<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-					</svg>
-					<span>I'd like to moderate this response</span>
-				</button>
-				
-				<button
-					on:click={markNotApplicable}
-					class="w-full px-6 py-4 rounded-lg font-medium transition-all duration-200 bg-gray-500 hover:bg-gray-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
-				>
+				<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+				</svg>
+				<span>I am not concerned with this response</span>
+			</button>
+			
+			<button
+				on:click={() => {
+					startModerating();
+					// Persist decision
+					try {
+						const scenarioId = `scenario_${selectedScenarioIndex}`;
+						upsertAnswer(localStorage.token, scenarioId, {
+							scenario_id: scenarioId,
+							question_key: 'satisfaction',
+							value: 'moderate',
+							answered_at: Date.now()
+						});
+					} catch (e) {
+						console.error('Failed to persist moderate decision', e);
+					}
+				}}
+				class="flex-1 px-6 py-4 rounded-lg font-medium transition-all duration-200 bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+			>
+				<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+				</svg>
+				<span>I'd like to moderate this response</span>
+			</button>
+			
+			<button
+				on:click={markNotApplicable}
+				class="flex-1 px-6 py-4 rounded-lg font-medium transition-all duration-200 bg-gray-500 hover:bg-gray-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+			>
 					<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
 					</svg>
