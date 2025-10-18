@@ -74,6 +74,8 @@ from mcp.shared.auth import (
     OAuthMetadata,
 )
 
+from authlib.oauth2.rfc6749.errors import OAuth2Error
+
 
 class OAuthClientInformationFull(OAuthClientMetadata):
     issuer: Optional[str] = None  # URL of the OAuth server that issued this client
@@ -148,6 +150,37 @@ def decrypt_data(data: str):
     except Exception as e:
         log.error(f"Error decrypting data: {e}")
         raise
+
+
+def _build_oauth_callback_error_message(exc: Exception) -> str:
+    """
+    Produce a user-facing callback error string with actionable context.
+    Keeps the message short and strips newlines for safe redirect usage.
+    """
+    if isinstance(exc, OAuth2Error):
+        parts = [p for p in [exc.error, exc.description] if p]
+        detail = " - ".join(parts)
+    elif isinstance(exc, HTTPException):
+        detail = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
+    elif isinstance(exc, aiohttp.ClientResponseError):
+        detail = f"Upstream provider returned {exc.status}: {exc.message}"
+    elif isinstance(exc, aiohttp.ClientError):
+        detail = str(exc)
+    elif isinstance(exc, KeyError):
+        missing = str(exc).strip("'")
+        if missing.lower() == "state":
+            detail = "Missing state parameter in callback (session may have expired)"
+        else:
+            detail = f"Missing expected key '{missing}' in OAuth response"
+    else:
+        detail = str(exc)
+
+    detail = detail.replace("\n", " ").strip()
+    if not detail:
+        detail = exc.__class__.__name__
+
+    message = f"OAuth callback failed: {detail}"
+    return message[:197] + "..." if len(message) > 200 else message
 
 
 def is_in_blocked_groups(group_name: str, groups: list) -> bool:
@@ -621,8 +654,14 @@ class OAuthClientManager:
                 error_message = "Failed to obtain OAuth token"
                 log.warning(error_message)
         except Exception as e:
-            error_message = "OAuth callback error"
-            log.warning(f"OAuth callback error: {e}")
+            error_message = _build_oauth_callback_error_message(e)
+            log.warning(
+                "OAuth callback error for user_id=%s client_id=%s: %s",
+                user_id,
+                client_id,
+                error_message,
+                exc_info=True,
+            )
 
         redirect_url = (
             str(request.app.state.config.WEBUI_URL or request.base_url)
@@ -630,7 +669,9 @@ class OAuthClientManager:
 
         if error_message:
             log.debug(error_message)
-            redirect_url = f"{redirect_url}/?error={error_message}"
+            redirect_url = (
+                f"{redirect_url}/?error={urllib.parse.quote_plus(error_message)}"
+            )
             return RedirectResponse(url=redirect_url, headers=response.headers)
 
         response = RedirectResponse(url=redirect_url, headers=response.headers)
@@ -1104,7 +1145,13 @@ class OAuthManager:
             try:
                 token = await client.authorize_access_token(request)
             except Exception as e:
-                log.warning(f"OAuth callback error: {e}")
+                detailed_error = _build_oauth_callback_error_message(e)
+                log.warning(
+                    "OAuth callback error during authorize_access_token for provider %s: %s",
+                    provider,
+                    detailed_error,
+                    exc_info=True,
+                )
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
             # Try to get userinfo from the token first, some providers include it there
