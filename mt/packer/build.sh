@@ -30,6 +30,16 @@ fi
 echo -e "${GREEN}✅ Packer version: $(packer version)${NC}"
 echo
 
+# Initialize Packer (download plugins)
+echo -e "${BLUE}Initializing Packer plugins...${NC}"
+if packer init open-webui-image.pkr.hcl; then
+    echo -e "${GREEN}✅ Plugins initialized${NC}"
+else
+    echo -e "${RED}❌ Failed to initialize plugins${NC}"
+    exit 1
+fi
+echo
+
 # Get Digital Ocean token
 if [ $# -ge 1 ]; then
     DO_TOKEN="$1"
