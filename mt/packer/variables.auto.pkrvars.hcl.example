@@ -1,0 +1,29 @@
+# Example Packer Variables File
+# Copy this to variables.auto.pkrvars.hcl and customize
+# (variables.auto.pkrvars.hcl is ignored by git)
+#
+# Usage:
+#   cp variables.auto.pkrvars.hcl.example variables.auto.pkrvars.hcl
+#   # Edit variables.auto.pkrvars.hcl with your values
+#   packer build open-webui-image.pkr.hcl
+
+# Digital Ocean API Token
+# Get from: https://cloud.digitalocean.com/account/api/tokens
+do_token = "your-digital-ocean-api-token-here"
+
+# Image name prefix (timestamp will be appended)
+image_name = "open-webui-multitenant"
+
+# Build region
+# Options: nyc1, nyc3, sfo3, ams3, sgp1, lon1, fra1, tor1, blr1, syd1
+region = "nyc3"
+
+# Droplet size for building (recommend at least 2GB RAM)
+# Options: s-1vcpu-1gb, s-2vcpu-2gb, s-2vcpu-4gb, s-4vcpu-8gb
+size = "s-2vcpu-2gb"
+
+# Repository URL (use your fork if customized)
+repo_url = "https://github.com/imagicrafter/open-webui.git"
+
+# Repository branch to clone
+repo_branch = "main"

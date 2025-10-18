@@ -1,0 +1,32 @@
+# Packer build artifacts
+*.box
+packer_cache/
+crash.log
+
+# Packer manifest
+manifest.json
+
+# Variables files with secrets
+variables.auto.pkrvars.hcl
+*.auto.pkrvars.hcl
+secrets.pkrvars.hcl
+
+# Terraform state (if used alongside)
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.log
