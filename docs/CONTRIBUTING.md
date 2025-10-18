@@ -74,6 +74,9 @@ To add a new language:
 - Copy the American English translation file(s) (from `en-US` directory in `src/lib/i18n/locale`) to this new directory and update the string values in JSON format according to your language. Make sure to preserve the structure of the JSON object.
 - Add the language code and its respective title to languages file at `src/lib/i18n/locales/languages.json`.
 
+> [!NOTE]
+> When adding new translations, do so in a standalone PR! Feature PRs or PRs fixing a bug should not contain translation updates. Always keep the scope of a PR narrow.
+
 ### 🤔 Questions & Feedback
 
 Got questions or feedback? Join our [Discord community](https://discord.gg/5rJgQTnV4s) or open an issue or discussion. We're here to help!
