@@ -69,7 +69,7 @@
 		return await language?.load();
 	};
 
-	export const formatPythonCodeHandler = async () => {
+	export const formatPythonCodeHandler = async (silent = false) => {
 		if (codeEditor) {
 			const res = await formatPythonCode(localStorage.token, _value).catch((error) => {
 				toast.error(`${error}`);
@@ -86,7 +86,9 @@
 				onChange(_value);
 				await tick();
 
-				toast.success($i18n.t('Code formatted successfully'));
+				if (!silent) {
+					toast.success($i18n.t('Code formatted successfully'));
+				}
 				return true;
 			}
 			return false;

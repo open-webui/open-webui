@@ -68,6 +68,7 @@ class PromptForm(BaseModel):
     content: str
     # access_control: Optional[dict] = None
     access_control: Optional[dict] = {}
+    assign_to_email: Optional[str] = None
 
 
 class PromptsTable:
@@ -77,7 +78,7 @@ class PromptsTable:
         prompt = PromptModel(
             **{
                 "user_id": user_id,
-                **form_data.model_dump(),
+                **form_data.model_dump(exclude={"assign_to_email"}),
                 "timestamp": int(time.time()),
             }
         )

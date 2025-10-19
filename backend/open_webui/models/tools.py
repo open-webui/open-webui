@@ -106,6 +106,7 @@ class ToolForm(BaseModel):
     meta: ToolMeta
     # access_control: Optional[dict] = None
     access_control: Optional[dict] = {}
+    assign_to_email: Optional[str] = None
 
 
 class ToolValves(BaseModel):
@@ -119,7 +120,7 @@ class ToolsTable:
         with get_db() as db:
             tool = ToolModel(
                 **{
-                    **form_data.model_dump(),
+                    **form_data.model_dump(exclude={"assign_to_email"}),
                     "specs": specs,
                     "user_id": user_id,
                     "created_by": user_email,

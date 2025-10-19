@@ -32,6 +32,7 @@
 	};
 	export let content = '';
 	export let accessControl;
+	export let tool = null;
 
 	let assignToEmail = '';
 	let allUsers = [];
@@ -41,6 +42,15 @@
 		'sm11538@nyu.edu', 'ms15138@nyu.edu', 'mb484@nyu.edu',
 		'cg4532@nyu.edu', 'jy4421@nyu.edu', 'ht2490@nyu.edu', 'ps5226@nyu.edu'
 	].includes($user.email);
+
+	// Set assignToEmail immediately based on context
+	$: if (isSuperAdmin) {
+		if (edit && tool?.created_by && !assignToEmail) {
+			assignToEmail = tool.created_by;
+		} else if (!edit && $user?.email && !assignToEmail) {
+			assignToEmail = $user.email;
+		}
+	}
 
 	let _content = '';
 
@@ -186,7 +196,7 @@ class Tools:
 			content = _content;
 			await tick();
 
-			const res = await codeEditor.formatPythonCodeHandler();
+			const res = await codeEditor.formatPythonCodeHandler(true);
 			await tick();
 
 			content = _content;
@@ -209,14 +219,12 @@ class Tools:
 				allUsers = await res.json();
 				adminUsers = allUsers.filter(u => u.role === 'admin');
 				
-				if (edit && id) {
-					const currentTool = await fetch(`${WEBUI_API_BASE_URL}/tools/id/${id}`, {
-						headers: { authorization: `Bearer ${localStorage.token}` }
-					}).then(r => r.json()).catch(() => null);
-					if (currentTool?.user_id) {
-						const owner = allUsers.find(u => u.id === currentTool.user_id);
-						if (owner) assignToEmail = owner.email;
-					}
+				if (edit && tool?.user_id) {
+					const owner = allUsers.find(u => u.id === tool.user_id);
+					if (owner) assignToEmail = owner.email;
+				} else if (!edit) {
+					// Default to current user when creating
+					assignToEmail = $user.email;
 				}
 			}
 		}
@@ -327,8 +335,8 @@ class Tools:
 							<select
 								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:bg-gray-850"
 								bind:value={assignToEmail}
+								required
 							>
-								<option value="">{$i18n.t('Myself')}</option>
 								{#each adminUsers as u}
 									<option value={u.email}>{u.name} ({u.email})</option>
 								{/each}

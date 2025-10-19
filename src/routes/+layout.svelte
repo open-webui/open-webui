@@ -599,4 +599,7 @@
 	richColors
 	position="top-right"
 	closeButton
+	toastOptions={{
+		style: 'z-index: 9999;'
+	}}
 />

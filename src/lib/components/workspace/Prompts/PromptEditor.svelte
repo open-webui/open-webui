@@ -34,6 +34,16 @@
 		'cg4532@nyu.edu', 'jy4421@nyu.edu', 'ht2490@nyu.edu', 'ps5226@nyu.edu'
 	].includes($user.email);
 
+	// Set assignToEmail based on context
+	$: if (isSuperAdmin) {
+		if (edit && prompt?.user_id && allUsers.length > 0 && !assignToEmail) {
+			const owner = allUsers.find(u => u.id === prompt.user_id);
+			if (owner) assignToEmail = owner.email;
+		} else if (!edit && $user?.email && !assignToEmail) {
+			assignToEmail = $user.email;
+		}
+	}
+
 	let showAccessControlModal = false;
 
 	$: if (!edit) {
@@ -88,6 +98,8 @@
 				if (edit && prompt?.user_id) {
 					const owner = allUsers.find(u => u.id === prompt.user_id);
 					if (owner) assignToEmail = owner.email;
+				} else if (!edit) {
+					assignToEmail = $user.email;
 				}
 			}
 		}
@@ -177,11 +189,16 @@
 				<select
 					class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:bg-gray-850"
 					bind:value={assignToEmail}
+					required
+					disabled={adminUsers.length === 0}
 				>
-					<option value="">{$i18n.t('Myself')}</option>
-					{#each adminUsers as u}
-						<option value={u.email}>{u.name} ({u.email})</option>
-					{/each}
+					{#if adminUsers.length === 0}
+						<option value="">{$i18n.t('Loading...')}</option>
+					{:else}
+						{#each adminUsers as u}
+							<option value={u.email}>{u.name} ({u.email})</option>
+						{/each}
+					{/if}
 				</select>
 				{#if assignToEmail}
 					<div class="text-xs text-gray-500 mt-1">

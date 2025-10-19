@@ -225,7 +225,7 @@ async def update_tools_by_id(
         specs = get_tools_specs(TOOLS[id])
 
         updated = {
-            **form_data.model_dump(exclude={"id"}),
+            **form_data.model_dump(exclude={"id", "assign_to_email"}),
             "specs": specs,
         }
 

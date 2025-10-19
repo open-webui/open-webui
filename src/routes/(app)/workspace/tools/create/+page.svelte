@@ -37,7 +37,8 @@
 			name: data.name,
 			meta: data.meta,
 			content: data.content,
-			access_control: data.access_control
+			access_control: data.access_control,
+			assign_to_email: data.assign_to_email
 		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;

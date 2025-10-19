@@ -99,6 +99,7 @@ class KnowledgeForm(BaseModel):
     data: Optional[dict] = None
     # access_control: Optional[dict] = None
     access_control: Optional[dict] = {}
+    assign_to_email: Optional[str] = None
 
 
 class KnowledgeTable:
@@ -108,7 +109,7 @@ class KnowledgeTable:
         with get_db() as db:
             knowledge = KnowledgeModel(
                 **{
-                    **form_data.model_dump(),
+                    **form_data.model_dump(exclude={"assign_to_email"}),
                     "id": str(uuid.uuid4()),
                     "user_id": user_id,
                     "created_at": int(time.time()),
@@ -201,7 +202,7 @@ class KnowledgeTable:
                 knowledge = self.get_knowledge_by_id(id=id)
                 db.query(Knowledge).filter_by(id=id).update(
                     {
-                        **form_data.model_dump(),
+                        **form_data.model_dump(exclude={"assign_to_email"}),
                         "updated_at": int(time.time()),
                     }
                 )

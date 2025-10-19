@@ -27,6 +27,11 @@
 		'cg4532@nyu.edu', 'jy4421@nyu.edu', 'ht2490@nyu.edu', 'ps5226@nyu.edu'
 	].includes($user.email);
 
+	// Set assignToEmail for creating
+	$: if (isSuperAdmin && !edit && $user?.email && !assignToEmail) {
+		assignToEmail = $user.email;
+	}
+
 	$: if (!edit && !clone && accessControl === undefined) {
 	// New tool: default to private access
 	accessControl = {
@@ -51,10 +56,8 @@
 			localStorage.token,
 			name,
 			description,
-			{
-				...accessControl,
-				assign_to_email: assignToEmail || undefined
-			}
+			accessControl,
+			assignToEmail || undefined
 		).catch((e) => {
 			toast.error(`${e}`);
 		});
@@ -76,6 +79,10 @@
 			if (res.ok) {
 				allUsers = await res.json();
 				adminUsers = allUsers.filter(u => u.role === 'admin');
+				
+				if (!edit) {
+					assignToEmail = $user.email;
+				}
 			}
 		}
 	});
@@ -152,8 +159,8 @@
 					<select
 						class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:bg-gray-850"
 						bind:value={assignToEmail}
+						required
 					>
-						<option value="">{$i18n.t('Myself')}</option>
 						{#each adminUsers as u}
 							<option value={u.email}>{u.name} ({u.email})</option>
 						{/each}

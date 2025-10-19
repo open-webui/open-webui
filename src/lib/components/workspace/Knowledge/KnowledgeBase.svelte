@@ -9,7 +9,8 @@
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { mobile, showSidebar, knowledge as _knowledge } from '$lib/stores';
+	import { mobile, showSidebar, knowledge as _knowledge, user } from '$lib/stores';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import { updateFileDataContentById, uploadFile, deleteFileById } from '$lib/apis/files';
 	import {
@@ -64,6 +65,22 @@
 	let showAddTextContentModal = false;
 	let showSyncConfirmModal = false;
 	let showAccessControlModal = false;
+
+	// Assignment dropdown state
+	let assignToEmail = '';
+	let allUsers = [];
+	let adminUsers = [];
+
+	$: isSuperAdmin = $user?.email && [
+		'sm11538@nyu.edu', 'ms15138@nyu.edu', 'mb484@nyu.edu',
+		'cg4532@nyu.edu', 'jy4421@nyu.edu', 'ht2490@nyu.edu', 'ps5226@nyu.edu'
+	].includes($user.email);
+
+	// Set assignToEmail when knowledge loads
+	$: if (isSuperAdmin && knowledge?.user_id && allUsers.length > 0 && !assignToEmail) {
+		const owner = allUsers.find(u => u.id === knowledge.user_id);
+		if (owner) assignToEmail = owner.email;
+	}
 
 	let inputFiles = null;
 
@@ -415,32 +432,26 @@
 		}
 	};
 
-	const changeDebounceHandler = () => {
-		console.log('debounce');
-		if (debounceTimeout) {
-			clearTimeout(debounceTimeout);
+	const saveHandler = async () => {
+		if (knowledge.name.trim() === '' || knowledge.description.trim() === '') {
+			toast.error($i18n.t('Please fill in all fields.'));
+			return;
 		}
 
-		debounceTimeout = setTimeout(async () => {
-			if (knowledge.name.trim() === '' || knowledge.description.trim() === '') {
-				toast.error($i18n.t('Please fill in all fields.'));
-				return;
-			}
+		const res = await updateKnowledgeById(localStorage.token, id, {
+			...knowledge,
+			name: knowledge.name,
+			description: knowledge.description,
+			access_control: knowledge.access_control,
+			assign_to_email: assignToEmail || undefined
+		}).catch((e) => {
+			toast.error(`${e}`);
+		});
 
-			const res = await updateKnowledgeById(localStorage.token, id, {
-				...knowledge,
-				name: knowledge.name,
-				description: knowledge.description,
-				access_control: knowledge.access_control
-			}).catch((e) => {
-				toast.error(`${e}`);
-			});
-
-			if (res) {
-				toast.success($i18n.t('Knowledge updated successfully'));
-				_knowledge.set(await getKnowledgeBases(localStorage.token));
-			}
-		}, 1000);
+		if (res) {
+			toast.success($i18n.t('Knowledge updated successfully'));
+			_knowledge.set(await getKnowledgeBases(localStorage.token));
+		}
 	};
 
 	const handleMediaQuery = async (e) => {
@@ -523,6 +534,17 @@
 		}
 
 		id = $page.params.id;
+
+		// Fetch users for assignment dropdown if super admin
+		if (isSuperAdmin) {
+			const usersRes = await fetch(`${WEBUI_API_BASE_URL}/users/`, {
+				headers: { authorization: `Bearer ${localStorage.token}` }
+			});
+			if (usersRes.ok) {
+				allUsers = await usersRes.json();
+				adminUsers = allUsers.filter(u => u.role === 'admin');
+			}
+		}
 
 		const res = await getKnowledgeById(localStorage.token, id).catch((e) => {
 			toast.error(`${e}`);
@@ -620,9 +642,6 @@
 		<AccessControlModal
 			bind:show={showAccessControlModal}
 			bind:accessControl={knowledge.access_control}
-			onChange={() => {
-				changeDebounceHandler();
-			}}
 			accessRoles={['read', 'write']}
 		/>
 		<div class="w-full mb-2.5">
@@ -635,13 +654,10 @@
 								class="text-left w-full font-semibold text-2xl font-primary bg-transparent outline-hidden"
 								bind:value={knowledge.name}
 								placeholder="Knowledge Name"
-								on:input={() => {
-									changeDebounceHandler();
-								}}
 							/>
 						</div>
 
-						<div class="self-center shrink-0">
+						<div class="self-center shrink-0 flex gap-2">
 							<button
 								class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
 								type="button"
@@ -655,6 +671,14 @@
 									{$i18n.t('Access')}
 								</div>
 							</button>
+
+							<button
+								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+								type="button"
+								on:click={saveHandler}
+							>
+								{$i18n.t('Save')}
+							</button>
 						</div>
 					</div>
 
@@ -664,11 +688,28 @@
 							class="text-left text-xs w-full text-gray-500 bg-transparent outline-hidden"
 							bind:value={knowledge.description}
 							placeholder="Knowledge Description"
-							on:input={() => {
-								changeDebounceHandler();
-							}}
 						/>
 					</div>
+
+					{#if isSuperAdmin}
+						<div class="mt-2 px-1">
+							<div class="text-xs font-semibold mb-1">{$i18n.t('Assign To')}</div>
+							<select
+								class="w-full rounded-lg py-1.5 px-2 text-xs bg-gray-50 dark:bg-gray-850"
+								bind:value={assignToEmail}
+								required
+							>
+								{#each adminUsers as u}
+									<option value={u.email}>{u.name} ({u.email})</option>
+								{/each}
+							</select>
+							{#if assignToEmail}
+								<div class="text-xs text-gray-500 mt-0.5">
+									{$i18n.t('Owner')}: {assignToEmail}
+								</div>
+							{/if}
+						</div>
+					{/if}
 				</div>
 			</div>
 		</div>
