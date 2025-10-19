@@ -13,7 +13,7 @@ dependencies = [
     "itsdangerous==2.2.0",
 
     "python-socketio==5.13.0",
-    "python-jose==3.4.0",
+    "python-jose==3.5.0",
     "cryptography",
     "bcrypt==5.0.0",
     "argon2-cffi==25.1.0",
