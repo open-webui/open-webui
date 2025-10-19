@@ -129,8 +129,8 @@ li p {
 }
 
 ::-webkit-scrollbar {
-	height: 0.8rem;
-	width: 0.8rem;
+	height: 0.6rem;
+	width: 0.6rem;
 }
 
 ::-webkit-scrollbar-track {
