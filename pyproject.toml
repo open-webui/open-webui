@@ -73,7 +73,7 @@ dependencies = [
     "pymdown-extensions==10.14.2",
     "docx2txt==0.8",
     "python-pptx==1.0.2",
-    "unstructured==0.16.17",
+    "unstructured==0.18.15",
     "nltk==3.9.1",
     "Markdown==3.9",
     "pypandoc==1.15",
