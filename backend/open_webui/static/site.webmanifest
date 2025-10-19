@@ -1,6 +1,6 @@
 {
-  "name": "Open WebUI",
-  "short_name": "WebUI",
+  "name": "Renobo WebUI",
+  "short_name": "Renobo",
   "icons": [
     {
       "src": "/static/web-app-manifest-192x192.png",
@@ -15,7 +15,7 @@
       "purpose": "maskable"
     }
   ],
-  "theme_color": "#ffffff",
-  "background_color": "#ffffff",
+  "theme_color": "#00A676",
+  "background_color": "#F7F9F9",
   "display": "standalone"
 }

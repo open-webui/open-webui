@@ -10,17 +10,38 @@ export default {
 			colors: {
 				// Renobo Brand Colors
 				primary: {
-					50: '#f0f8f2',
-					100: '#e8f5ea',
-					200: '#d4ead7',
-					300: '#a8d5b0',
-					400: '#6dc07f',
-					500: '#124a26',  // Primary Renobo Green
-					600: '#1a6b39',
-					700: '#2d8b4d',
-					800: '#4caf60',
-					900: '#0d3a1d',
-					950: '#061e0f'
+					50: '#e6f7f2',
+					100: '#ccefe5',
+					200: '#99dfcb',
+					300: '#66cfb1',
+					400: '#33bf97',
+					500: '#00A676',  // Primary Renobo Green
+					600: '#00855e',
+					700: '#007D63',  // Primary Dark
+					800: '#005340',
+					900: '#003a2d',
+					950: '#00261f'
+				},
+				background: {
+					DEFAULT: '#F7F9F9',  // Background color
+					dark: '#1B263B'      // Dark background (using text color)
+				},
+				text: {
+					DEFAULT: '#1B263B',  // Text color
+					light: '#F7F9F9'     // Light text (for dark backgrounds)
+				},
+				accent: {
+					DEFAULT: '#E0FBFC',  // Accent color
+					50: '#f7feff',
+					100: '#E0FBFC',
+					200: '#c4f6f8',
+					300: '#a7f2f4',
+					400: '#8bedf0',
+					500: '#6ee9ec',
+					600: '#4dd4d7',
+					700: '#3ab0b3',
+					800: '#2d888a',
+					900: '#1f5e60'
 				},
 				gray: {
 					50: 'var(--color-gray-50, #f9f9f9)',

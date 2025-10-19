@@ -1,24 +1,16 @@
-<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="faviconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#2563eb;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#10b981;stop-opacity:1" />
-    </linearGradient>
-  </defs>
+<svg width="200" height="60" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Icon: Stylized house with leaf (energy retrofit theme) -->
+  <g id="icon">
+    <!-- Background circle -->
+    <circle cx="30" cy="30" r="28" fill="#00A676"/>
+    
+    <!-- House shape -->
+    <path d="M30 15L45 25V42H15V25L30 15Z" fill="white" opacity="0.9"/>
+    
+    <!-- Leaf overlay (sustainability) -->
+    <path d="M35 28C35 28 38 30 40 28C42 26 40 23 38 24C36 25 35 28 35 28Z" fill="#E0FBFC"/>
+  </g>
 
-  <!-- Background circle -->
-  <circle cx="16" cy="16" r="16" fill="url(#faviconGradient)"/>
-
-  <!-- House icon -->
-  <!-- Roof -->
-  <path d="M16 8 L10 13 L10 12 L16 7 L22 12 L22 13 Z" fill="white"/>
-
-  <!-- Body -->
-  <path d="M11 13 L11 23 L21 23 L21 13 Z" fill="white" opacity="0.9"/>
-
-  <!-- Door -->
-  <rect x="14" y="18" width="4" height="5" fill="#2563eb"/>
-
-  <!-- Energy indicator -->
-  <circle cx="16" cy="15" r="1.5" fill="#f59e0b"/>
+  <!-- Renobo Text -->
+  <text x="65" y="40" font-family="Inter, sans-serif" font-size="26" font-weight="700" fill="#1B263B">Renobo</text>
 </svg>
