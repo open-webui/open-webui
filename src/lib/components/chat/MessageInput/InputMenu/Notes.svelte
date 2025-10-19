@@ -48,6 +48,14 @@
 					...note,
 					type: 'note',
 					name: note.title,
+					content: note.data,
+					file: {
+						data: {
+							content: note.data?.content?.md || ''
+						}
+					},
+					data: note.data,
+					url: `/notes/${note.id}`,
 					description: dayjs(note.updated_at / 1000000).fromNow()
 				};
 			})
@@ -100,6 +108,12 @@
 							<div class="line-clamp-1 flex-1">
 								{decodeString(item?.name)}
 							</div>
+
+							{#if item.content}
+								<div class="text-xs text-gray-500 line-clamp-2 pl-5.5">
+									{item.content}
+								</div>
+							{/if}
 						</Tooltip>
 					</div>
 				</button>

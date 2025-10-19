@@ -1,0 +1,129 @@
+<script lang="ts">
+	import { goto } from '$app/navigation';
+	import { getContext, createEventDispatcher, onMount, onDestroy } from 'svelte';
+	import DragGhost from '$lib/components/common/DragGhost.svelte';
+	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
+
+	import { mobile, showSidebar } from '$lib/stores';
+	import Document from '$lib/components/icons/Document.svelte';
+	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import NoteMenu from './NoteMenu.svelte'; // Import the new component
+
+	export let id;
+	export let title;
+	export let className = '';
+	export let folderId;
+
+	let itemElement;
+	let dragged = false;
+	let x = 0;
+	let y = 0;
+	const dragImage = new Image();
+	dragImage.src =
+		'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+	const onDragStart = (e, noteId, currentFolderId) => {
+		e.stopPropagation();
+		e.dataTransfer.setDragImage(dragImage, 0, 0);
+		e.dataTransfer.setData(
+			'text/plain',
+			JSON.stringify({
+				type: 'note',
+				id: id,
+				sourceFolderId: folderId
+			})
+		);
+		dragged = true;
+		e.dataTransfer.effectAllowed = 'move';
+		e.target.style.opacity = '0.5';
+		itemElement.style.opacity = '0.5'; // Optional: Visual cue to show it's being dragged
+	};
+
+	const onDrag = (event) => {
+		event.stopPropagation();
+
+		x = event.clientX;
+		y = event.clientY;
+	};
+
+	const onDragEnd = (e) => {
+		e.stopPropagation();
+		e.target.style.opacity = '1';
+		itemElement.style.opacity = '1'; // Reset visual cue after drag
+		dragged = false;
+	};
+
+	onMount(() => {
+		if (itemElement) {
+			//			document.addEventListener('click', onClickOutside, true);
+
+			// Event listener for when dragging starts
+			itemElement.addEventListener('dragstart', onDragStart);
+			// Event listener for when dragging occurs (optional)
+			itemElement.addEventListener('drag', onDrag);
+			// Event listener for when dragging ends
+			itemElement.addEventListener('dragend', onDragEnd);
+		}
+	});
+
+	onDestroy(() => {
+		if (itemElement) {
+			//			document.removeEventListener('click', onClickOutside, true);
+
+			itemElement.removeEventListener('dragstart', onDragStart);
+			itemElement.removeEventListener('drag', onDrag);
+			itemElement.removeEventListener('dragend', onDragEnd);
+		}
+	});
+</script>
+
+{#if dragged && x && y}
+	<DragGhost {x} {y}>
+		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-fit max-w-40">
+			<div class="flex items-center gap-1">
+				<Document className=" size-[18px]" strokeWidth="2" />
+				<div class=" text-xs text-white line-clamp-1">
+					{title}
+				</div>
+			</div>
+		</div>
+	</DragGhost>
+{/if}
+
+<div class="group relative">
+	<a
+		bind:this={itemElement}
+		draggable="true"
+		on:dragstart={onDragStart}
+		on:dragend={onDragEnd}
+		class="w-full flex justify-between rounded-xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+		href="/notes/{id}"
+		on:click={() => {
+			if ($mobile) {
+				showSidebar.set(!$showSidebar);
+			}
+		}}
+	>
+		<div class="flex flex-1 items-center gap-2 overflow-hidden">
+			<div class="flex-shrink-0">
+				<Document className="size-4" />
+			</div>
+			<div class="flex-1 text-sm line-clamp-1">
+				{title}
+			</div>
+		</div>
+	</a>
+
+	<div class="absolute right-2 top-1/2 -translate-y-1/2 invisible group-hover:visible">
+		<NoteMenu
+			on:remove={() => {
+				dispatch('remove', { id });
+			}}
+		>
+			<button class="p-1 hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg">
+				<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
+			</button>
+		</NoteMenu>
+	</div>
+</div>

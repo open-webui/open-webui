@@ -11,7 +11,7 @@
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 
-	import { chatId, mobile, selectedFolder, showSidebar } from '$lib/stores';
+	import { chatId, mobile, selectedFolder, showSidebar, chatListRefresh } from '$lib/stores';
 
 	import {
 		deleteFolderById,
@@ -27,6 +27,8 @@
 		importChat,
 		updateChatFolderIdById
 	} from '$lib/apis/chats';
+	import { getNoteById } from '$lib/apis/notes';
+	import { getKnowledgeById } from '$lib/apis/knowledge';
 
 	import ChevronDown from '../../icons/ChevronDown.svelte';
 	import ChevronRight from '../../icons/ChevronRight.svelte';
@@ -38,6 +40,8 @@
 
 	import ChatItem from './ChatItem.svelte';
 	import FolderMenu from './Folders/FolderMenu.svelte';
+	import NoteItem from './NoteItem.svelte';
+	import CollectionItem from './CollectionItem.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import FolderModal from './Folders/FolderModal.svelte';
 	import Emoji from '$lib/components/common/Emoji.svelte';
@@ -68,6 +72,10 @@
 	let clickTimer = null;
 
 	let name = '';
+
+	$: if ($chatListRefresh) {
+		setFolderItems();
+	}
 
 	const onDragOver = (e) => {
 		e.preventDefault();
@@ -127,7 +135,7 @@
 							const data = JSON.parse(dataTransfer);
 							console.log(data);
 
-							const { type, id, item } = data;
+							const { type, id, sourceFolderId, item } = data;
 
 							if (type === 'folder') {
 								open = true;
@@ -144,6 +152,58 @@
 
 								if (res) {
 									dispatch('update');
+								}
+							} else if (type === 'note') {
+								open = true;
+								// Get target folder
+								const folder = await getFolderById(localStorage.token, folderId);
+								const currentNotes = folder.data?.notes || [];
+
+								if (!currentNotes.includes(id)) {
+									// Add to target folder
+									const updatedData = {
+										...folder.data,
+										notes: [...currentNotes, id]
+									};
+
+									const res = await updateFolderById(localStorage.token, folderId, {
+										data: updatedData
+									}).catch((error) => {
+										toast.error(`${error}`);
+										return null;
+									});
+
+									if (res) {
+										// Remove from source folder if it exists and is different
+										if (sourceFolderId && sourceFolderId !== folderId) {
+											const sourceFolder = await getFolderById(localStorage.token, sourceFolderId);
+											const updatedSourceNotes = sourceFolder.data.notes.filter(
+												(noteId) => noteId !== id
+											);
+
+											await updateFolderById(localStorage.token, sourceFolderId, {
+												data: {
+													...sourceFolder.data,
+													notes: updatedSourceNotes
+												}
+											}).catch((error) => {
+												toast.error(`${error}`);
+											});
+
+											// Refresh source folder display
+											folderRegistry[sourceFolderId]?.setFolderItems();
+
+											onItemMove({
+												originFolderId: sourceFolderId,
+												targetFolderId: folderId,
+												e
+											});
+										}
+
+										// Refresh target folder display
+										folderRegistry[folderId]?.setFolderItems();
+										toast.success($i18n.t('Note moved to folder'));
+									}
 								}
 							} else if (type === 'chat') {
 								open = true;
@@ -184,6 +244,58 @@
 
 								if (res) {
 									dispatch('update');
+								}
+							} else if (type === 'collection') {
+								open = true;
+
+								// Get target folder
+								const folder = await getFolderById(localStorage.token, folderId);
+								const currentCollections = folder.data?.collections || [];
+
+								// Check if collection already exists in folder
+								if (currentCollections.includes(id)) {
+									toast.error($i18n.t('Collection already in folder'));
+									return;
+								}
+
+								// Add collection to folder
+								const updatedCollections = [...currentCollections, id];
+								const res = await updateFolderById(localStorage.token, folderId, {
+									data: {
+										...folder.data,
+										collections: updatedCollections
+									}
+								});
+
+								if (res) {
+									if (sourceFolderId && sourceFolderId !== folderId) {
+										const sourceFolder = await getFolderById(localStorage.token, sourceFolderId);
+										const updatedSourceCollections = sourceFolder.data.collections.filter(
+											(collectionId) => collectionId !== id
+										);
+
+										await updateFolderById(localStorage.token, sourceFolderId, {
+											data: {
+												...sourceFolder.data,
+												collections: updatedSourceCollections
+											}
+										}).catch((error) => {
+											toast.error(`${error}`);
+										});
+
+										// Refresh source folder display
+										folderRegistry[sourceFolderId]?.setFolderItems();
+
+										onItemMove({
+											originFolderId: sourceFolderId,
+											targetFolderId: folderId,
+											e
+										});
+									}
+
+									// Refresh target folder display
+									folderRegistry[folderId]?.setFolderItems();
+									toast.success($i18n.t('Collection added to folder'));
 								}
 							}
 						} catch (error) {
@@ -362,6 +474,9 @@
 	};
 
 	let chats = null;
+	let notes = null;
+	let collections = null;
+
 	export const setFolderItems = async () => {
 		await tick();
 		if (open) {
@@ -370,18 +485,40 @@
 				return [];
 			});
 
-			if ($selectedFolder?.id === folderId) {
-				const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
-					toast.error(`${error}`);
-					return null;
-				});
+			const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
 
+			if (folder && folder.data?.notes) {
+				const notePromises = folder.data.notes.map((noteId) =>
+					getNoteById(localStorage.token, noteId)
+				);
+				notes = await Promise.all(notePromises).catch(() => []);
+			} else {
+				notes = [];
+			}
+
+			if (folder?.data?.collections) {
+				// Fetch full collection data for each collection ID
+				collections = await Promise.all(
+					folder.data.collections.map(async (collectionId) => {
+						return await getKnowledgeById(localStorage.token, collectionId).catch(() => null);
+					})
+				).then((results) => results.filter((c) => c !== null));
+			} else {
+				collections = [];
+			}
+
+			if ($selectedFolder?.id === folderId) {
 				if (folder) {
-					await selectedFolder.set(folder);
+					selectedFolder.set(folder);
 				}
 			}
 		} else {
 			chats = null;
+			notes = null;
+			collections = null;
 		}
 	};
 
@@ -599,7 +736,7 @@
 		</div>
 
 		<div slot="content" class="w-full">
-			{#if (folders[folderId]?.childrenIds ?? []).length > 0 || (chats ?? []).length > 0}
+			{#if (folders[folderId]?.childrenIds ?? []).length > 0 || (chats ?? []).length > 0 || (notes ?? []).length > 0 || (collections ?? []).length > 0}
 				<div
 					class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
 				>
@@ -635,6 +772,72 @@
 						{/each}
 					{/if}
 
+					{#each collections ?? [] as collection (collection.id)}
+						<CollectionItem
+							id={collection.id}
+							name={collection.name}
+							{folderId}
+							on:remove={async (e) => {
+								const collectionId = e.detail.id;
+								const folder = await getFolderById(localStorage.token, folderId);
+
+								if (folder.data?.collections) {
+									const updatedCollections = folder.data.collections.filter(
+										(id) => id !== collectionId
+									);
+									const updatedData = {
+										...folder.data,
+										collections: updatedCollections
+									};
+
+									const res = await updateFolderById(localStorage.token, folderId, {
+										data: updatedData
+									}).catch((error) => {
+										toast.error(`${error}`);
+										return null;
+									});
+
+									if (res) {
+										setFolderItems();
+										toast.success($i18n.t('Collection removed from folder'));
+									}
+								}
+							}}
+						/>
+					{/each}
+
+					{#each notes ?? [] as note (note.id)}
+						<NoteItem
+							id={note.id}
+							title={note.title}
+							{folderId}
+							on:remove={async (e) => {
+								const noteId = e.detail.id;
+								const folder = await getFolderById(localStorage.token, folderId);
+
+								if (folder.data?.notes) {
+									const updatedNotes = folder.data.notes.filter((id) => id !== noteId);
+									const updatedData = {
+										...folder.data,
+										notes: updatedNotes
+									};
+
+									const res = await updateFolderById(localStorage.token, folderId, {
+										data: updatedData
+									}).catch((error) => {
+										toast.error(`${error}`);
+										return null;
+									});
+
+									if (res) {
+										setFolderItems();
+										toast.success($i18n.t('Note removed from folder'));
+									}
+								}
+							}}
+						/>
+					{/each}
+
 					{#each chats ?? [] as chat (chat.id)}
 						<ChatItem
 							id={chat.id}
@@ -648,7 +851,7 @@
 				</div>
 			{/if}
 
-			{#if chats === null}
+			{#if chats === null || notes === null || collections === null}
 				<div class="flex justify-center items-center p-2">
 					<Spinner className="size-4 text-gray-500" />
 				</div>

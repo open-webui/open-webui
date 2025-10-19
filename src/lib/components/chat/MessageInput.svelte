@@ -46,6 +46,9 @@
 	import { deleteFileById } from '$lib/apis/files';
 	import { getSessionUser } from '$lib/apis/auths';
 	import { getTools } from '$lib/apis/tools';
+	import { getNoteById } from '$lib/apis/notes';
+	import { getChatById } from '$lib/apis/chats';
+	import { getKnowledgeById } from '$lib/apis/knowledge';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
@@ -546,6 +549,11 @@
 			return null;
 		}
 
+		if (files.find((f) => f.name === file.name && f.size === file.size)) {
+			toast.error($i18n.t('File already attached'));
+			return null;
+		}
+
 		files = [...files, fileItem];
 
 		if (!$temporaryChatEnabled) {
@@ -727,11 +735,130 @@
 	const onDragOver = (e) => {
 		e.preventDefault();
 
-		// Check if a file is being dragged.
-		if (e.dataTransfer?.types?.includes('Files')) {
-			dragged = true;
-		} else {
-			dragged = false;
+		const hasFiles = e.dataTransfer?.types?.includes('Files');
+		const hasText = e.dataTransfer?.types?.includes('text/plain');
+
+		// Only update if the state actually needs to change, it fix blinking
+		const shouldShowOverlay = hasFiles || hasText;
+		if (dragged !== shouldShowOverlay) {
+			dragged = shouldShowOverlay;
+		}
+	};
+
+	const attachNoteToChat = async (noteId: string) => {
+		// Check for duplicates
+		if (files.find((f) => f.type === 'note' && f.id === noteId)) {
+			toast.error($i18n.t('Note already attached'));
+			return false;
+		}
+
+		// Fetch the full note
+		const note = await getNoteById(localStorage.token, noteId).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (!note) {
+			return false;
+		}
+
+		// Create the file object (matching InputMenu pattern)
+		const noteFile = {
+			type: 'note',
+			id: note.id,
+			name: note.title,
+			file: {
+				data: {
+					content: note.data?.content?.md || ''
+				}
+			},
+			data: note.data,
+			url: `/notes/${note.id}`,
+			status: 'processed',
+			collection_name: null
+		};
+
+		// Add to files array
+		files = [...files, noteFile];
+
+		toast.success($i18n.t('Note added to chat'));
+		return true;
+	};
+
+	const attachChatToChat = async (chatId: string) => {
+		// Check for duplicates
+		if (files.find((f) => f.type === 'chat' && f.id === chatId)) {
+			toast.error($i18n.t('Chat already attached'));
+			return;
+		}
+
+		// Fetch chat metadata (title, etc.)
+		const chat = await getChatById(localStorage.token, chatId);
+
+		if (!chat) {
+			toast.error($i18n.t('Chat not found'));
+			return;
+		}
+
+		// Create file reference object (NOT the full content)
+		files = [
+			...files,
+			{
+				type: 'chat',
+				id: chat.id,
+				name: chat.title || 'Untitled Chat',
+				collection_name: chat.id,
+				status: 'processed',
+				url: `/c/${chat.id}`,
+				file: {
+					data: {
+						content: chat.chat?.history?.messages
+							? Object.values(chat.chat.history.messages)
+									.map((msg) => `${msg.role}: ${msg.content}`)
+									.join('\n\n')
+							: ''
+					}
+				}
+			}
+		];
+
+		toast.success($i18n.t('Chat added to chat'));
+	};
+
+	const attachKnowledgeToChat = async (knowledgeId: string) => {
+		// Check for duplicates
+		if (files.find((f) => f.type === 'collection' && f.id === knowledgeId)) {
+			toast.error($i18n.t('Knowledge already attached'));
+			return;
+		}
+
+		try {
+			// Fetch the knowledge base
+			const knowledge = await getKnowledgeById(localStorage.token, knowledgeId);
+
+			if (!knowledge) {
+				toast.error($i18n.t('Knowledge not found'));
+				return;
+			}
+
+			// Add as file reference
+			files = [
+				...files,
+				{
+					type: 'collection',
+					id: knowledge.id,
+					name: knowledge.name,
+					collection_name: knowledge.id,
+					status: 'processed',
+					url: `/workspace/knowledge/${knowledge.id}`,
+					description: knowledge.description
+				}
+			];
+
+			toast.success($i18n.t('Knowledge attached to chat'));
+		} catch (error) {
+			console.error('Error attaching knowledge:', error);
+			toast.error($i18n.t('Failed to attach knowledge'));
 		}
 	};
 
@@ -742,7 +869,32 @@
 	const onDrop = async (e) => {
 		e.preventDefault();
 		console.log(e);
+		e.stopPropagation();
 
+		const dataTransfer = e.dataTransfer?.getData('text/plain');
+
+		if (dataTransfer) {
+			try {
+				const data = JSON.parse(dataTransfer);
+				if (data.type === 'note') {
+					await attachNoteToChat(data.id);
+					dragged = false;
+					return;
+				}
+				if (data.type === 'chat') {
+					await attachChatToChat(data.id);
+					dragged = false;
+					return;
+				}
+				if (data.type === 'collection') {
+					await attachKnowledgeToChat(data.id);
+					dragged = false;
+					return;
+				}
+			} catch (error) {
+				console.log('Not a note/chat drop, checking for files');
+			}
+		}
 		if (e.dataTransfer?.files) {
 			const inputFiles = Array.from(e.dataTransfer?.files);
 			if (inputFiles && inputFiles.length > 0) {
@@ -927,7 +1079,13 @@
 	});
 </script>
 
-<FilesOverlay show={dragged} />
+<FilesOverlay
+	show={dragged}
+	onNoteDrop={attachNoteToChat}
+	onChatDrop={attachChatToChat}
+	onKnowledgeDrop={attachKnowledgeToChat}
+	onFileDrop={inputFilesHandler}
+/>
 <ToolServersModal bind:show={showTools} {selectedToolIds} />
 
 <InputVariablesModal
@@ -1157,7 +1315,7 @@
 													dismissible={true}
 													edit={true}
 													small={true}
-													modal={['file', 'collection'].includes(file?.type)}
+													modal={['file', 'collection', 'note', 'chat'].includes(file?.type)}
 													on:dismiss={async () => {
 														// Remove from UI state
 														files.splice(fileIdx, 1);
@@ -1181,6 +1339,25 @@
 												: 'pt-2.5'
 											: ''}"
 										id="chat-input-container"
+										on:dragover|preventDefault={(e) => {
+											// Allow the drag to continue
+											e.dataTransfer.dropEffect = 'none';
+										}}
+										on:drop|preventDefault|stopPropagation={(e) => {
+											const noteData = e.dataTransfer?.getData('text/plain');
+											if (noteData) {
+												try {
+													const data = JSON.parse(noteData);
+													if (data.type === 'note' || data.type === 'chat') {
+														// Block the drop on the text input - do nothing
+														// The overlay handler will process it instead
+														return;
+													}
+												} catch (error) {
+													// Not JSON data, let it through
+												}
+											}
+										}}
 									>
 										{#if suggestions}
 											{#key $settings?.richTextInput ?? true}
@@ -1387,6 +1564,9 @@
 									<div class="ml-1 self-end flex items-center flex-1 max-w-[80%]">
 										<InputMenu
 											bind:files
+											{attachNoteToChat}
+											{attachChatToChat}
+											{attachKnowledgeToChat}
 											selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
 											{fileUploadCapableModels}
 											{screenCaptureHandler}

@@ -45,6 +45,7 @@ export const TTSWorker = writable(null);
 
 export const chatId = writable('');
 export const chatTitle = writable('');
+export const chatListRefresh = writable({ timestamp: Date.now(), folderId: null });
 
 export const channels = writable([]);
 export const chats = writable(null);

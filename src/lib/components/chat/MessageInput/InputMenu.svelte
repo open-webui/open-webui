@@ -79,17 +79,29 @@
 		init();
 	}
 
-	const onSelect = (item) => {
-		if (files.find((f) => f.id === item.id)) {
-			return;
-		}
-		files = [
-			...files,
-			{
-				...item,
-				status: 'processed'
+	export let attachNoteToChat: Function;
+	export let attachChatToChat: Function;
+	export let attachKnowledgeToChat: Function;
+
+	const onSelect = async (item) => {
+		if (item.type === 'note') {
+			await attachNoteToChat(item.id);
+		} else if (item.type === 'chat') {
+			await attachChatToChat(item.id);
+		} else if (item.type === 'collection') {
+			await attachKnowledgeToChat(item.id);
+		} else {
+			if (files.find((f) => f.id === item.id)) {
+				return;
 			}
-		];
+			files = [
+				...files,
+				{
+					...item,
+					status: 'processed'
+				}
+			];
+		}
 
 		show = false;
 	};

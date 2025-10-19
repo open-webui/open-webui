@@ -580,7 +580,7 @@
 	};
 
 	const selectTemplate = () => {
-		if (value !== '') {
+		if (value !== '' && editor?.view) {
 			// After updating the state, try to find and select the next template
 			setTimeout(() => {
 				const templateFound = selectNextTemplate(editor.view.state, editor.view.dispatch);

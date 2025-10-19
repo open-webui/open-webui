@@ -28,7 +28,9 @@
 	};
 	let data = {
 		system_prompt: '',
-		files: []
+		files: [],
+		notes: [],
+		collections: []
 	};
 
 	let loading = false;
@@ -91,7 +93,8 @@
 		};
 		data = {
 			system_prompt: '',
-			files: []
+			files: [],
+			notes: []
 		};
 	}
 </script>

@@ -178,6 +178,15 @@ class NoteTable:
 
             return results
 
+    def check_access_by_user_id(self, id, user_id, permission="write") -> bool:
+        file = self.get_notes_by_id(id)
+        if not file:
+            return False
+        if file.user_id == user_id:
+            return True
+        # Implement additional access control logic here as needed
+        return False
+
     def get_note_by_id(self, id: str) -> Optional[NoteModel]:
         with get_db() as db:
             note = db.query(Note).filter(Note.id == id).first()

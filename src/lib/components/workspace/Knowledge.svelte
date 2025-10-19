@@ -6,7 +6,7 @@
 	dayjs.extend(relativeTime);
 
 	import { toast } from 'svelte-sonner';
-	import { onMount, getContext, tick } from 'svelte';
+	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import { WEBUI_NAME, knowledge, user } from '$lib/stores';
@@ -94,10 +94,66 @@
 		}
 	};
 
+	let itemElement;
+	let dragged = false;
+	let x = 0;
+	let y = 0;
+	const dragImage = new Image();
+	dragImage.src =
+		'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+	const onDragStart = (e, collectionId) => {
+		e.stopPropagation();
+		e.dataTransfer.setDragImage(dragImage, 0, 0);
+		e.dataTransfer.setData(
+			'text/plain',
+			JSON.stringify({
+				type: 'collection',
+				id: collectionId
+			})
+		);
+		e.dataTransfer.effectAllowed = 'move';
+		e.target.style.opacity = '0.5';
+		itemElement.style.opacity = '0.5';
+	};
+
+	const onDrag = (event) => {
+		event.stopPropagation();
+		x = event.clientX;
+		y = event.clientY;
+	};
+
+	const onDragEnd = (event) => {
+		event.stopPropagation();
+		event.target.style.opacity = '1';
+		itemElement.style.opacity = '1';
+		dragged = false;
+	};
+
 	onMount(async () => {
+		if (itemElement) {
+			//			document.addEventListener('click', onClickOutside, true);
+
+			// Event listener for when dragging starts
+			itemElement.addEventListener('dragstart', onDragStart);
+			// Event listener for when dragging occurs (optional)
+			itemElement.addEventListener('drag', onDrag);
+			// Event listener for when dragging ends
+			itemElement.addEventListener('dragend', onDragEnd);
+		}
 		viewOption = localStorage?.workspaceViewOption || '';
 		knowledgeBases = await getKnowledgeBaseList(localStorage.token);
 		loaded = true;
+	});
+
+	onDestroy(() => {
+		if (itemElement) {
+			//			document.removeEventListener('click', onClickOutside, true);
+
+			itemElement.removeEventListener('dragstart', onDragStart);
+			itemElement.removeEventListener('drag', onDrag);
+			itemElement.removeEventListener('dragend', onDragEnd);
+		}
 	});
 </script>
 
@@ -198,6 +254,10 @@
 				{#each filteredItems as item}
 					<Tooltip content={item?.description ?? item.name}>
 						<button
+							bind:this={itemElement}
+							draggable={true}
+							on:dragstart={(e) => onDragStart(e, item.id)}
+							on:dragend={onDragEnd}
 							class=" flex space-x-4 cursor-pointer text-left w-full px-3 py-2.5 dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl"
 							on:click={() => {
 								if (item?.meta?.document) {

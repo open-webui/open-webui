@@ -25,6 +25,7 @@
 		isApp,
 		models,
 		selectedFolder,
+		chatListRefresh,
 		WEBUI_NAME
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
@@ -62,6 +63,8 @@
 	import PinnedModelList from './Sidebar/PinnedModelList.svelte';
 	import Note from '../icons/Note.svelte';
 	import { slide } from 'svelte/transition';
+
+	let lastRefreshTimestamp = 0;
 
 	const BREAKPOINT = 768;
 
@@ -205,6 +208,9 @@
 		scrollPaginationEnabled.set(true);
 	};
 
+	$: if ($chatListRefresh) {
+		initChatList();
+	}
 	const loadMoreChats = async () => {
 		chatListLoading = true;
 

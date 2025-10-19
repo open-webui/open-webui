@@ -56,6 +56,8 @@
 	let noteItems = [];
 	let fuse = null;
 
+	let draggable = true;
+
 	let selectedNote = null;
 	let notes = {};
 	$: if (fuse) {
@@ -260,6 +262,30 @@
 	};
 
 	let dragged = false;
+	let x = 0;
+	let y = 0;
+	const dragImage = new Image();
+	dragImage.src =
+		'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+	const onDragStart = (event, noteId) => {
+		event.stopPropagation();
+		event.dataTransfer.setData(
+			'text/plain',
+			JSON.stringify({
+				type: 'note',
+				id: noteId
+			})
+		);
+		dragged = true;
+		event.target.style.opacity = '0.5'; // Optional: Visual cue to show it's being dragged
+	};
+
+	const onDragEnd = (event) => {
+		event.stopPropagation();
+		event.target.style.opacity = '1';
+		dragged = false;
+	};
 
 	const onDragOver = (e) => {
 		e.preventDefault();
@@ -386,6 +412,9 @@
 						>
 							{#each notes[timeRange] as note, idx (note.id)}
 								<div
+									draggable={true}
+									on:dragstart={(e) => onDragStart(e, note.id)}
+									on:dragend={onDragEnd}
 									class=" flex space-x-4 cursor-pointer w-full px-4.5 py-4 border border-gray-50 dark:border-gray-850 bg-transparent dark:hover:bg-gray-850 hover:bg-white rounded-2xl transition"
 								>
 									<div class=" flex flex-1 space-x-4 cursor-pointer w-full">

@@ -27,7 +27,8 @@
 		showSidebar,
 		currentChatPage,
 		tags,
-		selectedFolder
+		selectedFolder,
+		chatListRefresh
 	} from '$lib/stores';
 
 	import ChatMenu from './ChatMenu.svelte';
@@ -90,6 +91,14 @@
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			await pinnedChats.set(await getPinnedChatList(localStorage.token));
 
+			// Trigger global refresh with folder context
+			if (chat?.folder_id) {
+				chatListRefresh.update((v) => ({
+					timestamp: Date.now(),
+					folderId: chat.folder_id
+				}));
+			}
+
 			dispatch('change');
 		}
 	};
@@ -129,6 +138,13 @@
 				await chatId.set('');
 				await tick();
 			}
+			// Trigger global refresh with folder context
+			if (chat?.folder_id) {
+				chatListRefresh.update((v) => ({
+					timestamp: Date.now(),
+					folderId: chat.folder_id
+				}));
+			}
 
 			dispatch('change');
 		}
@@ -136,6 +152,16 @@
 
 	const archiveChatHandler = async (id) => {
 		await archiveChatById(localStorage.token, id);
+		chatListRefresh.set({ timestamp: Date.now(), folderId: chat.folder_id });
+
+		// Trigger global refresh with folder context
+		if (chat?.folder_id) {
+			chatListRefresh.update((v) => ({
+				timestamp: Date.now(),
+				folderId: chat.folder_id
+			}));
+		}
+
 		dispatch('change');
 	};
 

@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel
 import mimetypes
-
+from open_webui.models.notes import Notes
 
 from open_webui.models.folders import (
     FolderForm,
@@ -78,6 +78,22 @@ async def get_folders(user=Depends(get_verified_user)):
                         valid_files.append(file)
 
                 folder.data["files"] = valid_files
+                Folders.update_folder_by_id_and_user_id(
+                    folder.id, user.id, FolderUpdateForm(data=folder.data)
+                )
+
+            if "notes" in folder.data:
+                valid_notes = []
+                # Get all note IDs the user has read access to
+                accessible_notes = Notes.get_notes_by_permission(user.id, "read")
+                accessible_note_ids = {note.id for note in accessible_notes}
+
+                for note_id in folder.data["notes"]:
+                    # Check if note_id is in the set of accessible note IDs
+                    if note_id in accessible_note_ids:
+                        valid_notes.append(note_id)
+
+                folder.data["notes"] = valid_notes
                 Folders.update_folder_by_id_and_user_id(
                     folder.id, user.id, FolderUpdateForm(data=folder.data)
                 )

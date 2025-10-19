@@ -94,6 +94,27 @@
 			: (knowledge?.files ?? []);
 	}
 
+	let currentId = null;
+
+	// React to route parameter changes
+	$: if ($page.params.id && $page.params.id !== currentId) {
+		currentId = $page.params.id;
+		loadKnowledge(currentId);
+	}
+
+	async function loadKnowledge(collectionId) {
+		const res = await getKnowledgeById(localStorage.token, collectionId).catch((e) => {
+			toast.error(`${e}`);
+			return null;
+		});
+
+		if (res) {
+			knowledge = res;
+		} else {
+			goto('/workspace/knowledge');
+		}
+	}
+
 	let selectedFile = null;
 	let selectedFileId = null;
 	let selectedFileContent = '';
