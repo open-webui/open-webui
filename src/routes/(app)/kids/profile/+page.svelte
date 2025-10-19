@@ -7,6 +7,8 @@
 	import { childProfileSync } from '$lib/services/childProfileSync';
 	import type { ChildProfile } from '$lib/apis/child-profiles';
 	import { toast } from 'svelte-sonner';
+	import { personalityTraits, type PersonalityTrait, type SubCharacteristic } from '$lib/data/personalityTraits';
+	import { generateScenariosFromPersonalityData } from '$lib/data/personalityQuestions';
 
 	const i18n = getContext('i18n');
 
@@ -19,6 +21,11 @@
 	let parentAge: string = '';
 	let parentPreference: string = '';
 	let parentingStyle: string = '';
+	
+	// Personality traits system
+	let selectedPersonalityTrait: string = '';
+	let selectedSubCharacteristics: string[] = [];
+	let showPersonalitySelection: boolean = false;
 
 	// Multi-child support - using backend ChildProfile type
 	let childProfiles: ChildProfile[] = [];
@@ -34,9 +41,94 @@
 	let showScrollIndicator: boolean = false;
 	let hasScrolled: boolean = false;
 
+	// Function to generate and store shuffled scenarios for a child
+	function generateAndStoreScenarios(selectedCharacteristics: string[]) {
+		console.log('Generating scenarios for characteristics:', selectedCharacteristics);
+		
+		// Generate scenarios based on selected characteristics
+		const scenarios = generateScenariosFromPersonalityData(selectedCharacteristics);
+		
+		// Shuffle the scenarios once
+		const shuffledScenarios = scenarios.sort(() => Math.random() - 0.5);
+		
+		console.log('Generated and shuffled scenarios:', shuffledScenarios);
+		
+		// Store the shuffled scenarios in localStorage with a unique key for this child
+		const scenarioKey = `personality_scenarios_${Date.now()}`;
+		localStorage.setItem(scenarioKey, JSON.stringify(shuffledScenarios));
+		
+		// Also store the key in the child's characteristics for later retrieval
+		return scenarioKey;
+	}
+
 	function getChildGridTemplate(): string {
 		const cols = Math.max(1, Math.min((childProfiles?.length || 0) + 1, 5));
 		return `repeat(${cols}, minmax(120px, 1fr))`;
+	}
+
+	// Reactive statement to track trait changes
+	$: currentTrait = getSelectedTrait();
+	$: console.log('Reactive: selectedPersonalityTrait changed to:', selectedPersonalityTrait);
+	$: console.log('Reactive: currentTrait is:', currentTrait);
+	$: console.log('Reactive: subCharacteristics available:', currentTrait?.subCharacteristics?.length || 0);
+	
+	// Force reactivity by creating a derived value
+	$: traitSubCharacteristics = selectedPersonalityTrait ? getSelectedTrait()?.subCharacteristics || [] : [];
+	$: console.log('Reactive: traitSubCharacteristics updated:', traitSubCharacteristics.length);
+
+	// Personality trait helper functions
+	function getSelectedTrait(): PersonalityTrait | undefined {
+		console.log('getSelectedTrait called with selectedPersonalityTrait:', selectedPersonalityTrait);
+		const trait = personalityTraits.find(trait => trait.id === selectedPersonalityTrait);
+		console.log('Found trait:', trait);
+		return trait;
+	}
+
+	function getSelectedSubCharacteristics(): SubCharacteristic[] {
+		const trait = getSelectedTrait();
+		if (!trait) return [];
+		return trait.subCharacteristics.filter(sub => selectedSubCharacteristics.includes(sub.id));
+	}
+
+	function toggleSubCharacteristic(subId: string) {
+		if (selectedSubCharacteristics.includes(subId)) {
+			selectedSubCharacteristics = selectedSubCharacteristics.filter(id => id !== subId);
+		} else {
+			selectedSubCharacteristics = [...selectedSubCharacteristics, subId];
+		}
+	}
+
+	function selectPersonalityTrait(traitId: string) {
+		console.log('Selecting personality trait:', traitId);
+		
+		// Reset sub-characteristics first
+		selectedSubCharacteristics = [];
+		
+		// Update the selected trait
+		selectedPersonalityTrait = traitId;
+		
+		// Show the personality selection
+		showPersonalitySelection = true;
+		
+		// Force reactivity by triggering a change
+		selectedPersonalityTrait = traitId;
+		
+		// Force a reactive update by using setTimeout
+		setTimeout(() => {
+			const trait = getSelectedTrait();
+			console.log('Selected trait after timeout:', trait);
+			console.log('Sub-characteristics after timeout:', trait?.subCharacteristics);
+		}, 0);
+	}
+
+	function getPersonalityDescription(): string {
+		const trait = getSelectedTrait();
+		const subChars = getSelectedSubCharacteristics();
+		
+		if (!trait || subChars.length === 0) return '';
+		
+		const subCharNames = subChars.map(sub => sub.name).join(', ');
+		return `${trait.name}: ${subCharNames}`;
 	}
 
 	function ensureAtLeastOneChild() {
@@ -51,6 +143,29 @@
 		childGender = sel?.child_gender || '';
 		childCharacteristics = sel?.child_characteristics || '';
 		parentingStyle = sel?.parenting_style || '';
+		
+		// Parse personality traits from stored characteristics
+		if (sel?.child_characteristics) {
+			// Try to parse personality data from the characteristics field
+			const characteristics = sel.child_characteristics;
+			
+			// Check if this contains personality data (has the format we use)
+			if (characteristics.includes('Selected characteristics:') && characteristics.includes('Additional characteristics:')) {
+				// Extract the additional characteristics part (after "Additional characteristics:")
+				const additionalStart = characteristics.indexOf('Additional characteristics:');
+				if (additionalStart !== -1) {
+					childCharacteristics = characteristics.substring(additionalStart + 'Additional characteristics:'.length).trim();
+				}
+			} else {
+				// If it doesn't contain our format, treat the whole thing as additional characteristics
+				childCharacteristics = characteristics;
+			}
+			
+			// Reset personality selection for now (we could parse this back in the future)
+			selectedPersonalityTrait = '';
+			selectedSubCharacteristics = [];
+			showPersonalitySelection = false;
+		}
 	}
 
 	function applyFormToSelectedChild() {
@@ -60,7 +175,14 @@
 		sel.name = childName;
 		sel.child_age = childAge;
 		sel.child_gender = childGender;
-		sel.child_characteristics = childCharacteristics;
+		// Combine personality traits with characteristics
+		const personalityDesc = getPersonalityDescription();
+		const selectedCharacteristicsList = getSelectedSubCharacteristics().map(sub => sub.name).join(', ');
+		const combinedCharacteristics = personalityDesc 
+			? `${personalityDesc}\n\nSelected characteristics: ${selectedCharacteristicsList}\n\nAdditional characteristics:\n${childCharacteristics}`
+			: childCharacteristics;
+		
+		sel.child_characteristics = combinedCharacteristics;
 		sel.parenting_style = parentingStyle;
 	}
 
@@ -109,6 +231,11 @@
 		childGender = '';
 		childCharacteristics = '';
 		parentingStyle = '';
+		
+		// Reset personality traits
+		selectedPersonalityTrait = '';
+		selectedSubCharacteristics = [];
+		showPersonalitySelection = false;
 		showForm = true;
 		isEditing = true; // Set editing mode
 		// Set selected index to -1 to indicate we're creating a new profile
@@ -131,13 +258,26 @@
 				return;
 			}
 
+			// Combine personality traits with characteristics
+			const personalityDesc = getPersonalityDescription();
+			const selectedCharacteristicsList = getSelectedSubCharacteristics().map(sub => sub.name).join(', ');
+			const combinedCharacteristics = personalityDesc 
+				? `${personalityDesc}\n\nSelected characteristics: ${selectedCharacteristicsList}\n\nAdditional characteristics:\n${childCharacteristics}`
+				: childCharacteristics;
+			
+			// Generate and store shuffled scenarios for this child
+			const scenarioKey = generateAndStoreScenarios(getSelectedSubCharacteristics().map(sub => sub.name));
+			
 			const newChild = await childProfileSync.createChildProfile({
 				name: childName,
 				child_age: childAge,
 				child_gender: childGender,
-				child_characteristics: childCharacteristics,
+				child_characteristics: combinedCharacteristics,
 				parenting_style: parentingStyle
 			});
+			
+			// Store the scenario key in localStorage with the child's ID
+			localStorage.setItem(`scenarios_${newChild.id}`, scenarioKey);
 			
 			childProfiles = [...childProfiles, newChild];
 			selectedChildIndex = childProfiles.length - 1;
@@ -168,6 +308,11 @@
 			childGender = '';
 			childCharacteristics = '';
 			parentingStyle = '';
+			
+			// Reset personality traits
+			selectedPersonalityTrait = '';
+			selectedSubCharacteristics = [];
+			showPersonalitySelection = false;
 		}
 	}
 
@@ -227,11 +372,18 @@
 
 			// If no profiles exist or we're creating a new profile, create a new one
 			if (childProfiles.length === 0 || selectedChildIndex === -1) {
+				// Combine personality traits with characteristics
+				const personalityDesc = getPersonalityDescription();
+				const selectedCharacteristicsList = getSelectedSubCharacteristics().map(sub => sub.name).join(', ');
+				const combinedCharacteristics = personalityDesc 
+					? `${personalityDesc}\n\nSelected characteristics: ${selectedCharacteristicsList}\n\nAdditional characteristics:\n${childCharacteristics}`
+					: childCharacteristics;
+				
 				const newChild = await childProfileSync.createChildProfile({
 					name: childName,
 					child_age: childAge,
 					child_gender: childGender,
-					child_characteristics: childCharacteristics,
+					child_characteristics: combinedCharacteristics,
 					parenting_style: parentingStyle
 				});
 				if (childProfiles.length === 0) {
@@ -247,12 +399,19 @@
 				
 				const selectedChild = childProfiles[selectedChildIndex];
 				if (selectedChild) {
+					// Combine personality traits with characteristics
+					const personalityDesc = getPersonalityDescription();
+					const selectedCharacteristicsList = getSelectedSubCharacteristics().map(sub => sub.name).join(', ');
+					const combinedCharacteristics = personalityDesc 
+						? `${personalityDesc}\n\nSelected characteristics: ${selectedCharacteristicsList}\n\nAdditional characteristics:\n${childCharacteristics}`
+						: childCharacteristics;
+					
 					// Update the child profile via API
 					await childProfileSync.updateChildProfile(selectedChild.id, {
 						name: childName,
 						child_age: childAge,
 						child_gender: childGender,
-						child_characteristics: childCharacteristics,
+						child_characteristics: combinedCharacteristics,
 						parenting_style: parentingStyle
 					});
 				}
@@ -613,17 +772,97 @@
 						</select>
 					</div>
 
+					<!-- Personality Traits Selection -->
 					<div>
-						<label for="childCharacteristics" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-							Characteristics & Interests
+						<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+							Personality Traits
 						</label>
-						<textarea
-							id="childCharacteristics"
-							bind:value={childCharacteristics}
-							rows="4"
-							placeholder="Describe your child's personality, interests, learning style, etc."
-							class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-						></textarea>
+						<p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+							Select one main personality trait and then choose specific characteristics that describe your child.
+						</p>
+						
+						<!-- Main Personality Trait Selection -->
+						<div class="mb-4">
+							<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+								{#each personalityTraits as trait}
+									<button
+										type="button"
+										on:click={() => selectPersonalityTrait(trait.id)}
+										class="p-3 text-left rounded-lg border-2 transition-all {
+											selectedPersonalityTrait === trait.id 
+												? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+												: 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+										} bg-white dark:bg-gray-700"
+									>
+										<div class="font-medium text-gray-900 dark:text-white mb-1">
+											{trait.name}
+										</div>
+										<div class="text-sm text-gray-600 dark:text-gray-400">
+											{trait.description}
+										</div>
+									</button>
+								{/each}
+							</div>
+						</div>
+						
+						<!-- Debug info -->
+						<div class="text-xs text-gray-500 mb-2">
+							Debug: selectedPersonalityTrait = "{selectedPersonalityTrait}", currentTrait = {currentTrait ? 'found' : 'null'}
+						</div>
+						
+						<!-- Sub-characteristics Selection -->
+						{#if selectedPersonalityTrait}
+							<div class="mb-4">
+								<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+									Select specific characteristics (choose multiple):
+								</label>
+								<div class="space-y-2">
+									{#each traitSubCharacteristics as subChar}
+										<label class="flex items-start space-x-3 p-3 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+											<input
+												type="checkbox"
+												bind:group={selectedSubCharacteristics}
+												value={subChar.id}
+												class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+											/>
+											<div class="flex-1">
+												<div class="font-medium text-gray-900 dark:text-white">
+													{subChar.name}
+												</div>
+												<div class="text-sm text-gray-600 dark:text-gray-400">
+													{subChar.description}
+												</div>
+											</div>
+										</label>
+									{/each}
+									
+									<!-- Debug info -->
+									{#if traitSubCharacteristics.length > 0}
+										<div class="text-xs text-gray-500 mt-2">
+											Debug: Found {traitSubCharacteristics.length} sub-characteristics for {getSelectedTrait()?.name || 'unknown trait'}
+										</div>
+									{:else}
+										<div class="text-xs text-red-500 mt-2">
+											Debug: No sub-characteristics found for trait "{selectedPersonalityTrait}"
+										</div>
+									{/if}
+								</div>
+							</div>
+						{/if}
+						
+						<!-- Additional Characteristics -->
+						<div>
+							<label for="childCharacteristics" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+								Additional Characteristics & Interests
+							</label>
+							<textarea
+								id="childCharacteristics"
+								bind:value={childCharacteristics}
+								rows="3"
+								placeholder="Add any additional details about your child's personality, interests, learning style, etc."
+								class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+							></textarea>
+						</div>
 					</div>
 
 					<div>

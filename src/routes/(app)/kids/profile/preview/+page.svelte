@@ -51,6 +51,67 @@
 		childProfileSync.setCurrentChildId(currentChild.id);
 	};
 
+	// Function to parse child characteristics into structured format
+	function parseChildCharacteristics(characteristics: string) {
+		console.log('Parsing characteristics:', characteristics);
+		
+		const result = {
+			personalityTrait: '',
+			selectedCharacteristics: [] as string[],
+			additionalCharacteristics: ''
+		};
+
+		if (!characteristics) return result;
+
+		// Check if this contains our structured format
+		if (characteristics.includes('Selected characteristics:') && characteristics.includes('Additional characteristics:')) {
+			// Extract personality trait and selected characteristics in one go
+			const selectedStart = characteristics.indexOf('Selected characteristics:');
+			if (selectedStart > 0) {
+				const personalityPart = characteristics.substring(0, selectedStart).trim();
+				console.log('Personality part:', personalityPart);
+				
+				// Extract trait name and characteristics
+				const traitMatch = personalityPart.match(/^([^:]+):\s*(.+)/);
+				if (traitMatch) {
+					result.personalityTrait = traitMatch[1].trim();
+					result.selectedCharacteristics = traitMatch[2].split(',').map(char => char.trim()).filter(char => char);
+					console.log('Parsed trait:', result.personalityTrait);
+					console.log('Parsed characteristics:', result.selectedCharacteristics);
+				}
+			}
+
+			// Extract additional characteristics
+			const additionalStart = characteristics.indexOf('Additional characteristics:');
+			if (additionalStart !== -1) {
+				result.additionalCharacteristics = characteristics.substring(additionalStart + 'Additional characteristics:'.length).trim();
+			}
+		} else {
+			// Fallback: treat as additional characteristics
+			result.additionalCharacteristics = characteristics;
+		}
+
+		console.log('Final result:', result);
+		return result;
+	}
+
+	// Simple function to clean up characteristics display
+	function cleanUpCharacteristics(characteristics: string) {
+		if (!characteristics) return '';
+		
+		// If it contains our structured format, extract just the main part
+		if (characteristics.includes('Selected characteristics:') && characteristics.includes('Additional characteristics:')) {
+			const selectedStart = characteristics.indexOf('Selected characteristics:');
+			if (selectedStart > 0) {
+				// Return just the personality trait part (before "Selected characteristics:")
+				return characteristics.substring(0, selectedStart).trim();
+			}
+		}
+		
+		// Otherwise return the original
+		return characteristics;
+	}
+
 	const goToEdit = () => {
 		goto('/kids/profile');
 	};
@@ -231,18 +292,19 @@
 						<!-- Characteristics -->
 						<div>
 							<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-								Learning Characteristics
+								Characteristics & Interests
 							</h3>
 							{#if currentChild.child_characteristics}
+								{@const cleanCharacteristics = cleanUpCharacteristics(currentChild.child_characteristics)}
 								<div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
 									<p class="text-gray-700 dark:text-gray-300 leading-relaxed">
-										{currentChild.child_characteristics}
+										{cleanCharacteristics}
 									</p>
 								</div>
 							{:else}
 								<div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
 									<p class="text-gray-500 dark:text-gray-400 italic">
-										No learning characteristics have been set yet.
+										No characteristics specified
 									</p>
 								</div>
 							{/if}

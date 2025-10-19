@@ -1,0 +1,182 @@
+{
+  "Is systematic, likes to keep things in order": {
+    "positive": [
+      "Can you help me make a plan for my day?",
+      "What are fun ways to organize my room?",
+      "How do I keep my backpack neat and tidy?"
+    ],
+    "neutral": [
+      "What’s a good way to sort my toys or books?",
+      "How can I make a list to stay on track?"
+    ],
+    "negative": [
+      "Why do I feel stressed when things are messy?",
+      "How can I stop getting frustrated when my plans change?",
+      "What should I do when I lose track of my things?",
+      "Why does being organized feel so hard sometimes?",
+      "How do I stay calm when everything feels out of order?"
+    ]
+  },
+  "Keeps things neat and tidy": {
+    "positive": [
+      "Can you help me make a morning cleaning routine?",
+      "What are tricks to keep my desk clean every day?",
+      "How can I make cleaning up feel like a game?"
+    ],
+    "neutral": [
+      "What are fun ways to tidy my room fast?",
+      "How do I keep my school binder from getting messy?"
+    ],
+    "negative": [
+      "Why do I always end up with clutter?",
+      "What should I do when I don’t feel like cleaning?",
+      "Why do I get upset when others make a mess?",
+      "How do I stop worrying about being perfect?",
+      "What if people think I’m too picky about neatness?"
+    ]
+  },
+  "Tends to be disorganized": {
+    "positive": [
+      "Can you help me learn to stay organized?",
+      "How can I remember where I put my stuff?",
+      "What are ways to make cleaning fun?"
+    ],
+    "neutral": [
+      "Why do I lose things so often?",
+      "What can I do when I forget my homework?"
+    ],
+    "negative": [
+      "Why do I feel like a mess all the time?",
+      "How do I start cleaning when it’s overwhelming?",
+      "Why can’t I ever find what I need?",
+      "How do I stop feeling lazy about chores?",
+      "What should I do when my room gets too messy to handle?"
+    ]
+  },
+  "Is efficient, gets things done": {
+    "positive": [
+      "How can I finish my homework faster?",
+      "What are smart ways to use my time?",
+      "Can you help me plan my afternoon productively?"
+    ],
+    "neutral": [
+      "How do I stay focused while working?",
+      "What’s the best way to finish a big project?"
+    ],
+    "negative": [
+      "Why do I get distracted so easily?",
+      "What should I do when I can’t focus?",
+      "Why do I take so long to finish things?",
+      "How do I stop wasting time on small stuff?",
+      "What if I always feel behind?"
+    ]
+  },
+  "Is persistent, works until the task is finished": {
+    "positive": [
+      "Can you tell me a story about not giving up?",
+      "What are ways to stay motivated when something’s hard?",
+      "How do I feel proud after finishing something big?"
+    ],
+    "neutral": [
+      "What can I do when I get bored halfway through?",
+      "How do I remind myself to keep going?"
+    ],
+    "negative": [
+      "Why do I give up so easily?",
+      "What if I never finish anything I start?",
+      "How do I stop quitting when things get tough?",
+      "Why do I lose interest so fast?",
+      "What should I do when I feel like failing?"
+    ]
+  },
+  "Tends to be lazy": {
+    "positive": [
+      "How do I find fun ways to be active?",
+      "Can you help me turn chores into a game?",
+      "What are tricks to stay motivated?"
+    ],
+    "neutral": [
+      "Why do I not want to do my chores sometimes?",
+      "What can I do when I feel tired and lazy?"
+    ],
+    "negative": [
+      "Why do I keep putting things off?",
+      "How can I stop procrastinating?",
+      "Why is it so hard for me to get started?",
+      "What happens if I never finish my work?",
+      "How do I make myself move when I just don’t want to?"
+    ]
+  },
+  "Is dependable, steady": {
+    "positive": [
+      "How can I show people they can count on me?",
+      "What are ways to prove I’m trustworthy?",
+      "How do I keep my promises even when I’m busy?"
+    ],
+    "neutral": [
+      "What does it mean to be dependable?",
+      "How can I remember what I said I’d do?"
+    ],
+    "negative": [
+      "Why do I forget to do things people ask?",
+      "How do I make up for letting someone down?",
+      "What should I do when people stop trusting me?",
+      "Why do I feel guilty when I forget?",
+      "How can I be steady when I feel all over the place?"
+    ]
+  },
+  "Is reliable, can always be counted on": {
+    "positive": [
+      "How do I show my friends I’ll always be there?",
+      "What are good habits that make me reliable?",
+      "How can I act responsible in school and at home?"
+    ],
+    "neutral": [
+      "Why is being reliable important?",
+      "What should I do when someone needs my help?"
+    ],
+    "negative": [
+      "Why do people say I forget too much?",
+      "What if I mess up when someone’s counting on me?",
+      "How do I stay calm when I make a mistake?",
+      "Why do I feel like I’m not dependable enough?",
+      "How do I fix my reputation if people think I’m unreliable?"
+    ]
+  },
+  "Can be somewhat careless": {
+    "positive": [
+      "How can I learn to pay more attention?",
+      "What are smart ways to check my work?",
+      "Can you teach me to slow down when I rush?"
+    ],
+    "neutral": [
+      "Why do I forget small things all the time?",
+      "What should I do if I make a mistake?"
+    ],
+    "negative": [
+      "Why do I always drop or spill things?",
+      "How can I stop making silly mistakes?",
+      "Why do I feel clumsy all the time?",
+      "What if people think I don’t try hard enough?",
+      "How do I fix it when I mess things up?"
+    ]
+  },
+  "Sometimes behaves irresponsibly": {
+    "positive": [
+      "What are steps to being more responsible?",
+      "How can I learn from my mistakes?",
+      "Can you help me make a responsibility chart?"
+    ],
+    "neutral": [
+      "Why is it important to do what I say I will?",
+      "How can I remember important tasks every day?"
+    ],
+    "negative": [
+      "Why do I forget important things?",
+      "How can I stop getting in trouble for being careless?",
+      "Why do I feel bad when I don’t keep my word?",
+      "What happens if I keep avoiding chores?",
+      "How do I earn back trust when I mess up?"
+    ]
+  }
+}

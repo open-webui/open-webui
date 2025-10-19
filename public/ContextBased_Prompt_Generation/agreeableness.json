@@ -1,0 +1,182 @@
+{
+  "Is compassionate, has a soft heart": {
+    "positive": [
+      "What can I do to help someone who's sad?",
+      "Can you help me write a nice note to a friend?",
+      "What are kind things I can say to someone?"
+    ],
+    "neutral": [
+      "How can I be a good friend today?",
+      "What are ways to help people who are hurt or sick?"
+    ],
+    "negative": [
+      "Why do I feel bad when other people are upset?",
+      "What should I do if I can’t stop worrying about someone?",
+      "Why do I cry when my friends are sad?",
+      "What if people don’t care when I try to help?",
+      "How do I stop feeling too sensitive?"
+    ]
+  },
+  "Is helpful and unselfish with others": {
+    "positive": [
+      "How can I help my teacher in class?",
+      "What are ways I can help my family today?",
+      "How can I be a good teammate?"
+    ],
+    "neutral": [
+      "Can you make a list of good deeds I can do?",
+      "What are fun ways to help my friends?"
+    ],
+    "negative": [
+      "Why do I feel tired from helping too much?",
+      "What if people never help me back?",
+      "How do I say no when I don’t want to help?",
+      "What should I do when I feel taken for granted?",
+      "Why do people ignore my help sometimes?"
+    ]
+  },
+  "Feels little sympathy for others": {
+    "positive": [
+      "Can you teach me what empathy means?",
+      "Why is being kind important?",
+      "What are ways to be more caring?"
+    ],
+    "neutral": [
+      "Why do people cry when others are sad?",
+      "Why should I care when someone is upset?"
+    ],
+    "negative": [
+      "What if I don’t feel bad when someone gets hurt?",
+      "Why do I not understand people’s feelings?",
+      "How can I act nice even if I don’t feel it?",
+      "What happens when I don’t care about others?",
+      "Why do I feel annoyed when people are emotional?"
+    ]
+  },
+  "Is respectful, treats others with respect": {
+    "positive": [
+      "What are ways to show respect to my teacher?",
+      "How can I show respect at home?",
+      "How do I be respectful when I disagree?"
+    ],
+    "neutral": [
+      "What are respectful ways to ask for help?",
+      "What are respectful rules I can follow?"
+    ],
+    "negative": [
+      "What should I do if someone isn’t respectful to me?",
+      "Why do people sometimes ignore me?",
+      "What if I lose my temper when I feel disrespected?",
+      "How do I earn respect from others?",
+      "Why do people act rude even when I’m nice?"
+    ]
+  },
+  "Is polite, courteous to others": {
+    "positive": [
+      "Can you teach me nice words to use every day?",
+      "What are polite ways to ask for things?",
+      "How can I be courteous at school?"
+    ],
+    "neutral": [
+      "What do I say when I meet someone new?",
+      "Can I write a polite letter to my friend?"
+    ],
+    "negative": [
+      "Why do I forget to say please or thank you?",
+      "What should I do if someone laughs at my manners?",
+      "Why do I feel awkward saying polite things?",
+      "How do I act polite when I’m upset?",
+      "What if people think I’m too formal?"
+    ]
+  },
+  "Starts arguments with others": {
+    "positive": [
+      "How can I get along better with others?",
+      "Can you teach me how to solve problems with words?",
+      "What should I do when someone disagrees with me?"
+    ],
+    "neutral": [
+      "Why do people argue even when they like each other?",
+      "How can I fix a fight with my friend?"
+    ],
+    "negative": [
+      "Why do I feel like arguing all the time?",
+      "How do I stop yelling when I’m mad?",
+      "What should I do when I say something mean?",
+      "Why do I get angry so fast?",
+      "How do I calm down before I fight?"
+    ]
+  },
+  "Has a forgiving nature": {
+    "positive": [
+      "How do I forgive someone who hurt my feelings?",
+      "Why is forgiving people a good thing?",
+      "Can you help me write a letter of forgiveness?"
+    ],
+    "neutral": [
+      "What should I do when someone says sorry?",
+      "Why does forgiveness make me feel better?"
+    ],
+    "negative": [
+      "Why is it hard to forgive people sometimes?",
+      "What if I don’t want to forgive someone?",
+      "How do I stop thinking about what they did?",
+      "What happens if I never forgive?",
+      "How can I move on when I still feel angry?"
+    ]
+  },
+  "Assumes the best about people": {
+    "positive": [
+      "Why is it good to give second chances?",
+      "How can I stay hopeful about others?",
+      "How do I believe the best in people?"
+    ],
+    "neutral": [
+      "Can you tell me a story where someone turned out better than expected?",
+      "What does it mean to see the good in someone?"
+    ],
+    "negative": [
+      "What if I trust people too easily?",
+      "How can I tell when someone is lying?",
+      "Why do I feel disappointed in people sometimes?",
+      "What if my friend breaks my trust?",
+      "How do I stop being naive?"
+    ]
+  },
+  "Tends to find fault with others": {
+    "positive": [
+      "Can you teach me how to focus on the good in people?",
+      "How do I give helpful advice without hurting feelings?",
+      "What are ways to notice good things about people?"
+    ],
+    "neutral": [
+      "Why do I notice when people mess up?",
+      "How do I stop being so picky?"
+    ],
+    "negative": [
+      "Why do I always correct people?",
+      "What should I do when people annoy me?",
+      "How do I stop complaining so much?",
+      "Why do I feel frustrated when people make mistakes?",
+      "What if I can’t stop judging others?"
+    ]
+  },
+  "Is suspicious of others’ intentions": {
+    "positive": [
+      "What does it mean to trust someone?",
+      "How can I learn to believe people more?",
+      "What are ways to give people a chance?"
+    ],
+    "neutral": [
+      "How do I know if I can trust a friend?",
+      "Can you help me understand why people act strange sometimes?"
+    ],
+    "negative": [
+      "Why do I feel like people are lying to me?",
+      "What should I do when I think people are being fake?",
+      "Why do I always assume people are against me?",
+      "How do I stop being scared to trust others?",
+      "What if I can’t tell who’s honest anymore?"
+    ]
+  }
+}

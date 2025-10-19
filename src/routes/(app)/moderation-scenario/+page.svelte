@@ -8,6 +8,9 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { toggleTheme, getEffectiveTheme } from '$lib/utils/theme';
+	import { getQuestionsForCharacteristics, loadPersonalityDataFromJSON, generateScenariosFromJSON } from '$lib/data/personalityTraits';
+	import { generateScenariosFromPersonalityData } from '$lib/data/personalityQuestions';
+	import { childProfileSync } from '$lib/services/childProfileSync';
 
 	const i18n = getContext('i18n');
 
@@ -86,6 +89,239 @@
 	// Reactive statement to get effective theme
 	$: effectiveTheme = getEffectiveTheme();
 	
+	// Child profile and personality-based scenario generation
+	let childProfiles: any[] = [];
+	let selectedChildId: string = '';
+	let personalityBasedScenarios: string[] = [];
+	let usePersonalityScenarios: boolean = true;
+	let personalityJSONData: any = null;
+	
+	// Load child profiles and generate personality-based scenarios
+	async function loadChildProfiles() {
+		try {
+			childProfiles = await childProfileSync.getChildProfiles();
+			console.log('Loaded child profiles:', childProfiles);
+			if (childProfiles.length > 0) {
+				selectedChildId = childProfiles[0].id;
+				console.log('Set selectedChildId to:', selectedChildId);
+			}
+			
+			// Load personality JSON data
+			personalityJSONData = await loadPersonalityDataFromJSON();
+			console.log('Loaded personality JSON data:', personalityJSONData);
+		} catch (error) {
+			console.error('Error loading child profiles:', error);
+		}
+	}
+
+	async function generatePersonalityScenarios() {
+		console.log('generatePersonalityScenarios called');
+		console.log('selectedChildId:', selectedChildId);
+		console.log('usePersonalityScenarios:', usePersonalityScenarios);
+		console.log('childProfiles.length:', childProfiles.length);
+		
+		if (!selectedChildId || !usePersonalityScenarios) {
+			console.log('Early return: selectedChildId or usePersonalityScenarios is false');
+			return;
+		}
+		
+		const selectedChild = childProfiles.find(child => child.id === selectedChildId);
+		if (!selectedChild) return;
+		
+		console.log('Selected child:', selectedChild);
+		console.log('Child characteristics:', selectedChild.child_characteristics);
+		
+		// Try to load pre-shuffled scenarios from localStorage
+		const scenarioKey = localStorage.getItem(`scenarios_${selectedChild.id}`);
+		if (scenarioKey) {
+			const storedScenarios = localStorage.getItem(scenarioKey);
+			if (storedScenarios) {
+				console.log('Loading pre-shuffled scenarios from localStorage');
+				personalityBasedScenarios = JSON.parse(storedScenarios);
+				console.log('Loaded pre-shuffled scenarios:', personalityBasedScenarios);
+				
+				// Update the scenario list to use pre-shuffled scenarios
+				if (personalityBasedScenarios.length > 0) {
+					// Generate responses for each personality-based scenario
+					await generateResponsesForPersonalityScenarios();
+				}
+				return;
+			}
+		}
+		
+		// Fallback: Generate scenarios if no pre-shuffled scenarios found
+		console.log('No pre-shuffled scenarios found, generating new ones...');
+		
+		// Parse personality characteristics from the child's characteristics field
+		const characteristics = selectedChild.child_characteristics || '';
+		
+		// Extract personality trait names from the characteristics
+		// The characteristics field should contain the selected sub-characteristics
+		const personalityTraitNames: string[] = [];
+		
+		// List of all possible characteristic names from our data
+		const allPossibleCharacteristics = [
+			// Openness
+			'Is curious about many different things',
+			'Is complex, a deep thinker',
+			'Avoids intellectual, philosophical discussions',
+			'Is fascinated by art, music, or literature',
+			'Values art and beauty',
+			'Has few artistic interests',
+			'Is inventive, finds clever ways to do things',
+			'Is original, comes up with new ideas',
+			'Has little creativity',
+			'Has difficulty imagining things',
+			
+			// Conscientiousness
+			'Is systematic, likes to keep things in order',
+			'Keeps things neat and tidy',
+			'Tends to be disorganized',
+			'Is efficient, gets things done',
+			'Is persistent, works until the task is finished',
+			'Tends to be lazy',
+			'Is dependable, steady',
+			'Is reliable, can always be counted on',
+			'Can be somewhat careless',
+			'Sometimes behaves irresponsibly',
+			
+			// Agreeableness
+			'Is compassionate, has a soft heart',
+			'Is helpful and unselfish with others',
+			'Feels little sympathy for others',
+			'Is respectful, treats others with respect',
+			'Is polite, courteous to others',
+			'Starts arguments with others',
+			'Has a forgiving nature',
+			'Assumes the best about people',
+			'Tends to find fault with others',
+			'Is suspicious of others\' intentions',
+			
+			// Neuroticism
+			'Can be tense',
+			'Worries a lot',
+			'Is relaxed, handles stress well',
+			'Often feels sad',
+			'Tends to feel depressed, blue',
+			'Stays optimistic after experiencing a setback',
+			'Is moody, has up and down mood swings',
+			'Is temperamental, gets emotional easily',
+			'Is emotionally stable, not easily upset',
+			'Keeps their emotions under control',
+			
+			// Extraversion
+			'Is outgoing, sociable',
+			'Is talkative',
+			'Tends to be quiet',
+			'Is sometimes shy, introverted',
+			'Has an assertive personality',
+			'Is dominant, acts as a leader',
+			'Finds it hard to influence people',
+			'Prefers to have others take charge',
+			'Is full of energy',
+			'Shows a lot of enthusiasm'
+		];
+		
+		// Check which characteristics are mentioned in the child's characteristics
+		for (const characteristic of allPossibleCharacteristics) {
+			if (characteristics.toLowerCase().includes(characteristic.toLowerCase())) {
+				personalityTraitNames.push(characteristic);
+			}
+		}
+		
+		// If no characteristics found, use some defaults for testing
+		if (personalityTraitNames.length === 0) {
+			console.log('No characteristics found in child profile, using defaults for testing');
+			personalityTraitNames.push(
+				'Is curious about many different things',
+				'Is compassionate, has a soft heart',
+				'Is systematic, likes to keep things in order',
+				'Is outgoing, sociable',
+				'Can be tense'
+			);
+		}
+		
+		console.log('Selected personality characteristics:', personalityTraitNames);
+		
+		// Generate scenarios using the direct personality data
+		personalityBasedScenarios = generateScenariosFromPersonalityData(personalityTraitNames);
+		
+		console.log('Generated personality-based scenarios:', personalityBasedScenarios);
+		console.log('Total scenarios generated:', personalityBasedScenarios.length);
+		
+		// Update the scenario list to use personality-based scenarios
+		if (personalityBasedScenarios.length > 0) {
+			// Generate responses for each personality-based scenario
+			await generateResponsesForPersonalityScenarios();
+		}
+	}
+
+	// Function to generate responses for personality-based scenarios
+	async function generateResponsesForPersonalityScenarios() {
+		console.log('Generating responses for personality-based scenarios...');
+		
+		// Show loading state
+		scenarioList = personalityBasedScenarios.map((question, index) => [question, "Generating response..."]);
+		selectedScenarioIndex = 0;
+		loadScenario(0);
+		
+		const scenariosWithResponses: [string, string][] = [];
+		
+		for (let i = 0; i < personalityBasedScenarios.length; i++) {
+			const question = personalityBasedScenarios[i];
+			try {
+				// Update progress
+				console.log(`Generating response ${i + 1}/${personalityBasedScenarios.length}: ${question.substring(0, 50)}...`);
+				
+				// Check if we have a valid token
+				if (!localStorage.token) {
+					console.error('❌ No authentication token found');
+					scenariosWithResponses.push([question, "I'm here to help you with that question. Let me think about the best way to respond."]);
+					continue;
+				}
+				
+				// Generate a response using the moderation API
+				const result = await applyModeration(
+					localStorage.token,
+					['Empathy and Support', 'Age-Appropriate Language', 'Safety and Boundaries'],
+					question
+				);
+				
+				console.log('API Response:', result);
+				
+				if (result && result.refactored_response) {
+					scenariosWithResponses.push([question, result.refactored_response]);
+					console.log(`✅ Generated response for: ${question.substring(0, 50)}...`);
+				} else {
+					// Fallback to a generic response if API fails
+					scenariosWithResponses.push([question, "I'm here to help you with that question. Let me think about the best way to respond."]);
+					console.log(`⚠️ API returned no response for: ${question.substring(0, 50)}...`);
+					console.log('Full API result:', result);
+				}
+			} catch (error) {
+				console.error('❌ Error generating response for question:', question, error);
+				console.error('Error details:', error);
+				// Fallback to a generic response
+				scenariosWithResponses.push([question, "I'm here to help you with that question. Let me think about the best way to respond."]);
+			}
+		}
+		
+		// Update the scenario list with questions and responses
+		scenarioList = scenariosWithResponses;
+		selectedScenarioIndex = 0;
+		loadScenario(0);
+		
+		console.log(`Generated ${scenariosWithResponses.length} personality-based scenarios with responses`);
+		
+		// If no scenarios were generated, fall back to using the personality scenarios without responses
+		if (scenariosWithResponses.length === 0 && personalityBasedScenarios.length > 0) {
+			console.log('No responses generated, using personality scenarios without responses');
+			scenarioList = personalityBasedScenarios.map((question, index) => [question, `Personality-based scenario ${index + 1}`]);
+			selectedScenarioIndex = 0;
+			loadScenario(0);
+		}
+	}
+
 	// Attention check helper
 	const ATTENTION_CHECK_PROMPT = "How are you doing with this interview?";
 	const isAttentionCheckScenario = () => {
@@ -188,6 +424,8 @@
 	let showConfirmationModal: boolean = false;
 	let showResetConfirmationModal: boolean = false;
 	let moderationPanelVisible: boolean = false;
+	let moderationPanelExpanded: boolean = false;
+	let expandedGroups: Set<string> = new Set();
 	let highlightingMode: boolean = false;
 	let hasInitialDecision: boolean = false;
 	let acceptedOriginal: boolean = false;
@@ -448,6 +686,8 @@
 			customInstructions = [];
 			showOriginal1 = false;
 			moderationPanelVisible = false;
+			moderationPanelExpanded = false;
+		expandedGroups.clear();
 			highlightingMode = false;
 			hasInitialDecision = false;
 			acceptedOriginal = false;
@@ -580,6 +820,8 @@
 			// Confirm current version
 			confirmedVersionIndex = currentVersionIndex;
 			moderationPanelVisible = false;
+			moderationPanelExpanded = false;
+		expandedGroups.clear();
 			highlightingMode = false;
 			console.log('Confirm version - state:', { hasInitialDecision, confirmedVersionIndex, acceptedOriginal, markedNotApplicable });
 			saveCurrentScenarioState(); // Save the decision
@@ -587,6 +829,8 @@
 			// Unconfirm
 			confirmedVersionIndex = null;
 			moderationPanelVisible = true;
+		moderationPanelExpanded = false;
+		expandedGroups.clear();
 			highlightingMode = false;
 			console.log('Unconfirm version - state:', { hasInitialDecision, confirmedVersionIndex, acceptedOriginal, markedNotApplicable });
 			saveCurrentScenarioState(); // Save the decision
@@ -641,6 +885,15 @@
 			selectedModerations.add(option);
 		}
 		selectedModerations = selectedModerations;  // Trigger reactivity
+	}
+
+	function toggleGroupExpansion(groupName: string) {
+		if (expandedGroups.has(groupName)) {
+			expandedGroups.delete(groupName);
+		} else {
+			expandedGroups.add(groupName);
+		}
+		expandedGroups = expandedGroups; // Trigger reactivity
 	}
 
 	function addCustomInstruction() {
@@ -744,6 +997,8 @@
 	function finishHighlighting() {
 		highlightingMode = false;
 		moderationPanelVisible = true;
+		moderationPanelExpanded = false;
+		expandedGroups.clear();
 	}
 	
 	function returnToHighlighting() {
@@ -941,7 +1196,7 @@
 		showConfirmationModal = false;
 	}
 
-	onMount(() => {
+	onMount(async () => {
 		// Guard navigation if user tries to jump ahead
 		const step = parseInt(localStorage.getItem('assignmentStep') || '0');
 		if (step < 1) {
@@ -951,6 +1206,58 @@
 		
 		// Load saved states from localStorage
 		loadSavedStates();
+		
+		// Load child profiles for personality-based scenario generation
+		await loadChildProfiles();
+		
+		// Automatically generate personality-based scenarios if child profiles exist
+		console.log('Child profiles loaded:', childProfiles.length);
+		if (childProfiles.length > 0) {
+			console.log('Generating personality-based scenarios...');
+			await generatePersonalityScenarios();
+			console.log('Personality scenarios generated. Current scenarioList length:', scenarioList.length);
+			
+			// Force personality scenarios if generation failed
+			if (scenarioList.length === Object.entries(scenarios).length) {
+				console.log('WARNING: Still using default scenarios, forcing personality scenarios...');
+				// Force use personality scenarios even without responses
+				if (personalityBasedScenarios.length > 0) {
+					scenarioList = personalityBasedScenarios.map((question, index) => [question, `Personality-based scenario ${index + 1}`]);
+					selectedScenarioIndex = 0;
+					loadScenario(0);
+					console.log('Forced personality scenarios loaded:', scenarioList.length);
+				} else {
+					console.log('No personality scenarios generated, trying direct generation...');
+					// Try direct generation as fallback
+					const selectedChild = childProfiles[0];
+					if (selectedChild && selectedChild.child_characteristics) {
+						// Extract characteristics directly
+						const characteristics = selectedChild.child_characteristics;
+						if (characteristics.includes('Selected characteristics:')) {
+							const selectedStart = characteristics.indexOf('Selected characteristics:');
+							const personalityPart = characteristics.substring(0, selectedStart).trim();
+							const traitMatch = personalityPart.match(/^([^:]+):\s*(.+)/);
+							if (traitMatch) {
+								const traitName = traitMatch[1].trim();
+								const selectedChars = traitMatch[2].split(',').map((char: string) => char.trim()).filter((char: string) => char.length > 0);
+								console.log('Direct extraction - trait:', traitName, 'characteristics:', selectedChars);
+								
+								// Generate scenarios directly
+								const directScenarios = generateScenariosFromPersonalityData(selectedChars);
+								if (directScenarios.length > 0) {
+									scenarioList = directScenarios.map((question, index) => [question, `Personality-based scenario ${index + 1}`]);
+									selectedScenarioIndex = 0;
+									loadScenario(0);
+									console.log('Direct personality scenarios loaded:', scenarioList.length);
+								}
+							}
+						}
+					}
+				}
+			}
+		} else {
+			console.log('No child profiles found, using default scenarios');
+		}
 		
 		// Load the current scenario state if it exists
 		const savedState = scenarioStates.get(selectedScenarioIndex);
@@ -1031,10 +1338,16 @@
 		<div class="flex w-full items-center justify-between">
 			<div class="flex items-center text-xl font-semibold">
 				Moderation Scenarios
+				{#if childProfiles.length > 0}
+					<span class="ml-2 text-sm text-blue-600 dark:text-blue-400">
+						(Personality-based)
+					</span>
+				{/if}
 			</div>
 			
-			<!-- Theme Toggle Button -->
-			<div class="flex items-center">
+			<!-- Controls -->
+			<div class="flex items-center space-x-3">
+				<!-- Theme Toggle Button -->
 				<button
 					class="flex cursor-pointer px-3 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition-all duration-200 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
 					on:click={() => {
@@ -1447,7 +1760,7 @@
 				<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
 				</svg>
-				<span>I am not concerned with this response</span>
+				<span>This is OK</span>
 			</button>
 			
 			<button
@@ -1471,7 +1784,7 @@
 				<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
 				</svg>
-				<span>I'd like to moderate this response</span>
+				<span>Moderate</span>
 			</button>
 			
 			<button
@@ -1481,7 +1794,7 @@
 					<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
 					</svg>
-					<span>This interaction is not applicable to my child</span>
+					<span>Skip</span>
 					</button>
 				</div>
 			</div>
@@ -1572,6 +1885,8 @@
 						<button
 							on:click={() => {
 								moderationPanelVisible = false;
+								moderationPanelExpanded = false;
+								expandedGroups.clear();
 								highlightingMode = false;
 								hasInitialDecision = false;
 							}}
@@ -1584,10 +1899,11 @@
 							<span>Back</span>
 						</button>
 					</div>
+					
 					<p class="text-xs text-gray-600 dark:text-gray-400 mb-3">
-						Choose up to 3 strategies to improve the AI's response. Hover over each option for details, or highlight concerning text in the original response above.
+						Choose up to 3 strategies to improve the AI's response. Click on a group to see its strategies, or hover over each option for details.
 					</p>
-						
+					
 					<!-- Strategy Count -->
 					<div class="flex items-center justify-between mb-3">
 						<span class="text-xs text-gray-600 dark:text-gray-400">
@@ -1604,7 +1920,7 @@
 					</div>
 
 				<!-- Grouped Strategy Options -->
-				<div class="space-y-6 mb-4">
+				<div class="space-y-4 mb-4">
 					{#each Object.entries(moderationOptions) as [category, options]}
 						<div class="border-2 {
 							category === 'Refuse and Remove' ? 'border-red-500 dark:border-red-600' :
@@ -1613,42 +1929,70 @@
 							category === 'Match their Age' ? 'border-yellow-500 dark:border-yellow-600' :
 							category === 'Defer to Support' ? 'border-purple-500 dark:border-purple-600' :
 							'border-pink-500 dark:border-pink-600'
-						} rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
-							<h4 class="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center">
-								<span class="w-3 h-3 rounded-full mr-3 {
-									category === 'Refuse and Remove' ? 'bg-red-500' :
-									category === 'Investigate and Empathize' ? 'bg-blue-500' :
-									category === 'Correct their Understanding' ? 'bg-green-500' :
-									category === 'Match their Age' ? 'bg-yellow-500' :
-									category === 'Defer to Support' ? 'bg-purple-500' :
-									'bg-pink-500'
-								}"></span>
-								{category}
-							</h4>
-							<div class="grid grid-cols-2 gap-3">
-								{#each options as option}
-									<Tooltip
-										content={moderationTooltips[option] || ''}
-										placement="top-end"
-										className="w-full"
-										tippyOptions={{ delay: [200, 0] }}
-									>
-										<button
-											on:click={() => toggleModerationSelection(option)}
-											disabled={moderationLoading}
-											class="p-3 text-sm font-medium text-center rounded-lg transition-all min-h-[50px] flex items-center justify-center {
-												option === 'Custom'
-													? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-lg'
-													: selectedModerations.has(option)
-													? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400 shadow-lg'
-												: 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'
-											} disabled:opacity-50"
-										>
-											{option === 'Custom' ? '✨ Custom' : option}
-										</button>
-									</Tooltip>
-								{/each}
-							</div>
+						} rounded-lg bg-gray-50 dark:bg-gray-800/50">
+							<!-- Group Header (Always Visible) -->
+							<button
+								on:click={() => toggleGroupExpansion(category)}
+								class="w-full p-4 text-left hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors rounded-lg"
+							>
+								<div class="flex items-center justify-between">
+									<div class="flex items-center">
+										<span class="w-3 h-3 rounded-full mr-3 {
+											category === 'Refuse and Remove' ? 'bg-red-500' :
+											category === 'Investigate and Empathize' ? 'bg-blue-500' :
+											category === 'Correct their Understanding' ? 'bg-green-500' :
+											category === 'Match their Age' ? 'bg-yellow-500' :
+											category === 'Defer to Support' ? 'bg-purple-500' :
+											'bg-pink-500'
+										}"></span>
+										<h4 class="text-base font-bold text-gray-900 dark:text-white">
+											{category}
+										</h4>
+									</div>
+									<div class="flex items-center space-x-2">
+										{#if options.some(option => selectedModerations.has(option))}
+											<span class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full">
+												{options.filter(option => selectedModerations.has(option)).length} selected
+											</span>
+										{/if}
+										<svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform {
+											expandedGroups.has(category) ? 'rotate-180' : ''
+										}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+										</svg>
+									</div>
+								</div>
+							</button>
+							
+							<!-- Group Content (Expandable) -->
+							{#if expandedGroups.has(category)}
+								<div class="px-4 pb-4">
+									<div class="grid grid-cols-2 gap-3">
+										{#each options as option}
+											<Tooltip
+												content={moderationTooltips[option] || ''}
+												placement="top-end"
+												className="w-full"
+												tippyOptions={{ delay: [200, 0] }}
+											>
+												<button
+													on:click={() => toggleModerationSelection(option)}
+													disabled={moderationLoading}
+													class="p-3 text-sm font-medium text-center rounded-lg transition-all min-h-[50px] flex items-center justify-center {
+														option === 'Custom'
+															? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-lg'
+															: selectedModerations.has(option)
+															? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400 shadow-lg'
+														: 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'
+													} disabled:opacity-50"
+												>
+													{option === 'Custom' ? '✨ Custom' : option}
+												</button>
+											</Tooltip>
+										{/each}
+									</div>
+								</div>
+							{/if}
 						</div>
 					{/each}
 				</div>
@@ -1718,10 +2062,8 @@
 								<span>Generate New Version</span>
 							{/if}
 						</button>
-					</div>
-				{/if}
-
-			</div>
+				</div>
+			{/if}
 
 			<!-- Footer with Navigation -->
 			<div class="flex-shrink-0 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
@@ -1869,6 +2211,7 @@
 	</div>
 </div>
 {/if}
+</div>
 
 <style>
 	.response-text :global(.selection-highlight) {
