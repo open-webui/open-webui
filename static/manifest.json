@@ -1,1 +1,26 @@
-{}
+{
+  "name": "Renobo AI - Energy Retrofit Advisor",
+  "short_name": "Renobo AI",
+  "description": "AI-powered energy retrofit advisor for Swedish buildings",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#124a26",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/static/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity", "utilities"],
+  "screenshots": []
+}

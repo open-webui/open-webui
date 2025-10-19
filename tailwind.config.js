@@ -8,6 +8,20 @@ export default {
 	theme: {
 		extend: {
 			colors: {
+				// Renobo Brand Colors
+				primary: {
+					50: '#f0f8f2',
+					100: '#e8f5ea',
+					200: '#d4ead7',
+					300: '#a8d5b0',
+					400: '#6dc07f',
+					500: '#124a26',  // Primary Renobo Green
+					600: '#1a6b39',
+					700: '#2d8b4d',
+					800: '#4caf60',
+					900: '#0d3a1d',
+					950: '#061e0f'
+				},
 				gray: {
 					50: 'var(--color-gray-50, #f9f9f9)',
 					100: 'var(--color-gray-100, #ececec)',
@@ -39,6 +53,9 @@ export default {
 			},
 			transitionProperty: {
 				width: 'width'
+			},
+			fontFamily: {
+				sans: ['Inter', 'system-ui', 'sans-serif']
 			}
 		}
 	},
