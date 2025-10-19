@@ -307,8 +307,14 @@ API_KEY_ALLOWED_ENDPOINTS = PersistentConfig(
 
 
 JWT_EXPIRES_IN = PersistentConfig(
-    "JWT_EXPIRES_IN", "auth.jwt_expiry", os.environ.get("JWT_EXPIRES_IN", "-1")
+    "JWT_EXPIRES_IN", "auth.jwt_expiry", os.environ.get("JWT_EXPIRES_IN", "4w")
 )
+
+if JWT_EXPIRES_IN.value == "-1":
+    log.warning(
+        "⚠️  SECURITY WARNING: JWT_EXPIRES_IN is set to '-1'\n"
+        "    See: https://docs.openwebui.com/getting-started/env-configuration\n"
+    )
 
 ####################################
 # OAuth config
@@ -2289,6 +2295,36 @@ DATALAB_MARKER_OUTPUT_FORMAT = PersistentConfig(
     "DATALAB_MARKER_OUTPUT_FORMAT",
     "rag.datalab_marker_output_format",
     os.environ.get("DATALAB_MARKER_OUTPUT_FORMAT", "markdown"),
+)
+
+MINERU_API_MODE = PersistentConfig(
+    "MINERU_API_MODE",
+    "rag.mineru_api_mode",
+    os.environ.get("MINERU_API_MODE", "local"),  # "local" or "cloud"
+)
+
+MINERU_API_URL = PersistentConfig(
+    "MINERU_API_URL",
+    "rag.mineru_api_url",
+    os.environ.get("MINERU_API_URL", "http://localhost:8000"),
+)
+
+MINERU_API_KEY = PersistentConfig(
+    "MINERU_API_KEY",
+    "rag.mineru_api_key",
+    os.environ.get("MINERU_API_KEY", ""),
+)
+
+mineru_params = os.getenv("MINERU_PARAMS", "")
+try:
+    mineru_params = json.loads(mineru_params)
+except json.JSONDecodeError:
+    mineru_params = {}
+
+MINERU_PARAMS = PersistentConfig(
+    "MINERU_PARAMS",
+    "rag.mineru_params",
+    mineru_params,
 )
 
 EXTERNAL_DOCUMENT_LOADER_URL = PersistentConfig(

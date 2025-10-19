@@ -31,7 +31,7 @@
 
 	const getItemsPage = async () => {
 		itemsLoading = true;
-		let res = await getChatList(localStorage.token, page, true).catch(() => {
+		let res = await getChatList(localStorage.token, page, true, true).catch(() => {
 			return [];
 		});
 

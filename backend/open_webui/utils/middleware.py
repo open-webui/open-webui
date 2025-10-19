@@ -827,11 +827,7 @@ async def chat_completion_files_handler(
 
     if files := body.get("metadata", {}).get("files", None):
         # Check if all files are in full context mode
-        all_full_context = all(
-            item.get("context") == "full"
-            for item in files
-            if item.get("type") == "file"
-        )
+        all_full_context = all(item.get("context") == "full" for item in files)
 
         queries = []
         if not all_full_context:
@@ -1509,8 +1505,8 @@ async def process_chat_response(
                             )
 
                             follow_ups_string = response_message.get(
-                                "content", response_message.get("reasoning_content", "")
-                            )
+                                "content"
+                            ) or response_message.get("reasoning_content", "")
                         else:
                             follow_ups_string = ""
 
@@ -1573,12 +1569,12 @@ async def process_chat_response(
                                         "message", {}
                                     )
 
-                                    title_string = response_message.get(
-                                        "content",
-                                        response_message.get(
+                                    title_string = (
+                                        response_message.get("content")
+                                        or response_message.get(
                                             "reasoning_content",
-                                            message.get("content", user_message),
-                                        ),
+                                        )
+                                        or message.get("content", user_message)
                                     )
                                 else:
                                     title_string = ""
@@ -1637,9 +1633,8 @@ async def process_chat_response(
                                 )
 
                                 tags_string = response_message.get(
-                                    "content",
-                                    response_message.get("reasoning_content", ""),
-                                )
+                                    "content"
+                                ) or response_message.get("reasoning_content", "")
                             else:
                                 tags_string = ""
 
@@ -2671,8 +2666,6 @@ async def process_chat_response(
                     results = []
 
                     for tool_call in response_tool_calls:
-
-                        print("tool_call", tool_call)
                         tool_call_id = tool_call.get("id", "")
                         tool_function_name = tool_call.get("function", {}).get(
                             "name", ""
@@ -2803,9 +2796,9 @@ async def process_chat_response(
 
                     try:
                         new_form_data = {
+                            **form_data,
                             "model": model_id,
                             "stream": True,
-                            "tools": form_data["tools"],
                             "messages": [
                                 *form_data["messages"],
                                 *convert_content_blocks_to_messages(
@@ -2979,6 +2972,7 @@ async def process_chat_response(
 
                         try:
                             new_form_data = {
+                                **form_data,
                                 "model": model_id,
                                 "stream": True,
                                 "messages": [

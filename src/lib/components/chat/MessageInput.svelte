@@ -117,6 +117,11 @@
 	let showValvesModal = false;
 	let selectedValvesType = 'tool'; // 'tool' or 'function'
 	let selectedValvesItemId = null;
+	let integrationsMenuCloseOnOutsideClick = true;
+
+	$: if (!showValvesModal) {
+		integrationsMenuCloseOnOutsideClick = true;
+	}
 
 	$: onChange({
 		prompt,
@@ -944,6 +949,9 @@
 	on:save={async () => {
 		await tick();
 	}}
+	on:close={() => {
+		integrationsMenuCloseOnOutsideClick = true;
+	}}
 />
 
 {#if loaded}
@@ -1463,11 +1471,13 @@
 												bind:webSearchEnabled
 												bind:imageGenerationEnabled
 												bind:codeInterpreterEnabled
+												closeOnOutsideClick={integrationsMenuCloseOnOutsideClick}
 												onShowValves={(e) => {
 													const { type, id } = e;
 													selectedValvesType = type;
 													selectedValvesItemId = id;
 													showValvesModal = true;
+													integrationsMenuCloseOnOutsideClick = false;
 												}}
 												onClose={async () => {
 													await tick();
