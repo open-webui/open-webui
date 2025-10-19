@@ -486,9 +486,7 @@ class OAuthClientManager:
                         try:
                             payload = json.loads(body_text)
                             error = payload.get("error")
-                            error_description = payload.get(
-                                "error_description", ""
-                            )
+                            error_description = payload.get("error_description", "")
                         except json.JSONDecodeError:
                             error = None
                             error_description = ""
@@ -496,7 +494,11 @@ class OAuthClientManager:
                         error_description = body_text
 
                     combined = f"{error or ''} {error_description}".lower()
-                    if "invalid_client" in combined or "invalid client" in combined or "client id" in combined:
+                    if (
+                        "invalid_client" in combined
+                        or "invalid client" in combined
+                        or "client id" in combined
+                    ):
                         log.warning(
                             "OAuth client preflight detected invalid registration for %s: %s %s",
                             client_info.client_id,
@@ -577,9 +579,7 @@ class OAuthClientManager:
         log.info("Re-registered OAuth client %s for MCP tool server", client_id)
         return True
 
-    async def _ensure_valid_client_registration(
-        self, request, client_id: str
-    ) -> None:
+    async def _ensure_valid_client_registration(self, request, client_id: str) -> None:
         if not client_id.startswith("mcp:"):
             return
 
