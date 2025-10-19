@@ -485,11 +485,44 @@
 									<option value={null} class=" text-gray-900"
 										>{$i18n.t('Select a base model')}</option
 									>
-									{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena') as model}
-										<option value={model.id} class=" text-gray-900">{model.name}</option>
+									{#each $models.filter((m) => {
+										// Base filters
+										let baseFilter = (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena';
+										
+										// If super admin editing existing model, show only original creator's base models
+										if (edit && $user?.email && ['sm11538@nyu.edu', 'ms15138@nyu.edu', 'mb484@nyu.edu', 'cg4532@nyu.edu', 'jy4421@nyu.edu', 'ht2490@nyu.edu', 'ps5226@nyu.edu'].includes($user.email) && model?.created_by) {
+											return baseFilter && (m.created_by === model.created_by || !m.created_by);
+										}
+										
+										return baseFilter;
+									}) as baseModel}
+										<option value={baseModel.id} class=" text-gray-900">
+											{baseModel.name}
+											{#if $user?.email && ['sm11538@nyu.edu', 'ms15138@nyu.edu', 'mb484@nyu.edu', 'cg4532@nyu.edu', 'jy4421@nyu.edu', 'ht2490@nyu.edu', 'ps5226@nyu.edu'].includes($user.email) && baseModel.created_by && baseModel.created_by !== $user.email}
+												({baseModel.created_by})
+											{/if}
+										</option>
 									{/each}
 								</select>
 							</div>
+							
+							<!-- Visual feedback for super admins -->
+							{#if $user?.email && ['sm11538@nyu.edu', 'ms15138@nyu.edu', 'mb484@nyu.edu', 'cg4532@nyu.edu', 'jy4421@nyu.edu', 'ht2490@nyu.edu', 'ps5226@nyu.edu'].includes($user.email) && info.base_model_id}
+								{@const selectedModel = $models.find(m => m.id === info.base_model_id)}
+								{#if edit && model?.created_by}
+									<div class="text-xs text-gray-500 mt-1">
+										Showing base models from: {model.created_by}
+									</div>
+								{:else if selectedModel?.created_by && selectedModel.created_by !== $user.email}
+									<div class="text-xs text-gray-500 mt-1">
+										Model will be assigned to: {selectedModel.created_by}
+									</div>
+								{:else}
+									<div class="text-xs text-gray-500 mt-1">
+										Model will be assigned to: You
+									</div>
+								{/if}
+							{/if}
 						</div>
 					{/if}
 

@@ -13,6 +13,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
+from open_webui.utils.super_admin import is_super_admin
+from open_webui.models.functions import Functions
+from open_webui.models.users import Users
 
 
 router = APIRouter()
@@ -68,7 +71,22 @@ async def create_new_model(
         )
 
     else:
-        model = Models.insert_new_model(form_data, user.id, user.email)
+        # Default to logged-in user
+        creator_user_id = user.id
+        creator_email = user.email
+        
+        # If super admin with function-based base model, auto-assign to function creator
+        if is_super_admin(user) and form_data.base_model_id:
+            functions = Functions.get_functions_by_type("pipe", active_only=True)
+            for func in functions:
+                if func.id == form_data.base_model_id or form_data.base_model_id.startswith(f"{func.id}."):
+                    creator_user = Users.get_user_by_email(func.created_by)
+                    if creator_user:
+                        creator_user_id = creator_user.id
+                        creator_email = func.created_by
+                    break
+        
+        model = Models.insert_new_model(form_data, creator_user_id, creator_email)
         if model:
             return model
         else:

@@ -29,7 +29,7 @@ router = APIRouter()
 
 @router.get("/", response_model=list[FunctionResponse])
 async def get_functions(user=Depends(get_verified_user)):
-    return Functions.get_functions(user.email)
+    return Functions.get_functions(user.email, user=user)
 
 
 ############################

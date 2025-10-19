@@ -32,6 +32,7 @@ from open_webui.models.models import Models
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.tools import get_tools
 from open_webui.utils.access_control import has_access
+from open_webui.utils.super_admin import is_super_admin
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
 
@@ -72,7 +73,7 @@ async def get_function_models(request, user: UserModel = None):
     pipe_models = []
 
     for pipe in pipes:
-        if (user.role == "admin" and pipe.created_by == user.email) or (user.role == "user"):
+        if (user.role == "admin" and pipe.created_by == user.email) or (user.role == "user") or is_super_admin(user):
             function_module = get_function_module_by_id(request, pipe.id)
 
             # Check if function is a manifold
@@ -113,6 +114,7 @@ async def get_function_models(request, user: UserModel = None):
                             "created": pipe.created_at,
                             "owned_by": "openai",
                             "pipe": pipe_flag,
+                            "created_by": pipe.created_by,
                         }
                     )
             else:
@@ -130,6 +132,7 @@ async def get_function_models(request, user: UserModel = None):
                         "created": pipe.created_at,
                         "owned_by": "openai",
                         "pipe": pipe_flag,
+                        "created_by": pipe.created_by,
                     }
                 )
 
