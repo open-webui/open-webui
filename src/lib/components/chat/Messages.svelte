@@ -424,33 +424,38 @@
 					{/if}
 					<ul role="log" aria-live="polite" aria-relevant="additions" aria-atomic="false">
 						{#each messages as message, messageIdx (message.id)}
-							<Message
-								{chatId}
-								bind:history
-								{selectedModels}
-								messageId={message.id}
-								idx={messageIdx}
-								{user}
-								{setInputText}
-								{gotoMessage}
-								{showPreviousMessage}
-								{showNextMessage}
-								{updateChat}
-								{editMessage}
-								{deleteMessage}
-								{rateMessage}
-								{actionMessage}
-								{saveMessage}
-								{submitMessage}
-								{regenerateResponse}
-								{continueResponse}
-								{mergeResponses}
-								{addMessages}
-								{triggerScroll}
-								{readOnly}
-								{editCodeBlock}
-								{topPadding}
-							/>
+							<li
+								role="listitem"
+								aria-label="{message.role === 'user' ? $i18n.t('User message') : $i18n.t('Assistant message')}: {message.content ? message.content.substring(0, 100) : $i18n.t('Message loading')}"
+							>
+								<Message
+									{chatId}
+									bind:history
+									{selectedModels}
+									messageId={message.id}
+									idx={messageIdx}
+									{user}
+									{setInputText}
+									{gotoMessage}
+									{showPreviousMessage}
+									{showNextMessage}
+									{updateChat}
+									{editMessage}
+									{deleteMessage}
+									{rateMessage}
+									{actionMessage}
+									{saveMessage}
+									{submitMessage}
+									{regenerateResponse}
+									{continueResponse}
+									{mergeResponses}
+									{addMessages}
+									{triggerScroll}
+									{readOnly}
+									{editCodeBlock}
+									{topPadding}
+								/>
+							</li>
 						{/each}
 					</ul>
 				</section>

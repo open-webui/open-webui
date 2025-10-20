@@ -755,10 +755,14 @@
 						{:else}
 							<div class="w-full flex flex-col relative" id="response-content-container">
 								{#if message.content === '' && !message.error && ((model?.info?.meta?.capabilities?.status_updates ?? true) ? (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 || (message?.statusHistory?.at(-1)?.hidden ?? false) : true)}
+									<span class="sr-only">{$i18n.t('Assistant is typing')}</span>
 									<Skeleton />
 								{:else if message.content && message.error !== true}
 									<!-- always show message contents even if there's an error -->
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
+									{#if message.done}
+										<span class="sr-only">{$i18n.t('Response complete')}</span>
+									{/if}
 									<ContentRenderer
 										id={`${chatId}-${message.id}`}
 										messageId={message.id}
