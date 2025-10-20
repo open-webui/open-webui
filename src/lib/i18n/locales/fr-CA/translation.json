@@ -1157,6 +1157,7 @@
 	"Speech recognition error: {{error}}": "Erreur de reconnaissance vocale : {{error}}",
 	"Speech-to-Text Engine": "Moteur de reconnaissance vocale",
 	"Standard I/O (stdio)": "Entrée/Sortie standard (stdio)",
+	"Start and end dates cannot be the same. Please select a date range of at least one day.": "Les dates de début et de fin ne peuvent pas être identiques. Veuillez sélectionner une plage de dates d'au moins un jour.",
 	"Start Date": "Date de début",
 	"Start Server": "Démarrer le serveur",
 	"Start server automatically": "Démarrer le serveur automatiquement",
