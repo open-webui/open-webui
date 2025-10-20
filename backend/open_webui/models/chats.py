@@ -441,7 +441,7 @@ class ChatTable:
                 direction = filter.get("direction")
 
                 if order_by and direction:
-                    if not getattr(Chat, order_by):
+                    if not getattr(Chat, order_by, None):
                         raise ValueError("Invalid order_by field")
 
                     if direction.lower() == "asc":
