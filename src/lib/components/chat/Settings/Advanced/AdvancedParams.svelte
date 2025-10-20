@@ -508,7 +508,7 @@
 					<input
 						id="steps-range"
 						type="range"
-						min="-2"
+						min="1"
 						max="131072"
 						step="1"
 						bind:value={params.max_tokens}
@@ -520,7 +520,7 @@
 						bind:value={params.max_tokens}
 						type="number"
 						class=" bg-transparent text-center w-14"
-						min="-2"
+						min="1"
 						step="1"
 					/>
 				</div>
