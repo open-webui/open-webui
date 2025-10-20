@@ -1593,18 +1593,23 @@ export const decodeString = (str: string) => {
 	}
 };
 
+let mermaidInitialized = false;
 export const renderMermaidDiagram = async (code: string) => {
 	const { default: mermaid } = await import('mermaid');
-	mermaid.initialize({
-		startOnLoad: false, // Should be false when using render API
-		theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
-		securityLevel: 'loose',
-		suppressErrorRendering: true
-	});
-	await mermaid.parse(code, { suppressErrors: false });  
-	const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);  
-	return svg;  
-}
+
+	if (!mermaidInitialized) {
+		mermaid.initialize({
+			startOnLoad: false, // Should be false when using render API
+			theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
+			securityLevel: 'loose',
+			suppressErrorRendering: true
+		});
+		mermaidInitialized = true;
+	}
+	await mermaid.parse(code, { suppressErrors: false });
+	const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
+	return svg;
+};
 
 export const renderVegaVisualization = async (spec: string, i18n?: any) => {
 	const vega = await import('vega');
