@@ -36,14 +36,14 @@ body:
       label: Check Existing Issues
       description: Please confirm that you've checked for existing similar requests
       options:
-        - label: I have searched all existing open AND closed issues and discussions for similar requests. I have found none that is comparable to my request.
+        - label: I have searched for all existing **open AND closed** issues and discussions for similar requests. I have found none that is comparable to my request.
           required: true
   - type: textarea
     id: problem-description
     attributes:
       label: Problem Description
       description: Is your feature request related to a problem? Please provide a clear and concise description of what the problem is.
-      placeholder: "Ex. I'm always frustrated when..."
+      placeholder: "Ex. I'm always frustrated when... / Not related to a problem"
     validations:
       required: true
   - type: textarea
