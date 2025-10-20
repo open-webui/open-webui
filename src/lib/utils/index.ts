@@ -1598,15 +1598,13 @@ export const renderMermaidDiagram = async (code: string) => {
 	mermaid.initialize({
 		startOnLoad: false, // Should be false when using render API
 		theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
-		securityLevel: 'loose'
+		securityLevel: 'loose',
+		suppressErrorRendering: true
 	});
-	const parseResult = await mermaid.parse(code, { suppressErrors: false });
-	if (parseResult) {
-		const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
-		return svg;
-	}
-	return '';
-};
+	await mermaid.parse(code, { suppressErrors: false });  
+	const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);  
+	return svg;  
+}
 
 export const renderVegaVisualization = async (spec: string, i18n?: any) => {
 	const vega = await import('vega');
