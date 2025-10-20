@@ -440,7 +440,10 @@ class ChatTable:
                 order_by = filter.get("order_by")
                 direction = filter.get("direction")
 
-                if order_by and direction and getattr(Chat, order_by):
+                if order_by and direction:
+                    if not getattr(Chat, order_by):
+                        raise ValueError("Invalid order_by field")
+
                     if direction.lower() == "asc":
                         query = query.order_by(getattr(Chat, order_by).asc())
                     elif direction.lower() == "desc":
