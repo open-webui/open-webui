@@ -733,7 +733,7 @@
 								</div>
 								<div class="">
 									<Textarea
-										bind:value={RAGConfig.DOCLING_PARAMETERS}
+										bind:value={RAGConfig.DOCLING_PARAMS}
 										placeholder={$i18n.t('Enter additional parameters in JSON format')}
 										minSize={100}
 									/>
