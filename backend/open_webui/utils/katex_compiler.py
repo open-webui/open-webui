@@ -191,9 +191,8 @@ class KaTeXCompiler:
 
         script_content = "\n".join(script_lines)
 
-        # Create files in project temp dir
-        project_temp_dir = Path(__file__).parent.parent.parent.parent / "temp"
-        project_temp_dir.mkdir(exist_ok=True)
+        # Use /tmp directory (works in OpenShift)
+        project_temp_dir = Path('/tmp')
 
         script_path = project_temp_dir / f"katex_script_{part_index}.cjs"
         with open(script_path, 'w') as script_file:
@@ -309,9 +308,8 @@ class KaTeXCompiler:
             
             script_content = "\n".join(script_lines)
             
-            # Create temporary files in project temp directory
-            project_temp_dir = Path(__file__).parent.parent.parent.parent / "temp"
-            project_temp_dir.mkdir(exist_ok=True)
+            # Use /tmp directory (works in OpenShift)
+            project_temp_dir = Path('/tmp')
             
             # Create script file in project temp directory (use .cjs for CommonJS)
             script_path = project_temp_dir / f"katex_script_{part_index}.cjs"
@@ -384,8 +382,9 @@ class KaTeXCompiler:
 
             script_content = "\n".join(script_lines)
 
-            project_temp_dir = Path(__file__).parent.parent.parent.parent / 'temp'
-            project_temp_dir.mkdir(exist_ok=True)
+            # Use /tmp directory (works in OpenShift)
+            project_temp_dir = Path('/tmp')
+            
             script_path = project_temp_dir / 'katex_render_fragment.cjs'
             with open(script_path, 'w') as f:
                 f.write(script_content)
@@ -424,15 +423,17 @@ class KaTeXCompiler:
                 print(f"Error cleaning up temp file {temp_path}: {e}")
         self.temp_images.clear()
         
-        # Also clean up any remaining files in the project temp directory
-        project_temp_dir = Path(__file__).parent.parent.parent.parent / "temp"
-        if project_temp_dir.exists():
+        # Clean up any remaining KaTeX files in /tmp
+        temp_dir = Path('/tmp')
+        if temp_dir.exists():
             try:
-                for temp_file in project_temp_dir.glob("katex_*"):
-                    if temp_file.is_file():
-                        temp_file.unlink()
+                for pattern in ("katex_*", "weasyprint-*"):
+                    for temp_file in temp_dir.glob(pattern):
+                        if temp_file.is_file():
+                            temp_file.unlink()
             except Exception as e:
-                print(f"Error cleaning up project temp directory: {e}")
+                print(f"Error cleaning up temp directory {temp_dir}: {e}")
+
     
     def is_available(self) -> bool:
         """Check if KaTeX compilation is available."""
