@@ -106,13 +106,14 @@ async def get_tool_function_with_updated_params(
 
         if inspect.iscoroutinefunction(original_func):
             return await original_func(**filtered_params, **tool_params)
-        else:
-            result = original_func(**filtered_params, **tool_params)
-            if inspect.isawaitable(result):
-                return await result
-            return result
-    else:
-        return await callable_func(**tool_params)
+
+        result = original_func(**filtered_params, **tool_params)
+        if inspect.isawaitable(result):
+            return await result
+            
+        return result
+            
+    return await callable_func(**tool_params)
 
 
 async def get_tools(
