@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.35] - 2025-10-22
+
+### Added
+- 🖨️ Code block output now preserves whitespace formatting with monospace font to accurately reflect terminal behavior. [#18352](https://github.com/open-webui/open-webui/pull/18352)
+- 🔒 CORS origin validation was added to WebSocket connections as a defense-in-depth security measure against cross-site WebSocket hijacking attacks. [#18411](https://github.com/open-webui/open-webui/pull/18411), [#18410](https://github.com/open-webui/open-webui/issues/18410)
+- 🐍 Experimental initial preparations for Python 3.13 compatibility by updating the unstructured and python-jose dependencies with security enhancements and cryptographic improvements. [#18430](https://github.com/open-webui/open-webui/pull/18430), [#18424](https://github.com/open-webui/open-webui/pull/18424)
+- 🔄 Various improvements were implemented across the frontend and backend to enhance performance, stability, and security.
+- 🌐 Translations for Portuguese (Brazil), Greek, German, Traditional Chinese, Simplified Chinese, and Georgian were enhanced and expanded.
+
+### Fixed
+- 🔐 Chat query errors are prevented by properly validating and handling the 'order_by' parameter to ensure requested columns exist. [#18400](https://github.com/open-webui/open-webui/pull/18400), [#18452](https://github.com/open-webui/open-webui/pull/18452)
+- 🔐 Login failures with passwords longer than 72 bytes are resolved by safely truncating oversized passwords for bcrypt compatibility. [#18157](https://github.com/open-webui/open-webui/issues/18157)
+- 📄 Docling RAG parameter configuration is now correctly saved in the admin UI by fixing the typo in the "DOCLING_PARAMS" parameter name. [#18390](https://github.com/open-webui/open-webui/pull/18390)
+- 📹 YouTube video transcript fetching now works correctly when using a proxy connection. [#18419](https://github.com/open-webui/open-webui/pull/18419)
+- ⚙️ Chat settings now load properly when reopening a tab or starting a new session by initializing defaults when sessionStorage is empty. [#18438](https://github.com/open-webui/open-webui/pull/18438)
+- 🔒 Incorrect await call in the OAuth 2.1 flow is removed, eliminating a logged exception during authentication. [#18236](https://github.com/open-webui/open-webui/pull/18236)
+- 🔒 Duplicate crossorigin attribute in the manifest file was removed. [#18413](https://github.com/open-webui/open-webui/pull/18413)
+
 ## [0.6.34] - 2025-10-16
 
 ### Added
