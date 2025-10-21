@@ -6,7 +6,12 @@
 
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
 	import { executeCode } from '$lib/apis/utils';
-	import { copyToClipboard, renderMermaidDiagram, renderVegaVisualization } from '$lib/utils';
+	import {
+		copyToClipboard,
+		initMermaid,
+		renderMermaidDiagram,
+		renderVegaVisualization
+	} from '$lib/utils';
 
 	import 'highlight.js/styles/github-dark.min.css';
 
@@ -323,11 +328,19 @@
 		};
 	};
 
+	let mermaid = null;
+	const renderMermaid = async (code) => {
+		if (!mermaid) {
+			mermaid = await initMermaid();
+		}
+		return await renderMermaidDiagram(mermaid, code);
+	};
+
 	const render = async () => {
 		onUpdate(token);
 		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
 			try {
-				mermaidHtml = await renderMermaidDiagram(code);
+				mermaidHtml = await renderMermaid(code);
 			} catch (error) {
 				console.error('Failed to render mermaid diagram:', error);
 				const errorMsg = error instanceof Error ? error.message : String(error);
