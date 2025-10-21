@@ -93,7 +93,6 @@ class PDFGenerator:
                 latex_expr = match.group(1).strip()  # Remove leading/trailing whitespace
                 # Additional validation to ensure we have meaningful content
                 if latex_expr and len(latex_expr) > 0 and not latex_expr.isspace():
-                    print(f"Detected LaTeX: '{latex_expr}' (delimiter: {delimiter})")
                     found_latex.append({
                         "expression": latex_expr,
                         "full_match": match.group(0),
@@ -131,11 +130,6 @@ class PDFGenerator:
             except Exception as e:
                 print(f"Error cleaning up project temp directory: {e}")
 
-    # Removed KaTeX->PNG path (WeasyPrint renders KaTeX HTML directly)
-
-    # Matplotlib fallback removed to enforce KaTeX-only rendering
-
-    # Removed image placeholder path (WeasyPrint uses direct KaTeX HTML)
 
     def print_latex_detected(self, message: Dict[str, Any]) -> None:
         """
@@ -225,16 +219,27 @@ class PDFGenerator:
         html_content = content
         for latex in latex_expressions:
             expr = latex['expression']
+            
+            # Handle special cases where we need to reconstruct the full LaTeX command
+            if latex['delimiter'] in ['\\boxed{}', '\\ce{}', '\\pu{}']:
+                # Reconstruct the full LaTeX command for these special cases
+                expr = latex['delimiter'].replace('{}', '{' + expr + '}')
+            elif latex['delimiter'] == '\\[\\boxed{}\\]]':
+                # Handle boxed expressions wrapped in \[ \] delimiters
+                # Remove the \[ \] delimiters and just use \boxed{}
+                expr = '\\boxed{' + expr + '}'
+            
             # Insert soft breakpoints to avoid overflow in PDF layout
             expr = self._insert_soft_breaks(expr)
             try:
                 fragment = self.katex_compiler.render_to_html(expr, latex['display'])
-                print(f"✅ LaTeX rendered successfully: {expr[:50]}...")
             except Exception as e:
-                print(f"❌ LaTeX rendering failed for '{expr[:50]}...': {e}")
                 fragment = escape(expr)
             # Replace the full matched delimiter range with the fragment
             html_content = html_content[:latex['start']] + fragment + html_content[latex['end']:]
+
+        # Clean up any remaining \[ \] delimiters that might have been missed
+        html_content = html_content.replace('\\[', '').replace('\\]', '')
 
         return html_content
 
@@ -277,11 +282,6 @@ class PDFGenerator:
 
         return expr
 
-    # Removed FPDF message rendering (WeasyPrint renders full HTML)
-
-    # Removed FPDF text cleanup helper
-
-    # Removed FPDF content embedding (unused)
 
     def generate_chat_pdf(self) -> bytes:
         """
@@ -299,13 +299,14 @@ class PDFGenerator:
 
             self.messages_html = "\n".join(messages_html_parts)
             html_body = self._generate_html_body()
-            # Inject KaTeX CSS link and wrapping rules to avoid cropping long math
+            # Inject CSS and KaTeX CSS link with wrapping rules to avoid cropping long math
             html_full = html_body.replace(
                 "<head>",
                 (
                     "<head>\n"
                     "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css\">\n"
                     "<style>\n"
+                    f"{self.css}\n"
                     "  /* Ensure long KaTeX math wraps within page width */\n"
                     "  .katex, .katex-display {\n"
                     "    white-space: normal !important;\n"
