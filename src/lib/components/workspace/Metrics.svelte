@@ -37,6 +37,21 @@
 		return formatDate(minEndDate);
 	}
 
+	// Handler for start date changes - ensures end date is always after start date
+	function handleStartDateChange(event) {
+		const newStartDate = event.target.value;
+		startDate = newStartDate;
+
+		// If start date is after or equal to end date, adjust end date to be one day after start date
+		if (newStartDate && endDate && new Date(newStartDate) >= new Date(endDate)) {
+			const startDateObj = new Date(newStartDate);
+			const newEndDate = new Date(startDateObj.getTime() + 24 * 60 * 60 * 1000); // Add one day
+			endDate = formatDate(newEndDate);
+		}
+
+		updateRangeMetrics();
+	}
+
 	// Register all Chart.js components
 	Chart.register(...registerables);
 
@@ -231,7 +246,6 @@
 	async function updateCharts(selectedDomain: string | null, selectedModel: string | null) {
 		// Don't update charts if either date is empty (from clearing date inputs)
 		if (!startDate || !endDate) {
-			console.log('Skipping chart update - missing date values');
 			return;
 		}
 
@@ -622,7 +636,6 @@
 	async function updateRangeMetrics() {
 		// Don't make API calls if either date is empty (from clearing date inputs)
 		if (!startDate || !endDate) {
-			console.log('Skipping metrics update - missing date values');
 			rangeMetrics = null; // Clear stale data
 			return;
 		}
@@ -857,7 +870,7 @@
 								bind:value={startDate}
 								max={formatDate(new Date(Date.now() - 24 * 60 * 60 * 1000))}
 								required
-								on:change={updateRangeMetrics}
+								on:change={handleStartDateChange}
 								class="block w-40 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
 							/>
 						</div>
