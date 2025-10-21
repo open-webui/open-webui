@@ -1564,7 +1564,7 @@ async def query_doc_handler(
                 )
 
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
-            return query_doc_with_hybrid_search(
+            return await query_doc_with_hybrid_search(
                 collection_name=form_data.collection_name,
                 query=form_data.query,
                 embedding_function=request.app.state.EMBEDDING_FUNCTION,
@@ -1635,7 +1635,7 @@ async def query_collection_handler(
             return []
 
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
-            return query_collection_with_hybrid_search(
+            return await query_collection_with_hybrid_search(
                 collection_names=form_data.collection_names,
                 queries=[form_data.query],
                 embedding_function=request.app.state.EMBEDDING_FUNCTION,

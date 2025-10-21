@@ -5,7 +5,6 @@ from typing import Optional, Union
 import requests
 
 from huggingface_hub import snapshot_download
-from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriever
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 
@@ -24,41 +23,6 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 from typing import Any
-
-from langchain_core.callbacks import CallbackManagerForRetrieverRun
-from langchain_core.retrievers import BaseRetriever
-
-
-class VectorSearchRetriever(BaseRetriever):
-    collection_name: Any
-    embedding_function: Any
-    top_k: int
-
-    def _get_relevant_documents(
-        self,
-        query: str,
-        *,
-        run_manager: CallbackManagerForRetrieverRun,
-    ) -> list[Document]:
-        result = VECTOR_DB_CLIENT.search(
-            collection_name=self.collection_name,
-            vectors=[self.embedding_function(query)],
-            limit=self.top_k,
-        )
-
-        ids = result.ids[0]
-        metadatas = result.metadatas[0]
-        documents = result.documents[0]
-
-        results = []
-        for idx in range(len(ids)):
-            results.append(
-                Document(
-                    metadata=metadatas[idx],
-                    page_content=documents[idx],
-                )
-            )
-        return results
 
 
 async def query_doc(
@@ -82,9 +46,9 @@ async def query_doc(
         raise e
 
 
-def get_doc(collection_name: str, user: UserModel = None):
+async def get_doc(collection_name: str, user: UserModel = None):
     try:
-        result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
+        result = await VECTOR_DB_CLIENT.get(collection_name=collection_name)
 
         if result:
             log.info(f"query_doc:result {result.ids} {result.metadatas}")
@@ -95,7 +59,7 @@ def get_doc(collection_name: str, user: UserModel = None):
         raise e
 
 
-def query_doc_with_hybrid_search(
+async def query_doc_with_hybrid_search(
     collection_name: str,
     query: str,
     embedding_function,
@@ -104,39 +68,74 @@ def query_doc_with_hybrid_search(
     r: float,
 ) -> dict:
     try:
-        result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
+        # Get all documents from the collection
+        result = await VECTOR_DB_CLIENT.get(collection_name=collection_name)
 
+        # Prepare documents for BM25
+        documents = result.documents[0]
+        metadatas = result.metadatas[0]
+
+        # Create BM25 retriever
         bm25_retriever = BM25Retriever.from_texts(
-            texts=result.documents[0],
-            metadatas=result.metadatas[0],
+            texts=documents,
+            metadatas=metadatas,
         )
         bm25_retriever.k = k
 
-        vector_search_retriever = VectorSearchRetriever(
+        # Get BM25 results
+        bm25_docs = bm25_retriever.invoke(query)
+
+        # Get vector search results
+        query_embedding = embedding_function(query)
+        vector_result = await VECTOR_DB_CLIENT.search(
             collection_name=collection_name,
-            embedding_function=embedding_function,
-            top_k=k,
+            vectors=[query_embedding],
+            limit=k,
         )
 
-        ensemble_retriever = EnsembleRetriever(
-            retrievers=[bm25_retriever, vector_search_retriever], weights=[0.5, 0.5]
-        )
-        compressor = RerankCompressor(
-            embedding_function=embedding_function,
-            top_n=k,
-            reranking_function=reranking_function,
-            r_score=r,
-        )
+        # Convert vector results to Document objects
+        vector_docs = []
+        for idx in range(len(vector_result.ids[0])):
+            vector_docs.append(
+                Document(
+                    metadata=vector_result.metadatas[0][idx],
+                    page_content=vector_result.documents[0][idx],
+                )
+            )
 
-        compression_retriever = ContextualCompressionRetriever(
-            base_compressor=compressor, base_retriever=ensemble_retriever
-        )
+        # Combine results (simple approach: merge and deduplicate by content)
+        combined_docs = []
+        seen_content = set()
 
-        result = compression_retriever.invoke(query)
+        # Add BM25 results with weight
+        for doc in bm25_docs:
+            if doc.page_content not in seen_content:
+                combined_docs.append(doc)
+                seen_content.add(doc.page_content)
+
+        # Add vector results with weight (only if not already seen)
+        for doc in vector_docs:
+            if doc.page_content not in seen_content:
+                combined_docs.append(doc)
+                seen_content.add(doc.page_content)
+
+        # Apply reranking/compression
+        if reranking_function is not None or r > 0:
+            compressor = RerankCompressor(
+                embedding_function=embedding_function,
+                top_n=k,
+                reranking_function=reranking_function,
+                r_score=r,
+            )
+            final_docs = compressor.compress_documents(combined_docs, query)
+        else:
+            final_docs = combined_docs[:k]
+
+        # Format results
         result = {
-            "distances": [[d.metadata.get("score") for d in result]],
-            "documents": [[d.page_content for d in result]],
-            "metadatas": [[d.metadata for d in result]],
+            "distances": [[d.metadata.get("score", 0.0) for d in final_docs]],
+            "documents": [[d.page_content for d in final_docs]],
+            "metadatas": [[d.metadata for d in final_docs]],
         }
 
         log.info(
@@ -209,13 +208,13 @@ def merge_and_sort_query_results(
     return result
 
 
-def get_all_items_from_collections(collection_names: list[str]) -> dict:
+async def get_all_items_from_collections(collection_names: list[str]) -> dict:
     results = []
 
     for collection_name in collection_names:
         if collection_name:
             try:
-                result = get_doc(collection_name=collection_name)
+                result = await get_doc(collection_name=collection_name)
                 if result is not None:
                     results.append(result.model_dump())
             except Exception as e:
@@ -261,7 +260,7 @@ async def query_collection(
         return merge_and_sort_query_results(results, k=k, reverse=True)
 
 
-def query_collection_with_hybrid_search(
+async def query_collection_with_hybrid_search(
     collection_names: list[str],
     queries: list[str],
     embedding_function,
@@ -274,7 +273,7 @@ def query_collection_with_hybrid_search(
     for collection_name in collection_names:
         try:
             for query in queries:
-                result = query_doc_with_hybrid_search(
+                result = await query_doc_with_hybrid_search(
                     collection_name=collection_name,
                     query=query,
                     embedding_function=embedding_function,
@@ -442,7 +441,7 @@ async def get_sources_from_files(
 
             if full_context:
                 try:
-                    context = get_all_items_from_collections(collection_names)
+                    context = await get_all_items_from_collections(collection_names)
 
                     print("context", context)
                 except Exception as e:
@@ -456,7 +455,7 @@ async def get_sources_from_files(
                     else:
                         if hybrid_search:
                             try:
-                                context = query_collection_with_hybrid_search(
+                                context = await query_collection_with_hybrid_search(
                                     collection_names=collection_names,
                                     queries=queries,
                                     embedding_function=embedding_function,
@@ -619,7 +618,7 @@ def generate_embeddings(engine: str, model: str, text: Union[str, list[str]], **
 
 
 import operator
-from typing import Optional, Sequence
+from typing import Sequence
 
 from langchain_core.callbacks import Callbacks
 from langchain_core.documents import BaseDocumentCompressor, Document
