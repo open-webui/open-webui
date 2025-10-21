@@ -39,6 +39,8 @@
 	// State for scroll indicator
 	let showScrollIndicator: boolean = false;
 	let hasScrolled: boolean = false;
+	// Main page container for scrolling
+	let mainPageContainer: HTMLElement;
 
 	// Function to generate and store shuffled scenarios for a child
 	async function generateAndStoreScenarios(selectedCharacteristics: string[]) {
@@ -170,9 +172,10 @@
 		sel.child_gender = childGender;
 		// Combine personality traits with characteristics
 		const personalityDesc = getPersonalityDescription();
-		const selectedCharacteristicsList = getSelectedSubCharacteristics().map(sub => sub.name).join(', ');
 		const combinedCharacteristics = personalityDesc 
-			? `${personalityDesc}\n\nSelected characteristics: ${selectedCharacteristicsList}\n\nAdditional characteristics:\n${childCharacteristics}`
+			? (childCharacteristics.trim() 
+				? `${personalityDesc}\n\nAdditional characteristics:\n${childCharacteristics}`
+				: personalityDesc)
 			: childCharacteristics;
 		
 		sel.child_characteristics = combinedCharacteristics;
@@ -252,9 +255,10 @@
 
 		// Combine personality traits with characteristics
 		const personalityDesc = getPersonalityDescription();
-		const selectedCharacteristicsList = getSelectedSubCharacteristicNames().join(', ');
 		const combinedCharacteristics = personalityDesc 
-			? `${personalityDesc}\n\nSelected characteristics: ${selectedCharacteristicsList}\n\nAdditional characteristics:\n${childCharacteristics}`
+			? (childCharacteristics.trim() 
+				? `${personalityDesc}\n\nAdditional characteristics:\n${childCharacteristics}`
+				: personalityDesc)
 			: childCharacteristics;
 		
 		// Generate and store shuffled scenarios for this child
@@ -307,11 +311,18 @@
 		}
 	}
 
-	function selectChild(index: number) {
+	async function selectChild(index: number) {
 		selectedChildIndex = index;
 		hydrateFormFromSelectedChild();
 		showForm = false;
 		isEditing = false;
+		
+		// Update the current child ID in the service
+		const childId = childProfiles[index]?.id;
+		if (childId) {
+			await childProfileSync.setCurrentChildId(childId);
+			console.log('Selected child profile:', childId);
+		}
 	}
 
 	async function loadChildProfile() {
@@ -361,13 +372,17 @@
 				return;
 			}
 
+			// Track if we're editing an existing profile
+			const isEditingExisting = childProfiles.length > 0 && selectedChildIndex >= 0;
+
 			// If no profiles exist or we're creating a new profile, create a new one
 			if (childProfiles.length === 0 || selectedChildIndex === -1) {
 				// Combine personality traits with characteristics
 				const personalityDesc = getPersonalityDescription();
-				const selectedCharacteristicsList = getSelectedSubCharacteristics().map(sub => sub.name).join(', ');
 				const combinedCharacteristics = personalityDesc 
-					? `${personalityDesc}\n\nSelected characteristics: ${selectedCharacteristicsList}\n\nAdditional characteristics:\n${childCharacteristics}`
+					? (childCharacteristics.trim() 
+						? `${personalityDesc}\n\nAdditional characteristics:\n${childCharacteristics}`
+						: personalityDesc)
 					: childCharacteristics;
 				
 				const newChild = await childProfileSync.createChildProfile({
@@ -392,10 +407,31 @@
 				if (selectedChild) {
 					// Combine personality traits with characteristics
 					const personalityDesc = getPersonalityDescription();
-					const selectedCharacteristicsList = getSelectedSubCharacteristics().map(sub => sub.name).join(', ');
 					const combinedCharacteristics = personalityDesc 
-						? `${personalityDesc}\n\nSelected characteristics: ${selectedCharacteristicsList}\n\nAdditional characteristics:\n${childCharacteristics}`
+						? (childCharacteristics.trim() 
+							? `${personalityDesc}\n\nAdditional characteristics:\n${childCharacteristics}`
+							: personalityDesc)
 						: childCharacteristics;
+					
+					// Clear old scenarios and moderation state for this child
+					const oldScenarioKey = localStorage.getItem(`scenarios_${selectedChild.id}`);
+					if (oldScenarioKey) {
+						// Remove old scenario data
+						localStorage.removeItem(oldScenarioKey);
+					}
+					// Remove the scenario key reference
+					localStorage.removeItem(`scenarios_${selectedChild.id}`);
+					
+					// Clear moderation state for this child
+					localStorage.removeItem(`moderationScenarioStates_${selectedChild.id}`);
+					localStorage.removeItem(`moderationScenarioTimers_${selectedChild.id}`);
+					localStorage.removeItem(`moderationCurrentScenario_${selectedChild.id}`);
+					
+					// Generate new scenarios based on updated characteristics
+					const newScenarioKey = await generateAndStoreScenarios(getSelectedSubCharacteristicNames());
+					
+					// Store the new scenario key
+					localStorage.setItem(`scenarios_${selectedChild.id}`, newScenarioKey);
 					
 					// Update the child profile via API
 					await childProfileSync.updateChildProfile(selectedChild.id, {
@@ -408,15 +444,25 @@
 				}
 			}
 			
-			// Dispatch event to notify sidebar of child profile changes
-			window.dispatchEvent(new CustomEvent('child-profiles-updated'));
-			
+		// Dispatch event to notify sidebar of child profile changes
+		window.dispatchEvent(new CustomEvent('child-profiles-updated'));
+		
+		// Show appropriate success message
+		if (isEditingExisting) {
+			toast.success('Profile updated! New moderation scenarios have been generated.');
+		} else {
 			toast.success('Child profile saved successfully!');
-			
-			// Exit edit mode after saving and mark as completed
-			isEditing = false;
-			showForm = false;
-			isProfileCompleted = true;
+		}
+		
+		// Scroll to top to see the saved profile
+		if (mainPageContainer) {
+			mainPageContainer.scrollTo({ top: 0, behavior: 'smooth' });
+		}
+		
+		// Exit edit mode after saving and mark as completed
+		isEditing = false;
+		showForm = false;
+		isProfileCompleted = true;
 		} catch (error) {
 			console.error('Failed to save child profile:', error);
 			toast.error('Failed to save child profile');
@@ -438,18 +484,21 @@
 		showForm = true;
 	}
 
-	function selectChildForQuestions(index: number) {
+	async function selectChildForQuestions(index: number) {
 		childSelectedForQuestions = index;
 		const childId = childProfiles[index]?.id;
 		if (childId) {
+			// Use the childProfileSync service to set the current child ID
+			await childProfileSync.setCurrentChildId(childId);
 			localStorage.setItem('selectedChildForQuestions', childId.toString());
+			console.log('Selected child for moderation:', childId);
 		}
-	// Unlock Step 2 immediately before showing the modal
-	localStorage.setItem('assignmentStep', '2');
-	localStorage.setItem('moderationScenariosAccessed', 'true');
-	localStorage.setItem('unlock_moderation', 'true');
-	window.dispatchEvent(new Event('storage'));
-	window.dispatchEvent(new Event('workflow-updated'));
+		// Unlock Step 2 immediately before showing the modal
+		localStorage.setItem('assignmentStep', '2');
+		localStorage.setItem('moderationScenariosAccessed', 'true');
+		localStorage.setItem('unlock_moderation', 'true');
+		window.dispatchEvent(new Event('storage'));
+		window.dispatchEvent(new Event('workflow-updated'));
 		toast.success(`${childProfiles[index]?.name} selected for questions`);
 		showConfirmationModal = true;
 	}
@@ -583,7 +632,7 @@
 		</div>
 	</nav>
 
-	<div class="flex-1 max-h-full overflow-y-auto bg-gray-50 dark:bg-gray-900">
+	<div class="flex-1 max-h-full overflow-y-auto bg-gray-50 dark:bg-gray-900" bind:this={mainPageContainer}>
 		<div class="max-w-4xl mx-auto px-4 py-8">
 		<!-- Header -->
 		<div class="mb-8"></div>

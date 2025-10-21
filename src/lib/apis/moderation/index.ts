@@ -114,7 +114,8 @@ export const applyModeration = async (
 	childPrompt?: string,
 	customInstructions?: string[],  // Optional custom instruction texts
 	originalResponse?: string,  // For refactoring mode
-	highlightedTexts?: string[]  // Phrases parent flagged
+	highlightedTexts?: string[],  // Phrases parent flagged
+	childAge?: string  // Child's age for age-appropriate moderation
 ): Promise<ModerationResponse | null> => {
 	let error = null;
 
@@ -131,7 +132,8 @@ export const applyModeration = async (
 			max_chars: 600,
 			custom_instructions: customInstructions || [],  // Send custom instructions array
 			original_response: originalResponse || null,  // Optional: for refactoring mode
-			highlighted_texts: highlightedTexts || []  // Optional: flagged texts
+			highlighted_texts: highlightedTexts || [],  // Optional: flagged texts
+			child_age: childAge || null  // Optional: child's age for "Tailor to Age Group" strategy
 		})
 	})
 		.then(async (res) => {

@@ -98,9 +98,75 @@
 	// Child profile and personality-based scenario generation
 	let childProfiles: any[] = [];
 	let selectedChildId: string = '';
+	let previousChildId: string = ''; // Track previous child to detect changes
 	let personalityBasedScenarios: QAPair[] = []; // Now storing Q&A pairs
 	let usePersonalityScenarios: boolean = true;
 	let personalityJSONData: any = null;
+	
+	// Watch for child profile changes and reset state
+	$: {
+		// Get the current child ID from the service
+		const currentChildId = childProfileSync.getCurrentChildId();
+		
+		if (currentChildId && previousChildId && currentChildId !== previousChildId) {
+			console.log('🔄 Child profile changed from', previousChildId, 'to', currentChildId);
+			selectedChildId = currentChildId;
+			
+			// Reset all scenario state when switching child profiles
+			resetAllScenarioStates();
+			// Update previous child ID
+			previousChildId = currentChildId;
+			
+			// Regenerate scenarios for the new child (async, non-blocking)
+			setTimeout(() => {
+				generatePersonalityScenarios();
+			}, 0);
+		} else if (currentChildId && !previousChildId) {
+			// First time initialization - don't regenerate (onMount handles it)
+			selectedChildId = currentChildId;
+			previousChildId = currentChildId;
+			console.log('✅ Initial child ID set:', currentChildId);
+		}
+	}
+	
+	// Function to reset all scenario states
+	function resetAllScenarioStates() {
+		console.log('Resetting all scenario states for new child profile');
+		scenarioStates.clear();
+		versions = [];
+		currentVersionIndex = -1;
+		confirmedVersionIndex = null;
+		highlightedTexts1 = [];
+		selectedModerations = new Set();
+		customInstructions = [];
+		showOriginal1 = false;
+		moderationPanelVisible = false;
+		moderationPanelExpanded = false;
+		expandedGroups.clear();
+		highlightingMode = false;
+		hasInitialDecision = false;
+		acceptedOriginal = false;
+		attentionCheckSelected = false;
+		markedNotApplicable = false;
+		selectedScenarioIndex = 0;
+		scenarioTimers.clear();
+		
+		// Clear child-specific localStorage states
+		try {
+			if (selectedChildId) {
+				const stateKey = `moderationScenarioStates_${selectedChildId}`;
+				const timerKey = `moderationScenarioTimers_${selectedChildId}`;
+				const currentKey = `moderationCurrentScenario_${selectedChildId}`;
+				
+				localStorage.removeItem(stateKey);
+				localStorage.removeItem(timerKey);
+				localStorage.removeItem(currentKey);
+				console.log(`Cleared localStorage states for child: ${selectedChildId}`);
+			}
+		} catch (e) {
+			console.error('Failed to clear scenario states from localStorage:', e);
+		}
+	}
 	
 	// Load child profiles and generate personality-based scenarios
 	async function loadChildProfiles() {
@@ -108,7 +174,15 @@
 			childProfiles = await childProfileSync.getChildProfiles();
 			console.log('Loaded child profiles:', childProfiles);
 			if (childProfiles.length > 0) {
-				selectedChildId = childProfiles[0].id;
+				// Get the current child ID from the service (set by sidebar/profile page)
+				const currentChildId = childProfileSync.getCurrentChildId();
+				if (currentChildId) {
+					selectedChildId = currentChildId;
+				} else {
+					// Fallback to first child if none selected
+					selectedChildId = childProfiles[0].id;
+					await childProfileSync.setCurrentChildId(selectedChildId);
+				}
 				console.log('Set selectedChildId to:', selectedChildId);
 			}
 			
@@ -146,13 +220,19 @@
 				personalityBasedScenarios = JSON.parse(storedScenarios);
 				console.log('Loaded pre-shuffled Q&A scenarios:', personalityBasedScenarios);
 				
-				// Update the scenario list to use Q&A pairs directly
-				if (personalityBasedScenarios.length > 0) {
-					// Convert Q&A pairs to scenario list format [question, response]
-					scenarioList = personalityBasedScenarios.map(qa => [qa.question, qa.response]);
-					console.log('Updated scenarioList with Q&A pairs:', scenarioList.length);
-				}
-				return;
+			// Update the scenario list to use Q&A pairs directly
+			if (personalityBasedScenarios.length > 0) {
+				// Convert Q&A pairs to scenario list format [question, response]
+				scenarioList = personalityBasedScenarios.map(qa => [qa.question, qa.response]);
+				console.log('Updated scenarioList with Q&A pairs:', scenarioList.length);
+				
+				// Load saved states for this child after scenarios are loaded
+				loadSavedStates();
+				
+				// Load the first scenario to ensure UI is updated (force reload)
+				loadScenario(0, true);
+			}
+			return;
 			}
 		}
 		
@@ -261,75 +341,22 @@
 			// Convert Q&A pairs to scenario list format [question, response]
 			scenarioList = personalityBasedScenarios.map(qa => [qa.question, qa.response]);
 			console.log('Updated scenarioList with Q&A pairs:', scenarioList.length);
+			
+			// Load saved states for this child after scenarios are loaded
+			loadSavedStates();
+			
+			// Load the first scenario to ensure UI is updated (force reload)
+			loadScenario(0, true);
 		}
 	}
 
 	// DEPRECATED: This function is no longer used - responses now come directly from JSON files
-	// Function to generate responses for personality-based scenarios
+	/* 
 	async function generateResponsesForPersonalityScenarios() {
-		console.log('Generating responses for personality-based scenarios...');
-		
-		// Show loading state
-		scenarioList = personalityBasedScenarios.map((question, index) => [question, "Generating response..."]);
-		selectedScenarioIndex = 0;
-		loadScenario(0);
-		
-		const scenariosWithResponses: [string, string][] = [];
-		
-		for (let i = 0; i < personalityBasedScenarios.length; i++) {
-			const question = personalityBasedScenarios[i];
-			try {
-				// Update progress
-				console.log(`Generating response ${i + 1}/${personalityBasedScenarios.length}: ${question.substring(0, 50)}...`);
-				
-				// Check if we have a valid token
-				if (!localStorage.token) {
-					console.error('❌ No authentication token found');
-					scenariosWithResponses.push([question, "I'm here to help you with that question. Let me think about the best way to respond."]);
-					continue;
-				}
-				
-				// Generate a response using the moderation API
-				const result = await applyModeration(
-					localStorage.token,
-					['Empathy and Support', 'Age-Appropriate Language', 'Safety and Boundaries'],
-					question
-				);
-				
-				console.log('API Response:', result);
-				
-				if (result && result.refactored_response) {
-					scenariosWithResponses.push([question, result.refactored_response]);
-					console.log(`✅ Generated response for: ${question.substring(0, 50)}...`);
-				} else {
-					// Fallback to a generic response if API fails
-					scenariosWithResponses.push([question, "I'm here to help you with that question. Let me think about the best way to respond."]);
-					console.log(`⚠️ API returned no response for: ${question.substring(0, 50)}...`);
-					console.log('Full API result:', result);
-				}
-			} catch (error) {
-				console.error('❌ Error generating response for question:', question, error);
-				console.error('Error details:', error);
-				// Fallback to a generic response
-				scenariosWithResponses.push([question, "I'm here to help you with that question. Let me think about the best way to respond."]);
-			}
-		}
-		
-		// Update the scenario list with questions and responses
-		scenarioList = scenariosWithResponses;
-		selectedScenarioIndex = 0;
-		loadScenario(0);
-		
-		console.log(`Generated ${scenariosWithResponses.length} personality-based scenarios with responses`);
-		
-		// If no scenarios were generated, fall back to using the personality scenarios without responses
-		if (scenariosWithResponses.length === 0 && personalityBasedScenarios.length > 0) {
-			console.log('No responses generated, using personality scenarios without responses');
-			scenarioList = personalityBasedScenarios.map((question, index) => [question, `Personality-based scenario ${index + 1}`]);
-			selectedScenarioIndex = 0;
-			loadScenario(0);
-		}
+		// This function is no longer needed since Q&A pairs come with responses from JSON files
+		// Previously generated responses via API, but now they're pre-written in the JSON
 	}
+	*/
 
 	// Attention check helper
 	const ATTENTION_CHECK_PROMPT = "How are you doing with this interview?";
@@ -396,7 +423,7 @@
 	// Current scenario state
 	let moderationLoading: boolean = false;
 	let selectedModerations: Set<string> = new Set();
-	let showCustomModal: boolean = false;
+	let showCustomInput: boolean = false; // Show inline input instead of modal
 	let customInstructionInput: string = '';
 	let customInstructions: Array<{id: string, text: string}> = [];
 	let attentionCheckSelected: boolean = false;
@@ -422,6 +449,8 @@
 	// Text selection UI state
 	let responseContainer1: HTMLElement;
 	let promptContainer1: HTMLElement;
+	let mainContentContainer: HTMLElement; // Main scrollable container
+	let moderationPanelElement: HTMLElement; // Reference to moderation panel for scrolling
 	let selectionButtonsVisible1: boolean = false;
 	let selectionButtonsTop1: number = 0;
 	let selectionButtonsLeft1: number = 0;
@@ -440,7 +469,7 @@
 	let acceptedOriginal: boolean = false;
 	let markedNotApplicable: boolean = false;
 
-	// Helper function to handle text selection
+	// Helper function to handle text selection - AUTO-HIGHLIGHT on drag
 	function handleTextSelection(event: MouseEvent) {
 		const container = (event.currentTarget as HTMLElement) || responseContainer1;
 		if (!container) return;
@@ -458,16 +487,13 @@
 			currentSelection1 = selectedText;
 			selectionInPrompt = !!promptContainer1 && container === promptContainer1;
 			
-			const range = selection.getRangeAt(0);
-			const rect = range.getBoundingClientRect();
-			const containerRect = container.getBoundingClientRect();
+			// Automatically highlight the selected text (no button required)
+			saveSelection();
 			
-			const top = rect.bottom - containerRect.top + 5;
-			const left = rect.left - containerRect.left;
-			
-			selectionButtonsTop1 = top;
-			selectionButtonsLeft1 = left;
-			selectionButtonsVisible1 = true;
+			// Clear the text selection after highlighting (visual cleanup)
+			setTimeout(() => {
+				selection.removeAllRanges();
+			}, 100);
 		}, 10);
 	}
 	
@@ -639,7 +665,7 @@
 		};
 		scenarioStates.set(selectedScenarioIndex, currentState);
 		
-		// Save to localStorage for persistence across navigation
+		// Save to localStorage for persistence across navigation (child-specific)
 		try {
 			const serializedStates = new Map();
 			scenarioStates.forEach((state, index) => {
@@ -648,20 +674,29 @@
 					selectedModerations: Array.from(state.selectedModerations) // Convert Set to Array for JSON
 				});
 			});
-			localStorage.setItem('moderationScenarioStates', JSON.stringify(Array.from(serializedStates.entries())));
-			localStorage.setItem('moderationScenarioTimers', JSON.stringify(Array.from(scenarioTimers.entries())));
-			localStorage.setItem('moderationCurrentScenario', selectedScenarioIndex.toString());
-			console.log('Saved moderation states to localStorage');
+			
+			// Use child-specific localStorage keys
+			const stateKey = selectedChildId ? `moderationScenarioStates_${selectedChildId}` : 'moderationScenarioStates';
+			const timerKey = selectedChildId ? `moderationScenarioTimers_${selectedChildId}` : 'moderationScenarioTimers';
+			const currentKey = selectedChildId ? `moderationCurrentScenario_${selectedChildId}` : 'moderationCurrentScenario';
+			
+			localStorage.setItem(stateKey, JSON.stringify(Array.from(serializedStates.entries())));
+			localStorage.setItem(timerKey, JSON.stringify(Array.from(scenarioTimers.entries())));
+			localStorage.setItem(currentKey, selectedScenarioIndex.toString());
+			console.log(`Saved moderation states to localStorage for child: ${selectedChildId}`);
 		} catch (e) {
 			console.error('Failed to save moderation states to localStorage:', e);
 		}
 	}
 
-	function loadScenario(index: number) {
-		if (index === selectedScenarioIndex) return;
+	function loadScenario(index: number, forceReload: boolean = false) {
+		// Skip if same scenario and not forcing reload
+		if (index === selectedScenarioIndex && !forceReload) return;
 		
-		// Save current state before switching
-		saveCurrentScenarioState();
+		// Save current state before switching (unless forcing reload for new child)
+		if (!forceReload) {
+			saveCurrentScenarioState();
+		}
 		
 		selectedScenarioIndex = index;
 		const [prompt, response] = scenarioList[index];
@@ -731,8 +766,13 @@
 
 	function loadSavedStates() {
 		try {
+			// Use child-specific localStorage keys
+			const stateKey = selectedChildId ? `moderationScenarioStates_${selectedChildId}` : 'moderationScenarioStates';
+			const timerKey = selectedChildId ? `moderationScenarioTimers_${selectedChildId}` : 'moderationScenarioTimers';
+			const currentKey = selectedChildId ? `moderationCurrentScenario_${selectedChildId}` : 'moderationCurrentScenario';
+			
 			// Load scenario states
-			const savedStates = localStorage.getItem('moderationScenarioStates');
+			const savedStates = localStorage.getItem(stateKey);
 			if (savedStates) {
 				const parsedStates = new Map(JSON.parse(savedStates));
 				scenarioStates.clear();
@@ -742,18 +782,18 @@
 						selectedModerations: new Set(state.selectedModerations) // Convert Array back to Set
 					});
 				});
-				console.log('Loaded saved scenario states from localStorage');
+				console.log(`Loaded saved scenario states from localStorage for child: ${selectedChildId}`);
 			}
 			
 			// Load timers
-			const savedTimers = localStorage.getItem('moderationScenarioTimers');
+			const savedTimers = localStorage.getItem(timerKey);
 			if (savedTimers) {
 				scenarioTimers = new Map(JSON.parse(savedTimers));
-				console.log('Loaded saved timers from localStorage');
+				console.log(`Loaded saved timers from localStorage for child: ${selectedChildId}`);
 			}
 			
 			// Load current scenario
-			const savedCurrentScenario = localStorage.getItem('moderationCurrentScenario');
+			const savedCurrentScenario = localStorage.getItem(currentKey);
 			if (savedCurrentScenario) {
 				const scenarioIndex = parseInt(savedCurrentScenario);
 				if (scenarioIndex >= 0 && scenarioIndex < scenarioList.length) {
@@ -793,10 +833,21 @@
 		scenarioTimers.clear();
 		stopTimer();
 		
-		// Clear localStorage
-		localStorage.removeItem('moderationScenarioStates');
-		localStorage.removeItem('moderationScenarioTimers');
-		localStorage.removeItem('moderationCurrentScenario');
+		// Clear child-specific localStorage
+		if (selectedChildId) {
+			const stateKey = `moderationScenarioStates_${selectedChildId}`;
+			const timerKey = `moderationScenarioTimers_${selectedChildId}`;
+			const currentKey = `moderationCurrentScenario_${selectedChildId}`;
+			
+			localStorage.removeItem(stateKey);
+			localStorage.removeItem(timerKey);
+			localStorage.removeItem(currentKey);
+		} else {
+			// Fallback to non-specific keys
+			localStorage.removeItem('moderationScenarioStates');
+			localStorage.removeItem('moderationScenarioTimers');
+			localStorage.removeItem('moderationCurrentScenario');
+		}
 		
 		// Reset to first scenario
 		selectedScenarioIndex = 0;
@@ -868,9 +919,9 @@
 	}
 
 	function toggleModerationSelection(option: string) {
-		// Special handling for Custom option - opens modal
+		// Special handling for Custom option - same as clicking group header
 		if (option === 'Custom') {
-			showCustomModal = true;
+			showCustomInput = !showCustomInput;
 			return;
 		}
 		
@@ -897,6 +948,18 @@
 	}
 
 	function toggleGroupExpansion(groupName: string) {
+		// Special handling for Custom category - toggle input instead of group
+		if (groupName === 'Custom') {
+			showCustomInput = !showCustomInput;
+			// Auto-expand the group when showing input
+			if (showCustomInput) {
+				expandedGroups.add('Custom');
+			}
+			expandedGroups = expandedGroups;
+			return;
+		}
+		
+		// Normal group expansion for other categories
 		if (expandedGroups.has(groupName)) {
 			expandedGroups.delete(groupName);
 		} else {
@@ -918,11 +981,15 @@
 		// Add to custom instructions array
 		customInstructions = [...customInstructions, {id, text: trimmed}];
 		
-		// Close modal and reset input
-		showCustomModal = false;
+		// Add to selected moderations automatically
+		selectedModerations.add(id);
+		selectedModerations = selectedModerations;
+		
+		// Close input and reset
+		showCustomInput = false;
 		customInstructionInput = '';
 		
-		toast.success('Custom instruction added - click it to select');
+		toast.success('Custom instruction added and selected');
 	}
 
 	function unmarkSatisfaction() {
@@ -942,8 +1009,8 @@
 		selectedModerations = selectedModerations;
 	}
 	
-	function cancelCustomModal() {
-		showCustomModal = false;
+	function cancelCustomInput() {
+		showCustomInput = false;
 		customInstructionInput = '';
 	}
 
@@ -1108,6 +1175,11 @@
 				}
 			});
 			
+			// Get child's age from the selected child profile
+			const selectedChild = childProfiles.find(child => child.id === selectedChildId);
+			const childAge = selectedChild?.child_age || null;
+			console.log('Applying moderation with child age:', childAge);
+			
 			// Call moderation API
 			const result = await applyModeration(
 				localStorage.token,
@@ -1115,7 +1187,8 @@
 				childPrompt1,
 				customTexts,
 				originalResponse1,  // Pass original response for refactoring
-				highlightedTexts1  // Pass highlighted texts
+				highlightedTexts1,  // Pass highlighted texts
+				childAge  // Pass child's age for age-appropriate moderation
 			);
 			
 			if (result) {
@@ -1134,6 +1207,11 @@
 				versions = [...versions, newVersion]; // Trigger reactivity
 				currentVersionIndex = versions.length - 1;
 				showOriginal1 = false; // Ensure we're viewing the new version
+				
+				// Scroll to top to see the new moderated response
+				if (mainContentContainer) {
+					mainContentContainer.scrollTo({ top: 0, behavior: 'smooth' });
+				}
 				
 				// Clear current selections for next iteration
 				selectedModerations = new Set();
@@ -1205,6 +1283,20 @@
 		showConfirmationModal = false;
 	}
 
+	// Handler for profile updates - defined at component level for cleanup
+	const handleProfileUpdate = async () => {
+		console.log('🔄 Profile updated event received, reloading child profiles and scenarios...');
+		await loadChildProfiles();
+		
+		// Reset all scenario states to start fresh
+		resetAllScenarioStates();
+		
+		// Regenerate scenarios with updated characteristics
+		await generatePersonalityScenarios();
+		
+		console.log('✅ Scenarios reloaded after profile update');
+	};
+
 	onMount(async () => {
 		// Guard navigation if user tries to jump ahead
 		const step = parseInt(localStorage.getItem('assignmentStep') || '0');
@@ -1213,10 +1305,11 @@
 			return;
 		}
 		
-		// Load saved states from localStorage
-		loadSavedStates();
+		// Listen for profile updates to reload scenarios when characteristics change
+		window.addEventListener('child-profiles-updated', handleProfileUpdate);
 		
 		// Load child profiles for personality-based scenario generation
+		// (loadSavedStates will be called after scenarios are loaded in generatePersonalityScenarios)
 		await loadChildProfiles();
 		
 		// Automatically generate personality-based scenarios if child profiles exist
@@ -1229,11 +1322,12 @@
 			// Force personality scenarios if generation failed
 			if (scenarioList.length === Object.entries(scenarios).length) {
 				console.log('WARNING: Still using default scenarios, forcing personality scenarios...');
-				// Force use personality scenarios even without responses
+				// Force use personality scenarios with Q&A pairs
 				if (personalityBasedScenarios.length > 0) {
-					scenarioList = personalityBasedScenarios.map((question, index) => [question, `Personality-based scenario ${index + 1}`]);
+					scenarioList = personalityBasedScenarios.map(qa => [qa.question, qa.response]);
+					loadSavedStates(); // Load child-specific states
 					selectedScenarioIndex = 0;
-					loadScenario(0);
+					loadScenario(0, true); // Force reload
 					console.log('Forced personality scenarios loaded:', scenarioList.length);
 				} else {
 					console.log('No personality scenarios generated, trying direct generation...');
@@ -1251,14 +1345,16 @@
 								const selectedChars = traitMatch[2].split(',').map((char: string) => char.trim()).filter((char: string) => char.length > 0);
 								console.log('Direct extraction - trait:', traitName, 'characteristics:', selectedChars);
 								
-								// Generate scenarios directly
-								const directScenarios = generateScenariosFromPersonalityData(selectedChars);
-								if (directScenarios.length > 0) {
-									scenarioList = directScenarios.map((question, index) => [question, `Personality-based scenario ${index + 1}`]);
-									selectedScenarioIndex = 0;
-									loadScenario(0);
-									console.log('Direct personality scenarios loaded:', scenarioList.length);
-								}
+								// Generate scenarios directly (async)
+								generateScenariosFromPersonalityData(selectedChars).then(directScenarios => {
+									if (directScenarios.length > 0) {
+										scenarioList = directScenarios.map(qa => [qa.question, qa.response]);
+										loadSavedStates(); // Load child-specific states
+										selectedScenarioIndex = 0;
+										loadScenario(0, true); // Force reload
+										console.log('Direct personality scenarios loaded:', scenarioList.length);
+									}
+								});
 							}
 						}
 					}
@@ -1310,6 +1406,8 @@
 		saveCurrentScenarioState();
 		// Clean up timer on component destroy
 		stopTimer();
+		// Remove event listener
+		window.removeEventListener('child-profiles-updated', handleProfileUpdate);
 	});
 
 	// Reactive statements to save state when changes occur
@@ -1497,44 +1595,17 @@
 				<p class="text-sm text-gray-600 dark:text-gray-400">
 					Please the conversation below, and answer the questions that follow.
 				</p>
-			</div>
+		</div>
 
-			<div class="flex-1 overflow-y-auto p-6 space-y-4">
-				<!-- Child Prompt Bubble -->
+		<div class="flex-1 overflow-y-auto p-6 space-y-4" bind:this={mainContentContainer}>
+			<!-- Child Prompt Bubble -->
 				<div class="flex justify-end">
 					<div class="max-w-[80%] bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm relative select-text"
 						bind:this={promptContainer1}
 						on:mouseup={handleTextSelection}
 					>
 						<p class="text-sm whitespace-pre-wrap">{@html childPromptHTML}</p>
-						{#if selectionButtonsVisible1 && showOriginal1 && selectionInPrompt}
-							<div 
-								class="absolute z-50 bg-white dark:bg-gray-700 shadow-lg rounded-lg px-2 py-1 flex items-center space-x-2"
-								style="top: {selectionButtonsTop1}px; left: {selectionButtonsLeft1}px;"
-								on:mousedown|stopPropagation
-								on:mouseup|stopPropagation
-								role="toolbar"
-								aria-label="Text selection toolbar"
-							>
-								<button
-									on:click|stopPropagation|preventDefault={saveSelection}
-									on:mousedown|stopPropagation
-									class="px-3 py-1 text-xs font-medium bg-yellow-500 hover:bg-yellow-600 text-white rounded transition-colors"
-								>
-									💡 Highlight
-								</button>
-								<button
-									on:click|stopPropagation={() => selectionButtonsVisible1 = false}
-									on:mousedown|stopPropagation
-									class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-									aria-label="Close"
-								>
-									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-									</svg>
-								</button>
-							</div>
-						{/if}
+						<!-- Auto-highlight enabled: No button needed -->
 					</div>
 				</div>
 
@@ -1548,35 +1619,7 @@
 							<div class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap response-text">
 								{@html response1HTML}
 							</div>
-							
-							{#if selectionButtonsVisible1 && showOriginal1 && !selectionInPrompt}
-								<div 
-									class="absolute z-50 bg-white dark:bg-gray-700 shadow-lg rounded-lg px-2 py-1 flex items-center space-x-2"
-									style="top: {selectionButtonsTop1}px; left: {selectionButtonsLeft1}px;"
-									on:mousedown|stopPropagation
-									on:mouseup|stopPropagation
-									role="toolbar"
-									aria-label="Text selection toolbar"
-								>
-									<button
-										on:click|stopPropagation|preventDefault={saveSelection}
-										on:mousedown|stopPropagation
-										class="px-3 py-1 text-xs font-medium bg-yellow-500 hover:bg-yellow-600 text-white rounded transition-colors"
-									>
-										💡 Highlight
-									</button>
-									<button
-										on:click|stopPropagation={() => selectionButtonsVisible1 = false}
-										on:mousedown|stopPropagation
-										class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-										aria-label="Close"
-									>
-										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-										</svg>
-									</button>
-								</div>
-							{/if}
+							<!-- Auto-highlight enabled: No button needed -->
 							
 						<!-- Original Accepted Indicator -->
 						{#if acceptedOriginal}
@@ -1721,9 +1764,28 @@
 									{/each}
 								</div>
 							</div>
-						<!-- Confirmation: only show the confirm button inside -->
-						<div class="mt-3">
-							{#if confirmedVersionIndex === null}
+					<!-- Confirmation: two-button choice after moderation -->
+					<div class="mt-3">
+						{#if confirmedVersionIndex === null}
+							<div class="flex space-x-3">
+							<button
+								on:click={() => {
+									// Show moderation panel again for another iteration
+									moderationPanelVisible = true;
+									moderationPanelExpanded = true;
+									toast.info('Select moderation strategies to create another version');
+									
+									// Scroll to moderation panel after it opens
+									setTimeout(() => {
+										if (moderationPanelElement) {
+											moderationPanelElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+										}
+									}, 100);
+								}}
+								class="flex-1 px-6 py-2 rounded-lg font-medium transition-all duration-200 bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl"
+							>
+								Moderate Again
+							</button>
 								<button
 									on:click={() => {
 										confirmCurrentVersion();
@@ -1734,12 +1796,13 @@
 											console.error('Failed to persist confirm', e);
 										}
 									}}
-									class="px-6 py-2 rounded-lg font-medium transition-all duration-200 bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl"
+									class="flex-1 px-6 py-2 rounded-lg font-medium transition-all duration-200 bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl"
 								>
-									I am satisfied with this response
+									This is Good
 								</button>
-							{/if}
-						</div>
+							</div>
+						{/if}
+					</div>
 						{/if}
 						</div>
 					</div>
@@ -1886,9 +1949,9 @@
 			{/if}
 		{/if}
 
-			<!-- Moderation Panel -->
-			{#if moderationPanelVisible}
-				<div class="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+		<!-- Moderation Panel -->
+		{#if moderationPanelVisible}
+			<div class="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700" bind:this={moderationPanelElement}>
 					<div class="flex items-center justify-between mb-1">
 						<h3 class="text-sm font-semibold text-gray-900 dark:text-white">Select Moderation Strategies</h3>
 						<button
@@ -1909,15 +1972,12 @@
 						</button>
 					</div>
 					
-					<p class="text-xs text-gray-600 dark:text-gray-400 mb-3">
-						Choose up to 3 strategies to improve the AI's response. Click on a group to see its strategies, or hover over each option for details.
+					<p class="text-base text-gray-600 dark:text-gray-400 mb-3">
+						Choose up to <b>3 strategies</b> to improve the AI's response. Click on a group to see its strategies, or hover over each option for details.
 					</p>
 					
 					<!-- Strategy Count -->
-					<div class="flex items-center justify-between mb-3">
-						<span class="text-xs text-gray-600 dark:text-gray-400">
-							{selectedModerations.size} selected{selectedModerations.size === 3 ? ' (maximum reached)' : ''}
-						</span>
+					<div class="flex items-center justify-end mb-3">
 						{#if selectedModerations.size > 0 || attentionCheckSelected}
 							<button
 								on:click={clearSelections}
@@ -1955,53 +2015,97 @@
 											'bg-pink-500'
 										}"></span>
 										<h4 class="text-base font-bold text-gray-900 dark:text-white">
-											{category}
+											{category === 'Custom' && showCustomInput ? '✨ Custom (Open)' : category}
 										</h4>
 									</div>
 									<div class="flex items-center space-x-2">
-										{#if options.some(option => selectedModerations.has(option))}
+										{#if options.some(option => selectedModerations.has(option)) || (category === 'Custom' && customInstructions.length > 0)}
 											<span class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full">
-												{options.filter(option => selectedModerations.has(option)).length} selected
+												{category === 'Custom' ? customInstructions.filter(c => selectedModerations.has(c.id)).length : options.filter(option => selectedModerations.has(option)).length} selected
 											</span>
 										{/if}
-										<svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform {
-											expandedGroups.has(category) ? 'rotate-180' : ''
-										}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-										</svg>
+										{#if category !== 'Custom' || !showCustomInput}
+											<svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform {
+												expandedGroups.has(category) || (category === 'Custom' && showCustomInput) ? 'rotate-180' : ''
+											}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+											</svg>
+										{:else}
+											<svg class="w-5 h-5 text-purple-500 dark:text-purple-400 transition-transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+											</svg>
+										{/if}
 									</div>
 								</div>
 							</button>
 							
-							<!-- Group Content (Expandable) -->
-							{#if expandedGroups.has(category)}
-								<div class="px-4 pb-4">
-									<div class="grid grid-cols-2 gap-3">
-										{#each options as option}
-											<Tooltip
-												content={moderationTooltips[option] || ''}
-												placement="top-end"
-												className="w-full"
-												tippyOptions={{ delay: [200, 0] }}
+						<!-- Group Content (Expandable) - Skip for Custom category -->
+						{#if expandedGroups.has(category) && category !== 'Custom'}
+							<div class="px-4 pb-4">
+								<div class="grid grid-cols-2 gap-3">
+									{#each options as option}
+										<Tooltip
+											content={moderationTooltips[option] || ''}
+											placement="top-end"
+											className="w-full"
+											tippyOptions={{ delay: [200, 0] }}
+										>
+										<button
+											on:click={() => toggleModerationSelection(option)}
+											disabled={moderationLoading}
+											class="p-3 text-sm font-medium text-center rounded-lg transition-all min-h-[50px] flex items-center justify-center {
+												selectedModerations.has(option)
+													? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400 shadow-lg'
+												: 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'
+											} disabled:opacity-50"
+										>
+											{option}
+										</button>
+										</Tooltip>
+									{/each}
+								</div>
+							</div>
+						{/if}
+						
+						<!-- Custom Input Field - Shows directly when Custom category is clicked -->
+						{#if category === 'Custom' && showCustomInput}
+							<div class="px-4 pb-4 pt-2">
+								<div class="space-y-3">
+									<label class="block text-sm font-medium text-purple-900 dark:text-purple-200">
+										Enter custom moderation instruction:
+									</label>
+									<textarea
+										bind:value={customInstructionInput}
+										rows="3"
+										placeholder="E.g., Emphasize problem-solving skills, Include mindfulness techniques, Focus on building independence..."
+										class="w-full px-3 py-2 border border-purple-300 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+										on:keydown={(e) => {
+											if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+												addCustomInstruction();
+											} else if (e.key === 'Escape') {
+												cancelCustomInput();
+											}
+										}}
+									></textarea>
+									<div class="flex justify-end">
+										<div class="flex space-x-2">
+											<button
+												on:click={cancelCustomInput}
+												class="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
 											>
-												<button
-													on:click={() => toggleModerationSelection(option)}
-													disabled={moderationLoading}
-													class="p-3 text-sm font-medium text-center rounded-lg transition-all min-h-[50px] flex items-center justify-center {
-														option === 'Custom'
-															? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-lg'
-															: selectedModerations.has(option)
-															? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400 shadow-lg'
-														: 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'
-													} disabled:opacity-50"
-												>
-													{option === 'Custom' ? '✨ Custom' : option}
-												</button>
-											</Tooltip>
-										{/each}
+												Cancel
+											</button>
+											<button
+												on:click={addCustomInstruction}
+												class="px-3 py-1.5 text-sm font-medium bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors"
+											>
+												Add
+											</button>
+										</div>
 									</div>
 								</div>
-							{/if}
+							</div>
+						{/if}
 						</div>
 					{/each}
 				</div>
@@ -2092,17 +2196,21 @@
 						<div></div>
 					{/if}
 
-			<!-- Next Scenario or Done Button -->
-			{#if selectedScenarioIndex < scenarioList.length - 1}
-				<button
-					on:click={() => loadScenario(selectedScenarioIndex + 1)}
-					class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center space-x-2"
-				>
-					<span>Next</span>
-					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-					</svg>
-				</button>
+		<!-- Next Scenario or Done Button -->
+		{#if selectedScenarioIndex < scenarioList.length - 1}
+			<button
+				on:click={() => loadScenario(selectedScenarioIndex + 1)}
+				class="px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center space-x-2 {
+					currentScenarioCompleted
+						? 'bg-green-500 text-white hover:bg-green-600 shadow-lg hover:shadow-xl'
+						: 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+				}"
+			>
+				<span>Next</span>
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+				</svg>
+			</button>
 			{:else}
 				<button
 					on:click={completeModeration}
@@ -2120,34 +2228,7 @@
 	</div>
 </div>
 
-<!-- Custom Instruction Modal -->
-{#if showCustomModal}
-<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" on:click={cancelCustomModal} role="dialog" aria-modal="true" aria-labelledby="custom-modal-title">
-	<div class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl" on:click|stopPropagation>
-		<h3 id="custom-modal-title" class="text-lg font-bold text-gray-900 dark:text-white mb-4">Add Custom Instruction</h3>
-		<textarea
-			bind:value={customInstructionInput}
-			rows="4"
-			placeholder="Enter your custom moderation instruction..."
-			class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-		></textarea>
-		<div class="flex justify-end space-x-3 mt-4">
-			<button
-				on:click={cancelCustomModal}
-				class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-			>
-				Cancel
-			</button>
-			<button
-				on:click={addCustomInstruction}
-				class="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors"
-			>
-				Add Instruction
-			</button>
-		</div>
-	</div>
-</div>
-{/if}
+<!-- Custom Instruction Modal - REMOVED: Now using inline input -->
 
 <!-- Confirmation Modal -->
 {#if showConfirmationModal}
