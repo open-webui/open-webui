@@ -2012,12 +2012,14 @@ async def process_chat_response(
                 messages = []
 
                 temp_blocks = []
+                thinking_blocks = []
                 for idx, block in enumerate(content_blocks):
                     if block["type"] == "tool_calls":
                         messages.append(
                             {
                                 "role": "assistant",
                                 "content": serialize_content_blocks(temp_blocks, raw),
+                                "thinking_blocks": thinking_blocks,
                                 "tool_calls": block.get("content"),
                             }
                         )
@@ -2033,7 +2035,14 @@ async def process_chat_response(
                                 }
                             )
                         temp_blocks = []
+                        thinking_blocks = []
                     else:
+                        if block["type"] == "reasoning":
+                            thinking_blocks.append({
+                                "type": "thinking",
+                                "thinking": block.get("content"),
+                                "signature": block.get("signature")
+                            })
                         temp_blocks.append(block)
 
                 if temp_blocks:
@@ -2043,6 +2052,7 @@ async def process_chat_response(
                             {
                                 "role": "assistant",
                                 "content": content,
+                                "thinking_blocks": thinking_blocks,
                             }
                         )
 
@@ -2464,7 +2474,10 @@ async def process_chat_response(
                                         or delta.get("reasoning")
                                         or delta.get("thinking")
                                     )
-                                    if reasoning_content:
+                                    signature = (
+                                        delta.get("thinking_blocks", [{}])[0].get("signature", None)
+                                    )
+                                    if reasoning_content or signature:
                                         if (
                                             not content_blocks
                                             or content_blocks[-1]["type"] != "reasoning"
@@ -2478,12 +2491,17 @@ async def process_chat_response(
                                                 },
                                                 "content": "",
                                                 "started_at": time.time(),
+                                                "signature": None
                                             }
                                             content_blocks.append(reasoning_block)
                                         else:
                                             reasoning_block = content_blocks[-1]
 
-                                        reasoning_block["content"] += reasoning_content
+                                        if reasoning_content:
+                                            reasoning_block["content"] += reasoning_content
+
+                                        if signature:
+                                            reasoning_block["signature"] = signature
 
                                         data = {
                                             "content": serialize_content_blocks(
