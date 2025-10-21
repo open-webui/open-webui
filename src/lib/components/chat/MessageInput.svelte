@@ -13,7 +13,6 @@
 
 	import {
 		type Model,
-		mobile,
 		settings,
 		models,
 		config,
@@ -400,6 +399,8 @@
 		}
 		return false;
 	}
+
+	const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
 
 	let chatInputContainerElement;
 	let chatInputElement;
@@ -1207,7 +1208,7 @@
 														floatingMenuPlacement={'top-start'}
 														insertPromptAsRichText={$settings?.insertPromptAsRichText ?? false}
 														shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
-															!$mobile &&
+															!isMobile &&
 															!(
 																'ontouchstart' in window ||
 																navigator.maxTouchPoints > 0 ||
@@ -1292,7 +1293,7 @@
 
 															if (!suggestionsContainerElement) {
 																if (
-																	!$mobile ||
+																	!isMobile ||
 																	!(
 																		'ontouchstart' in window ||
 																		navigator.maxTouchPoints > 0 ||
