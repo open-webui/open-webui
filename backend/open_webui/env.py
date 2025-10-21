@@ -212,6 +212,11 @@ ENABLE_FORWARD_USER_INFO_HEADERS = (
     os.environ.get("ENABLE_FORWARD_USER_INFO_HEADERS", "False").lower() == "true"
 )
 
+# Experimental feature, may be removed in future
+ENABLE_STAR_SESSIONS_MIDDLEWARE = (
+    os.environ.get("ENABLE_STAR_SESSIONS_MIDDLEWARE", "False").lower() == "true"
+)
+
 ####################################
 # WEBUI_BUILD_HASH
 ####################################
@@ -468,16 +473,21 @@ ENABLE_COMPRESSION_MIDDLEWARE = (
 ####################################
 # OAUTH Configuration
 ####################################
-
+ENABLE_OAUTH_EMAIL_FALLBACK = (
+    os.environ.get("ENABLE_OAUTH_EMAIL_FALLBACK", "False").lower() == "true"
+)
 
 ENABLE_OAUTH_ID_TOKEN_COOKIE = (
     os.environ.get("ENABLE_OAUTH_ID_TOKEN_COOKIE", "True").lower() == "true"
 )
 
+OAUTH_CLIENT_INFO_ENCRYPTION_KEY = os.environ.get(
+    "OAUTH_CLIENT_INFO_ENCRYPTION_KEY", WEBUI_SECRET_KEY
+)
+
 OAUTH_SESSION_TOKEN_ENCRYPTION_KEY = os.environ.get(
     "OAUTH_SESSION_TOKEN_ENCRYPTION_KEY", WEBUI_SECRET_KEY
 )
-
 
 ####################################
 # SCIM Configuration
@@ -547,16 +557,16 @@ else:
 
 
 CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = os.environ.get(
-    "CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES", "10"
+    "CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES", "30"
 )
 
 if CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES == "":
-    CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = 10
+    CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = 30
 else:
     try:
         CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = int(CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES)
     except Exception:
-        CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = 10
+        CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = 30
 
 
 ####################################

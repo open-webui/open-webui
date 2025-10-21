@@ -65,6 +65,8 @@
 
 	const BREAKPOINT = 768;
 
+	let scrollTop = 0;
+
 	let navElement;
 	let shiftKey = false;
 
@@ -78,7 +80,10 @@
 	let allChatsLoaded = false;
 
 	let showCreateFolderModal = false;
+
 	let folders = {};
+	let folderRegistry = {};
+
 	let newFolderId = null;
 
 	const initFolders = async () => {
@@ -86,7 +91,7 @@
 			toast.error(`${error}`);
 			return [];
 		});
-		_folders.set(folderList);
+		_folders.set(folderList.sort((a, b) => b.updated_at - a.updated_at));
 
 		folders = {};
 
@@ -173,14 +178,28 @@
 
 	const initChatList = async () => {
 		// Reset pagination variables
-		tags.set(await getAllTags(localStorage.token));
-		pinnedChats.set(await getPinnedChatList(localStorage.token));
-		initFolders();
-
+		console.log('initChatList');
 		currentChatPage.set(1);
 		allChatsLoaded = false;
 
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		initFolders();
+		await Promise.all([
+			await (async () => {
+				console.log('Init tags');
+				const _tags = await getAllTags(localStorage.token);
+				tags.set(_tags);
+			})(),
+			await (async () => {
+				console.log('Init pinned chats');
+				const _pinnedChats = await getPinnedChatList(localStorage.token);
+				pinnedChats.set(_pinnedChats);
+			})(),
+			await (async () => {
+				console.log('Init chat list');
+				const _chats = await getChatList(localStorage.token, $currentChatPage);
+				await chats.set(_chats);
+			})()
+		]);
 
 		// Enable pagination
 		scrollPaginationEnabled.set(true);
@@ -330,57 +349,52 @@
 		selectedChatId = null;
 	};
 
+	let unsubscribers = [];
 	onMount(async () => {
 		showPinnedChat = localStorage?.showPinnedChat ? localStorage.showPinnedChat === 'true' : true;
+		await showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
 
-		mobile.subscribe((value) => {
-			if ($showSidebar && value) {
-				showSidebar.set(false);
-			}
-
-			if ($showSidebar && !value) {
-				const navElement = document.getElementsByTagName('nav')[0];
-				if (navElement) {
-					navElement.style['-webkit-app-region'] = 'drag';
+		unsubscribers = [
+			mobile.subscribe((value) => {
+				if ($showSidebar && value) {
+					showSidebar.set(false);
 				}
-			}
 
-			if (!$showSidebar && !value) {
-				showSidebar.set(true);
-			}
-		});
-
-		showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
-		showSidebar.subscribe(async (value) => {
-			localStorage.sidebar = value;
-
-			// nav element is not available on the first render
-			const navElement = document.getElementsByTagName('nav')[0];
-
-			if (navElement) {
-				if ($mobile) {
-					if (!value) {
+				if ($showSidebar && !value) {
+					const navElement = document.getElementsByTagName('nav')[0];
+					if (navElement) {
 						navElement.style['-webkit-app-region'] = 'drag';
-					} else {
-						navElement.style['-webkit-app-region'] = 'no-drag';
 					}
-				} else {
-					navElement.style['-webkit-app-region'] = 'drag';
 				}
-			}
 
-			if (!value) {
-				await initChannels();
-				await initChatList();
-			}
-		});
+				if (!$showSidebar && !value) {
+					showSidebar.set(true);
+				}
+			}),
+			showSidebar.subscribe(async (value) => {
+				localStorage.sidebar = value;
 
-		chats.subscribe((value) => {
-			initFolders();
-		});
+				// nav element is not available on the first render
+				const navElement = document.getElementsByTagName('nav')[0];
 
-		await initChannels();
-		await initChatList();
+				if (navElement) {
+					if ($mobile) {
+						if (!value) {
+							navElement.style['-webkit-app-region'] = 'drag';
+						} else {
+							navElement.style['-webkit-app-region'] = 'no-drag';
+						}
+					} else {
+						navElement.style['-webkit-app-region'] = 'drag';
+					}
+				}
+
+				if (value) {
+					await initChannels();
+					await initChatList();
+				}
+			})
+		];
 
 		window.addEventListener('keydown', onKeyDown);
 		window.addEventListener('keyup', onKeyUp);
@@ -399,6 +413,14 @@
 	});
 
 	onDestroy(() => {
+		if (unsubscribers && unsubscribers.length > 0) {
+			unsubscribers.forEach((unsubscriber) => {
+				if (unsubscriber) {
+					unsubscriber();
+				}
+			});
+		}
+
 		window.removeEventListener('keydown', onKeyDown);
 		window.removeEventListener('keyup', onKeyUp);
 
@@ -528,7 +550,7 @@
 					placement="right"
 				>
 					<button
-						class="flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition group {isWindows
+						class="flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group {isWindows
 							? 'cursor-pointer'
 							: 'cursor-[e-resize]'}"
 						aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
@@ -551,7 +573,7 @@
 				<div class="">
 					<Tooltip content={$i18n.t('New Chat')} placement="right">
 						<a
-							class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+							class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
 							href="/"
 							draggable="false"
 							on:click={async (e) => {
@@ -573,7 +595,7 @@
 				<div class="">
 					<Tooltip content={$i18n.t('Search')} placement="right">
 						<button
-							class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+							class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
 							on:click={(e) => {
 								e.stopImmediatePropagation();
 								e.preventDefault();
@@ -594,7 +616,7 @@
 					<div class="">
 						<Tooltip content={$i18n.t('Notes')} placement="right">
 							<a
-								class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+								class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
 								href="/notes"
 								on:click={async (e) => {
 									e.stopImmediatePropagation();
@@ -618,7 +640,7 @@
 					<div class="">
 						<Tooltip content={$i18n.t('Workspace')} placement="right">
 							<a
-								class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+								class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
 								href="/workspace"
 								on:click={async (e) => {
 									e.stopImmediatePropagation();
@@ -666,7 +688,7 @@
 							}}
 						>
 							<div
-								class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+								class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
 							>
 								<div class=" self-center flex items-center justify-center size-9">
 									<img
@@ -704,10 +726,10 @@
 				: 'invisible'}"
 		>
 			<div
-				class="sidebar px-1.5 pt-2 pb-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 bg-gray-50 dark:bg-gray-950"
+				class="sidebar px-2 pt-2 pb-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 -mb-3"
 			>
 				<a
-					class="flex items-center rounded-lg p-1.5 h-full justify-center hover:bg-gray-100 dark:hover:bg-gray-850 transition no-drag-region"
+					class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition no-drag-region"
 					href="/"
 					draggable="false"
 					on:click={newChatHandler}
@@ -730,7 +752,7 @@
 					placement="bottom"
 				>
 					<button
-						class="flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition {isWindows
+						class="flex rounded-xl size-8.5 justify-center items-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition {isWindows
 							? 'cursor-pointer'
 							: 'cursor-[w-resize]'}"
 						on:click={() => {
@@ -743,102 +765,120 @@
 						</div>
 					</button>
 				</Tooltip>
+
+				<div
+					class="{scrollTop > 0
+						? 'visible'
+						: 'invisible'} sidebar-bg-gradient-to-b bg-linear-to-b from-gray-50 dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10 -mb-6"
+				></div>
 			</div>
 
-			<div class="pb-1.5">
-				<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
-					<a
-						id="sidebar-new-chat-button"
-						class="grow flex items-center space-x-3 rounded-lg px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
-						href="/"
-						draggable="false"
-						on:click={newChatHandler}
-						aria-label={$i18n.t('New Chat')}
-					>
-						<div class="self-center">
-							<PencilSquare className=" size-4.5" strokeWidth="2" />
-						</div>
-
-						<div class="flex self-center translate-y-[0.5px]">
-							<div class=" self-center text-sm font-primary">{$i18n.t('New Chat')}</div>
-						</div>
-					</a>
-				</div>
-
-				<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
-					<button
-						class="grow flex items-center space-x-3 rounded-lg px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
-						on:click={() => {
-							showSearch.set(true);
-						}}
-						draggable="false"
-						aria-label={$i18n.t('Search')}
-					>
-						<div class="self-center">
-							<Search strokeWidth="2" className="size-4.5" />
-						</div>
-
-						<div class="flex self-center translate-y-[0.5px]">
-							<div class=" self-center text-sm font-primary">{$i18n.t('Search')}</div>
-						</div>
-					</button>
-				</div>
-
-				{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
+			<div
+				class="relative flex flex-col flex-1 overflow-y-auto scrollbar-hidden pt-3 pb-3"
+				on:scroll={(e) => {
+					if (e.target.scrollTop === 0) {
+						scrollTop = 0;
+					} else {
+						scrollTop = e.target.scrollTop;
+					}
+				}}
+			>
+				<div class="pb-1.5">
 					<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
 						<a
-							class="grow flex items-center space-x-3 rounded-lg px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-							href="/notes"
-							on:click={itemClickHandler}
+							id="sidebar-new-chat-button"
+							class="grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+							href="/"
 							draggable="false"
-							aria-label={$i18n.t('Notes')}
+							on:click={newChatHandler}
+							aria-label={$i18n.t('New Chat')}
 						>
 							<div class="self-center">
-								<Note className="size-4.5" strokeWidth="2" />
+								<PencilSquare className=" size-4.5" strokeWidth="2" />
 							</div>
 
 							<div class="flex self-center translate-y-[0.5px]">
-								<div class=" self-center text-sm font-primary">{$i18n.t('Notes')}</div>
+								<div class=" self-center text-sm font-primary">{$i18n.t('New Chat')}</div>
 							</div>
 						</a>
 					</div>
-				{/if}
 
-				{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
 					<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
-						<a
-							class="grow flex items-center space-x-3 rounded-lg px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-							href="/workspace"
-							on:click={itemClickHandler}
+						<button
+							id="sidebar-search-button"
+							class="grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+							on:click={() => {
+								showSearch.set(true);
+							}}
 							draggable="false"
-							aria-label={$i18n.t('Workspace')}
+							aria-label={$i18n.t('Search')}
 						>
 							<div class="self-center">
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke-width="2"
-									stroke="currentColor"
-									class="size-4.5"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z"
-									/>
-								</svg>
+								<Search strokeWidth="2" className="size-4.5" />
 							</div>
 
 							<div class="flex self-center translate-y-[0.5px]">
-								<div class=" self-center text-sm font-primary">{$i18n.t('Workspace')}</div>
+								<div class=" self-center text-sm font-primary">{$i18n.t('Search')}</div>
 							</div>
-						</a>
+						</button>
 					</div>
-				{/if}
-			</div>
 
-			<div class="relative flex flex-col flex-1">
+					{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
+						<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
+							<a
+								id="sidebar-notes-button"
+								class="grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								href="/notes"
+								on:click={itemClickHandler}
+								draggable="false"
+								aria-label={$i18n.t('Notes')}
+							>
+								<div class="self-center">
+									<Note className="size-4.5" strokeWidth="2" />
+								</div>
+
+								<div class="flex self-center translate-y-[0.5px]">
+									<div class=" self-center text-sm font-primary">{$i18n.t('Notes')}</div>
+								</div>
+							</a>
+						</div>
+					{/if}
+
+					{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
+						<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
+							<a
+								id="sidebar-workspace-button"
+								class="grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								href="/workspace"
+								on:click={itemClickHandler}
+								draggable="false"
+								aria-label={$i18n.t('Workspace')}
+							>
+								<div class="self-center">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke-width="2"
+										stroke="currentColor"
+										class="size-4.5"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z"
+										/>
+									</svg>
+								</div>
+
+								<div class="flex self-center translate-y-[0.5px]">
+									<div class=" self-center text-sm font-primary">{$i18n.t('Workspace')}</div>
+								</div>
+							</a>
+						</div>
+					{/if}
+				</div>
+
 				{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
 					<PinnedModelList bind:selectedChatId {shiftKey} />
 				{/if}
@@ -902,6 +942,7 @@
 						}}
 					>
 						<Folders
+							bind:folderRegistry
 							{folders}
 							{shiftKey}
 							onDelete={(folderId) => {
@@ -928,7 +969,6 @@
 					chevron={false}
 					on:change={async (e) => {
 						selectedFolder.set(null);
-						await goto('/');
 					}}
 					on:import={(e) => {
 						importChatHandler(e.detail);
@@ -961,6 +1001,8 @@
 											return null;
 										}
 									);
+
+									folderRegistry[chat.folder_id]?.setFolderItems();
 								}
 
 								if (chat.pinned) {
@@ -1157,7 +1199,10 @@
 				</Folder>
 			</div>
 
-			<div class="px-1.5 pt-1.5 pb-2 sticky bottom-0 z-10 bg-gray-50 dark:bg-gray-950 sidebar">
+			<div class="px-1.5 pt-1.5 pb-2 sticky bottom-0 z-10 -mt-3 sidebar">
+				<div
+					class=" sidebar-bg-gradient-to-t bg-linear-to-t from-gray-50 dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10 -mt-6"
+				></div>
 				<div class="flex flex-col font-primary">
 					{#if $user !== undefined && $user !== null}
 						<UserMenu
@@ -1169,7 +1214,7 @@
 							}}
 						>
 							<div
-								class=" flex items-center rounded-xl py-2 px-1.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								class=" flex items-center rounded-2xl py-2 px-1.5 w-full hover:bg-gray-100/50 dark:hover:bg-gray-900/50 transition"
 							>
 								<div class=" self-center mr-3">
 									<img
@@ -1188,14 +1233,3 @@
 		</div>
 	</div>
 {/if}
-
-<style>
-	.scrollbar-hidden:active::-webkit-scrollbar-thumb,
-	.scrollbar-hidden:focus::-webkit-scrollbar-thumb,
-	.scrollbar-hidden:hover::-webkit-scrollbar-thumb {
-		visibility: visible;
-	}
-	.scrollbar-hidden::-webkit-scrollbar-thumb {
-		visibility: hidden;
-	}
-</style>

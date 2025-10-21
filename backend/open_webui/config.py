@@ -222,9 +222,10 @@ class PersistentConfig(Generic[T]):
 
 
 class AppConfig:
-    _state: dict[str, PersistentConfig]
     _redis: Union[redis.Redis, redis.cluster.RedisCluster] = None
     _redis_key_prefix: str
+
+    _state: dict[str, PersistentConfig]
 
     def __init__(
         self,
@@ -233,9 +234,8 @@ class AppConfig:
         redis_cluster: Optional[bool] = False,
         redis_key_prefix: str = "open-webui",
     ):
-        super().__setattr__("_state", {})
-        super().__setattr__("_redis_key_prefix", redis_key_prefix)
         if redis_url:
+            super().__setattr__("_redis_key_prefix", redis_key_prefix)
             super().__setattr__(
                 "_redis",
                 get_redis_connection(
@@ -245,6 +245,8 @@ class AppConfig:
                     decode_responses=True,
                 ),
             )
+
+        super().__setattr__("_state", {})
 
     def __setattr__(self, key, value):
         if isinstance(value, PersistentConfig):
@@ -305,8 +307,14 @@ API_KEY_ALLOWED_ENDPOINTS = PersistentConfig(
 
 
 JWT_EXPIRES_IN = PersistentConfig(
-    "JWT_EXPIRES_IN", "auth.jwt_expiry", os.environ.get("JWT_EXPIRES_IN", "-1")
+    "JWT_EXPIRES_IN", "auth.jwt_expiry", os.environ.get("JWT_EXPIRES_IN", "4w")
 )
+
+if JWT_EXPIRES_IN.value == "-1":
+    log.warning(
+        "⚠️  SECURITY WARNING: JWT_EXPIRES_IN is set to '-1'\n"
+        "    See: https://docs.openwebui.com/getting-started/env-configuration\n"
+    )
 
 ####################################
 # OAuth config
@@ -603,8 +611,8 @@ def load_oauth_providers():
     OAUTH_PROVIDERS.clear()
     if GOOGLE_CLIENT_ID.value and GOOGLE_CLIENT_SECRET.value:
 
-        def google_oauth_register(client: OAuth):
-            client.register(
+        def google_oauth_register(oauth: OAuth):
+            client = oauth.register(
                 name="google",
                 client_id=GOOGLE_CLIENT_ID.value,
                 client_secret=GOOGLE_CLIENT_SECRET.value,
@@ -619,6 +627,7 @@ def load_oauth_providers():
                 },
                 redirect_uri=GOOGLE_REDIRECT_URI.value,
             )
+            return client
 
         OAUTH_PROVIDERS["google"] = {
             "redirect_uri": GOOGLE_REDIRECT_URI.value,
@@ -631,8 +640,8 @@ def load_oauth_providers():
         and MICROSOFT_CLIENT_TENANT_ID.value
     ):
 
-        def microsoft_oauth_register(client: OAuth):
-            client.register(
+        def microsoft_oauth_register(oauth: OAuth):
+            client = oauth.register(
                 name="microsoft",
                 client_id=MICROSOFT_CLIENT_ID.value,
                 client_secret=MICROSOFT_CLIENT_SECRET.value,
@@ -647,6 +656,7 @@ def load_oauth_providers():
                 },
                 redirect_uri=MICROSOFT_REDIRECT_URI.value,
             )
+            return client
 
         OAUTH_PROVIDERS["microsoft"] = {
             "redirect_uri": MICROSOFT_REDIRECT_URI.value,
@@ -656,8 +666,8 @@ def load_oauth_providers():
 
     if GITHUB_CLIENT_ID.value and GITHUB_CLIENT_SECRET.value:
 
-        def github_oauth_register(client: OAuth):
-            client.register(
+        def github_oauth_register(oauth: OAuth):
+            client = oauth.register(
                 name="github",
                 client_id=GITHUB_CLIENT_ID.value,
                 client_secret=GITHUB_CLIENT_SECRET.value,
@@ -675,6 +685,7 @@ def load_oauth_providers():
                 },
                 redirect_uri=GITHUB_CLIENT_REDIRECT_URI.value,
             )
+            return client
 
         OAUTH_PROVIDERS["github"] = {
             "redirect_uri": GITHUB_CLIENT_REDIRECT_URI.value,
@@ -688,7 +699,7 @@ def load_oauth_providers():
         and OPENID_PROVIDER_URL.value
     ):
 
-        def oidc_oauth_register(client: OAuth):
+        def oidc_oauth_register(oauth: OAuth):
             client_kwargs = {
                 "scope": OAUTH_SCOPES.value,
                 **(
@@ -714,7 +725,7 @@ def load_oauth_providers():
                     % ("S256", OAUTH_CODE_CHALLENGE_METHOD.value)
                 )
 
-            client.register(
+            client = oauth.register(
                 name="oidc",
                 client_id=OAUTH_CLIENT_ID.value,
                 client_secret=OAUTH_CLIENT_SECRET.value,
@@ -722,6 +733,7 @@ def load_oauth_providers():
                 client_kwargs=client_kwargs,
                 redirect_uri=OPENID_REDIRECT_URI.value,
             )
+            return client
 
         OAUTH_PROVIDERS["oidc"] = {
             "name": OAUTH_PROVIDER_NAME.value,
@@ -731,8 +743,8 @@ def load_oauth_providers():
 
     if FEISHU_CLIENT_ID.value and FEISHU_CLIENT_SECRET.value:
 
-        def feishu_oauth_register(client: OAuth):
-            client.register(
+        def feishu_oauth_register(oauth: OAuth):
+            client = oauth.register(
                 name="feishu",
                 client_id=FEISHU_CLIENT_ID.value,
                 client_secret=FEISHU_CLIENT_SECRET.value,
@@ -750,6 +762,7 @@ def load_oauth_providers():
                 },
                 redirect_uri=FEISHU_REDIRECT_URI.value,
             )
+            return client
 
         OAUTH_PROVIDERS["feishu"] = {
             "register": feishu_oauth_register,
@@ -1215,6 +1228,11 @@ USER_PERMISSIONS_WORKSPACE_MODELS_ALLOW_PUBLIC_SHARING = (
     == "true"
 )
 
+USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING = (
+    os.environ.get("USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING", "False").lower()
+    == "true"
+)
+
 USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ALLOW_PUBLIC_SHARING = (
     os.environ.get(
         "USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ALLOW_PUBLIC_SHARING", "False"
@@ -1352,6 +1370,7 @@ DEFAULT_USER_PERMISSIONS = {
         "public_knowledge": USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ALLOW_PUBLIC_SHARING,
         "public_prompts": USER_PERMISSIONS_WORKSPACE_PROMPTS_ALLOW_PUBLIC_SHARING,
         "public_tools": USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_PUBLIC_SHARING,
+        "public_notes": USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING,
     },
     "chat": {
         "controls": USER_PERMISSIONS_CHAT_CONTROLS,
@@ -1997,16 +2016,23 @@ if VECTOR_DB == "chroma":
 # this uses the model defined in the Dockerfile ENV variable. If you dont use docker or docker based deployments such as k8s, the default embedding model will be used (sentence-transformers/all-MiniLM-L6-v2)
 
 # Milvus
-
 MILVUS_URI = os.environ.get("MILVUS_URI", f"{DATA_DIR}/vector_db/milvus.db")
 MILVUS_DB = os.environ.get("MILVUS_DB", "default")
 MILVUS_TOKEN = os.environ.get("MILVUS_TOKEN", None)
-
 MILVUS_INDEX_TYPE = os.environ.get("MILVUS_INDEX_TYPE", "HNSW")
 MILVUS_METRIC_TYPE = os.environ.get("MILVUS_METRIC_TYPE", "COSINE")
 MILVUS_HNSW_M = int(os.environ.get("MILVUS_HNSW_M", "16"))
 MILVUS_HNSW_EFCONSTRUCTION = int(os.environ.get("MILVUS_HNSW_EFCONSTRUCTION", "100"))
 MILVUS_IVF_FLAT_NLIST = int(os.environ.get("MILVUS_IVF_FLAT_NLIST", "128"))
+MILVUS_DISKANN_MAX_DEGREE = int(os.environ.get("MILVUS_DISKANN_MAX_DEGREE", "56"))
+MILVUS_DISKANN_SEARCH_LIST_SIZE = int(
+    os.environ.get("MILVUS_DISKANN_SEARCH_LIST_SIZE", "100")
+)
+ENABLE_MILVUS_MULTITENANCY_MODE = (
+    os.environ.get("ENABLE_MILVUS_MULTITENANCY_MODE", "false").lower() == "true"
+)
+# Hyphens not allowed, need to use underscores in collection names
+MILVUS_COLLECTION_PREFIX = os.environ.get("MILVUS_COLLECTION_PREFIX", "open_webui")
 
 # Qdrant
 QDRANT_URI = os.environ.get("QDRANT_URI", None)
@@ -2168,6 +2194,8 @@ ENABLE_ONEDRIVE_INTEGRATION = PersistentConfig(
     "onedrive.enable",
     os.getenv("ENABLE_ONEDRIVE_INTEGRATION", "False").lower() == "true",
 )
+
+
 ENABLE_ONEDRIVE_PERSONAL = (
     os.environ.get("ENABLE_ONEDRIVE_PERSONAL", "True").lower() == "true"
 )
@@ -2175,10 +2203,12 @@ ENABLE_ONEDRIVE_BUSINESS = (
     os.environ.get("ENABLE_ONEDRIVE_BUSINESS", "True").lower() == "true"
 )
 
-ONEDRIVE_CLIENT_ID = PersistentConfig(
-    "ONEDRIVE_CLIENT_ID",
-    "onedrive.client_id",
-    os.environ.get("ONEDRIVE_CLIENT_ID", ""),
+ONEDRIVE_CLIENT_ID = os.environ.get("ONEDRIVE_CLIENT_ID", "")
+ONEDRIVE_CLIENT_ID_PERSONAL = os.environ.get(
+    "ONEDRIVE_CLIENT_ID_PERSONAL", ONEDRIVE_CLIENT_ID
+)
+ONEDRIVE_CLIENT_ID_BUSINESS = os.environ.get(
+    "ONEDRIVE_CLIENT_ID_BUSINESS", ONEDRIVE_CLIENT_ID
 )
 
 ONEDRIVE_SHAREPOINT_URL = PersistentConfig(
@@ -2267,6 +2297,36 @@ DATALAB_MARKER_OUTPUT_FORMAT = PersistentConfig(
     os.environ.get("DATALAB_MARKER_OUTPUT_FORMAT", "markdown"),
 )
 
+MINERU_API_MODE = PersistentConfig(
+    "MINERU_API_MODE",
+    "rag.mineru_api_mode",
+    os.environ.get("MINERU_API_MODE", "local"),  # "local" or "cloud"
+)
+
+MINERU_API_URL = PersistentConfig(
+    "MINERU_API_URL",
+    "rag.mineru_api_url",
+    os.environ.get("MINERU_API_URL", "http://localhost:8000"),
+)
+
+MINERU_API_KEY = PersistentConfig(
+    "MINERU_API_KEY",
+    "rag.mineru_api_key",
+    os.environ.get("MINERU_API_KEY", ""),
+)
+
+mineru_params = os.getenv("MINERU_PARAMS", "")
+try:
+    mineru_params = json.loads(mineru_params)
+except json.JSONDecodeError:
+    mineru_params = {}
+
+MINERU_PARAMS = PersistentConfig(
+    "MINERU_PARAMS",
+    "rag.mineru_params",
+    mineru_params,
+)
+
 EXTERNAL_DOCUMENT_LOADER_URL = PersistentConfig(
     "EXTERNAL_DOCUMENT_LOADER_URL",
     "rag.external_document_loader_url",
@@ -2289,6 +2349,18 @@ DOCLING_SERVER_URL = PersistentConfig(
     "DOCLING_SERVER_URL",
     "rag.docling_server_url",
     os.getenv("DOCLING_SERVER_URL", "http://docling:5001"),
+)
+
+docling_params = os.getenv("DOCLING_PARAMS", "")
+try:
+    docling_params = json.loads(docling_params)
+except json.JSONDecodeError:
+    docling_params = {}
+
+DOCLING_PARAMS = PersistentConfig(
+    "DOCLING_PARAMS",
+    "rag.docling_params",
+    docling_params,
 )
 
 DOCLING_DO_OCR = PersistentConfig(
@@ -2760,6 +2832,12 @@ WEB_SEARCH_TRUST_ENV = PersistentConfig(
     os.getenv("WEB_SEARCH_TRUST_ENV", "False").lower() == "true",
 )
 
+
+OLLAMA_CLOUD_WEB_SEARCH_API_KEY = PersistentConfig(
+    "OLLAMA_CLOUD_WEB_SEARCH_API_KEY",
+    "rag.web.search.ollama_cloud_api_key",
+    os.getenv("OLLAMA_CLOUD_API_KEY", ""),
+)
 
 SEARXNG_QUERY_URL = PersistentConfig(
     "SEARXNG_QUERY_URL",
@@ -3335,6 +3413,19 @@ AUDIO_TTS_OPENAI_API_KEY = PersistentConfig(
     "audio.tts.openai.api_key",
     os.getenv("AUDIO_TTS_OPENAI_API_KEY", OPENAI_API_KEY),
 )
+
+audio_tts_openai_params = os.getenv("AUDIO_TTS_OPENAI_PARAMS", "")
+try:
+    audio_tts_openai_params = json.loads(audio_tts_openai_params)
+except json.JSONDecodeError:
+    audio_tts_openai_params = {}
+
+AUDIO_TTS_OPENAI_PARAMS = PersistentConfig(
+    "AUDIO_TTS_OPENAI_PARAMS",
+    "audio.tts.openai.params",
+    audio_tts_openai_params,
+)
+
 
 AUDIO_TTS_API_KEY = PersistentConfig(
     "AUDIO_TTS_API_KEY",

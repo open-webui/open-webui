@@ -12,6 +12,7 @@
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import UserProfileImage from '$lib/components/chat/Settings/Account/UserProfileImage.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -83,110 +84,122 @@
 						submitHandler();
 					}}
 				>
-					<div class=" flex items-center rounded-md px-5 py-2 w-full">
-						<div class=" self-center mr-5">
-							<img
-								src={selectedUser.profile_image_url}
-								class=" max-w-[55px] object-cover rounded-full"
-								alt="User profile"
-							/>
-						</div>
-
-						<div>
-							<div class=" self-center capitalize font-semibold">{selectedUser.name}</div>
-
-							<div class="text-xs text-gray-500">
-								{$i18n.t('Created at')}
-								{dayjs(selectedUser.created_at * 1000).format('LL')}
+					<div class=" px-5 pt-3 pb-5 w-full">
+						<div class="flex self-center w-full">
+							<div class=" self-start h-full mr-6">
+								<UserProfileImage
+									imageClassName="size-14"
+									bind:profileImageUrl={_user.profile_image_url}
+									user={_user}
+								/>
 							</div>
-						</div>
-					</div>
 
-					<div class=" px-5 pt-3 pb-5">
-						<div class=" flex flex-col space-y-1.5">
-							<div class="flex flex-col w-full">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Role')}</div>
+							<div class=" flex-1">
+								<div class="overflow-hidden w-ful mb-2">
+									<div class=" self-center capitalize font-medium truncate">
+										{selectedUser.name}
+									</div>
 
-								<div class="flex-1">
-									<select
-										class="w-full dark:bg-gray-900 text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
-										bind:value={_user.role}
-										disabled={_user.id == sessionUser.id}
-										required
-									>
-										<option value="admin">{$i18n.t('Admin')}</option>
-										<option value="user">{$i18n.t('User')}</option>
-										<option value="pending">{$i18n.t('Pending')}</option>
-									</select>
+									<div class="text-xs text-gray-500">
+										{$i18n.t('Created at')}
+										{dayjs(selectedUser.created_at * 1000).format('LL')}
+									</div>
 								</div>
-							</div>
 
-							{#if userGroups}
-								<div class="flex flex-col w-full text-sm">
-									<div class="mb-1 text-xs text-gray-500">{$i18n.t('User Groups')}</div>
+								<div class=" flex flex-col space-y-1.5">
+									{#if (userGroups ?? []).length > 0}
+										<div class="flex flex-col w-full text-sm">
+											<div class="mb-1 text-xs text-gray-500">{$i18n.t('User Groups')}</div>
 
-									{#if userGroups.length}
-										<div class="flex flex-wrap gap-1 my-0.5 -mx-1">
-											{#each userGroups as userGroup}
-												<span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-850 text-xs">
-													<a
-														href={'/admin/users/groups?id=' + userGroup.id}
-														on:click|preventDefault={() =>
-															goto('/admin/users/groups?id=' + userGroup.id)}
+											<div class="flex flex-wrap gap-1 my-0.5 -mx-1">
+												{#each userGroups as userGroup}
+													<span
+														class="px-1.5 py-0.5 rounded-xl bg-gray-100 dark:bg-gray-850 text-xs"
 													>
-														{userGroup.name}
-													</a>
-												</span>
-											{/each}
+														<a
+															href={'/admin/users/groups?id=' + userGroup.id}
+															on:click|preventDefault={() =>
+																goto('/admin/users/groups?id=' + userGroup.id)}
+														>
+															{userGroup.name}
+														</a>
+													</span>
+												{/each}
+											</div>
 										</div>
-									{:else}
-										<span>-</span>
 									{/if}
-								</div>
-							{/if}
 
-							<div class="flex flex-col w-full">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Email')}</div>
+									<div class="flex flex-col w-full">
+										<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Role')}</div>
 
-								<div class="flex-1">
-									<input
-										class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
-										type="email"
-										bind:value={_user.email}
-										placeholder={$i18n.t('Enter Your Email')}
-										autocomplete="off"
-										required
-									/>
-								</div>
-							</div>
+										<div class="flex-1">
+											<select
+												class="w-full dark:bg-gray-900 text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+												bind:value={_user.role}
+												disabled={_user.id == sessionUser.id}
+												required
+											>
+												<option value="admin">{$i18n.t('Admin')}</option>
+												<option value="user">{$i18n.t('User')}</option>
+												<option value="pending">{$i18n.t('Pending')}</option>
+											</select>
+										</div>
+									</div>
 
-							<div class="flex flex-col w-full">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
+									<div class="flex flex-col w-full">
+										<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
 
-								<div class="flex-1">
-									<input
-										class="w-full text-sm bg-transparent outline-hidden"
-										type="text"
-										bind:value={_user.name}
-										placeholder={$i18n.t('Enter Your Name')}
-										autocomplete="off"
-										required
-									/>
-								</div>
-							</div>
+										<div class="flex-1">
+											<input
+												class="w-full text-sm bg-transparent outline-hidden"
+												type="text"
+												bind:value={_user.name}
+												placeholder={$i18n.t('Enter Your Name')}
+												autocomplete="off"
+												required
+											/>
+										</div>
+									</div>
 
-							<div class="flex flex-col w-full">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('New Password')}</div>
+									<div class="flex flex-col w-full">
+										<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Email')}</div>
 
-								<div class="flex-1">
-									<SensitiveInput
-										class="w-full text-sm bg-transparent outline-hidden"
-										type="password"
-										placeholder={$i18n.t('Enter New Password')}
-										bind:value={_user.password}
-										autocomplete="new-password"
-										required={false}
-									/>
+										<div class="flex-1">
+											<input
+												class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+												type="email"
+												bind:value={_user.email}
+												placeholder={$i18n.t('Enter Your Email')}
+												autocomplete="off"
+												required
+											/>
+										</div>
+									</div>
+
+									{#if _user?.oauth_sub}
+										<div class="flex flex-col w-full">
+											<div class=" mb-1 text-xs text-gray-500">{$i18n.t('OAuth ID')}</div>
+
+											<div class="flex-1 text-sm break-all mb-1">
+												{_user.oauth_sub ?? ''}
+											</div>
+										</div>
+									{/if}
+
+									<div class="flex flex-col w-full">
+										<div class=" mb-1 text-xs text-gray-500">{$i18n.t('New Password')}</div>
+
+										<div class="flex-1">
+											<SensitiveInput
+												class="w-full text-sm bg-transparent outline-hidden"
+												type="password"
+												placeholder={$i18n.t('Enter New Password')}
+												bind:value={_user.password}
+												autocomplete="new-password"
+												required={false}
+											/>
+										</div>
+									</div>
 								</div>
 							</div>
 						</div>

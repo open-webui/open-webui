@@ -1,72 +1,61 @@
-fastapi==0.115.7
-uvicorn[standard]==0.35.0
-pydantic==2.11.7
+fastapi==0.118.0
+uvicorn[standard]==0.37.0
+pydantic==2.11.9
 python-multipart==0.0.20
+itsdangerous==2.2.0
 
 python-socketio==5.13.0
 python-jose==3.4.0
-passlib[bcrypt]==1.7.4
 cryptography
+bcrypt==5.0.0
+argon2-cffi==25.1.0
+PyJWT[crypto]==2.10.1
+authlib==1.6.5
 
-requests==2.32.4
+requests==2.32.5
 aiohttp==3.12.15
 async-timeout
 aiocache
 aiofiles
 starlette-compress==1.6.0
 httpx[socks,http2,zstd,cli,brotli]==0.28.1
+starsessions[redis]==2.2.1
 
 sqlalchemy==2.0.38
 alembic==1.14.0
 peewee==3.18.1
 peewee-migrate==1.12.2
-psycopg2-binary==2.9.10
-pgvector==0.4.1
-PyMySQL==1.1.1
-bcrypt==4.3.0
-
-pymongo
-redis
-boto3==1.40.5
-
-argon2-cffi==25.1.0
-APScheduler==3.10.4
 
 pycrdt==0.12.25
+redis
 
+APScheduler==3.10.4
 RestrictedPython==8.0
 
 loguru==0.7.3
 asgiref==3.8.1
 
 # AI libraries
+tiktoken
+mcp==1.14.1
+
 openai
 anthropic
-google-genai==1.32.0
+google-genai==1.38.0
 google-generativeai==0.8.5
-tiktoken
 
-langchain==0.3.26
-langchain-community==0.3.27
+langchain==0.3.27
+langchain-community==0.3.29
 
 fake-useragent==2.2.0
-chromadb==1.0.20
-pymilvus==2.5.0
-qdrant-client==1.14.3
+chromadb==1.1.0
 opensearch-py==2.8.0
-playwright==1.49.1 # Caution: version must match docker-compose.playwright.yaml
-elasticsearch==9.1.0
-pinecone==6.0.2
-oracledb==3.2.0
 
-av==14.0.1 # Caution: Set due to FATAL FIPS SELFTEST FAILURE, see discussion https://github.com/open-webui/open-webui/discussions/15720
 transformers
-sentence-transformers==4.1.0
+sentence-transformers==5.1.1
 accelerate
-colbert-ai==0.2.21
 pyarrow==20.0.0 # fix: pin pyarrow version to 20 for rpi compatibility #15897
 einops==0.8.1 
-
 
 ftfy==6.2.3
 pypdf==6.0.0
@@ -76,7 +65,7 @@ docx2txt==0.8
 python-pptx==1.0.2
 unstructured==0.16.17
 nltk==3.9.1
-Markdown==3.8.2
+Markdown==3.9
 pypandoc==1.15
 pandas==2.2.3
 openpyxl==3.1.5
@@ -94,13 +83,10 @@ rapidocr-onnxruntime==1.4.4
 rank-bm25==0.2.2
 
 onnxruntime==1.20.1
-
 faster-whisper==1.1.1
 
-PyJWT[crypto]==2.10.1
-authlib==1.6.3
 
-black==25.1.0
+black==25.9.0
 youtube-transcript-api==1.2.2
 pytube==15.0.0
 
@@ -112,17 +98,36 @@ google-api-python-client
 google-auth-httplib2
 google-auth-oauthlib
 
+googleapis-common-protos==1.70.0
+google-cloud-storage==2.19.0
+
+azure-identity==1.25.0
+azure-storage-blob==12.24.1
+
+
+pymongo
+psycopg2-binary==2.9.10
+pgvector==0.4.1
+
+PyMySQL==1.1.1
+boto3==1.40.5
+
+pymilvus==2.6.2
+qdrant-client==1.14.3
+playwright==1.49.1 # Caution: version must match docker-compose.playwright.yaml
+elasticsearch==9.1.0
+pinecone==6.0.2
+oracledb==3.2.0
+
+av==14.0.1 # Caution: Set due to FATAL FIPS SELFTEST FAILURE, see discussion https://github.com/open-webui/open-webui/discussions/15720
+
+colbert-ai==0.2.21
+
+
 ## Tests
 docker~=7.1.0
 pytest~=8.4.1
 pytest-docker~=3.1.1
-
-googleapis-common-protos==1.70.0
-google-cloud-storage==2.19.0
-
-azure-identity==1.23.0
-azure-storage-blob==12.24.1
-
 
 ## LDAP
 ldap3==2.9.1
@@ -130,18 +135,15 @@ ldap3==2.9.1
 ## Firecrawl
 firecrawl-py==1.12.0
 
-# Sougou API SDK(Tencentcloud SDK)
-tencentcloud-sdk-python==3.0.1336
-
 ## Trace
-opentelemetry-api==1.36.0
-opentelemetry-sdk==1.36.0
-opentelemetry-exporter-otlp==1.36.0
-opentelemetry-instrumentation==0.57b0
-opentelemetry-instrumentation-fastapi==0.57b0
-opentelemetry-instrumentation-sqlalchemy==0.57b0
-opentelemetry-instrumentation-redis==0.57b0
-opentelemetry-instrumentation-requests==0.57b0
-opentelemetry-instrumentation-logging==0.57b0
-opentelemetry-instrumentation-httpx==0.57b0
-opentelemetry-instrumentation-aiohttp-client==0.57b0
+opentelemetry-api==1.37.0
+opentelemetry-sdk==1.37.0
+opentelemetry-exporter-otlp==1.37.0
+opentelemetry-instrumentation==0.58b0
+opentelemetry-instrumentation-fastapi==0.58b0
+opentelemetry-instrumentation-sqlalchemy==0.58b0
+opentelemetry-instrumentation-redis==0.58b0
+opentelemetry-instrumentation-requests==0.58b0
+opentelemetry-instrumentation-logging==0.58b0
+opentelemetry-instrumentation-httpx==0.58b0
+opentelemetry-instrumentation-aiohttp-client==0.58b0

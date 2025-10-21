@@ -121,7 +121,7 @@ def openai_reasoning_model_handler(payload):
     return payload
 
 
-def get_headers_and_cookies(
+async def get_headers_and_cookies(
     request: Request,
     url,
     key=None,
@@ -174,7 +174,7 @@ def get_headers_and_cookies(
         oauth_token = None
         try:
             if request.cookies.get("oauth_session_id", None):
-                oauth_token = request.app.state.oauth_manager.get_oauth_token(
+                oauth_token = await request.app.state.oauth_manager.get_oauth_token(
                     user.id,
                     request.cookies.get("oauth_session_id", None),
                 )
@@ -189,6 +189,9 @@ def get_headers_and_cookies(
 
     if token:
         headers["Authorization"] = f"Bearer {token}"
+
+    if config.get("headers") and isinstance(config.get("headers"), dict):
+        headers = {**headers, **config.get("headers")}
 
     return headers, cookies
 
@@ -305,7 +308,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             request.app.state.config.OPENAI_API_CONFIGS.get(url, {}),  # Legacy support
         )
 
-        headers, cookies = get_headers_and_cookies(
+        headers, cookies = await get_headers_and_cookies(
             request, url, key, api_config, user=user
         )
 
@@ -570,7 +573,7 @@ async def get_models(
             timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
         ) as session:
             try:
-                headers, cookies = get_headers_and_cookies(
+                headers, cookies = await get_headers_and_cookies(
                     request, url, key, api_config, user=user
                 )
 
@@ -656,7 +659,7 @@ async def verify_connection(
         timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
     ) as session:
         try:
-            headers, cookies = get_headers_and_cookies(
+            headers, cookies = await get_headers_and_cookies(
                 request, url, key, api_config, user=user
             )
 
@@ -901,7 +904,7 @@ async def generate_chat_completion(
             convert_logit_bias_input_to_json(payload["logit_bias"])
         )
 
-    headers, cookies = get_headers_and_cookies(
+    headers, cookies = await get_headers_and_cookies(
         request, url, key, api_config, metadata, user=user
     )
 
@@ -1010,7 +1013,9 @@ async def embeddings(request: Request, form_data: dict, user):
     session = None
     streaming = False
 
-    headers, cookies = get_headers_and_cookies(request, url, key, api_config, user=user)
+    headers, cookies = await get_headers_and_cookies(
+        request, url, key, api_config, user=user
+    )
     try:
         session = aiohttp.ClientSession(trust_env=True)
         r = await session.request(
@@ -1080,7 +1085,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     streaming = False
 
     try:
-        headers, cookies = get_headers_and_cookies(
+        headers, cookies = await get_headers_and_cookies(
             request, url, key, api_config, user=user
         )
 

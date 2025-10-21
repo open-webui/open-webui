@@ -6,6 +6,7 @@ import requests
 import hashlib
 from concurrent.futures import ThreadPoolExecutor
 import time
+import re
 
 from urllib.parse import quote
 from huggingface_hub import snapshot_download
@@ -15,6 +16,7 @@ from langchain_core.documents import Document
 
 from open_webui.config import VECTOR_DB
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+
 
 from open_webui.models.users import UserModel
 from open_webui.models.files import Files
@@ -26,6 +28,9 @@ from open_webui.models.notes import Notes
 from open_webui.retrieval.vector.main import GetResult
 from open_webui.utils.access_control import has_access
 from open_webui.utils.misc import get_message_list
+
+from open_webui.retrieval.web.utils import get_web_loader
+from open_webui.retrieval.loaders.youtube import YoutubeLoader
 
 
 from open_webui.env import (
@@ -47,6 +52,33 @@ from typing import Any
 
 from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain_core.retrievers import BaseRetriever
+
+
+def is_youtube_url(url: str) -> bool:
+    youtube_regex = r"^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.+$"
+    return re.match(youtube_regex, url) is not None
+
+
+def get_loader(request, url: str):
+    if is_youtube_url(url):
+        return YoutubeLoader(
+            url,
+            language=request.app.state.config.YOUTUBE_LOADER_LANGUAGE,
+            proxy_url=request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
+        )
+    else:
+        return get_web_loader(
+            url,
+            verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
+            requests_per_second=request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
+        )
+
+
+def get_content_from_url(request, url: str) -> str:
+    loader = get_loader(request, url)
+    docs = loader.load()
+    content = " ".join([doc.page_content for doc in docs])
+    return content, docs
 
 
 class VectorSearchRetriever(BaseRetriever):
@@ -127,7 +159,13 @@ def query_doc_with_hybrid_search(
     hybrid_bm25_weight: float,
 ) -> dict:
     try:
-        if not collection_result.documents[0]:
+        if (
+            not collection_result
+            or not hasattr(collection_result, "documents")
+            or not collection_result.documents
+            or len(collection_result.documents) == 0
+            or not collection_result.documents[0]
+        ):
             log.warning(f"query_doc_with_hybrid_search:no_docs {collection_name}")
             return {"documents": [], "metadatas": [], "distances": []}
 
@@ -182,7 +220,11 @@ def query_doc_with_hybrid_search(
                 zip(distances, metadatas, documents), key=lambda x: x[0], reverse=True
             )
             sorted_items = sorted_items[:k]
-            distances, documents, metadatas = map(list, zip(*sorted_items))
+
+            if sorted_items:
+                distances, documents, metadatas = map(list, zip(*sorted_items))
+            else:
+                distances, documents, metadatas = [], [], []
 
         result = {
             "distances": [distances],
@@ -226,6 +268,13 @@ def merge_and_sort_query_results(query_results: list[dict], k: int) -> dict:
     combined = dict()  # To store documents with unique document hashes
 
     for data in query_results:
+        if (
+            len(data.get("distances", [])) == 0
+            or len(data.get("documents", [])) == 0
+            or len(data.get("metadatas", [])) == 0
+        ):
+            continue
+
         distances = data["distances"][0]
         documents = data["documents"][0]
         metadatas = data["metadatas"][0]
@@ -565,6 +614,13 @@ def get_sources_from_items(
                         "metadatas": [[{"file_id": chat.id, "name": chat.title}]],
                     }
 
+        elif item.get("type") == "url":
+            content, docs = get_content_from_url(request, item.get("url"))
+            if docs:
+                query_result = {
+                    "documents": [[content]],
+                    "metadatas": [[{"url": item.get("url"), "name": item.get("url")}]],
+                }
         elif item.get("type") == "file":
             if (
                 item.get("context") == "full"
@@ -730,7 +786,6 @@ def get_sources_from_items(
                     sources.append(source)
         except Exception as e:
             log.exception(e)
-
     return sources
 
 

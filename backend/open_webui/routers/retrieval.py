@@ -5,6 +5,7 @@ import os
 import shutil
 import asyncio
 
+import re
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -45,6 +46,8 @@ from open_webui.retrieval.loaders.youtube import YoutubeLoader
 # Web search engines
 from open_webui.retrieval.web.main import SearchResult
 from open_webui.retrieval.web.utils import get_web_loader
+from open_webui.retrieval.web.ollama import search_ollama_cloud
+from open_webui.retrieval.web.perplexity_search import search_perplexity_search
 from open_webui.retrieval.web.brave import search_brave
 from open_webui.retrieval.web.kagi import search_kagi
 from open_webui.retrieval.web.mojeek import search_mojeek
@@ -68,6 +71,7 @@ from open_webui.retrieval.web.firecrawl import search_firecrawl
 from open_webui.retrieval.web.external import search_external
 
 from open_webui.retrieval.utils import (
+    get_content_from_url,
     get_embedding_function,
     get_reranking_function,
     get_model_path,
@@ -76,6 +80,7 @@ from open_webui.retrieval.utils import (
     query_doc,
     query_doc_with_hybrid_search,
 )
+from open_webui.retrieval.vector.utils import filter_metadata
 from open_webui.utils.misc import (
     calculate_sha256_string,
 )
@@ -185,6 +190,26 @@ def get_rf(
                 except Exception as e:
                     log.error(f"CrossEncoder: {e}")
                     raise Exception(ERROR_MESSAGES.DEFAULT("CrossEncoder error"))
+
+                # Safely adjust pad_token_id if missing as some models do not have this in config
+                try:
+                    model_cfg = getattr(rf, "model", None)
+                    if model_cfg and hasattr(model_cfg, "config"):
+                        cfg = model_cfg.config
+                        if getattr(cfg, "pad_token_id", None) is None:
+                            # Fallback to eos_token_id when available
+                            eos = getattr(cfg, "eos_token_id", None)
+                            if eos is not None:
+                                cfg.pad_token_id = eos
+                                log.debug(
+                                    f"Missing pad_token_id detected; set to eos_token_id={eos}"
+                                )
+                            else:
+                                log.warning(
+                                    "Neither pad_token_id nor eos_token_id present in model config"
+                                )
+                except Exception as e2:
+                    log.warning(f"Failed to adjust pad_token_id on CrossEncoder: {e2}")
 
     return rf
 
@@ -426,6 +451,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "EXTERNAL_DOCUMENT_LOADER_API_KEY": request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
         "TIKA_SERVER_URL": request.app.state.config.TIKA_SERVER_URL,
         "DOCLING_SERVER_URL": request.app.state.config.DOCLING_SERVER_URL,
+        "DOCLING_PARAMS": request.app.state.config.DOCLING_PARAMS,
         "DOCLING_DO_OCR": request.app.state.config.DOCLING_DO_OCR,
         "DOCLING_FORCE_OCR": request.app.state.config.DOCLING_FORCE_OCR,
         "DOCLING_OCR_ENGINE": request.app.state.config.DOCLING_OCR_ENGINE,
@@ -440,6 +466,11 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
+        # MinerU settings
+        "MINERU_API_MODE": request.app.state.config.MINERU_API_MODE,
+        "MINERU_API_URL": request.app.state.config.MINERU_API_URL,
+        "MINERU_API_KEY": request.app.state.config.MINERU_API_KEY,
+        "MINERU_PARAMS": request.app.state.config.MINERU_PARAMS,
         # Reranking settings
         "RAG_RERANKING_MODEL": request.app.state.config.RAG_RERANKING_MODEL,
         "RAG_RERANKING_ENGINE": request.app.state.config.RAG_RERANKING_ENGINE,
@@ -469,6 +500,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "WEB_SEARCH_DOMAIN_FILTER_LIST": request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
             "BYPASS_WEB_SEARCH_WEB_LOADER": request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER,
+            "OLLAMA_CLOUD_WEB_SEARCH_API_KEY": request.app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY,
             "SEARXNG_QUERY_URL": request.app.state.config.SEARXNG_QUERY_URL,
             "YACY_QUERY_URL": request.app.state.config.YACY_QUERY_URL,
             "YACY_USERNAME": request.app.state.config.YACY_USERNAME,
@@ -525,6 +557,7 @@ class WebConfig(BaseModel):
     WEB_SEARCH_DOMAIN_FILTER_LIST: Optional[List[str]] = []
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
     BYPASS_WEB_SEARCH_WEB_LOADER: Optional[bool] = None
+    OLLAMA_CLOUD_WEB_SEARCH_API_KEY: Optional[str] = None
     SEARXNG_QUERY_URL: Optional[str] = None
     YACY_QUERY_URL: Optional[str] = None
     YACY_USERNAME: Optional[str] = None
@@ -585,6 +618,7 @@ class ConfigForm(BaseModel):
     # Content extraction settings
     CONTENT_EXTRACTION_ENGINE: Optional[str] = None
     PDF_EXTRACT_IMAGES: Optional[bool] = None
+
     DATALAB_MARKER_API_KEY: Optional[str] = None
     DATALAB_MARKER_API_BASE_URL: Optional[str] = None
     DATALAB_MARKER_ADDITIONAL_CONFIG: Optional[str] = None
@@ -596,11 +630,13 @@ class ConfigForm(BaseModel):
     DATALAB_MARKER_FORMAT_LINES: Optional[bool] = None
     DATALAB_MARKER_USE_LLM: Optional[bool] = None
     DATALAB_MARKER_OUTPUT_FORMAT: Optional[str] = None
+
     EXTERNAL_DOCUMENT_LOADER_URL: Optional[str] = None
     EXTERNAL_DOCUMENT_LOADER_API_KEY: Optional[str] = None
 
     TIKA_SERVER_URL: Optional[str] = None
     DOCLING_SERVER_URL: Optional[str] = None
+    DOCLING_PARAMS: Optional[dict] = None
     DOCLING_DO_OCR: Optional[bool] = None
     DOCLING_FORCE_OCR: Optional[bool] = None
     DOCLING_OCR_ENGINE: Optional[str] = None
@@ -615,6 +651,12 @@ class ConfigForm(BaseModel):
     DOCUMENT_INTELLIGENCE_ENDPOINT: Optional[str] = None
     DOCUMENT_INTELLIGENCE_KEY: Optional[str] = None
     MISTRAL_OCR_API_KEY: Optional[str] = None
+
+    # MinerU settings
+    MINERU_API_MODE: Optional[str] = None
+    MINERU_API_URL: Optional[str] = None
+    MINERU_API_KEY: Optional[str] = None
+    MINERU_PARAMS: Optional[dict] = None
 
     # Reranking settings
     RAG_RERANKING_MODEL: Optional[str] = None
@@ -777,6 +819,11 @@ async def update_rag_config(
         if form_data.DOCLING_SERVER_URL is not None
         else request.app.state.config.DOCLING_SERVER_URL
     )
+    request.app.state.config.DOCLING_PARAMS = (
+        form_data.DOCLING_PARAMS
+        if form_data.DOCLING_PARAMS is not None
+        else request.app.state.config.DOCLING_PARAMS
+    )
     request.app.state.config.DOCLING_DO_OCR = (
         form_data.DOCLING_DO_OCR
         if form_data.DOCLING_DO_OCR is not None
@@ -848,6 +895,28 @@ async def update_rag_config(
         form_data.MISTRAL_OCR_API_KEY
         if form_data.MISTRAL_OCR_API_KEY is not None
         else request.app.state.config.MISTRAL_OCR_API_KEY
+    )
+
+    # MinerU settings
+    request.app.state.config.MINERU_API_MODE = (
+        form_data.MINERU_API_MODE
+        if form_data.MINERU_API_MODE is not None
+        else request.app.state.config.MINERU_API_MODE
+    )
+    request.app.state.config.MINERU_API_URL = (
+        form_data.MINERU_API_URL
+        if form_data.MINERU_API_URL is not None
+        else request.app.state.config.MINERU_API_URL
+    )
+    request.app.state.config.MINERU_API_KEY = (
+        form_data.MINERU_API_KEY
+        if form_data.MINERU_API_KEY is not None
+        else request.app.state.config.MINERU_API_KEY
+    )
+    request.app.state.config.MINERU_PARAMS = (
+        form_data.MINERU_PARAMS
+        if form_data.MINERU_PARAMS is not None
+        else request.app.state.config.MINERU_PARAMS
     )
 
     # Reranking settings
@@ -988,6 +1057,9 @@ async def update_rag_config(
         request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER = (
             form_data.web.BYPASS_WEB_SEARCH_WEB_LOADER
         )
+        request.app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY = (
+            form_data.web.OLLAMA_CLOUD_WEB_SEARCH_API_KEY
+        )
         request.app.state.config.SEARXNG_QUERY_URL = form_data.web.SEARXNG_QUERY_URL
         request.app.state.config.YACY_QUERY_URL = form_data.web.YACY_QUERY_URL
         request.app.state.config.YACY_USERNAME = form_data.web.YACY_USERNAME
@@ -1096,6 +1168,7 @@ async def update_rag_config(
         "EXTERNAL_DOCUMENT_LOADER_API_KEY": request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
         "TIKA_SERVER_URL": request.app.state.config.TIKA_SERVER_URL,
         "DOCLING_SERVER_URL": request.app.state.config.DOCLING_SERVER_URL,
+        "DOCLING_PARAMS": request.app.state.config.DOCLING_PARAMS,
         "DOCLING_DO_OCR": request.app.state.config.DOCLING_DO_OCR,
         "DOCLING_FORCE_OCR": request.app.state.config.DOCLING_FORCE_OCR,
         "DOCLING_OCR_ENGINE": request.app.state.config.DOCLING_OCR_ENGINE,
@@ -1110,6 +1183,11 @@ async def update_rag_config(
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
+        # MinerU settings
+        "MINERU_API_MODE": request.app.state.config.MINERU_API_MODE,
+        "MINERU_API_URL": request.app.state.config.MINERU_API_URL,
+        "MINERU_API_KEY": request.app.state.config.MINERU_API_KEY,
+        "MINERU_PARAMS": request.app.state.config.MINERU_PARAMS,
         # Reranking settings
         "RAG_RERANKING_MODEL": request.app.state.config.RAG_RERANKING_MODEL,
         "RAG_RERANKING_ENGINE": request.app.state.config.RAG_RERANKING_ENGINE,
@@ -1139,6 +1217,7 @@ async def update_rag_config(
             "WEB_SEARCH_DOMAIN_FILTER_LIST": request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
             "BYPASS_WEB_SEARCH_WEB_LOADER": request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER,
+            "OLLAMA_CLOUD_WEB_SEARCH_API_KEY": request.app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY,
             "SEARXNG_QUERY_URL": request.app.state.config.SEARXNG_QUERY_URL,
             "YACY_QUERY_URL": request.app.state.config.YACY_QUERY_URL,
             "YACY_USERNAME": request.app.state.config.YACY_USERNAME,
@@ -1407,59 +1486,35 @@ def process_file(
     form_data: ProcessFileForm,
     user=Depends(get_verified_user),
 ):
-    try:
+    if user.role == "admin":
         file = Files.get_file_by_id(form_data.file_id)
+    else:
+        file = Files.get_file_by_id_and_user_id(form_data.file_id, user.id)
 
-        collection_name = form_data.collection_name
+    if file:
+        try:
 
-        if collection_name is None:
-            collection_name = f"file-{file.id}"
+            collection_name = form_data.collection_name
 
-        if form_data.content:
-            # Update the content in the file
-            # Usage: /files/{file_id}/data/content/update, /files/ (audio file upload pipeline)
+            if collection_name is None:
+                collection_name = f"file-{file.id}"
 
-            try:
-                # /files/{file_id}/data/content/update
-                VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
-            except:
-                # Audio file upload pipeline
-                pass
+            if form_data.content:
+                # Update the content in the file
+                # Usage: /files/{file_id}/data/content/update, /files/ (audio file upload pipeline)
 
-            docs = [
-                Document(
-                    page_content=form_data.content.replace("<br/>", "\n"),
-                    metadata={
-                        **file.meta,
-                        "name": file.filename,
-                        "created_by": file.user_id,
-                        "file_id": file.id,
-                        "source": file.filename,
-                    },
-                )
-            ]
-
-            text_content = form_data.content
-        elif form_data.collection_name:
-            # Check if the file has already been processed and save the content
-            # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
-
-            result = VECTOR_DB_CLIENT.query(
-                collection_name=f"file-{file.id}", filter={"file_id": file.id}
-            )
-
-            if result is not None and len(result.ids[0]) > 0:
-                docs = [
-                    Document(
-                        page_content=result.documents[0][idx],
-                        metadata=result.metadatas[0][idx],
+                try:
+                    # /files/{file_id}/data/content/update
+                    VECTOR_DB_CLIENT.delete_collection(
+                        collection_name=f"file-{file.id}"
                     )
-                    for idx, id in enumerate(result.ids[0])
-                ]
-            else:
+                except:
+                    # Audio file upload pipeline
+                    pass
+
                 docs = [
                     Document(
-                        page_content=file.data.get("content", ""),
+                        page_content=form_data.content.replace("<br/>", "\n"),
                         metadata={
                             **file.meta,
                             "name": file.filename,
@@ -1470,148 +1525,194 @@ def process_file(
                     )
                 ]
 
-            text_content = file.data.get("content", "")
-        else:
-            # Process the file and save the content
-            # Usage: /files/
-            file_path = file.path
-            if file_path:
-                file_path = Storage.get_file(file_path)
-                loader = Loader(
-                    engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
-                    DATALAB_MARKER_API_KEY=request.app.state.config.DATALAB_MARKER_API_KEY,
-                    DATALAB_MARKER_API_BASE_URL=request.app.state.config.DATALAB_MARKER_API_BASE_URL,
-                    DATALAB_MARKER_ADDITIONAL_CONFIG=request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG,
-                    DATALAB_MARKER_SKIP_CACHE=request.app.state.config.DATALAB_MARKER_SKIP_CACHE,
-                    DATALAB_MARKER_FORCE_OCR=request.app.state.config.DATALAB_MARKER_FORCE_OCR,
-                    DATALAB_MARKER_PAGINATE=request.app.state.config.DATALAB_MARKER_PAGINATE,
-                    DATALAB_MARKER_STRIP_EXISTING_OCR=request.app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR,
-                    DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION=request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION,
-                    DATALAB_MARKER_FORMAT_LINES=request.app.state.config.DATALAB_MARKER_FORMAT_LINES,
-                    DATALAB_MARKER_USE_LLM=request.app.state.config.DATALAB_MARKER_USE_LLM,
-                    DATALAB_MARKER_OUTPUT_FORMAT=request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT,
-                    EXTERNAL_DOCUMENT_LOADER_URL=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL,
-                    EXTERNAL_DOCUMENT_LOADER_API_KEY=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
-                    TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
-                    DOCLING_SERVER_URL=request.app.state.config.DOCLING_SERVER_URL,
-                    DOCLING_PARAMS={
-                        "do_ocr": request.app.state.config.DOCLING_DO_OCR,
-                        "force_ocr": request.app.state.config.DOCLING_FORCE_OCR,
-                        "ocr_engine": request.app.state.config.DOCLING_OCR_ENGINE,
-                        "ocr_lang": request.app.state.config.DOCLING_OCR_LANG,
-                        "pdf_backend": request.app.state.config.DOCLING_PDF_BACKEND,
-                        "table_mode": request.app.state.config.DOCLING_TABLE_MODE,
-                        "pipeline": request.app.state.config.DOCLING_PIPELINE,
-                        "do_picture_description": request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
-                        "picture_description_mode": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE,
-                        "picture_description_local": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL,
-                        "picture_description_api": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API,
-                    },
-                    PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
-                    DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
-                    DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
-                    MISTRAL_OCR_API_KEY=request.app.state.config.MISTRAL_OCR_API_KEY,
-                )
-                docs = loader.load(
-                    file.filename, file.meta.get("content_type"), file_path
+                text_content = form_data.content
+            elif form_data.collection_name:
+                # Check if the file has already been processed and save the content
+                # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
+
+                result = VECTOR_DB_CLIENT.query(
+                    collection_name=f"file-{file.id}", filter={"file_id": file.id}
                 )
 
-                docs = [
-                    Document(
-                        page_content=doc.page_content,
-                        metadata={
-                            **doc.metadata,
-                            "name": file.filename,
-                            "created_by": file.user_id,
-                            "file_id": file.id,
-                            "source": file.filename,
-                        },
-                    )
-                    for doc in docs
-                ]
-            else:
-                docs = [
-                    Document(
-                        page_content=file.data.get("content", ""),
-                        metadata={
-                            **file.meta,
-                            "name": file.filename,
-                            "created_by": file.user_id,
-                            "file_id": file.id,
-                            "source": file.filename,
-                        },
-                    )
-                ]
-            text_content = " ".join([doc.page_content for doc in docs])
-
-        log.debug(f"text_content: {text_content}")
-        Files.update_file_data_by_id(
-            file.id,
-            {"content": text_content},
-        )
-        hash = calculate_sha256_string(text_content)
-        Files.update_file_hash_by_id(file.id, hash)
-
-        if request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
-            Files.update_file_data_by_id(file.id, {"status": "completed"})
-            return {
-                "status": True,
-                "collection_name": None,
-                "filename": file.filename,
-                "content": text_content,
-            }
-        else:
-            try:
-                result = save_docs_to_vector_db(
-                    request,
-                    docs=docs,
-                    collection_name=collection_name,
-                    metadata={
-                        "file_id": file.id,
-                        "name": file.filename,
-                        "hash": hash,
-                    },
-                    add=(True if form_data.collection_name else False),
-                    user=user,
-                )
-                log.info(f"added {len(docs)} items to collection {collection_name}")
-
-                if result:
-                    Files.update_file_metadata_by_id(
-                        file.id,
-                        {
-                            "collection_name": collection_name,
-                        },
-                    )
-
-                    Files.update_file_data_by_id(
-                        file.id,
-                        {"status": "completed"},
-                    )
-
-                    return {
-                        "status": True,
-                        "collection_name": collection_name,
-                        "filename": file.filename,
-                        "content": text_content,
-                    }
+                if result is not None and len(result.ids[0]) > 0:
+                    docs = [
+                        Document(
+                            page_content=result.documents[0][idx],
+                            metadata=result.metadatas[0][idx],
+                        )
+                        for idx, id in enumerate(result.ids[0])
+                    ]
                 else:
-                    raise Exception("Error saving document to vector database")
-            except Exception as e:
-                raise e
+                    docs = [
+                        Document(
+                            page_content=file.data.get("content", ""),
+                            metadata={
+                                **file.meta,
+                                "name": file.filename,
+                                "created_by": file.user_id,
+                                "file_id": file.id,
+                                "source": file.filename,
+                            },
+                        )
+                    ]
 
-    except Exception as e:
-        log.exception(e)
-        if "No pandoc was found" in str(e):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.PANDOC_NOT_INSTALLED,
+                text_content = file.data.get("content", "")
+            else:
+                # Process the file and save the content
+                # Usage: /files/
+                file_path = file.path
+                if file_path:
+                    file_path = Storage.get_file(file_path)
+                    loader = Loader(
+                        engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
+                        DATALAB_MARKER_API_KEY=request.app.state.config.DATALAB_MARKER_API_KEY,
+                        DATALAB_MARKER_API_BASE_URL=request.app.state.config.DATALAB_MARKER_API_BASE_URL,
+                        DATALAB_MARKER_ADDITIONAL_CONFIG=request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG,
+                        DATALAB_MARKER_SKIP_CACHE=request.app.state.config.DATALAB_MARKER_SKIP_CACHE,
+                        DATALAB_MARKER_FORCE_OCR=request.app.state.config.DATALAB_MARKER_FORCE_OCR,
+                        DATALAB_MARKER_PAGINATE=request.app.state.config.DATALAB_MARKER_PAGINATE,
+                        DATALAB_MARKER_STRIP_EXISTING_OCR=request.app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR,
+                        DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION=request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION,
+                        DATALAB_MARKER_FORMAT_LINES=request.app.state.config.DATALAB_MARKER_FORMAT_LINES,
+                        DATALAB_MARKER_USE_LLM=request.app.state.config.DATALAB_MARKER_USE_LLM,
+                        DATALAB_MARKER_OUTPUT_FORMAT=request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT,
+                        EXTERNAL_DOCUMENT_LOADER_URL=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL,
+                        EXTERNAL_DOCUMENT_LOADER_API_KEY=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
+                        TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
+                        DOCLING_SERVER_URL=request.app.state.config.DOCLING_SERVER_URL,
+                        DOCLING_PARAMS={
+                            "do_ocr": request.app.state.config.DOCLING_DO_OCR,
+                            "force_ocr": request.app.state.config.DOCLING_FORCE_OCR,
+                            "ocr_engine": request.app.state.config.DOCLING_OCR_ENGINE,
+                            "ocr_lang": request.app.state.config.DOCLING_OCR_LANG,
+                            "pdf_backend": request.app.state.config.DOCLING_PDF_BACKEND,
+                            "table_mode": request.app.state.config.DOCLING_TABLE_MODE,
+                            "pipeline": request.app.state.config.DOCLING_PIPELINE,
+                            "do_picture_description": request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
+                            "picture_description_mode": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE,
+                            "picture_description_local": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL,
+                            "picture_description_api": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API,
+                            **request.app.state.config.DOCLING_PARAMS,
+                        },
+                        PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
+                        DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
+                        DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
+                        MISTRAL_OCR_API_KEY=request.app.state.config.MISTRAL_OCR_API_KEY,
+                        MINERU_API_MODE=request.app.state.config.MINERU_API_MODE,
+                        MINERU_API_URL=request.app.state.config.MINERU_API_URL,
+                        MINERU_API_KEY=request.app.state.config.MINERU_API_KEY,
+                        MINERU_PARAMS=request.app.state.config.MINERU_PARAMS,
+                    )
+                    docs = loader.load(
+                        file.filename, file.meta.get("content_type"), file_path
+                    )
+
+                    docs = [
+                        Document(
+                            page_content=doc.page_content,
+                            metadata={
+                                **filter_metadata(doc.metadata),
+                                "name": file.filename,
+                                "created_by": file.user_id,
+                                "file_id": file.id,
+                                "source": file.filename,
+                            },
+                        )
+                        for doc in docs
+                    ]
+                else:
+                    docs = [
+                        Document(
+                            page_content=file.data.get("content", ""),
+                            metadata={
+                                **file.meta,
+                                "name": file.filename,
+                                "created_by": file.user_id,
+                                "file_id": file.id,
+                                "source": file.filename,
+                            },
+                        )
+                    ]
+                text_content = " ".join([doc.page_content for doc in docs])
+
+            log.debug(f"text_content: {text_content}")
+            Files.update_file_data_by_id(
+                file.id,
+                {"content": text_content},
             )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e),
+            hash = calculate_sha256_string(text_content)
+            Files.update_file_hash_by_id(file.id, hash)
+
+            if request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
+                Files.update_file_data_by_id(file.id, {"status": "completed"})
+                return {
+                    "status": True,
+                    "collection_name": None,
+                    "filename": file.filename,
+                    "content": text_content,
+                }
+            else:
+                try:
+                    result = save_docs_to_vector_db(
+                        request,
+                        docs=docs,
+                        collection_name=collection_name,
+                        metadata={
+                            "file_id": file.id,
+                            "name": file.filename,
+                            "hash": hash,
+                        },
+                        add=(True if form_data.collection_name else False),
+                        user=user,
+                    )
+                    log.info(f"added {len(docs)} items to collection {collection_name}")
+
+                    if result:
+                        Files.update_file_metadata_by_id(
+                            file.id,
+                            {
+                                "collection_name": collection_name,
+                            },
+                        )
+
+                        Files.update_file_data_by_id(
+                            file.id,
+                            {"status": "completed"},
+                        )
+
+                        return {
+                            "status": True,
+                            "collection_name": collection_name,
+                            "filename": file.filename,
+                            "content": text_content,
+                        }
+                    else:
+                        raise Exception("Error saving document to vector database")
+                except Exception as e:
+                    raise e
+
+        except Exception as e:
+            log.exception(e)
+            Files.update_file_data_by_id(
+                file.id,
+                {"status": "failed"},
             )
+
+            if "No pandoc was found" in str(e):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.PANDOC_NOT_INSTALLED,
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=str(e),
+                )
+
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
 
 
 class ProcessTextForm(BaseModel):
@@ -1654,49 +1755,6 @@ def process_text(
 
 
 @router.post("/process/youtube")
-def process_youtube_video(
-    request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)
-):
-    try:
-        collection_name = form_data.collection_name
-        if not collection_name:
-            collection_name = calculate_sha256_string(form_data.url)[:63]
-
-        loader = YoutubeLoader(
-            form_data.url,
-            language=request.app.state.config.YOUTUBE_LOADER_LANGUAGE,
-            proxy_url=request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
-        )
-
-        docs = loader.load()
-        content = " ".join([doc.page_content for doc in docs])
-        log.debug(f"text_content: {content}")
-
-        save_docs_to_vector_db(
-            request, docs, collection_name, overwrite=True, user=user
-        )
-
-        return {
-            "status": True,
-            "collection_name": collection_name,
-            "filename": form_data.url,
-            "file": {
-                "data": {
-                    "content": content,
-                },
-                "meta": {
-                    "name": form_data.url,
-                },
-            },
-        }
-    except Exception as e:
-        log.exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
-        )
-
-
 @router.post("/process/web")
 def process_web(
     request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)
@@ -1706,19 +1764,16 @@ def process_web(
         if not collection_name:
             collection_name = calculate_sha256_string(form_data.url)[:63]
 
-        loader = get_web_loader(
-            form_data.url,
-            verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
-            requests_per_second=request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
-        )
-        docs = loader.load()
-        content = " ".join([doc.page_content for doc in docs])
-
+        content, docs = get_content_from_url(request, form_data.url)
         log.debug(f"text_content: {content}")
 
         if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             save_docs_to_vector_db(
-                request, docs, collection_name, overwrite=True, user=user
+                request,
+                docs,
+                collection_name,
+                overwrite=True,
+                user=user,
             )
         else:
             collection_name = None
@@ -1769,7 +1824,25 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
     """
 
     # TODO: add playwright to search the web
-    if engine == "searxng":
+    if engine == "ollama_cloud":
+        return search_ollama_cloud(
+            "https://ollama.com",
+            request.app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY,
+            query,
+            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+        )
+    elif engine == "perplexity_search":
+        if request.app.state.config.PERPLEXITY_API_KEY:
+            return search_perplexity_search(
+                request.app.state.config.PERPLEXITY_API_KEY,
+                query,
+                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception("No PERPLEXITY_API_KEY found in environment variables")
+    elif engine == "searxng":
         if request.app.state.config.SEARXNG_QUERY_URL:
             return search_searxng(
                 request.app.state.config.SEARXNG_QUERY_URL,
@@ -2003,7 +2076,7 @@ async def process_web_search(
     result_items = []
 
     try:
-        logging.info(
+        logging.debug(
             f"trying to web search with {request.app.state.config.WEB_SEARCH_ENGINE, form_data.queries}"
         )
 
@@ -2035,6 +2108,12 @@ async def process_web_search(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.WEB_SEARCH_ERROR(e),
+        )
+
+    if len(urls) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.DEFAULT("No results found from web search"),
         )
 
     try:
