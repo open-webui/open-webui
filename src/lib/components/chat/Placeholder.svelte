@@ -105,32 +105,41 @@
 					<div class="flex shrink-0 justify-center">
 						<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
 							{#each models as model, modelIdx}
-								<Tooltip
-									content={(models[modelIdx]?.info?.meta?.tags ?? [])
-										.map((tag) => tag.name.toUpperCase())
-										.join(', ')}
-									placement="top"
-								>
-									<button
-										aria-hidden={models.length <= 1}
-										aria-label={$i18n.t('Get information on {{name}} in the UI', {
-											name: models[modelIdx]?.name
-										})}
-										on:click={() => {
-											selectedModelIdx = modelIdx;
-										}}
-									>
+								{@const isClickable = models.length > 1}
+								{@const avatarSrc = model?.info?.meta?.profile_image_url ?? 
+									($i18n.language === 'dg-DG' 
+										? `${WEBUI_BASE_URL}/doge.png` 
+										: `${WEBUI_BASE_URL}/static/favicon.png`)}
+								{@const tooltipContent = (models[modelIdx]?.info?.meta?.tags ?? [])
+									.map((tag) => tag.name.toUpperCase())
+									.join(', ')}
+								
+								<Tooltip content={tooltipContent} placement="top">
+									{#if isClickable}
+										<button
+											aria-hidden="false"
+											aria-label={$i18n.t('Get information on {{name}} in the UI', {
+												name: models[modelIdx]?.name
+											})}
+											on:click={() => selectedModelIdx = modelIdx}
+										>
+											<img
+												crossorigin="anonymous"
+												src={avatarSrc}
+												class="size-9 @sm:size-10 rounded-full border-[1px] border-gray-100 dark:border-none"
+												aria-hidden="true"
+												draggable="false"
+											/>
+										</button>
+									{:else}
 										<img
 											crossorigin="anonymous"
-											src={model?.info?.meta?.profile_image_url ??
-												($i18n.language === 'dg-DG'
-													? `${WEBUI_BASE_URL}/doge.png`
-													: `${WEBUI_BASE_URL}/static/favicon.png`)}
-											class=" size-9 @sm:size-10 rounded-full border-[1px] border-gray-100 dark:border-none"
+											src={avatarSrc}
+											class="size-9 @sm:size-10 rounded-full border-[1px] border-gray-100 dark:border-none"
 											aria-hidden="true"
 											draggable="false"
 										/>
-									</button>
+									{/if}
 								</Tooltip>
 							{/each}
 						</div>
