@@ -351,11 +351,13 @@ class KaTeXCompiler:
     
     def render_to_html(self, latex_expr: str, display: bool = False) -> str:
         """Render a LaTeX expression to a KaTeX HTML fragment (no images)."""
+        print(f"🔧 Rendering LaTeX: '{latex_expr}' (display: {display})")
         try:
             # Ensure Node.js is available
             result = subprocess.run(['node', '--version'], capture_output=True, text=True, timeout=5)
             if result.returncode != 0:
                 raise RuntimeError('Node.js is required to render KaTeX HTML')
+            print(f"✅ Node.js available: {result.stdout.strip()}")
 
             katex_path = str(self.node_modules_path / 'katex')
             display_mode = str(display).lower()
@@ -386,9 +388,11 @@ class KaTeXCompiler:
             project_temp_dir = Path('/tmp')
             
             script_path = project_temp_dir / 'katex_render_fragment.cjs'
+            print(f"📝 Creating script: {script_path}")
             with open(script_path, 'w') as f:
                 f.write(script_content)
 
+            print(f"🚀 Running Node.js script...")
             proc = subprocess.run(
                 ['node', str(script_path)],
                 capture_output=True,
@@ -396,6 +400,9 @@ class KaTeXCompiler:
                 timeout=15,
                 cwd=str(self.node_modules_path.parent)
             )
+            print(f"📊 Node.js result: returncode={proc.returncode}")
+            print(f"📤 stdout: {proc.stdout[:200]}...")
+            print(f"📤 stderr: {proc.stderr[:200]}...")
 
             try:
                 os.unlink(script_path)
