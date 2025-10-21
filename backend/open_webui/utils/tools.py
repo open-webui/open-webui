@@ -110,9 +110,9 @@ async def get_tool_function_with_updated_params(
         result = original_func(**filtered_params, **tool_params)
         if inspect.isawaitable(result):
             return await result
-            
+
         return result
-            
+
     return await callable_func(**tool_params)
 
 
