@@ -229,7 +229,9 @@ class PDFGenerator:
             expr = self._insert_soft_breaks(expr)
             try:
                 fragment = self.katex_compiler.render_to_html(expr, latex['display'])
-            except Exception:
+                print(f"✅ LaTeX rendered successfully: {expr[:50]}...")
+            except Exception as e:
+                print(f"❌ LaTeX rendering failed for '{expr[:50]}...': {e}")
                 fragment = escape(expr)
             # Replace the full matched delimiter range with the fragment
             html_content = html_content[:latex['start']] + fragment + html_content[latex['end']:]
