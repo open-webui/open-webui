@@ -1033,8 +1033,7 @@
 								recording = false;
 
 								await tick();
-								insertTextAtCursor(text);
-
+								await insertTextAtCursor(text);
 								await tick();
 								document.getElementById('chat-input')?.focus();
 
