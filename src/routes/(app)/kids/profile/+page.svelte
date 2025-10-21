@@ -22,10 +22,9 @@
 	let parentPreference: string = '';
 	let parentingStyle: string = '';
 	
-	// Personality traits system
-	let selectedPersonalityTrait: string = '';
-	let selectedSubCharacteristics: string[] = [];
-	let showPersonalitySelection: boolean = false;
+	// Personality traits system - Updated to support multiple traits
+	let expandedTraits: Set<string> = new Set(); // Track which traits are expanded
+	let selectedSubCharacteristics: string[] = []; // All selected characteristics across all traits
 
 	// Multi-child support - using backend ChildProfile type
 	let childProfiles: ChildProfile[] = [];
@@ -42,20 +41,17 @@
 	let hasScrolled: boolean = false;
 
 	// Function to generate and store shuffled scenarios for a child
-	function generateAndStoreScenarios(selectedCharacteristics: string[]) {
+	async function generateAndStoreScenarios(selectedCharacteristics: string[]) {
 		console.log('Generating scenarios for characteristics:', selectedCharacteristics);
 		
-		// Generate scenarios based on selected characteristics
-		const scenarios = generateScenariosFromPersonalityData(selectedCharacteristics);
+		// Generate scenarios based on selected characteristics (returns Q&A pairs)
+		const scenarios = await generateScenariosFromPersonalityData(selectedCharacteristics);
 		
-		// Shuffle the scenarios once
-		const shuffledScenarios = scenarios.sort(() => Math.random() - 0.5);
-		
-		console.log('Generated and shuffled scenarios:', shuffledScenarios);
+		console.log('Generated scenarios:', scenarios);
 		
 		// Store the shuffled scenarios in localStorage with a unique key for this child
 		const scenarioKey = `personality_scenarios_${Date.now()}`;
-		localStorage.setItem(scenarioKey, JSON.stringify(shuffledScenarios));
+		localStorage.setItem(scenarioKey, JSON.stringify(scenarios));
 		
 		// Also store the key in the child's characteristics for later retrieval
 		return scenarioKey;
@@ -66,69 +62,67 @@
 		return `repeat(${cols}, minmax(120px, 1fr))`;
 	}
 
-	// Reactive statement to track trait changes
-	$: currentTrait = getSelectedTrait();
-	$: console.log('Reactive: selectedPersonalityTrait changed to:', selectedPersonalityTrait);
-	$: console.log('Reactive: currentTrait is:', currentTrait);
-	$: console.log('Reactive: subCharacteristics available:', currentTrait?.subCharacteristics?.length || 0);
-	
-	// Force reactivity by creating a derived value
-	$: traitSubCharacteristics = selectedPersonalityTrait ? getSelectedTrait()?.subCharacteristics || [] : [];
-	$: console.log('Reactive: traitSubCharacteristics updated:', traitSubCharacteristics.length);
+	// Reactive statement to track selected characteristics
+	$: console.log('Selected characteristics:', selectedSubCharacteristics);
+	$: console.log('Expanded traits:', Array.from(expandedTraits));
 
 	// Personality trait helper functions
-	function getSelectedTrait(): PersonalityTrait | undefined {
-		console.log('getSelectedTrait called with selectedPersonalityTrait:', selectedPersonalityTrait);
-		const trait = personalityTraits.find(trait => trait.id === selectedPersonalityTrait);
-		console.log('Found trait:', trait);
-		return trait;
+	function toggleTrait(traitId: string) {
+		if (expandedTraits.has(traitId)) {
+			expandedTraits.delete(traitId);
+		} else {
+			expandedTraits.add(traitId);
+		}
+		expandedTraits = expandedTraits; // Trigger reactivity
 	}
 
 	function getSelectedSubCharacteristics(): SubCharacteristic[] {
-		const trait = getSelectedTrait();
-		if (!trait) return [];
-		return trait.subCharacteristics.filter(sub => selectedSubCharacteristics.includes(sub.id));
-	}
-
-	function toggleSubCharacteristic(subId: string) {
-		if (selectedSubCharacteristics.includes(subId)) {
-			selectedSubCharacteristics = selectedSubCharacteristics.filter(id => id !== subId);
-		} else {
-			selectedSubCharacteristics = [...selectedSubCharacteristics, subId];
+		const selected: SubCharacteristic[] = [];
+		
+		// Go through all traits and find selected characteristics
+		for (const trait of personalityTraits) {
+			const matchingChars = trait.subCharacteristics.filter(sub => 
+				selectedSubCharacteristics.includes(sub.id)
+			);
+			selected.push(...matchingChars);
 		}
+		
+		return selected;
 	}
 
-	function selectPersonalityTrait(traitId: string) {
-		console.log('Selecting personality trait:', traitId);
-		
-		// Reset sub-characteristics first
-		selectedSubCharacteristics = [];
-		
-		// Update the selected trait
-		selectedPersonalityTrait = traitId;
-		
-		// Show the personality selection
-		showPersonalitySelection = true;
-		
-		// Force reactivity by triggering a change
-		selectedPersonalityTrait = traitId;
-		
-		// Force a reactive update by using setTimeout
-		setTimeout(() => {
-			const trait = getSelectedTrait();
-			console.log('Selected trait after timeout:', trait);
-			console.log('Sub-characteristics after timeout:', trait?.subCharacteristics);
-		}, 0);
+	function getSelectedSubCharacteristicNames(): string[] {
+		return getSelectedSubCharacteristics().map(sub => sub.name);
 	}
 
 	function getPersonalityDescription(): string {
-		const trait = getSelectedTrait();
 		const subChars = getSelectedSubCharacteristics();
 		
-		if (!trait || subChars.length === 0) return '';
+		if (subChars.length === 0) return '';
 		
-		const subCharNames = subChars.map(sub => sub.name).join(', ');
-		return `${trait.name}: ${subCharNames}`;
+		// Group characteristics by trait
+		const traitGroups = new Map<string, string[]>();
+		
+		for (const subChar of subChars) {
+			// Find which trait this belongs to
+			const trait = personalityTraits.find(t => 
+				t.subCharacteristics.some(sc => sc.id === subChar.id)
+			);
+			
+			if (trait) {
+				if (!traitGroups.has(trait.name)) {
+					traitGroups.set(trait.name, []);
+				}
+				traitGroups.get(trait.name)!.push(subChar.name);
+			}
+		}
+		
+		// Format as "Trait: char1, char2\nTrait2: char3, char4"
+		const descriptions: string[] = [];
+		for (const [traitName, chars] of traitGroups.entries()) {
+			descriptions.push(`${traitName}: ${chars.join(', ')}`);
+		}
+		
+		return descriptions.join('\n');
 	}
 
 	function ensureAtLeastOneChild() {
@@ -162,9 +156,8 @@
 			}
 			
 			// Reset personality selection for now (we could parse this back in the future)
-			selectedPersonalityTrait = '';
 			selectedSubCharacteristics = [];
-			showPersonalitySelection = false;
+			expandedTraits = new Set();
 		}
 	}
 
@@ -233,9 +226,8 @@
 		parentingStyle = '';
 		
 		// Reset personality traits
-		selectedPersonalityTrait = '';
 		selectedSubCharacteristics = [];
-		showPersonalitySelection = false;
+		expandedTraits = new Set();
 		showForm = true;
 		isEditing = true; // Set editing mode
 		// Set selected index to -1 to indicate we're creating a new profile
@@ -258,15 +250,15 @@
 				return;
 			}
 
-			// Combine personality traits with characteristics
-			const personalityDesc = getPersonalityDescription();
-			const selectedCharacteristicsList = getSelectedSubCharacteristics().map(sub => sub.name).join(', ');
-			const combinedCharacteristics = personalityDesc 
-				? `${personalityDesc}\n\nSelected characteristics: ${selectedCharacteristicsList}\n\nAdditional characteristics:\n${childCharacteristics}`
-				: childCharacteristics;
-			
-			// Generate and store shuffled scenarios for this child
-			const scenarioKey = generateAndStoreScenarios(getSelectedSubCharacteristics().map(sub => sub.name));
+		// Combine personality traits with characteristics
+		const personalityDesc = getPersonalityDescription();
+		const selectedCharacteristicsList = getSelectedSubCharacteristicNames().join(', ');
+		const combinedCharacteristics = personalityDesc 
+			? `${personalityDesc}\n\nSelected characteristics: ${selectedCharacteristicsList}\n\nAdditional characteristics:\n${childCharacteristics}`
+			: childCharacteristics;
+		
+		// Generate and store shuffled scenarios for this child
+		const scenarioKey = await generateAndStoreScenarios(getSelectedSubCharacteristicNames());
 			
 			const newChild = await childProfileSync.createChildProfile({
 				name: childName,
@@ -310,9 +302,8 @@
 			parentingStyle = '';
 			
 			// Reset personality traits
-			selectedPersonalityTrait = '';
 			selectedSubCharacteristics = [];
-			showPersonalitySelection = false;
+			expandedTraits = new Set();
 		}
 	}
 
@@ -772,80 +763,88 @@
 						</select>
 					</div>
 
-					<!-- Personality Traits Selection -->
+					<!-- Personality Traits Selection - Multi-Trait Support -->
 					<div>
 						<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 							Personality Traits
 						</label>
 						<p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-							Select one main personality trait and then choose specific characteristics that describe your child.
+							Select personality traits and choose specific characteristics from one or more traits that describe your child.
 						</p>
 						
-						<!-- Main Personality Trait Selection -->
-						<div class="mb-4">
-							<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-								{#each personalityTraits as trait}
+						<!-- All Personality Traits as Expandable Sections -->
+						<div class="space-y-3 mb-4">
+							{#each personalityTraits as trait}
+								<div class="border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700">
+									<!-- Trait Header - Click to expand/collapse -->
 									<button
 										type="button"
-										on:click={() => selectPersonalityTrait(trait.id)}
-										class="p-3 text-left rounded-lg border-2 transition-all {
-											selectedPersonalityTrait === trait.id 
-												? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-												: 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
-										} bg-white dark:bg-gray-700"
+										on:click={() => toggleTrait(trait.id)}
+										class="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors rounded-lg"
 									>
-										<div class="font-medium text-gray-900 dark:text-white mb-1">
-											{trait.name}
+										<div class="text-left flex-1">
+											<div class="font-medium text-gray-900 dark:text-white flex items-center space-x-2">
+												<span>{trait.name}</span>
+												{#if trait.subCharacteristics.some(sub => selectedSubCharacteristics.includes(sub.id))}
+													<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+														{trait.subCharacteristics.filter(sub => selectedSubCharacteristics.includes(sub.id)).length} selected
+													</span>
+												{/if}
+											</div>
+											<div class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+												{trait.description}
+											</div>
 										</div>
-										<div class="text-sm text-gray-600 dark:text-gray-400">
-											{trait.description}
+										<div class="ml-2 flex-shrink-0">
+											<svg 
+												class="w-5 h-5 text-gray-500 transition-transform {expandedTraits.has(trait.id) ? 'transform rotate-180' : ''}" 
+												fill="none" 
+												stroke="currentColor" 
+												viewBox="0 0 24 24"
+											>
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+											</svg>
 										</div>
 									</button>
-								{/each}
-							</div>
-						</div>
-						
-						<!-- Debug info -->
-						<div class="text-xs text-gray-500 mb-2">
-							Debug: selectedPersonalityTrait = "{selectedPersonalityTrait}", currentTrait = {currentTrait ? 'found' : 'null'}
-						</div>
-						
-						<!-- Sub-characteristics Selection -->
-						{#if selectedPersonalityTrait}
-							<div class="mb-4">
-								<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-									Select specific characteristics (choose multiple):
-								</label>
-								<div class="space-y-2">
-									{#each traitSubCharacteristics as subChar}
-										<label class="flex items-start space-x-3 p-3 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
-											<input
-												type="checkbox"
-												bind:group={selectedSubCharacteristics}
-												value={subChar.id}
-												class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-											/>
-											<div class="flex-1">
-												<div class="font-medium text-gray-900 dark:text-white">
-													{subChar.name}
-												</div>
-												<div class="text-sm text-gray-600 dark:text-gray-400">
-													{subChar.description}
-												</div>
-											</div>
-										</label>
-									{/each}
 									
-									<!-- Debug info -->
-									{#if traitSubCharacteristics.length > 0}
-										<div class="text-xs text-gray-500 mt-2">
-											Debug: Found {traitSubCharacteristics.length} sub-characteristics for {getSelectedTrait()?.name || 'unknown trait'}
-										</div>
-									{:else}
-										<div class="text-xs text-red-500 mt-2">
-											Debug: No sub-characteristics found for trait "{selectedPersonalityTrait}"
+									<!-- Trait Characteristics - Show when expanded -->
+									{#if expandedTraits.has(trait.id)}
+										<div class="px-4 pb-4 space-y-2 border-t border-gray-200 dark:border-gray-600 pt-4">
+											<p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+												Select characteristics that apply:
+											</p>
+											{#each trait.subCharacteristics as subChar}
+												<label class="flex items-start space-x-3 p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer transition-colors">
+													<input
+														type="checkbox"
+														bind:group={selectedSubCharacteristics}
+														value={subChar.id}
+														class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+													/>
+													<div class="flex-1">
+														<div class="font-medium text-gray-900 dark:text-white">
+															{subChar.name}
+														</div>
+														<div class="text-sm text-gray-600 dark:text-gray-400">
+															{subChar.description}
+														</div>
+													</div>
+												</label>
+											{/each}
 										</div>
 									{/if}
+								</div>
+							{/each}
+						</div>
+						
+						<!-- Summary of selections -->
+						{#if selectedSubCharacteristics.length > 0}
+							<div class="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-4">
+								<div class="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+									Selected: {selectedSubCharacteristics.length} characteristic{selectedSubCharacteristics.length !== 1 ? 's' : ''}
+								</div>
+								<div class="text-xs text-blue-700 dark:text-blue-300">
+									{getSelectedSubCharacteristicNames().join(', ')}
 								</div>
 							</div>
 						{/if}

@@ -86,13 +86,19 @@
 	let selectedScenarioIndex: number = 0;
 	let scenarioList = Object.entries(scenarios);
 	
+	// Q&A Pair interface for personality-based scenarios
+	interface QAPair {
+		question: string;
+		response: string;
+	}
+	
 	// Reactive statement to get effective theme
 	$: effectiveTheme = getEffectiveTheme();
 	
 	// Child profile and personality-based scenario generation
 	let childProfiles: any[] = [];
 	let selectedChildId: string = '';
-	let personalityBasedScenarios: string[] = [];
+	let personalityBasedScenarios: QAPair[] = []; // Now storing Q&A pairs
 	let usePersonalityScenarios: boolean = true;
 	let personalityJSONData: any = null;
 	
@@ -136,14 +142,15 @@
 		if (scenarioKey) {
 			const storedScenarios = localStorage.getItem(scenarioKey);
 			if (storedScenarios) {
-				console.log('Loading pre-shuffled scenarios from localStorage');
+				console.log('Loading pre-shuffled Q&A scenarios from localStorage');
 				personalityBasedScenarios = JSON.parse(storedScenarios);
-				console.log('Loaded pre-shuffled scenarios:', personalityBasedScenarios);
+				console.log('Loaded pre-shuffled Q&A scenarios:', personalityBasedScenarios);
 				
-				// Update the scenario list to use pre-shuffled scenarios
+				// Update the scenario list to use Q&A pairs directly
 				if (personalityBasedScenarios.length > 0) {
-					// Generate responses for each personality-based scenario
-					await generateResponsesForPersonalityScenarios();
+					// Convert Q&A pairs to scenario list format [question, response]
+					scenarioList = personalityBasedScenarios.map(qa => [qa.question, qa.response]);
+					console.log('Updated scenarioList with Q&A pairs:', scenarioList.length);
 				}
 				return;
 			}
@@ -243,19 +250,21 @@
 		
 		console.log('Selected personality characteristics:', personalityTraitNames);
 		
-		// Generate scenarios using the direct personality data
-		personalityBasedScenarios = generateScenariosFromPersonalityData(personalityTraitNames);
+		// Generate Q&A scenarios using the new personality data
+		personalityBasedScenarios = await generateScenariosFromPersonalityData(personalityTraitNames);
 		
-		console.log('Generated personality-based scenarios:', personalityBasedScenarios);
+		console.log('Generated personality-based Q&A scenarios:', personalityBasedScenarios);
 		console.log('Total scenarios generated:', personalityBasedScenarios.length);
 		
-		// Update the scenario list to use personality-based scenarios
+		// Update the scenario list to use Q&A pairs directly
 		if (personalityBasedScenarios.length > 0) {
-			// Generate responses for each personality-based scenario
-			await generateResponsesForPersonalityScenarios();
+			// Convert Q&A pairs to scenario list format [question, response]
+			scenarioList = personalityBasedScenarios.map(qa => [qa.question, qa.response]);
+			console.log('Updated scenarioList with Q&A pairs:', scenarioList.length);
 		}
 	}
 
+	// DEPRECATED: This function is no longer used - responses now come directly from JSON files
 	// Function to generate responses for personality-based scenarios
 	async function generateResponsesForPersonalityScenarios() {
 		console.log('Generating responses for personality-based scenarios...');
