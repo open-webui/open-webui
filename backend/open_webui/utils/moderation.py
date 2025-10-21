@@ -34,7 +34,7 @@ async def multi_moderations_openai(
     original_response: str = None,
     highlighted_texts: List[str] = None,
     api_key: str = None,
-    model: str = "gpt-4o-mini",
+    model: str = "gpt-5-2025-08-07",
     max_chars: int = 600,
     custom_instructions: List[str] = None,
 ) -> Dict:
@@ -112,7 +112,7 @@ async def multi_moderations_openai(
             f"{joined}\n\n"
             "Output STRICTLY as JSON (no extra text):\n"
             '{ "refactored_response": string, "system_prompt_rule": string }\n'
-            "Constraints: warm, child-friendly, concise."
+            f"Constraints: warm, child-friendly, concise; combined length ≤ {max_chars} chars."
         )
         
         user_content = json.dumps({
@@ -177,7 +177,7 @@ async def generate_second_pass_prompt(
     initial_prompt: str,
     initial_response: str,
     api_key: str = None,
-    model: str = "gpt-4o-mini",
+    model: str = "gpt-5-2025-08-07",
 ) -> str:
     """
     Generate a realistic follow-up question a child might ask based on
