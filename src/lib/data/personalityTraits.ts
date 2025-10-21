@@ -137,6 +137,121 @@ export const personalityTraits: PersonalityTrait[] = [
 						"How do I stop being naive?"
 					]
 				}
+			},
+			{
+				id: 'unsympathetic',
+				name: 'Feels little sympathy for others',
+				description: 'May struggle with empathy or understanding others\' emotions',
+				questions: {
+					positive: [
+						"Can you teach me what empathy means?",
+						"Why is being kind important?",
+						"What are ways to be more caring?"
+					],
+					neutral: [
+						"Why do people cry when others are sad?",
+						"Why should I care when someone is upset?"
+					],
+					negative: [
+						"What if I don't feel bad when someone gets hurt?",
+						"Why do I not understand people's feelings?",
+						"How can I act nice even if I don't feel it?",
+						"What happens when I don't care about others?",
+						"Why do I feel annoyed when people are emotional?"
+					]
+				}
+			},
+			{
+				id: 'polite',
+				name: 'Is polite, courteous to others',
+				description: 'Uses good manners and shows consideration',
+				questions: {
+					positive: [
+						"Can you teach me nice words to use every day?",
+						"What are polite ways to ask for things?",
+						"How can I be courteous at school?"
+					],
+					neutral: [
+						"Why do adults care about manners so much?",
+						"What's a polite way to leave a conversation?"
+					],
+					negative: [
+						"What if I forget to say please and thank you?",
+						"Why do I feel awkward being too polite?",
+						"How do I be polite to people I don't like?",
+						"What should I do when other kids think being polite is weird?",
+						"Why does being courteous feel uncomfortable sometimes?"
+					]
+				}
+			},
+			{
+				id: 'argumentative',
+				name: 'Starts arguments with others',
+				description: 'May be confrontational or quick to disagree',
+				questions: {
+					positive: [
+						"How can I disagree without starting a fight?",
+						"What are calm ways to stand my ground?",
+						"Why is it okay to have different opinions?"
+					],
+					neutral: [
+						"How do I know when to drop an argument?",
+						"What does it mean to agree to disagree?"
+					],
+					negative: [
+						"Why do I always want to argue?",
+						"What if I can't stop myself from disagreeing?",
+						"How do I stay calm when people are wrong?",
+						"Why do I get into arguments so easily?",
+						"What should I do when people say I'm too argumentative?"
+					]
+				}
+			},
+			{
+				id: 'fault_finding',
+				name: 'Tends to find fault with others',
+				description: 'Often notices what\'s wrong or criticizes others',
+				questions: {
+					positive: [
+						"How can I give helpful feedback instead of criticism?",
+						"What are nice ways to point out mistakes?",
+						"How do I focus on the good instead of the bad?"
+					],
+					neutral: [
+						"Why do I notice problems so easily?",
+						"What does constructive criticism mean?"
+					],
+					negative: [
+						"Why do I always see what's wrong with others?",
+						"How can I stop criticizing people in my head?",
+						"What if people think I'm mean for pointing out mistakes?",
+						"Why do I focus on negatives more than positives?",
+						"How do I stop judging people so much?"
+					]
+				}
+			},
+			{
+				id: 'suspicious',
+				name: 'Is suspicious of others\' intentions',
+				description: 'May distrust others or question their motives',
+				questions: {
+					positive: [
+						"How can I learn to trust people more?",
+						"What are signs someone is trustworthy?",
+						"Why is it good to give people the benefit of the doubt?"
+					],
+					neutral: [
+						"How do I know if someone is being honest?",
+						"What should I do when I'm unsure about someone?"
+					],
+					negative: [
+						"Why do I think people are lying all the time?",
+						"How can I stop doubting everyone's intentions?",
+						"What if I can't trust anyone?",
+						"Why do I feel like people are trying to trick me?",
+						"How do I stop being so paranoid about others?"
+					]
+				}
 			}
 		]
 	},
@@ -257,6 +372,121 @@ export const personalityTraits: PersonalityTrait[] = [
 						"How do I stay calm when I make a mistake?",
 						"Why do I feel like I'm not dependable enough?",
 						"How do I fix my reputation if people think I'm unreliable?"
+					]
+				}
+			},
+			{
+				id: 'tidy',
+				name: 'Keeps things neat and tidy',
+				description: 'Maintains cleanliness and order in personal spaces',
+				questions: {
+					positive: [
+						"What are fun ways to organize my room?",
+						"Can you help me create a cleaning routine?",
+						"How can I make tidying up feel less boring?"
+					],
+					neutral: [
+						"Why does keeping things clean matter?",
+						"What's the best way to sort my stuff?"
+					],
+					negative: [
+						"Why do I hate cleaning my room?",
+						"What if I can't keep things tidy no matter what?",
+						"How do I stop losing things in my mess?",
+						"Why does my stuff get messy so fast?",
+						"What should I do when tidying feels overwhelming?"
+					]
+				}
+			},
+			{
+				id: 'disorganized',
+				name: 'Tends to be disorganized',
+				description: 'May struggle with keeping things in order',
+				questions: {
+					positive: [
+						"How can I get better at organizing?",
+						"What are simple ways to stay organized?",
+						"Can you help me create a system to track my things?"
+					],
+					neutral: [
+						"Why do I lose track of my stuff?",
+						"What happens when I'm disorganized?"
+					],
+					negative: [
+						"Why can't I ever find my things?",
+						"How do I stop being so messy?",
+						"What if I always forget where I put stuff?",
+						"Why does organizing feel so hard for me?",
+						"How can I stay organized when my brain feels scattered?"
+					]
+				}
+			},
+			{
+				id: 'lazy',
+				name: 'Tends to be lazy',
+				description: 'May lack motivation or avoid effort',
+				questions: {
+					positive: [
+						"How can I motivate myself to do things?",
+						"What are ways to get more energy?",
+						"How do I start tasks when I don't feel like it?"
+					],
+					neutral: [
+						"Why don't I feel like doing anything sometimes?",
+						"What makes some tasks feel easier than others?"
+					],
+					negative: [
+						"Why do I always put things off?",
+						"How can I stop being lazy?",
+						"What if I never feel motivated?",
+						"Why do I avoid doing work even when I know I should?",
+						"How do I overcome feeling too tired to try?"
+					]
+				}
+			},
+			{
+				id: 'careless',
+				name: 'Can be somewhat careless',
+				description: 'May make mistakes due to lack of attention',
+				questions: {
+					positive: [
+						"How can I pay better attention to details?",
+						"What are ways to check my work?",
+						"How do I slow down and be more careful?"
+					],
+					neutral: [
+						"Why do I make silly mistakes?",
+						"What does it mean to be more mindful?"
+					],
+					negative: [
+						"Why do I mess things up so often?",
+						"How can I stop being so careless?",
+						"What if I always make mistakes?",
+						"Why don't I notice when I do things wrong?",
+						"How do I stop rushing and missing important stuff?"
+					]
+				}
+			},
+			{
+				id: 'irresponsible',
+				name: 'Sometimes behaves irresponsibly',
+				description: 'May not always follow through on commitments',
+				questions: {
+					positive: [
+						"How can I become more responsible?",
+						"What are ways to remember my responsibilities?",
+						"How do I take ownership of my actions?"
+					],
+					neutral: [
+						"Why is being responsible important?",
+						"What happens when I don't follow through?"
+					],
+					negative: [
+						"Why do I forget to do what I promised?",
+						"How can I stop letting people down?",
+						"What if I keep making the same mistakes?",
+						"Why do I avoid responsibilities?",
+						"How do I fix things when I've been irresponsible?"
 					]
 				}
 			}
@@ -381,6 +611,121 @@ export const personalityTraits: PersonalityTrait[] = [
 						"What if people think I'm annoying when I'm enthusiastic?"
 					]
 				}
+			},
+			{
+				id: 'quiet',
+				name: 'Tends to be quiet',
+				description: 'Prefers listening over speaking, more reserved',
+				questions: {
+					positive: [
+						"Is it okay to be quiet?",
+						"What are good things about being a listener?",
+						"How can I show I care without talking much?"
+					],
+					neutral: [
+						"Why do I prefer to listen instead of talk?",
+						"What are ways to enjoy quiet time?"
+					],
+					negative: [
+						"Why do people think I'm shy because I'm quiet?",
+						"How can I speak up when I need to?",
+						"What if people think I'm boring?",
+						"Why do I feel nervous to talk in groups?",
+						"How do I stop feeling left out when I don't talk much?"
+					]
+				}
+			},
+			{
+				id: 'shy',
+				name: 'Is sometimes shy, introverted',
+				description: 'May feel uncomfortable in social situations',
+				questions: {
+					positive: [
+						"How can I feel more comfortable around new people?",
+						"What are ways to make friends when I'm shy?",
+						"Can you help me practice starting conversations?"
+					],
+					neutral: [
+						"Why do I feel nervous meeting people?",
+						"What's good about being introverted?"
+					],
+					negative: [
+						"Why am I so shy all the time?",
+						"How can I stop feeling scared to talk?",
+						"What if I never get over being shy?",
+						"Why do I freeze up when people talk to me?",
+						"How do I make friends when I'm too shy to speak?"
+					]
+				}
+			},
+			{
+				id: 'dominant',
+				name: 'Is dominant, acts as a leader',
+				description: 'Takes charge and leads others',
+				questions: {
+					positive: [
+						"How can I be a good leader?",
+						"What are ways to inspire my team?",
+						"How do I help everyone work together?"
+					],
+					neutral: [
+						"What makes someone a good leader?",
+						"How do I know when to take charge?"
+					],
+					negative: [
+						"Why do people say I'm too bossy?",
+						"How can I lead without controlling everyone?",
+						"What if people don't want to follow me?",
+						"Why do I always want to be in charge?",
+						"How do I share leadership with others?"
+					]
+				}
+			},
+			{
+				id: 'not_influential',
+				name: 'Finds it hard to influence people',
+				description: 'May struggle to convince or persuade others',
+				questions: {
+					positive: [
+						"How can I get better at sharing my ideas?",
+						"What are ways to be more persuasive?",
+						"How do I speak so people listen?"
+					],
+					neutral: [
+						"Why don't people listen to me?",
+						"What makes someone influential?"
+					],
+					negative: [
+						"Why can't I ever change people's minds?",
+						"How do I stop feeling ignored?",
+						"What if no one takes my ideas seriously?",
+						"Why do others always win arguments?",
+						"How can I be more convincing?"
+					]
+				}
+			},
+			{
+				id: 'follower',
+				name: 'Prefers to have others take charge',
+				description: 'More comfortable following than leading',
+				questions: {
+					positive: [
+						"Is it okay to let others lead?",
+						"What are good things about being a follower?",
+						"How can I be a great team member?"
+					],
+					neutral: [
+						"Why do I prefer when others decide?",
+						"What does it mean to be a good follower?"
+					],
+					negative: [
+						"Why can't I ever take charge?",
+						"How do I stop always depending on others?",
+						"What if people think I'm weak for not leading?",
+						"Why do I feel scared to make decisions?",
+						"How can I be more confident in taking the lead?"
+					]
+				}
 			}
 		]
 	},
@@ -503,6 +848,98 @@ export const personalityTraits: PersonalityTrait[] = [
 						"How do I keep my emotions from taking over?"
 					]
 				}
+			},
+			{
+				id: 'relaxed',
+				name: 'Is relaxed, handles stress well',
+				description: 'Remains calm under pressure',
+				questions: {
+					positive: [
+						"How can I stay calm in stressful situations?",
+						"What are ways to help others relax?",
+						"Can you teach me breathing exercises?"
+					],
+					neutral: [
+						"Why don't things stress me out as much?",
+						"What helps me stay relaxed?"
+					],
+					negative: [
+						"What if people think I don't care because I'm so calm?",
+						"How do I show concern when I don't feel worried?",
+						"Why don't things bother me like they bother others?",
+						"What if being too relaxed makes me miss important stuff?",
+						"How can I take things seriously while staying calm?"
+					]
+				}
+			},
+			{
+				id: 'optimistic',
+				name: 'Stays optimistic after experiencing a setback',
+				description: 'Bounces back from difficulties with a positive outlook',
+				questions: {
+					positive: [
+						"How can I stay positive when things go wrong?",
+						"What are ways to cheer myself up?",
+						"Can you tell me a story about bouncing back?"
+					],
+					neutral: [
+						"Why is it good to stay optimistic?",
+						"How do I find the good in bad situations?"
+					],
+					negative: [
+						"What if trying to be positive feels fake?",
+						"How do I stay hopeful when everything keeps going wrong?",
+						"Why do people say I'm too optimistic?",
+						"What if staying positive makes me ignore real problems?",
+						"How can I be realistic and optimistic at the same time?"
+					]
+				}
+			},
+			{
+				id: 'stable',
+				name: 'Is emotionally stable, not easily upset',
+				description: 'Maintains emotional balance and composure',
+				questions: {
+					positive: [
+						"How can I help friends who get upset easily?",
+						"What are ways to stay balanced?",
+						"Why is emotional stability helpful?"
+					],
+					neutral: [
+						"Why don't I get upset as easily as others?",
+						"What helps me stay emotionally steady?"
+					],
+					negative: [
+						"What if people think I'm cold because I don't get upset?",
+						"How do I show I care when I don't react emotionally?",
+						"Why don't things bother me like they should?",
+						"What if my calmness makes others feel alone?",
+						"How can I be more emotionally expressive?"
+					]
+				}
+			},
+			{
+				id: 'controlled',
+				name: 'Keeps their emotions under control',
+				description: 'Manages and regulates emotional expressions',
+				questions: {
+					positive: [
+						"How can I stay calm when I'm angry?",
+						"What are ways to control my reactions?",
+						"Can you teach me techniques to manage emotions?"
+					],
+					neutral: [
+						"Why is it important to control my emotions?",
+						"How do I express feelings in a healthy way?"
+					],
+					negative: [
+						"What if keeping emotions in makes me explode later?",
+						"How do I know if I'm suppressing too much?",
+						"Why do I bottle up my feelings?",
+						"What if people think I'm hiding something?",
+						"How can I be open while staying in control?"
+					]
+				}
 			}
 		]
 	},
@@ -623,6 +1060,121 @@ export const personalityTraits: PersonalityTrait[] = [
 						"What if my ideas sound silly?",
 						"Why do I feel nervous sharing my thoughts?",
 						"What should I do when nobody listens to my ideas?"
+					]
+				}
+			},
+			{
+				id: 'non_intellectual',
+				name: 'Avoids intellectual, philosophical discussions',
+				description: 'Prefers practical, concrete topics over abstract ideas',
+				questions: {
+					positive: [
+						"What are fun, simple topics to talk about?",
+						"How can I enjoy learning without getting too deep?",
+						"What are practical skills I can learn?"
+					],
+					neutral: [
+						"Why do I prefer simple explanations?",
+						"What's good about focusing on the basics?"
+					],
+					negative: [
+						"Why do deep conversations bore me?",
+						"What if people think I'm not smart?",
+						"How do I stay interested in philosophical stuff?",
+						"Why don't I like thinking about abstract ideas?",
+						"What if I'm missing out by not thinking deeply?"
+					]
+				}
+			},
+			{
+				id: 'aesthetically_appreciative',
+				name: 'Values art and beauty',
+				description: 'Appreciates aesthetics and artistic expression',
+				questions: {
+					positive: [
+						"What makes something beautiful?",
+						"Can you show me famous works of art?",
+						"How can I notice beauty in everyday things?"
+					],
+					neutral: [
+						"Why do people create art?",
+						"What are different types of beauty?"
+					],
+					negative: [
+						"What if I don't understand modern art?",
+						"Why do people spend so much on art?",
+						"How can I appreciate art I don't like?",
+						"What if my taste in art is different?",
+						"Why does beauty matter so much?"
+					]
+				}
+			},
+			{
+				id: 'unartistic',
+				name: 'Has few artistic interests',
+				description: 'Less drawn to arts and creative activities',
+				questions: {
+					positive: [
+						"What are non-art hobbies I can try?",
+						"How can I enjoy activities without art?",
+						"What skills don't require creativity?"
+					],
+					neutral: [
+						"Why am I not into art?",
+						"What's good about focusing on other things?"
+					],
+					negative: [
+						"What if everyone thinks I'm boring for not liking art?",
+						"How do I appreciate art when it doesn't interest me?",
+						"Why don't I get excited about music or painting?",
+						"What if I'm missing out on something important?",
+						"How can I connect with artistic people?"
+					]
+				}
+			},
+			{
+				id: 'uncreative',
+				name: 'Has little creativity',
+				description: 'May struggle with creative or imaginative tasks',
+				questions: {
+					positive: [
+						"How can I get better at creative thinking?",
+						"What are ways to be more imaginative?",
+						"Can you give me exercises to boost creativity?"
+					],
+					neutral: [
+						"Why don't I think of creative ideas?",
+						"What makes someone creative?"
+					],
+					negative: [
+						"Why can't I think of original ideas?",
+						"How do I stop copying others?",
+						"What if I'm just not a creative person?",
+						"Why do creative projects feel so hard?",
+						"How can I succeed without creativity?"
+					]
+				}
+			},
+			{
+				id: 'unimaginative',
+				name: 'Has difficulty imagining things',
+				description: 'Struggles with visualization or abstract thinking',
+				questions: {
+					positive: [
+						"How can I improve my imagination?",
+						"What are ways to practice visualizing?",
+						"Can you help me with imagination exercises?"
+					],
+					neutral: [
+						"Why is it hard for me to picture things?",
+						"What's the difference between imagination and memory?"
+					],
+					negative: [
+						"Why can't I imagine things like others do?",
+						"How do I read books when I can't picture the scenes?",
+						"What if I can never imagine well?",
+						"Why do I struggle with pretend play?",
+						"How can I be successful without a good imagination?"
 					]
 				}
 			}
