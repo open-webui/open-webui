@@ -1157,6 +1157,7 @@
 	"Speech recognition error: {{error}}": "",
 	"Speech-to-Text Engine": "",
 	"Standard I/O (stdio)": "",
+	"Start and end dates cannot be the same. Please select a date range of at least one day.": "",
 	"Start Date": "",
 	"Start Server": "",
 	"Start server automatically": "",
