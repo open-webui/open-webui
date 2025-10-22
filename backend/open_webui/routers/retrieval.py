@@ -98,7 +98,7 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 ##########################################
 
 
-def get_ef(
+def load_embedding_model(
     engine: str,
     embedding_model: str,
     auto_update: bool = False,
@@ -134,7 +134,7 @@ def get_ef(
     return ef
 
 
-def get_rf(
+def load_reranker_model(
     reranking_model: str,
     auto_update: bool = False,
 ):
@@ -279,7 +279,7 @@ async def update_embedding_config(
                 form_data.embedding_batch_size
             )
 
-        request.app.state.ef = get_ef(
+        request.app.state.ef = load_embedding_model(
             request.app.state.config.RAG_EMBEDDING_ENGINE,
             request.app.state.config.RAG_EMBEDDING_MODEL,
         )
@@ -338,7 +338,7 @@ async def update_reranking_config(
         request.app.state.config.RAG_RERANKING_MODEL = form_data.reranking_model
 
         try:
-            request.app.state.rf = get_rf(
+            request.app.state.rf = load_reranker_model(
                 request.app.state.config.RAG_RERANKING_MODEL,
                 True,
             )

@@ -69,8 +69,8 @@ from mcp_backend.routers import mcp, crew_mcp
 
 from open_webui.routers.retrieval import (
     get_embedding_function,
-    get_ef,
-    get_rf,
+    load_embedding_model,
+    load_reranker_model,
 )
 
 from open_webui.internal.db import Session, get_db
@@ -690,13 +690,13 @@ app.state.YOUTUBE_LOADER_TRANSLATION = None
 
 
 try:
-    app.state.ef = get_ef(
+    app.state.ef = load_embedding_model(
         app.state.config.RAG_EMBEDDING_ENGINE,
         app.state.config.RAG_EMBEDDING_MODEL,
         RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     )
 
-    app.state.rf = get_rf(
+    app.state.rf = load_reranker_model(
         app.state.config.RAG_RERANKING_MODEL,
         RAG_RERANKING_MODEL_AUTO_UPDATE,
     )
