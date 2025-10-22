@@ -5,6 +5,7 @@ from typing import Optional, Union
 import requests
 
 from huggingface_hub import snapshot_download
+from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriever
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 
@@ -23,6 +24,50 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 from typing import Any
+
+from langchain_core.callbacks import CallbackManagerForRetrieverRun
+from langchain_core.retrievers import BaseRetriever
+
+
+class AsyncVectorSearchRetriever(BaseRetriever):
+    collection_name: Any
+    embedding_function: Any
+    top_k: int
+
+    async def _aget_relevant_documents(
+        self,
+        query: str,
+        *,
+        run_manager: CallbackManagerForRetrieverRun,
+    ) -> list[Document]:
+        result = await VECTOR_DB_CLIENT.search(
+            collection_name=self.collection_name,
+            vectors=[self.embedding_function(query)],
+            limit=self.top_k,
+        )
+
+        ids = result.ids[0]
+        metadatas = result.metadatas[0]
+        documents = result.documents[0]
+
+        results = []
+        for idx in range(len(ids)):
+            results.append(
+                Document(
+                    metadata=metadatas[idx],
+                    page_content=documents[idx],
+                )
+            )
+        return results
+
+    def _get_relevant_documents(
+        self,
+        query: str,
+        *,
+        run_manager: CallbackManagerForRetrieverRun,
+    ) -> list[Document]:
+        # Fallback sync method - should not be used in async context
+        raise NotImplementedError("Use ainvoke() for async operations")
 
 
 async def query_doc(
@@ -68,10 +113,8 @@ async def query_doc_with_hybrid_search(
     r: float,
 ) -> dict:
     try:
-        # Get all documents from the collection
+        # Get all documents from the collection for BM25
         result = await VECTOR_DB_CLIENT.get(collection_name=collection_name)
-
-        # Prepare documents for BM25
         documents = result.documents[0]
         metadatas = result.metadatas[0]
 
@@ -82,70 +125,38 @@ async def query_doc_with_hybrid_search(
         )
         bm25_retriever.k = k
 
-        # Get BM25 results
-        bm25_docs = bm25_retriever.invoke(query)
-
-        # Get vector search results
-        query_embedding = embedding_function(query)
-        vector_result = await VECTOR_DB_CLIENT.search(
+        # Create async vector search retriever
+        vector_search_retriever = AsyncVectorSearchRetriever(
             collection_name=collection_name,
-            vectors=[query_embedding],
-            limit=k,
+            embedding_function=embedding_function,
+            top_k=k,
         )
 
-        # Convert vector results to Document objects
-        vector_docs = []
-        for idx in range(len(vector_result.ids[0])):
-            vector_docs.append(
-                Document(
-                    metadata=vector_result.metadatas[0][idx],
-                    page_content=vector_result.documents[0][idx],
-                )
-            )
+        # Create ensemble retriever with equal weights (like original)
+        ensemble_retriever = EnsembleRetriever(
+            retrievers=[bm25_retriever, vector_search_retriever], weights=[0.5, 0.5]
+        )
 
-        # Combine results with weighted interleaving (similar to EnsembleRetriever)
-        combined_docs = []
-        seen_content = set()
+        # Create compression retriever with reranking
+        compressor = RerankCompressor(
+            embedding_function=embedding_function,
+            top_n=k,
+            reranking_function=reranking_function,
+            r_score=r,
+        )
 
-        # Interleave results with equal weights (0.5, 0.5) like original EnsembleRetriever
-        bm25_idx = 0
-        vector_idx = 0
+        compression_retriever = ContextualCompressionRetriever(
+            base_compressor=compressor, base_retriever=ensemble_retriever
+        )
 
-        while (bm25_idx < len(bm25_docs) or vector_idx < len(vector_docs)) and len(
-            combined_docs
-        ) < k * 2:
-            # Alternate between BM25 and vector results
-            if bm25_idx < len(bm25_docs):
-                doc = bm25_docs[bm25_idx]
-                if doc.page_content not in seen_content:
-                    combined_docs.append(doc)
-                    seen_content.add(doc.page_content)
-                bm25_idx += 1
-
-            if vector_idx < len(vector_docs):
-                doc = vector_docs[vector_idx]
-                if doc.page_content not in seen_content:
-                    combined_docs.append(doc)
-                    seen_content.add(doc.page_content)
-                vector_idx += 1
-
-        # Apply reranking/compression
-        if reranking_function is not None or r > 0:
-            compressor = RerankCompressor(
-                embedding_function=embedding_function,
-                top_n=k,
-                reranking_function=reranking_function,
-                r_score=r,
-            )
-            final_docs = compressor.compress_documents(combined_docs, query)
-        else:
-            final_docs = combined_docs[:k]
+        # Use async invoke
+        result = await compression_retriever.ainvoke(query)
 
         # Format results
         result = {
-            "distances": [[d.metadata.get("score", 0.0) for d in final_docs]],
-            "documents": [[d.page_content for d in final_docs]],
-            "metadatas": [[d.metadata for d in final_docs]],
+            "distances": [[d.metadata.get("score", 0.0) for d in result]],
+            "documents": [[d.page_content for d in result]],
+            "metadatas": [[d.metadata for d in result]],
         }
 
         log.info(
