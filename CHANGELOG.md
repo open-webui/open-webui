@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🌐 Translations for Portuguese (Brazil), Greek, German, Traditional Chinese, Simplified Chinese, Spanish, and Georgian were enhanced and expanded.
 
 ### Fixed
+- 🔒 Server-Sent Event (SSE) code injection vulnerability in Direct Connections is resolved by blocking event emission from untrusted external model servers; event emitters from direct connected model servers are no longer supported, preventing arbitrary JavaScript execution in user browsers. [Commit](https://github.com/open-webui/open-webui/commit/8af6a4cf21b756a66cd58378a01c60f74c39b7ca)
+- 🔒 DOM XSS vulnerability in "Insert Prompt as Rich Text" is resolved by sanitizing HTML content with DOMPurify before rendering. [Commit](https://github.com/open-webui/open-webui/commit/eb9c4c0e358c274aea35f21c2856c0a20051e5f1)
 - 🔐 Chat query errors are prevented by properly validating and handling the 'order_by' parameter to ensure requested columns exist. [#18400](https://github.com/open-webui/open-webui/pull/18400), [#18452](https://github.com/open-webui/open-webui/pull/18452)
 - 🔐 Login failures with passwords longer than 72 bytes are resolved by safely truncating oversized passwords for bcrypt compatibility. [#18157](https://github.com/open-webui/open-webui/issues/18157)
 - 🎙️ The "Instant Auto-Send After Voice Transcription" setting now functions correctly and automatically sends transcribed text when enabled. [#18466](https://github.com/open-webui/open-webui/issues/18466)
