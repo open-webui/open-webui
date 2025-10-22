@@ -4,7 +4,7 @@ from typing import Optional
 
 from open_webui.internal.db import Base, get_db, JSONField
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, JSON, Text, Index
+from sqlalchemy import BigInteger, Column, String, JSON, Text, Index, Boolean, Integer
 
 
 class ExitQuizResponse(Base):
@@ -18,6 +18,10 @@ class ExitQuizResponse(Base):
     score = Column(JSON, nullable=True)  # allow number or structured breakdown
     meta = Column(JSON, nullable=True)  # duration_ms, version, etc.
 
+    # Reset/attempt tracking
+    attempt_number = Column(Integer, nullable=False, default=1)
+    is_current = Column(Boolean, nullable=False, default=True)
+
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
 
@@ -25,6 +29,8 @@ class ExitQuizResponse(Base):
         Index("idx_exit_quiz_user_id", "user_id"),
         Index("idx_exit_quiz_child_id", "child_id"),
         Index("idx_exit_quiz_created_at", "created_at"),
+        Index("idx_exit_quiz_attempt", "user_id", "child_id", "attempt_number"),
+        Index("idx_exit_quiz_user_current", "user_id", "is_current"),
     )
 
 
@@ -37,6 +43,8 @@ class ExitQuizModel(BaseModel):
     answers: dict
     score: Optional[dict] = None
     meta: Optional[dict] = None
+    attempt_number: int
+    is_current: bool
     created_at: int
     updated_at: int
 
@@ -62,6 +70,8 @@ class ExitQuizTable:
                     "answers": form_data.answers,
                     "score": form_data.score,
                     "meta": form_data.meta,
+                    "attempt_number": 1,
+                    "is_current": True,
                     "created_at": ts,
                     "updated_at": ts,
                 }
@@ -124,5 +134,6 @@ class ExitQuizTable:
 
 
 ExitQuizzes = ExitQuizTable()
+
 
 

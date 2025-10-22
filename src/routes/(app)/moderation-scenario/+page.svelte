@@ -4,7 +4,7 @@
 	import { showSidebar, user } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
-	import { applyModeration, generateFollowUpPrompt, type ModerationResponse, upsertScenario, patchScenario, upsertAnswer, createVersion, confirmVersion } from '$lib/apis/moderation';
+	import { applyModeration, generateFollowUpPrompt, type ModerationResponse, saveModerationSession } from '$lib/apis/moderation';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { toggleTheme, getEffectiveTheme } from '$lib/utils/theme';
@@ -460,7 +460,8 @@
 	// UI state
 	let showOriginal1: boolean = false;
 	let showConfirmationModal: boolean = false;
-	let showResetConfirmationModal: boolean = false;
+	// Local restart removed; use global sidebar reset
+	let showResetConfirmationModal: boolean = false; // keep for template compatibility, always false
 	let moderationPanelVisible: boolean = false;
 	let moderationPanelExpanded: boolean = false;
 	let expandedGroups: Set<string> = new Set();
@@ -751,18 +752,12 @@
 		saveCurrentScenarioState();
 	}
 
-	function showResetConfirmation() {
-		showResetConfirmationModal = true;
-	}
+// Local restart removed; use global sidebar reset
+function showResetConfirmation() {}
 
-	function confirmReset() {
-		showResetConfirmationModal = false;
-		resetConversation();
-	}
+function confirmReset() {}
 
-	function cancelReset() {
-		showResetConfirmationModal = false;
-	}
+function cancelReset() {}
 
 	function loadSavedStates() {
 		try {
@@ -1014,7 +1009,7 @@
 		customInstructionInput = '';
 	}
 
-	function acceptOriginalResponse() {
+	async function acceptOriginalResponse() {
 		// Check if this is the attention check scenario
 		if (isAttentionCheckScenario()) {
 			// User passed the attention check! Mark as completed first
@@ -1045,12 +1040,28 @@
 		saveCurrentScenarioState(); // Save the decision
 		toast.success('Original response accepted');
 
-		// Persist decision
+		// Save complete session data
 		try {
-			const scenarioId = `scenario_${selectedScenarioIndex}`;
-			patchScenario(localStorage.token, scenarioId, { decision: 'accept_original', decided_at: Date.now() });
+			const sessionId = `scenario_${selectedScenarioIndex}`;
+			await saveModerationSession(localStorage.token, {
+				session_id: sessionId,
+				user_id: $user?.id || 'unknown',
+				child_id: selectedChildId || 'unknown',
+				scenario_index: selectedScenarioIndex,
+				attempt_number: 1,
+				version_number: 0,
+				scenario_prompt: childPrompt1,
+				original_response: originalResponse1,
+				initial_decision: 'accept_original',
+				strategies: [],
+				custom_instructions: [],
+				highlighted_texts: [],
+				refactored_response: undefined,
+				is_final_version: false,
+				session_metadata: { decision: 'accept_original', decided_at: Date.now() }
+			});
 		} catch (e) {
-			console.error('Failed to persist accept_original decision', e);
+			console.error('Failed to save moderation session', e);
 		}
 	}
 
@@ -1094,7 +1105,7 @@
 		console.log('User selected "I\'m Satisfied With Original" from moderation panel');
 	}
 
-	function markNotApplicable() {
+	async function markNotApplicable() {
 		// Check if this is the attention check scenario
 		if (isAttentionCheckScenario()) {
 			toast.error('Please follow the instructions in the response carefully');
@@ -1113,12 +1124,28 @@
 		toast.success('Scenario marked as not applicable');
 		console.log('User marked scenario as not applicable:', selectedScenarioIndex);
 
-		// Persist decision immediately
+		// Save complete session data
 		try {
-			const scenarioId = `scenario_${selectedScenarioIndex}`;
-			patchScenario(localStorage.token, scenarioId, { decision: 'not_applicable', decided_at: Date.now() });
+			const sessionId = `scenario_${selectedScenarioIndex}`;
+			await saveModerationSession(localStorage.token, {
+				session_id: sessionId,
+				user_id: $user?.id || 'unknown',
+				child_id: selectedChildId || 'unknown',
+				scenario_index: selectedScenarioIndex,
+				attempt_number: 1,
+				version_number: 0,
+				scenario_prompt: childPrompt1,
+				original_response: originalResponse1,
+				initial_decision: 'not_applicable',
+				strategies: [],
+				custom_instructions: [],
+				highlighted_texts: [],
+				refactored_response: undefined,
+				is_final_version: false,
+				session_metadata: { decision: 'not_applicable', decided_at: Date.now() }
+			});
 		} catch (e) {
-			console.error('Failed to persist not_applicable decision', e);
+			console.error('Failed to save moderation session', e);
 		}
 	}
 
@@ -1221,19 +1248,32 @@
 				const total = standardStrategies.length + customTexts.length;
 				toast.success(`Created version ${versions.length} with ${total} moderation strateg${total === 1 ? 'y' : 'ies'}`);
 
-				// Persist version row
+				// Save complete session data with the new version
 				try {
-					const scenarioId = `scenario_${selectedScenarioIndex}`;
-					createVersion(localStorage.token, scenarioId, {
-						scenario_id: scenarioId,
-						version_index: currentVersionIndex,
+					const sessionId = `scenario_${selectedScenarioIndex}`;
+					await saveModerationSession(localStorage.token, {
+						session_id: sessionId,
+						user_id: $user?.id || 'unknown',
+						child_id: selectedChildId || 'unknown',
+						scenario_index: selectedScenarioIndex,
+						attempt_number: 1,
+						version_number: currentVersionIndex + 1,
+						scenario_prompt: childPrompt1,
+						original_response: originalResponse1,
+						initial_decision: 'moderate',
 						strategies: [...standardStrategies],
-						custom_instructions: usedCustomInstructions,
+						custom_instructions: usedCustomInstructions.map(c => c.text), // Convert to string array
 						highlighted_texts: [...highlightedTexts1],
-						refactored_response: result.refactored_response
+						refactored_response: result.refactored_response,
+						is_final_version: false,
+						session_metadata: { 
+							version_index: currentVersionIndex,
+							decision: 'moderate',
+							decided_at: Date.now()
+						}
 					});
 				} catch (e) {
-					console.error('Failed to persist version', e);
+					console.error('Failed to save moderation session', e);
 				}
 			} else {
 				toast.error('Failed to apply moderation');
@@ -1388,13 +1428,23 @@
 
 		// Bootstrap scenario persistence
 		try {
-			const scenarioId = `scenario_${selectedScenarioIndex}`;
-			upsertScenario(localStorage.token, {
-				scenario_id: scenarioId,
+			const sessionId = `scenario_${selectedScenarioIndex}`;
+			await saveModerationSession(localStorage.token, {
+				session_id: sessionId,
 				user_id: $user?.id || 'unknown',
-				child_id: localStorage.getItem('selectedChildId') || 'unknown',
+				child_id: selectedChildId || 'unknown',
+				scenario_index: selectedScenarioIndex,
+				attempt_number: 1,
+				version_number: 0,
 				scenario_prompt: childPrompt1,
-				original_response: originalResponse1
+				original_response: originalResponse1,
+				initial_decision: undefined,
+				strategies: [],
+				custom_instructions: [],
+				highlighted_texts: [],
+				refactored_response: undefined,
+				is_final_version: false,
+				session_metadata: { status: 'initialized' }
 			});
 		} catch (e) {
 			console.error('Failed to bootstrap scenario', e);
@@ -1445,11 +1495,6 @@
 		<div class="flex w-full items-center justify-between">
 			<div class="flex items-center text-xl font-semibold">
 				Moderation Scenarios
-				{#if childProfiles.length > 0}
-					<span class="ml-2 text-sm text-blue-600 dark:text-blue-400">
-						(Personality-based)
-					</span>
-				{/if}
 			</div>
 			
 			<!-- Controls -->
@@ -1575,17 +1620,7 @@
 		{/each}
 	</div>
 
-			<div class="flex-shrink-0 border-t border-gray-200 dark:border-gray-800 p-4">
-				<button
-					on:click={showResetConfirmation}
-					class="w-full px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex items-center justify-center space-x-2"
-				>
-					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-					</svg>
-					<span>Restart All Scenarios</span>
-				</button>
-			</div>
+			<!-- Removed bottom divider and reset area -->
 		</div>
 
 		<!-- Right Side: Chat Thread -->
@@ -1789,12 +1824,7 @@
 								<button
 									on:click={() => {
 										confirmCurrentVersion();
-										try {
-											const scenarioId = `scenario_${selectedScenarioIndex}`;
-											confirmVersion(localStorage.token, scenarioId, currentVersionIndex);
-										} catch (e) {
-											console.error('Failed to persist confirm', e);
-										}
+										// Confirmation will be saved in the session data
 									}}
 									class="flex-1 px-6 py-2 rounded-lg font-medium transition-all duration-200 bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl"
 								>
@@ -1814,18 +1844,7 @@
 					<button
 						on:click={() => {
 							acceptOriginalResponse();
-							// Persist decision
-							try {
-								const scenarioId = `scenario_${selectedScenarioIndex}`;
-								upsertAnswer(localStorage.token, scenarioId, {
-									scenario_id: scenarioId,
-									question_key: 'satisfaction',
-									value: 'satisfied',
-									answered_at: Date.now()
-								});
-							} catch (e) {
-								console.error('Failed to persist satisfied decision', e);
-							}
+							// Decision will be saved when acceptOriginalResponse is called
 						}}
 					class="flex-1 px-6 py-4 rounded-lg font-medium transition-all duration-200 bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
 				>
@@ -1838,18 +1857,7 @@
 			<button
 				on:click={() => {
 					startModerating();
-					// Persist decision
-					try {
-						const scenarioId = `scenario_${selectedScenarioIndex}`;
-						upsertAnswer(localStorage.token, scenarioId, {
-							scenario_id: scenarioId,
-							question_key: 'satisfaction',
-							value: 'moderate',
-							answered_at: Date.now()
-						});
-					} catch (e) {
-						console.error('Failed to persist moderate decision', e);
-					}
+					// Decision will be saved when moderation is applied
 				}}
 				class="flex-1 px-6 py-4 rounded-lg font-medium transition-all duration-200 bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
 			>
@@ -1925,12 +1933,7 @@
 									<button
 										on:click={() => {
 											confirmCurrentVersion();
-											try {
-												const scenarioId = `scenario_${selectedScenarioIndex}`;
-												confirmVersion(localStorage.token, scenarioId, currentVersionIndex);
-											} catch (e) {
-												console.error('Failed to persist confirm', e);
-											}
+											// Confirmation will be saved in the session data
 										}}
 							class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
 						>

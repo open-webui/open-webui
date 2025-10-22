@@ -15,32 +15,47 @@ export interface ModerationResponse {
 	child_prompt: string;
 }
 
-export interface ScenarioPayload {
-  scenario_id?: string;
+export interface ModerationSessionPayload {
+  session_id?: string;  // For updates
   user_id: string;
   child_id: string;
+  scenario_index: number;
+  attempt_number: number;
+  version_number: number;
   scenario_prompt: string;
   original_response: string;
+  initial_decision?: 'accept_original' | 'moderate' | 'not_applicable';
+  strategies?: string[];
+  custom_instructions?: string[];  // Simplified from {id, text}[] to string[]
+  highlighted_texts?: string[];
+  refactored_response?: string;
+  is_final_version?: boolean;
+  session_metadata?: Record<string, any>;
 }
 
-export interface AnswerPayload {
-  scenario_id: string;
-  question_key: string;
-  value: boolean | string | Record<string, any>;
-  answered_at: number;
+export interface ModerationSessionResponse {
+  id: string;
+  user_id: string;
+  child_id: string;
+  scenario_index: number;
+  attempt_number: number;
+  version_number: number;
+  scenario_prompt: string;
+  original_response: string;
+  initial_decision?: string;
+  is_final_version: boolean;
+  strategies?: string[];
+  custom_instructions?: string[];
+  highlighted_texts?: string[];
+  refactored_response?: string;
+  session_metadata?: Record<string, any>;
+  created_at: number;
+  updated_at: number;
 }
 
-export interface VersionPayload {
-  scenario_id: string;
-  version_index: number;
-  strategies: string[];
-  custom_instructions: { id: string; text: string }[];
-  highlighted_texts: string[];
-  refactored_response: string;
-}
-
-export const upsertScenario = async (token: string, payload: ScenarioPayload) => {
-  const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/scenarios`, {
+// New simplified API functions
+export const saveModerationSession = async (token: string, payload: ModerationSessionPayload): Promise<ModerationSessionResponse> => {
+  const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/sessions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -52,62 +67,45 @@ export const upsertScenario = async (token: string, payload: ScenarioPayload) =>
   return res.json();
 };
 
-export const patchScenario = async (
-  token: string,
-  scenarioId: string,
-  payload: Partial<{ is_applicable: boolean; decision: string; decided_at: number }>
-) => {
-  const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/scenarios/${scenarioId}`, {
-    method: 'PATCH',
+export const getModerationSessions = async (token: string, child_id?: string): Promise<ModerationSessionResponse[]> => {
+  const url = new URL(`${WEBUI_API_BASE_URL}/moderation/sessions`);
+  if (child_id) url.searchParams.set('child_id', child_id);
+
+  const res = await fetch(url.toString(), {
+    method: 'GET',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify(payload)
+    }
   });
   if (!res.ok) throw await res.json();
   return res.json();
 };
 
-export const upsertAnswer = async (token: string, scenarioId: string, payload: AnswerPayload) => {
-  const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/scenarios/${scenarioId}/answers`, {
-    method: 'POST',
+export const getModerationSession = async (token: string, session_id: string): Promise<ModerationSessionResponse> => {
+  const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/sessions/${session_id}`, {
+    method: 'GET',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify(payload)
+    }
   });
   if (!res.ok) throw await res.json();
   return res.json();
 };
 
-export const createVersion = async (token: string, scenarioId: string, payload: VersionPayload) => {
-  const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/scenarios/${scenarioId}/versions`, {
-    method: 'POST',
+export const deleteModerationSession = async (token: string, session_id: string): Promise<void> => {
+  const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/sessions/${session_id}`, {
+    method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify(payload)
+    }
   });
   if (!res.ok) throw await res.json();
-  return res.json();
 };
 
-export const confirmVersion = async (token: string, scenarioId: string, versionIndex: number) => {
-  const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/scenarios/${scenarioId}/confirm`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify({ version_index: versionIndex })
-  });
-  if (!res.ok) throw await res.json();
-  return res.json();
-};
-
+// Keep the existing moderation apply function for generating responses
 export const applyModeration = async (
 	token: string,
 	moderationTypes: string[],  // Standard moderation types
@@ -181,5 +179,3 @@ export const generateFollowUpPrompt = async (
 
 	return res;
 };
-
-

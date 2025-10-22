@@ -4,7 +4,7 @@ from typing import Optional
 
 from open_webui.internal.db import Base, get_db
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, Index
+from sqlalchemy import BigInteger, Column, String, Text, Index, Boolean, Integer
 
 ####################
 # CHILD PROFILE: Database schema for storing child profiles linked to parent users
@@ -23,6 +23,10 @@ class ChildProfile(Base):
     child_gender = Column(String, nullable=True)  # Gender (e.g., "Male", "Female")
     child_characteristics = Column(Text, nullable=True)  # Personality/interests description
     parenting_style = Column(String, nullable=True)  # Parenting approach/preferences
+
+    # Reset/attempt tracking
+    attempt_number = Column(Integer, nullable=False, default=1)
+    is_current = Column(Boolean, nullable=False, default=True)
     
     created_at = Column(BigInteger)  # When profile was created
     updated_at = Column(BigInteger)  # When profile was last updated
@@ -31,6 +35,8 @@ class ChildProfile(Base):
     __table_args__ = (
         Index('idx_child_profile_user_id', 'user_id'),
         Index('idx_child_profile_created_at', 'created_at'),
+        Index('idx_child_profile_user_current', 'user_id', 'is_current'),
+        Index('idx_child_profile_attempt', 'user_id', 'id', 'attempt_number'),
     )
 
 class ChildProfileModel(BaseModel):
@@ -43,6 +49,8 @@ class ChildProfileModel(BaseModel):
     child_gender: Optional[str] = None
     child_characteristics: Optional[str] = None
     parenting_style: Optional[str] = None
+    attempt_number: int
+    is_current: bool
     created_at: int
     updated_at: int
 
@@ -71,6 +79,8 @@ class ChildProfileTable:
                     "child_gender": form_data.child_gender,
                     "child_characteristics": form_data.child_characteristics,
                     "parenting_style": form_data.parenting_style,
+                    "attempt_number": 1,
+                    "is_current": True,
                     "created_at": ts,
                     "updated_at": ts,
                 }
@@ -85,9 +95,16 @@ class ChildProfileTable:
     def get_child_profiles_by_user(self, user_id: str) -> list[ChildProfileModel]:
         """Get all child profiles for a specific parent user"""
         with get_db() as db:
-            profiles = db.query(ChildProfile).filter(
-                ChildProfile.user_id == user_id
-            ).order_by(ChildProfile.created_at.asc()).all()
+            # Return only current profiles for this user
+            profiles = (
+                db.query(ChildProfile)
+                .filter(
+                    ChildProfile.user_id == user_id,
+                    ChildProfile.is_current == True,
+                )
+                .order_by(ChildProfile.created_at.asc())
+                .all()
+            )
             
             return [ChildProfileModel.model_validate(profile) for profile in profiles]
 

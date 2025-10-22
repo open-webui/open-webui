@@ -41,3 +41,4 @@ def downgrade():
     op.drop_table("exit_quiz_response")
 
 
+

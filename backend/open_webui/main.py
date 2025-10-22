@@ -1298,6 +1298,10 @@ app.include_router(child_profiles.router, prefix="/api/v1", tags=["child_profile
 # Include exit quiz router
 app.include_router(exit_quiz.router, prefix="/api/v1", tags=["exit_quiz"])
 
+# Include workflow router
+from open_webui.routers import workflow
+app.include_router(workflow.router, prefix="/api/v1", tags=["workflow"])
+
 # SCIM 2.0 API for identity management
 if SCIM_ENABLED:
     app.include_router(scim.router, prefix="/api/v1/scim/v2", tags=["scim"])

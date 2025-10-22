@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -7,12 +7,9 @@ from pydantic import BaseModel
 from open_webui.utils.auth import get_verified_user
 from open_webui.models.users import UserModel
 from open_webui.models.moderation import (
-    ModerationScenarios,
-    ModerationScenarioForm,
-    ModerationApplieds,
-    ModerationAppliedForm,
-    ModerationQuestionAnswers,
-    ModerationQuestionAnswerForm,
+    ModerationSessions,
+    ModerationSessionForm,
+    ModerationSessionModel,
 )
 
 log = logging.getLogger(__name__)
@@ -20,170 +17,106 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
-class ScenarioCreateForm(ModerationScenarioForm):
-    scenario_id: Optional[str] = None
+class ModerationSessionPayload(BaseModel):
+    session_id: Optional[str] = None
+    user_id: str
+    child_id: str
+    scenario_index: int
+    attempt_number: int
+    version_number: int
+    scenario_prompt: str
+    original_response: str
+    initial_decision: Optional[str] = None
+    strategies: Optional[List[str]] = None
+    custom_instructions: Optional[List[str]] = None
+    highlighted_texts: Optional[List[str]] = None
+    refactored_response: Optional[str] = None
+    is_final_version: Optional[bool] = False
+    session_metadata: Optional[dict] = None
 
 
-@router.post("/moderation/scenarios")
-async def create_or_update_scenario(
-    form_data: ScenarioCreateForm,
+@router.post("/moderation/sessions", response_model=ModerationSessionModel)
+async def create_or_update_session(
+    form_data: ModerationSessionPayload,
     user: UserModel = Depends(get_verified_user),
 ):
+    """Create or update a moderation session version row"""
     try:
         if user.id != form_data.user_id:
             raise HTTPException(status_code=403, detail="Forbidden")
-        result = ModerationScenarios.upsert(form_data, scenario_id=form_data.scenario_id)
-        return result.model_dump()
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error upserting scenario: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-class ScenarioPatchForm(BaseModel):
-    is_applicable: Optional[bool] = None
-    decision: Optional[str] = None
-    decided_at: Optional[int] = None
-
-
-@router.patch("/moderation/scenarios/{scenario_id}")
-async def patch_scenario(
-    scenario_id: str,
-    form_data: ScenarioPatchForm,
-    user: UserModel = Depends(get_verified_user),
-):
-    try:
-        # Simple update via upsert: fetch and update
-        existing = ModerationScenarios.upsert(
-            ModerationScenarioForm(
-                user_id=user.id,
-                child_id="",
-                scenario_prompt="",
-                original_response="",
-            ),
-            scenario_id=scenario_id,
+        
+        form = ModerationSessionForm(
+            session_id=form_data.session_id,
+            user_id=form_data.user_id,
+            child_id=form_data.child_id,
+            scenario_index=form_data.scenario_index,
+            attempt_number=form_data.attempt_number,
+            version_number=form_data.version_number,
+            scenario_prompt=form_data.scenario_prompt,
+            original_response=form_data.original_response,
+            initial_decision=form_data.initial_decision,
+            strategies=form_data.strategies,
+            custom_instructions=form_data.custom_instructions,
+            highlighted_texts=form_data.highlighted_texts,
+            refactored_response=form_data.refactored_response,
+            is_final_version=form_data.is_final_version,
+            session_metadata=form_data.session_metadata,
         )
-        # Apply partial updates
-        from open_webui.internal.db import get_db
-        from open_webui.models.moderation import ModerationScenario
-        with get_db() as db:
-            obj = db.query(ModerationScenario).filter(ModerationScenario.id == scenario_id).first()
-            if not obj:
-                raise HTTPException(status_code=404, detail="Scenario not found")
-            if form_data.is_applicable is not None:
-                obj.is_applicable = form_data.is_applicable
-            if form_data.decision is not None:
-                obj.decision = form_data.decision
-            if form_data.decided_at is not None:
-                obj.decided_at = form_data.decided_at
-            db.add(obj)
-            db.commit()
-        return {"status": True}
+        
+        result = ModerationSessions.upsert(form)
+        return result
     except HTTPException:
         raise
     except Exception as e:
-        log.error(f"Error patching scenario: {e}")
+        log.error(f"Error upserting moderation session: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.post("/moderation/scenarios/{scenario_id}/answers")
-async def upsert_answer(
-    scenario_id: str,
-    form_data: ModerationQuestionAnswerForm,
+@router.get("/moderation/sessions", response_model=List[ModerationSessionModel])
+async def list_sessions(
+    child_id: Optional[str] = None,
     user: UserModel = Depends(get_verified_user),
 ):
+    """List moderation sessions for the current user"""
     try:
-        if form_data.scenario_id != scenario_id:
-            raise HTTPException(status_code=400, detail="Scenario ID mismatch")
-        result = ModerationQuestionAnswers.upsert(form_data)
-        return result.model_dump()
+        sessions = ModerationSessions.get_sessions_by_user(user.id, child_id=child_id)
+        return sessions
+    except Exception as e:
+        log.error(f"Error listing moderation sessions: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/moderation/sessions/{session_id}", response_model=ModerationSessionModel)
+async def get_session(
+    session_id: str,
+    user: UserModel = Depends(get_verified_user),
+):
+    """Get a specific moderation session"""
+    try:
+        session = ModerationSessions.get_session_by_id(session_id, user.id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Moderation session not found")
+        return session
     except HTTPException:
         raise
     except Exception as e:
-        log.error(f"Error upserting answer: {e}")
+        log.error(f"Error fetching moderation session: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.post("/moderation/scenarios/{scenario_id}/versions")
-async def create_version(
-    scenario_id: str,
-    form_data: ModerationAppliedForm,
+@router.delete("/moderation/sessions/{session_id}")
+async def delete_session(
+    session_id: str,
     user: UserModel = Depends(get_verified_user),
 ):
+    """Delete a moderation session"""
     try:
-        if form_data.scenario_id != scenario_id:
-            raise HTTPException(status_code=400, detail="Scenario ID mismatch")
-        result = ModerationApplieds.create_version(form_data)
-        return result.model_dump()
+        success = ModerationSessions.delete_session(session_id, user.id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Moderation session not found")
+        return {"message": "Moderation session deleted successfully"}
     except HTTPException:
         raise
     except Exception as e:
-        log.error(f"Error creating version: {e}")
+        log.error(f"Error deleting moderation session: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
-
-
-class ConfirmForm(BaseModel):
-    version_index: int
-
-
-@router.post("/moderation/scenarios/{scenario_id}/confirm")
-async def confirm_version(
-    scenario_id: str,
-    form_data: ConfirmForm,
-    user: UserModel = Depends(get_verified_user),
-):
-    try:
-        ModerationApplieds.confirm_version(scenario_id, form_data.version_index)
-        # Also set scenario decision to 'moderate' if not already
-        from open_webui.internal.db import get_db
-        from open_webui.models.moderation import ModerationScenario
-        with get_db() as db:
-            obj = db.query(ModerationScenario).filter(ModerationScenario.id == scenario_id).first()
-            if obj and obj.decision is None:
-                obj.decision = "moderate"
-                db.add(obj)
-                db.commit()
-        return {"status": True}
-    except Exception as e:
-        log.error(f"Error confirming version: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-class SelectionSaveForm(BaseModel):
-    scenario_id: str
-    text: str
-    source: str  # 'prompt' | 'response'
-
-
-@router.post("/moderation/scenarios/{scenario_id}/selections")
-async def save_selection_for_scenario(
-    scenario_id: str,
-    form_data: SelectionSaveForm,
-    user: UserModel = Depends(get_verified_user),
-):
-    try:
-        if form_data.scenario_id != scenario_id:
-            raise HTTPException(status_code=400, detail="Scenario ID mismatch")
-        # Reuse selections table for storage
-        from open_webui.models.selections import SelectionForm, Selections
-        sel = Selections.insert_new_selection(
-            SelectionForm(
-                chat_id=scenario_id,
-                message_id=f"{scenario_id}:{form_data.source}",
-                role=("user" if form_data.source == "prompt" else "assistant"),
-                selected_text=form_data.text,
-                child_id=None,
-                context=None,
-                meta={"scenario_id": scenario_id, "source": form_data.source},
-            ),
-            user.id,
-        )
-        return sel.model_dump() if sel else {"status": False}
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error saving selection for scenario: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
