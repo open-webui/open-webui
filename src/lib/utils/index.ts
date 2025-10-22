@@ -348,7 +348,8 @@ export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
 			context.drawImage(img, 0, 0, width, height);
 
 			// Get compressed image URL
-			const compressedUrl = canvas.toDataURL();
+            const mimeType = imageUrl.match(/^data:([^;]+);/)?.[1];
+			const compressedUrl = canvas.toDataURL(mimeType);
 			resolve(compressedUrl);
 		};
 		img.onerror = (error) => reject(error);
