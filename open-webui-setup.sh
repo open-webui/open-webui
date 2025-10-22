@@ -36,7 +36,7 @@ npm -v
 pip install --upgrade chromadb
 fi
 source .venv/bin/activate
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | sh
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash 
 export NVM_DIR="$HOME/.nvm"
 . "$NVM_DIR/nvm.sh"
 uv pip install -r backend/requirements.txt
