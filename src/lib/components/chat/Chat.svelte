@@ -2572,3 +2572,10 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	::-webkit-scrollbar {
+		height: 0.6rem;
+		width: 0.6rem;
+	}
+</style>

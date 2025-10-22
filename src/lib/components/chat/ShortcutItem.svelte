@@ -47,7 +47,7 @@
 	}
 </script>
 
-<div class="w-full flex justify-between items-center">
+<div class="w-full flex justify-between">
 	<div class="text-sm whitespace-pre-line">
 		{#if shortcut.tooltip}
 			<Tooltip content={$i18n.t(shortcut.tooltip)}>
@@ -59,10 +59,10 @@
 			{$i18n.t(shortcut.name)}
 		{/if}
 	</div>
-	<div class="flex-shrink-0 flex flex-wrap justify-end items-center self-center space-x-1 text-xs">
-		{#each shortcut.keys.filter(key => !(key.toLowerCase() === 'delete' && shortcut.keys.includes('Backspace'))) as key}
+	<div class="flex-shrink-0 flex justify-end self-start h-full space-x-1 text-xs">
+		{#each shortcut.keys.filter((key) => !(key.toLowerCase() === 'delete' && shortcut.keys.includes('Backspace'))) as key}
 			<div
-				class="h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
+				class="h-fit px-1 py-0.5 flex items-start justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
 			>
 				{formatKey(key)}
 			</div>

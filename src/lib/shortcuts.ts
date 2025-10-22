@@ -29,8 +29,6 @@ export enum Shortcut {
 	ACCEPT_AUTOCOMPLETE = 'acceptAutocomplete',
 	PREVENT_FILE_CREATION = 'preventFileCreation',
 	NAVIGATE_PROMPT_HISTORY_UP = 'navigatePromptHistoryUp',
-	SEND_MESSAGE_NORMAL = 'sendMessageNormal',
-	SEND_MESSAGE_MOD = 'sendMessageMod',
 	ATTACH_FILE = 'attachFile',
 	ADD_PROMPT = 'addPrompt',
 	TALK_TO_MODEL = 'talkToModel',
@@ -105,26 +103,6 @@ export const shortcuts: ShortcutRegistry = {
 		category: 'Input',
 		tooltip: 'Only active when "Paste Large Text as File" setting is toggled on.'
 	},
-	[Shortcut.SEND_MESSAGE_NORMAL]: {
-		name: 'Send Message',
-		keys: ['Enter'],
-		category: 'Input',
-		tooltip: 'The behavior of this shortcut is determined by the "Enter Key Behavior" setting.',
-		setting: {
-			id: 'ctrlEnterToSend',
-			value: false
-		}
-	},
-	[Shortcut.SEND_MESSAGE_MOD]: {
-		name: 'Send Message',
-		keys: ['mod', 'Enter'],
-		category: 'Input',
-		tooltip: 'The behavior of this shortcut is determined by the "Enter Key Behavior" setting.',
-		setting: {
-			id: 'ctrlEnterToSend',
-			value: true
-		}
-	},
 	[Shortcut.ATTACH_FILE]: {
 		name: 'Attach File From Knowledge',
 		keys: ['#'],
@@ -159,18 +137,18 @@ export const shortcuts: ShortcutRegistry = {
 		category: 'Message',
 		tooltip: 'Only active when the chat input is in focus and an LLM is generating a response.'
 	},
-    	[Shortcut.NAVIGATE_PROMPT_HISTORY_UP]: {
+	[Shortcut.NAVIGATE_PROMPT_HISTORY_UP]: {
 		name: 'Edit Last Message',
 		keys: ['ArrowUp'],
 		category: 'Message',
-        tooltip: 'Only can be triggered when the chat input is in focus.'
+		tooltip: 'Only can be triggered when the chat input is in focus.'
 	},
 	[Shortcut.COPY_LAST_RESPONSE]: {
 		name: 'Copy Last Response',
 		keys: ['mod', 'shift', 'KeyC'],
 		category: 'Message'
 	},
-    [Shortcut.COPY_LAST_CODE_BLOCK]: {
+	[Shortcut.COPY_LAST_CODE_BLOCK]: {
 		name: 'Copy Last Code Block',
 		keys: ['mod', 'shift', 'Semicolon'],
 		category: 'Message'
