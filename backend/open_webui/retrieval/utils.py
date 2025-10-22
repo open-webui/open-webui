@@ -103,21 +103,31 @@ async def query_doc_with_hybrid_search(
                 )
             )
 
-        # Combine results (simple approach: merge and deduplicate by content)
+        # Combine results with weighted interleaving (similar to EnsembleRetriever)
         combined_docs = []
         seen_content = set()
 
-        # Add BM25 results with weight
-        for doc in bm25_docs:
-            if doc.page_content not in seen_content:
-                combined_docs.append(doc)
-                seen_content.add(doc.page_content)
+        # Interleave results with equal weights (0.5, 0.5) like original EnsembleRetriever
+        bm25_idx = 0
+        vector_idx = 0
 
-        # Add vector results with weight (only if not already seen)
-        for doc in vector_docs:
-            if doc.page_content not in seen_content:
-                combined_docs.append(doc)
-                seen_content.add(doc.page_content)
+        while (bm25_idx < len(bm25_docs) or vector_idx < len(vector_docs)) and len(
+            combined_docs
+        ) < k * 2:
+            # Alternate between BM25 and vector results
+            if bm25_idx < len(bm25_docs):
+                doc = bm25_docs[bm25_idx]
+                if doc.page_content not in seen_content:
+                    combined_docs.append(doc)
+                    seen_content.add(doc.page_content)
+                bm25_idx += 1
+
+            if vector_idx < len(vector_docs):
+                doc = vector_docs[vector_idx]
+                if doc.page_content not in seen_content:
+                    combined_docs.append(doc)
+                    seen_content.add(doc.page_content)
+                vector_idx += 1
 
         # Apply reranking/compression
         if reranking_function is not None or r > 0:
