@@ -1441,16 +1441,24 @@ async def chat_completion(
     model_id = form_data.get("model", None)
     model_item = form_data.pop("model_item", {})
     tasks = form_data.pop("background_tasks", None)
-
     metadata = {}
     try:
-        if not model_item.get("direct", False):
+        # Determine if this is a Direct Connection based on backend data
+        # Never trust the client's "direct" flag
+        model_exists_in_backend = (
+            model_id in request.app.state.MODELS or 
+            Models.get_model_by_id(model_id) is not None
+        )
+        
+        # If model doesn't exist in backend, it MUST be a Direct Connection
+        is_direct_connection = not model_exists_in_backend
+        
+        if not is_direct_connection:
+            # Regular backend-managed model
             if model_id not in request.app.state.MODELS:
                 raise Exception("Model not found")
-
             model = request.app.state.MODELS[model_id]
             model_info = Models.get_model_by_id(model_id)
-
             # Check if user has access to the model
             if not BYPASS_MODEL_ACCESS_CONTROL and (
                 user.role != "admin" or not BYPASS_ADMIN_ACCESS_CONTROL
@@ -1460,9 +1468,9 @@ async def chat_completion(
                 except Exception as e:
                     raise e
         else:
+            # Direct Connection
             model = model_item
             model_info = None
-
             request.state.direct = True
             request.state.model = model
 
@@ -1495,7 +1503,7 @@ async def chat_completion(
             "features": form_data.get("features", {}),
             "variables": form_data.get("variables", {}),
             "model": model,
-            "direct": model_item.get("direct", False),
+            "direct": is_direct_connection,
             "params": {
                 "stream_delta_chunk_size": stream_delta_chunk_size,
                 "reasoning_tags": reasoning_tags,
