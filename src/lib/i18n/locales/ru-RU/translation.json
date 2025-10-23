@@ -221,6 +221,7 @@
 	"Channel": "Канал",
 	"Channel deleted successfully": "Канал успешно удалён",
 	"Channel Name": "Название канала",
+	"Channel name cannot be empty.": "Название канала не может быть пустым.",
 	"Channel updated successfully": "Канал успешно обновлён",
 	"Channels": "Каналы",
 	"Character": "Символ",
