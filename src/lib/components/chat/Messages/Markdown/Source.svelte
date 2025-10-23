@@ -50,7 +50,7 @@
 
 {#if attributes.title !== 'N/A'}
 	<button
-		class="text-xs font-medium w-fit translate-y-[2px] px-2 py-0.5 dark:bg-white/5 dark:text-white/60 dark:hover:text-white bg-gray-50 text-black/60 hover:text-black transition rounded-lg"
+		class="[&+button]:ms-1 text-xs font-medium w-fit translate-y-[2px] px-2 py-0.5 dark:bg-white/5 dark:text-white/60 dark:hover:text-white bg-gray-50 text-black/60 hover:text-black transition rounded-lg"
 		on:click={() => {
 			onClick(id, attributes.data);
 		}}
