@@ -335,12 +335,13 @@ input[type='number'] {
 .ProseMirror p.is-editor-empty:first-child::before {
 	content: attr(data-placeholder);
 	float: left;
-	/* Below color is from tailwind, and has the proper contrast
-	text-gray-600 from: https://tailwindcss.com/docs/color */
-	color: #676767;
 	pointer-events: none;
 
-	@apply line-clamp-1 absolute;
+	@apply line-clamp-1 absolute text-gray-400;
+}
+
+.dark .ProseMirror p.is-editor-empty:first-child::before {
+	@apply text-neutral-500;
 }
 
 .tiptap ul[data-type='taskList'] {
@@ -499,12 +500,6 @@ input[type='number'] {
 				align-items: initial;
 			}
 		}
-	}
-}
-
-@media (prefers-color-scheme: dark) {
-	.ProseMirror p.is-editor-empty:first-child::before {
-		color: #757575;
 	}
 }
 
