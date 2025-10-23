@@ -35,6 +35,9 @@ async def automated_chat_cleanup():
     """
     Automated chat cleanup job that respects current configuration.
     This is called by the scheduler when chat lifetime is enabled.
+
+    Runs database operations in an executor to prevent blocking the event loop
+    and ensure health checks continue to respond during cleanup.
     """
     try:
         # Import here to avoid circular imports
@@ -54,11 +57,18 @@ async def automated_chat_cleanup():
             f"Starting automated chat cleanup (age > {days} days, preserve_pinned={preserve_pinned}, preserve_archived={preserve_archived})"
         )
 
-        result = await cleanup_expired_chats(
-            max_age_days=days,
-            preserve_pinned=preserve_pinned,
-            preserve_archived=preserve_archived,
-            force_cleanup_all=False,  # Always use age-based cleanup for automation
+        # Run cleanup in thread pool to prevent blocking the main event loop
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(
+            None,  # Use default ThreadPoolExecutor
+            lambda: asyncio.run(
+                cleanup_expired_chats(
+                    max_age_days=days,
+                    preserve_pinned=preserve_pinned,
+                    preserve_archived=preserve_archived,
+                    force_cleanup_all=False,  # Always use age-based cleanup for automation
+                )
+            ),
         )
 
         log.info(f"Automated chat cleanup completed: {result}")
