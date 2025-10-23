@@ -1481,6 +1481,12 @@ ENABLE_USER_WEBHOOKS = PersistentConfig(
     os.environ.get("ENABLE_USER_WEBHOOKS", "True").lower() == "true",
 )
 
+FORCE_ENABLE_MEMORY = PersistentConfig(
+    "FORCE_ENABLE_MEMORY",
+    "ui.force_enable_memory",
+    os.environ.get("FORCE_ENABLE_MEMORY", "False").lower() == "true",
+)
+
 # FastAPI / AnyIO settings
 THREAD_POOL_SIZE = os.getenv("THREAD_POOL_SIZE", None)
 
@@ -2509,6 +2515,18 @@ RAG_FILE_MAX_COUNT = PersistentConfig(
         if os.environ.get("RAG_FILE_MAX_COUNT")
         else None
     ),
+)
+
+MEMORY_TOP_K = PersistentConfig(
+    "MEMORY_TOP_K",
+    "memory.top_k",
+    int(os.environ.get("MEMORY_TOP_K", "30")),
+)
+
+MEMORY_RELEVANCE_THRESHOLD = PersistentConfig(
+    "MEMORY_RELEVANCE_THRESHOLD",
+    "memory.relevance_threshold",
+    float(os.environ.get("MEMORY_RELEVANCE_THRESHOLD", "0.5")),
 )
 
 RAG_FILE_MAX_SIZE = PersistentConfig(

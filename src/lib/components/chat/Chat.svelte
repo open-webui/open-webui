@@ -1747,7 +1747,7 @@
 			}
 		}
 
-		if ($settings?.memory ?? false) {
+		if ($settings?.memory ?? true) {
 			features = { ...features, memory: true };
 		}
 

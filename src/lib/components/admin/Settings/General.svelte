@@ -10,6 +10,7 @@
 		updateLdapConfig,
 		updateLdapServer
 	} from '$lib/apis/auths';
+	import { resetMemory } from '$lib/apis/memories';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -86,6 +87,25 @@
 			saveHandler();
 		} else {
 			toast.error($i18n.t('Failed to update settings'));
+		}
+	};
+
+	const resetMemoryHandler = async () => {
+		const confirmed = confirm(
+			$i18n.t(
+				'This will re-index all memories in the vector database using the current embedding model. Your memory content will not be deleted. Continue?'
+			)
+		);
+
+		if (!confirmed) return;
+
+		toast.info($i18n.t('Re-indexing memories...'));
+
+		try {
+			await resetMemory(localStorage.token);
+			toast.success($i18n.t('Memories re-indexed successfully'));
+		} catch (error) {
+			toast.error($i18n.t('Failed to re-index memories: ') + error);
 		}
 	};
 
@@ -678,6 +698,176 @@
 
 						<Switch bind:state={adminConfig.ENABLE_USER_WEBHOOKS} />
 					</div>
+				</div>
+
+				<div class="mb-3">
+					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Memory')}</div>
+
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
+					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Force Enable Memory')}
+						</div>
+						<Tooltip
+							content={$i18n.t(
+								'When enabled, non-admin users will always have memory enabled and cannot disable it'
+							)}
+						>
+							<Switch bind:state={adminConfig.FORCE_ENABLE_MEMORY} />
+						</Tooltip>
+					</div>
+
+					<div class="mb-2.5">
+						<button
+							class="w-full flex justify-between items-center px-4 py-2.5 rounded-lg text-sm bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition"
+							on:click={resetMemoryHandler}
+							type="button"
+						>
+							<div class="flex items-center gap-2">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke-width="1.5"
+									stroke="currentColor"
+									class="size-4"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+									/>
+								</svg>
+								<span>{$i18n.t('Re-index Memory Vectors')}</span>
+							</div>
+							<Tooltip
+								content={$i18n.t(
+									'Re-embed all memories using the current embedding model. Use this after changing embedding models to ensure proper semantic search.'
+								)}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke-width="1.5"
+									stroke="currentColor"
+									class="size-3.5"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"
+									/>
+								</svg>
+							</Tooltip>
+						</button>
+					</div>
+
+					<div class="mb-2.5">
+						<div class="flex w-full justify-between mb-2">
+							<div class=" self-center text-xs font-medium">
+								{$i18n.t('Memory Top K')}
+							</div>
+							<Tooltip
+								content={$i18n.t(
+									'Maximum number of memories to retrieve. Higher values allow more context but may include less relevant information.'
+								)}
+							>
+								<button class="cursor-pointer" type="button">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke-width="1.5"
+										stroke="currentColor"
+										class="size-3"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"
+										/>
+									</svg>
+								</button>
+							</Tooltip>
+						</div>
+						<input
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							type="number"
+							min="1"
+							max="100"
+							placeholder="30"
+							value={adminConfig.MEMORY_TOP_K || 30}
+							on:input={(e) => {
+								adminConfig.MEMORY_TOP_K = Number(e.currentTarget.value);
+							}}
+						/>
+					</div>
+
+					<div class="mb-2.5">
+						<div class="flex w-full justify-between mb-2">
+							<div class=" self-center text-xs font-medium">
+								{$i18n.t('Memory Relevance Threshold')}
+							</div>
+							<Tooltip
+								content={$i18n.t(
+									'Minimum similarity threshold for memory retrieval. Higher values mean stricter matching (100% = identical, 0% = unrelated). Recommended: 30-50% for broad retrieval, 60-80% for strict matching.'
+								)}
+							>
+								<button class="cursor-pointer" type="button">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke-width="1.5"
+										stroke="currentColor"
+										class="size-3"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"
+										/>
+									</svg>
+								</button>
+							</Tooltip>
+						</div>
+						<div class="flex items-center gap-3">
+							<input
+								type="range"
+								class="flex-1"
+								min="0"
+								max="100"
+								step="1"
+								value={Math.round((adminConfig.MEMORY_RELEVANCE_THRESHOLD || 0.5) * 100)}
+								on:input={(e) => {
+									adminConfig.MEMORY_RELEVANCE_THRESHOLD = Number(e.currentTarget.value) / 100;
+								}}
+							/>
+							<input
+								class="w-20 rounded-lg py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none text-center"
+								type="number"
+								min="0"
+								max="100"
+								step="1"
+								value={Math.round((adminConfig.MEMORY_RELEVANCE_THRESHOLD || 0.5) * 100)}
+								on:input={(e) => {
+									const val = Number(e.currentTarget.value);
+									if (val >= 0 && val <= 100) {
+										adminConfig.MEMORY_RELEVANCE_THRESHOLD = val / 100;
+									}
+								}}
+							/>
+							<span class="text-xs text-gray-500 dark:text-gray-400 min-w-[20px]">%</span>
+						</div>
+					</div>
+				</div>
+
+				<div class="mb-3">
+					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Miscellaneous')}</div>
+
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 					<div class="mb-2.5">
 						<div class=" self-center text-xs font-medium mb-2">

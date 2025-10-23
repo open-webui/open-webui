@@ -16,8 +16,17 @@
 	// Addons
 	let enableMemory = false;
 
+	// Check if memory toggle should be hidden (force enabled for non-admin users)
+	$: memoryToggleHidden = $config?.features?.force_enable_memory && $user?.role !== 'admin';
+
 	onMount(async () => {
-		enableMemory = $settings?.memory ?? false;
+		enableMemory = $settings?.memory ?? true;
+
+		// If force enable memory is on and user is not admin, ensure memory is enabled
+		if (memoryToggleHidden && !enableMemory) {
+			enableMemory = true;
+			saveSettings({ memory: enableMemory });
+		}
 	});
 </script>
 
@@ -45,17 +54,18 @@
 					</div>
 				</Tooltip>
 
-				<div class="">
-					<Switch
-						bind:state={enableMemory}
-						on:change={async () => {
-							saveSettings({ memory: enableMemory });
-						}}
-					/>
-				</div>
+				{#if !memoryToggleHidden}
+					<div class="">
+						<Switch
+							bind:state={enableMemory}
+							on:change={async () => {
+								saveSettings({ memory: enableMemory });
+							}}
+						/>
+					</div>
+				{/if}
 			</div>
 		</div>
-
 		<div class="text-xs text-gray-600 dark:text-gray-400">
 			<div>
 				{$i18n.t(
