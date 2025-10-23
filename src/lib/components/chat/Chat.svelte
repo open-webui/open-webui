@@ -268,33 +268,33 @@
 		const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
 		if (model) {
 			// Set Default Tools
-			if (model?.info?.meta?.toolIds) {
+			if (model?.meta?.toolIds) {
 				selectedToolIds = [
 					...new Set(
-						[...(model?.info?.meta?.toolIds ?? [])].filter((id) => $tools.find((t) => t.id === id))
+						[...(model?.meta?.toolIds ?? [])].filter((id) => $tools.find((t) => t.id === id))
 					)
 				];
 			}
 
 			// Set Default Filters (Toggleable only)
-			if (model?.info?.meta?.defaultFilterIds) {
-				selectedFilterIds = model.info.meta.defaultFilterIds.filter((id) =>
+			if (model?.meta?.defaultFilterIds) {
+				selectedFilterIds = model.meta.defaultFilterIds.filter((id) =>
 					model?.filters?.find((f) => f.id === id)
 				);
 			}
 
 			// Set Default Features
-			if (model?.info?.meta?.defaultFeatureIds) {
-				if (model.info?.meta?.capabilities?.['image_generation']) {
-					imageGenerationEnabled = model.info.meta.defaultFeatureIds.includes('image_generation');
+			if (model?.meta?.defaultFeatureIds) {
+				if (model?.meta?.capabilities?.['image_generation']) {
+					imageGenerationEnabled = model.meta.defaultFeatureIds.includes('image_generation');
 				}
 
-				if (model.info?.meta?.capabilities?.['web_search']) {
-					webSearchEnabled = model.info.meta.defaultFeatureIds.includes('web_search');
+				if (model?.meta?.capabilities?.['web_search']) {
+					webSearchEnabled = model.meta.defaultFeatureIds.includes('web_search');
 				}
 
-				if (model.info?.meta?.capabilities?.['code_interpreter']) {
-					codeInterpreterEnabled = model.info.meta.defaultFeatureIds.includes('code_interpreter');
+				if (model?.meta?.capabilities?.['code_interpreter']) {
+					codeInterpreterEnabled = model.meta.defaultFeatureIds.includes('code_interpreter');
 				}
 			}
 		}
@@ -1678,7 +1678,7 @@
 						message.files?.some((file) => file.type === 'image')
 					);
 
-					if (hasImages && !(model.info?.meta?.capabilities?.vision ?? true)) {
+					if (hasImages && !(model?.meta?.capabilities?.vision ?? true)) {
 						toast.error(
 							$i18n.t('Model {{modelName}} is not vision capable', {
 								modelName: model.name ?? model.id
@@ -1737,7 +1737,7 @@
 		const currentModels = atSelectedModel?.id ? [atSelectedModel.id] : selectedModels;
 		if (
 			currentModels.filter(
-				(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.web_search ?? true
+				(model) => $models.find((m) => m.id === model)?.meta?.capabilities?.web_search ?? true
 			).length === currentModels.length
 		) {
 			if ($config?.features?.enable_web_search && ($settings?.webSearch ?? false) === 'always') {
@@ -1797,7 +1797,7 @@
 		}
 
 		const stream =
-			model?.info?.params?.stream_response ??
+			model?.params?.stream_response ??
 			$settings?.params?.stream_response ??
 			params?.stream_response ??
 			true;
@@ -1908,7 +1908,7 @@
 					follow_up_generation: $settings?.autoFollowUps ?? true
 				},
 
-				...(stream && (model.info?.meta?.capabilities?.usage ?? false)
+				...(stream && (model?.meta?.capabilities?.usage ?? false)
 					? {
 							stream_options: {
 								include_usage: true
