@@ -753,7 +753,7 @@
 					placement="bottom"
 				>
 					<button
-						class="flex rounded-xl size-8.5 justify-center items-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition {isWindows
+						class="flex rounded-xl size-8.5 justify-center items-center text-neutral-400 hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition {isWindows
 							? 'cursor-pointer'
 							: 'cursor-[w-resize]'}"
 						on:click={() => {
