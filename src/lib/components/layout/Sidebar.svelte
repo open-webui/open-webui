@@ -181,6 +181,7 @@
 		console.log('initChatList');
 		currentChatPage.set(1);
 		allChatsLoaded = false;
+		scrollPaginationEnabled.set(false);
 
 		initFolders();
 		await Promise.all([
