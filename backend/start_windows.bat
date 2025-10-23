@@ -43,8 +43,43 @@ IF "%WEBUI_SECRET_KEY% %WEBUI_JWT_SECRET_KEY%" == " " (
     SET /p WEBUI_SECRET_KEY=<%KEY_FILE%
 )
 
+:: Logic to get oauth client secret from file (if OAuth is enabled)
+IF /I "%ENABLE_OAUTH_SIGNUP%" == "true" (
+    IF "%OAUTH_CLIENT_SECRET%" == "" (
+        echo Loading OAUTH_CLIENT_SECRET from file, not provided as an environment variable.
+
+        :: Validate file path is set
+        IF "%OAUTH_CLIENT_SECRET_FILE%" == "" (
+            echo ERROR: Neither OAUTH_CLIENT_SECRET nor OAUTH_CLIENT_SECRET_FILE specified
+            exit /b 1
+        )
+
+        :: Check file exists and is readable
+        IF NOT EXIST "%OAUTH_CLIENT_SECRET_FILE%" (
+            echo ERROR: OAuth secret file not found or not readable
+            exit /b 1
+        )
+
+        :: Read and validate secret
+        SET /p OAUTH_CLIENT_SECRET=<"%OAUTH_CLIENT_SECRET_FILE%" 2>nul
+        IF ERRORLEVEL 1 (
+            echo ERROR: Failed to read OAuth secret file
+            exit /b 1
+        )
+
+        :: Validate content is not empty
+        IF "%OAUTH_CLIENT_SECRET%" == "" (
+            echo ERROR: OAuth secret file is empty
+            exit /b 1
+        )
+
+        echo Successfully loaded OAUTH_CLIENT_SECRET from file
+    )
+)
+
 :: Execute uvicorn
 SET "WEBUI_SECRET_KEY=%WEBUI_SECRET_KEY%"
+SET "OAUTH_CLIENT_SECRET=%OAUTH_CLIENT_SECRET%"
 IF "%UVICORN_WORKERS%"=="" SET UVICORN_WORKERS=1
 uvicorn open_webui.main:app --host "%HOST%" --port "%PORT%" --forwarded-allow-ips '*' --workers %UVICORN_WORKERS% --ws auto
 :: For ssl user uvicorn open_webui.main:app --host "%HOST%" --port "%PORT%" --forwarded-allow-ips '*' --ssl-keyfile "key.pem" --ssl-certfile "cert.pem" --ws auto

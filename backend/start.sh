@@ -35,6 +35,40 @@ if test "$WEBUI_SECRET_KEY $WEBUI_JWT_SECRET_KEY" = " "; then
   WEBUI_SECRET_KEY=$(cat "$KEY_FILE")
 fi
 
+# Logic to get oauth client secret from file (if OAuth is enabled)
+if [[ "${ENABLE_OAUTH_SIGNUP,,}" == "true" ]]; then
+  if [[ -z "$OAUTH_CLIENT_SECRET" ]]; then
+    echo "Loading OAUTH_CLIENT_SECRET from file, not provided as an environment variable."
+
+    # Validate file path is set
+    if [[ -z "$OAUTH_CLIENT_SECRET_FILE" ]]; then
+      echo "ERROR: Neither OAUTH_CLIENT_SECRET nor OAUTH_CLIENT_SECRET_FILE specified"
+      exit 1
+    fi
+
+    # Check file exists and is readable
+    if [[ ! -f "$OAUTH_CLIENT_SECRET_FILE" ]]; then
+      echo "ERROR: OAuth secret file not found or not readable"
+      exit 1
+    fi
+
+    # Read and validate secret
+    if ! OAUTH_CLIENT_SECRET=$(cat "$OAUTH_CLIENT_SECRET_FILE" 2>/dev/null); then
+      echo "ERROR: Failed to read OAuth secret file" >&2
+      exit 1
+    fi
+
+    # Strip whitespace and validate content
+    OAUTH_CLIENT_SECRET=$(echo "$OAUTH_CLIENT_SECRET" | tr -d '\n\r')
+    if [[ -z "$OAUTH_CLIENT_SECRET" ]]; then
+      echo "ERROR: OAuth secret file is empty"
+      exit 1
+    fi
+
+    echo "Successfully loaded OAUTH_CLIENT_SECRET from file"
+  fi
+fi
+
 if [[ "${USE_OLLAMA_DOCKER,,}" == "true" ]]; then
     echo "USE_OLLAMA is set to true, starting ollama serve."
     ollama serve &
@@ -80,7 +114,7 @@ else
 fi
 
 # Run uvicorn
-WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec "$PYTHON_CMD" -m uvicorn open_webui.main:app \
+WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" OAUTH_CLIENT_SECRET="$OAUTH_CLIENT_SECRET" exec "$PYTHON_CMD" -m uvicorn open_webui.main:app \
     --host "$HOST" \
     --port "$PORT" \
     --forwarded-allow-ips '*' \
