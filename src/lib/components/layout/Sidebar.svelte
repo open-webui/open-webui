@@ -802,7 +802,7 @@
 								<div class=" self-center text-sm font-primary">{$i18n.t('New Chat')}</div>
 							</div>
 
-							<HotkeyHint name="newChat" />
+							<HotkeyHint name="newChat" className=" group-hover:visible invisible" />
 						</a>
 					</div>
 
@@ -823,7 +823,7 @@
 							<div class="flex flex-1 self-center translate-y-[0.5px]">
 								<div class=" self-center text-sm font-primary">{$i18n.t('Search')}</div>
 							</div>
-							<HotkeyHint name="search" />
+							<HotkeyHint name="search" className=" group-hover:visible invisible" />
 						</button>
 					</div>
 
