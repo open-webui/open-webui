@@ -43,6 +43,7 @@ from open_webui.routers.tasks import (
 from open_webui.routers.retrieval import (
     process_web_search,
     SearchForm,
+    split_text_content
 )
 from open_webui.routers.images import (
     load_b64_image_data,
@@ -873,6 +874,7 @@ async def chat_completion_files_handler(
         if len(queries) == 0:
             queries = [get_last_user_message(body["messages"])]
 
+        queries = split_text_content(request, queries)
         try:
             # Offload get_sources_from_items to a separate thread
             loop = asyncio.get_running_loop()

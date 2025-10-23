@@ -1269,7 +1269,91 @@ async def update_rag_config(
 # Document process and retrieval
 #
 ####################################
+def split_text_content(request, docs_or_text):
+    if isinstance(docs_or_text, str):
+        docs = [Document(page_content=docs_or_text, metadata={})]
+        input_type = "text"
+    elif isinstance(docs_or_text, Document):
+        docs = [docs_or_text]
+        input_type = "doc"
+    elif isinstance(docs_or_text, list):
+        if all(isinstance(d, str) for d in docs_or_text):
+            docs = [Document(page_content=d, metadata={}) for d in docs_or_text]
+            input_type = "list_str"
+        elif all(isinstance(d, Document) for d in docs_or_text):
+            docs = docs_or_text
+            input_type = "list_docs"
+        else:
+            raise ValueError("List must contain either only strings or only Document objects")
+    else:
+        raise TypeError("Input must be str, Document, or list of these")
 
+    splitter_type = request.app.state.config.TEXT_SPLITTER
+    chunk_size = request.app.state.config.CHUNK_SIZE
+    chunk_overlap = request.app.state.config.CHUNK_OVERLAP
+
+    if splitter_type in ["", "character"]:
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+            add_start_index=True,
+        )
+        docs = text_splitter.split_documents(docs)
+
+    elif splitter_type == "token":
+        log.info(f"Using token text splitter: {request.app.state.config.TIKTOKEN_ENCODING_NAME}")
+        tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
+        text_splitter = TokenTextSplitter(
+            encoding_name=str(request.app.state.config.TIKTOKEN_ENCODING_NAME),
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+            add_start_index=True,
+        )
+        docs = text_splitter.split_documents(docs)
+
+    elif splitter_type == "markdown_header":
+        log.info("Using markdown header text splitter")
+        headers_to_split_on = [
+            ("#", "Header 1"),
+            ("##", "Header 2"),
+            ("###", "Header 3"),
+            ("####", "Header 4"),
+            ("#####", "Header 5"),
+            ("######", "Header 6"),
+        ]
+        markdown_splitter = MarkdownHeaderTextSplitter(
+            headers_to_split_on=headers_to_split_on,
+            strip_headers=False,
+        )
+        md_split_docs = []
+        for doc in docs:
+            md_header_splits = markdown_splitter.split_text(doc.page_content)
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap,
+                add_start_index=True,
+            )
+            md_header_splits = text_splitter.split_documents(md_header_splits)
+
+            for split_chunk in md_header_splits:
+                headings_list = []
+                for _, header_meta_key_name in headers_to_split_on:
+                    if header_meta_key_name in split_chunk.metadata:
+                        headings_list.append(split_chunk.metadata[header_meta_key_name])
+                md_split_docs.append(
+                    Document(
+                        page_content=split_chunk.page_content,
+                        metadata={**doc.metadata, "headings": headings_list},
+                    )
+                )
+        docs = md_split_docs
+    else:
+        raise ValueError("Invalid text splitter type")
+
+    if input_type in ["text", "list_str"]:
+        return [d.page_content for d in docs]
+
+    return docs
 
 def save_docs_to_vector_db(
     request: Request,
@@ -1315,74 +1399,7 @@ def save_docs_to_vector_db(
                 raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
-        if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
-            text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=request.app.state.config.CHUNK_SIZE,
-                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
-                add_start_index=True,
-            )
-            docs = text_splitter.split_documents(docs)
-        elif request.app.state.config.TEXT_SPLITTER == "token":
-            log.info(
-                f"Using token text splitter: {request.app.state.config.TIKTOKEN_ENCODING_NAME}"
-            )
-
-            tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
-            text_splitter = TokenTextSplitter(
-                encoding_name=str(request.app.state.config.TIKTOKEN_ENCODING_NAME),
-                chunk_size=request.app.state.config.CHUNK_SIZE,
-                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
-                add_start_index=True,
-            )
-            docs = text_splitter.split_documents(docs)
-        elif request.app.state.config.TEXT_SPLITTER == "markdown_header":
-            log.info("Using markdown header text splitter")
-
-            # Define headers to split on - covering most common markdown header levels
-            headers_to_split_on = [
-                ("#", "Header 1"),
-                ("##", "Header 2"),
-                ("###", "Header 3"),
-                ("####", "Header 4"),
-                ("#####", "Header 5"),
-                ("######", "Header 6"),
-            ]
-
-            markdown_splitter = MarkdownHeaderTextSplitter(
-                headers_to_split_on=headers_to_split_on,
-                strip_headers=False,  # Keep headers in content for context
-            )
-
-            md_split_docs = []
-            for doc in docs:
-                md_header_splits = markdown_splitter.split_text(doc.page_content)
-                text_splitter = RecursiveCharacterTextSplitter(
-                    chunk_size=request.app.state.config.CHUNK_SIZE,
-                    chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
-                    add_start_index=True,
-                )
-                md_header_splits = text_splitter.split_documents(md_header_splits)
-
-                # Convert back to Document objects, preserving original metadata
-                for split_chunk in md_header_splits:
-                    headings_list = []
-                    # Extract header values in order based on headers_to_split_on
-                    for _, header_meta_key_name in headers_to_split_on:
-                        if header_meta_key_name in split_chunk.metadata:
-                            headings_list.append(
-                                split_chunk.metadata[header_meta_key_name]
-                            )
-
-                    md_split_docs.append(
-                        Document(
-                            page_content=split_chunk.page_content,
-                            metadata={**doc.metadata, "headings": headings_list},
-                        )
-                    )
-
-            docs = md_split_docs
-        else:
-            raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
+        docs = split_text_content(request, docs)
 
     if len(docs) == 0:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
