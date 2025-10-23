@@ -120,16 +120,7 @@
 											selectedModelIdx = modelIdx;
 										}}
 									>
-										<img
-											crossorigin="anonymous"
-											src={model?.info?.meta?.profile_image_url ??
-												($i18n.language === 'dg-DG'
-													? `${WEBUI_BASE_URL}/doge.png`
-													: `${WEBUI_BASE_URL}/static/favicon.png`)}
-											class=" size-9 @sm:size-10 rounded-full border-[1px] border-gray-100 dark:border-none"
-											aria-hidden="true"
-											draggable="false"
-										/>
+										
 									</button>
 								</Tooltip>
 							{/each}
@@ -250,6 +241,9 @@
 					{onSelect}
 				/>
 			</div>
+			
 		</div>
+		
 	{/if}
+	
 </div>

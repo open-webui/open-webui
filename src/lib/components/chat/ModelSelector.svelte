@@ -48,7 +48,9 @@
 		}
 	}
 </script>
-
+<div class="w-full text-left text-gray-500 dark:text-gray-400 text-sm mb-2 font-primary">
+    @ Copyright Niveus, Part of NTT Data.
+</div>
 <div class="flex flex-col w-full items-start">
 	{#each selectedModels as selectedModel, selectedModelIdx}
 		<div class="flex w-full max-w-fit">
