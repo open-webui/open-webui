@@ -27,7 +27,7 @@ SYSTEMDB_LOGIN_PROMPT = "agilex7dksiagf014eb"
 
 
 # SSH connection details
-hostname = "192.168.7.2"
+hostname = "192.168.1.200"
 username = "root"
 password = "your_password"  # or use key-based auth
 port = 22
