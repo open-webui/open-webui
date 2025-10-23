@@ -570,7 +570,7 @@
 				</Tooltip>
 			</div>
 
-			<div>
+			<div class="pt-0.25 flex flex-col gap-0.5">
 				<div class="">
 					<Tooltip content={$i18n.t('New Chat')} placement="right">
 						<a
@@ -587,7 +587,7 @@
 							aria-label={$i18n.t('New Chat')}
 						>
 							<div class=" self-center flex items-center justify-center size-9">
-								<PencilSquare className="size-4.5" />
+								<PencilSquare className="size-4 ml-0.5" />
 							</div>
 						</a>
 					</Tooltip>
@@ -607,7 +607,7 @@
 							aria-label={$i18n.t('Search')}
 						>
 							<div class=" self-center flex items-center justify-center size-9">
-								<Search className="size-4.5" />
+								<Search className="size-4 ml-0.5" />
 							</div>
 						</button>
 					</Tooltip>
@@ -630,7 +630,7 @@
 								aria-label={$i18n.t('Notes')}
 							>
 								<div class=" self-center flex items-center justify-center size-9">
-									<Note className="size-4.5" />
+									<Note className="size-4 ml-0.5" />
 								</div>
 							</a>
 						</Tooltip>
@@ -660,7 +660,7 @@
 										viewBox="0 0 24 24"
 										stroke-width="1.5"
 										stroke="currentColor"
-										class="size-4.5"
+										class="size-4 ml-0.5"
 									>
 										<path
 											stroke-linecap="round"
@@ -727,7 +727,7 @@
 				: 'invisible'}"
 		>
 			<div
-				class="sidebar px-2 pt-2 pb-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 -mb-3"
+				class="sidebar pl-1.75 pr-2 pt-2.25 pb-1.75 flex justify-between text-gray-600 dark:text-gray-400 sticky top-0 z-10 -mb-3"
 			>
 				<a
 					class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition no-drag-region"
@@ -743,8 +743,8 @@
 					/>
 				</a>
 
-				<a href="/" class="flex flex-1 px-1.5" on:click={newChatHandler}>
-					<div class=" self-center font-medium text-gray-850 dark:text-white font-primary">
+				<a href="/" class="flex flex-1 pl-1 pr-2" on:click={newChatHandler}>
+					<div class="self-center text-gray-850 dark:text-white font-primary text-base font-semibold">
 						{$WEBUI_NAME}
 					</div>
 				</a>
@@ -784,32 +784,32 @@
 					}
 				}}
 			>
-				<div class="pb-1.5">
-					<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
+				<div class="pb-1.5 flex flex-col gap-0.5">
+					<div class="px-1.5 flex justify-center text-blue-500 dark:text-blue-400">
 						<a
 							id="sidebar-new-chat-button"
-							class="group grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+							class="group grow flex items-center space-x-3 rounded-2xl pl-2.25 pr-2.5 py-1.75 bg-[#E5F1FF] dark:bg-blue-950 hover:bg-blue-100 dark:hover:bg-blue-900 transition outline-none ring ring-blue-100 dark:ring-blue-900 mt-0.5 mb-0.25"
 							href="/"
 							draggable="false"
 							on:click={newChatHandler}
 							aria-label={$i18n.t('New Chat')}
 						>
 							<div class="self-center">
-								<PencilSquare className=" size-4.5" strokeWidth="2" />
+								<PencilSquare className="size-4 ml-0.5" strokeWidth="2" />
 							</div>
 
 							<div class="flex flex-1 self-center translate-y-[0.5px]">
-								<div class=" self-center text-sm font-primary">{$i18n.t('New Chat')}</div>
+								<div class="self-center text-sm font-primary font-medium">{$i18n.t('New Chat')}</div>
 							</div>
 
 							<HotkeyHint name="newChat" />
 						</a>
 					</div>
 
-					<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
+					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 						<button
 							id="sidebar-search-button"
-							class="group grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+							class="group grow flex items-center space-x-3 rounded-2xl pl-2.25 pr-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
 							on:click={() => {
 								showSearch.set(true);
 							}}
@@ -817,7 +817,7 @@
 							aria-label={$i18n.t('Search')}
 						>
 							<div class="self-center">
-								<Search strokeWidth="2" className="size-4.5" />
+								<Search strokeWidth="2" className="size-4 ml-0.5" />
 							</div>
 
 							<div class="flex flex-1 self-center translate-y-[0.5px]">
@@ -828,17 +828,17 @@
 					</div>
 
 					{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
-						<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
+						<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 							<a
 								id="sidebar-notes-button"
-								class="grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								class="grow flex items-center space-x-3 rounded-2xl pl-2.25 pr-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 								href="/notes"
 								on:click={itemClickHandler}
 								draggable="false"
 								aria-label={$i18n.t('Notes')}
 							>
 								<div class="self-center">
-									<Note className="size-4.5" strokeWidth="2" />
+									<Note className="size-4 ml-0.5" strokeWidth="2" />
 								</div>
 
 								<div class="flex self-center translate-y-[0.5px]">
@@ -849,10 +849,10 @@
 					{/if}
 
 					{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
-						<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
+						<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 							<a
 								id="sidebar-workspace-button"
-								class="grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								class="grow flex items-center space-x-3 rounded-2xl pl-2.25 pr-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 								href="/workspace"
 								on:click={itemClickHandler}
 								draggable="false"
@@ -865,7 +865,7 @@
 										viewBox="0 0 24 24"
 										stroke-width="2"
 										stroke="currentColor"
-										class="size-4.5"
+										class="size-4 ml-0.5"
 									>
 										<path
 											stroke-linecap="round"
