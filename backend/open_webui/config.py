@@ -1813,6 +1813,19 @@ TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
     os.environ.get("TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE", ""),
 )
 
+SYSTEM_PROMPT_CALLING_TEMPLATE = PersistentConfig(
+    "SYSTEM_PROMPT_CALLING_TEMPLATE",
+    "task.calling.prompt_template",
+    os.environ.get("SYSTEM_PROMPT_CALLING_TEMPLATE", ""),
+)
+
+DEFAULT_SYSTEM_PROMPT_CALLING = """You are a helpful voice assistant.
+
+Everything you write will be spoken in voice, so keep your responses concise and to the point.
+Act like this is a real conversation with a person, and respond in short sentences and short responses overall.
+Lengthy sentences and long responses are inadequate for voice based conversations.
+"""
+
 
 DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = """Available Tools: {{TOOLS}}
 
