@@ -56,13 +56,12 @@
 	let enable = true;
 	let loading = false;
 
-    let additionalHeaders: { key: string; value: string }[] = [];
+	let additionalHeaders: { key: string; value: string }[] = [];
 
 	const addAdditionalHeader = () => {
 		additionalHeaders = [...additionalHeaders, { key: '', value: '' }];
-
-		console.log(additionalHeaders);
 	}
+
 	const removeAdditionalHeader = (idx) => {
 		additionalHeaders.splice(idx, 1);
 		additionalHeaders = [...additionalHeaders];
