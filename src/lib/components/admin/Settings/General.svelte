@@ -678,6 +678,112 @@
 
 						<Switch bind:state={adminConfig.ENABLE_USER_WEBHOOKS} />
 					</div>
+				</div>
+
+				<div class="mb-3">
+					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Chat Context')}</div>
+
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
+					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Enable Chat Context')}
+						</div>
+						<Tooltip
+							content={$i18n.t(
+								'When enabled, recent chats are automatically injected into the conversation context to provide continuity across sessions'
+							)}
+						>
+							<Switch bind:state={adminConfig.ENABLE_CHAT_CONTEXT} />
+						</Tooltip>
+					</div>
+
+					{#if adminConfig.ENABLE_CHAT_CONTEXT}
+						<div class="mb-2.5">
+							<div class="flex w-full justify-between mb-2">
+								<div class=" self-center text-xs font-medium">
+									{$i18n.t('Chat Context Mode')}
+								</div>
+								<Tooltip
+									content={$i18n.t(
+										'Choose how chats are selected for context. "Recent" uses most recent chats. "Pinned" only includes user-pinned chats. "Relevant" (coming soon) will use AI to select contextually relevant chats.'
+									)}
+								>
+									<button class="cursor-pointer" type="button">
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke-width="1.5"
+											stroke="currentColor"
+											class="size-3"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"
+											/>
+										</svg>
+									</button>
+								</Tooltip>
+							</div>
+							<select
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								bind:value={adminConfig.CHAT_CONTEXT_MODE}
+							>
+								<option value="recent">{$i18n.t('Recent Chats')}</option>
+								<option value="pinned">{$i18n.t('Pinned Chats')}</option>
+								<option value="relevant" disabled>{$i18n.t('Relevant Chats (Coming Soon)')}</option>
+							</select>
+						</div>
+
+						<div class="mb-2.5">
+							<div class="flex w-full justify-between mb-2">
+								<div class=" self-center text-xs font-medium">
+									{$i18n.t('Number of Chats')}
+								</div>
+								<Tooltip
+									content={$i18n.t(
+										'Maximum number of chats to include in context. Higher values provide more history but may slow down responses.'
+									)}
+								>
+									<button class="cursor-pointer" type="button">
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke-width="1.5"
+											stroke="currentColor"
+											class="size-3"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"
+											/>
+										</svg>
+									</button>
+								</Tooltip>
+							</div>
+							<input
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								type="number"
+								min="1"
+								max="10"
+								placeholder="3"
+								value={adminConfig.CHAT_CONTEXT_TOP_K || 3}
+								on:input={(e) => {
+									adminConfig.CHAT_CONTEXT_TOP_K = Number(e.currentTarget.value);
+								}}
+							/>
+						</div>
+					{/if}
+				</div>
+
+				<div class="mb-3">
+					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Miscellaneous')}</div>
+
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 					<div class="mb-2.5">
 						<div class=" self-center text-xs font-medium mb-2">

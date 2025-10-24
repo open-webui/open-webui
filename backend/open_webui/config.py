@@ -2511,6 +2511,24 @@ RAG_FILE_MAX_COUNT = PersistentConfig(
     ),
 )
 
+ENABLE_CHAT_CONTEXT = PersistentConfig(
+    "ENABLE_CHAT_CONTEXT",
+    "chat_context.enable",
+    os.environ.get("ENABLE_CHAT_CONTEXT", "False").lower() == "true",
+)
+
+CHAT_CONTEXT_MODE = PersistentConfig(
+    "CHAT_CONTEXT_MODE",
+    "chat_context.mode",
+    os.environ.get("CHAT_CONTEXT_MODE", "recent"),
+)
+
+CHAT_CONTEXT_TOP_K = PersistentConfig(
+    "CHAT_CONTEXT_TOP_K",
+    "chat_context.top_k",
+    int(os.environ.get("CHAT_CONTEXT_TOP_K", "3")),
+)
+
 RAG_FILE_MAX_SIZE = PersistentConfig(
     "RAG_FILE_MAX_SIZE",
     "rag.file.max_size",

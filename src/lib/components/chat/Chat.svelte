@@ -1751,6 +1751,10 @@
 			features = { ...features, memory: true };
 		}
 
+		if ($config?.chat_context?.enable ?? false) {
+			features = { ...features, chat_context: true };
+		}
+
 		return features;
 	};
 

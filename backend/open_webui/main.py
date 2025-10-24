@@ -220,6 +220,9 @@ from open_webui.config import (
     RAG_HYBRID_BM25_WEIGHT,
     RAG_ALLOWED_FILE_EXTENSIONS,
     RAG_FILE_MAX_COUNT,
+    ENABLE_CHAT_CONTEXT,
+    CHAT_CONTEXT_MODE,
+    CHAT_CONTEXT_TOP_K,
     RAG_FILE_MAX_SIZE,
     FILE_IMAGE_COMPRESSION_WIDTH,
     FILE_IMAGE_COMPRESSION_HEIGHT,
@@ -811,6 +814,9 @@ app.state.config.TOP_K_RERANKER = RAG_TOP_K_RERANKER
 app.state.config.RELEVANCE_THRESHOLD = RAG_RELEVANCE_THRESHOLD
 app.state.config.HYBRID_BM25_WEIGHT = RAG_HYBRID_BM25_WEIGHT
 
+app.state.config.ENABLE_CHAT_CONTEXT = ENABLE_CHAT_CONTEXT
+app.state.config.CHAT_CONTEXT_MODE = CHAT_CONTEXT_MODE
+app.state.config.CHAT_CONTEXT_TOP_K = CHAT_CONTEXT_TOP_K
 
 app.state.config.ALLOWED_FILE_EXTENSIONS = RAG_ALLOWED_FILE_EXTENSIONS
 app.state.config.FILE_MAX_SIZE = RAG_FILE_MAX_SIZE
@@ -1776,6 +1782,11 @@ async def get_app_config(request: Request):
                 if user is not None
                 else {}
             ),
+        },
+        "chat_context": {
+            "enable": app.state.config.ENABLE_CHAT_CONTEXT,
+            "mode": app.state.config.CHAT_CONTEXT_MODE,
+            "top_k": app.state.config.CHAT_CONTEXT_TOP_K,
         },
         **(
             {

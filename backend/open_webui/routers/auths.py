@@ -848,6 +848,9 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "PENDING_USER_OVERLAY_TITLE": request.app.state.config.PENDING_USER_OVERLAY_TITLE,
         "PENDING_USER_OVERLAY_CONTENT": request.app.state.config.PENDING_USER_OVERLAY_CONTENT,
         "RESPONSE_WATERMARK": request.app.state.config.RESPONSE_WATERMARK,
+        "ENABLE_CHAT_CONTEXT": request.app.state.config.ENABLE_CHAT_CONTEXT,
+        "CHAT_CONTEXT_MODE": request.app.state.config.CHAT_CONTEXT_MODE,
+        "CHAT_CONTEXT_TOP_K": request.app.state.config.CHAT_CONTEXT_TOP_K,
     }
 
 
@@ -868,6 +871,9 @@ class AdminConfig(BaseModel):
     PENDING_USER_OVERLAY_TITLE: Optional[str] = None
     PENDING_USER_OVERLAY_CONTENT: Optional[str] = None
     RESPONSE_WATERMARK: Optional[str] = None
+    ENABLE_CHAT_CONTEXT: bool
+    CHAT_CONTEXT_MODE: str
+    CHAT_CONTEXT_TOP_K: int
 
 
 @router.post("/admin/config")
@@ -914,6 +920,10 @@ async def update_admin_config(
 
     request.app.state.config.RESPONSE_WATERMARK = form_data.RESPONSE_WATERMARK
 
+    request.app.state.config.ENABLE_CHAT_CONTEXT = form_data.ENABLE_CHAT_CONTEXT
+    request.app.state.config.CHAT_CONTEXT_MODE = form_data.CHAT_CONTEXT_MODE
+    request.app.state.config.CHAT_CONTEXT_TOP_K = form_data.CHAT_CONTEXT_TOP_K
+
     return {
         "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
         "WEBUI_URL": request.app.state.config.WEBUI_URL,
@@ -931,6 +941,9 @@ async def update_admin_config(
         "PENDING_USER_OVERLAY_TITLE": request.app.state.config.PENDING_USER_OVERLAY_TITLE,
         "PENDING_USER_OVERLAY_CONTENT": request.app.state.config.PENDING_USER_OVERLAY_CONTENT,
         "RESPONSE_WATERMARK": request.app.state.config.RESPONSE_WATERMARK,
+        "ENABLE_CHAT_CONTEXT": request.app.state.config.ENABLE_CHAT_CONTEXT,
+        "CHAT_CONTEXT_MODE": request.app.state.config.CHAT_CONTEXT_MODE,
+        "CHAT_CONTEXT_TOP_K": request.app.state.config.CHAT_CONTEXT_TOP_K,
     }
 
 

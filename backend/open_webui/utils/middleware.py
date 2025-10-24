@@ -555,6 +555,151 @@ async def chat_memory_handler(
     return form_data
 
 
+async def chat_context_handler(
+    request: Request, form_data: dict, extra_params: dict, user
+):
+    """Inject recent or relevant chat context into the system message."""
+    try:
+        mode = request.app.state.config.CHAT_CONTEXT_MODE
+        top_k = request.app.state.config.CHAT_CONTEXT_TOP_K
+
+        chats_list = []
+        context_prompt = ""
+
+        if mode == "pinned":
+            # Get pinned chats for the user (no skip needed since current chat won't be pinned during active use)
+            retrieved_chats = Chats.get_pinned_chats_by_user_id(user.id)
+            # If no pinned chats exist, return early without injecting anything
+            if not retrieved_chats:
+                return form_data
+            context_prompt = "Pinned chats (user-selected important conversations; often irrelevant — ignore unless directly useful):\n"
+        elif mode == "recent":
+            # Get recent chats for the user (skip=1 to exclude current chat)
+            retrieved_chats = Chats.get_chat_list_by_user_id(
+                user.id, limit=top_k, skip=1
+            )
+            context_prompt = "Recent chats (auto-provided for context enrichment; most often irrelevant — ignore unless directly useful):\n"
+        elif mode == "relevant":
+            log.warning("[CHAT_CONTEXT] 'relevant' mode not yet implemented")
+            return form_data
+        else:
+            log.warning(
+                f"[CHAT_CONTEXT] Invalid CHAT_CONTEXT_MODE '{mode}' for user {user.id}"
+            )
+            return form_data
+
+        for chat in retrieved_chats:
+            # Extract basic chat information
+            chat_obj = {
+                "title": chat.title,
+                "created_at": time.strftime(
+                    "%Y-%m-%dT%H:%M:%S%z", time.localtime(chat.created_at)
+                ),
+                "updated_at": time.strftime(
+                    "%Y-%m-%dT%H:%M:%S%z", time.localtime(chat.updated_at)
+                ),
+            }
+
+            # Extract message summary (first user message and last user+assistant messages)
+            if chat.chat and "messages" in chat.chat:
+                messages = chat.chat["messages"]
+                if messages:
+                    # Get first user message
+                    first_user_msg = next(
+                        (msg for msg in messages if msg.get("role") == "user"), None
+                    )
+                    if first_user_msg:
+                        content = first_user_msg.get("content", "")
+                        if isinstance(content, str):
+                            chat_obj["first_user_message"] = content
+                        elif isinstance(content, list):
+                            # Handle content array (multimodal messages)
+                            text_parts = [
+                                part.get("text", "")
+                                for part in content
+                                if part.get("type") == "text"
+                            ]
+                            if text_parts:
+                                chat_obj["first_user_message"] = text_parts[0]
+
+                    # Get last user message and last assistant message
+                    last_messages = {}
+
+                    # Last user message
+                    last_user_msg = next(
+                        (
+                            msg
+                            for msg in reversed(messages)
+                            if msg.get("role") == "user"
+                        ),
+                        None,
+                    )
+                    if last_user_msg:
+                        content = last_user_msg.get("content", "")
+                        if isinstance(content, str):
+                            last_messages["user"] = content
+                        elif isinstance(content, list):
+                            text_parts = [
+                                part.get("text", "")
+                                for part in content
+                                if part.get("type") == "text"
+                            ]
+                            if text_parts:
+                                last_messages["user"] = text_parts[0]
+
+                    # Last assistant message
+                    last_assistant_msg = next(
+                        (
+                            msg
+                            for msg in reversed(messages)
+                            if msg.get("role") == "assistant"
+                        ),
+                        None,
+                    )
+                    if last_assistant_msg:
+                        content = last_assistant_msg.get("content", "")
+                        if isinstance(content, str):
+                            last_messages["assistant"] = content
+                        elif isinstance(content, list):
+                            # Handle content array
+                            text_parts = [
+                                part.get("text", "")
+                                for part in content
+                                if part.get("type") == "text"
+                            ]
+                            if text_parts:
+                                last_messages["assistant"] = text_parts[0]
+
+                    # Only add last_messages if we have at least one message
+                    if last_messages:
+                        chat_obj["last_messages"] = last_messages
+
+            chats_list.append(chat_obj)
+
+        log.info(f"[CHAT_CONTEXT] Injected {len(chats_list)} chats for user {user.id}")
+
+        # TODO: Add "relevant" mode using embedding-based retrieval
+        # elif mode == "relevant":
+        #     # Use embeddings to find relevant chats based on current query
+        #     pass
+
+        if chats_list:
+            # Format as JSON list inside XML tags with explanatory prompt
+            chats_json = json.dumps(chats_list, indent=2, ensure_ascii=False)
+            form_data["messages"] = add_or_update_system_message(
+                f"<chat_context>\n{context_prompt}{chats_json}\n</chat_context>\n",
+                form_data["messages"],
+                append=True,
+            )
+
+    except Exception as e:
+        log.error(
+            f"[CHAT_CONTEXT] Error injecting chat context for user {user.id}: {e}"
+        )
+
+    return form_data
+
+
 async def chat_web_search_handler(
     request: Request, form_data: dict, extra_params: dict, user
 ):
@@ -1145,6 +1290,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if features:
         if "memory" in features and features["memory"]:
             form_data = await chat_memory_handler(
+                request, form_data, extra_params, user
+            )
+
+        if "chat_context" in features and features["chat_context"]:
+            form_data = await chat_context_handler(
                 request, form_data, extra_params, user
             )
 
