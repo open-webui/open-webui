@@ -2463,6 +2463,43 @@ MISTRAL_OCR_API_KEY = PersistentConfig(
     os.getenv("MISTRAL_OCR_API_KEY", ""),
 )
 
+####################################
+# DeepSeek OCR Configuration
+####################################
+
+DEEPSEEK_OCR_API_BASE_URL = PersistentConfig(
+    "DEEPSEEK_OCR_API_BASE_URL",
+    "rag.deepseek_ocr_api_base_url",
+    os.getenv("DEEPSEEK_OCR_API_BASE_URL", ""),
+)
+
+DEEPSEEK_OCR_API_KEY = PersistentConfig(
+    "DEEPSEEK_OCR_API_KEY",
+    "rag.deepseek_ocr_api_key",
+    os.getenv("DEEPSEEK_OCR_API_KEY", ""),
+)
+
+DEEPSEEK_OCR_MODEL_NAME = PersistentConfig(
+    "DEEPSEEK_OCR_MODEL_NAME",
+    "rag.deepseek_ocr_model_name",
+    os.getenv("DEEPSEEK_OCR_MODEL_NAME", "deepseek-ocr"),
+)
+
+DEEPSEEK_OCR_PROMPT = PersistentConfig(
+    "DEEPSEEK_OCR_PROMPT",
+    "rag.deepseek_ocr_prompt",
+    os.getenv(
+        "DEEPSEEK_OCR_PROMPT",
+        "<image>\n<|grounding|>Convert the document to markdown. ",
+    ),
+)
+
+DEEPSEEK_OCR_TIMEOUT = PersistentConfig(
+    "DEEPSEEK_OCR_TIMEOUT",
+    "rag.deepseek_ocr_timeout",
+    int(os.getenv("DEEPSEEK_OCR_TIMEOUT", "300")),
+)
+
 BYPASS_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
     "BYPASS_EMBEDDING_AND_RETRIEVAL",
     "rag.bypass_embedding_and_retrieval",

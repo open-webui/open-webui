@@ -466,6 +466,12 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
+        # DeepSeek OCR settings
+        "DEEPSEEK_OCR_API_BASE_URL": request.app.state.config.DEEPSEEK_OCR_API_BASE_URL,
+        "DEEPSEEK_OCR_API_KEY": request.app.state.config.DEEPSEEK_OCR_API_KEY,
+        "DEEPSEEK_OCR_MODEL_NAME": request.app.state.config.DEEPSEEK_OCR_MODEL_NAME,
+        "DEEPSEEK_OCR_PROMPT": request.app.state.config.DEEPSEEK_OCR_PROMPT,
+        "DEEPSEEK_OCR_TIMEOUT": request.app.state.config.DEEPSEEK_OCR_TIMEOUT,
         # MinerU settings
         "MINERU_API_MODE": request.app.state.config.MINERU_API_MODE,
         "MINERU_API_URL": request.app.state.config.MINERU_API_URL,
@@ -651,6 +657,13 @@ class ConfigForm(BaseModel):
     DOCUMENT_INTELLIGENCE_ENDPOINT: Optional[str] = None
     DOCUMENT_INTELLIGENCE_KEY: Optional[str] = None
     MISTRAL_OCR_API_KEY: Optional[str] = None
+
+    # DeepSeek OCR settings
+    DEEPSEEK_OCR_API_BASE_URL: Optional[str] = None
+    DEEPSEEK_OCR_API_KEY: Optional[str] = None
+    DEEPSEEK_OCR_MODEL_NAME: Optional[str] = None
+    DEEPSEEK_OCR_PROMPT: Optional[str] = None
+    DEEPSEEK_OCR_TIMEOUT: Optional[int] = None
 
     # MinerU settings
     MINERU_API_MODE: Optional[str] = None
@@ -895,6 +908,33 @@ async def update_rag_config(
         form_data.MISTRAL_OCR_API_KEY
         if form_data.MISTRAL_OCR_API_KEY is not None
         else request.app.state.config.MISTRAL_OCR_API_KEY
+    )
+
+    # DeepSeek OCR settings
+    request.app.state.config.DEEPSEEK_OCR_API_BASE_URL = (
+        form_data.DEEPSEEK_OCR_API_BASE_URL
+        if form_data.DEEPSEEK_OCR_API_BASE_URL is not None
+        else request.app.state.config.DEEPSEEK_OCR_API_BASE_URL
+    )
+    request.app.state.config.DEEPSEEK_OCR_API_KEY = (
+        form_data.DEEPSEEK_OCR_API_KEY
+        if form_data.DEEPSEEK_OCR_API_KEY is not None
+        else request.app.state.config.DEEPSEEK_OCR_API_KEY
+    )
+    request.app.state.config.DEEPSEEK_OCR_MODEL_NAME = (
+        form_data.DEEPSEEK_OCR_MODEL_NAME
+        if form_data.DEEPSEEK_OCR_MODEL_NAME is not None
+        else request.app.state.config.DEEPSEEK_OCR_MODEL_NAME
+    )
+    request.app.state.config.DEEPSEEK_OCR_PROMPT = (
+        form_data.DEEPSEEK_OCR_PROMPT
+        if form_data.DEEPSEEK_OCR_PROMPT is not None
+        else request.app.state.config.DEEPSEEK_OCR_PROMPT
+    )
+    request.app.state.config.DEEPSEEK_OCR_TIMEOUT = (
+        form_data.DEEPSEEK_OCR_TIMEOUT
+        if form_data.DEEPSEEK_OCR_TIMEOUT is not None
+        else request.app.state.config.DEEPSEEK_OCR_TIMEOUT
     )
 
     # MinerU settings
@@ -1183,6 +1223,12 @@ async def update_rag_config(
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
+        # DeepSeek OCR settings
+        "DEEPSEEK_OCR_API_BASE_URL": request.app.state.config.DEEPSEEK_OCR_API_BASE_URL,
+        "DEEPSEEK_OCR_API_KEY": request.app.state.config.DEEPSEEK_OCR_API_KEY,
+        "DEEPSEEK_OCR_MODEL_NAME": request.app.state.config.DEEPSEEK_OCR_MODEL_NAME,
+        "DEEPSEEK_OCR_PROMPT": request.app.state.config.DEEPSEEK_OCR_PROMPT,
+        "DEEPSEEK_OCR_TIMEOUT": request.app.state.config.DEEPSEEK_OCR_TIMEOUT,
         # MinerU settings
         "MINERU_API_MODE": request.app.state.config.MINERU_API_MODE,
         "MINERU_API_URL": request.app.state.config.MINERU_API_URL,
@@ -1598,6 +1644,11 @@ def process_file(
                         DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                         DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
                         MISTRAL_OCR_API_KEY=request.app.state.config.MISTRAL_OCR_API_KEY,
+                        DEEPSEEK_OCR_API_BASE_URL=request.app.state.config.DEEPSEEK_OCR_API_BASE_URL,
+                        DEEPSEEK_OCR_API_KEY=request.app.state.config.DEEPSEEK_OCR_API_KEY,
+                        DEEPSEEK_OCR_MODEL_NAME=request.app.state.config.DEEPSEEK_OCR_MODEL_NAME,
+                        DEEPSEEK_OCR_PROMPT=request.app.state.config.DEEPSEEK_OCR_PROMPT,
+                        DEEPSEEK_OCR_TIMEOUT=request.app.state.config.DEEPSEEK_OCR_TIMEOUT,
                         MINERU_API_MODE=request.app.state.config.MINERU_API_MODE,
                         MINERU_API_URL=request.app.state.config.MINERU_API_URL,
                         MINERU_API_KEY=request.app.state.config.MINERU_API_KEY,

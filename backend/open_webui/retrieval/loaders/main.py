@@ -26,6 +26,7 @@ from langchain_core.documents import Document
 from open_webui.retrieval.loaders.external_document import ExternalDocumentLoader
 
 from open_webui.retrieval.loaders.mistral import MistralLoader
+from open_webui.retrieval.loaders.deepseek_ocr import DeepSeekOCRLoader
 from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
 from open_webui.retrieval.loaders.mineru import MinerULoader
 
@@ -392,6 +393,22 @@ class Loader:
         ):
             loader = MistralLoader(
                 api_key=self.kwargs.get("MISTRAL_OCR_API_KEY"), file_path=file_path
+            )
+        elif (
+            self.engine == "deepseek_ocr"
+            and self.kwargs.get("DEEPSEEK_OCR_API_BASE_URL") != ""
+            and file_ext in ["pdf", "png", "jpg", "jpeg", "webp", "tiff", "gif", "bmp"]
+        ):
+            loader = DeepSeekOCRLoader(
+                file_path=file_path,
+                api_base_url=self.kwargs.get("DEEPSEEK_OCR_API_BASE_URL"),
+                api_key=self.kwargs.get("DEEPSEEK_OCR_API_KEY", ""),
+                model_name=self.kwargs.get("DEEPSEEK_OCR_MODEL_NAME", "deepseek-ocr"),
+                prompt=self.kwargs.get(
+                    "DEEPSEEK_OCR_PROMPT",
+                    "<image>\n<|grounding|>Convert the document to markdown. ",
+                ),
+                timeout=self.kwargs.get("DEEPSEEK_OCR_TIMEOUT", 300),
             )
         elif (
             self.engine == "external"

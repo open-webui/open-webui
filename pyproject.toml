@@ -69,6 +69,7 @@ dependencies = [
 
     "ftfy==6.2.3",
     "pypdf==6.0.0",
+    "pdf2image>=1.17.0",
     "fpdf2==2.8.2",
     "pymdown-extensions==10.14.2",
     "docx2txt==0.8",
