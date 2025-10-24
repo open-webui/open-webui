@@ -633,7 +633,7 @@ async def get_tool_servers_data(servers: List[Dict[str, Any]]) -> List[Dict[str,
                 openapi_path = server.get("path", "openapi.json")
                 spec_url = get_tool_server_url(server_url, openapi_path)
                 # Fetch from URL
-                task = get_tool_server_data(token, spec_url)
+                task = get_tool_server_data(token, spec_url, config)
             elif spec_type == "json" and server.get("spec", ""):
                 # Use provided JSON spec
                 spec_json = None
