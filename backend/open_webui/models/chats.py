@@ -766,11 +766,13 @@ class ChatTable:
 
             elif dialect_name == "postgresql":
                 # PostgreSQL relies on proper JSON query for search
+                # Note: We use replace() to remove null bytes (\u0000) which PostgreSQL cannot convert to text
                 postgres_content_sql = (
                     "EXISTS ("
                     "    SELECT 1 "
                     "    FROM json_array_elements(Chat.chat->'messages') AS message "
-                    "    WHERE LOWER(message->>'content') LIKE '%' || :content_key || '%'"
+                    "    WHERE message->>'content' IS NOT NULL "
+                    "    AND LOWER(REPLACE(message->>'content', chr(0), '')) LIKE '%' || :content_key || '%'"
                     ")"
                 )
                 postgres_content_clause = text(postgres_content_sql)
