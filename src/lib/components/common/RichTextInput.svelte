@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { marked } from 'marked';
+	import DOMPurify from 'dompurify';
+
 	marked.use({
 		breaks: true,
 		gfm: true,
@@ -336,12 +338,14 @@
 		let tr = state.tr;
 
 		if (insertPromptAsRichText) {
-			const htmlContent = marked
-				.parse(text, {
-					breaks: true,
-					gfm: true
-				})
-				.trim();
+			const htmlContent = DOMPurify.sanitize(
+				marked
+					.parse(text, {
+						breaks: true,
+						gfm: true
+					})
+					.trim()
+			);
 
 			// Create a temporary div to parse HTML
 			const tempDiv = document.createElement('div');
@@ -672,16 +676,10 @@
 			}
 		}
 
-		console.log('content', content);
-
 		if (collaboration && documentId && socket && user) {
 			const { SocketIOCollaborationProvider } = await import('./RichTextInput/Collaboration');
 			provider = new SocketIOCollaborationProvider(documentId, socket, user, content);
 		}
-
-		console.log(bubbleMenuElement, floatingMenuElement);
-		console.log(suggestions);
-
 		editor = new Editor({
 			element: element,
 			extensions: [
@@ -781,13 +779,29 @@
 
 				htmlValue = editor.getHTML();
 				jsonValue = editor.getJSON();
-				mdValue = turndownService
-					.turndown(
-						htmlValue
-							.replace(/<p><\/p>/g, '<br/>')
-							.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
-					)
-					.replace(/\u00a0/g, ' ');
+
+				if (richText) {
+					mdValue = turndownService
+						.turndown(
+							htmlValue
+								.replace(/<p><\/p>/g, '<br/>')
+								.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
+						)
+						.replace(/\u00a0/g, ' ');
+				} else {
+					mdValue = turndownService
+						.turndown(
+							htmlValue
+								// Replace empty paragraphs with line breaks
+								.replace(/<p><\/p>/g, '<br/>')
+								// Replace multiple spaces with non-breaking spaces
+								.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
+								// Replace tabs with non-breaking spaces (preserve indentation)
+								.replace(/\t/g, '\u00a0\u00a0\u00a0\u00a0') // 1 tab = 4 spaces
+						)
+						// Convert non-breaking spaces back to regular spaces for markdown
+						.replace(/\u00a0/g, ' ');
+				}
 
 				onChange({
 					html: htmlValue,

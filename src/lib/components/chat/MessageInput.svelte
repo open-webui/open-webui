@@ -117,6 +117,11 @@
 	let showValvesModal = false;
 	let selectedValvesType = 'tool'; // 'tool' or 'function'
 	let selectedValvesItemId = null;
+	let integrationsMenuCloseOnOutsideClick = true;
+
+	$: if (!showValvesModal) {
+		integrationsMenuCloseOnOutsideClick = true;
+	}
 
 	$: onChange({
 		prompt,
@@ -885,8 +890,6 @@
 				})
 			}
 		];
-
-		console.log(suggestions);
 		loaded = true;
 
 		window.setTimeout(() => {
@@ -945,6 +948,9 @@
 	id={selectedValvesItemId ?? null}
 	on:save={async () => {
 		await tick();
+	}}
+	on:close={() => {
+		integrationsMenuCloseOnOutsideClick = true;
 	}}
 />
 
@@ -1027,8 +1033,7 @@
 								recording = false;
 
 								await tick();
-								insertTextAtCursor(text);
-
+								await insertTextAtCursor(text);
 								await tick();
 								document.getElementById('chat-input')?.focus();
 
@@ -1045,6 +1050,12 @@
 								dispatch('submit', prompt);
 							}}
 						>
+							<button
+								id="generate-message-pair-button"
+								class="hidden"
+								on:click={() => createMessagePair(prompt)}
+							/>
+
 							<div
 								id="message-input-container"
 								class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border {$temporaryChatEnabled
@@ -1201,12 +1212,12 @@
 														floatingMenuPlacement={'top-start'}
 														insertPromptAsRichText={$settings?.insertPromptAsRichText ?? false}
 														shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
-															(!$mobile ||
-																!(
-																	'ontouchstart' in window ||
-																	navigator.maxTouchPoints > 0 ||
-																	navigator.msMaxTouchPoints > 0
-																))}
+															!$mobile &&
+															!(
+																'ontouchstart' in window ||
+																navigator.maxTouchPoints > 0 ||
+																navigator.msMaxTouchPoints > 0
+															)}
 														placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 														largeTextAsFile={($settings?.largeTextAsFile ?? false) && !shiftKey}
 														autocomplete={$config?.features?.enable_autocomplete_generation &&
@@ -1247,24 +1258,6 @@
 
 															if (e.key === 'Escape') {
 																stopResponse();
-															}
-
-															// Command/Ctrl + Shift + Enter to submit a message pair
-															if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
-																e.preventDefault();
-																createMessagePair(prompt);
-															}
-
-															// Check if Ctrl + R is pressed
-															if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
-																e.preventDefault();
-																console.log('regenerate');
-
-																const regenerateButton = [
-																	...document.getElementsByClassName('regenerate-response-button')
-																]?.at(-1);
-
-																regenerateButton?.click();
 															}
 
 															if (prompt === '' && e.key == 'ArrowUp') {
@@ -1449,11 +1442,9 @@
 											</div>
 										</InputMenu>
 
-										<div
-											class="flex self-center w-[1px] h-4 mx-1 bg-gray-200/50 dark:bg-gray-800/50"
-										/>
-
 										{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || (toggleFilters && toggleFilters.length > 0)}
+											<div class="flex self-center w-[1px] h-4 mx-1 bg-gray-200/50 dark:bg-gray-800/50" />
+
 											<IntegrationsMenu
 												selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
 												{toggleFilters}
@@ -1465,11 +1456,13 @@
 												bind:webSearchEnabled
 												bind:imageGenerationEnabled
 												bind:codeInterpreterEnabled
+												closeOnOutsideClick={integrationsMenuCloseOnOutsideClick}
 												onShowValves={(e) => {
 													const { type, id } = e;
 													selectedValvesType = type;
 													selectedValvesItemId = id;
 													showValvesModal = true;
+													integrationsMenuCloseOnOutsideClick = false;
 												}}
 												onClose={async () => {
 													await tick();

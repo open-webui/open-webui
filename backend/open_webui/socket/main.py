@@ -18,6 +18,10 @@ from open_webui.utils.redis import (
     get_sentinel_url_from_env,
 )
 
+from open_webui.config import (
+    CORS_ALLOW_ORIGIN,
+)
+
 from open_webui.env import (
     ENABLE_WEBSOCKET_SUPPORT,
     WEBSOCKET_MANAGER,
@@ -58,7 +62,7 @@ if WEBSOCKET_MANAGER == "redis":
     else:
         mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL)
     sio = socketio.AsyncServer(
-        cors_allowed_origins=[],
+        cors_allowed_origins=CORS_ALLOW_ORIGIN,
         async_mode="asgi",
         transports=(["websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
         allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
@@ -67,7 +71,7 @@ if WEBSOCKET_MANAGER == "redis":
     )
 else:
     sio = socketio.AsyncServer(
-        cors_allowed_origins=[],
+        cors_allowed_origins=CORS_ALLOW_ORIGIN,
         async_mode="asgi",
         transports=(["websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
         allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
@@ -356,7 +360,7 @@ async def join_note(sid, data):
     await sio.enter_room(sid, f"note:{note.id}")
 
 
-@sio.on("channel-events")
+@sio.on("events:channel")
 async def channel_events(sid, data):
     room = f"channel:{data['channel_id']}"
     participants = sio.manager.get_participants(
@@ -373,7 +377,7 @@ async def channel_events(sid, data):
 
     if event_type == "typing":
         await sio.emit(
-            "channel-events",
+            "events:channel",
             {
                 "channel_id": data["channel_id"],
                 "message_id": data.get("message_id", None),
@@ -653,12 +657,15 @@ def get_event_emitter(request_info, update_db=True):
             )
         )
 
+        chat_id = request_info.get("chat_id", None)
+        message_id = request_info.get("message_id", None)
+
         emit_tasks = [
             sio.emit(
-                "chat-events",
+                "events",
                 {
-                    "chat_id": request_info.get("chat_id", None),
-                    "message_id": request_info.get("message_id", None),
+                    "chat_id": chat_id,
+                    "message_id": message_id,
                     "data": event_data,
                 },
                 to=session_id,
@@ -667,8 +674,11 @@ def get_event_emitter(request_info, update_db=True):
         ]
 
         await asyncio.gather(*emit_tasks)
-
-        if update_db:
+        if (
+            update_db
+            and message_id
+            and not request_info.get("chat_id", "").startswith("local:")
+        ):
             if "type" in event_data and event_data["type"] == "status":
                 Chats.add_message_status_to_chat_by_id_and_message_id(
                     request_info["chat_id"],
@@ -764,7 +774,7 @@ def get_event_emitter(request_info, update_db=True):
 def get_event_call(request_info):
     async def __event_caller__(event_data):
         response = await sio.call(
-            "chat-events",
+            "events",
             {
                 "chat_id": request_info.get("chat_id", None),
                 "message_id": request_info.get("message_id", None),

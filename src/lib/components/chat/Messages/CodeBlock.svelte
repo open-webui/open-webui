@@ -6,7 +6,12 @@
 
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
 	import { executeCode } from '$lib/apis/utils';
-	import { copyToClipboard, renderMermaidDiagram } from '$lib/utils';
+	import {
+		copyToClipboard,
+		initMermaid,
+		renderMermaidDiagram,
+		renderVegaVisualization
+	} from '$lib/utils';
 
 	import 'highlight.js/styles/github-dark.min.css';
 
@@ -55,6 +60,7 @@
 	let _token = null;
 
 	let mermaidHtml = null;
+	let vegaHtml = null;
 
 	let highlightedCode = null;
 	let executing = false;
@@ -322,10 +328,37 @@
 		};
 	};
 
+	let mermaid = null;
+	const renderMermaid = async (code) => {
+		if (!mermaid) {
+			mermaid = await initMermaid();
+		}
+		return await renderMermaidDiagram(mermaid, code);
+	};
+
 	const render = async () => {
 		onUpdate(token);
 		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
-			mermaidHtml = await renderMermaidDiagram(code);
+			try {
+				mermaidHtml = await renderMermaid(code);
+			} catch (error) {
+				console.error('Failed to render mermaid diagram:', error);
+				const errorMsg = error instanceof Error ? error.message : String(error);
+				toast.error($i18n.t('Failed to render diagram') + `: ${errorMsg}`);
+				mermaidHtml = null;
+			}
+		} else if (
+			(lang === 'vega' || lang === 'vega-lite') &&
+			(token?.raw ?? '').slice(-4).includes('```')
+		) {
+			try {
+				vegaHtml = await renderVegaVisualization(code);
+			} catch (error) {
+				console.error('Failed to render Vega visualization:', error);
+				const errorMsg = error instanceof Error ? error.message : String(error);
+				toast.error($i18n.t('Failed to render diagram') + `: ${errorMsg}`);
+				vegaHtml = null;
+			}
 		}
 	};
 
@@ -396,6 +429,16 @@
 				/>
 			{:else}
 				<pre class="mermaid">{code}</pre>
+			{/if}
+		{:else if lang === 'vega' || lang === 'vega-lite'}
+			{#if vegaHtml}
+				<SvgPanZoom
+					className="rounded-3xl max-h-fit overflow-hidden"
+					svg={vegaHtml}
+					content={_token.text}
+				/>
+			{:else}
+				<pre class="vega">{code}</pre>
 			{/if}
 		{:else}
 			<div
@@ -531,15 +574,15 @@
 					>
 						{#if executing}
 							<div class=" ">
-								<div class=" text-gray-500 text-xs mb-1">{$i18n.t('STDOUT/STDERR')}</div>
+								<div class=" text-gray-500 text-sm mb-1">{$i18n.t('STDOUT/STDERR')}</div>
 								<div class="text-sm">{$i18n.t('Running...')}</div>
 							</div>
 						{:else}
 							{#if stdout || stderr}
 								<div class=" ">
-									<div class=" text-gray-500 text-xs mb-1">{$i18n.t('STDOUT/STDERR')}</div>
+									<div class=" text-gray-500 text-sm mb-1">{$i18n.t('STDOUT/STDERR')}</div>
 									<div
-										class="text-sm {stdout?.split('\n')?.length > 100
+										class="text-sm font-mono whitespace-pre-wrap {stdout?.split('\n')?.length > 100
 											? `max-h-96`
 											: ''}  overflow-y-auto"
 									>
@@ -549,7 +592,7 @@
 							{/if}
 							{#if result || files}
 								<div class=" ">
-									<div class=" text-gray-500 text-xs mb-1">{$i18n.t('RESULT')}</div>
+									<div class=" text-gray-500 text-sm mb-1">{$i18n.t('RESULT')}</div>
 									{#if result}
 										<div class="text-sm">{`${JSON.stringify(result)}`}</div>
 									{/if}

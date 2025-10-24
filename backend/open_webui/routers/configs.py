@@ -183,7 +183,7 @@ async def set_tool_servers_config(
                     )
                     oauth_client_info = decrypt_data(oauth_client_info)
 
-                    await request.app.state.oauth_client_manager.add_client(
+                    request.app.state.oauth_client_manager.add_client(
                         f"{server_type}:{server_id}",
                         OAuthClientInformationFull(**oauth_client_info),
                     )
@@ -234,7 +234,7 @@ async def verify_tool_servers_config(
                                     )
                                     raise HTTPException(
                                         status_code=400,
-                                        detail=f"Failed to parse OAuth 2.1 discovery document from {discovery_urls[0]}",
+                                        detail=f"Failed to parse OAuth 2.1 discovery document from {discovery_url}",
                                     )
 
                 raise HTTPException(

@@ -440,7 +440,10 @@ class ChatTable:
                 order_by = filter.get("order_by")
                 direction = filter.get("direction")
 
-                if order_by and direction and getattr(Chat, order_by):
+                if order_by and direction:
+                    if not getattr(Chat, order_by, None):
+                        raise ValueError("Invalid order_by field")
+
                     if direction.lower() == "asc":
                         query = query.order_by(getattr(Chat, order_by).asc())
                     elif direction.lower() == "desc":
@@ -502,6 +505,7 @@ class ChatTable:
         user_id: str,
         include_archived: bool = False,
         include_folders: bool = False,
+        include_pinned: bool = False,
         skip: Optional[int] = None,
         limit: Optional[int] = None,
     ) -> list[ChatTitleIdResponse]:
@@ -511,7 +515,8 @@ class ChatTable:
             if not include_folders:
                 query = query.filter_by(folder_id=None)
 
-            query = query.filter(or_(Chat.pinned == False, Chat.pinned == None))
+            if not include_pinned:
+                query = query.filter(or_(Chat.pinned == False, Chat.pinned == None))
 
             if not include_archived:
                 query = query.filter_by(archived=False)

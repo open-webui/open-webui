@@ -246,11 +246,12 @@
 	};
 
 	onMount(async () => {
-		folderRegistry[folderId] = {
-			setFolderItems: () => setFolderItems()
-		};
-
 		open = folders[folderId].is_expanded;
+		folderRegistry[folderId] = {
+			setFolderItems: () => {
+				setFolderItems();
+			}
+		};
 		if (folderElement) {
 			folderElement.addEventListener('dragover', onDragOver);
 			folderElement.addEventListener('drop', onDrop);
@@ -335,7 +336,7 @@
 				});
 
 				if (folder) {
-					selectedFolder.set(folder);
+					await selectedFolder.set(folder);
 				}
 			}
 			dispatch('update');
@@ -376,7 +377,7 @@
 				});
 
 				if (folder) {
-					selectedFolder.set(folder);
+					await selectedFolder.set(folder);
 				}
 			}
 		} else {
@@ -384,7 +385,9 @@
 		}
 	};
 
-	$: setFolderItems(open);
+	$: if (open) {
+		setFolderItems();
+	}
 
 	const renameHandler = async () => {
 		console.log('Edit');
@@ -488,16 +491,16 @@
 					}
 
 					clickTimer = setTimeout(async () => {
-						await goto('/');
-
 						const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
 							toast.error(`${error}`);
 							return null;
 						});
 
 						if (folder) {
-							selectedFolder.set(folder);
+							await selectedFolder.set(folder);
 						}
+
+						await goto('/');
 
 						if ($mobile) {
 							showSidebar.set(!$showSidebar);

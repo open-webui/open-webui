@@ -40,7 +40,10 @@ from open_webui.routers.tasks import (
     generate_image_prompt,
     generate_chat_tags,
 )
-from open_webui.routers.retrieval import process_web_search, SearchForm
+from open_webui.routers.retrieval import (
+    process_web_search,
+    SearchForm,
+)
 from open_webui.routers.images import (
     load_b64_image_data,
     image_generations,
@@ -76,10 +79,12 @@ from open_webui.utils.task import (
 )
 from open_webui.utils.misc import (
     deep_update,
+    extract_urls,
     get_message_list,
     add_or_update_system_message,
     add_or_update_user_message,
     get_last_user_message,
+    get_last_user_message_item,
     get_last_assistant_message,
     get_system_message,
     prepend_to_first_user_message_content,
@@ -854,10 +859,6 @@ async def chat_completion_files_handler(
             except:
                 pass
 
-        if len(queries) == 0:
-            queries = [get_last_user_message(body["messages"])]
-
-        if not all_full_context:
             await __event_emitter__(
                 {
                     "type": "status",
@@ -868,6 +869,9 @@ async def chat_completion_files_handler(
                     },
                 }
             )
+
+        if len(queries) == 0:
+            queries = [get_last_user_message(body["messages"])]
 
         try:
             # Offload get_sources_from_items to a separate thread
@@ -907,7 +911,6 @@ async def chat_completion_files_handler(
         log.debug(f"rag_contexts:sources: {sources}")
 
         unique_ids = set()
-
         for source in sources or []:
             if not source or len(source.keys()) == 0:
                 continue
@@ -926,7 +929,6 @@ async def chat_completion_files_handler(
                 unique_ids.add(_id)
 
         sources_count = len(unique_ids)
-
         await __event_emitter__(
             {
                 "type": "status",
@@ -1000,11 +1002,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     log.debug(f"form_data: {form_data}")
 
     system_message = get_system_message(form_data.get("messages", []))
-    if system_message:
+    if system_message:  # Chat Controls/User Settings
         try:
             form_data = apply_system_prompt_to_body(
-                system_message.get("content"), form_data, metadata, user
-            )
+                system_message.get("content"), form_data, metadata, user, replace=True
+            )  # Required to handle system prompt variables
         except:
             pass
 
@@ -1169,8 +1171,28 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     tool_ids = form_data.pop("tool_ids", None)
     files = form_data.pop("files", None)
 
-    # Remove files duplicates
+    prompt = get_last_user_message(form_data["messages"])
+    # TODO: re-enable URL extraction from prompt
+    # urls = []
+    # if prompt and len(prompt or "") < 500 and (not files or len(files) == 0):
+    #     urls = extract_urls(prompt)
+
     if files:
+        if not files:
+            files = []
+
+        for file_item in files:
+            if file_item.get("type", "file") == "folder":
+                # Get folder files
+                folder_id = file_item.get("id", None)
+                if folder_id:
+                    folder = Folders.get_folder_by_id_and_user_id(folder_id, user.id)
+                    if folder and folder.data and "files" in folder.data:
+                        files = [f for f in files if f.get("id", None) != folder_id]
+                        files = [*files, *folder.data["files"]]
+
+        # files = [*files, *[{"type": "url", "url": url, "name": url} for url in urls]]
+        # Remove duplicate files based on their content
         files = list({json.dumps(f, sort_keys=True): f for f in files}.values())
 
     metadata = {
@@ -1262,9 +1284,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
                         def make_tool_function(client, function_name):
                             async def tool_function(**kwargs):
-                                print(kwargs)
-                                print(client)
-                                print(await client.list_tool_specs())
                                 return await client.call_tool(
                                     function_name,
                                     function_args=kwargs,
@@ -1371,8 +1390,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     )
 
         context_string = context_string.strip()
-
-        prompt = get_last_user_message(form_data["messages"])
         if prompt is None:
             raise Exception("No user message found")
 
@@ -1418,10 +1435,13 @@ async def process_chat_response(
     request, response, form_data, user, metadata, model, events, tasks
 ):
     async def background_tasks_handler():
-        messages_map = Chats.get_messages_map_by_chat_id(metadata["chat_id"])
-        message = messages_map.get(metadata["message_id"]) if messages_map else None
+        message = None
+        messages = []
 
-        if message:
+        if "chat_id" in metadata and not metadata["chat_id"].startswith("local:"):
+            messages_map = Chats.get_messages_map_by_chat_id(metadata["chat_id"])
+            message = messages_map.get(metadata["message_id"]) if messages_map else None
+
             message_list = get_message_list(messages_map, metadata["message_id"])
 
             # Remove details tags and files from the messages.
@@ -1454,7 +1474,14 @@ async def process_chat_response(
                         "content": content,
                     }
                 )
+        else:
+            # Local temp chat, get the model and message from the form_data
+            message = get_last_user_message_item(form_data.get("messages", []))
+            messages = form_data.get("messages", [])
+            if message:
+                message["model"] = form_data.get("model")
 
+        if message and "model" in message:
             if tasks and messages:
                 if (
                     TASKS.FOLLOW_UP_GENERATION in tasks
@@ -1473,11 +1500,13 @@ async def process_chat_response(
 
                     if res and isinstance(res, dict):
                         if len(res.get("choices", [])) == 1:
-                            follow_ups_string = (
-                                res.get("choices", [])[0]
-                                .get("message", {})
-                                .get("content", "")
+                            response_message = res.get("choices", [])[0].get(
+                                "message", {}
                             )
+
+                            follow_ups_string = response_message.get(
+                                "content"
+                            ) or response_message.get("reasoning_content", "")
                         else:
                             follow_ups_string = ""
 
@@ -1490,15 +1519,6 @@ async def process_chat_response(
                             follow_ups = json.loads(follow_ups_string).get(
                                 "follow_ups", []
                             )
-
-                            Chats.upsert_message_to_chat_by_id_and_message_id(
-                                metadata["chat_id"],
-                                metadata["message_id"],
-                                {
-                                    "followUps": follow_ups,
-                                },
-                            )
-
                             await event_emitter(
                                 {
                                     "type": "chat:message:follow_ups",
@@ -1507,17 +1527,96 @@ async def process_chat_response(
                                     },
                                 }
                             )
+
+                            if not metadata.get("chat_id", "").startswith("local:"):
+                                Chats.upsert_message_to_chat_by_id_and_message_id(
+                                    metadata["chat_id"],
+                                    metadata["message_id"],
+                                    {
+                                        "followUps": follow_ups,
+                                    },
+                                )
+
                         except Exception as e:
                             pass
 
-                if TASKS.TITLE_GENERATION in tasks:
-                    user_message = get_last_user_message(messages)
-                    if user_message and len(user_message) > 100:
-                        user_message = user_message[:100] + "..."
+                if not metadata.get("chat_id", "").startswith(
+                    "local:"
+                ):  # Only update titles and tags for non-temp chats
+                    if (
+                        TASKS.TITLE_GENERATION in tasks
+                        and tasks[TASKS.TITLE_GENERATION]
+                    ):
+                        user_message = get_last_user_message(messages)
+                        if user_message and len(user_message) > 100:
+                            user_message = user_message[:100] + "..."
 
-                    if tasks[TASKS.TITLE_GENERATION]:
+                        if tasks[TASKS.TITLE_GENERATION]:
 
-                        res = await generate_title(
+                            res = await generate_title(
+                                request,
+                                {
+                                    "model": message["model"],
+                                    "messages": messages,
+                                    "chat_id": metadata["chat_id"],
+                                },
+                                user,
+                            )
+
+                            if res and isinstance(res, dict):
+                                if len(res.get("choices", [])) == 1:
+                                    response_message = res.get("choices", [])[0].get(
+                                        "message", {}
+                                    )
+
+                                    title_string = (
+                                        response_message.get("content")
+                                        or response_message.get(
+                                            "reasoning_content",
+                                        )
+                                        or message.get("content", user_message)
+                                    )
+                                else:
+                                    title_string = ""
+
+                                title_string = title_string[
+                                    title_string.find("{") : title_string.rfind("}") + 1
+                                ]
+
+                                try:
+                                    title = json.loads(title_string).get(
+                                        "title", user_message
+                                    )
+                                except Exception as e:
+                                    title = ""
+
+                                if not title:
+                                    title = messages[0].get("content", user_message)
+
+                                Chats.update_chat_title_by_id(
+                                    metadata["chat_id"], title
+                                )
+
+                                await event_emitter(
+                                    {
+                                        "type": "chat:title",
+                                        "data": title,
+                                    }
+                                )
+                        elif len(messages) == 2:
+                            title = messages[0].get("content", user_message)
+
+                            Chats.update_chat_title_by_id(metadata["chat_id"], title)
+
+                            await event_emitter(
+                                {
+                                    "type": "chat:title",
+                                    "data": message.get("content", user_message),
+                                }
+                            )
+
+                    if TASKS.TAGS_GENERATION in tasks and tasks[TASKS.TAGS_GENERATION]:
+                        res = await generate_chat_tags(
                             request,
                             {
                                 "model": message["model"],
@@ -1529,89 +1628,34 @@ async def process_chat_response(
 
                         if res and isinstance(res, dict):
                             if len(res.get("choices", [])) == 1:
-                                title_string = (
-                                    res.get("choices", [])[0]
-                                    .get("message", {})
-                                    .get(
-                                        "content", message.get("content", user_message)
-                                    )
+                                response_message = res.get("choices", [])[0].get(
+                                    "message", {}
                                 )
-                            else:
-                                title_string = ""
 
-                            title_string = title_string[
-                                title_string.find("{") : title_string.rfind("}") + 1
+                                tags_string = response_message.get(
+                                    "content"
+                                ) or response_message.get("reasoning_content", "")
+                            else:
+                                tags_string = ""
+
+                            tags_string = tags_string[
+                                tags_string.find("{") : tags_string.rfind("}") + 1
                             ]
 
                             try:
-                                title = json.loads(title_string).get(
-                                    "title", user_message
+                                tags = json.loads(tags_string).get("tags", [])
+                                Chats.update_chat_tags_by_id(
+                                    metadata["chat_id"], tags, user
+                                )
+
+                                await event_emitter(
+                                    {
+                                        "type": "chat:tags",
+                                        "data": tags,
+                                    }
                                 )
                             except Exception as e:
-                                title = ""
-
-                            if not title:
-                                title = messages[0].get("content", user_message)
-
-                            Chats.update_chat_title_by_id(metadata["chat_id"], title)
-
-                            await event_emitter(
-                                {
-                                    "type": "chat:title",
-                                    "data": title,
-                                }
-                            )
-                    elif len(messages) == 2:
-                        title = messages[0].get("content", user_message)
-
-                        Chats.update_chat_title_by_id(metadata["chat_id"], title)
-
-                        await event_emitter(
-                            {
-                                "type": "chat:title",
-                                "data": message.get("content", user_message),
-                            }
-                        )
-
-                if TASKS.TAGS_GENERATION in tasks and tasks[TASKS.TAGS_GENERATION]:
-                    res = await generate_chat_tags(
-                        request,
-                        {
-                            "model": message["model"],
-                            "messages": messages,
-                            "chat_id": metadata["chat_id"],
-                        },
-                        user,
-                    )
-
-                    if res and isinstance(res, dict):
-                        if len(res.get("choices", [])) == 1:
-                            tags_string = (
-                                res.get("choices", [])[0]
-                                .get("message", {})
-                                .get("content", "")
-                            )
-                        else:
-                            tags_string = ""
-
-                        tags_string = tags_string[
-                            tags_string.find("{") : tags_string.rfind("}") + 1
-                        ]
-
-                        try:
-                            tags = json.loads(tags_string).get("tags", [])
-                            Chats.update_chat_tags_by_id(
-                                metadata["chat_id"], tags, user
-                            )
-
-                            await event_emitter(
-                                {
-                                    "type": "chat:tags",
-                                    "data": tags,
-                                }
-                            )
-                        except Exception as e:
-                            pass
+                                pass
 
     event_emitter = None
     event_caller = None
@@ -2305,7 +2349,9 @@ async def process_chat_response(
                             )
 
                             if data:
-                                if "event" in data:
+                                if "event" in data and not getattr(
+                                    request.state, "direct", False
+                                ):
                                     await event_emitter(data.get("event", {}))
 
                                 if "selected_model_id" in data:
@@ -2622,8 +2668,6 @@ async def process_chat_response(
                     results = []
 
                     for tool_call in response_tool_calls:
-
-                        print("tool_call", tool_call)
                         tool_call_id = tool_call.get("id", "")
                         tool_function_name = tool_call.get("function", {}).get(
                             "name", ""
@@ -2754,9 +2798,9 @@ async def process_chat_response(
 
                     try:
                         new_form_data = {
+                            **form_data,
                             "model": model_id,
                             "stream": True,
-                            "tools": form_data["tools"],
                             "messages": [
                                 *form_data["messages"],
                                 *convert_content_blocks_to_messages(
@@ -2930,6 +2974,7 @@ async def process_chat_response(
 
                         try:
                             new_form_data = {
+                                **form_data,
                                 "model": model_id,
                                 "stream": True,
                                 "messages": [

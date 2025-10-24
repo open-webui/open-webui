@@ -68,12 +68,26 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 		});
 
 		if (Array.isArray(sourceIds)) {
-			sourceIds.forEach((sourceId, idx) => {
-				const regex = new RegExp(`\\[${idx + 1}\\]`, 'g');
-				segment = segment.replace(
-					regex,
-					`<source_id data="${idx + 1}" title="${encodeURIComponent(sourceId)}" />`
-				);
+			// Match both [1], [2], and [1,2,3] forms
+			const multiRefRegex = /\[([\d,\s]+)\]/g;
+			segment = segment.replace(multiRefRegex, (match, group) => {
+				// Extract numbers like 1,2,3
+				const indices = group
+					.split(',')
+					.map((n) => parseInt(n.trim(), 10))
+					.filter((n) => !isNaN(n));
+
+				// Replace each index with a <source_id> tag
+				const sources = indices
+					.map((idx) => {
+						const sourceId = sourceIds[idx - 1];
+						return sourceId
+							? `<source_id data="${idx}" title="${encodeURIComponent(sourceId)}" />`
+							: `[${idx}]`;
+					})
+					.join('');
+
+				return sources;
 			});
 		}
 
@@ -334,7 +348,8 @@ export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
 			context.drawImage(img, 0, 0, width, height);
 
 			// Get compressed image URL
-			const compressedUrl = canvas.toDataURL();
+            const mimeType = imageUrl.match(/^data:([^;]+);/)?.[1];
+			const compressedUrl = canvas.toDataURL(mimeType);
 			resolve(compressedUrl);
 		};
 		img.onerror = (error) => reject(error);
@@ -1579,20 +1594,34 @@ export const decodeString = (str: string) => {
 	}
 };
 
-export const renderMermaidDiagram = async (code: string) => {
-	try {
-		const { default: mermaid } = await import('mermaid');
-		mermaid.initialize({
-			startOnLoad: true,
-			theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
-			securityLevel: 'loose'
-		});
-		if (await mermaid.parse(code)) {
-			const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
-			return svg;
-		}
-	} catch (error) {
-		console.log('Failed to render mermaid diagram:', error);
-		return '';
+export const initMermaid = async () => {
+	const { default: mermaid } = await import('mermaid');
+	mermaid.initialize({
+		startOnLoad: false, // Should be false when using render API
+		theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
+		securityLevel: 'loose'
+	});
+	return mermaid;
+};
+
+export const renderMermaidDiagram = async (mermaid, code: string) => {
+	const parseResult = await mermaid.parse(code, { suppressErrors: false });
+	if (parseResult) {
+		const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
+		return svg;
 	}
+	return '';
+};
+
+export const renderVegaVisualization = async (spec: string, i18n?: any) => {
+	const vega = await import('vega');
+	const parsedSpec = JSON.parse(spec);
+	let vegaSpec = parsedSpec;
+	if (parsedSpec.$schema && parsedSpec.$schema.includes('vega-lite')) {
+		const vegaLite = await import('vega-lite');
+		vegaSpec = vegaLite.compile(parsedSpec).spec;
+	}
+	const view = new vega.View(vega.parse(vegaSpec), { renderer: 'none' });
+	const svg = await view.toSVG();
+	return svg;
 };
