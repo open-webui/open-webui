@@ -1800,7 +1800,13 @@ def process_web(
         )
 
 
-def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
+def search_web(
+    request: Request,
+    engine: str,
+    query: str,
+    user: Optional[object] = None,
+    chat_id: Optional[str] = None,
+) -> list[SearchResult]:
     """Search the web using a search engine and return the results as a list of SearchResult objects.
     Will look for a search engine API key in environment variables in the following order:
     - SEARXNG_QUERY_URL
@@ -2063,6 +2069,16 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
         )
+    elif engine == "litellm":
+        return search_litellm(
+            request.app.state.config.LITELLM_WEB_SEARCH_URL,
+            request.app.state.config.LITELLM_WEB_SEARCH_API_KEY,
+            query,
+            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            user=user,
+            chat_id=chat_id,
+        )
     else:
         raise Exception("No search engine API key found in environment variables")
 
@@ -2080,12 +2096,16 @@ async def process_web_search(
             f"trying to web search with {request.app.state.config.WEB_SEARCH_ENGINE, form_data.queries}"
         )
 
+        chat_id = request.headers.get("X-OpenWebUI-Chat-Id")
+
         search_tasks = [
             run_in_threadpool(
                 search_web,
                 request,
                 request.app.state.config.WEB_SEARCH_ENGINE,
                 query,
+                user,
+                chat_id,
             )
             for query in form_data.queries
         ]
