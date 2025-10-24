@@ -36,6 +36,3 @@ services:
       - DOCUMENT_INTELLIGENCE_ENDPOINT=${DOCUMENT_INTELLIGENCE_ENDPOINT}
       - DOCUMENT_INTELLIGENCE_KEY=${DOCUMENT_INTELLIGENCE_KEY}
     restart: unless-stopped
-
-#volumes:
-#  postgres_data:
