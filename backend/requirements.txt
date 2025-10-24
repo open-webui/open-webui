@@ -29,7 +29,7 @@ redis
 boto3==1.35.53
 
 argon2-cffi==23.1.0
-APScheduler==3.10.4
+APScheduler==3.11.0
 
 # AI libraries
 openai
