@@ -39,7 +39,8 @@
 		functions,
 		selectedFolder,
 		pinnedChats,
-		showEmbeds
+		showEmbeds,
+		knowledge
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
