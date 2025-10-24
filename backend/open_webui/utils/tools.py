@@ -544,7 +544,7 @@ async def get_tool_servers(request: Request):
     return tool_servers
 
 
-async def get_tool_server_data(token: str, url: str, config: Dict[str, str]) -> Dict[str, Any]:
+async def get_tool_server_data(token: str, url: str, config: Dict[str, Any]) -> Dict[str, Any]:
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
@@ -552,9 +552,9 @@ async def get_tool_server_data(token: str, url: str, config: Dict[str, str]) -> 
     if token:
         headers["Authorization"] = f"Bearer {token}"
 
-    if config.additional_headers:
-        for additional_header in config.additional_headers:
-            headers[additional_header.key] = additional_header.value
+    if config["additional_headers"]:
+        for additional_header in config["additional_headers"]:
+            headers[additional_header["key"]] = additional_header["value"]
 
     error = None
     try:

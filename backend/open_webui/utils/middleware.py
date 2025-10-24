@@ -1273,6 +1273,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             log.error(f"Error getting OAuth token: {e}")
                             oauth_token = None
 
+                    config = mcp_server_connection.get("config")
+                    if config["additional_headers"]:
+                        for additional_header in config["additional_headers"]:
+                            headers[additional_header["key"]] = additional_header["value"]
+                            
                     mcp_clients[server_id] = MCPClient()
                     await mcp_clients[server_id].connect(
                         url=mcp_server_connection.get("url", ""),

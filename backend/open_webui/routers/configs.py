@@ -264,6 +264,12 @@ async def verify_tool_servers_config(
                     if token:
                         headers = {"Authorization": f"Bearer {token}"}
 
+                    if form_data.config["additional_headers"]:
+                        if headers == None:
+                            headers = {}
+                        for additional_header in form_data.config["additional_headers"]:
+                            headers[additional_header["key"]] = additional_header["value"]
+
                     await client.connect(form_data.url, headers=headers)
                     specs = await client.list_tool_specs()
                     return {
