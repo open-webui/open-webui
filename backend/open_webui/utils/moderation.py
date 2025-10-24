@@ -4,7 +4,7 @@ import os
 from typing import Dict, List
 from openai import OpenAI
 
-# Moderation instructions mapping (updated from Viki's latest notebook)
+# Moderation instructions mapping
 MODERATION_INSTRUCTIONS = {
     "Refuse Response and Explain": "Decline to answer and give a simple, child-friendly reason.",
     "Remove Harmful Phrases": "Answer but avoid or replace harmful wording.",
@@ -146,7 +146,9 @@ async def multi_moderations_openai(
     
     # Call OpenAI API
     client = OpenAI(api_key=api_key)
+    print(f"🔍 [MODERATION] Calling OpenAI API with model: {model}")
     resp = client.chat.completions.create(model=model, messages=messages)
+    print(f"✅ [MODERATION] OpenAI API response received. Model used: {resp.model}")
     
     # Parse response
     raw = resp.choices[0].message.content or ""
@@ -221,6 +223,7 @@ async def generate_second_pass_prompt(
     }
     
     client = OpenAI(api_key=api_key)
+    print(f"🔍 [FOLLOWUP] Calling OpenAI API with model: {model}")
     resp = client.chat.completions.create(
         model=model,
         messages=[
@@ -228,6 +231,7 @@ async def generate_second_pass_prompt(
             {"role": "user", "content": json.dumps(user_payload, ensure_ascii=False)},
         ],
     )
+    print(f"✅ [FOLLOWUP] OpenAI API response received. Model used: {resp.model}")
     
     raw = resp.choices[0].message.content or ""
     data = json.loads(_strip_fences(raw))
