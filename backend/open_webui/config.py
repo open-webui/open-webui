@@ -584,13 +584,14 @@ OAUTH_ALLOWED_ROLES = PersistentConfig(
     [
         role.strip()
         for role in os.environ.get("OAUTH_ALLOWED_ROLES", f"user{SEP}admin").split(SEP)
+        if role
     ],
 )
 
 OAUTH_ADMIN_ROLES = PersistentConfig(
     "OAUTH_ADMIN_ROLES",
     "oauth.admin_roles",
-    [role.strip() for role in os.environ.get("OAUTH_ADMIN_ROLES", "admin").split(SEP)],
+    [role.strip() for role in os.environ.get("OAUTH_ADMIN_ROLES", "admin").split(SEP) if role],
 )
 
 OAUTH_ALLOWED_DOMAINS = PersistentConfig(
