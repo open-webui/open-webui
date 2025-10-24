@@ -54,7 +54,9 @@ from open_webui.utils.filter import (
     get_sorted_filter_ids,
     process_filter_functions,
 )
-
+from open_webui.config import (
+    DEFAULT_SYSTEM_PROMPT_CALLING,
+)
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL
 
 
@@ -207,6 +209,17 @@ async def generate_chat_completion(
             except Exception as e:
                 raise e
 
+    if "call" in form_data.get("metadata", {}):
+        if request.app.state.config.SYSTEM_PROMPT_CALLING_TEMPLATE != "":
+            template = request.app.state.config.SYSTEM_PROMPT_CALLING_TEMPLATE
+        else:
+            template = DEFAULT_SYSTEM_PROMPT_CALLING
+
+        form_data["messages"] = add_or_update_system_message(
+            template,
+            form_data["messages"],
+        )
+        
         if model.get("owned_by") == "arena":
             model_ids = model.get("info", {}).get("meta", {}).get("model_ids")
             filter_mode = model.get("info", {}).get("meta", {}).get("filter_mode")
