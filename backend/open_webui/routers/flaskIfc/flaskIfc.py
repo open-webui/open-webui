@@ -492,7 +492,7 @@ def receive_upload_model():
         )
 
     print("Listing out existing files")
-    send_serial_command(port, baudrate, f"cd {destn_path}; ls -lt", timeout=300)
+    send_serial_command(f"cd {destn_path}; ls -lt", timeout=300)
 
     print("Doing checksum of the upload file")
     target_check_sum = send_serial_command(
