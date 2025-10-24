@@ -204,8 +204,6 @@
 		}
 	};
 
-	import { getPromptByCommand } from '$lib/apis/prompts';
-
 	const processPromptCommands = async (text: string): Promise<string> => {
 		const commandRegex = /(^|\s)(\/[a-z0-9_-]+)/gi;
 		
@@ -238,7 +236,7 @@
 	
 	const onSelect = async (e) => {
 		const { type, data } = e;
-	
+
 		if (type === 'prompt') {
 			// Process any /commands in the prompt content
 			const processedContent = await processPromptCommands(data);
