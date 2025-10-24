@@ -1076,13 +1076,29 @@ ENABLE_BASE_MODELS_CACHE = PersistentConfig(
 # TOOL_SERVERS
 ####################################
 
+tool_server_connections = []
+
 try:
-    tool_server_connections = json.loads(
+    tool_server_connections = tool_server_connections + json.loads(
         os.environ.get("TOOL_SERVER_CONNECTIONS", "[]")
     )
 except Exception as e:
     log.exception(f"Error loading TOOL_SERVER_CONNECTIONS: {e}")
-    tool_server_connections = []
+
+
+tool_server_connections_file_path = os.environ.get("TOOL_SERVER_CONNECTIONS_FILE", None)
+if tool_server_connections_file_path:
+    try:
+        with open(tool_server_connections_file_path, "r", encoding="utf-8") as f:
+            loaded = json.load(f)
+        if isinstance(loaded, list):
+            tool_server_connections = tool_server_connections + loaded
+        else: 
+            log.exception(
+                f"Error loading TOOL_SERVER_CONNECTIONS_FILE: '{tool_server_connections_file_path}' does not contain a list"
+            )
+    except Exception as e:
+        log.exception(f"Error loading TOOL_SERVER_CONNECTIONS_FILE: {e}")
 
 
 TOOL_SERVER_CONNECTIONS = PersistentConfig(
