@@ -41,7 +41,8 @@
 		ENABLE_SEARCH_QUERY_GENERATION: true,
 		ENABLE_RETRIEVAL_QUERY_GENERATION: true,
 		QUERY_GENERATION_PROMPT_TEMPLATE: '',
-		TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: ''
+		TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: '',
+		SYSTEM_PROMPT_CALLING_TEMPLATE: ''
 	};
 
 	let promptSuggestions = [];
@@ -314,6 +315,22 @@
 					>
 						<Textarea
 							bind:value={taskConfig.QUERY_GENERATION_PROMPT_TEMPLATE}
+							placeholder={$i18n.t(
+								'Leave empty to use the default prompt, or enter a custom prompt'
+							)}
+						/>
+					</Tooltip>
+				</div>
+
+				<div class="mb-2.5">
+					<div class=" mb-1 text-xs font-medium">{$i18n.t('Calling System Prompt')}</div>
+
+					<Tooltip
+						content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+						placement="top-start"
+					>
+						<Textarea
+							bind:value={taskConfig.SYSTEM_PROMPT_CALLING_TEMPLATE}
 							placeholder={$i18n.t(
 								'Leave empty to use the default prompt, or enter a custom prompt'
 							)}
