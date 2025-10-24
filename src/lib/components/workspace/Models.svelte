@@ -494,34 +494,34 @@
 																		<GarbageBin />
 																	</button>
 																</Tooltip>
-                                                            {:else}
-                                                                <ModelMenu
-                                                                    user={$user}
-                                                                    {model}
-                                                                    shareHandler={() => {
-                                                                        shareModelHandler(model);
-                                                                    }}
-                                                                    cloneHandler={() => {
-                                                                        cloneModelHandler(model);
-                                                                    }}
-                                                                    exportHandler={() => {
-                                                                        exportModelHandler(model);
-                                                                    }}
-                                                                    hideHandler={() => {
-                                                                        hideModelHandler(model);
-                                                                    }}
-                                                                    copyLinkHandler={() => {
-                                                                        copyLinkHandler(model);
-                                                                    }}
-                                                                    editHandler={() => {
-                                                                        goto(`/workspace/models/edit?id=${encodeURIComponent(model.id)}`);
-                                                                    }}
-                                                                    deleteHandler={() => {
-                                                                        selectedModel = model;
-                                                                        showModelDeleteConfirm = true;
-                                                                    }}
-                                                                    onClose={() => {}}
-                                                                >
+															{:else}
+																<ModelMenu
+																	user={$user}
+																	{model}
+																	shareHandler={() => {
+																		shareModelHandler(model);
+																	}}
+																	cloneHandler={() => {
+																		cloneModelHandler(model);
+																	}}
+																	exportHandler={() => {
+																		exportModelHandler(model);
+																	}}
+																	hideHandler={() => {
+																		hideModelHandler(model);
+																	}}
+																	copyLinkHandler={() => {
+																		copyLinkHandler(model);
+																	}}
+																	editHandler={() => {
+																		goto(`/workspace/models/edit?id=${encodeURIComponent(model.id)}`);
+																	}}
+																	deleteHandler={() => {
+																		selectedModel = model;
+																		showModelDeleteConfirm = true;
+																	}}
+																	onClose={() => {}}
+																>
 																	<div
 																		class="self-center w-fit p-1 text-sm dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 																	>
