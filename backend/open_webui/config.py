@@ -3063,6 +3063,18 @@ EXTERNAL_WEB_LOADER_API_KEY = PersistentConfig(
     os.environ.get("EXTERNAL_WEB_LOADER_API_KEY", ""),
 )
 
+LITELLM_WEB_SEARCH_URL = PersistentConfig(
+    "LITELLM_WEB_SEARCH_URL",
+    "rag.web.search.litellm_web_search_url",
+    os.environ.get("LITELLM_WEB_SEARCH_URL", ""),
+)
+
+LITELLM_WEB_SEARCH_API_KEY = PersistentConfig(
+    "LITELLM_WEB_SEARCH_API_KEY",
+    "rag.web.search.litellm_web_search_api_key",
+    os.environ.get("LITELLM_WEB_SEARCH_API_KEY", ""),
+)
+
 ####################################
 # Images
 ####################################
