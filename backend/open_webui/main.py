@@ -503,6 +503,8 @@ from open_webui.utils.redis import get_sentinels_from_env
 
 from open_webui.constants import ERROR_MESSAGES
 
+from open_webui.tool_servers.watcher import start_tool_server_connections_file_watcher, stop_tool_server_connections_file_watcher
+
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
@@ -549,6 +551,7 @@ https://github.com/open-webui/open-webui
 async def lifespan(app: FastAPI):
     app.state.instance_id = INSTANCE_ID
     start_logger()
+    start_tool_server_connections_file_watcher(app, TOOL_SERVER_CONNECTIONS)
 
     if RESET_CONFIG_ON_START:
         reset_config()
@@ -603,6 +606,7 @@ async def lifespan(app: FastAPI):
         )
 
     yield
+    stop_tool_server_connections_file_watcher(app)
 
     if hasattr(app.state, "redis_task_command_listener"):
         app.state.redis_task_command_listener.cancel()
