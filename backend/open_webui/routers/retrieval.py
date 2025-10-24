@@ -3257,11 +3257,11 @@ async def cleanup_expired_chats(
         # Clean up associated files and vector collections
         log.info(f"Cleaning up {len(file_ids_to_cleanup)} associated files...")
 
+        # Get all file references once before the loop to avoid repeated scanning
+        all_file_refs = get_all_file_references_from_chats()
+
         for file_id in file_ids_to_cleanup:
             try:
-                # Check if file is still referenced by other chats
-                all_file_refs = get_all_file_references_from_chats()
-
                 # Only delete if this file is not referenced by any remaining chats
                 if file_id not in all_file_refs:
                     # Get file info
