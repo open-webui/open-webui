@@ -576,19 +576,21 @@ OAUTH_ROLES_CLAIM = PersistentConfig(
     os.environ.get("OAUTH_ROLES_CLAIM", "roles"),
 )
 
+SEP = os.environ.get("OAUTH_ROLES_SEPARATOR", ",")
+
 OAUTH_ALLOWED_ROLES = PersistentConfig(
     "OAUTH_ALLOWED_ROLES",
     "oauth.allowed_roles",
     [
         role.strip()
-        for role in os.environ.get("OAUTH_ALLOWED_ROLES", "user,admin").split(",")
+        for role in os.environ.get("OAUTH_ALLOWED_ROLES", f"user{SEP}admin").split(SEP)
     ],
 )
 
 OAUTH_ADMIN_ROLES = PersistentConfig(
     "OAUTH_ADMIN_ROLES",
     "oauth.admin_roles",
-    [role.strip() for role in os.environ.get("OAUTH_ADMIN_ROLES", "admin").split(",")],
+    [role.strip() for role in os.environ.get("OAUTH_ADMIN_ROLES", "admin").split(SEP)],
 )
 
 OAUTH_ALLOWED_DOMAINS = PersistentConfig(
