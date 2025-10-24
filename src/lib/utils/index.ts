@@ -348,7 +348,8 @@ export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
 			context.drawImage(img, 0, 0, width, height);
 
 			// Get compressed image URL
-			const compressedUrl = canvas.toDataURL();
+            const mimeType = imageUrl.match(/^data:([^;]+);/)?.[1];
+			const compressedUrl = canvas.toDataURL(mimeType);
 			resolve(compressedUrl);
 		};
 		img.onerror = (error) => reject(error);
@@ -1593,13 +1594,17 @@ export const decodeString = (str: string) => {
 	}
 };
 
-export const renderMermaidDiagram = async (code: string) => {
+export const initMermaid = async () => {
 	const { default: mermaid } = await import('mermaid');
 	mermaid.initialize({
 		startOnLoad: false, // Should be false when using render API
 		theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
 		securityLevel: 'loose'
 	});
+	return mermaid;
+};
+
+export const renderMermaidDiagram = async (mermaid, code: string) => {
 	const parseResult = await mermaid.parse(code, { suppressErrors: false });
 	if (parseResult) {
 		const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);

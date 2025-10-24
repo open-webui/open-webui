@@ -2354,7 +2354,9 @@ async def process_chat_response(
                             )
 
                             if data:
-                                if "event" in data:
+                                if "event" in data and not getattr(
+                                    request.state, "direct", False
+                                ):
                                     await event_emitter(data.get("event", {}))
 
                                 if "selected_model_id" in data:
