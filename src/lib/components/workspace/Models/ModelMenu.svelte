@@ -26,7 +26,8 @@
 	export let cloneHandler: Function;
 	export let exportHandler: Function;
 	export let copyLinkHandler: Function;
-
+	export let editHandler: Function;
+	
 	export let hideHandler: Function;
 	export let deleteHandler: Function;
 	export let onClose: Function;
@@ -113,16 +114,27 @@
 				</div>
 			</DropdownMenu.Item>
 
-			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
-				on:click={() => {
-					copyLinkHandler();
-				}}
-			>
-				<Link />
+            <DropdownMenu.Item
+                class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+                on:click={() => {
+                    copyLinkHandler();
+                }}
+            >
+                <Link />
 
-				<div class="flex items-center">{$i18n.t('Copy Link')}</div>
-			</DropdownMenu.Item>
+                <div class="flex items-center">{$i18n.t('Copy Link')}</div>
+            </DropdownMenu.Item>
+
+            <DropdownMenu.Item
+                class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+                on:click={() => {
+                    editHandler();
+                }}
+            >
+                <Pencil />
+
+                <div class="flex items-center">{$i18n.t('Edit')}</div>
+            </DropdownMenu.Item>
 
 			{#if $config?.features.enable_community_sharing}
 				<DropdownMenu.Item
