@@ -50,7 +50,7 @@
 
 	let largeTextAsFile = false;
 
-	let insertSuggestionPrompt = false;
+	let insertSuggestionPrompt = true;
 	let keepFollowUpPrompts = false;
 	let insertFollowUpPrompt = false;
 
@@ -204,7 +204,7 @@
 		insertPromptAsRichText = $settings?.insertPromptAsRichText ?? false;
 		promptAutocomplete = $settings?.promptAutocomplete ?? false;
 
-		insertSuggestionPrompt = $settings?.insertSuggestionPrompt ?? false;
+		insertSuggestionPrompt = $settings?.insertSuggestionPrompt ?? true;
 		keepFollowUpPrompts = $settings?.keepFollowUpPrompts ?? false;
 		insertFollowUpPrompt = $settings?.insertFollowUpPrompt ?? false;
 
