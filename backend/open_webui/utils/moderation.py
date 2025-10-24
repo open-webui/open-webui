@@ -37,6 +37,7 @@ async def multi_moderations_openai(
     model: str = "gpt-5-2025-08-07",
     max_chars: int = 600,
     custom_instructions: List[str] = None,
+    child_age: str = None,
 ) -> Dict:
     """
     Apply moderation strategies to either:
@@ -54,6 +55,7 @@ async def multi_moderations_openai(
         model: OpenAI model to use
         max_chars: Maximum combined length of response + rule
         custom_instructions: List of custom instruction texts (optional)
+        child_age: Child's age for age-appropriate tailoring (optional)
     
     Returns:
         Dict with moderation_types, refactored_response, system_prompt_rule, model, child_prompt,
@@ -88,7 +90,11 @@ async def multi_moderations_openai(
     
     # Add standard moderation instructions
     for m in cleaned:
-        instruction_parts.append(f"{idx}. {MODERATION_INSTRUCTIONS[m]}")
+        # Customize "Tailor to Age Group" instruction if child_age is provided
+        if m == "Tailor to Age Group" and child_age:
+            instruction_parts.append(f"{idx}. Tailor language and complexity for a {child_age} child.")
+        else:
+            instruction_parts.append(f"{idx}. {MODERATION_INSTRUCTIONS[m]}")
         idx += 1
     
     # Add custom instructions

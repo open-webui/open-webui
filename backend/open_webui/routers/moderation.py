@@ -19,6 +19,7 @@ class ModerationRequest(BaseModel):
     custom_instructions: List[str] = []  # Optional custom instruction texts
     original_response: Optional[str] = None  # For refactoring mode
     highlighted_texts: List[str] = []  # Phrases parent flagged
+    child_age: Optional[str] = None  # Child's age for age-appropriate tailoring
 
 
 class FollowUpPromptRequest(BaseModel):
@@ -65,6 +66,7 @@ async def apply_moderation(
             model=form_data.model,
             max_chars=form_data.max_chars,
             custom_instructions=form_data.custom_instructions,
+            child_age=form_data.child_age,
         )
         
         mode = "refactoring" if form_data.original_response else "generation"
