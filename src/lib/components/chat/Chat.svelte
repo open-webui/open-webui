@@ -61,6 +61,7 @@
 		updateChatById,
 		updateChatFolderIdById
 	} from '$lib/apis/chats';
+	import { getPromptByCommand } from '$lib/apis/prompts';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
 	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
@@ -203,12 +204,47 @@
 		}
 	};
 
+	import { getPromptByCommand } from '$lib/apis/prompts';
+
+	const processPromptCommands = async (text: string): Promise<string> => {
+		const commandRegex = /(^|\s)(\/[a-z0-9_-]+)/gi;
+		
+		const matches = [...text.matchAll(commandRegex)];
+		
+		if (matches.length === 0) {
+			return text;
+		}
+		
+		let processedText = text;
+		
+		// Process each command match
+		for (const match of matches) {
+			const fullMatch = match[0];
+			const commandWithSlash = match[2];
+			const commandName = commandWithSlash.slice(1).toLowerCase();
+			
+			try {
+				const promptCommand = await getPromptByCommand(localStorage.token, commandName);
+				if (promptCommand && promptCommand.content) {
+					processedText = processedText.replace(fullMatch, match[1] + promptCommand.content);
+				}
+			} catch (error) {
+				console.log(`Command ${commandWithSlash} not found or error fetching:`, error);
+			}
+		}
+		
+		return processedText;
+	};
+	
 	const onSelect = async (e) => {
 		const { type, data } = e;
-
+	
 		if (type === 'prompt') {
+			// Process any /commands in the prompt content
+			const processedContent = await processPromptCommands(data);
+			
 			// Handle prompt selection
-			messageInput?.setText(data, async () => {
+			messageInput?.setText(processedContent, async () => {
 				if (!($settings?.insertSuggestionPrompt ?? false)) {
 					await tick();
 					submitPrompt(prompt);
