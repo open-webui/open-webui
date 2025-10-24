@@ -42,6 +42,7 @@
 
 	export let onShowValves: Function;
 	export let onClose: Function;
+	export let closeOnOutsideClick = true;
 
 	let show = false;
 	let tab = '';
@@ -93,6 +94,7 @@
 
 <Dropdown
 	bind:show
+	{closeOnOutsideClick}
 	on:change={(e) => {
 		if (e.detail === false) {
 			onClose();

@@ -207,6 +207,15 @@
 			return;
 		}
 
+		if (
+			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mineru' &&
+			RAGConfig.MINERU_API_MODE === 'cloud' &&
+			RAGConfig.MINERU_API_KEY === ''
+		) {
+			toast.error($i18n.t('MinerU API Key required for Cloud API mode.'));
+			return;
+		}
+
 		if (!RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL) {
 			await embeddingModelUpdateHandler();
 		}
@@ -337,6 +346,7 @@
 									<option value="datalab_marker">{$i18n.t('Datalab Marker API')}</option>
 									<option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
 									<option value="mistral_ocr">{$i18n.t('Mistral OCR')}</option>
+									<option value="mineru">{$i18n.t('MinerU')}</option>
 								</select>
 							</div>
 						</div>
@@ -749,6 +759,92 @@
 									bind:value={RAGConfig.MISTRAL_OCR_API_KEY}
 								/>
 							</div>
+						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mineru'}
+							<!-- API Mode Selection -->
+							<div class="flex w-full mt-2">
+								<div class="flex-1 flex justify-between">
+									<div class="self-center text-xs font-medium">
+										{$i18n.t('API Mode')}
+									</div>
+									<select
+										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden"
+										bind:value={RAGConfig.MINERU_API_MODE}
+										on:change={() => {
+											// Auto-update URL when switching modes if it's empty or matches the opposite mode's default
+											const cloudUrl = 'https://mineru.net/api/v4';
+											const localUrl = 'http://localhost:8000';
+
+											if (RAGConfig.MINERU_API_MODE === 'cloud') {
+												if (!RAGConfig.MINERU_API_URL || RAGConfig.MINERU_API_URL === localUrl) {
+													RAGConfig.MINERU_API_URL = cloudUrl;
+												}
+											} else {
+												if (!RAGConfig.MINERU_API_URL || RAGConfig.MINERU_API_URL === cloudUrl) {
+													RAGConfig.MINERU_API_URL = localUrl;
+												}
+											}
+										}}
+									>
+										<option value="local">{$i18n.t('Self-Hosted')}</option>
+										<option value="cloud">{$i18n.t('minerU managed (Cloud API)')}</option>
+									</select>
+								</div>
+							</div>
+
+							<!-- API URL -->
+							<div class="flex w-full mt-2">
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={RAGConfig.MINERU_API_MODE === 'cloud'
+										? $i18n.t('https://mineru.net/api/v4')
+										: $i18n.t('http://localhost:8000')}
+									bind:value={RAGConfig.MINERU_API_URL}
+								/>
+							</div>
+
+							<!-- API Key (Cloud only) -->
+							{#if RAGConfig.MINERU_API_MODE === 'cloud'}
+								<div class="flex w-full mt-2">
+									<SensitiveInput
+										placeholder={$i18n.t('Enter MinerU API Key')}
+										bind:value={RAGConfig.MINERU_API_KEY}
+									/>
+								</div>
+							{/if}
+
+							<!-- Parameters -->
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">
+									<Tooltip
+										content={$i18n.t(
+											'Advanced parameters for MinerU parsing (enable_ocr, enable_formula, enable_table, language, model_version, page_ranges)'
+										)}
+										placement="top-start"
+									>
+										{$i18n.t('Parameters')}
+									</Tooltip>
+								</div>
+								<div class="">
+									<Textarea
+										value={typeof RAGConfig.MINERU_PARAMS === 'object' &&
+										RAGConfig.MINERU_PARAMS !== null &&
+										Object.keys(RAGConfig.MINERU_PARAMS).length > 0
+											? JSON.stringify(RAGConfig.MINERU_PARAMS, null, 2)
+											: ''}
+										on:input={(e) => {
+											try {
+												const value = e.target.value.trim();
+												RAGConfig.MINERU_PARAMS = value ? JSON.parse(value) : {};
+											} catch (err) {
+												// Keep the string value if JSON is invalid (user is still typing)
+												RAGConfig.MINERU_PARAMS = e.target.value;
+											}
+										}}
+										placeholder={`{\n  "enable_ocr": false,\n  "enable_formula": true,\n  "enable_table": true,\n  "language": "en",\n  "model_version": "pipeline",\n  "page_ranges": ""\n}`}
+										minSize={100}
+									/>
+								</div>
+							</div>
 						{/if}
 					</div>
 
@@ -978,7 +1074,7 @@
 
 							<div class="mt-1 mb-1 text-xs text-gray-400 dark:text-gray-500">
 								{$i18n.t(
-									'Warning: If you update or change your embedding model, you will need to re-import all documents.'
+									'After updating or changing the embedding model, you must reindex the knowledge base for the changes to take effect. You can do this using the "Reindex" button below.'
 								)}
 							</div>
 						</div>

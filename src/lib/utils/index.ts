@@ -83,7 +83,7 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 						const sourceId = sourceIds[idx - 1];
 						return sourceId
 							? `<source_id data="${idx}" title="${encodeURIComponent(sourceId)}" />`
-							: match;
+							: `[${idx}]`;
 					})
 					.join('');
 

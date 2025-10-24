@@ -56,6 +56,18 @@
 	let enable = true;
 	let loading = false;
 
+    let additionalHeaders: { key: string; value: string }[] = [];
+
+	const addAdditionalHeader = () => {
+		additionalHeaders = [...additionalHeaders, { key: '', value: '' }];
+
+		console.log(additionalHeaders);
+	}
+	const removeAdditionalHeader = (idx) => {
+		additionalHeaders.splice(idx, 1);
+		additionalHeaders = [...additionalHeaders];
+	}
+
 	const registerOAuthClientHandler = async () => {
 		if (url === '') {
 			toast.error($i18n.t('Please enter a valid URL'));
@@ -131,7 +143,8 @@
 				key,
 				config: {
 					enable: enable,
-					access_control: accessControl
+					access_control: accessControl,
+                    additional_headers: additionalHeaders
 				},
 				info: {
 					id,
@@ -268,7 +281,8 @@
 			key,
 			config: {
 				enable: enable,
-				access_control: accessControl
+				access_control: accessControl,
+                additional_headers: additionalHeaders
 			},
 			info: {
 				id: id,
@@ -301,6 +315,8 @@
 
 		enable = true;
 		accessControl = null;
+
+        additionalHeaders = [];
 	};
 
 	const init = () => {
@@ -322,6 +338,8 @@
 
 			enable = connection.config?.enable ?? true;
 			accessControl = connection.config?.access_control ?? null;
+
+            additionalHeaders = connection.config?.additional_headers ?? [];
 		}
 	};
 
@@ -656,6 +674,63 @@
 							</div>
 						</div>
 
+                        <div class="flex gap-2 mt-2">
+							<div class="flex flex-col w-full">
+								<label
+									for="select-bearer-or-session"
+									class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+									>{$i18n.t('Custom Headers')}</label
+								>
+
+								<div class="flex flex-col gap-2">
+									{#each additionalHeaders as additionalHeader, i (i)}
+										<div class="flex w-full flex-row" key="{i}">
+											<div class="flex flex-1">
+												<input
+													id="additional-header-{i}-key"
+													class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+													type="text"
+													bind:value={additionalHeader.key}
+													placeholder={$i18n.t('Key')}
+													autocomplete="off"
+													required
+												/>
+											</div>
+											<div class="flex flex-1">
+												<input
+													id="additional-header-{i}-value"
+													class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+													type="text"
+													bind:value={additionalHeader.value}
+													placeholder={$i18n.t('Value')}
+													autocomplete="off"
+													required
+												/>
+											</div>
+											<div class="flex flex-none">
+												<button class="px-1" type="button"
+													on:click={() => removeAdditionalHeader(i)}
+												>
+													<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"></path></svg>
+												</button>
+											</div>
+										</div>
+									{/each}
+									<div class="flex w-full">
+										<button
+											class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+											on:click={addAdditionalHeader}
+										>
+											<div class="self-center">
+												<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"></path></svg>
+											</div>
+											<div class="self-center font-medium line-clamp-1">Add Header</div>
+										</button>
+									</div>
+								</div>
+							</div>
+						</div>
+                        
 						{#if !direct}
 							<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 

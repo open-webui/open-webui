@@ -717,7 +717,7 @@ class Oracle23aiClient(VectorDBBase):
         )
 
         try:
-            limit = limit or 1000
+            limit = 1000  # Hardcoded limit for get operation
 
             with self.get_connection() as connection:
                 with connection.cursor() as cursor:
