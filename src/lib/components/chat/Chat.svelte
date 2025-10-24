@@ -62,6 +62,7 @@
 		updateChatFolderIdById
 	} from '$lib/apis/chats';
 	import { getPromptByCommand } from '$lib/apis/prompts';
+	import { getKnowledgeBases } from '$lib/apis/knowledge';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
 	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
@@ -204,23 +205,72 @@
 		}
 	};
 
+	const normalizeKnowledgeName = (name: string): string => {
+		// Remove spaces and hyphens, convert to lowercase
+		return name.toLowerCase().replace(/[\s-]/g, '');
+	};
+
+	const processKnowledgeReferences = async (text: string): Promise<{ text: string, knowledgeBases: any[] }> => {
+		const knowledgeRegex = /(^|\s)(#[a-z0-9_-]+)/gi;
+		const matches = [...text.matchAll(knowledgeRegex)];
+
+		if (matches.length === 0) {
+			return { text, knowledgeBases: [] };
+		}
+
+		if (!$knowledge) {
+			await knowledge.set(await getKnowledgeBases(localStorage.token));
+		}
+
+		let processedText = text;
+		const foundKnowledgeBases = [];
+		const addedKnowledgeIds = new Set();
+
+		for (const match of matches) {
+			const fullMatch = match[0]; // Includes whitespace if present
+			const knowledgeRef = match[2]; // The #knowledge part
+			const normalizedRef = normalizeKnowledgeName(knowledgeRef.slice(1)); // Remove # and normalize
+
+			try {
+				const matchingKnowledge = ($knowledge ?? []).find(kb => 
+					normalizeKnowledgeName(kb.name) === normalizedRef
+				);
+
+				if (matchingKnowledge && !addedKnowledgeIds.has(matchingKnowledge.id)) {
+					foundKnowledgeBases.push({
+						type: 'collection',
+						...matchingKnowledge,
+						status: 'processed'
+					});
+					addedKnowledgeIds.add(matchingKnowledge.id);
+
+					processedText = processedText.replace(fullMatch, match[1]);
+				}
+			} catch (error) {
+				console.log(`Knowledge ${knowledgeRef} not found or error fetching:`, error);
+			}
+		}
+
+		return { text: processedText.trim(), knowledgeBases: foundKnowledgeBases };
+	};
+
 	const processPromptCommands = async (text: string): Promise<string> => {
+		// Regex to match /command at word boundaries (start of string or after whitespace)
 		const commandRegex = /(^|\s)(\/[a-z0-9_-]+)/gi;
-		
+
 		const matches = [...text.matchAll(commandRegex)];
-		
+
 		if (matches.length === 0) {
 			return text;
 		}
-		
+
 		let processedText = text;
-		
-		// Process each command match
+
 		for (const match of matches) {
-			const fullMatch = match[0];
-			const commandWithSlash = match[2];
-			const commandName = commandWithSlash.slice(1).toLowerCase();
-			
+			const fullMatch = match[0]; // Includes whitespace if present
+			const commandWithSlash = match[2]; // The /command part
+			const commandName = commandWithSlash.slice(1).toLowerCase(); // Remove / and lowercase
+
 			try {
 				const promptCommand = await getPromptByCommand(localStorage.token, commandName);
 				if (promptCommand && promptCommand.content) {
@@ -230,18 +280,28 @@
 				console.log(`Command ${commandWithSlash} not found or error fetching:`, error);
 			}
 		}
-		
+
 		return processedText;
 	};
-	
+
 	const onSelect = async (e) => {
 		const { type, data } = e;
 
 		if (type === 'prompt') {
-			// Process any /commands in the prompt content
-			const processedContent = await processPromptCommands(data);
-			
-			// Handle prompt selection
+			const { text: textAfterKnowledge, knowledgeBases } = await processKnowledgeReferences(data);
+			const processedContent = await processPromptCommands(textAfterKnowledge);
+
+			// Add knowledge bases to files
+			if (knowledgeBases.length > 0) {
+				const existingKnowledgeIds = new Set(
+					files.filter(f => f.type === 'collection').map(f => f.id)
+				);
+				const newKnowledgeBases = knowledgeBases.filter(
+					kb => !existingKnowledgeIds.has(kb.id)
+				);
+				files = [...files, ...newKnowledgeBases];
+			}
+
 			messageInput?.setText(processedContent, async () => {
 				if (!($settings?.insertSuggestionPrompt ?? false)) {
 					await tick();
