@@ -92,7 +92,7 @@ async def multi_moderations_openai(
     for m in cleaned:
         # Customize "Tailor to Age Group" instruction if child_age is provided
         if m == "Tailor to Age Group" and child_age:
-            instruction_parts.append(f"{idx}. Tailor language and complexity for a {child_age} child.")
+            instruction_parts.append(f"{idx}. Tailor language and complexity for a {child_age} child. Explain terms and concepts they might not understand.")
         else:
             instruction_parts.append(f"{idx}. {MODERATION_INSTRUCTIONS[m]}")
         idx += 1
