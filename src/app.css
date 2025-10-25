@@ -152,6 +152,15 @@ select {
 	-webkit-appearance: none;
 }
 
+.dark select {  
+    background-color: rgb(23, 23, 23); /* gray-900 */  
+    color: rgb(209, 213, 219); /* gray-300 */  
+}  
+  
+.dark select option {  
+    background-color: rgb(38, 38, 38); /* gray-850 */  
+    color: rgb(255, 255, 255);  
+}
 @keyframes shimmer {
 	0% {
 		background-position: 200% 0;
