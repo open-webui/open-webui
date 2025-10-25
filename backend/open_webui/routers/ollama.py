@@ -1338,7 +1338,9 @@ async def generate_chat_completion(
             system = params.pop("system", None)
 
             payload = apply_model_params_to_body_ollama(params, payload)
-            payload = apply_system_prompt_to_body(system, payload, metadata, user)
+            payload = apply_system_prompt_to_body(
+                system, payload, metadata, user, model={"user_id": model_info.user_id}
+            )
 
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
@@ -1527,7 +1529,9 @@ async def generate_openai_chat_completion(
             system = params.pop("system", None)
 
             payload = apply_model_params_to_body_openai(params, payload)
-            payload = apply_system_prompt_to_body(system, payload, metadata, user)
+            payload = apply_system_prompt_to_body(
+                system, payload, metadata, user, model={"user_id": model_info.user_id}
+            )
 
         # Check if user has access to the model
         if user.role == "user":

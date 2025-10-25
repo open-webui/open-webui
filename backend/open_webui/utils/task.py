@@ -38,8 +38,16 @@ def prompt_variables_template(template: str, variables: dict[str, str]) -> str:
     return template
 
 
-def prompt_template(template: str, user: Optional[Any] = None) -> str:
+def _get_user_variables(user: Optional[Any] = None) -> dict:
+    """
+    Extract user variables for template substitution.
 
+    Args:
+        user: User object or dict
+
+    Returns:
+        Dict of user variables
+    """
     USER_VARIABLES = {}
 
     if user:
@@ -66,7 +74,7 @@ def prompt_template(template: str, user: Optional[Any] = None) -> str:
                             < (birth_date.month, birth_date.day)
                         )
                     )
-                except Exception as e:
+                except Exception:
                     pass
 
             USER_VARIABLES = {
@@ -77,6 +85,23 @@ def prompt_template(template: str, user: Optional[Any] = None) -> str:
                 "birth_date": str(birth_date),
                 "age": str(age),
             }
+
+    return USER_VARIABLES
+
+
+def _resolve_basic_variables(template: str, user: Optional[Any] = None) -> str:
+    """
+    Resolve basic template variables (dates, user info) but NOT nested prompts.
+    This is used internally when resolving prompt content to avoid circular dependencies.
+
+    Args:
+        template: The template string to resolve
+        user: User object for resolving user-specific variables
+
+    Returns:
+        Template with basic variables resolved
+    """
+    USER_VARIABLES = _get_user_variables(user)
 
     # Get the current date
     current_date = datetime.now()
@@ -107,6 +132,86 @@ def prompt_template(template: str, user: Optional[Any] = None) -> str:
     template = template.replace(
         "{{USER_LOCATION}}", USER_VARIABLES.get("location", "Unknown")
     )
+
+    return template
+
+
+def replace_prompts_variable(
+    template: str,
+    prompts: Optional[list[dict]] = None,
+    current_prompt_command: Optional[str] = None,
+    user: Optional[Any] = None,
+) -> str:
+    """
+    Replace {{PROMPTS.prompt_name}} variables with prompt content.
+    The prompt content itself is resolved for variables (like {{CURRENT_DATETIME}}, {{USER_NAME}}, etc.)
+    before being inserted.
+
+    Args:
+        template: The template string containing prompt variables
+        prompts: List of prompt objects with 'command' and 'content' fields
+        current_prompt_command: The command of the current prompt being processed (to prevent self-injection)
+        user: User object for resolving user-specific variables in prompt content
+
+    Returns:
+        Template with prompt variables replaced
+    """
+    if not prompts:
+        return template
+
+    # Build a mapping of prompt names to their content
+    prompt_map = {}
+    for prompt in prompts:
+        # Remove leading '/' from command if present
+        command = prompt.get("command", "").lstrip("/")
+        content = prompt.get("content", "")
+        if command:
+            prompt_map[command] = content
+
+    # Pattern to match {{PROMPTS.prompt_name}}
+    pattern = r"{{PROMPTS\.([a-zA-Z0-9-_]+)}}"
+
+    def replacement_function(match):
+        prompt_name = match.group(1)
+
+        # Prevent self-injection (infinite recursion)
+        if current_prompt_command:
+            current_name = current_prompt_command.lstrip("/")
+            if prompt_name == current_name:
+                log.warning(
+                    f"Prevented self-injection: prompt '{prompt_name}' tried to include itself"
+                )
+                return f"{{{{PROMPTS.{prompt_name}}}}}"  # Return unchanged
+
+        # Get the prompt content
+        content = prompt_map.get(prompt_name)
+        if content is not None:
+            # Resolve variables within the prompt content itself
+            # This handles {{CURRENT_DATETIME}}, {{USER_NAME}}, etc. but NOT nested {{PROMPTS.*}}
+            # to avoid complexity and potential circular references
+            resolved_content = _resolve_basic_variables(content, user)
+            return resolved_content
+        else:
+            # If prompt not found, leave the variable unchanged
+            log.debug(f"Prompt variable not found: {{{{PROMPTS.{prompt_name}}}}}")
+            return match.group(0)
+
+    template = re.sub(pattern, replacement_function, template)
+    return template
+
+
+def prompt_template(
+    template: str,
+    user: Optional[Any] = None,
+    prompts: Optional[list[dict]] = None,
+    current_prompt_command: Optional[str] = None,
+) -> str:
+    # Resolve basic variables (dates, user info)
+    template = _resolve_basic_variables(template, user)
+
+    # Replace {{PROMPTS.prompt_name}} variables
+    # Pass the user object so prompt content can be resolved with user-specific variables
+    template = replace_prompts_variable(template, prompts, current_prompt_command, user)
 
     return template
 
@@ -227,56 +332,71 @@ def rag_template(template: str, context: str, query: str):
 
 
 def title_generation_template(
-    template: str, messages: list[dict], user: Optional[Any] = None
+    template: str,
+    messages: list[dict],
+    user: Optional[Any] = None,
+    prompts: Optional[list[dict]] = None,
 ) -> str:
 
     prompt = get_last_user_message(messages)
     template = replace_prompt_variable(template, prompt)
     template = replace_messages_variable(template, messages)
 
-    template = prompt_template(template, user)
+    template = prompt_template(template, user, prompts)
 
     return template
 
 
 def follow_up_generation_template(
-    template: str, messages: list[dict], user: Optional[Any] = None
+    template: str,
+    messages: list[dict],
+    user: Optional[Any] = None,
+    prompts: Optional[list[dict]] = None,
 ) -> str:
     prompt = get_last_user_message(messages)
     template = replace_prompt_variable(template, prompt)
     template = replace_messages_variable(template, messages)
 
-    template = prompt_template(template, user)
+    template = prompt_template(template, user, prompts)
     return template
 
 
 def tags_generation_template(
-    template: str, messages: list[dict], user: Optional[Any] = None
+    template: str,
+    messages: list[dict],
+    user: Optional[Any] = None,
+    prompts: Optional[list[dict]] = None,
 ) -> str:
     prompt = get_last_user_message(messages)
     template = replace_prompt_variable(template, prompt)
     template = replace_messages_variable(template, messages)
 
-    template = prompt_template(template, user)
+    template = prompt_template(template, user, prompts)
     return template
 
 
 def image_prompt_generation_template(
-    template: str, messages: list[dict], user: Optional[Any] = None
+    template: str,
+    messages: list[dict],
+    user: Optional[Any] = None,
+    prompts: Optional[list[dict]] = None,
 ) -> str:
     prompt = get_last_user_message(messages)
     template = replace_prompt_variable(template, prompt)
     template = replace_messages_variable(template, messages)
 
-    template = prompt_template(template, user)
+    template = prompt_template(template, user, prompts)
     return template
 
 
 def emoji_generation_template(
-    template: str, prompt: str, user: Optional[Any] = None
+    template: str,
+    prompt: str,
+    user: Optional[Any] = None,
+    prompts: Optional[list[dict]] = None,
 ) -> str:
     template = replace_prompt_variable(template, prompt)
-    template = prompt_template(template, user)
+    template = prompt_template(template, user, prompts)
 
     return template
 
@@ -287,23 +407,27 @@ def autocomplete_generation_template(
     messages: Optional[list[dict]] = None,
     type: Optional[str] = None,
     user: Optional[Any] = None,
+    prompts: Optional[list[dict]] = None,
 ) -> str:
     template = template.replace("{{TYPE}}", type if type else "")
     template = replace_prompt_variable(template, prompt)
     template = replace_messages_variable(template, messages)
 
-    template = prompt_template(template, user)
+    template = prompt_template(template, user, prompts)
     return template
 
 
 def query_generation_template(
-    template: str, messages: list[dict], user: Optional[Any] = None
+    template: str,
+    messages: list[dict],
+    user: Optional[Any] = None,
+    prompts: Optional[list[dict]] = None,
 ) -> str:
     prompt = get_last_user_message(messages)
     template = replace_prompt_variable(template, prompt)
     template = replace_messages_variable(template, messages)
 
-    template = prompt_template(template, user)
+    template = prompt_template(template, user, prompts)
     return template
 
 

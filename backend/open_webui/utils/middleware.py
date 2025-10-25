@@ -1005,10 +1005,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if system_message:  # Chat Controls/User Settings
         try:
             form_data = apply_system_prompt_to_body(
-                system_message.get("content"), form_data, metadata, user, replace=True
+                system_message.get("content"),
+                form_data,
+                metadata,
+                user,
+                replace=True,
+                model=model,
             )  # Required to handle system prompt variables
-        except:
-            pass
+        except Exception:
+            log.exception("Error applying system prompt")
 
     event_emitter = get_event_emitter(metadata)
     event_call = get_event_call(metadata)
@@ -1063,7 +1068,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             if folder and folder.data:
                 if "system_prompt" in folder.data:
                     form_data = apply_system_prompt_to_body(
-                        folder.data["system_prompt"], form_data, metadata, user
+                        folder.data["system_prompt"],
+                        form_data,
+                        metadata,
+                        user,
+                        model=model,
                     )
                 if "files" in folder.data:
                     form_data["files"] = [

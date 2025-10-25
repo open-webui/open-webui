@@ -1,4 +1,7 @@
-from open_webui.utils.task import prompt_template, prompt_variables_template
+from open_webui.utils.task import (
+    prompt_template,
+    prompt_variables_template,
+)
 from open_webui.utils.misc import (
     deep_update,
     add_or_update_system_message,
@@ -8,6 +11,9 @@ from open_webui.utils.misc import (
 from typing import Callable, Optional
 import json
 
+from open_webui.models.prompts import Prompts
+from open_webui.models.users import Users
+
 
 # inplace function: form_data is modified
 def apply_system_prompt_to_body(
@@ -16,6 +22,8 @@ def apply_system_prompt_to_body(
     metadata: Optional[dict] = None,
     user=None,
     replace: bool = False,
+    current_prompt_command: Optional[str] = None,
+    model: Optional[dict] = None,
 ) -> dict:
     if not system:
         return form_data
@@ -26,8 +34,45 @@ def apply_system_prompt_to_body(
         if variables:
             system = prompt_variables_template(system, variables)
 
-    # Legacy (API Usage)
-    system = prompt_template(system, user)
+    # Get user's accessible prompts for {{PROMPTS.prompt_name}} substitution
+    # If model is admin-owned, fetch ALL prompts; otherwise only user's accessible prompts
+    user_prompts = None
+    if user and Prompts is not None:
+        try:
+            # Check if model is owned by an admin
+            is_admin_owned_model = False
+            if model:
+                model_user_id = model.get("user_id")
+                if model_user_id:
+                    model_owner = Users.get_user_by_id(model_user_id)
+                    if model_owner and model_owner.role == "admin":
+                        is_admin_owned_model = True
+
+            # Fetch prompts based on model ownership
+            if is_admin_owned_model:
+                # Admin-owned models get access to ALL prompts
+                prompt_objects = Prompts.get_prompts()
+            else:
+                # Regular models only access user's readable prompts
+                user_id = user.id if hasattr(user, "id") else user.get("id")
+                if user_id:
+                    prompt_objects = Prompts.get_prompts_by_user_id(user_id, "read")
+                else:
+                    prompt_objects = []
+
+            # Convert to simple dict format for template processing
+            user_prompts = [
+                {"command": p.command, "content": p.content} for p in prompt_objects
+            ]
+        except Exception as e:
+            # Log error but continue without prompts
+            import logging
+
+            log = logging.getLogger(__name__)
+            log.warning(f"Error fetching user prompts: {e}")
+
+    # Legacy (API Usage) - now with prompts support
+    system = prompt_template(system, user, user_prompts, current_prompt_command)
 
     if replace:
         form_data["messages"] = replace_system_message_content(
