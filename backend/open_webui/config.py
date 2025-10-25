@@ -2520,7 +2520,7 @@ RAG_FILE_MAX_COUNT = PersistentConfig(
 MEMORY_TOP_K = PersistentConfig(
     "MEMORY_TOP_K",
     "memory.top_k",
-    int(os.environ.get("MEMORY_TOP_K", "30")),
+    int(os.environ.get("MEMORY_TOP_K", "5")),
 )
 
 MEMORY_RELEVANCE_THRESHOLD = PersistentConfig(
