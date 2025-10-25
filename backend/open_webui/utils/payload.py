@@ -22,7 +22,6 @@ def apply_system_prompt_to_body(
     metadata: Optional[dict] = None,
     user=None,
     replace: bool = False,
-    current_prompt_command: Optional[str] = None,
     model: Optional[dict] = None,
 ) -> dict:
     if not system:
@@ -71,8 +70,8 @@ def apply_system_prompt_to_body(
             log = logging.getLogger(__name__)
             log.warning(f"Error fetching user prompts: {e}")
 
-    # Legacy (API Usage) - now with prompts support
-    system = prompt_template(system, user, user_prompts, current_prompt_command)
+    # Legacy (API Usage) - now with prompts support and nested resolution
+    system = prompt_template(system, user, user_prompts)
 
     if replace:
         form_data["messages"] = replace_system_message_content(

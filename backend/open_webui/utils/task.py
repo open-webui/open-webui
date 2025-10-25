@@ -139,24 +139,38 @@ def _resolve_basic_variables(template: str, user: Optional[Any] = None) -> str:
 def replace_prompts_variable(
     template: str,
     prompts: Optional[list[dict]] = None,
-    current_prompt_command: Optional[str] = None,
+    visited_prompts: Optional[set[str]] = None,
     user: Optional[Any] = None,
+    depth: int = 0,
+    max_depth: int = 50,
 ) -> str:
     """
-    Replace {{PROMPTS.prompt_name}} variables with prompt content.
-    The prompt content itself is resolved for variables (like {{CURRENT_DATETIME}}, {{USER_NAME}}, etc.)
-    before being inserted.
+    Replace {{PROMPTS.prompt_name}} variables with prompt content, recursively.
+    The prompt content itself is resolved for ALL variables including nested {{PROMPTS.*}}.
+    Circular dependencies are prevented by tracking visited prompts.
 
     Args:
         template: The template string containing prompt variables
         prompts: List of prompt objects with 'command' and 'content' fields
-        current_prompt_command: The command of the current prompt being processed (to prevent self-injection)
+        visited_prompts: Set of prompt commands already visited (prevents circular references)
         user: User object for resolving user-specific variables in prompt content
+        depth: Current recursion depth
+        max_depth: Maximum recursion depth to prevent infinite loops (default: 50)
 
     Returns:
-        Template with prompt variables replaced
+        Template with prompt variables replaced recursively
     """
     if not prompts:
+        return template
+
+    if visited_prompts is None:
+        visited_prompts = set()
+
+    # Check max depth to prevent excessive recursion
+    if depth >= max_depth:
+        log.warning(
+            f"Maximum recursion depth ({max_depth}) reached for prompt variable resolution"
+        )
         return template
 
     # Build a mapping of prompt names to their content
@@ -174,22 +188,29 @@ def replace_prompts_variable(
     def replacement_function(match):
         prompt_name = match.group(1)
 
-        # Prevent self-injection (infinite recursion)
-        if current_prompt_command:
-            current_name = current_prompt_command.lstrip("/")
-            if prompt_name == current_name:
-                log.warning(
-                    f"Prevented self-injection: prompt '{prompt_name}' tried to include itself"
-                )
-                return f"{{{{PROMPTS.{prompt_name}}}}}"  # Return unchanged
+        # Prevent circular dependencies
+        if prompt_name in visited_prompts:
+            raise ValueError(f"Circular reference detected for prompt '{prompt_name}'")
 
         # Get the prompt content
         content = prompt_map.get(prompt_name)
         if content is not None:
-            # Resolve variables within the prompt content itself
-            # This handles {{CURRENT_DATETIME}}, {{USER_NAME}}, etc. but NOT nested {{PROMPTS.*}}
-            # to avoid complexity and potential circular references
+            # Add this prompt to visited set for this branch of recursion
+            new_visited = visited_prompts | {prompt_name}
+
+            # First resolve basic variables (dates, user info)
             resolved_content = _resolve_basic_variables(content, user)
+
+            # Then recursively resolve any nested {{PROMPTS.*}} references
+            resolved_content = replace_prompts_variable(
+                resolved_content,
+                prompts=prompts,
+                visited_prompts=new_visited,
+                user=user,
+                depth=depth + 1,
+                max_depth=max_depth,
+            )
+
             return resolved_content
         else:
             # If prompt not found, leave the variable unchanged
@@ -204,14 +225,23 @@ def prompt_template(
     template: str,
     user: Optional[Any] = None,
     prompts: Optional[list[dict]] = None,
-    current_prompt_command: Optional[str] = None,
+    current_prompt_command: Optional[
+        str
+    ] = None,  # Deprecated but kept for backward compatibility
 ) -> str:
     # Resolve basic variables (dates, user info)
     template = _resolve_basic_variables(template, user)
 
-    # Replace {{PROMPTS.prompt_name}} variables
-    # Pass the user object so prompt content can be resolved with user-specific variables
-    template = replace_prompts_variable(template, prompts, current_prompt_command, user)
+    # Replace {{PROMPTS.prompt_name}} variables with nested resolution
+    # Access control is handled by the prompts list - it only contains prompts the user can access
+    template = replace_prompts_variable(
+        template,
+        prompts=prompts,
+        visited_prompts=None,  # Start with empty visited set
+        user=user,
+        depth=0,
+        max_depth=50,
+    )
 
     return template
 
