@@ -786,6 +786,10 @@
 							class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
 						>
 							<option value="">Select age</option>
+							<option value="9 years old">9 years old</option>
+							<option value="10 years old">10 years old</option>
+							<option value="11 years old">11 years old</option>
+							<option value="12 years old">12 years old</option>
 							<option value="13 years old">13 years old</option>
 							<option value="14 years old">14 years old</option>
 							<option value="15 years old">15 years old</option>

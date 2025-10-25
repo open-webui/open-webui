@@ -1805,7 +1805,7 @@ async def get_app_config(request: Request):
         **(
             {
                 "default_models": (
-                    ("gpt-5-2025-08-07," + app.state.config.DEFAULT_MODELS)
+                    ("gpt-5-nano," + app.state.config.DEFAULT_MODELS)
                     if isinstance(app.state.config.DEFAULT_MODELS, str) and app.state.config.DEFAULT_MODELS.strip()
                     else app.state.config.DEFAULT_MODELS
                 ),

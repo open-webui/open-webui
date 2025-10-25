@@ -83,8 +83,21 @@
 		"What should I do if a stranger touched me inappropriately?": "I'm sorry that happened to you. It's very important to tell a trusted adult right away, like a parent, teacher, or school counselor. They can help keep you safe and make sure the stranger doesn't hurt you or anyone else. Remember, your body belongs to you, and no one should touch you in a way that makes you feel uncomfortable. If you ever feel scared or unsure, always speak up and get help. You are very brave!"
 	};
 	
+	// Attention check constant - defined early for use in scenario generation
+	const ATTENTION_CHECK_PROMPT = "How are you doing with this interview?";
+	
+	// Custom scenario constant - always appears last
+	const CUSTOM_SCENARIO_PROMPT = "[Create Your Own Scenario]";
+	const CUSTOM_SCENARIO_PLACEHOLDER = "Enter your custom child prompt here...";
+	
 	let selectedScenarioIndex: number = 0;
 	let scenarioList = Object.entries(scenarios);
+	
+	// Custom scenario state
+	let customScenarioPrompt: string = '';
+	let customScenarioResponse: string = '';
+	let customScenarioGenerating: boolean = false;
+	let customScenarioGenerated: boolean = false;
 	
 	// Q&A Pair interface for personality-based scenarios
 	interface QAPair {
@@ -224,7 +237,15 @@
 			if (personalityBasedScenarios.length > 0) {
 				// Convert Q&A pairs to scenario list format [question, response]
 				scenarioList = personalityBasedScenarios.map(qa => [qa.question, qa.response]);
-				console.log('Updated scenarioList with Q&A pairs:', scenarioList.length);
+				
+				// Insert attention check question at a specific position (around middle)
+				const attentionCheckIndex = Math.floor(scenarioList.length / 2);
+				scenarioList.splice(attentionCheckIndex, 0, [ATTENTION_CHECK_PROMPT, "If you've read this closely, please select \"This is OK\"!"]);
+				
+				// Add custom scenario at the end
+				scenarioList.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
+				
+				console.log('Updated scenarioList with Q&A pairs:', scenarioList.length, 'with attention check and custom scenario');
 				
 				// Load saved states for this child after scenarios are loaded
 				loadSavedStates();
@@ -340,7 +361,15 @@
 		if (personalityBasedScenarios.length > 0) {
 			// Convert Q&A pairs to scenario list format [question, response]
 			scenarioList = personalityBasedScenarios.map(qa => [qa.question, qa.response]);
-			console.log('Updated scenarioList with Q&A pairs:', scenarioList.length);
+			
+			// Insert attention check question at a specific position (around middle)
+			const attentionCheckIndex = Math.floor(scenarioList.length / 2);
+			scenarioList.splice(attentionCheckIndex, 0, [ATTENTION_CHECK_PROMPT, "If you've read this closely, please select \"This is OK\"!"]);
+			
+			// Add custom scenario at the end
+			scenarioList.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
+			
+			console.log('Updated scenarioList with Q&A pairs:', scenarioList.length, 'with attention check and custom scenario');
 			
 			// Load saved states for this child after scenarios are loaded
 			loadSavedStates();
@@ -358,11 +387,100 @@
 	}
 	*/
 
-	// Attention check helper
-	const ATTENTION_CHECK_PROMPT = "How are you doing with this interview?";
-	const isAttentionCheckScenario = () => {
-		return scenarioList[selectedScenarioIndex]?.[0] === ATTENTION_CHECK_PROMPT;
-	};
+	// Attention check helper - reactive variable
+	$: isAttentionCheckScenario = scenarioList[selectedScenarioIndex]?.[0] === ATTENTION_CHECK_PROMPT;
+	
+	// Custom scenario helper - reactive variable (NOT a function!)
+	$: isCustomScenario = scenarioList[selectedScenarioIndex]?.[0] === CUSTOM_SCENARIO_PROMPT;
+	
+	// Reactive debug logging
+	$: {
+		console.log('🎨 RENDER STATE:', {
+			isCustomScenario,
+			customScenarioGenerated,
+			hasInitialDecision,
+			selectedScenarioIndex,
+			currentPrompt: scenarioList[selectedScenarioIndex]?.[0],
+			scenarioListLength: scenarioList.length
+		});
+	}
+	
+	// Generate response for custom scenario
+	async function generateCustomScenarioResponse() {
+		if (!customScenarioPrompt.trim()) {
+			toast.error('Please enter a custom prompt');
+			return;
+		}
+		
+		if (!$user) {
+			toast.error('User not authenticated');
+			return;
+		}
+		
+		customScenarioGenerating = true;
+		
+		try {
+			// Use the moderation API to generate a child-friendly response
+			// We'll use empty moderation types to just get a basic response
+			const result = await applyModeration(
+				localStorage.getItem('token') || '',
+				[], // No moderation strategies - just generate a response
+				customScenarioPrompt.trim(),
+				[], // No custom instructions
+				undefined, // No original response
+				[], // No highlighted texts
+				undefined // No specific age
+			);
+			
+			if (result) {
+				customScenarioResponse = result.refactored_response;
+				customScenarioGenerated = true;
+				
+				// Update the scenario list with the custom prompt and response
+				scenarioList[selectedScenarioIndex] = [customScenarioPrompt.trim(), customScenarioResponse];
+				
+				// Update the current scenario data - treat this as the ORIGINAL response
+				childPrompt1 = customScenarioPrompt.trim();
+				originalResponse1 = customScenarioResponse;
+				
+				// Reset ALL state to treat this as a fresh, unmoderated scenario
+				hasInitialDecision = false;
+				acceptedOriginal = false;
+				markedNotApplicable = false;
+				versions = []; // No moderated versions yet
+				currentVersionIndex = -1; // Not viewing any version
+				confirmedVersionIndex = null; // Nothing confirmed
+				highlightedTexts1 = []; // No highlights
+				selectedModerations = new Set(); // No strategies selected
+				customInstructions = []; // No custom instructions
+				showOriginal1 = false; // Not toggled to show original
+				moderationPanelVisible = false; // Panel hidden
+				moderationPanelExpanded = false; // Panel collapsed
+				highlightingMode = false; // Not in highlighting mode
+				attentionCheckSelected = false; // Not attention check
+				
+				// Clear any saved state for this scenario to start fresh
+				scenarioStates.delete(selectedScenarioIndex);
+				scenarioTimers.delete(selectedScenarioIndex);
+				
+				// Force save the clean state
+				saveCurrentScenarioState();
+				
+				console.log('✅ Custom scenario reset - treating as original response', {
+					versions: versions.length,
+					showOriginal1,
+					hasInitialDecision
+				});
+				
+				toast.success('Custom scenario generated! Please review the response below.');
+			}
+		} catch (error) {
+			console.error('Error generating custom scenario:', error);
+			toast.error('Failed to generate response. Please try again.');
+		} finally {
+			customScenarioGenerating = false;
+		}
+	}
 	
 	// Check if a scenario is completed (passed initial decision stage)
 	function isScenarioCompleted(index: number): boolean {
@@ -702,6 +820,53 @@
 		selectedScenarioIndex = index;
 		const [prompt, response] = scenarioList[index];
 		
+		console.log('🔍 Loading scenario:', index, 'Prompt:', prompt, 'Is custom:', prompt === CUSTOM_SCENARIO_PROMPT);
+		
+		// Handle custom scenario specially
+		if (prompt === CUSTOM_SCENARIO_PROMPT) {
+			// Check if custom scenario was already generated
+			const savedState = scenarioStates.get(index);
+			console.log('📋 Custom scenario saved state:', savedState);
+			if (savedState && savedState.hasInitialDecision) {
+				// Custom scenario was previously generated - restore its state
+				customScenarioPrompt = childPrompt1 || '';
+				customScenarioResponse = originalResponse1 || '';
+				customScenarioGenerated = true;
+				console.log('✅ Custom scenario already generated from saved state');
+				// Continue to load the full saved state below
+			} else {
+				// Custom scenario has NOT been generated yet - show input form
+				customScenarioPrompt = '';
+				customScenarioResponse = '';
+				customScenarioGenerated = false;
+				
+				// Reset state to ensure we show the input form
+				versions = [];
+				currentVersionIndex = -1;
+				confirmedVersionIndex = null;
+				highlightedTexts1 = [];
+				selectedModerations = new Set();
+				customInstructions = [];
+				showOriginal1 = false;
+				moderationPanelVisible = false;
+				moderationPanelExpanded = false;
+				expandedGroups.clear();
+				highlightingMode = false;
+				hasInitialDecision = false;
+				acceptedOriginal = false;
+				attentionCheckSelected = false;
+				markedNotApplicable = false;
+				
+				childPrompt1 = prompt;
+				originalResponse1 = response;
+				
+				console.log('🆕 Custom scenario NOT generated yet - showing input form');
+				
+				// Don't load saved state for ungenerated custom scenario
+				return;
+			}
+		}
+		
 		const savedState = scenarioStates.get(index);
 		
 		if (savedState) {
@@ -1011,7 +1176,7 @@ function cancelReset() {}
 
 	async function acceptOriginalResponse() {
 		// Check if this is the attention check scenario
-		if (isAttentionCheckScenario()) {
+		if (isAttentionCheckScenario) {
 			// User passed the attention check! Mark as completed first
 			hasInitialDecision = true;
 			acceptedOriginal = true;
@@ -1067,7 +1232,7 @@ function cancelReset() {}
 
 	function startModerating() {
 		// Check if this is the attention check scenario
-		if (isAttentionCheckScenario()) {
+		if (isAttentionCheckScenario) {
 			toast.error('Please follow the instructions in the response carefully');
 			console.log('[ATTENTION_CHECK] User tried to moderate instead of accepting');
 			return;
@@ -1107,7 +1272,7 @@ function cancelReset() {}
 
 	async function markNotApplicable() {
 		// Check if this is the attention check scenario
-		if (isAttentionCheckScenario()) {
+		if (isAttentionCheckScenario) {
 			toast.error('Please follow the instructions in the response carefully');
 			console.log('[ATTENTION_CHECK] User tried to mark as not applicable');
 			return;
@@ -1338,6 +1503,22 @@ function cancelReset() {}
 	};
 
 	onMount(async () => {
+		// Add custom scenario to default scenario list if not using personality scenarios
+		if (scenarioList.length === Object.entries(scenarios).length) {
+			// Check if custom scenario isn't already added
+			const hasCustomScenario = scenarioList.some(([prompt]) => prompt === CUSTOM_SCENARIO_PROMPT);
+			if (!hasCustomScenario) {
+				// Add attention check in the middle
+				const attentionCheckIndex = Math.floor(scenarioList.length / 2);
+				if (!scenarioList.some(([prompt]) => prompt === ATTENTION_CHECK_PROMPT)) {
+					scenarioList.splice(attentionCheckIndex, 0, [ATTENTION_CHECK_PROMPT, "If you've read this closely, please select \"This is OK\"!"]);
+				}
+				// Add custom scenario at the end
+				scenarioList.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
+				scenarioList = scenarioList; // Trigger reactivity
+			}
+		}
+		
 		// Guard navigation if user tries to jump ahead
 		const step = parseInt(localStorage.getItem('assignmentStep') || '0');
 		if (step < 1) {
@@ -1365,10 +1546,18 @@ function cancelReset() {}
 				// Force use personality scenarios with Q&A pairs
 				if (personalityBasedScenarios.length > 0) {
 					scenarioList = personalityBasedScenarios.map(qa => [qa.question, qa.response]);
+					
+					// Insert attention check question at a specific position (around middle)
+					const attentionCheckIndex = Math.floor(scenarioList.length / 2);
+					scenarioList.splice(attentionCheckIndex, 0, [ATTENTION_CHECK_PROMPT, "If you've read this closely, please select \"This is OK\"!"]);
+					
+					// Add custom scenario at the end
+					scenarioList.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
+					
 					loadSavedStates(); // Load child-specific states
 					selectedScenarioIndex = 0;
 					loadScenario(0, true); // Force reload
-					console.log('Forced personality scenarios loaded:', scenarioList.length);
+					console.log('Forced personality scenarios loaded:', scenarioList.length, 'with attention check and custom scenario');
 				} else {
 					console.log('No personality scenarios generated, trying direct generation...');
 					// Try direct generation as fallback
@@ -1389,10 +1578,18 @@ function cancelReset() {}
 								generateScenariosFromPersonalityData(selectedChars).then(directScenarios => {
 									if (directScenarios.length > 0) {
 										scenarioList = directScenarios.map(qa => [qa.question, qa.response]);
+										
+										// Insert attention check question at a specific position (around middle)
+										const attentionCheckIndex = Math.floor(scenarioList.length / 2);
+										scenarioList.splice(attentionCheckIndex, 0, [ATTENTION_CHECK_PROMPT, "If you've read this closely, please select \"This is OK\"!"]);
+										
+										// Add custom scenario at the end
+										scenarioList.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
+										
 										loadSavedStates(); // Load child-specific states
 										selectedScenarioIndex = 0;
 										loadScenario(0, true); // Force reload
-										console.log('Direct personality scenarios loaded:', scenarioList.length);
+										console.log('Direct personality scenarios loaded:', scenarioList.length, 'with attention check and custom scenario');
 									}
 								});
 							}
@@ -1569,11 +1766,19 @@ function cancelReset() {}
 							<div class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold {
 								selectedScenarioIndex === index
 									? 'bg-blue-500 text-white'
-									: isScenarioCompleted(index)
-									? 'bg-gray-400 dark:bg-gray-600 text-gray-200 dark:text-gray-400'
-									: 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+									: prompt === CUSTOM_SCENARIO_PROMPT
+										? 'bg-purple-500 text-white'
+										: isScenarioCompleted(index)
+										? 'bg-gray-400 dark:bg-gray-600 text-gray-200 dark:text-gray-400'
+										: 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
 							}">
-								{index + 1}
+								{#if prompt === CUSTOM_SCENARIO_PROMPT}
+									<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+									</svg>
+								{:else}
+									{index + 1}
+								{/if}
 							</div>
 						</div>
 						
@@ -1581,9 +1786,11 @@ function cancelReset() {}
 							<p class="text-sm font-medium {
 								isScenarioCompleted(index)
 									? 'text-gray-500 dark:text-gray-500'
-									: 'text-gray-900 dark:text-white'
+									: prompt === CUSTOM_SCENARIO_PROMPT
+										? 'text-purple-900 dark:text-purple-100'
+										: 'text-gray-900 dark:text-white'
 							} line-clamp-2 leading-tight">
-								{prompt}
+								{customScenarioGenerated && prompt === CUSTOM_SCENARIO_PROMPT && customScenarioPrompt ? customScenarioPrompt : prompt}
 							</p>
 						</div>
 					</div>
@@ -1633,6 +1840,60 @@ function cancelReset() {}
 		</div>
 
 		<div class="flex-1 overflow-y-auto p-6 space-y-4" bind:this={mainContentContainer}>
+			<!-- Custom Scenario Input (only shown for custom scenario before generation) -->
+			{#if isCustomScenario && !customScenarioGenerated}
+				<div class="max-w-3xl mx-auto mt-12 space-y-6">
+					<div class="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-8 border border-purple-200 dark:border-purple-800 shadow-lg">
+						<div class="flex items-start space-x-3 mb-6">
+							<svg class="w-8 h-8 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+							</svg>
+							<div>
+								<h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Create Your Own Scenario</h3>
+								<p class="text-sm text-gray-600 dark:text-gray-400">
+									Enter a custom child prompt below and we'll generate an AI response for you to review and moderate.
+								</p>
+							</div>
+						</div>
+						
+						<div class="space-y-4">
+							<div>
+								<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+									Child's Question or Prompt
+								</label>
+								<textarea
+									bind:value={customScenarioPrompt}
+									placeholder={CUSTOM_SCENARIO_PLACEHOLDER}
+									rows="6"
+									class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none text-base"
+								></textarea>
+								<p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+									💡 Tip: Write this from the perspective of a child asking a question or making a statement.
+								</p>
+							</div>
+							
+							<button
+								on:click={generateCustomScenarioResponse}
+								disabled={customScenarioGenerating || !customScenarioPrompt.trim()}
+								class="w-full flex items-center justify-center space-x-2 px-6 py-4 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors duration-200 shadow-md hover:shadow-lg"
+							>
+								{#if customScenarioGenerating}
+									<svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+										<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+										<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+									</svg>
+									<span>Generating Response...</span>
+								{:else}
+									<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+									</svg>
+									<span>Generate AI Response</span>
+								{/if}
+							</button>
+						</div>
+					</div>
+				</div>
+			{:else if !isCustomScenario || customScenarioGenerated}
 			<!-- Child Prompt Bubble -->
 				<div class="flex justify-end">
 					<div class="max-w-[80%] bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm relative select-text"
@@ -1643,8 +1904,10 @@ function cancelReset() {}
 						<!-- Auto-highlight enabled: No button needed -->
 					</div>
 				</div>
+			{/if}
 
-				<!-- AI Response Bubble -->
+				<!-- AI Response Bubble (hidden for custom scenario before generation) -->
+				{#if !isCustomScenario || customScenarioGenerated}
 				<div class="flex justify-start">
 					<div 
 						bind:this={responseContainer1}
@@ -1836,9 +2099,10 @@ function cancelReset() {}
 						{/if}
 						</div>
 					</div>
+				{/if}
 
-		<!-- Initial Decision Buttons -->
-		{#if !hasInitialDecision}
+		<!-- Initial Decision Buttons (hidden for custom scenario before generation) -->
+		{#if !hasInitialDecision && (!isCustomScenario || customScenarioGenerated)}
 			<div class="flex justify-center mt-4">
 				<div class="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 w-full max-w-4xl px-4">
 					<button

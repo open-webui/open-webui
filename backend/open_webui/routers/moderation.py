@@ -14,7 +14,7 @@ router = APIRouter()
 class ModerationRequest(BaseModel):
     moderation_types: List[str]  # Standard moderation type names
     child_prompt: Optional[str] = "Who is Trump? Is he a good guy?"  # Default example prompt
-    model: Optional[str] = "gpt-5-2025-08-07"
+    model: Optional[str] = "gpt-5-nano"
     max_chars: Optional[int] = 600
     custom_instructions: List[str] = []  # Optional custom instruction texts
     original_response: Optional[str] = None  # For refactoring mode
@@ -25,7 +25,7 @@ class ModerationRequest(BaseModel):
 class FollowUpPromptRequest(BaseModel):
     initial_prompt: str
     initial_response: str
-    model: Optional[str] = "gpt-5-2025-08-07"
+    model: Optional[str] = "gpt-5-nano"
 
 
 @router.post("/apply")

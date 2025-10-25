@@ -15,7 +15,7 @@ import re
 import sys
 from pathlib import Path
 
-EXPECTED_MODEL = "gpt-5-2025-08-07"
+EXPECTED_MODEL = "gpt-5-nano"
 
 def check_file_for_model(filepath: Path, patterns: list[tuple[str, str]]) -> bool:
     """Check if file contains expected model in specified patterns."""
@@ -103,9 +103,9 @@ def main():
         print("   1. Restart your backend server")
         print("   2. Make a moderation request in the UI")
         print("   3. Check backend logs for:")
-        print("      🤖 Moderation request using model: gpt-5-2025-08-07")
-        print("      🔍 [MODERATION] Calling OpenAI API with model: gpt-5-2025-08-07")
-        print("      ✅ [MODERATION] OpenAI API response received. Model used: gpt-5-2025-08-07")
+        print("      🤖 Moderation request using model: gpt-5-nano")
+        print("      🔍 [MODERATION] Calling OpenAI API with model: gpt-5-nano")
+        print("      ✅ [MODERATION] OpenAI API response received. Model used: gpt-5-nano")
         return 0
     else:
         print("❌ SOME CHECKS FAILED - Review the output above")

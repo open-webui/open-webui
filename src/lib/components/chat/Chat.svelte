@@ -1343,8 +1343,8 @@ const initNewChat = async () => {
 			);
 		} else {
 			// Always reset to preferred default on refresh/new chat
-			// Prefer 'gpt-5-2025-08-07' when present, otherwise use server defaults
-			const preferredModelId = 'gpt-5-2025-08-07';
+			// Prefer 'gpt-5-nano' when present, otherwise use server defaults
+			const preferredModelId = 'gpt-5-nano';
 			if (availableModels.includes(preferredModelId)) {
 				selectedModels = [preferredModelId];
 			} else if ($config?.default_models) {
