@@ -5,10 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.35] - 2025-10-22
+## [0.6.35] - 2025-10-26
 
 ### Added
 - 🖨️ Code block output now preserves whitespace formatting with monospace font to accurately reflect terminal behavior. [#18352](https://github.com/open-webui/open-webui/pull/18352)
+- ⚡ Image compression now preserves the original image format instead of converting to PNG, significantly reducing file sizes and improving chat loading performance. [#18506](https://github.com/open-webui/open-webui/pull/18506)
+- ⌨️ Keyboard shortcut hints are now displayed on sidebar buttons and can be toggled in interface settings, with a refactored shortcuts modal that accurately reflects all available hotkeys across different keyboard layouts. [#18473](https://github.com/open-webui/open-webui/pull/18473)
 - 🔒 CORS origin validation was added to WebSocket connections as a defense-in-depth security measure against cross-site WebSocket hijacking attacks. [#18411](https://github.com/open-webui/open-webui/pull/18411), [#18410](https://github.com/open-webui/open-webui/issues/18410)
 - 📝 "Create a new note" from the search modal now immediately creates a new private note and opens it in the editor instead of navigating to the generic notes page. [#18255](https://github.com/open-webui/open-webui/pull/18255)
 - 🐍 Experimental initial preparations for Python 3.13 compatibility by updating the unstructured and python-jose dependencies with security enhancements and cryptographic improvements. [#18430](https://github.com/open-webui/open-webui/pull/18430), [#18424](https://github.com/open-webui/open-webui/pull/18424)
@@ -26,9 +28,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🌐 "Attach Webpage" button now displays with correct disabled styling when a model does not support file uploads. [#18483](https://github.com/open-webui/open-webui/pull/18483)
 - 🎚️ Divider no longer displays in the integrations menu when no integrations are enabled. [#18487](https://github.com/open-webui/open-webui/pull/18487)
 - 📊 Mermaid diagram rendering errors no longer cause UI unavailability or display error messages below the input box. [#18493](https://github.com/open-webui/open-webui/pull/18493), [#18340](https://github.com/open-webui/open-webui/issues/18340)
+- 🔧 UI freeze when querying models with knowledge bases containing inconsistent distance metrics is resolved by properly initializing the distances array in citations. [#18585](https://github.com/open-webui/open-webui/pull/18585)
+- 🎯 Globally enabled actions in the model editor now correctly apply as global instead of being treated as disabled. [#18577](https://github.com/open-webui/open-webui/pull/18577)
 - 📄 Docling RAG parameter configuration is now correctly saved in the admin UI by fixing the typo in the "DOCLING_PARAMS" parameter name. [#18390](https://github.com/open-webui/open-webui/pull/18390)
 - 📹 YouTube video transcript fetching now works correctly when using a proxy connection. [#18419](https://github.com/open-webui/open-webui/pull/18419)
 - ⚙️ Chat settings now load properly when reopening a tab or starting a new session by initializing defaults when sessionStorage is empty. [#18438](https://github.com/open-webui/open-webui/pull/18438)
+- 🎨 Layout shift near system instructions is prevented by properly rendering the chat component when system prompts are empty. [#18594](https://github.com/open-webui/open-webui/pull/18594)
+- 🎨 Modal layout shift caused by scrollbar appearance is prevented by adding a stable scrollbar gutter. [#18591](https://github.com/open-webui/open-webui/pull/18591)
+- 🎨 Spacing between icon and label in the user menu dropdown items is now consistent. [#18595](https://github.com/open-webui/open-webui/pull/18595)
 - 🔒 Incorrect await call in the OAuth 2.1 flow is removed, eliminating a logged exception during authentication. [#18236](https://github.com/open-webui/open-webui/pull/18236)
 - 🔒 Duplicate crossorigin attribute in the manifest file was removed. [#18413](https://github.com/open-webui/open-webui/pull/18413)
 
