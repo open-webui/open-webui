@@ -2338,6 +2338,7 @@ async def process_chat_response(
                         nonlocal last_delta_data
 
                         if delta_count >= threshold and last_delta_data:
+                            log.info(f"📤 FLUSH: Emitting batch of {delta_count} chunks with content keys: {list(last_delta_data.keys()) if last_delta_data else 'None'}")
                             await event_emitter(
                                 {
                                     "type": "chat:completion",
@@ -2346,6 +2347,8 @@ async def process_chat_response(
                             )
                             delta_count = 0
                             last_delta_data = None
+                        else:
+                            log.debug(f"📤 FLUSH: Skipping - delta_count={delta_count}, threshold={threshold}, has_data={last_delta_data is not None}")
 
                     async for line in response.body_iterator:
                         line = (
@@ -2622,6 +2625,8 @@ async def process_chat_response(
                                 if delta:
                                     delta_count += 1
                                     last_delta_data = data
+                                    if chunk_count <= 3 or chunk_count % 10 == 0:
+                                        log.info(f"📦 DELTA #{chunk_count}: delta_count={delta_count}/{delta_chunk_size}, data_keys={list(data.keys()) if data else 'None'}, value={value[:50] if value else 'None'}")
                                     if delta_count >= delta_chunk_size:
                                         await flush_pending_delta_data(delta_chunk_size)
                                 else:
