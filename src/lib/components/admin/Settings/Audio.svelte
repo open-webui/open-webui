@@ -19,6 +19,7 @@
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
+	import Textarea from '$lib/components/common/Textarea.svelte';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
@@ -31,6 +32,7 @@
 	let TTS_ENGINE = '';
 	let TTS_MODEL = '';
 	let TTS_VOICE = '';
+	let TTS_OPENAI_PARAMS = '';
 	let TTS_SPLIT_ON: TTS_RESPONSE_SPLIT = TTS_RESPONSE_SPLIT.PUNCTUATION;
 	let TTS_AZURE_SPEECH_REGION = '';
 	let TTS_AZURE_SPEECH_BASE_URL = '';
@@ -98,18 +100,28 @@
 	};
 
 	const updateConfigHandler = async () => {
+		let openaiParams = {};
+		try {
+			openaiParams = TTS_OPENAI_PARAMS ? JSON.parse(TTS_OPENAI_PARAMS) : {};
+			TTS_OPENAI_PARAMS = JSON.stringify(openaiParams, null, 2);
+		} catch (e) {
+			toast.error($i18n.t('Invalid JSON format for Parameters'));
+			return;
+		}
+
 		const res = await updateAudioConfig(localStorage.token, {
 			tts: {
 				OPENAI_API_BASE_URL: TTS_OPENAI_API_BASE_URL,
 				OPENAI_API_KEY: TTS_OPENAI_API_KEY,
+				OPENAI_PARAMS: openaiParams,
 				API_KEY: TTS_API_KEY,
 				ENGINE: TTS_ENGINE,
 				MODEL: TTS_MODEL,
 				VOICE: TTS_VOICE,
-				SPLIT_ON: TTS_SPLIT_ON,
 				AZURE_SPEECH_REGION: TTS_AZURE_SPEECH_REGION,
 				AZURE_SPEECH_BASE_URL: TTS_AZURE_SPEECH_BASE_URL,
-				AZURE_SPEECH_OUTPUT_FORMAT: TTS_AZURE_SPEECH_OUTPUT_FORMAT
+				AZURE_SPEECH_OUTPUT_FORMAT: TTS_AZURE_SPEECH_OUTPUT_FORMAT,
+				SPLIT_ON: TTS_SPLIT_ON
 			},
 			stt: {
 				OPENAI_API_BASE_URL: STT_OPENAI_API_BASE_URL,
@@ -146,6 +158,7 @@
 			console.log(res);
 			TTS_OPENAI_API_BASE_URL = res.tts.OPENAI_API_BASE_URL;
 			TTS_OPENAI_API_KEY = res.tts.OPENAI_API_KEY;
+			TTS_OPENAI_PARAMS = JSON.stringify(res?.tts?.OPENAI_PARAMS ?? '', null, 2);
 			TTS_API_KEY = res.tts.API_KEY;
 
 			TTS_ENGINE = res.tts.ENGINE;
@@ -215,13 +228,13 @@
 						<select
 							class="dark:bg-gray-900 cursor-pointer w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 							bind:value={STT_ENGINE}
-							placeholder="Select an engine"
+							placeholder={$i18n.t('Select an engine')}
 						>
 							<option value="">{$i18n.t('Whisper (Local)')}</option>
-							<option value="openai">OpenAI</option>
+							<option value="openai">{$i18n.t('OpenAI')}</option>
 							<option value="web">{$i18n.t('Web API')}</option>
-							<option value="deepgram">Deepgram</option>
-							<option value="azure">Azure AI Speech</option>
+							<option value="deepgram">{$i18n.t('Deepgram')}</option>
+							<option value="azure">{$i18n.t('Azure AI Speech')}</option>
 						</select>
 					</div>
 				</div>
@@ -250,7 +263,7 @@
 									list="model-list"
 									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 									bind:value={STT_MODEL}
-									placeholder="Select a model"
+									placeholder={$i18n.t('Select a model')}
 								/>
 
 								<datalist id="model-list">
@@ -275,7 +288,7 @@
 								<input
 									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 									bind:value={STT_MODEL}
-									placeholder="Select a model (optional)"
+									placeholder={$i18n.t('Select a model (optional)')}
 								/>
 							</div>
 						</div>
@@ -424,7 +437,7 @@
 						<select
 							class=" dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 							bind:value={TTS_ENGINE}
-							placeholder="Select a mode"
+							placeholder={$i18n.t('Select a mode')}
 							on:change={async (e) => {
 								await updateConfigHandler();
 								await getVoices();
@@ -539,7 +552,7 @@
 										list="model-list"
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 										bind:value={TTS_MODEL}
-										placeholder="CMU ARCTIC speaker embedding name"
+										placeholder={$i18n.t('CMU ARCTIC speaker embedding name')}
 									/>
 
 									<datalist id="model-list">
@@ -581,7 +594,7 @@
 											list="voice-list"
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_VOICE}
-											placeholder="Select a voice"
+											placeholder={$i18n.t('Select a voice')}
 										/>
 
 										<datalist id="voice-list">
@@ -600,7 +613,7 @@
 											list="tts-model-list"
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_MODEL}
-											placeholder="Select a model"
+											placeholder={$i18n.t('Select a model')}
 										/>
 
 										<datalist id="tts-model-list">
@@ -608,6 +621,22 @@
 												<option value={model.id} class="bg-gray-50 dark:bg-gray-700" />
 											{/each}
 										</datalist>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+							<div class="w-full">
+								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('Additional Parameters')}</div>
+								<div class="flex w-full">
+									<div class="flex-1">
+										<Textarea
+											className="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+											bind:value={TTS_OPENAI_PARAMS}
+											placeholder={$i18n.t('Enter additional parameters in JSON format')}
+											minSize={100}
+										/>
 									</div>
 								</div>
 							</div>
@@ -622,7 +651,7 @@
 											list="voice-list"
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_VOICE}
-											placeholder="Select a voice"
+											placeholder={$i18n.t('Select a voice')}
 										/>
 
 										<datalist id="voice-list">
@@ -641,7 +670,7 @@
 											list="tts-model-list"
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_MODEL}
-											placeholder="Select a model"
+											placeholder={$i18n.t('Select a model')}
 										/>
 
 										<datalist id="tts-model-list">
@@ -663,7 +692,7 @@
 											list="voice-list"
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_VOICE}
-											placeholder="Select a voice"
+											placeholder={$i18n.t('Select a voice')}
 										/>
 
 										<datalist id="voice-list">
@@ -690,7 +719,7 @@
 											list="tts-model-list"
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_AZURE_SPEECH_OUTPUT_FORMAT}
-											placeholder="Select a output format"
+											placeholder={$i18n.t('Select an output format')}
 										/>
 									</div>
 								</div>
@@ -704,7 +733,7 @@
 					<div class="flex items-center relative">
 						<select
 							class="dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
-							aria-label="Select how to split message text for TTS requests"
+							aria-label={$i18n.t('Select how to split message text for TTS requests')}
 							bind:value={TTS_SPLIT_ON}
 						>
 							{#each Object.values(TTS_RESPONSE_SPLIT) as split}

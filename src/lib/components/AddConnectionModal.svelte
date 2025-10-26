@@ -17,6 +17,7 @@
 	import Tags from './common/Tags.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import Textarea from './common/Textarea.svelte';
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
@@ -31,17 +32,18 @@
 
 	let url = '';
 	let key = '';
+	let auth_type = 'bearer';
 
 	let connectionType = 'external';
 	let azure = false;
 	$: azure =
-		(url.includes('azure.com') || url.includes('cognitive.microsoft.com')) && !direct
-			? true
-			: false;
+		(url.includes('azure.') || url.includes('cognitive.microsoft.com')) && !direct ? true : false;
 
 	let prefixId = '';
 	let enable = true;
 	let apiVersion = '';
+
+	let headers = '';
 
 	let tags = [];
 
@@ -70,14 +72,32 @@
 		// remove trailing slash from url
 		url = url.replace(/\/$/, '');
 
+		let _headers = null;
+
+		if (headers) {
+			try {
+				_headers = JSON.parse(headers);
+				if (typeof _headers !== 'object' || Array.isArray(_headers)) {
+					_headers = null;
+					throw new Error('Headers must be a valid JSON object');
+				}
+				headers = JSON.stringify(_headers, null, 2);
+			} catch (error) {
+				toast.error($i18n.t('Headers must be a valid JSON object'));
+				return;
+			}
+		}
+
 		const res = await verifyOpenAIConnection(
 			localStorage.token,
 			{
 				url,
 				key,
 				config: {
+					auth_type,
 					azure: azure,
-					api_version: apiVersion
+					api_version: apiVersion,
+					...(_headers ? { headers: _headers } : {})
 				}
 			},
 			direct
@@ -110,7 +130,7 @@
 
 		if (!ollama && !url) {
 			loading = false;
-			toast.error('URL is required');
+			toast.error($i18n.t('URL is required'));
 			return;
 		}
 
@@ -118,20 +138,33 @@
 			if (!apiVersion) {
 				loading = false;
 
-				toast.error('API Version is required');
+				toast.error($i18n.t('API Version is required'));
 				return;
 			}
 
-			if (!key) {
+			if (!key && !['azure_ad', 'microsoft_entra_id'].includes(auth_type)) {
 				loading = false;
 
-				toast.error('Key is required');
+				toast.error($i18n.t('Key is required'));
 				return;
 			}
 
 			if (modelIds.length === 0) {
 				loading = false;
-				toast.error('Deployment names are required');
+				toast.error($i18n.t('Deployment names are required for Azure OpenAI'));
+				return;
+			}
+		}
+
+		if (headers) {
+			try {
+				const _headers = JSON.parse(headers);
+				if (typeof _headers !== 'object' || Array.isArray(_headers)) {
+					throw new Error('Headers must be a valid JSON object');
+				}
+				headers = JSON.stringify(_headers, null, 2);
+			} catch (error) {
+				toast.error($i18n.t('Headers must be a valid JSON object'));
 				return;
 			}
 		}
@@ -148,6 +181,8 @@
 				prefix_id: prefixId,
 				model_ids: modelIds,
 				connection_type: connectionType,
+				auth_type,
+				headers: headers ? JSON.parse(headers) : undefined,
 				...(!ollama && azure ? { azure: true, api_version: apiVersion } : {})
 			}
 		};
@@ -159,6 +194,7 @@
 
 		url = '';
 		key = '';
+		auth_type = 'bearer';
 		prefixId = '';
 		tags = [];
 		modelIds = [];
@@ -168,6 +204,11 @@
 		if (connection) {
 			url = connection.url;
 			key = connection.key;
+
+			auth_type = connection.config.auth_type ?? 'bearer';
+			headers = connection.config?.headers
+				? JSON.stringify(connection.config.headers, null, 2)
+				: '';
 
 			enable = connection.config?.enable ?? true;
 			tags = connection.config?.tags ?? [];
@@ -307,23 +348,101 @@
 
 						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col w-full">
-								<div
-									class={`mb-0.5 text-xs text-gray-500
-								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
+								<label
+									for="select-bearer-or-session"
+									class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+									>{$i18n.t('Auth')}</label
 								>
-									{$i18n.t('Key')}
-								</div>
 
-								<div class="flex-1">
-									<SensitiveInput
-										inputClassName={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-										bind:value={key}
-										placeholder={$i18n.t('API Key')}
-										required={false}
-									/>
+								<div class="flex gap-2">
+									<div class="flex-shrink-0 self-start">
+										<select
+											id="select-bearer-or-session"
+											class={`w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											bind:value={auth_type}
+										>
+											<option value="none">{$i18n.t('None')}</option>
+											<option value="bearer">{$i18n.t('Bearer')}</option>
+
+											{#if !ollama}
+												<option value="session">{$i18n.t('Session')}</option>
+												{#if !direct}
+													<option value="system_oauth">{$i18n.t('OAuth')}</option>
+													{#if azure}
+														<option value="microsoft_entra_id">{$i18n.t('Entra ID')}</option>
+													{/if}
+												{/if}
+											{/if}
+										</select>
+									</div>
+
+									<div class="flex flex-1 items-center">
+										{#if auth_type === 'bearer'}
+											<SensitiveInput
+												bind:value={key}
+												placeholder={$i18n.t('API Key')}
+												required={false}
+											/>
+										{:else if auth_type === 'none'}
+											<div
+												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+											>
+												{$i18n.t('No authentication')}
+											</div>
+										{:else if auth_type === 'session'}
+											<div
+												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+											>
+												{$i18n.t('Forwards system user session credentials to authenticate')}
+											</div>
+										{:else if auth_type === 'system_oauth'}
+											<div
+												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+											>
+												{$i18n.t('Forwards system user OAuth access token to authenticate')}
+											</div>
+										{:else if ['azure_ad', 'microsoft_entra_id'].includes(auth_type)}
+											<div
+												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+											>
+												{$i18n.t('Uses DefaultAzureCredential to authenticate')}
+											</div>
+										{/if}
+									</div>
 								</div>
 							</div>
+						</div>
 
+						{#if !ollama && !direct}
+							<div class="flex gap-2 mt-2">
+								<div class="flex flex-col w-full">
+									<label
+										for="headers-input"
+										class={`mb-0.5 text-xs text-gray-500
+								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
+										>{$i18n.t('Headers')}</label
+									>
+
+									<div class="flex-1">
+										<Tooltip
+											content={$i18n.t(
+												'Enter additional headers in JSON format (e.g. {{\'{{"X-Custom-Header": "value"}}\'}})'
+											)}
+										>
+											<Textarea
+												className="w-full text-sm outline-hidden"
+												bind:value={headers}
+												placeholder={$i18n.t('Enter additional headers in JSON format')}
+												required={false}
+												minSize={30}
+											/>
+										</Tooltip>
+									</div>
+								</div>
+							</div>
+						{/if}
+
+						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col w-full">
 								<label
 									for="prefix-id-input"
@@ -351,6 +470,29 @@
 							</div>
 						</div>
 
+						{#if !ollama && !direct}
+							<div class="flex flex-row justify-between items-center w-full mt-2">
+								<label
+									for="prefix-id-input"
+									class={`mb-0.5 text-xs text-gray-500
+								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
+									>{$i18n.t('Provider Type')}</label
+								>
+
+								<div>
+									<button
+										on:click={() => {
+											azure = !azure;
+										}}
+										type="button"
+										class=" text-xs text-gray-700 dark:text-gray-300"
+									>
+										{azure ? $i18n.t('Azure OpenAI') : $i18n.t('OpenAI')}
+									</button>
+								</div>
+							</div>
+						{/if}
+
 						{#if azure}
 							<div class="flex gap-2 mt-2">
 								<div class="flex flex-col w-full">
@@ -376,37 +518,7 @@
 							</div>
 						{/if}
 
-						<div class="flex gap-2 mt-2">
-							<div class="flex flex-col w-full">
-								<div
-									class={`mb-0.5 text-xs text-gray-500
-								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
-								>
-									{$i18n.t('Tags')}
-								</div>
-
-								<div class="flex-1">
-									<Tags
-										bind:tags
-										on:add={(e) => {
-											tags = [
-												...tags,
-												{
-													name: e.detail
-												}
-											];
-										}}
-										on:delete={(e) => {
-											tags = tags.filter((tag) => tag.name !== e.detail);
-										}}
-									/>
-								</div>
-							</div>
-						</div>
-
-						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
-
-						<div class="flex flex-col w-full">
+						<div class="flex flex-col w-full mt-2">
 							<div class="mb-1 flex justify-between">
 								<div
 									class={`mb-0.5 text-xs text-gray-500
@@ -462,8 +574,6 @@
 							{/if}
 						</div>
 
-						<hr class=" border-gray-100 dark:border-gray-700/10 my-1.5 w-full" />
-
 						<div class="flex items-center">
 							<label class="sr-only" for="add-model-id-input">{$i18n.t('Add a model ID')}</label>
 							<input
@@ -487,6 +597,34 @@
 								>
 									<Plus className="size-3.5" strokeWidth="2" />
 								</button>
+							</div>
+						</div>
+					</div>
+
+					<div class="flex gap-2 mt-2">
+						<div class="flex flex-col w-full">
+							<div
+								class={`mb-0.5 text-xs text-gray-500
+								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
+							>
+								{$i18n.t('Tags')}
+							</div>
+
+							<div class="flex-1 mt-0.5">
+								<Tags
+									bind:tags
+									on:add={(e) => {
+										tags = [
+											...tags,
+											{
+												name: e.detail
+											}
+										];
+									}}
+									on:delete={(e) => {
+										tags = tags.filter((tag) => tag.name !== e.detail);
+									}}
+								/>
 							</div>
 						</div>
 					</div>

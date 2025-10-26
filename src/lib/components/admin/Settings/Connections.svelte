@@ -6,7 +6,7 @@
 
 	import { getOllamaConfig, updateOllamaConfig } from '$lib/apis/ollama';
 	import { getOpenAIConfig, updateOpenAIConfig, getOpenAIModels } from '$lib/apis/openai';
-	import { getModels as _getModels } from '$lib/apis';
+	import { getModels as _getModels, getBackendConfig } from '$lib/apis';
 	import { getConnectionsConfig, setConnectionsConfig } from '$lib/apis/configs';
 
 	import { config, models, settings, user } from '$lib/stores';
@@ -114,6 +114,7 @@
 		if (res) {
 			toast.success($i18n.t('Connections settings updated'));
 			await models.set(await getModels());
+			await config.set(await getBackendConfig());
 		}
 	};
 
@@ -196,9 +197,10 @@
 	const submitHandler = async () => {
 		updateOpenAIHandler();
 		updateOllamaHandler();
-		updateDirectConnectionsHandler();
 
 		dispatch('save');
+
+		await config.set(await getBackendConfig());
 	};
 </script>
 
@@ -259,10 +261,10 @@
 								<div class="flex flex-col gap-1.5 mt-1.5">
 									{#each OPENAI_API_BASE_URLS as url, idx}
 										<OpenAIConnection
-											pipeline={pipelineUrls[url] ? true : false}
-											bind:url
+											bind:url={OPENAI_API_BASE_URLS[idx]}
 											bind:key={OPENAI_API_KEYS[idx]}
 											bind:config={OPENAI_API_CONFIGS[idx]}
+											pipeline={pipelineUrls[url] ? true : false}
 											onSubmit={() => {
 												updateOpenAIHandler();
 											}}
@@ -324,7 +326,7 @@
 								<div class="flex-1 flex flex-col gap-1.5 mt-1.5">
 									{#each OLLAMA_BASE_URLS as url, idx}
 										<OllamaConnection
-											bind:url
+											bind:url={OLLAMA_BASE_URLS[idx]}
 											bind:config={OLLAMA_API_CONFIGS[idx]}
 											{idx}
 											onSubmit={() => {

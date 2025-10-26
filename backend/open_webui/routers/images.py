@@ -10,11 +10,18 @@ from typing import Optional
 
 from urllib.parse import quote
 import requests
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Request,
+    UploadFile,
+)
+
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS, SRC_LOG_LEVELS
-from open_webui.routers.files import upload_file
+from open_webui.routers.files import upload_file_handler
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.images.comfyui import (
     ComfyUIGenerateImageForm,
@@ -41,6 +48,7 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
         "prompt_generation": request.app.state.config.ENABLE_IMAGE_PROMPT_GENERATION,
         "openai": {
             "OPENAI_API_BASE_URL": request.app.state.config.IMAGES_OPENAI_API_BASE_URL,
+            "OPENAI_API_VERSION": request.app.state.config.IMAGES_OPENAI_API_VERSION,
             "OPENAI_API_KEY": request.app.state.config.IMAGES_OPENAI_API_KEY,
         },
         "automatic1111": {
@@ -65,6 +73,7 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
 
 class OpenAIConfigForm(BaseModel):
     OPENAI_API_BASE_URL: str
+    OPENAI_API_VERSION: str
     OPENAI_API_KEY: str
 
 
@@ -112,6 +121,9 @@ async def update_config(
     request.app.state.config.IMAGES_OPENAI_API_BASE_URL = (
         form_data.openai.OPENAI_API_BASE_URL
     )
+    request.app.state.config.IMAGES_OPENAI_API_VERSION = (
+        form_data.openai.OPENAI_API_VERSION
+    )
     request.app.state.config.IMAGES_OPENAI_API_KEY = form_data.openai.OPENAI_API_KEY
 
     request.app.state.config.IMAGES_GEMINI_API_BASE_URL = (
@@ -158,6 +170,7 @@ async def update_config(
         "prompt_generation": request.app.state.config.ENABLE_IMAGE_PROMPT_GENERATION,
         "openai": {
             "OPENAI_API_BASE_URL": request.app.state.config.IMAGES_OPENAI_API_BASE_URL,
+            "OPENAI_API_VERSION": request.app.state.config.IMAGES_OPENAI_API_VERSION,
             "OPENAI_API_KEY": request.app.state.config.IMAGES_OPENAI_API_KEY,
         },
         "automatic1111": {
@@ -469,7 +482,13 @@ def upload_image(request, image_data, content_type, metadata, user):
             "content-type": content_type,
         },
     )
-    file_item = upload_file(request, file, metadata=metadata, internal=True, user=user)
+    file_item = upload_file_handler(
+        request,
+        file=file,
+        metadata=metadata,
+        process=False,
+        user=user,
+    )
     url = request.app.url_path_for("get_file_content_by_id", id=file_item.id)
     return url
 
@@ -483,11 +502,19 @@ async def image_generations(
     # if IMAGE_SIZE = 'auto', default WidthxHeight to the 512x512 default
     # This is only relevant when the user has set IMAGE_SIZE to 'auto' with an
     # image model other than gpt-image-1, which is warned about on settings save
-    width, height = (
-        tuple(map(int, request.app.state.config.IMAGE_SIZE.split("x")))
-        if "x" in request.app.state.config.IMAGE_SIZE
-        else (512, 512)
-    )
+
+    size = "512x512"
+    if (
+        request.app.state.config.IMAGE_SIZE
+        and "x" in request.app.state.config.IMAGE_SIZE
+    ):
+        size = request.app.state.config.IMAGE_SIZE
+
+    if form_data.size and "x" in form_data.size:
+        size = form_data.size
+
+    width, height = tuple(map(int, size.split("x")))
+    model = get_image_model(request)
 
     r = None
     try:
@@ -505,11 +532,7 @@ async def image_generations(
                 headers["X-OpenWebUI-User-Role"] = user.role
 
             data = {
-                "model": (
-                    request.app.state.config.IMAGE_GENERATION_MODEL
-                    if request.app.state.config.IMAGE_GENERATION_MODEL != ""
-                    else "dall-e-2"
-                ),
+                "model": model,
                 "prompt": form_data.prompt,
                 "n": form_data.n,
                 "size": (
@@ -524,10 +547,16 @@ async def image_generations(
                 ),
             }
 
+            api_version_query_param = ""
+            if request.app.state.config.IMAGES_OPENAI_API_VERSION:
+                api_version_query_param = (
+                    f"?api-version={request.app.state.config.IMAGES_OPENAI_API_VERSION}"
+                )
+
             # Use asyncio.to_thread for the requests.post call
             r = await asyncio.to_thread(
                 requests.post,
-                url=f"{request.app.state.config.IMAGES_OPENAI_API_BASE_URL}/images/generations",
+                url=f"{request.app.state.config.IMAGES_OPENAI_API_BASE_URL}/images/generations{api_version_query_param}",
                 json=data,
                 headers=headers,
             )
@@ -552,7 +581,6 @@ async def image_generations(
             headers["Content-Type"] = "application/json"
             headers["x-goog-api-key"] = request.app.state.config.IMAGES_GEMINI_API_KEY
 
-            model = get_image_model(request)
             data = {
                 "instances": {"prompt": form_data.prompt},
                 "parameters": {
@@ -608,7 +636,7 @@ async def image_generations(
                 }
             )
             res = await comfyui_generate_image(
-                request.app.state.config.IMAGE_GENERATION_MODEL,
+                model,
                 form_data,
                 user.id,
                 request.app.state.config.COMFYUI_BASE_URL,

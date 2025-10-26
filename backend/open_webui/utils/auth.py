@@ -6,7 +6,7 @@ import hmac
 import hashlib
 import requests
 import os
-
+import bcrypt
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.asymmetric import ed25519
@@ -38,10 +38,7 @@ from open_webui.env import (
 
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from passlib.context import CryptContext
 
-
-logging.getLogger("passlib").setLevel(logging.ERROR)
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OAUTH"])
@@ -155,17 +152,23 @@ def get_license_data(app, key):
 
 
 bearer_security = HTTPBearer(auto_error=False)
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-def verify_password(plain_password, hashed_password):
+def get_password_hash(password: str) -> str:
+    """Hash a password using bcrypt"""
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a password against its hash"""
     return (
-        pwd_context.verify(plain_password, hashed_password) if hashed_password else None
+        bcrypt.checkpw(
+            plain_password.encode("utf-8"),
+            hashed_password.encode("utf-8"),
+        )
+        if hashed_password
+        else None
     )
-
-
-def get_password_hash(password):
-    return pwd_context.hash(password)
 
 
 def create_token(data: dict, expires_delta: Union[timedelta, None] = None) -> str:
@@ -221,7 +224,7 @@ def get_current_user(
         token = request.cookies.get("token")
 
     if token is None:
-        raise HTTPException(status_code=403, detail="Not authenticated")
+        raise HTTPException(status_code=401, detail="Not authenticated")
 
     # auth by api key
     if token.startswith("sk-"):
@@ -261,55 +264,67 @@ def get_current_user(
         return user
 
     # auth by jwt token
-    try:
-        data = decode_token(token)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
-        )
 
-    if data is not None and "id" in data:
-        user = Users.get_user_by_id(data["id"])
-        if user is None:
+    try:
+        try:
+            data = decode_token(token)
+        except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=ERROR_MESSAGES.INVALID_TOKEN,
+                detail="Invalid token",
             )
-        else:
-            if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
-                trusted_email = request.headers.get(
-                    WEBUI_AUTH_TRUSTED_EMAIL_HEADER, ""
-                ).lower()
-                if trusted_email and user.email != trusted_email:
-                    # Delete the token cookie
-                    response.delete_cookie("token")
-                    # Delete OAuth token if present
-                    if request.cookies.get("oauth_id_token"):
-                        response.delete_cookie("oauth_id_token")
-                    raise HTTPException(
-                        status_code=status.HTTP_401_UNAUTHORIZED,
-                        detail="User mismatch. Please sign in again.",
+
+        if data is not None and "id" in data:
+            user = Users.get_user_by_id(data["id"])
+            if user is None:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=ERROR_MESSAGES.INVALID_TOKEN,
+                )
+            else:
+                if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
+                    trusted_email = request.headers.get(
+                        WEBUI_AUTH_TRUSTED_EMAIL_HEADER, ""
+                    ).lower()
+                    if trusted_email and user.email != trusted_email:
+                        raise HTTPException(
+                            status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="User mismatch. Please sign in again.",
+                        )
+
+                # Add user info to current span
+                current_span = trace.get_current_span()
+                if current_span:
+                    current_span.set_attribute("client.user.id", user.id)
+                    current_span.set_attribute("client.user.email", user.email)
+                    current_span.set_attribute("client.user.role", user.role)
+                    current_span.set_attribute("client.auth.type", "jwt")
+
+                # Refresh the user's last active timestamp asynchronously
+                # to prevent blocking the request
+                if background_tasks:
+                    background_tasks.add_task(
+                        Users.update_user_last_active_by_id, user.id
                     )
+            return user
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.UNAUTHORIZED,
+            )
+    except Exception as e:
+        # Delete the token cookie
+        if request.cookies.get("token"):
+            response.delete_cookie("token")
 
-            # Add user info to current span
-            current_span = trace.get_current_span()
-            if current_span:
-                current_span.set_attribute("client.user.id", user.id)
-                current_span.set_attribute("client.user.email", user.email)
-                current_span.set_attribute("client.user.role", user.role)
-                current_span.set_attribute("client.auth.type", "jwt")
+        if request.cookies.get("oauth_id_token"):
+            response.delete_cookie("oauth_id_token")
 
-            # Refresh the user's last active timestamp asynchronously
-            # to prevent blocking the request
-            if background_tasks:
-                background_tasks.add_task(Users.update_user_last_active_by_id, user.id)
-        return user
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.UNAUTHORIZED,
-        )
+        # Delete OAuth session if present
+        if request.cookies.get("oauth_session_id"):
+            response.delete_cookie("oauth_session_id")
+
+        raise e
 
 
 def get_current_user_by_api_key(api_key: str):

@@ -6,10 +6,11 @@ from typing import Optional
 
 from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
+from open_webui.models.folders import Folders
 from open_webui.env import SRC_LOG_LEVELS
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
+from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, Index
 from sqlalchemy import or_, func, select, and_, text
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import bindparam
@@ -39,6 +40,20 @@ class Chat(Base):
 
     meta = Column(JSON, server_default="{}")
     folder_id = Column(Text, nullable=True)
+
+    __table_args__ = (
+        # Performance indexes for common queries
+        # WHERE folder_id = ...
+        Index("folder_id_idx", "folder_id"),
+        # WHERE user_id = ... AND pinned = ...
+        Index("user_id_pinned_idx", "user_id", "pinned"),
+        # WHERE user_id = ... AND archived = ...
+        Index("user_id_archived_idx", "user_id", "archived"),
+        # WHERE user_id = ... ORDER BY updated_at DESC
+        Index("updated_at_user_id_idx", "updated_at", "user_id"),
+        # WHERE folder_id = ... AND user_id = ...
+        Index("folder_id_user_id_idx", "folder_id", "user_id"),
+    )
 
 
 class ChatModel(BaseModel):
@@ -221,7 +236,7 @@ class ChatTable:
 
         return chat.chat.get("title", "New Chat")
 
-    def get_messages_by_chat_id(self, id: str) -> Optional[dict]:
+    def get_messages_map_by_chat_id(self, id: str) -> Optional[dict]:
         chat = self.get_chat_by_id(id)
         if chat is None:
             return None
@@ -296,6 +311,9 @@ class ChatTable:
                     "user_id": f"shared-{chat_id}",
                     "title": chat.title,
                     "chat": chat.chat,
+                    "meta": chat.meta,
+                    "pinned": chat.pinned,
+                    "folder_id": chat.folder_id,
                     "created_at": chat.created_at,
                     "updated_at": int(time.time()),
                 }
@@ -327,7 +345,9 @@ class ChatTable:
 
                 shared_chat.title = chat.title
                 shared_chat.chat = chat.chat
-
+                shared_chat.meta = chat.meta
+                shared_chat.pinned = chat.pinned
+                shared_chat.folder_id = chat.folder_id
                 shared_chat.updated_at = int(time.time())
                 db.commit()
                 db.refresh(shared_chat)
@@ -342,6 +362,15 @@ class ChatTable:
                 db.query(Chat).filter_by(user_id=f"shared-{chat_id}").delete()
                 db.commit()
 
+                return True
+        except Exception:
+            return False
+
+    def unarchive_all_chats_by_user_id(self, user_id: str) -> bool:
+        try:
+            with get_db() as db:
+                db.query(Chat).filter_by(user_id=user_id).update({"archived": False})
+                db.commit()
                 return True
         except Exception:
             return False
@@ -472,12 +501,19 @@ class ChatTable:
         self,
         user_id: str,
         include_archived: bool = False,
+        include_folders: bool = False,
+        include_pinned: bool = False,
         skip: Optional[int] = None,
         limit: Optional[int] = None,
     ) -> list[ChatTitleIdResponse]:
         with get_db() as db:
-            query = db.query(Chat).filter_by(user_id=user_id).filter_by(folder_id=None)
-            query = query.filter(or_(Chat.pinned == False, Chat.pinned == None))
+            query = db.query(Chat).filter_by(user_id=user_id)
+
+            if not include_folders:
+                query = query.filter_by(folder_id=None)
+
+            if not include_pinned:
+                query = query.filter(or_(Chat.pinned == False, Chat.pinned == None))
 
             if not include_archived:
                 query = query.filter_by(archived=False)
@@ -612,8 +648,45 @@ class ChatTable:
             if word.startswith("tag:")
         ]
 
+        # Extract folder names - handle spaces and case insensitivity
+        folders = Folders.search_folders_by_names(
+            user_id,
+            [
+                word.replace("folder:", "")
+                for word in search_text_words
+                if word.startswith("folder:")
+            ],
+        )
+        folder_ids = [folder.id for folder in folders]
+
+        is_pinned = None
+        if "pinned:true" in search_text_words:
+            is_pinned = True
+        elif "pinned:false" in search_text_words:
+            is_pinned = False
+
+        is_archived = None
+        if "archived:true" in search_text_words:
+            is_archived = True
+        elif "archived:false" in search_text_words:
+            is_archived = False
+
+        is_shared = None
+        if "shared:true" in search_text_words:
+            is_shared = True
+        elif "shared:false" in search_text_words:
+            is_shared = False
+
         search_text_words = [
-            word for word in search_text_words if not word.startswith("tag:")
+            word
+            for word in search_text_words
+            if (
+                not word.startswith("tag:")
+                and not word.startswith("folder:")
+                and not word.startswith("pinned:")
+                and not word.startswith("archived:")
+                and not word.startswith("shared:")
+            )
         ]
 
         search_text = " ".join(search_text_words)
@@ -621,8 +694,22 @@ class ChatTable:
         with get_db() as db:
             query = db.query(Chat).filter(Chat.user_id == user_id)
 
-            if not include_archived:
+            if is_archived is not None:
+                query = query.filter(Chat.archived == is_archived)
+            elif not include_archived:
                 query = query.filter(Chat.archived == False)
+
+            if is_pinned is not None:
+                query = query.filter(Chat.pinned == is_pinned)
+
+            if is_shared is not None:
+                if is_shared:
+                    query = query.filter(Chat.share_id.isnot(None))
+                else:
+                    query = query.filter(Chat.share_id.is_(None))
+
+            if folder_ids:
+                query = query.filter(Chat.folder_id.in_(folder_ids))
 
             query = query.order_by(Chat.updated_at.desc())
 
@@ -734,7 +821,7 @@ class ChatTable:
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
     def get_chats_by_folder_id_and_user_id(
-        self, folder_id: str, user_id: str
+        self, folder_id: str, user_id: str, skip: int = 0, limit: int = 60
     ) -> list[ChatModel]:
         with get_db() as db:
             query = db.query(Chat).filter_by(folder_id=folder_id, user_id=user_id)
@@ -742,6 +829,11 @@ class ChatTable:
             query = query.filter_by(archived=False)
 
             query = query.order_by(Chat.updated_at.desc())
+
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
 
             all_chats = query.all()
             return [ChatModel.model_validate(chat) for chat in all_chats]
@@ -870,6 +962,16 @@ class ChatTable:
             # Debugging output for inspection
             log.info(f"Count of chats for tag '{tag_name}': {count}")
 
+            return count
+
+    def count_chats_by_folder_id_and_user_id(self, folder_id: str, user_id: str) -> int:
+        with get_db() as db:
+            query = db.query(Chat).filter_by(user_id=user_id)
+
+            query = query.filter_by(folder_id=folder_id)
+            count = query.count()
+
+            log.info(f"Count of chats for folder '{folder_id}': {count}")
             return count
 
     def delete_tag_by_id_and_user_id_and_tag_name(

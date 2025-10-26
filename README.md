@@ -31,6 +31,8 @@ For more information, be sure to check out our [Open WebUI Documentation](https:
 
 - 🛡️ **Granular Permissions and User Groups**: By allowing administrators to create detailed user roles and permissions, we ensure a secure user environment. This granularity not only enhances security but also allows for customized user experiences, fostering a sense of ownership and responsibility amongst users.
 
+- 🔄 **SCIM 2.0 Support**: Enterprise-grade user and group provisioning through SCIM 2.0 protocol, enabling seamless integration with identity providers like Okta, Azure AD, and Google Workspace for automated user lifecycle management.
+
 - 📱 **Responsive Design**: Enjoy a seamless experience across Desktop PC, Laptop, and Mobile devices.
 
 - 📱 **Progressive Web App (PWA) for Mobile**: Enjoy a native app-like experience on your mobile device with our PWA, providing offline access on localhost and a seamless user interface.
@@ -68,7 +70,7 @@ Want to learn more about Open WebUI's features? Check out our [Open WebUI docume
 #### Emerald
 
 <table>
-  <tr>
+  <!-- <tr>
     <td>
       <a href="https://n8n.io/" target="_blank">
         <img src="https://docs.openwebui.com/sponsors/logos/n8n.png" alt="n8n" style="width: 8rem; height: 8rem; border-radius: .75rem;" />
@@ -77,7 +79,7 @@ Want to learn more about Open WebUI's features? Check out our [Open WebUI docume
     <td>
       <a href="https://n8n.io/">n8n</a> • Does your interface have a backend yet?<br>Try <a href="https://n8n.io/">n8n</a>
     </td>
-  </tr>
+  </tr> -->
   <tr>
     <td>
       <a href="https://tailscale.com/blog/self-host-a-local-ai-stack/?utm_source=OpenWebUI&utm_medium=paid-ad-placement&utm_campaign=OpenWebUI-Docs" target="_blank">
@@ -86,6 +88,16 @@ Want to learn more about Open WebUI's features? Check out our [Open WebUI docume
     </td>
     <td>
       <a href="https://tailscale.com/blog/self-host-a-local-ai-stack/?utm_source=OpenWebUI&utm_medium=paid-ad-placement&utm_campaign=OpenWebUI-Docs">Tailscale</a> • Connect self-hosted AI to any device with Tailscale
+    </td>
+  </tr>
+   <tr>
+    <td>
+      <a href="https://warp.dev/open-webui" target="_blank">
+        <img src="https://docs.openwebui.com/sponsors/logos/warp.png" alt="Warp" style="width: 8rem; height: 8rem; border-radius: .75rem;" />
+      </a>
+    </td>
+    <td>
+      <a href="https://warp.dev/open-webui">Warp</a> • The intelligent terminal for developers
     </td>
   </tr>
 </table>
@@ -236,7 +248,7 @@ Discover upcoming features on our roadmap in the [Open WebUI Documentation](http
 
 ## License 📜
 
-This project is licensed under the [Open WebUI License](LICENSE), a revised BSD-3-Clause license. You receive all the same rights as the classic BSD-3 license: you can use, modify, and distribute the software, including in proprietary and commercial products, with minimal restrictions. The only additional requirement is to preserve the "Open WebUI" branding, as detailed in the LICENSE file. For full terms, see the [LICENSE](LICENSE) document. 📄
+This project contains code under multiple licenses. The current codebase includes components licensed under the Open WebUI License with an additional requirement to preserve the "Open WebUI" branding, as well as prior contributions under their respective original licenses. For a detailed record of license changes and the applicable terms for each section of the code, please refer to [LICENSE_HISTORY](./LICENSE_HISTORY). For complete and updated licensing details, please see the [LICENSE](./LICENSE) and [LICENSE_HISTORY](./LICENSE_HISTORY) files.
 
 ## Support 💬
 

@@ -129,7 +129,10 @@ async def create_feedback(
 
 @router.get("/feedback/{id}", response_model=FeedbackModel)
 async def get_feedback_by_id(id: str, user=Depends(get_verified_user)):
-    feedback = Feedbacks.get_feedback_by_id_and_user_id(id=id, user_id=user.id)
+    if user.role == "admin":
+        feedback = Feedbacks.get_feedback_by_id(id=id)
+    else:
+        feedback = Feedbacks.get_feedback_by_id_and_user_id(id=id, user_id=user.id)
 
     if not feedback:
         raise HTTPException(
@@ -143,9 +146,12 @@ async def get_feedback_by_id(id: str, user=Depends(get_verified_user)):
 async def update_feedback_by_id(
     id: str, form_data: FeedbackForm, user=Depends(get_verified_user)
 ):
-    feedback = Feedbacks.update_feedback_by_id_and_user_id(
-        id=id, user_id=user.id, form_data=form_data
-    )
+    if user.role == "admin":
+        feedback = Feedbacks.update_feedback_by_id(id=id, form_data=form_data)
+    else:
+        feedback = Feedbacks.update_feedback_by_id_and_user_id(
+            id=id, user_id=user.id, form_data=form_data
+        )
 
     if not feedback:
         raise HTTPException(

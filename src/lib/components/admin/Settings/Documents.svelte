@@ -153,12 +153,21 @@
 		}
 		if (
 			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' &&
+			RAGConfig.DOCLING_DO_OCR &&
 			((RAGConfig.DOCLING_OCR_ENGINE === '' && RAGConfig.DOCLING_OCR_LANG !== '') ||
 				(RAGConfig.DOCLING_OCR_ENGINE !== '' && RAGConfig.DOCLING_OCR_LANG === ''))
 		) {
 			toast.error(
 				$i18n.t('Both Docling OCR Engine and Language(s) must be provided or both left empty.')
 			);
+			return;
+		}
+		if (
+			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' &&
+			RAGConfig.DOCLING_DO_OCR === false &&
+			RAGConfig.DOCLING_FORCE_OCR === true
+		) {
+			toast.error($i18n.t('In order to force OCR, performing OCR must be enabled.'));
 			return;
 		}
 
@@ -171,11 +180,23 @@
 		}
 
 		if (
-			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'document_intelligence' &&
-			(RAGConfig.DOCUMENT_INTELLIGENCE_ENDPOINT === '' ||
-				RAGConfig.DOCUMENT_INTELLIGENCE_KEY === '')
+			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker' &&
+			RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG &&
+			RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG.trim() !== ''
 		) {
-			toast.error($i18n.t('Document Intelligence endpoint and key required.'));
+			try {
+				JSON.parse(RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG);
+			} catch (e) {
+				toast.error($i18n.t('Invalid JSON format in Additional Config'));
+				return;
+			}
+		}
+
+		if (
+			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'document_intelligence' &&
+			RAGConfig.DOCUMENT_INTELLIGENCE_ENDPOINT === ''
+		) {
+			toast.error($i18n.t('Document Intelligence endpoint required.'));
 			return;
 		}
 		if (
@@ -183,6 +204,15 @@
 			RAGConfig.MISTRAL_OCR_API_KEY === ''
 		) {
 			toast.error($i18n.t('Mistral OCR API Key required.'));
+			return;
+		}
+
+		if (
+			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mineru' &&
+			RAGConfig.MINERU_API_MODE === 'cloud' &&
+			RAGConfig.MINERU_API_KEY === ''
+		) {
+			toast.error($i18n.t('MinerU API Key required for Cloud API mode.'));
 			return;
 		}
 
@@ -195,10 +225,6 @@
 			ALLOWED_FILE_EXTENSIONS: RAGConfig.ALLOWED_FILE_EXTENSIONS.split(',')
 				.map((ext) => ext.trim())
 				.filter((ext) => ext !== ''),
-			DATALAB_MARKER_LANGS: RAGConfig.DATALAB_MARKER_LANGS.split(',')
-				.map((code) => code.trim())
-				.filter((code) => code !== '')
-				.join(', '),
 			DOCLING_PICTURE_DESCRIPTION_LOCAL: JSON.parse(
 				RAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL || '{}'
 			),
@@ -320,6 +346,7 @@
 									<option value="datalab_marker">{$i18n.t('Datalab Marker API')}</option>
 									<option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
 									<option value="mistral_ocr">{$i18n.t('Mistral OCR')}</option>
+									<option value="mineru">{$i18n.t('MinerU')}</option>
 								</select>
 							</div>
 						</div>
@@ -337,6 +364,21 @@
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker'}
 							<div class="my-0.5 flex gap-2 pr-2">
+								<Tooltip
+									content={$i18n.t(
+										'API Base URL for Datalab Marker service. Defaults to: https://www.datalab.to/api/v1/marker'
+									)}
+									placement="top-start"
+									className="w-full"
+								>
+									<input
+										class="flex-1 w-full text-sm bg-transparent outline-hidden"
+										placeholder={$i18n.t('Enter Datalab Marker API Base URL')}
+										bind:value={RAGConfig.DATALAB_MARKER_API_BASE_URL}
+									/>
+								</Tooltip>
+							</div>
+							<div class="my-0.5 flex gap-2 pr-2">
 								<SensitiveInput
 									placeholder={$i18n.t('Enter Datalab Marker API Key')}
 									required={false}
@@ -344,24 +386,33 @@
 								/>
 							</div>
 
-							<div class="flex justify-between w-full mt-2">
-								<div class="text-xs font-medium">
-									{$i18n.t('Languages')}
+							<div class="flex flex-col gap-2 mt-2">
+								<div class=" flex flex-col w-full justify-between">
+									<div class=" mb-1 text-xs font-medium">
+										{$i18n.t('Additional Config')}
+									</div>
+									<div class="flex w-full items-center relative">
+										<Tooltip
+											content={$i18n.t(
+												'Additional configuration options for marker. This should be a JSON string with key-value pairs. For example, \'{"key": "value"}\'. Supported keys include: disable_links, keep_pageheader_in_output, keep_pagefooter_in_output, filter_blank_pages, drop_repeated_text, layout_coverage_threshold, merge_threshold, height_tolerance, gap_threshold, image_threshold, min_line_length, level_count, default_level'
+											)}
+											placement="top-start"
+											className="w-full"
+										>
+											<Textarea
+												bind:value={RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG}
+												placeholder={$i18n.t('Enter JSON config (e.g., {"disable_links": true})')}
+											/>
+										</Tooltip>
+									</div>
 								</div>
-
-								<input
-									class="text-sm bg-transparent outline-hidden"
-									type="text"
-									bind:value={RAGConfig.DATALAB_MARKER_LANGS}
-									placeholder={$i18n.t('e.g.) en,fr,de')}
-								/>
 							</div>
 
 							<div class="flex justify-between w-full mt-2">
 								<div class="self-center text-xs font-medium">
 									<Tooltip
 										content={$i18n.t(
-											'Significantly improves accuracy by using an LLM to enhance tables, forms, inline math, and layout detection. Will increase latency. Defaults to True.'
+											'Significantly improves accuracy by using an LLM to enhance tables, forms, inline math, and layout detection. Will increase latency. Defaults to False.'
 										)}
 										placement="top-start"
 									>
@@ -449,6 +500,21 @@
 								<div class="self-center text-xs font-medium">
 									<Tooltip
 										content={$i18n.t(
+											'Format the lines in the output. Defaults to False. If set to True, the lines will be formatted to detect inline math and styles.'
+										)}
+										placement="top-start"
+									>
+										{$i18n.t('Format Lines')}
+									</Tooltip>
+								</div>
+								<div class="flex items-center">
+									<Switch bind:state={RAGConfig.DATALAB_MARKER_FORMAT_LINES} />
+								</div>
+							</div>
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">
+									<Tooltip
+										content={$i18n.t(
 											"The output format for the text. Can be 'json', 'markdown', or 'html'. Defaults to 'markdown'."
 										)}
 										placement="top-start"
@@ -498,19 +564,91 @@
 									bind:value={RAGConfig.DOCLING_SERVER_URL}
 								/>
 							</div>
-							<div class="flex w-full mt-2">
-								<input
-									class="flex-1 w-full text-sm bg-transparent outline-hidden"
-									placeholder={$i18n.t('Enter Docling OCR Engine')}
-									bind:value={RAGConfig.DOCLING_OCR_ENGINE}
-								/>
-								<input
-									class="flex-1 w-full text-sm bg-transparent outline-hidden"
-									placeholder={$i18n.t('Enter Docling OCR Language(s)')}
-									bind:value={RAGConfig.DOCLING_OCR_LANG}
-								/>
-							</div>
 
+							<div class="flex w-full mt-2">
+								<div class="flex-1 flex justify-between">
+									<div class=" self-center text-xs font-medium">
+										{$i18n.t('Perform OCR')}
+									</div>
+									<div class="flex items-center relative">
+										<Switch bind:state={RAGConfig.DOCLING_DO_OCR} />
+									</div>
+								</div>
+							</div>
+							{#if RAGConfig.DOCLING_DO_OCR}
+								<div class="flex w-full mt-2">
+									<input
+										class="flex-1 w-full text-sm bg-transparent outline-hidden"
+										placeholder={$i18n.t('Enter Docling OCR Engine')}
+										bind:value={RAGConfig.DOCLING_OCR_ENGINE}
+									/>
+									<input
+										class="flex-1 w-full text-sm bg-transparent outline-hidden"
+										placeholder={$i18n.t('Enter Docling OCR Language(s)')}
+										bind:value={RAGConfig.DOCLING_OCR_LANG}
+									/>
+								</div>
+							{/if}
+							<div class="flex w-full mt-2">
+								<div class="flex-1 flex justify-between">
+									<div class=" self-center text-xs font-medium">
+										{$i18n.t('Force OCR')}
+									</div>
+									<div class="flex items-center relative">
+										<Switch bind:state={RAGConfig.DOCLING_FORCE_OCR} />
+									</div>
+								</div>
+							</div>
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">
+									<Tooltip content={''} placement="top-start">
+										{$i18n.t('PDF Backend')}
+									</Tooltip>
+								</div>
+								<div class="">
+									<select
+										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+										bind:value={RAGConfig.DOCLING_PDF_BACKEND}
+									>
+										<option value="pypdfium2">{$i18n.t('pypdfium2')}</option>
+										<option value="dlparse_v1">{$i18n.t('dlparse_v1')}</option>
+										<option value="dlparse_v2">{$i18n.t('dlparse_v2')}</option>
+										<option value="dlparse_v4">{$i18n.t('dlparse_v4')}</option>
+									</select>
+								</div>
+							</div>
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">
+									<Tooltip content={''} placement="top-start">
+										{$i18n.t('Table Mode')}
+									</Tooltip>
+								</div>
+								<div class="">
+									<select
+										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+										bind:value={RAGConfig.DOCLING_TABLE_MODE}
+									>
+										<option value="fast">{$i18n.t('fast')}</option>
+										<option value="accurate">{$i18n.t('accurate')}</option>
+									</select>
+								</div>
+							</div>
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">
+									<Tooltip content={''} placement="top-start">
+										{$i18n.t('Pipeline')}
+									</Tooltip>
+								</div>
+								<div class="">
+									<select
+										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+										bind:value={RAGConfig.DOCLING_PIPELINE}
+									>
+										<option value="standard">{$i18n.t('standard')}</option>
+										<option value="vlm">{$i18n.t('vlm')}</option>
+									</select>
+								</div>
+							</div>
 							<div class="flex w-full mt-2">
 								<div class="flex-1 flex justify-between">
 									<div class=" self-center text-xs font-medium">
@@ -586,6 +724,21 @@
 									</div>
 								{/if}
 							{/if}
+
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">
+									<Tooltip content={''} placement="top-start">
+										{$i18n.t('Parameters')}
+									</Tooltip>
+								</div>
+								<div class="">
+									<Textarea
+										bind:value={RAGConfig.DOCLING_PARAMETERS}
+										placeholder={$i18n.t('Enter additional parameters in JSON format')}
+										minSize={100}
+									/>
+								</div>
+							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'document_intelligence'}
 							<div class="my-0.5 flex gap-2 pr-2">
 								<input
@@ -596,6 +749,7 @@
 								<SensitiveInput
 									placeholder={$i18n.t('Enter Document Intelligence Key')}
 									bind:value={RAGConfig.DOCUMENT_INTELLIGENCE_KEY}
+									required={false}
 								/>
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mistral_ocr'}
@@ -604,6 +758,92 @@
 									placeholder={$i18n.t('Enter Mistral API Key')}
 									bind:value={RAGConfig.MISTRAL_OCR_API_KEY}
 								/>
+							</div>
+						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mineru'}
+							<!-- API Mode Selection -->
+							<div class="flex w-full mt-2">
+								<div class="flex-1 flex justify-between">
+									<div class="self-center text-xs font-medium">
+										{$i18n.t('API Mode')}
+									</div>
+									<select
+										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden"
+										bind:value={RAGConfig.MINERU_API_MODE}
+										on:change={() => {
+											// Auto-update URL when switching modes if it's empty or matches the opposite mode's default
+											const cloudUrl = 'https://mineru.net/api/v4';
+											const localUrl = 'http://localhost:8000';
+
+											if (RAGConfig.MINERU_API_MODE === 'cloud') {
+												if (!RAGConfig.MINERU_API_URL || RAGConfig.MINERU_API_URL === localUrl) {
+													RAGConfig.MINERU_API_URL = cloudUrl;
+												}
+											} else {
+												if (!RAGConfig.MINERU_API_URL || RAGConfig.MINERU_API_URL === cloudUrl) {
+													RAGConfig.MINERU_API_URL = localUrl;
+												}
+											}
+										}}
+									>
+										<option value="local">{$i18n.t('Self-Hosted')}</option>
+										<option value="cloud">{$i18n.t('minerU managed (Cloud API)')}</option>
+									</select>
+								</div>
+							</div>
+
+							<!-- API URL -->
+							<div class="flex w-full mt-2">
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={RAGConfig.MINERU_API_MODE === 'cloud'
+										? $i18n.t('https://mineru.net/api/v4')
+										: $i18n.t('http://localhost:8000')}
+									bind:value={RAGConfig.MINERU_API_URL}
+								/>
+							</div>
+
+							<!-- API Key (Cloud only) -->
+							{#if RAGConfig.MINERU_API_MODE === 'cloud'}
+								<div class="flex w-full mt-2">
+									<SensitiveInput
+										placeholder={$i18n.t('Enter MinerU API Key')}
+										bind:value={RAGConfig.MINERU_API_KEY}
+									/>
+								</div>
+							{/if}
+
+							<!-- Parameters -->
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">
+									<Tooltip
+										content={$i18n.t(
+											'Advanced parameters for MinerU parsing (enable_ocr, enable_formula, enable_table, language, model_version, page_ranges)'
+										)}
+										placement="top-start"
+									>
+										{$i18n.t('Parameters')}
+									</Tooltip>
+								</div>
+								<div class="">
+									<Textarea
+										value={typeof RAGConfig.MINERU_PARAMS === 'object' &&
+										RAGConfig.MINERU_PARAMS !== null &&
+										Object.keys(RAGConfig.MINERU_PARAMS).length > 0
+											? JSON.stringify(RAGConfig.MINERU_PARAMS, null, 2)
+											: ''}
+										on:input={(e) => {
+											try {
+												const value = e.target.value.trim();
+												RAGConfig.MINERU_PARAMS = value ? JSON.parse(value) : {};
+											} catch (err) {
+												// Keep the string value if JSON is invalid (user is still typing)
+												RAGConfig.MINERU_PARAMS = e.target.value;
+											}
+										}}
+										placeholder={`{\n  "enable_ocr": false,\n  "enable_formula": true,\n  "enable_table": true,\n  "language": "en",\n  "model_version": "pipeline",\n  "page_ranges": ""\n}`}
+										minSize={100}
+									/>
+								</div>
 							</div>
 						{/if}
 					</div>
@@ -698,7 +938,7 @@
 									<select
 										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 										bind:value={embeddingEngine}
-										placeholder="Select an embedding model engine"
+										placeholder={$i18n.t('Select an embedding model engine')}
 										on:change={(e) => {
 											if (e.target.value === 'ollama') {
 												embeddingModel = '';
@@ -714,7 +954,7 @@
 										<option value="">{$i18n.t('Default (SentenceTransformers)')}</option>
 										<option value="ollama">{$i18n.t('Ollama')}</option>
 										<option value="openai">{$i18n.t('OpenAI')}</option>
-										<option value="azure_openai">Azure OpenAI</option>
+										<option value="azure_openai">{$i18n.t('Azure OpenAI')}</option>
 									</select>
 								</div>
 							</div>
@@ -763,7 +1003,7 @@
 									<div class="flex gap-2">
 										<input
 											class="flex-1 w-full text-sm bg-transparent outline-hidden"
-											placeholder="Version"
+											placeholder={$i18n.t('Version')}
 											bind:value={AzureOpenAIVersion}
 											required
 										/>
@@ -834,7 +1074,7 @@
 
 							<div class="mt-1 mb-1 text-xs text-gray-400 dark:text-gray-500">
 								{$i18n.t(
-									'Warning: If you update or change your embedding model, you will need to re-import all documents.'
+									'After updating or changing the embedding model, you must reindex the knowledge base for the changes to take effect. You can do this using the "Reindex" button below.'
 								)}
 							</div>
 						</div>
@@ -899,7 +1139,7 @@
 											<select
 												class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 												bind:value={RAGConfig.RAG_RERANKING_ENGINE}
-												placeholder="Select a reranking model engine"
+												placeholder={$i18n.t('Select a reranking model engine')}
 												on:change={(e) => {
 													if (e.target.value === 'external') {
 														RAGConfig.RAG_RERANKING_MODEL = '';
@@ -1011,22 +1251,71 @@
 							{/if}
 
 							{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
-								<div class="mb-2.5 flex w-full justify-between">
-									<div class="self-center text-xs font-medium">
-										{$i18n.t('Weight of BM25 Retrieval')}
-									</div>
-									<div class="flex items-center relative">
-										<input
-											class="flex-1 w-full text-sm bg-transparent outline-hidden"
-											type="number"
-											step="0.01"
-											placeholder={$i18n.t('Enter BM25 Weight')}
-											bind:value={RAGConfig.HYBRID_BM25_WEIGHT}
-											autocomplete="off"
-											min="0.0"
-											max="1.0"
-										/>
-									</div>
+								<div class=" mb-2.5 py-0.5 w-full justify-between">
+									<Tooltip
+										content={$i18n.t(
+											'The Weight of BM25 Hybrid Search. 0 more semantic, 1 more lexical. Default 0.5'
+										)}
+										placement="top-start"
+										className="inline-tooltip"
+									>
+										<div class="flex w-full justify-between">
+											<div class=" self-center text-xs font-medium">
+												{$i18n.t('BM25 Weight')}
+											</div>
+											<button
+												class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+												type="button"
+												on:click={() => {
+													RAGConfig.HYBRID_BM25_WEIGHT =
+														(RAGConfig?.HYBRID_BM25_WEIGHT ?? null) === null ? 0.5 : null;
+												}}
+											>
+												{#if (RAGConfig?.HYBRID_BM25_WEIGHT ?? null) === null}
+													<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
+												{:else}
+													<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
+												{/if}
+											</button>
+										</div>
+									</Tooltip>
+
+									{#if (RAGConfig?.HYBRID_BM25_WEIGHT ?? null) !== null}
+										<div class="flex mt-0.5 space-x-2">
+											<div class=" flex-1">
+												<input
+													id="steps-range"
+													type="range"
+													min="0"
+													max="1"
+													step="0.05"
+													bind:value={RAGConfig.HYBRID_BM25_WEIGHT}
+													class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+												/>
+
+												<div class="py-0.5">
+													<div class="flex w-full justify-between">
+														<div class=" text-left text-xs font-small">
+															{$i18n.t('semantic')}
+														</div>
+														<div class=" text-right text-xs font-small">
+															{$i18n.t('lexical')}
+														</div>
+													</div>
+												</div>
+											</div>
+											<div>
+												<input
+													bind:value={RAGConfig.HYBRID_BM25_WEIGHT}
+													type="number"
+													class=" bg-transparent text-center w-14"
+													min="0"
+													max="1"
+													step="any"
+												/>
+											</div>
+										</div>
+									{/if}
 								</div>
 							{/if}
 						{/if}

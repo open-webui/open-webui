@@ -22,9 +22,11 @@ from open_webui.env import (
     ENABLE_WEBSOCKET_SUPPORT,
     WEBSOCKET_MANAGER,
     WEBSOCKET_REDIS_URL,
+    WEBSOCKET_REDIS_CLUSTER,
     WEBSOCKET_REDIS_LOCK_TIMEOUT,
     WEBSOCKET_SENTINEL_PORT,
     WEBSOCKET_SENTINEL_HOSTS,
+    REDIS_KEY_PREFIX,
 )
 from open_webui.utils.auth import decode_token
 from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
@@ -86,6 +88,7 @@ if WEBSOCKET_MANAGER == "redis":
         redis_sentinels=get_sentinels_from_env(
             WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT
         ),
+        redis_cluster=WEBSOCKET_REDIS_CLUSTER,
         async_mode=True,
     )
 
@@ -93,19 +96,22 @@ if WEBSOCKET_MANAGER == "redis":
         WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT
     )
     SESSION_POOL = RedisDict(
-        "open-webui:session_pool",
+        f"{REDIS_KEY_PREFIX}:session_pool",
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=redis_sentinels,
+        redis_cluster=WEBSOCKET_REDIS_CLUSTER,
     )
     USER_POOL = RedisDict(
-        "open-webui:user_pool",
+        f"{REDIS_KEY_PREFIX}:user_pool",
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=redis_sentinels,
+        redis_cluster=WEBSOCKET_REDIS_CLUSTER,
     )
     USAGE_POOL = RedisDict(
-        "open-webui:usage_pool",
+        f"{REDIS_KEY_PREFIX}:usage_pool",
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=redis_sentinels,
+        redis_cluster=WEBSOCKET_REDIS_CLUSTER,
     )
 
     # Token usage tracking data structures
@@ -122,9 +128,10 @@ if WEBSOCKET_MANAGER == "redis":
 
     clean_up_lock = RedisLock(
         redis_url=WEBSOCKET_REDIS_URL,
-        lock_name="usage_cleanup_lock",
+        lock_name=f"{REDIS_KEY_PREFIX}:usage_cleanup_lock",
         timeout_secs=WEBSOCKET_REDIS_LOCK_TIMEOUT,
         redis_sentinels=redis_sentinels,
+        redis_cluster=WEBSOCKET_REDIS_CLUSTER,
     )
     aquire_func = clean_up_lock.aquire_lock
     renew_func = clean_up_lock.renew_lock
@@ -143,7 +150,7 @@ else:
 
 YDOC_MANAGER = YdocManager(
     redis=REDIS,
-    redis_key_prefix="open-webui:ydoc:documents",
+    redis_key_prefix=f"{REDIS_KEY_PREFIX}:ydoc:documents",
 )
 
 
@@ -348,7 +355,9 @@ async def connect(sid, environ, auth):
             user = Users.get_user_by_id(data["id"])
 
         if user:
-            SESSION_POOL[sid] = user.model_dump()
+            SESSION_POOL[sid] = user.model_dump(
+                exclude=["date_of_birth", "bio", "gender"]
+            )
             if user.id in USER_POOL:
                 USER_POOL[user.id] = USER_POOL[user.id] + [sid]
             else:
@@ -370,7 +379,7 @@ async def user_join(sid, data):
     if not user:
         return
 
-    SESSION_POOL[sid] = user.model_dump()
+    SESSION_POOL[sid] = user.model_dump(exclude=["date_of_birth", "bio", "gender"])
     if user.id in USER_POOL:
         USER_POOL[user.id] = USER_POOL[user.id] + [sid]
     else:
@@ -436,7 +445,7 @@ async def join_note(sid, data):
     await sio.enter_room(sid, f"note:{note.id}")
 
 
-@sio.on("channel-events")
+@sio.on("events:channel")
 async def channel_events(sid, data):
     room = f"channel:{data['channel_id']}"
     participants = sio.manager.get_participants(
@@ -453,7 +462,7 @@ async def channel_events(sid, data):
 
     if event_type == "typing":
         await sio.emit(
-            "channel-events",
+            "events:channel",
             {
                 "channel_id": data["channel_id"],
                 "message_id": data.get("message_id", None),
@@ -670,7 +679,7 @@ async def yjs_document_leave(sid, data):
         )
 
         if (
-            YDOC_MANAGER.document_exists(document_id)
+            await YDOC_MANAGER.document_exists(document_id)
             and len(await YDOC_MANAGER.get_users(document_id)) == 0
         ):
             log.info(f"Cleaning up document {document_id} as no users are left")
@@ -733,12 +742,15 @@ def get_event_emitter(request_info, update_db=True):
             )
         )
 
+        chat_id = request_info.get("chat_id", None)
+        message_id = request_info.get("message_id", None)
+
         emit_tasks = [
             sio.emit(
-                "chat-events",
+                "events",
                 {
-                    "chat_id": request_info.get("chat_id", None),
-                    "message_id": request_info.get("message_id", None),
+                    "chat_id": chat_id,
+                    "message_id": message_id,
                     "data": event_data,
                 },
                 to=session_id,
@@ -747,8 +759,11 @@ def get_event_emitter(request_info, update_db=True):
         ]
 
         await asyncio.gather(*emit_tasks)
-
-        if update_db:
+        if (
+            update_db
+            and message_id
+            and not request_info.get("chat_id", "").startswith("local:")
+        ):
             if "type" in event_data and event_data["type"] == "status":
                 Chats.add_message_status_to_chat_by_id_and_message_id(
                     request_info["chat_id"],
@@ -785,13 +800,66 @@ def get_event_emitter(request_info, update_db=True):
                     },
                 )
 
+            if "type" in event_data and event_data["type"] == "embeds":
+                message = Chats.get_message_by_id_and_message_id(
+                    request_info["chat_id"],
+                    request_info["message_id"],
+                )
+
+                embeds = event_data.get("data", {}).get("embeds", [])
+                embeds.extend(message.get("embeds", []))
+
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    request_info["chat_id"],
+                    request_info["message_id"],
+                    {
+                        "embeds": embeds,
+                    },
+                )
+
+            if "type" in event_data and event_data["type"] == "files":
+                message = Chats.get_message_by_id_and_message_id(
+                    request_info["chat_id"],
+                    request_info["message_id"],
+                )
+
+                files = event_data.get("data", {}).get("files", [])
+                files.extend(message.get("files", []))
+
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    request_info["chat_id"],
+                    request_info["message_id"],
+                    {
+                        "files": files,
+                    },
+                )
+
+            if event_data.get("type") in ["source", "citation"]:
+                data = event_data.get("data", {})
+                if data.get("type") == None:
+                    message = Chats.get_message_by_id_and_message_id(
+                        request_info["chat_id"],
+                        request_info["message_id"],
+                    )
+
+                    sources = message.get("sources", [])
+                    sources.append(data)
+
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        request_info["chat_id"],
+                        request_info["message_id"],
+                        {
+                            "sources": sources,
+                        },
+                    )
+
     return __event_emitter__
 
 
 def get_event_call(request_info):
     async def __event_caller__(event_data):
         response = await sio.call(
-            "chat-events",
+            "events",
             {
                 "chat_id": request_info.get("chat_id", None),
                 "message_id": request_info.get("message_id", None),

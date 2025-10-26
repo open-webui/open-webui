@@ -4,7 +4,7 @@
 	import { getLanguages, changeLanguage } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
-	import { models, settings, theme, user } from '$lib/stores';
+	import { config, models, settings, theme, user } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -42,6 +42,7 @@
 	let params = {
 		// Advanced
 		stream_response: null,
+		stream_delta_chunk_size: null,
 		function_calling: null,
 		seed: null,
 		temperature: null,
@@ -71,6 +72,8 @@
 			system: system !== '' ? system : undefined,
 			params: {
 				stream_response: params.stream_response !== null ? params.stream_response : undefined,
+				stream_delta_chunk_size:
+					params.stream_delta_chunk_size !== null ? params.stream_delta_chunk_size : undefined,
 				function_calling: params.function_calling !== null ? params.function_calling : undefined,
 				seed: (params.seed !== null ? params.seed : undefined) ?? undefined,
 				stop: params.stop ? params.stop.split(',').filter((e) => e) : undefined,
@@ -117,7 +120,7 @@
 	});
 
 	const applyTheme = (_theme: string) => {
-		let themeToApply = _theme === 'oled-dark' ? 'dark' : _theme;
+		let themeToApply = _theme === 'oled-dark' ? 'dark' : _theme === 'her' ? 'light' : _theme;
 
 		if (_theme === 'system') {
 			themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -188,7 +191,7 @@
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm" id="tab-general">
-	<div class="  overflow-y-scroll max-h-[28rem] lg:max-h-full">
+	<div class="  overflow-y-scroll max-h-[28rem] md:max-h-full">
 		<div class="">
 			<div class=" mb-1 text-sm font-medium">{$i18n.t('WebUI Settings')}</div>
 
@@ -200,7 +203,7 @@
 							? ''
 							: 'outline-hidden'}"
 						bind:value={selectedTheme}
-						placeholder="Select a theme"
+						placeholder={$i18n.t('Select a theme')}
 						on:change={() => themeChangeHandler(selectedTheme)}
 					>
 						<option value="system">⚙️ {$i18n.t('System')}</option>
@@ -222,7 +225,7 @@
 							? ''
 							: 'outline-hidden'}"
 						bind:value={lang}
-						placeholder="Select a language"
+						placeholder={$i18n.t('Select a language')}
 						on:change={(e) => {
 							changeLanguage(lang);
 						}}
@@ -233,11 +236,17 @@
 					</select>
 				</div>
 			</div>
-			{#if $i18n.language === 'en-US'}
-				<div class="mb-2 text-xs text-gray-400 dark:text-gray-500">
+			{#if $i18n.language === 'en-US' && !($config?.license_metadata ?? false)}
+				<div
+					class="mb-2 text-xs {($settings?.highContrastMode ?? false)
+						? 'text-gray-800 dark:text-gray-100'
+						: 'text-gray-400 dark:text-gray-500'}"
+				>
 					Couldn't find your language?
 					<a
-						class=" text-gray-300 font-medium underline"
+						class="font-medium underline {($settings?.highContrastMode ?? false)
+							? 'text-gray-700 dark:text-gray-200'
+							: 'text-gray-300'}"
 						href="https://github.com/open-webui/open-webui/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization"
 						target="_blank"
 					>
@@ -267,8 +276,8 @@
 			</div>
 		</div>
 
-		{#if $user?.role === 'admin' || ($user?.permissions.chat?.system_prompt ?? true)}
-			<hr class="border-gray-50 dark:border-gray-850 my-3" />
+		{#if $user?.role === 'admin' || (($user?.permissions.chat?.controls ?? true) && ($user?.permissions.chat?.system_prompt ?? true))}
+			<hr class="border-gray-100/50 dark:border-gray-850 my-3" />
 
 			<div>
 				<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
@@ -276,20 +285,22 @@
 					bind:value={system}
 					className={'w-full text-sm outline-hidden resize-vertical' +
 						($settings.highContrastMode
-							? ' p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 overflow-y-hidden'
-							: ' bg-white dark:text-gray-300 dark:bg-gray-900')}
+							? ' p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-transparent text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 overflow-y-hidden'
+							: '  dark:text-gray-300 ')}
 					rows="4"
 					placeholder={$i18n.t('Enter system prompt here')}
 				/>
 			</div>
 		{/if}
 
-		{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
+		{#if $user?.role === 'admin' || (($user?.permissions.chat?.controls ?? true) && ($user?.permissions.chat?.params ?? true))}
 			<div class="mt-2 space-y-3 pr-1.5">
 				<div class="flex justify-between items-center text-sm">
 					<div class="  font-medium">{$i18n.t('Advanced Parameters')}</div>
 					<button
-						class=" text-xs font-medium text-gray-500"
+						class=" text-xs font-medium {($settings?.highContrastMode ?? false)
+							? 'text-gray-800 dark:text-gray-100'
+							: 'text-gray-400 dark:text-gray-500'}"
 						type="button"
 						on:click={() => {
 							showAdvanced = !showAdvanced;

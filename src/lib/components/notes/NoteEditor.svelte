@@ -1,12 +1,8 @@
 <script lang="ts">
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	import { v4 as uuidv4 } from 'uuid';
-	import heic2any from 'heic2any';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
-
-	import jsPDF from 'jspdf';
-	import html2canvas from 'html2canvas-pro';
 
 	const i18n = getContext('i18n');
 
@@ -26,12 +22,21 @@
 
 	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
 
-	import { compressImage, copyToClipboard, splitStream } from '$lib/utils';
+	import { compressImage, copyToClipboard, splitStream, convertHeicToJpeg } from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { uploadFile } from '$lib/apis/files';
 	import { chatCompletion, generateOpenAIChatCompletion } from '$lib/apis/openai';
 
-	import { config, models, settings, showSidebar, socket, user, WEBUI_NAME } from '$lib/stores';
+	import {
+		config,
+		mobile,
+		models,
+		settings,
+		showSidebar,
+		socket,
+		user,
+		WEBUI_NAME
+	} from '$lib/stores';
 
 	import NotePanel from '$lib/components/notes/NotePanel.svelte';
 
@@ -61,7 +66,6 @@
 	import MicSolid from '../icons/MicSolid.svelte';
 	import VoiceRecording from '../chat/MessageInput/VoiceRecording.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import MenuLines from '../icons/MenuLines.svelte';
 	import ChatBubbleOval from '../icons/ChatBubbleOval.svelte';
 
 	import Calendar from '../icons/Calendar.svelte';
@@ -79,7 +83,7 @@
 	import Bars3BottomLeft from '../icons/Bars3BottomLeft.svelte';
 	import ArrowUturnLeft from '../icons/ArrowUturnLeft.svelte';
 	import ArrowUturnRight from '../icons/ArrowUturnRight.svelte';
-	import Sidebar from '../common/Sidebar.svelte';
+	import Sidebar from '../icons/Sidebar.svelte';
 	import ArrowRight from '../icons/ArrowRight.svelte';
 	import Cog6 from '../icons/Cog6.svelte';
 	import AiMenu from './AIMenu.svelte';
@@ -126,6 +130,7 @@
 	let showDeleteConfirm = false;
 	let showAccessControlModal = false;
 
+	let ignoreBlur = false;
 	let titleInputFocused = false;
 	let titleGenerating = false;
 
@@ -536,11 +541,7 @@ ${content}
 					}
 				};
 
-				reader.readAsDataURL(
-					file['type'] === 'image/heic'
-						? await heic2any({ blob: file, toType: 'image/jpeg' })
-						: file
-				);
+				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
 			});
 
 			return await uploadImagePromise;
@@ -571,25 +572,59 @@ ${content}
 
 	const downloadPdf = async (note) => {
 		try {
+			const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+				import('jspdf'),
+				import('html2canvas-pro')
+			]);
+
 			// Define a fixed virtual screen size
 			const virtualWidth = 1024; // Fixed width (adjust as needed)
 			const virtualHeight = 1400; // Fixed height (adjust as needed)
 
 			// STEP 1. Get a DOM node to render
 			const html = note.data?.content?.html ?? '';
+			const isDarkMode = document.documentElement.classList.contains('dark');
+
 			let node;
 			if (html instanceof HTMLElement) {
 				node = html;
 			} else {
-				// If it's HTML string, render to a temporary hidden element
+				const virtualWidth = 800; // px, fixed width for cloned element
+
+				// Clone and style
 				node = document.createElement('div');
-				node.innerHTML = html;
+
+				// title node
+				const titleNode = document.createElement('div');
+				titleNode.textContent = note.title;
+				titleNode.style.fontSize = '24px';
+				titleNode.style.fontWeight = 'medium';
+				titleNode.style.paddingBottom = '20px';
+				titleNode.style.color = isDarkMode ? 'white' : 'black';
+				node.appendChild(titleNode);
+
+				const contentNode = document.createElement('div');
+
+				contentNode.innerHTML = html;
+
+				node.appendChild(contentNode);
+
+				node.classList.add('text-black');
+				node.classList.add('dark:text-white');
+				node.style.width = `${virtualWidth}px`;
+				node.style.position = 'absolute';
+				node.style.left = '-9999px';
+				node.style.height = 'auto';
+				node.style.padding = '40px 40px';
+
+				console.log(node);
 				document.body.appendChild(node);
 			}
 
 			// Render to canvas with predefined width
 			const canvas = await html2canvas(node, {
 				useCORS: true,
+				backgroundColor: isDarkMode ? '#000' : '#fff',
 				scale: 2, // Keep at 1x to avoid unexpected enlargements
 				width: virtualWidth, // Set fixed virtual screen width
 				windowWidth: virtualWidth, // Ensure consistent rendering
@@ -601,19 +636,26 @@ ${content}
 				document.body.removeChild(node);
 			}
 
-			const imgData = canvas.toDataURL('image/png');
+			const imgData = canvas.toDataURL('image/jpeg', 0.7);
 
 			// A4 page settings
 			const pdf = new jsPDF('p', 'mm', 'a4');
 			const imgWidth = 210; // A4 width in mm
+			const pageWidthMM = 210; // A4 width in mm
 			const pageHeight = 297; // A4 height in mm
+			const pageHeightMM = 297; // A4 height in mm
+
+			if (isDarkMode) {
+				pdf.setFillColor(0, 0, 0);
+				pdf.rect(0, 0, pageWidthMM, pageHeightMM, 'F'); // black bg
+			}
 
 			// Maintain aspect ratio
 			const imgHeight = (canvas.height * imgWidth) / canvas.width;
 			let heightLeft = imgHeight;
 			let position = 0;
 
-			pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+			pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
 			heightLeft -= pageHeight;
 
 			// Handle additional pages
@@ -621,7 +663,12 @@ ${content}
 				position -= pageHeight;
 				pdf.addPage();
 
-				pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+				if (isDarkMode) {
+					pdf.setFillColor(0, 0, 0);
+					pdf.rect(0, 0, pageWidthMM, pageHeightMM, 'F'); // black bg
+				}
+
+				pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
 				heightLeft -= pageHeight;
 			}
 
@@ -866,7 +913,8 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 		}
 
 		if (!selectedModelId) {
-			selectedModelId = $models.at(0)?.id || '';
+			selectedModelId =
+				$models.filter((model) => !(model?.info?.meta?.hidden ?? false)).at(0)?.id || '';
 		}
 
 		const dropzoneElement = document.getElementById('note-editor');
@@ -937,24 +985,29 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 				<div class=" w-full flex flex-col {loading ? 'opacity-20' : ''}">
 					<div class="shrink-0 w-full flex justify-between items-center px-3.5 mb-1.5">
 						<div class="w-full flex items-center">
-							<div
-								class="{$showSidebar
-									? 'md:hidden pl-0.5'
-									: ''} flex flex-none items-center pr-1 -translate-x-1"
-							>
-								<button
-									id="sidebar-toggle-button"
-									class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-									on:click={() => {
-										showSidebar.set(!$showSidebar);
-									}}
-									aria-label="Toggle Sidebar"
+							{#if $mobile}
+								<div
+									class="{$showSidebar
+										? 'md:hidden pl-0.5'
+										: ''} flex flex-none items-center pr-1 -translate-x-1"
 								>
-									<div class=" m-auto self-center">
-										<MenuLines />
-									</div>
-								</button>
-							</div>
+									<Tooltip
+										content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+									>
+										<button
+											id="sidebar-toggle-button"
+											class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+											on:click={() => {
+												showSidebar.set(!$showSidebar);
+											}}
+										>
+											<div class=" self-center p-1.5">
+												<Sidebar />
+											</div>
+										</button>
+									</Tooltip>
+								</div>
+							{/if}
 
 							<input
 								class="w-full text-2xl font-medium bg-transparent outline-hidden"
@@ -964,13 +1017,13 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 								disabled={(note?.user_id !== $user?.id && $user?.role !== 'admin') ||
 									titleGenerating}
 								required
-								on:input={changeDebounceHandler}
 								on:focus={() => {
 									titleInputFocused = true;
 								}}
 								on:blur={(e) => {
 									// check if target is generate button
-									if (e.relatedTarget?.id === 'generate-title-button') {
+									if (ignoreBlur) {
+										ignoreBlur = false;
 										return;
 									}
 
@@ -987,6 +1040,11 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 										<button
 											class=" self-center dark:hover:text-white transition"
 											id="generate-title-button"
+											disabled={(note?.user_id !== $user?.id && $user?.role !== 'admin') ||
+												titleGenerating}
+											on:mouseenter={() => {
+												ignoreBlur = true;
+											}}
 											on:click={(e) => {
 												e.preventDefault();
 												e.stopImmediatePropagation();
@@ -1200,6 +1258,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							collaboration={true}
 							socket={$socket}
 							user={$user}
+							dragHandle={true}
 							link={true}
 							image={true}
 							{files}

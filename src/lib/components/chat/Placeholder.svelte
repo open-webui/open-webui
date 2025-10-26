@@ -7,6 +7,9 @@
 
 	const dispatch = createEventDispatcher();
 
+	import { getChatList } from '$lib/apis/chats';
+	import { updateFolderById } from '$lib/apis/folders';
+
 	import {
 		config,
 		user,
@@ -25,11 +28,8 @@
 	import MessageInput from './MessageInput.svelte';
 	import FolderPlaceholder from './Placeholder/FolderPlaceholder.svelte';
 	import FolderTitle from './Placeholder/FolderTitle.svelte';
-	import { getChatList } from '$lib/apis/chats';
 
 	const i18n = getContext('i18n');
-
-	export let transparentBackground = false;
 
 	export let createMessagePair: Function;
 	export let stopResponse: Function;
@@ -55,11 +55,11 @@
 	export let webSearchEnabled = false;
 
 	export let onSelect = (e) => {};
+	export let onChange = (e) => {};
 
 	export let toolServers = [];
 
 	let models = [];
-
 	let selectedModelIdx = 0;
 
 	$: if (selectedModels.length > 0) {
@@ -67,8 +67,6 @@
 	}
 
 	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
-
-	onMount(() => {});
 </script>
 
 <div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-24 text-center">
@@ -78,8 +76,8 @@
 			className="w-full flex justify-center mb-0.5"
 			placement="top"
 		>
-			<div class="flex items-center gap-2 text-gray-500 font-medium text-lg my-2 w-fit">
-				<EyeSlash strokeWidth="2.5" className="size-5" />{$i18n.t('Temporary Chat')}
+			<div class="flex items-center gap-2 text-gray-500 text-base my-2 w-fit">
+				<EyeSlash strokeWidth="2.5" className="size-4" />{$i18n.t('Temporary Chat')}
 			</div>
 		</Tooltip>
 	{/if}
@@ -92,8 +90,6 @@
 				<FolderTitle
 					folder={$selectedFolder}
 					onUpdate={async (folder) => {
-						selectedFolder.set(folder);
-
 						await chats.set(await getChatList(localStorage.token, $currentChatPage));
 						currentChatPage.set(1);
 					}}
@@ -220,19 +216,10 @@
 					bind:atSelectedModel
 					bind:showCommands
 					{toolServers}
-					{transparentBackground}
 					{stopResponse}
 					{createMessagePair}
 					placeholder={$i18n.t('How can I help you today?')}
-					onChange={(input) => {
-						if (!$temporaryChatEnabled) {
-							if (input.prompt !== null) {
-								sessionStorage.setItem(`chat-input`, JSON.stringify(input));
-							} else {
-								sessionStorage.removeItem(`chat-input`);
-							}
-						}
-					}}
+					{onChange}
 					on:upload={(e) => {
 						dispatch('upload', e.detail);
 					}}

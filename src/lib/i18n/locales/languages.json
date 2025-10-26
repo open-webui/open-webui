@@ -24,6 +24,10 @@
 		"title": "Bengali (বাংলা)"
 	},
 	{
+		"code": "bs-BA",
+		"title": "Bosanski Latinica"
+	},
+	{
 		"code": "bo-TB",
 		"title": "Tibetan (བོད)"
 	},
@@ -114,6 +118,10 @@
 	{
 		"code": "ja-JP",
 		"title": "Japanese (日本語)"
+	},
+	{
+		"code": "kab-DZ",
+		"title": "Kabyle (Taqbaylit)"
 	},
 	{
 		"code": "ko-KR",

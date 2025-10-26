@@ -13,7 +13,8 @@
 	const dispatch = createEventDispatcher();
 
 	export let className = 'w-60';
-	export let colorClassName = 'bg-white dark:bg-gray-850 border border-gray-50 dark:border-white/5';
+	export let colorClassName =
+		'bg-white dark:bg-gray-850 border border-gray-50 dark:border-gray-800';
 	export let url: string | null = null;
 
 	export let dismissible = false;
@@ -28,8 +29,11 @@
 	export let type: string;
 	export let size: number;
 
-	import { deleteFileById } from '$lib/apis/files';
-
+	import DocumentPage from '../icons/DocumentPage.svelte';
+	import Database from '../icons/Database.svelte';
+	import PageEdit from '../icons/PageEdit.svelte';
+	import ChatBubble from '../icons/ChatBubble.svelte';
+	import Folder from '../icons/Folder.svelte';
 	let showModal = false;
 
 	const decodeString = (str: string) => {
@@ -47,11 +51,11 @@
 
 <button
 	class="relative group p-1.5 {className} flex items-center gap-1 {colorClassName} {small
-		? 'rounded-xl'
+		? 'rounded-xl p-2'
 		: 'rounded-2xl'} text-left"
 	type="button"
 	on:click={async () => {
-		if (item?.file?.data?.content || modal) {
+		if (item?.file?.data?.content || item?.type === 'file' || modal) {
 			showModal = !showModal;
 		} else {
 			if (url) {
@@ -67,14 +71,16 @@
 	}}
 >
 	{#if !small}
-		<div class="p-3 bg-black/20 dark:bg-white/10 text-white rounded-xl">
+		<div
+			class="size-10 shrink-0 flex justify-center items-center bg-black/20 dark:bg-white/10 text-white rounded-xl"
+		>
 			{#if !loading}
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 24 24"
 					fill="currentColor"
 					aria-hidden="true"
-					class=" size-5"
+					class=" size-4.5"
 				>
 					<path
 						fill-rule="evenodd"
@@ -85,6 +91,37 @@
 						d="M12.971 1.816A5.23 5.23 0 0 1 14.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 0 1 3.434 1.279 9.768 9.768 0 0 0-6.963-6.963Z"
 					/>
 				</svg>
+			{:else}
+				<Spinner />
+			{/if}
+		</div>
+	{:else}
+		<div class="pl-1.5">
+			{#if !loading}
+				<Tooltip
+					content={type === 'collection'
+						? $i18n.t('Collection')
+						: type === 'note'
+							? $i18n.t('Note')
+							: type === 'chat'
+								? $i18n.t('Chat')
+								: type === 'file'
+									? $i18n.t('File')
+									: $i18n.t('Document')}
+					placement="top"
+				>
+					{#if type === 'collection'}
+						<Database />
+					{:else if type === 'note'}
+						<PageEdit />
+					{:else if type === 'chat'}
+						<ChatBubble />
+					{:else if type === 'folder'}
+						<Folder />
+					{:else}
+						<DocumentPage />
+					{/if}
+				</Tooltip>
 			{:else}
 				<Spinner />
 			{/if}
@@ -104,6 +141,8 @@
 			>
 				{#if type === 'file'}
 					{$i18n.t('File')}
+				{:else if type === 'note'}
+					{$i18n.t('Note')}
 				{:else if type === 'doc'}
 					{$i18n.t('Document')}
 				{:else if type === 'collection'}
@@ -118,15 +157,14 @@
 		</div>
 	{:else}
 		<Tooltip content={decodeString(name)} className="flex flex-col w-full" placement="top-start">
-			<div class="flex flex-col justify-center -space-y-0.5 px-2.5 w-full">
+			<div class="flex flex-col justify-center -space-y-0.5 px-1 w-full">
 				<div class=" dark:text-gray-100 text-sm flex justify-between items-center">
-					{#if loading}
-						<div class=" shrink-0 mr-2">
-							<Spinner className="size-4" />
-						</div>
+					<div class="font-medium line-clamp-1 flex-1 pr-1">{decodeString(name)}</div>
+					{#if size}
+						<div class="text-gray-500 text-xs capitalize shrink-0">{formatFileSize(size)}</div>
+					{:else}
+						<div class="text-gray-500 text-xs capitalize shrink-0">{type}</div>
 					{/if}
-					<div class="font-medium line-clamp-1 flex-1">{decodeString(name)}</div>
-					<div class="text-gray-500 text-xs capitalize shrink-0">{formatFileSize(size)}</div>
 				</div>
 			</div>
 		</Tooltip>

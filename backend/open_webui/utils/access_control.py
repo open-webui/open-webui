@@ -1,4 +1,4 @@
-from typing import Optional, Union, List, Dict, Any
+from typing import Optional, Set, Union, List, Dict, Any
 from open_webui.models.users import Users, UserModel
 from open_webui.models.groups import Groups
 
@@ -60,8 +60,7 @@ def get_permissions(
 
     # Combine permissions from all user groups
     for group in user_groups:
-        group_permissions = group.permissions or {}
-        permissions = combine_permissions(permissions, group_permissions)
+        permissions = combine_permissions(permissions, group.permissions or {})
 
     # Ensure all fields from default_permissions are present and filled in
     permissions = fill_missing_permissions(permissions, default_permissions)
@@ -96,8 +95,7 @@ def has_permission(
     user_groups = Groups.get_groups_by_member_id(user_id)
 
     for group in user_groups:
-        group_permissions = group.permissions
-        if get_permission(group_permissions, permission_hierarchy):
+        if get_permission(group.permissions or {}, permission_hierarchy):
             return True
 
     # Check default permissions afterward if the group permissions don't allow it
@@ -111,12 +109,19 @@ def has_access(
     user_id: str,
     type: str = "write",
     access_control: Optional[dict] = None,
+    user_group_ids: Optional[Set[str]] = None,
+    strict: bool = True,
 ) -> bool:
     if access_control is None:
-        return type == "read"
+        if strict:
+            return type == "read"
+        else:
+            return True
 
-    user_groups = Groups.get_groups_by_member_id(user_id)
-    user_group_ids = [group.id for group in user_groups]
+    if user_group_ids is None:
+        user_groups = Groups.get_groups_by_member_id(user_id)
+        user_group_ids = {group.id for group in user_groups}
+
     permission_access = access_control.get(type, {})
     permitted_group_ids = permission_access.get("group_ids", [])
     permitted_user_ids = permission_access.get("user_ids", [])
@@ -129,9 +134,10 @@ def has_access(
 # Get all users with access to a resource
 def get_users_with_access(
     type: str = "write", access_control: Optional[dict] = None
-) -> List[UserModel]:
+) -> list[UserModel]:
     if access_control is None:
-        return Users.get_users()
+        result = Users.get_users()
+        return result.get("users", [])
 
     permission_access = access_control.get(type, {})
     permitted_group_ids = permission_access.get("group_ids", [])

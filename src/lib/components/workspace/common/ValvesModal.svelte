@@ -11,6 +11,20 @@
 		updateFunctionValvesById
 	} from '$lib/apis/functions';
 	import { getToolValvesById, getToolValvesSpecById, updateToolValvesById } from '$lib/apis/tools';
+
+	import {
+		getUserValvesSpecById as getToolUserValvesSpecById,
+		getUserValvesById as getToolUserValvesById,
+		updateUserValvesById as updateToolUserValvesById,
+		getTools
+	} from '$lib/apis/tools';
+	import {
+		getUserValvesSpecById as getFunctionUserValvesSpecById,
+		getUserValvesById as getFunctionUserValvesById,
+		updateUserValvesById as updateFunctionUserValvesById,
+		getFunctions
+	} from '$lib/apis/functions';
+
 	import Spinner from '../../common/Spinner.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Valves from '$lib/components/common/Valves.svelte';
@@ -23,6 +37,7 @@
 
 	export let type = 'tool';
 	export let id = null;
+	export let userValves = false;
 
 	let saving = false;
 	let loading = false;
@@ -37,24 +52,45 @@
 			// Convert string to array
 			for (const property in valvesSpec.properties) {
 				if (valvesSpec.properties[property]?.type === 'array') {
-					valves[property] = (valves[property] ?? '').split(',').map((v) => v.trim());
+					if (typeof valves[property] === 'string') {
+						valves[property] = (valves[property] ?? '')
+							.split(',')
+							.map((v) => v.trim())
+							.filter((v) => v.length > 0);
+					} else if (valves[property] == null) {
+						valves[property] = null;
+					}
 				}
 			}
 
 			let res = null;
 
-			if (type === 'tool') {
-				res = await updateToolValvesById(localStorage.token, id, valves).catch((error) => {
-					toast.error(`${error}`);
-				});
-			} else if (type === 'function') {
-				res = await updateFunctionValvesById(localStorage.token, id, valves).catch((error) => {
-					toast.error(`${error}`);
-				});
+			if (userValves) {
+				if (type === 'tool') {
+					res = await updateToolUserValvesById(localStorage.token, id, valves).catch((error) => {
+						toast.error(`${error}`);
+					});
+				} else if (type === 'function') {
+					res = await updateFunctionUserValvesById(localStorage.token, id, valves).catch(
+						(error) => {
+							toast.error(`${error}`);
+						}
+					);
+				}
+			} else {
+				if (type === 'tool') {
+					res = await updateToolValvesById(localStorage.token, id, valves).catch((error) => {
+						toast.error(`${error}`);
+					});
+				} else if (type === 'function') {
+					res = await updateFunctionValvesById(localStorage.token, id, valves).catch((error) => {
+						toast.error(`${error}`);
+					});
+				}
 			}
 
 			if (res) {
-				toast.success('Valves updated successfully');
+				toast.success($i18n.t('Valves updated successfully'));
 				dispatch('save');
 			}
 		}
@@ -67,28 +103,48 @@
 		valves = {};
 		valvesSpec = null;
 
-		if (type === 'tool') {
-			valves = await getToolValvesById(localStorage.token, id);
-			valvesSpec = await getToolValvesSpecById(localStorage.token, id);
-		} else if (type === 'function') {
-			valves = await getFunctionValvesById(localStorage.token, id);
-			valvesSpec = await getFunctionValvesSpecById(localStorage.token, id);
-		}
-
-		if (!valves) {
-			valves = {};
-		}
-
-		if (valvesSpec) {
-			// Convert array to string
-			for (const property in valvesSpec.properties) {
-				if (valvesSpec.properties[property]?.type === 'array') {
-					valves[property] = (valves[property] ?? []).join(',');
+		try {
+			if (userValves) {
+				if (type === 'tool') {
+					valves = await getToolUserValvesById(localStorage.token, id);
+					valvesSpec = await getToolUserValvesSpecById(localStorage.token, id);
+				} else if (type === 'function') {
+					valves = await getFunctionUserValvesById(localStorage.token, id);
+					valvesSpec = await getFunctionUserValvesSpecById(localStorage.token, id);
+				}
+			} else {
+				if (type === 'tool') {
+					valves = await getToolValvesById(localStorage.token, id);
+					valvesSpec = await getToolValvesSpecById(localStorage.token, id);
+				} else if (type === 'function') {
+					valves = await getFunctionValvesById(localStorage.token, id);
+					valvesSpec = await getFunctionValvesSpecById(localStorage.token, id);
 				}
 			}
-		}
 
-		loading = false;
+			if (!valves) {
+				valves = {};
+			}
+
+			if (valvesSpec) {
+				for (const property in valvesSpec.properties) {
+					if (valvesSpec.properties[property]?.type === 'array') {
+						if (valves[property] != null) {
+							valves[property] = (Array.isArray(valves[property]) ? valves[property] : []).join(
+								','
+							);
+						} else {
+							valves[property] = null;
+						}
+					}
+				}
+			}
+
+			loading = false;
+		} catch (e) {
+			toast.error(`Error fetching valves`);
+			show = false;
+		}
 	};
 
 	$: if (show) {

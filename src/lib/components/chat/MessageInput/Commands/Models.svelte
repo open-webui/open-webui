@@ -6,14 +6,15 @@
 
 	import { models } from '$lib/stores';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
 
-	export let command = '';
+	export let query = '';
 	export let onSelect = (e) => {};
 
 	let selectedIdx = 0;
-	let filteredItems = [];
+	export let filteredItems = [];
 
 	let fuse = new Fuse(
 		$models
@@ -29,17 +30,17 @@
 			}),
 		{
 			keys: ['value', 'tags', 'modelName'],
-			threshold: 0.3
+			threshold: 0.5
 		}
 	);
 
-	$: filteredItems = command.slice(1)
-		? fuse.search(command).map((e) => {
+	$: filteredItems = query
+		? fuse.search(query).map((e) => {
 				return e.item;
 			})
 		: $models.filter((model) => !model?.info?.meta?.hidden);
 
-	$: if (command) {
+	$: if (query) {
 		selectedIdx = 0;
 	}
 
@@ -51,84 +52,46 @@
 		selectedIdx = Math.min(selectedIdx + 1, filteredItems.length - 1);
 	};
 
-	let container;
-	let adjustHeightDebounce;
-
-	const adjustHeight = () => {
-		if (container) {
-			if (adjustHeightDebounce) {
-				clearTimeout(adjustHeightDebounce);
-			}
-
-			adjustHeightDebounce = setTimeout(() => {
-				if (!container) return;
-
-				// Ensure the container is visible before adjusting height
-				const rect = container.getBoundingClientRect();
-				container.style.maxHeight = Math.max(Math.min(240, rect.bottom - 100), 100) + 'px';
-			}, 100);
+	export const select = async () => {
+		const model = filteredItems[selectedIdx];
+		if (model) {
+			onSelect({ type: 'model', data: model });
 		}
 	};
-
-	const confirmSelect = async (model) => {
-		onSelect({ type: 'model', data: model });
-	};
-
-	onMount(async () => {
-		window.addEventListener('resize', adjustHeight);
-		adjustHeight();
-
-		await tick();
-		const chatInputElement = document.getElementById('chat-input');
-		await tick();
-		chatInputElement?.focus();
-		await tick();
-	});
-
-	onDestroy(() => {
-		window.removeEventListener('resize', adjustHeight);
-	});
 </script>
 
+<div class="px-2 text-xs text-gray-500 py-1">
+	{$i18n.t('Models')}
+</div>
+
 {#if filteredItems.length > 0}
-	<div
-		id="commands-container"
-		class="px-2 mb-2 text-left w-full absolute bottom-0 left-0 right-0 z-10"
-	>
-		<div class="flex w-full rounded-xl border border-gray-100 dark:border-gray-850">
-			<div class="flex flex-col w-full rounded-xl bg-white dark:bg-gray-900 dark:text-gray-100">
-				<div
-					class="m-1 overflow-y-auto p-1 rounded-r-lg space-y-0.5 scrollbar-hidden max-h-60"
-					id="command-options-container"
-					bind:this={container}
-				>
-					{#each filteredItems as model, modelIdx}
-						<button
-							class="px-3 py-1.5 rounded-xl w-full text-left {modelIdx === selectedIdx
-								? 'bg-gray-50 dark:bg-gray-850 selected-command-option-button'
-								: ''}"
-							type="button"
-							on:click={() => {
-								confirmSelect(model);
-							}}
-							on:mousemove={() => {
-								selectedIdx = modelIdx;
-							}}
-							on:focus={() => {}}
-						>
-							<div class="flex font-medium text-black dark:text-gray-100 line-clamp-1">
-								<img
-									src={model?.info?.meta?.profile_image_url ??
-										`${WEBUI_BASE_URL}/static/favicon.png`}
-									alt={model?.name ?? model.id}
-									class="rounded-full size-6 items-center mr-2"
-								/>
-								{model.name}
-							</div>
-						</button>
-					{/each}
+	{#each filteredItems as model, modelIdx}
+		<Tooltip content={model.id} placement="top-start">
+			<button
+				class="px-2.5 py-1.5 rounded-xl w-full text-left {modelIdx === selectedIdx
+					? 'bg-gray-50 dark:bg-gray-800 selected-command-option-button'
+					: ''}"
+				type="button"
+				on:click={() => {
+					onSelect({ type: 'model', data: model });
+				}}
+				on:mousemove={() => {
+					selectedIdx = modelIdx;
+				}}
+				on:focus={() => {}}
+				data-selected={modelIdx === selectedIdx}
+			>
+				<div class="flex text-black dark:text-gray-100 line-clamp-1">
+					<img
+						src={model?.info?.meta?.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`}
+						alt={model?.name ?? model.id}
+						class="rounded-full size-5 items-center mr-2"
+					/>
+					<div class="truncate">
+						{model.name}
+					</div>
 				</div>
-			</div>
-		</div>
-	</div>
+			</button>
+		</Tooltip>
+	{/each}
 {/if}

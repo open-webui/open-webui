@@ -2,14 +2,14 @@ import logging
 import time
 import uuid
 from typing import Optional
+import re
+
+
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import BigInteger, Column, Text, JSON, Boolean, func
 
 from open_webui.internal.db import Base, get_db
-from open_webui.models.chats import Chats
-
 from open_webui.env import SRC_LOG_LEVELS
-from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
-from open_webui.utils.access_control import get_permissions
 
 
 log = logging.getLogger(__name__)
@@ -50,6 +50,20 @@ class FolderModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class FolderMetadataResponse(BaseModel):
+    icon: Optional[str] = None
+
+
+class FolderNameIdResponse(BaseModel):
+    id: str
+    name: str
+    meta: Optional[FolderMetadataResponse] = None
+    parent_id: Optional[str] = None
+    is_expanded: bool = False
+    created_at: int
+    updated_at: int
+
+
 ####################
 # Forms
 ####################
@@ -58,6 +72,14 @@ class FolderModel(BaseModel):
 class FolderForm(BaseModel):
     name: str
     data: Optional[dict] = None
+    meta: Optional[dict] = None
+    model_config = ConfigDict(extra="allow")
+
+
+class FolderUpdateForm(BaseModel):
+    name: Optional[str] = None
+    data: Optional[dict] = None
+    meta: Optional[dict] = None
     model_config = ConfigDict(extra="allow")
 
 
@@ -106,7 +128,7 @@ class FolderTable:
 
     def get_children_folders_by_id_and_user_id(
         self, id: str, user_id: str
-    ) -> Optional[FolderModel]:
+    ) -> Optional[list[FolderModel]]:
         try:
             with get_db() as db:
                 folders = []
@@ -191,7 +213,7 @@ class FolderTable:
             return
 
     def update_folder_by_id_and_user_id(
-        self, id: str, user_id: str, form_data: FolderForm
+        self, id: str, user_id: str, form_data: FolderUpdateForm
     ) -> Optional[FolderModel]:
         try:
             with get_db() as db:
@@ -222,8 +244,13 @@ class FolderTable:
                         **form_data["data"],
                     }
 
-                folder.updated_at = int(time.time())
+                if "meta" in form_data:
+                    folder.meta = {
+                        **(folder.meta or {}),
+                        **form_data["meta"],
+                    }
 
+                folder.updated_at = int(time.time())
                 db.commit()
 
                 return FolderModel.model_validate(folder)
@@ -251,18 +278,15 @@ class FolderTable:
             log.error(f"update_folder: {e}")
             return
 
-    def delete_folder_by_id_and_user_id(
-        self, id: str, user_id: str, delete_chats=True
-    ) -> bool:
+    def delete_folder_by_id_and_user_id(self, id: str, user_id: str) -> list[str]:
         try:
+            folder_ids = []
             with get_db() as db:
                 folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
                 if not folder:
-                    return False
+                    return folder_ids
 
-                if delete_chats:
-                    # Delete all chats in the folder
-                    Chats.delete_chats_by_user_id_and_folder_id(user_id, folder.id)
+                folder_ids.append(folder.id)
 
                 # Delete all children folders
                 def delete_children(folder):
@@ -270,12 +294,9 @@ class FolderTable:
                         folder.id, user_id
                     )
                     for folder_child in folder_children:
-                        if delete_chats:
-                            Chats.delete_chats_by_user_id_and_folder_id(
-                                user_id, folder_child.id
-                            )
 
                         delete_children(folder_child)
+                        folder_ids.append(folder_child.id)
 
                         folder = db.query(Folder).filter_by(id=folder_child.id).first()
                         db.delete(folder)
@@ -284,10 +305,62 @@ class FolderTable:
                 delete_children(folder)
                 db.delete(folder)
                 db.commit()
-                return True
+                return folder_ids
         except Exception as e:
             log.error(f"delete_folder: {e}")
-            return False
+            return []
+
+    def normalize_folder_name(self, name: str) -> str:
+        # Replace _ and space with a single space, lower case, collapse multiple spaces
+        name = re.sub(r"[\s_]+", " ", name)
+        return name.strip().lower()
+
+    def search_folders_by_names(
+        self, user_id: str, queries: list[str]
+    ) -> list[FolderModel]:
+        """
+        Search for folders for a user where the name matches any of the queries, treating _ and space as equivalent, case-insensitive.
+        """
+        normalized_queries = [self.normalize_folder_name(q) for q in queries]
+        if not normalized_queries:
+            return []
+
+        results = {}
+        with get_db() as db:
+            folders = db.query(Folder).filter_by(user_id=user_id).all()
+            for folder in folders:
+                if self.normalize_folder_name(folder.name) in normalized_queries:
+                    results[folder.id] = FolderModel.model_validate(folder)
+
+                    # get children folders
+                    children = self.get_children_folders_by_id_and_user_id(
+                        folder.id, user_id
+                    )
+                    for child in children:
+                        results[child.id] = child
+
+        # Return the results as a list
+        if not results:
+            return []
+        else:
+            results = list(results.values())
+            return results
+
+    def search_folders_by_name_contains(
+        self, user_id: str, query: str
+    ) -> list[FolderModel]:
+        """
+        Partial match: normalized name contains (as substring) the normalized query.
+        """
+        normalized_query = self.normalize_folder_name(query)
+        results = []
+        with get_db() as db:
+            folders = db.query(Folder).filter_by(user_id=user_id).all()
+            for folder in folders:
+                norm_name = self.normalize_folder_name(folder.name)
+                if normalized_query in norm_name:
+                    results.append(FolderModel.model_validate(folder))
+        return results
 
 
 Folders = FolderTable()

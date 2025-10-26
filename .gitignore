@@ -1,4 +1,6 @@
-—.DS_Store
+x.py
+yarn.lock
+.DS_Store
 node_modules
 /build
 /.svelte-kit
@@ -12,7 +14,8 @@ vite.config.ts.timestamp-*
 __pycache__/
 *.py[cod]
 *$py.class
-
+.nvmrc
+CLAUDE.md
 # C extensions
 *.so
 

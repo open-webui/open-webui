@@ -84,8 +84,8 @@
 											<div class=" self-center text-xs font-medium">
 												{variable}
 
-												{#if variables[variable]?.required ?? true}
-													<span class=" text-gray-500">*required</span>
+												{#if variables[variable]?.required ?? false}
+													<span class=" text-gray-500">*{$i18n.t('required')}</span>
 												{/if}
 											</div>
 										</div>
@@ -131,10 +131,10 @@
 														<input
 															type="text"
 															class="flex-1 py-1 text-sm dark:text-gray-300 bg-transparent outline-hidden"
-															placeholder="Enter value (true/false)"
+															placeholder={$i18n.t('Enter value (true/false)')}
 															bind:value={variableValues[variable]}
 															autocomplete="off"
-															required
+															required={variables[variable]?.required ?? false}
 														/>
 													</div>
 												{:else if variables[variable]?.type === 'color'}
@@ -156,10 +156,10 @@
 														<input
 															type="text"
 															class="flex-1 py-2 text-sm dark:text-gray-300 bg-transparent outline-hidden"
-															placeholder="Enter hex color (e.g. #FF0000)"
+															placeholder={$i18n.t('Enter hex color (e.g. #FF0000)')}
 															bind:value={variableValues[variable]}
 															autocomplete="off"
-															required
+															required={variables[variable]?.required ?? false}
 														/>
 													</div>
 												{:else if variables[variable]?.type === 'date'}
@@ -170,7 +170,7 @@
 														bind:value={variableValues[variable]}
 														autocomplete="off"
 														id="input-variable-{idx}"
-														required
+														required={variables[variable]?.required ?? false}
 														{...variableAttributes}
 													/>
 												{:else if variables[variable]?.type === 'datetime-local'}
@@ -181,7 +181,7 @@
 														bind:value={variableValues[variable]}
 														autocomplete="off"
 														id="input-variable-{idx}"
-														required
+														required={variables[variable]?.required ?? false}
 														{...variableAttributes}
 													/>
 												{:else if variables[variable]?.type === 'email'}
@@ -192,7 +192,7 @@
 														bind:value={variableValues[variable]}
 														autocomplete="off"
 														id="input-variable-{idx}"
-														required
+														required={variables[variable]?.required ?? false}
 														{...variableAttributes}
 													/>
 												{:else if variables[variable]?.type === 'month'}
@@ -203,7 +203,7 @@
 														bind:value={variableValues[variable]}
 														autocomplete="off"
 														id="input-variable-{idx}"
-														required
+														required={variables[variable]?.required ?? false}
 														{...variableAttributes}
 													/>
 												{:else if variables[variable]?.type === 'number'}
@@ -214,7 +214,7 @@
 														bind:value={variableValues[variable]}
 														autocomplete="off"
 														id="input-variable-{idx}"
-														required
+														required={variables[variable]?.required ?? false}
 														{...variableAttributes}
 													/>
 												{:else if variables[variable]?.type === 'range'}
@@ -232,10 +232,10 @@
 														<input
 															type="text"
 															class=" py-1 text-sm dark:text-gray-300 bg-transparent outline-hidden text-right"
-															placeholder="Enter value"
+															placeholder={$i18n.t('Enter value')}
 															bind:value={variableValues[variable]}
 															autocomplete="off"
-															required
+															required={variables[variable]?.required ?? false}
 														/>
 													</div>
 
@@ -256,7 +256,7 @@
 														bind:value={variableValues[variable]}
 														autocomplete="off"
 														id="input-variable-{idx}"
-														required
+														required={variables[variable]?.required ?? false}
 														{...variableAttributes}
 													/>
 												{:else if variables[variable]?.type === 'text'}
@@ -267,7 +267,7 @@
 														bind:value={variableValues[variable]}
 														autocomplete="off"
 														id="input-variable-{idx}"
-														required
+														required={variables[variable]?.required ?? false}
 														{...variableAttributes}
 													/>
 												{:else if variables[variable]?.type === 'time'}
@@ -278,7 +278,7 @@
 														bind:value={variableValues[variable]}
 														autocomplete="off"
 														id="input-variable-{idx}"
-														required
+														required={variables[variable]?.required ?? false}
 														{...variableAttributes}
 													/>
 												{:else if variables[variable]?.type === 'url'}
@@ -289,7 +289,7 @@
 														bind:value={variableValues[variable]}
 														autocomplete="off"
 														id="input-variable-{idx}"
-														required
+														required={variables[variable]?.required ?? false}
 														{...variableAttributes}
 													/>
 												{:else if variables[variable]?.type === 'map'}
@@ -308,10 +308,10 @@
 														<input
 															type="text"
 															class=" w-full py-1 text-left text-sm dark:text-gray-300 bg-transparent outline-hidden"
-															placeholder="Enter coordinates (e.g. 51.505, -0.09)"
+															placeholder={$i18n.t('Enter coordinates (e.g. 51.505, -0.09)')}
 															bind:value={variableValues[variable]}
 															autocomplete="off"
-															required
+															required={variables[variable]?.required ?? false}
 														/>
 													</div>
 												{:else}
@@ -321,7 +321,7 @@
 														bind:value={variableValues[variable]}
 														autocomplete="off"
 														id="input-variable-{idx}"
-														required
+														required={variables[variable]?.required ?? false}
 													/>
 												{/if}
 											</div>

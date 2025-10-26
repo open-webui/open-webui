@@ -4,14 +4,17 @@ from typing import Optional
 from open_webui.internal.db import Base, JSONField, get_db
 
 
+from open_webui.env import DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL
 from open_webui.models.chats import Chats
 from open_webui.models.groups import Groups
+from open_webui.utils.misc import throttle
 
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text
+from sqlalchemy import BigInteger, Column, String, Text, Date
 from sqlalchemy import or_
 
+import datetime
 
 ####################
 # User DB Schema
@@ -23,19 +26,27 @@ class User(Base):
 
     id = Column(String, primary_key=True)
     name = Column(String)
+
     email = Column(String)
+    username = Column(String(50), nullable=True)
+
     role = Column(String)
     profile_image_url = Column(Text)
 
-    last_active_at = Column(BigInteger)
-    updated_at = Column(BigInteger)
-    created_at = Column(BigInteger)
+    bio = Column(Text, nullable=True)
+    gender = Column(Text, nullable=True)
+    date_of_birth = Column(Date, nullable=True)
+
+    info = Column(JSONField, nullable=True)
+    settings = Column(JSONField, nullable=True)
 
     api_key = Column(String, nullable=True, unique=True)
-    settings = Column(JSONField, nullable=True)
-    info = Column(JSONField, nullable=True)
-
     oauth_sub = Column(Text, unique=True)
+
+    last_active_at = Column(BigInteger)
+
+    updated_at = Column(BigInteger)
+    created_at = Column(BigInteger)
 
 
 class UserSettings(BaseModel):
@@ -47,19 +58,26 @@ class UserSettings(BaseModel):
 class UserModel(BaseModel):
     id: str
     name: str
+
     email: str
+    username: Optional[str] = None
+
     role: str = "pending"
     profile_image_url: str
+
+    bio: Optional[str] = None
+    gender: Optional[str] = None
+    date_of_birth: Optional[datetime.date] = None
+
+    info: Optional[dict] = None
+    settings: Optional[UserSettings] = None
+
+    api_key: Optional[str] = None
+    oauth_sub: Optional[str] = None
 
     last_active_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
-
-    api_key: Optional[str] = None
-    settings: Optional[UserSettings] = None
-    info: Optional[dict] = None
-
-    oauth_sub: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -67,6 +85,14 @@ class UserModel(BaseModel):
 ####################
 # Forms
 ####################
+
+
+class UpdateProfileForm(BaseModel):
+    profile_image_url: str
+    name: str
+    bio: Optional[str] = None
+    gender: Optional[str] = None
+    date_of_birth: Optional[datetime.date] = None
 
 
 class UserListResponse(BaseModel):
@@ -81,8 +107,18 @@ class UserInfoResponse(BaseModel):
     role: str
 
 
+class UserIdNameResponse(BaseModel):
+    id: str
+    name: str
+
+
 class UserInfoListResponse(BaseModel):
     users: list[UserInfoResponse]
+    total: int
+
+
+class UserIdNameListResponse(BaseModel):
+    users: list[UserIdNameResponse]
     total: int
 
 
@@ -184,7 +220,7 @@ class UsersTable:
         filter: Optional[dict] = None,
         skip: Optional[int] = None,
         limit: Optional[int] = None,
-    ) -> UserListResponse:
+    ) -> dict:
         with get_db() as db:
             query = db.query(User)
 
@@ -258,6 +294,10 @@ class UsersTable:
         with get_db() as db:
             return db.query(User).count()
 
+    def has_users(self) -> bool:
+        with get_db() as db:
+            return db.query(db.query(User).exists()).scalar()
+
     def get_first_user(self) -> UserModel:
         try:
             with get_db() as db:
@@ -307,6 +347,7 @@ class UsersTable:
         except Exception:
             return None
 
+    @throttle(DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL)
     def update_user_last_active_by_id(self, id: str) -> Optional[UserModel]:
         try:
             with get_db() as db:
@@ -342,7 +383,8 @@ class UsersTable:
                 user = db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
                 # return UserModel(**user.dict())
-        except Exception:
+        except Exception as e:
+            print(e)
             return None
 
     def update_user_settings_by_id(self, id: str, updated: dict) -> Optional[UserModel]:

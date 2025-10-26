@@ -21,6 +21,7 @@
 
 	export let users = [];
 	export let group = null;
+	export let defaultPermissions = {};
 
 	export let custom = true;
 
@@ -48,10 +49,24 @@
 		},
 		chat: {
 			controls: true,
+			valves: true,
+			system_prompt: true,
+			params: true,
 			file_upload: true,
 			delete: true,
+			delete_message: true,
+			continue_response: true,
+			regenerate_response: true,
+			rate_response: true,
 			edit: true,
-			temporary: true
+			share: true,
+			export: true,
+			stt: true,
+			tts: true,
+			call: true,
+			multiple_models: true,
+			temporary: true,
+			temporary_enforced: false
 		},
 		features: {
 			direct_tool_servers: false,
@@ -216,7 +231,7 @@
 							{#if selectedTab == 'general'}
 								<Display bind:name bind:description />
 							{:else if selectedTab == 'permissions'}
-								<Permissions bind:permissions />
+								<Permissions bind:permissions {defaultPermissions} />
 							{:else if selectedTab == 'users'}
 								<Users bind:userIds {users} />
 							{/if}

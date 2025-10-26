@@ -15,6 +15,8 @@ dayjs.extend(localizedFormat);
 
 import { TTS_RESPONSE_SPLIT } from '$lib/types';
 
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
+
 import { marked } from 'marked';
 import markedExtension from '$lib/utils/marked/extension';
 import markedKatexExtension from '$lib/utils/marked/katex-extension';
@@ -66,9 +68,26 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 		});
 
 		if (Array.isArray(sourceIds)) {
-			sourceIds.forEach((sourceId, idx) => {
-				const regex = new RegExp(`\\[${idx + 1}\\]`, 'g');
-				segment = segment.replace(regex, `<source_id data="${idx + 1}" title="${sourceId}" />`);
+			// Match both [1], [2], and [1,2,3] forms
+			const multiRefRegex = /\[([\d,\s]+)\]/g;
+			segment = segment.replace(multiRefRegex, (match, group) => {
+				// Extract numbers like 1,2,3
+				const indices = group
+					.split(',')
+					.map((n) => parseInt(n.trim(), 10))
+					.filter((n) => !isNaN(n));
+
+				// Replace each index with a <source_id> tag
+				const sources = indices
+					.map((idx) => {
+						const sourceId = sourceIds[idx - 1];
+						return sourceId
+							? `<source_id data="${idx}" title="${encodeURIComponent(sourceId)}" />`
+							: `[${idx}]`;
+					})
+					.join('');
+
+				return sources;
 			});
 		}
 
@@ -373,14 +392,13 @@ export const generateInitialsImage = (name) => {
 
 export const formatDate = (inputDate) => {
 	const date = dayjs(inputDate);
-	const now = dayjs();
 
 	if (date.isToday()) {
-		return `Today at ${date.format('LT')}`;
+		return `Today at {{LOCALIZED_TIME}}`;
 	} else if (date.isYesterday()) {
-		return `Yesterday at ${date.format('LT')}`;
+		return `Yesterday at {{LOCALIZED_TIME}}`;
 	} else {
-		return `${date.format('L')} at ${date.format('LT')}`;
+		return `{{LOCALIZED_DATE}} at {{LOCALIZED_TIME}}`;
 	}
 };
 
@@ -795,6 +813,15 @@ export const isValidHttpUrl = (string: string) => {
 	return url.protocol === 'http:' || url.protocol === 'https:';
 };
 
+export const isYoutubeUrl = (url: string) => {
+	return (
+		url.startsWith('https://www.youtube.com') ||
+		url.startsWith('https://youtu.be') ||
+		url.startsWith('https://youtube.com') ||
+		url.startsWith('https://m.youtube.com')
+	);
+};
+
 export const removeEmojis = (str: string) => {
 	// Regular expression to match emojis
 	const emojiRegex = /[\uD800-\uDBFF][\uDC00-\uDFFF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDE4F]/g;
@@ -981,77 +1008,6 @@ export const getPromptVariables = (user_name, user_location) => {
 };
 
 /**
- * @param {string} template - The template string containing placeholders.
- * @returns {string} The template string with the placeholders replaced by the prompt.
- */
-export const promptTemplate = (
-	template: string,
-	user_name?: string,
-	user_location?: string
-): string => {
-	// Get the current date
-	const currentDate = new Date();
-
-	// Format the date to YYYY-MM-DD
-	const formattedDate =
-		currentDate.getFullYear() +
-		'-' +
-		String(currentDate.getMonth() + 1).padStart(2, '0') +
-		'-' +
-		String(currentDate.getDate()).padStart(2, '0');
-
-	// Format the time to HH:MM:SS AM/PM
-	const currentTime = currentDate.toLocaleTimeString('en-US', {
-		hour: 'numeric',
-		minute: 'numeric',
-		second: 'numeric',
-		hour12: true
-	});
-
-	// Get the current weekday
-	const currentWeekday = getWeekday();
-
-	// Get the user's timezone
-	const currentTimezone = getUserTimezone();
-
-	// Get the user's language
-	const userLanguage = localStorage.getItem('locale') || 'en-US';
-
-	// Replace {{CURRENT_DATETIME}} in the template with the formatted datetime
-	template = template.replace('{{CURRENT_DATETIME}}', `${formattedDate} ${currentTime}`);
-
-	// Replace {{CURRENT_DATE}} in the template with the formatted date
-	template = template.replace('{{CURRENT_DATE}}', formattedDate);
-
-	// Replace {{CURRENT_TIME}} in the template with the formatted time
-	template = template.replace('{{CURRENT_TIME}}', currentTime);
-
-	// Replace {{CURRENT_WEEKDAY}} in the template with the current weekday
-	template = template.replace('{{CURRENT_WEEKDAY}}', currentWeekday);
-
-	// Replace {{CURRENT_TIMEZONE}} in the template with the user's timezone
-	template = template.replace('{{CURRENT_TIMEZONE}}', currentTimezone);
-
-	// Replace {{USER_LANGUAGE}} in the template with the user's language
-	template = template.replace('{{USER_LANGUAGE}}', userLanguage);
-
-	if (user_name) {
-		// Replace {{USER_NAME}} in the template with the user's name
-		template = template.replace('{{USER_NAME}}', user_name);
-	}
-
-	if (user_location) {
-		// Replace {{USER_LOCATION}} in the template with the current location
-		template = template.replace('{{USER_LOCATION}}', user_location);
-	} else {
-		// Replace {{USER_LOCATION}} in the template with 'Unknown' if no location is provided
-		template = template.replace('{{USER_LOCATION}}', 'LOCATION_UNKNOWN');
-	}
-
-	return template;
-};
-
-/**
  * This function is used to replace placeholders in a template string with the provided prompt.
  * The placeholders can be in the following formats:
  * - `{{prompt}}`: This will be replaced with the entire prompt.
@@ -1084,8 +1040,6 @@ export const titleGenerationTemplate = (template: string, prompt: string): strin
 			return '';
 		}
 	);
-
-	template = promptTemplate(template);
 
 	return template;
 };
@@ -1320,7 +1274,6 @@ export const convertOpenApiToToolPayload = (openApiSpec) => {
 		for (const [method, operation] of Object.entries(methods)) {
 			if (operation?.operationId) {
 				const tool = {
-					type: 'function',
 					name: operation.operationId,
 					description: operation.description || operation.summary || 'No description available.',
 					parameters: {
@@ -1389,8 +1342,8 @@ export const slugify = (str: string): string => {
 			.replace(/[\u0300-\u036f]/g, '')
 			// 3. Replace any sequence of whitespace with a single hyphen
 			.replace(/\s+/g, '-')
-			// 4. Remove all characters except alphanumeric characters and hyphens
-			.replace(/[^a-zA-Z0-9-]/g, '')
+			// 4. Remove all characters except alphanumeric characters, hyphens, and underscores
+			.replace(/[^a-zA-Z0-9-_]/g, '')
 			// 5. Convert to lowercase
 			.toLowerCase()
 	);
@@ -1478,24 +1431,39 @@ export const parseVariableDefinition = (definition: string): Record<string, any>
 	// Parse type (explicit or implied)
 	const type = firstPart.startsWith('type=') ? firstPart.slice(5) : firstPart;
 
-	// Parse properties using reduce
-	const properties = propertyParts.reduce((props, part) => {
-		// Use splitProperties for the equals sign as well, in case there are nested quotes
-		const equalsParts = splitProperties(part, '=');
-		const [propertyName, ...valueParts] = equalsParts;
-		const propertyValue = valueParts.join('='); // Handle values with = signs
+	// Parse properties; support both key=value and bare flags (e.g., ":required")
+	const properties = propertyParts.reduce(
+		(props, part) => {
+			const trimmed = part.trim();
+			if (!trimmed) return props;
 
-		return propertyName && propertyValue
-			? {
-					...props,
-					[propertyName.trim()]: parseJsonValue(propertyValue.trim())
+			// Use splitProperties for the equals sign as well, in case there are nested quotes
+			const equalsParts = splitProperties(trimmed, '=');
+
+			if (equalsParts.length === 1) {
+				// It's a flag with no value, e.g. "required" -> true
+				const flagName = equalsParts[0].trim();
+				if (flagName.length > 0) {
+					return { ...props, [flagName]: true };
 				}
-			: props;
-	}, {});
+				return props;
+			}
+
+			const [propertyName, ...valueParts] = equalsParts;
+			const propertyValueRaw = valueParts.join('='); // Handle values with extra '='
+
+			if (!propertyName || propertyValueRaw == null) return props;
+
+			return {
+				...props,
+				[propertyName.trim()]: parseJsonValue(propertyValueRaw.trim())
+			};
+		},
+		{} as Record<string, any>
+	);
 
 	return { type, ...properties };
 };
-
 export const parseJsonValue = (value: string): any => {
 	// Remove surrounding quotes if present (for string values)
 	if (value.startsWith('"') && value.endsWith('"')) {
@@ -1514,7 +1482,18 @@ export const parseJsonValue = (value: string): any => {
 	return value;
 };
 
-export const extractContentFromFile = async (file, pdfjsLib = null) => {
+async function ensurePDFjsLoaded() {
+	if (!window.pdfjsLib) {
+		const pdfjs = await import('pdfjs-dist');
+		pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+		if (!window.pdfjsLib) {
+			throw new Error('pdfjsLib is required for PDF extraction');
+		}
+	}
+	return window.pdfjsLib;
+}
+
+export const extractContentFromFile = async (file: File) => {
 	// Known text file extensions for extra fallback
 	const textExtensions = [
 		'.txt',
@@ -1531,31 +1510,28 @@ export const extractContentFromFile = async (file, pdfjsLib = null) => {
 		'.rtf'
 	];
 
-	function getExtension(filename) {
+	function getExtension(filename: string) {
 		const dot = filename.lastIndexOf('.');
 		return dot === -1 ? '' : filename.substr(dot).toLowerCase();
 	}
 
 	// Uses pdfjs to extract text from PDF
-	async function extractPdfText(file) {
-		if (!pdfjsLib) {
-			throw new Error('pdfjsLib is required for PDF extraction');
-		}
-
+	async function extractPdfText(file: File) {
+		const pdfjsLib = await ensurePDFjsLoaded();
 		const arrayBuffer = await file.arrayBuffer();
 		const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 		let allText = '';
 		for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
 			const page = await pdf.getPage(pageNum);
 			const content = await page.getTextContent();
-			const strings = content.items.map((item) => item.str);
+			const strings = content.items.map((item: any) => item.str);
 			allText += strings.join(' ') + '\n';
 		}
 		return allText;
 	}
 
 	// Reads file as text using FileReader
-	function readAsText(file) {
+	function readAsText(file: File) {
 		return new Promise((resolve, reject) => {
 			const reader = new FileReader();
 			reader.onload = () => resolve(reader.result);
@@ -1583,4 +1559,64 @@ export const extractContentFromFile = async (file, pdfjsLib = null) => {
 	} catch (err) {
 		throw new Error('Unsupported or non-text file type: ' + (file.name || type));
 	}
+};
+
+export const getAge = (birthDate) => {
+	const today = new Date();
+	const bDate = new Date(birthDate);
+	let age = today.getFullYear() - bDate.getFullYear();
+	const m = today.getMonth() - bDate.getMonth();
+
+	if (m < 0 || (m === 0 && today.getDate() < bDate.getDate())) {
+		age--;
+	}
+	return age.toString();
+};
+
+export const convertHeicToJpeg = async (file: File) => {
+	const { default: heic2any } = await import('heic2any');
+	try {
+		return await heic2any({ blob: file, toType: 'image/jpeg' });
+	} catch (err: any) {
+		if (err?.message?.includes('already browser readable')) {
+			return file;
+		}
+		throw err;
+	}
+};
+
+export const decodeString = (str: string) => {
+	try {
+		return decodeURIComponent(str);
+	} catch (e) {
+		return str;
+	}
+};
+
+export const renderMermaidDiagram = async (code: string) => {
+	const { default: mermaid } = await import('mermaid');
+	mermaid.initialize({
+		startOnLoad: false, // Should be false when using render API
+		theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
+		securityLevel: 'loose'
+	});
+	const parseResult = await mermaid.parse(code, { suppressErrors: false });
+	if (parseResult) {
+		const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
+		return svg;
+	}
+	return '';
+};
+
+export const renderVegaVisualization = async (spec: string, i18n?: any) => {
+	const vega = await import('vega');
+	const parsedSpec = JSON.parse(spec);
+	let vegaSpec = parsedSpec;
+	if (parsedSpec.$schema && parsedSpec.$schema.includes('vega-lite')) {
+		const vegaLite = await import('vega-lite');
+		vegaSpec = vegaLite.compile(parsedSpec).spec;
+	}
+	const view = new vega.View(vega.parse(vegaSpec), { renderer: 'none' });
+	const svg = await view.toSVG();
+	return svg;
 };
