@@ -69,32 +69,38 @@ async def generate_direct_chat_completion(
     user: Any,
     models: dict,
 ):
-    log.info("generate_direct_chat_completion")
+    log.info("🚀 DIRECT COMPLETION: Starting generate_direct_chat_completion")
 
     metadata = form_data.pop("metadata", {})
+    log.info(f"🚀 DIRECT COMPLETION: Metadata: {metadata}")
 
     user_id = metadata.get("user_id")
     session_id = metadata.get("session_id")
     request_id = str(uuid.uuid4())  # Generate a unique request ID
 
     event_caller = get_event_call(metadata)
+    log.info(f"🚀 DIRECT COMPLETION: Got event_caller for user_id={user_id}, session_id={session_id}")
 
     channel = f"{user_id}:{session_id}:{request_id}"
-    logging.info(f"WebSocket channel: {channel}")
+    logging.info(f"🚀 DIRECT COMPLETION: WebSocket channel: {channel}")
 
     if form_data.get("stream"):
+        log.info("🚀 DIRECT COMPLETION: Stream mode enabled")
         q = asyncio.Queue()
 
         async def message_listener(sid, data):
             """
             Handle received socket messages and push them into the queue.
             """
+            log.info(f"🚀 DIRECT COMPLETION: Received message on channel {channel}: {data}")
             await q.put(data)
 
         # Register the listener
         sio.on(channel, message_listener)
+        log.info(f"🚀 DIRECT COMPLETION: Registered listener on channel {channel}")
 
         # Start processing chat completion in background
+        log.info(f"🚀 DIRECT COMPLETION: Calling event_caller with model={form_data.get('model')}")
         res = await event_caller(
             {
                 "type": "request:chat:completion",
@@ -107,17 +113,24 @@ async def generate_direct_chat_completion(
             }
         )
 
-        log.info(f"res: {res}")
+        log.info(f"🚀 DIRECT COMPLETION: event_caller returned: {res}")
 
         if res.get("status", False):
+            log.info("🚀 DIRECT COMPLETION: Status is True, setting up event generator")
             # Define a generator to stream responses
             async def event_generator():
                 nonlocal q
+                log.info("🚀 DIRECT COMPLETION: Event generator started, waiting for messages...")
                 try:
+                    message_count = 0
                     while True:
                         data = await q.get()  # Wait for new messages
+                        message_count += 1
+                        log.info(f"🚀 DIRECT COMPLETION: Received message #{message_count}: {data}")
+
                         if isinstance(data, dict):
                             if "done" in data and data["done"]:
+                                log.info("🚀 DIRECT COMPLETION: Received 'done' signal, stopping stream")
                                 break  # Stop streaming when 'done' is received
 
                             yield f"data: {json.dumps(data)}\n\n"
@@ -127,21 +140,28 @@ async def generate_direct_chat_completion(
                             else:
                                 yield f"data: {data}\n\n"
                 except Exception as e:
-                    log.debug(f"Error in event generator: {e}")
+                    log.error(f"🚀 DIRECT COMPLETION: Error in event generator: {e}", exc_info=True)
                     pass
+                finally:
+                    log.info("🚀 DIRECT COMPLETION: Event generator finished")
 
             # Define a background task to run the event generator
             async def background():
+                log.info("🚀 DIRECT COMPLETION: Running background cleanup")
                 try:
                     del sio.handlers["/"][channel]
+                    log.info(f"🚀 DIRECT COMPLETION: Cleaned up channel {channel}")
                 except Exception as e:
+                    log.warning(f"🚀 DIRECT COMPLETION: Error cleaning up channel: {e}")
                     pass
 
             # Return the streaming response
+            log.info("🚀 DIRECT COMPLETION: Returning StreamingResponse")
             return StreamingResponse(
                 event_generator(), media_type="text/event-stream", background=background
             )
         else:
+            log.error(f"🚀 DIRECT COMPLETION: Status is False! Response: {res}")
             raise Exception(str(res))
     else:
         res = await event_caller(

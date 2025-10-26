@@ -858,16 +858,24 @@ def get_event_emitter(request_info, update_db=True):
 
 def get_event_call(request_info):
     async def __event_caller__(event_data):
-        response = await sio.call(
-            "events",
-            {
-                "chat_id": request_info.get("chat_id", None),
-                "message_id": request_info.get("message_id", None),
-                "data": event_data,
-            },
-            to=request_info["session_id"],
-        )
-        return response
+        log.info(f"📞 EVENT CALL: Calling 'events' socket for session {request_info.get('session_id')}")
+        log.info(f"📞 EVENT CALL: Event data type: {event_data.get('type')}")
+        log.info(f"📞 EVENT CALL: Full event_data: {event_data}")
+        try:
+            response = await sio.call(
+                "events",
+                {
+                    "chat_id": request_info.get("chat_id", None),
+                    "message_id": request_info.get("message_id", None),
+                    "data": event_data,
+                },
+                to=request_info["session_id"],
+            )
+            log.info(f"📞 EVENT CALL: Received response: {response}")
+            return response
+        except Exception as e:
+            log.error(f"📞 EVENT CALL: Error calling socket event: {e}", exc_info=True)
+            return {"status": False, "error": str(e)}
 
     return __event_caller__
 
