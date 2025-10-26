@@ -597,24 +597,26 @@
 				</div>
 			{/if}
 
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div id="widescreen-mode-label" class=" self-center text-xs">
-						{$i18n.t('Widescreen Mode')}
-					</div>
+			{#if landingPageMode !== ''}
+				<div>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div id="widescreen-mode-label" class=" self-center text-xs">
+							{$i18n.t('Widescreen Mode')}
+						</div>
 
-					<div class="flex items-center gap-2 p-1">
-						<Switch
-							ariaLabelledbyId="widescreen-mode-label"
-							tooltip={true}
-							bind:state={widescreenMode}
-							on:change={() => {
-								saveSettings({ widescreenMode });
-							}}
-						/>
+						<div class="flex items-center gap-2 p-1">
+							<Switch
+								ariaLabelledbyId="widescreen-mode-label"
+								tooltip={true}
+								bind:state={widescreenMode}
+								on:change={() => {
+									saveSettings({ widescreenMode });
+								}}
+							/>
+						</div>
 					</div>
 				</div>
-			</div>
+			{/if}
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
