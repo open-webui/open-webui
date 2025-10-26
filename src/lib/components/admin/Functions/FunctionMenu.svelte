@@ -59,7 +59,7 @@
 					</div>
 
 					<div>
-						<Switch on:change={toggleGlobalHandler} bind:state={func.is_global} />
+						<Switch on:change={toggleGlobalHandler} bind:state={func.is_global} tooltip={true} />
 					</div>
 				</div>
 

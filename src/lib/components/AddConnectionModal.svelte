@@ -340,9 +340,7 @@
 								<label class="sr-only" for="toggle-connection"
 									>{$i18n.t('Toggle whether current connection is active.')}</label
 								>
-								<Tooltip content={enable ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
-									<Switch id="toggle-connection" bind:state={enable} />
-								</Tooltip>
+								<Switch id="toggle-connection" bind:state={enable} tooltip={true} />
 							</div>
 						</div>
 

@@ -358,7 +358,7 @@
 										{$i18n.t('PDF Extract Images (OCR)')}
 									</div>
 									<div class="flex items-center relative">
-										<Switch bind:state={RAGConfig.PDF_EXTRACT_IMAGES} />
+										<Switch bind:state={RAGConfig.PDF_EXTRACT_IMAGES} tooltip={true} />
 									</div>
 								</div>
 							</div>
@@ -409,119 +409,122 @@
 							</div>
 
 							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
-									<Tooltip
-										content={$i18n.t(
-											'Significantly improves accuracy by using an LLM to enhance tables, forms, inline math, and layout detection. Will increase latency. Defaults to False.'
-										)}
-										placement="top-start"
-									>
+								<Tooltip
+									content={$i18n.t(
+										'Significantly improves accuracy by using an LLM to enhance tables, forms, inline math, and layout detection. Will increase latency. Defaults to False.'
+									)}
+									placement="top-start"
+								>
+									<div class="self-center text-xs font-medium">
 										{$i18n.t('Use LLM')}
-									</Tooltip>
-								</div>
+									</div>
+								</Tooltip>
 								<div class="flex items-center">
-									<Switch bind:state={RAGConfig.DATALAB_MARKER_USE_LLM} />
+									<Switch bind:state={RAGConfig.DATALAB_MARKER_USE_LLM} tooltip={true} />
 								</div>
 							</div>
 							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
-									<Tooltip
-										content={$i18n.t('Skip the cache and re-run the inference. Defaults to False.')}
-										placement="top-start"
-									>
+								<Tooltip
+									content={$i18n.t('Skip the cache and re-run the inference. Defaults to False.')}
+									placement="top-start"
+								>
+									<div class="self-center text-xs font-medium">
 										{$i18n.t('Skip Cache')}
-									</Tooltip>
-								</div>
+									</div>
+								</Tooltip>
 								<div class="flex items-center">
-									<Switch bind:state={RAGConfig.DATALAB_MARKER_SKIP_CACHE} />
+									<Switch bind:state={RAGConfig.DATALAB_MARKER_SKIP_CACHE} tooltip={true} />
 								</div>
 							</div>
 							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
-									<Tooltip
-										content={$i18n.t(
-											'Force OCR on all pages of the PDF. This can lead to worse results if you have good text in your PDFs. Defaults to False.'
-										)}
-										placement="top-start"
-									>
+								<Tooltip
+									content={$i18n.t(
+										'Force OCR on all pages of the PDF. This can lead to worse results if you have good text in your PDFs. Defaults to False.'
+									)}
+									placement="top-start"
+								>
+									<div class="self-center text-xs font-medium">
 										{$i18n.t('Force OCR')}
-									</Tooltip>
-								</div>
+									</div>
+								</Tooltip>
 								<div class="flex items-center">
-									<Switch bind:state={RAGConfig.DATALAB_MARKER_FORCE_OCR} />
+									<Switch bind:state={RAGConfig.DATALAB_MARKER_FORCE_OCR} tooltip={true} />
 								</div>
 							</div>
 							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
-									<Tooltip
-										content={$i18n.t(
-											'Whether to paginate the output. Each page will be separated by a horizontal rule and page number. Defaults to False.'
-										)}
-										placement="top-start"
-									>
+								<Tooltip
+									content={$i18n.t(
+										'Whether to paginate the output. Each page will be separated by a horizontal rule and page number. Defaults to False.'
+									)}
+									placement="top-start"
+								>
+									<div class="self-center text-xs font-medium">
 										{$i18n.t('Paginate')}
-									</Tooltip>
-								</div>
+									</div>
+								</Tooltip>
 								<div class="flex items-center">
-									<Switch bind:state={RAGConfig.DATALAB_MARKER_PAGINATE} />
+									<Switch bind:state={RAGConfig.DATALAB_MARKER_PAGINATE} tooltip={true} />
 								</div>
 							</div>
 							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
-									<Tooltip
-										content={$i18n.t(
-											'Strip existing OCR text from the PDF and re-run OCR. Ignored if Force OCR is enabled. Defaults to False.'
-										)}
-										placement="top-start"
-									>
+								<Tooltip
+									content={$i18n.t(
+										'Strip existing OCR text from the PDF and re-run OCR. Ignored if Force OCR is enabled. Defaults to False.'
+									)}
+									placement="top-start"
+								>
+									<div class="self-center text-xs font-medium">
 										{$i18n.t('Strip Existing OCR')}
-									</Tooltip>
-								</div>
+									</div>
+								</Tooltip>
 								<div class="flex items-center">
-									<Switch bind:state={RAGConfig.DATALAB_MARKER_STRIP_EXISTING_OCR} />
+									<Switch bind:state={RAGConfig.DATALAB_MARKER_STRIP_EXISTING_OCR} tooltip={true} />
 								</div>
 							</div>
 							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
-									<Tooltip
-										content={$i18n.t(
-											'Disable image extraction from the PDF. If Use LLM is enabled, images will be automatically captioned. Defaults to False.'
-										)}
-										placement="top-start"
-									>
+								<Tooltip
+									content={$i18n.t(
+										'Disable image extraction from the PDF. If Use LLM is enabled, images will be automatically captioned. Defaults to False.'
+									)}
+									placement="top-start"
+								>
+									<div class="self-center text-xs font-medium">
 										{$i18n.t('Disable Image Extraction')}
-									</Tooltip>
-								</div>
+									</div>
+								</Tooltip>
 								<div class="flex items-center">
-									<Switch bind:state={RAGConfig.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION} />
+									<Switch
+										bind:state={RAGConfig.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION}
+										tooltip={true}
+									/>
 								</div>
 							</div>
 							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
-									<Tooltip
-										content={$i18n.t(
-											'Format the lines in the output. Defaults to False. If set to True, the lines will be formatted to detect inline math and styles.'
-										)}
-										placement="top-start"
-									>
+								<Tooltip
+									content={$i18n.t(
+										'Format the lines in the output. Defaults to False. If set to True, the lines will be formatted to detect inline math and styles.'
+									)}
+									placement="top-start"
+								>
+									<div class="self-center text-xs font-medium">
 										{$i18n.t('Format Lines')}
-									</Tooltip>
-								</div>
+									</div>
+								</Tooltip>
 								<div class="flex items-center">
-									<Switch bind:state={RAGConfig.DATALAB_MARKER_FORMAT_LINES} />
+									<Switch bind:state={RAGConfig.DATALAB_MARKER_FORMAT_LINES} tooltip={true} />
 								</div>
 							</div>
 							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
-									<Tooltip
-										content={$i18n.t(
-											"The output format for the text. Can be 'json', 'markdown', or 'html'. Defaults to 'markdown'."
-										)}
-										placement="top-start"
-									>
+								<Tooltip
+									content={$i18n.t(
+										"The output format for the text. Can be 'json', 'markdown', or 'html'. Defaults to 'markdown'."
+									)}
+									placement="top-start"
+								>
+									<div class="self-center text-xs font-medium">
 										{$i18n.t('Output Format')}
-									</Tooltip>
-								</div>
+									</div>
+								</Tooltip>
 								<div class="">
 									<select
 										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
@@ -571,7 +574,7 @@
 										{$i18n.t('Perform OCR')}
 									</div>
 									<div class="flex items-center relative">
-										<Switch bind:state={RAGConfig.DOCLING_DO_OCR} />
+										<Switch bind:state={RAGConfig.DOCLING_DO_OCR} tooltip={true} />
 									</div>
 								</div>
 							</div>
@@ -595,16 +598,16 @@
 										{$i18n.t('Force OCR')}
 									</div>
 									<div class="flex items-center relative">
-										<Switch bind:state={RAGConfig.DOCLING_FORCE_OCR} />
+										<Switch bind:state={RAGConfig.DOCLING_FORCE_OCR} tooltip={true} />
 									</div>
 								</div>
 							</div>
 							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
-									<Tooltip content={''} placement="top-start">
+								<Tooltip content={''} placement="top-start">
+									<div class="self-center text-xs font-medium">
 										{$i18n.t('PDF Backend')}
-									</Tooltip>
-								</div>
+									</div>
+								</Tooltip>
 								<div class="">
 									<select
 										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
@@ -618,11 +621,11 @@
 								</div>
 							</div>
 							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
-									<Tooltip content={''} placement="top-start">
+								<Tooltip content={''} placement="top-start">
+									<div class="self-center text-xs font-medium">
 										{$i18n.t('Table Mode')}
-									</Tooltip>
-								</div>
+									</div>
+								</Tooltip>
 								<div class="">
 									<select
 										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
@@ -634,11 +637,11 @@
 								</div>
 							</div>
 							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
-									<Tooltip content={''} placement="top-start">
+								<Tooltip content={''} placement="top-start">
+									<div class="self-center text-xs font-medium">
 										{$i18n.t('Pipeline')}
-									</Tooltip>
-								</div>
+									</div>
+								</Tooltip>
 								<div class="">
 									<select
 										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
@@ -655,17 +658,17 @@
 										{$i18n.t('Describe Pictures in Documents')}
 									</div>
 									<div class="flex items-center relative">
-										<Switch bind:state={RAGConfig.DOCLING_DO_PICTURE_DESCRIPTION} />
+										<Switch bind:state={RAGConfig.DOCLING_DO_PICTURE_DESCRIPTION} tooltip={true} />
 									</div>
 								</div>
 							</div>
 							{#if RAGConfig.DOCLING_DO_PICTURE_DESCRIPTION}
 								<div class="flex justify-between w-full mt-2">
-									<div class="self-center text-xs font-medium">
-										<Tooltip content={''} placement="top-start">
+									<Tooltip content={''} placement="top-start">
+										<div class="self-center text-xs font-medium">
 											{$i18n.t('Picture Description Mode')}
-										</Tooltip>
-									</div>
+										</div>
+									</Tooltip>
 									<div class="">
 										<select
 											class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
@@ -726,11 +729,11 @@
 							{/if}
 
 							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
-									<Tooltip content={''} placement="top-start">
+								<Tooltip content={''} placement="top-start">
+									<div class="self-center text-xs font-medium">
 										{$i18n.t('Parameters')}
-									</Tooltip>
-								</div>
+									</div>
+								</Tooltip>
 								<div class="">
 									<Textarea
 										bind:value={RAGConfig.DOCLING_PARAMS}
@@ -846,23 +849,22 @@
 					</div>
 
 					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">
-							<Tooltip content={$i18n.t('Full Context Mode')} placement="top-start">
+						<Tooltip
+							content={RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL
+								? $i18n.t(
+										'Inject the entire content as context for comprehensive processing, this is recommended for complex queries.'
+									)
+								: $i18n.t(
+										'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'
+									)}
+							placement="top-start"
+						>
+							<div class=" self-center text-xs font-medium">
 								{$i18n.t('Bypass Embedding and Retrieval')}
-							</Tooltip>
-						</div>
+							</div>
+						</Tooltip>
 						<div class="flex items-center relative">
-							<Tooltip
-								content={RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL
-									? $i18n.t(
-											'Inject the entire content as context for comprehensive processing, this is recommended for complex queries.'
-										)
-									: $i18n.t(
-											'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'
-										)}
-							>
-								<Switch bind:state={RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL} />
-							</Tooltip>
+							<Switch bind:state={RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL} tooltip={true} />
 						</div>
 					</div>
 
@@ -1102,19 +1104,19 @@
 						<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 						<div class="  mb-2.5 flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('Full Context Mode')}</div>
+							<Tooltip
+								content={RAGConfig.RAG_FULL_CONTEXT
+									? $i18n.t(
+											'Inject the entire content as context for comprehensive processing, this is recommended for complex queries.'
+										)
+									: $i18n.t(
+											'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'
+										)}
+							>
+								<div class=" self-center text-xs font-medium">{$i18n.t('Full Context Mode')}</div>
+							</Tooltip>
 							<div class="flex items-center relative">
-								<Tooltip
-									content={RAGConfig.RAG_FULL_CONTEXT
-										? $i18n.t(
-												'Inject the entire content as context for comprehensive processing, this is recommended for complex queries.'
-											)
-										: $i18n.t(
-												'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'
-											)}
-								>
-									<Switch bind:state={RAGConfig.RAG_FULL_CONTEXT} />
-								</Tooltip>
+								<Switch bind:state={RAGConfig.RAG_FULL_CONTEXT} tooltip={true} />
 							</div>
 						</div>
 
@@ -1122,7 +1124,7 @@
 							<div class="  mb-2.5 flex w-full justify-between">
 								<div class=" self-center text-xs font-medium">{$i18n.t('Hybrid Search')}</div>
 								<div class="flex items-center relative">
-									<Switch bind:state={RAGConfig.ENABLE_RAG_HYBRID_SEARCH} />
+								<Switch bind:state={RAGConfig.ENABLE_RAG_HYBRID_SEARCH} tooltip={true} />
 								</div>
 							</div>
 
@@ -1459,14 +1461,14 @@
 					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">{$i18n.t('Google Drive')}</div>
 						<div class="flex items-center relative">
-							<Switch bind:state={RAGConfig.ENABLE_GOOGLE_DRIVE_INTEGRATION} />
+							<Switch bind:state={RAGConfig.ENABLE_GOOGLE_DRIVE_INTEGRATION} tooltip={true} />
 						</div>
 					</div>
 
 					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">{$i18n.t('OneDrive')}</div>
 						<div class="flex items-center relative">
-							<Switch bind:state={RAGConfig.ENABLE_ONEDRIVE_INTEGRATION} />
+							<Switch bind:state={RAGConfig.ENABLE_ONEDRIVE_INTEGRATION} tooltip={true} />
 						</div>
 					</div>
 				</div>

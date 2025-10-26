@@ -216,7 +216,7 @@
 						{$i18n.t('Title Generation')}
 					</div>
 
-					<Switch bind:state={taskConfig.ENABLE_TITLE_GENERATION} />
+					<Switch bind:state={taskConfig.ENABLE_TITLE_GENERATION} tooltip={true} />
 				</div>
 
 				{#if taskConfig.ENABLE_TITLE_GENERATION}
@@ -242,7 +242,7 @@
 						{$i18n.t('Follow Up Generation')}
 					</div>
 
-					<Switch bind:state={taskConfig.ENABLE_FOLLOW_UP_GENERATION} />
+					<Switch bind:state={taskConfig.ENABLE_FOLLOW_UP_GENERATION} tooltip={true} />
 				</div>
 
 				{#if taskConfig.ENABLE_FOLLOW_UP_GENERATION}
@@ -268,7 +268,7 @@
 						{$i18n.t('Tags Generation')}
 					</div>
 
-					<Switch bind:state={taskConfig.ENABLE_TAGS_GENERATION} />
+					<Switch bind:state={taskConfig.ENABLE_TAGS_GENERATION} tooltip={true} />
 				</div>
 
 				{#if taskConfig.ENABLE_TAGS_GENERATION}
@@ -294,7 +294,7 @@
 						{$i18n.t('Retrieval Query Generation')}
 					</div>
 
-					<Switch bind:state={taskConfig.ENABLE_RETRIEVAL_QUERY_GENERATION} />
+					<Switch bind:state={taskConfig.ENABLE_RETRIEVAL_QUERY_GENERATION} tooltip={true} />
 				</div>
 
 				<div class="mb-2.5 flex w-full items-center justify-between">
@@ -302,7 +302,7 @@
 						{$i18n.t('Web Search Query Generation')}
 					</div>
 
-					<Switch bind:state={taskConfig.ENABLE_SEARCH_QUERY_GENERATION} />
+					<Switch bind:state={taskConfig.ENABLE_SEARCH_QUERY_GENERATION} tooltip={true} />
 				</div>
 
 				<div class="mb-2.5">
@@ -322,13 +322,13 @@
 				</div>
 
 				<div class="mb-2.5 flex w-full items-center justify-between">
-					<div class=" self-center text-xs font-medium">
-						{$i18n.t('Autocomplete Generation')}
-					</div>
-
 					<Tooltip content={$i18n.t('Enable autocomplete generation for chat messages')}>
-						<Switch bind:state={taskConfig.ENABLE_AUTOCOMPLETE_GENERATION} />
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Autocomplete Generation')}
+						</div>
 					</Tooltip>
+
+					<Switch bind:state={taskConfig.ENABLE_AUTOCOMPLETE_GENERATION} tooltip={true} />
 				</div>
 
 				{#if taskConfig.ENABLE_AUTOCOMPLETE_GENERATION}

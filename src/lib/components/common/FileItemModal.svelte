@@ -161,7 +161,7 @@
 					</div>
 
 					{#if edit}
-						<div>
+						<div class="flex items-center gap-1.5 text-xs">
 							<Tooltip
 								content={enableFullContent
 									? $i18n.t(
@@ -171,20 +171,19 @@
 											'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'
 										)}
 							>
-								<div class="flex items-center gap-1.5 text-xs">
-									{#if enableFullContent}
-										{$i18n.t('Using Entire Document')}
-									{:else}
-										{$i18n.t('Using Focused Retrieval')}
-									{/if}
-									<Switch
-										bind:state={enableFullContent}
-										on:change={(e) => {
-											item.context = e.detail ? 'full' : undefined;
-										}}
-									/>
-								</div>
+								{#if enableFullContent}
+									{$i18n.t('Using Entire Document')}
+								{:else}
+									{$i18n.t('Using Focused Retrieval')}
+								{/if}
 							</Tooltip>
+							<Switch
+								bind:state={enableFullContent}
+								on:change={(e) => {
+									item.context = e.detail ? 'full' : undefined;
+								}}
+								tooltip={true}
+							/>
 						</div>
 					{/if}
 				</div>

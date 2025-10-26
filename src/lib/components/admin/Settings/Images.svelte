@@ -275,6 +275,7 @@
 
 									updateConfigHandler();
 								}}
+								tooltip={true}
 							/>
 						</div>
 					</div>
@@ -284,7 +285,7 @@
 					<div class=" py-1 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">{$i18n.t('Image Prompt Generation')}</div>
 						<div class="px-1">
-							<Switch bind:state={config.prompt_generation} />
+							<Switch bind:state={config.prompt_generation} tooltip={true} />
 						</div>
 					</div>
 				{/if}

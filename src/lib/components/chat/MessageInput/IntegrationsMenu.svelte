@@ -207,6 +207,7 @@
 												const state = e.detail;
 												await tick();
 											}}
+											tooltip={true}
 										/>
 									</div>
 								</button>
@@ -239,6 +240,7 @@
 											const state = e.detail;
 											await tick();
 										}}
+										tooltip={true}
 									/>
 								</div>
 							</button>
@@ -270,6 +272,7 @@
 											const state = e.detail;
 											await tick();
 										}}
+										tooltip={true}
 									/>
 								</div>
 							</button>
@@ -305,6 +308,7 @@
 											const state = e.detail;
 											await tick();
 										}}
+										tooltip={true}
 									/>
 								</div>
 							</button>
@@ -394,7 +398,7 @@
 							{/if}
 
 							<div class=" shrink-0">
-								<Switch state={tools[toolId].enabled} />
+								<Switch state={tools[toolId].enabled} tooltip={true} />
 							</div>
 						</button>
 					{/each}

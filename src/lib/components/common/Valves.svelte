@@ -88,6 +88,7 @@
 										on:change={() => {
 											dispatch('change');
 										}}
+										tooltip={true}
 									/>
 								</div>
 							</div>

@@ -467,9 +467,7 @@
 										</button>
 									</Tooltip>
 
-									<Tooltip content={enable ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
-										<Switch bind:state={enable} />
-									</Tooltip>
+									<Switch bind:state={enable} tooltip={true} />
 								</div>
 							</div>
 						</div>

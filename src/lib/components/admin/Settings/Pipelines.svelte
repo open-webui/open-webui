@@ -518,7 +518,7 @@
 																	</div>
 
 																	<div class=" pr-2">
-																		<Switch bind:state={valves[property]} />
+																		<Switch bind:state={valves[property]} tooltip={true} />
 																	</div>
 																</div>
 															{:else}

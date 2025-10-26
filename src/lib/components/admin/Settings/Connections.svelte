@@ -235,6 +235,7 @@
 										on:change={async () => {
 											updateOpenAIHandler();
 										}}
+										tooltip={true}
 									/>
 								</div>
 							</div>
@@ -300,6 +301,7 @@
 								on:change={async () => {
 									updateOllamaHandler();
 								}}
+								tooltip={true}
 							/>
 						</div>
 					</div>
@@ -372,6 +374,7 @@
 									on:change={async () => {
 										updateConnectionsHandler();
 									}}
+									tooltip={true}
 								/>
 							</div>
 						</div>
@@ -397,6 +400,7 @@
 									on:change={async () => {
 										updateConnectionsHandler();
 									}}
+									tooltip={true}
 								/>
 							</div>
 						</div>

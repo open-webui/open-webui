@@ -1171,7 +1171,7 @@
 						{params.use_mmap ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 					</div>
 					<div class=" pr-2">
-						<Switch bind:state={params.use_mmap} />
+						<Switch bind:state={params.use_mmap} tooltip={true} />
 					</div>
 				</div>
 			{/if}
@@ -1213,7 +1213,7 @@
 					</div>
 
 					<div class=" pr-2">
-						<Switch bind:state={params.use_mlock} />
+						<Switch bind:state={params.use_mlock} tooltip={true} />
 					</div>
 				</div>
 			{/if}

@@ -373,7 +373,7 @@
 					</div>
 
 					<div class="mt-1">
-						<Switch bind:state={nonLocalVoices} />
+						<Switch bind:state={nonLocalVoices} tooltip={true} />
 					</div>
 				</div>
 			</div>

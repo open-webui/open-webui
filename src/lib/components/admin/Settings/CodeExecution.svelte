@@ -51,7 +51,7 @@
 								{$i18n.t('Enable Code Execution')}
 							</div>
 
-							<Switch bind:state={config.ENABLE_CODE_EXECUTION} />
+							<Switch bind:state={config.ENABLE_CODE_EXECUTION} tooltip={true} />
 						</div>
 					</div>
 
@@ -174,7 +174,7 @@
 								{$i18n.t('Enable Code Interpreter')}
 							</div>
 
-							<Switch bind:state={config.ENABLE_CODE_INTERPRETER} />
+							<Switch bind:state={config.ENABLE_CODE_INTERPRETER} tooltip={true} />
 						</div>
 					</div>
 

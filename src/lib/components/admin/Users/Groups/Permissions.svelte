@@ -88,7 +88,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Models Access')}
 				</div>
-				<Switch bind:state={permissions.workspace.models} />
+				<Switch bind:state={permissions.workspace.models} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.workspace?.models && !permissions.workspace.models}
 				<div>
@@ -104,7 +104,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Knowledge Access')}
 				</div>
-				<Switch bind:state={permissions.workspace.knowledge} />
+				<Switch bind:state={permissions.workspace.knowledge} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.workspace?.knowledge && !permissions.workspace.knowledge}
 				<div>
@@ -120,7 +120,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Prompts Access')}
 				</div>
-				<Switch bind:state={permissions.workspace.prompts} />
+				<Switch bind:state={permissions.workspace.prompts} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.workspace?.prompts && !permissions.workspace.prompts}
 				<div>
@@ -132,18 +132,19 @@
 		</div>
 
 		<div class="flex flex-col w-full">
-			<Tooltip
-				className="flex w-full justify-between my-1"
-				content={$i18n.t(
-					'Warning: Enabling this will allow users to upload arbitrary code on the server.'
-				)}
-				placement="top-start"
-			>
-				<div class=" self-center text-xs font-medium">
-					{$i18n.t('Tools Access')}
-				</div>
-				<Switch bind:state={permissions.workspace.tools} />
-			</Tooltip>
+			<div class="flex w-full justify-between my-1">
+				<Tooltip
+					content={$i18n.t(
+						'Warning: Enabling this will allow users to upload arbitrary code on the server.'
+					)}
+					placement="top-start"
+				>
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Tools Access')}
+					</div>
+				</Tooltip>
+				<Switch bind:state={permissions.workspace.tools} tooltip={true} />
+			</div>
 			{#if defaultPermissions?.workspace?.tools && !permissions.workspace.tools}
 				<div>
 					<div class="text-xs text-gray-500">
@@ -164,7 +165,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Models Public Sharing')}
 				</div>
-				<Switch bind:state={permissions.sharing.public_models} />
+				<Switch bind:state={permissions.sharing.public_models} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.sharing?.public_models && !permissions.sharing.public_models}
 				<div>
@@ -180,7 +181,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Knowledge Public Sharing')}
 				</div>
-				<Switch bind:state={permissions.sharing.public_knowledge} />
+				<Switch bind:state={permissions.sharing.public_knowledge} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.sharing?.public_knowledge && !permissions.sharing.public_knowledge}
 				<div>
@@ -196,7 +197,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Prompts Public Sharing')}
 				</div>
-				<Switch bind:state={permissions.sharing.public_prompts} />
+				<Switch bind:state={permissions.sharing.public_prompts} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.sharing?.public_prompts && !permissions.sharing.public_prompts}
 				<div>
@@ -212,7 +213,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Tools Public Sharing')}
 				</div>
-				<Switch bind:state={permissions.sharing.public_tools} />
+				<Switch bind:state={permissions.sharing.public_tools} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.sharing?.public_tools && !permissions.sharing.public_tools}
 				<div>
@@ -228,7 +229,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Notes Public Sharing')}
 				</div>
-				<Switch bind:state={permissions.sharing.public_notes} />
+				<Switch bind:state={permissions.sharing.public_notes} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.sharing?.public_notes && !permissions.sharing.public_notes}
 				<div>
@@ -250,7 +251,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Allow File Upload')}
 				</div>
-				<Switch bind:state={permissions.chat.file_upload} />
+				<Switch bind:state={permissions.chat.file_upload} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.chat?.file_upload && !permissions.chat.file_upload}
 				<div>
@@ -266,7 +267,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Allow Chat Controls')}
 				</div>
-				<Switch bind:state={permissions.chat.controls} />
+				<Switch bind:state={permissions.chat.controls} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.chat?.controls && !permissions.chat.controls}
 				<div>
@@ -283,7 +284,7 @@
 					<div class=" self-center text-xs font-medium">
 						{$i18n.t('Allow Chat Valves')}
 					</div>
-					<Switch bind:state={permissions.chat.valves} />
+					<Switch bind:state={permissions.chat.valves} tooltip={true} />
 				</div>
 				{#if defaultPermissions?.chat?.valves && !permissions.chat.valves}
 					<div>
@@ -299,7 +300,7 @@
 					<div class=" self-center text-xs font-medium">
 						{$i18n.t('Allow Chat System Prompt')}
 					</div>
-					<Switch bind:state={permissions.chat.system_prompt} />
+					<Switch bind:state={permissions.chat.system_prompt} tooltip={true} />
 				</div>
 				{#if defaultPermissions?.chat?.system_prompt && !permissions.chat.system_prompt}
 					<div>
@@ -315,7 +316,7 @@
 					<div class=" self-center text-xs font-medium">
 						{$i18n.t('Allow Chat Params')}
 					</div>
-					<Switch bind:state={permissions.chat.params} />
+					<Switch bind:state={permissions.chat.params} tooltip={true} />
 				</div>
 				{#if defaultPermissions?.chat?.params && !permissions.chat.params}
 					<div>
@@ -332,7 +333,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Allow Chat Edit')}
 				</div>
-				<Switch bind:state={permissions.chat.edit} />
+				<Switch bind:state={permissions.chat.edit} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.chat?.edit && !permissions.chat.edit}
 				<div>
@@ -348,7 +349,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Allow Chat Delete')}
 				</div>
-				<Switch bind:state={permissions.chat.delete} />
+				<Switch bind:state={permissions.chat.delete} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.chat?.delete && !permissions.chat.delete}
 				<div>
@@ -364,7 +365,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Allow Delete Messages')}
 				</div>
-				<Switch bind:state={permissions.chat.delete_message} />
+				<Switch bind:state={permissions.chat.delete_message} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.chat?.delete_message && !permissions.chat.delete_message}
 				<div>
@@ -380,7 +381,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Allow Continue Response')}
 				</div>
-				<Switch bind:state={permissions.chat.continue_response} />
+				<Switch bind:state={permissions.chat.continue_response} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.chat?.continue_response && !permissions.chat.continue_response}
 				<div>
@@ -396,7 +397,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Allow Regenerate Response')}
 				</div>
-				<Switch bind:state={permissions.chat.regenerate_response} />
+				<Switch bind:state={permissions.chat.regenerate_response} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.chat?.regenerate_response && !permissions.chat.regenerate_response}
 				<div>
@@ -412,7 +413,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Allow Rate Response')}
 				</div>
-				<Switch bind:state={permissions.chat.rate_response} />
+				<Switch bind:state={permissions.chat.rate_response} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.chat?.rate_response && !permissions.chat.rate_response}
 				<div>
@@ -428,7 +429,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Allow Chat Share')}
 				</div>
-				<Switch bind:state={permissions.chat.share} />
+				<Switch bind:state={permissions.chat.share} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.chat?.share && !permissions.chat.share}
 				<div>
@@ -444,7 +445,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Allow Chat Export')}
 				</div>
-				<Switch bind:state={permissions.chat.export} />
+				<Switch bind:state={permissions.chat.export} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.chat?.export && !permissions.chat.export}
 				<div>
@@ -460,7 +461,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Allow Speech to Text')}
 				</div>
-				<Switch bind:state={permissions.chat.stt} />
+				<Switch bind:state={permissions.chat.stt} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.chat?.stt && !permissions.chat.stt}
 				<div>
@@ -476,7 +477,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Allow Text to Speech')}
 				</div>
-				<Switch bind:state={permissions.chat.tts} />
+				<Switch bind:state={permissions.chat.tts} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.chat?.tts && !permissions.chat.tts}
 				<div>
@@ -492,7 +493,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Allow Call')}
 				</div>
-				<Switch bind:state={permissions.chat.call} />
+				<Switch bind:state={permissions.chat.call} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.chat?.call && !permissions.chat.call}
 				<div>
@@ -508,7 +509,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Allow Multiple Models in Chat')}
 				</div>
-				<Switch bind:state={permissions.chat.multiple_models} />
+				<Switch bind:state={permissions.chat.multiple_models} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.chat?.multiple_models && !permissions.chat.multiple_models}
 				<div>
@@ -524,7 +525,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Allow Temporary Chat')}
 				</div>
-				<Switch bind:state={permissions.chat.temporary} />
+				<Switch bind:state={permissions.chat.temporary} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.chat?.temporary && !permissions.chat.temporary}
 				<div>
@@ -541,7 +542,7 @@
 					<div class=" self-center text-xs font-medium">
 						{$i18n.t('Enforce Temporary Chat')}
 					</div>
-					<Switch bind:state={permissions.chat.temporary_enforced} />
+					<Switch bind:state={permissions.chat.temporary_enforced} tooltip={true} />
 				</div>
 				{#if defaultPermissions?.chat?.temporary_enforced && !permissions.chat.temporary_enforced}
 					<div>
@@ -564,7 +565,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Direct Tool Servers')}
 				</div>
-				<Switch bind:state={permissions.features.direct_tool_servers} />
+				<Switch bind:state={permissions.features.direct_tool_servers} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.features?.direct_tool_servers && !permissions.features.direct_tool_servers}
 				<div>
@@ -580,7 +581,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Web Search')}
 				</div>
-				<Switch bind:state={permissions.features.web_search} />
+				<Switch bind:state={permissions.features.web_search} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.features?.web_search && !permissions.features.web_search}
 				<div>
@@ -596,7 +597,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Image Generation')}
 				</div>
-				<Switch bind:state={permissions.features.image_generation} />
+				<Switch bind:state={permissions.features.image_generation} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.features?.image_generation && !permissions.features.image_generation}
 				<div>
@@ -612,7 +613,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Code Interpreter')}
 				</div>
-				<Switch bind:state={permissions.features.code_interpreter} />
+				<Switch bind:state={permissions.features.code_interpreter} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.features?.code_interpreter && !permissions.features.code_interpreter}
 				<div>
@@ -628,7 +629,7 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Notes')}
 				</div>
-				<Switch bind:state={permissions.features.notes} />
+				<Switch bind:state={permissions.features.notes} tooltip={true} />
 			</div>
 			{#if defaultPermissions?.features?.notes && !permissions.features.notes}
 				<div>

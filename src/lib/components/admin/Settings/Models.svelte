@@ -431,16 +431,13 @@
 								</ModelMenu>
 
 								<div class="ml-1">
-									<Tooltip
-										content={(model?.is_active ?? true) ? $i18n.t('Enabled') : $i18n.t('Disabled')}
-									>
-										<Switch
-											bind:state={model.is_active}
-											on:change={async () => {
-												toggleModelHandler(model);
-											}}
-										/>
-									</Tooltip>
+									<Switch
+										bind:state={model.is_active}
+										on:change={async () => {
+											toggleModelHandler(model);
+										}}
+										tooltip={true}
+									/>
 								</div>
 							{/if}
 						</div>

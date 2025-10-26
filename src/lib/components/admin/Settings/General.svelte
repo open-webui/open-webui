@@ -302,7 +302,7 @@
 					<div class=" mb-2.5 flex w-full justify-between pr-2">
 						<div class=" self-center text-xs font-medium">{$i18n.t('Enable New Sign Ups')}</div>
 
-						<Switch bind:state={adminConfig.ENABLE_SIGNUP} />
+						<Switch bind:state={adminConfig.ENABLE_SIGNUP} tooltip={true} />
 					</div>
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
@@ -310,7 +310,7 @@
 							{$i18n.t('Show Admin Details in Account Pending Overlay')}
 						</div>
 
-						<Switch bind:state={adminConfig.SHOW_ADMIN_DETAILS} />
+						<Switch bind:state={adminConfig.SHOW_ADMIN_DETAILS} tooltip={true} />
 					</div>
 
 					<div class="mb-2.5">
@@ -340,7 +340,7 @@
 					<div class="mb-2.5 flex w-full justify-between pr-2">
 						<div class=" self-center text-xs font-medium">{$i18n.t('Enable API Key')}</div>
 
-						<Switch bind:state={adminConfig.ENABLE_API_KEY} />
+						<Switch bind:state={adminConfig.ENABLE_API_KEY} tooltip={true} />
 					</div>
 
 					{#if adminConfig?.ENABLE_API_KEY}
@@ -349,7 +349,7 @@
 								{$i18n.t('API Key Endpoint Restrictions')}
 							</div>
 
-							<Switch bind:state={adminConfig.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS} />
+							<Switch bind:state={adminConfig.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS} tooltip={true} />
 						</div>
 
 						{#if adminConfig?.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS}
@@ -427,7 +427,7 @@
 								<div class="  font-medium">{$i18n.t('LDAP')}</div>
 
 								<div class="mt-1">
-									<Switch bind:state={ENABLE_LDAP} />
+									<Switch bind:state={ENABLE_LDAP} tooltip={true} />
 								</div>
 							</div>
 
@@ -590,7 +590,7 @@
 											<div class="  font-medium">{$i18n.t('TLS')}</div>
 
 											<div class="mt-1">
-												<Switch bind:state={LDAP_SERVER.use_tls} />
+												<Switch bind:state={LDAP_SERVER.use_tls} tooltip={true} />
 											</div>
 										</div>
 										{#if LDAP_SERVER.use_tls}
@@ -610,7 +610,7 @@
 												<div class=" font-medium">{$i18n.t('Validate certificate')}</div>
 
 												<div class="mt-1">
-													<Switch bind:state={LDAP_SERVER.validate_cert} />
+													<Switch bind:state={LDAP_SERVER.validate_cert} tooltip={true} />
 												</div>
 											</div>
 											<div class="flex w-full gap-2">
@@ -646,13 +646,13 @@
 							{$i18n.t('Enable Community Sharing')}
 						</div>
 
-						<Switch bind:state={adminConfig.ENABLE_COMMUNITY_SHARING} />
+						<Switch bind:state={adminConfig.ENABLE_COMMUNITY_SHARING} tooltip={true} />
 					</div>
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">{$i18n.t('Enable Message Rating')}</div>
 
-						<Switch bind:state={adminConfig.ENABLE_MESSAGE_RATING} />
+						<Switch bind:state={adminConfig.ENABLE_MESSAGE_RATING} tooltip={true} />
 					</div>
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
@@ -660,7 +660,7 @@
 							{$i18n.t('Notes')} ({$i18n.t('Beta')})
 						</div>
 
-						<Switch bind:state={adminConfig.ENABLE_NOTES} />
+						<Switch bind:state={adminConfig.ENABLE_NOTES} tooltip={true} />
 					</div>
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
@@ -668,7 +668,7 @@
 							{$i18n.t('Channels')} ({$i18n.t('Beta')})
 						</div>
 
-						<Switch bind:state={adminConfig.ENABLE_CHANNELS} />
+						<Switch bind:state={adminConfig.ENABLE_CHANNELS} tooltip={true} />
 					</div>
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
@@ -676,7 +676,7 @@
 							{$i18n.t('User Webhooks')}
 						</div>
 
-						<Switch bind:state={adminConfig.ENABLE_USER_WEBHOOKS} />
+						<Switch bind:state={adminConfig.ENABLE_USER_WEBHOOKS} tooltip={true} />
 					</div>
 
 					<div class="mb-2.5">

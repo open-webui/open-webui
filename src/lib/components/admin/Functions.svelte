@@ -550,23 +550,22 @@
 								{/if}
 
 								<div class=" self-center mx-1">
-									<Tooltip content={func.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
-										<Switch
-											bind:state={func.is_active}
-											on:change={async (e) => {
-												toggleFunctionById(localStorage.token, func.id);
-												models.set(
-													await getModels(
-														localStorage.token,
-														$config?.features?.enable_direct_connections &&
-															($settings?.directConnections ?? null),
-														false,
-														true
-													)
-												);
-											}}
-										/>
-									</Tooltip>
+									<Switch
+										bind:state={func.is_active}
+										on:change={async (e) => {
+											toggleFunctionById(localStorage.token, func.id);
+											models.set(
+												await getModels(
+													localStorage.token,
+													$config?.features?.enable_direct_connections &&
+														($settings?.directConnections ?? null),
+													false,
+													true
+												)
+											);
+										}}
+										tooltip={true}
+									/>
 								</div>
 							</div>
 						</div>

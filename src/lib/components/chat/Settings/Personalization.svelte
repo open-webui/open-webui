@@ -51,6 +51,7 @@
 						on:change={async () => {
 							saveSettings({ memory: enableMemory });
 						}}
+						tooltip={true}
 					/>
 				</div>
 			</div>
