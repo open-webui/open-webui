@@ -109,6 +109,75 @@
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
 
+	// Reasoning effort functionality
+	let reasoningEffort = 'medium'; // default to medium
+	let reasoningEffortByModel = {};
+	let currentTrackedModel = '';
+	let userModifiedEffortForCurrentModel = false;
+	let preferencesLoaded = false;
+
+	// Load reasoning effort preferences from localStorage
+	const loadReasoningEffortPreferences = () => {
+		try {
+			const stored = localStorage.getItem('reasoningEffortByModel');
+			if (stored) {
+				reasoningEffortByModel = JSON.parse(stored);
+				console.log('🎯 Reasoning Effort: Loaded preferences', reasoningEffortByModel);
+			}
+		} catch (e) {
+			console.error('Error loading reasoning effort preferences:', e);
+		}
+		preferencesLoaded = true;
+	};
+
+	// Save reasoning effort preferences to localStorage
+	const saveReasoningEffortPreferences = () => {
+		try {
+			localStorage.setItem('reasoningEffortByModel', JSON.stringify(reasoningEffortByModel));
+		} catch (e) {
+			console.error('Error saving reasoning effort preferences:', e);
+		}
+	};
+
+	// Update reasoning effort when selected model changes
+	$: if (selectedModelIds.length > 0 && preferencesLoaded) {
+		const newModelId = selectedModelIds[0];
+		if (newModelId !== currentTrackedModel) {
+			console.log('🎯 Reasoning Effort: Model changed from', currentTrackedModel, 'to', newModelId);
+
+			const isFirstTimeSettingModel = !currentTrackedModel;
+			const shouldLoadStoredPreference = !isFirstTimeSettingModel || !userModifiedEffortForCurrentModel;
+
+			currentTrackedModel = newModelId;
+			userModifiedEffortForCurrentModel = false;
+
+			if (shouldLoadStoredPreference) {
+				const newEffort = reasoningEffortByModel[newModelId] || 'medium';
+				console.log('🎯 Reasoning Effort: Loading stored effort for model', newModelId, ':', newEffort);
+				reasoningEffort = newEffort;
+			} else {
+				console.log('🎯 Reasoning Effort: Preserving user setting during model initialization:', reasoningEffort);
+				reasoningEffortByModel[newModelId] = reasoningEffort;
+				saveReasoningEffortPreferences();
+			}
+		}
+	}
+
+	// Handle user changes to reasoning effort
+	const handleReasoningEffortChange = (event) => {
+		const newEffort = event.target.value;
+		reasoningEffort = newEffort;
+		userModifiedEffortForCurrentModel = true;
+
+		const modelToUse = currentTrackedModel || (selectedModelIds.length > 0 ? selectedModelIds[0] : null);
+
+		if (modelToUse) {
+			console.log('🎯 Reasoning Effort: User changed to', newEffort, 'for model', modelToUse);
+			reasoningEffortByModel[modelToUse] = newEffort;
+			saveReasoningEffortPreferences();
+		}
+	};
+
 	let showInputVariablesModal = false;
 	let inputVariablesModalCallback = (variableValues) => {};
 	let inputVariables = {};
@@ -138,7 +207,8 @@
 		selectedFilterIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
-		codeInterpreterEnabled
+		codeInterpreterEnabled,
+		reasoning: { effort: reasoningEffort }
 	});
 
 	const inputVariableHandler = async (text: string): Promise<string> => {
@@ -912,6 +982,9 @@
 		dropzoneElement?.addEventListener('dragleave', onDragLeave);
 
 		await tools.set(await getTools(localStorage.token));
+
+		// Load reasoning effort preferences
+		loadReasoningEffortPreferences();
 	});
 
 	onDestroy(() => {
@@ -1575,6 +1648,22 @@
 													</Tooltip>
 												{/if}
 											{/each}
+
+											<!-- Reasoning Effort Selector -->
+											<Tooltip content={'Reasoning Effort'} placement="top">
+												<div class="flex items-center">
+													<select
+														bind:value={reasoningEffort}
+														on:change={handleReasoningEffortChange}
+														class="text-xs p-1.5 pr-6 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-all cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-750"
+														style="appearance: none; background-image: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 24 24%22 stroke=%22currentColor%22%3E%3Cpath stroke-linecap=%22round%22 stroke-linejoin=%22round%22 stroke-width=%222%22 d=%22M19 9l-7 7-7-7%22/%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right 0.25rem center; background-size: 1em 1em;"
+													>
+														<option value="low">Low</option>
+														<option value="medium">Medium</option>
+														<option value="high">High</option>
+													</select>
+												</div>
+											</Tooltip>
 
 											{#if webSearchEnabled}
 												<Tooltip content={$i18n.t('Web Search')} placement="top">

@@ -999,6 +999,18 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # -> Chat Files
 
     form_data = apply_params_to_form_data(form_data, model)
+
+    # Ensure stream_options.include_usage is enabled for token usage tracking
+    if form_data.get("stream", False):
+        if "stream_options" not in form_data:
+            form_data["stream_options"] = {}
+        form_data["stream_options"]["include_usage"] = True
+        log.info(f"🔍 USAGE DEBUG (Middleware): Set stream_options.include_usage=true for streaming request")
+        log.info(f"🔍 USAGE DEBUG (Middleware): form_data.stream_options = {form_data.get('stream_options')}")
+        log.info(f"🔍 USAGE DEBUG (Middleware): Model being requested: {form_data.get('model')}")
+    else:
+        log.info(f"🔍 USAGE DEBUG (Middleware): Non-streaming request, stream_options not set")
+
     log.debug(f"form_data: {form_data}")
 
     system_message = get_system_message(form_data.get("messages", []))
