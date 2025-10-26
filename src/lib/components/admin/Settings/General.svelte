@@ -723,6 +723,11 @@
 								bind:value={webhookUrl}
 							/>
 						</div>
+						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t(
+								'This webhook is used for system-wide notifications, such as new user registrations or important system alerts.'
+							)}
+						</div>
 					</div>
 				</div>
 			</div>

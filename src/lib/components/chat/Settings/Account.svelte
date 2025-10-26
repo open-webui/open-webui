@@ -230,6 +230,11 @@
 							required
 						/>
 					</div>
+					<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+						{$i18n.t(
+							'This webhook is used to receive notifications about your personal chat activities, such as when a new message is received.'
+						)}
+					</div>
 				</div>
 			</div>
 		{/if}
