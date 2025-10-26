@@ -1671,6 +1671,9 @@ async def process_chat_response(
 
     event_emitter = None
     event_caller = None
+
+    log.info(f"🔍 METADATA CHECK: session_id={metadata.get('session_id')}, chat_id={metadata.get('chat_id')}, message_id={metadata.get('message_id')}")
+
     if (
         "session_id" in metadata
         and metadata["session_id"]
@@ -1679,8 +1682,11 @@ async def process_chat_response(
         and "message_id" in metadata
         and metadata["message_id"]
     ):
+        log.info(f"✅ ALL CONDITIONS MET - Creating event_emitter with metadata: {metadata}")
         event_emitter = get_event_emitter(metadata)
         event_caller = get_event_call(metadata)
+    else:
+        log.warning(f"❌ CONDITIONS NOT MET - event_emitter will be None!")
 
     # Non-streaming response
     if not isinstance(response, StreamingResponse):
@@ -2339,12 +2345,16 @@ async def process_chat_response(
 
                         if delta_count >= threshold and last_delta_data:
                             log.info(f"📤 FLUSH: Emitting batch of {delta_count} chunks with content keys: {list(last_delta_data.keys()) if last_delta_data else 'None'}")
-                            await event_emitter(
-                                {
-                                    "type": "chat:completion",
-                                    "data": last_delta_data,
-                                }
-                            )
+                            if event_emitter is None:
+                                log.error(f"❌ FLUSH ERROR: event_emitter is None! Cannot emit events!")
+                            else:
+                                log.info(f"📤 FLUSH: Calling event_emitter (is not None)")
+                                await event_emitter(
+                                    {
+                                        "type": "chat:completion",
+                                        "data": last_delta_data,
+                                    }
+                                )
                             delta_count = 0
                             last_delta_data = None
                         else:
