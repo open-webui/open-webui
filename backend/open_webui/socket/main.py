@@ -745,6 +745,8 @@ def get_event_emitter(request_info, update_db=True):
         chat_id = request_info.get("chat_id", None)
         message_id = request_info.get("message_id", None)
 
+        log.info(f"📡 EMIT: Emitting to {len(session_ids)} sessions, chat_id={chat_id}, message_id={message_id}, event_type={event_data.get('type')}")
+
         emit_tasks = [
             sio.emit(
                 "events",

@@ -395,9 +395,11 @@
 	};
 
 	const chatEventHandler = async (event, cb) => {
-		console.log(event);
+		console.log('🎯 CHAT EVENT:', event);
+		console.log(`🎯 Checking: event.chat_id="${event.chat_id}" === $chatId="${$chatId}" ? ${event.chat_id === $chatId}`);
 
 		if (event.chat_id === $chatId) {
+			console.log('✅ Chat ID matches! Processing event:', event.data?.type);
 			await tick();
 			let message = history.messages[event.message_id];
 
@@ -520,6 +522,8 @@
 
 				history.messages[event.message_id] = message;
 			}
+		} else {
+			console.log('❌ Chat ID mismatch - event ignored');
 		}
 	};
 
