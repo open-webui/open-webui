@@ -205,7 +205,7 @@ async def generate_chat_completion(
         models = {
             request.state.model["id"]: request.state.model,
         }
-        log.debug(f"direct connection to model: {models}")
+        log.info(f"🔄 ROUTING: Direct flag set, model: {request.state.model['id']}")
     else:
         models = request.app.state.MODELS
 
@@ -215,11 +215,19 @@ async def generate_chat_completion(
 
     model = models[model_id]
 
-    if getattr(request.state, "direct", False):
+    # Check if model is in MODELS (backend-managed) - if so, DON'T use direct flow
+    is_in_backend_models = model_id in request.app.state.MODELS
+    is_direct_flag_set = getattr(request.state, "direct", False)
+
+    log.info(f"🔄 ROUTING: model_id={model_id}, is_in_backend_models={is_in_backend_models}, is_direct_flag_set={is_direct_flag_set}")
+
+    if is_direct_flag_set and not is_in_backend_models:
+        log.info(f"🔄 ROUTING: Using DIRECT completion flow for {model_id}")
         return await generate_direct_chat_completion(
             request, form_data, user=user, models=models
         )
     else:
+        log.info(f"🔄 ROUTING: Using BACKEND completion flow for {model_id} (owned_by: {model.get('owned_by')})")
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
             try:
