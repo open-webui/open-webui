@@ -27,7 +27,8 @@ export default defineConfig({
 		format: 'es'
 	},
 	esbuild: {
-		pure: process.env.ENV === 'dev' ? [] : ['console.log', 'console.debug', 'console.error']
+		// Temporarily disabled to allow socket debugging logs
+		// pure: process.env.ENV === 'dev' ? [] : ['console.log', 'console.debug', 'console.error']
 	},
 	ssr: {
 		noExternal: [],
