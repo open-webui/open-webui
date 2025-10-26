@@ -113,11 +113,15 @@
 			const stored = localStorage.getItem('reasoningEffortByModel');
 			if (stored) {
 				reasoningEffortByModel = JSON.parse(stored);
+				console.log('🎯 Reasoning Effort: Loaded preferences', reasoningEffortByModel);
 			}
 		} catch (e) {
 			console.error('Error loading reasoning effort preferences:', e);
 		}
+		// Mark preferences as loaded to allow reactive statement to run
+		preferencesLoaded = true;
 	};
+
 
 	// Save reasoning effort preferences to localStorage
 	const saveReasoningEffortPreferences = () => {
@@ -128,18 +132,53 @@
 		}
 	};
 
+	// Track the current model 
+	let currentTrackedModel = '';
+	let userModifiedEffortForCurrentModel = false; // Track if user modified effort for current model
+	let preferencesLoaded = false; // Track if localStorage preferences have been loaded
+	
 	// Update reasoning effort when selected model changes
-	$: if (selectedModelIds.length > 0) {
-		const currentModel = selectedModelIds[0];
-		reasoningEffort = reasoningEffortByModel[currentModel] || 'medium';
+	$: if (selectedModelIds.length > 0 && preferencesLoaded) {
+		const newModelId = selectedModelIds[0];
+		if (newModelId !== currentTrackedModel) {
+			console.log('🎯 Reasoning Effort: Model changed from', currentTrackedModel, 'to', newModelId);
+			
+			// Only update the effort if this is a genuinely different model
+			// OR if it's the first time setting currentTrackedModel AND user hasn't made changes
+			const isFirstTimeSettingModel = !currentTrackedModel;
+			const shouldLoadStoredPreference = !isFirstTimeSettingModel || !userModifiedEffortForCurrentModel;
+			
+			// Update the tracked model
+			currentTrackedModel = newModelId;
+			
+			// Reset the user modification flag for the new model
+			userModifiedEffortForCurrentModel = false;
+			
+			if (shouldLoadStoredPreference) {
+				const newEffort = reasoningEffortByModel[newModelId] || 'medium';
+				console.log('🎯 Reasoning Effort: Loading stored effort for model', newModelId, ':', newEffort);
+				reasoningEffort = newEffort;
+			} else {
+				console.log('🎯 Reasoning Effort: Preserving user setting during model initialization:', reasoningEffort);
+				// Save the user's current choice for this new model
+				reasoningEffortByModel[newModelId] = reasoningEffort;
+				saveReasoningEffortPreferences();
+			}
+		}
 	}
-
-	// Update stored preference when reasoning effort changes
-	const updateReasoningEffort = (effort: string) => {
-		if (selectedModelIds.length > 0) {
-			const currentModel = selectedModelIds[0];
-			reasoningEffortByModel[currentModel] = effort;
-			reasoningEffort = effort;
+	
+	// Handle user changes to reasoning effort (event-based, not reactive)
+	const handleReasoningEffortChange = (event) => {
+		const newEffort = event.target.value;
+		reasoningEffort = newEffort;
+		userModifiedEffortForCurrentModel = true; // Mark that user modified effort for current model
+		
+		// Use the currently selected model, even if currentTrackedModel isn't set yet
+		const modelToUse = currentTrackedModel || (selectedModelIds.length > 0 ? selectedModelIds[0] : null);
+		
+		if (modelToUse) {
+			console.log('🎯 Reasoning Effort: User changed to', newEffort, 'for model', modelToUse);
+			reasoningEffortByModel[modelToUse] = newEffort;
 			saveReasoningEffortPreferences();
 		}
 	};
@@ -1316,19 +1355,66 @@
 														for (const item of clipboardData.items) {
 															if (item.type.indexOf('image') !== -1) {
 																const blob = item.getAsFile();
-																const reader = new FileReader();
 
-																reader.onload = function (e) {
-																	files = [
-																		...files,
-																		{
-																			type: 'image',
-																			url: `${e.target.result}`
-																		}
-																	];
-																};
+																// Check vision capability before processing
+																if (visionCapableModels.length === 0) {
+																	toast.error($i18n.t('Selected model(s) do not support image inputs'));
+																	return;
+																}
 
-																reader.readAsDataURL(blob);
+																// Use Promise to properly await FileReader
+																const imageUrl = await new Promise((resolve, reject) => {
+																	const reader = new FileReader();
+
+																	reader.onload = async function (e) {
+																		let imageUrl = e.target.result;
+
+																		// Compress the pasted image using the same logic as file uploads
+																		const compressImageHandler = async (imageUrl, settings = {}, config = {}) => {
+																			const settingsCompression = settings?.imageCompression ?? false;
+																			const configWidth = config?.file?.image_compression?.width ?? null;
+																			const configHeight = config?.file?.image_compression?.height ?? null;
+
+																			if (!settingsCompression && !configWidth && !configHeight) {
+																				return imageUrl;
+																			}
+
+																			let width = null;
+																			let height = null;
+
+																			if (settingsCompression) {
+																				width = settings?.imageCompressionSize?.width ?? null;
+																				height = settings?.imageCompressionSize?.height ?? null;
+																			}
+
+																			if (configWidth && (width === null || width > configWidth)) {
+																				width = configWidth;
+																			}
+																			if (configHeight && (height === null || height > configHeight)) {
+																				height = configHeight;
+																			}
+
+																			if (width || height) {
+																				return await compressImage(imageUrl, width, height);
+																			}
+																			return imageUrl;
+																		};
+
+																		const compressedUrl = await compressImageHandler(imageUrl, $settings, $config);
+																		resolve(compressedUrl);
+																	};
+
+																	reader.onerror = reject;
+																	reader.readAsDataURL(blob);
+																});
+
+																files = [
+																	...files,
+																	{
+																		type: 'image',
+																		url: `${imageUrl}`
+																	}
+																];
 															} else if (item?.kind === 'file') {
 																const file = item.getAsFile();
 																if (file) {
@@ -1564,19 +1650,66 @@
 														console.log(item);
 														if (item.type.indexOf('image') !== -1) {
 															const blob = item.getAsFile();
-															const reader = new FileReader();
 
-															reader.onload = function (e) {
-																files = [
-																	...files,
-																	{
-																		type: 'image',
-																		url: `${e.target.result}`
-																	}
-																];
-															};
+															// Check vision capability before processing
+															if (visionCapableModels.length === 0) {
+																toast.error($i18n.t('Selected model(s) do not support image inputs'));
+																return;
+															}
 
-															reader.readAsDataURL(blob);
+															// Use Promise to properly await FileReader
+															const imageUrl = await new Promise((resolve, reject) => {
+																const reader = new FileReader();
+
+																reader.onload = async function (e) {
+																	let imageUrl = e.target.result;
+
+																	// Compress the pasted image using the same logic as file uploads
+																	const compressImageHandler = async (imageUrl, settings = {}, config = {}) => {
+																		const settingsCompression = settings?.imageCompression ?? false;
+																		const configWidth = config?.file?.image_compression?.width ?? null;
+																		const configHeight = config?.file?.image_compression?.height ?? null;
+
+																		if (!settingsCompression && !configWidth && !configHeight) {
+																			return imageUrl;
+																		}
+
+																		let width = null;
+																		let height = null;
+
+																		if (settingsCompression) {
+																			width = settings?.imageCompressionSize?.width ?? null;
+																			height = settings?.imageCompressionSize?.height ?? null;
+																		}
+
+																		if (configWidth && (width === null || width > configWidth)) {
+																			width = configWidth;
+																		}
+																		if (configHeight && (height === null || height > configHeight)) {
+																			height = configHeight;
+																		}
+
+																		if (width || height) {
+																			return await compressImage(imageUrl, width, height);
+																		}
+																		return imageUrl;
+																	};
+
+																	const compressedUrl = await compressImageHandler(imageUrl, $settings, $config);
+																	resolve(compressedUrl);
+																};
+
+																reader.onerror = reject;
+																reader.readAsDataURL(blob);
+															});
+
+															files = [
+																...files,
+																{
+																	type: 'image',
+																	url: `${imageUrl}`
+																}
+															];
 														} else if (item?.kind === 'file') {
 															const file = item.getAsFile();
 															if (file) {
@@ -1767,8 +1900,8 @@
 																</span>
 																<select
 																	id="reasoning-effort-select"
-																	bind:value={reasoningEffort}
-																	on:change={(e) => updateReasoningEffort(e.target.value)}
+																	value={reasoningEffort}
+																	on:change={handleReasoningEffortChange}
 																	class="absolute inset-0 opacity-0 cursor-pointer"
 																>
 																	<option value="low">Low</option>

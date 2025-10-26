@@ -14,6 +14,7 @@
 	import Images from './Settings/Images.svelte';
 	import Interface from './Settings/Interface.svelte';
 	import Models from './Settings/Models.svelte';
+	import ModelLimits from './Settings/ModelLimits.svelte';
 	import Connections from './Settings/Connections.svelte';
 	import Documents from './Settings/Documents.svelte';
 	import WebSearch from './Settings/WebSearch.svelte';
@@ -36,6 +37,7 @@
 			'general',
 			'connections',
 			'models',
+			'model-limits',
 			'evaluations',
 			'tools',
 			'documents',
@@ -162,6 +164,33 @@
 				</svg>
 			</div>
 			<div class=" self-center">{$i18n.t('Models')}</div>
+		</button>
+
+		<button
+			id="model-limits"
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+			'model-limits'
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+			on:click={() => {
+				goto('/admin/settings/model-limits');
+			}}
+		>
+			<div class=" self-center mr-2">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="w-4 h-4"
+				>
+					<path
+						fill-rule="evenodd"
+						d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+			</div>
+			<div class=" self-center">Token Limits</div>
 		</button>
 
 		<button
@@ -451,6 +480,12 @@
 			/>
 		{:else if selectedTab === 'models'}
 			<Models />
+		{:else if selectedTab === 'model-limits'}
+			<ModelLimits 
+				on:save={() => {
+					toast.success($i18n.t('Token limits saved successfully!'));
+				}}
+			/>
 		{:else if selectedTab === 'evaluations'}
 			<Evaluations />
 		{:else if selectedTab === 'tools'}

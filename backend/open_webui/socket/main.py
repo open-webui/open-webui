@@ -257,11 +257,11 @@ def get_token_groups():
     return token_groups.get_token_groups()
 
 
-def set_token_group(group_name: str, models: list, limit: int = None):
+def set_token_group(group_name: str, models: list, limit: int = None, reset_time: str = '00:00', reset_timezone: str = 'UTC'):
     """Set a token group"""
     # Try to update first, if not found create new
     if not token_groups.update_token_group(group_name, models, limit):
-        return token_groups.create_token_group(group_name, models, limit or 0)
+        return token_groups.create_token_group(group_name, models, limit or 0, reset_time, reset_timezone)
 
 
 def update_token_group(group_name: str, models: list = None, limit: int = None):

@@ -1813,11 +1813,15 @@ class TokenGroupCreate(BaseModel):
     name: str
     models: list[str]
     limit: Optional[int] = None
+    resetTime: Optional[str] = '00:00'
+    resetTimezone: Optional[str] = 'UTC'
 
 
 class TokenGroupUpdate(BaseModel):
     models: Optional[list[str]] = None
     limit: Optional[int] = None
+    resetTime: Optional[str] = None
+    resetTimezone: Optional[str] = None
 
 
 # Token Usage API Endpoints
@@ -1852,7 +1856,7 @@ async def create_usage_group(
 ):
     """Create a new token group"""
     try:
-        set_token_group(form_data.name, form_data.models, form_data.limit)
+        set_token_group(form_data.name, form_data.models, form_data.limit, form_data.resetTime, form_data.resetTimezone)
         
         # Get the created group data
         groups = get_token_groups()
@@ -1930,6 +1934,25 @@ async def delete_usage_group(
         return {"status": True}
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/usage/reset")
+async def manual_reset_usage(user=Depends(get_verified_user)):
+    """Manually reset all token usage (for testing daily reset functionality)"""
+    try:
+        from open_webui.models.token_usage import token_groups
+        success = token_groups.force_reset_all_usage()
+        
+        if success:
+            return {
+                "status": True, 
+                "message": "All token usage counters have been reset to 0"
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to reset token usage")
+            
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
