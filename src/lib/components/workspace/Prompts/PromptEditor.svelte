@@ -10,6 +10,7 @@
 	import { user } from '$lib/stores';
 	import { slugify } from '$lib/utils';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import { validatePrompt } from '$lib/apis/prompts';
 
 	export let onSubmit: Function;
 	export let edit = false;
@@ -42,18 +43,47 @@
 	const submitHandler = async () => {
 		loading = true;
 
-		if (validateCommandString(command)) {
-			await onSubmit({
-				title,
-				command,
-				content,
-				access_control: accessControl
-			});
-		} else {
+		if (!validateCommandString(command)) {
 			toast.error(
 				$i18n.t('Only alphanumeric characters and hyphens are allowed in the command string.')
 			);
+			loading = false;
+			return;
 		}
+
+		// Validate prompt references (circular dependencies, non-existent prompts, etc.)
+		const validation = await validatePrompt(localStorage.token, {
+			title,
+			command,
+			content,
+			access_control: accessControl
+		});
+
+		if (validation) {
+			// Show errors if any
+			if (validation.errors && validation.errors.length > 0) {
+				for (const error of validation.errors) {
+					toast.error(error);
+				}
+				loading = false;
+				return;
+			}
+
+			// Show warnings if any
+			if (validation.warnings && validation.warnings.length > 0) {
+				for (const warning of validation.warnings) {
+					toast.warning(warning);
+				}
+			}
+		}
+
+		// Proceed with submission
+		await onSubmit({
+			title,
+			command,
+			content,
+			access_control: accessControl
+		});
 
 		loading = false;
 	};

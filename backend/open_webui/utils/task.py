@@ -501,3 +501,114 @@ def moa_response_generation_template(
 def tools_function_calling_generation_template(template: str, tools_specs: str) -> str:
     template = template.replace("{{TOOLS}}", tools_specs)
     return template
+
+
+def validate_prompt_references(
+    prompt_command: str,
+    prompt_content: str,
+    all_prompts: list[dict],
+    accessible_prompts: Optional[list[dict]] = None,
+    max_depth_warning: int = 15,
+    max_depth_error: int = 50,
+) -> dict:
+    """
+    Validate {{PROMPTS.*}} references in a prompt before saving.
+
+    Args:
+        prompt_command: The command of the prompt being validated (without leading /)
+        prompt_content: The content to validate
+        all_prompts: List of all prompts in the system (for admins) or user's accessible prompts
+        accessible_prompts: List of prompts the user has access to (None for admins)
+        max_depth_warning: Depth threshold for warnings
+        max_depth_error: Depth threshold for errors
+
+    Returns:
+        dict with 'errors' (list), 'warnings' (list), and 'valid' (bool)
+    """
+    errors = []
+    warnings = []
+
+    # Extract all {{PROMPTS.command}} references
+    pattern = r"{{PROMPTS\.([a-zA-Z0-9-_]+)}}"
+    references = re.findall(pattern, prompt_content)
+
+    if not references:
+        return {"valid": True, "errors": [], "warnings": []}
+
+    # Build prompt map
+    prompt_map = {}
+    for p in all_prompts:
+        cmd = p.get("command", "").lstrip("/")
+        if cmd:
+            prompt_map[cmd] = p.get("content", "")
+
+    # Build accessible prompt set (if applicable)
+    accessible_set = None
+    if accessible_prompts is not None:
+        accessible_set = set(
+            p.get("command", "").lstrip("/") for p in accessible_prompts
+        )
+
+    # Check for non-existent or inaccessible prompts
+    for ref in references:
+        if ref not in prompt_map:
+            errors.append(f"Referenced prompt '/{ref}' does not exist")
+        elif accessible_set is not None and ref not in accessible_set:
+            errors.append(f"You don't have access to prompt '/{ref}'")
+
+    # If there are errors, don't proceed with circular dependency check
+    if errors:
+        return {"valid": False, "errors": errors, "warnings": warnings}
+
+    # Check for circular dependencies and max depth
+    def check_circular_and_depth(
+        current_cmd: str, visited: set[str], depth: int
+    ) -> tuple[bool, int]:
+        """
+        Returns (has_circular, max_depth_reached)
+        """
+        if current_cmd in visited:
+            return True, depth
+
+        if depth >= max_depth_error:
+            return False, depth
+
+        content = prompt_map.get(current_cmd, "")
+        nested_refs = re.findall(pattern, content)
+
+        if not nested_refs:
+            return False, depth
+
+        new_visited = visited | {current_cmd}
+        max_depth_found = depth
+
+        for ref in nested_refs:
+            if ref in prompt_map:
+                has_circ, nested_depth = check_circular_and_depth(
+                    ref, new_visited, depth + 1
+                )
+                if has_circ:
+                    return True, nested_depth
+                max_depth_found = max(max_depth_found, nested_depth)
+
+        return False, max_depth_found
+
+    # Check starting from the current prompt
+    has_circular, max_depth = check_circular_and_depth(prompt_command, set(), 0)
+
+    if has_circular:
+        errors.append(
+            "Circular dependency detected: this prompt references itself through other prompts"
+        )
+
+    # Check depth warnings
+    if max_depth >= max_depth_error:
+        errors.append(
+            f"Nesting depth ({max_depth}) exceeds maximum allowed ({max_depth_error})"
+        )
+    elif max_depth >= max_depth_warning:
+        warnings.append(
+            f"Nesting depth ({max_depth}) is high. Consider simplifying your prompt references."
+        )
+
+    return {"valid": len(errors) == 0, "errors": errors, "warnings": warnings}
