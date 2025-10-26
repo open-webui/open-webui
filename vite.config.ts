@@ -24,8 +24,8 @@ export default defineConfig({
 		sourcemap: true,
 		rollupOptions: {
 			external: (id) => {
-				// Don't externalize raw imports (they need to be inlined)
-				if (id.includes('?raw')) {
+				// Never externalize raw imports, url imports, or other query params
+				if (id.includes('?')) {
 					return false;
 				}
 
@@ -35,12 +35,11 @@ export default defineConfig({
 					'vega-lite',
 					'@joplin/turndown-plugin-gfm',
 					'turndown',
-					'turndown-plugin-gfm',
-					'alpinejs'
+					'turndown-plugin-gfm'
 				];
 
 				// Check if id matches any external package or starts with @tiptap/
-				return externalPackages.includes(id) || id.startsWith('@tiptap/') || id.startsWith('alpinejs/');
+				return externalPackages.includes(id) || id.startsWith('@tiptap/');
 			}
 		}
 	},
