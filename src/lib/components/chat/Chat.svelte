@@ -155,6 +155,9 @@
 	let tokenUsageGroups = {};
 	let usagePollingInterval = null;
 
+	// Reasoning effort tracking
+	let reasoning = { effort: 'medium' };
+
 	const fetchTokenUsage = async () => {
 		try {
 			const response = await fetch(`${WEBUI_BASE_URL}/api/usage/groups`, {
@@ -1993,7 +1996,10 @@
 								include_usage: true
 							}
 						}
-					: {})
+					: {}),
+
+				// Include reasoning effort parameter
+				reasoning: reasoning
 			},
 			`${WEBUI_BASE_URL}/api`
 		).catch(async (error) => {
@@ -2565,6 +2571,11 @@
 									onChange={(data) => {
 										if (!$temporaryChatEnabled) {
 											saveDraft(data, $chatId);
+										}
+										// Capture reasoning effort from MessageInput
+										if (data.reasoning) {
+											reasoning = data.reasoning;
+											console.log('🎯 Reasoning Effort: Captured from MessageInput:', reasoning);
 										}
 									}}
 									on:upload={async (e) => {
