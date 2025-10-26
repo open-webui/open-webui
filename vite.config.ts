@@ -24,17 +24,23 @@ export default defineConfig({
 		sourcemap: true,
 		rollupOptions: {
 			external: (id) => {
+				// Don't externalize raw imports (they need to be inlined)
+				if (id.includes('?raw')) {
+					return false;
+				}
+
 				// Externalize specific browser-only packages for SSR
 				const externalPackages = [
 					'vega',
 					'vega-lite',
 					'@joplin/turndown-plugin-gfm',
 					'turndown',
-					'turndown-plugin-gfm'
+					'turndown-plugin-gfm',
+					'alpinejs'
 				];
 
 				// Check if id matches any external package or starts with @tiptap/
-				return externalPackages.includes(id) || id.startsWith('@tiptap/');
+				return externalPackages.includes(id) || id.startsWith('@tiptap/') || id.startsWith('alpinejs/');
 			}
 		}
 	},
