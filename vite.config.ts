@@ -23,7 +23,19 @@ export default defineConfig({
 	build: {
 		sourcemap: true,
 		rollupOptions: {
-			external: ['vega', 'vega-lite', '@joplin/turndown-plugin-gfm']
+			external: (id) => {
+				// Externalize specific browser-only packages for SSR
+				const externalPackages = [
+					'vega',
+					'vega-lite',
+					'@joplin/turndown-plugin-gfm',
+					'turndown',
+					'turndown-plugin-gfm'
+				];
+
+				// Check if id matches any external package or starts with @tiptap/
+				return externalPackages.includes(id) || id.startsWith('@tiptap/');
+			}
 		}
 	},
 	worker: {
