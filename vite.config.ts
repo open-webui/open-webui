@@ -21,27 +21,7 @@ export default defineConfig({
 		APP_BUILD_HASH: JSON.stringify(process.env.APP_BUILD_HASH || 'dev-build')
 	},
 	build: {
-		sourcemap: true,
-		rollupOptions: {
-			external: (id) => {
-				// Never externalize raw imports, url imports, or other query params
-				if (id.includes('?')) {
-					return false;
-				}
-
-				// Externalize specific browser-only packages for SSR
-				const externalPackages = [
-					'vega',
-					'vega-lite',
-					'@joplin/turndown-plugin-gfm',
-					'turndown',
-					'turndown-plugin-gfm'
-				];
-
-				// Check if id matches any external package or starts with @tiptap/
-				return externalPackages.includes(id) || id.startsWith('@tiptap/');
-			}
-		}
+		sourcemap: true
 	},
 	worker: {
 		format: 'es'
@@ -51,7 +31,7 @@ export default defineConfig({
 	},
 	ssr: {
 		noExternal: [],
-		external: ['vega', 'vega-lite']
+		external: []
 	},
 	optimizeDeps: {
 		exclude: ['vega', 'vega-lite']
