@@ -31,6 +31,8 @@
 		TASK_MODEL_EXTERNAL: '',
 		ENABLE_TITLE_GENERATION: true,
 		TITLE_GENERATION_PROMPT_TEMPLATE: '',
+		TITLE_GENERATION_OVERRIDE: 'none',
+		TITLE_GENERATION_MODEL: '',
 		ENABLE_FOLLOW_UP_GENERATION: true,
 		FOLLOW_UP_GENERATION_PROMPT_TEMPLATE: '',
 		IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE: '',
@@ -234,6 +236,53 @@
 								)}
 							/>
 						</Tooltip>
+					</div>
+
+					<div class="mb-2.5">
+						<div class=" mb-1 text-xs font-medium">{$i18n.t('Admin Override')}</div>
+						<select
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							bind:value={taskConfig.TITLE_GENERATION_OVERRIDE}
+						>
+							<option value="none">{$i18n.t('None (User Setting)')}</option>
+							<option value="force_enable">{$i18n.t('Force Enable for All Users')}</option>
+							<option value="force_disable">{$i18n.t('Force Disable for All Users')}</option>
+						</select>
+					</div>
+
+					<div class="mb-2.5">
+						<div class=" mb-1 text-xs font-medium">{$i18n.t('Title Generation Model')}</div>
+						<select
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							bind:value={taskConfig.TITLE_GENERATION_MODEL}
+							placeholder={$i18n.t('Select a model')}
+							on:change={() => {
+								if (taskConfig.TITLE_GENERATION_MODEL) {
+									const model = models.find((m) => m.id === taskConfig.TITLE_GENERATION_MODEL);
+									if (model) {
+										if (model?.access_control !== null) {
+											toast.error(
+												$i18n.t(
+													'This model is not publicly available. Please select another model.'
+												)
+											);
+										}
+
+										taskConfig.TITLE_GENERATION_MODEL = model.id;
+									} else {
+										taskConfig.TITLE_GENERATION_MODEL = '';
+									}
+								}
+							}}
+						>
+							<option value="" selected>{$i18n.t('Default (Task Model)')}</option>
+							{#each models as model}
+								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
+									{model.name}
+									{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
+								</option>
+							{/each}
+						</select>
 					</div>
 				{/if}
 

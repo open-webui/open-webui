@@ -1702,6 +1702,18 @@ ENABLE_TITLE_GENERATION = PersistentConfig(
     os.environ.get("ENABLE_TITLE_GENERATION", "True").lower() == "true",
 )
 
+TITLE_GENERATION_OVERRIDE = PersistentConfig(
+    "TITLE_GENERATION_OVERRIDE",
+    "task.title.override",
+    os.environ.get("TITLE_GENERATION_OVERRIDE", "none"),
+)
+
+TITLE_GENERATION_MODEL = PersistentConfig(
+    "TITLE_GENERATION_MODEL",
+    "task.title.model",
+    os.environ.get("TITLE_GENERATION_MODEL", ""),
+)
+
 
 ENABLE_SEARCH_QUERY_GENERATION = PersistentConfig(
     "ENABLE_SEARCH_QUERY_GENERATION",

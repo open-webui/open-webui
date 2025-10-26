@@ -56,6 +56,8 @@ async def get_task_config(request: Request, user=Depends(get_verified_user)):
         "TASK_MODEL": request.app.state.config.TASK_MODEL,
         "TASK_MODEL_EXTERNAL": request.app.state.config.TASK_MODEL_EXTERNAL,
         "TITLE_GENERATION_PROMPT_TEMPLATE": request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE,
+        "TITLE_GENERATION_OVERRIDE": request.app.state.config.TITLE_GENERATION_OVERRIDE,
+        "TITLE_GENERATION_MODEL": request.app.state.config.TITLE_GENERATION_MODEL,
         "IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE": request.app.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,
         "ENABLE_AUTOCOMPLETE_GENERATION": request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION,
         "AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH": request.app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
@@ -76,6 +78,8 @@ class TaskConfigForm(BaseModel):
     TASK_MODEL_EXTERNAL: Optional[str]
     ENABLE_TITLE_GENERATION: bool
     TITLE_GENERATION_PROMPT_TEMPLATE: str
+    TITLE_GENERATION_OVERRIDE: Optional[str]
+    TITLE_GENERATION_MODEL: Optional[str]
     IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE: str
     ENABLE_AUTOCOMPLETE_GENERATION: bool
     AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH: int
@@ -98,6 +102,12 @@ async def update_task_config(
     request.app.state.config.ENABLE_TITLE_GENERATION = form_data.ENABLE_TITLE_GENERATION
     request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = (
         form_data.TITLE_GENERATION_PROMPT_TEMPLATE
+    )
+    request.app.state.config.TITLE_GENERATION_OVERRIDE = (
+        form_data.TITLE_GENERATION_OVERRIDE
+    )
+    request.app.state.config.TITLE_GENERATION_MODEL = (
+        form_data.TITLE_GENERATION_MODEL
     )
 
     request.app.state.config.ENABLE_FOLLOW_UP_GENERATION = (
@@ -159,8 +169,16 @@ async def update_task_config(
 async def generate_title(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
+    # Check admin override setting first
+    override = request.app.state.config.TITLE_GENERATION_OVERRIDE
+    if override == "force_disable":
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"detail": "Title generation disabled by administrator"},
+        )
 
-    if not request.app.state.config.ENABLE_TITLE_GENERATION:
+    # Only check ENABLE_TITLE_GENERATION if not force_enable
+    if override != "force_enable" and not request.app.state.config.ENABLE_TITLE_GENERATION:
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={"detail": "Title generation is disabled"},
@@ -180,14 +198,20 @@ async def generate_title(
             detail="Model not found",
         )
 
-    # Check if the user has a custom task model
-    # If the user has a custom task model, use that model
-    task_model_id = get_task_model_id(
-        model_id,
-        request.app.state.config.TASK_MODEL,
-        request.app.state.config.TASK_MODEL_EXTERNAL,
-        models,
-    )
+    # Check if admin specified a title generation model override
+    override_model = request.app.state.config.TITLE_GENERATION_MODEL
+    if override_model and override_model in models:
+        task_model_id = override_model
+        log.debug(f"Using admin-specified title generation model: {task_model_id}")
+    else:
+        # Check if the user has a custom task model
+        # If the user has a custom task model, use that model
+        task_model_id = get_task_model_id(
+            model_id,
+            request.app.state.config.TASK_MODEL,
+            request.app.state.config.TASK_MODEL_EXTERNAL,
+            models,
+        )
 
     log.debug(
         f"generating chat title using model {task_model_id} for user {user.email} "
