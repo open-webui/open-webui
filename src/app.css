@@ -153,13 +153,11 @@ select {
 }
 
 .dark select {  
-	background-color: rgb(23, 23, 23); /* gray-900 */  
-	color: rgb(209, 213, 219); /* gray-300 */  
+	@apply bg-gray-900 text-gray-300;  
 }  
-
+  
 .dark select option {  
-	background-color: rgb(38, 38, 38); /* gray-850 */  
-	color: rgb(255, 255, 255);  
+	@apply bg-gray-850 text-white;  
 }
 
 @keyframes shimmer {
