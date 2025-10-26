@@ -23,7 +23,7 @@ export default defineConfig({
 	build: {
 		sourcemap: true,
 		rollupOptions: {
-			external: ['vega', 'vega-lite']
+			external: ['vega', 'vega-lite', '@joplin/turndown-plugin-gfm']
 		}
 	},
 	worker: {
