@@ -28,5 +28,12 @@ export default defineConfig({
 	},
 	esbuild: {
 		pure: process.env.ENV === 'dev' ? [] : ['console.log', 'console.debug', 'console.error']
+	},
+	ssr: {
+		noExternal: [],
+		external: ['vega', 'vega-lite']
+	},
+	optimizeDeps: {
+		exclude: ['vega', 'vega-lite']
 	}
 });
