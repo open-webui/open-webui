@@ -139,6 +139,27 @@ DEFAULT_SOLUTION_TAGS = [("<|begin_of_solution|>", "<|end_of_solution|>")]
 DEFAULT_CODE_INTERPRETER_TAGS = [("<code_interpreter>", "</code_interpreter>")]
 
 
+def clean_message_content(content: str) -> str:
+    """Strip reasoning blocks (details tags) and images from message content.
+
+    Removes:
+    - <details> tags and their content (reasoning blocks, tool calls, outputs)
+    - Image markdown (![alt](url))
+
+    Args:
+        content: The message content to clean
+
+    Returns:
+        Cleaned content string with reasoning blocks and images removed
+    """
+    return re.sub(
+        r"<details\b[^>]*>.*?<\/details>|!\[.*?\]\(.*?\)",
+        "",
+        content,
+        flags=re.S | re.I,
+    ).strip()
+
+
 def process_tool_result(
     request,
     tool_function_name,
@@ -659,7 +680,10 @@ async def chat_context_handler(
                     if last_assistant_msg:
                         content = last_assistant_msg.get("content", "")
                         if isinstance(content, str):
-                            last_messages["assistant"] = content
+                            # Strip reasoning blocks, details tags, and images from assistant content
+                            content = clean_message_content(content)
+                            if content:
+                                last_messages["assistant"] = content
                         elif isinstance(content, list):
                             # Handle content array
                             text_parts = [
@@ -668,7 +692,10 @@ async def chat_context_handler(
                                 if part.get("type") == "text"
                             ]
                             if text_parts:
-                                last_messages["assistant"] = text_parts[0]
+                                # Strip reasoning blocks and details tags from text content
+                                cleaned_text = clean_message_content(text_parts[0])
+                                if cleaned_text:
+                                    last_messages["assistant"] = cleaned_text
 
                     # Only add last_messages if we have at least one message
                     if last_messages:
@@ -1608,12 +1635,7 @@ async def process_chat_response(
                             break
 
                 if isinstance(content, str):
-                    content = re.sub(
-                        r"<details\b[^>]*>.*?<\/details>|!\[.*?\]\(.*?\)",
-                        "",
-                        content,
-                        flags=re.S | re.I,
-                    ).strip()
+                    content = clean_message_content(content)
 
                 messages.append(
                     {
