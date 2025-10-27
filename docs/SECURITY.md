@@ -44,9 +44,8 @@ We appreciate the community's interest in identifying potential vulnerabilities.
 > - Screenshots/videos demonstrating the exploit (supplementary to written steps)
 >
 > **Failure to provide a reproducible PoC may lead to closure of the report**
->
-> We will notify you, if we struggle to reproduce the exploit using your PoC to allow you to improve your PoC.
-> However, if we repeatedly cannot reproduce the exploit using the PoC, the report may be closed.
+> We will notify you, if we struggle to reproduce the exploit using your PoC to allow you to improve your PoC
+> However, if we repeatedly cannot reproduce the exploit using the PoC, the report may be closed
 
 5. **Required Patch or Actionable Remediation Plan Submission**: Along with the PoC, reporters must provide a patch or some actionable steps to remediate the identified vulnerability. This helps us evaluate and implement fixes rapidly.
 
@@ -89,21 +88,11 @@ We appreciate the community's interest in identifying potential vulnerabilities.
 
 **Non-compliant submissions will be closed, and repeat extreme violators may be banned.** Our goal is to foster a constructive reporting environment where quality submissions promote better security for all users.
 
-## Where to report the vulnerability
-
 If you want to report a vulnerability and can meet the outlined requirements, [open a vulnerability report here](https://github.com/open-webui/open-webui/security/advisories/new).
-If you feel like you are not able to follow ALL outlined requirements for vulnerability-specific reasons, still do report it, we will check every report either way.
 
 ## Product Security And For Non-Vulnerability Security Concerns:
 
-If your concern does not meet the vulnerability requirements outlined above, is not a vulnerability, **but is still related to security concerns**, then use the following channels instead:
-
-- **Documentation issues/improvement ideas:** Open an issue on our [Documentation Repository](https://github.com/open-webui/docs)
-- **Feature requests:** Create a discussion in [GitHub Discussions - Ideas](https://github.com/open-webui/open-webui/discussions/) to discuss with the community if this feature request is wanted by multiple people
-- **Configuration help:** Ask the community for help and guidance on our [Discord Server](https://discord.gg/5rJgQTnV4s) or on [Reddit](https://www.reddit.com/r/OpenWebUI/)
-- **General issues:** Use our [Issue Tracker](https://github.com/open-webui/open-webui/issues)
-
-**Examples of non-vulnerability, still security related concerns:**
+If your concern does not meet the vulnerability requirements outlined above, such as:
 
 - Suggestions for better default configuration values
 - Security hardening recommendations
@@ -113,7 +102,12 @@ If your concern does not meet the vulnerability requirements outlined above, is 
 - Feature requests for optional security enhancements (2FA, audit logging, etc.)
 - General security questions about production deployment
 
-Please use the adequate channel for your specific issue - e.g. best-practice guidance or additional documentation needs into the Documentation Repository, and feature requests into the Main Repository as an issue or discussion.
+**then use one of the following channels instead:**
+
+- **Documentation issues/improvement ideas:** Open an issue on our [Documentation Repository](https://github.com/open-webui/docs)
+- **Feature requests:** Create a discussion in [GitHub Discussions - Ideas](https://github.com/open-webui/open-webui/discussions/) to discuss with the community if this feature request is wanted by multiple people
+- **Configuration help:** Ask the community for help and guidance on our [Discord Server](https://discord.gg/5rJgQTnV4s) or on [Reddit](https://www.reddit.com/r/OpenWebUI/)
+- **General issues:** Use our [Issue Tracker](https://github.com/open-webui/open-webui/issues)
 
 We regularly audit our internal processes and system architecture for vulnerabilities using a combination of automated and manual testing techniques. We are also planning to implement SAST and SCA scans in our project soon.
 
@@ -121,4 +115,4 @@ For any other immediate concerns, please create an issue in our [issue tracker](
 
 ---
 
-_Last updated on **2025-10-17**._
+_Last updated on **2025-10-12**._

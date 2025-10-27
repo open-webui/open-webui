@@ -18,10 +18,6 @@ from open_webui.utils.redis import (
     get_sentinel_url_from_env,
 )
 
-from open_webui.config import (
-    CORS_ALLOW_ORIGIN,
-)
-
 from open_webui.env import (
     ENABLE_WEBSOCKET_SUPPORT,
     WEBSOCKET_MANAGER,
@@ -62,7 +58,7 @@ if WEBSOCKET_MANAGER == "redis":
     else:
         mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL)
     sio = socketio.AsyncServer(
-        cors_allowed_origins=CORS_ALLOW_ORIGIN,
+        cors_allowed_origins=[],
         async_mode="asgi",
         transports=(["websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
         allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
@@ -71,7 +67,7 @@ if WEBSOCKET_MANAGER == "redis":
     )
 else:
     sio = socketio.AsyncServer(
-        cors_allowed_origins=CORS_ALLOW_ORIGIN,
+        cors_allowed_origins=[],
         async_mode="asgi",
         transports=(["websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
         allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,

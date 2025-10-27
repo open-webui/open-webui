@@ -1033,7 +1033,8 @@
 								recording = false;
 
 								await tick();
-								await insertTextAtCursor(text);
+								insertTextAtCursor(text);
+
 								await tick();
 								document.getElementById('chat-input')?.focus();
 
@@ -1050,12 +1051,6 @@
 								dispatch('submit', prompt);
 							}}
 						>
-							<button
-								id="generate-message-pair-button"
-								class="hidden"
-								on:click={() => createMessagePair(prompt)}
-							/>
-
 							<div
 								id="message-input-container"
 								class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border {$temporaryChatEnabled
@@ -1260,6 +1255,24 @@
 																stopResponse();
 															}
 
+															// Command/Ctrl + Shift + Enter to submit a message pair
+															if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
+																e.preventDefault();
+																createMessagePair(prompt);
+															}
+
+															// Check if Ctrl + R is pressed
+															if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
+																e.preventDefault();
+																console.log('regenerate');
+
+																const regenerateButton = [
+																	...document.getElementsByClassName('regenerate-response-button')
+																]?.at(-1);
+
+																regenerateButton?.click();
+															}
+
 															if (prompt === '' && e.key == 'ArrowUp') {
 																e.preventDefault();
 
@@ -1442,11 +1455,11 @@
 											</div>
 										</InputMenu>
 
-										{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || (toggleFilters && toggleFilters.length > 0)}
-											<div
-												class="flex self-center w-[1px] h-4 mx-1 bg-gray-200/50 dark:bg-gray-800/50"
-											/>
+										<div
+											class="flex self-center w-[1px] h-4 mx-1 bg-gray-200/50 dark:bg-gray-800/50"
+										/>
 
+										{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || (toggleFilters && toggleFilters.length > 0)}
 											<IntegrationsMenu
 												selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
 												{toggleFilters}

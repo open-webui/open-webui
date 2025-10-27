@@ -303,10 +303,12 @@
 	});
 
 	onMount(async () => {
-		if ($page.url.searchParams.get('content') !== null) {
+		if ($page.url.searchParams.get('content')) {
 			const content = $page.url.searchParams.get('content') ?? '';
-			createNoteHandler(content);
-			return;
+			if (content) {
+				createNoteHandler(content);
+				return;
+			}
 		}
 
 		await init();

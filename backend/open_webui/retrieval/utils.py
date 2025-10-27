@@ -668,51 +668,46 @@ def get_sources_from_items(
                     collection_names.append(f"file-{item['id']}")
 
         elif item.get("type") == "collection":
-            # Manual Full Mode Toggle for Collection
-            knowledge_base = Knowledges.get_knowledge_by_id(item.get("id"))
-
-            if knowledge_base and (
-                user.role == "admin"
-                or knowledge_base.user_id == user.id
-                or has_access(user.id, "read", knowledge_base.access_control)
+            if (
+                item.get("context") == "full"
+                or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
             ):
-                if (
-                    item.get("context") == "full"
-                    or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
+                # Manual Full Mode Toggle for Collection
+                knowledge_base = Knowledges.get_knowledge_by_id(item.get("id"))
+
+                if knowledge_base and (
+                    user.role == "admin"
+                    or knowledge_base.user_id == user.id
+                    or has_access(user.id, "read", knowledge_base.access_control)
                 ):
-                    if knowledge_base and (
-                        user.role == "admin"
-                        or knowledge_base.user_id == user.id
-                        or has_access(user.id, "read", knowledge_base.access_control)
-                    ):
 
-                        file_ids = knowledge_base.data.get("file_ids", [])
+                    file_ids = knowledge_base.data.get("file_ids", [])
 
-                        documents = []
-                        metadatas = []
-                        for file_id in file_ids:
-                            file_object = Files.get_file_by_id(file_id)
+                    documents = []
+                    metadatas = []
+                    for file_id in file_ids:
+                        file_object = Files.get_file_by_id(file_id)
 
-                            if file_object:
-                                documents.append(file_object.data.get("content", ""))
-                                metadatas.append(
-                                    {
-                                        "file_id": file_id,
-                                        "name": file_object.filename,
-                                        "source": file_object.filename,
-                                    }
-                                )
+                        if file_object:
+                            documents.append(file_object.data.get("content", ""))
+                            metadatas.append(
+                                {
+                                    "file_id": file_id,
+                                    "name": file_object.filename,
+                                    "source": file_object.filename,
+                                }
+                            )
 
-                        query_result = {
-                            "documents": [documents],
-                            "metadatas": [metadatas],
-                        }
+                    query_result = {
+                        "documents": [documents],
+                        "metadatas": [metadatas],
+                    }
+            else:
+                # Fallback to collection names
+                if item.get("legacy"):
+                    collection_names = item.get("collection_names", [])
                 else:
-                    # Fallback to collection names
-                    if item.get("legacy"):
-                        collection_names = item.get("collection_names", [])
-                    else:
-                        collection_names.append(item["id"])
+                    collection_names.append(item["id"])
 
         elif item.get("docs"):
             # BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL

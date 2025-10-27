@@ -6,12 +6,7 @@
 
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
 	import { executeCode } from '$lib/apis/utils';
-	import {
-		copyToClipboard,
-		initMermaid,
-		renderMermaidDiagram,
-		renderVegaVisualization
-	} from '$lib/utils';
+	import { copyToClipboard, renderMermaidDiagram, renderVegaVisualization } from '$lib/utils';
 
 	import 'highlight.js/styles/github-dark.min.css';
 
@@ -328,19 +323,11 @@
 		};
 	};
 
-	let mermaid = null;
-	const renderMermaid = async (code) => {
-		if (!mermaid) {
-			mermaid = await initMermaid();
-		}
-		return await renderMermaidDiagram(mermaid, code);
-	};
-
 	const render = async () => {
 		onUpdate(token);
 		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
 			try {
-				mermaidHtml = await renderMermaid(code);
+				mermaidHtml = await renderMermaidDiagram(code);
 			} catch (error) {
 				console.error('Failed to render mermaid diagram:', error);
 				const errorMsg = error instanceof Error ? error.message : String(error);
@@ -574,15 +561,15 @@
 					>
 						{#if executing}
 							<div class=" ">
-								<div class=" text-gray-500 text-sm mb-1">{$i18n.t('STDOUT/STDERR')}</div>
+								<div class=" text-gray-500 text-xs mb-1">{$i18n.t('STDOUT/STDERR')}</div>
 								<div class="text-sm">{$i18n.t('Running...')}</div>
 							</div>
 						{:else}
 							{#if stdout || stderr}
 								<div class=" ">
-									<div class=" text-gray-500 text-sm mb-1">{$i18n.t('STDOUT/STDERR')}</div>
+									<div class=" text-gray-500 text-xs mb-1">{$i18n.t('STDOUT/STDERR')}</div>
 									<div
-										class="text-sm font-mono whitespace-pre-wrap {stdout?.split('\n')?.length > 100
+										class="text-sm {stdout?.split('\n')?.length > 100
 											? `max-h-96`
 											: ''}  overflow-y-auto"
 									>
@@ -592,7 +579,7 @@
 							{/if}
 							{#if result || files}
 								<div class=" ">
-									<div class=" text-gray-500 text-sm mb-1">{$i18n.t('RESULT')}</div>
+									<div class=" text-gray-500 text-xs mb-1">{$i18n.t('RESULT')}</div>
 									{#if result}
 										<div class="text-sm">{`${JSON.stringify(result)}`}</div>
 									{/if}

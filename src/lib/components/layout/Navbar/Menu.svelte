@@ -19,8 +19,7 @@
 		user,
 		settings,
 		folders,
-		showEmbeds,
-		artifactContents
+		showEmbeds
 	} from '$lib/stores';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { getChatById } from '$lib/apis/chats';
@@ -313,7 +312,7 @@
 				<div class="flex items-center">{$i18n.t('Settings')}</div>
 			</DropdownMenu.Item> -->
 
-			{#if $mobile && ($user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true))}
+			{#if $mobile}
 				<DropdownMenu.Item
 					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
 					id="chat-controls-button"
@@ -343,21 +342,19 @@
 				<div class="flex items-center">{$i18n.t('Overview')}</div>
 			</DropdownMenu.Item>
 
-			{#if ($artifactContents ?? []).length > 0}
-				<DropdownMenu.Item
-					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
-					id="chat-overview-button"
-					on:click={async () => {
-						await showControls.set(true);
-						await showArtifacts.set(true);
-						await showOverview.set(false);
-						await showEmbeds.set(false);
-					}}
-				>
-					<Cube className=" size-4" strokeWidth="1.5" />
-					<div class="flex items-center">{$i18n.t('Artifacts')}</div>
-				</DropdownMenu.Item>
-			{/if}
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
+				id="chat-overview-button"
+				on:click={async () => {
+					await showControls.set(true);
+					await showArtifacts.set(true);
+					await showOverview.set(false);
+					await showEmbeds.set(false);
+				}}
+			>
+				<Cube className=" size-4" strokeWidth="1.5" />
+				<div class="flex items-center">{$i18n.t('Artifacts')}</div>
+			</DropdownMenu.Item>
 
 			<hr class="border-gray-50 dark:border-gray-800 my-1" />
 

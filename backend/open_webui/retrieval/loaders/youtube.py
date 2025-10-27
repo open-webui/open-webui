@@ -83,7 +83,6 @@ class YoutubeLoader:
                 TranscriptsDisabled,
                 YouTubeTranscriptApi,
             )
-            from youtube_transcript_api.proxies import GenericProxyConfig
         except ImportError:
             raise ImportError(
                 'Could not import "youtube_transcript_api" Python package. '
@@ -91,9 +90,10 @@ class YoutubeLoader:
             )
 
         if self.proxy_url:
-            youtube_proxies = GenericProxyConfig(
-                http_url=self.proxy_url, https_url=self.proxy_url
-            )
+            youtube_proxies = {
+                "http": self.proxy_url,
+                "https": self.proxy_url,
+            }
             log.debug(f"Using proxy URL: {self.proxy_url[:14]}...")
         else:
             youtube_proxies = None

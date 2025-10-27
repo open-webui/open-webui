@@ -1,7 +1,5 @@
 <script lang="ts">
 	import { marked } from 'marked';
-	import DOMPurify from 'dompurify';
-
 	marked.use({
 		breaks: true,
 		gfm: true,
@@ -338,14 +336,12 @@
 		let tr = state.tr;
 
 		if (insertPromptAsRichText) {
-			const htmlContent = DOMPurify.sanitize(
-				marked
-					.parse(text, {
-						breaks: true,
-						gfm: true
-					})
-					.trim()
-			);
+			const htmlContent = marked
+				.parse(text, {
+					breaks: true,
+					gfm: true
+				})
+				.trim();
 
 			// Create a temporary div to parse HTML
 			const tempDiv = document.createElement('div');
@@ -695,6 +691,7 @@
 							CodeBlockLowlight.configure({
 								lowlight
 							}),
+							Highlight,
 							Typography,
 							TableKit.configure({
 								table: { resizable: true }

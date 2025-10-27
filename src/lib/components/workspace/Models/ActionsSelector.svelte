@@ -34,17 +34,10 @@
 					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">
 							<Checkbox
-								state={_actions[action].is_global
-									? 'checked'
-									: _actions[action].selected
-										? 'checked'
-										: 'unchecked'}
-								disabled={_actions[action].is_global}
+								state={_actions[action].selected ? 'checked' : 'unchecked'}
 								on:change={(e) => {
-									if (!_actions[action].is_global) {
-										_actions[action].selected = e.detail === 'checked';
-										selectedActionIds = Object.keys(_actions).filter((t) => _actions[t].selected);
-									}
+									_actions[action].selected = e.detail === 'checked';
+									selectedActionIds = Object.keys(_actions).filter((t) => _actions[t].selected);
 								}}
 							/>
 						</div>

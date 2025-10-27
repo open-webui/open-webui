@@ -59,12 +59,7 @@
 			title={token.fileId}
 			width="100%"
 			frameborder="0"
-			on:load={(e) => {
-				try {
-					e.currentTarget.style.height =
-						e.currentTarget.contentWindow.document.body.scrollHeight + 20 + 'px';
-				} catch {}
-			}}
+			onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
 		></iframe>
 	{:else if token.type === 'mention'}
 		<MentionToken {token} />

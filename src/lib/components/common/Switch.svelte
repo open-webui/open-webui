@@ -15,13 +15,7 @@
 </script>
 
 <Tooltip
-	content={typeof tooltip === 'string'
-		? tooltip
-		: typeof tooltip === 'boolean' && tooltip
-			? state
-				? $i18n.t('Enabled')
-				: $i18n.t('Disabled')
-			: ''}
+	content={tooltip ? (state ? $i18n.t('Enabled') : $i18n.t('Disabled')) : ''}
 	placement="top"
 >
 	<Switch.Root
