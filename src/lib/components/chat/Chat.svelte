@@ -2612,8 +2612,8 @@
 										if (!$temporaryChatEnabled) {
 											saveDraft(data, $chatId);
 										}
-										// Capture reasoning effort from MessageInput
-										if (data.reasoning) {
+										// Capture reasoning effort from MessageInput (only if changed to prevent infinite loop)
+										if (data.reasoning && data.reasoning.effort !== reasoning.effort) {
 											reasoning = data.reasoning;
 											console.log('🎯 Reasoning Effort: Captured from MessageInput:', reasoning);
 										}
