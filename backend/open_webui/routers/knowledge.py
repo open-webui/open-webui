@@ -567,7 +567,8 @@ def sync_file_to_knowledge_by_id(
                 ProcessFileForm(file_id=new_file.id, collection_name=id),
                 user=user,
             )
-            log.info(f"[KB Sync] replace kb_id={id} old_id={same_name_file.id} new_id={new_file.id} name={new_file.filename}")
+            log.info(f"[KB Sync] replace kb_id={id} old_id={same_name_file.id} "
+                     f"new_id={new_file.id} name={new_file.filename}")
 
             # Replace old id with new id in knowledge
             file_ids = [fid for fid in file_ids if fid != same_name_file.id]
