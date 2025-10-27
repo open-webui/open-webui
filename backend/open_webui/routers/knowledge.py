@@ -441,7 +441,7 @@ def add_file_to_knowledge_by_id(
         )
 
 
-@router.post("/{id}/sync", response_model=Optional[KnowledgeFilesResponse])
+@router.post("/{id}/file/sync", response_model=Optional[KnowledgeFilesResponse])
 def sync_file_to_knowledge_by_id(
     request: Request,
     id: str,
