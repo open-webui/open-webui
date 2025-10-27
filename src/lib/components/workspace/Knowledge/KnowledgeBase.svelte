@@ -651,7 +651,7 @@
 <SyncConfirmDialog
 	bind:show={showSyncConfirmModal}
 	message={$i18n.t(
-		'This will sync a directory: all modified files will be reuploaded. Do you wish to continue?'
+		'This will sync a directory: new files will be uploaded and modified files updated to their latest version. Do you wish to continue?'
 	)}
 	on:confirm={() => {
 		syncDirectoryHandler();
