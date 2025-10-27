@@ -4,6 +4,7 @@ import time
 import datetime
 import logging
 from aiohttp import ClientSession
+import urllib.parse
 
 from open_webui.models.auths import (
     AddUserForm,
@@ -471,7 +472,14 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
         name = email
 
         if WEBUI_AUTH_TRUSTED_NAME_HEADER:
-            name = request.headers.get(WEBUI_AUTH_TRUSTED_NAME_HEADER, email)
+            raw_name = request.headers.get(WEBUI_AUTH_TRUSTED_NAME_HEADER)
+            if raw_name is not None:
+                try:
+                    decoded_name = urllib.parse.unquote(raw_name, encoding='utf-8')
+                    if decoded_name:
+                        name = decoded_name
+                except Exception:
+                    pass
 
         if not Users.get_user_by_email(email.lower()):
             await signup(
