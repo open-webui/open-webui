@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { getContext, createEventDispatcher } from 'svelte';
+	import { getContext, createEventDispatcher, onMount } from 'svelte';
 	import { showFacilitiesOverlay, showControls, models, chatId, chats, currentChatPage } from '$lib/stores';
 	import { slide } from 'svelte/transition';
-	import { generateFacilitiesResponse, getFacilitiesSections } from '$lib/apis/facilities';
+	import { generateFacilitiesResponse, getFacilitiesSections, downloadFacilitiesDocument } from '$lib/apis/facilities';
 	import { updateChatById, getChatList } from '$lib/apis/chats';
 	import { toast } from 'svelte-sonner';
 	
@@ -15,6 +15,10 @@
 	export let addMessages: Function | null = null;
 	export let initChatHandler: Function | null = null; 
 	export let webSearchEnabled: boolean = false;
+	export let files: any[] = [];
+	
+	// Local storage key - unique per chat
+	$: STORAGE_KEY = `facilities-overlay-form-${$chatId || 'new'}`;
 	
 	// Get the current web search state from the chat interface
 	$: currentWebSearchEnabled = webSearchEnabled;
@@ -33,6 +37,19 @@
 
 	let generating = false;
 	let dynamicSections: string[] = [];
+	let lastGeneratedResponse: { content: string; sections: any; sources: any[] } | null = null;
+	let showDownloadOptions = false;
+	let downloadFormat: 'pdf' | 'word' | '' = '';
+	let downloadFilename = 'facilities_draft';
+	let currentChatId = $chatId;
+
+	// Reset download state when chat changes
+	$: if ($chatId !== currentChatId) {
+		currentChatId = $chatId;
+		showDownloadOptions = false;
+		downloadFormat = '';
+		lastGeneratedResponse = null;
+	}
 
 	const nsfSections = [
 		{ id: 'projectTitle', label: '1. Project Title', required: true },
@@ -52,7 +69,6 @@
 	// Create dynamic sections based on backend response
 	$: currentSections = dynamicSections.length > 0 ? 
 		dynamicSections.map((sectionLabel, index) => {
-			// Map backend section labels to form field IDs
 			const sectionId = getSectionIdFromLabel(sectionLabel);
 			console.log(`Mapping section ${index}: "${sectionLabel}" to ID "${sectionId}"`);
 			return { id: sectionId, label: sectionLabel, required: true };
@@ -74,6 +90,88 @@
 		return mapping[label] || label.toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
 	}
 	
+	// Save form data to localStorage whenever it changes
+	// Only save if we have a valid chatId (not for new chats)
+	$: if ($chatId && (selectedSponsor || Object.values(formData).some(v => v.trim() !== ''))) {
+		saveToLocalStorage();
+	}
+
+	function saveToLocalStorage() {
+		// Only save if we have a valid chatId
+		if (!$chatId) {
+			console.log('Skipping save - no chatId yet (new chat)');
+			return;
+		}
+		
+		try {
+			const dataToSave = {
+				selectedSponsor,
+				formData,
+				dynamicSections,
+				chatId: $chatId,
+				timestamp: Date.now()
+			};
+			localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+			console.log(`Saved form data to localStorage for chat: ${$chatId}`);
+		} catch (error) {
+			console.error('Error saving to localStorage:', error);
+		}
+	}
+
+	function loadFromLocalStorage() {
+		// Only load if we have a valid chatId
+		if (!$chatId) {
+			console.log('Skipping load - no chatId yet (new chat)');
+			return;
+		}
+		
+		try {
+			const saved = localStorage.getItem(STORAGE_KEY);
+			if (saved) {
+				const parsed = JSON.parse(saved);
+				
+				// Only load if it matches current chat (safety check)
+				if (parsed.chatId === $chatId) {
+					selectedSponsor = parsed.selectedSponsor || '';
+					formData = parsed.formData || formData;
+					dynamicSections = parsed.dynamicSections || [];
+					
+					console.log(`Loaded form data from localStorage for chat: ${$chatId}`, {
+						sponsor: selectedSponsor,
+						hasData: Object.values(formData).some(v => v.trim() !== ''),
+						sectionsCount: dynamicSections.length,
+						savedAt: new Date(parsed.timestamp).toLocaleString()
+					});
+				}
+			}
+		} catch (error) {
+			console.error('Error loading from localStorage:', error);
+		}
+	}
+
+	function clearLocalStorage() {
+		// Only clear if we have a valid chatId
+		if (!$chatId) {
+			return;
+		}
+		
+		try {
+			localStorage.removeItem(STORAGE_KEY);
+			console.log(`Cleared form data from localStorage for chat: ${$chatId}`);
+		} catch (error) {
+			console.error('Error clearing localStorage:', error);
+		}
+	}
+
+	// Load saved data when component mounts or chat changes
+	onMount(() => {
+		loadFromLocalStorage();
+	});
+	
+	// Reload form data when chat ID changes
+	$: if ($chatId) {
+		loadFromLocalStorage();
+	}
 
 	// DIRECT CHAT HISTORY MANIPULATION - BYPASS submitPrompt entirely
 	async function addFacilitiesResponseToChat(content: string, sources: any[], error: string | null = null) {
@@ -240,6 +338,7 @@
 			
 			history.currentId = responseMsgId;
 		}
+		files = [];
 
 		console.log('Added facilities response to chat using addMessages:', {
 			contentLength: content.length,
@@ -251,17 +350,8 @@
 
 	async function handleSponsorChange(sponsor: string) {
 		selectedSponsor = sponsor;
-		// Reset form data when sponsor changes
-		formData = {
-			projectTitle: '',
-			researchSpaceFacilities: '',
-			coreInstrumentation: '',
-			computingDataResources: '',
-			internalFacilitiesNYU: '',
-			externalFacilitiesOther: '',
-			specialInfrastructure: '',
-			equipment: ''
-		};
+		// Don't reset form data - keep existing data
+		// Just update the equipment field visibility based on sponsor
 		
 		// Fetch sections from backend
 		try {
@@ -285,6 +375,11 @@
 			dynamicSections = sponsor === 'NSF' ? 
 				nsfSections.map(s => s.label) : 
 				nihSections.map(s => s.label);
+		}
+		
+		// Save after sponsor change (only if chatId exists)
+		if ($chatId) {
+			saveToLocalStorage();
 		}
 	}
 
@@ -315,16 +410,21 @@
 				sponsor: selectedSponsor,
 				form_data: formData,
 				model: modelId,
-				web_search_enabled: webSearchEnabled
+				web_search_enabled: webSearchEnabled,
+				files: files
 			});
 			console.log('Web search enabled value:', webSearchEnabled);
+			console.log('Attached files:', files);
+			console.log('Attached files count:', files.length);
+			console.log('Attached files details:', files.map(f => ({ name: f.name, type: f.type, id: f.id })));
 
 			// Call the facilities API
 			const response = await generateFacilitiesResponse(token, {
 				sponsor: selectedSponsor,
 				form_data: formData,
 				model: modelId,  
-				web_search_enabled: webSearchEnabled  
+				web_search_enabled: webSearchEnabled,
+				files: files
 			});
 
 			console.log('Facilities API response:', response);
@@ -344,8 +444,18 @@
 
 				await addFacilitiesResponseToChat(responseMessage, sources, null);
 
+				// Store the response for download functionality
+				lastGeneratedResponse = {
+					content: responseMessage,
+					sections: response.sections || {},
+					sources: sources
+				};
+
+				// Show download options
+				showDownloadOptions = true;
+
 				toast.success(`Generated ${Object.keys(response.sections).length} sections for ${selectedSponsor}. Form remains open for additional generations.`);
-			} else {
+			} else{
 				console.error('Facilities API failed:', response.error);
 				// Add error to chat like regular chat does
 				await addFacilitiesResponseToChat('', [], response.error || 'Failed to generate facilities response');
@@ -370,7 +480,43 @@
 		}
 	}
 
+	async function handleDownload() {
+		if (!lastGeneratedResponse || !downloadFormat) {
+			toast.error('No document to download');
+			return;
+		}
+
+		try {
+			// Get token from localStorage
+			const token = localStorage.getItem('token');
+			if (!token) {
+				toast.error('Authentication required');
+				return;
+			}
+
+			// Call backend API to download document
+			await downloadFacilitiesDocument(
+				token,
+				lastGeneratedResponse.sections,
+				downloadFormat,
+				downloadFilename
+			);
+
+			toast.success(`Downloaded ${downloadFormat === 'pdf' ? 'PDF' : 'Word document'} successfully`);
+			
+			downloadFormat = '';
+		} catch (error: any) {
+			console.error('Download error:', error);
+			toast.error(error.message || 'Failed to download document');
+		}
+	}
+
 	function closeOverlay() {
+		// Reset download state when form is closed
+		showDownloadOptions = false;
+		downloadFormat = '';
+		lastGeneratedResponse = null;
+		
 		showFacilitiesOverlay.set(false);
 		showControls.set(false);
 		dispatch('close');
@@ -462,6 +608,23 @@
 
 		<!-- Main content area - scrollable -->
 		<div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4 space-y-6">
+			<!-- Attached Files Indicator -->
+			{#if files && files.length > 0}
+				<div class="bg-[#8900E1]/20 border border-[#8900E1]/30 dark:border-[#8900E1]/40 rounded-lg p-3">
+					<div class="flex items-center gap-2 mb-2">
+						<svg class="w-4 h-4 text-[#8900E1] dark:text-[#8900E1]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+						</svg>
+						<span class="text-sm font-medium text-[#57068C] dark:text-[#8900E1]">
+							{files.length} file{files.length === 1 ? '' : 's'} attached
+						</span>
+					</div>
+					<p class="text-xs text-[#57068C] dark:text-[#8900E1]">
+						These files will be used as reference material when generating your facilities response.
+					</p>
+				</div>
+			{/if}
+
 			<p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
 					<b>Description</b><br>
 					This tool assists in developing the DRAFT section related to  Facilities & Equipment for grant proposals where sponsors are NSF (National Science Foundation) and NIH (National Institute of Health).<br><br>
@@ -520,7 +683,7 @@
 
 						<button
 							type="button"
-							class="w-full mt-6 px-4 py-3 bg-[#57068C] hover:bg-[#8900E1] text-white dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 dark:disabled:bg-gray-600 rounded-lg font-medium text-sm"
+							class="w-full mt-6 px-4 py-3 bg-[#57068C] hover:bg-[#8900E1] text-white dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 dark:disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium text-sm transition-colors"
 							on:click={generateSection}
 							disabled={generating}
 							aria-describedby="generate-help"
@@ -535,6 +698,79 @@
 								{('Generate')}
 							{/if}
 						</button>
+
+						<!-- Download Options -->
+						{#if showDownloadOptions && lastGeneratedResponse}
+							<div class="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
+								<h3 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+									Download Generated Response
+								</h3>
+								
+								<!-- Download Format Buttons -->
+								<div class="grid grid-cols-2 gap-3 mb-4">
+									<button
+										type="button"
+										class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition-colors"
+										on:click={() => downloadFormat = 'pdf'}
+									>
+										<svg class="inline w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+										</svg>
+										Download as PDF
+									</button>
+									<button
+										type="button"
+										class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition-colors"
+										on:click={() => downloadFormat = 'word'}
+									>
+										<svg class="inline w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+										</svg>
+										Download as Word
+									</button>
+								</div>
+
+								<!-- Filename Input and Download Button -->
+								{#if downloadFormat}
+									<div class="space-y-3" transition:slide>
+										<div>
+											<label for="download-filename" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+												Enter filename (without extension):
+											</label>
+											<input
+												id="download-filename"
+												type="text"
+												bind:value={downloadFilename}
+												class="w-full rounded-lg py-2.5 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+												placeholder="facilities_draft"
+											/>
+											<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+												Timestamp will be automatically appended to the filename
+											</p>
+										</div>
+										
+										<button
+											type="button"
+											class="w-full px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium text-sm transition-colors"
+											on:click={handleDownload}
+										>
+											<svg class="inline w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+											</svg>
+											Download {downloadFormat === 'pdf' ? 'PDF' : 'Word Document'}
+										</button>
+										
+										<button
+											type="button"
+											class="w-full px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-sm"
+											on:click={() => downloadFormat = ''}
+										>
+											Cancel
+										</button>
+									</div>
+								{/if}
+							</div>
+						{/if}
 
 					</fieldset>
 				</div>

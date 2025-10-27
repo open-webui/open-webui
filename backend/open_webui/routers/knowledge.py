@@ -22,6 +22,7 @@ from open_webui.storage.provider import Storage
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
+from open_webui.utils.super_admin import is_super_admin
 
 
 from open_webui.env import SRC_LOG_LEVELS
@@ -150,7 +151,16 @@ async def create_new_knowledge(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    knowledge = Knowledges.insert_new_knowledge(user.id, form_data)
+    creator_user_id = user.id
+    if is_super_admin(user):
+        assign_to = form_data.model_dump().get('assign_to_email')
+        if assign_to:
+            from open_webui.models.users import Users
+            target_user = Users.get_user_by_email(assign_to)
+            if target_user:
+                creator_user_id = target_user.id
+    
+    knowledge = Knowledges.insert_new_knowledge(creator_user_id, form_data)
 
     if knowledge:
         return knowledge
@@ -198,6 +208,8 @@ class KnowledgeFilesResponse(KnowledgeResponse):
 
 @router.get("/{id}", response_model=Optional[KnowledgeFilesResponse])
 async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
+    from open_webui.utils.workspace_access import item_assigned_to_user_groups
+    
     knowledge = Knowledges.get_knowledge_by_id(id=id)
 
     if not knowledge:
@@ -206,6 +218,7 @@ async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
     if (
         knowledge.user_id == user.id
         or has_access(user.id, "read", knowledge.access_control)
+        or item_assigned_to_user_groups(user.id, knowledge, "read")
     ):
 
         file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
@@ -248,6 +261,24 @@ async def update_knowledge_by_id(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
+
+    if is_super_admin(user):
+        assign_to = form_data.model_dump().get('assign_to_email')
+        if assign_to:
+            from open_webui.models.users import Users
+            target_user = Users.get_user_by_email(assign_to)
+            if target_user:
+                knowledge = Knowledges.update_knowledge_by_id(id=id, form_data=form_data)
+                if knowledge:
+                    from open_webui.internal.db import get_db
+                    from open_webui.models.knowledge import Knowledge
+                    with get_db() as db:
+                        db.query(Knowledge).filter_by(id=id).update({"user_id": target_user.id})
+                        db.commit()
+                    knowledge = Knowledges.get_knowledge_by_id(id=id)
+                    file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
+                    files = Files.get_files_by_ids(file_ids)
+                    return KnowledgeFilesResponse(**knowledge.model_dump(), files=files)
 
     knowledge = Knowledges.update_knowledge_by_id(id=id, form_data=form_data)
     if knowledge:

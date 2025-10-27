@@ -46,6 +46,8 @@ async def get_groups(user=Depends(get_verified_user)):
         
         if (first_user and user.id == first_user.id) or user.email in allowed_emails:
             return Groups.get_groups()  # Super admin gets ALL groups
+        elif user.info and user.info.get("is_co_admin"):
+            return Groups.get_groups_by_member_id(user.id)  # Co-admins get groups they're members of
         else:
             return Groups.get_groups(user.email)  # Normal admin gets their groups
     else:

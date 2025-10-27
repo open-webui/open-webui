@@ -5,8 +5,10 @@
 
 	import { createNewKnowledge, getKnowledgeBases } from '$lib/apis/knowledge';
 	import { toast } from 'svelte-sonner';
-	import { knowledge } from '$lib/stores';
+	import { knowledge, user } from '$lib/stores';
 	import AccessControl from '../common/AccessControl.svelte';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { onMount } from 'svelte';
 
 	let loading = false;
 	export let edit = false;
@@ -15,6 +17,20 @@
 	let name = '';
 	let description = '';
 	export let accessControl;
+
+	let assignToEmail = '';
+	let allUsers = [];
+	let adminUsers = [];
+
+	$: isSuperAdmin = $user?.email && [
+		'sm11538@nyu.edu', 'ms15138@nyu.edu', 'mb484@nyu.edu',
+		'cg4532@nyu.edu', 'jy4421@nyu.edu', 'ht2490@nyu.edu', 'ps5226@nyu.edu'
+	].includes($user.email);
+
+	// Set assignToEmail for creating
+	$: if (isSuperAdmin && !edit && $user?.email && !assignToEmail) {
+		assignToEmail = $user.email;
+	}
 
 	$: if (!edit && !clone && accessControl === undefined) {
 	// New tool: default to private access
@@ -40,7 +56,8 @@
 			localStorage.token,
 			name,
 			description,
-			accessControl
+			accessControl,
+			assignToEmail || undefined
 		).catch((e) => {
 			toast.error(`${e}`);
 		});
@@ -53,6 +70,22 @@
 
 		loading = false;
 	};
+
+	onMount(async () => {
+		if (isSuperAdmin) {
+			const res = await fetch(`${WEBUI_API_BASE_URL}/users/`, {
+				headers: { authorization: `Bearer ${localStorage.token}` }
+			});
+			if (res.ok) {
+				allUsers = await res.json();
+				adminUsers = allUsers.filter(u => u.role === 'admin');
+				
+				if (!edit) {
+					assignToEmail = $user.email;
+				}
+			}
+		}
+	});
 </script>
 
 <div class="w-full max-h-full">
@@ -119,6 +152,26 @@
 					</div>
 				</div>
 			</div>
+
+			{#if isSuperAdmin}
+				<div class="my-2">
+					<div class="text-sm font-semibold mb-1">{$i18n.t('Assign To')}</div>
+					<select
+						class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:bg-gray-850"
+						bind:value={assignToEmail}
+						required
+					>
+						{#each adminUsers as u}
+							<option value={u.email}>{u.name} ({u.email})</option>
+						{/each}
+					</select>
+					{#if assignToEmail}
+						<div class="text-xs text-gray-500 mt-1">
+							{$i18n.t('Will be assigned to')}: {assignToEmail}
+						</div>
+					{/if}
+				</div>
+			{/if}
 		</div>
 
 		<div class="mt-2">

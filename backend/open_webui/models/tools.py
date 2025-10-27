@@ -106,6 +106,7 @@ class ToolForm(BaseModel):
     meta: ToolMeta
     # access_control: Optional[dict] = None
     access_control: Optional[dict] = {}
+    assign_to_email: Optional[str] = None
 
 
 class ToolValves(BaseModel):
@@ -119,7 +120,7 @@ class ToolsTable:
         with get_db() as db:
             tool = ToolModel(
                 **{
-                    **form_data.model_dump(),
+                    **form_data.model_dump(exclude={"assign_to_email"}),
                     "specs": specs,
                     "user_id": user_id,
                     "created_by": user_email,
@@ -176,6 +177,11 @@ class ToolsTable:
     #         or has_access(user_id, permission, tool.access_control)
     #     ]
 
+    def _item_assigned_to_user_groups(self, user_id: str, item, permission: str = "write") -> bool:
+        """Check if item is assigned to any group the user is member of OR owns"""
+        from open_webui.utils.workspace_access import item_assigned_to_user_groups
+        return item_assigned_to_user_groups(user_id, item, permission)
+
     def get_tools_by_user_id(
         self, user_id: str, permission: str = "write"
     ) -> list[ToolUserModel]:
@@ -188,10 +194,10 @@ class ToolsTable:
 
             tools_for_user = []
             for tool in all_tools:
-                # Must be the creator OR pass group-based check
-                if tool.user_id == user_id or has_access(
-                    user_id, permission, tool.access_control
-                ):
+                # Must be the creator OR pass group-based check OR be assigned to user's groups
+                if (tool.user_id == user_id or 
+                    has_access(user_id, permission, tool.access_control) or
+                    self._item_assigned_to_user_groups(user_id, tool, permission)):
                     user = Users.get_user_by_id(tool.user_id)
                     tools_for_user.append(
                         ToolUserModel.model_validate(

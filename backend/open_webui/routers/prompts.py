@@ -10,6 +10,7 @@ from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
+from open_webui.utils.super_admin import is_super_admin
 
 router = APIRouter()
 
@@ -57,7 +58,16 @@ async def create_new_prompt(
 
     prompt = Prompts.get_prompt_by_command(form_data.command)
     if prompt is None:
-        prompt = Prompts.insert_new_prompt(user.id, form_data)
+        creator_user_id = user.id
+        if is_super_admin(user):
+            assign_to = form_data.model_dump().get('assign_to_email')
+            if assign_to:
+                from open_webui.models.users import Users
+                target_user = Users.get_user_by_email(assign_to)
+                if target_user:
+                    creator_user_id = target_user.id
+        
+        prompt = Prompts.insert_new_prompt(creator_user_id, form_data)
 
         if prompt:
             return prompt
@@ -96,12 +106,16 @@ async def create_new_prompt(
 
 @router.get("/command/{command}", response_model=Optional[PromptModel])
 async def get_prompt_by_command(command: str, user=Depends(get_verified_user)):
+    from open_webui.utils.workspace_access import item_assigned_to_user_groups
+    
     prompt = Prompts.get_prompt_by_command(f"/{command}")
 
     if not prompt:
         raise HTTPException(status_code=404, detail="Prompt not found")
 
-    if prompt.user_id == user.id or has_access(user.id, "read", prompt.access_control):
+    if (prompt.user_id == user.id or 
+        has_access(user.id, "read", prompt.access_control) or
+        item_assigned_to_user_groups(user.id, prompt, "read")):
         return prompt
 
     raise HTTPException(
@@ -137,6 +151,22 @@ async def update_prompt_by_command(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
+
+    if is_super_admin(user):
+        assign_to = form_data.model_dump().get('assign_to_email')
+        if assign_to:
+            from open_webui.models.users import Users
+            target_user = Users.get_user_by_email(assign_to)
+            if target_user:
+                prompt = Prompts.update_prompt_by_command(f"/{command}", form_data)
+                if prompt:
+                    from open_webui.internal.db import get_db
+                    from open_webui.models.prompts import Prompt
+                    with get_db() as db:
+                        db.query(Prompt).filter_by(command=f"/{command}").update({"user_id": target_user.id})
+                        db.commit()
+                    prompt = Prompts.get_prompt_by_command(f"/{command}")
+                return prompt
 
     prompt = Prompts.update_prompt_by_command(f"/{command}", form_data)
     if prompt:

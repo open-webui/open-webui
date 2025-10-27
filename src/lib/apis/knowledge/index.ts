@@ -4,7 +4,8 @@ export const createNewKnowledge = async (
 	token: string,
 	name: string,
 	description: string,
-	accessControl: null | object
+	accessControl: null | object,
+	assignToEmail?: string
 ) => {
 	let error = null;
 
@@ -18,7 +19,8 @@ export const createNewKnowledge = async (
 		body: JSON.stringify({
 			name: name,
 			description: description,
-			access_control: accessControl
+			access_control: accessControl,
+			assign_to_email: assignToEmail
 		})
 	})
 		.then(async (res) => {
@@ -153,7 +155,8 @@ export const updateKnowledgeById = async (token: string, id: string, form: Knowl
 			name: form?.name ? form.name : undefined,
 			description: form?.description ? form.description : undefined,
 			data: form?.data ? form.data : undefined,
-			access_control: form.access_control
+			access_control: form.access_control,
+			assign_to_email: form.assign_to_email
 		})
 	})
 		.then(async (res) => {

@@ -1,10 +1,19 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi.responses import Response
 from pydantic import BaseModel
 from typing import Dict, List, Optional
 import logging
 import os
 import json
 from urllib.parse import urlparse
+from io import BytesIO
+from docx import Document
+from docx.shared import Pt, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from datetime import datetime
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 
 from open_webui.models.knowledge import Knowledges
@@ -19,9 +28,7 @@ FACILITIES_PROMPT = """You are an expert grant writer specializing in the 'Facil
 Your job is to expand and professionally refine the user's section draft using:
 1.  User Input (this forms the base and must be preserved).
 2.  PDF Research Chunks from relevant proposals or facility descriptions.
-3.  Trusted Web Snippets:
-   - For most sections: snippets from `nyu.edu` or `nsf.gov`.
-   - For Internal Facilities (NYU): only snippets from the specified trusted NYU HPC/Core Facilities pages.
+3.  Trusted Web Snippets
 
 
 ---
@@ -34,9 +41,9 @@ Your job is to expand and professionally refine the user's section draft using:
 > *Draft:* "The Robotics Lab features 10 industrial-grade robotic manipulators and an advanced OptiTrack motion capture system for multi-agent interaction studies [Robotics_Lab_Equipment.pdf]."
 
 **Example 2**  
-> *User:* "We use NYU's HPC system with 1000 GPUs."  
-> *Context:* `<source><source_id>https://www.nyu.edu/hpc</source_id><source_context>NYU HPC cluster with 1,024 NVIDIA A100 GPUs</source_context></source>`
-> *Draft:* "High-performance computing is supported by NYU's HPC cluster with 1,024 NVIDIA A100 GPUs [https://www.nyu.edu/hpc]."
+> *User:* "We use our university's HPC system with 1000 GPUs."  
+> *Context:* `<source><source_id>HPC_Cluster_Overview.pdf</source_id><source_context>University HPC cluster with 1,024 NVIDIA A100 GPUs</source_context></source>`
+> *Draft:* "High-performance computing is supported by the university's HPC cluster with 1,024 NVIDIA A100 GPUs [HPC_Cluster_Overview.pdf]."
 
 **Example 3 - Multiple Sources**  
 > *User:* "Our wireless lab has software-defined radios and spectrum analyzers."  
@@ -71,20 +78,21 @@ Your job is to expand and professionally refine the user's section draft using:
 - Use specific technical details, numbers, and concrete information from the sources.
 - Write comprehensive, detailed content that demonstrates expertise and thoroughness.
 **CRITICAL CITATION RULES - FOLLOW EXACTLY:**
-- **MANDATORY: You MUST use source names/links in square brackets like [filename.pdf] or [https://url.com].**
+- **IMPORTANT: When web search is disabled, ONLY cite PDF files and document names - NEVER cite web URLs even if they appear in sources.**
 - **ONLY use source names/links that appear in `<source_id>` tags in the context above.**
 - **Look at the context above and find the exact `<source_id>` values.**
 - **If you see `<source><source_id>HRamani_NSFCAREER_SUBMITTED_Proposal_20240723_NSF.pdf</source_id>`, you MUST use [HRamani_NSFCAREER_SUBMITTED_Proposal_20240723_NSF.pdf].**
-- **If you see `<source><source_id>https://www.nyu.edu/hpc</source_id>`, you MUST use [https://www.nyu.edu/hpc].**
+
 - **NEVER use numbered citations like [1], [2], [3] - ALWAYS use the actual source name/link.**
 - **Do NOT use source names/links that are NOT in the `<source_id>` tags.**
 - **If no `<source_id>` tags are provided, do not include any citations.**
-- **If web search is disabled, do NOT include any web URLs as citations.**
+- **If web search is disabled, do NOT include any web URLs as citations, even if they appear in knowledge base sources.**
 - **IMPORTANT: Use SEPARATE citations for each source - [source1.pdf] [source2.pdf] NOT [source1.pdf; source2.pdf].**
 - **NEVER combine multiple sources in one bracket with semicolons or commas.**
 - Never invent or assume data not present in input or sources.
 - If no relevant info is found, return only the user's input — improved stylistically.
 - Focus on creating professional, grant-worthy content that showcases facilities and capabilities.
+- **IMPORTANT: Do NOT add "Facilities, Equipment, and Other Resources" as a subtitle - just write the content for the section directly.**
 
 Write a polished, comprehensive section suitable for direct inclusion in an NSF or NIH grant.
 """
@@ -95,7 +103,8 @@ class FacilitiesRequest(BaseModel):
     sponsor: str  
     form_data: Dict[str, str]  
     model: str  
-    web_search_enabled: bool = False  
+    web_search_enabled: bool = False
+    files: Optional[List[Dict]] = None
 
 class FacilitiesResponse(BaseModel):
     success: bool
@@ -410,6 +419,11 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
     if not request.app.state.config.ENABLE_FACILITIES.get(user.email):
         raise HTTPException(status_code=403, detail="Facilities feature is not enabled for this user")
     try:
+        logging.info(f"DEBUG: Received facilities request with files: {form_data.files}")
+        logging.info(f"DEBUG: Files count: {len(form_data.files) if form_data.files else 0}")
+        if form_data.files:
+            for i, file in enumerate(form_data.files):
+                logging.info(f"DEBUG: File {i}: {file}")
         if form_data.sponsor not in ["NSF", "NIH"]:
             raise HTTPException(status_code=400, detail="Invalid sponsor. Must be 'NSF' or 'NIH'")
         
@@ -446,6 +460,31 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
                 error="Please fill in at least one form field"
             )
         
+        # Process attached files
+        attached_files_sources = []
+        if form_data.files:
+            logging.info(f"Processing {len(form_data.files)} attached files for facilities generation")
+            try:
+                # Import the file processing function from middleware
+                from open_webui.utils.middleware import chat_completion_files_handler
+                
+                # Create a mock body structure for file processing
+                mock_body = {
+                    "metadata": {
+                        "files": form_data.files
+                    },
+                    "messages": [{"role": "user", "content": "Facilities generation with attached files"}]
+                }
+                
+                processed_body, file_flags = await chat_completion_files_handler(request, mock_body, user)
+                attached_files_sources = file_flags.get("sources", [])
+                
+                logging.info(f"Processed attached files, found {len(attached_files_sources)} sources")
+                
+            except Exception as e:
+                logging.error(f"Error processing attached files: {e}")
+                # Continue without attached files if processing fails
+        
         
         section_outputs = {}
         all_sources = []
@@ -464,13 +503,29 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
             
             search_results = search_knowledge_base(query, user.id, request, model, k=5)
             
+            # Add attached files sources to the search results
+            attached_file_results = []
+            if attached_files_sources:
+                for source in attached_files_sources:
+                    for doc in source.get("document", []):
+                        attached_file_results.append((
+                            doc, 
+                            source.get("source", {}).get("name", "attached_file"), 
+                            source.get("distances", [0.1])[0] if source.get("distances") else 0.1
+                        ))
+                
+                logging.info(f"Added {len(attached_file_results)} attached file sources for {section}")
+            
+            # Combine knowledge base and attached file results
+            all_search_results = search_results + attached_file_results
+            
              
             retrieved_chunks = []
             section_sources = []
             
             
             source_groups = {}
-            for doc, source, score in search_results:
+            for doc, source, score in all_search_results:
                 if source not in source_groups:
                     source_groups[source] = []
                 source_groups[source].append((doc, score))
@@ -499,8 +554,8 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
             logging.info(f"Added {len(section_sources)} sources to all_sources for {section}")
             logging.info(f"Sources added: {[s.get('source', {}).get('name', 'unknown') for s in section_sources]}")
             
-            logging.info(f"Found {len(search_results)} chunks for {section}")
-            logging.info(f"Sources found: {[source for _, source, _ in search_results]}")
+            logging.info(f"Found {len(all_search_results)} total chunks for {section} (KB: {len(search_results)}, Attached: {len(attached_file_results)})")
+            logging.info(f"All sources found: {[source for _, source, _ in all_search_results]}")
             
             web_content = ""
             web_links = []
@@ -680,4 +735,133 @@ async def get_facilities_sections(sponsor: str, request: Request, user=Depends(g
     except Exception as e:
         logging.error(f"Error getting sections for {sponsor}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get sections: {str(e)}")
+
+
+class DownloadRequest(BaseModel):
+    sections: Dict[str, str]
+    format: str  # 'pdf' or 'word'
+
+
+def generate_facilities_pdf(sections: Dict[str, str]) -> bytes:
+    """Generate PDF from facilities sections """
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    story = []
+    
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=16,
+        spaceAfter=30,
+        alignment=1  
+    )
+    heading_style = ParagraphStyle(
+        'CustomHeading',
+        parent=styles['Heading2'],
+        fontSize=14,
+        spaceAfter=12,
+        spaceBefore=20
+    )
+    normal_style = styles['Normal']
+    
+    
+    story.append(Paragraph("Facilities Template", title_style))
+    story.append(Spacer(1, 20))
+    
+    
+    for section_label, section_text in sections.items():
+        if section_text and section_text.strip():
+            
+            story.append(Paragraph(section_label, heading_style))
+            
+            
+            escaped_text = section_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            
+            formatted_text = escaped_text.replace('\n', '<br/>')
+            
+            story.append(Paragraph(formatted_text, normal_style))
+            story.append(Spacer(1, 12))
+    
+    
+    doc.build(story)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+def generate_facilities_word(sections: Dict[str, str]) -> bytes:
+    """Generate Word document from facilities sections"""
+    doc = Document()
+    
+    
+    title_paragraph = doc.add_paragraph()
+    title_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    title_run = title_paragraph.add_run('Facilities Template')
+    title_run.bold = True
+    title_run.font.size = Pt(16)
+    
+    title_run.font.color.rgb = RGBColor(0, 0, 0)
+    title_run.font.color.theme_color = None  
+    
+    doc.add_paragraph()
+    
+
+    for section_label, section_text in sections.items():
+        if section_text and section_text.strip():
+        
+            heading_paragraph = doc.add_paragraph()
+            heading_run = heading_paragraph.add_run(section_label)
+            heading_run.bold = True
+            heading_run.font.size = Pt(14)
+
+            heading_run.font.color.rgb = RGBColor(0, 0, 0)
+            heading_run.font.color.theme_color = None
+            
+            doc.add_paragraph(section_text)
+    
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+@router.post("/download")
+async def download_facilities_document(
+    request: Request,
+    download_data: DownloadRequest,
+    user=Depends(get_verified_user)
+):
+    """
+    Download facilities document as PDF or Word
+    """
+    if not request.app.state.config.ENABLE_FACILITIES.get(user.email):
+        raise HTTPException(status_code=403, detail="Facilities feature is not enabled for this user")
+    
+    try:
+        if download_data.format not in ["pdf", "word"]:
+            raise HTTPException(status_code=400, detail="Invalid format. Must be 'pdf' or 'word'")
+        
+        if not download_data.sections:
+            raise HTTPException(status_code=400, detail="No sections provided")
+        
+        # Generate document based on format
+        if download_data.format == "pdf":
+            content = generate_facilities_pdf(download_data.sections)
+            media_type = "application/pdf"
+            filename = "facilities_draft.pdf"
+        else:  # word
+            content = generate_facilities_word(download_data.sections)
+            media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            filename = "facilities_draft.docx"
+        
+        return Response(
+            content=content,
+            media_type=media_type,
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+        
+    except Exception as e:
+        logging.error(f"Error generating {download_data.format} document: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate document: {str(e)}")
 

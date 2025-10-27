@@ -12,6 +12,7 @@
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import { user } from '$lib/stores';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	let formElement = null;
 	let loading = false;
@@ -31,7 +32,25 @@
 	};
 	export let content = '';
 	export let accessControl;
+	export let tool = null;
 
+	let assignToEmail = '';
+	let allUsers = [];
+	let adminUsers = [];
+
+	$: isSuperAdmin = $user?.email && [
+		'sm11538@nyu.edu', 'ms15138@nyu.edu', 'mb484@nyu.edu',
+		'cg4532@nyu.edu', 'jy4421@nyu.edu', 'ht2490@nyu.edu', 'ps5226@nyu.edu'
+	].includes($user.email);
+
+	// Set assignToEmail immediately based on context
+	$: if (isSuperAdmin) {
+		if (edit && tool?.created_by && !assignToEmail) {
+			assignToEmail = tool.created_by;
+		} else if (!edit && $user?.email && !assignToEmail) {
+			assignToEmail = $user.email;
+		}
+	}
 
 	let _content = '';
 
@@ -167,7 +186,8 @@ class Tools:
 			name: finalName,
 			meta,
 			content,
-			access_control: accessControl
+			access_control: accessControl,
+			assign_to_email: assignToEmail || undefined
 		});
 	};
 
@@ -176,7 +196,7 @@ class Tools:
 			content = _content;
 			await tick();
 
-			const res = await codeEditor.formatPythonCodeHandler();
+			const res = await codeEditor.formatPythonCodeHandler(true);
 			await tick();
 
 			content = _content;
@@ -189,6 +209,26 @@ class Tools:
 			}
 		}
 	};
+
+	onMount(async () => {
+		if (isSuperAdmin) {
+			const res = await fetch(`${WEBUI_API_BASE_URL}/users/`, {
+				headers: { authorization: `Bearer ${localStorage.token}` }
+			});
+			if (res.ok) {
+				allUsers = await res.json();
+				adminUsers = allUsers.filter(u => u.role === 'admin');
+				
+				if (edit && tool?.user_id) {
+					const owner = allUsers.find(u => u.id === tool.user_id);
+					if (owner) assignToEmail = owner.email;
+				} else if (!edit) {
+					// Default to current user when creating
+					assignToEmail = $user.email;
+				}
+			}
+		}
+	});
 </script>
 
 <AccessControlModal
@@ -288,6 +328,26 @@ class Tools:
 							/>
 						</Tooltip>
 					</div>
+
+					{#if isSuperAdmin}
+						<div class="my-2 px-1">
+							<div class="text-sm font-semibold mb-1">{$i18n.t('Assign To')}</div>
+							<select
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:bg-gray-850"
+								bind:value={assignToEmail}
+								required
+							>
+								{#each adminUsers as u}
+									<option value={u.email}>{u.name} ({u.email})</option>
+								{/each}
+							</select>
+							{#if assignToEmail}
+								<div class="text-xs text-gray-500 mt-1">
+									{edit ? $i18n.t('Owner') : $i18n.t('Will be assigned to')}: {assignToEmail}
+								</div>
+							{/if}
+						</div>
+					{/if}
 				</div>
 
 				<div class="mb-2 flex-1 overflow-auto h-0 rounded-lg">

@@ -42,7 +42,8 @@
 					title: _prompt.title,
 					command: _prompt.command,
 					content: _prompt.content,
-					access_control: _prompt?.access_control ?? null
+					access_control: _prompt?.access_control ?? null,
+					user_id: _prompt.user_id
 				};
 			} else {
 				goto('/workspace/prompts');

@@ -7,6 +7,8 @@
 	import AccessControl from '../common/AccessControl.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
+	import { user } from '$lib/stores';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	export let onSubmit: Function;
 	export let edit = false;
@@ -23,6 +25,24 @@
 
 	export let accessControl;
 
+	let assignToEmail = '';
+	let allUsers = [];
+	let adminUsers = [];
+
+	$: isSuperAdmin = $user?.email && [
+		'sm11538@nyu.edu', 'ms15138@nyu.edu', 'mb484@nyu.edu',
+		'cg4532@nyu.edu', 'jy4421@nyu.edu', 'ht2490@nyu.edu', 'ps5226@nyu.edu'
+	].includes($user.email);
+
+	// Set assignToEmail based on context
+	$: if (isSuperAdmin) {
+		if (edit && prompt?.user_id && allUsers.length > 0 && !assignToEmail) {
+			const owner = allUsers.find(u => u.id === prompt.user_id);
+			if (owner) assignToEmail = owner.email;
+		} else if (!edit && $user?.email && !assignToEmail) {
+			assignToEmail = $user.email;
+		}
+	}
 
 	let showAccessControlModal = false;
 
@@ -46,7 +66,8 @@
 				title,
 				command,
 				content,
-				access_control: accessControl
+				access_control: accessControl,
+				assign_to_email: assignToEmail || undefined
 			});
 		} else {
 			toast.error(
@@ -66,6 +87,23 @@
 	};
 
 	onMount(async () => {
+		if (isSuperAdmin) {
+			const res = await fetch(`${WEBUI_API_BASE_URL}/users/`, {
+				headers: { authorization: `Bearer ${localStorage.token}` }
+			});
+			if (res.ok) {
+				allUsers = await res.json();
+				adminUsers = allUsers.filter(u => u.role === 'admin');
+				
+				if (edit && prompt?.user_id) {
+					const owner = allUsers.find(u => u.id === prompt.user_id);
+					if (owner) assignToEmail = owner.email;
+				} else if (!edit) {
+					assignToEmail = $user.email;
+				}
+			}
+		}
+
 		if (prompt) {
 			title = prompt.title;
 			await tick();
@@ -144,6 +182,31 @@
 				</div>
 			</Tooltip>
 		</div>
+
+		{#if isSuperAdmin}
+			<div class="my-2">
+				<div class="text-sm font-semibold mb-1">{$i18n.t('Assign To')}</div>
+				<select
+					class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:bg-gray-850"
+					bind:value={assignToEmail}
+					required
+					disabled={adminUsers.length === 0}
+				>
+					{#if adminUsers.length === 0}
+						<option value="">{$i18n.t('Loading...')}</option>
+					{:else}
+						{#each adminUsers as u}
+							<option value={u.email}>{u.name} ({u.email})</option>
+						{/each}
+					{/if}
+				</select>
+				{#if assignToEmail}
+					<div class="text-xs text-gray-500 mt-1">
+						{edit ? $i18n.t('Owner') : $i18n.t('Will be assigned to')}: {assignToEmail}
+					</div>
+				{/if}
+			</div>
+		{/if}
 
 		<div class="my-2">
 			<div class="flex w-full justify-between">

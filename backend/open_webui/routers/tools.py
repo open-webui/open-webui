@@ -17,6 +17,7 @@ from open_webui.utils.tools import get_tools_specs
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.utils.super_admin import is_super_admin
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
@@ -104,7 +105,19 @@ async def create_new_tools(
             TOOLS[form_data.id] = tools_module
 
             specs = get_tools_specs(TOOLS[form_data.id])
-            tools = Tools.insert_new_tool(user.id, user.email, form_data, specs)
+            
+            creator_user_id = user.id
+            creator_email = user.email
+            if is_super_admin(user):
+                assign_to = form_data.model_dump().get('assign_to_email')
+                if assign_to:
+                    from open_webui.models.users import Users
+                    target_user = Users.get_user_by_email(assign_to)
+                    if target_user:
+                        creator_user_id = target_user.id
+                        creator_email = assign_to
+            
+            tools = Tools.insert_new_tool(creator_user_id, creator_email, form_data, specs)
 
             tool_cache_dir = Path(CACHE_DIR) / "tools" / form_data.id
             tool_cache_dir.mkdir(parents=True, exist_ok=True)
@@ -154,12 +167,16 @@ async def create_new_tools(
 
 @router.get("/id/{id}", response_model=Optional[ToolModel])
 async def get_tools_by_id(id: str, user=Depends(get_verified_user)):
+    from open_webui.utils.workspace_access import item_assigned_to_user_groups
+    
     tool = Tools.get_tool_by_id(id)
     if not tool:
         raise HTTPException(status_code=404, detail="Tool not found")
 
     # Now everyone must pass either "I'm the owner" or group-based "read" check
-    if tool.user_id == user.id or has_access(user.id, "read", tool.access_control):
+    if (tool.user_id == user.id or 
+        has_access(user.id, "read", tool.access_control) or
+        item_assigned_to_user_groups(user.id, tool, "read")):
         return tool
 
     raise HTTPException(status_code=401, detail="Not allowed to view this tool")
@@ -208,9 +225,18 @@ async def update_tools_by_id(
         specs = get_tools_specs(TOOLS[id])
 
         updated = {
-            **form_data.model_dump(exclude={"id"}),
+            **form_data.model_dump(exclude={"id", "assign_to_email"}),
             "specs": specs,
         }
+
+        if is_super_admin(user):
+            assign_to = form_data.model_dump().get('assign_to_email')
+            if assign_to:
+                from open_webui.models.users import Users
+                target_user = Users.get_user_by_email(assign_to)
+                if target_user:
+                    updated["user_id"] = target_user.id
+                    updated["created_by"] = assign_to
 
         log.debug(updated)
         tools = Tools.update_tool_by_id(id, updated)

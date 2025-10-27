@@ -68,6 +68,7 @@ class PromptForm(BaseModel):
     content: str
     # access_control: Optional[dict] = None
     access_control: Optional[dict] = {}
+    assign_to_email: Optional[str] = None
 
 
 class PromptsTable:
@@ -77,7 +78,7 @@ class PromptsTable:
         prompt = PromptModel(
             **{
                 "user_id": user_id,
-                **form_data.model_dump(),
+                **form_data.model_dump(exclude={"assign_to_email"}),
                 "timestamp": int(time.time()),
             }
         )
@@ -132,6 +133,11 @@ class PromptsTable:
     #         or has_access(user_id, permission, prompt.access_control)
     #     ]
 
+    def _item_assigned_to_user_groups(self, user_id: str, item, permission: str = "write") -> bool:
+        """Check if item is assigned to any group the user is member of OR owns"""
+        from open_webui.utils.workspace_access import item_assigned_to_user_groups
+        return item_assigned_to_user_groups(user_id, item, permission)
+
     def get_prompts_by_user_id(
         self, user_id: str, permission: str = "write"
     ) -> list[PromptUserResponse]:
@@ -140,9 +146,9 @@ class PromptsTable:
 
             prompts_for_user = []
             for prompt in all_prompts:
-                if prompt.user_id == user_id or has_access(
-                    user_id, permission, prompt.access_control
-                ):
+                if (prompt.user_id == user_id or 
+                    has_access(user_id, permission, prompt.access_control) or
+                    self._item_assigned_to_user_groups(user_id, prompt, permission)):
                     user = Users.get_user_by_id(prompt.user_id)
                     prompts_for_user.append(
                         PromptUserResponse.model_validate(

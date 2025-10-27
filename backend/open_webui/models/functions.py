@@ -5,6 +5,7 @@ from typing import Optional
 from open_webui.internal.db import Base, JSONField, get_db
 from open_webui.models.users import Users
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.utils.super_admin import is_super_admin
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text
 
@@ -133,7 +134,8 @@ class FunctionsTable:
     #                 for function in db.query(Function).all()
     #             ]
 
-    def get_functions(self, user_email, active_only=False) -> list[FunctionModel]:
+    def get_functions(self, user_email, active_only=False, user=None) -> list[FunctionModel]:
+        # Always return only user's own functions (for security)
         with get_db() as db:
             if active_only:
                 return [

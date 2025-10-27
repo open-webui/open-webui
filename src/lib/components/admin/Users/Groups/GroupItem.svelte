@@ -2,6 +2,14 @@
 	import { toast } from 'svelte-sonner';
 	import { getContext } from 'svelte';
 	import dayjs from 'dayjs';
+	import timezone from 'dayjs/plugin/timezone';
+	import utc from 'dayjs/plugin/utc';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
+
+	// Extend dayjs with timezone and utc plugins
+	dayjs.extend(timezone);
+	dayjs.extend(utc);
+	dayjs.extend(localizedFormat);
 
 	const i18n = getContext('i18n');
 
@@ -47,6 +55,23 @@
 			toast.success($i18n.t('Group deleted successfully'));
 			setGroups();
 		}
+	};
+
+	// Helper function to format date in desired format
+	const formatDateTime = (timestamp) => {
+		// Convert timestamp to JavaScript Date object
+		const date = new Date(timestamp * 1000);
+		
+		// Get timezone abbreviation
+		const timezoneAbbr = date.toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ').pop();
+		
+		// Format using dayjs for better control
+		const dayjsDate = dayjs(timestamp * 1000);
+		
+		// Format: "Aug 18 2025, 04:05:15 PM (EST)"
+		const formattedDate = dayjsDate.format('MMM DD YYYY, hh:mm:ss A');
+		
+		return `${formattedDate} (${timezoneAbbr})`;
 	};
 </script>
 

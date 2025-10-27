@@ -1,4 +1,4 @@
-@reference "./tailwind.css";
+@import "./tailwind.css";
 
 @font-face {
 	font-family: 'Inter';
@@ -55,11 +55,11 @@ math {
 }
 
 .markdown-prose {
-	@apply prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-100 prose-hr:dark:border-gray-800 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-100 prose-hr:dark:border-gray-800 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
 
 .markdown-prose-xs {
-	@apply text-xs prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-0  prose-hr:border-gray-100 prose-hr:dark:border-gray-800 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply text-xs prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal prose-headings:font-semibold prose-hr:my-0 prose-hr:border-gray-100 prose-hr:dark:border-gray-800 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
 
 .markdown a {
@@ -101,7 +101,8 @@ li p {
 
 /* Dark theme scrollbar styles */
 .dark ::-webkit-scrollbar-thumb {
-	background-color: rgba(42, 42, 42, 0.8); /* Darker color for dark theme */
+	background-color: rgba(42, 42, 42, 0.8);
+	/* Darker color for dark theme */
 	border-color: rgba(0, 0, 0, var(--tw-border-opacity));
 }
 
@@ -133,6 +134,7 @@ select {
 	0% {
 		background-position: 200% 0;
 	}
+
 	100% {
 		background-position: -200% 0;
 	}
@@ -145,7 +147,8 @@ select {
 	-webkit-background-clip: text;
 	-webkit-text-fill-color: transparent;
 	animation: shimmer 4s linear infinite;
-	color: #818286; /* Fallback color */
+	color: #818286;
+	/* Fallback color */
 }
 
 :global(.dark) .shimmer {
@@ -155,7 +158,8 @@ select {
 	-webkit-background-clip: text;
 	-webkit-text-fill-color: transparent;
 	animation: shimmer 4s linear infinite;
-	color: #a1a3a7; /* Darker fallback color for dark mode */
+	color: #a1a3a7;
+	/* Darker fallback color for dark mode */
 }
 
 @keyframes smoothFadeIn {
@@ -163,6 +167,7 @@ select {
 		opacity: 0;
 		transform: translateY(-10px);
 	}
+
 	100% {
 		opacity: 1;
 		transform: translateY(0);
@@ -182,6 +187,7 @@ select {
 .scrollbar-hidden:hover::-webkit-scrollbar-thumb {
 	visibility: visible;
 }
+
 .scrollbar-hidden::-webkit-scrollbar-thumb {
 	visibility: hidden;
 }
@@ -191,7 +197,8 @@ select {
 }
 
 .scrollbar-none::-webkit-scrollbar {
-	display: none; /* for Chrome, Safari and Opera */
+	display: none;
+	/* for Chrome, Safari and Opera */
 }
 
 .scrollbar-none::-webkit-scrollbar-corner {
@@ -199,19 +206,23 @@ select {
 }
 
 .scrollbar-none {
-	-ms-overflow-style: none; /* IE and Edge */
-	scrollbar-width: none; /* Firefox */
+	-ms-overflow-style: none;
+	/* IE and Edge */
+	scrollbar-width: none;
+	/* Firefox */
 }
 
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
 	/* display: none; <- Crashes Chrome on hover */
 	-webkit-appearance: none;
-	margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
+	margin: 0;
+	/* <-- Apparently some margin are still there even though it's hidden */
 }
 
 input[type='number'] {
-	-moz-appearance: textfield; /* Firefox */
+	-moz-appearance: textfield;
+	/* Firefox */
 }
 
 .cm-editor {
@@ -258,11 +269,11 @@ input[type='number'] {
 	background-color: transparent !important;
 }
 
-.svelte-flow__edge > path {
+.svelte-flow__edge>path {
 	stroke-width: 0.5;
 }
 
-.svelte-flow__edge.animated > path {
+.svelte-flow__edge.animated>path {
 	stroke-width: 2;
 	@apply stroke-gray-600 dark:stroke-gray-500;
 }
@@ -295,7 +306,7 @@ input[type='number'] {
 	pointer-events: none;
 }
 
-.tiptap > pre > code {
+.tiptap>pre>code {
 	border-radius: 0.4rem;
 	font-size: 0.85rem;
 	padding: 0.25em 0.3em;
@@ -303,7 +314,7 @@ input[type='number'] {
 	@apply dark:bg-gray-800 bg-gray-100;
 }
 
-.tiptap > pre {
+.tiptap>pre {
 	border-radius: 0.5rem;
 	font-family: 'JetBrainsMono', monospace;
 	margin: 1.5rem 0;
@@ -371,4 +382,17 @@ input[type='number'] {
 
 .hljs-strong {
 	font-weight: 700;
+}
+
+/* Toast notification positioning fix */
+[data-sonner-toaster] {
+	position: fixed !important;
+	z-index: 9999 !important;
+	top: 0 !important;
+	right: 0 !important;
+	margin: 1rem !important;
+}
+
+[data-sonner-toast] {
+	z-index: 9999 !important;
 }
