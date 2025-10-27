@@ -1450,18 +1450,12 @@ async def chat_completion(
 
     metadata = {}
     try:
-        log.info(f"🔧 CHAT COMPLETION: model_id={model_id}, model_item={model_item}")
-        log.info(f"🔧 CHAT COMPLETION: model_item.get('direct')={model_item.get('direct', False)}")
-
         # Check if this is really a direct model or if it's in MODELS (backend-managed)
         is_in_models = model_id in request.app.state.MODELS
         is_direct_requested = model_item.get("direct", False)
 
-        log.info(f"🔧 CHAT COMPLETION: is_in_models={is_in_models}, is_direct_requested={is_direct_requested}")
-
         # If model is in MODELS, always use backend handling even if direct was requested
         if is_in_models:
-            log.info(f"🔧 CHAT COMPLETION: Using backend handling for {model_id}")
             model = request.app.state.MODELS[model_id]
             model_info = Models.get_model_by_id(model_id)
 
@@ -1474,7 +1468,6 @@ async def chat_completion(
                 except Exception as e:
                     raise e
         elif is_direct_requested:
-            log.info(f"🔧 CHAT COMPLETION: Using direct handling for {model_id}")
             model = model_item
             model_info = None
 

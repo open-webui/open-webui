@@ -395,17 +395,7 @@
 	};
 
 	const chatEventHandler = async (event, cb) => {
-		console.log('🎯 CHAT EVENT RECEIVED:', {
-			event_chat_id: event.chat_id,
-			current_chatId: $chatId,
-			event_type: event.data?.type,
-			message_id: event.message_id,
-			full_event: event
-		});
-		console.log(`🎯 Checking: event.chat_id="${event.chat_id}" === $chatId="${$chatId}" ? ${event.chat_id === $chatId}`);
-
 		if (event.chat_id === $chatId) {
-			console.log('✅ Chat ID matches! Processing event:', event.data?.type);
 			await tick();
 			let message = history.messages[event.message_id];
 
@@ -597,34 +587,16 @@
 
 	onMount(async () => {
 		loading = true;
-		console.log('mounted');
-		console.log('🔌 SOCKET STATUS:', {
-			exists: !!$socket,
-			connected: $socket?.connected,
-			id: $socket?.id
-		});
-
-		// Expose socket to window for debugging
-		if (typeof window !== 'undefined') {
-			window._debugSocket = $socket;
-		}
 
 		window.addEventListener('message', onMessageHandler);
 
 		// Register socket event handler reactively
 		socketSubscribe = socket.subscribe((_socket) => {
-			console.log('🔄 SOCKET CHANGED:', {
-				exists: !!_socket,
-				connected: _socket?.connected,
-				id: _socket?.id
-			});
-
 			if (_socket) {
 				// Remove old listener if any
 				_socket.off('events', chatEventHandler);
 				// Register new listener
 				_socket.on('events', chatEventHandler);
-				console.log('✅ Registered "events" listener on socket');
 			}
 		});
 
@@ -715,7 +687,6 @@
 			chatIdUnsubscriber?.();
 			window.removeEventListener('message', onMessageHandler);
 			$socket?.off('events', chatEventHandler);
-			console.log('🧹 Cleaned up Chat.svelte listeners');
 		} catch (e) {
 			console.error(e);
 		}
@@ -2615,7 +2586,6 @@
 										// Capture reasoning effort from MessageInput (only if changed to prevent infinite loop)
 										if (data.reasoning && data.reasoning.effort !== reasoning.effort) {
 											reasoning = data.reasoning;
-											console.log('🎯 Reasoning Effort: Captured from MessageInput:', reasoning);
 										}
 									}}
 									on:upload={async (e) => {
