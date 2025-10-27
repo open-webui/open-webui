@@ -167,19 +167,19 @@ async def set_tool_servers_config(
     form_data: ToolServersConfigForm,
     user=Depends(get_admin_user),
 ):
-    mcp_server_ids = [
-        conn.get("info", {}).get("id")
-        for conn in form_data.TOOL_SERVER_CONNECTIONS
-        if conn.get("type") == "mcp"
-    ]
+    for connection in request.app.state.config.TOOL_SERVER_CONNECTIONS:
+        server_type = connection.get("type", "openapi")
+        auth_type = connection.get("auth_type", "none")
 
-    for server_id in mcp_server_ids:
-        # Remove existing OAuth clients for MCP tool servers that are no longer present
-        client_key = f"mcp:{server_id}"
-        try:
-            request.app.state.oauth_client_manager.remove_client(client_key)
-        except:
-            pass
+        if auth_type == "oauth_2.1":
+            # Remove existing OAuth clients for tool servers
+            server_id = connection.get("info", {}).get("id")
+            client_key = f"{server_type}:{server_id}"
+
+            try:
+                request.app.state.oauth_client_manager.remove_client(client_key)
+            except:
+                pass
 
     # Set new tool server connections
     request.app.state.config.TOOL_SERVER_CONNECTIONS = [
@@ -193,6 +193,7 @@ async def set_tool_servers_config(
         if server_type == "mcp":
             server_id = connection.get("info", {}).get("id")
             auth_type = connection.get("auth_type", "none")
+
             if auth_type == "oauth_2.1" and server_id:
                 try:
                     oauth_client_info = connection.get("info", {}).get(

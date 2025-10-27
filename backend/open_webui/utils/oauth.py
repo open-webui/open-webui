@@ -582,6 +582,7 @@ class OAuthClientManager:
 
         client = self.get_client(client_id)
         client_info = self.get_client_info(client_id)
+
         if client is None or client_info is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND)
 
@@ -593,6 +594,7 @@ class OAuthClientManager:
             "Detected invalid OAuth client %s; attempting re-registration",
             client_id,
         )
+
         re_registered = await self._re_register_client(request, client_id)
         if not re_registered:
             raise HTTPException(
@@ -799,7 +801,7 @@ class OAuthClientManager:
             return None
 
     async def handle_authorize(self, request, client_id: str) -> RedirectResponse:
-        await self._ensure_valid_client_registration(request, client_id)
+        # await self._ensure_valid_client_registration(request, client_id)
 
         client = self.get_client(client_id)
         if client is None:
