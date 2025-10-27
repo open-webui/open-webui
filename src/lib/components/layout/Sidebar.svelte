@@ -891,7 +891,14 @@
 				</div>
 
 				{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
-					<PinnedModelList bind:selectedChatId {shiftKey} />
+					<Folder
+						className="px-2 mt-0.5"
+						name={$i18n.t('Models')}
+						chevron={false}
+						dragAndDrop={false}
+					>
+						<PinnedModelList bind:selectedChatId {shiftKey} />
+					</Folder>
 				{/if}
 
 				{#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0)}
