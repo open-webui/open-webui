@@ -4,6 +4,7 @@
 	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
 
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
+	import { fade } from 'svelte/transition';
 	const i18n: Writable<i18nType> = getContext('i18n');
 
 	import { goto } from '$app/navigation';
@@ -34,6 +35,7 @@
 		showOverview,
 		chatTitle,
 		showArtifacts,
+		artifactContents,
 		tools,
 		toolServers,
 		functions,
@@ -48,9 +50,9 @@
 		createMessagesList,
 		getPromptVariables,
 		processDetails,
-		removeAllDetails
+		removeAllDetails,
+		getCodeBlockContents
 	} from '$lib/utils';
-
 	import {
 		createNewChat,
 		getAllTags,
@@ -75,8 +77,8 @@
 	import { getTools } from '$lib/apis/tools';
 	import { uploadFile } from '$lib/apis/files';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
-
-	import { fade } from 'svelte/transition';
+	import { getFunctions } from '$lib/apis/functions';
+	import { updateFolderById } from '$lib/apis/folders';
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
@@ -89,9 +91,7 @@
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
-	import { getFunctions } from '$lib/apis/functions';
 	import Image from '../common/Image.svelte';
-	import { updateFolderById } from '$lib/apis/folders';
 
 	export let chatIdProp = '';
 
@@ -817,6 +817,63 @@
 			files = files.filter((f) => f.name !== url);
 			toast.error(`${e}`);
 		}
+	};
+
+	$: if (history) {
+		getContents();
+	} else {
+		artifactContents.set([]);
+	}
+
+	const getContents = () => {
+		const messages = history ? createMessagesList(history, history.currentId) : [];
+		let contents = [];
+		messages.forEach((message) => {
+			if (message?.role !== 'user' && message?.content) {
+				const {
+					codeBlocks: codeBlocks,
+					html: htmlContent,
+					css: cssContent,
+					js: jsContent
+				} = getCodeBlockContents(message.content);
+
+				if (htmlContent || cssContent || jsContent) {
+					const renderedContent = `
+                        <!DOCTYPE html>
+                        <html lang="en">
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+							<${''}style>
+								body {
+									background-color: white; /* Ensure the iframe has a white background */
+								}
+
+								${cssContent}
+							</${''}style>
+                        </head>
+                        <body>
+                            ${htmlContent}
+
+							<${''}script>
+                            	${jsContent}
+							</${''}script>
+                        </body>
+                        </html>
+                    `;
+					contents = [...contents, { type: 'iframe', content: renderedContent }];
+				} else {
+					// Check for SVG content
+					for (const block of codeBlocks) {
+						if (block.lang === 'svg' || (block.lang === 'xml' && block.code.includes('<svg'))) {
+							contents = [...contents, { type: 'svg', content: block.code }];
+						}
+					}
+				}
+			}
+		});
+
+		artifactContents.set(contents);
 	};
 
 	//////////////////////////
