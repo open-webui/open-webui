@@ -262,5 +262,16 @@ class OAuthSessionTable:
             log.error(f"Error deleting OAuth sessions by user ID: {e}")
             return False
 
+    def delete_sessions_by_provider(self, provider: str) -> bool:
+        """Delete all OAuth sessions for a provider"""
+        try:
+            with get_db() as db:
+                db.query(OAuthSession).filter_by(provider=provider).delete()
+                db.commit()
+                return True
+        except Exception as e:
+            log.error(f"Error deleting OAuth sessions by provider {provider}: {e}")
+            return False
+
 
 OAuthSessions = OAuthSessionTable()
