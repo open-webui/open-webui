@@ -411,7 +411,7 @@
 		{#if (filteredModels ?? []).length !== 0}
 			<div class=" px-3 my-2 gap-1 lg:gap-2 grid lg:grid-cols-2" id="model-list">
 				{#each filteredModels as model (model.id)}
-					<button
+					<div
 						class="  flex cursor-pointer dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl w-full p-2.5"
 						id="model-item-{model.id}"
 						on:click={() => {
@@ -593,7 +593,7 @@
 								</div>
 							</div>
 						</div>
-					</button>
+					</div>
 				{/each}
 			</div>
 		{:else}
