@@ -153,32 +153,32 @@ def decrypt_data(data: str):
         raise
 
 
-def _build_oauth_callback_error_message(exc: Exception) -> str:
+def _build_oauth_callback_error_message(e: Exception) -> str:
     """
     Produce a user-facing callback error string with actionable context.
     Keeps the message short and strips newlines for safe redirect usage.
     """
-    if isinstance(exc, OAuth2Error):
-        parts = [p for p in [exc.error, exc.description] if p]
+    if isinstance(e, OAuth2Error):
+        parts = [p for p in [e.error, e.description] if p]
         detail = " - ".join(parts)
-    elif isinstance(exc, HTTPException):
-        detail = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
-    elif isinstance(exc, aiohttp.ClientResponseError):
-        detail = f"Upstream provider returned {exc.status}: {exc.message}"
-    elif isinstance(exc, aiohttp.ClientError):
-        detail = str(exc)
-    elif isinstance(exc, KeyError):
-        missing = str(exc).strip("'")
+    elif isinstance(e, HTTPException):
+        detail = e.detail if isinstance(e.detail, str) else str(e.detail)
+    elif isinstance(e, aiohttp.ClientResponseError):
+        detail = f"Upstream provider returned {e.status}: {e.message}"
+    elif isinstance(e, aiohttp.ClientError):
+        detail = str(e)
+    elif isinstance(e, KeyError):
+        missing = str(e).strip("'")
         if missing.lower() == "state":
             detail = "Missing state parameter in callback (session may have expired)"
         else:
             detail = f"Missing expected key '{missing}' in OAuth response"
     else:
-        detail = str(exc)
+        detail = str(e)
 
     detail = detail.replace("\n", " ").strip()
     if not detail:
-        detail = exc.__class__.__name__
+        detail = e.__class__.__name__
 
     message = f"OAuth callback failed: {detail}"
     return message[:197] + "..." if len(message) > 200 else message
@@ -402,20 +402,18 @@ class OAuthClientManager:
         return self.clients[client_id]
 
     def remove_client(self, client_id):
-        removed = False
         if client_id in self.clients:
             del self.clients[client_id]
-            removed = True
+            log.info(f"Removed OAuth client {client_id}")
+
         if hasattr(self.oauth, "_clients"):
             if client_id in self.oauth._clients:
                 self.oauth._clients.pop(client_id, None)
-                removed = True
+
         if hasattr(self.oauth, "_registry"):
             if client_id in self.oauth._registry:
                 self.oauth._registry.pop(client_id, None)
-                removed = True
-        if removed:
-            log.info(f"Removed OAuth client {client_id}")
+
         return True
 
     def _find_mcp_connection(self, request, client_id: str):
@@ -574,7 +572,6 @@ class OAuthClientManager:
 
         self.remove_client(client_id)
         self.add_client(client_id, oauth_client_info)
-        OAuthSessions.delete_sessions_by_provider(client_id)
 
         log.info("Re-registered OAuth client %s for MCP tool server", client_id)
         return True
