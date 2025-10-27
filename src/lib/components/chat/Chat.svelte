@@ -1547,7 +1547,6 @@
 			);
 		}
 
-		console.log(data);
 		await tick();
 
 		if (autoScroll) {
