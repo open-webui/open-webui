@@ -1941,6 +1941,7 @@ if len(app.state.config.TOOL_SERVER_CONNECTIONS) > 0:
         if tool_server_connection.get("type", "openapi") == "mcp":
             server_id = tool_server_connection.get("info", {}).get("id")
             auth_type = tool_server_connection.get("auth_type", "none")
+
             if server_id and auth_type == "oauth_2.1":
                 oauth_client_info = tool_server_connection.get("info", {}).get(
                     "oauth_client_info", ""
