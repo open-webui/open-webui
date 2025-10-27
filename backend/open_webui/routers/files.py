@@ -115,6 +115,20 @@ def process_uploaded_file(request, file, file_path, file_item, file_metadata, us
                 request.app.state.config.CONTENT_EXTRACTION_ENGINE == "external"
             ):
                 process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
+            else:
+                # Add this else block to handle unsupported image/video files
+                log.warning(
+                    f"File {file_item.id} with content type {file.content_type} cannot be processed. "
+                    f"External content extraction engine is not configured."
+                )
+                Files.update_file_data_by_id(
+                    file_item.id,
+                    {
+                        "status": "failed",
+                        "error": ERROR_MESSAGES.FILE_NOT_PROCESSED,
+                    },
+                
+                )
         else:
             log.info(
                 f"File type {file.content_type} is not provided, but trying to process anyway"
