@@ -29,9 +29,9 @@
 		getKnowledgeById,
 		getKnowledgeBases,
 		removeFileFromKnowledgeById,
-		resetKnowledgeById,
 		updateFileFromKnowledgeById,
-		updateKnowledgeById
+		updateKnowledgeById,
+		syncFileToKnowledgeById
 	} from '$lib/apis/knowledge';
 	import { blobToFile } from '$lib/utils';
 
@@ -78,6 +78,7 @@
 	let showAccessControlModal = false;
 
 	let inputFiles = null;
+	let syncMode = false;
 
 	let filteredItems = [];
 	$: if (knowledge && knowledge.files) {
@@ -199,7 +200,11 @@
 					delete item.itemId;
 					return item;
 				});
-				await addFileHandler(uploadedFile.id);
+				if (syncMode) {
+					await syncFileHandler(uploadedFile.id);
+				} else {
+					await addFileHandler(uploadedFile.id);
+				}
 			} else {
 				toast.error($i18n.t('Failed to upload file.'));
 			}
@@ -382,20 +387,12 @@
 
 	// Helper function to maintain file paths within zip
 	const syncDirectoryHandler = async () => {
-		if ((knowledge?.files ?? []).length > 0) {
-			const res = await resetKnowledgeById(localStorage.token, id).catch((e) => {
-				toast.error(`${e}`);
-			});
-
-			if (res) {
-				knowledge = res;
-				toast.success($i18n.t('Knowledge reset successfully.'));
-
-				// Upload directory
-				uploadDirectoryHandler();
-			}
-		} else {
-			uploadDirectoryHandler();
+		syncMode = true;
+		try {
+			await uploadDirectoryHandler();
+			toast.success($i18n.t('Directory sync completed.'));
+		} finally {
+			syncMode = false;
 		}
 	};
 
@@ -412,6 +409,23 @@
 			toast.success($i18n.t('File added successfully.'));
 		} else {
 			toast.error($i18n.t('Failed to add file.'));
+			knowledge.files = knowledge.files.filter((file) => file.id !== fileId);
+		}
+	};
+
+	const syncFileHandler = async (fileId) => {
+		const updatedKnowledge = await syncFileToKnowledgeById(localStorage.token, id, fileId).catch(
+			(e) => {
+				toast.error(`${e}`);
+				return null;
+			}
+		);
+
+		if (updatedKnowledge) {
+			knowledge = updatedKnowledge;
+			toast.success($i18n.t('File synced successfully.'));
+		} else {
+			toast.error($i18n.t('Failed to sync file.'));
 			knowledge.files = knowledge.files.filter((file) => file.id !== fileId);
 		}
 	};
@@ -637,7 +651,7 @@
 <SyncConfirmDialog
 	bind:show={showSyncConfirmModal}
 	message={$i18n.t(
-		'This will reset the knowledge base and sync all files. Do you wish to continue?'
+		'This will sync a directory: all modified files will be reuploaded. Do you wish to continue?'
 	)}
 	on:confirm={() => {
 		syncDirectoryHandler();

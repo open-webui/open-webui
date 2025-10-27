@@ -441,6 +441,177 @@ def add_file_to_knowledge_by_id(
         )
 
 
+@router.post("/{id}/file/sync", response_model=Optional[KnowledgeFilesResponse])
+def sync_file_to_knowledge_by_id(
+    request: Request,
+    id: str,
+    form_data: KnowledgeFileIdForm,
+    user=Depends(get_verified_user),
+):
+    """
+    Sync a single file into a knowledge base by filename with hash comparison:
+    - If a file with the same name exists and hashes match: skip (discard the new upload).
+    - If a file with the same name exists and hashes differ: replace old with new.
+    - If no same-named file exists: add new.
+    """
+    log.info(f"[KB Sync] start kb_id={id} file_id={form_data.file_id}")
+    knowledge = Knowledges.get_knowledge_by_id(id=id)
+
+    if not knowledge:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if (
+        knowledge.user_id != user.id
+        and not has_access(user.id, "write", knowledge.access_control)
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    new_file = Files.get_file_by_id(form_data.file_id)
+    if not new_file:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    # Ensure the new file is processed so that hash/content exist
+    if not (new_file.hash and new_file.data and new_file.data.get("content")):
+        try:
+            process_file(
+                request,
+                ProcessFileForm(file_id=form_data.file_id),
+                user=user,
+            )
+            new_file = Files.get_file_by_id(form_data.file_id)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            )
+
+    data = knowledge.data or {}
+    file_ids = data.get("file_ids", [])
+
+    existing_files = Files.get_files_by_ids(file_ids) if file_ids else []
+    same_name_file = next(
+        (f for f in existing_files if f.filename == new_file.filename), None
+    )
+
+    if same_name_file:
+        # If hashes match, skip (discard the new upload) and keep existing
+        if (
+            same_name_file.hash
+            and new_file.hash
+            and same_name_file.hash == new_file.hash
+        ):
+            try:
+                # Cleanup new file's vector collection if exists
+                try:
+                    VECTOR_DB_CLIENT.delete_collection(
+                        collection_name=f"file-{new_file.id}"
+                    )
+                except Exception as e:
+                    log.debug(e)
+                try:
+                    if new_file.path:
+                        Storage.delete_file(new_file.path)
+                except Exception as e:
+                    log.debug(e)
+                Files.delete_file_by_id(new_file.id)
+            except Exception as e:
+                log.debug(e)
+
+            log.info(f"[KB Sync] skip (hash match) kb_id={id} name={new_file.filename}")
+            files = Files.get_file_metadatas_by_ids(file_ids)
+            return KnowledgeFilesResponse(
+                **knowledge.model_dump(),
+                files=files,
+            )
+
+        # Hash is different: replace old with new
+        try:
+            # Remove old file's embeddings from KB collection
+            try:
+                VECTOR_DB_CLIENT.delete(
+                    collection_name=knowledge.id, filter={"file_id": same_name_file.id}
+                )
+            except Exception as e:
+                log.debug(e)
+
+            # Remove old file's own collection and DB record
+            try:
+                if VECTOR_DB_CLIENT.has_collection(
+                    collection_name=f"file-{same_name_file.id}"
+                ):
+                    VECTOR_DB_CLIENT.delete_collection(
+                        collection_name=f"file-{same_name_file.id}"
+                    )
+            except Exception as e:
+                log.debug(e)
+            try:
+                if same_name_file.path:
+                    Storage.delete_file(same_name_file.path)
+            except Exception as e:
+                log.debug(e)
+            Files.delete_file_by_id(same_name_file.id)
+
+            # Add new file to KB collection
+            process_file(
+                request,
+                ProcessFileForm(file_id=new_file.id, collection_name=id),
+                user=user,
+            )
+            log.info(f"[KB Sync] replace kb_id={id} old_id={same_name_file.id} new_id={new_file.id} name={new_file.filename}")
+
+            # Replace old id with new id in knowledge
+            file_ids = [fid for fid in file_ids if fid != same_name_file.id]
+            if new_file.id not in file_ids:
+                file_ids.append(new_file.id)
+            data["file_ids"] = file_ids
+            knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
+
+            files = Files.get_file_metadatas_by_ids(file_ids)
+            return KnowledgeFilesResponse(
+                **knowledge.model_dump(),
+                files=files,
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            )
+    else:
+        # No same-named file: add new
+        try:
+            process_file(
+                request,
+                ProcessFileForm(file_id=new_file.id, collection_name=id),
+                user=user,
+            )
+            log.info(f"[KB Sync] add kb_id={id} name={new_file.filename}")
+            if new_file.id not in file_ids:
+                file_ids.append(new_file.id)
+            data["file_ids"] = file_ids
+            knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
+
+            files = Files.get_file_metadatas_by_ids(file_ids)
+            return KnowledgeFilesResponse(
+                **knowledge.model_dump(),
+                files=files,
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            )
+
+
 @router.post("/{id}/file/update", response_model=Optional[KnowledgeFilesResponse])
 def update_file_from_knowledge_by_id(
     request: Request,
