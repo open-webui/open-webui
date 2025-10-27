@@ -215,7 +215,7 @@ export const addFileToKnowledgeById = async (token: string, id: string, fileId: 
 export const syncFileToKnowledgeById = async (token: string, id: string, fileId: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/file/sync`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/sync`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
