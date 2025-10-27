@@ -9,6 +9,7 @@ from mcp.client.auth import OAuthClientProvider, TokenStorage
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.shared.auth import OAuthClientInformationFull, OAuthClientMetadata, OAuthToken
 
+
 class MCPClient:
     def __init__(self):
         self.session: Optional[ClientSession] = None
@@ -35,7 +36,6 @@ class MCPClient:
             except Exception as e:
                 await asyncio.shield(self.disconnect())
                 raise e
-                
 
     async def list_tool_specs(self) -> Optional[dict]:
         if not self.session:
