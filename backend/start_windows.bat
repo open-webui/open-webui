@@ -6,6 +6,30 @@ SETLOCAL ENABLEDELAYEDEXPANSION
 SET "SCRIPT_DIR=%~dp0"
 cd /d "%SCRIPT_DIR%" || exit /b
 
+:: Convert all environment variables with names ending in __FILE into the content of
+:: the file that they point at and use the name without the trailing __FILE.
+:: This can be used to carry in Docker secrets.
+for /f "tokens=1* delims==" %%A in ('set ^| findstr "__FILE="') do (
+    set "VAR_NAME_FILE=%%A"
+    set "FILE_PATH=%%B"
+    
+    :: Extract the base variable name (remove __FILE suffix)
+    set "VAR_NAME=!VAR_NAME_FILE:__FILE=!"
+    
+    :: Check if the base variable is already set
+    if defined !VAR_NAME! (
+        echo ERROR: Both !VAR_NAME! and !VAR_NAME_FILE! are set ^(but are exclusive^) >&2
+        exit /b 1
+    )
+    
+    :: Read the file content and set the base variable
+    echo Getting secret !VAR_NAME! from !FILE_PATH!
+    set /p "!VAR_NAME!"=<"!FILE_PATH!"
+    
+    :: Unset the __FILE variable
+    set "!VAR_NAME_FILE!="
+)
+
 :: Add conditional Playwright browser installation
 IF /I "%WEB_LOADER_ENGINE%" == "playwright" (
     IF "%PLAYWRIGHT_WS_URL%" == "" (

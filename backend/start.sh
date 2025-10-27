@@ -3,6 +3,20 @@
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd "$SCRIPT_DIR" || exit
 
+# Convert all environment variables with names ending in __FILE into the content of
+# the file that they point at and use the name without the trailing __FILE.
+# This can be used to carry in Docker secrets.
+for VAR_NAME in $(env | grep '__FILE=.\+' | sed -r "s/([^=]*)__FILE=.*/\1/g"); do
+    VAR_NAME_FILE="$VAR_NAME"__FILE
+    if [ "${!VAR_NAME}" ]; then
+        echo "ERROR: Both $VAR_NAME and $VAR_NAME_FILE are set (but are exclusive)"
+        exit 1
+    fi
+    echo "Getting variable $VAR_NAME from secret file ${!VAR_NAME_FILE}"
+    export "$VAR_NAME"="$(< "${!VAR_NAME_FILE}")"
+    unset "$VAR_NAME_FILE"
+done
+
 # Add conditional Playwright browser installation
 if [[ "${WEB_LOADER_ENGINE,,}" == "playwright" ]]; then
     if [[ -z "${PLAYWRIGHT_WS_URL}" ]]; then
@@ -22,6 +36,8 @@ fi
 
 PORT="${PORT:-8080}"
 HOST="${HOST:-0.0.0.0}"
+
+# Deprecated with introduction of __FILE introduction, kept here for backwards compatibility. 
 if test "$WEBUI_SECRET_KEY $WEBUI_JWT_SECRET_KEY" = " "; then
   echo "Loading WEBUI_SECRET_KEY from file, not provided as an environment variable."
 
@@ -32,7 +48,7 @@ if test "$WEBUI_SECRET_KEY $WEBUI_JWT_SECRET_KEY" = " "; then
   fi
 
   echo "Loading WEBUI_SECRET_KEY from $KEY_FILE"
-  WEBUI_SECRET_KEY=$(cat "$KEY_FILE")
+  export WEBUI_SECRET_KEY=$(cat "$KEY_FILE")
 fi
 
 if [[ "${USE_OLLAMA_DOCKER,,}" == "true" ]]; then
@@ -50,7 +66,7 @@ if [ -n "$SPACE_ID" ]; then
   echo "Configuring for HuggingFace Space deployment"
   if [ -n "$ADMIN_USER_EMAIL" ] && [ -n "$ADMIN_USER_PASSWORD" ]; then
     echo "Admin user configured, creating"
-    WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*' &
+    uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*' &
     webui_pid=$!
     echo "Waiting for webui to start..."
     while ! curl -s "http://localhost:${PORT}/health" > /dev/null; do
@@ -80,7 +96,7 @@ else
 fi
 
 # Run uvicorn
-WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec "$PYTHON_CMD" -m uvicorn open_webui.main:app \
+exec "$PYTHON_CMD" -m uvicorn open_webui.main:app \
     --host "$HOST" \
     --port "$PORT" \
     --forwarded-allow-ips '*' \
