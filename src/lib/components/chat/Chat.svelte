@@ -1262,9 +1262,7 @@
 	};
 
 	const getChatEventEmitter = async (modelId: string, chatId: string = '') => {
-		console.log('🔍 USAGE DEBUG (Frontend): Starting getChatEventEmitter for model:', modelId);
 		return setInterval(() => {
-			console.log('🔍 USAGE DEBUG (Frontend): Emitting usage polling event for model:', modelId);
 			$socket?.emit('usage', {
 				action: 'chat',
 				model: modelId,
@@ -1399,30 +1397,15 @@
 	const chatCompletionEventHandler = async (data, message, chatId) => {
 		const { id, done, choices, content, sources, selected_model_id, error, usage } = data;
 		
-		// DEBUG: Log the data to see what we're receiving
-		console.log('🔍 USAGE DEBUG (Frontend): chatCompletionEventHandler called with data:', {
-			id, done, selected_model_id, 
-			hasUsage: !!usage,
-			usage: usage,
-			hasSocket: !!$socket
-		});
-
 		if (error) {
 			await handleOpenAIError(error, message);
 		}
 
 		// Emit usage event for token tracking if usage data is available
 		if (usage && selected_model_id && $socket) {
-			console.log('🔍 USAGE DEBUG (Frontend): Emitting usage data:', { model: selected_model_id, usage: usage });
 			$socket.emit('usage', {
 				model: selected_model_id,
 				usage: usage
-			});
-		} else {
-			console.log('🔍 USAGE DEBUG (Frontend): NOT emitting - missing data:', { 
-				hasUsage: !!usage, 
-				hasSelectedModel: !!selected_model_id, 
-				hasSocket: !!$socket 
 			});
 		}
 

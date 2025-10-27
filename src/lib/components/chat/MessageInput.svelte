@@ -122,7 +122,6 @@
 			const stored = localStorage.getItem('reasoningEffortByModel');
 			if (stored) {
 				reasoningEffortByModel = JSON.parse(stored);
-				console.log('🎯 Reasoning Effort: Loaded preferences', reasoningEffortByModel);
 			}
 		} catch (e) {
 			console.error('Error loading reasoning effort preferences:', e);
@@ -143,8 +142,6 @@
 	$: if (selectedModelIds.length > 0 && preferencesLoaded) {
 		const newModelId = selectedModelIds[0];
 		if (newModelId !== currentTrackedModel) {
-			console.log('🎯 Reasoning Effort: Model changed from', currentTrackedModel, 'to', newModelId);
-
 			const isFirstTimeSettingModel = !currentTrackedModel;
 			const shouldLoadStoredPreference = !isFirstTimeSettingModel || !userModifiedEffortForCurrentModel;
 
@@ -153,10 +150,8 @@
 
 			if (shouldLoadStoredPreference) {
 				const newEffort = reasoningEffortByModel[newModelId] || 'medium';
-				console.log('🎯 Reasoning Effort: Loading stored effort for model', newModelId, ':', newEffort);
 				reasoningEffort = newEffort;
 			} else {
-				console.log('🎯 Reasoning Effort: Preserving user setting during model initialization:', reasoningEffort);
 				reasoningEffortByModel[newModelId] = reasoningEffort;
 				saveReasoningEffortPreferences();
 			}
@@ -172,7 +167,6 @@
 		const modelToUse = currentTrackedModel || (selectedModelIds.length > 0 ? selectedModelIds[0] : null);
 
 		if (modelToUse) {
-			console.log('🎯 Reasoning Effort: User changed to', newEffort, 'for model', modelToUse);
 			reasoningEffortByModel[modelToUse] = newEffort;
 			saveReasoningEffortPreferences();
 		}
