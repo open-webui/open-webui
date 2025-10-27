@@ -98,7 +98,7 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 ##########################################
 
 
-def get_ef(
+def load_embedding_model(
     engine: str,
     embedding_model: str,
     auto_update: bool = False,
@@ -134,7 +134,7 @@ def get_ef(
     return ef
 
 
-def get_rf(
+def load_reranker_model(
     reranking_model: str,
     auto_update: bool = False,
 ):
@@ -279,7 +279,7 @@ async def update_embedding_config(
                 form_data.embedding_batch_size
             )
 
-        request.app.state.ef = get_ef(
+        request.app.state.ef = load_embedding_model(
             request.app.state.config.RAG_EMBEDDING_ENGINE,
             request.app.state.config.RAG_EMBEDDING_MODEL,
         )
@@ -338,7 +338,7 @@ async def update_reranking_config(
         request.app.state.config.RAG_RERANKING_MODEL = form_data.reranking_model
 
         try:
-            request.app.state.rf = get_rf(
+            request.app.state.rf = load_reranker_model(
                 request.app.state.config.RAG_RERANKING_MODEL,
                 True,
             )
@@ -1564,7 +1564,7 @@ async def query_doc_handler(
                 )
 
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
-            return query_doc_with_hybrid_search(
+            return await query_doc_with_hybrid_search(
                 collection_name=form_data.collection_name,
                 query=form_data.query,
                 embedding_function=request.app.state.EMBEDDING_FUNCTION,
@@ -1635,7 +1635,7 @@ async def query_collection_handler(
             return []
 
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
-            return query_collection_with_hybrid_search(
+            return await query_collection_with_hybrid_search(
                 collection_names=form_data.collection_names,
                 queries=[form_data.query],
                 embedding_function=request.app.state.EMBEDDING_FUNCTION,

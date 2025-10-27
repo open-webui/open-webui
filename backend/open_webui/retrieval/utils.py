@@ -29,18 +29,18 @@ from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain_core.retrievers import BaseRetriever
 
 
-class VectorSearchRetriever(BaseRetriever):
+class AsyncVectorSearchRetriever(BaseRetriever):
     collection_name: Any
     embedding_function: Any
     top_k: int
 
-    def _get_relevant_documents(
+    async def _aget_relevant_documents(
         self,
         query: str,
         *,
         run_manager: CallbackManagerForRetrieverRun,
     ) -> list[Document]:
-        result = VECTOR_DB_CLIENT.search(
+        result = await VECTOR_DB_CLIENT.search(
             collection_name=self.collection_name,
             vectors=[self.embedding_function(query)],
             limit=self.top_k,
@@ -59,6 +59,15 @@ class VectorSearchRetriever(BaseRetriever):
                 )
             )
         return results
+
+    def _get_relevant_documents(
+        self,
+        query: str,
+        *,
+        run_manager: CallbackManagerForRetrieverRun,
+    ) -> list[Document]:
+        # Fallback sync method - should not be used in async context
+        raise NotImplementedError("Use ainvoke() for async operations")
 
 
 async def query_doc(
@@ -82,9 +91,9 @@ async def query_doc(
         raise e
 
 
-def get_doc(collection_name: str, user: UserModel = None):
+async def get_doc(collection_name: str, user: UserModel = None):
     try:
-        result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
+        result = await VECTOR_DB_CLIENT.get(collection_name=collection_name)
 
         if result:
             log.info(f"query_doc:result {result.ids} {result.metadatas}")
@@ -95,7 +104,7 @@ def get_doc(collection_name: str, user: UserModel = None):
         raise e
 
 
-def query_doc_with_hybrid_search(
+async def query_doc_with_hybrid_search(
     collection_name: str,
     query: str,
     embedding_function,
@@ -104,23 +113,31 @@ def query_doc_with_hybrid_search(
     r: float,
 ) -> dict:
     try:
-        result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
+        # Get all documents from the collection for BM25
+        result = await VECTOR_DB_CLIENT.get(collection_name=collection_name)
+        documents = result.documents[0]
+        metadatas = result.metadatas[0]
 
+        # Create BM25 retriever
         bm25_retriever = BM25Retriever.from_texts(
-            texts=result.documents[0],
-            metadatas=result.metadatas[0],
+            texts=documents,
+            metadatas=metadatas,
         )
         bm25_retriever.k = k
 
-        vector_search_retriever = VectorSearchRetriever(
+        # Create async vector search retriever
+        vector_search_retriever = AsyncVectorSearchRetriever(
             collection_name=collection_name,
             embedding_function=embedding_function,
             top_k=k,
         )
 
+        # Create ensemble retriever with equal weights (like original)
         ensemble_retriever = EnsembleRetriever(
             retrievers=[bm25_retriever, vector_search_retriever], weights=[0.5, 0.5]
         )
+
+        # Create compression retriever with reranking
         compressor = RerankCompressor(
             embedding_function=embedding_function,
             top_n=k,
@@ -132,9 +149,12 @@ def query_doc_with_hybrid_search(
             base_compressor=compressor, base_retriever=ensemble_retriever
         )
 
-        result = compression_retriever.invoke(query)
+        # Use async invoke
+        result = await compression_retriever.ainvoke(query)
+
+        # Format results
         result = {
-            "distances": [[d.metadata.get("score") for d in result]],
+            "distances": [[d.metadata.get("score", 0.0) for d in result]],
             "documents": [[d.page_content for d in result]],
             "metadatas": [[d.metadata for d in result]],
         }
@@ -209,13 +229,13 @@ def merge_and_sort_query_results(
     return result
 
 
-def get_all_items_from_collections(collection_names: list[str]) -> dict:
+async def get_all_items_from_collections(collection_names: list[str]) -> dict:
     results = []
 
     for collection_name in collection_names:
         if collection_name:
             try:
-                result = get_doc(collection_name=collection_name)
+                result = await get_doc(collection_name=collection_name)
                 if result is not None:
                     results.append(result.model_dump())
             except Exception as e:
@@ -261,7 +281,7 @@ async def query_collection(
         return merge_and_sort_query_results(results, k=k, reverse=True)
 
 
-def query_collection_with_hybrid_search(
+async def query_collection_with_hybrid_search(
     collection_names: list[str],
     queries: list[str],
     embedding_function,
@@ -274,7 +294,7 @@ def query_collection_with_hybrid_search(
     for collection_name in collection_names:
         try:
             for query in queries:
-                result = query_doc_with_hybrid_search(
+                result = await query_doc_with_hybrid_search(
                     collection_name=collection_name,
                     query=query,
                     embedding_function=embedding_function,
@@ -442,7 +462,7 @@ async def get_sources_from_files(
 
             if full_context:
                 try:
-                    context = get_all_items_from_collections(collection_names)
+                    context = await get_all_items_from_collections(collection_names)
 
                     print("context", context)
                 except Exception as e:
@@ -456,7 +476,7 @@ async def get_sources_from_files(
                     else:
                         if hybrid_search:
                             try:
-                                context = query_collection_with_hybrid_search(
+                                context = await query_collection_with_hybrid_search(
                                     collection_names=collection_names,
                                     queries=queries,
                                     embedding_function=embedding_function,
@@ -619,7 +639,7 @@ def generate_embeddings(engine: str, model: str, text: Union[str, list[str]], **
 
 
 import operator
-from typing import Optional, Sequence
+from typing import Sequence
 
 from langchain_core.callbacks import Callbacks
 from langchain_core.documents import BaseDocumentCompressor, Document
