@@ -71,11 +71,15 @@ async def _generate_title(
 ):
     """Generate and update chat title"""
     from open_webui.utils.chat import generate_chat_completion
+    from open_webui.utils.misc import remove_details_with_reasoning
+
+    # Filter reasoning content from the result for title generation
+    filtered_result = remove_details_with_reasoning(result)
 
     title_prompt = f"""Create a concise, 3-5 word title with an emoji for this conversation:
 
 User: {request.query}
-Assistant: {result[:500]}...
+Assistant: {filtered_result[:500]}...
 
 Respond with just the title, no quotes or formatting."""
 

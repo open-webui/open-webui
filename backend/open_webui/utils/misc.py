@@ -35,10 +35,10 @@ def get_message_list(messages, message_id):
     return message_list
 
 
-def get_messages_content(messages: list[dict]) -> str:
+def get_messages_content(messages: list[dict], filter_reasoning: bool = False) -> str:
     return "\n".join(
         [
-            f"{message['role'].upper()}: {get_content_from_message(message)}"
+            f"{message['role'].upper()}: {get_content_from_message(message, filter_reasoning)}"
             for message in messages
         ]
     )
@@ -51,21 +51,52 @@ def get_last_user_message_item(messages: list[dict]) -> Optional[dict]:
     return None
 
 
-def get_content_from_message(message: dict) -> Optional[str]:
+def remove_details_with_reasoning(content: str) -> str:
+    """Remove reasoning details from content for title generation."""
+    import re
+
+    if not content:
+        return content
+
+    # Remove <details type="reasoning"...>...</details> tags and their content
+    filtered_content = re.sub(
+        r'<details\s+type="reasoning"[^>]*>.*?</details>',
+        "",
+        content,
+        flags=re.DOTALL | re.IGNORECASE,
+    )
+
+    # Clean up excessive whitespace - replace multiple consecutive newlines with at most 2
+    filtered_content = re.sub(r"\n\s*\n\s*\n+", "\n\n", filtered_content)
+
+    return filtered_content.strip()
+
+
+def get_content_from_message(
+    message: dict, filter_reasoning: bool = False
+) -> Optional[str]:
     if isinstance(message["content"], list):
         for item in message["content"]:
             if item["type"] == "text":
-                return item["text"]
+                content = item["text"]
+                if filter_reasoning and content:
+                    content = remove_details_with_reasoning(content)
+                return content
     else:
-        return message["content"]
+        content = message["content"]
+        if filter_reasoning and content:
+            content = remove_details_with_reasoning(content)
+        return content
     return None
 
 
-def get_last_user_message(messages: list[dict]) -> Optional[str]:
+def get_last_user_message(
+    messages: list[dict], filter_reasoning: bool = False
+) -> Optional[str]:
     message = get_last_user_message_item(messages)
     if message is None:
         return None
-    return get_content_from_message(message)
+    return get_content_from_message(message, filter_reasoning)
 
 
 def get_last_assistant_message_item(messages: list[dict]) -> Optional[dict]:
@@ -75,10 +106,12 @@ def get_last_assistant_message_item(messages: list[dict]) -> Optional[dict]:
     return None
 
 
-def get_last_assistant_message(messages: list[dict]) -> Optional[str]:
+def get_last_assistant_message(
+    messages: list[dict], filter_reasoning: bool = False
+) -> Optional[str]:
     for message in reversed(messages):
         if message["role"] == "assistant":
-            return get_content_from_message(message)
+            return get_content_from_message(message, filter_reasoning)
     return None
 
 
