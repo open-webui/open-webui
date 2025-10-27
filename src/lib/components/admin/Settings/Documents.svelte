@@ -173,14 +173,6 @@
 
 		if (
 			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker' &&
-			!RAGConfig.DATALAB_MARKER_API_KEY
-		) {
-			toast.error($i18n.t('Datalab Marker API Key required.'));
-			return;
-		}
-
-		if (
-			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker' &&
 			RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG &&
 			RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG.trim() !== ''
 		) {
@@ -733,7 +725,7 @@
 								</div>
 								<div class="">
 									<Textarea
-										bind:value={RAGConfig.DOCLING_PARAMETERS}
+										bind:value={RAGConfig.DOCLING_PARAMS}
 										placeholder={$i18n.t('Enter additional parameters in JSON format')}
 										minSize={100}
 									/>
@@ -785,8 +777,8 @@
 											}
 										}}
 									>
-										<option value="local">{$i18n.t('Self-Hosted')}</option>
-										<option value="cloud">{$i18n.t('minerU managed (Cloud API)')}</option>
+										<option value="local">{$i18n.t('local')}</option>
+										<option value="cloud">{$i18n.t('cloud')}</option>
 									</select>
 								</div>
 							</div>
@@ -802,15 +794,12 @@
 								/>
 							</div>
 
-							<!-- API Key (Cloud only) -->
-							{#if RAGConfig.MINERU_API_MODE === 'cloud'}
-								<div class="flex w-full mt-2">
-									<SensitiveInput
-										placeholder={$i18n.t('Enter MinerU API Key')}
-										bind:value={RAGConfig.MINERU_API_KEY}
-									/>
-								</div>
-							{/if}
+							<div class="flex w-full mt-2">
+								<SensitiveInput
+									placeholder={$i18n.t('Enter MinerU API Key')}
+									bind:value={RAGConfig.MINERU_API_KEY}
+								/>
+							</div>
 
 							<!-- Parameters -->
 							<div class="flex justify-between w-full mt-2">
