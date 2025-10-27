@@ -695,7 +695,6 @@
 							CodeBlockLowlight.configure({
 								lowlight
 							}),
-							Highlight,
 							Typography,
 							TableKit.configure({
 								table: { resizable: true }
