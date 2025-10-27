@@ -2066,8 +2066,8 @@ async def oauth_client_authorize(
             client_id,
         )
 
-        re_registered = await register_client(request, client_id)
-        if not re_registered:
+        registered = await register_client(request, client_id)
+        if not registered:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to re-register OAuth client",
