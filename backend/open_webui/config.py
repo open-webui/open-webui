@@ -3433,6 +3433,14 @@ AUDIO_TTS_API_KEY = PersistentConfig(
     os.getenv("AUDIO_TTS_API_KEY", ""),
 )
 
+# ElevenLabs API base URL (EU/US)
+ELEVENLABS_API_BASE_URL = os.getenv("ELEVENLABS_API_BASE_URL", "https://api.elevenlabs.io")
+AUDIO_TTS_ELEVENLABS_API_BASE_URL = PersistentConfig(
+    "AUDIO_TTS_ELEVENLABS_API_BASE_URL",
+    "audio.tts.elevenlabs.api_base_url",
+    ELEVENLABS_API_BASE_URL,
+)
+
 AUDIO_TTS_ENGINE = PersistentConfig(
     "AUDIO_TTS_ENGINE",
     "audio.tts.engine",
