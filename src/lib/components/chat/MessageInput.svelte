@@ -168,27 +168,28 @@
 				return '{{CLIPBOARD}}';
 			});
 
-			const clipboardItems = await navigator.clipboard.read();
+			const clipboardItems = await navigator.clipboard.read().catch((err) => {
+				console.error('Failed to read clipboard items:', err);
+				return [];
+			});
 
-			let imageUrl = null;
 			for (const item of clipboardItems) {
-				// Check for known image types
 				for (const type of item.types) {
 					if (type.startsWith('image/')) {
 						const blob = await item.getType(type);
-						imageUrl = URL.createObjectURL(blob);
+						const reader = new FileReader();
+						reader.onload = (event) => {
+							files = [
+								...files,
+								{
+									type: 'image',
+									url: event.target.result as string
+								}
+							];
+						};
+						reader.readAsDataURL(blob);
 					}
 				}
-			}
-
-			if (imageUrl) {
-				files = [
-					...files,
-					{
-						type: 'image',
-						url: imageUrl
-					}
-				];
 			}
 
 			text = text.replaceAll('{{CLIPBOARD}}', clipboardText);
