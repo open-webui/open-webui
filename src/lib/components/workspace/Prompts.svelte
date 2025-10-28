@@ -33,7 +33,7 @@
 	let promptsImportInputElement: HTMLInputElement;
 	let loaded = false;
 
-	let importFiles = '';
+	let importFiles = null;
 	let query = '';
 
 	let prompts = [];
