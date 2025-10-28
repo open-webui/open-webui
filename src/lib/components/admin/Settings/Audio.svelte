@@ -25,6 +25,7 @@
 
 	export let saveHandler: () => void;
 
+
 	// Audio
 	let TTS_OPENAI_API_BASE_URL = '';
 	let TTS_OPENAI_API_KEY = '';
@@ -37,6 +38,7 @@
 	let TTS_AZURE_SPEECH_REGION = '';
 	let TTS_AZURE_SPEECH_BASE_URL = '';
 	let TTS_AZURE_SPEECH_OUTPUT_FORMAT = '';
+	let TTS_ELEVENLABS_API_BASE_URL = 'https://api.elevenlabs.io';
 
 	let STT_OPENAI_API_BASE_URL = '';
 	let STT_OPENAI_API_KEY = '';
@@ -109,6 +111,12 @@
 			return;
 		}
 
+		// Validate ElevenLabs API base URL
+		if (TTS_ENGINE === 'elevenlabs' && TTS_ELEVENLABS_API_BASE_URL && !(TTS_ELEVENLABS_API_BASE_URL.startsWith('http://') || TTS_ELEVENLABS_API_BASE_URL.startsWith('https://'))) {
+			toast.error($i18n.t('Invalid ElevenLabs API Base URL. Must start with http:// or https://'));
+			return;
+		}
+
 		const res = await updateAudioConfig(localStorage.token, {
 			tts: {
 				OPENAI_API_BASE_URL: TTS_OPENAI_API_BASE_URL,
@@ -121,7 +129,8 @@
 				AZURE_SPEECH_REGION: TTS_AZURE_SPEECH_REGION,
 				AZURE_SPEECH_BASE_URL: TTS_AZURE_SPEECH_BASE_URL,
 				AZURE_SPEECH_OUTPUT_FORMAT: TTS_AZURE_SPEECH_OUTPUT_FORMAT,
-				SPLIT_ON: TTS_SPLIT_ON
+				SPLIT_ON: TTS_SPLIT_ON,
+				ELEVENLABS_API_BASE_URL: TTS_ELEVENLABS_API_BASE_URL
 			},
 			stt: {
 				OPENAI_API_BASE_URL: STT_OPENAI_API_BASE_URL,
@@ -170,6 +179,7 @@
 			TTS_AZURE_SPEECH_REGION = res.tts.AZURE_SPEECH_REGION;
 			TTS_AZURE_SPEECH_BASE_URL = res.tts.AZURE_SPEECH_BASE_URL;
 			TTS_AZURE_SPEECH_OUTPUT_FORMAT = res.tts.AZURE_SPEECH_OUTPUT_FORMAT;
+			TTS_ELEVENLABS_API_BASE_URL = res.tts.ELEVENLABS_API_BASE_URL || 'https://api.elevenlabs.io';
 
 			STT_OPENAI_API_BASE_URL = res.stt.OPENAI_API_BASE_URL;
 			STT_OPENAI_API_KEY = res.stt.OPENAI_API_KEY;
@@ -483,6 +493,17 @@
 								bind:value={TTS_API_KEY}
 								required
 							/>
+						</div>
+						<div class="mt-1 flex gap-2 mb-1">
+							<input
+								class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+								placeholder={$i18n.t('API Base URL (e.g. https://api.elevenlabs.io)')}
+								bind:value={TTS_ELEVENLABS_API_BASE_URL}
+								required
+							/>
+						</div>
+						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t('Set the ElevenLabs API base URL for EU/US residency. Default is https://api.elevenlabs.io. For EU, use https://api.eu.residency.elevenlabs.io.')}
 						</div>
 					</div>
 				{:else if TTS_ENGINE === 'azure'}
