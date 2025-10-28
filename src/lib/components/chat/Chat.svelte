@@ -132,7 +132,8 @@
 
 	// Auto-save tool preferences when they change
 	let toolSaveTimeout;
-	$: if (selectedToolIds && !loading) {
+	$: if (selectedToolIds && selectedToolIds.length > 0 && !loading) {
+		// Only save when tools are actually selected (not during reset/init)
 		// Debounce to avoid excessive API calls
 		clearTimeout(toolSaveTimeout);
 		toolSaveTimeout = setTimeout(async () => {
