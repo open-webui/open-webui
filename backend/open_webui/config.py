@@ -2942,6 +2942,30 @@ JINA_API_KEY = PersistentConfig(
     os.getenv("JINA_API_KEY", ""),
 )
 
+JINA_SEARCH_FETCH_FULL_CONTENT = PersistentConfig(
+    "JINA_SEARCH_FETCH_FULL_CONTENT",
+    "rag.web.search.jina.fetch_full_content",
+    os.getenv("JINA_SEARCH_FETCH_FULL_CONTENT", "True").lower() == "true",
+)
+
+JINA_SEARCH_CLEAN_CONTENT = PersistentConfig(
+    "JINA_SEARCH_CLEAN_CONTENT",
+    "rag.web.search.jina.clean_content",
+    os.getenv("JINA_SEARCH_CLEAN_CONTENT", "True").lower() == "true",
+)
+
+JINA_SEARCH_DISABLE_CACHING = PersistentConfig(
+    "JINA_SEARCH_DISABLE_CACHING",
+    "rag.web.search.jina.disable_caching",
+    os.getenv("JINA_SEARCH_DISABLE_CACHING", "False").lower() == "true",
+)
+
+JINA_SEARCH_MAX_CONCURRENT_REQUESTS = PersistentConfig(
+    "JINA_SEARCH_MAX_CONCURRENT_REQUESTS",
+    "rag.web.search.jina.max_concurrent_requests",
+    int(os.getenv("JINA_SEARCH_MAX_CONCURRENT_REQUESTS", "5")),
+)
+
 SEARCHAPI_API_KEY = PersistentConfig(
     "SEARCHAPI_API_KEY",
     "rag.web.search.searchapi_api_key",

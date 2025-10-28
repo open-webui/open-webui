@@ -578,6 +578,10 @@ class WebConfig(BaseModel):
     SERPAPI_API_KEY: Optional[str] = None
     SERPAPI_ENGINE: Optional[str] = None
     JINA_API_KEY: Optional[str] = None
+    JINA_SEARCH_FETCH_FULL_CONTENT: Optional[bool] = None
+    JINA_SEARCH_CLEAN_CONTENT: Optional[bool] = None
+    JINA_SEARCH_DISABLE_CACHING: Optional[bool] = None
+    JINA_SEARCH_MAX_CONCURRENT_REQUESTS: Optional[int] = None
     BING_SEARCH_V7_ENDPOINT: Optional[str] = None
     BING_SEARCH_V7_SUBSCRIPTION_KEY: Optional[str] = None
     EXA_API_KEY: Optional[str] = None

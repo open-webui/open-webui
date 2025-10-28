@@ -43,36 +43,19 @@ class WebSearchTool:
     Built-in tool that provides web search functionality to language models.
     This tool allows models to search the web and receive structured results
     that they can use to provide informed responses.
+
+    Configuration is managed through the admin panel web search settings.
     """
 
     class Valves(BaseModel):
-        """Configuration options for the web search tool"""
-        JINA_API_KEY: str = Field(
-            default="",
-            description="(Optional) Jina API key. Allows higher rate limit when fetching full content."
-        )
-        DISABLE_JINA_CACHING: bool = Field(
-            default=False,
-            description="Bypass Jina cache when scraping content"
-        )
-        CLEAN_CONTENT: bool = Field(
-            default=True,
-            description="Remove links and image URLs from scraped content to reduce tokens"
-        )
-        FETCH_FULL_CONTENT: bool = Field(
-            default=True,
-            description="Fetch full content from URLs using Jina Reader (disable to only return snippets)"
-        )
-        MAX_CONCURRENT_REQUESTS: int = Field(
-            default=5,
-            description="Maximum number of concurrent Jina Reader requests"
-        )
+        """Configuration placeholder - settings are managed via admin panel"""
+        pass
 
     def __init__(self):
         self.valves = self.Valves()
 
     async def _fetch_jina_content(
-        self, session: aiohttp.ClientSession, url: str
+        self, session: aiohttp.ClientSession, url: str, config
     ) -> Optional[str]:
         """
         Fetch full content from a URL using Jina Reader.
@@ -80,6 +63,7 @@ class WebSearchTool:
         Args:
             session: aiohttp ClientSession for making requests
             url: The URL to fetch content from
+            config: App configuration object
 
         Returns:
             The full content as markdown, or None if fetching failed
@@ -87,19 +71,19 @@ class WebSearchTool:
         try:
             jina_url = f"https://r.jina.ai/{url}"
             headers = {
-                "X-No-Cache": "true" if self.valves.DISABLE_JINA_CACHING else "false",
+                "X-No-Cache": "true" if config.JINA_SEARCH_DISABLE_CACHING else "false",
                 "X-With-Generated-Alt": "true",
             }
 
-            if self.valves.JINA_API_KEY:
-                headers["Authorization"] = f"Bearer {self.valves.JINA_API_KEY}"
+            if config.JINA_API_KEY:
+                headers["Authorization"] = f"Bearer {config.JINA_API_KEY}"
 
             async with session.get(jina_url, headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
                 response.raise_for_status()
                 content = await response.text()
 
                 # Clean URLs if configured
-                if self.valves.CLEAN_CONTENT:
+                if config.JINA_SEARCH_CLEAN_CONTENT:
                     content = clean_urls(content)
 
                 return content
@@ -143,8 +127,9 @@ class WebSearchTool:
             return "Error: Request context not available"
 
         try:
-            # Get the configured search engine from app config
-            engine = __request__.app.state.config.WEB_SEARCH_ENGINE
+            # Get configuration from app state
+            config = __request__.app.state.config
+            engine = config.WEB_SEARCH_ENGINE
 
             # Perform the search using existing search_web function
             results: list[SearchResult] = search_web(__request__, engine, query)
@@ -154,16 +139,17 @@ class WebSearchTool:
 
             # Fetch full content concurrently if enabled
             full_contents = {}
-            if self.valves.FETCH_FULL_CONTENT:
+            if config.JINA_SEARCH_FETCH_FULL_CONTENT:
                 log.info(f"🔍 WEB SEARCH TOOL: Fetching full content from {len(results)} URLs via Jina Reader")
 
                 async with aiohttp.ClientSession() as session:
                     # Create semaphore to limit concurrent requests
-                    semaphore = asyncio.Semaphore(self.valves.MAX_CONCURRENT_REQUESTS)
+                    max_concurrent = config.JINA_SEARCH_MAX_CONCURRENT_REQUESTS
+                    semaphore = asyncio.Semaphore(max_concurrent)
 
                     async def fetch_with_semaphore(url: str):
                         async with semaphore:
-                            return url, await self._fetch_jina_content(session, url)
+                            return url, await self._fetch_jina_content(session, url, config)
 
                     # Fetch all URLs concurrently
                     tasks = [fetch_with_semaphore(result.link) for result in results]
