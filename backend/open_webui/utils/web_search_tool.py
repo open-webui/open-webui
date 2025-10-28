@@ -54,7 +54,12 @@ class WebSearchTool:
             To search for Python tutorials:
             query = "Python programming tutorials for beginners"
         """
+        log.info(f"🔍 WEB SEARCH TOOL: Called with query='{query}'")
+        log.info(f"🔍 WEB SEARCH TOOL: __request__ is {'present' if __request__ else 'None'}")
+        log.info(f"🔍 WEB SEARCH TOOL: __user__ is {'present' if __user__ else 'None'}")
+
         if not __request__:
+            log.error("🔍 WEB SEARCH TOOL: ERROR - Request context not available")
             return "Error: Request context not available"
 
         try:

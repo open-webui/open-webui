@@ -96,7 +96,7 @@ async def get_tools(
     for tool_id in tool_ids:
         # Handle built-in web search tool
         if tool_id == "builtin:web_search":
-            web_search_tool = get_web_search_tool_specs()
+            web_search_tool = get_web_search_tool_specs(extra_params)
             if web_search_tool:
                 tools_dict["search_web"] = web_search_tool
             continue
@@ -820,23 +820,31 @@ def get_tool_server_url(url: Optional[str], path: str) -> str:
     return f"{url}{path}"
 
 
-def get_web_search_tool_specs() -> dict:
+def get_web_search_tool_specs(extra_params: dict) -> dict:
     """
     Generate tool specs for the built-in web search tool.
     Returns a dict containing the tool specs in OpenAI function calling format.
+
+    Args:
+        extra_params: Extra parameters to inject (__request__, __user__, etc.)
     """
     from open_webui.utils.web_search_tool import get_web_search_tool_instance
-    
+
     tool_instance = get_web_search_tool_instance()
     specs = get_tool_specs(tool_instance)
-    
+
     if not specs:
         return {}
-    
+
+    # Wrap the callable with extra_params injection (e.g., __request__, __user__)
+    callable_with_params = get_async_tool_function_and_apply_extra_params(
+        tool_instance.search_web, extra_params
+    )
+
     # Use the first (and only) spec from the tool
     return {
         "id": "builtin:web_search",
-        "name": "web_search", 
+        "name": "web_search",
         "spec": specs[0],
-        "callable": tool_instance.search_web,
+        "callable": callable_with_params,
     }

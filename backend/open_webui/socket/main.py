@@ -291,14 +291,10 @@ def get_token_usage():
 
 @sio.on("usage")
 async def usage(sid, data):
-    log.info(f"🔍 USAGE DEBUG: Received usage event from sid {sid}: {data}")
-    
     if sid in SESSION_POOL:
         model_id = data["model"]
         usage_data = data.get("usage", {})
-        
-        log.info(f"🔍 USAGE DEBUG: Processing usage for model_id={model_id}, usage_data={usage_data}")
-        
+
         # Record the timestamp for the last update
         current_time = int(time.time())
 
@@ -307,42 +303,34 @@ async def usage(sid, data):
             **(USAGE_POOL[model_id] if model_id in USAGE_POOL else {}),
             sid: {"updated_at": current_time},
         }
-        
+
         # Process token usage tracking
         await process_token_usage(model_id, usage_data)
-    else:
-        log.warning(f"🔍 USAGE DEBUG: Session {sid} not found in SESSION_POOL")
 
 
 async def process_token_usage(model_id: str, usage_data: dict):
     """Process token usage data and update group usage counters"""
-    log.info(f"🔍 USAGE DEBUG: Received usage data for model {model_id}: {usage_data}")
-    
     if not usage_data:
-        log.warning(f"🔍 USAGE DEBUG: No usage data provided for model {model_id}")
         return
-        
+
     # Extract token counts with safe defaults
     prompt_tokens = usage_data.get("prompt_tokens", 0)
     completion_tokens = usage_data.get("completion_tokens", 0)
-    
+
     # Extract reasoning tokens from completion_tokens_details
     completion_tokens_details = usage_data.get("completion_tokens_details", {})
     reasoning_tokens = completion_tokens_details.get("reasoning_tokens", 0)
-    
+
     # Calculate IN, OUT, TOTAL according to spec
     # IN = prompt_tokens
-    # OUT = completion_tokens + reasoning_tokens  
+    # OUT = completion_tokens + reasoning_tokens
     # TOTAL = IN + OUT
     token_in = prompt_tokens
     token_out = completion_tokens + reasoning_tokens
     token_total = token_in + token_out
-    
-    log.info(f"🔍 USAGE DEBUG: Calculated tokens for {model_id}: IN={token_in}, OUT={token_out}, TOTAL={token_total}")
-    
+
     # Use the database model to update usage
     token_groups.update_token_usage(model_id, token_in, token_out, token_total)
-    log.info(f"🔍 USAGE DEBUG: Updated token usage for model {model_id}")
 
 
 @sio.event
@@ -744,8 +732,6 @@ def get_event_emitter(request_info, update_db=True):
 
         chat_id = request_info.get("chat_id", None)
         message_id = request_info.get("message_id", None)
-
-        log.info(f"📡 EMIT: Emitting to {len(session_ids)} sessions, chat_id={chat_id}, message_id={message_id}, event_type={event_data.get('type')}")
 
         emit_tasks = [
             sio.emit(

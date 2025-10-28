@@ -1005,11 +1005,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         if "stream_options" not in form_data:
             form_data["stream_options"] = {}
         form_data["stream_options"]["include_usage"] = True
-        log.info(f"🔍 USAGE DEBUG (Middleware): Set stream_options.include_usage=true for streaming request")
-        log.info(f"🔍 USAGE DEBUG (Middleware): form_data.stream_options = {form_data.get('stream_options')}")
-        log.info(f"🔍 USAGE DEBUG (Middleware): Model being requested: {form_data.get('model')}")
-    else:
-        log.info(f"🔍 USAGE DEBUG (Middleware): Non-streaming request, stream_options not set")
 
     log.debug(f"form_data: {form_data}")
 
@@ -1773,8 +1768,6 @@ async def process_chat_response(
                         if content:
                             # Check for usage data in non-streaming response
                             usage = response_data.get("usage", {})
-                            if usage:
-                                log.info(f"🔍 USAGE DEBUG (Middleware): Found usage in non-streaming response: {usage}")
 
                             await event_emitter(
                                 {
@@ -1794,7 +1787,6 @@ async def process_chat_response(
                             if usage:
                                 completion_data["usage"] = usage
                                 completion_data["selected_model_id"] = model_id
-                                log.info(f"🔍 USAGE DEBUG (Middleware): Adding usage to non-streaming completion: {usage}")
 
                             await event_emitter(
                                 {
@@ -2367,11 +2359,9 @@ async def process_chat_response(
                         nonlocal last_delta_data
 
                         if delta_count >= threshold and last_delta_data:
-                            log.info(f"📤 FLUSH: Emitting batch of {delta_count} chunks with content keys: {list(last_delta_data.keys()) if last_delta_data else 'None'}")
                             if event_emitter is None:
                                 log.error(f"❌ FLUSH ERROR: event_emitter is None! Cannot emit events!")
                             else:
-                                log.info(f"📤 FLUSH: Calling event_emitter (is not None)")
                                 await event_emitter(
                                     {
                                         "type": "chat:completion",
@@ -2380,8 +2370,6 @@ async def process_chat_response(
                                 )
                             delta_count = 0
                             last_delta_data = None
-                        else:
-                            log.debug(f"📤 FLUSH: Skipping - delta_count={delta_count}, threshold={threshold}, has_data={last_delta_data is not None}")
 
                     async for line in response.body_iterator:
                         line = (
@@ -2405,12 +2393,6 @@ async def process_chat_response(
                         try:
                             data = json.loads(data)
                             chunk_count += 1
-
-                            # Minimal debug logging to avoid interfering with stream
-                            if 'usage' in data:
-                                log.info(f"🔍 USAGE DEBUG (Middleware): Chunk #{chunk_count} HAS USAGE: {data['usage']}")
-                            elif chunk_count <= 2:
-                                log.debug(f"🔍 USAGE DEBUG (Middleware): Chunk #{chunk_count} structure: {list(data.keys())}")
 
                             data, _ = await process_filter_functions(
                                 request=request,
@@ -2446,7 +2428,6 @@ async def process_chat_response(
                                     usage = data.get("usage", {}) or {}
                                     usage.update(data.get("timings", {}))  # llama.cpp
                                     if usage:
-                                        log.info(f"🔍 USAGE DEBUG (Middleware): ✅ FOUND USAGE IN CHUNK #{chunk_count}: {usage}")
                                         response_usage = usage  # Store for final completion event
                                         await event_emitter(
                                             {
@@ -2456,9 +2437,6 @@ async def process_chat_response(
                                                 },
                                             }
                                         )
-                                    # Minimal logging for final chunks without usage
-                                    elif not choices or (choices and choices[0].get("finish_reason")):
-                                        log.debug(f"🔍 USAGE DEBUG (Middleware): Final chunk #{chunk_count} no usage, finish_reason: {choices[0].get('finish_reason') if choices else 'none'}")
 
                                     if not choices:
                                         error = data.get("error", {})
@@ -3088,11 +3066,8 @@ async def process_chat_response(
 
                 # Include usage data if available
                 if response_usage:
-                    log.info(f"🔍 USAGE DEBUG (Middleware): ✅ Adding usage to completion for {model_id}")
                     data["usage"] = response_usage
                     data["selected_model_id"] = model_id  # Include model ID for socket emission
-                else:
-                    log.warning(f"🔍 USAGE DEBUG (Middleware): ❌ No usage data for {model_id}")
 
                 if not ENABLE_REALTIME_CHAT_SAVE:
                     # Save message in the database
