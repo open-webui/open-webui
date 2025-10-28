@@ -264,7 +264,10 @@
 					if (!$temporaryChatEnabled) {
 						messageInput?.setText(input.prompt);
 						files = input.files;
-						selectedToolIds = input.selectedToolIds;
+						// Only use sessionStorage tools if they exist, otherwise keep saved defaults
+						if (input.selectedToolIds && input.selectedToolIds.length > 0) {
+							selectedToolIds = input.selectedToolIds;
+						}
 						selectedFilterIds = input.selectedFilterIds;
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
@@ -655,7 +658,10 @@
 				if (!$temporaryChatEnabled) {
 					messageInput?.setText(input.prompt);
 					files = input.files;
-					selectedToolIds = input.selectedToolIds;
+					// Only use sessionStorage tools if they exist, otherwise keep saved defaults
+					if (input.selectedToolIds && input.selectedToolIds.length > 0) {
+						selectedToolIds = input.selectedToolIds;
+					}
 					selectedFilterIds = input.selectedFilterIds;
 					webSearchEnabled = input.webSearchEnabled;
 					imageGenerationEnabled = input.imageGenerationEnabled;
