@@ -4,38 +4,15 @@ Provides web search capability as a native tool that models can call directly
 """
 
 import logging
-import aiohttp
-import asyncio
-import re
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from fastapi import Request
 
 from open_webui.routers.retrieval import search_web
 from open_webui.retrieval.web.main import SearchResult
+from open_webui.retrieval.web.utils import get_web_loader
 
 log = logging.getLogger(__name__)
-
-
-def extract_title(text: str) -> Optional[str]:
-    """
-    Extracts the title from Jina Reader response.
-
-    :param text: The input string containing the title.
-    :return: The extracted title string, or None if the title is not found.
-    """
-    match = re.search(r'Title: (.*)\n', text)
-    return match.group(1).strip() if match else None
-
-
-def clean_urls(text: str) -> str:
-    """
-    Cleans URLs from a string containing structured text.
-
-    :param text: The input string containing the URLs.
-    :return: The cleaned string with URLs removed.
-    """
-    return re.sub(r'\((http[^)]+)\)', '', text)
 
 
 class WebSearchTool:
@@ -45,6 +22,7 @@ class WebSearchTool:
     that they can use to provide informed responses.
 
     Configuration is managed through the admin panel web search settings.
+    Uses the configured WEB_LOADER_ENGINE to fetch full content from URLs.
     """
 
     class Valves(BaseModel):
@@ -53,44 +31,6 @@ class WebSearchTool:
 
     def __init__(self):
         self.valves = self.Valves()
-
-    async def _fetch_jina_content(
-        self, session: aiohttp.ClientSession, url: str, config
-    ) -> Optional[str]:
-        """
-        Fetch full content from a URL using Jina Reader.
-
-        Args:
-            session: aiohttp ClientSession for making requests
-            url: The URL to fetch content from
-            config: App configuration object
-
-        Returns:
-            The full content as markdown, or None if fetching failed
-        """
-        try:
-            jina_url = f"https://r.jina.ai/{url}"
-            headers = {
-                "X-No-Cache": "true" if config.JINA_SEARCH_DISABLE_CACHING else "false",
-                "X-With-Generated-Alt": "true",
-            }
-
-            if config.JINA_API_KEY:
-                headers["Authorization"] = f"Bearer {config.JINA_API_KEY}"
-
-            async with session.get(jina_url, headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
-                response.raise_for_status()
-                content = await response.text()
-
-                # Clean URLs if configured
-                if config.JINA_SEARCH_CLEAN_CONTENT:
-                    content = clean_urls(content)
-
-                return content
-
-        except Exception as e:
-            log.warning(f"Failed to fetch content from {url} via Jina Reader: {e}")
-            return None
 
     async def search_web(
         self,
@@ -137,28 +77,32 @@ class WebSearchTool:
             if not results:
                 return f"No results found for query: '{query}'"
 
-            # Fetch full content concurrently if enabled
+            # Fetch full content using configured web loader if bypass is disabled
             full_contents = {}
-            if config.JINA_SEARCH_FETCH_FULL_CONTENT:
-                log.info(f"🔍 WEB SEARCH TOOL: Fetching full content from {len(results)} URLs via Jina Reader")
+            if not config.BYPASS_WEB_SEARCH_WEB_LOADER:
+                try:
+                    log.info(f"🔍 WEB SEARCH TOOL: Fetching full content from {len(results)} URLs using {config.WEB_LOADER_ENGINE} loader")
 
-                async with aiohttp.ClientSession() as session:
-                    # Create semaphore to limit concurrent requests
-                    max_concurrent = config.JINA_SEARCH_MAX_CONCURRENT_REQUESTS
-                    semaphore = asyncio.Semaphore(max_concurrent)
+                    # Get URLs from search results
+                    urls = [result.link for result in results]
 
-                    async def fetch_with_semaphore(url: str):
-                        async with semaphore:
-                            return url, await self._fetch_jina_content(session, url, config)
+                    # Use configured web loader to fetch content
+                    web_loader = get_web_loader(
+                        urls=urls,
+                        verify_ssl=config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
+                        requests_per_second=config.WEB_LOADER_CONCURRENT_REQUESTS,
+                        trust_env=config.WEB_SEARCH_TRUST_ENV,
+                    )
 
-                    # Fetch all URLs concurrently
-                    tasks = [fetch_with_semaphore(result.link) for result in results]
-                    fetch_results = await asyncio.gather(*tasks)
+                    # Load documents
+                    documents = list(web_loader.lazy_load())
 
-                    # Store results in dict
-                    full_contents = {url: content for url, content in fetch_results if content}
+                    # Map URLs to content
+                    full_contents = {doc.metadata.get("source"): doc.page_content for doc in documents}
 
-                log.info(f"🔍 WEB SEARCH TOOL: Successfully fetched content from {len(full_contents)}/{len(results)} URLs")
+                    log.info(f"🔍 WEB SEARCH TOOL: Successfully fetched content from {len(full_contents)}/{len(results)} URLs")
+                except Exception as e:
+                    log.error(f"🔍 WEB SEARCH TOOL: Error fetching content: {e}", exc_info=True)
 
             # Format results for the model
             formatted_results = [
@@ -178,10 +122,6 @@ class WebSearchTool:
                 # Add full content if available
                 if result.link in full_contents:
                     content = full_contents[result.link]
-                    # Extract title from Jina content if available
-                    jina_title = extract_title(content)
-                    if jina_title:
-                        formatted_results.append(f"**Extracted Title**: {jina_title}\n")
                     formatted_results.append(f"\n**Full Content**:\n\n{content}\n")
 
                 formatted_results.append("\n---\n\n")

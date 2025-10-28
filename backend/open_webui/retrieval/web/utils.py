@@ -25,6 +25,7 @@ from langchain_community.document_loaders.firecrawl import FireCrawlLoader
 from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
 from open_webui.retrieval.loaders.tavily import TavilyLoader
+from open_webui.retrieval.loaders.jina import JinaLoader
 from open_webui.retrieval.loaders.external_web import ExternalWebLoader
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.config import (
@@ -38,6 +39,7 @@ from open_webui.config import (
     TAVILY_EXTRACT_DEPTH,
     EXTERNAL_WEB_LOADER_URL,
     EXTERNAL_WEB_LOADER_API_KEY,
+    JINA_API_KEY,
 )
 from open_webui.env import SRC_LOG_LEVELS, AIOHTTP_CLIENT_SESSION_SSL
 
@@ -374,6 +376,101 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 raise e
 
 
+class SafeJinaLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
+    def __init__(
+        self,
+        web_paths: Union[str, List[str]],
+        api_key: str = "",
+        continue_on_failure: bool = True,
+        requests_per_second: Optional[float] = None,
+        verify_ssl: bool = True,
+        trust_env: bool = False,
+        proxy: Optional[Dict[str, str]] = None,
+    ):
+        """Initialize SafeJinaLoader with rate limiting and SSL verification support.
+
+        Args:
+            web_paths: List of URLs/paths to process.
+            api_key: The Jina API key (optional, for higher rate limits).
+            continue_on_failure: Whether to continue if extraction of a URL fails.
+            requests_per_second: Number of requests per second to limit to.
+            verify_ssl: If True, verify SSL certificates.
+            trust_env: If True, use proxy settings from environment variables.
+            proxy: Optional proxy configuration (not used by Jina API).
+        """
+        # Store parameters for creating JinaLoader instances
+        self.web_paths = web_paths if isinstance(web_paths, list) else [web_paths]
+        self.api_key = api_key
+        self.continue_on_failure = continue_on_failure
+        self.verify_ssl = verify_ssl
+        self.trust_env = trust_env
+        self.proxy = proxy
+
+        # Add rate limiting
+        self.requests_per_second = requests_per_second
+        self.last_request_time = None
+
+    def lazy_load(self) -> Iterator[Document]:
+        """Load documents with rate limiting support, delegating to JinaLoader."""
+        valid_urls = []
+        for url in self.web_paths:
+            try:
+                self._safe_process_url_sync(url)
+                valid_urls.append(url)
+            except Exception as e:
+                log.warning(f"SSL verification failed for {url}: {str(e)}")
+                if not self.continue_on_failure:
+                    raise e
+        if not valid_urls:
+            if self.continue_on_failure:
+                log.warning("No valid URLs to process after SSL verification")
+                return
+            raise ValueError("No valid URLs to process after SSL verification")
+        try:
+            loader = JinaLoader(
+                urls=valid_urls,
+                api_key=self.api_key,
+                continue_on_failure=self.continue_on_failure,
+            )
+            yield from loader.lazy_load()
+        except Exception as e:
+            if self.continue_on_failure:
+                log.exception(f"Error extracting content from URLs: {e}")
+            else:
+                raise e
+
+    async def alazy_load(self) -> AsyncIterator[Document]:
+        """Async version with rate limiting and SSL verification."""
+        valid_urls = []
+        for url in self.web_paths:
+            try:
+                await self._safe_process_url(url)
+                valid_urls.append(url)
+            except Exception as e:
+                log.warning(f"SSL verification failed for {url}: {str(e)}")
+                if not self.continue_on_failure:
+                    raise e
+        if not valid_urls:
+            if self.continue_on_failure:
+                log.warning("No valid URLs to process after SSL verification")
+                return
+            raise ValueError("No valid URLs to process after SSL verification")
+
+        try:
+            loader = JinaLoader(
+                urls=valid_urls,
+                api_key=self.api_key,
+                continue_on_failure=self.continue_on_failure,
+            )
+            async for document in loader.alazy_load():
+                yield document
+        except Exception as e:
+            if self.continue_on_failure:
+                log.exception(f"Error loading URLs: {e}")
+            else:
+                raise e
+
+
 class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessingMixin):
     """Load HTML pages safely with Playwright, supporting SSL verification, rate limiting, and remote browser connection.
 
@@ -630,6 +727,10 @@ def get_web_loader(
         web_loader_args["api_key"] = TAVILY_API_KEY.value
         web_loader_args["extract_depth"] = TAVILY_EXTRACT_DEPTH.value
 
+    if WEB_LOADER_ENGINE.value == "jina":
+        WebLoaderClass = SafeJinaLoader
+        web_loader_args["api_key"] = JINA_API_KEY.value
+
     if WEB_LOADER_ENGINE.value == "external":
         WebLoaderClass = ExternalWebLoader
         web_loader_args["external_url"] = EXTERNAL_WEB_LOADER_URL.value
@@ -648,5 +749,5 @@ def get_web_loader(
     else:
         raise ValueError(
             f"Invalid WEB_LOADER_ENGINE: {WEB_LOADER_ENGINE.value}. "
-            "Please set it to 'safe_web', 'playwright', 'firecrawl', or 'tavily'."
+            "Please set it to 'safe_web', 'playwright', 'firecrawl', 'tavily', 'jina', or 'external'."
         )

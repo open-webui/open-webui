@@ -37,7 +37,7 @@
 		'firecrawl',
 		'external'
 	];
-	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily', 'external'];
+	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily', 'jina', 'external'];
 
 	let webConfig = null;
 
@@ -439,88 +439,6 @@
 										placeholder={$i18n.t('Enter Jina API Key')}
 										bind:value={webConfig.JINA_API_KEY}
 									/>
-								</div>
-
-								<div class="mt-3">
-									<div class=" self-center text-xs font-medium mb-1.5">
-										{$i18n.t('Jina Reader Settings')}
-									</div>
-
-									<div class="flex items-center justify-between mb-2">
-										<div class="text-xs">
-											{$i18n.t('Fetch Full Content')}
-											<div class="text-xs text-gray-500">
-												{$i18n.t('Retrieve full page content using Jina Reader instead of just snippets')}
-											</div>
-										</div>
-										<label class="relative inline-flex items-center cursor-pointer">
-											<input
-												type="checkbox"
-												class="sr-only peer"
-												bind:checked={webConfig.JINA_SEARCH_FETCH_FULL_CONTENT}
-											/>
-											<div
-												class="w-9 h-5 bg-gray-200 peer-focus:outline-hidden peer-focus:ring-4 peer-focus:ring-gray-300 dark:peer-focus:ring-gray-600 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-gray-900 dark:peer-checked:bg-gray-300"
-											/>
-										</label>
-									</div>
-
-									<div class="flex items-center justify-between mb-2">
-										<div class="text-xs">
-											{$i18n.t('Clean Content')}
-											<div class="text-xs text-gray-500">
-												{$i18n.t('Remove links and image URLs to reduce token usage')}
-											</div>
-										</div>
-										<label class="relative inline-flex items-center cursor-pointer">
-											<input
-												type="checkbox"
-												class="sr-only peer"
-												bind:checked={webConfig.JINA_SEARCH_CLEAN_CONTENT}
-											/>
-											<div
-												class="w-9 h-5 bg-gray-200 peer-focus:outline-hidden peer-focus:ring-4 peer-focus:ring-gray-300 dark:peer-focus:ring-gray-600 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-gray-900 dark:peer-checked:bg-gray-300"
-											/>
-										</label>
-									</div>
-
-									<div class="flex items-center justify-between mb-2">
-										<div class="text-xs">
-											{$i18n.t('Disable Jina Caching')}
-											<div class="text-xs text-gray-500">
-												{$i18n.t('Bypass Jina cache for fresh content')}
-											</div>
-										</div>
-										<label class="relative inline-flex items-center cursor-pointer">
-											<input
-												type="checkbox"
-												class="sr-only peer"
-												bind:checked={webConfig.JINA_SEARCH_DISABLE_CACHING}
-											/>
-											<div
-												class="w-9 h-5 bg-gray-200 peer-focus:outline-hidden peer-focus:ring-4 peer-focus:ring-gray-300 dark:peer-focus:ring-gray-600 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-gray-900 dark:peer-checked:bg-gray-300"
-											/>
-										</label>
-									</div>
-
-									<div class="mt-2">
-										<div class=" self-center text-xs font-medium mb-1">
-											{$i18n.t('Max Concurrent Requests')}
-										</div>
-
-										<div class="flex w-full">
-											<div class="flex-1">
-												<input
-													class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-													type="number"
-													placeholder={$i18n.t('5')}
-													bind:value={webConfig.JINA_SEARCH_MAX_CONCURRENT_REQUESTS}
-													min="1"
-													max="20"
-												/>
-											</div>
-										</div>
-									</div>
 								</div>
 							</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'bing'}
@@ -934,6 +852,21 @@
 									<SensitiveInput
 										placeholder={$i18n.t('Enter Tavily API Key')}
 										bind:value={webConfig.TAVILY_API_KEY}
+									/>
+								</div>
+							{/if}
+						</div>
+					{:else if webConfig.WEB_LOADER_ENGINE === 'jina'}
+						<div class="mb-2.5 flex w-full flex-col">
+							{#if webConfig.WEB_SEARCH_ENGINE !== 'jina'}
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Jina API Key')}
+									</div>
+
+									<SensitiveInput
+										placeholder={$i18n.t('Enter Jina API Key (optional, for higher rate limits)')}
+										bind:value={webConfig.JINA_API_KEY}
 									/>
 								</div>
 							{/if}
