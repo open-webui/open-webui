@@ -63,6 +63,11 @@ class S3VectorClient(VectorDBBase):
                 dataType=data_type,
                 dimension=dimension,
                 distanceMetric=distance_metric,
+                metadataConfiguration={
+                    'nonFilterableMetadataKeys': [
+                        'text',
+                    ]
+                },
             )
             log.info(
                 f"Created S3 index: {index_name} (dim={dimension}, type={data_type}, metric={distance_metric})"
@@ -80,7 +85,10 @@ class S3VectorClient(VectorDBBase):
         if not isinstance(metadata, dict) or len(metadata) <= 10:
             return metadata
 
-        # Keep only the first 10 keys, prioritizing important ones based on actual Open WebUI metadata
+        # Keep only the first 10 keys, prioritizing important ones based on actual Open WebUI metadata.
+        # Preserve the original text from which each vector is derived, but mark it as non-filterable.
+        # - Total metadata per vector: Up to 40 KB (filterable + non-filterable)
+        # - Filterable metadata per vector: Up to 2 KB
         important_keys = [
             "text",  # The actual document content
             "file_id",  # File ID
@@ -178,7 +186,9 @@ class S3VectorClient(VectorDBBase):
                     # Convert list to float32 values as required by S3 Vector API
                     vector_data = [float(x) for x in vector_data]
 
-                # Prepare metadata, ensuring the text field is preserved
+                # Prepare metadata, ensuring the text field is preserved.
+                # All keys are considered filterable by default unless specified
+                # in metadataConfiguration
                 metadata = item.get("metadata", {}).copy()
 
                 # Add the text field to metadata so it's available for retrieval
