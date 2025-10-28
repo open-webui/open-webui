@@ -24,7 +24,7 @@
 	export let onSourceClick: Function = () => {};
 </script>
 
-{#each tokens as token}
+{#each tokens as token, tokenIdx (tokenIdx)}
 	{#if token.type === 'escape'}
 		{unescapeHtml(token.text)}
 	{:else if token.type === 'html'}
