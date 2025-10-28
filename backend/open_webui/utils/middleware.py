@@ -91,7 +91,7 @@ from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
     get_content_from_message,
 )
-from open_webui.utils.tools import get_tools
+from open_webui.utils.tools import get_tools, get_web_search_tool_specs
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.filter import (
     get_sorted_filter_ids,
@@ -1153,6 +1153,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     except Exception as e:
         raise Exception(f"{e}")
 
+    # Pop tool_ids early so we can modify it in feature handlers
+    tool_ids = form_data.pop("tool_ids", None)
+
     features = form_data.pop("features", None)
     if features:
         if "memory" in features and features["memory"]:
@@ -1160,10 +1163,30 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 request, form_data, extra_params, user
             )
 
+        # AUTO-ENABLE WEB SEARCH AS NATIVE TOOL
+        # When web_search feature is enabled, automatically register the built-in
+        # web search tool and enable native function calling mode
         if "web_search" in features and features["web_search"]:
-            form_data = await chat_web_search_handler(
-                request, form_data, extra_params, user
-            )
+            # Get or create tool_ids list
+            if tool_ids is None:
+                tool_ids = []
+
+            # Add built-in web search tool ID
+            if "builtin:web_search" not in tool_ids:
+                tool_ids.append("builtin:web_search")
+
+            # Enable native function calling mode
+            if "params" not in metadata:
+                metadata["params"] = {}
+            metadata["params"]["function_calling"] = "native"
+
+            log.info("Auto-enabled web search tool with native function calling")
+
+        # OLD WEB SEARCH HANDLER - DISABLED IN FAVOR OF TOOL-BASED APPROACH
+        # if "web_search" in features and features["web_search"]:
+        #     form_data = await chat_web_search_handler(
+        #         request, form_data, extra_params, user
+        #     )
 
         if "image_generation" in features and features["image_generation"]:
             form_data = await chat_image_generation_handler(
@@ -1180,7 +1203,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 form_data["messages"],
             )
 
-    tool_ids = form_data.pop("tool_ids", None)
+    # tool_ids already popped earlier for web search auto-enable
     files = form_data.pop("files", None)
 
     prompt = get_last_user_message(form_data["messages"])

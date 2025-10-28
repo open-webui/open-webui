@@ -94,6 +94,13 @@ async def get_tools(
     tools_dict = {}
 
     for tool_id in tool_ids:
+        # Handle built-in web search tool
+        if tool_id == "builtin:web_search":
+            web_search_tool = get_web_search_tool_specs()
+            if web_search_tool:
+                tools_dict["search_web"] = web_search_tool
+            continue
+
         tool = Tools.get_tool_by_id(tool_id)
         if tool is None:
 
@@ -811,3 +818,25 @@ def get_tool_server_url(url: Optional[str], path: str) -> str:
         # Ensure the path starts with a slash
         path = f"/{path}"
     return f"{url}{path}"
+
+
+def get_web_search_tool_specs() -> dict:
+    """
+    Generate tool specs for the built-in web search tool.
+    Returns a dict containing the tool specs in OpenAI function calling format.
+    """
+    from open_webui.utils.web_search_tool import get_web_search_tool_instance
+    
+    tool_instance = get_web_search_tool_instance()
+    specs = get_tool_specs(tool_instance)
+    
+    if not specs:
+        return {}
+    
+    # Use the first (and only) spec from the tool
+    return {
+        "id": "builtin:web_search",
+        "name": "web_search", 
+        "spec": specs[0],
+        "callable": tool_instance.search_web,
+    }
