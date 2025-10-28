@@ -39,7 +39,6 @@ from open_webui.config import (
     WHISPER_MODEL_DIR,
     CACHE_DIR,
     WHISPER_LANGUAGE,
-    ELEVENLABS_API_BASE_URL,
 )
 
 from open_webui.constants import ERROR_MESSAGES
@@ -419,7 +418,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 timeout=timeout, trust_env=True
             ) as session:
                 async with session.post(
-                    f"{ELEVENLABS_API_BASE_URL}/v1/text-to-speech/{voice_id}",
+                    f"{api_base_url}/v1/text-to-speech/{voice_id}",
                     json={
                         "text": payload["input"],
                         "model_id": request.app.state.config.TTS_MODEL,
@@ -1046,7 +1045,7 @@ def get_available_models(request: Request) -> list[dict]:
             if not api_base_url.startswith("http://") and not api_base_url.startswith("https://"):
                 raise ValueError("Invalid ElevenLabs API base URL. Must start with http:// or https://")
             response = requests.get(
-                f"{ELEVENLABS_API_BASE_URL}/v1/models",
+                f"{api_base_url}/v1/models",
                 headers={
                     "xi-api-key": request.app.state.config.TTS_API_KEY,
                     "Content-Type": "application/json",
@@ -1153,7 +1152,7 @@ def get_elevenlabs_voices(api_key: str, api_base_url: str) -> dict:
         raise ValueError("Invalid ElevenLabs API base URL. Must start with http:// or https://")
     try:
         response = requests.get(
-            f"{ELEVENLABS_API_BASE_URL}/v1/voices",
+            f"{api_base_url}/v1/voices",
             headers={
                 "xi-api-key": api_key,
                 "Content-Type": "application/json",
