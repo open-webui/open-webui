@@ -53,6 +53,7 @@ from typing import Any
 from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain_core.retrievers import BaseRetriever
 
+from open_webui.retrieval.bm25_cache import get_or_build_bm25_retriever
 
 def is_youtube_url(url: str) -> bool:
     youtube_regex = r"^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.+$"
@@ -172,10 +173,21 @@ def query_doc_with_hybrid_search(
 
         log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
 
-        bm25_retriever = BM25Retriever.from_texts(
+        #  Legacy open-webui
+        # bm25_retriever = BM25Retriever.from_texts(
+        #     texts=collection_result.documents[0],
+        #     metadatas=collection_result.metadatas[0],
+        # )
+
+        # Still classic langchain BM25 but with cache feature
+        bm25_retriever = get_or_build_bm25_retriever(
+            collection_name=collection_name,
             texts=collection_result.documents[0],
             metadatas=collection_result.metadatas[0],
+            builder=BM25Retriever.from_texts,
         )
+
+
         bm25_retriever.k = k
 
         vector_search_retriever = VectorSearchRetriever(

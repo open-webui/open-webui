@@ -2224,3 +2224,21 @@ else:
     log.warning(
         f"Frontend build directory not found at '{FRONTEND_BUILD_DIR}'. Serving API only."
     )
+
+# Allow running the backend with python
+if __name__ == "__main__":
+    import os
+    import uvicorn
+
+    # Define same env var as dev.sh
+    os.environ.setdefault("CORS_ALLOW_ORIGIN", "http://localhost:5173;http://localhost:8080")
+    port = int(os.environ.get("PORT", 8080))
+
+    # Lancement du serveur en mode debug / reload
+    uvicorn.run(
+        "open_webui.main:app",
+        host="0.0.0.0",
+        port=port,
+        reload=False,
+        forwarded_allow_ips="*"
+    )
