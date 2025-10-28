@@ -49,6 +49,7 @@ from open_webui.utils.payload import convert_payload_openai_to_ollama
 from open_webui.utils.response import (
     convert_response_ollama_to_openai,
     convert_streaming_response_ollama_to_openai,
+    calculate_chat_completion_approximate_total,
 )
 from open_webui.utils.filter import (
     get_sorted_filter_ids,
@@ -342,7 +343,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
             request=request,
             filter_functions=filter_functions,
             filter_type="outlet",
-            form_data=data,
+            form_data=calculate_chat_completion_approximate_total(data),
             extra_params=extra_params,
         )
         return result

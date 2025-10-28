@@ -187,3 +187,32 @@ def convert_embedding_response_ollama_to_openai(response) -> dict:
 
     # Fallback: return as is if unrecognized
     return response
+
+def calculate_chat_completion_approximate_total(data: dict) -> dict:
+    """
+    Intercept data and calculate the approximate total from OpenAI-compatible dict.
+
+    Args:
+        data (dict): The OpenAI-compatible data
+
+    Returns:
+        dict: Data injected with usage approximate_total calculation
+    """
+    if (
+        isinstance(data, dict)
+        and "messages" in data
+        and isinstance(data["messages"], list)
+    ):
+        for message in data["messages"]:
+            if (
+                isinstance(message, dict)
+                and "usage" in message
+                and isinstance(message["usage"], dict)
+                and "approximate_total" not in message["usage"]
+            ):
+                # Inject total if nonexistent
+                seconds = (round(message["usage"].get("prompt_ms", 0)) +
+                           round(message["usage"].get("predicted_ms", 0))) // 1000
+                if seconds > 0:
+                    message["usage"]["approximate_total"] = f"{seconds // 3600}h{(seconds % 3600) // 60}m{seconds % 60}s"
+    return data

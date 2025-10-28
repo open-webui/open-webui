@@ -20,7 +20,6 @@
 	import { imageGenerations } from '$lib/apis/images';
 	import {
 		copyToClipboard as _copyToClipboard,
-		approximateToHumanReadable,
 		getMessageContentParts,
 		sanitizeResponseContent,
 		createMessagesList,
