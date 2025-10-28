@@ -58,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - 🔄 Firecrawl integration was refactored to use the official Firecrawl SDK instead of direct HTTP requests and langchain_community FireCrawlLoader, improving reliability and performance with batch scraping support and enhanced error handling. [#18635](https://github.com/open-webui/open-webui/pull/18635)
+
 ## [0.6.34] - 2025-10-16
 
 ### Added
