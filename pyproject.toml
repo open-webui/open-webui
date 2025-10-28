@@ -14,12 +14,16 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Communications :: Chat",
     "Topic :: Multimedia",
 ]
 
 # Core dependencies - aligned with requirements.txt
 dependencies = [
+    # Python 3.13+ Compatibility
+    "audioop-lts>=0.2.1; python_version >= '3.13'",  # Drop-in replacement for removed audioop module
+
     # Web Framework & Server
     "fastapi>=0.118.0",
     "uvicorn[standard]>=0.37.0",

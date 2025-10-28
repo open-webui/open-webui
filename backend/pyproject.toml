@@ -4,6 +4,9 @@ version = "0.6.34"
 description = "Open WebUI Backend - Python FastAPI server"
 requires-python = ">= 3.11, < 3.14"
 dependencies = [
+    # Python 3.13+ Compatibility
+    "audioop-lts>=0.2.1; python_version >= '3.13'",  # Drop-in replacement for removed audioop module
+
     # Web Framework & Server
     "fastapi>=0.118.0",
     "uvicorn[standard]>=0.37.0",
