@@ -199,12 +199,12 @@
 					toast.warning(uploadedFile.error);
 					knowledge.files = knowledge.files.filter((file) => file.id !== uploadedFile.id);
 				} else {
-          if (syncMode) {
-					  await syncFileHandler(uploadedFile.id);
-          } else {
-					  await addFileHandler(uploadedFile.id);
-          }
-				}
+                    if (syncMode) {
+                        await syncFileHandler(uploadedFile.id);
+                    } else {
+                        await addFileHandler(uploadedFile.id);
+                    }
+                }
 			} else {
 				toast.error($i18n.t('Failed to upload file.'));
 			}
