@@ -1688,6 +1688,21 @@ async def process_chat_response(
 
                     await background_tasks_handler()
 
+            # Record metrics for non-streaming response
+            if "usage" in response:
+                model_used = (
+                    response.get("model")
+                    or metadata.get("selected_model_id")
+                    or form_data.get("model")
+                    or "unknown"
+                )
+                MessageMetrics.insert_new_metrics(
+                    user,
+                    model_used,
+                    response["usage"],
+                    metadata.get("chat_id"),
+                )
+
             return response
         else:
             return response
