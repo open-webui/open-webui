@@ -1,0 +1,85 @@
+# UV Ignore File
+# Files and directories to exclude from uv operations
+
+# Frontend
+node_modules/
+dist/
+build/
+.svelte-kit/
+static/
+src/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+*.egg
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+webui.db
+chroma.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Documentation
+docs/
+*.md
+!pyproject.toml
+!uv.lock
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.circleci/
+
+# Docker
+Dockerfile*
+docker-compose*.yaml
+.dockerignore
+
+# Kubernetes
+kubernetes/
+
+# Other
+*.gif
+*.png
+*.jpg
+*.jpeg
+*.svg
+.git/
+.gitignore
+cypress/
+test/
+

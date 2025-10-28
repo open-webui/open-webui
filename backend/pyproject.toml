@@ -1,24 +1,8 @@
 [project]
 name = "open-webui"
-version = "0.6.34"  # Static version - update manually or via CI/CD
-description = "Open WebUI - User-friendly WebUI for LLMs"
-authors = [
-    { name = "Timothy Jaeryang Baek", email = "tim@openwebui.com" }
-]
-license = { file = "LICENSE" }
-readme = "README.md"
+version = "0.6.34"
+description = "Open WebUI Backend - Python FastAPI server"
 requires-python = ">= 3.11, < 3.14"
-classifiers = [
-    "Development Status :: 4 - Beta",
-    "License :: Other/Proprietary License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Topic :: Communications :: Chat",
-    "Topic :: Multimedia",
-]
-
-# Core dependencies - aligned with requirements.txt
 dependencies = [
     # Web Framework & Server
     "fastapi>=0.118.0",
@@ -268,23 +252,22 @@ requires = ["uv_build>=0.8.22,<0.9.0"]
 
 [tool.uv.build-backend]
 # Configure uv_build for src-layout structure
-module-root = "backend"
+module-root = "."
 
 [tool.hatch.build.targets.wheel]
-sources = ["backend"]
+sources = ["."]
 exclude = [
     ".dockerignore",
     ".gitignore",
     ".webui_secret_key",
     "dev.sh",
+    "dev.ps1",
     "requirements.txt",
     "start.sh",
     "start_windows.bat",
     "webui.db",
     "chroma.sqlite3",
 ]
-force-include = { "CHANGELOG.md" = "open_webui/CHANGELOG.md" }
-# Note: Frontend build artifacts should be pre-built before running uv build
 
 [tool.codespell]
 # Ref: https://github.com/codespell-project/codespell#using-a-config-file
@@ -361,3 +344,4 @@ dev-full = [
     "ipython>=8.20.0",
     "ipdb>=0.13.13",
 ]
+
