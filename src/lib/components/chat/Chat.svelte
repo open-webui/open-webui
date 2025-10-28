@@ -63,7 +63,7 @@
 	} from '$lib/apis/chats';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
-	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
+	import { getAndUpdateUserLocation, getUserSettings, updateUserSettings } from '$lib/apis/users';
 	import {
 		chatCompleted,
 		generateQueries,
@@ -129,6 +129,25 @@
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
+
+	// Auto-save tool preferences when they change
+	let toolSaveTimeout;
+	$: if (selectedToolIds && !loading) {
+		// Debounce to avoid excessive API calls
+		clearTimeout(toolSaveTimeout);
+		toolSaveTimeout = setTimeout(async () => {
+			try {
+				await updateUserSettings(localStorage.token, {
+					ui: {
+						...$settings,
+						defaultToolIds: selectedToolIds
+					}
+				});
+			} catch (error) {
+				console.error('Failed to save tool preferences:', error);
+			}
+		}, 1000); // Wait 1 second after last change before saving
+	}
 
 	let showCommands = false;
 
@@ -219,7 +238,9 @@
 		messageInput?.setText('');
 
 		files = [];
-		selectedToolIds = [];
+		// Load default tools from user settings
+		const userSettings = await getUserSettings(localStorage.token);
+		selectedToolIds = userSettings?.ui?.defaultToolIds || [];
 		selectedFilterIds = [];
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
@@ -1052,6 +1073,10 @@
 
 		if (userSettings) {
 			settings.set(userSettings.ui);
+			// Load persistent tool preferences
+			if (userSettings.ui?.defaultToolIds) {
+				selectedToolIds = userSettings.ui.defaultToolIds;
+			}
 		} else {
 			settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
 		}

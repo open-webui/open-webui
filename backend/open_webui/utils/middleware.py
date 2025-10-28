@@ -2636,8 +2636,6 @@ async def process_chat_response(
                                 if delta:
                                     delta_count += 1
                                     last_delta_data = data
-                                    if chunk_count <= 3 or chunk_count % 10 == 0:
-                                        log.info(f"📦 DELTA #{chunk_count}: delta_count={delta_count}/{delta_chunk_size}, data_keys={list(data.keys()) if data else 'None'}, value={value[:50] if value else 'None'}")
                                     if delta_count >= delta_chunk_size:
                                         await flush_pending_delta_data(delta_chunk_size)
                                 else:
