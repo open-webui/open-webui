@@ -152,6 +152,14 @@ select {
 	-webkit-appearance: none;
 }
 
+.dark select:not([class*='bg-transparent']) {
+	@apply bg-gray-900 text-gray-300;
+}
+
+.dark select option {
+	@apply bg-gray-850 text-white;
+}
+
 @keyframes shimmer {
 	0% {
 		background-position: 200% 0;

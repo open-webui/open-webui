@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import type { Shortcut } from '$lib/shortcuts';
 
@@ -7,17 +7,39 @@
 	export let isMac: boolean;
 
 	const i18n = getContext('i18n');
+	let keyboardLayoutMap: Map<string, string> | undefined;
+
+	onMount(async () => {
+		if (navigator.keyboard && 'getLayoutMap' in navigator.keyboard) {
+			try {
+				keyboardLayoutMap = await navigator.keyboard.getLayoutMap();
+			} catch (error) {
+				console.error('Failed to get keyboard layout map:', error);
+			}
+		}
+	});
 
 	function formatKey(key: string): string {
-		const lowerKey = key.toLowerCase();
-
-		switch (lowerKey) {
+		// First, handle special modifier keys which are defined in lowercase
+		switch (key) {
 			case 'mod':
 				return isMac ? '⌘' : 'Ctrl';
 			case 'shift':
 				return isMac ? '⇧' : 'Shift';
 			case 'alt':
 				return isMac ? '⌥' : 'Alt';
+		}
+
+		// Next, try to use the layout map with the raw KeyboardEvent.code (e.g., "Slash")
+		if (keyboardLayoutMap && keyboardLayoutMap.has(key)) {
+			const mappedKey = keyboardLayoutMap.get(key) ?? key;
+			// For single characters, make them uppercase. For others (like 'CapsLock'), leave as is.
+			return mappedKey.length === 1 ? mappedKey.toUpperCase() : mappedKey;
+		}
+
+		// Finally, provide a fallback for browsers without getLayoutMap or for keys not in the map
+		const lowerKey = key.toLowerCase();
+		switch (lowerKey) {
 			case 'backspace':
 			case 'delete':
 				return isMac ? '⌫' : 'Delete';
@@ -40,8 +62,11 @@
 			case 'semicolon':
 				return ';';
 			default:
-				if (lowerKey.startsWith('key')) return key.slice(-1);
-				if (lowerKey.startsWith('digit')) return key.slice(-1);
+				// For 'KeyA', 'Digit1', etc., extract the last character.
+				if (lowerKey.startsWith('key') || lowerKey.startsWith('digit')) {
+					return key.slice(-1).toUpperCase();
+				}
+				// For anything else, just uppercase it.
 				return key.toUpperCase();
 		}
 	}
