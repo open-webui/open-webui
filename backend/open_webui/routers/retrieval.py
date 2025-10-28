@@ -1765,7 +1765,7 @@ def process_web(
         collection_name = form_data.collection_name
         if not collection_name:
             collection_name = calculate_sha256_string(form_data.url)[:63]
-        
+
         content, docs = get_content_from_url(request, form_data.url)
         log.debug(f"text_content: {content}")
         
