@@ -3343,6 +3343,10 @@ DEEPGRAM_API_KEY = PersistentConfig(
     os.getenv("DEEPGRAM_API_KEY", ""),
 )
 
+# ElevenLabs configuration
+ELEVENLABS_API_BASE_URL = os.getenv(
+    "ELEVENLABS_API_BASE_URL", "https://api.elevenlabs.io"
+)
 
 AUDIO_STT_OPENAI_API_BASE_URL = PersistentConfig(
     "AUDIO_STT_OPENAI_API_BASE_URL",
