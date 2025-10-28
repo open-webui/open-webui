@@ -164,120 +164,123 @@
 			})
 		]);
 
-// Helper function to check if the pressed keys match the shortcut definition
-	const checkShortcut = (event: KeyboardEvent, keys: string[]): boolean => {
-		const lowerCaseKeys = keys.map((key) => key.toLowerCase());
+		// Helper function to check if the pressed keys match the shortcut definition
+		const checkShortcut = (event: KeyboardEvent, keys: string[]): boolean => {
+			const lowerCaseKeys = keys.map((key) => key.toLowerCase());
 
-		const isModPressed = lowerCaseKeys.includes('mod') ? event.ctrlKey || event.metaKey : true;
-		const isShiftPressed = lowerCaseKeys.includes('shift') ? event.shiftKey : true;
-		const isAltPressed = lowerCaseKeys.includes('alt') ? event.altKey : true;
-		const isCtrlPressed = lowerCaseKeys.includes('ctrl') ? event.ctrlKey : true;
+			const isModPressed = lowerCaseKeys.includes('mod') ? event.ctrlKey || event.metaKey : true;
+			const isShiftPressed = lowerCaseKeys.includes('shift') ? event.shiftKey : true;
+			const isAltPressed = lowerCaseKeys.includes('alt') ? event.altKey : true;
+			const isCtrlPressed = lowerCaseKeys.includes('ctrl') ? event.ctrlKey : true;
 
-		const mainKeys = lowerCaseKeys.filter((key) => !['mod', 'shift', 'alt', 'ctrl'].includes(key));
+			const mainKeys = lowerCaseKeys.filter(
+				(key) => !['mod', 'shift', 'alt', 'ctrl'].includes(key)
+			);
 
-		if (mainKeys.length > 0 && !mainKeys.includes(event.code.toLowerCase())) {
-			return false;
-		}
-
-		let modConflict = false;
-		if (keys.includes('mod')) {
-			if (!lowerCaseKeys.includes('shift') && event.shiftKey) modConflict = true;
-			if (!lowerCaseKeys.includes('alt') && event.altKey) modConflict = true;
-		}
-
-		return (
-			!modConflict &&
-			isModPressed &&
-			isShiftPressed &&
-			isAltPressed &&
-			isCtrlPressed &&
-			(event.ctrlKey || event.metaKey) === (lowerCaseKeys.includes('mod') || lowerCaseKeys.includes('ctrl')) &&
-			event.shiftKey === lowerCaseKeys.includes('shift') &&
-			event.altKey === lowerCaseKeys.includes('alt')
-		);
-	};
-
-const setupKeyboardShortcuts = () => {
-	document.addEventListener('keydown', async (event) => {
-		for (const shortcutName in shortcuts) {
-			const shortcut = shortcuts[shortcutName];
-			if (checkShortcut(event, shortcut.keys)) {
-				// Here you can map the shortcut name to an action
-				// This is a simple example, you might want a more robust solution
-				switch (shortcutName) {
-					case Shortcut.SEARCH:
-							event.preventDefault();
-						showSearch.set(!$showSearch);
-						break;
-					case Shortcut.NEW_CHAT:
-							event.preventDefault();
-						document.getElementById('sidebar-new-chat-button')?.click();
-						break;
-					case Shortcut.FOCUS_INPUT:
-							event.preventDefault();
-						document.getElementById('chat-input')?.focus();
-						break;
-					case Shortcut.COPY_LAST_CODE_BLOCK:
-							event.preventDefault();
-						[...document.getElementsByClassName('copy-code-button')]?.at(-1)?.click();
-						break;
-					case Shortcut.COPY_LAST_RESPONSE:
-							event.preventDefault();
-						[...document.getElementsByClassName('copy-response-button')]?.at(-1)?.click();
-						break;
-					case Shortcut.TOGGLE_SIDEBAR:
-							event.preventDefault();
-						showSidebar.set(!$showSidebar);
-						break;
-					case Shortcut.DELETE_CHAT:
-							event.preventDefault();
-						document.getElementById('delete-chat-button')?.click();
-						break;
-					case Shortcut.OPEN_SETTINGS:
-							event.preventDefault();
-						showSettings.set(!$showSettings);
-						break;
-					case Shortcut.SHOW_SHORTCUTS:
-							event.preventDefault();
-						showShortcuts.set(!$showShortcuts);
-						break;
-					case Shortcut.CLOSE_MODAL:
-						event.preventDefault();
-						showSettings.set(false);
-						showShortcuts.set(false);
-						break;
-					case Shortcut.NEW_TEMPORARY_CHAT:
-						event.preventDefault();
-						if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
-							temporaryChatEnabled.set(true);
-						} else {
-							temporaryChatEnabled.set(!$temporaryChatEnabled);
-						}
-						await goto('/');
-						setTimeout(() => {
-							document.getElementById('new-chat-button')?.click();
-						}, 0);
-						break;
-					case Shortcut.GENERATE_MESSAGE_PAIR:
-						event.preventDefault();
-						document.getElementById('generate-message-pair-button')?.click();
-						break;
-
-					case Shortcut.REGENERATE_RESPONSE:
-						event.preventDefault();
-						[...document.getElementsByClassName('regenerate-response-button')]?.at(-1)?.click();
-						break;
-					case Shortcut.STOP_GENERATING:
-						// Placeholder for future implementation
-						break;
-					case Shortcut.PREVENT_FILE_CREATION:
-						// This shortcut is handled by the paste event in MessageInput.svelte
-						break;
-				}
+			if (mainKeys.length > 0 && !mainKeys.includes(event.code.toLowerCase())) {
+				return false;
 			}
-		}
-	});
-};
+
+			let modConflict = false;
+			if (keys.includes('mod')) {
+				if (!lowerCaseKeys.includes('shift') && event.shiftKey) modConflict = true;
+				if (!lowerCaseKeys.includes('alt') && event.altKey) modConflict = true;
+			}
+
+			return (
+				!modConflict &&
+				isModPressed &&
+				isShiftPressed &&
+				isAltPressed &&
+				isCtrlPressed &&
+				(event.ctrlKey || event.metaKey) ===
+					(lowerCaseKeys.includes('mod') || lowerCaseKeys.includes('ctrl')) &&
+				event.shiftKey === lowerCaseKeys.includes('shift') &&
+				event.altKey === lowerCaseKeys.includes('alt')
+			);
+		};
+
+		const setupKeyboardShortcuts = () => {
+			document.addEventListener('keydown', async (event) => {
+				for (const shortcutName in shortcuts) {
+					const shortcut = shortcuts[shortcutName];
+					if (checkShortcut(event, shortcut.keys)) {
+						// Here you can map the shortcut name to an action
+						// This is a simple example, you might want a more robust solution
+						switch (shortcutName) {
+							case Shortcut.SEARCH:
+								event.preventDefault();
+								showSearch.set(!$showSearch);
+								break;
+							case Shortcut.NEW_CHAT:
+								event.preventDefault();
+								document.getElementById('sidebar-new-chat-button')?.click();
+								break;
+							case Shortcut.FOCUS_INPUT:
+								event.preventDefault();
+								document.getElementById('chat-input')?.focus();
+								break;
+							case Shortcut.COPY_LAST_CODE_BLOCK:
+								event.preventDefault();
+								[...document.getElementsByClassName('copy-code-button')]?.at(-1)?.click();
+								break;
+							case Shortcut.COPY_LAST_RESPONSE:
+								event.preventDefault();
+								[...document.getElementsByClassName('copy-response-button')]?.at(-1)?.click();
+								break;
+							case Shortcut.TOGGLE_SIDEBAR:
+								event.preventDefault();
+								showSidebar.set(!$showSidebar);
+								break;
+							case Shortcut.DELETE_CHAT:
+								event.preventDefault();
+								document.getElementById('delete-chat-button')?.click();
+								break;
+							case Shortcut.OPEN_SETTINGS:
+								event.preventDefault();
+								showSettings.set(!$showSettings);
+								break;
+							case Shortcut.SHOW_SHORTCUTS:
+								event.preventDefault();
+								showShortcuts.set(!$showShortcuts);
+								break;
+							case Shortcut.CLOSE_MODAL:
+								event.preventDefault();
+								showSettings.set(false);
+								showShortcuts.set(false);
+								break;
+							case Shortcut.NEW_TEMPORARY_CHAT:
+								event.preventDefault();
+								if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
+									temporaryChatEnabled.set(true);
+								} else {
+									temporaryChatEnabled.set(!$temporaryChatEnabled);
+								}
+								await goto('/');
+								setTimeout(() => {
+									document.getElementById('new-chat-button')?.click();
+								}, 0);
+								break;
+							case Shortcut.GENERATE_MESSAGE_PAIR:
+								event.preventDefault();
+								document.getElementById('generate-message-pair-button')?.click();
+								break;
+
+							case Shortcut.REGENERATE_RESPONSE:
+								event.preventDefault();
+								[...document.getElementsByClassName('regenerate-response-button')]?.at(-1)?.click();
+								break;
+							case Shortcut.STOP_GENERATING:
+								// Placeholder for future implementation
+								break;
+							case Shortcut.PREVENT_FILE_CREATION:
+								// This shortcut is handled by the paste event in MessageInput.svelte
+								break;
+						}
+					}
+				}
+			});
+		};
 		setupKeyboardShortcuts();
 
 		if ($user?.role === 'admin' && ($settings?.showChangelog ?? true)) {

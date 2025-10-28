@@ -129,7 +129,8 @@
 	};
 
 	const createFolder = async ({ name, data }) => {
-		if (name === '') {
+		name = name?.trim();
+		if (!name) {
 			toast.error($i18n.t('Folder name cannot be empty.'));
 			return;
 		}
@@ -479,6 +480,12 @@
 <ChannelModal
 	bind:show={showCreateChannel}
 	onSubmit={async ({ name, access_control }) => {
+		name = name?.trim();
+		if (!name) {
+			toast.error($i18n.t('Channel name cannot be empty.'));
+			return;
+		}
+
 		const res = await createNewChannel(localStorage.token, {
 			name: name,
 			access_control: access_control
@@ -884,7 +891,14 @@
 				</div>
 
 				{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
-					<PinnedModelList bind:selectedChatId {shiftKey} />
+					<Folder
+						className="px-2 mt-0.5"
+						name={$i18n.t('Models')}
+						chevron={false}
+						dragAndDrop={false}
+					>
+						<PinnedModelList bind:selectedChatId {shiftKey} />
+					</Folder>
 				{/if}
 
 				{#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0)}
