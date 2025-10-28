@@ -163,6 +163,7 @@ class TTSConfigForm(BaseModel):
     AZURE_SPEECH_REGION: str
     AZURE_SPEECH_BASE_URL: str
     AZURE_SPEECH_OUTPUT_FORMAT: str
+    ELEVENLABS_API_BASE_URL: str = "https://api.elevenlabs.io"
 
 
 class STTConfigForm(BaseModel):
@@ -200,6 +201,7 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             "AZURE_SPEECH_REGION": request.app.state.config.TTS_AZURE_SPEECH_REGION,
             "AZURE_SPEECH_BASE_URL": request.app.state.config.TTS_AZURE_SPEECH_BASE_URL,
             "AZURE_SPEECH_OUTPUT_FORMAT": request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT,
+            "ELEVENLABS_API_BASE_URL": request.app.state.config.AUDIO_TTS_ELEVENLABS_API_BASE_URL,
         },
         "stt": {
             "OPENAI_API_BASE_URL": request.app.state.config.STT_OPENAI_API_BASE_URL,
@@ -231,12 +233,12 @@ async def update_audio_config(
     request.app.state.config.TTS_VOICE = form_data.tts.VOICE
     request.app.state.config.TTS_SPLIT_ON = form_data.tts.SPLIT_ON
     request.app.state.config.TTS_AZURE_SPEECH_REGION = form_data.tts.AZURE_SPEECH_REGION
-    request.app.state.config.TTS_AZURE_SPEECH_BASE_URL = (
-        form_data.tts.AZURE_SPEECH_BASE_URL
-    )
-    request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = (
-        form_data.tts.AZURE_SPEECH_OUTPUT_FORMAT
-    )
+    request.app.state.config.TTS_AZURE_SPEECH_BASE_URL = form_data.tts.AZURE_SPEECH_BASE_URL
+    request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = form_data.tts.AZURE_SPEECH_OUTPUT_FORMAT
+    # Update ElevenLabs API base URL if provided and valid
+    elevenlabs_url = form_data.tts.ELEVENLABS_API_BASE_URL
+    if elevenlabs_url and (elevenlabs_url.startswith("http://") or elevenlabs_url.startswith("https://")):
+        request.app.state.config.AUDIO_TTS_ELEVENLABS_API_BASE_URL = elevenlabs_url
 
     request.app.state.config.STT_OPENAI_API_BASE_URL = form_data.stt.OPENAI_API_BASE_URL
     request.app.state.config.STT_OPENAI_API_KEY = form_data.stt.OPENAI_API_KEY
@@ -408,12 +410,15 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             )
 
         try:
+            api_base_url = getattr(request.app.state.config, "AUDIO_TTS_ELEVENLABS_API_BASE_URL", "https://api.elevenlabs.io")
+            if not api_base_url.startswith("http://") and not api_base_url.startswith("https://"):
+                raise ValueError("Invalid ElevenLabs API base URL. Must start with http:// or https://")
             timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
             async with aiohttp.ClientSession(
                 timeout=timeout, trust_env=True
             ) as session:
                 async with session.post(
-                    f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
+                    f"{api_base_url}/v1/text-to-speech/{voice_id}",
                     json={
                         "text": payload["input"],
                         "model_id": request.app.state.config.TTS_MODEL,
@@ -1036,8 +1041,11 @@ def get_available_models(request: Request) -> list[dict]:
             available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
     elif request.app.state.config.TTS_ENGINE == "elevenlabs":
         try:
+            api_base_url = getattr(request.app.state.config, "AUDIO_TTS_ELEVENLABS_API_BASE_URL", "https://api.elevenlabs.io")
+            if not api_base_url.startswith("http://") and not api_base_url.startswith("https://"):
+                raise ValueError("Invalid ElevenLabs API base URL. Must start with http:// or https://")
             response = requests.get(
-                "https://api.elevenlabs.io/v1/models",
+                f"{api_base_url}/v1/models",
                 headers={
                     "xi-api-key": request.app.state.config.TTS_API_KEY,
                     "Content-Type": "application/json",
@@ -1097,11 +1105,12 @@ def get_available_voices(request) -> dict:
             }
     elif request.app.state.config.TTS_ENGINE == "elevenlabs":
         try:
+            api_base_url = getattr(request.app.state.config, "AUDIO_TTS_ELEVENLABS_API_BASE_URL", "https://api.elevenlabs.io")
             available_voices = get_elevenlabs_voices(
-                api_key=request.app.state.config.TTS_API_KEY
+                api_key=request.app.state.config.TTS_API_KEY,
+                api_base_url=api_base_url
             )
         except Exception:
-            # Avoided @lru_cache with exception
             pass
     elif request.app.state.config.TTS_ENGINE == "azure":
         try:
@@ -1129,7 +1138,7 @@ def get_available_voices(request) -> dict:
 
 
 @lru_cache
-def get_elevenlabs_voices(api_key: str) -> dict:
+def get_elevenlabs_voices(api_key: str, api_base_url: str) -> dict:
     """
     Note, set the following in your .env file to use Elevenlabs:
     AUDIO_TTS_ENGINE=elevenlabs
@@ -1138,10 +1147,12 @@ def get_elevenlabs_voices(api_key: str) -> dict:
     AUDIO_TTS_MODEL=eleven_multilingual_v2
     """
 
+    # Validate base URL
+    if not api_base_url.startswith("http://") and not api_base_url.startswith("https://"):
+        raise ValueError("Invalid ElevenLabs API base URL. Must start with http:// or https://")
     try:
-        # TODO: Add retries
         response = requests.get(
-            "https://api.elevenlabs.io/v1/voices",
+            f"{api_base_url}/v1/voices",
             headers={
                 "xi-api-key": api_key,
                 "Content-Type": "application/json",
@@ -1154,7 +1165,6 @@ def get_elevenlabs_voices(api_key: str) -> dict:
         for voice in voices_data.get("voices", []):
             voices[voice["voice_id"]] = voice["name"]
     except requests.RequestException as e:
-        # Avoid @lru_cache with exception
         log.error(f"Error fetching voices: {str(e)}")
         raise RuntimeError(f"Error fetching voices: {str(e)}")
 
