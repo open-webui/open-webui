@@ -588,6 +588,14 @@ async def chat_web_search_handler(
 
         response = res["choices"][0]["message"]["content"]
 
+        # Normalize response if it's multimodal content (list) to plain text
+        if isinstance(response, list):
+            text_response = ""
+            for item in response:
+                if isinstance(item, dict) and item.get("type") == "text":
+                    text_response += item.get("text", "")
+            response = text_response
+
         try:
             bracket_start = response.find("{")
             bracket_end = response.rfind("}") + 1
@@ -599,18 +607,18 @@ async def chat_web_search_handler(
             queries = json.loads(response)
             queries = queries.get("queries", [])
         except Exception as e:
-            queries = [response]
+            queries = [response] if response else []
 
         if ENABLE_QUERIES_CACHE:
             request.state.cached_queries = queries
 
     except Exception as e:
         log.exception(e)
-        queries = [user_message]
+        queries = [user_message] if user_message else []
 
     # Check if generated queries are empty
-    if len(queries) == 1 and queries[0].strip() == "":
-        queries = [user_message]
+    if len(queries) == 1 and queries[0] and isinstance(queries[0], str) and queries[0].strip() == "":
+        queries = [user_message] if user_message else []
 
     # Check if queries are not found
     if len(queries) == 0:
@@ -625,6 +633,24 @@ async def chat_web_search_handler(
             }
         )
         return form_data
+
+    # Ensure all queries are strings (defensive programming)
+    normalized_queries = []
+    for q in queries:
+        if isinstance(q, str):
+            normalized_queries.append(q)
+        elif isinstance(q, list):
+            # Extract text from multimodal content if somehow a list got through
+            text_content = ""
+            for item in q:
+                if isinstance(item, dict) and item.get("type") == "text":
+                    text_content += item.get("text", "")
+            if text_content:
+                normalized_queries.append(text_content)
+        elif q:  # Handle any other non-None value
+            normalized_queries.append(str(q))
+
+    queries = normalized_queries
 
     await event_emitter(
         {
