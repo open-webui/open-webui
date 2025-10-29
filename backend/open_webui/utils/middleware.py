@@ -2301,6 +2301,15 @@ async def process_chat_response(
                 else last_assistant_message if last_assistant_message else ""
             )
 
+            # Normalize multimodal content (with images) to plain text
+            # When user attaches images, content is a list: [{"type": "text", "text": "..."}, {"type": "image_url", ...}]
+            if isinstance(content, list):
+                text_content = ""
+                for item in content:
+                    if isinstance(item, dict) and item.get("type") == "text":
+                        text_content += item.get("text", "")
+                content = text_content
+
             response_usage = None  # Initialize response_usage at the top level
             chunk_count = 0  # Initialize chunk_count at the top level for logging
 
@@ -2668,9 +2677,18 @@ async def process_chat_response(
                     if content_blocks:
                         # Clean up the last text block
                         if content_blocks[-1]["type"] == "text":
-                            content_blocks[-1]["content"] = content_blocks[-1][
-                                "content"
-                            ].strip()
+                            # Handle both string and multimodal list content
+                            last_content = content_blocks[-1]["content"]
+                            if isinstance(last_content, list):
+                                # Extract and strip text from multimodal content
+                                text_content = ""
+                                for item in last_content:
+                                    if item.get("type") == "text":
+                                        text_content += item.get("text", "")
+                                content_blocks[-1]["content"] = text_content.strip()
+                            else:
+                                # Handle simple string content
+                                content_blocks[-1]["content"] = last_content.strip()
 
                             if not content_blocks[-1]["content"]:
                                 content_blocks.pop()
