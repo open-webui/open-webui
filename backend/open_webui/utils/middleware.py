@@ -1925,7 +1925,18 @@ async def process_chat_response(
 
                 for block in content_blocks:
                     if block["type"] == "text":
-                        block_content = block["content"].strip()
+                        # Handle both string content and multimodal list content (with images)
+                        if isinstance(block["content"], list):
+                            # Extract text from multimodal content
+                            block_content = ""
+                            for item in block["content"]:
+                                if item.get("type") == "text":
+                                    block_content += item.get("text", "")
+                            block_content = block_content.strip()
+                        else:
+                            # Handle simple string content
+                            block_content = block["content"].strip()
+
                         if block_content:
                             content = f"{content}{block_content}\n"
                     elif block["type"] == "tool_calls":
