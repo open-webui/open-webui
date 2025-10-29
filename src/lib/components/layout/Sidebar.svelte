@@ -369,10 +369,6 @@
 						navElement.style['-webkit-app-region'] = 'drag';
 					}
 				}
-
-				if (!$showSidebar && !value) {
-					showSidebar.set(true);
-				}
 			}),
 			showSidebar.subscribe(async (value) => {
 				localStorage.sidebar = value;
