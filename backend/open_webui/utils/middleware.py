@@ -1688,6 +1688,32 @@ async def process_chat_response(
 
                     await background_tasks_handler()
 
+            # Record metrics for non-streaming response
+            model_used = (
+                response.get("model")
+                or metadata.get("selected_model_id")
+                or form_data.get("model")
+                or "unknown"
+            )
+
+            # Use actual usage data if available, otherwise use minimal estimated values
+            if "usage" in response:
+                usage_data = response["usage"]
+            else:
+                # Record the prompt even without usage data using 0 values to indicate missing data
+                usage_data = {
+                    "completion_tokens": 0,  # 0 to indicate no usage data was available
+                    "prompt_tokens": 0,  # 0 to indicate no usage data was available
+                    "total_tokens": 0,
+                }
+
+            MessageMetrics.insert_new_metrics(
+                user,
+                model_used,
+                usage_data,
+                metadata.get("chat_id"),
+            )
+
             return response
         else:
             return response
@@ -1707,6 +1733,9 @@ async def process_chat_response(
                 metadata["chat_id"], metadata["message_id"]
             )
             content = message.get("content", "") if message else ""
+
+            # Track if metrics have been recorded during streaming
+            metrics_recorded = False
 
             try:
                 # Separate sources events from other events
@@ -1777,6 +1806,7 @@ async def process_chat_response(
                                 data["usage"],
                                 metadata.get("chat_id"),
                             )
+                            metrics_recorded = True
 
                         if "selected_model_id" in data:
                             Chats.upsert_message_to_chat_by_id_and_message_id(
@@ -1940,6 +1970,26 @@ async def process_chat_response(
                         {
                             **event,
                         },
+                    )
+
+                # Record metrics as fallback if not captured during streaming
+                if not metrics_recorded:
+                    model_used = (
+                        metadata.get("selected_model_id")
+                        or form_data.get("model")
+                        or "unknown"
+                    )
+                    # Use 0 values when usage data wasn't in the stream to clearly identify missing data
+                    fallback_usage = {
+                        "completion_tokens": 0,  # 0 to indicate no usage data was available
+                        "prompt_tokens": 0,  # 0 to indicate no usage data was available
+                        "total_tokens": 0,
+                    }
+                    MessageMetrics.insert_new_metrics(
+                        user,
+                        model_used,
+                        fallback_usage,
+                        metadata.get("chat_id"),
                     )
 
                 await background_tasks_handler()
