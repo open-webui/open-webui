@@ -13,10 +13,7 @@ def item_assigned_to_user_groups(user_id: str, item, permission: str = "write") 
         "sm11538@nyu.edu",
         "ms15138@nyu.edu", 
         "mb484@nyu.edu",
-        "cg4532@nyu.edu",
-        "jy4421@nyu.edu",
-        "ht2490@nyu.edu",
-        "ps5226@nyu.edu"
+        "cg4532@nyu.edu"
     ]
     is_super_admin = (
         user and user.id == Users.get_first_user().id or 
