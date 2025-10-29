@@ -1050,6 +1050,45 @@ OPENAI_API_CONFIGS = PersistentConfig(
     {},
 )
 
+####################################
+# GATEWAYZ_AI
+####################################
+
+ENABLE_GATEWAYZ_API = PersistentConfig(
+    "ENABLE_GATEWAYZ_API",
+    "gatewayz.enable",
+    os.environ.get("ENABLE_GATEWAYZ_API", "True").lower() == "true",
+)
+
+GATEWAYZ_API_BASE_URL = os.environ.get("GATEWAYZ_API_BASE_URL", "")
+GATEWAYZ_API_BASE_URLS = os.environ.get("GATEWAYZ_API_BASE_URLS", "")
+GATEWAYZ_API_BASE_URLS = (
+    GATEWAYZ_API_BASE_URLS if GATEWAYZ_API_BASE_URLS != "" else GATEWAYZ_API_BASE_URL
+)
+
+GATEWAYZ_API_BASE_URLS = [
+    url.strip() if url != "" else "https://api.gatewayz.ai/v1"
+    for url in GATEWAYZ_API_BASE_URLS.split(";")
+]
+GATEWAYZ_API_BASE_URLS = PersistentConfig(
+    "GATEWAYZ_API_BASE_URLS", "gatewayz.api_base_urls", GATEWAYZ_API_BASE_URLS
+)
+
+GATEWAYZ_API_KEY = os.environ.get("GATEWAYZ_API_KEY", "")
+GATEWAYZ_API_KEYS = os.environ.get("GATEWAYZ_API_KEYS", "")
+GATEWAYZ_API_KEYS = GATEWAYZ_API_KEYS if GATEWAYZ_API_KEYS != "" else GATEWAYZ_API_KEY
+
+GATEWAYZ_API_KEYS = [key.strip() for key in GATEWAYZ_API_KEYS.split(";")]
+GATEWAYZ_API_KEYS = PersistentConfig(
+    "GATEWAYZ_API_KEYS", "gatewayz.api_keys", GATEWAYZ_API_KEYS
+)
+
+GATEWAYZ_API_CONFIGS = PersistentConfig(
+    "GATEWAYZ_API_CONFIGS",
+    "gatewayz.api_configs",
+    {},
+)
+
 # Get the actual OpenAI API key based on the base URL
 OPENAI_API_KEY = ""
 try:

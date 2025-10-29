@@ -72,6 +72,7 @@ from open_webui.routers import (
     images,
     ollama,
     openai,
+    gatewayz,
     retrieval,
     pipelines,
     tasks,
@@ -119,6 +120,11 @@ from open_webui.config import (
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     OPENAI_API_CONFIGS,
+    # Gatewayz
+    ENABLE_GATEWAYZ_API,
+    GATEWAYZ_API_BASE_URLS,
+    GATEWAYZ_API_KEYS,
+    GATEWAYZ_API_CONFIGS,
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
     # Model list
@@ -674,6 +680,19 @@ app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
 app.state.config.OPENAI_API_CONFIGS = OPENAI_API_CONFIGS
 
 app.state.OPENAI_MODELS = {}
+
+########################################
+#
+# GATEWAYZ
+#
+########################################
+
+app.state.config.ENABLE_GATEWAYZ_API = ENABLE_GATEWAYZ_API
+app.state.config.GATEWAYZ_API_BASE_URLS = GATEWAYZ_API_BASE_URLS
+app.state.config.GATEWAYZ_API_KEYS = GATEWAYZ_API_KEYS
+app.state.config.GATEWAYZ_API_CONFIGS = GATEWAYZ_API_CONFIGS
+
+app.state.GATEWAYZ_MODELS = {}
 
 ########################################
 #
@@ -1282,6 +1301,7 @@ app.mount("/ws", socket_app)
 
 app.include_router(ollama.router, prefix="/ollama", tags=["ollama"])
 app.include_router(openai.router, prefix="/openai", tags=["openai"])
+app.include_router(gatewayz.router, prefix="/gatewayz", tags=["gatewayz"])
 
 
 app.include_router(pipelines.router, prefix="/api/v1/pipelines", tags=["pipelines"])

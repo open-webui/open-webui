@@ -6,6 +6,7 @@
 
 	import { getOllamaConfig, updateOllamaConfig } from '$lib/apis/ollama';
 	import { getOpenAIConfig, updateOpenAIConfig, getOpenAIModels } from '$lib/apis/openai';
+	import { getGatewayzConfig, updateGatewayzConfig, getGatewayzModels } from '$lib/apis/gatewayz';
 	import { getModels as _getModels, getBackendConfig } from '$lib/apis';
 	import { getConnectionsConfig, setConnectionsConfig } from '$lib/apis/configs';
 
@@ -17,6 +18,7 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 
 	import OpenAIConnection from './Connections/OpenAIConnection.svelte';
+	import GatewayzConnection from './Connections/GatewayzConnection.svelte';
 	import AddConnectionModal from '$lib/components/AddConnectionModal.svelte';
 	import OllamaConnection from './Connections/OllamaConnection.svelte';
 
@@ -40,14 +42,20 @@
 	let OPENAI_API_BASE_URLS = [''];
 	let OPENAI_API_CONFIGS = {};
 
+	let GATEWAYZ_API_KEYS = [''];
+	let GATEWAYZ_API_BASE_URLS = [''];
+	let GATEWAYZ_API_CONFIGS = {};
+
 	let ENABLE_OPENAI_API: null | boolean = null;
 	let ENABLE_OLLAMA_API: null | boolean = null;
+	let ENABLE_GATEWAYZ_API: null | boolean = null;
 
 	let connectionsConfig = null;
 
 	let pipelineUrls = {};
 	let showAddOpenAIConnectionModal = false;
 	let showAddOllamaConnectionModal = false;
+	let showAddGatewayzConnectionModal = false;
 
 	const updateOpenAIHandler = async () => {
 		if (ENABLE_OPENAI_API !== null) {
@@ -106,6 +114,43 @@
 		}
 	};
 
+	const updateGatewayzHandler = async () => {
+		if (ENABLE_GATEWAYZ_API !== null) {
+			// Remove trailing slashes
+			GATEWAYZ_API_BASE_URLS = GATEWAYZ_API_BASE_URLS.map((url) => url.replace(/\/$/, ''));
+
+			// Check if API KEYS length is same than API URLS length
+			if (GATEWAYZ_API_KEYS.length !== GATEWAYZ_API_BASE_URLS.length) {
+				// if there are more keys than urls, remove the extra keys
+				if (GATEWAYZ_API_KEYS.length > GATEWAYZ_API_BASE_URLS.length) {
+					GATEWAYZ_API_KEYS = GATEWAYZ_API_KEYS.slice(0, GATEWAYZ_API_BASE_URLS.length);
+				}
+
+				// if there are more urls than keys, add empty keys
+				if (GATEWAYZ_API_KEYS.length < GATEWAYZ_API_BASE_URLS.length) {
+					const diff = GATEWAYZ_API_BASE_URLS.length - GATEWAYZ_API_KEYS.length;
+					for (let i = 0; i < diff; i++) {
+						GATEWAYZ_API_KEYS.push('');
+					}
+				}
+			}
+
+			const res = await updateGatewayzConfig(localStorage.token, {
+				ENABLE_GATEWAYZ_API: ENABLE_GATEWAYZ_API,
+				GATEWAYZ_API_BASE_URLS: GATEWAYZ_API_BASE_URLS,
+				GATEWAYZ_API_KEYS: GATEWAYZ_API_KEYS,
+				GATEWAYZ_API_CONFIGS: GATEWAYZ_API_CONFIGS
+			}).catch((error) => {
+				toast.error(`${error}`);
+			});
+
+			if (res) {
+				toast.success($i18n.t('Gatewayz API settings updated'));
+				await models.set(await getModels());
+			}
+		}
+	};
+
 	const updateConnectionsHandler = async () => {
 		const res = await setConnectionsConfig(localStorage.token, connectionsConfig).catch((error) => {
 			toast.error(`${error}`);
@@ -136,10 +181,19 @@
 		await updateOllamaHandler();
 	};
 
+	const addGatewayzConnectionHandler = async (connection) => {
+		GATEWAYZ_API_BASE_URLS = [...GATEWAYZ_API_BASE_URLS, connection.url];
+		GATEWAYZ_API_KEYS = [...GATEWAYZ_API_KEYS, connection.key];
+		GATEWAYZ_API_CONFIGS[GATEWAYZ_API_BASE_URLS.length - 1] = connection.config;
+
+		await updateGatewayzHandler();
+	};
+
 	onMount(async () => {
 		if ($user?.role === 'admin') {
 			let ollamaConfig = {};
 			let openaiConfig = {};
+			let gatewayzConfig = {};
 
 			await Promise.all([
 				(async () => {
@@ -149,16 +203,24 @@
 					openaiConfig = await getOpenAIConfig(localStorage.token);
 				})(),
 				(async () => {
+					gatewayzConfig = await getGatewayzConfig(localStorage.token);
+				})(),
+				(async () => {
 					connectionsConfig = await getConnectionsConfig(localStorage.token);
 				})()
 			]);
 
 			ENABLE_OPENAI_API = openaiConfig.ENABLE_OPENAI_API;
 			ENABLE_OLLAMA_API = ollamaConfig.ENABLE_OLLAMA_API;
+			ENABLE_GATEWAYZ_API = gatewayzConfig.ENABLE_GATEWAYZ_API;
 
 			OPENAI_API_BASE_URLS = openaiConfig.OPENAI_API_BASE_URLS;
 			OPENAI_API_KEYS = openaiConfig.OPENAI_API_KEYS;
 			OPENAI_API_CONFIGS = openaiConfig.OPENAI_API_CONFIGS;
+
+			GATEWAYZ_API_BASE_URLS = gatewayzConfig.GATEWAYZ_API_BASE_URLS;
+			GATEWAYZ_API_KEYS = gatewayzConfig.GATEWAYZ_API_KEYS;
+			GATEWAYZ_API_CONFIGS = gatewayzConfig.GATEWAYZ_API_CONFIGS;
 
 			OLLAMA_BASE_URLS = ollamaConfig.OLLAMA_BASE_URLS;
 			OLLAMA_API_CONFIGS = ollamaConfig.OLLAMA_API_CONFIGS;
@@ -184,6 +246,27 @@
 				});
 			}
 
+			if (ENABLE_GATEWAYZ_API) {
+				// get url and idx
+				for (const [idx, url] of GATEWAYZ_API_BASE_URLS.entries()) {
+					if (!GATEWAYZ_API_CONFIGS[idx]) {
+						// Legacy support, url as key
+						GATEWAYZ_API_CONFIGS[idx] = GATEWAYZ_API_CONFIGS[url] || {};
+					}
+				}
+
+				GATEWAYZ_API_BASE_URLS.forEach(async (url, idx) => {
+					GATEWAYZ_API_CONFIGS[idx] = GATEWAYZ_API_CONFIGS[idx] || {};
+					if (!(GATEWAYZ_API_CONFIGS[idx]?.enable ?? true)) {
+						return;
+					}
+					const res = await getGatewayzModels(localStorage.token, idx);
+					if (res.pipelines) {
+						pipelineUrls[url] = true;
+					}
+				});
+			}
+
 			if (ENABLE_OLLAMA_API) {
 				for (const [idx, url] of OLLAMA_BASE_URLS.entries()) {
 					if (!OLLAMA_API_CONFIGS[idx]) {
@@ -196,6 +279,7 @@
 
 	const submitHandler = async () => {
 		updateOpenAIHandler();
+		updateGatewayzHandler();
 		updateOllamaHandler();
 
 		dispatch('save');
@@ -210,6 +294,11 @@
 />
 
 <AddConnectionModal
+	bind:show={showAddGatewayzConnectionModal}
+	onSubmit={addGatewayzConnectionHandler}
+/>
+
+<AddConnectionModal
 	ollama
 	bind:show={showAddOllamaConnectionModal}
 	onSubmit={addOllamaConnectionHandler}
@@ -217,7 +306,7 @@
 
 <form class="flex flex-col h-full justify-between text-sm" on:submit|preventDefault={submitHandler}>
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
-		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && connectionsConfig !== null}
+		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && ENABLE_GATEWAYZ_API !== null && connectionsConfig !== null}
 			<div class="mb-3.5">
 				<div class=" mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
 
@@ -281,6 +370,73 @@
 												});
 												OPENAI_API_CONFIGS = newConfig;
 												updateOpenAIHandler();
+											}}
+										/>
+									{/each}
+								</div>
+							</div>
+						{/if}
+					</div>
+				</div>
+
+				<div class="my-2">
+					<div class="mt-2 space-y-2">
+						<div class="flex justify-between items-center text-sm">
+							<div class="  font-medium">{$i18n.t('Gatewayz API')}</div>
+
+							<div class="flex items-center">
+								<div class="">
+									<Switch
+										bind:state={ENABLE_GATEWAYZ_API}
+										on:change={async () => {
+											updateGatewayzHandler();
+										}}
+									/>
+								</div>
+							</div>
+						</div>
+
+						{#if ENABLE_GATEWAYZ_API}
+							<div class="">
+								<div class="flex justify-between items-center">
+									<div class="font-medium text-xs">{$i18n.t('Manage Gatewayz API Connections')}</div>
+
+									<Tooltip content={$i18n.t(`Add Connection`)}>
+										<button
+											class="px-1"
+											on:click={() => {
+												showAddGatewayzConnectionModal = true;
+											}}
+											type="button"
+										>
+											<Plus />
+										</button>
+									</Tooltip>
+								</div>
+
+								<div class="flex flex-col gap-1.5 mt-1.5">
+									{#each GATEWAYZ_API_BASE_URLS as url, idx}
+										<GatewayzConnection
+											bind:url={GATEWAYZ_API_BASE_URLS[idx]}
+											bind:key={GATEWAYZ_API_KEYS[idx]}
+											bind:config={GATEWAYZ_API_CONFIGS[idx]}
+											pipeline={pipelineUrls[url] ? true : false}
+											onSubmit={() => {
+												updateGatewayzHandler();
+											}}
+											onDelete={() => {
+												GATEWAYZ_API_BASE_URLS = GATEWAYZ_API_BASE_URLS.filter(
+													(url, urlIdx) => idx !== urlIdx
+												);
+												GATEWAYZ_API_KEYS = GATEWAYZ_API_KEYS.filter((key, keyIdx) => idx !== keyIdx);
+
+												let newConfig = {};
+												GATEWAYZ_API_BASE_URLS.forEach((url, newIdx) => {
+													newConfig[newIdx] =
+														GATEWAYZ_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
+												});
+												GATEWAYZ_API_CONFIGS = newConfig;
+												updateGatewayzHandler();
 											}}
 										/>
 									{/each}
