@@ -428,7 +428,7 @@
 					>
 						<div class="flex group/item gap-3.5 w-full">
 							<div class="self-center pl-0.5">
-								<div class="flex bg-white rounded-2xl">
+								<div class="flex rounded-2xl">
 									<div
 										class="{model.is_active ? '' : 'opacity-50 dark:opacity-50'} {model.meta
 											.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`
