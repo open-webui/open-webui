@@ -22,6 +22,7 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import DefaultFiltersSelector from './DefaultFiltersSelector.svelte';
 	import DefaultFeatures from './DefaultFeatures.svelte';
+	import PromptSuggestionsModal from '$lib/components/admin/Settings/Interface/PromptSuggestionsModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -660,7 +661,7 @@
 									type="button"
 									on:click={() => {
 										if ((info?.meta?.suggestion_prompts ?? null) === null) {
-											info.meta.suggestion_prompts = [{ content: '' }];
+											info.meta.suggestion_prompts = [{ title: ['', ''], content: '' }];
 										} else {
 											info.meta.suggestion_prompts = null;
 										}
@@ -705,32 +706,7 @@
 						</div>
 
 						{#if info?.meta?.suggestion_prompts}
-							<div class="flex flex-col space-y-1 mt-1 mb-3">
-								{#if info.meta.suggestion_prompts.length > 0}
-									{#each info.meta.suggestion_prompts as prompt, promptIdx}
-										<div class=" flex rounded-lg">
-											<input
-												class=" text-sm w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850"
-												placeholder={$i18n.t('Write a prompt suggestion (e.g. Who are you?)')}
-												bind:value={prompt.content}
-											/>
-
-											<button
-												class="px-2"
-												type="button"
-												on:click={() => {
-													info.meta.suggestion_prompts.splice(promptIdx, 1);
-													info.meta.suggestion_prompts = info.meta.suggestion_prompts;
-												}}
-											>
-												<XMark className={'size-4'} />
-											</button>
-										</div>
-									{/each}
-								{:else}
-									<div class="text-xs text-center">{$i18n.t('No suggestion prompts')}</div>
-								{/if}
-							</div>
+							<PromptSuggestionsModal bind:suggestions={info.meta.suggestion_prompts} />
 						{/if}
 					</div>
 
