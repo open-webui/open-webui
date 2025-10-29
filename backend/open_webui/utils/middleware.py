@@ -1926,7 +1926,7 @@ async def process_chat_response(
                 for block in content_blocks:
                     if block["type"] == "text":
                         # DEBUG: Log block content type before strip() call
-                        log.info(f"🔍 DEBUG - serialize_content_blocks - Block content type: {type(block['content'])}, Content: {block['content'][:200] if isinstance(block['content'], str) else block['content']}")
+                        print(f"🔍 DEBUG - serialize_content_blocks - Block content type: {type(block['content'])}, Content: {block['content'][:200] if isinstance(block['content'], str) else block['content']}", file=sys.stderr, flush=True)
                         block_content = block["content"].strip()
                         if block_content:
                             content = f"{content}{block_content}\n"
@@ -2293,7 +2293,7 @@ async def process_chat_response(
             )
 
             # DEBUG: Log content type and value to diagnose image attachment issue
-            log.info(f"🔍 DEBUG - Content type: {type(content)}, Content: {content[:200] if isinstance(content, str) else content}")
+            print(f"🔍 DEBUG - Content type: {type(content)}, Content: {content[:200] if isinstance(content, str) else content}", file=sys.stderr, flush=True)
 
             response_usage = None  # Initialize response_usage at the top level
             chunk_count = 0  # Initialize chunk_count at the top level for logging
@@ -2306,7 +2306,7 @@ async def process_chat_response(
             ]
 
             # DEBUG: Log content_blocks to see what's being stored
-            log.info(f"🔍 DEBUG - Content blocks created: {content_blocks}")
+            print(f"🔍 DEBUG - Content blocks created: {content_blocks}", file=sys.stderr, flush=True)
 
             reasoning_tags_param = metadata.get("params", {}).get("reasoning_tags")
             DETECT_REASONING_TAGS = reasoning_tags_param is not False
