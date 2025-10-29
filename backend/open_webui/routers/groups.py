@@ -38,10 +38,7 @@ async def get_groups(user=Depends(get_verified_user)):
             "sm11538@nyu.edu",
             "ms15138@nyu.edu", 
             "mb484@nyu.edu",
-            "cg4532@nyu.edu",
-            "jy4421@nyu.edu",
-            "ht2490@nyu.edu",
-            "ps5226@nyu.edu"
+            "cg4532@nyu.edu"
         ]
         
         if (first_user and user.id == first_user.id) or user.email in allowed_emails:

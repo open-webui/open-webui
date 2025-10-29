@@ -175,10 +175,7 @@ async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin
         "sm11538@nyu.edu",
         "ms15138@nyu.edu",
         "mb484@nyu.edu",
-        "cg4532@nyu.edu",
-        "jy4421@nyu.edu",
-        "ht2490@nyu.edu",
-        "ps5226@nyu.edu",
+        "cg4532@nyu.edu"
     ]
 
     # Prevent users from changing their own role.
@@ -442,10 +439,7 @@ async def toggle_co_admin_status(user_id: str, user=Depends(get_admin_user)):
         "sm11538@nyu.edu",
         "ms15138@nyu.edu", 
         "mb484@nyu.edu",
-        "cg4532@nyu.edu",
-        "jy4421@nyu.edu",
-        "ht2490@nyu.edu",
-        "ps5226@nyu.edu",
+        "cg4532@nyu.edu"
     ]
     
     is_super_admin = (
