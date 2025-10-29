@@ -1441,6 +1441,8 @@ async def chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
 ):
+    print("🔍 DEBUG - chat_completion() endpoint called!", file=sys.stderr, flush=True)
+
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
 
@@ -1540,6 +1542,7 @@ async def chat_completion(
         )
 
     async def process_chat(request, form_data, user, metadata, model):
+        print("🔍 DEBUG - process_chat() called!", file=sys.stderr, flush=True)
         try:
             form_data, metadata, events = await process_chat_payload(
                 request, form_data, user, metadata, model
@@ -1559,6 +1562,7 @@ async def chat_completion(
                 except:
                     pass
 
+            print("🔍 DEBUG - About to call process_chat_response()!", file=sys.stderr, flush=True)
             return await process_chat_response(
                 request, response, form_data, user, metadata, model, events, tasks
             )
