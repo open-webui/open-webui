@@ -1464,6 +1464,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 async def process_chat_response(
     request, response, form_data, user, metadata, model, events, tasks
 ):
+    print("🔍 DEBUG - process_chat_response() called!", file=sys.stderr, flush=True)
+
     async def background_tasks_handler():
         message = None
         messages = []
