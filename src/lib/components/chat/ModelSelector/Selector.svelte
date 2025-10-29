@@ -312,13 +312,15 @@
 
 	onMount(async () => {
 		if (items) {
-			tags = items
+			const tags = items
 				.filter((item) => !(item.model?.info?.meta?.hidden ?? false))
 				.flatMap((item) => item.model?.tags ?? [])
-				.map((tag) => tag.name);
+				.map((tag) => tag.name.toLowerCase());
 
-			// Remove duplicates and sort
-			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
+			// Remove duplicates, capitalize, and sort
+			tags = Array.from(new Set(tags))
+				.map((tag) => capitalizeFirstLetter(tag))
+				.sort((a, b) => a.localeCompare(b));
 		}
 	});
 
