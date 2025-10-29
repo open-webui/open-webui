@@ -212,7 +212,7 @@ class FunctionsTable:
             functions = db.query(Function).order_by(Function.updated_at.desc()).all()
             user_ids = list(set(func.user_id for func in functions))
 
-            users = Users.get_users_by_user_ids(user_ids) if user_ids else []
+            users = Users.get_users_by_user_ids(user_ids, db) if user_ids else []
             users_dict = {user.id: user for user in users}
 
             return [
