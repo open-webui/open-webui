@@ -312,13 +312,13 @@
 
 	onMount(async () => {
 		if (items) {
-			const tags = items
+			const lowerCaseTags = items
 				.filter((item) => !(item.model?.info?.meta?.hidden ?? false))
 				.flatMap((item) => item.model?.tags ?? [])
 				.map((tag) => tag.name.toLowerCase());
 
 			// Remove duplicates, capitalize, and sort
-			tags = Array.from(new Set(tags))
+			tags = Array.from(new Set(lowerCaseTags))
 				.map((tag) => capitalizeFirstLetter(tag))
 				.sort((a, b) => a.localeCompare(b));
 		}
