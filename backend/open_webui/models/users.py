@@ -285,7 +285,7 @@ class UsersTable:
                 "total": db.query(User).count(),
             }
 
-    def get_users_by_user_ids(self, user_ids: list[str]) -> list[UserModel]:
+    def get_users_by_user_ids(self, user_ids: list[str], db = None) -> list[UserModel]:
         if db is None:
             with get_db() as db:
                 users = db.query(User).filter(User.id.in_(user_ids)).all()
