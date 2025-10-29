@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, Text, Index, Boolean, Integer
 
 from open_webui.internal.db import Base, JSONField, get_db
+from open_webui.models.users import Users
 
 
 class ModerationSession(Base):
@@ -19,6 +20,7 @@ class ModerationSession(Base):
     scenario_index = Column(Integer, nullable=False, default=0)
     attempt_number = Column(Integer, nullable=False, default=1)
     version_number = Column(Integer, nullable=False, default=0)
+    session_number = Column(BigInteger, nullable=False, default=1)
 
     scenario_prompt = Column(Text, nullable=False)
     original_response = Column(Text, nullable=False)
@@ -40,8 +42,9 @@ class ModerationSession(Base):
         Index("idx_moderation_session_user_id", "user_id"),
         Index("idx_moderation_session_child_id", "child_id"),
         Index("idx_moderation_session_created_at", "created_at"),
-        Index("idx_mod_session_composite", "user_id", "child_id", "scenario_index", "attempt_number"),
+        Index("idx_mod_session_composite", "user_id", "child_id", "scenario_index", "attempt_number", "session_number"),
         Index("idx_mod_session_final", "user_id", "child_id", "is_final_version"),
+        Index("idx_mod_session_user_session", "user_id", "session_number"),
     )
 
 
@@ -54,6 +57,7 @@ class ModerationSessionModel(BaseModel):
     scenario_index: int
     attempt_number: int
     version_number: int
+    session_number: int
     scenario_prompt: str
     original_response: str
     initial_decision: Optional[str] = None
@@ -120,9 +124,23 @@ class ModerationSessionTable:
                 obj.refactored_response = form.refactored_response
                 obj.is_final_version = bool(form.is_final_version)
                 obj.session_metadata = form.session_metadata
+                # Ensure session_number is stamped for updated rows as well
+                user = Users.get_user_by_id(form.user_id)
+                if user and getattr(user, "session_number", None) is not None:
+                    try:
+                        obj.session_number = int(user.session_number)
+                    except Exception:
+                        pass
                 obj.updated_at = ts
             else:
                 # Create a new row for this version; generate a fresh id to avoid overwriting prior versions
+                user = Users.get_user_by_id(form.user_id)
+                session_number = 1
+                if user and getattr(user, "session_number", None) is not None:
+                    try:
+                        session_number = int(user.session_number)
+                    except Exception:
+                        session_number = 1
                 obj = ModerationSession(
                     id=str(uuid.uuid4()),
                     user_id=form.user_id,
@@ -130,6 +148,7 @@ class ModerationSessionTable:
                     scenario_index=form.scenario_index,
                     attempt_number=form.attempt_number,
                     version_number=form.version_number,
+                    session_number=session_number,
                     scenario_prompt=form.scenario_prompt,
                     original_response=form.original_response,
                     initial_decision=form.initial_decision,

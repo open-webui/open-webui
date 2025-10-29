@@ -94,3 +94,11 @@ def downgrade():
         batch_op.drop_column("version_number")
         batch_op.drop_column("attempt_number")
         batch_op.drop_column("scenario_index")
+
+
+
+
+
+
+
+

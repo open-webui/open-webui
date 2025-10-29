@@ -43,6 +43,12 @@ class User(Base):
     api_key = Column(String, nullable=True, unique=True)
     oauth_sub = Column(Text, unique=True)
 
+    # Prolific integration fields
+    prolific_pid = Column(String, nullable=True, unique=True)
+    study_id = Column(String, nullable=True)
+    current_session_id = Column(String, nullable=True)
+    session_number = Column(BigInteger, nullable=False, default=1)
+
     last_active_at = Column(BigInteger)
 
     updated_at = Column(BigInteger)
@@ -74,6 +80,12 @@ class UserModel(BaseModel):
 
     api_key: Optional[str] = None
     oauth_sub: Optional[str] = None
+
+    # Prolific integration fields
+    prolific_pid: Optional[str] = None
+    study_id: Optional[str] = None
+    current_session_id: Optional[str] = None
+    session_number: int = 1
 
     last_active_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
@@ -453,6 +465,28 @@ class UsersTable:
                 return UserModel.model_validate(user)
             else:
                 return None
+
+    def get_user_by_prolific_pid(self, prolific_pid: str) -> Optional[UserModel]:
+        try:
+            with get_db() as db:
+                user = db.query(User).filter_by(prolific_pid=prolific_pid).first()
+                return UserModel.model_validate(user) if user else None
+        except Exception:
+            return None
+
+    def update_user_session(self, user_id: str, session_id: str, session_number: int) -> Optional[UserModel]:
+        try:
+            with get_db() as db:
+                db.query(User).filter_by(id=user_id).update({
+                    "current_session_id": session_id,
+                    "session_number": session_number,
+                    "updated_at": int(time.time())
+                })
+                db.commit()
+                user = db.query(User).filter_by(id=user_id).first()
+                return UserModel.model_validate(user) if user else None
+        except Exception:
+            return None
 
 
 Users = UsersTable()

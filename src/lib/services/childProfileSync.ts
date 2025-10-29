@@ -68,7 +68,11 @@ class ChildProfileSyncService {
         }
 
         try {
-            const token = get(user)?.token;
+            let token = get(user)?.token as string | undefined;
+            if (!token && typeof localStorage !== 'undefined') {
+                const lt = localStorage.getItem('token');
+                if (lt && lt.length > 0) token = lt;
+            }
             if (!token) return this.getFromCache();
 
             const profiles = await getChildProfiles(token);
@@ -106,7 +110,11 @@ class ChildProfileSyncService {
         // Try to create on backend first if online and authenticated
         if (this.isOnline && this.isUserAuthenticated()) {
             try {
-                const token = get(user)?.token;
+                let token = get(user)?.token as string | undefined;
+                if (!token && typeof localStorage !== 'undefined') {
+                    const lt = localStorage.getItem('token');
+                    if (lt && lt.length > 0) token = lt;
+                }
                 if (token) {
                     const newProfile = await createChildProfile(token, formData);
                     // Update cache
@@ -155,7 +163,11 @@ class ChildProfileSyncService {
         // Try to update on backend first if online and authenticated
         if (this.isOnline && this.isUserAuthenticated()) {
             try {
-                const token = get(user)?.token;
+                let token = get(user)?.token as string | undefined;
+                if (!token && typeof localStorage !== 'undefined') {
+                    const lt = localStorage.getItem('token');
+                    if (lt && lt.length > 0) token = lt;
+                }
                 if (token) {
                     const updatedProfile = await updateChildProfile(token, profileId, formData);
                     // Update cache
@@ -203,7 +215,11 @@ class ChildProfileSyncService {
         // Try to delete on backend first if online and authenticated
         if (this.isOnline && this.isUserAuthenticated()) {
             try {
-                const token = get(user)?.token;
+                let token = get(user)?.token as string | undefined;
+                if (!token && typeof localStorage !== 'undefined') {
+                    const lt = localStorage.getItem('token');
+                    if (lt && lt.length > 0) token = lt;
+                }
                 if (token) {
                     await deleteChildProfile(token, profileId);
                     // Update cache

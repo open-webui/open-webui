@@ -4,7 +4,9 @@
 	import { showSidebar, user } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
-	import { applyModeration, generateFollowUpPrompt, type ModerationResponse, saveModerationSession } from '$lib/apis/moderation';
+import { applyModeration, generateFollowUpPrompt, type ModerationResponse, saveModerationSession } from '$lib/apis/moderation';
+import { finalizeModeration } from '$lib/apis/workflow';
+	import { getAvailableScenarios, getCurrentSession } from '$lib/apis/prolific';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { toggleTheme, getEffectiveTheme } from '$lib/utils/theme';
@@ -92,6 +94,7 @@
 	
 	let selectedScenarioIndex: number = 0;
 	let scenarioList = Object.entries(scenarios);
+	let sessionNumber: number = 1; // Default session number for non-Prolific users
 	
 	// Custom scenario state
 	let customScenarioPrompt: string = '';
@@ -206,6 +209,23 @@
 			console.error('Error loading child profiles:', error);
 		}
 	}
+
+// Helper: aggressively clear moderation-related localStorage keys
+function clearModerationLocalKeys() {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i) || '';
+        if (
+            k.startsWith('scenario_') ||
+            k.startsWith('selection-') ||
+            k.startsWith('input-panel-state-') ||
+            k.startsWith('selection-dismissed-')
+        ) {
+            keysToRemove.push(k);
+        }
+    }
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+}
 
 	async function generatePersonalityScenarios() {
 		console.log('generatePersonalityScenarios called');
@@ -1215,6 +1235,7 @@ function cancelReset() {}
 				scenario_index: selectedScenarioIndex,
 				attempt_number: 1,
 				version_number: 0,
+				session_number: sessionNumber,
 				scenario_prompt: childPrompt1,
 				original_response: originalResponse1,
 				initial_decision: 'accept_original',
@@ -1299,6 +1320,7 @@ function cancelReset() {}
 				scenario_index: selectedScenarioIndex,
 				attempt_number: 1,
 				version_number: 0,
+				session_number: sessionNumber,
 				scenario_prompt: childPrompt1,
 				original_response: originalResponse1,
 				initial_decision: 'not_applicable',
@@ -1423,6 +1445,7 @@ function cancelReset() {}
 						scenario_index: selectedScenarioIndex,
 						attempt_number: 1,
 						version_number: currentVersionIndex + 1,
+						session_number: sessionNumber,
 						scenario_prompt: childPrompt1,
 						original_response: originalResponse1,
 						initial_decision: 'moderate',
@@ -1481,6 +1504,13 @@ function cancelReset() {}
     localStorage.setItem('unlock_exit', 'true');
     window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new Event('workflow-updated'));
+		// Ask backend to mark latest per-scenario submission as final for this child/session
+		try {
+			finalizeModeration(localStorage.token, { child_id: selectedChildId, session_number: sessionNumber })
+				.catch((e) => console.error('Finalize moderation failed:', e));
+		} catch (e) {
+			console.error('Finalize moderation error:', e);
+		}
 		goto('/exit-survey');
 	}
 
@@ -1502,7 +1532,10 @@ function cancelReset() {}
 		console.log('✅ Scenarios reloaded after profile update');
 	};
 
-	onMount(async () => {
+onMount(async () => {
+    // Prepare available scenarios; fetch after child profile is known
+    let availableScenarioIndices: number[] = [];
+		
 		// Add custom scenario to default scenario list if not using personality scenarios
 		if (scenarioList.length === Object.entries(scenarios).length) {
 			// Check if custom scenario isn't already added
@@ -1529,9 +1562,32 @@ function cancelReset() {}
 		// Listen for profile updates to reload scenarios when characteristics change
 		window.addEventListener('child-profiles-updated', handleProfileUpdate);
 		
-		// Load child profiles for personality-based scenario generation
+    // Load child profiles for personality-based scenario generation
 		// (loadSavedStates will be called after scenarios are loaded in generatePersonalityScenarios)
 		await loadChildProfiles();
+    
+    // Now that we know the selected child, fetch available scenarios for Prolific users
+    try {
+        const sessionInfo = await getCurrentSession(localStorage.token);
+        if (sessionInfo.is_prolific_user && selectedChildId) {
+            const currentSessionId = localStorage.getItem('prolificSessionId') || '';
+            const lastLoadedSessionId = localStorage.getItem('lastLoadedModerationSessionId') || '';
+
+            // If session changed since last load, wipe cached moderation state
+            if (currentSessionId && currentSessionId !== lastLoadedSessionId) {
+                resetAllScenarioStates();
+                clearModerationLocalKeys();
+                localStorage.setItem('lastLoadedModerationSessionId', currentSessionId);
+            }
+
+			const availableScenarios = await getAvailableScenarios(localStorage.token, selectedChildId);
+			availableScenarioIndices = availableScenarios.available_scenarios || [];
+			sessionNumber = availableScenarios.session_number;
+			console.log('Prolific user - available scenarios (from backend):', availableScenarioIndices, 'session:', sessionNumber);
+        }
+    } catch (error) {
+        console.log('Not a Prolific user or error fetching scenarios:', error);
+    }
 		
 		// Automatically generate personality-based scenarios if child profiles exist
 		console.log('Child profiles loaded:', childProfiles.length);
@@ -1539,6 +1595,59 @@ function cancelReset() {}
 			console.log('Generating personality-based scenarios...');
 			await generatePersonalityScenarios();
 			console.log('Personality scenarios generated. Current scenarioList length:', scenarioList.length);
+			
+			// Filter scenarios for Prolific users and top up to target count
+			// Target includes 2 slots reserved for attention check and custom scenario
+			const TARGET_SCENARIO_COUNT = 12;
+			let finalIndices: number[] = [];
+			if (availableScenarioIndices.length > 0) {
+				finalIndices = [...new Set(availableScenarioIndices.filter(i => Number.isInteger(i) && i >= 0))];
+			}
+
+			// Fetch completed scenario indices to avoid previously seen ones
+			let completed: number[] = [];
+			try {
+				const resp = await fetch(`${WEBUI_API_BASE_URL}/workflow/completed-scenarios`, {
+					method: 'GET',
+					headers: { 'Content-Type': 'application/json', ...(localStorage.token ? { authorization: `Bearer ${localStorage.token}` } : {}) }
+				});
+				if (resp.ok) {
+					const data = await resp.json();
+					completed = Array.isArray(data?.completed_scenario_indices) ? data.completed_scenario_indices : [];
+				}
+			} catch (e) {
+				// Non-fatal; fallback below
+			}
+
+			// Build unseen pool from current scenarioList (personality generated) removing seen and already picked
+			const allIndices = Array.from({ length: scenarioList.length }, (_, i) => i).filter(i => i >= 0);
+			const seenSet = new Set<number>(completed);
+			const pickedSet = new Set<number>(finalIndices);
+			const unseenPool = allIndices.filter(i => !seenSet.has(i) && !pickedSet.has(i));
+
+			// Top up to target count from unseenPool at random
+			while (finalIndices.length < TARGET_SCENARIO_COUNT && unseenPool.length > 0) {
+				const rand = Math.floor(Math.random() * unseenPool.length);
+				const pick = unseenPool.splice(rand, 1)[0];
+				finalIndices.push(pick);
+			}
+
+			// Map indices to scenarios
+			if (finalIndices.length > 0) {
+				const filteredScenarios = finalIndices
+					.filter(index => index < scenarioList.length)
+					.map(index => scenarioList[index])
+					.filter(Boolean);
+
+				if (filteredScenarios.length > 0) {
+					// Replace scenarios and reset in-memory UI state to avoid old responses
+					scenarioList = filteredScenarios;
+					resetAllScenarioStates();
+					selectedScenarioIndex = 0;
+					loadScenario(0, true);
+					console.log('Final scenarios for session (filled to target if needed):', scenarioList.length);
+				}
+			}
 			
 			// Force personality scenarios if generation failed
 			if (scenarioList.length === Object.entries(scenarios).length) {
@@ -1633,6 +1742,7 @@ function cancelReset() {}
 				scenario_index: selectedScenarioIndex,
 				attempt_number: 1,
 				version_number: 0,
+				session_number: sessionNumber,
 				scenario_prompt: childPrompt1,
 				original_response: originalResponse1,
 				initial_decision: undefined,

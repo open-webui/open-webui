@@ -27,6 +27,7 @@ class ChildProfile(Base):
     # Reset/attempt tracking
     attempt_number = Column(Integer, nullable=False, default=1)
     is_current = Column(Boolean, nullable=False, default=True)
+    session_number = Column(BigInteger, nullable=False, default=1)
     
     created_at = Column(BigInteger)  # When profile was created
     updated_at = Column(BigInteger)  # When profile was last updated
@@ -37,6 +38,7 @@ class ChildProfile(Base):
         Index('idx_child_profile_created_at', 'created_at'),
         Index('idx_child_profile_user_current', 'user_id', 'is_current'),
         Index('idx_child_profile_attempt', 'user_id', 'id', 'attempt_number'),
+        Index('idx_child_profile_user_session_current', 'user_id', 'session_number', 'is_current'),
     )
 
 class ChildProfileModel(BaseModel):
@@ -51,6 +53,7 @@ class ChildProfileModel(BaseModel):
     parenting_style: Optional[str] = None
     attempt_number: int
     is_current: bool
+    session_number: int
     created_at: int
     updated_at: int
 
@@ -63,7 +66,7 @@ class ChildProfileForm(BaseModel):
 
 class ChildProfileTable:
     def insert_new_child_profile(
-        self, form_data: ChildProfileForm, user_id: str
+        self, form_data: ChildProfileForm, user_id: str, session_number: int = 1, attempt_number: int = 1
     ) -> Optional[ChildProfileModel]:
         """Insert a new child profile into the database"""
         with get_db() as db:
@@ -79,8 +82,9 @@ class ChildProfileTable:
                     "child_gender": form_data.child_gender,
                     "child_characteristics": form_data.child_characteristics,
                     "parenting_style": form_data.parenting_style,
-                    "attempt_number": 1,
+                    "attempt_number": attempt_number,
                     "is_current": True,
+                    "session_number": session_number,
                     "created_at": ts,
                     "updated_at": ts,
                 }
@@ -93,19 +97,14 @@ class ChildProfileTable:
             return ChildProfileModel.model_validate(result) if result else None
 
     def get_child_profiles_by_user(self, user_id: str) -> list[ChildProfileModel]:
-        """Get all child profiles for a specific parent user"""
+        """Get all child profiles for a specific parent user (all sessions)."""
         with get_db() as db:
-            # Return only current profiles for this user
             profiles = (
                 db.query(ChildProfile)
-                .filter(
-                    ChildProfile.user_id == user_id,
-                    ChildProfile.is_current == True,
-                )
-                .order_by(ChildProfile.created_at.asc())
+                .filter(ChildProfile.user_id == user_id)
+                .order_by(ChildProfile.updated_at.desc())
                 .all()
             )
-            
             return [ChildProfileModel.model_validate(profile) for profile in profiles]
 
     def get_child_profile_by_id(self, profile_id: str, user_id: str) -> Optional[ChildProfileModel]:
@@ -167,6 +166,61 @@ class ChildProfileTable:
                 "total_profiles": total_profiles,
                 "unique_parents": unique_parents,
             }
+
+    def get_current_child_profile(self, user_id: str) -> Optional[ChildProfileModel]:
+        with get_db() as db:
+            profile = (
+                db.query(ChildProfile)
+                .filter(ChildProfile.user_id == user_id, ChildProfile.is_current == True)
+                .order_by(ChildProfile.created_at.desc())
+                .first()
+            )
+            return ChildProfileModel.model_validate(profile) if profile else None
+
+    def get_latest_child_profile_any(self, user_id: str) -> Optional[ChildProfileModel]:
+        """Return the most recently updated child profile regardless of is_current/session."""
+        with get_db() as db:
+            profile = (
+                db.query(ChildProfile)
+                .filter(ChildProfile.user_id == user_id)
+                .order_by(ChildProfile.updated_at.desc())
+                .first()
+            )
+            return ChildProfileModel.model_validate(profile) if profile else None
+
+    def clone_current_profile_for_session(self, user_id: str, new_session_number: int) -> Optional[ChildProfileModel]:
+        with get_db() as db:
+            current = (
+                db.query(ChildProfile)
+                .filter(ChildProfile.user_id == user_id, ChildProfile.is_current == True)
+                .order_by(ChildProfile.created_at.desc())
+                .first()
+            )
+            if not current:
+                return None
+            ts = int(time.time_ns())
+            new_id = str(uuid.uuid4())
+            # Create a copy
+            new_row = ChildProfile(
+                id=new_id,
+                user_id=current.user_id,
+                name=current.name,
+                child_age=current.child_age,
+                child_gender=current.child_gender,
+                child_characteristics=current.child_characteristics,
+                parenting_style=current.parenting_style,
+                attempt_number=current.attempt_number,
+                is_current=True,
+                session_number=new_session_number,
+                created_at=ts,
+                updated_at=ts,
+            )
+            # Mark previous as not current
+            current.is_current = False
+            db.add(new_row)
+            db.commit()
+            db.refresh(new_row)
+            return ChildProfileModel.model_validate(new_row)
 
 # Global instance
 ChildProfiles = ChildProfileTable()

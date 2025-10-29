@@ -10,6 +10,7 @@
 
 	import { getBackendConfig } from '$lib/apis';
 	import { ldapUserSignIn, getSessionUser, userSignIn, userSignUp } from '$lib/apis/auths';
+	import { authenticateWithProlific } from '$lib/apis/prolific';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
@@ -100,6 +101,70 @@
 		}
 	};
 
+const prolificAuthHandler = async () => {
+		const prolificPid = $page.url.searchParams.get('PROLIFIC_PID');
+		const studyId = $page.url.searchParams.get('STUDY_ID');
+		const sessionId = $page.url.searchParams.get('SESSION_ID');
+		
+		if (!prolificPid || !studyId || !sessionId) {
+			return false; // Not a Prolific user
+		}
+
+		try {
+        const authResponse = await authenticateWithProlific(prolificPid, studyId, sessionId);
+			
+			if (authResponse) {
+                // Determine if this is a different user or a new session for same user
+                const lastUserId = localStorage.getItem('lastUserId');
+                const lastSessionId = localStorage.getItem('lastProlificSessionId');
+
+                // If brand new user (or switching users), clear ALL workflow keys
+                if (authResponse.is_new_user || !lastUserId || lastUserId !== authResponse.user.id) {
+                    clearAllWorkflowKeysForNewUser();
+                } else if (lastSessionId !== sessionId) {
+                    // Same user but new SESSION_ID ⇒ reset moderation-only keys
+                    resetModerationKeysForNewSession();
+                }
+
+				// Store session metadata
+				localStorage.setItem('prolificSessionId', sessionId);
+				localStorage.setItem('prolificStudyId', studyId);
+				localStorage.setItem('prolificSessionNumber', authResponse.session_number.toString());
+                localStorage.setItem('lastProlificSessionId', sessionId);
+                localStorage.setItem('lastUserId', authResponse.user.id);
+				
+                // Persist token and hydrate full session user
+                localStorage.token = authResponse.token;
+                const sessionUser = await getSessionUser(authResponse.token).catch((error) => {
+                    toast.error(`${error}`);
+                    return null;
+                });
+                if (!sessionUser) {
+                    return false;
+                }
+                await setSessionUser(sessionUser);
+
+                // If backend provided a child to select, set it and route to review page
+                if (authResponse.new_child_id) {
+                    localStorage.setItem('selectedChildId', authResponse.new_child_id);
+                    // If user already completed exit survey in prior session, unlock it
+                    if (authResponse.has_exit_quiz) {
+                        localStorage.setItem('unlock_exit', 'true');
+                    }
+                    await goto('/kids/profile');
+                } else {
+                    const redirectPath = $page.url.searchParams.get('redirect') || '/';
+                    goto(redirectPath);
+                }
+				return true;
+			}
+		} catch (error) {
+			toast.error(`Prolific authentication failed: ${error}`);
+		}
+		
+		return false;
+	};
+
 	const oauthCallbackHandler = async () => {
 		// Get the value of the 'token' cookie
 		function getCookie(name) {
@@ -126,6 +191,69 @@
 		localStorage.token = token;
 		await setSessionUser(sessionUser, localStorage.getItem('redirectPath') || null);
 	};
+
+const clearAllWorkflowKeysForNewUser = () => {
+    // Core workflow gating
+    localStorage.removeItem('assignmentStep');
+    localStorage.removeItem('assignmentCompleted');
+    localStorage.removeItem('instructionsCompleted');
+    localStorage.removeItem('moderationScenariosAccessed');
+    localStorage.removeItem('unlock_exit');
+    localStorage.removeItem('unlock_kids');
+    localStorage.removeItem('unlock_moderation');
+    localStorage.removeItem('unlock_completion');
+
+    // Selection and per-scenario local state
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i) || '';
+        if (
+            k.startsWith('scenario_') ||
+            k.startsWith('chat-input') ||
+            k.startsWith('selection-') ||
+            k.startsWith('input-panel-state-') ||
+            k.startsWith('selection-dismissed-')
+        ) {
+            keysToRemove.push(k);
+        }
+    }
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+
+    // Child linkage
+    localStorage.removeItem('selectedChildId');
+
+    // Prolific bookkeeping
+    localStorage.removeItem('lastProlificSessionId');
+    localStorage.removeItem('lastUserId');
+    localStorage.removeItem('prolificSessionId');
+    localStorage.removeItem('prolificStudyId');
+    localStorage.removeItem('prolificSessionNumber');
+};
+
+const resetModerationKeysForNewSession = () => {
+    // Reset moderation progress only, preserve instructions/child profile
+    localStorage.removeItem('assignmentStep');
+    localStorage.removeItem('assignmentCompleted');
+    localStorage.removeItem('moderationScenariosAccessed');
+    localStorage.removeItem('unlock_exit');
+    // Unselect current child so user reviews but doesn't re-fill
+    localStorage.removeItem('selectedChildId');
+
+    // Clear per-scenario UI state
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i) || '';
+        if (
+            k.startsWith('scenario_') ||
+            k.startsWith('selection-') ||
+            k.startsWith('input-panel-state-') ||
+            k.startsWith('selection-dismissed-')
+        ) {
+            keysToRemove.push(k);
+        }
+    }
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+};
 
 
 	async function setLogoImage() {
@@ -166,7 +294,14 @@
 			toast.error(error);
 		}
 
-		await oauthCallbackHandler();
+		// Try Prolific authentication first
+		const prolificSuccess = await prolificAuthHandler();
+		
+		if (!prolificSuccess) {
+			// Only proceed with OAuth if Prolific auth didn't succeed
+			await oauthCallbackHandler();
+		}
+		
 		form = $page.url.searchParams.get('form');
 
 		loaded = true;

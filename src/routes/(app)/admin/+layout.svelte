@@ -74,6 +74,13 @@
 						>
 
 						<a
+							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/submissions')
+								? ''
+								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+							href="/admin/submissions">Submissions</a
+						>
+
+						<a
 							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/evaluations')
 								? ''
 								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"

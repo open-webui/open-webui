@@ -1302,6 +1302,10 @@ app.include_router(exit_quiz.router, prefix="/api/v1", tags=["exit_quiz"])
 from open_webui.routers import workflow
 app.include_router(workflow.router, prefix="/api/v1", tags=["workflow"])
 
+# Include prolific router
+from open_webui.routers import prolific
+app.include_router(prolific.router, prefix="/api/v1/prolific", tags=["prolific"])
+
 # SCIM 2.0 API for identity management
 if SCIM_ENABLED:
     app.include_router(scim.router, prefix="/api/v1/scim/v2", tags=["scim"])

@@ -280,6 +280,27 @@
 		const assignmentCompleted = localStorage.getItem('assignmentCompleted') === 'true';
 		const instructionsCompleted = localStorage.getItem('instructionsCompleted') === 'true';
 		
+		// Check if this is a Prolific user
+		const isProlificUser = $user?.prolific_pid !== undefined && $user?.prolific_pid !== null;
+		const prolificSessionId = localStorage.getItem('prolificSessionId');
+		const prolificSessionNumber = parseInt(localStorage.getItem('prolificSessionNumber') || '1');
+		
+		// For Prolific users on new sessions, reset workflow to instructions
+		if (isProlificUser && prolificSessionId) {
+			const lastSessionId = localStorage.getItem('lastProlificSessionId');
+			const isNewSession = lastSessionId !== prolificSessionId;
+			
+			if (isNewSession) {
+				// New session - reset workflow state but preserve child profile
+				localStorage.setItem('lastProlificSessionId', prolificSessionId);
+				localStorage.removeItem('assignmentStep');
+				localStorage.removeItem('assignmentCompleted');
+				localStorage.removeItem('moderationScenariosAccessed');
+				localStorage.removeItem('unlock_exit');
+				// Keep instructionsCompleted and child profile data
+			}
+		}
+		
 		// Prevent access to main chat page after assignment completion (except for admins)
 		if (currentPath === '/' && assignmentCompleted && $user?.role !== 'admin') {
 			await goto('/completion');

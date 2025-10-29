@@ -1,4 +1,5 @@
 import logging
+import random
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -11,6 +12,7 @@ from open_webui.models.moderation import (
     ModerationSessionForm,
     ModerationSessionModel,
 )
+from open_webui.models.child_profiles import ChildProfiles
 
 log = logging.getLogger(__name__)
 
@@ -24,6 +26,7 @@ class ModerationSessionPayload(BaseModel):
     scenario_index: int
     attempt_number: int
     version_number: int
+    session_number: int = 1
     scenario_prompt: str
     original_response: str
     initial_decision: Optional[str] = None
@@ -52,6 +55,7 @@ async def create_or_update_session(
             scenario_index=form_data.scenario_index,
             attempt_number=form_data.attempt_number,
             version_number=form_data.version_number,
+            session_number=form_data.session_number,
             scenario_prompt=form_data.scenario_prompt,
             original_response=form_data.original_response,
             initial_decision=form_data.initial_decision,
@@ -119,4 +123,60 @@ async def delete_session(
         raise
     except Exception as e:
         log.error(f"Error deleting moderation session: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/moderation/scenarios/available")
+async def get_available_scenarios(
+    child_id: str,
+    user: UserModel = Depends(get_verified_user),
+):
+    """
+    Get available scenarios for the current session that the user hasn't seen yet.
+    Prioritizes scenarios matching the child's personality characteristics.
+    """
+    try:
+        # Get all sessions for this user to find seen scenarios
+        all_sessions = ModerationSessions.get_sessions_by_user(user.id, child_id)
+        seen_scenario_indices = set()
+        
+        for session in all_sessions:
+            seen_scenario_indices.add(session.scenario_index)
+        
+        # Get child profile to understand personality characteristics
+        child_profiles = ChildProfiles.get_child_profiles_by_user(user.id)
+        child_profile = None
+        for profile in child_profiles:
+            if profile.id == child_id:
+                child_profile = profile
+                break
+        
+        if not child_profile:
+            raise HTTPException(status_code=404, detail="Child profile not found")
+        
+        # Define all available scenarios (0-11 based on the frontend)
+        all_scenarios = list(range(12))  # 0-11 inclusive
+        
+        # Filter out seen scenarios
+        unseen_scenarios = [idx for idx in all_scenarios if idx not in seen_scenario_indices]
+        
+        if not unseen_scenarios:
+            # All scenarios have been seen, return empty list
+            return {"available_scenarios": []}
+        
+        # For now, return all unseen scenarios in random order
+        # TODO: Implement personality-based prioritization when personality data is available
+        random.shuffle(unseen_scenarios)
+        
+        return {
+            "available_scenarios": unseen_scenarios,
+            "total_seen": len(seen_scenario_indices),
+            "total_available": len(unseen_scenarios),
+            "session_number": user.session_number
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error getting available scenarios: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
