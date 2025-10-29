@@ -2483,7 +2483,7 @@
 										if (e.detail || files.length > 0) {
 											await tick();
 
-											submitPrompt(e.detail.replaceAll('\n\n', '\n'));
+											submitPrompt(e.detail);
 										}
 									}}
 								/>
