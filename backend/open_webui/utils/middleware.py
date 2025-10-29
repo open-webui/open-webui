@@ -2107,6 +2107,18 @@ async def process_chat_response(
             def tag_content_handler(content_type, tags, content, content_blocks):
                 end_flag = False
 
+                # Normalize multimodal content to plain text if needed
+                # This ensures all string operations (.replace(), .strip(), etc.) work correctly
+                if content_blocks and content_blocks[-1].get("type") == "text":
+                    block_content = content_blocks[-1]["content"]
+                    if isinstance(block_content, list):
+                        # Extract text from multimodal content
+                        text_content = ""
+                        for item in block_content:
+                            if isinstance(item, dict) and item.get("type") == "text":
+                                text_content += item.get("text", "")
+                        content_blocks[-1]["content"] = text_content
+
                 def extract_attributes(tag_content):
                     """Extract attributes from a tag if they exist."""
                     attributes = {}
