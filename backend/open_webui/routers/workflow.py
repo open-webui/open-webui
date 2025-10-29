@@ -16,6 +16,65 @@ from open_webui.internal.db import get_db
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+class WorkflowStateResponse(BaseModel):
+    next_route: str
+    substep: str | None = None
+    progress_by_section: dict
+
+
+@router.get("/workflow/state")
+async def get_workflow_state(user: UserModel = Depends(get_verified_user)) -> WorkflowStateResponse:
+    """
+    Compute current workflow state for the user to resume progress on login.
+    Sections: kids/profile -> moderation-scenario -> exit-survey -> completion
+    """
+    try:
+        with get_db() as db:
+            progress = {
+                "has_child_profile": False,
+                "moderation_completed_count": 0,
+                "moderation_total": 12,
+                "exit_survey_completed": False,
+            }
+
+            # Child profiles
+            latest_child = ChildProfiles.get_latest_child_profile_any(user.id)
+            if latest_child:
+                progress["has_child_profile"] = True
+
+            # Moderation progress: count unique scenarios that have a terminal decision
+            sessions = ModerationSessions.get_sessions_by_user(user.id)
+            decided = set()
+            for s in sessions:
+                if s.initial_decision in ("accept_original", "moderate", "not_applicable"):
+                    decided.add(s.scenario_index)
+            progress["moderation_completed_count"] = len(decided)
+
+            # Exit survey completion (latest current response)
+            latest_exit = (
+                db.query(ExitQuizResponse)
+                .filter(ExitQuizResponse.user_id == user.id, ExitQuizResponse.is_current == True)
+                .order_by(ExitQuizResponse.created_at.desc())
+                .first()
+            )
+            progress["exit_survey_completed"] = latest_exit is not None
+
+            # Determine next route
+            if not progress["has_child_profile"]:
+                return WorkflowStateResponse(next_route="/kids/profile", substep=None, progress_by_section=progress)
+
+            if progress["moderation_completed_count"] < progress["moderation_total"]:
+                return WorkflowStateResponse(next_route="/moderation-scenario", substep=None, progress_by_section=progress)
+
+            if not progress["exit_survey_completed"]:
+                return WorkflowStateResponse(next_route="/exit-survey", substep=None, progress_by_section=progress)
+
+            return WorkflowStateResponse(next_route="/completion", substep=None, progress_by_section=progress)
+
+    except Exception as e:
+        log.error(f"Error computing workflow state for user {user.id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to compute workflow state")
+
 
 
 @router.post("/workflow/reset")

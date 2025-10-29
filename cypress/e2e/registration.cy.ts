@@ -49,4 +49,20 @@ describe('Registration and Login', () => {
 			}
 		});
 	});
+
+	it('routes to resume step after sign in', () => {
+		cy.visit('/auth?redirect=%2F');
+		cy.contains(/sign in/i).should('exist');
+
+		const EMAIL = Cypress.env('TEST_EMAIL') || adminUser.email;
+		const PASSWORD = Cypress.env('TEST_PASSWORD') || adminUser.password;
+
+		cy.get('input[type="email"]').clear().type(EMAIL);
+		cy.get('input[type="password"]').first().clear().type(PASSWORD);
+		cy.get('button').contains(/sign in/i).click();
+
+		cy.location('pathname', { timeout: 15000 }).should((path) => {
+			expect(['/kids/profile', '/moderation-scenario', '/exit-survey', '/completion', '/']).to.include(path);
+		});
+	});
 });

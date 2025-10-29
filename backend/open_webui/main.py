@@ -95,6 +95,7 @@ from open_webui.routers import (
     child_profiles,
 )
 from open_webui.routers import exit_quiz
+from open_webui.routers import attention_checks
 from open_webui.routers import moderation_scenarios as moderation_scenarios_router
 
 from open_webui.routers.retrieval import (
@@ -1297,6 +1298,7 @@ app.include_router(child_profiles.router, prefix="/api/v1", tags=["child_profile
 
 # Include exit quiz router
 app.include_router(exit_quiz.router, prefix="/api/v1", tags=["exit_quiz"])
+app.include_router(attention_checks.router, prefix="/api/v1", tags=["attention_checks"])
 
 # Include workflow router
 from open_webui.routers import workflow

@@ -36,6 +36,11 @@
 
 	let ldapUsername = '';
 
+	// Debug helpers
+	let showFormUI = true; // computed gate for form visibility
+	let showSignupToggle = true; // computed gate for signup toggle visibility
+let signupServerDisabled = false; // when backend rejects signup by policy
+
 	const setSessionUser = async (sessionUser, redirectPath: string | null = null) => {
 		if (sessionUser) {
 			console.log(sessionUser);
@@ -47,11 +52,59 @@
 			await user.set(sessionUser);
 			await config.set(await getBackendConfig());
 
-			if (!redirectPath) {
-				redirectPath = $page.url.searchParams.get('redirectPath') || '/';
-			}
+            // If no explicit redirect, fetch workflow state to resume last step
+            if (!redirectPath) {
+                try {
+                    const res = await fetch(`${WEBUI_API_BASE_URL}/workflow/state`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionUser.token}` }
+                    });
+                    if (res.ok) {
+                        const state = await res.json();
+                        // Sync sidebar progress flags for reactive updates
+                        try {
+                            const p = state?.progress_by_section || {};
+                            // Reset first
+                            localStorage.removeItem('unlock_kids');
+                            localStorage.removeItem('unlock_moderation');
+                            localStorage.removeItem('unlock_exit');
+                            localStorage.removeItem('unlock_completion');
+                            localStorage.removeItem('assignmentCompleted');
+                            // Determine step and unlocks
+                            if (p.has_child_profile) {
+                                localStorage.setItem('unlock_kids', 'true');
+                                localStorage.setItem('assignmentStep', '1');
+                            }
+                            if ((p.moderation_completed_count ?? 0) > 0 || p.has_child_profile) {
+                                localStorage.setItem('unlock_moderation', 'true');
+                                if (!localStorage.getItem('moderationScenariosAccessed')) {
+                                    localStorage.setItem('moderationScenariosAccessed', 'true');
+                                }
+                                localStorage.setItem('assignmentStep', '2');
+                            }
+                            if (p.exit_survey_completed) {
+                                localStorage.setItem('unlock_exit', 'true');
+                                localStorage.setItem('assignmentStep', '4');
+                                localStorage.setItem('assignmentCompleted', 'true');
+                                localStorage.setItem('unlock_completion', 'true');
+                            } else if ((p.moderation_completed_count ?? 0) >= (p.moderation_total ?? 12)) {
+                                // Completed moderation; ready for survey
+                                localStorage.setItem('unlock_exit', 'true');
+                                localStorage.setItem('assignmentStep', '3');
+                            }
+                            window.dispatchEvent(new Event('storage'));
+                            window.dispatchEvent(new Event('workflow-updated'));
+                        } catch {}
+                        redirectPath = state?.next_route || '/';
+                    } else {
+                        redirectPath = $page.url.searchParams.get('redirectPath') || '/';
+                    }
+                } catch {
+                    redirectPath = $page.url.searchParams.get('redirectPath') || '/';
+                }
+            }
 
-			goto(redirectPath);
+            goto(redirectPath);
 			localStorage.removeItem('redirectPath');
 		}
 	};
@@ -73,12 +126,19 @@
 			}
 		}
 
-		const sessionUser = await userSignUp(name, email, password, generateInitialsImage(name)).catch(
-			(error) => {
-				toast.error(`${error}`);
-				return null;
+	const sessionUser = await userSignUp(name, email, password, generateInitialsImage(name)).catch(
+		(error) => {
+			const msg = `${error}`;
+			console.log('[AUTH] signup failed:', msg);
+			if (msg?.toLowerCase().includes('access') || msg?.toLowerCase().includes('prohibited') || msg?.toLowerCase().includes('permission')) {
+				signupServerDisabled = true;
+				toast.error('Sign up is disabled by the server. Please contact your administrator.');
+			} else {
+				toast.error(msg);
 			}
-		);
+			return null;
+		}
+	);
 
 		await setSessionUser(sessionUser);
 	};
@@ -303,14 +363,33 @@ const resetModerationKeysForNewSession = () => {
 		}
 		
 		form = $page.url.searchParams.get('form');
+		if (form === 'signup') {
+			mode = 'signup';
+		}
 
 		loaded = true;
 		setLogoImage();
+
+		// Compute gates and log for debugging
+		try {
+			showFormUI = ($config?.features?.enable_login_form ?? true) || ($config?.features?.enable_ldap ?? false) || !!form;
+			showSignupToggle = ($config?.features?.enable_signup ?? true);
+			console.log('[AUTH] loaded:', {
+				features: $config?.features,
+				formParam: form,
+				computed: { showFormUI, showSignupToggle },
+				mode,
+			});
+		} catch (e) {
+			console.log('[AUTH] debug compute error', e);
+		}
 
 		if (($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false) {
 			await signInHandler();
 				}
 	});
+
+	$: console.log('[AUTH] mode changed:', mode);
 </script>
 
 <svelte:head>
@@ -377,9 +456,10 @@ const resetModerationKeysForNewSession = () => {
 											{/if}
 									</div>
 
+
 								</div>
 
-								{#if $config?.features.enable_login_form || $config?.features.enable_ldap || form}
+							{#if (showFormUI)}
 									<div class="flex flex-col mt-4">
 										{#if mode === 'signup'}
 											<div class="mb-2">
@@ -469,8 +549,31 @@ const resetModerationKeysForNewSession = () => {
 										{/if}
 									</div>
 								{/if}
-								<div class="mt-5">
-									{#if $config?.features.enable_login_form || $config?.features.enable_ldap || form}
+                                <!-- Always show the sign-in/sign-up toggle row so user can switch modes, even if form gating fails -->
+                                <div class="mt-5">
+                                    {#if (mode !== 'ldap')}
+                                        {#if (showSignupToggle)}
+                                            <div class=" mt-0 text-sm text-center">
+                                                {mode === 'signin'
+                                                    ? $i18n.t("Don't have an account?")
+                                                    : $i18n.t('Already have an account?')}
+
+                                                <button
+                                                    class=" font-medium underline"
+                                                    type="button"
+                                                    on:click={() => {
+                                                        mode = mode === 'signin' ? 'signup' : 'signin';
+                                                    }}
+                                                >
+                                                    {mode === 'signin' ? $i18n.t('Sign up') : $i18n.t('Sign in')}
+                                                </button>
+                                            </div>
+                                        {/if}
+                                    {/if}
+                                </div>
+
+                                <div class="mt-3">
+                                    {#if (showFormUI)}
 										{#if mode === 'ldap'}
 											<button
 												class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
@@ -487,28 +590,6 @@ const resetModerationKeysForNewSession = () => {
 												? $i18n.t('Sign in')
 												: $i18n.t('Create Account')}
 											</button>
-
-											{#if $config?.features.enable_signup}
-												<div class=" mt-4 text-sm text-center">
-													{mode === 'signin'
-														? $i18n.t("Don't have an account?")
-														: $i18n.t('Already have an account?')}
-
-													<button
-														class=" font-medium underline"
-														type="button"
-														on:click={() => {
-															if (mode === 'signin') {
-																mode = 'signup';
-															} else {
-																mode = 'signin';
-															}
-														}}
-													>
-														{mode === 'signin' ? $i18n.t('Sign up') : $i18n.t('Sign in')}
-													</button>
-												</div>
-											{/if}
 										{/if}
 									{/if}
 								</div>

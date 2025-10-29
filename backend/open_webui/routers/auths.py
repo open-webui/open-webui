@@ -567,10 +567,9 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
     has_users = Users.has_users()
 
     if WEBUI_AUTH:
-        if (
-            not request.app.state.config.ENABLE_SIGNUP
-            or not request.app.state.config.ENABLE_LOGIN_FORM
-        ):
+        # Gate API signup on ENABLE_SIGNUP only. ENABLE_LOGIN_FORM is a UI toggle
+        # and should not block API signup when server policy allows it.
+        if not request.app.state.config.ENABLE_SIGNUP:
             if has_users or not ENABLE_INITIAL_ADMIN_SIGNUP:
                 raise HTTPException(
                     status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED

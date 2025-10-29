@@ -8,6 +8,11 @@ export interface ChildProfile {
 	child_gender?: string;
 	child_characteristics?: string;
 	parenting_style?: string;
+	// New optional research fields
+	is_only_child?: boolean;
+	child_has_ai_use?: 'yes' | 'no' | 'unsure';
+	child_ai_use_contexts?: string[];
+	parent_llm_monitoring_level?: 'active_rules' | 'occasional_guidance' | 'plan_to' | 'no_monitoring' | 'prefer_not_to_say';
 	created_at: number;
 	updated_at: number;
 }
@@ -18,6 +23,11 @@ export interface ChildProfileForm {
 	child_gender?: string;
 	child_characteristics?: string;
 	parenting_style?: string;
+	// New optional research fields
+	is_only_child?: boolean;
+	child_has_ai_use?: 'yes' | 'no' | 'unsure';
+	child_ai_use_contexts?: string[];
+	parent_llm_monitoring_level?: 'active_rules' | 'occasional_guidance' | 'plan_to' | 'no_monitoring' | 'prefer_not_to_say';
 }
 
 export const getChildProfiles = async (token: string = '') => {

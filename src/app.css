@@ -625,6 +625,13 @@ input[type='number'] {
 	--columbia-blue-2: #CFE1FA;
 	--mimi-pink: #FED4DC;
 	--mimi-pink-2: #FEDEE4;
+
+	/* Theme tokens aligned with system prompt accents */
+	--color-primary: 56 189 248; /* sky-400 */
+	--color-primary-foreground: 255 255 255;
+	--color-accent: 147 51 234; /* purple-600 */
+	--color-surface: 255 255 255;
+	--color-surface-dark: 17 24 39; /* gray-900 */
 }
 
 /* Enhanced drop shadow for message input box */

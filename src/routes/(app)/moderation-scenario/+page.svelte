@@ -246,6 +246,7 @@ function clearModerationLocalKeys() {
 		
 		// Try to load pre-shuffled scenarios from localStorage
 		const scenarioKey = localStorage.getItem(`scenarios_${selectedChild.id}`);
+		const initializedFlag = localStorage.getItem(`scenariosInitialized_${selectedChild.id}_${sessionNumber}`);
 		if (scenarioKey) {
 			const storedScenarios = localStorage.getItem(scenarioKey);
 			if (storedScenarios) {
@@ -275,6 +276,16 @@ function clearModerationLocalKeys() {
 			}
 			return;
 			}
+			// Mark initialized so revisits do not regenerate
+			localStorage.setItem(`scenariosInitialized_${selectedChild.id}_${sessionNumber}`, 'true');
+			return;
+		}
+
+		// If we previously initialized scenarios for this child/session, avoid regenerating
+		if (initializedFlag) {
+			console.log('Scenarios already initialized for this child/session; loading saved states only');
+			loadSavedStates();
+			return;
 		}
 		
 		// Fallback: Generate scenarios if no pre-shuffled scenarios found
@@ -390,6 +401,10 @@ function clearModerationLocalKeys() {
 			scenarioList.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
 			
 			console.log('Updated scenarioList with Q&A pairs:', scenarioList.length, 'with attention check and custom scenario');
+			// Mark initialized so revisits use stored scenarios
+			if (selectedChildId) {
+				localStorage.setItem(`scenariosInitialized_${selectedChildId}_${sessionNumber}`, 'true');
+			}
 			
 			// Load saved states for this child after scenarios are loaded
 			loadSavedStates();
@@ -607,6 +622,10 @@ function clearModerationLocalKeys() {
 	let hasInitialDecision: boolean = false;
 	let acceptedOriginal: boolean = false;
 	let markedNotApplicable: boolean = false;
+// Mobile sidebar toggle for scenario list
+let sidebarOpen: boolean = true;
+// Request guard to prevent responses applying to wrong scenario
+let currentRequestId: number = 0;
 
 	// Helper function to handle text selection - AUTO-HIGHLIGHT on drag
 	function handleTextSelection(event: MouseEvent) {
@@ -1394,7 +1413,9 @@ function cancelReset() {}
 			const childAge = selectedChild?.child_age || null;
 			console.log('Applying moderation with child age:', childAge);
 			
-			// Call moderation API
+			// Call moderation API with request guard
+			const requestId = ++currentRequestId;
+			const scenarioAtRequest = selectedScenarioIndex;
 			const result = await applyModeration(
 				localStorage.token,
 				standardStrategies,
@@ -1405,7 +1426,8 @@ function cancelReset() {}
 				childAge  // Pass child's age for age-appropriate moderation
 			);
 			
-			if (result) {
+			// Drop responses that arrive after user switched scenarios
+			if (result && requestId === currentRequestId && scenarioAtRequest === selectedScenarioIndex) {
 				// Store custom instructions before clearing
 				const usedCustomInstructions = customInstructions.filter(c => selectedArray.includes(c.id)).map(c => ({...c}));
 				
@@ -1477,22 +1499,20 @@ function cancelReset() {}
 	function completeModeration() {
 		// Save current scenario state
 		saveCurrentScenarioState();
-		
-		// Count moderated scenarios (only those where a moderated version was confirmed)
-		let moderatedCount = 0;
-		scenarioStates.forEach((state) => {
-			// Only count as moderated if confirmedVersionIndex >= 0 (not -1 for original accepted)
-			if (state.confirmedVersionIndex !== null && state.confirmedVersionIndex >= 0) {
-				moderatedCount++;
+
+		// New rule: require a terminal decision for every scenario (including custom)
+		let allCompleted = true;
+		for (let i = 0; i < scenarioList.length; i++) {
+			if (!isScenarioCompleted(i)) {
+				allCompleted = false;
+				break;
 			}
-		});
-		
-		// Check if user has moderated at least 3 scenarios
-		if (moderatedCount < 3) {
-			toast.error('Must have at least 3 moderated scenarios');
+		}
+		if (!allCompleted) {
+			toast.error('Please make a selection for every scenario before continuing');
 			return;
 		}
-		
+
 		// Show confirmation modal
 		showConfirmationModal = true;
 	}
@@ -1533,6 +1553,18 @@ function cancelReset() {}
 	};
 
 onMount(async () => {
+    try {
+        // Initialize sidebar state based on screen size for mobile
+        sidebarOpen = window.innerWidth >= 768;
+        const onResize = () => {
+            const shouldOpen = window.innerWidth >= 768;
+            if (shouldOpen !== sidebarOpen) {
+                sidebarOpen = shouldOpen;
+            }
+        };
+        window.addEventListener('resize', onResize);
+        onDestroy(() => window.removeEventListener('resize', onResize));
+    } catch {}
     // Prepare available scenarios; fetch after child profile is known
     let availableScenarioIndices: number[] = [];
 		
@@ -1832,29 +1864,22 @@ onMount(async () => {
 	</nav>
 
 	<div class="flex-1 flex bg-white dark:bg-gray-900 overflow-hidden">
+        <!-- Mobile toggle to open sidebar when hidden -->
+        {#if !sidebarOpen}
+        <button class="md:hidden fixed top-3 left-3 z-20 px-3 py-2 text-xs rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700" on:click={() => { sidebarOpen = true; }} aria-label="Open scenarios">Scenarios</button>
+        {/if}
 		<!-- Left Sidebar: Scenario List -->
-		<div class="w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-gray-50 dark:bg-gray-900">
+		<div class="w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-gray-50 dark:bg-gray-900 {sidebarOpen ? '' : 'hidden'} md:flex">
 			<div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-800 p-4">
-				<h1 class="text-xl font-bold text-gray-900 dark:text-white">Scenarios</h1>
+				<div class="flex items-center justify-between">
+					<h1 class="text-xl font-bold text-gray-900 dark:text-white">Scenarios</h1>
+					<button class="md:hidden text-xs px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800" on:click={() => { sidebarOpen = !sidebarOpen; }} aria-label="Toggle scenarios">{sidebarOpen ? 'Hide' : 'Show'}</button>
+				</div>
 				<p class="text-sm text-gray-600 dark:text-gray-400">
 					{(() => {
-						// Count reviewed scenarios (those with a decision made)
-						const reviewedCount = scenarioStates.size + (hasInitialDecision && !scenarioStates.has(selectedScenarioIndex) ? 1 : 0);
-						
-						// Count moderated scenarios (only those where a moderated version was confirmed)
-						let moderatedCount = 0;
-						scenarioStates.forEach((state) => {
-							// Only count as moderated if confirmedVersionIndex >= 0 (not -1 for original accepted)
-							if (state.confirmedVersionIndex !== null && state.confirmedVersionIndex >= 0) {
-								moderatedCount++;
-							}
-						});
-						// Check current scenario if it has a confirmed moderated version and isn't saved yet
-						if (!scenarioStates.has(selectedScenarioIndex) && confirmedVersionIndex !== null && confirmedVersionIndex >= 0) {
-							moderatedCount++;
-						}
-						
-						return `${reviewedCount} of ${scenarioList.length} reviewed, ${moderatedCount} moderated`;
+						// Completed when any terminal decision is made on a scenario
+						const completedCount = scenarioStates.size + (hasInitialDecision && !scenarioStates.has(selectedScenarioIndex) ? 1 : 0);
+						return `${completedCount} of ${scenarioList.length} completed`;
 					})()}
 				</p>
 			</div>

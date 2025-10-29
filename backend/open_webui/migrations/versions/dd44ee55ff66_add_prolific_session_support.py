@@ -23,8 +23,9 @@ def upgrade():
     op.add_column('user', sa.Column('current_session_id', sa.String(), nullable=True))
     op.add_column('user', sa.Column('session_number', sa.BigInteger(), nullable=False, server_default='1'))
     
-    # Add unique constraint for prolific_pid
-    op.create_unique_constraint('uq_user_prolific_pid', 'user', ['prolific_pid'])
+    # Add unique constraint for prolific_pid (use batch mode for SQLite compatibility)
+    with op.batch_alter_table('user') as batch_op:
+        batch_op.create_unique_constraint('uq_user_prolific_pid', ['prolific_pid'])
     
     # Add session_number to moderation_session table
     op.add_column('moderation_session', sa.Column('session_number', sa.BigInteger(), nullable=False, server_default='1'))
@@ -48,8 +49,9 @@ def downgrade():
     # Remove session_number from moderation_session
     op.drop_column('moderation_session', 'session_number')
     
-    # Remove Prolific fields from user table
-    op.drop_constraint('uq_user_prolific_pid', 'user', type_='unique')
+    # Remove Prolific fields from user table (drop constraint via batch for SQLite)
+    with op.batch_alter_table('user') as batch_op:
+        batch_op.drop_constraint('uq_user_prolific_pid', type_='unique')
     op.drop_column('user', 'session_number')
     op.drop_column('user', 'current_session_id')
     op.drop_column('user', 'study_id')

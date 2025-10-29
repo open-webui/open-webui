@@ -21,6 +21,12 @@
 	let parentAge: string = '';
 	let parentPreference: string = '';
 	let parentingStyle: string = '';
+
+// Child quiz research fields (all required)
+let isOnlyChild: string = '';
+let childHasAIUse: string = '';
+let childAIUseContexts: string[] = [];
+let parentLLMMonitoringLevel: string = '';
 	
 	// Personality traits system - Updated to support multiple traits
 	let expandedTraits: Set<string> = new Set(); // Track which traits are expanded
@@ -139,6 +145,12 @@
 		childGender = sel?.child_gender || '';
 		childCharacteristics = sel?.child_characteristics || '';
 		parentingStyle = sel?.parenting_style || '';
+
+	// Research fields (optional if older profiles lack them)
+	isOnlyChild = typeof (sel as any)?.is_only_child === 'boolean' ? ((sel as any).is_only_child ? 'yes' : 'no') : '';
+	childHasAIUse = (sel as any)?.child_has_ai_use || '';
+	childAIUseContexts = Array.isArray((sel as any)?.child_ai_use_contexts) ? (sel as any).child_ai_use_contexts : [];
+	parentLLMMonitoringLevel = (sel as any)?.parent_llm_monitoring_level || '';
 		
 		// Parse personality traits from stored characteristics
 		if (sel?.child_characteristics) {
@@ -180,6 +192,11 @@
 		
 		sel.child_characteristics = combinedCharacteristics;
 		sel.parenting_style = parentingStyle;
+	// Attach research fields to selected child for local view
+	(sel as any).is_only_child = isOnlyChild === 'yes';
+	(sel as any).child_has_ai_use = childHasAIUse || null;
+	(sel as any).child_ai_use_contexts = childAIUseContexts || [];
+	(sel as any).parent_llm_monitoring_level = parentLLMMonitoringLevel || null;
 	}
 
 	async function deleteChild(index: number) {
@@ -231,6 +248,11 @@
 		// Reset personality traits
 		selectedSubCharacteristics = [];
 		expandedTraits = new Set();
+	// Reset research fields
+	isOnlyChild = '';
+	childHasAIUse = '';
+	childAIUseContexts = [];
+	parentLLMMonitoringLevel = '';
 		showForm = true;
 		isEditing = true; // Set editing mode
 		// Set selected index to -1 to indicate we're creating a new profile
@@ -252,6 +274,40 @@
 				toast.error('Please select a gender');
 				return;
 			}
+			// Enforce child quiz required fields
+			if (!isOnlyChild) {
+				toast.error('Please indicate if this child is an only child');
+				return;
+			}
+			if (!childHasAIUse) {
+				toast.error("Please answer whether this child has used ChatGPT or similar AI tools");
+				return;
+			}
+			if (childHasAIUse !== 'no' && childAIUseContexts.length === 0) {
+				toast.error('Please select at least one context of AI use');
+				return;
+			}
+			if (!parentLLMMonitoringLevel) {
+				toast.error("Please indicate how you've monitored or adjusted this child's AI use");
+				return;
+			}
+			// Required research fields
+			if (!isOnlyChild) {
+				toast.error('Please indicate if this child is an only child');
+				return;
+			}
+			if (!childHasAIUse) {
+				toast.error("Please answer whether this child has used ChatGPT or similar AI tools");
+				return;
+			}
+			if (childHasAIUse !== 'no' && childAIUseContexts.length === 0) {
+				toast.error('Please select at least one context of AI use');
+				return;
+			}
+			if (!parentLLMMonitoringLevel) {
+				toast.error("Please indicate how you've monitored or adjusted this child's AI use");
+				return;
+			}
 
 		// Combine personality traits with characteristics
 		const personalityDesc = getPersonalityDescription();
@@ -269,7 +325,11 @@
 				child_age: childAge,
 				child_gender: childGender,
 				child_characteristics: combinedCharacteristics,
-				parenting_style: parentingStyle
+				parenting_style: parentingStyle,
+				is_only_child: isOnlyChild === 'yes',
+				child_has_ai_use: childHasAIUse as any,
+				child_ai_use_contexts: childAIUseContexts,
+				parent_llm_monitoring_level: parentLLMMonitoringLevel as any
 			});
 			
 			// Store the scenario key in localStorage with the child's ID
@@ -371,6 +431,23 @@
 				toast.error('Please select a gender');
 				return;
 			}
+			// Enforce child quiz required fields
+			if (!isOnlyChild) {
+				toast.error('Please indicate if this child is an only child');
+				return;
+			}
+			if (!childHasAIUse) {
+				toast.error("Please answer whether this child has used ChatGPT or similar AI tools");
+				return;
+			}
+			if (childHasAIUse !== 'no' && childAIUseContexts.length === 0) {
+				toast.error('Please select at least one context of AI use');
+				return;
+			}
+			if (!parentLLMMonitoringLevel) {
+				toast.error("Please indicate how you've monitored or adjusted this child's AI use");
+				return;
+			}
 
 			// Track if we're editing an existing profile
 			const isEditingExisting = childProfiles.length > 0 && selectedChildIndex >= 0;
@@ -385,12 +462,16 @@
 						: personalityDesc)
 					: childCharacteristics;
 				
-				const newChild = await childProfileSync.createChildProfile({
+			const newChild = await childProfileSync.createChildProfile({
 					name: childName,
 					child_age: childAge,
 					child_gender: childGender,
 					child_characteristics: combinedCharacteristics,
-					parenting_style: parentingStyle
+				parenting_style: parentingStyle,
+				is_only_child: isOnlyChild === 'yes',
+				child_has_ai_use: childHasAIUse as any,
+				child_ai_use_contexts: childAIUseContexts,
+				parent_llm_monitoring_level: parentLLMMonitoringLevel as any
 				});
 				if (childProfiles.length === 0) {
 					childProfiles = [newChild];
@@ -439,7 +520,11 @@
 						child_age: childAge,
 						child_gender: childGender,
 						child_characteristics: combinedCharacteristics,
-						parenting_style: parentingStyle
+						parenting_style: parentingStyle,
+						is_only_child: isOnlyChild === 'yes',
+						child_has_ai_use: childHasAIUse as any,
+						child_ai_use_contexts: childAIUseContexts,
+						parent_llm_monitoring_level: parentLLMMonitoringLevel as any
 					});
 				}
 			}
@@ -750,6 +835,23 @@
 					<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Parenting Style</div>
 					<p class="text-gray-900 dark:text-white whitespace-pre-wrap">{childProfiles[selectedChildIndex]?.parenting_style || 'Not specified'}</p>
 				</div>
+				<!-- New research fields -->
+				<div>
+					<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Only Child</div>
+					<p class="text-gray-900 dark:text-white">{childProfiles[selectedChildIndex]?.is_only_child === true ? 'Yes' : childProfiles[selectedChildIndex]?.is_only_child === false ? 'No' : 'Not specified'}</p>
+				</div>
+				<div>
+					<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Child Has Used AI Tools</div>
+					<p class="text-gray-900 dark:text-white">{childProfiles[selectedChildIndex]?.child_has_ai_use || 'Not specified'}</p>
+				</div>
+				<div>
+					<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Contexts of AI Use</div>
+					<p class="text-gray-900 dark:text-white">{(childProfiles[selectedChildIndex]?.child_ai_use_contexts && childProfiles[selectedChildIndex]?.child_ai_use_contexts.length > 0) ? childProfiles[selectedChildIndex]?.child_ai_use_contexts.join(', ') : 'Not specified'}</p>
+				</div>
+				<div>
+					<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Parent LLM Monitoring Level</div>
+					<p class="text-gray-900 dark:text-white">{childProfiles[selectedChildIndex]?.parent_llm_monitoring_level || 'Not specified'}</p>
+				</div>
 			</div>
 			
 		</div>
@@ -929,6 +1031,65 @@
 							class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
 						></textarea>
 					</div>
+
+			<!-- Child Quiz (Required) -->
+			<div class="pt-2">
+				<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Child Quiz</h3>
+				<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Please answer all questions <span class="text-red-500">*</span></p>
+
+				<!-- Only child -->
+				<div class="mb-4">
+					<div class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+						Is this child an only child? <span class="text-red-500">*</span>
+					</div>
+					<div class="space-y-2">
+						<label class="flex items-center"><input type="radio" bind:group={isOnlyChild} value="yes" class="mr-3" />Yes</label>
+						<label class="flex items-center"><input type="radio" bind:group={isOnlyChild} value="no" class="mr-3" />No</label>
+					</div>
+				</div>
+
+				<!-- Child AI use -->
+				<div class="mb-4">
+					<div class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+						Has this child used ChatGPT or similar AI tools? <span class="text-red-500">*</span>
+					</div>
+					<div class="space-y-2">
+						<label class="flex items-center"><input type="radio" bind:group={childHasAIUse} value="yes" class="mr-3" />Yes</label>
+						<label class="flex items-center"><input type="radio" bind:group={childHasAIUse} value="no" class="mr-3" />No</label>
+						<label class="flex items-center"><input type="radio" bind:group={childHasAIUse} value="unsure" class="mr-3" />Unsure</label>
+					</div>
+				</div>
+
+				{#if childHasAIUse !== '' && childHasAIUse !== 'no'}
+					<!-- Contexts -->
+					<div class="mb-4">
+						<div class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+							In what contexts has this child used these tools? <span class="text-red-500">*</span>
+						</div>
+						<div class="space-y-2">
+							<label class="flex items-center"><input type="checkbox" bind:group={childAIUseContexts} value="school_homework" class="mr-3" />For school or homework</label>
+							<label class="flex items-center"><input type="checkbox" bind:group={childAIUseContexts} value="general_knowledge" class="mr-3" />For general knowledge or casual questions</label>
+							<label class="flex items-center"><input type="checkbox" bind:group={childAIUseContexts} value="games_chatting" class="mr-3" />For playing games or chatting with the AI</label>
+							<label class="flex items-center"><input type="checkbox" bind:group={childAIUseContexts} value="personal_advice" class="mr-3" />For advice on personal or social issues</label>
+							<label class="flex items-center"><input type="checkbox" bind:group={childAIUseContexts} value="other" class="mr-3" />Other</label>
+						</div>
+					</div>
+				{/if}
+
+				<!-- Monitoring level -->
+				<div class="mb-2">
+					<div class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+						Have you monitored or adjusted your child’s use of Large Language Models like ChatGPT? <span class="text-red-500">*</span>
+					</div>
+					<div class="space-y-2">
+						<label class="flex items-center"><input type="radio" bind:group={parentLLMMonitoringLevel} value="active_rules" class="mr-3" />Yes — I actively monitor and set rules/limits</label>
+						<label class="flex items-center"><input type="radio" bind:group={parentLLMMonitoringLevel} value="occasional_guidance" class="mr-3" />Yes — occasional reminders or guidance</label>
+						<label class="flex items-center"><input type="radio" bind:group={parentLLMMonitoringLevel} value="plan_to" class="mr-3" />Not yet, but I plan to</label>
+						<label class="flex items-center"><input type="radio" bind:group={parentLLMMonitoringLevel} value="no_monitoring" class="mr-3" />No — I have not monitored or adjusted</label>
+						<label class="flex items-center"><input type="radio" bind:group={parentLLMMonitoringLevel} value="prefer_not_to_say" class="mr-3" />Prefer not to say</label>
+					</div>
+				</div>
+			</div>
 				</div>
 
 				<!-- Save Button -->

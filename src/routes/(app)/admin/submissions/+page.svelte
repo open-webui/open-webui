@@ -19,6 +19,13 @@ import { getAllUsers } from '$lib/apis/users';
 	let showModerationSessions = true;
 	let showExitQuizResponses = true;
 
+	// State for expanded dropdowns/accordions
+	let expandedScenarios: Record<string, boolean> = {};
+	let expandedVersions: Record<string, boolean> = {};
+	
+	// Force reactivity with a counter
+	let expansionCounter = 0;
+
 	// Helpers to support multi-session displays (session_number optional)
 	const getSessionNumber = (obj: any) => Number(obj?.session_number);
 
@@ -39,21 +46,66 @@ import { getAllUsers } from '$lib/apis/users';
 			}));
 	};
 
-	const groupWithinSessionByScenario = (items: any[]) => {
-		const byScenario: Record<string, any[]> = {};
+	const groupWithinSessionByChild = (items: any[], childProfiles: any[]) => {
+		// Group by child first
+		const byChild: Record<string, any[]> = {};
 		for (const s of items) {
-			const scenarioKey = `${s.child_id || 'unknown'}::${s.scenario_index ?? -1}`;
-			(byScenario[scenarioKey] ||= []).push(s);
+			const childId = s.child_id || 'unknown';
+			(byChild[childId] ||= []).push(s);
 		}
-		return Object.entries(byScenario).map(([k, list]) => {
-			const [child_id, scenario_index] = k.split('::');
+		
+		return Object.entries(byChild).map(([childId, sessions]) => {
+			// Lookup child name from profiles
+			const profile = childProfiles.find((p: any) => p.id === childId);
+			const childName = profile?.name || 'Unknown';
+			
+			// Then group by scenario within this child
+			const byScenario: Record<string, any[]> = {};
+			for (const s of sessions) {
+				const scenarioKey = `${s.scenario_index ?? -1}`;
+				(byScenario[scenarioKey] ||= []).push(s);
+			}
+			
+			const scenarios = Object.entries(byScenario).map(([k, list]) => {
+				const scenarioIndex = Number(k);
+				return {
+					scenario_index: scenarioIndex,
+					versions: list.sort((a, b) => (a.version_number ?? 0) - (b.version_number ?? 0)),
+					// Get first version's prompt and response (all should be same)
+					scenario_prompt: list[0]?.scenario_prompt || '',
+					original_response: list[0]?.original_response || ''
+				};
+			});
+			
 			return {
-				child_id,
-				scenario_index: Number(scenario_index),
-				versions: list.sort((a, b) => (a.version_number ?? 0) - (b.version_number ?? 0))
+				child_id: childId,
+				child_name: childName,
+				scenarios: scenarios.sort((a, b) => a.scenario_index - b.scenario_index)
 			};
 		});
 	};
+
+	function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
+		const key = `${childId}::${scenarioIndex}`;
+		const currentValue = expandedScenarios[key];
+		expandedScenarios = { ...expandedScenarios, [key]: !currentValue };
+		expansionCounter++;
+	}
+
+	function isScenarioExpanded(childId: string, scenarioIndex: number) {
+		const key = `${childId}::${scenarioIndex}`;
+		return expandedScenarios[key] === true;
+	}
+
+	function toggleVersionAccordion(versionId: string) {
+		const currentValue = expandedVersions[versionId];
+		expandedVersions = { ...expandedVersions, [versionId]: !currentValue };
+		expansionCounter++;
+	}
+
+	function isVersionExpanded(versionId: string) {
+		return expandedVersions[versionId] === true;
+	}
 
 		onMount(async () => {
 		if ($user?.role !== 'admin') {
@@ -304,49 +356,136 @@ import { getAllUsers } from '$lib/apis/users';
 										</div>
 										<div class="text-xs text-gray-500 dark:text-gray-400">{sessionBlock.items.length} rows</div>
 									</div>
-									<div class="p-3 space-y-3">
-										{#each groupWithinSessionByScenario(sessionBlock.items) as group}
-											<div class="rounded border border-gray-100 dark:border-gray-800">
-												<div class="px-3 py-2 bg-white dark:bg-gray-900 flex items-center justify-between">
-													<div class="flex items-center gap-3">
-														<span class="text-xs text-gray-500 dark:text-gray-400">Child</span>
-														<span class="font-mono text-xs">{group.child_id}</span>
-														<span class="text-xs text-gray-500 dark:text-gray-400">Scenario</span>
-														<span class="text-sm">{group.scenario_index}</span>
+									<div class="p-3 space-y-4">
+										{#each groupWithinSessionByChild(sessionBlock.items, submissionsData.child_profiles) as childGroup}
+											<div class="rounded border border-gray-200 dark:border-gray-700">
+												<div class="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 flex items-center justify-between">
+													<div class="flex items-center gap-2">
+														<span class="text-sm font-semibold text-gray-900 dark:text-white">Child: {childGroup.child_name} ({childGroup.child_id})</span>
 													</div>
 												</div>
-												<div class="overflow-x-auto">
-													<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-														<thead class="text-xs text-gray-700 dark:text-gray-300 uppercase bg-gray-50 dark:bg-gray-800">
-															<tr>
-																<th class="px-3 py-2">Attempt</th>
-																<th class="px-3 py-2">Version</th>
-																<th class="px-3 py-2">Decision</th>
-																<th class="px-3 py-2">Final</th>
-																<th class="px-3 py-2">Created</th>
-														</tr>
-													</thead>
-													<tbody>
-														{#each group.versions as row}
-															<tr class="bg-white dark:bg-gray-900 border-t dark:border-gray-800">
-																<td class="px-3 py-2">{row.attempt_number}</td>
-																<td class="px-3 py-2">{row.version_number}</td>
-																<td class="px-3 py-2">{row.initial_decision || 'N/A'}</td>
-																<td class="px-3 py-2">
-																	{#if row.is_final_version}
-																		<span class="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded">Final</span>
-																	{:else}
-																		<span class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded">Draft</span>
+												<div class="p-3 space-y-3">
+													{#each childGroup.scenarios as scenario}
+														<div class="rounded border border-gray-200 dark:border-gray-700">
+															<div class="px-3 py-2 bg-white dark:bg-gray-900 flex items-center justify-between">
+																<div class="flex items-center gap-3 flex-1 min-w-0">
+																	<span class="text-sm font-medium text-gray-900 dark:text-white">Scenario {scenario.scenario_index}</span>
+																	{#if scenario.scenario_prompt}
+																		<span class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-md">
+																			{scenario.scenario_prompt.substring(0, 80)}{scenario.scenario_prompt.length > 80 ? '...' : ''}
+																		</span>
 																	{/if}
-																</td>
-																<td class="px-3 py-2">{formatTimestamp(row.created_at)}</td>
-															</tr>
-														{/each}
-													</tbody>
-												</table>
+																</div>
+																<button
+																	on:click={() => toggleScenarioDropdown(childGroup.child_id, scenario.scenario_index)}
+																	class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xs whitespace-nowrap ml-2"
+																>
+																	{isScenarioExpanded(childGroup.child_id, scenario.scenario_index) ? '▼' : '▶'} View Full Prompt
+																</button>
+															</div>
+															{#if isScenarioExpanded(childGroup.child_id, scenario.scenario_index) && expansionCounter >= 0}
+																<div class="px-3 py-2 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+																	<div class="mb-2">
+																		<span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Scenario Prompt:</span>
+																		<p class="text-sm text-gray-900 dark:text-white mt-1">{scenario.scenario_prompt || 'No prompt available'}</p>
+																	</div>
+																	<div>
+																		<span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Original Response:</span>
+																		<p class="text-sm text-gray-900 dark:text-white mt-1">{scenario.original_response || 'No response available'}</p>
+																	</div>
+																</div>
+															{/if}
+															<div class="overflow-x-auto">
+																<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+																	<thead class="text-xs text-gray-700 dark:text-gray-300 uppercase bg-gray-50 dark:bg-gray-800">
+																		<tr>
+																			<th class="px-3 py-2">Attempt</th>
+																			<th class="px-3 py-2">Version</th>
+																			<th class="px-3 py-2">Decision</th>
+																			<th class="px-3 py-2">Final</th>
+																			<th class="px-3 py-2">Created</th>
+																			<th class="px-3 py-2">Details</th>
+																		</tr>
+																	</thead>
+																	<tbody>
+																		{#each scenario.versions as row}
+																			<tr class="bg-white dark:bg-gray-900 border-t dark:border-gray-800">
+																				<td class="px-3 py-2">{row.attempt_number}</td>
+																				<td class="px-3 py-2">{row.version_number}</td>
+																				<td class="px-3 py-2">{row.initial_decision || 'N/A'}</td>
+																				<td class="px-3 py-2">
+																					{#if row.is_final_version}
+																						<span class="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded">Final</span>
+																					{:else}
+																						<span class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded">Draft</span>
+																					{/if}
+																				</td>
+																				<td class="px-3 py-2">{formatTimestamp(row.created_at)}</td>
+																				<td class="px-3 py-2">
+																					<button
+																						on:click={() => toggleVersionAccordion(row.id)}
+																						class="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs"
+																					>
+																						{isVersionExpanded(row.id) ? 'Hide' : 'Show'}
+																					</button>
+																				</td>
+																			</tr>
+																			{#if isVersionExpanded(row.id) && expansionCounter >= 0}
+																				<tr class="bg-gray-50 dark:bg-gray-800">
+																					<td colspan="6" class="px-4 py-3">
+																						<div class="space-y-3">
+																							{#if row.strategies && row.strategies.length > 0}
+																								<div>
+																									<span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Strategies:</span>
+																									<ul class="mt-1 space-y-1">
+																										{#each row.strategies as strategy}
+																											<li class="text-sm text-gray-900 dark:text-white">• {strategy}</li>
+																										{/each}
+																									</ul>
+																								</div>
+																							{/if}
+																							{#if row.custom_instructions && row.custom_instructions.length > 0}
+																								<div>
+																									<span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Custom Instructions:</span>
+																									<ul class="mt-1 space-y-1">
+																										{#each row.custom_instructions as instruction}
+																											<li class="text-sm text-gray-900 dark:text-white">• {instruction}</li>
+																										{/each}
+																									</ul>
+																								</div>
+																							{/if}
+																							{#if row.highlighted_texts && row.highlighted_texts.length > 0}
+																								<div>
+																									<span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Highlighted Texts:</span>
+																									<ul class="mt-1 space-y-1">
+																										{#each row.highlighted_texts as text}
+																											<li class="text-sm text-gray-900 dark:text-white">• {text}</li>
+																										{/each}
+																									</ul>
+																								</div>
+																							{/if}
+																							{#if row.refactored_response}
+																								<div>
+																									<span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Refactored Response:</span>
+																									<p class="text-sm text-gray-900 dark:text-white mt-1">{row.refactored_response}</p>
+																								</div>
+																							{/if}
+																							{#if !row.strategies?.length && !row.custom_instructions?.length && !row.highlighted_texts?.length && !row.refactored_response}
+																								<div class="text-xs text-gray-500 italic">No moderation details available for this version</div>
+																							{/if}
+																						</div>
+																					</td>
+																				</tr>
+																			{/if}
+																		{/each}
+																	</tbody>
+																</table>
+															</div>
+														</div>
+													{/each}
+												</div>
 											</div>
-										</div>
-									{/each}
+										{/each}
 								</div>
 							</div>
 						{/each}

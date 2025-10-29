@@ -5,6 +5,7 @@ from typing import Optional
 from open_webui.internal.db import Base, get_db
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, Index, Boolean, Integer
+from open_webui.internal.db import JSONField
 
 ####################
 # CHILD PROFILE: Database schema for storing child profiles linked to parent users
@@ -23,6 +24,12 @@ class ChildProfile(Base):
     child_gender = Column(String, nullable=True)  # Gender (e.g., "Male", "Female")
     child_characteristics = Column(Text, nullable=True)  # Personality/interests description
     parenting_style = Column(String, nullable=True)  # Parenting approach/preferences
+
+    # Research fields (nullable for backward compatibility)
+    is_only_child = Column(Boolean, nullable=True)
+    child_has_ai_use = Column(String, nullable=True)  # 'yes' | 'no' | 'unsure'
+    child_ai_use_contexts = Column(JSONField, nullable=True)  # list[str]
+    parent_llm_monitoring_level = Column(String, nullable=True)  # enum-like string
 
     # Reset/attempt tracking
     attempt_number = Column(Integer, nullable=False, default=1)
@@ -51,6 +58,10 @@ class ChildProfileModel(BaseModel):
     child_gender: Optional[str] = None
     child_characteristics: Optional[str] = None
     parenting_style: Optional[str] = None
+    is_only_child: Optional[bool] = None
+    child_has_ai_use: Optional[str] = None
+    child_ai_use_contexts: Optional[list[str]] = None
+    parent_llm_monitoring_level: Optional[str] = None
     attempt_number: int
     is_current: bool
     session_number: int
@@ -63,6 +74,10 @@ class ChildProfileForm(BaseModel):
     child_gender: Optional[str] = None
     child_characteristics: Optional[str] = None
     parenting_style: Optional[str] = None
+    is_only_child: Optional[bool] = None
+    child_has_ai_use: Optional[str] = None
+    child_ai_use_contexts: Optional[list[str]] = None
+    parent_llm_monitoring_level: Optional[str] = None
 
 class ChildProfileTable:
     def insert_new_child_profile(
@@ -82,6 +97,10 @@ class ChildProfileTable:
                     "child_gender": form_data.child_gender,
                     "child_characteristics": form_data.child_characteristics,
                     "parenting_style": form_data.parenting_style,
+                    "is_only_child": form_data.is_only_child,
+                    "child_has_ai_use": form_data.child_has_ai_use,
+                    "child_ai_use_contexts": form_data.child_ai_use_contexts,
+                    "parent_llm_monitoring_level": form_data.parent_llm_monitoring_level,
                     "attempt_number": attempt_number,
                     "is_current": True,
                     "session_number": session_number,
@@ -134,6 +153,10 @@ class ChildProfileTable:
                 profile.child_gender = updated.child_gender
                 profile.child_characteristics = updated.child_characteristics
                 profile.parenting_style = updated.parenting_style
+                profile.is_only_child = updated.is_only_child
+                profile.child_has_ai_use = updated.child_has_ai_use
+                profile.child_ai_use_contexts = updated.child_ai_use_contexts
+                profile.parent_llm_monitoring_level = updated.parent_llm_monitoring_level
                 profile.updated_at = ts
                 
                 db.commit()
