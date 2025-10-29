@@ -1490,6 +1490,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 async def process_chat_response(
     request, response, form_data, user, metadata, model, events, tasks
 ):
+    print(f"🔍 [MULTIMODAL DEBUG] ===== process_chat_response CALLED =====")
+
     async def background_tasks_handler():
         message = None
         messages = []
@@ -1951,11 +1953,11 @@ async def process_chat_response(
 
                 for idx, block in enumerate(content_blocks):
                     if block["type"] == "text":
-                        log.info(f"🔍 [MULTIMODAL DEBUG] serialize_content_blocks block[{idx}] content type: {type(block['content']).__name__}")
+                        print(f"🔍 [MULTIMODAL DEBUG] serialize_content_blocks block[{idx}] content type: {type(block['content']).__name__}")
 
                         # Handle both string content and multimodal list content (with images)
                         if isinstance(block["content"], list):
-                            log.info(f"🔍 [MULTIMODAL DEBUG] Block content is list, extracting text")
+                            print(f"🔍 [MULTIMODAL DEBUG] Block content is list, extracting text: {block['content']}")
                             # Extract text from multimodal content
                             block_content = ""
                             for item in block["content"]:
@@ -1967,7 +1969,7 @@ async def process_chat_response(
                             try:
                                 block_content = block["content"].strip()
                             except AttributeError as e:
-                                log.error(f"🔍 [MULTIMODAL DEBUG] ERROR calling .strip() on block[{idx}]['content']: type={type(block['content'])}, value={block['content']}")
+                                print(f"🔍 [MULTIMODAL DEBUG] ❌ ERROR calling .strip() on block[{idx}]['content']: type={type(block['content'])}, value={block['content']}")
                                 raise
 
                         if block_content:
@@ -2144,16 +2146,16 @@ async def process_chat_response(
                 # This ensures all string operations (.replace(), .strip(), etc.) work correctly
                 if content_blocks and content_blocks[-1].get("type") == "text":
                     block_content = content_blocks[-1]["content"]
-                    log.info(f"🔍 [MULTIMODAL DEBUG] tag_content_handler: content_blocks[-1] type={type(block_content).__name__}")
+                    print(f"🔍 [MULTIMODAL DEBUG] tag_content_handler: content_blocks[-1] type={type(block_content).__name__}")
                     if isinstance(block_content, list):
-                        log.info(f"🔍 [MULTIMODAL DEBUG] tag_content_handler: Normalizing list content")
+                        print(f"🔍 [MULTIMODAL DEBUG] tag_content_handler: Normalizing list content: {block_content}")
                         # Extract text from multimodal content
                         text_content = ""
                         for item in block_content:
                             if isinstance(item, dict) and item.get("type") == "text":
                                 text_content += item.get("text", "")
                         content_blocks[-1]["content"] = text_content
-                        log.info(f"🔍 [MULTIMODAL DEBUG] tag_content_handler: After normalization type={type(content_blocks[-1]['content']).__name__}")
+                        print(f"🔍 [MULTIMODAL DEBUG] tag_content_handler: After normalization type={type(content_blocks[-1]['content']).__name__}")
 
                 def extract_attributes(tag_content):
                     """Extract attributes from a tag if they exist."""
@@ -2349,20 +2351,20 @@ async def process_chat_response(
                 else last_assistant_message if last_assistant_message else ""
             )
 
-            log.info(f"🔍 [MULTIMODAL DEBUG] Initial content type: {type(content).__name__}")
+            print(f"🔍 [MULTIMODAL DEBUG] Initial content type: {type(content).__name__}")
             if isinstance(content, list):
-                log.info(f"🔍 [MULTIMODAL DEBUG] Content is list with {len(content)} items")
+                print(f"🔍 [MULTIMODAL DEBUG] Content is list with {len(content)} items: {content}")
 
             # Normalize multimodal content (with images) to plain text
             # When user attaches images, content is a list: [{"type": "text", "text": "..."}, {"type": "image_url", ...}]
             if isinstance(content, list):
-                log.info(f"🔍 [MULTIMODAL DEBUG] Normalizing multimodal content to text")
+                print(f"🔍 [MULTIMODAL DEBUG] Normalizing multimodal content to text")
                 text_content = ""
                 for item in content:
                     if isinstance(item, dict) and item.get("type") == "text":
                         text_content += item.get("text", "")
                 content = text_content
-                log.info(f"🔍 [MULTIMODAL DEBUG] After normalization: type={type(content).__name__}, length={len(content) if isinstance(content, str) else 'N/A'}")
+                print(f"🔍 [MULTIMODAL DEBUG] After normalization: type={type(content).__name__}, length={len(content) if isinstance(content, str) else 'N/A'}")
 
             response_usage = None  # Initialize response_usage at the top level
             chunk_count = 0  # Initialize chunk_count at the top level for logging
@@ -2373,7 +2375,7 @@ async def process_chat_response(
                     "content": content,
                 }
             ]
-            log.info(f"🔍 [MULTIMODAL DEBUG] Created content_blocks with content type: {type(content).__name__}")
+            print(f"🔍 [MULTIMODAL DEBUG] Created content_blocks with content type: {type(content).__name__}")
 
             reasoning_tags_param = metadata.get("params", {}).get("reasoning_tags")
             DETECT_REASONING_TAGS = reasoning_tags_param is not False
@@ -2657,7 +2659,9 @@ async def process_chat_response(
                                         # Debug log to catch if multimodal content is being added during streaming
                                         current_content = content_blocks[-1]["content"]
                                         if isinstance(current_content, list) or isinstance(value, list):
-                                            log.error(f"🔍 [MULTIMODAL DEBUG] STREAMING: Detected list! current_content type={type(current_content).__name__}, value type={type(value).__name__}")
+                                            print(f"🔍 [MULTIMODAL DEBUG] ❌ STREAMING: Detected list! current_content type={type(current_content).__name__}, value type={type(value).__name__}")
+                                            print(f"🔍 [MULTIMODAL DEBUG] current_content={current_content}")
+                                            print(f"🔍 [MULTIMODAL DEBUG] value={value}")
 
                                         content_blocks[-1]["content"] = (
                                             content_blocks[-1]["content"] + value
@@ -2739,10 +2743,10 @@ async def process_chat_response(
                         if content_blocks[-1]["type"] == "text":
                             # Handle both string and multimodal list content
                             last_content = content_blocks[-1]["content"]
-                            log.info(f"🔍 [MULTIMODAL DEBUG] Cleanup: content_blocks[-1] content type={type(last_content).__name__}")
+                            print(f"🔍 [MULTIMODAL DEBUG] Cleanup: content_blocks[-1] content type={type(last_content).__name__}")
 
                             if isinstance(last_content, list):
-                                log.info(f"🔍 [MULTIMODAL DEBUG] Cleanup: Content is list, extracting text")
+                                print(f"🔍 [MULTIMODAL DEBUG] Cleanup: Content is list, extracting text: {last_content}")
                                 # Extract and strip text from multimodal content
                                 text_content = ""
                                 for item in last_content:
@@ -2754,7 +2758,7 @@ async def process_chat_response(
                                 try:
                                     content_blocks[-1]["content"] = last_content.strip()
                                 except AttributeError as e:
-                                    log.error(f"🔍 [MULTIMODAL DEBUG] Cleanup ERROR calling .strip(): type={type(last_content)}, value={last_content}")
+                                    print(f"🔍 [MULTIMODAL DEBUG] ❌ Cleanup ERROR calling .strip(): type={type(last_content)}, value={last_content}")
                                     raise
 
                             if not content_blocks[-1]["content"]:
