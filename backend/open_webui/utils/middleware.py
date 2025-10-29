@@ -1700,11 +1700,11 @@ async def process_chat_response(
             if "usage" in response:
                 usage_data = response["usage"]
             else:
-                # Record the prompt even without usage data using estimated minimal values
+                # Record the prompt even without usage data using 0 values to indicate missing data
                 usage_data = {
-                    "completion_tokens": 1,  # Minimal to indicate a response was generated
-                    "prompt_tokens": 1,  # Minimal to indicate a prompt was sent
-                    "total_tokens": 2,
+                    "completion_tokens": 0,  # 0 to indicate no usage data was available
+                    "prompt_tokens": 0,  # 0 to indicate no usage data was available
+                    "total_tokens": 0,
                 }
 
             MessageMetrics.insert_new_metrics(
@@ -1979,11 +1979,11 @@ async def process_chat_response(
                         or form_data.get("model")
                         or "unknown"
                     )
-                    # Use minimal estimated values when usage data wasn't in the stream
+                    # Use 0 values when usage data wasn't in the stream to clearly identify missing data
                     fallback_usage = {
-                        "completion_tokens": 1,  # Minimal to indicate a response was generated
-                        "prompt_tokens": 1,  # Minimal to indicate a prompt was sent
-                        "total_tokens": 2,
+                        "completion_tokens": 0,  # 0 to indicate no usage data was available
+                        "prompt_tokens": 0,  # 0 to indicate no usage data was available
+                        "total_tokens": 0,
                     }
                     MessageMetrics.insert_new_metrics(
                         user,
