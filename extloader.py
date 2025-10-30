@@ -55,7 +55,7 @@ DEFAULT_COMPRESSION_WIDTH = int(os.getenv("FILE_IMAGE_COMPRESSION_WIDTH", "1024"
 DEFAULT_COMPRESSION_HEIGHT = int(os.getenv("FILE_IMAGE_COMPRESSION_HEIGHT", "1024"))
 COMPRESSION_QUALITY = int(os.getenv("IMAGE_COMPRESSION_QUALITY", "85"))
 
-# Image filtering thresholds - ADD AFTER LINE 55
+# Image filtering thresholds
 MIN_IMAGE_WIDTH = int(os.getenv("MIN_IMAGE_WIDTH", "32"))  # Minimum width in pixels
 MIN_IMAGE_HEIGHT = int(os.getenv("MIN_IMAGE_HEIGHT", "32"))  # Minimum height in pixels
 MIN_IMAGE_SIZE_BYTES = int(os.getenv("MIN_IMAGE_SIZE_BYTES", "1024"))  # 1KB minimum
@@ -670,17 +670,19 @@ async def process_document(request: Request):
 
     base64_images = []
     full_text = ""
+    page_texts = []
     page_count = 0
 
-    # PDF processing - use original working logic with efficiency improvements and unicode normalization
+    # PDF processing - page-by-page extraction with unicode normalization
     if file_ext == ".pdf":
-        logger.info("Taking PDF processing path with PyMuPDF")
+        logger.info("Taking PDF processing path with PyMuPDF - page-by-page extraction")
         try:
-            # Open the PDF from the in-memory byte stream - EXACTLY like original
+            # Open the PDF from the in-memory byte stream
             doc = fitz.open(stream=file_bytes, filetype="pdf")
             page_count = doc.page_count
             
-            # 1. Extract all text content from the document with unicode normalization
+            # 1. Extract text content PAGE BY PAGE with unicode normalization
+            page_texts = []
             for page_num in range(len(doc)):
                 page = doc.load_page(page_num)
                 page_text = page.get_text()
@@ -688,7 +690,16 @@ async def process_document(request: Request):
                 # Normalize unicode to prevent encoding errors
                 page_text = normalize_text_encoding(page_text)
                 
-                full_text += page_text + "\n\n"
+                # Only add non-empty pages
+                if page_text.strip():
+                    page_texts.append(page_text.strip())
+                else:
+                    logger.debug(f"Page {page_num + 1} is empty, skipping")
+            
+            logger.info(f"Extracted {len(page_texts)} non-empty pages from {page_count} total pages")
+            
+            # Create full_text for any code that might reference it
+            full_text = "\n\n".join(page_texts)
 
             # 2. Extract images with efficiency optimizations
             base64_images = process_images_efficiently(doc, extract_images_flag, filename)
@@ -733,22 +744,41 @@ async def process_document(request: Request):
             )
 
     # Prepare the final JSON response payload with processing status
-    response_payload = {
-        "page_content": full_text.strip(),
-        "metadata": {
-            "source": filename,
-            "page_count": page_count,
-            "images_extracted": len(base64_images),
-            "processing_status": "completed",
-            "processing_time_ms": int((time.time() - start_time) * 1000) if 'start_time' in locals() else None,
-            "output_format": output_format,
-            "azure_compatible": AZURE_DOC_INTEL_COMPATIBLE,
-            "text_normalized": True  # Flag indicating unicode normalization was applied
-        },
-        "images": base64_images,
-    }
-
-    logger.info(f"Returning response with {len(full_text)} chars of text and {len(base64_images)} images")
+    if file_ext == ".pdf":
+        # For PDFs, return pages as a list
+        total_chars = sum(len(page) for page in page_texts)
+        response_payload = {
+            "page_content": page_texts,  # ← List of pages for PDFs
+            "metadata": {
+                "source": filename,
+                "page_count": len(page_texts),  # ← Accurate count of non-empty pages
+                "images_extracted": len(base64_images),
+                "processing_status": "completed",
+                "processing_time_ms": int((time.time() - start_time) * 1000) if 'start_time' in locals() else None,
+                "output_format": "page_list",  # ← Indicate this is a page list
+                "azure_compatible": AZURE_DOC_INTEL_COMPATIBLE,
+                "text_normalized": True
+            },
+            "images": base64_images,
+        }
+        logger.info(f"Returning response with {len(page_texts)} pages ({total_chars} chars) and {len(base64_images)} images")
+    else:
+        # For non-PDFs, keep single string format
+        response_payload = {
+            "page_content": full_text.strip(),
+            "metadata": {
+                "source": filename,
+                "page_count": page_count,
+                "images_extracted": len(base64_images),
+                "processing_status": "completed",
+                "processing_time_ms": int((time.time() - start_time) * 1000) if 'start_time' in locals() else None,
+                "output_format": output_format,
+                "azure_compatible": AZURE_DOC_INTEL_COMPATIBLE,
+                "text_normalized": True
+            },
+            "images": base64_images,
+        }
+        logger.info(f"Returning response with {len(full_text)} chars of text and {len(base64_images)} images")
     
     return JSONResponse(content=response_payload)
 
@@ -768,7 +798,7 @@ def read_root():
     return {
         "status": "ok", 
         "message": "Content Processing Engine is running.",
-        "pdf_processing": "PyMuPDF",
+        "pdf_processing": "PyMuPDF (Page-by-Page)",
         "document_processing": "Azure Document Intelligence Compatible",
         "processors_available": processors_available,
         "supported_formats": ["PDF", "DOCX", "XLSX", "PPTX", "RTF"] if all([DOCX_AVAILABLE, OPENPYXL_AVAILABLE, PPTX_AVAILABLE, RTF_AVAILABLE]) else ["PDF"] + processors_available,
@@ -780,7 +810,12 @@ def read_root():
             "compression_width": DEFAULT_COMPRESSION_WIDTH,
             "compression_height": DEFAULT_COMPRESSION_HEIGHT,
             "compression_quality": COMPRESSION_QUALITY,
-            "compression_available": PILLOW_AVAILABLE
+            "compression_available": PILLOW_AVAILABLE,
+            "filtering": {
+                "min_width": MIN_IMAGE_WIDTH,
+                "min_height": MIN_IMAGE_HEIGHT,
+                "min_size_bytes": MIN_IMAGE_SIZE_BYTES
+            }
         }
     }
 
@@ -789,7 +824,7 @@ def health_check():
     """Health check endpoint."""
     return {
         "status": "healthy",
-        "pdf_processor": "PyMuPDF - Available",
+        "pdf_processor": "PyMuPDF - Available (Page-by-Page Extraction)",
         "docx_processor": "python-docx - Available (Azure Compatible)" if DOCX_AVAILABLE else "python-docx - Not Available",
         "xlsx_processor": "openpyxl - Available" if OPENPYXL_AVAILABLE else "openpyxl - Not Available", 
         "pptx_processor": "python-pptx - Available" if PPTX_AVAILABLE else "python-pptx - Not Available",
@@ -802,6 +837,11 @@ def health_check():
             "max_width": DEFAULT_COMPRESSION_WIDTH,
             "max_height": DEFAULT_COMPRESSION_HEIGHT,
             "quality": COMPRESSION_QUALITY
+        },
+        "image_filtering": {
+            "min_width": MIN_IMAGE_WIDTH,
+            "min_height": MIN_IMAGE_HEIGHT,
+            "min_size_bytes": MIN_IMAGE_SIZE_BYTES
         }
     }
 
@@ -811,12 +851,19 @@ def test_image_extraction():
     return {
         "status": "ready",
         "message": "Send a PDF with 'X-Extract-Images: true' header to /process to test image extraction",
-        "pdf_processing": "PyMuPDF",
+        "pdf_processing": "PyMuPDF (Page-by-Page Extraction)",
         "azure_compatibility": "Azure Document Intelligence Compatible Output",
         "text_normalization": "Unicode NFKC normalization enabled",
         "expected_headers": {
             "X-Filename": "your-file.pdf",
             "X-Extract-Images": "true",
             "outputContentFormat": "json or markdown (optional)"
+        },
+        "pdf_output_format": {
+            "page_content": "List[str] - One string per page",
+            "metadata": {
+                "output_format": "page_list",
+                "page_count": "Accurate count of non-empty pages"
+            }
         }
     }
