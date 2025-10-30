@@ -117,6 +117,11 @@
 	let showValvesModal = false;
 	let selectedValvesType = 'tool'; // 'tool' or 'function'
 	let selectedValvesItemId = null;
+	let integrationsMenuCloseOnOutsideClick = true;
+
+	$: if (!showValvesModal) {
+		integrationsMenuCloseOnOutsideClick = true;
+	}
 
 	$: onChange({
 		prompt,
@@ -885,8 +890,6 @@
 				})
 			}
 		];
-
-		console.log(suggestions);
 		loaded = true;
 
 		window.setTimeout(() => {
@@ -945,6 +948,9 @@
 	id={selectedValvesItemId ?? null}
 	on:save={async () => {
 		await tick();
+	}}
+	on:close={() => {
+		integrationsMenuCloseOnOutsideClick = true;
 	}}
 />
 
@@ -1201,12 +1207,12 @@
 														floatingMenuPlacement={'top-start'}
 														insertPromptAsRichText={$settings?.insertPromptAsRichText ?? false}
 														shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
-															(!$mobile ||
-																!(
-																	'ontouchstart' in window ||
-																	navigator.maxTouchPoints > 0 ||
-																	navigator.msMaxTouchPoints > 0
-																))}
+															!$mobile &&
+															!(
+																'ontouchstart' in window ||
+																navigator.maxTouchPoints > 0 ||
+																navigator.msMaxTouchPoints > 0
+															)}
 														placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 														largeTextAsFile={($settings?.largeTextAsFile ?? false) && !shiftKey}
 														autocomplete={$config?.features?.enable_autocomplete_generation &&
@@ -1465,11 +1471,13 @@
 												bind:webSearchEnabled
 												bind:imageGenerationEnabled
 												bind:codeInterpreterEnabled
+												closeOnOutsideClick={integrationsMenuCloseOnOutsideClick}
 												onShowValves={(e) => {
 													const { type, id } = e;
 													selectedValvesType = type;
 													selectedValvesItemId = id;
 													showValvesModal = true;
+													integrationsMenuCloseOnOutsideClick = false;
 												}}
 												onClose={async () => {
 													await tick();
