@@ -3,6 +3,7 @@
 	import dayjs from 'dayjs';
 
 	import { createEventDispatcher } from 'svelte';
+	import { onDestroy } from 'svelte';
 	import { onMount, tick, getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType, t } from 'i18next';
@@ -29,6 +30,8 @@
 		removeAllDetails
 	} from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { TTS_RESPONSE_SPLIT } from '$lib/types';
+	import { ttsState, playAudio, stopAllAudio } from '$lib/utils/tts';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
@@ -155,14 +158,7 @@
 	let editTextAreaElement: HTMLTextAreaElement;
 
 	let messageIndexEdit = false;
-
-	let audioParts: Record<number, HTMLAudioElement | null> = {};
-	let speaking = false;
-	let speakingIdx: number | undefined;
-
-	let loadingSpeech = false;
 	let generatingImage = false;
-
 	let showRateComment = false;
 
 	const copyToClipboard = async (text) => {
@@ -177,182 +173,156 @@
 			toast.success($i18n.t('Copying to clipboard was successful!'));
 		}
 	};
+	
+	// ===[TTS | Read Aloud Logic]===
+	const toggleSpeakMessage = async (
+		messageId: string | number,
+		content: string,
+		config: {
+			engine: string,
+			voice: string,
+			playbackRate: number,
+			splitOn?: TTS_RESPONSE_SPLIT.PUNCTUATION | TTS_RESPONSE_SPLIT.PARAGRAPHS | TTS_RESPONSE_SPLIT.NONE,
+			token?: string,
+			dtype?: string
+		}
+	) => {
+		const oldMessageId = $ttsState.currentMessageId;
 
-	const playAudio = (idx: number) => {
-		return new Promise<void>((res) => {
-			speakingIdx = idx;
-			const audio = audioParts[idx];
+		// stop when user clicks the same button while playing
+		if ((oldMessageId === messageId) && ($ttsState.isSpeaking || $ttsState.isLoading)) {
+			stopAllAudio();
+			await new Promise((r) => setTimeout(r, 100));
+			return;
+		}
 
-			if (!audio) {
-				return res();
+		// stop if the user clicks a different button while playing/loading
+		if ($ttsState.isSpeaking || $ttsState.isLoading) {
+			if (oldMessageId !== messageId) {
+				stopAllAudio();
+				await new Promise((r) => setTimeout(r, 100));
 			}
+		}
 
-			audio.play();
-			audio.onended = async () => {
-				await new Promise((r) => setTimeout(r, 300));
+		$ttsState.isLoading = true;
 
-				if (Object.keys(audioParts).length - 1 === idx) {
-					speaking = false;
-				}
+		// remove <details> blocks
+		content = removeAllDetails(content);
 
-				res();
-			};
-		});
-	};
+		// split message content into parts
+		const messageParts = getMessageContentParts(
+			content,
+			config.splitOn ?? TTS_RESPONSE_SPLIT.PUNCTUATION
+		)
 
-	const toggleSpeakMessage = async () => {
-		if (speaking) {
-			try {
-				speechSynthesis.cancel();
-
-				if (speakingIdx !== undefined && audioParts[speakingIdx]) {
-					audioParts[speakingIdx]!.pause();
-					audioParts[speakingIdx]!.currentTime = 0;
-				}
-			} catch {}
-
-			speaking = false;
-			speakingIdx = undefined;
+		// handle empty messages
+		if (!messageParts.length) {
+			toast.info($i18n?.t('No content to speak') ?? 'No content to speak');
+			stopAllAudio();
+			$ttsState.isSpeaking = false;
+			$ttsState.isLoading = false;
 			return;
 		}
 
-		if (!(message?.content ?? '').trim().length) {
-			toast.info($i18n.t('No content to speak'));
-			return;
-		}
+		console.debug('Prepared message content for TTS', messageParts);
+		$ttsState.audioParts = messageParts.reduce(
+			(acc, _sentence, idx) => {
+				acc[idx] = null;
+				return acc;
+			},
+			{} as typeof $ttsState.audioParts
+		);
 
-		speaking = true;
+		let lastPromise = Promise.resolve(); // initialize a promise for sequential playback
+		$ttsState.currentMessageId = messageId;
 
-		const content = removeAllDetails(message.content);
-
-		if ($config.audio.tts.engine === '') {
-			let voices = [];
-			const getVoicesLoop = setInterval(() => {
-				voices = speechSynthesis.getVoices();
-				if (voices.length > 0) {
-					clearInterval(getVoicesLoop);
-
-					const voice =
-						voices
-							?.filter(
-								(v) => v.voiceURI === ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
-							)
-							?.at(0) ?? undefined;
-
-					console.log(voice);
-
-					const speak = new SpeechSynthesisUtterance(content);
-					speak.rate = $settings.audio?.tts?.playbackRate ?? 1;
-
-					console.log(speak);
-
-					speak.onend = () => {
-						speaking = false;
-						if ($settings.conversationMode) {
-							document.getElementById('voice-input-button')?.click();
-						}
-					};
-
-					if (voice) {
-						speak.voice = voice;
-					}
-
-					speechSynthesis.speak(speak);
-				}
-			}, 100);
-		} else {
-			loadingSpeech = true;
-
-			const messageContentParts: string[] = getMessageContentParts(
-				content,
-				$config?.audio?.tts?.split_on ?? 'punctuation'
-			);
-
-			if (!messageContentParts.length) {
-				console.log('No content to speak');
-				toast.info($i18n.t('No content to speak'));
-
-				speaking = false;
-				loadingSpeech = false;
+		try {
+			// ---------------- Browser TTS ----------------
+			// browser tts directly gets the entire message (splitted content only for other engines)
+			// this is pure browser tts
+			if (config.engine === '' || config.engine === 'browser') {
+				const voices = speechSynthesis.getVoices();
+				const voice = voices.find(v => v.voiceURI === config.voice);
+				const speak = new SpeechSynthesisUtterance(content);
+				speak.rate = config.playbackRate ?? 1;
+				if (voice) speak.voice = voice;
+				$ttsState.isSpeaking = true;
+				speak.onend = () => {
+					$ttsState.isSpeaking = false;
+				};
+				speechSynthesis.speak(speak);
+				$ttsState.isLoading = false;
 				return;
 			}
 
-			console.debug('Prepared message content for TTS', messageContentParts);
+			// ---------------- Kokoro TTS ----------------
+			if (config.engine === 'browser-kokoro') {
+				try {
+					if (!$TTSWorker) {
+						await TTSWorker.set(
+							new KokoroWorker({ dtype: config.dtype ?? 'fp32' })
+						);
+						await $TTSWorker.init();
+					}
 
-			audioParts = messageContentParts.reduce(
-				(acc, _sentence, idx) => {
-					acc[idx] = null;
-					return acc;
-				},
-				{} as typeof audioParts
-			);
-
-			let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
-
-			if ($settings.audio?.tts?.engine === 'browser-kokoro') {
-				if (!$TTSWorker) {
-					await TTSWorker.set(
-						new KokoroWorker({
-							dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
-						})
-					);
-
-					await $TTSWorker.init();
-				}
-
-				for (const [idx, sentence] of messageContentParts.entries()) {
-					const blob = await $TTSWorker
-						.generate({
+					for (const [idx, sentence] of messageParts.entries()) {
+						const blob = await $TTSWorker.generate({
 							text: sentence,
-							voice: $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice
-						})
-						.catch((error) => {
+							voice: config.voice,
+						}).catch((error: Error) => {
 							console.error(error);
 							toast.error(`${error}`);
-
-							speaking = false;
-							loadingSpeech = false;
+							stopAllAudio();
 						});
 
-					if (blob) {
-						const audio = new Audio(blob);
-						audio.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
-
-						audioParts[idx] = audio;
-						loadingSpeech = false;
-						lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
+						if (blob) {
+							const audio = new Audio(blob);
+							audio.playbackRate = config.playbackRate ?? 1;
+							$ttsState.audioParts[idx] = audio;
+							lastPromise = lastPromise.then(() => playAudio(idx));
+						}
 					}
+				} catch (error) {
+					console.error('Kokoro TTS Error:', error);
+					toast.error(`${error}`);
+					stopAllAudio();
 				}
-			} else {
-				for (const [idx, sentence] of messageContentParts.entries()) {
-					const res = await synthesizeOpenAISpeech(
-						localStorage.token,
-						$settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice
-							? ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
-							: $config?.audio?.tts?.voice,
-						sentence
-					).catch((error) => {
-						console.error(error);
-						toast.error(`${error}`);
 
-						speaking = false;
-						loadingSpeech = false;
-					});
+			// ---------------- OpenAI TTS ----------------
+			} else {
+				for (const [idx, sentence] of messageParts.entries()) {
+					const res = await synthesizeOpenAISpeech(
+						config.token, config.voice, sentence
+					).catch((error: Error) => {
+						console.error('OpenAI TTS Error:', error);
+						toast.error(`${error}`);
+						stopAllAudio();
+					})
 
 					if (res) {
-						const blob = await res.blob();
-						const blobUrl = URL.createObjectURL(blob);
+						const blobUrl = URL.createObjectURL(await res.blob());
 						const audio = new Audio(blobUrl);
-						audio.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
-
-						audioParts[idx] = audio;
-						loadingSpeech = false;
-						lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
+						audio.playbackRate = config.playbackRate ?? 1;
+						$ttsState.audioParts[idx] = audio;
+						lastPromise = lastPromise.then(() => playAudio(idx));
 					}
 				}
 			}
+			await lastPromise;
+
+		} catch (err) {
+			console.error(err);
+			toast.error('Error generating TTS');
+			stopAllAudio();
+		} finally {
+			$ttsState.isLoading = false;
 		}
 	};
+
+	// on a page change stop all audio
+	onDestroy(() => {
+		stopAllAudio();
+	});
 
 	let preprocessedDetailsCache = [];
 
@@ -994,12 +964,20 @@
 												? 'visible'
 												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 											on:click={() => {
-												if (!loadingSpeech) {
-													toggleSpeakMessage();
+												if (!$ttsState.isLoading) {
+													toggleSpeakMessage(message.id, message.content, {
+															engine: $settings.audio?.tts?.engine ?? $config.audio?.tts?.engine ?? '',
+															voice: $settings.audio?.tts?.voice ?? $config.audio?.tts?.voice ?? '',
+															playbackRate: $settings.audio?.tts?.playbackRate ?? 1,
+															splitOn: $config.audio?.tts?.split_on ?? TTS_RESPONSE_SPLIT.PUNCTUATION,
+															token: localStorage.token,
+															dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
+														}
+													);
 												}
-											}}
+												}}
 										>
-											{#if loadingSpeech}
+											{#if $ttsState.isLoading && $ttsState.currentMessageId === message.id}
 												<svg
 													class=" w-4 h-4"
 													fill="currentColor"
@@ -1032,7 +1010,7 @@
 													<circle class="spinner_S1WN spinner_Km9P" cx="12" cy="12" r="3" />
 													<circle class="spinner_S1WN spinner_JApP" cx="20" cy="12" r="3" />
 												</svg>
-											{:else if speaking}
+											{:else if $ttsState.isSpeaking && $ttsState.currentMessageId === message.id}
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
 													fill="none"
