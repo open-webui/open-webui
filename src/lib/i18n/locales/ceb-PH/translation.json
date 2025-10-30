@@ -1714,7 +1714,7 @@
 	"Workspace Permissions": "",
 	"Write": "",
 	"Write a prompt suggestion (e.g. Who are you?)": "Pagsulat og gisugyot nga prompt (eg. Kinsa ka?)",
-	"Write a summary in 50 words that summarizes [topic or keyword].": "Pagsulat og 50 ka pulong nga summary nga nagsumaryo [topic o keyword].",
+	"Write a summary in 50 words that summarizes {{topic}}.": "Pagsulat og 50 ka pulong nga summary nga nagsumaryo [topic o keyword].",
 	"Write something...": "",
 	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Isulat dinhi ang sulod sa system prompt sa imong modelo\npananglitan: Ikaw si Mario gikan sa Super Mario Bros, naglihok isip assistant.",
 	"Yacy Instance URL": "",

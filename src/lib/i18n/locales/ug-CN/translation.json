@@ -1714,7 +1714,7 @@
 	"Workspace Permissions": "ئىشخانا ھوقۇقى",
 	"Write": "يېزىش",
 	"Write a prompt suggestion (e.g. Who are you?)": "تۈرتكە تەكلىپى يېزىڭ (مەسىلەن: سىز كىمسىز؟)",
-	"Write a summary in 50 words that summarizes [topic or keyword].": "50 سۆز بىلەن [تېما ياكى ئاچقۇچلۇق سۆز] نى خاتىرىلەڭ.",
+	"Write a summary in 50 words that summarizes {{topic}}.": "50 سۆز بىلەن [تېما ياكى ئاچقۇچلۇق سۆز] نى خاتىرىلەڭ.",
 	"Write something...": "بىر نەرسە يېزىڭ...",
 	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "بۇ يەردە مودېلىڭىزنىڭ سىستېما كۆرسەتمىسى مەزمۇنىنى يېزىڭ\nمەسىلەن: سىز Super Mario Bros دىكى Mario بولۇپ، ياردەمچى رولىنى ئوينايسىز.",
 	"Yacy Instance URL": "Yacy مىسال URL",

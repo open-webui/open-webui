@@ -1716,7 +1716,7 @@
 	"Workspace Permissions": "Дозволи робочого простору.",
 	"Write": "Писати",
 	"Write a prompt suggestion (e.g. Who are you?)": "Напишіть промт (напр., Хто ти?)",
-	"Write a summary in 50 words that summarizes [topic or keyword].": "Напишіть стислий зміст у 50 слів, який узагальнює [тема або ключове слово].",
+	"Write a summary in 50 words that summarizes {{topic}}.": "Напишіть стислий зміст у 50 слів, який узагальнює [тема або ключове слово].",
 	"Write something...": "Напишіть щось...",
 	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Напишіть тут зміст системного підказу (system prompt) вашої моделі\nнапр.: Ви — Маріо з Super Mario Bros і дієте як асистент.",
 	"Yacy Instance URL": "",

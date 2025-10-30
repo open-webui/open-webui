@@ -1714,7 +1714,7 @@
 	"Workspace Permissions": "Tisirag n temnaḍṭ n umahil",
 	"Write": "Aru",
 	"Write a prompt suggestion (e.g. Who are you?)": "Aru-d assumer i d-yeffɣen s tɣawla (amedya, anwa-k?)",
-	"Write a summary in 50 words that summarizes [topic or keyword].": "Aru agzul s 50 n wawalen i yessewzalen [asefru neɣ tasarut].",
+	"Write a summary in 50 words that summarizes {{topic}}.": "Aru agzul s 50 n wawalen i yessewzalen [asefru neɣ tasarut].",
 	"Write something...": "Aru kra…",
 	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Ru da, agbur-ik·im n unagraw i uneftaɣ n tmudemt\nAmedya.) Kečč d Mario seg Super Mario Bros, txeddmeḍ amzun d amalal.",
 	"Yacy Instance URL": "URL n tummant Yacy",

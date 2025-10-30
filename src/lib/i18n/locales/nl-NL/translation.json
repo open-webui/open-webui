@@ -1714,7 +1714,7 @@
 	"Workspace Permissions": "Werkruimtemachtigingen",
 	"Write": "Schrijf",
 	"Write a prompt suggestion (e.g. Who are you?)": "Schrijf een prompt suggestie (bijv. Wie ben je?)",
-	"Write a summary in 50 words that summarizes [topic or keyword].": "Schrijf een samenvatting in 50 woorden die [onderwerp of trefwoord] samenvat.",
+	"Write a summary in 50 words that summarizes {{topic}}.": "Schrijf een samenvatting in 50 woorden die [onderwerp of trefwoord] samenvat.",
 	"Write something...": "Schrijf iets...",
 	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Schrijf hier de inhoud van de systeemprompt van je model\nbijv.: Je bent Mario uit Super Mario Bros en treedt op als assistent.",
 	"Yacy Instance URL": "",
