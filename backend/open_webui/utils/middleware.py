@@ -2190,6 +2190,8 @@ async def process_chat_response(
                         end_flag = True
 
                         block_content = content_blocks[-1]["content"]
+                        # DEBUG: Log content type before strip at line 2197
+                        print(f"🔍 DEBUG - Line 2197 - block_content type: {type(block_content)}, value: {block_content[:200] if isinstance(block_content, str) else block_content}", file=sys.stderr, flush=True)
                         # Strip start and end tags from the content
                         start_tag_pattern = rf"<{re.escape(start_tag)}(.*?)>"
                         block_content = re.sub(
@@ -2667,6 +2669,8 @@ async def process_chat_response(
                     if content_blocks:
                         # Clean up the last text block
                         if content_blocks[-1]["type"] == "text":
+                            # DEBUG: Log content type before strip at line 2672
+                            print(f"🔍 DEBUG - Line 2672 - content_blocks[-1]['content'] type: {type(content_blocks[-1]['content'])}, value: {content_blocks[-1]['content'][:200] if isinstance(content_blocks[-1]['content'], str) else content_blocks[-1]['content']}", file=sys.stderr, flush=True)
                             content_blocks[-1]["content"] = content_blocks[-1][
                                 "content"
                             ].strip()
