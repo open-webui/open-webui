@@ -745,23 +745,24 @@ async def process_document(request: Request):
 
     # Prepare the final JSON response payload with processing status
     if file_ext == ".pdf":
-        # For PDFs, return pages as a list
-        total_chars = sum(len(page) for page in page_texts)
+        # For PDFs, concatenate pages into single string for LangChain compatibility
+        # full_text already contains "\n\n".join(page_texts) from line 656
         response_payload = {
-            "page_content": page_texts,  # ← List of pages for PDFs
+            "page_content": full_text.strip(),  # ← Single string for LangChain compatibility
             "metadata": {
                 "source": filename,
                 "page_count": len(page_texts),  # ← Accurate count of non-empty pages
+                "total_pages": page_count,  # ← Total pages including empty ones
                 "images_extracted": len(base64_images),
                 "processing_status": "completed",
                 "processing_time_ms": int((time.time() - start_time) * 1000) if 'start_time' in locals() else None,
-                "output_format": "page_list",  # ← Indicate this is a page list
+                "output_format": "text",  # ← Single text output
                 "azure_compatible": AZURE_DOC_INTEL_COMPATIBLE,
                 "text_normalized": True
             },
             "images": base64_images,
         }
-        logger.info(f"Returning response with {len(page_texts)} pages ({total_chars} chars) and {len(base64_images)} images")
+        logger.info(f"Returning response with {len(page_texts)} non-empty pages from {page_count} total ({len(full_text)} chars) and {len(base64_images)} images")
     else:
         # For non-PDFs, keep single string format
         response_payload = {
