@@ -698,8 +698,19 @@ async def process_document(request: Request):
             
             logger.info(f"Extracted {len(page_texts)} non-empty pages from {page_count} total pages")
             
-            # Create full_text for any code that might reference it
-            full_text = "\n\n".join(page_texts)
+            # Create full_text with page delimiters for requirements agent compatibility
+            # Add "Page X of Y" delimiters between pages so downstream agents can split correctly
+            full_text_parts = []
+            total_non_empty_pages = len(page_texts)
+            
+            for idx, page_text in enumerate(page_texts):
+                page_num = idx + 1
+                # Add page delimiter before each page (except the first)
+                if idx > 0:
+                    full_text_parts.append(f"\n\nPage {page_num} of {total_non_empty_pages}\n\n")
+                full_text_parts.append(page_text)
+            
+            full_text = "".join(full_text_parts)
 
             # 2. Extract images with efficiency optimizations
             base64_images = process_images_efficiently(doc, extract_images_flag, filename)
@@ -762,7 +773,7 @@ async def process_document(request: Request):
             },
             "images": base64_images,
         }
-        logger.info(f"Returning response with {len(page_texts)} non-empty pages from {page_count} total ({len(full_text)} chars) and {len(base64_images)} images")
+        logger.info(f"Returning response with {len(page_texts)} non-empty pages from {page_count} total ({len(full_text)} chars with page delimiters) and {len(base64_images)} images")
     else:
         # For non-PDFs, keep single string format
         response_payload = {
