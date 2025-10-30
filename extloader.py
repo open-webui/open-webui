@@ -56,9 +56,9 @@ DEFAULT_COMPRESSION_HEIGHT = int(os.getenv("FILE_IMAGE_COMPRESSION_HEIGHT", "102
 COMPRESSION_QUALITY = int(os.getenv("IMAGE_COMPRESSION_QUALITY", "85"))
 
 # Image filtering thresholds - ADD AFTER LINE 55
-MIN_IMAGE_WIDTH = int(os.getenv("MIN_IMAGE_WIDTH", "50"))  # Minimum width in pixels
-MIN_IMAGE_HEIGHT = int(os.getenv("MIN_IMAGE_HEIGHT", "50"))  # Minimum height in pixels
-MIN_IMAGE_SIZE_BYTES = int(os.getenv("MIN_IMAGE_SIZE_BYTES", "5120"))  # 5KB minimum
+MIN_IMAGE_WIDTH = int(os.getenv("MIN_IMAGE_WIDTH", "32"))  # Minimum width in pixels
+MIN_IMAGE_HEIGHT = int(os.getenv("MIN_IMAGE_HEIGHT", "32"))  # Minimum height in pixels
+MIN_IMAGE_SIZE_BYTES = int(os.getenv("MIN_IMAGE_SIZE_BYTES", "1024"))  # 1KB minimum
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
