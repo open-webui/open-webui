@@ -18,15 +18,18 @@ class ExternalDocumentLoader(BaseLoader):
         url: str,
         api_key: str,
         mime_type=None,
+        user=None,
         **kwargs,
     ) -> None:
         self.url = url
         self.api_key = api_key
-
         self.file_path = file_path
         self.mime_type = mime_type
+        self.user = user
 
     def load(self) -> List[Document]:
+        from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS
+
         with open(self.file_path, "rb") as f:
             data = f.read()
 
@@ -41,6 +44,13 @@ class ExternalDocumentLoader(BaseLoader):
             headers["X-Filename"] = quote(os.path.basename(self.file_path))
         except:
             pass
+
+        if ENABLE_FORWARD_USER_INFO_HEADERS and self.user:
+            from urllib.parse import quote as url_quote
+            headers["X-OpenWebUI-User-Name"] = url_quote(self.user.name, safe=" ")
+            headers["X-OpenWebUI-User-Id"] = self.user.id
+            headers["X-OpenWebUI-User-Email"] = self.user.email
+            headers["X-OpenWebUI-User-Role"] = self.user.role
 
         url = self.url
         if url.endswith("/"):
