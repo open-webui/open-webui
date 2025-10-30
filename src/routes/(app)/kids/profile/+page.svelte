@@ -283,14 +283,22 @@ let parentLLMMonitoringLevel: string = '';
 				toast.error("Please answer whether this child has used ChatGPT or similar AI tools");
 				return;
 			}
-			if (childHasAIUse !== 'no' && childAIUseContexts.length === 0) {
-				toast.error('Please select at least one context of AI use');
-				return;
-			}
+            if (childHasAIUse === 'yes' && childAIUseContexts.length === 0) {
+                toast.error('Please select at least one context of AI use');
+                return;
+            }
 			if (!parentLLMMonitoringLevel) {
 				toast.error("Please indicate how you've monitored or adjusted this child's AI use");
 				return;
 			}
+            if (!childCharacteristics.trim()) {
+                toast.error('Please enter additional characteristics & interests');
+                return;
+            }
+            if (!parentingStyle.trim()) {
+                toast.error('Please enter parenting style');
+                return;
+            }
 			// Required research fields
 			if (!isOnlyChild) {
 				toast.error('Please indicate if this child is an only child');
@@ -300,14 +308,22 @@ let parentLLMMonitoringLevel: string = '';
 				toast.error("Please answer whether this child has used ChatGPT or similar AI tools");
 				return;
 			}
-			if (childHasAIUse !== 'no' && childAIUseContexts.length === 0) {
-				toast.error('Please select at least one context of AI use');
-				return;
-			}
+            if (childHasAIUse === 'yes' && childAIUseContexts.length === 0) {
+                toast.error('Please select at least one context of AI use');
+                return;
+            }
 			if (!parentLLMMonitoringLevel) {
 				toast.error("Please indicate how you've monitored or adjusted this child's AI use");
 				return;
 			}
+            if (!childCharacteristics.trim()) {
+                toast.error('Please enter additional characteristics & interests');
+                return;
+            }
+            if (!parentingStyle.trim()) {
+                toast.error('Please enter parenting style');
+                return;
+            }
 
 		// Combine personality traits with characteristics
 		const personalityDesc = getPersonalityDescription();
@@ -440,7 +456,7 @@ let parentLLMMonitoringLevel: string = '';
 				toast.error("Please answer whether this child has used ChatGPT or similar AI tools");
 				return;
 			}
-			if (childHasAIUse !== 'no' && childAIUseContexts.length === 0) {
+			if (childHasAIUse === 'yes' && childAIUseContexts.length === 0) {
 				toast.error('Please select at least one context of AI use');
 				return;
 			}
@@ -601,6 +617,13 @@ let parentLLMMonitoringLevel: string = '';
 		}
 	}
 
+	function joinContextsForDisplay(): string {
+		const contexts: string[] = (childProfiles && selectedChildIndex >= 0 && childProfiles[selectedChildIndex]?.child_ai_use_contexts)
+			? (childProfiles[selectedChildIndex].child_ai_use_contexts as unknown as string[])
+			: [];
+		return contexts.length > 0 ? contexts.join(', ') : 'Not specified';
+	}
+
 	onMount(() => {
 		(async () => {
 		// Redirect if instructions not confirmed
@@ -746,18 +769,8 @@ let parentLLMMonitoringLevel: string = '';
 								
 								<!-- Add "Select for questions" button below each profile -->
 								{#if childSelectedForQuestions !== i}
-									<button
-										type="button"
-										on:click={() => selectChildForQuestions(i)}
-										class="mt-2 w-full px-4 py-2 text-sm bg-green-500 hover:bg-green-600 text-white rounded-lg transition-all"
-									>
-										Select for questions
-									</button>
-								{:else}
-									<div class="mt-2 w-full px-4 py-2 text-sm bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-lg text-center font-medium">
-										Selected ✓
-									</div>
-								{/if}
+								<!-- per-card select button removed; selection now via page-level action -->
+							{/if}
 								
 								<!-- Delete button -->
 								<button 
@@ -846,7 +859,7 @@ let parentLLMMonitoringLevel: string = '';
 				</div>
 				<div>
 					<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Contexts of AI Use</div>
-					<p class="text-gray-900 dark:text-white">{(childProfiles[selectedChildIndex]?.child_ai_use_contexts && childProfiles[selectedChildIndex]?.child_ai_use_contexts.length > 0) ? childProfiles[selectedChildIndex]?.child_ai_use_contexts.join(', ') : 'Not specified'}</p>
+                    <p class="text-gray-900 dark:text-white">{joinContextsForDisplay()}</p>
 				</div>
 				<div>
 					<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Parent LLM Monitoring Level</div>
@@ -854,6 +867,25 @@ let parentLLMMonitoringLevel: string = '';
 				</div>
 			</div>
 			
+		</div>
+
+		<!-- Page-level action: Select for questions (below profile info) -->
+		<div class="flex justify-end mt-6">
+			{#if childSelectedForQuestions === -1}
+				<button
+					type="button"
+					on:click={() => selectChildForQuestions(selectedChildIndex)}
+					class="px-6 py-3 text-sm rounded-lg font-medium transition-colors bg-green-500 hover:bg-green-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+					aria-label="Select current profile for questions"
+					disabled={selectedChildIndex === -1}
+				>
+					Select for questions
+				</button>
+			{:else}
+				<div class="px-4 py-2 text-sm bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-lg font-medium">
+					Selected ✓
+				</div>
+			{/if}
 		</div>
 		{/if}
 
@@ -866,9 +898,9 @@ let parentLLMMonitoringLevel: string = '';
 					<h3 class="text-xl font-semibold text-gray-900 dark:text-white">Child Information</h3>
 					
 					<div>
-						<label for="childName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-							Name
-						</label>
+                    <label for="childName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Name <span class="text-red-500">*</span>
+                        </label>
 						<input
 							type="text"
 							id="childName"
@@ -879,9 +911,9 @@ let parentLLMMonitoringLevel: string = '';
 					</div>
 
 					<div>
-						<label for="childAge" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-							Age
-						</label>
+                        <label for="childAge" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Age <span class="text-red-500">*</span>
+                        </label>
 						<select
 							id="childAge"
 							bind:value={childAge}
@@ -902,9 +934,9 @@ let parentLLMMonitoringLevel: string = '';
 					</div>
 
 					<div>
-						<label for="childGender" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-							Gender
-						</label>
+                        <label for="childGender" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Gender <span class="text-red-500">*</span>
+                        </label>
 						<select
 							id="childGender"
 							bind:value={childGender}
@@ -920,9 +952,9 @@ let parentLLMMonitoringLevel: string = '';
 
 					<!-- Personality Traits Selection - Multi-Trait Support -->
 					<div>
-						<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-							Personality Traits
-						</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Personality Traits <span class="text-red-500">*</span>
+                        </label>
 						<p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
 							Select personality traits and choose specific characteristics from one or more traits that describe your child.
 						</p>
@@ -1006,9 +1038,9 @@ let parentLLMMonitoringLevel: string = '';
 						
 						<!-- Additional Characteristics -->
 						<div>
-							<label for="childCharacteristics" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-								Additional Characteristics & Interests
-							</label>
+                        <label for="childCharacteristics" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Additional Characteristics & Interests <span class="text-red-500">*</span>
+                            </label>
 							<textarea
 								id="childCharacteristics"
 								bind:value={childCharacteristics}
@@ -1020,9 +1052,9 @@ let parentLLMMonitoringLevel: string = '';
 					</div>
 
 					<div>
-						<label for="parentingStyle" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-							Parenting Style
-						</label>
+                        <label for="parentingStyle" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Parenting Style <span class="text-red-500">*</span>
+                        </label>
 						<textarea
 							id="parentingStyle"
 							bind:value={parentingStyle}
@@ -1034,36 +1066,36 @@ let parentLLMMonitoringLevel: string = '';
 
 			<!-- Child Quiz (Required) -->
 			<div class="pt-2">
-				<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Child Quiz</h3>
-				<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Please answer all questions <span class="text-red-500">*</span></p>
 
 				<!-- Only child -->
 				<div class="mb-4">
-					<div class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+					<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 						Is this child an only child? <span class="text-red-500">*</span>
 					</div>
 					<div class="space-y-2">
 						<label class="flex items-center"><input type="radio" bind:group={isOnlyChild} value="yes" class="mr-3" />Yes</label>
 						<label class="flex items-center"><input type="radio" bind:group={isOnlyChild} value="no" class="mr-3" />No</label>
+						<label class="flex items-center"><input type="radio" bind:group={isOnlyChild} value="prefer_not_to_say" class="mr-3" />Prefer not to say</label>
 					</div>
 				</div>
 
 				<!-- Child AI use -->
 				<div class="mb-4">
-					<div class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+					<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 						Has this child used ChatGPT or similar AI tools? <span class="text-red-500">*</span>
 					</div>
 					<div class="space-y-2">
 						<label class="flex items-center"><input type="radio" bind:group={childHasAIUse} value="yes" class="mr-3" />Yes</label>
 						<label class="flex items-center"><input type="radio" bind:group={childHasAIUse} value="no" class="mr-3" />No</label>
-						<label class="flex items-center"><input type="radio" bind:group={childHasAIUse} value="unsure" class="mr-3" />Unsure</label>
+						<label class="flex items-center"><input type="radio" bind:group={childHasAIUse} value="unsure" class="mr-3" />Not sure</label>
+						<label class="flex items-center"><input type="radio" bind:group={childHasAIUse} value="prefer_not_to_say" class="mr-3" />Prefer not to say</label>
 					</div>
 				</div>
 
-				{#if childHasAIUse !== '' && childHasAIUse !== 'no'}
+				{#if childHasAIUse === 'yes'}
 					<!-- Contexts -->
 					<div class="mb-4">
-						<div class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+						<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 							In what contexts has this child used these tools? <span class="text-red-500">*</span>
 						</div>
 						<div class="space-y-2">
@@ -1078,7 +1110,7 @@ let parentLLMMonitoringLevel: string = '';
 
 				<!-- Monitoring level -->
 				<div class="mb-2">
-					<div class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+					<div class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 						Have you monitored or adjusted your child’s use of Large Language Models like ChatGPT? <span class="text-red-500">*</span>
 					</div>
 					<div class="space-y-2">

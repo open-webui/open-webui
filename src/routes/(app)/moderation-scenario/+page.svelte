@@ -92,9 +92,110 @@ import { finalizeModeration } from '$lib/apis/workflow';
 	const CUSTOM_SCENARIO_PROMPT = "[Create Your Own Scenario]";
 	const CUSTOM_SCENARIO_PLACEHOLDER = "Enter your custom child prompt here...";
 	
-	let selectedScenarioIndex: number = 0;
-	let scenarioList = Object.entries(scenarios);
-	let sessionNumber: number = 1; // Default session number for non-Prolific users
+    let selectedScenarioIndex: number = 0;
+    let scenarioList = Object.entries(scenarios);
+    let sessionNumber: number = 1; // Default session number for non-Prolific users
+
+    // Session-level lock to prevent re-ordering once restored/corrected
+    let scenariosLockedForSession: boolean = false;
+    let lastPolledChildId: string | number | null = null;
+    let lastPolledSession: number | null = null;
+    let currentFetchId: number = 0;
+    let inFlightFetchId: number | null = null;
+    let visibilityDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+    // Helpers for persistence keys
+    const listKeyFor = (childId: string | number, session: number) => `scenarioList_${childId}_${session}`;
+    const initializedKeyFor = (childId: string | number, session: number) => `scenariosInitialized_${childId}_${session}`;
+    const currentKeyFor = (childId: string | number) => `moderationCurrentScenario_${childId}`;
+    const packageKeyFor = (childId: string | number, session: number) => `scenarioPkg_${childId}_${session}`;
+
+    function shouldRepollScenarios(childId: string | number, session: number): boolean {
+        if (!childId || !Number.isFinite(session)) return false;
+        if (scenariosLockedForSession && lastPolledChildId === childId && lastPolledSession === session) return false;
+        return true;
+    }
+
+    function beginScenarioFetch(): number {
+        currentFetchId += 1;
+        inFlightFetchId = currentFetchId;
+        return currentFetchId;
+    }
+
+    function isFetchCurrent(fetchId: number): boolean {
+        return inFlightFetchId === fetchId;
+    }
+
+    function endScenarioFetch(fetchId: number): void {
+        if (inFlightFetchId === fetchId) inFlightFetchId = null;
+    }
+
+    function buildScenarioList(basePairs: Array<[string, string]>): Array<[string, string]> {
+        let list: Array<[string, string]> = basePairs.slice();
+        // Insert attention check in the middle if missing
+        const hasAttention = list.some(([q]) => q === ATTENTION_CHECK_PROMPT);
+        if (!hasAttention) {
+            const mid = Math.floor(list.length / 2);
+            list.splice(mid, 0, [ATTENTION_CHECK_PROMPT, "If you've read this closely, please select \"This is OK\"!"]);
+        }
+        // Ensure custom scenario is last
+        const hasCustom = list.some(([q]) => q === CUSTOM_SCENARIO_PROMPT);
+        if (!hasCustom) {
+            list.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
+        } else {
+            // Move existing custom to the end
+            list = list.filter(([q]) => q !== CUSTOM_SCENARIO_PROMPT);
+            list.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
+        }
+        return list;
+    }
+
+    function persistScenarioPackage(childId: string | number, session: number, list: Array<[string, string]>) {
+        const pkg = { version: 1, childId, sessionNumber: session, list, createdAt: Date.now() };
+        try {
+            localStorage.setItem(packageKeyFor(childId, session), JSON.stringify(pkg));
+            // Cache hygiene: clear legacy partial keys for this child/session
+            localStorage.removeItem(listKeyFor(childId, session));
+            localStorage.removeItem(initializedKeyFor(childId, session));
+        } catch {}
+    }
+
+    function tryRestoreScenarioPackage(childId: string | number, session: number): null | { version: number; childId: string | number; sessionNumber: number; list: Array<[string, string]>; createdAt: number } {
+        try {
+            const raw = localStorage.getItem(packageKeyFor(childId, session));
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (parsed && Array.isArray(parsed.list) && parsed.list.length > 0) {
+                return parsed;
+            }
+        } catch {}
+        return null;
+    }
+
+    function ensureScenarioInvariants(childId: string | number, session: number) {
+        const restored = tryRestoreScenarioPackage(childId, session);
+        if (!restored) return null;
+        const list = restored.list as Array<[string, string]>;
+        const hasAttention = list.some(([q]) => q === ATTENTION_CHECK_PROMPT);
+        const hasCustom = list.some(([q]) => q === CUSTOM_SCENARIO_PROMPT);
+        if (list.length >= 3 && hasAttention && hasCustom) {
+            return restored;
+        }
+        // Rebuild from available data
+        const basePairs: Array<[string, string]> = (personalityBasedScenarios && personalityBasedScenarios.length > 0)
+            ? personalityBasedScenarios.map((qa) => [qa.question, qa.response])
+            : Object.entries(scenarios);
+        const rebuilt = buildScenarioList(basePairs);
+        persistScenarioPackage(childId, session, rebuilt);
+        return { version: 1, childId, sessionNumber: session, list: rebuilt, createdAt: Date.now() };
+    }
+
+    // Persist current scenario selection whenever it changes
+    $: if (selectedChildId != null && typeof selectedScenarioIndex === 'number') {
+        try {
+            localStorage.setItem(currentKeyFor(selectedChildId), String(selectedScenarioIndex));
+        } catch {}
+    }
 	
 	// Custom scenario state
 	let customScenarioPrompt: string = '';
@@ -184,7 +285,7 @@ import { finalizeModeration } from '$lib/apis/workflow';
 		}
 	}
 	
-	// Load child profiles and generate personality-based scenarios
+    // Load child profiles and generate personality-based scenarios
 	async function loadChildProfiles() {
 		try {
 			childProfiles = await childProfileSync.getChildProfiles();
@@ -244,7 +345,33 @@ function clearModerationLocalKeys() {
 		console.log('Selected child:', selectedChild);
 		console.log('Child characteristics:', selectedChild.child_characteristics);
 		
-		// Try to load pre-shuffled scenarios from localStorage
+        // Stabilize session number if not provided elsewhere
+        try {
+            const storedSession = selectedChildId ? localStorage.getItem(`moderationSessionNumber_${selectedChildId}`) : null;
+            if (storedSession && !Number.isNaN(Number(storedSession))) {
+                sessionNumber = Number(storedSession);
+            } else {
+                localStorage.setItem(`moderationSessionNumber_${selectedChildId}`, String(sessionNumber));
+            }
+        } catch {}
+
+        // Attempt to restore canonical package for this child/session and short-circuit
+        {
+            const pkg = tryRestoreScenarioPackage(selectedChildId, sessionNumber) || ensureScenarioInvariants(selectedChildId, sessionNumber);
+            if (pkg && Array.isArray(pkg.list) && pkg.list.length > 0) {
+                scenarioList = pkg.list;
+                scenariosLockedForSession = true;
+                loadSavedStates();
+                const savedCurrent = localStorage.getItem(selectedChildId ? currentKeyFor(selectedChildId) : 'moderationCurrentScenario');
+                if (savedCurrent) {
+                    const idx = Number(savedCurrent);
+                    if (!Number.isNaN(idx)) selectedScenarioIndex = idx;
+                }
+                return; // Early restore prevents regeneration/filtering
+            }
+        }
+
+        // Try to load pre-shuffled scenarios from localStorage
 		const scenarioKey = localStorage.getItem(`scenarios_${selectedChild.id}`);
 		const initializedFlag = localStorage.getItem(`scenariosInitialized_${selectedChild.id}_${sessionNumber}`);
 		if (scenarioKey) {
@@ -254,42 +381,25 @@ function clearModerationLocalKeys() {
 				personalityBasedScenarios = JSON.parse(storedScenarios);
 				console.log('Loaded pre-shuffled Q&A scenarios:', personalityBasedScenarios);
 				
-			// Update the scenario list to use Q&A pairs directly
-			if (personalityBasedScenarios.length > 0) {
-				// Convert Q&A pairs to scenario list format [question, response]
-				scenarioList = personalityBasedScenarios.map(qa => [qa.question, qa.response]);
-				
-				// Insert attention check question at a specific position (around middle)
-				const attentionCheckIndex = Math.floor(scenarioList.length / 2);
-				scenarioList.splice(attentionCheckIndex, 0, [ATTENTION_CHECK_PROMPT, "If you've read this closely, please select \"This is OK\"!"]);
-				
-				// Add custom scenario at the end
-				scenarioList.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
-				
-				console.log('Updated scenarioList with Q&A pairs:', scenarioList.length, 'with attention check and custom scenario');
-				
-				// Load saved states for this child after scenarios are loaded
-				loadSavedStates();
-				
-				// Load the first scenario to ensure UI is updated (force reload)
-				loadScenario(0, true);
+            // Build final list using builder and persist canonical package
+            if (personalityBasedScenarios.length > 0) {
+                const basePairs = personalityBasedScenarios.map((qa) => [qa.question, qa.response] as [string, string]);
+                if (!scenariosLockedForSession) scenarioList = buildScenarioList(basePairs);
+                persistScenarioPackage(selectedChildId, sessionNumber, scenarioList);
+                scenariosLockedForSession = true;
+                loadSavedStates();
+                loadScenario(0, true);
+            }
+            return;
 			}
-			return;
-			}
-			// Mark initialized so revisits do not regenerate
-			localStorage.setItem(`scenariosInitialized_${selectedChild.id}_${sessionNumber}`, 'true');
-			return;
+            // Legacy flag no longer needed; canonical package is persisted
+            return;
 		}
 
-		// If we previously initialized scenarios for this child/session, avoid regenerating
-		if (initializedFlag) {
-			console.log('Scenarios already initialized for this child/session; loading saved states only');
-			loadSavedStates();
-			return;
-		}
+        // Initialized flag path deprecated in favor of canonical package
 		
-		// Fallback: Generate scenarios if no pre-shuffled scenarios found
-		console.log('No pre-shuffled scenarios found, generating new ones...');
+        // Fallback: Generate scenarios if no pre-shuffled scenarios found
+        console.log('No pre-shuffled scenarios found, generating new ones...');
 		
 		// Parse personality characteristics from the child's characteristics field
 		const characteristics = selectedChild.child_characteristics || '';
@@ -388,30 +498,19 @@ function clearModerationLocalKeys() {
 		console.log('Generated personality-based Q&A scenarios:', personalityBasedScenarios);
 		console.log('Total scenarios generated:', personalityBasedScenarios.length);
 		
-		// Update the scenario list to use Q&A pairs directly
-		if (personalityBasedScenarios.length > 0) {
-			// Convert Q&A pairs to scenario list format [question, response]
-			scenarioList = personalityBasedScenarios.map(qa => [qa.question, qa.response]);
-			
-			// Insert attention check question at a specific position (around middle)
-			const attentionCheckIndex = Math.floor(scenarioList.length / 2);
-			scenarioList.splice(attentionCheckIndex, 0, [ATTENTION_CHECK_PROMPT, "If you've read this closely, please select \"This is OK\"!"]);
-			
-			// Add custom scenario at the end
-			scenarioList.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
-			
-			console.log('Updated scenarioList with Q&A pairs:', scenarioList.length, 'with attention check and custom scenario');
-			// Mark initialized so revisits use stored scenarios
-			if (selectedChildId) {
-				localStorage.setItem(`scenariosInitialized_${selectedChildId}_${sessionNumber}`, 'true');
-			}
-			
-			// Load saved states for this child after scenarios are loaded
-			loadSavedStates();
-			
-			// Load the first scenario to ensure UI is updated (force reload)
-			loadScenario(0, true);
-		}
+        // Update the scenario list to use Q&A pairs directly
+        if (personalityBasedScenarios.length > 0) {
+            const basePairs = personalityBasedScenarios.map(qa => [qa.question, qa.response] as [string, string]);
+            if (!scenariosLockedForSession) scenarioList = buildScenarioList(basePairs);
+            persistScenarioPackage(selectedChildId, sessionNumber, scenarioList);
+            scenariosLockedForSession = true;
+            
+            // Load saved states for this child after scenarios are loaded
+            loadSavedStates();
+            
+            // Load the first scenario to ensure UI is updated (force reload)
+            loadScenario(0, true);
+        }
 	}
 
 	// DEPRECATED: This function is no longer used - responses now come directly from JSON files
@@ -1602,6 +1701,17 @@ onMount(async () => {
     try {
         const sessionInfo = await getCurrentSession(localStorage.token);
         if (sessionInfo.is_prolific_user && selectedChildId) {
+            // Skip if we shouldn't repoll (locked and no change)
+            let prospectiveSession = sessionNumber;
+            try {
+                const stored = localStorage.getItem(`moderationSessionNumber_${selectedChildId}`);
+                if (stored && !Number.isNaN(Number(stored))) prospectiveSession = Number(stored);
+            } catch {}
+            if (!shouldRepollScenarios(selectedChildId, prospectiveSession)) {
+                console.log('Repoll skipped: locked and no child/session change');
+                
+            } else {
+                const fetchId = beginScenarioFetch();
             const currentSessionId = localStorage.getItem('prolificSessionId') || '';
             const lastLoadedSessionId = localStorage.getItem('lastLoadedModerationSessionId') || '';
 
@@ -1612,10 +1722,18 @@ onMount(async () => {
                 localStorage.setItem('lastLoadedModerationSessionId', currentSessionId);
             }
 
-			const availableScenarios = await getAvailableScenarios(localStorage.token, selectedChildId);
-			availableScenarioIndices = availableScenarios.available_scenarios || [];
-			sessionNumber = availableScenarios.session_number;
-			console.log('Prolific user - available scenarios (from backend):', availableScenarioIndices, 'session:', sessionNumber);
+                const availableScenarios = await getAvailableScenarios(localStorage.token, selectedChildId);
+                if (!isFetchCurrent(fetchId)) {
+                    console.log('Stale available scenarios response ignored');
+                    return;
+                }
+                availableScenarioIndices = availableScenarios.available_scenarios || [];
+                sessionNumber = availableScenarios.session_number;
+                console.log('Prolific user - available scenarios (from backend):', availableScenarioIndices, 'session:', sessionNumber);
+                lastPolledChildId = selectedChildId;
+                lastPolledSession = sessionNumber;
+                endScenarioFetch(fetchId);
+            }
         }
     } catch (error) {
         console.log('Not a Prolific user or error fetching scenarios:', error);
@@ -1628,73 +1746,88 @@ onMount(async () => {
 			await generatePersonalityScenarios();
 			console.log('Personality scenarios generated. Current scenarioList length:', scenarioList.length);
 			
-			// Filter scenarios for Prolific users and top up to target count
-			// Target includes 2 slots reserved for attention check and custom scenario
-			const TARGET_SCENARIO_COUNT = 12;
-			let finalIndices: number[] = [];
-			if (availableScenarioIndices.length > 0) {
-				finalIndices = [...new Set(availableScenarioIndices.filter(i => Number.isInteger(i) && i >= 0))];
-			}
+			// Filter/top-up only if not locked by canonical package
+			if (!scenariosLockedForSession) {
+				// Target includes 2 slots reserved for attention check and custom scenario
+				const TARGET_SCENARIO_COUNT = 12;
+				let finalIndices: number[] = [];
+				if (availableScenarioIndices.length > 0) {
+					finalIndices = [...new Set(availableScenarioIndices.filter(i => Number.isInteger(i) && i >= 0))];
+				}
 
 			// Fetch completed scenario indices to avoid previously seen ones
 			let completed: number[] = [];
-			try {
-				const resp = await fetch(`${WEBUI_API_BASE_URL}/workflow/completed-scenarios`, {
+            try {
+                const fetchId2 = beginScenarioFetch();
+                const resp = await fetch(`${WEBUI_API_BASE_URL}/workflow/completed-scenarios`, {
 					method: 'GET',
 					headers: { 'Content-Type': 'application/json', ...(localStorage.token ? { authorization: `Bearer ${localStorage.token}` } : {}) }
 				});
 				if (resp.ok) {
 					const data = await resp.json();
-					completed = Array.isArray(data?.completed_scenario_indices) ? data.completed_scenario_indices : [];
+                    if (isFetchCurrent(fetchId2)) {
+                        completed = Array.isArray(data?.completed_scenario_indices) ? data.completed_scenario_indices : [];
+                    } else {
+                        console.log('Stale completed scenarios response ignored');
+                    }
+                }
+                if (isFetchCurrent(fetchId2)) {
+                    endScenarioFetch(fetchId2);
 				}
 			} catch (e) {
 				// Non-fatal; fallback below
 			}
 
-			// Build unseen pool from current scenarioList (personality generated) removing seen and already picked
-			const allIndices = Array.from({ length: scenarioList.length }, (_, i) => i).filter(i => i >= 0);
-			const seenSet = new Set<number>(completed);
-			const pickedSet = new Set<number>(finalIndices);
-			const unseenPool = allIndices.filter(i => !seenSet.has(i) && !pickedSet.has(i));
+				// Build unseen pool from current scenarioList (personality generated) removing seen and already picked
+				const allIndices = Array.from({ length: scenarioList.length }, (_, i) => i).filter(i => i >= 0);
+				const seenSet = new Set<number>(completed);
+				const pickedSet = new Set<number>(finalIndices);
+				const unseenPool = allIndices.filter(i => !seenSet.has(i) && !pickedSet.has(i));
 
-			// Top up to target count from unseenPool at random
-			while (finalIndices.length < TARGET_SCENARIO_COUNT && unseenPool.length > 0) {
-				const rand = Math.floor(Math.random() * unseenPool.length);
-				const pick = unseenPool.splice(rand, 1)[0];
-				finalIndices.push(pick);
-			}
+				// Top up to target count from unseenPool at random
+				while (finalIndices.length < TARGET_SCENARIO_COUNT && unseenPool.length > 0) {
+					const rand = Math.floor(Math.random() * unseenPool.length);
+					const pick = unseenPool.splice(rand, 1)[0];
+					finalIndices.push(pick);
+				}
 
-			// Map indices to scenarios
-			if (finalIndices.length > 0) {
-				const filteredScenarios = finalIndices
-					.filter(index => index < scenarioList.length)
-					.map(index => scenarioList[index])
-					.filter(Boolean);
+				// Map indices to scenarios
+				if (finalIndices.length > 0) {
+					const filteredScenarios = finalIndices
+						.filter(index => index < scenarioList.length)
+						.map(index => scenarioList[index])
+						.filter(Boolean);
 
-				if (filteredScenarios.length > 0) {
-					// Replace scenarios and reset in-memory UI state to avoid old responses
-					scenarioList = filteredScenarios;
-					resetAllScenarioStates();
-					selectedScenarioIndex = 0;
-					loadScenario(0, true);
-					console.log('Final scenarios for session (filled to target if needed):', scenarioList.length);
+					if (filteredScenarios.length > 0) {
+						// Replace scenarios and reset in-memory UI state to avoid old responses
+						if (!scenariosLockedForSession) {
+							scenarioList = filteredScenarios;
+						}
+						resetAllScenarioStates();
+						selectedScenarioIndex = 0;
+						loadScenario(0, true);
+						console.log('Final scenarios for session (filled to target if needed):', scenarioList.length);
+					}
 				}
 			}
 			
 			// Force personality scenarios if generation failed
-			if (scenarioList.length === Object.entries(scenarios).length) {
+			if (!scenariosLockedForSession && scenarioList.length === Object.entries(scenarios).length) {
 				console.log('WARNING: Still using default scenarios, forcing personality scenarios...');
 				// Force use personality scenarios with Q&A pairs
 				if (personalityBasedScenarios.length > 0) {
-					scenarioList = personalityBasedScenarios.map(qa => [qa.question, qa.response]);
+					if (!scenariosLockedForSession) scenarioList = personalityBasedScenarios.map(qa => [qa.question, qa.response]);
 					
 					// Insert attention check question at a specific position (around middle)
 					const attentionCheckIndex = Math.floor(scenarioList.length / 2);
 					scenarioList.splice(attentionCheckIndex, 0, [ATTENTION_CHECK_PROMPT, "If you've read this closely, please select \"This is OK\"!"]);
 					
 					// Add custom scenario at the end
-					scenarioList.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
+					if (!scenariosLockedForSession) scenarioList.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
 					
+					// Persist canonical package and lock
+					persistScenarioPackage(selectedChildId, sessionNumber, scenarioList);
+					scenariosLockedForSession = true;
 					loadSavedStates(); // Load child-specific states
 					selectedScenarioIndex = 0;
 					loadScenario(0, true); // Force reload
@@ -1717,17 +1850,20 @@ onMount(async () => {
 								
 								// Generate scenarios directly (async)
 								generateScenariosFromPersonalityData(selectedChars).then(directScenarios => {
-									if (directScenarios.length > 0) {
-										scenarioList = directScenarios.map(qa => [qa.question, qa.response]);
+										if (directScenarios.length > 0) {
+											if (!scenariosLockedForSession) scenarioList = directScenarios.map(qa => [qa.question, qa.response]);
 										
 										// Insert attention check question at a specific position (around middle)
 										const attentionCheckIndex = Math.floor(scenarioList.length / 2);
 										scenarioList.splice(attentionCheckIndex, 0, [ATTENTION_CHECK_PROMPT, "If you've read this closely, please select \"This is OK\"!"]);
 										
-										// Add custom scenario at the end
-										scenarioList.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
+											// Add custom scenario at the end
+											if (!scenariosLockedForSession) scenarioList.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
 										
-										loadSavedStates(); // Load child-specific states
+											// Persist canonical package and lock
+											persistScenarioPackage(selectedChildId, sessionNumber, scenarioList);
+											scenariosLockedForSession = true;
+											loadSavedStates(); // Load child-specific states
 										selectedScenarioIndex = 0;
 										loadScenario(0, true); // Force reload
 										console.log('Direct personality scenarios loaded:', scenarioList.length, 'with attention check and custom scenario');
