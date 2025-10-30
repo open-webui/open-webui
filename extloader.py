@@ -4,6 +4,7 @@ import logging
 import os
 import tempfile
 import time
+import hashlib
 import json
 import re
 import unicodedata
@@ -53,6 +54,11 @@ AUTO_COMPRESS_IMAGES = os.getenv("AUTO_COMPRESS_IMAGES", "true").lower() == "tru
 DEFAULT_COMPRESSION_WIDTH = int(os.getenv("FILE_IMAGE_COMPRESSION_WIDTH", "1024"))
 DEFAULT_COMPRESSION_HEIGHT = int(os.getenv("FILE_IMAGE_COMPRESSION_HEIGHT", "1024"))
 COMPRESSION_QUALITY = int(os.getenv("IMAGE_COMPRESSION_QUALITY", "85"))
+
+# Image filtering thresholds - ADD AFTER LINE 55
+MIN_IMAGE_WIDTH = int(os.getenv("MIN_IMAGE_WIDTH", "50"))  # Minimum width in pixels
+MIN_IMAGE_HEIGHT = int(os.getenv("MIN_IMAGE_HEIGHT", "50"))  # Minimum height in pixels
+MIN_IMAGE_SIZE_BYTES = int(os.getenv("MIN_IMAGE_SIZE_BYTES", "5120"))  # 5KB minimum
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -440,16 +446,21 @@ def process_rtf(file_bytes: bytes, filename: str) -> tuple[str, int]:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to process RTF: {e}")
 
-def compress_image_for_efficiency(image_bytes: bytes, image_ext: str) -> tuple[bytes, bool]:
+def compress_image_for_efficiency(image_bytes: bytes, image_ext: str) -> tuple[bytes, bool, tuple[int, int]]:
     """
     Compress image for processing efficiency if auto-compression is enabled.
-    Returns: (processed_bytes, was_compressed)
+    Returns: (processed_bytes, was_compressed, (width, height))
     """
-    if not PILLOW_AVAILABLE or not AUTO_COMPRESS_IMAGES:
-        return image_bytes, False
+    if not PILLOW_AVAILABLE:
+        return image_bytes, False, (0, 0)
     
     try:
         image = Image.open(io.BytesIO(image_bytes))
+        original_dimensions = (image.width, image.height)
+        
+        # Return dimensions even if not compressing
+        if not AUTO_COMPRESS_IMAGES:
+            return image_bytes, False, original_dimensions
         
         # Convert to RGB if necessary (for JPEG compatibility)
         if image.mode in ('RGBA', 'LA', 'P'):
@@ -460,7 +471,6 @@ def compress_image_for_efficiency(image_bytes: bytes, image_ext: str) -> tuple[b
             image = background
         
         # Resize if image is larger than compression settings for efficiency
-        original_size = (image.width, image.height)
         if image.width > DEFAULT_COMPRESSION_WIDTH or image.height > DEFAULT_COMPRESSION_HEIGHT:
             image.thumbnail((DEFAULT_COMPRESSION_WIDTH, DEFAULT_COMPRESSION_HEIGHT), Image.Resampling.LANCZOS)
         
@@ -474,28 +484,42 @@ def compress_image_for_efficiency(image_bytes: bytes, image_ext: str) -> tuple[b
             original_mb = len(image_bytes) / (1024 * 1024)
             compressed_mb = len(compressed_bytes) / (1024 * 1024)
             logger.info(f"Image compressed for efficiency: {original_mb:.1f}MB -> {compressed_mb:.1f}MB")
-            return compressed_bytes, True
+            return compressed_bytes, True, original_dimensions
         else:
-            return image_bytes, False
+            return image_bytes, False, original_dimensions
             
     except Exception as e:
         logger.warning(f"Image compression failed, using original: {e}")
-        return image_bytes, False
+        return image_bytes, False, (0, 0)
 
 def process_images_efficiently(doc, extract_images_flag: str, filename: str) -> list:
     """
-    Process PDF images with efficiency optimizations.
+    Process PDF images with efficiency optimizations, filtering, and deduplication.
+    
+    Filters out:
+    - Images smaller than MIN_IMAGE_WIDTH x MIN_IMAGE_HEIGHT pixels
+    - Images smaller than MIN_IMAGE_SIZE_BYTES bytes
+    - Duplicate images (same content hash)
+    
     Returns: base64_images list
     """
     base64_images = []
     images_processed = 0
     images_compressed = 0
+    images_filtered = 0
+    images_duplicated = 0
     
     if extract_images_flag != 'true':
         logger.info("No image extraction requested (X-Extract-Images != 'true')")
         return base64_images
     
-    logger.info("Starting efficient image extraction...")
+    logger.info("Starting efficient image extraction with filtering and deduplication...")
+    logger.info(f"Filter thresholds: {MIN_IMAGE_WIDTH}x{MIN_IMAGE_HEIGHT}px, {MIN_IMAGE_SIZE_BYTES} bytes")
+    
+    # Track seen image hashes to prevent duplicates
+    seen_hashes = set()
+    # Track extracted xrefs to handle PyMuPDF's potential duplicates across pages
+    seen_xrefs = set()
     
     try:
         # Process images efficiently
@@ -505,12 +529,56 @@ def process_images_efficiently(doc, extract_images_flag: str, filename: str) -> 
             for img_index, img in enumerate(image_list):
                 try:
                     xref = img[0]
+                    
+                    # Skip if we've already extracted this xref (PyMuPDF can report same image multiple times)
+                    if xref in seen_xrefs:
+                        images_duplicated += 1
+                        logger.debug(f"Skipping duplicate xref {xref} on page {page_num + 1}")
+                        continue
+                    
+                    seen_xrefs.add(xref)
+                    
                     base_image = doc.extract_image(xref)
                     image_bytes = base_image["image"]
                     image_ext = base_image["ext"]
                     
-                    # Apply efficiency compression if enabled
-                    processed_bytes, was_compressed = compress_image_for_efficiency(image_bytes, image_ext)
+                    # FILTER 1: Check file size first (fastest check)
+                    if len(image_bytes) < MIN_IMAGE_SIZE_BYTES:
+                        images_filtered += 1
+                        logger.debug(f"Filtered small image on page {page_num + 1}: {len(image_bytes)} bytes < {MIN_IMAGE_SIZE_BYTES} bytes")
+                        continue
+                    
+                    # FILTER 2: Check image dimensions and get dimensions for reporting
+                    processed_bytes, was_compressed, dimensions = compress_image_for_efficiency(image_bytes, image_ext)
+                    width, height = dimensions
+                    
+                    # Only check dimensions if we got them
+                    if width > 0 and height > 0:
+                        if width < MIN_IMAGE_WIDTH or height < MIN_IMAGE_HEIGHT:
+                            images_filtered += 1
+                            logger.debug(f"Filtered tiny image on page {page_num + 1}: {width}x{height}px < {MIN_IMAGE_WIDTH}x{MIN_IMAGE_HEIGHT}px")
+                            continue
+                    else:
+                        # If we couldn't get dimensions but Pillow is available, try to check
+                        if PILLOW_AVAILABLE:
+                            try:
+                                from PIL import Image as PILImage
+                                img_check = PILImage.open(io.BytesIO(image_bytes))
+                                if img_check.width < MIN_IMAGE_WIDTH or img_check.height < MIN_IMAGE_HEIGHT:
+                                    images_filtered += 1
+                                    logger.debug(f"Filtered tiny image on page {page_num + 1}: {img_check.width}x{img_check.height}px")
+                                    continue
+                            except Exception as e:
+                                logger.debug(f"Could not verify image dimensions: {e}")
+                    
+                    # FILTER 3: Deduplicate by content hash (after compression to catch visually identical images)
+                    image_hash = hashlib.md5(processed_bytes).hexdigest()
+                    if image_hash in seen_hashes:
+                        images_duplicated += 1
+                        logger.debug(f"Filtered duplicate image on page {page_num + 1}: hash {image_hash[:8]}...")
+                        continue
+                    
+                    seen_hashes.add(image_hash)
                     
                     if was_compressed:
                         images_compressed += 1
@@ -527,11 +595,13 @@ def process_images_efficiently(doc, extract_images_flag: str, filename: str) -> 
                     base64_images.append(data_uri)
                     images_processed += 1
                     
+                    logger.debug(f"Extracted image {images_processed} from page {page_num + 1}: {width}x{height}px, {len(image_bytes)} bytes")
+                    
                 except Exception as e:
-                    logger.warning(f"Failed to process image {images_processed + 1}: {e}")
+                    logger.warning(f"Failed to process image on page {page_num + 1}: {e}")
                     continue
         
-        logger.info(f"Image processing complete: {images_processed} processed, {images_compressed} compressed for efficiency")
+        logger.info(f"Image processing complete: {images_processed} extracted, {images_compressed} compressed, {images_filtered} filtered (too small), {images_duplicated} duplicates skipped")
         
     except Exception as e:
         logger.error(f"Error during image processing: {e}")
