@@ -246,6 +246,7 @@ export const syncFileToKnowledgeById = async (token: string, id: string, fileId:
 	return res;
 };
 
+
 export const updateFileFromKnowledgeById = async (token: string, id: string, fileId: string) => {
 	let error = null;
 
@@ -281,10 +282,17 @@ export const updateFileFromKnowledgeById = async (token: string, id: string, fil
 	return res;
 };
 
-export const removeFileFromKnowledgeById = async (token: string, id: string, fileId: string) => {
+export const removeFileFromKnowledgeById = async (
+	token: string,
+	id: string,
+	fileId: string,
+	deleteFile: boolean = true
+) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/file/remove`, {
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/knowledge/${id}/file/remove?delete_file=${deleteFile}`,
+		{
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',

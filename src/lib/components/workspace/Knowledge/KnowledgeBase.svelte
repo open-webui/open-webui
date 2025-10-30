@@ -79,6 +79,7 @@
 
 	let inputFiles = null;
 	let syncMode = false;
+	let syncCollectedNames: Set<string> = new Set();
 
 	let filteredItems = [];
 	$: if (knowledge && knowledge.files) {
@@ -129,6 +130,16 @@
 
 	const uploadFileHandler = async (file) => {
 		console.log(file);
+		// When syncing a directory, remember each file's relative name used on upload.
+		if (syncMode) {
+			try {
+				// Track only base names to match server-side storage
+				const baseName = file.name?.split(/[\\/]/).pop() ?? file.name;
+				syncCollectedNames.add(baseName);
+			} catch (_) {
+				// no-op
+			}
+		}
 
 		const tempItemId = uuidv4();
 		const fileItem = {
@@ -389,8 +400,31 @@
 	// Helper function to maintain file paths within zip
 	const syncDirectoryHandler = async () => {
 		syncMode = true;
+		syncCollectedNames = new Set();
 		try {
 			await uploadDirectoryHandler();
+
+			// After uploading and per-file syncs, remove KB files that are not present in the directory
+			const dirNames = new Set(Array.from(syncCollectedNames));
+			const currentFiles = knowledge?.files ?? [];
+			const toRemove = currentFiles.filter((f) => !dirNames.has(f?.meta?.name ?? f?.filename));
+
+			for (const f of toRemove) {
+				// First remove from knowledge (and KB vectors) but keep file record
+				const updated = await removeFileFromKnowledgeById(localStorage.token, id, f.id, false).catch((e) => {
+					toast.error(`${e}`);
+					return null;
+				});
+				if (updated) {
+					knowledge = updated;
+				}
+
+				// Then delete the actual file (removes per-file vectors and storage)
+				await deleteFileById(localStorage.token, f.id).catch((e) => {
+					console.error(e);
+				});
+			}
+
 			toast.success($i18n.t('Directory sync completed.'));
 		} finally {
 			syncMode = false;
@@ -652,7 +686,7 @@
 <SyncConfirmDialog
 	bind:show={showSyncConfirmModal}
 	message={$i18n.t(
-		'This will sync a directory: new files will be uploaded and modified files updated to their latest version. Do you wish to continue?'
+		'This will sync a directory: new files will be added, modified files updated, and files missing from the selected directory will be removed from the knowledge. Do you wish to continue?'
 	)}
 	on:confirm={() => {
 		syncDirectoryHandler();
