@@ -189,18 +189,14 @@
 	) => {
 		const oldMessageId = $ttsState.currentMessageId;
 
-		// stop when user clicks the same button while playing
-		if ((oldMessageId === messageId) && ($ttsState.isSpeaking || $ttsState.isLoading)) {
+		// stop if the user either clicks a different or the same button while playing/loading
+		if ($ttsState.isSpeaking || $ttsState.isLoading) {
 			stopAllAudio();
 			await new Promise((r) => setTimeout(r, 100));
-			return;
-		}
 
-		// stop if the user clicks a different button while playing/loading
-		if ($ttsState.isSpeaking || $ttsState.isLoading) {
-			if (oldMessageId !== messageId) {
-				stopAllAudio();
-				await new Promise((r) => setTimeout(r, 100));
+			// return when user clicks the same button
+			if (oldMessageId === messageId) {
+				return;
 			}
 		}
 
