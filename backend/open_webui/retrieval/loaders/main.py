@@ -226,7 +226,7 @@ class DoclingLoader:
 
 
 class Loader:
-    def __init__(self, engine: str = "", **kwargs):
+    def __init__(self, engine: str = "", user=None, **kwargs):
         self.engine = engine
         self.user = user
         self.kwargs = kwargs
