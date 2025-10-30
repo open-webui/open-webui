@@ -1564,6 +1564,7 @@ def process_file(
                 if file_path:
                     file_path = Storage.get_file(file_path)
                     loader = Loader(
+                        user=user,
                         engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
                         DATALAB_MARKER_API_KEY=request.app.state.config.DATALAB_MARKER_API_KEY,
                         DATALAB_MARKER_API_BASE_URL=request.app.state.config.DATALAB_MARKER_API_BASE_URL,
