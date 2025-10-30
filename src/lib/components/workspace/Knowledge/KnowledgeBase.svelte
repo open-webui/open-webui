@@ -205,7 +205,6 @@
 					delete item.itemId;
 					return item;
 				});
-
 				if (uploadedFile.error) {
 					console.warn('File upload warning:', uploadedFile.error);
 					toast.warning(uploadedFile.error);
@@ -216,7 +215,7 @@
                     } else {
                         await addFileHandler(uploadedFile.id);
                     }
-				}
+                }
 			} else {
 				toast.error($i18n.t('Failed to upload file.'));
 			}
