@@ -6,6 +6,7 @@ import tempfile
 import time
 import json
 import re
+import unicodedata
 from typing import Dict, List, Tuple, Any, Optional
 from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.responses import JSONResponse
@@ -64,6 +65,61 @@ app = FastAPI(
     version="1.0.0"
 )
 
+def normalize_text_encoding(text: str) -> str:
+    """
+    Normalize text encoding to handle unicode issues comprehensively.
+    
+    Args:
+        text: Raw text that may contain unicode escape sequences
+        
+    Returns:
+        Normalized text with consistent encoding
+    """
+    if not text:
+        return ""
+    
+    try:
+        # Step 1: Normalize unicode using NFKC (Compatibility Decomposition, followed by Canonical Composition)
+        # This converts non-breaking spaces, special hyphens, etc. to their standard equivalents
+        normalized = unicodedata.normalize('NFKC', text)
+        
+        # Step 2: Replace common problematic unicode characters
+        replacements = {
+            '\u00a0': ' ',   # Non-breaking space
+            '\xa0': ' ',     # Non-breaking space (alternate form)
+            '\u2013': '-',   # En dash
+            '\u2014': '--',  # Em dash
+            '\u2018': "'",   # Left single quotation mark
+            '\u2019': "'",   # Right single quotation mark
+            '\u201c': '"',   # Left double quotation mark
+            '\u201d': '"',   # Right double quotation mark
+            '\u2022': '*',   # Bullet point
+            '\u2026': '...',  # Horizontal ellipsis
+        }
+        
+        for unicode_char, replacement in replacements.items():
+            normalized = normalized.replace(unicode_char, replacement)
+        
+        # Step 3: Remove any remaining control characters except newlines and tabs
+        normalized = ''.join(
+            char for char in normalized 
+            if char == '\n' or char == '\t' or not unicodedata.category(char).startswith('C')
+        )
+        
+        # Step 4: Ensure proper encoding by encoding to UTF-8 and decoding back
+        # This catches any remaining encoding issues
+        normalized = normalized.encode('utf-8', errors='ignore').decode('utf-8', errors='ignore')
+        
+        return normalized
+        
+    except Exception as e:
+        logger.warning(f"Text normalization failed, returning original text: {e}")
+        # Fallback: at minimum, replace non-breaking spaces
+        try:
+            return text.replace('\u00a0', ' ').replace('\xa0', ' ')
+        except:
+            return text
+
 def extract_docx_structure_azure_format(doc, filename: str, output_format: str = "json") -> str:
     """Extract structured content from DOCX in Azure Document Intelligence format."""
     
@@ -77,7 +133,8 @@ def extract_docx_structure_azure_format(doc, filename: str, output_format: str =
     for paragraph in doc.paragraphs:
         if paragraph.text.strip():
             start_offset = len(full_content)
-            text_content = paragraph.text.strip()
+            # Normalize text encoding
+            text_content = normalize_text_encoding(paragraph.text.strip())
             
             # Determine element type
             style_name = paragraph.style.name if paragraph.style else ""
@@ -123,7 +180,8 @@ def extract_docx_structure_azure_format(doc, filename: str, output_format: str =
         for row in table.rows:
             row_data = []
             for cell in row.cells:
-                cell_text = cell.text.strip()
+                # Normalize cell text
+                cell_text = normalize_text_encoding(cell.text.strip())
                 row_data.append(cell_text)
             table_data.append(row_data)
         
@@ -282,7 +340,9 @@ def process_xlsx(file_bytes: bytes, filename: str) -> tuple[str, int]:
                 row_text = []
                 for cell in row:
                     if cell is not None:
-                        row_text.append(str(cell))
+                        # Normalize cell text
+                        cell_str = normalize_text_encoding(str(cell))
+                        row_text.append(cell_str)
                 if row_text:
                     full_text += "\t".join(row_text) + "\n"
         
@@ -319,14 +379,18 @@ def process_pptx(file_bytes: bytes, filename: str) -> tuple[str, int]:
             
             for shape in slide.shapes:
                 if hasattr(shape, "text"):
-                    full_text += shape.text + "\n"
+                    # Normalize shape text
+                    shape_text = normalize_text_encoding(shape.text)
+                    full_text += shape_text + "\n"
                 
                 # Extract text from tables in slides
                 if shape.has_table:
                     table = shape.table
                     for row in table.rows:
                         for cell in row.cells:
-                            full_text += cell.text + " "
+                            # Normalize cell text
+                            cell_text = normalize_text_encoding(cell.text)
+                            full_text += cell_text + " "
                         full_text += "\n"
         
         os.unlink(temp_file_path)
@@ -364,6 +428,9 @@ def process_rtf(file_bytes: bytes, filename: str) -> tuple[str, int]:
     try:
         rtf_content = file_bytes.decode('utf-8', errors='ignore')
         plain_text = rtf_to_text(rtf_content)
+        
+        # Normalize extracted text
+        plain_text = normalize_text_encoding(plain_text)
         
         # Estimate page count
         page_count = max(1, len(plain_text) // 3000)
@@ -535,7 +602,7 @@ async def process_document(request: Request):
     full_text = ""
     page_count = 0
 
-    # PDF processing - use original working logic with efficiency improvements
+    # PDF processing - use original working logic with efficiency improvements and unicode normalization
     if file_ext == ".pdf":
         logger.info("Taking PDF processing path with PyMuPDF")
         try:
@@ -543,10 +610,15 @@ async def process_document(request: Request):
             doc = fitz.open(stream=file_bytes, filetype="pdf")
             page_count = doc.page_count
             
-            # 1. Extract all text content from the document - EXACTLY like original
+            # 1. Extract all text content from the document with unicode normalization
             for page_num in range(len(doc)):
                 page = doc.load_page(page_num)
-                full_text += page.get_text() + "\n\n"
+                page_text = page.get_text()
+                
+                # Normalize unicode to prevent encoding errors
+                page_text = normalize_text_encoding(page_text)
+                
+                full_text += page_text + "\n\n"
 
             # 2. Extract images with efficiency optimizations
             base64_images = process_images_efficiently(doc, extract_images_flag, filename)
@@ -600,7 +672,8 @@ async def process_document(request: Request):
             "processing_status": "completed",
             "processing_time_ms": int((time.time() - start_time) * 1000) if 'start_time' in locals() else None,
             "output_format": output_format,
-            "azure_compatible": AZURE_DOC_INTEL_COMPATIBLE
+            "azure_compatible": AZURE_DOC_INTEL_COMPATIBLE,
+            "text_normalized": True  # Flag indicating unicode normalization was applied
         },
         "images": base64_images,
     }
@@ -631,6 +704,7 @@ def read_root():
         "supported_formats": ["PDF", "DOCX", "XLSX", "PPTX", "RTF"] if all([DOCX_AVAILABLE, OPENPYXL_AVAILABLE, PPTX_AVAILABLE, RTF_AVAILABLE]) else ["PDF"] + processors_available,
         "azure_compatible": AZURE_DOC_INTEL_COMPATIBLE,
         "output_formats": ["json", "markdown"],
+        "text_normalization": "Unicode NFKC normalization enabled",
         "image_processing": {
             "auto_compress": AUTO_COMPRESS_IMAGES,
             "compression_width": DEFAULT_COMPRESSION_WIDTH,
@@ -652,6 +726,7 @@ def health_check():
         "rtf_processor": "striprtf - Available" if RTF_AVAILABLE else "striprtf - Not Available",
         "image_compression": "Pillow - Available" if PILLOW_AVAILABLE else "Pillow - Not Available",
         "azure_compatibility": "Enabled",
+        "text_normalization": "Enabled (Unicode NFKC)",
         "compression_settings": {
             "auto_compress": AUTO_COMPRESS_IMAGES,
             "max_width": DEFAULT_COMPRESSION_WIDTH,
@@ -668,6 +743,7 @@ def test_image_extraction():
         "message": "Send a PDF with 'X-Extract-Images: true' header to /process to test image extraction",
         "pdf_processing": "PyMuPDF",
         "azure_compatibility": "Azure Document Intelligence Compatible Output",
+        "text_normalization": "Unicode NFKC normalization enabled",
         "expected_headers": {
             "X-Filename": "your-file.pdf",
             "X-Extract-Images": "true",
