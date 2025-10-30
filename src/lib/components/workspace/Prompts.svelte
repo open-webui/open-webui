@@ -5,7 +5,8 @@
 
 	import { goto } from '$app/navigation';
 	import { onMount, getContext, tick } from 'svelte';
-	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
+	import { WEBUI_NAME, config, prompts as _prompts, user, mcpPrompts as _mcpPrompts } from '$lib/stores';
+	import { getMCPPrompts } from '$lib/apis/mcp-prompts';
 
 	import {
 		createNewPrompt,
@@ -37,7 +38,7 @@
 	let query = '';
 
 	let prompts = [];
-
+	let mcpPrompts = [];
 	let showDeleteConfirm = false;
 	let deletePrompt = null;
 
@@ -51,14 +52,20 @@
 	}
 
 	const setFilteredItems = () => {
-		filteredItems = prompts.filter((p) => {
+		filteredItems = [
+			...prompts.map(p => ({...p, type: 'local'})),
+			...mcpPrompts.map(p => ({...p,type: 'mcp'}))
+		].filter((p) => {
 			if (query === '' && viewOption === '') return true;
 			const lowerQuery = query.toLowerCase();
 			return (
 				((p.title || '').toLowerCase().includes(lowerQuery) ||
 					(p.command || '').toLowerCase().includes(lowerQuery) ||
 					(p.user?.name || '').toLowerCase().includes(lowerQuery) ||
-					(p.user?.email || '').toLowerCase().includes(lowerQuery)) &&
+					(p.user?.email || '').toLowerCase().includes(lowerQuery) ||
+				    (p.name || '').toLowerCase().includes(lowerQuery) ||
+					(p.server_id || '').toLowerCase().includes(lowerQuery) ||
+					(p.description || '').toLowerCase().includes(lowerQuery)) &&
 				(viewOption === '' ||
 					(viewOption === 'created' && p.user_id === $user?.id) ||
 					(viewOption === 'shared' && p.user_id !== $user?.id))
@@ -120,8 +127,12 @@
 	};
 
 	const init = async () => {
+		mcpPrompts = await getMCPPrompts(localStorage.token);
+		await _mcpPrompts.set(await getMCPPrompts(localStorage.token))
+
 		prompts = await getPromptList(localStorage.token);
 		await _prompts.set(await getPrompts(localStorage.token));
+
 	};
 
 	onMount(async () => {
@@ -205,6 +216,9 @@
 
 					prompts = await getPromptList(localStorage.token);
 					await _prompts.set(await getPrompts(localStorage.token));
+
+					mcpPrompts = await getMCPPrompts(localStorage.token);
+					await _mcpPrompts.set(await getMCPPrompts(localStorage.token)) 
 
 					importFiles = [];
 					promptsImportInputElement.value = '';
@@ -324,11 +338,11 @@
 				{#each filteredItems as prompt}
 					<a
 						class=" flex space-x-4 cursor-pointer text-left w-full px-3 py-2.5 dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl"
-						href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
+						href={prompt.type === 'mcp' ? `/workspace/prompts/mcp-details?server_id=${encodeURIComponent(prompt.server_id)}&name=${encodeURIComponent(prompt.name)}` : `/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
 					>
 						<div class=" flex flex-col flex-1 space-x-4 cursor-pointer w-full pl-1">
 							<div class=" flex-1 flex items-center gap-2 self-start">
-								<div class=" font-medium line-clamp-1 capitalize">{prompt.title}</div>
+								<div class=" font-medium line-clamp-1 capitalize">{prompt.type === 'local' ? `${prompt.title}` : prompt.name}</div>
 								<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
 									{prompt.command}
 								</div>
@@ -336,20 +350,29 @@
 
 							<div class=" text-xs">
 								<Tooltip
-									content={prompt?.user?.email ?? $i18n.t('Deleted User')}
+									content={prompt.type === 'local' ? `${prompt?.user?.email ?? $i18n.t('Deleted User')}` : prompt.description}
 									className="flex shrink-0"
 									placement="top-start"
 								>
 									<div class="shrink-0 text-gray-500">
+										{#if prompt.type === 'local'}
 										{$i18n.t('By {{name}}', {
 											name: capitalizeFirstLetter(
 												prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
 											)
 										})}
+										{:else if prompt.type === "mcp"}
+										{$i18n.t('MCP Server: {{server_id}}', {
+											server_id: 
+												prompt?.server_id
+											
+										})}
+										{/if}
 									</div>
 								</Tooltip>
 							</div>
 						</div>
+						{#if prompt.type === 'local'}
 						<div class="flex flex-row gap-0.5 self-center">
 							{#if shiftKey}
 								<Tooltip content={$i18n.t('Delete')}>
@@ -389,6 +412,7 @@
 								</PromptMenu>
 							{/if}
 						</div>
+						{/if}
 					</a>
 				{/each}
 			</div>

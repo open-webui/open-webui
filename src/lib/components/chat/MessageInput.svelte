@@ -829,6 +829,31 @@
 
 						if (type === 'model') {
 							atSelectedModel = data;
+						} else if (type === 'mcp-prompt') {
+							// Handle MCP prompts with parameters
+							inputVariables = data.variables;
+							showInputVariablesModal = true;
+							inputVariablesModalCallback = async (variableValues) => {
+								// Get the MCP prompt content with filled variables
+								try {
+									const { getMCPPromptContent } = await import('$lib/apis/mcp-prompts');
+									const content = await getMCPPromptContent(
+										localStorage.token,
+										data.mcpPrompt.server_id,
+										data.mcpPrompt.name,
+										variableValues
+									);
+									
+									let promptText = content.messages[0].content.text;
+									
+									await insertTextAtCursor(promptText);
+									showInputVariablesModal = false;
+								} catch (error) {
+									console.error('Error loading MCP prompt content:', error);
+									showInputVariablesModal = false;
+								}
+							};
+							return;
 						}
 
 						document.getElementById('chat-input')?.focus();

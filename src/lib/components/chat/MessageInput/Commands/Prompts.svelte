@@ -7,13 +7,17 @@
 
 	export let query = '';
 	export let prompts = [];
+	export let mcpPrompts = [];
 	export let onSelect = (e) => {};
 
 	let selectedPromptIdx = 0;
 	export let filteredItems = [];
 
-	$: filteredItems = prompts
-		.filter((p) => p.command.toLowerCase().includes(query.toLowerCase()))
+	$: filteredItems = [
+		...prompts.map(p => ({ ...p, type: 'prompt' })),
+		...mcpPrompts.map(p => ({ ...p, type: ((p.arguments || []).length > 0) ? 'mcp-prompt-with-params' : 'mcp-prompt', title: p.description }))
+	]
+		.filter((p) => (p.command || p.title).toLowerCase().includes(query.toLowerCase()))
 		.sort((a, b) => a.title.localeCompare(b.title));
 
 	$: if (query) {
@@ -30,8 +34,12 @@
 	export const select = async () => {
 		const command = filteredItems[selectedPromptIdx];
 		if (command) {
-			onSelect({ type: 'prompt', data: command });
+			onSelect({ type: command.type, data: command });
 		}
+	};
+
+	export const setSelectedIndex = (index) => {
+		selectedPromptIdx = index >= 0 ? index : 0;
 	};
 </script>
 
@@ -49,7 +57,7 @@
 						: ''} truncate"
 					type="button"
 					on:click={() => {
-						onSelect({ type: 'prompt', data: promptItem });
+						onSelect({ type: promptItem.type, data: promptItem });
 					}}
 					on:mousemove={() => {
 						selectedPromptIdx = promptIdx;

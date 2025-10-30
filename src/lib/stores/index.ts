@@ -5,6 +5,7 @@ import type { Banner } from '$lib/types';
 import type { Socket } from 'socket.io-client';
 
 import emojiShortCodes from '$lib/emoji-shortcodes.json';
+import type { MCPPrompt } from '$lib/apis/mcp-prompts';
 
 // Backend
 export const WEBUI_NAME = writable(APP_NAME);
@@ -58,6 +59,7 @@ export const selectedFolder = writable(null);
 export const models: Writable<Model[]> = writable([]);
 
 export const prompts: Writable<null | Prompt[]> = writable(null);
+export const mcpPrompts: Writable<null | MCPPrompt[]> = writable(null);
 export const knowledge: Writable<null | Document[]> = writable(null);
 export const tools = writable(null);
 export const functions = writable(null);

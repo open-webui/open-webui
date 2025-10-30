@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { knowledge, prompts } from '$lib/stores';
+	import { knowledge, prompts, mcpPrompts } from '$lib/stores';
 
 	import { getPrompts } from '$lib/apis/prompts';
 	import { getKnowledgeBases } from '$lib/apis/knowledge';
+	import { getMCPPrompts, getMCPPromptContent } from '$lib/apis/mcp-prompts';
 
 	import Prompts from './Commands/Prompts.svelte';
 	import Knowledge from './Commands/Knowledge.svelte';
@@ -31,6 +32,9 @@
 			})(),
 			(async () => {
 				knowledge.set(await getKnowledgeBases(localStorage.token));
+			})(),
+			(async () => {
+				mcpPrompts.set(await getMCPPrompts(localStorage.token));
 			})()
 		]);
 		loading = false;
@@ -90,11 +94,33 @@
 					{query}
 					bind:filteredItems
 					prompts={$prompts ?? []}
-					onSelect={(e) => {
+					mcpPrompts={$mcpPrompts ?? []}
+					onSelect={async (e) => {
 						const { type, data } = e;
-
 						if (type === 'prompt') {
 							insertTextHandler(data.content);
+						} else if (type == "mcp-prompt") {
+							const content = await getMCPPromptContent(localStorage.token, data.server_id, data.name);
+							insertTextHandler(content.messages[0].content.text || '')
+						} else if (type == "mcp-prompt-with-params") {
+
+							const variables = {};
+
+				            data.arguments.forEach(arg => {
+				            	variables[arg.name] = {
+				            		type: 'text',
+				            		required: arg.required || false,
+				            		placeholder: arg.description || `Enter ${arg.name}`
+				            	};
+				            });
+
+							onSelect({
+								type: 'mcp-prompt',
+								data: {
+									variables: variables,
+									mcpPrompt: data
+								}
+							});
 						}
 					}}
 				/>
