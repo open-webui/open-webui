@@ -723,7 +723,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 			localStorage.token,
 			{
 				model: model.id,
-				stream: true,
+				stream: $config?.features?.default_chat_stream_response ?? true,
 				messages: [
 					{
 						role: 'system',

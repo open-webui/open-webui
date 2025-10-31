@@ -1481,6 +1481,12 @@ ENABLE_USER_WEBHOOKS = PersistentConfig(
     os.environ.get("ENABLE_USER_WEBHOOKS", "True").lower() == "true",
 )
 
+DEFAULT_CHAT_STREAM_RESPONSE = PersistentConfig(
+    "DEFAULT_CHAT_STREAM_RESPONSE",
+    "ui.default_chat_stream_response",
+    os.environ.get("DEFAULT_CHAT_STREAM_RESPONSE", "True").lower() == "true",
+)
+
 # FastAPI / AnyIO settings
 THREAD_POOL_SIZE = os.getenv("THREAD_POOL_SIZE", None)
 

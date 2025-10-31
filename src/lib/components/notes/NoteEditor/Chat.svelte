@@ -188,7 +188,7 @@ Based on the user's instruction, update and enhance the existing notes or select
 			localStorage.token,
 			{
 				model: model.id,
-				stream: true,
+				stream: $config?.features?.default_chat_stream_response ?? true,
 				messages: chatMessages
 				// ...(files && files.length > 0 ? { files } : {}) // TODO: Decide whether to use native file handling or not
 			},

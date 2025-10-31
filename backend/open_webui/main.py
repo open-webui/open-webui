@@ -347,6 +347,7 @@ from open_webui.config import (
     ENABLE_COMMUNITY_SHARING,
     ENABLE_MESSAGE_RATING,
     ENABLE_USER_WEBHOOKS,
+    DEFAULT_CHAT_STREAM_RESPONSE,
     ENABLE_EVALUATION_ARENA_MODELS,
     BYPASS_ADMIN_ACCESS_CONTROL,
     USER_PERMISSIONS,
@@ -752,6 +753,7 @@ app.state.config.ENABLE_NOTES = ENABLE_NOTES
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
 app.state.config.ENABLE_MESSAGE_RATING = ENABLE_MESSAGE_RATING
 app.state.config.ENABLE_USER_WEBHOOKS = ENABLE_USER_WEBHOOKS
+app.state.config.DEFAULT_CHAT_STREAM_RESPONSE = DEFAULT_CHAT_STREAM_RESPONSE
 
 app.state.config.ENABLE_EVALUATION_ARENA_MODELS = ENABLE_EVALUATION_ARENA_MODELS
 app.state.config.EVALUATION_ARENA_MODELS = EVALUATION_ARENA_MODELS
@@ -1760,6 +1762,7 @@ async def get_app_config(request: Request):
                     "enable_community_sharing": app.state.config.ENABLE_COMMUNITY_SHARING,
                     "enable_message_rating": app.state.config.ENABLE_MESSAGE_RATING,
                     "enable_user_webhooks": app.state.config.ENABLE_USER_WEBHOOKS,
+                    "default_chat_stream_response": app.state.config.DEFAULT_CHAT_STREAM_RESPONSE,
                     "enable_admin_export": ENABLE_ADMIN_EXPORT,
                     "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
                     "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,

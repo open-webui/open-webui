@@ -1800,6 +1800,7 @@
 			model?.info?.params?.stream_response ??
 			$settings?.params?.stream_response ??
 			params?.stream_response ??
+			$config?.features?.default_chat_stream_response ??
 			true;
 
 		let messages = [
