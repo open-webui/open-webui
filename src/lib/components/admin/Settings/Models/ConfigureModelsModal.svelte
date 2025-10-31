@@ -85,6 +85,13 @@
 		} else {
 			defaultModelIds = [];
 		}
+
+		if (config?.DEFAULT_PINNED_MODELS) {
+			defaultPinnedModelIds = (config?.DEFAULT_PINNED_MODELS).split(',').filter((id) => id);
+		} else {
+			defaultPinnedModelIds = [];
+		}
+
 		const modelOrderList = config.MODEL_ORDER_LIST || [];
 		const allModelIds = $models.map((model) => model.id);
 
