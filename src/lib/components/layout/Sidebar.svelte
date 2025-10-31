@@ -467,6 +467,16 @@
 	};
 
 	const isWindows = /Windows/i.test(navigator.userAgent);
+
+$: {
+	console.log('[Sidebar Debug] Models count:', ($models ?? []).length);
+	console.log('[Sidebar Debug] Pinned models count:', ($settings?.pinnedModels ?? []).length);
+	console.log('[Sidebar Debug] Config default_pinned_models:', $config?.default_pinned_models);
+	console.log('[Sidebar Debug] Should render PinnedModelList:', 
+		($models ?? []).length > 0 && 
+		(($settings?.pinnedModels ?? []).length > 0 || $config?.default_pinned_models)
+	);
+}
 </script>
 
 <ArchivedChatsModal
