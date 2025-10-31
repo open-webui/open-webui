@@ -78,7 +78,7 @@
 				}}
 				onUnpin={() => {
 					const pinnedModels = $settings.pinnedModels.filter((id) => id !== modelId);
-					settings.set({ ...$settings, pinnedModels });
+					settings.set({ ...$settings, pinnedModels, pinnedModelsCustomized: true });
 					updateUserSettings(localStorage.token, { ui: $settings });
 				}}
 			/>
