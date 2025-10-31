@@ -272,7 +272,6 @@ class Loader:
                 loader = TikaLoader(
                     url=self.kwargs.get("TIKA_SERVER_URL"),
                     file_path=file_path,
-                    mime_type=file_content_type,
                     extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES"),
                 )
         elif (
