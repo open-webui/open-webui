@@ -26,6 +26,9 @@ import { getAllUsers } from '$lib/apis/users';
 	// Force reactivity with a counter
 	let expansionCounter = 0;
 
+	// Custom scenario detection
+	const CUSTOM_SCENARIO_MARKER = "[Create Your Own Scenario]";
+
 	// Helpers to support multi-session displays (session_number optional)
 	const getSessionNumber = (obj: any) => Number(obj?.session_number);
 
@@ -77,15 +80,24 @@ import { getAllUsers } from '$lib/apis/users';
 				};
 			});
 			
-			return {
-				child_id: childId,
-				child_name: childName,
-				scenarios: scenarios.sort((a, b) => a.scenario_index - b.scenario_index)
-			};
-		});
-	};
+		return {
+			child_id: childId,
+			child_name: childName,
+			scenarios: scenarios.sort((a, b) => a.scenario_index - b.scenario_index)
+		};
+	});
+};
 
-	function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
+const isCustomScenario = (scenarioIndex: number, allScenarios: any[]) => {
+	// Custom scenarios are always the last scenario in the list
+	// They are typically at index 8 (after 8 personality-based scenarios)
+	// but can be at higher indices if there are more scenarios
+	if (allScenarios.length === 0) return false;
+	const maxIndex = Math.max(...allScenarios.map(s => s.scenario_index));
+	return scenarioIndex === maxIndex;
+};
+
+function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 		const key = `${childId}::${scenarioIndex}`;
 		const currentValue = expandedScenarios[key];
 		expandedScenarios = { ...expandedScenarios, [key]: !currentValue };
@@ -447,7 +459,14 @@ import { getAllUsers } from '$lib/apis/users';
 														<div class="rounded border border-gray-200 dark:border-gray-700">
 															<div class="px-3 py-2 bg-white dark:bg-gray-900 flex items-center justify-between">
 																<div class="flex items-center gap-3 flex-1 min-w-0">
-																	<span class="text-sm font-medium text-gray-900 dark:text-white">Scenario {scenario.scenario_index}</span>
+																	<div class="flex items-center gap-2">
+																		<span class="text-sm font-medium text-gray-900 dark:text-white">Scenario {scenario.scenario_index}</span>
+																		{#if isCustomScenario(scenario.scenario_index, childGroup.scenarios)}
+																			<span class="px-2 py-0.5 text-xs rounded bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200">
+																				Custom
+																			</span>
+																		{/if}
+																	</div>
 																	{#if scenario.scenario_prompt}
 																		<span class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-md">
 																			{scenario.scenario_prompt.substring(0, 80)}{scenario.scenario_prompt.length > 80 ? '...' : ''}
@@ -464,7 +483,9 @@ import { getAllUsers } from '$lib/apis/users';
 															{#if isScenarioExpanded(childGroup.child_id, scenario.scenario_index) && expansionCounter >= 0}
 																<div class="px-3 py-2 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
 																	<div class="mb-2">
-																		<span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Scenario Prompt:</span>
+																		<span class="text-xs font-semibold text-gray-700 dark:text-gray-300">
+																			{isCustomScenario(scenario.scenario_index, childGroup.scenarios) ? 'Custom Prompt:' : 'Scenario Prompt:'}
+																		</span>
 																		<p class="text-sm text-gray-900 dark:text-white mt-1">{scenario.scenario_prompt || 'No prompt available'}</p>
 																	</div>
 																	<div>

@@ -100,6 +100,14 @@ import { finalizeModeration } from '$lib/apis/workflow';
     let scenarioList = Object.entries(scenarios);
     let sessionNumber: number = 1; // Default session number for non-Prolific users
 
+    // Warm-up tutorial state
+    let warmupCompleted: boolean = false;
+    let showWarmup: boolean = false;
+    let warmupStep: number = 0;
+    let warmupSelectedStrategies: string[] = [];
+    let warmupModeratedResponse: string = '';
+    let warmupConfirmed: boolean = false;
+
     // Session-level lock to prevent re-ordering once restored/corrected
     let scenariosLockedForSession: boolean = false;
     let lastPolledChildId: string | number | null = null;
@@ -685,13 +693,19 @@ function clearModerationLocalKeys() {
 				customScenarioResponse = result.refactored_response;
 				customScenarioGenerated = true;
 				
-				// Update the scenario list with the custom prompt and response
-				scenarioList[selectedScenarioIndex] = [customScenarioPrompt.trim(), customScenarioResponse];
+				// Update the scenario list: keep CUSTOM_SCENARIO_PROMPT as the marker, store actual prompt in metadata
+				// The response is the generated one
+				scenarioList[selectedScenarioIndex] = [CUSTOM_SCENARIO_PROMPT, customScenarioResponse];
+				
+				// Persist the updated scenario list with the generated custom scenario
+				if (selectedChildId && sessionNumber) {
+					persistScenarioPackage(selectedChildId, sessionNumber, scenarioList);
+				}
 				
 				// Update the current scenario data - treat this as the ORIGINAL response
 				childPrompt1 = customScenarioPrompt.trim();
 				originalResponse1 = customScenarioResponse;
-				
+
 				// Reset ALL state to treat this as a fresh, unmoderated scenario
 				hasInitialDecision = false;
 				acceptedOriginal = false;
@@ -708,11 +722,7 @@ function clearModerationLocalKeys() {
 				highlightingMode = false; // Not in highlighting mode
 				attentionCheckSelected = false; // Not attention check
 				
-				// Clear any saved state for this scenario to start fresh
-				scenarioStates.delete(selectedScenarioIndex);
-				scenarioTimers.delete(selectedScenarioIndex);
-				
-				// Force save the clean state
+				// Force save the clean state (this will include customPrompt)
 				saveCurrentScenarioState();
 				
 				console.log('✅ Custom scenario reset - treating as original response', {
@@ -778,6 +788,7 @@ function clearModerationLocalKeys() {
 		acceptedOriginal: boolean;
 		attentionCheckSelected: boolean;
 		markedNotApplicable: boolean;
+		customPrompt?: string; // Store actual custom prompt text for custom scenarios
 	}
 	
 	let scenarioStates: Map<number, ScenarioState> = new Map();
@@ -1022,6 +1033,8 @@ let currentRequestId: number = 0;
 	}
 
 	function saveCurrentScenarioState() {
+		// Get existing customPrompt if we're saving state for a custom scenario
+		const existingState = scenarioStates.get(selectedScenarioIndex);
 		const currentState: ScenarioState = {
 			versions: [...versions],
 			currentVersionIndex,
@@ -1033,7 +1046,8 @@ let currentRequestId: number = 0;
 			hasInitialDecision,
 			acceptedOriginal,
 			attentionCheckSelected,
-			markedNotApplicable
+			markedNotApplicable,
+			customPrompt: isCustomScenario && customScenarioGenerated ? customScenarioPrompt : existingState?.customPrompt
 		};
 		scenarioStates.set(selectedScenarioIndex, currentState);
 		
@@ -1077,15 +1091,22 @@ let currentRequestId: number = 0;
 		
 		// Handle custom scenario specially
 		if (prompt === CUSTOM_SCENARIO_PROMPT) {
-			// Check if custom scenario was already generated
+			// Check if custom scenario was already generated (response is not placeholder)
 			const savedState = scenarioStates.get(index);
-			console.log('📋 Custom scenario saved state:', savedState);
-			if (savedState && savedState.hasInitialDecision) {
-				// Custom scenario was previously generated - restore its state
-				customScenarioPrompt = childPrompt1 || '';
-				customScenarioResponse = originalResponse1 || '';
+			const isGenerated = response && response !== CUSTOM_SCENARIO_PLACEHOLDER;
+			console.log('📋 Custom scenario check - Is generated:', isGenerated, 'Response preview:', response?.substring(0, 50), 'Saved state:', savedState);
+			if (isGenerated) {
+				// Custom scenario was previously generated - restore its values
+				// Use the saved customPrompt if available, otherwise use prompt
+				customScenarioPrompt = savedState?.customPrompt || CUSTOM_SCENARIO_PROMPT;
+				customScenarioResponse = response;
 				customScenarioGenerated = true;
-				console.log('✅ Custom scenario already generated from saved state');
+				console.log('✅ Custom scenario already generated - prompt:', customScenarioPrompt.substring(0, 50));
+				
+				// Set childPrompt1 to the actual custom prompt, not the marker
+				childPrompt1 = customScenarioPrompt;
+				originalResponse1 = response;
+				
 				// Continue to load the full saved state below
 			} else {
 				// Custom scenario has NOT been generated yet - show input form
@@ -1158,8 +1179,11 @@ let currentRequestId: number = 0;
 			markedNotApplicable = false;
 		}
 		
-		childPrompt1 = prompt;
-		originalResponse1 = response;
+		// Only set childPrompt1 if it wasn't already set for a custom scenario
+		if (!(prompt === CUSTOM_SCENARIO_PROMPT && customScenarioGenerated && customScenarioPrompt)) {
+			childPrompt1 = prompt;
+			originalResponse1 = response;
+		}
 		selectionButtonsVisible1 = false;
 		currentSelection1 = '';
 		
@@ -1212,8 +1236,26 @@ function cancelReset() {}
 				if (scenarioIndex >= 0 && scenarioIndex < scenarioList.length) {
 					selectedScenarioIndex = scenarioIndex;
 					const [prompt, response] = scenarioList[scenarioIndex];
-					childPrompt1 = prompt;
-					originalResponse1 = response;
+					
+					// If this is a custom scenario, restore the custom prompt first
+					if (prompt === CUSTOM_SCENARIO_PROMPT && response && response !== CUSTOM_SCENARIO_PLACEHOLDER) {
+						const state = scenarioStates.get(scenarioIndex);
+						if (state?.customPrompt) {
+							customScenarioPrompt = state.customPrompt;
+							customScenarioResponse = response;
+							customScenarioGenerated = true;
+							childPrompt1 = customScenarioPrompt; // Use the actual custom prompt
+							originalResponse1 = response;
+							console.log('Restored custom scenario with prompt:', customScenarioPrompt.substring(0, 50));
+						} else {
+							// Fallback if state not loaded yet
+							childPrompt1 = prompt;
+							originalResponse1 = response;
+						}
+					} else {
+						childPrompt1 = prompt;
+						originalResponse1 = response;
+					}
 					console.log('Restored current scenario:', scenarioIndex);
 				}
 			}
@@ -1766,6 +1808,15 @@ onMount(async () => {
         window.addEventListener('resize', onResize);
         onDestroy(() => window.removeEventListener('resize', onResize));
 		} catch {}
+    
+    // Check if warm-up tutorial has been completed
+    try {
+        const warmupKey = `moderationWarmupCompleted_${$user?.id}`;
+        warmupCompleted = localStorage.getItem(warmupKey) === 'true';
+    } catch (e) {
+        console.warn('Failed to check warmup completion', e);
+    }
+    
     // Prepare available scenarios; fetch after child profile is known
     let availableScenarioIndices: number[] = [];
 
@@ -1926,6 +1977,20 @@ onMount(async () => {
 						.map(index => scenarioList[index])
 						.filter(Boolean);
 
+					// Ensure custom scenario is at the end if it was in original list
+					const hasCustom = scenarioList.some(([q]) => q === CUSTOM_SCENARIO_PROMPT);
+					if (hasCustom) {
+						const customIdx = filteredScenarios.findIndex(([q]) => q === CUSTOM_SCENARIO_PROMPT);
+						if (customIdx === -1) {
+							// Custom not in filtered scenarios, add it
+							filteredScenarios.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
+						} else if (customIdx !== filteredScenarios.length - 1) {
+							// Custom exists but not at end, move it
+							const custom = filteredScenarios.splice(customIdx, 1)[0];
+							filteredScenarios.push(custom);
+						}
+					}
+
 					if (filteredScenarios.length > 0) {
 						// Replace scenarios and reset in-memory UI state to avoid old responses
 						if (!scenariosLockedForSession) {
@@ -1944,10 +2009,10 @@ onMount(async () => {
 				console.log('WARNING: Still using default scenarios, forcing personality scenarios...');
 				// Force use personality scenarios with Q&A pairs
 				if (personalityBasedScenarios.length > 0) {
-					if (!scenariosLockedForSession) scenarioList = personalityBasedScenarios.map(qa => [qa.question, qa.response]);
-					
-					// Add custom scenario at the end
-					if (!scenariosLockedForSession) scenarioList.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
+					if (!scenariosLockedForSession) {
+						const basePairs = personalityBasedScenarios.map(qa => [qa.question, qa.response] as [string, string]);
+						scenarioList = buildScenarioList(basePairs);
+					}
 					
 					// Persist canonical package and lock
 					persistScenarioPackage(selectedChildId, sessionNumber, scenarioList);
@@ -1975,10 +2040,10 @@ onMount(async () => {
 								// Generate scenarios directly (async)
 								generateScenariosFromPersonalityData(selectedChars).then(directScenarios => {
 										if (directScenarios.length > 0) {
-											if (!scenariosLockedForSession) scenarioList = directScenarios.map(qa => [qa.question, qa.response]);
-										
-											// Add custom scenario at the end
-											if (!scenariosLockedForSession) scenarioList.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
+											if (!scenariosLockedForSession) {
+												const basePairs = directScenarios.map(qa => [qa.question, qa.response] as [string, string]);
+												scenarioList = buildScenarioList(basePairs);
+											}
 										
 											// Persist canonical package and lock
 											persistScenarioPackage(selectedChildId, sessionNumber, scenarioList);
@@ -2017,11 +2082,68 @@ onMount(async () => {
 			moderationPanelVisible = confirmedVersionIndex === null && hasInitialDecision && !acceptedOriginal && !markedNotApplicable;
 		}
 		
-		// Start timer for the current scenario
-		startTimer(selectedScenarioIndex);
+		// Show warm-up if not completed
+		if (!warmupCompleted) {
+			showWarmup = true;
+			console.log('Showing warm-up tutorial');
+		} else {
+			// Start timer for the current scenario only if not in warmup
+			startTimer(selectedScenarioIndex);
 
-		// Bootstrap scenario persistence
+			// Bootstrap scenario persistence
+			try {
+				const sessionId = `scenario_${selectedScenarioIndex}`;
+				await saveModerationSession(localStorage.token, {
+					session_id: sessionId,
+					user_id: $user?.id || 'unknown',
+					child_id: selectedChildId || 'unknown',
+					scenario_index: selectedScenarioIndex,
+					attempt_number: 1,
+					version_number: 0,
+					session_number: sessionNumber,
+					scenario_prompt: childPrompt1,
+					original_response: originalResponse1,
+					initial_decision: undefined,
+					strategies: [],
+					custom_instructions: [],
+					highlighted_texts: [],
+					refactored_response: undefined,
+					is_final_version: false,
+					session_metadata: { status: 'initialized' }
+				});
+			} catch (e) {
+				console.error('Failed to bootstrap scenario', e);
+			}
+		}
+	});
+	
+	onDestroy(() => {
+		// Save current state before leaving
+		saveCurrentScenarioState();
+		// Clean up timer on component destroy
+		stopTimer();
+		// Remove event listener
+		window.removeEventListener('child-profiles-updated', handleProfileUpdate);
+	});
+
+	// Reactive statements to save state when changes occur
+	$: if (highlightedTexts1.length > 0 || selectedModerations.size > 0 || customInstructions.length > 0 || hasInitialDecision || acceptedOriginal || markedNotApplicable) {
+		saveCurrentScenarioState();
+	}
+
+	// Warm-up tutorial functions
+	async function completeWarmup() {
 		try {
+			const warmupKey = `moderationWarmupCompleted_${$user?.id}`;
+			localStorage.setItem(warmupKey, 'true');
+			warmupCompleted = true;
+			showWarmup = false;
+			warmupStep = 0;
+			warmupConfirmed = false;
+			toast.success('Tutorial complete! You are ready to moderate scenarios.');
+			
+			// Start the regular moderation flow
+			startTimer(selectedScenarioIndex);
 			const sessionId = `scenario_${selectedScenarioIndex}`;
 			await saveModerationSession(localStorage.token, {
 				session_id: sessionId,
@@ -2042,22 +2164,48 @@ onMount(async () => {
 				session_metadata: { status: 'initialized' }
 			});
 		} catch (e) {
-			console.error('Failed to bootstrap scenario', e);
+			console.error('Error completing warmup', e);
 		}
-	});
-	
-	onDestroy(() => {
-		// Save current state before leaving
-		saveCurrentScenarioState();
-		// Clean up timer on component destroy
-		stopTimer();
-		// Remove event listener
-		window.removeEventListener('child-profiles-updated', handleProfileUpdate);
-	});
+	}
 
-	// Reactive statements to save state when changes occur
-	$: if (highlightedTexts1.length > 0 || selectedModerations.size > 0 || customInstructions.length > 0 || hasInitialDecision || acceptedOriginal || markedNotApplicable) {
-		saveCurrentScenarioState();
+	function skipWarmup() {
+		completeWarmup();
+	}
+
+	async function generateWarmupResponse() {
+		const warmupPrompt = "Can you help me with my homework?";
+		const warmupResponse = "Of course! I'd be happy to help you with your homework. What subject are you working on? If you tell me what you're studying, I can guide you through the problem or explain concepts to help you understand better.";
+		
+		try {
+			moderationLoading = true;
+			const result = await applyModeration(
+				localStorage.token,
+				warmupSelectedStrategies,
+				warmupPrompt,
+				[],
+				warmupResponse,
+				[],
+				undefined
+			);
+			if (result) {
+				warmupModeratedResponse = result.refactored_response || warmupResponse;
+				warmupStep = 2; // Move to review step
+			}
+		} catch (error: any) {
+			console.error('Error generating warmup response:', error);
+			toast.error(`Error: ${error.message || 'Failed to generate response'}`);
+		} finally {
+			moderationLoading = false;
+		}
+	}
+
+	function confirmWarmup() {
+		if (!warmupModeratedResponse) {
+			toast.error('Please generate a moderated response first');
+			return;
+		}
+		warmupConfirmed = true;
+		warmupStep = 3;
 	}
 </script>
 
@@ -2065,11 +2213,197 @@ onMount(async () => {
 	<title>Moderation Scenarios</title>
 </svelte:head>
 
-<div
-	class="flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
-		? 'md:max-w-[calc(100%-260px)]'
-		: ''} max-w-full"
->
+{#if showWarmup && !warmupCompleted}
+	<!-- Warm-up Tutorial -->
+	<div class="flex flex-col w-full h-screen max-h-[100dvh] bg-gradient-to-br from-yellow-50 via-blue-50 to-purple-50 dark:from-yellow-900/20 dark:via-blue-900/20 dark:to-purple-900/20">
+		<div class="flex-1 flex flex-col items-center justify-center p-6">
+			<div class="max-w-4xl w-full bg-white dark:bg-gray-800 rounded-xl shadow-2xl border-2 border-yellow-200 dark:border-yellow-800 p-8">
+				<!-- Header -->
+				<div class="text-center mb-8">
+					<div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-blue-500 mb-4">
+						<svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+						</svg>
+					</div>
+					<h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Welcome to Moderation Practice!</h1>
+					<p class="text-lg text-gray-600 dark:text-gray-400">Learn how to moderate AI responses for children</p>
+					<div class="flex justify-center items-center gap-2 mt-4">
+						<span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Step {warmupStep + 1} of 4</span>
+						<div class="flex gap-1">
+							{#each [0, 1, 2, 3] as step}
+								<div class="w-2 h-2 rounded-full {step === warmupStep ? 'bg-blue-500' : step < warmupStep ? 'bg-green-500' : 'bg-gray-300'}"></div>
+							{/each}
+						</div>
+					</div>
+				</div>
+
+				{#if warmupStep === 0}
+					<!-- Step 0: Introduction -->
+					<div class="space-y-6">
+						<div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6">
+							<h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">What is Moderation?</h2>
+							<p class="text-gray-700 dark:text-gray-300 mb-4">
+								As a parent, you'll review AI responses to your child's questions. Your job is to:
+							</p>
+							<ul class="space-y-2 text-gray-700 dark:text-gray-300">
+								<li class="flex items-start">
+									<span class="mr-2 text-green-500">✓</span>
+									<span>Review each response for appropriateness</span>
+								</li>
+								<li class="flex items-start">
+									<span class="mr-2 text-green-500">✓</span>
+									<span>Select moderation strategies if needed</span>
+								</li>
+								<li class="flex items-start">
+									<span class="mr-2 text-green-500">✓</span>
+									<span>Generate and approve a moderated version</span>
+								</li>
+							</ul>
+						</div>
+						<button
+							on:click={() => warmupStep = 1}
+							class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold py-3 px-6 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg"
+						>
+							Start Tutorial →
+						</button>
+					</div>
+				{:else if warmupStep === 1}
+					<!-- Step 1: Review and Select Strategies -->
+					<div class="space-y-6">
+						<div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-6">
+							<h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Practice Scenario</h2>
+							<div class="mb-4">
+								<p class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">Child's Question:</p>
+								<p class="text-lg text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded p-4">"Can you help me with my homework?"</p>
+							</div>
+							<div>
+								<p class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">AI Response:</p>
+								<p class="text-base text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 rounded p-4">
+									Of course! I'd be happy to help you with your homework. What subject are you working on? If you tell me what you're studying, I can guide you through the problem or explain concepts to help you understand better.
+								</p>
+							</div>
+						</div>
+
+						<div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-lg p-4 mb-6">
+							<p class="text-sm text-yellow-800 dark:text-yellow-200">
+								💡 <strong>Tip:</strong> This response is already appropriate, but try selecting "Tailor to Age Group" to see how moderation works!
+							</p>
+						</div>
+
+						<div>
+							<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Select a moderation strategy:</h3>
+							<div class="grid grid-cols-2 gap-3">
+								{#each ['Tailor to Age Group'] as strategy}
+									<button
+										on:click={() => {
+											if (!warmupSelectedStrategies.includes(strategy)) {
+												warmupSelectedStrategies = [...warmupSelectedStrategies, strategy];
+											} else {
+												warmupSelectedStrategies = warmupSelectedStrategies.filter(s => s !== strategy);
+											}
+										}}
+										class="p-4 rounded-lg border-2 transition-all {
+											warmupSelectedStrategies.includes(strategy)
+												? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+												: 'border-gray-300 dark:border-gray-700 hover:border-blue-400'
+										}"
+									>
+										<span class="text-sm font-medium text-gray-900 dark:text-white">{strategy}</span>
+									</button>
+								{/each}
+							</div>
+						</div>
+
+						<div class="flex gap-3">
+							<button
+								on:click={() => warmupStep = 0}
+								class="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold py-3 px-6 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+							>
+								← Back
+							</button>
+							<button
+								on:click={generateWarmupResponse}
+								disabled={warmupSelectedStrategies.length === 0 || moderationLoading}
+								class="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold py-3 px-6 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+							>
+								{moderationLoading ? 'Generating...' : 'Generate Response →'}
+							</button>
+						</div>
+					</div>
+				{:else if warmupStep === 2}
+					<!-- Step 2: Review Generated Response -->
+					<div class="space-y-6">
+						<div class="bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700 rounded-lg p-4">
+							<p class="text-sm font-semibold text-green-800 dark:text-green-200 mb-2">✓ Moderated Response Generated!</p>
+							<p class="text-sm text-green-700 dark:text-green-300">Review the response below, then confirm to complete the tutorial.</p>
+						</div>
+
+						<div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-6">
+							<p class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">Moderated Response:</p>
+							<p class="text-base text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded p-4">
+								{warmupModeratedResponse}
+							</p>
+						</div>
+
+						<div class="flex gap-3">
+							<button
+								on:click={() => warmupStep = 1}
+								class="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold py-3 px-6 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+							>
+								← Back
+							</button>
+							<button
+								on:click={confirmWarmup}
+								class="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold py-3 px-6 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg"
+							>
+								Confirm Response ✓
+							</button>
+						</div>
+					</div>
+				{:else if warmupStep === 3}
+					<!-- Step 3: Completion -->
+					<div class="space-y-6 text-center">
+						<div class="bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-lg p-8">
+							<div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-500 mb-4">
+								<svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+								</svg>
+							</div>
+							<h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-3">Tutorial Complete!</h2>
+							<p class="text-lg text-gray-700 dark:text-gray-300 mb-6">
+								You're ready to start moderating real scenarios. Remember to review each response carefully and select appropriate strategies.
+							</p>
+							<button
+								on:click={completeWarmup}
+								class="bg-gradient-to-r from-green-600 to-blue-600 text-white font-semibold py-3 px-8 rounded-lg hover:from-green-700 hover:to-blue-700 transition-all shadow-lg text-lg"
+							>
+								Start Moderation →
+							</button>
+						</div>
+					</div>
+				{/if}
+
+				<!-- Skip Tutorial Button -->
+				{#if warmupStep < 3}
+					<div class="mt-6 text-center">
+						<button
+							on:click={skipWarmup}
+							class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline"
+						>
+							Skip Tutorial
+						</button>
+					</div>
+				{/if}
+			</div>
+		</div>
+	</div>
+{:else}
+	<!-- Regular Moderation UI -->
+	<div
+		class="flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
+			? 'md:max-w-[calc(100%-260px)]'
+			: ''} max-w-full"
+	>
 	<nav class="px-2.5 pt-1 backdrop-blur-xl w-full drag-region border-b border-gray-200 dark:border-gray-800">
 		<div class="flex items-center">
 			<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
@@ -2966,13 +3300,14 @@ onMount(async () => {
 				on:click={cancelReset}
 				class="px-6 py-3 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
 			>
-				No, Keep My Progress
-			</button>
-		</div>
-	</div>
+		No, Keep My Progress
+	</button>
+</div>
+</div>
 </div>
 {/if}
 </div>
+{/if}
 
 <style>
 	.response-text :global(.selection-highlight) {
