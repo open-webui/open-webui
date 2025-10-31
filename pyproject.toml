@@ -151,7 +151,7 @@ all = [
     "oracledb==3.2.0",
 
     "colbert-ai==0.2.21",
-    "firecrawl-py==1.12.0",
+    "firecrawl-py==4.5.0",
 ]
 
 [project.scripts]
