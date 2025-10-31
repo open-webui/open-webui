@@ -3,7 +3,7 @@ import json
   
 # Configuration  
 BASE_URL = "https://cepm.amd.com:3443"  # Replace with your Open WebUI instance  
-API_KEY = "sk-52c....."    # Your API key  
+API_KEY = "sk-ccf522e72f8f419aaf4f6df2"    # Your API key  
   
 # Headers for all requests  
 headers = {  
@@ -116,31 +116,31 @@ def chat_completion_streaming(model, messages):
 
 def main():  
     try:  
-        # Get all chats  
-        #chats = get_all_chats()  
-        #print(f"Found {len(chats)} chats")  
-          
-        # Create a new chat  
-        new_chat = create_new_chat("Python API Sample Code")  
-        chat_id = new_chat["id"]  
-        print(f"Created chat: {chat_id}")  
-          
-        # Send a chat completion  
+        # Example 1: Direct JIRA search with automatic confirmation bypass
+        print("=== Example 1: Direct JIRA Search ===")
+        jira_query = "would you help to search critical JIRA issue in Krackan? Please answer the question directly."
+        result = search_jira_directly(jira_query)
+        print(f"Chat ID: {result['chat_id']}")
+        print("Final Response:", result['final_response'])
+        
+        print("\n" + "="*50 + "\n")
+        
+        # Example 2: Streaming JIRA search with automatic confirmation
+        print("=== Example 2: Streaming JIRA Search ===")
+        jira_query_2 = "Search for high priority JIRA issues in Krackan project that are blocking development"
+        streaming_result = search_jira_streaming(jira_query_2)
+        print(f"\nCompleted streaming search. Chat ID: {streaming_result['chat_id']}")
+        
+        print("\n" + "="*50 + "\n")
+        
+        # Example 3: Basic chat completion (original functionality)
+        print("=== Example 3: Basic Chat Completion ===")
         messages = [  
             {"role": "user", "content": "Hello! How are you?"}  
         ]  
           
         completion = chat_completion("uat-cgce-qa-agent-gpt-5", messages)  
         print("Response:", completion)  
-          
-        # Example with streaming  
-        print("\nStreaming response:")  
-        for chunk in chat_completion_streaming("uat-cgce-qa-agent-gpt-5", messages):  
-            if "choices" in chunk and chunk["choices"]:  
-                delta = chunk["choices"][0].get("delta", {})  
-                if "content" in delta:  
-                    print(delta["content"], end="", flush=True)  
-        print()  
           
     except requests.exceptions.RequestException as e:  
         print(f"API request failed: {e}")  
