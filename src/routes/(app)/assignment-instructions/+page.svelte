@@ -210,6 +210,28 @@
 				</div>
 			</div>
 
+			<!-- Demo Video -->
+			<div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 mb-8">
+				<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+					Demo Video
+				</h3>
+				<p class="text-gray-600 dark:text-gray-300 mb-4">
+					Watch this demonstration video to see how the workflow operates before you begin:
+				</p>
+				<div class="w-full max-w-4xl mx-auto">
+					<!-- svelte-ignore a11y-media-has-caption -->
+					<video
+						controls
+						class="w-full rounded-lg shadow-md"
+						poster=""
+						preload="metadata"
+					>
+						<source src="/video/Demo-Video.mp4" type="video/mp4" />
+						Your browser does not support the video tag.
+					</video>
+				</div>
+			</div>
+
 			<!-- Important Notes -->
 			<div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-6 mb-8">
 				<h3 class="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-3">
