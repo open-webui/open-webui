@@ -23,6 +23,7 @@
 	export let users = [];
 	export let group = null;
 
+
 	export let custom = true;
 
 	let showImportModal = false;
@@ -39,6 +40,10 @@
 	export let created_by = ''; // add creator name
 	export let created_at = ''; // add creator initialization
 	export let updated_at = ''; // add updated initialization
+
+	export let co_admin_user_ids: string[] = [];
+	export let co_admin_emails: string[] = [];
+
 
 	export let permissions = {
 		workspace: {
@@ -60,7 +65,20 @@
 			code_interpreter: true
 		}
 	};
-	export let userIds = [];
+export let userIds = [];
+// Keep co-admin list in sync with current members and users
+$: {
+	try {
+		const memberUsers = (userIds || [])
+			.map((id) => (users || []).find((u) => u.id === id))
+			.filter((u) => !!u);
+		co_admin_emails = memberUsers
+			.filter((u) => u.role === 'admin' && (u.info?.is_co_admin === true))
+			.map((u) => u.email);
+	} catch (e) {
+		// noop: keep previous value if any transient error
+	}
+}
 
 	const submitHandler = async () => {
 		loading = true;
@@ -96,6 +114,15 @@
 			console.log('First 3 lines of CSV:', lines);
 		};
 		reader.readAsText(file);
+	}
+
+	// Copied from src/lib/components/admin/Users/UserList.svelte
+	// Also used in src/lib/components/admin/Users/Groups/Users.svelte for showing badge in EditGroupModal -> Users
+	function getRoleLabel(user) {
+		if (user.role === 'admin' && user.info?.is_co_admin) {
+			return 'co-admin';
+		}
+		return user.role;
 	}
 
 	function handleImportCSV(event) {
@@ -197,14 +224,15 @@
 	}
 
 	const init = () => {
-		console.log('EditGroupModal - Initializing with group:', group);
-		console.log('properties in the group:', group ? Object.keys(group) : 'No group');
+		console.log('✅ Received META data from group', group);
+		// console.log('properties in the group:', group ? Object.keys(group) : 'No group');
 		if (group) {
 			name = group.name;
 			description = group.description;
 			permissions = group?.permissions ?? {};
 			created_by = group?.created_by ?? 'Unknown';
-
+			// user_ids_before_identify = group.user_ids
+			
 			const cDate = toDate(group?.created_at);
 			created_at = cDate ? formatDateTime(cDate) : 'Unknown';
 
@@ -379,6 +407,7 @@
 									bind:created_by
 									bind:created_at
 									bind:updated_at
+									{co_admin_emails}
 								/>
 								<!-- Finally put other stuff here -->
 							{:else if selectedTab == 'permissions'}

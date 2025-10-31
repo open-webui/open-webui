@@ -13,6 +13,14 @@
 
 	let filteredUsers = [];
 
+	// Copied from src/lib/components/admin/Users/UserList.svelte
+	function getRoleLabel(user) {
+		if (user.role === 'admin' && user.info?.is_co_admin) {
+			return 'co-admin';
+		}
+		return user.role;
+	}
+
 	$: filteredUsers = users
 		.filter((user) => {
 			if (user?.role === 'admin' && !user.info?.is_co_admin) {
@@ -134,7 +142,19 @@
 							</Tooltip>
 
 							{#if userIds.includes(user.id)}
-								<Badge type="success" content="member" />
+								<!-- <Badge type="success" content="member" /> -->
+								 							<Badge
+								type={getRoleLabel(user) === 'super admin'
+									? 'super'
+									: getRoleLabel(user) === 'co-admin'
+										? 'warning'
+										: user.role === 'admin'
+											? 'info'
+											: user.role === 'user'
+												? 'success'
+												: 'muted'}
+								content={$i18n.t(getRoleLabel(user))}
+							/>
 							{/if}
 						</div>
 					</div>
