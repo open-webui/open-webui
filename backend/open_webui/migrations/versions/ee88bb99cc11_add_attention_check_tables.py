@@ -34,7 +34,7 @@ def upgrade() -> None:
         sa.Column('session_number', sa.Integer(), nullable=True),
         sa.Column('question_id', sa.String(), nullable=False),
         sa.Column('response', sa.String(), nullable=False),
-        sa.Column('is_passed', sa.Boolean(), nullable=False, server_default=sa.text('0')),
+        sa.Column('is_passed', sa.Boolean(), nullable=False, server_default=sa.text('false')),
         sa.Column('created_at', sa.BigInteger(), nullable=False),
     )
     op.create_index('idx_acr_user', 'attention_check_response', ['user_id'])

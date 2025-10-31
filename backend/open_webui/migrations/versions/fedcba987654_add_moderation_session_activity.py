@@ -52,3 +52,4 @@ def downgrade() -> None:
     op.drop_table("moderation_session_activity")
 
 
+
