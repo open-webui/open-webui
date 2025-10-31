@@ -27,6 +27,8 @@
 
 	let selectedModelId = '';
 	let defaultModelIds = [];
+	let selectedPinnedModelId = '';
+	let defaultPinnedModelIds = [];
 	let modelIds = [];
 
 	let sortKey = '';
