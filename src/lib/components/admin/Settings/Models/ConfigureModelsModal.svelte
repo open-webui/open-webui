@@ -45,6 +45,10 @@
 		onModelSelect();
 	}
 
+	$: if (selectedPinnedModelId) {
+		onPinnedModelSelect();
+	}
+
 	const onModelSelect = () => {
 		if (selectedModelId === '') {
 			return;
@@ -57,6 +61,20 @@
 
 		defaultModelIds = [...defaultModelIds, selectedModelId];
 		selectedModelId = '';
+	};
+
+	const onPinnedModelSelect = () => {
+		if (selectedPinnedModelId === '') {
+			return;
+		}
+
+		if (defaultPinnedModelIds.includes(selectedPinnedModelId)) {
+			selectedPinnedModelId = '';
+			return;
+		}
+
+		defaultPinnedModelIds = [...defaultPinnedModelIds, selectedPinnedModelId];
+		selectedPinnedModelId = '';
 	};
 
 	const init = async () => {
