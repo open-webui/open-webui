@@ -27,6 +27,8 @@
 
 	let selectedModelId = '';
 	let defaultModelIds = [];
+	let selectedPinnedModelId = '';
+	let defaultPinnedModelIds = [];
 	let modelIds = [];
 
 	let sortKey = '';
@@ -43,6 +45,10 @@
 		onModelSelect();
 	}
 
+	$: if (selectedPinnedModelId) {
+		onPinnedModelSelect();
+	}
+
 	const onModelSelect = () => {
 		if (selectedModelId === '') {
 			return;
@@ -57,6 +63,20 @@
 		selectedModelId = '';
 	};
 
+	const onPinnedModelSelect = () => {
+		if (selectedPinnedModelId === '') {
+			return;
+		}
+
+		if (defaultPinnedModelIds.includes(selectedPinnedModelId)) {
+			selectedPinnedModelId = '';
+			return;
+		}
+
+		defaultPinnedModelIds = [...defaultPinnedModelIds, selectedPinnedModelId];
+		selectedPinnedModelId = '';
+	};
+
 	const init = async () => {
 		config = await getModelsConfig(localStorage.token);
 
@@ -65,6 +85,13 @@
 		} else {
 			defaultModelIds = [];
 		}
+
+		if (config?.DEFAULT_PINNED_MODELS) {
+			defaultPinnedModelIds = (config?.DEFAULT_PINNED_MODELS).split(',').filter((id) => id);
+		} else {
+			defaultPinnedModelIds = [];
+		}
+
 		const modelOrderList = config.MODEL_ORDER_LIST || [];
 		const allModelIds = $models.map((model) => model.id);
 
@@ -86,6 +113,7 @@
 
 		const res = await setModelsConfig(localStorage.token, {
 			DEFAULT_MODELS: defaultModelIds.join(','),
+			DEFAULT_PINNED_MODELS: defaultPinnedModelIds.join(','),
 			MODEL_ORDER_LIST: modelIds
 		});
 
@@ -227,6 +255,60 @@
 														type="button"
 														on:click={() => {
 															defaultModelIds = defaultModelIds.filter(
+																(_, idx) => idx !== modelIdx
+															);
+														}}
+													>
+														<Minus strokeWidth="2" className="size-3.5" />
+													</button>
+												</div>
+											</div>
+										{/each}
+									</div>
+								{:else}
+									<div class="text-gray-500 text-xs text-center py-2">
+										{$i18n.t('No models selected')}
+									</div>
+								{/if}
+							</div>
+						</div>
+
+						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
+
+						<div>
+							<div class="flex flex-col w-full">
+								<div class="mb-1 flex justify-between">
+									<div class="text-xs text-gray-500">{$i18n.t('Default Pinned Models')}</div>
+								</div>
+
+								<div class="flex items-center -mr-1">
+									<select
+										class="w-full py-1 text-sm rounded-lg bg-transparent {selectedPinnedModelId
+											? ''
+											: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+										bind:value={selectedPinnedModelId}
+									>
+										<option value="">{$i18n.t('Select a model')}</option>
+										{#each $models as model}
+											<option value={model.id} class="bg-gray-50 dark:bg-gray-700"
+												>{model.name}</option
+											>
+										{/each}
+									</select>
+								</div>
+
+								{#if defaultPinnedModelIds.length > 0}
+									<div class="flex flex-col">
+										{#each defaultPinnedModelIds as modelId, modelIdx}
+											<div class=" flex gap-2 w-full justify-between items-center">
+												<div class=" text-sm flex-1 py-1 rounded-lg">
+													{$models.find((model) => model.id === modelId)?.name}
+												</div>
+												<div class="shrink-0">
+													<button
+														type="button"
+														on:click={() => {
+															defaultPinnedModelIds = defaultPinnedModelIds.filter(
 																(_, idx) => idx !== modelIdx
 															);
 														}}

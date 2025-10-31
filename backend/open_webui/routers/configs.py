@@ -439,6 +439,7 @@ async def set_code_execution_config(
 ############################
 class ModelsConfigForm(BaseModel):
     DEFAULT_MODELS: Optional[str]
+    DEFAULT_PINNED_MODELS: Optional[str]
     MODEL_ORDER_LIST: Optional[list[str]]
 
 
@@ -446,6 +447,7 @@ class ModelsConfigForm(BaseModel):
 async def get_models_config(request: Request, user=Depends(get_admin_user)):
     return {
         "DEFAULT_MODELS": request.app.state.config.DEFAULT_MODELS,
+        "DEFAULT_PINNED_MODELS": request.app.state.config.DEFAULT_PINNED_MODELS,
         "MODEL_ORDER_LIST": request.app.state.config.MODEL_ORDER_LIST,
     }
 
@@ -455,9 +457,11 @@ async def set_models_config(
     request: Request, form_data: ModelsConfigForm, user=Depends(get_admin_user)
 ):
     request.app.state.config.DEFAULT_MODELS = form_data.DEFAULT_MODELS
+    request.app.state.config.DEFAULT_PINNED_MODELS = form_data.DEFAULT_PINNED_MODELS
     request.app.state.config.MODEL_ORDER_LIST = form_data.MODEL_ORDER_LIST
     return {
         "DEFAULT_MODELS": request.app.state.config.DEFAULT_MODELS,
+        "DEFAULT_PINNED_MODELS": request.app.state.config.DEFAULT_PINNED_MODELS,
         "MODEL_ORDER_LIST": request.app.state.config.MODEL_ORDER_LIST,
     }
 

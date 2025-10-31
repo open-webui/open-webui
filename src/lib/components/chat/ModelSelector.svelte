@@ -34,7 +34,7 @@
 			pinnedModels = [...new Set([...pinnedModels, modelId])];
 		}
 
-		settings.set({ ...$settings, pinnedModels: pinnedModels });
+		settings.set({ ...$settings, pinnedModels: pinnedModels, pinnedModelsCustomized: true });
 		await updateUserSettings(localStorage.token, { ui: $settings });
 	};
 

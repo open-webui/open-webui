@@ -180,7 +180,6 @@
 
 	const initChatList = async () => {
 		// Reset pagination variables
-		console.log('initChatList');
 		currentChatPage.set(1);
 		allChatsLoaded = false;
 		scrollPaginationEnabled.set(false);
@@ -188,17 +187,14 @@
 		initFolders();
 		await Promise.all([
 			await (async () => {
-				console.log('Init tags');
 				const _tags = await getAllTags(localStorage.token);
 				tags.set(_tags);
 			})(),
 			await (async () => {
-				console.log('Init pinned chats');
 				const _pinnedChats = await getPinnedChatList(localStorage.token);
 				pinnedChats.set(_pinnedChats);
 			})(),
 			await (async () => {
-				console.log('Init chat list');
 				const _chats = await getChatList(localStorage.token, $currentChatPage);
 				await chats.set(_chats);
 			})()
@@ -887,16 +883,16 @@
 					{/if}
 				</div>
 
-				{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
-					<Folder
-						className="px-2 mt-0.5"
-						name={$i18n.t('Models')}
-						chevron={false}
-						dragAndDrop={false}
-					>
-						<PinnedModelList bind:selectedChatId {shiftKey} />
-					</Folder>
-				{/if}
+		        {#if ($models ?? []).length > 0 && (($settings?.pinnedModels ?? []).length > 0 || $config?.default_pinned_models)}
+							<Folder
+								className="px-2 mt-0.5"
+								name={$i18n.t('Models')}
+								chevron={false}
+								dragAndDrop={false}
+							>
+								<PinnedModelList bind:selectedChatId {shiftKey} />
+							</Folder>
+						{/if}
 
 				{#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0)}
 					<Folder
