@@ -338,9 +338,9 @@ async def get_user_submissions(user_id: str, user: UserModel = Depends(get_admin
                 "name": target_user.name,
                 "email": target_user.email
             },
-            "child_profiles": [profile.model_dump(mode='json') for profile in child_profiles],
-            "moderation_sessions": [session.model_dump(mode='json') for session in moderation_sessions],
-            "exit_quiz_responses": [response.model_dump(mode='json') for response in exit_quiz_responses],
+            "child_profiles": [profile.model_dump() for profile in child_profiles],
+            "moderation_sessions": [session.model_dump() for session in moderation_sessions],
+            "exit_quiz_responses": [response.model_dump() for response in exit_quiz_responses],
             "session_activity_totals": session_activity_totals
         }
         

@@ -37,6 +37,9 @@ class JSONField(types.TypeDecorator):
 
     def process_result_value(self, value: Optional[_T], dialect: Dialect) -> Any:
         if value is not None:
+            # If value is already a dict/list (deserialized), return it as-is
+            if isinstance(value, (dict, list)):
+                return value
             return json.loads(value)
 
     def copy(self, **kw: Any) -> Self:
@@ -47,6 +50,9 @@ class JSONField(types.TypeDecorator):
 
     def python_value(self, value):
         if value is not None:
+            # If value is already a dict/list (deserialized), return it as-is
+            if isinstance(value, (dict, list)):
+                return value
             return json.loads(value)
 
 
