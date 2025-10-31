@@ -44,7 +44,7 @@ fake-useragent==1.5.1
 qdrant-client~=1.12.0
 
 # txtai-wikipedia Wiki Grounding dependencies
-transformers>=4.46.0,<5.0.0
+transformers>=4.50.0,<5.0.0
 txtai[graph]==9.0.0
 sentence-transformers>=5.0.0
 sacremoses==0.1.1
@@ -58,7 +58,7 @@ pypdf>=5.0.0
 fpdf2==2.8.2
 pymdown-extensions==10.11.2
 docx2txt==0.8
-python-pptx==1.0.0
+python-pptx==1.0.2
 unstructured==0.15.9
 nltk==3.9.1
 Markdown==3.7
@@ -105,6 +105,9 @@ google-cloud-storage==2.19.0
 
 ## LDAP
 ldap3==2.9.1
+
+## Docling for advanced document parsing
+docling==2.59.0
 
 ## MCP (Model Context Protocol)
 fastmcp==2.5.2

@@ -583,6 +583,7 @@
 					>
 						<option value="">{$i18n.t('Default')} </option>
 						<option value="tika">{$i18n.t('Tika')}</option>
+						<option value="docling">{$i18n.t('Docling')}</option>
 					</select>
 				</div>
 			</div>
