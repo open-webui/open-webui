@@ -335,7 +335,7 @@
 
 		text = await textVariableHandler(text);
 
-		if (command) {
+		if (command && showCommands) {
 			replaceCommandWithText(text);
 		} else {
 			chatInputElement?.insertContent(text);
@@ -1019,33 +1019,36 @@
 						}}
 					/>
 
-					{#if recording}
-						<VoiceRecording
-							bind:recording
-							onCancel={async () => {
-								recording = false;
-
-								await tick();
-								document.getElementById('chat-input')?.focus();
-							}}
-							onConfirm={async (data) => {
-								const { text, filename } = data;
-
-								recording = false;
-
-								await tick();
-								await insertTextAtCursor(text);
-								await tick();
-								document.getElementById('chat-input')?.focus();
-
-								if ($settings?.speechAutoSend ?? false) {
-									dispatch('submit', prompt);
-								}
-							}}
-						/>
-					{:else}
-						<form
-							class="w-full flex flex-col gap-1.5"
+					<div class={recording ? '' : 'hidden'}>
+						{#key recording}
+							<VoiceRecording
+								bind:recording
+								onCancel={async () => {
+									recording = false;
+					
+									await tick();
+									document.getElementById('chat-input')?.focus();
+								}}
+								onConfirm={async (data) => {
+									const { text, filename } = data;
+					
+									recording = false;
+					
+									await tick();
+									await insertTextAtCursor(text);
+									await tick();
+									document.getElementById('chat-input')?.focus();
+					
+									if ($settings?.speechAutoSend ?? false) {
+										dispatch('submit', prompt);
+									}
+								}}
+							/>
+						{/key}
+					</div>
+					
+					<form
+						class="w-full flex flex-col gap-1.5 {recording ? 'hidden' : ''}"
 							on:submit|preventDefault={() => {
 								// check if selectedModels support image input
 								dispatch('submit', prompt);
@@ -1804,8 +1807,7 @@
 							{:else}
 								<div class="mb-1" />
 							{/if}
-						</form>
-					{/if}
+					</form>
 				</div>
 			</div>
 		</div>
