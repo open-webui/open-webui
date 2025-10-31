@@ -113,6 +113,7 @@
 
 		const res = await setModelsConfig(localStorage.token, {
 			DEFAULT_MODELS: defaultModelIds.join(','),
+			DEFAULT_PINNED_MODELS: defaultPinnedModelIds.join(','),
 			MODEL_ORDER_LIST: modelIds
 		});
 
