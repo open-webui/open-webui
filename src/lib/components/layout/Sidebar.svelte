@@ -886,7 +886,7 @@ $: {
 				</div>
 
 				{#if ($models ?? []).length > 0 && (($settings?.pinnedModels ?? []).length > 0 || $config?.default_pinned_models)}
-				    <PinnedModelList bind:selectedChatId {shiftKey} />
+					<PinnedModelList bind:selectedChatId {shiftKey} />
 				{/if}
 
 				{#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0)}
