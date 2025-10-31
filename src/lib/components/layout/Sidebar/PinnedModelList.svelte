@@ -34,59 +34,27 @@
 	};
 
 	const initDefaultPinnedModels = async () => {
-		console.log('[PinnedModels] initDefaultPinnedModels called');
-		console.log('[PinnedModels] $config:', $config);
-		console.log('[PinnedModels] $models:', $models);
-		console.log('[PinnedModels] $settings:', $settings);
 
-		// Wait for all dependencies to be ready
-		if (!$config) {
-			console.log('[PinnedModels] Config not ready, skipping');
-			return;
-		}
-
-		if (!$models || $models.length === 0) {
-			console.log('[PinnedModels] Models not ready, skipping');
-			return;
-		}
-
-		console.log('[PinnedModels] default_pinned_models from config:', $config?.default_pinned_models);
-		console.log('[PinnedModels] pinnedModelsCustomized:', $settings?.pinnedModelsCustomized);
-		console.log('[PinnedModels] current pinnedModels:', $settings?.pinnedModels);
-	
-		// Check if user has customized their pinned models
-		if ($settings?.pinnedModelsCustomized) {
-			console.log('[PinnedModels] User has customized, skipping defaults');
+		// Check if user has customized their pinned models or if no models were loaded
+		if (!$models || $models.length === 0 || $settings?.pinnedModelsCustomized) {
 			return;
 		}
 
 		// Apply default pinned models from admin config if user hasn't customized
 		if ($config?.default_pinned_models) {
 			const defaultPinnedModelIds = $config.default_pinned_models.split(',').filter((id) => id);
-			console.log('[PinnedModels] Parsed default model IDs:', defaultPinnedModelIds);
-
 			const availableModelIds = $models.map((m) => m.id);
-			console.log('[PinnedModels] Available model IDs:', availableModelIds);
 
 			const validPinnedModels = defaultPinnedModelIds.filter((id) => availableModelIds.includes(id));
-			console.log('[PinnedModels] Valid pinned models:', validPinnedModels);
 
 			// Only update if different from current pinned models
 			const currentPinnedModels = $settings.pinnedModels ?? [];
-			console.log('[PinnedModels] Current pinned models:', currentPinnedModels);
-			console.log('[PinnedModels] Are they different?', JSON.stringify(validPinnedModels) !== JSON.stringify(currentPinnedModels));
 
 			if (JSON.stringify(validPinnedModels) !== JSON.stringify(currentPinnedModels)) {
-				console.log('[PinnedModels] ✅ Applying default pinned models:', validPinnedModels);
 				settings.set({ ...$settings, pinnedModels: validPinnedModels });
 				// Persist to backend so it's saved
 				await updateUserSettings(localStorage.token, { ui: $settings });
-				console.log('[PinnedModels] ✅ Default pinned models saved to backend');
-			} else {
-				console.log('[PinnedModels] No changes needed, models already match');
 			}
-		} else {
-			console.log('[PinnedModels] No default_pinned_models configured in admin settings');
 		}
 	};
 
