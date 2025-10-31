@@ -242,6 +242,10 @@ If you are running Open WebUI in an offline environment, you can set the `HF_HUB
 export HF_HUB_OFFLINE=1
 ```
 
+### Production Deployment
+
+For production deployments, especially on platforms like Heroku, ensure you have proper database backup strategies in place. See [Heroku Backup Setup](docs/HEROKU_BACKUP_SETUP.md) for configuration details.
+
 ## What's Next? 🌟
 
 Discover upcoming features on our roadmap in the [Open WebUI Documentation](https://docs.openwebui.com/roadmap/).
