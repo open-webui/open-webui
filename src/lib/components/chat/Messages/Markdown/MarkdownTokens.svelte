@@ -47,6 +47,17 @@
 		return 'h' + depth;
 	};
 
+	const extractResultFromDetails = (token): string => {
+		if (token?.attributes?.type === 'tool_calls') {
+			const match = token.text.match(/<div class="tool-result"[^>]*>([\s\S]*?)<\/div>/);
+			if (match) {
+				return match[1];
+			}
+			return token.attributes?.result || '';
+		}
+		return '';
+	}
+
 	const exportTableToCSVHandler = (token, tokenIdx = 0) => {
 		console.log('Exporting table to CSV');
 
@@ -294,17 +305,20 @@
 			</ul>
 		{/if}
 	{:else if token.type === 'details'}
+		{@const result = extractResultFromDetails(token)}
+		{@const cleanedText = token.text.replace(/<div class="tool-result"[^>]*>[\s\S]*?<\/div>/, '')}
+
 		<Collapsible
 			title={token.summary}
 			open={$settings?.expandDetails ?? false}
-			attributes={token?.attributes}
+			attributes={{...token?.attributes, result: result}}
 			className="w-full space-y-1"
 			dir="auto"
 		>
 			<div class=" mb-1.5" slot="content">
 				<svelte:self
 					id={`${id}-${tokenIdx}-d`}
-					tokens={marked.lexer(token.text)}
+					tokens={marked.lexer(cleanedText)}
 					attributes={token?.attributes}
 					{done}
 					{editCodeBlock}
