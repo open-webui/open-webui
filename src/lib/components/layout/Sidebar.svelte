@@ -883,7 +883,7 @@
 					{/if}
 				</div>
 
-		{#if ($models ?? []).length > 0 && (($settings?.pinnedModels ?? []).length > 0 || $config?.default_pinned_models)}
+				{#if ($models ?? []).length > 0 && (($settings?.pinnedModels ?? []).length > 0 || $config?.default_pinned_models)}
 					<Folder
 						className="px-2 mt-0.5"
 						name={$i18n.t('Models')}
