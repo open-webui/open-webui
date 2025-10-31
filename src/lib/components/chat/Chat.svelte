@@ -2,7 +2,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
-
+	import { setContext } from 'svelte';
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	const i18n: Writable<i18nType> = getContext('i18n');
 
@@ -94,6 +94,9 @@
 	import { updateFolderById } from '$lib/apis/folders';
 
 	export let chatIdProp = '';
+
+	const submitPromptWrapper = (prompt) => submitPrompt(prompt);
+//	const chatIdWrapper = (chatId) => chatId(chatId);
 
 	let loading = true;
 
@@ -526,6 +529,10 @@
 	let pageSubscribe = null;
 	let showControlsSubscribe = null;
 	let selectedFolderSubscribe = null;
+
+    setContext('submitPrompt', submitPromptWrapper);  
+    setContext('chatId', chatId);  
+    setContext('modelId', selectedModelIds?.at(0)); 
 
 	onMount(async () => {
 		loading = true;

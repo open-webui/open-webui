@@ -41,6 +41,7 @@
 	export let editorClassName = '';
 	export let stickyButtonsClassName = 'top-0';
 
+
 	let pyodideWorker = null;
 
 	let _code = '';
@@ -56,6 +57,28 @@
 
 	let mermaidHtml = null;
 	let vegaHtml = null;
+	let mermaidError = null;
+	let vegaError = null;
+
+	const submitPrompt = getContext('submitPrompt');
+	const chatId = getContext('chatId');
+	const modelId = getContext('modelId');
+	const regenerateDiagram = async () => {  
+    	if (!submitPrompt) {
+        	toast.error('Cannot regenerate: chat context not available');
+        	return;
+	    }
+
+	    const prompt = `The following Mermaid diagram failed to render with this error:
+Error: ${mermaidError}
+Original diagram code:
+\`\`\`mermaid
+${code}
+\`\`\`
+Please fix the Mermaid diagram syntax and provide a corrected version that will render properly.`;
+	    // Submit the prompt to the model
+    	await submitPrompt(prompt);
+	};
 
 	let highlightedCode = null;
 	let executing = false;
@@ -327,11 +350,13 @@
 		onUpdate(token);
 		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
 			try {
+				mermaidError = null;
 				mermaidHtml = await renderMermaidDiagram(code);
 			} catch (error) {
 				console.error('Failed to render mermaid diagram:', error);
 				const errorMsg = error instanceof Error ? error.message : String(error);
-				toast.error($i18n.t('Failed to render diagram') + `: ${errorMsg}`);
+//				toast.error($i18n.t('Failed to render diagram') + `: ${errorMsg}`);
+				mermaidError = errorMsg;
 				mermaidHtml = null;
 			}
 		} else if (
@@ -343,7 +368,8 @@
 			} catch (error) {
 				console.error('Failed to render Vega visualization:', error);
 				const errorMsg = error instanceof Error ? error.message : String(error);
-				toast.error($i18n.t('Failed to render diagram') + `: ${errorMsg}`);
+//				toast.error($i18n.t('Failed to render diagram') + `: ${errorMsg}`);
+				vegaError = errorMsg;
 				vegaHtml = null;
 			}
 		}
@@ -408,25 +434,79 @@
 		dir="ltr"
 	>
 		{#if lang === 'mermaid'}
-			{#if mermaidHtml}
-				<SvgPanZoom
-					className=" rounded-3xl max-h-fit overflow-hidden"
-					svg={mermaidHtml}
-					content={_token.text}
-				/>
-			{:else}
-				<pre class="mermaid">{code}</pre>
-			{/if}
+		    {#if mermaidHtml}
+		        <SvgPanZoom
+		            className=" rounded-3xl max-h-fit overflow-hidden"
+		            svg={mermaidHtml}
+		            content={_token.text}
+		        />
+		    {:else if mermaidError}
+			    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-3xl p-4 m-2">
+			        <div class="flex items-start gap-3">
+			            <div class="flex-1">
+			                <div class="text-red-800 dark:text-red-200 font-medium mb-1">
+			                    {$i18n.t('Failed to render diagram')}
+			                </div>
+			                <div class="text-red-700 dark:text-red-300 text-sm mb-3 font-mono">
+			                    {mermaidError}
+			                </div>
+			                <div class="flex gap-2">
+			                    <button
+			                        class="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm transition"
+			                        on:click={() => render()}
+			                    >
+			                        {$i18n.t('Retry Render')}
+			                    </button>
+			                    <button
+			                        class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition"
+			                        on:click={() => regenerateDiagram()}
+			                    >
+			                        {$i18n.t('Ask AI to Fix')}
+			                    </button>
+			                </div>
+			            </div>
+			        </div>
+			    </div>
+		    {:else}
+		        <pre class="mermaid">{code}</pre>
+		    {/if}
 		{:else if lang === 'vega' || lang === 'vega-lite'}
-			{#if vegaHtml}
-				<SvgPanZoom
-					className="rounded-3xl max-h-fit overflow-hidden"
-					svg={vegaHtml}
-					content={_token.text}
-				/>
-			{:else}
-				<pre class="vega">{code}</pre>
-			{/if}
+		    {#if vegaHtml}
+		        <SvgPanZoom
+		            className="rounded-3xl max-h-fit overflow-hidden"
+		            svg={vegaHtml}
+		            content={_token.text}
+		        />
+		    {:else if vegaError}
+			    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-3xl p-4 m-2">
+			        <div class="flex items-start gap-3">
+			            <div class="flex-1">
+			                <div class="text-red-800 dark:text-red-200 font-medium mb-1">
+			                    {$i18n.t('Failed to render diagram')}
+			                </div>
+			                <div class="text-red-700 dark:text-red-300 text-sm mb-3 font-mono">
+			                    {vegaError}
+			                </div>
+			                <div class="flex gap-2">
+			                    <button
+			                        class="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm transition"
+			                        on:click={() => render()}
+			                    >
+			                        {$i18n.t('Retry Render')}
+			                    </button>
+			                    <button
+			                        class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition"
+			                        on:click={() => regenerateDiagram()}
+			                    >
+			                        {$i18n.t('Ask AI to Fix')}
+			                    </button>
+			                </div>
+			            </div>
+			        </div>
+			    </div>
+		    {:else}
+		        <pre class="vega">{code}</pre>
+		    {/if}
 		{:else}
 			<div
 				class="absolute left-0 right-0 py-2.5 pr-3 text-text-300 pl-4.5 text-xs font-medium dark:text-white"
