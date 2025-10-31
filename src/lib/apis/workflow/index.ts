@@ -62,6 +62,7 @@ export interface UserSubmissionsResponse {
   child_profiles: any[];
   moderation_sessions: any[];
   exit_quiz_responses: any[];
+  session_activity_totals?: Record<string, number>;
 }
 
 export const finalizeModeration = async (

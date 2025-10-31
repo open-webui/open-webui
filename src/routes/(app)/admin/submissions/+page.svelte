@@ -185,6 +185,44 @@ import { getAllUsers } from '$lib/apis/users';
 	const getSelectedUser = () => {
 		return users.find(u => u.id === selectedUserId);
 	};
+
+	const getAttentionCheckStats = (scenarios: any[]) => {
+		const attentionChecks = scenarios.flatMap(s => s.versions)
+			.filter(v => v.is_attention_check);
+		const passed = attentionChecks.filter(v => v.attention_check_passed).length;
+		return { total: attentionChecks.length, passed };
+	};
+
+	const parseExitQuizAnswers = (answers: any) => {
+		if (!answers) return null;
+		return {
+			genai_familiarity: answers['1'] || answers['genai_familiarity'] || 'Not answered',
+			usage_frequency: answers['2'] || answers['usage_frequency'] || 'Not answered',
+			raw: answers
+		};
+	};
+
+	const formatTimeSpent = (ms: number) => {
+		if (!ms || ms === 0) return 'No data';
+		const totalSeconds = Math.floor(ms / 1000);
+		const hours = Math.floor(totalSeconds / 3600);
+		const minutes = Math.floor((totalSeconds % 3600) / 60);
+		const seconds = totalSeconds % 60;
+		
+		if (hours > 0) {
+			return `${hours}h ${minutes}m ${seconds}s`;
+		} else if (minutes > 0) {
+			return `${minutes}m ${seconds}s`;
+		} else {
+			return `${seconds}s`;
+		}
+	};
+
+	const getSessionTime = (userId: string, childId: string, sessionNumber: number) => {
+		if (!submissionsData?.session_activity_totals) return 0;
+		const key = `${userId}::${childId}::${sessionNumber}`;
+		return submissionsData.session_activity_totals[key] || 0;
+	};
 </script>
 
 <svelte:head>
@@ -305,6 +343,30 @@ import { getAllUsers } from '$lib/apis/users';
 											<span class="text-sm text-gray-600 dark:text-gray-400">Attempt:</span>
 											<p class="text-gray-900 dark:text-white">{profile.attempt_number}</p>
 										</div>
+										<div>
+											<span class="text-sm text-gray-600 dark:text-gray-400">Session:</span>
+											<p class="text-gray-900 dark:text-white">{profile.session_number}</p>
+										</div>
+										<div>
+											<span class="text-sm text-gray-600 dark:text-gray-400">Only Child:</span>
+											<p class="text-gray-900 dark:text-white">
+												{profile.is_only_child === true ? 'Yes' : profile.is_only_child === false ? 'No' : 'Not specified'}
+											</p>
+										</div>
+										<div>
+											<span class="text-sm text-gray-600 dark:text-gray-400">Child AI Use:</span>
+											<p class="text-gray-900 dark:text-white">{profile.child_has_ai_use || 'Not specified'}</p>
+										</div>
+										{#if profile.child_ai_use_contexts && profile.child_ai_use_contexts.length > 0}
+											<div class="md:col-span-2">
+												<span class="text-sm text-gray-600 dark:text-gray-400">AI Use Contexts:</span>
+												<p class="text-gray-900 dark:text-white">{profile.child_ai_use_contexts.join(', ')}</p>
+											</div>
+										{/if}
+										<div>
+											<span class="text-sm text-gray-600 dark:text-gray-400">Parent Monitoring Level:</span>
+											<p class="text-gray-900 dark:text-white">{profile.parent_llm_monitoring_level || 'Not specified'}</p>
+										</div>
 										{#if profile.child_characteristics}
 											<div class="md:col-span-2">
 												<span class="text-sm text-gray-600 dark:text-gray-400">Characteristics:</span>
@@ -358,10 +420,26 @@ import { getAllUsers } from '$lib/apis/users';
 									</div>
 									<div class="p-3 space-y-4">
 										{#each groupWithinSessionByChild(sessionBlock.items, submissionsData.child_profiles) as childGroup}
+											{@const attnStats = getAttentionCheckStats(childGroup.scenarios)}
+											{@const timeSpent = getSessionTime(submissionsData.user_info.id, childGroup.child_id, sessionBlock.session_number)}
 											<div class="rounded border border-gray-200 dark:border-gray-700">
 												<div class="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 flex items-center justify-between">
 													<div class="flex items-center gap-2">
 														<span class="text-sm font-semibold text-gray-900 dark:text-white">Child: {childGroup.child_name} ({childGroup.child_id})</span>
+														<span class="px-2 py-0.5 text-xs rounded bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200">
+															⏱️ {formatTimeSpent(timeSpent)}
+														</span>
+														{#if attnStats.total > 0}
+															{#if attnStats.passed === attnStats.total}
+																<span class="px-2 py-0.5 text-xs rounded bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+																	Attention: {attnStats.passed}/{attnStats.total} passed
+																</span>
+															{:else}
+																<span class="px-2 py-0.5 text-xs rounded bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200">
+																	Attention: {attnStats.passed}/{attnStats.total} passed
+																</span>
+															{/if}
+														{/if}
 													</div>
 												</div>
 												<div class="p-3 space-y-3">
@@ -402,6 +480,7 @@ import { getAllUsers } from '$lib/apis/users';
 																			<th class="px-3 py-2">Attempt</th>
 																			<th class="px-3 py-2">Version</th>
 																			<th class="px-3 py-2">Decision</th>
+																			<th class="px-3 py-2">Attn Check</th>
 																			<th class="px-3 py-2">Final</th>
 																			<th class="px-3 py-2">Created</th>
 																			<th class="px-3 py-2">Details</th>
@@ -413,6 +492,11 @@ import { getAllUsers } from '$lib/apis/users';
 																				<td class="px-3 py-2">{row.attempt_number}</td>
 																				<td class="px-3 py-2">{row.version_number}</td>
 																				<td class="px-3 py-2">{row.initial_decision || 'N/A'}</td>
+																				<td class="px-3 py-2">
+																					{#if row.is_attention_check}
+																						<span class="text-yellow-600 dark:text-yellow-400">✓</span>
+																					{/if}
+																				</td>
 																				<td class="px-3 py-2">
 																					{#if row.is_final_version}
 																						<span class="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded">Final</span>
@@ -432,8 +516,31 @@ import { getAllUsers } from '$lib/apis/users';
 																			</tr>
 																			{#if isVersionExpanded(row.id) && expansionCounter >= 0}
 																				<tr class="bg-gray-50 dark:bg-gray-800">
-																					<td colspan="6" class="px-4 py-3">
+																					<td colspan="7" class="px-4 py-3">
 																						<div class="space-y-3">
+																							{#if row.is_attention_check}
+																								<div class="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
+																									<div class="text-xs font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
+																										Attention Check
+																									</div>
+																									<div class="space-y-1 text-sm">
+																										<div>Selected "I read the instructions": 
+																											{#if row.attention_check_selected}
+																												<span class="text-green-600">✓ Yes</span>
+																											{:else}
+																												<span class="text-red-600">✗ No</span>
+																											{/if}
+																										</div>
+																										<div>Status: 
+																											{#if row.attention_check_passed}
+																												<span class="text-green-600">✓ PASSED</span>
+																											{:else}
+																												<span class="text-red-600">✗ FAILED</span>
+																											{/if}
+																										</div>
+																									</div>
+																								</div>
+																							{/if}
 																							{#if row.strategies && row.strategies.length > 0}
 																								<div>
 																									<span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Strategies:</span>
@@ -514,6 +621,7 @@ import { getAllUsers } from '$lib/apis/users';
 							<p class="text-gray-500 dark:text-gray-400 italic">No exit quiz responses found</p>
 						{:else}
 							{#each submissionsData.exit_quiz_responses as response}
+								{@const parsed = parseExitQuizAnswers(response.answers)}
 								<div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
 									<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
 										<div>
@@ -529,6 +637,19 @@ import { getAllUsers } from '$lib/apis/users';
 											<p class="text-gray-900 dark:text-white">{formatTimestamp(response.created_at)}</p>
 										</div>
 									</div>
+
+									{#if parsed}
+										<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+											<div>
+												<span class="text-sm font-semibold text-gray-700 dark:text-gray-300">GenAI Familiarity:</span>
+												<p class="text-gray-900 dark:text-white">{parsed.genai_familiarity}</p>
+											</div>
+											<div>
+												<span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Usage Frequency:</span>
+												<p class="text-gray-900 dark:text-white">{parsed.usage_frequency}</p>
+											</div>
+										</div>
+									{/if}
 									
 									{#if response.score}
 										<div class="mb-4">

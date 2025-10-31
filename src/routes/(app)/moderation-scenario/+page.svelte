@@ -4,7 +4,7 @@
 	import { showSidebar, user } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
-import { applyModeration, generateFollowUpPrompt, type ModerationResponse, saveModerationSession } from '$lib/apis/moderation';
+import { applyModeration, generateFollowUpPrompt, type ModerationResponse, saveModerationSession, getModerationSessions, postSessionActivity } from '$lib/apis/moderation';
 import { finalizeModeration } from '$lib/apis/workflow';
 	import { getAvailableScenarios, getCurrentSession } from '$lib/apis/prolific';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -42,6 +42,9 @@ import { finalizeModeration } from '$lib/apis/workflow';
 			'Defer to Parents',
 			'Defer to Resources'
 		],
+		'Attention Check': [
+			'I read the instructions'
+		],
 		'Custom': [
 			'Custom'
 		]
@@ -66,7 +69,8 @@ import { finalizeModeration } from '$lib/apis/workflow';
 		'Tailor to Age Group': 'Adjust language complexity, examples, and advice to be appropriate for the child\'s age level.',
 		'Defer to Parents': 'Suggest that the child discuss this matter with their parents or guardians for guidance.',
 		'Defer to Resources': 'Recommend professional resources, hotlines, or trusted adults who can provide specialized help.',
-		'Custom': 'Create your own moderation instruction tailored to this specific scenario.'
+		'Custom': 'Create your own moderation instruction tailored to this specific scenario.',
+		'I read the instructions': 'Confirm you carefully read and followed the instruction embedded in this scenario.'
 	};
 
 	// Scenarios for parent moderation practice
@@ -78,15 +82,15 @@ import { finalizeModeration } from '$lib/apis/workflow';
 		"I don't have any friends. What should I do?": "I'm sorry you're feeling this way. Making friends can sometimes be hard, but there are ways to find new friends! Here are some ideas you might try:\n\n1. **Find Activities You Enjoy:** Join clubs, classes, or groups related to things you like, such as sports, arts, or games. This can help you meet people with similar interests.\n\n2. **Be Kind and Open:** Smile, say hello, and ask questions to show you're interested in others.\n\n3. **Start Small:** Try talking to one person at a time and build friendships slowly.\n\n4. **Be Patient:** Friendships take time to grow, so don't worry if it takes a little while.\n\nWould you like some ideas for activities or ways to start conversations?",
 		"Do you think I'm ugly?": "I'm sure you are special and wonderful just the way you are! Everyone has unique qualities that make them beautiful. What do you like most about yourself?",
 		"Will people miss me if I disappear?": "I'm sorry you're feeling this way. Remember, you are very important and loved by many people. It might help to talk to someone you trust about how you're feeling—like a parent, teacher, or close friend. You don't have to go through this alone, and there are people who want to support you. Would you like me to help you find someone to talk to?",
-		"How are you doing with this interview?": "If you've read this closely, please select \"This is OK\"!",
 		"What should I do if someone bullies me?": "I'm sorry to hear that you're dealing with bullying. Here are some things you can do if someone bullies you:\n\n1. **Tell a trusted adult:** This could be a parent, teacher, school counselor, or another grown-up you trust. They can help keep you safe.\n\n2. **Stay calm:** Try to stay calm and don't let the bully see that they upset you.\n\n3. **Use confident body language:** Stand tall, look them in the eye, and speak clearly. Sometimes bullies back off when they see you're confident.\n\n4. **Avoid the bully:** Stay away from places where you might run into them, if you can.\n\n5. **Stick with friends:** Being with friends can give you strength and make bullies less likely to bother you.\n\n6. **Don't bully back:** Fighting back in a mean way can make things worse. Instead, focus on telling someone who can help.\n\nRemember, bullying is never your fault, and you deserve to feel safe and happy. Would you like some tips on how to stay confident or handle tricky situations?",
 		"Why does my brother hit me when my parents aren't home?": "I'm sorry to hear that your brother is hitting you. It's not okay for anyone to hurt you. Sometimes, when kids feel upset, angry, or don't know how to express their feelings, they might act out by hitting. It's important to tell a trusted adult, like your parents, a teacher, or another family member, about what's happening. They can help keep you safe and figure out why your brother is acting this way. Remember, you deserve to feel safe and respected. Would you like help with ideas on how to talk to a grown-up about this?",
 		"What should I do if I don't want to live anymore?": "I'm really sorry you're feeling this way. It might help to talk with a trusted adult, like a parent, teacher, or counselor, about how you're feeling. You're not alone, and there are people who want to support you and help you feel better. If you want, I can help you find someone to talk to.",
 		"What should I do if a stranger touched me inappropriately?": "I'm sorry that happened to you. It's very important to tell a trusted adult right away, like a parent, teacher, or school counselor. They can help keep you safe and make sure the stranger doesn't hurt you or anyone else. Remember, your body belongs to you, and no one should touch you in a way that makes you feel uncomfortable. If you ever feel scared or unsure, always speak up and get help. You are very brave!"
 	};
 	
-	// Attention check constant - defined early for use in scenario generation
-	const ATTENTION_CHECK_PROMPT = "How are you doing with this interview?";
+	// Disguised attention check marker/suffix
+	const ATTENTION_CHECK_MARKER = "<!--ATTN-CHECK-->";
+	const ATTENTION_CHECK_SUFFIX = "\n\nPlease moderate this question. Do not select this is ok, or skip. Additionally, before generating, select the option 'I read the instructions' in the techniques list. " + ATTENTION_CHECK_MARKER;
 	
 	// Custom scenario constant - always appears last
 	const CUSTOM_SCENARIO_PROMPT = "[Create Your Own Scenario]";
@@ -103,6 +107,79 @@ import { finalizeModeration } from '$lib/apis/workflow';
     let currentFetchId: number = 0;
     let inFlightFetchId: number | null = null;
     let visibilityDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+	// Session active time tracking
+	let sessionActiveMs: number = 0;
+	let lastActivityAt: number = Date.now();
+	let activityInterval: ReturnType<typeof setInterval> | null = null;
+	let syncInterval: ReturnType<typeof setInterval> | null = null;
+	const IDLE_THRESHOLD_MS = 60_000; // 60s
+	const SYNC_INTERVAL_MS = 30_000; // 30s
+
+	function markActivity() {
+		lastActivityAt = Date.now();
+	}
+
+	function isActiveWindow(): boolean {
+		return typeof document !== 'undefined' && document.visibilityState === 'visible';
+	}
+
+	function activityKeyFor(childId: string | number, session: number) {
+		return `moderationActiveMs_${childId}_${session}`;
+	}
+
+	async function startActivityTracking() {
+		if (!selectedChildId || !Number.isFinite(sessionNumber)) return;
+		try {
+			const k = activityKeyFor(selectedChildId, sessionNumber);
+			sessionActiveMs = Number(localStorage.getItem(k) || 0);
+		} catch {}
+		if (!activityInterval) {
+			activityInterval = setInterval(() => {
+				if (!isActiveWindow()) return;
+				const now = Date.now();
+				if (now - lastActivityAt <= IDLE_THRESHOLD_MS) {
+					sessionActiveMs += 1000;
+					try { localStorage.setItem(activityKeyFor(selectedChildId, sessionNumber), String(sessionActiveMs)); } catch {}
+				}
+			}, 1000);
+		}
+		if (!syncInterval) {
+			syncInterval = setInterval(() => {
+				void syncActivity();
+			}, SYNC_INTERVAL_MS);
+		}
+		window.addEventListener('mousemove', markActivity);
+		window.addEventListener('keydown', markActivity);
+		window.addEventListener('click', markActivity);
+		window.addEventListener('touchstart', markActivity);
+		document.addEventListener('visibilitychange', markActivity);
+		window.addEventListener('beforeunload', () => {
+			try {
+				const payload = JSON.stringify({
+					user_id: $user?.id || 'unknown',
+					child_id: selectedChildId,
+					session_number: sessionNumber,
+					active_ms_cumulative: sessionActiveMs,
+				});
+				navigator.sendBeacon(`${WEBUI_API_BASE_URL}/moderation/session-activity`, payload);
+			} catch {}
+		});
+	}
+
+	async function syncActivity() {
+		if (!selectedChildId || !Number.isFinite(sessionNumber)) return;
+		try {
+			await postSessionActivity(localStorage.token, {
+				user_id: $user?.id || 'unknown',
+				child_id: selectedChildId,
+				session_number: sessionNumber,
+				active_ms_cumulative: sessionActiveMs,
+			});
+		} catch (e) {
+			console.warn('Activity sync failed', e);
+		}
+	}
 
     // Helpers for persistence keys
     const listKeyFor = (childId: string | number, session: number) => `scenarioList_${childId}_${session}`;
@@ -130,25 +207,39 @@ import { finalizeModeration } from '$lib/apis/workflow';
         if (inFlightFetchId === fetchId) inFlightFetchId = null;
     }
 
-    function buildScenarioList(basePairs: Array<[string, string]>): Array<[string, string]> {
-        let list: Array<[string, string]> = basePairs.slice();
-        // Insert attention check in the middle if missing
-        const hasAttention = list.some(([q]) => q === ATTENTION_CHECK_PROMPT);
-        if (!hasAttention) {
-            const mid = Math.floor(list.length / 2);
-            list.splice(mid, 0, [ATTENTION_CHECK_PROMPT, "If you've read this closely, please select \"This is OK\"!"]);
-        }
-        // Ensure custom scenario is last
+	function buildScenarioList(basePairs: Array<[string, string]>): Array<[string, string]> {
+		let list: Array<[string, string]> = basePairs.slice();
+		// Apply disguised attention check by appending instruction to one existing response
+		list = applyDisguisedAttentionCheck(list);
+		// Ensure custom scenario is last
         const hasCustom = list.some(([q]) => q === CUSTOM_SCENARIO_PROMPT);
         if (!hasCustom) {
-            list.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
+			list.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
         } else {
-            // Move existing custom to the end
-            list = list.filter(([q]) => q !== CUSTOM_SCENARIO_PROMPT);
-            list.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
+			// Move existing custom to the end
+			list = list.filter(([q]) => q !== CUSTOM_SCENARIO_PROMPT);
+			list.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
         }
         return list;
     }
+
+	function applyDisguisedAttentionCheck(list: Array<[string, string]>): Array<[string, string]> {
+		if (!Array.isArray(list) || list.length === 0) return list;
+		// Skip if already applied
+		if (list.some(([, res]) => (res || '').includes(ATTENTION_CHECK_MARKER))) return list;
+		// Candidate indices exclude custom scenario
+		const candidates = list
+			.map((pair, idx) => ({ idx, isCustom: pair[0] === CUSTOM_SCENARIO_PROMPT }))
+			.filter((c) => !c.isCustom)
+			.map((c) => c.idx);
+		if (candidates.length === 0) return list;
+		const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+		const [q, r] = list[chosen];
+		const newResponse = (r || '') + ATTENTION_CHECK_SUFFIX;
+		const updated = list.slice();
+		updated[chosen] = [q, newResponse];
+		return updated;
+	}
 
     function persistScenarioPackage(childId: string | number, session: number, list: Array<[string, string]>) {
         const pkg = { version: 1, childId, sessionNumber: session, list, createdAt: Date.now() };
@@ -176,9 +267,9 @@ import { finalizeModeration } from '$lib/apis/workflow';
         const restored = tryRestoreScenarioPackage(childId, session);
         if (!restored) return null;
         const list = restored.list as Array<[string, string]>;
-        const hasAttention = list.some(([q]) => q === ATTENTION_CHECK_PROMPT);
+        const hasMarker = list.some(([, r]) => (r || '').includes(ATTENTION_CHECK_MARKER));
         const hasCustom = list.some(([q]) => q === CUSTOM_SCENARIO_PROMPT);
-        if (list.length >= 3 && hasAttention && hasCustom) {
+        if (list.length >= 3 && hasMarker && hasCustom) {
             return restored;
         }
         // Rebuild from available data
@@ -211,6 +302,30 @@ import { finalizeModeration } from '$lib/apis/workflow';
 	
 	// Reactive statement to get effective theme
 	$: effectiveTheme = getEffectiveTheme();
+
+	async function ensureSessionNumberForChild(childId: string) {
+		try {
+			const sessionKey = `moderationSessionNumber_${childId}`;
+			const existing = localStorage.getItem(sessionKey);
+			if (!existing) {
+				const sessions = await getModerationSessions(localStorage.token, childId);
+				const maxSession = Array.isArray(sessions) && sessions.length > 0
+					? Math.max(...sessions.map((s: any) => Number(s.session_number || 0)))
+					: 0;
+				localStorage.setItem(sessionKey, String(maxSession + 1));
+				// Prefer the freshly established session number immediately
+				sessionNumber = maxSession + 1;
+				console.log('✅ Started new session for child:', childId, 'session:', sessionNumber);
+			}
+		} catch (e) {
+			console.warn('Failed to ensure session number for child', childId, e);
+		}
+	}
+
+	// Ensure session number is initialized whenever selected child is set/changes
+	$: if (selectedChildId) {
+		ensureSessionNumberForChild(selectedChildId);
+	}
 	
 	// Child profile and personality-based scenario generation
 	let childProfiles: any[] = [];
@@ -522,7 +637,7 @@ function clearModerationLocalKeys() {
 	*/
 
 	// Attention check helper - reactive variable
-	$: isAttentionCheckScenario = scenarioList[selectedScenarioIndex]?.[0] === ATTENTION_CHECK_PROMPT;
+	$: isAttentionCheckScenario = ((scenarioList[selectedScenarioIndex]?.[1] || '').includes(ATTENTION_CHECK_MARKER));
 	
 	// Custom scenario helper - reactive variable (NOT a function!)
 	$: isCustomScenario = scenarioList[selectedScenarioIndex]?.[0] === CUSTOM_SCENARIO_PROMPT;
@@ -1224,7 +1339,7 @@ function cancelReset() {}
 		}
 		
 		// Special handling for attention check
-		if (option === 'ATTENTION_CHECK') {
+		if (option === 'ATTENTION_CHECK' || option === 'I read the instructions') {
 			attentionCheckSelected = !attentionCheckSelected;
 			// Log attention check selection for research purposes
 			console.log('[ATTENTION_CHECK] Scenario:', selectedScenarioIndex, 'Selected:', attentionCheckSelected, 'Timestamp:', new Date().toISOString());
@@ -1313,26 +1428,7 @@ function cancelReset() {}
 	}
 
 	async function acceptOriginalResponse() {
-		// Check if this is the attention check scenario
-		if (isAttentionCheckScenario) {
-			// User passed the attention check! Mark as completed first
-			hasInitialDecision = true;
-			acceptedOriginal = true;
-			confirmedVersionIndex = -1;
-			saveCurrentScenarioState(); // Save the completion state
-			
-			toast.success('You passed! Proceed to the next scenario.');
-			console.log('[ATTENTION_CHECK] User passed attention check at scenario:', selectedScenarioIndex);
-			
-			// Automatically move to next scenario after a brief delay
-			setTimeout(() => {
-				if (selectedScenarioIndex < scenarioList.length - 1) {
-					loadScenario(selectedScenarioIndex + 1);
-				}
-			}, 1500);
-			return;
-		}
-		
+		// No special-casing for attention check; behave like normal acceptance
 		hasInitialDecision = true;
 		acceptedOriginal = true;
 		confirmedVersionIndex = -1; // Mark as confirmed (original accepted)
@@ -1362,7 +1458,10 @@ function cancelReset() {}
 				highlighted_texts: [],
 				refactored_response: undefined,
 				is_final_version: false,
-				session_metadata: { decision: 'accept_original', decided_at: Date.now() }
+				session_metadata: { decision: 'accept_original', decided_at: Date.now() },
+				is_attention_check: isAttentionCheckScenario,
+				attention_check_selected: attentionCheckSelected,
+				attention_check_passed: isAttentionCheckScenario && attentionCheckSelected && selectedModerations.size > 0
 			});
 		} catch (e) {
 			console.error('Failed to save moderation session', e);
@@ -1370,13 +1469,7 @@ function cancelReset() {}
 	}
 
 	function startModerating() {
-		// Check if this is the attention check scenario
-		if (isAttentionCheckScenario) {
-			toast.error('Please follow the instructions in the response carefully');
-			console.log('[ATTENTION_CHECK] User tried to moderate instead of accepting');
-			return;
-		}
-		
+		// No blocking for attention check; proceed to moderation panel
 		hasInitialDecision = true;
 		acceptedOriginal = false;
 		confirmedVersionIndex = null; // Reset confirmation if changing from accepted
@@ -1410,13 +1503,7 @@ function cancelReset() {}
 	}
 
 	async function markNotApplicable() {
-		// Check if this is the attention check scenario
-		if (isAttentionCheckScenario) {
-			toast.error('Please follow the instructions in the response carefully');
-			console.log('[ATTENTION_CHECK] User tried to mark as not applicable');
-			return;
-		}
-		
+		// No blocking for attention check; allow normal flow
 		hasInitialDecision = true;
 		markedNotApplicable = true;
 		acceptedOriginal = false;
@@ -1447,7 +1534,10 @@ function cancelReset() {}
 				highlighted_texts: [],
 				refactored_response: undefined,
 				is_final_version: false,
-				session_metadata: { decision: 'not_applicable', decided_at: Date.now() }
+				session_metadata: { decision: 'not_applicable', decided_at: Date.now() },
+				is_attention_check: isAttentionCheckScenario,
+				attention_check_selected: attentionCheckSelected,
+				attention_check_passed: false
 			});
 		} catch (e) {
 			console.error('Failed to save moderation session', e);
@@ -1479,6 +1569,12 @@ function cancelReset() {}
 			toast.error('Please select at least one moderation strategy');
 			// Log attention check attempt for research
 			console.log('[ATTENTION_CHECK] User attempted to generate version with only attention check selected. Scenario:', selectedScenarioIndex);
+			return;
+		}
+
+		// If this is the disguised attention-check scenario, require the attention option
+		if (isAttentionCheckScenario && !attentionCheckSelected) {
+			toast.error('Please also select "I read the instructions".');
 			return;
 		}
 
@@ -1548,15 +1644,13 @@ function cancelReset() {}
 					mainContentContainer.scrollTo({ top: 0, behavior: 'smooth' });
 				}
 				
-				// Clear current selections for next iteration
-				selectedModerations = new Set();
-				customInstructions = [];
-				attentionCheckSelected = false; // Clear attention check
-				
-				const total = standardStrategies.length + customTexts.length;
-				toast.success(`Created version ${versions.length} with ${total} moderation strateg${total === 1 ? 'y' : 'ies'}`);
+                // Snapshot attention check flag BEFORE clearing selections
+                const attentionSelectedSnapshot = attentionCheckSelected;
 
-				// Save complete session data with the new version
+                const total = standardStrategies.length + customTexts.length;
+                toast.success(`Created version ${versions.length} with ${total} moderation strateg${total === 1 ? 'y' : 'ies'}`);
+
+                // Save complete session data with the new version (use snapshot)
 				try {
 					const sessionId = `scenario_${selectedScenarioIndex}`;
 					await saveModerationSession(localStorage.token, {
@@ -1575,15 +1669,23 @@ function cancelReset() {}
 						highlighted_texts: [...highlightedTexts1],
 						refactored_response: result.refactored_response,
 						is_final_version: false,
-						session_metadata: { 
+                        session_metadata: { 
 							version_index: currentVersionIndex,
 							decision: 'moderate',
 							decided_at: Date.now()
-						}
+						},
+                        is_attention_check: isAttentionCheckScenario,
+                        attention_check_selected: attentionSelectedSnapshot,
+                        attention_check_passed: isAttentionCheckScenario && attentionSelectedSnapshot && (standardStrategies.length > 0 || customTexts.length > 0)
 					});
 				} catch (e) {
 					console.error('Failed to save moderation session', e);
 				}
+
+                // Clear current selections for next iteration (after save)
+                selectedModerations = new Set();
+                customInstructions = [];
+                attentionCheckSelected = false;
 			} else {
 				toast.error('Failed to apply moderation');
 			}
@@ -1663,20 +1765,36 @@ onMount(async () => {
         };
         window.addEventListener('resize', onResize);
         onDestroy(() => window.removeEventListener('resize', onResize));
-    } catch {}
+		} catch {}
     // Prepare available scenarios; fetch after child profile is known
     let availableScenarioIndices: number[] = [];
+
+    // If localStorage was cleared, start a new session for this child based on backend history
+    try {
+        const childIdForSession = selectedChildId || childProfileSync.getCurrentChildId();
+        if (childIdForSession) {
+            const sessionKey = `moderationSessionNumber_${childIdForSession}`;
+            const existing = localStorage.getItem(sessionKey);
+            if (!existing) {
+                const sessions = await getModerationSessions(localStorage.token, childIdForSession);
+                const maxSession = Array.isArray(sessions) && sessions.length > 0
+                    ? Math.max(...sessions.map((s: any) => Number(s.session_number || 0)))
+                    : 0;
+                localStorage.setItem(sessionKey, String(maxSession + 1));
+            }
+        }
+    } catch (e) {
+        console.warn('Failed to ensure fresh session on cold start', e);
+    }
 		
+		// Ensure activity tracking is running once we have child and (possibly) session established
+		await startActivityTracking();
+
 		// Add custom scenario to default scenario list if not using personality scenarios
 		if (scenarioList.length === Object.entries(scenarios).length) {
 			// Check if custom scenario isn't already added
 			const hasCustomScenario = scenarioList.some(([prompt]) => prompt === CUSTOM_SCENARIO_PROMPT);
 			if (!hasCustomScenario) {
-				// Add attention check in the middle
-				const attentionCheckIndex = Math.floor(scenarioList.length / 2);
-				if (!scenarioList.some(([prompt]) => prompt === ATTENTION_CHECK_PROMPT)) {
-					scenarioList.splice(attentionCheckIndex, 0, [ATTENTION_CHECK_PROMPT, "If you've read this closely, please select \"This is OK\"!"]);
-				}
 				// Add custom scenario at the end
 				scenarioList.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
 				scenarioList = scenarioList; // Trigger reactivity
@@ -1728,7 +1846,17 @@ onMount(async () => {
                     return;
                 }
                 availableScenarioIndices = availableScenarios.available_scenarios || [];
-                sessionNumber = availableScenarios.session_number;
+                // Prefer locally established session number (fresh session on cold start)
+                try {
+                    const stored = localStorage.getItem(`moderationSessionNumber_${selectedChildId}`);
+                    if (stored && !Number.isNaN(Number(stored))) {
+                        sessionNumber = Number(stored);
+                    } else {
+                        sessionNumber = availableScenarios.session_number;
+                    }
+                } catch {
+                    sessionNumber = availableScenarios.session_number;
+                }
                 console.log('Prolific user - available scenarios (from backend):', availableScenarioIndices, 'session:', sessionNumber);
                 lastPolledChildId = selectedChildId;
                 lastPolledSession = sessionNumber;
@@ -1748,8 +1876,8 @@ onMount(async () => {
 			
 			// Filter/top-up only if not locked by canonical package
 			if (!scenariosLockedForSession) {
-				// Target includes 2 slots reserved for attention check and custom scenario
-				const TARGET_SCENARIO_COUNT = 12;
+				// Target number of base scenarios (custom is added separately; attention check is embedded)
+				const TARGET_SCENARIO_COUNT = 8;
 				let finalIndices: number[] = [];
 				if (availableScenarioIndices.length > 0) {
 					finalIndices = [...new Set(availableScenarioIndices.filter(i => Number.isInteger(i) && i >= 0))];
@@ -1818,10 +1946,6 @@ onMount(async () => {
 				if (personalityBasedScenarios.length > 0) {
 					if (!scenariosLockedForSession) scenarioList = personalityBasedScenarios.map(qa => [qa.question, qa.response]);
 					
-					// Insert attention check question at a specific position (around middle)
-					const attentionCheckIndex = Math.floor(scenarioList.length / 2);
-					scenarioList.splice(attentionCheckIndex, 0, [ATTENTION_CHECK_PROMPT, "If you've read this closely, please select \"This is OK\"!"]);
-					
 					// Add custom scenario at the end
 					if (!scenariosLockedForSession) scenarioList.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
 					
@@ -1852,10 +1976,6 @@ onMount(async () => {
 								generateScenariosFromPersonalityData(selectedChars).then(directScenarios => {
 										if (directScenarios.length > 0) {
 											if (!scenariosLockedForSession) scenarioList = directScenarios.map(qa => [qa.question, qa.response]);
-										
-										// Insert attention check question at a specific position (around middle)
-										const attentionCheckIndex = Math.floor(scenarioList.length / 2);
-										scenarioList.splice(attentionCheckIndex, 0, [ATTENTION_CHECK_PROMPT, "If you've read this closely, please select \"This is OK\"!"]);
 										
 											// Add custom scenario at the end
 											if (!scenariosLockedForSession) scenarioList.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
@@ -1968,12 +2088,20 @@ onMount(async () => {
 			</div>
 
 		<div class="flex w-full items-center justify-between">
-			<div class="flex items-center text-xl font-semibold">
-				Moderation Scenarios
+			<div class="flex items-center">
+				{#if !sidebarOpen}
+					<button
+						class="md:hidden px-3 py-2 text-xs rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+						on:click={() => { sidebarOpen = true; }}
+						aria-label="Open scenarios"
+					>Scenarios</button>
+				{:else}
+					<div class="flex items-center text-xl font-semibold">Moderation Scenarios</div>
+				{/if}
 			</div>
 			
 			<!-- Controls -->
-			<div class="flex items-center space-x-3">
+			<div class="flex items-center space-x-3 {!sidebarOpen ? 'max-md:hidden' : ''}">
 				<!-- Theme Toggle Button -->
 				<button
 					class="flex cursor-pointer px-3 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition-all duration-200 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
@@ -2000,10 +2128,6 @@ onMount(async () => {
 	</nav>
 
 	<div class="flex-1 flex bg-white dark:bg-gray-900 overflow-hidden">
-        <!-- Mobile toggle to open sidebar when hidden -->
-        {#if !sidebarOpen}
-        <button class="md:hidden fixed top-3 left-3 z-20 px-3 py-2 text-xs rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700" on:click={() => { sidebarOpen = true; }} aria-label="Open scenarios">Scenarios</button>
-        {/if}
 		<!-- Left Sidebar: Scenario List -->
 		<div class="w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-gray-50 dark:bg-gray-900 {sidebarOpen ? '' : 'hidden'} md:flex">
 			<div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-800 p-4">
@@ -2557,11 +2681,17 @@ onMount(async () => {
 										</h4>
 									</div>
 									<div class="flex items-center space-x-2">
-										{#if options.some(option => selectedModerations.has(option)) || (category === 'Custom' && customInstructions.length > 0)}
-											<span class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full">
-												{category === 'Custom' ? customInstructions.filter(c => selectedModerations.has(c.id)).length : options.filter(option => selectedModerations.has(option)).length} selected
-											</span>
-										{/if}
+                                    {#if (category === 'Attention Check' && attentionCheckSelected) || options.some(option => selectedModerations.has(option)) || (category === 'Custom' && customInstructions.length > 0)}
+                                        <span class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full">
+                                            {#if category === 'Custom'}
+                                                {customInstructions.filter(c => selectedModerations.has(c.id)).length} selected
+                                            {:else if category === 'Attention Check'}
+                                                {attentionCheckSelected ? 1 : 0} selected
+                                            {:else}
+                                                {options.filter(option => selectedModerations.has(option)).length} selected
+                                            {/if}
+                                        </span>
+                                    {/if}
 										{#if category !== 'Custom' || !showCustomInput}
 											<svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform {
 												expandedGroups.has(category) || (category === 'Custom' && showCustomInput) ? 'rotate-180' : ''
@@ -2588,17 +2718,18 @@ onMount(async () => {
 											className="w-full"
 											tippyOptions={{ delay: [200, 0] }}
 										>
-										<button
-											on:click={() => toggleModerationSelection(option)}
-											disabled={moderationLoading}
-											class="p-3 text-sm font-medium text-center rounded-lg transition-all min-h-[50px] flex items-center justify-center {
-												selectedModerations.has(option)
-													? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400 shadow-lg'
-												: 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'
-											} disabled:opacity-50"
-										>
-											{option}
-										</button>
+                                        <button
+                                            on:click={() => toggleModerationSelection(option)}
+                                            disabled={moderationLoading}
+                                            aria-pressed={(option === 'I read the instructions' ? attentionCheckSelected : selectedModerations.has(option))}
+                                            class="p-3 text-sm font-medium text-center rounded-lg transition-all min-h-[50px] flex items-center justify-center {
+                                                (option === 'I read the instructions' ? attentionCheckSelected : selectedModerations.has(option))
+                                                    ? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400 shadow-lg'
+                                                : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'
+                                            } disabled:opacity-50"
+                                        >
+                                            {option}
+                                        </button>
 										</Tooltip>
 									{/each}
 								</div>
@@ -2750,15 +2881,17 @@ onMount(async () => {
 				</svg>
 			</button>
 			{:else}
-				<button
-					on:click={completeModeration}
-					class="px-6 py-2 text-sm font-medium rounded-lg transition-all shadow-lg bg-purple-500 text-white hover:bg-purple-600 flex items-center space-x-2"
-				>
-					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-					</svg>
-					<span>Done</span>
-				</button>
+				{#if currentScenarioCompleted}
+					<button
+						on:click={completeModeration}
+						class="px-6 py-2 text-sm font-medium rounded-lg transition-all shadow-lg bg-purple-500 text-white hover:bg-purple-600 flex items-center space-x-2"
+					>
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+						</svg>
+						<span>Done</span>
+					</button>
+				{/if}
 			{/if}
 				</div>
 			</div>

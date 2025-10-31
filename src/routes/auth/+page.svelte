@@ -45,6 +45,8 @@ let signupServerDisabled = false; // when backend rejects signup by policy
 		if (sessionUser) {
 			console.log(sessionUser);
 			toast.success($i18n.t(`You're now logged in.`));
+			// Clear previous user's storage before setting new token
+			clearAllAppStoragePreserveRedirect();
 			if (sessionUser.token) {
 				localStorage.token = sessionUser.token;
 			}
@@ -104,8 +106,9 @@ let signupServerDisabled = false; // when backend rejects signup by policy
                 }
             }
 
-            goto(redirectPath);
+			goto(redirectPath);
 			localStorage.removeItem('redirectPath');
+			try { localStorage.setItem('lastUserId', sessionUser.id); } catch {}
 		}
 	};
 
@@ -252,6 +255,13 @@ const prolificAuthHandler = async () => {
 		await setSessionUser(sessionUser, localStorage.getItem('redirectPath') || null);
 	};
 
+function clearIndexedDBSafely() {
+    try {
+        // Common store used by some libs (optional best-effort)
+        indexedDB.deleteDatabase('keyval-store');
+    } catch {}
+}
+
 const clearAllWorkflowKeysForNewUser = () => {
     // Core workflow gating
     localStorage.removeItem('assignmentStep');
@@ -314,6 +324,13 @@ const resetModerationKeysForNewSession = () => {
     }
     keysToRemove.forEach((k) => localStorage.removeItem(k));
 };
+
+function clearAllAppStoragePreserveRedirect() {
+    const redirectPath = localStorage.getItem('redirectPath');
+    try { localStorage.clear(); } catch {}
+    clearIndexedDBSafely();
+    if (redirectPath) localStorage.setItem('redirectPath', redirectPath);
+}
 
 
 	async function setLogoImage() {

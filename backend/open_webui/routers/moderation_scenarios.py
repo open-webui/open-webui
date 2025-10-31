@@ -11,6 +11,9 @@ from open_webui.models.moderation import (
     ModerationSessions,
     ModerationSessionForm,
     ModerationSessionModel,
+    ModerationSessionActivities,
+    ModerationSessionActivityForm,
+    ModerationSessionActivityModel,
 )
 from open_webui.models.child_profiles import ChildProfiles
 
@@ -36,6 +39,10 @@ class ModerationSessionPayload(BaseModel):
     refactored_response: Optional[str] = None
     is_final_version: Optional[bool] = False
     session_metadata: Optional[dict] = None
+    # Attention check tracking
+    is_attention_check: Optional[bool] = False
+    attention_check_selected: Optional[bool] = False
+    attention_check_passed: Optional[bool] = False
 
 
 @router.post("/moderation/sessions", response_model=ModerationSessionModel)
@@ -65,6 +72,9 @@ async def create_or_update_session(
             refactored_response=form_data.refactored_response,
             is_final_version=form_data.is_final_version,
             session_metadata=form_data.session_metadata,
+            is_attention_check=form_data.is_attention_check,
+            attention_check_selected=form_data.attention_check_selected,
+            attention_check_passed=form_data.attention_check_passed,
         )
         
         result = ModerationSessions.upsert(form)
@@ -73,6 +83,35 @@ async def create_or_update_session(
         raise
     except Exception as e:
         log.error(f"Error upserting moderation session: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+class SessionActivityPayload(BaseModel):
+    user_id: str
+    child_id: str
+    session_number: int
+    active_ms_cumulative: int
+
+
+@router.post("/moderation/session-activity", response_model=ModerationSessionActivityModel)
+async def post_session_activity(
+    payload: SessionActivityPayload,
+    user: UserModel = Depends(get_verified_user),
+):
+    try:
+        if user.id != payload.user_id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        form = ModerationSessionActivityForm(
+            user_id=payload.user_id,
+            child_id=payload.child_id,
+            session_number=payload.session_number,
+            active_ms_cumulative=max(0, int(payload.active_ms_cumulative)),
+        )
+        return ModerationSessionActivities.add_activity(form)
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error posting session activity: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 

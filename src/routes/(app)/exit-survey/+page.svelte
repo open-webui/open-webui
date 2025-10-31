@@ -462,6 +462,7 @@ $: saveDraft();
 								<label class="flex items-center"><input type="radio" bind:group={surveyResponses.genaiFamiliarity} value="tried_few_times" class="mr-3" />I have tried them a few times but don’t use them often</label>
 								<label class="flex items-center"><input type="radio" bind:group={surveyResponses.genaiFamiliarity} value="heard_never_used" class="mr-3" />I have heard of them but never used them</label>
 								<label class="flex items-center"><input type="radio" bind:group={surveyResponses.genaiFamiliarity} value="dont_know" class="mr-3" />I don’t know what they are</label>
+						<label class="flex items-center"><input type="radio" bind:group={surveyResponses.genaiFamiliarity} value="prefer-not-to-answer" class="mr-3" />Prefer not to answer</label>
 							</div>
 						</div>
 
@@ -475,6 +476,7 @@ $: saveDraft();
 								<label class="flex items-center"><input type="radio" bind:group={surveyResponses.genaiUsageFrequency} value="weekly" class="mr-3" />Weekly</label>
 								<label class="flex items-center"><input type="radio" bind:group={surveyResponses.genaiUsageFrequency} value="monthly_or_less" class="mr-3" />Monthly or less</label>
 								<label class="flex items-center"><input type="radio" bind:group={surveyResponses.genaiUsageFrequency} value="do_not_use" class="mr-3" />I do not use these tools</label>
+						<label class="flex items-center"><input type="radio" bind:group={surveyResponses.genaiUsageFrequency} value="prefer-not-to-answer" class="mr-3" />Prefer not to answer</label>
 							</div>
 						</div>
 						<!-- Question 1: Parent Gender -->

@@ -8,7 +8,7 @@ from sqlalchemy import func
 
 from open_webui.utils.auth import get_verified_user, get_admin_user
 from open_webui.models.users import UserModel, Users
-from open_webui.models.moderation import ModerationSession, ModerationSessions
+from open_webui.models.moderation import ModerationSession, ModerationSessions, ModerationSessionActivity
 from open_webui.models.child_profiles import ChildProfile, ChildProfiles
 from open_webui.models.exit_quiz import ExitQuizResponse, ExitQuizzes
 from open_webui.internal.db import get_db
@@ -296,7 +296,7 @@ async def get_study_status(user: UserModel = Depends(get_verified_user)) -> Dict
 async def get_user_submissions(user_id: str, user: UserModel = Depends(get_admin_user)) -> Dict[str, Any]:
     """
     Admin endpoint to get all quiz submission data for a specific user.
-    Returns child profiles, moderation sessions (all versions), and exit quiz responses.
+    Returns child profiles, moderation sessions (all versions), exit quiz responses, and session activity totals.
     """
     try:
         # Get user info
@@ -309,6 +309,29 @@ async def get_user_submissions(user_id: str, user: UserModel = Depends(get_admin
         moderation_sessions = ModerationSessions.get_sessions_by_user(user_id)
         exit_quiz_responses = ExitQuizzes.get_responses_by_user(user_id)
         
+        # Aggregate session activity totals per (user, child, session)
+        session_activity_totals = {}
+        with get_db() as db:
+            # Group by user_id, child_id, session_number and sum the deltas
+            results = (
+                db.query(
+                    ModerationSessionActivity.user_id,
+                    ModerationSessionActivity.child_id,
+                    ModerationSessionActivity.session_number,
+                    func.sum(ModerationSessionActivity.active_ms_delta).label('total_active_ms')
+                )
+                .filter(ModerationSessionActivity.user_id == user_id)
+                .group_by(
+                    ModerationSessionActivity.user_id,
+                    ModerationSessionActivity.child_id,
+                    ModerationSessionActivity.session_number
+                )
+                .all()
+            )
+            for row in results:
+                key = f"{row.user_id}::{row.child_id}::{row.session_number}"
+                session_activity_totals[key] = int(row.total_active_ms or 0)
+        
         return {
             "user_info": {
                 "id": target_user.id,
@@ -317,7 +340,8 @@ async def get_user_submissions(user_id: str, user: UserModel = Depends(get_admin
             },
             "child_profiles": [profile.model_dump() for profile in child_profiles],
             "moderation_sessions": [session.model_dump() for session in moderation_sessions],
-            "exit_quiz_responses": [response.model_dump() for response in exit_quiz_responses]
+            "exit_quiz_responses": [response.model_dump() for response in exit_quiz_responses],
+            "session_activity_totals": session_activity_totals
         }
         
     except HTTPException:

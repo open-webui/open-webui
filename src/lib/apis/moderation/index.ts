@@ -22,6 +22,7 @@ export interface ModerationSessionPayload {
   scenario_index: number;
   attempt_number: number;
   version_number: number;
+  session_number?: number;
   scenario_prompt: string;
   original_response: string;
   initial_decision?: 'accept_original' | 'moderate' | 'not_applicable';
@@ -31,6 +32,10 @@ export interface ModerationSessionPayload {
   refactored_response?: string;
   is_final_version?: boolean;
   session_metadata?: Record<string, any>;
+  // Attention check tracking
+  is_attention_check?: boolean;
+  attention_check_selected?: boolean;
+  attention_check_passed?: boolean;
 }
 
 export interface ModerationSessionResponse {
@@ -40,6 +45,7 @@ export interface ModerationSessionResponse {
   scenario_index: number;
   attempt_number: number;
   version_number: number;
+  session_number?: number;
   scenario_prompt: string;
   original_response: string;
   initial_decision?: string;
@@ -49,9 +55,42 @@ export interface ModerationSessionResponse {
   highlighted_texts?: string[];
   refactored_response?: string;
   session_metadata?: Record<string, any>;
+  is_attention_check: boolean;
+  attention_check_selected: boolean;
+  attention_check_passed: boolean;
   created_at: number;
   updated_at: number;
 }
+
+export interface SessionActivityPayload {
+  user_id: string;
+  child_id: string;
+  session_number: number;
+  active_ms_cumulative: number;
+}
+
+export interface SessionActivityResponse {
+  id: string;
+  user_id: string;
+  child_id: string;
+  session_number: number;
+  active_ms_delta: number;
+  cumulative_ms: number;
+  created_at: number;
+}
+
+export const postSessionActivity = async (token: string, payload: SessionActivityPayload): Promise<SessionActivityResponse> => {
+  const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/session-activity`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw await res.json();
+  return res.json();
+};
 
 // New simplified API functions
 export const saveModerationSession = async (token: string, payload: ModerationSessionPayload): Promise<ModerationSessionResponse> => {
