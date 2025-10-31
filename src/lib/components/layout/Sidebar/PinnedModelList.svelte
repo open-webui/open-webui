@@ -1,7 +1,7 @@
 <script>
 	import Sortable from 'sortablejs';
 
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 
 	import { chatId, mobile, models, settings, showSidebar, config } from '$lib/stores';
 	import { WEBUI_BASE_URL } from '$lib/constants';
@@ -33,7 +33,12 @@
 		}
 	};
 
-	const initDefaultPinnedModels = () => {
+	const initDefaultPinnedModels = async () => {
+		// Wait for all dependencies to be ready
+		if (!$config || !$models || $models.length === 0) {
+			return;
+		}
+
 		// Check if user has customized their pinned models
 		if ($settings?.pinnedModelsCustomized) {
 			return;
@@ -46,18 +51,24 @@
 			const validPinnedModels = defaultPinnedModelIds.filter((id) => availableModelIds.includes(id));
 
 			// Only update if different from current pinned models
-			if (JSON.stringify(validPinnedModels) !== JSON.stringify($settings.pinnedModels ?? [])) {
+			const currentPinnedModels = $settings.pinnedModels ?? [];
+			if (JSON.stringify(validPinnedModels) !== JSON.stringify(currentPinnedModels)) {
+				console.log('Applying default pinned models:', validPinnedModels);
 				settings.set({ ...$settings, pinnedModels: validPinnedModels });
+				// Persist to backend so it's saved
+				await updateUserSettings(localStorage.token, { ui: $settings });
 			}
 		}
 	};
 
-	onMount(() => {
-		initDefaultPinnedModels();
+	onMount(async () => {
+		await tick();
+		await initDefaultPinnedModels();
 		initPinnedModelsSortable();
 	});
 
-	$: if ($config && $models) {
+	// Re-run when config, models, or settings change
+	$: if ($config && $models && $models.length > 0 && $settings) {
 		initDefaultPinnedModels();
 	}
 </script>
