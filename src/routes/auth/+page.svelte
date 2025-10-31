@@ -42,6 +42,7 @@
 let signupServerDisabled = false; // when backend rejects signup by policy
 
 	const setSessionUser = async (sessionUser, redirectPath: string | null = null) => {
+		console.log('[SET SESSION USER] Called with:', { sessionUser, redirectPath });
 		if (sessionUser) {
 			console.log(sessionUser);
 			toast.success($i18n.t(`You're now logged in.`));
@@ -165,16 +166,39 @@ let signupServerDisabled = false; // when backend rejects signup by policy
 	};
 
 const prolificAuthHandler = async () => {
-		const prolificPid = $page.url.searchParams.get('PROLIFIC_PID');
-		const studyId = $page.url.searchParams.get('STUDY_ID');
-		const sessionId = $page.url.searchParams.get('SESSION_ID');
+		// Check current URL params first
+		let prolificPid = $page.url.searchParams.get('PROLIFIC_PID');
+		let studyId = $page.url.searchParams.get('STUDY_ID');
+		let sessionId = $page.url.searchParams.get('SESSION_ID');
+		
+		// If not in current URL, check the redirect parameter
+		if (!prolificPid || !studyId || !sessionId) {
+			const redirectParam = $page.url.searchParams.get('redirect');
+			if (redirectParam) {
+				try {
+					const redirectUrl = new URL(redirectParam, window.location.origin);
+					prolificPid = redirectUrl.searchParams.get('PROLIFIC_PID');
+					studyId = redirectUrl.searchParams.get('STUDY_ID');
+					sessionId = redirectUrl.searchParams.get('SESSION_ID');
+				} catch (e) {
+					console.error('[PROLIFIC AUTH] Failed to parse redirect URL:', e);
+				}
+			}
+		}
+		
+		console.log('[PROLIFIC AUTH] Checking params:', { prolificPid, studyId, sessionId });
+		console.log('[PROLIFIC AUTH] Full URL:', $page.url.href);
+		console.log('[PROLIFIC AUTH] Search params:', $page.url.searchParams.toString());
 		
 		if (!prolificPid || !studyId || !sessionId) {
+			console.log('[PROLIFIC AUTH] Missing required params, returning false');
 			return false; // Not a Prolific user
 		}
 
 		try {
+		console.log('[PROLIFIC AUTH] Attempting authentication...');
         const authResponse = await authenticateWithProlific(prolificPid, studyId, sessionId);
+		console.log('[PROLIFIC AUTH] Response:', authResponse);
 			
 			if (authResponse) {
                 // Determine if this is a different user or a new session for same user
@@ -189,13 +213,6 @@ const prolificAuthHandler = async () => {
                     resetModerationKeysForNewSession();
                 }
 
-				// Store session metadata
-				localStorage.setItem('prolificSessionId', sessionId);
-				localStorage.setItem('prolificStudyId', studyId);
-				localStorage.setItem('prolificSessionNumber', authResponse.session_number.toString());
-                localStorage.setItem('lastProlificSessionId', sessionId);
-                localStorage.setItem('lastUserId', authResponse.user.id);
-				
                 // Persist token and hydrate full session user
                 localStorage.token = authResponse.token;
                 const sessionUser = await getSessionUser(authResponse.token).catch((error) => {
@@ -205,19 +222,29 @@ const prolificAuthHandler = async () => {
                 if (!sessionUser) {
                     return false;
                 }
-                await setSessionUser(sessionUser);
 
-                // If backend provided a child to select, set it and route to review page
+                // Determine redirect path based on Prolific response
+                let prolificRedirectPath = '/';
+                if (authResponse.new_child_id) {
+                    prolificRedirectPath = '/kids/profile';
+                } else {
+                    prolificRedirectPath = $page.url.searchParams.get('redirect') || '/';
+                }
+
+                // Pass the redirect path to setSessionUser
+                await setSessionUser(sessionUser, prolificRedirectPath);
+
+                // Store session metadata AFTER setSessionUser (which clears localStorage)
+				localStorage.setItem('prolificSessionId', sessionId);
+				localStorage.setItem('prolificStudyId', studyId);
+				localStorage.setItem('prolificSessionNumber', authResponse.session_number.toString());
+                localStorage.setItem('lastProlificSessionId', sessionId);
+                localStorage.setItem('lastUserId', authResponse.user.id);
                 if (authResponse.new_child_id) {
                     localStorage.setItem('selectedChildId', authResponse.new_child_id);
-                    // If user already completed exit survey in prior session, unlock it
-                    if (authResponse.has_exit_quiz) {
-                        localStorage.setItem('unlock_exit', 'true');
-                    }
-                    await goto('/kids/profile');
-                } else {
-                    const redirectPath = $page.url.searchParams.get('redirect') || '/';
-                    goto(redirectPath);
+                }
+                if (authResponse.has_exit_quiz) {
+                    localStorage.setItem('unlock_exit', 'true');
                 }
 				return true;
 			}
