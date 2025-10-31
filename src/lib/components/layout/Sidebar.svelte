@@ -461,12 +461,6 @@
 	};
 
 	const isWindows = /Windows/i.test(navigator.userAgent);
-
-$: {
-		($models ?? []).length > 0 && 
-		(($settings?.pinnedModels ?? []).length > 0 || $config?.default_pinned_models)
-	);
-}
 </script>
 
 <ArchivedChatsModal
