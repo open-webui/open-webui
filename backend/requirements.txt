@@ -1,4 +1,4 @@
-fastapi==0.118.0
+fastapi==0.120.4
 uvicorn[standard]==0.37.0
 pydantic==2.11.9
 python-multipart==0.0.20
