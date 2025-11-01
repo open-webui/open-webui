@@ -52,24 +52,24 @@ class Filter:
         self.valves = self.Valves()
         self.nlp = None
         self._recent_memories = {}  # Simple dedup cache
+        self._cache_max_size = 1000  # Prevent unbounded growth
+        self._dedup_window_seconds = 600  # 10 minutes
 
     def _load_nlp(self):
         """Lazy load Spacy NLP model"""
         if self.nlp is None:
             try:
                 import spacy
-                try:
-                    self.nlp = spacy.load("en_core_web_sm")
-                    log.info("Spacy model loaded successfully")
-                except OSError:
-                    log.warning("Spacy model not found, downloading...")
-                    import subprocess
-                    subprocess.run(
-                        ["python", "-m", "spacy", "download", "en_core_web_sm"],
-                        check=True
-                    )
-                    self.nlp = spacy.load("en_core_web_sm")
-                    log.info("Spacy model downloaded and loaded")
+                self.nlp = spacy.load("en_core_web_sm")
+                log.info("Spacy model loaded successfully")
+            except OSError as e:
+                log.error(
+                    "Spacy model 'en_core_web_sm' not found. "
+                    "Please install it manually: python -m spacy download en_core_web_sm"
+                )
+                raise RuntimeError(
+                    "Spacy model not installed. Run: python -m spacy download en_core_web_sm"
+                ) from e
             except Exception as e:
                 log.error(f"Failed to load Spacy model: {str(e)}")
                 raise
@@ -129,13 +129,22 @@ class Filter:
         if not self.valves.deduplicate:
             return True
 
-        # Simple dedup: check if same entity stored in last 10 minutes
+        # Simple dedup: check if same entity stored recently
         cache_key = f"{user_id}:{entity['type']}:{entity['text'].lower()}"
         last_stored = self._recent_memories.get(cache_key, 0)
         current_time = time.time()
 
-        if current_time - last_stored < 600:  # 10 minutes
+        if current_time - last_stored < self._dedup_window_seconds:
             return False
+
+        # Evict old entries to prevent unbounded growth
+        if len(self._recent_memories) >= self._cache_max_size:
+            # Remove entries older than dedup window
+            cutoff_time = current_time - self._dedup_window_seconds
+            self._recent_memories = {
+                k: v for k, v in self._recent_memories.items()
+                if v > cutoff_time
+            }
 
         self._recent_memories[cache_key] = current_time
         return True

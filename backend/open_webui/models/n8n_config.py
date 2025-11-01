@@ -29,6 +29,8 @@ class N8NConfig(Base):
     name = Column(String, nullable=False)
     n8n_url = Column(String, nullable=False)
     webhook_id = Column(String, nullable=False)
+    # TODO: Encrypt API key before storing (use cryptography.fernet)
+    # For production, implement field-level encryption
     api_key = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
     is_streaming = Column(Boolean, default=True)
@@ -112,6 +114,21 @@ class N8NExecutionForm(BaseModel):
     """N8N execution form"""
     prompt: Optional[str] = None
     data: dict = {}
+
+    @validator("data")
+    def validate_data(cls, v):
+        """Validate execution data size and structure"""
+        import json
+        if not isinstance(v, dict):
+            raise ValueError("Data must be a dictionary")
+
+        # Limit data size to prevent DoS
+        data_str = json.dumps(v)
+        max_size = 1024 * 1024  # 1MB limit
+        if len(data_str) > max_size:
+            raise ValueError(f"Data payload too large (max {max_size} bytes)")
+
+        return v
 
 
 class N8NExecutionModel(BaseModel):

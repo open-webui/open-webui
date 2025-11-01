@@ -58,6 +58,7 @@ class Filter:
         self.valves = self.Valves()
         self.model = None
         self.tool_cache = {}  # Cache for tool embeddings
+        self._cache_max_size = 500  # Prevent unbounded growth
 
     def _load_model(self):
         """Lazy load sentence transformer model"""
@@ -93,8 +94,14 @@ class Filter:
         tool_description = f"{tool.name}: {tool.meta.get('description', '')}"
         embedding = self.model.encode([tool_description])[0]
 
-        # Cache it
+        # Cache it with LRU eviction
         if self.valves.cache_embeddings:
+            # Evict oldest entries if cache is full (simple FIFO)
+            if len(self.tool_cache) >= self._cache_max_size:
+                # Remove first item (oldest in dict order for Python 3.7+)
+                first_key = next(iter(self.tool_cache))
+                del self.tool_cache[first_key]
+
             self.tool_cache[tool_id] = embedding
 
         return embedding

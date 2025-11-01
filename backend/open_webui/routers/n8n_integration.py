@@ -28,6 +28,20 @@ from open_webui.models.users import Users
 log = logging.getLogger(__name__)
 router = APIRouter()
 
+# Shared HTTP client for performance (connection pooling)
+_http_client: Optional[httpx.AsyncClient] = None
+
+
+def get_http_client() -> httpx.AsyncClient:
+    """Get or create shared HTTP client"""
+    global _http_client
+    if _http_client is None:
+        _http_client = httpx.AsyncClient(
+            timeout=300.0,  # Default timeout
+            limits=httpx.Limits(max_connections=100, max_keepalive_connections=20)
+        )
+    return _http_client
+
 
 ######################
 # Configuration Management
@@ -199,30 +213,30 @@ async def trigger_n8n_workflow_internal(
             if config.api_key:
                 headers["Authorization"] = f"Bearer {config.api_key}"
 
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    webhook_url,
-                    json=payload,
-                    headers=headers,
-                    timeout=config.timeout_seconds
-                )
+            client = get_http_client()
+            response = await client.post(
+                webhook_url,
+                json=payload,
+                headers=headers,
+                timeout=config.timeout_seconds
+            )
 
-                response.raise_for_status()
-                duration_ms = int((time.time() - start_time) * 1000)
+            response.raise_for_status()
+            duration_ms = int((time.time() - start_time) * 1000)
 
-                # Success
-                execution = N8NExecutions.create(
-                    config_id=config.id,
-                    user_id=user_id,
-                    status="success",
-                    prompt=payload.get("prompt"),
-                    response=response.text,
-                    duration_ms=duration_ms,
-                    metadata={"attempts": attempt + 1}
-                )
+            # Success
+            execution = N8NExecutions.create(
+                config_id=config.id,
+                user_id=user_id,
+                status="success",
+                prompt=payload.get("prompt"),
+                response=response.text,
+                duration_ms=duration_ms,
+                metadata={"attempts": attempt + 1}
+            )
 
-                log.info(f"N8N workflow executed successfully: {execution.id}")
-                return execution
+            log.info(f"N8N workflow executed successfully: {execution.id}")
+            return execution
 
         except httpx.TimeoutException as e:
             last_error = f"Workflow timeout after {config.timeout_seconds}s"
@@ -360,37 +374,37 @@ async def trigger_n8n_workflow_stream(
             if config.api_key:
                 headers["Authorization"] = f"Bearer {config.api_key}"
 
-            async with httpx.AsyncClient() as client:
-                async with client.stream(
-                    "POST",
-                    webhook_url,
-                    json=payload,
-                    headers=headers,
-                    timeout=config.timeout_seconds
-                ) as response:
+            client = get_http_client()
+            async with client.stream(
+                "POST",
+                webhook_url,
+                json=payload,
+                headers=headers,
+                timeout=config.timeout_seconds
+            ) as response:
 
-                    # Send initial connection event
-                    yield f"data: {json.dumps({'type': 'connected', 'config_id': config_id})}\n\n"
+                # Send initial connection event
+                yield f"data: {json.dumps({'type': 'connected', 'config_id': config_id})}\n\n"
 
-                    # Stream workflow updates
-                    async for chunk in response.aiter_text():
-                        if chunk.strip():
-                            yield f"data: {chunk}\n\n"
+                # Stream workflow updates
+                async for chunk in response.aiter_text():
+                    if chunk.strip():
+                        yield f"data: {chunk}\n\n"
 
-                    # Send completion event
-                    duration_ms = int((time.time() - start_time) * 1000)
+                # Send completion event
+                duration_ms = int((time.time() - start_time) * 1000)
 
-                    # Record execution
-                    N8NExecutions.create(
-                        config_id=config.id,
-                        user_id=user.id,
-                        status="success",
-                        prompt=form_data.prompt,
-                        duration_ms=duration_ms,
-                        metadata={"streaming": True}
-                    )
+                # Record execution
+                N8NExecutions.create(
+                    config_id=config.id,
+                    user_id=user.id,
+                    status="success",
+                    prompt=form_data.prompt,
+                    duration_ms=duration_ms,
+                    metadata={"streaming": True}
+                )
 
-                    yield f"data: {json.dumps({'type': 'completed', 'duration_ms': duration_ms})}\n\n"
+                yield f"data: {json.dumps({'type': 'completed', 'duration_ms': duration_ms})}\n\n"
 
         except httpx.TimeoutException:
             duration_ms = int((time.time() - start_time) * 1000)
