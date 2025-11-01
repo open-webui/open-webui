@@ -369,12 +369,6 @@ class Loader:
                 )
         elif self.engine == "mineru" and file_ext in [
             "pdf",
-            "doc",
-            "docx",
-            "ppt",
-            "pptx",
-            "xls",
-            "xlsx",
         ]:
             loader = MinerULoader(
                 file_path=file_path,
