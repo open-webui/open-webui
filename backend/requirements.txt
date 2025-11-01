@@ -26,7 +26,7 @@ alembic==1.14.0
 peewee==3.18.1
 peewee-migrate==1.12.2
 
-pycrdt==0.12.25
+pycrdt==0.12.43
 redis
 
 APScheduler==3.10.4
