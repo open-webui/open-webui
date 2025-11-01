@@ -29,6 +29,9 @@
 	// Only increase version if something wirklich geändert hat
 	$: getFilteredPrompts(inputValue);
 
+	// Deduplicate prompts to prevent Svelte key errors
+	$: uniquePrompts = [...new Map(filteredPrompts.map(prompt => [prompt.id || prompt.content, prompt])).values()];
+
 	// Helper function to check if arrays are the same
 	// (based on unique IDs oder content)
 	function arraysEqual(a, b) {
@@ -84,7 +87,7 @@
 <div class="h-40 w-full">
 	{#if filteredPrompts.length > 0}
 		<div role="list" class="max-h-40 overflow-auto scrollbar-none items-start {className}">
-			{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}
+			{#each uniquePrompts as prompt, idx (prompt.id || prompt.content)}
 				<!-- svelte-ignore a11y-no-interactive-element-to-noninteractive-role -->
 				<button
 					role="listitem"
