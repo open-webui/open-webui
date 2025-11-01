@@ -17,7 +17,16 @@ services:
     image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
     container_name: open-webui
     volumes:
+      - ./backend:/app/backend
       - open-webui:/app/backend/data
+      - ./src:/app/src
+      - ./static:/app/static
+      - ./package.json:/app/package.json
+      - ./package-lock.json:/app/package-lock.json
+      - ./vite.config.ts:/app/vite.config.ts
+      - ./svelte.config.js:/app/svelte.config.js
+      - ./tailwind.config.js:/app/tailwind.config.js
+      - ./tsconfig.json:/app/tsconfig.json
     depends_on:
       - ollama
     ports:
