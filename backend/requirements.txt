@@ -106,7 +106,7 @@ azure-storage-blob==12.24.1
 
 
 pymongo
-psycopg2-binary==2.9.10
+psycopg2-binary==2.9.11
 pgvector==0.4.1
 
 PyMySQL==1.1.1
