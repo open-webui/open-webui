@@ -21,7 +21,13 @@
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import { redirect } from '@sveltejs/kit';
 
-	const i18n = getContext('i18n');
+
+	// resolve a warning. https://github.com/open-webui/open-webui/discussions/8977
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+	
+	const i18n: Writable<i18nType> = getContext('i18n');
+	// ------
 
 	let loaded = false;
 
@@ -563,6 +569,12 @@
 								</div>
 							</div>
 						{/if}
+
+						<div class="max-w-3xl mx-auto">
+							<div class="mt-2 text-[0.7rem] text-gray-500 dark:text-gray-400">
+								{$i18n.t('Copyright ® Private AI Company (2025).')}
+							</div>
+						</div>
 					</div>
 				{/if}
 			</div>
