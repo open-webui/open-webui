@@ -102,7 +102,7 @@ googleapis-common-protos==1.70.0
 google-cloud-storage==2.19.0
 
 azure-identity==1.25.0
-azure-storage-blob==12.24.1
+azure-storage-blob==12.27.1
 
 
 pymongo
