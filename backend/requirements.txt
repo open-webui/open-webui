@@ -60,7 +60,7 @@ einops==0.8.1
 ftfy==6.2.3
 pypdf==6.0.0
 fpdf2==2.8.2
-pymdown-extensions==10.14.2
+pymdown-extensions==10.16.1
 docx2txt==0.8
 python-pptx==1.0.2
 unstructured==0.18.15
