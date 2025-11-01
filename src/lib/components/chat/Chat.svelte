@@ -2632,7 +2632,7 @@
 
 <style>
 	::-webkit-scrollbar {
-		height: 0.6rem;
-		width: 0.6rem;
+		height: 0.5rem;
+		width: 0.5rem;
 	}
 </style>
