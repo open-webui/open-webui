@@ -21,7 +21,7 @@ starlette-compress==1.6.0
 httpx[socks,http2,zstd,cli,brotli]==0.28.1
 starsessions[redis]==2.2.1
 
-sqlalchemy==2.0.38
+sqlalchemy==2.0.44
 alembic==1.14.0
 peewee==3.18.1
 peewee-migrate==1.12.2
