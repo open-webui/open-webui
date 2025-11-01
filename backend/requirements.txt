@@ -110,7 +110,7 @@ psycopg2-binary==2.9.10
 pgvector==0.4.1
 
 PyMySQL==1.1.1
-boto3==1.40.5
+boto3==1.40.64
 
 pymilvus==2.6.2
 qdrant-client==1.14.3
