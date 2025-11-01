@@ -1,6 +1,5 @@
 import requests
 import logging
-import ftfy
 import sys
 import json
 
@@ -238,7 +237,7 @@ class Loader:
 
         return [
             Document(
-                page_content=ftfy.fix_text(doc.page_content), metadata=doc.metadata
+                page_content=doc.page_content, metadata=doc.metadata
             )
             for doc in docs
         ]
