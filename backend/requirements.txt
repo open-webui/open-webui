@@ -91,7 +91,7 @@ youtube-transcript-api==1.2.2
 pytube==15.0.0
 
 pydub
-ddgs==9.0.0
+ddgs==9.6.1
 
 ## Google Drive
 google-api-python-client
