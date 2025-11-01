@@ -1545,7 +1545,6 @@ async def process_chat_response(
                 ):  # Only update titles and tags for non-temp chats
                     if (
                         TASKS.TITLE_GENERATION in tasks
-                        and tasks[TASKS.TITLE_GENERATION]
                     ):
                         user_message = get_last_user_message(messages)
                         if user_message and len(user_message) > 100:
@@ -2349,7 +2348,9 @@ async def process_chat_response(
                             )
 
                             if data:
-                                if "event" in data:
+                                if "event" in data and not getattr(
+                                    request.state, "direct", False
+                                ):
                                     await event_emitter(data.get("event", {}))
 
                                 if "selected_model_id" in data:

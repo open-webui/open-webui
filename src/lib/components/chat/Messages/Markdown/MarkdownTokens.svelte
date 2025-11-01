@@ -321,7 +321,12 @@
 			title={token.fileId}
 			width="100%"
 			frameborder="0"
-			onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
+			on:load={(e) => {
+				try {
+					e.currentTarget.style.height =
+						e.currentTarget.contentWindow.document.body.scrollHeight + 20 + 'px';
+				} catch {}
+			}}
 		></iframe>
 	{:else if token.type === 'paragraph'}
 		<p dir="auto">
