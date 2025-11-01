@@ -9,7 +9,7 @@
 
 	import { toast } from 'svelte-sonner';
 
-	import { selectedFolder } from '$lib/stores';
+	import { selectedFolder, folders } from '$lib/stores';
 
 	import { deleteFolderById, getFolderById, updateFolderById } from '$lib/apis/folders';
 	import { getChatsByFolderId } from '$lib/apis/chats';
@@ -92,8 +92,18 @@
 				return null;
 			});
 
-			await selectedFolder.set(_folder);
-			onUpdate(_folder);
+			if (_folder) {
+				await selectedFolder.set(_folder);
+				
+				// Update the global folders store to make emoji changes reactive in sidebar
+				folders.update((currentFolders) => {
+					return currentFolders.map((f) => 
+						f.id === folder.id ? { ...f, meta: { ...f.meta, icon: iconName } } : f
+					);
+				});
+				
+				onUpdate(_folder);
+			}
 		}
 	};
 

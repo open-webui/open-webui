@@ -86,17 +86,12 @@
 
 	let newFolderId = null;
 
-	const initFolders = async () => {
-		const folderList = await getFolders(localStorage.token).catch((error) => {
-			toast.error(`${error}`);
-			return [];
-		});
-		_folders.set(folderList.sort((a, b) => b.updated_at - a.updated_at));
-
+	// Reactive statement to update local folders object when global folders store changes
+	$: if ($folders) {
 		folders = {};
-
+		
 		// First pass: Initialize all folder entries
-		for (const folder of folderList) {
+		for (const folder of $folders) {
 			// Ensure folder is added to folders with its data
 			folders[folder.id] = { ...(folders[folder.id] || {}), ...folder };
 
@@ -107,7 +102,7 @@
 		}
 
 		// Second pass: Tie child folders to their parents
-		for (const folder of folderList) {
+		for (const folder of $folders) {
 			if (folder.parent_id) {
 				// Ensure the parent folder is initialized if it doesn't exist
 				if (!folders[folder.parent_id]) {
@@ -125,6 +120,14 @@
 				});
 			}
 		}
+	}
+
+	const initFolders = async () => {
+		const folderList = await getFolders(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return [];
+		});
+		_folders.set(folderList.sort((a, b) => b.updated_at - a.updated_at));
 	};
 
 	const createFolder = async ({ name, data }) => {
