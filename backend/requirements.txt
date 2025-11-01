@@ -33,7 +33,7 @@ APScheduler==3.10.4
 RestrictedPython==8.0
 
 loguru==0.7.3
-asgiref==3.8.1
+asgiref==3.10.0
 
 # AI libraries
 tiktoken
