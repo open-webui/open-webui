@@ -1132,6 +1132,8 @@
 												on:change={(e) => {
 													if (e.target.value === 'external') {
 														RAGConfig.RAG_RERANKING_MODEL = '';
+													} else if (e.target.value === 'vertexai') {
+														RAGConfig.RAG_RERANKING_MODEL = 'semantic-ranker-default@latest';
 													} else if (e.target.value === '') {
 														RAGConfig.RAG_RERANKING_MODEL = 'BAAI/bge-reranker-v2-m3';
 													}
@@ -1139,6 +1141,7 @@
 											>
 												<option value="">{$i18n.t('Default (SentenceTransformers)')}</option>
 												<option value="external">{$i18n.t('External')}</option>
+												<option value="vertexai">{$i18n.t('Google Vertex AI')}</option>
 											</select>
 										</div>
 									</div>
@@ -1157,6 +1160,31 @@
 												bind:value={RAGConfig.RAG_EXTERNAL_RERANKER_API_KEY}
 												required={false}
 											/>
+										</div>
+									{/if}
+
+									{#if RAGConfig.RAG_RERANKING_ENGINE === 'vertexai'}
+										<div class="my-0.5 flex flex-col gap-2 pr-2">
+											<input
+												class="flex-1 w-full text-sm bg-transparent outline-hidden"
+												placeholder={$i18n.t('Google Cloud Project ID')}
+												bind:value={RAGConfig.RAG_VERTEXAI_RERANKER_PROJECT_ID}
+												required
+											/>
+
+											<div class="flex gap-2">
+												<input
+													class="flex-1 w-full text-sm bg-transparent outline-hidden"
+													placeholder={$i18n.t('Location (e.g., global, us-central1)')}
+													bind:value={RAGConfig.RAG_VERTEXAI_RERANKER_LOCATION}
+												/>
+
+												<input
+													class="flex-1 w-full text-sm bg-transparent outline-hidden"
+													placeholder={$i18n.t('Ranking Config (default: default_ranking_config)')}
+													bind:value={RAGConfig.RAG_VERTEXAI_RERANKER_RANKING_CONFIG}
+												/>
+											</div>
 										</div>
 									{/if}
 								</div>

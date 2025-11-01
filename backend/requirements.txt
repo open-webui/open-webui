@@ -100,6 +100,7 @@ google-auth-oauthlib
 
 googleapis-common-protos==1.70.0
 google-cloud-storage==2.19.0
+google-cloud-discoveryengine==0.15.0
 
 azure-identity==1.25.0
 azure-storage-blob==12.24.1

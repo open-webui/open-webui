@@ -508,11 +508,17 @@ def get_reranking_function(reranking_engine, reranking_model, reranking_function
     if reranking_function is None:
         return None
     if reranking_engine == "external":
-        return lambda sentences, user=None: reranking_function.predict(
+        return lambda sentences, user=None, documents=None: reranking_function.predict(
             sentences, user=user
         )
+    elif reranking_engine == "vertexai":
+        return lambda sentences, user=None, documents=None: reranking_function.predict(
+            sentences, documents=documents
+        )
     else:
-        return lambda sentences, user=None: reranking_function.predict(sentences)
+        return lambda sentences, user=None, documents=None: reranking_function.predict(
+            sentences
+        )
 
 
 def get_sources_from_items(
@@ -1057,7 +1063,7 @@ class RerankCompressor(BaseDocumentCompressor):
         scores = None
         if reranking:
             scores = self.reranking_function(
-                [(query, doc.page_content) for doc in documents]
+                [(query, doc.page_content) for doc in documents], documents=documents
             )
         else:
             from sentence_transformers import util

@@ -147,6 +147,9 @@ def get_rf(
     reranking_model: Optional[str] = None,
     external_reranker_url: str = "",
     external_reranker_api_key: str = "",
+    vertexai_reranker_project_id: str = "",
+    vertexai_reranker_location: str = "global",
+    vertexai_reranker_ranking_config: str = "default_ranking_config",
     auto_update: bool = False,
 ):
     rf = None
@@ -175,6 +178,21 @@ def get_rf(
                     )
                 except Exception as e:
                     log.error(f"ExternalReranking: {e}")
+                    raise Exception(ERROR_MESSAGES.DEFAULT(e))
+            elif engine == "vertexai":
+                try:
+                    from open_webui.retrieval.models.vertexai_reranker import (
+                        VertexAIReranker,
+                    )
+
+                    rf = VertexAIReranker(
+                        project_id=vertexai_reranker_project_id,
+                        location=vertexai_reranker_location,
+                        ranking_config=vertexai_reranker_ranking_config,
+                        model=reranking_model,
+                    )
+                except Exception as e:
+                    log.error(f"VertexAIReranker: {e}")
                     raise Exception(ERROR_MESSAGES.DEFAULT(e))
             else:
                 import sentence_transformers
@@ -476,6 +494,9 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "RAG_RERANKING_ENGINE": request.app.state.config.RAG_RERANKING_ENGINE,
         "RAG_EXTERNAL_RERANKER_URL": request.app.state.config.RAG_EXTERNAL_RERANKER_URL,
         "RAG_EXTERNAL_RERANKER_API_KEY": request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
+        "RAG_VERTEXAI_RERANKER_PROJECT_ID": request.app.state.config.RAG_VERTEXAI_RERANKER_PROJECT_ID,
+        "RAG_VERTEXAI_RERANKER_LOCATION": request.app.state.config.RAG_VERTEXAI_RERANKER_LOCATION,
+        "RAG_VERTEXAI_RERANKER_RANKING_CONFIG": request.app.state.config.RAG_VERTEXAI_RERANKER_RANKING_CONFIG,
         # Chunking settings
         "TEXT_SPLITTER": request.app.state.config.TEXT_SPLITTER,
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
@@ -663,6 +684,9 @@ class ConfigForm(BaseModel):
     RAG_RERANKING_ENGINE: Optional[str] = None
     RAG_EXTERNAL_RERANKER_URL: Optional[str] = None
     RAG_EXTERNAL_RERANKER_API_KEY: Optional[str] = None
+    RAG_VERTEXAI_RERANKER_PROJECT_ID: Optional[str] = None
+    RAG_VERTEXAI_RERANKER_LOCATION: Optional[str] = None
+    RAG_VERTEXAI_RERANKER_RANKING_CONFIG: Optional[str] = None
 
     # Chunking settings
     TEXT_SPLITTER: Optional[str] = None
@@ -950,6 +974,24 @@ async def update_rag_config(
         else request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY
     )
 
+    request.app.state.config.RAG_VERTEXAI_RERANKER_PROJECT_ID = (
+        form_data.RAG_VERTEXAI_RERANKER_PROJECT_ID
+        if form_data.RAG_VERTEXAI_RERANKER_PROJECT_ID is not None
+        else request.app.state.config.RAG_VERTEXAI_RERANKER_PROJECT_ID
+    )
+
+    request.app.state.config.RAG_VERTEXAI_RERANKER_LOCATION = (
+        form_data.RAG_VERTEXAI_RERANKER_LOCATION
+        if form_data.RAG_VERTEXAI_RERANKER_LOCATION is not None
+        else request.app.state.config.RAG_VERTEXAI_RERANKER_LOCATION
+    )
+
+    request.app.state.config.RAG_VERTEXAI_RERANKER_RANKING_CONFIG = (
+        form_data.RAG_VERTEXAI_RERANKER_RANKING_CONFIG
+        if form_data.RAG_VERTEXAI_RERANKER_RANKING_CONFIG is not None
+        else request.app.state.config.RAG_VERTEXAI_RERANKER_RANKING_CONFIG
+    )
+
     log.info(
         f"Updating reranking model: {request.app.state.config.RAG_RERANKING_MODEL} to {form_data.RAG_RERANKING_MODEL}"
     )
@@ -970,6 +1012,9 @@ async def update_rag_config(
                     request.app.state.config.RAG_RERANKING_MODEL,
                     request.app.state.config.RAG_EXTERNAL_RERANKER_URL,
                     request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
+                    request.app.state.config.RAG_VERTEXAI_RERANKER_PROJECT_ID,
+                    request.app.state.config.RAG_VERTEXAI_RERANKER_LOCATION,
+                    request.app.state.config.RAG_VERTEXAI_RERANKER_RANKING_CONFIG,
                     True,
                 )
 
@@ -1193,6 +1238,9 @@ async def update_rag_config(
         "RAG_RERANKING_ENGINE": request.app.state.config.RAG_RERANKING_ENGINE,
         "RAG_EXTERNAL_RERANKER_URL": request.app.state.config.RAG_EXTERNAL_RERANKER_URL,
         "RAG_EXTERNAL_RERANKER_API_KEY": request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
+        "RAG_VERTEXAI_RERANKER_PROJECT_ID": request.app.state.config.RAG_VERTEXAI_RERANKER_PROJECT_ID,
+        "RAG_VERTEXAI_RERANKER_LOCATION": request.app.state.config.RAG_VERTEXAI_RERANKER_LOCATION,
+        "RAG_VERTEXAI_RERANKER_RANKING_CONFIG": request.app.state.config.RAG_VERTEXAI_RERANKER_RANKING_CONFIG,
         # Chunking settings
         "TEXT_SPLITTER": request.app.state.config.TEXT_SPLITTER,
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
@@ -2234,8 +2282,8 @@ def query_doc_handler(
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 reranking_function=(
                     (
-                        lambda sentences: request.app.state.RERANKING_FUNCTION(
-                            sentences, user=user
+                        lambda sentences, documents=None: request.app.state.RERANKING_FUNCTION(
+                            sentences, user=user, documents=documents
                         )
                     )
                     if request.app.state.RERANKING_FUNCTION
@@ -2301,8 +2349,8 @@ def query_collection_handler(
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 reranking_function=(
                     (
-                        lambda sentences: request.app.state.RERANKING_FUNCTION(
-                            sentences, user=user
+                        lambda sentences, documents=None: request.app.state.RERANKING_FUNCTION(
+                            sentences, user=user, documents=documents
                         )
                     )
                     if request.app.state.RERANKING_FUNCTION

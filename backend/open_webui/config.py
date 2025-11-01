@@ -2640,6 +2640,24 @@ RAG_EXTERNAL_RERANKER_API_KEY = PersistentConfig(
     os.environ.get("RAG_EXTERNAL_RERANKER_API_KEY", ""),
 )
 
+RAG_VERTEXAI_RERANKER_PROJECT_ID = PersistentConfig(
+    "RAG_VERTEXAI_RERANKER_PROJECT_ID",
+    "rag.vertexai_reranker_project_id",
+    os.environ.get("RAG_VERTEXAI_RERANKER_PROJECT_ID", ""),
+)
+
+RAG_VERTEXAI_RERANKER_LOCATION = PersistentConfig(
+    "RAG_VERTEXAI_RERANKER_LOCATION",
+    "rag.vertexai_reranker_location",
+    os.environ.get("RAG_VERTEXAI_RERANKER_LOCATION", "global"),
+)
+
+RAG_VERTEXAI_RERANKER_RANKING_CONFIG = PersistentConfig(
+    "RAG_VERTEXAI_RERANKER_RANKING_CONFIG",
+    "rag.vertexai_reranker_ranking_config",
+    os.environ.get("RAG_VERTEXAI_RERANKER_RANKING_CONFIG", "default_ranking_config"),
+)
+
 
 RAG_TEXT_SPLITTER = PersistentConfig(
     "RAG_TEXT_SPLITTER",
