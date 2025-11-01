@@ -70,7 +70,7 @@ pypandoc==1.15
 pandas==2.2.3
 openpyxl==3.1.5
 pyxlsb==1.0.10
-xlrd==2.0.1
+xlrd==2.0.2
 validators==0.35.0
 psutil
 sentencepiece
