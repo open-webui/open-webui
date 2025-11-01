@@ -29,7 +29,7 @@ peewee-migrate==1.12.2
 pycrdt==0.12.25
 redis
 
-APScheduler==3.10.4
+APScheduler==3.11.1
 RestrictedPython==8.0
 
 loguru==0.7.3
