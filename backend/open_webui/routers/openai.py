@@ -548,7 +548,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
     models = get_merged_models(map(extract_data, responses))
     log.debug(f"models: {models}")
 
-    request.app.state.OPENAI_MODELS = map(extract_data, responses)
+    request.app.state.OPENAI_MODELS = models
     return {"data": list(models.values())}
 
 
