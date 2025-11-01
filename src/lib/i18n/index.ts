@@ -41,7 +41,8 @@ export const initI18n = (defaultLocale?: string | undefined) => {
 	const detectionOrder = defaultLocale
 		? ['querystring', 'localStorage']
 		: ['querystring', 'localStorage', 'navigator'];
-	const fallbackDefaultLocale = defaultLocale ? [defaultLocale] : ['en-US'];
+	// const fallbackDefaultLocale = defaultLocale ? [defaultLocale] : ['en-US'];          	// set Vietnamese as default for all users.
+	const fallbackDefaultLocale = defaultLocale ? [defaultLocale] : ['vi-VN'];
 
 	const loadResource = (language: string, namespace: string) =>
 		import(`./locales/${language}/${namespace}.json`);
