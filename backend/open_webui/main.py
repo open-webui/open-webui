@@ -1441,8 +1441,6 @@ async def chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
 ):
-    print("🔍 DEBUG - chat_completion() endpoint called!", file=sys.stderr, flush=True)
-
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
 
@@ -1542,17 +1540,12 @@ async def chat_completion(
         )
 
     async def process_chat(request, form_data, user, metadata, model):
-        print("🔍 DEBUG - process_chat() called!", file=sys.stderr, flush=True)
         try:
-            print("🔍 DEBUG - Calling process_chat_payload()...", file=sys.stderr, flush=True)
             form_data, metadata, events = await process_chat_payload(
                 request, form_data, user, metadata, model
             )
-            print("🔍 DEBUG - process_chat_payload() completed successfully", file=sys.stderr, flush=True)
 
-            print("🔍 DEBUG - Calling chat_completion_handler()...", file=sys.stderr, flush=True)
             response = await chat_completion_handler(request, form_data, user)
-            print(f"🔍 DEBUG - chat_completion_handler() returned response type: {type(response)}", file=sys.stderr, flush=True)
             if metadata.get("chat_id") and metadata.get("message_id"):
                 try:
                     if not metadata["chat_id"].startswith("local:"):
@@ -1566,12 +1559,10 @@ async def chat_completion(
                 except:
                     pass
 
-            print("🔍 DEBUG - About to call process_chat_response()!", file=sys.stderr, flush=True)
             return await process_chat_response(
                 request, response, form_data, user, metadata, model, events, tasks
             )
         except asyncio.CancelledError:
-            print("🔍 DEBUG - ❌ asyncio.CancelledError caught!", file=sys.stderr, flush=True)
             log.info("Chat processing was cancelled")
             try:
                 event_emitter = get_event_emitter(metadata)
@@ -1581,9 +1572,6 @@ async def chat_completion(
             except Exception as e:
                 pass
         except Exception as e:
-            print(f"🔍 DEBUG - ❌ EXCEPTION CAUGHT: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
-            import traceback
-            print(f"🔍 DEBUG - ❌ TRACEBACK:\n{traceback.format_exc()}", file=sys.stderr, flush=True)
             log.debug(f"Error processing chat payload: {e}")
             if metadata.get("chat_id") and metadata.get("message_id"):
                 # Update the chat message with the error

@@ -1464,8 +1464,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 async def process_chat_response(
     request, response, form_data, user, metadata, model, events, tasks
 ):
-    print("🔍 DEBUG - process_chat_response() called!", file=sys.stderr, flush=True)
-
     async def background_tasks_handler():
         message = None
         messages = []
@@ -1927,8 +1925,6 @@ async def process_chat_response(
 
                 for block in content_blocks:
                     if block["type"] == "text":
-                        # DEBUG: Log block content type before strip() call
-                        print(f"🔍 DEBUG - serialize_content_blocks - Block content type: {type(block['content'])}, Content: {block['content'][:200] if isinstance(block['content'], str) else block['content']}", file=sys.stderr, flush=True)
                         block_content = block["content"].strip()
                         if block_content:
                             content = f"{content}{block_content}\n"
@@ -2190,8 +2186,6 @@ async def process_chat_response(
                         end_flag = True
 
                         block_content = content_blocks[-1]["content"]
-                        # DEBUG: Log content type before strip at line 2197
-                        print(f"🔍 DEBUG - Line 2197 - block_content type: {type(block_content)}, value: {block_content[:200] if isinstance(block_content, str) else block_content}", file=sys.stderr, flush=True)
                         # Strip start and end tags from the content
                         start_tag_pattern = rf"<{re.escape(start_tag)}(.*?)>"
                         block_content = re.sub(
@@ -2291,13 +2285,10 @@ async def process_chat_response(
                 pass
 
             content = (
-                get_content_from_message(message)
+                message.get("content", "")
                 if message
                 else last_assistant_message if last_assistant_message else ""
             )
-
-            # DEBUG: Log content type and value to diagnose image attachment issue
-            print(f"🔍 DEBUG - Content type: {type(content)}, Content: {content[:200] if isinstance(content, str) else content}", file=sys.stderr, flush=True)
 
             response_usage = None  # Initialize response_usage at the top level
             chunk_count = 0  # Initialize chunk_count at the top level for logging
@@ -2308,9 +2299,6 @@ async def process_chat_response(
                     "content": content,
                 }
             ]
-
-            # DEBUG: Log content_blocks to see what's being stored
-            print(f"🔍 DEBUG - Content blocks created: {content_blocks}", file=sys.stderr, flush=True)
 
             reasoning_tags_param = metadata.get("params", {}).get("reasoning_tags")
             DETECT_REASONING_TAGS = reasoning_tags_param is not False
@@ -2669,8 +2657,6 @@ async def process_chat_response(
                     if content_blocks:
                         # Clean up the last text block
                         if content_blocks[-1]["type"] == "text":
-                            # DEBUG: Log content type before strip at line 2672
-                            print(f"🔍 DEBUG - Line 2672 - content_blocks[-1]['content'] type: {type(content_blocks[-1]['content'])}, value: {content_blocks[-1]['content'][:200] if isinstance(content_blocks[-1]['content'], str) else content_blocks[-1]['content']}", file=sys.stderr, flush=True)
                             content_blocks[-1]["content"] = content_blocks[-1][
                                 "content"
                             ].strip()

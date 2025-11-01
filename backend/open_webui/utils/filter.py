@@ -1,6 +1,5 @@
 import inspect
 import logging
-import sys
 
 from open_webui.utils.plugin import (
     load_function_module_by_id,
@@ -69,8 +68,6 @@ async def process_filter_functions(
         if not filter:
             continue
 
-        print(f"🔍 DEBUG - Processing filter: ID={filter_id}, Name={getattr(function, 'name', 'unknown')}, Type={filter_type}", file=sys.stderr, flush=True)
-
         function_module = get_function_module(
             request, filter_id, load_from_db=(filter_type != "stream")
         )
@@ -126,7 +123,6 @@ async def process_filter_functions(
                 form_data = handler(**params)
 
         except Exception as e:
-            print(f"🔍 DEBUG - ❌ ERROR in filter: ID={filter_id}, Name={getattr(function, 'name', 'unknown')}, Type={filter_type}, Error={e}", file=sys.stderr, flush=True)
             log.debug(f"Error in {filter_type} handler {filter_id}: {e}")
             raise e
 
