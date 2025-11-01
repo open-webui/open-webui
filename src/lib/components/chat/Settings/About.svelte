@@ -112,6 +112,25 @@
 
 		<hr class=" border-gray-100 dark:border-gray-850" />
 
+		<div class="mb-3">
+			<div class="text-sm font-medium mb-2 flex items-center space-x-2">
+				<span>☕</span>
+				<span>VITA - Vailen Industries Thematic AI</span>
+			</div>
+			<div class="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+				<div>Coffee-themed AI platform with native Claude support</div>
+				<div class="flex space-x-2">
+					<a href="https://github.com/sparioendernerd/VITA-webui" target="_blank" class="underline">
+						GitHub Repository
+					</a>
+				</div>
+			</div>
+		</div>
+
+		<div class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+			Built on <a href="https://github.com/open-webui/open-webui" target="_blank" class="underline">Open WebUI</a>
+		</div>
+
 		{#if $config?.license_metadata}
 			<div class="mb-2 text-xs">
 				{#if !$WEBUI_NAME.includes('Open WebUI')}
@@ -122,7 +141,10 @@
 				<span class=" capitalize">{$config?.license_metadata?.organization_name}</span>
 			</div>
 		{:else}
-			<div class="flex space-x-1">
+			<div class="mb-2 text-xs text-gray-500 dark:text-gray-400">
+				Original Open WebUI Project:
+			</div>
+			<div class="flex space-x-1 flex-wrap gap-y-1">
 				<a href="https://discord.gg/5rJgQTnV4s" target="_blank">
 					<img
 						alt="Discord"

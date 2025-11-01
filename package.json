@@ -1,7 +1,8 @@
 {
-	"name": "open-webui",
-	"version": "0.6.34",
+	"name": "vita-webui",
+	"version": "0.6.34-vita.1",
 	"private": true,
+	"description": "VITA - Vailen Industries Thematic AI: Coffee-themed AI platform with native Claude support and MCP integration",
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
 		"dev:5050": "npm run pyodide:fetch && vite dev --port 5050",
