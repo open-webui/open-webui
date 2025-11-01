@@ -1952,20 +1952,22 @@ async def process_chat_response(
                         if content and not content.endswith("\n"):
                             content += "\n"
 
+                        escaped_reasoning_display_content = html.escape(reasoning_display_content)
+
                         if reasoning_duration is not None:
                             if raw:
                                 content = (
                                     f'{content}{start_tag}{block["content"]}{end_tag}\n'
                                 )
                             else:
-                                content = f'{content}<details type="reasoning" done="true" duration="{reasoning_duration}">\n<summary>Thought for {reasoning_duration} seconds</summary>\n{reasoning_display_content}\n</details>\n'
+                                content = f'{content}<details type="reasoning" done="true" duration="{reasoning_duration}">\n<summary>Thought for {reasoning_duration} seconds</summary>\n{escaped_reasoning_display_content}\n</details>\n'
                         else:
                             if raw:
                                 content = (
                                     f'{content}{start_tag}{block["content"]}{end_tag}\n'
                                 )
                             else:
-                                content = f'{content}<details type="reasoning" done="false">\n<summary>Thinking…</summary>\n{reasoning_display_content}\n</details>\n'
+                                content = f'{content}<details type="reasoning" done="false">\n<summary>Thinking…</summary>\n{escaped_reasoning_display_content}\n</details>\n'
 
                     elif block["type"] == "code_interpreter":
                         attributes = block.get("attributes", {})

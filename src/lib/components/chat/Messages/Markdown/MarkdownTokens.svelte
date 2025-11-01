@@ -8,6 +8,7 @@
 
 	import { marked, type Token } from 'marked';
 	import { unescapeHtml } from '$lib/utils';
+	import { decode } from 'html-entities';
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -294,6 +295,15 @@
 			</ul>
 		{/if}
 	{:else if token.type === 'details'}
+		<!-- We are escaping the contents of the reasoning block,
+		so if the LLM returns <details> inside their response,
+		it doesn't conflict with the actual <details> block we're using to display.
+
+		Hence, we need to decode the text before passing to marked.
+		
+		Can be extended with other attribute types if needed in the future. -->
+		{@const shouldDecodeTokens = ['reasoning'].includes(token?.attributes?.type)}
+
 		<Collapsible
 			title={token.summary}
 			open={$settings?.expandDetails ?? false}
@@ -304,7 +314,7 @@
 			<div class=" mb-1.5" slot="content">
 				<svelte:self
 					id={`${id}-${tokenIdx}-d`}
-					tokens={marked.lexer(token.text)}
+					tokens={marked.lexer(shouldDecodeTokens ? decode(token.text) : token.text)}
 					attributes={token?.attributes}
 					{done}
 					{editCodeBlock}
