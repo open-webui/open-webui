@@ -87,7 +87,7 @@ faster-whisper==1.1.1
 
 
 black==25.9.0
-youtube-transcript-api==1.2.2
+youtube-transcript-api==1.2.3
 pytube==15.0.0
 
 pydub
