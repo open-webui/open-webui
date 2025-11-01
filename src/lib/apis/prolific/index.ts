@@ -136,3 +136,60 @@ export const getAvailableScenarios = async (
 
 	return res;
 };
+
+export interface ConsentResponse {
+	success: boolean;
+	consent_given: boolean | null;
+}
+
+export interface ConsentRequest {
+	consented: boolean;
+	prolific_pid?: string;
+	study_id?: string;
+	session_id?: string;
+}
+
+export const submitConsent = async (
+	token: string,
+	consented: boolean,
+	prolificPid?: string,
+	studyId?: string,
+	sessionId?: string
+): Promise<ConsentResponse> => {
+	let error = null;
+
+	const body: ConsentRequest = {
+		consented: consented
+	};
+
+	// Include Prolific IDs when consenting (required for new users)
+	if (consented && prolificPid && studyId && sessionId) {
+		body.prolific_pid = prolificPid;
+		body.study_id = studyId;
+		body.session_id = sessionId;
+	}
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/prolific/consent`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify(body)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail || err.message || 'Failed to submit consent';
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};

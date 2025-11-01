@@ -78,6 +78,11 @@ class SessionUserInfoResponse(SessionUserResponse):
     bio: Optional[str] = None
     gender: Optional[str] = None
     date_of_birth: Optional[datetime.date] = None
+    prolific_pid: Optional[str] = None
+    study_id: Optional[str] = None
+    current_session_id: Optional[str] = None
+    session_number: Optional[int] = None
+    consent_given: Optional[bool] = None
 
 
 @router.get("/", response_model=SessionUserInfoResponse)
@@ -119,7 +124,7 @@ async def get_session_user(
         user.id, request.app.state.config.USER_PERMISSIONS
     )
 
-    return {
+    response_data = {
         "token": token,
         "token_type": "Bearer",
         "expires_at": expires_at,
@@ -132,7 +137,19 @@ async def get_session_user(
         "gender": user.gender,
         "date_of_birth": user.date_of_birth,
         "permissions": user_permissions,
+        "prolific_pid": user.prolific_pid,
+        "study_id": user.study_id,
+        "current_session_id": user.current_session_id,
+        "session_number": user.session_number,
+        "consent_given": user.consent_given,
     }
+    
+    # Debug logging for consent flow
+    import logging
+    log = logging.getLogger(__name__)
+    log.debug(f"[CONSENT DEBUG] get_session_user returning: prolific_pid={user.prolific_pid}, consent_given={user.consent_given}")
+    
+    return response_data
 
 
 ############################

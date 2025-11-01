@@ -11,7 +11,7 @@ from open_webui.utils.misc import throttle
 
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, Date
+from sqlalchemy import BigInteger, Column, String, Text, Date, Boolean
 from sqlalchemy import or_
 
 import datetime
@@ -48,6 +48,7 @@ class User(Base):
     study_id = Column(String, nullable=True)
     current_session_id = Column(String, nullable=True)
     session_number = Column(BigInteger, nullable=False, default=1)
+    consent_given = Column(Boolean, nullable=True, default=False)
 
     last_active_at = Column(BigInteger)
 
@@ -86,6 +87,7 @@ class UserModel(BaseModel):
     study_id: Optional[str] = None
     current_session_id: Optional[str] = None
     session_number: int = 1
+    consent_given: Optional[bool] = None
 
     last_active_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
@@ -396,7 +398,10 @@ class UsersTable:
                 return UserModel.model_validate(user)
                 # return UserModel(**user.dict())
         except Exception as e:
-            print(e)
+            import logging
+            log = logging.getLogger(__name__)
+            log.error(f"Error updating user {id} with data {updated}: {e}")
+            print(f"Error updating user {id} with data {updated}: {e}")
             return None
 
     def update_user_settings_by_id(self, id: str, updated: dict) -> Optional[UserModel]:

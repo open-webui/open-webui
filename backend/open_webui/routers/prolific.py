@@ -2,14 +2,15 @@ import time
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Request, Response, Depends
 from pydantic import BaseModel
 
 from open_webui.models.users import Users, UserModel
 from open_webui.models.auths import Auths
-from open_webui.utils.auth import create_token, get_password_hash
+from open_webui.models.consent_audit import ConsentAudits, ConsentAuditForm
+from open_webui.utils.auth import create_token, get_password_hash, get_verified_user
 from open_webui.utils.misc import parse_duration, validate_email_format
-from open_webui.env import WEBUI_AUTH, WEBUI_AUTH_TRUSTED_EMAIL_HEADER, WEBUI_AUTH_TRUSTED_NAME_HEADER
+from open_webui.env import WEBUI_AUTH, WEBUI_AUTH_TRUSTED_EMAIL_HEADER, WEBUI_AUTH_TRUSTED_NAME_HEADER, VERSION
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.models.child_profiles import ChildProfiles
 from open_webui.models.exit_quiz import ExitQuizzes
@@ -33,6 +34,13 @@ class ProlificAuthResponse(BaseModel):
     has_exit_quiz: bool = False
 
 
+class ConsentForm(BaseModel):
+    consented: bool
+    prolific_pid: Optional[str] = None
+    study_id: Optional[str] = None
+    session_id: Optional[str] = None
+
+
 @router.post("/auth", response_model=ProlificAuthResponse)
 async def prolific_auth(request: Request, response: Response, form_data: ProlificAuthRequest):
     """
@@ -45,8 +53,13 @@ async def prolific_auth(request: Request, response: Response, form_data: Prolifi
     if not form_data.prolific_pid or not form_data.study_id or not form_data.session_id:
         raise HTTPException(400, detail="Missing required Prolific parameters")
     
-    # Check if user with this PROLIFIC_PID already exists
+    # Check if user with this PROLIFIC_PID already exists (they've consented before)
     existing_user = Users.get_user_by_prolific_pid(form_data.prolific_pid)
+    
+    # Also check by email in case user was created but hasn't consented yet
+    if not existing_user:
+        email = f"prolific_{form_data.prolific_pid}@prolific.study"
+        existing_user = Users.get_user_by_email(email)
     
     if existing_user:
         # User exists - check if this is a new session
@@ -74,8 +87,7 @@ async def prolific_auth(request: Request, response: Response, form_data: Prolifi
         
         is_new_user = False
     else:
-        # New user - create account
-        user_id = str(uuid.uuid4())
+        # New user - create account WITHOUT Prolific IDs (stored only after consent)
         # Use the full PROLIFIC_PID as the display name unless a name was provided
         name = form_data.name or form_data.prolific_pid
         email = f"prolific_{form_data.prolific_pid}@prolific.study"
@@ -84,7 +96,7 @@ async def prolific_auth(request: Request, response: Response, form_data: Prolifi
         password = str(uuid.uuid4())
         hashed_password = get_password_hash(password)
         
-        # Create auth record
+        # Create auth record (without Prolific fields)
         auth_user = Auths.insert_new_auth(
             email=email,
             password=hashed_password,
@@ -96,18 +108,9 @@ async def prolific_auth(request: Request, response: Response, form_data: Prolifi
         if not auth_user:
             raise HTTPException(500, detail="Failed to create user authentication")
         
-        # Update user with Prolific fields
-        updated_user = Users.update_user_by_id(auth_user.id, {
-            "prolific_pid": form_data.prolific_pid,
-            "study_id": form_data.study_id,
-            "current_session_id": form_data.session_id,
-            "session_number": 1
-        })
-        
-        if not updated_user:
-            raise HTTPException(500, detail="Failed to update user with Prolific data")
-        
-        user = updated_user
+        # DO NOT store Prolific IDs yet - they will be stored after consent
+        # Create user record without prolific fields
+        user = auth_user
         new_session_number = 1
         is_new_user = True
         # No child to reuse yet for first-time user
@@ -150,6 +153,79 @@ async def prolific_auth(request: Request, response: Response, form_data: Prolifi
         new_child_id=new_child_id,
         has_exit_quiz=has_exit
     )
+
+
+@router.post("/consent")
+async def submit_consent(
+    request: Request,
+    form_data: ConsentForm,
+    user=Depends(get_verified_user)
+):
+    """
+    Update user's consent status and store Prolific IDs.
+    Only Prolific users can submit consent.
+    """
+    # If consenting, require Prolific IDs to be provided
+    if form_data.consented:
+        if not form_data.prolific_pid or not form_data.study_id or not form_data.session_id:
+            raise HTTPException(400, detail="Prolific IDs are required when consenting")
+    
+    # For new users (without prolific_pid), store Prolific IDs after consent
+    update_data = {
+        "consent_given": form_data.consented,
+        "updated_at": int(time.time())
+    }
+    
+    if form_data.consented and not user.prolific_pid:
+        # Store Prolific IDs only after consent is given
+        update_data.update({
+            "prolific_pid": form_data.prolific_pid,
+            "study_id": form_data.study_id,
+            "current_session_id": form_data.session_id,
+            "session_number": 1
+        })
+    elif form_data.consented and user.prolific_pid:
+        # Existing user - check if this is a new session
+        if form_data.session_id and form_data.session_id != user.current_session_id:
+            # New session - increment session_number
+            new_session_number = user.session_number + 1
+            update_data.update({
+                "current_session_id": form_data.session_id,
+                "session_number": new_session_number
+            })
+    
+    # Update consent status
+    updated_user = Users.update_user_by_id(user.id, update_data)
+    
+    if not updated_user:
+        raise HTTPException(500, detail="Failed to update consent status")
+    
+    # Create consent audit record
+    if form_data.consented:
+        # Get consent version from environment or config
+        consent_version = getattr(request.app.state.config, 'CONSENT_VERSION', None) or VERSION
+        
+        # Get user agent
+        user_agent = request.headers.get("user-agent", None)
+        
+        # Create audit record with idempotency
+        audit_record = ConsentAudits.create_consent_record(
+            ConsentAuditForm(
+                user_id=user.id,
+                consent_version=consent_version,
+                prolific_pid=form_data.prolific_pid or updated_user.prolific_pid,
+                study_id=form_data.study_id or updated_user.study_id,
+                session_id=form_data.session_id or updated_user.current_session_id,
+                ui_version=VERSION,
+                user_agent=user_agent,
+                consent_given=True
+            )
+        )
+    
+    return {
+        "success": True,
+        "consent_given": updated_user.consent_given
+    }
 
 
 @router.get("/session-info")

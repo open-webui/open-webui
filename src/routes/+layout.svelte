@@ -34,6 +34,8 @@
 	import { executeToolServer, getBackendConfig } from '$lib/apis';
 	import { getSessionUser, userSignOut } from '$lib/apis/auths';
 	import { applyTheme } from '$lib/utils/theme';
+	import { submitConsent } from '$lib/apis/prolific';
+	import ConsentModal from '$lib/components/common/ConsentModal.svelte';
 
 	import '../tailwind.css';
 	import '../app.css';
@@ -67,6 +69,7 @@
 	let tokenTimer = null;
 
 	let showRefresh = false;
+	let showConsentModal = false;
 
 	const BREAKPOINT = 768;
 
@@ -553,6 +556,50 @@
 
 		user.subscribe((value) => {
 			if (value) {
+				// Check if Prolific user needs to consent
+				// Check by prolific_pid in user object OR by localStorage (for new users without prolific_pid stored yet)
+				// Also check URL params directly in case localStorage was cleared or user arrived directly
+				const urlProlificPid = typeof window !== 'undefined' && window.location ? new URL(window.location.href).searchParams.get('PROLIFIC_PID') : null;
+				const prolificPidFromUser = value.prolific_pid;
+				const prolificPidFromStorage = localStorage.getItem('prolificPid');
+				
+				console.log('[CONSENT DEBUG] User subscription triggered:', {
+					prolificPidFromUser,
+					prolificPidFromStorage,
+					urlProlificPid,
+					consent_given: value.consent_given,
+					consent_given_type: typeof value.consent_given
+				});
+				
+				const hasProlificPid = prolificPidFromUser || prolificPidFromStorage || urlProlificPid;
+				const needsConsent = (value.consent_given === null || value.consent_given === false || value.consent_given === undefined);
+				
+				console.log('[CONSENT DEBUG] Subscription decision:', {
+					hasProlificPid,
+					needsConsent,
+					willShowModal: hasProlificPid && needsConsent
+				});
+				
+				if (hasProlificPid && needsConsent) {
+					// Ensure Prolific IDs are in localStorage for consent submission
+					if (urlProlificPid && !localStorage.getItem('prolificPid')) {
+						localStorage.setItem('prolificPid', urlProlificPid);
+						const urlParams = new URL(window.location.href).searchParams;
+						const studyId = urlParams.get('STUDY_ID');
+						const sessionId = urlParams.get('SESSION_ID');
+						if (studyId) localStorage.setItem('prolificStudyId', studyId);
+						if (sessionId) localStorage.setItem('prolificSessionId', sessionId);
+					}
+					console.log('[CONSENT DEBUG] Subscription: Showing consent modal');
+					showConsentModal = true;
+				} else if (hasProlificPid && value.consent_given === true) {
+					// User has consented, ensure modal is hidden
+					console.log('[CONSENT DEBUG] Subscription: Hiding modal - consent already given');
+					showConsentModal = false;
+				} else {
+					console.log('[CONSENT DEBUG] Subscription: NOT showing modal - conditions not met');
+				}
+				
 				$socket?.off('chat-events', chatEventHandler);
 				$socket?.off('channel-events', channelEventHandler);
 
@@ -613,6 +660,45 @@
 					if (sessionUser) {
 						await user.set(sessionUser);
 						await config.set(await getBackendConfig());
+						
+						// Check if Prolific user needs to consent
+						// Check by prolific_pid in user object OR by localStorage (for new users without prolific_pid stored yet)
+						// Also check URL params directly in case localStorage was cleared
+						const urlProlificPid = $page.url.searchParams.get('PROLIFIC_PID');
+						const prolificPidFromUser = sessionUser.prolific_pid;
+						const prolificPidFromStorage = localStorage.getItem('prolificPid');
+						
+						console.log('[CONSENT DEBUG] Checking consent requirement:', {
+							prolificPidFromUser,
+							prolificPidFromStorage,
+							urlProlificPid,
+							consent_given: sessionUser.consent_given,
+							consent_given_type: typeof sessionUser.consent_given
+						});
+						
+						const hasProlificPid = prolificPidFromUser || prolificPidFromStorage || urlProlificPid;
+						const needsConsent = (sessionUser.consent_given === null || sessionUser.consent_given === false || sessionUser.consent_given === undefined);
+						
+						console.log('[CONSENT DEBUG] Decision:', {
+							hasProlificPid,
+							needsConsent,
+							willShowModal: hasProlificPid && needsConsent
+						});
+						
+						if (hasProlificPid && needsConsent) {
+							// Ensure Prolific IDs are in localStorage for consent submission
+							if (urlProlificPid && !localStorage.getItem('prolificPid')) {
+								localStorage.setItem('prolificPid', urlProlificPid);
+								const studyId = $page.url.searchParams.get('STUDY_ID');
+								const sessionId = $page.url.searchParams.get('SESSION_ID');
+								if (studyId) localStorage.setItem('prolificStudyId', studyId);
+								if (sessionId) localStorage.setItem('prolificSessionId', sessionId);
+							}
+							console.log('[CONSENT DEBUG] Showing consent modal');
+							showConsentModal = true;
+						} else {
+							console.log('[CONSENT DEBUG] NOT showing consent modal - conditions not met');
+						}
 					} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');
@@ -667,6 +753,71 @@
 			window.removeEventListener('resize', onResize);
 		};
 	});
+
+	const handleConsent = async () => {
+		if (!localStorage.token) {
+			toast.error('No authentication token found');
+			return;
+		}
+
+		// Get Prolific IDs - check URL first, then user object, then localStorage
+		const urlProlificPid = typeof window !== 'undefined' ? new URL(window.location.href).searchParams.get('PROLIFIC_PID') : null;
+		const prolificPid = urlProlificPid || $user?.prolific_pid || localStorage.getItem('prolificPid');
+		
+		const urlStudyId = typeof window !== 'undefined' ? new URL(window.location.href).searchParams.get('STUDY_ID') : null;
+		const studyId = urlStudyId || $user?.study_id || localStorage.getItem('prolificStudyId');
+		
+		const urlSessionId = typeof window !== 'undefined' ? new URL(window.location.href).searchParams.get('SESSION_ID') : null;
+		const sessionId = urlSessionId || $user?.current_session_id || localStorage.getItem('prolificSessionId');
+
+		console.log('[CONSENT] Submitting consent with IDs:', {
+			prolificPid,
+			studyId,
+			sessionId,
+			prolificPidFromUser: $user?.prolific_pid,
+			prolificPidFromStorage: localStorage.getItem('prolificPid')
+		});
+
+		try {
+			await submitConsent(
+				localStorage.token, 
+				true,
+				prolificPid || undefined,
+				studyId || undefined,
+				sessionId || undefined
+			);
+			// Refresh user data to get updated consent status
+			const sessionUser = await getSessionUser(localStorage.token);
+			if (sessionUser) {
+				await user.set(sessionUser);
+			}
+			showConsentModal = false;
+		} catch (error) {
+			console.error('Failed to submit consent:', error);
+			const errorMsg = typeof error === 'string' ? error : 'Failed to submit consent. Please check your connection and try again.';
+			toast.error(errorMsg, {
+				duration: 5000,
+				action: {
+					label: 'Retry',
+					onClick: () => handleConsent()
+				}
+			});
+		}
+	};
+
+	const handleDecline = () => {
+		// Clear any stored Prolific data before redirecting
+		localStorage.removeItem('prolificPid');
+		localStorage.removeItem('prolificStudyId');
+		localStorage.removeItem('prolificSessionId');
+		
+		console.log('[CONSENT] User declined consent, redirecting');
+		
+		// Redirect to Prolific withdraw URL
+		// Get completion code from environment/config or use default
+		const completionCode = (typeof window !== 'undefined' && window.PROLIFIC_COMPLETION_CODE) || 'RETURN_CODE';
+		window.location.href = `https://app.prolific.co/submissions/complete?cc=${completionCode}`;
+	};
 </script>
 
 <svelte:head>
@@ -688,6 +839,16 @@
 	<div class=" py-5">
 		<Spinner className="size-5" />
 	</div>
+{/if}
+
+{#if showConsentModal}
+	<ConsentModal 
+		show={showConsentModal} 
+		onConsent={handleConsent} 
+		onDecline={handleDecline}
+		consentVersion="1.0.0"
+		consentDate={new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+	/>
 {/if}
 
 {#if loaded}

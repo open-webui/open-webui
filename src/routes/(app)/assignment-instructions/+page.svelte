@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { showSidebar } from '$lib/stores';
+	import { page } from '$app/stores';
+	import { showSidebar, user } from '$lib/stores';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
-
 
 	// State to track if Start button was clicked
 	let startButtonClicked: boolean = false;
@@ -22,12 +22,12 @@
 			instructionsCompleted = true;
 		}
 
-	// Default open sidebar on wide screens (md and up)
-	try {
-		if (typeof window !== 'undefined' && window.innerWidth >= 768) {
-			showSidebar.set(true);
-		}
-	} catch (e) {}
+		// Default open sidebar on wide screens (md and up)
+		try {
+			if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+				showSidebar.set(true);
+			}
+		} catch (e) {}
 		
 		// Set up scroll indicator
 		const timer = setTimeout(() => {
@@ -59,6 +59,7 @@
 		};
 	});
 
+
 	function startAssignment() {
 		// Set initial assignment step
 		localStorage.setItem('assignmentStep', '1');
@@ -87,6 +88,7 @@
 	function cancelReady() {
 		showReadyModal = false;
 	}
+
 </script>
 
 <svelte:head>
@@ -321,5 +323,6 @@
 			</div>
 		</div>
 	{/if}
+
 </div>
 

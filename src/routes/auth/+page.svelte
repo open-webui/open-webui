@@ -208,6 +208,10 @@ const prolificAuthHandler = async () => {
                 // If brand new user (or switching users), clear ALL workflow keys
                 if (authResponse.is_new_user || !lastUserId || lastUserId !== authResponse.user.id) {
                     clearAllWorkflowKeysForNewUser();
+                    // Clear old Prolific IDs to prevent conflicts
+                    localStorage.removeItem('prolificPid');
+                    localStorage.removeItem('prolificStudyId');
+                    localStorage.removeItem('prolificSessionId');
                 } else if (lastSessionId !== sessionId) {
                     // Same user but new SESSION_ID ⇒ reset moderation-only keys
                     resetModerationKeysForNewSession();
@@ -231,15 +235,16 @@ const prolificAuthHandler = async () => {
                     prolificRedirectPath = $page.url.searchParams.get('redirect') || '/';
                 }
 
-                // Pass the redirect path to setSessionUser
-                await setSessionUser(sessionUser, prolificRedirectPath);
-
-                // Store session metadata AFTER setSessionUser (which clears localStorage)
+                // Store Prolific metadata BEFORE setSessionUser (which clears localStorage)
+				localStorage.setItem('prolificPid', prolificPid);
 				localStorage.setItem('prolificSessionId', sessionId);
 				localStorage.setItem('prolificStudyId', studyId);
 				localStorage.setItem('prolificSessionNumber', authResponse.session_number.toString());
                 localStorage.setItem('lastProlificSessionId', sessionId);
                 localStorage.setItem('lastUserId', authResponse.user.id);
+                
+                // Pass the redirect path to setSessionUser
+                await setSessionUser(sessionUser, prolificRedirectPath);
                 if (authResponse.new_child_id) {
                     localStorage.setItem('selectedChildId', authResponse.new_child_id);
                 }
@@ -354,9 +359,17 @@ const resetModerationKeysForNewSession = () => {
 
 function clearAllAppStoragePreserveRedirect() {
     const redirectPath = localStorage.getItem('redirectPath');
+    // Preserve Prolific IDs needed for consent flow
+    const prolificPid = localStorage.getItem('prolificPid');
+    const prolificStudyId = localStorage.getItem('prolificStudyId');
+    const prolificSessionId = localStorage.getItem('prolificSessionId');
     try { localStorage.clear(); } catch {}
     clearIndexedDBSafely();
     if (redirectPath) localStorage.setItem('redirectPath', redirectPath);
+    // Restore Prolific IDs after clear
+    if (prolificPid) localStorage.setItem('prolificPid', prolificPid);
+    if (prolificStudyId) localStorage.setItem('prolificStudyId', prolificStudyId);
+    if (prolificSessionId) localStorage.setItem('prolificSessionId', prolificSessionId);
 }
 
 
