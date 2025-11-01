@@ -29,6 +29,11 @@ peewee-migrate==1.12.2
 pycrdt==0.12.25
 redis
 
+# N8N Integration, Auto Memory, AutoTool Filter dependencies
+spacy>=3.7.0
+sentence-transformers>=2.2.0
+scikit-learn>=1.3.0
+
 APScheduler==3.10.4
 RestrictedPython==8.0
 
