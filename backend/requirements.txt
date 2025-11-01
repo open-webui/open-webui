@@ -83,7 +83,7 @@ rapidocr-onnxruntime==1.4.4
 rank-bm25==0.2.2
 
 onnxruntime==1.20.1
-faster-whisper==1.1.1
+faster-whisper==1.2.1
 
 
 black==25.9.0
