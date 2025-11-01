@@ -30,7 +30,7 @@ pycrdt==0.12.25
 redis
 
 APScheduler==3.10.4
-RestrictedPython==8.0
+RestrictedPython==8.1
 
 loguru==0.7.3
 asgiref==3.8.1
