@@ -52,7 +52,7 @@ chromadb==1.1.0
 opensearch-py==2.8.0
 
 transformers
-sentence-transformers==5.1.1
+sentence-transformers==5.1.2
 accelerate
 pyarrow==20.0.0 # fix: pin pyarrow version to 20 for rpi compatibility #15897
 einops==0.8.1 
