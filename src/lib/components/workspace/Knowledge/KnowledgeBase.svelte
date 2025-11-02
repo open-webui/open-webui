@@ -177,7 +177,7 @@
 				};
 			}
 
-			const uploadedFile = await uploadFile(localStorage.token, file, metadata).catch((e) => {
+			const uploadedFile = await uploadFile(localStorage.token, file, metadata, false).catch((e) => {
 				toast.error(`${e}`);
 				return null;
 			});
