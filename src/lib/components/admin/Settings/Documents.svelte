@@ -745,10 +745,35 @@
 								/>
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mistral_ocr'}
-							<div class="my-0.5 flex gap-2 pr-2">
+							<div class="flex flex-col w-full mt-1">
+								<div class="text-xs font-medium min-w-fit mb-1">
+									{$i18n.t('Endpoint URL')}
+								</div>
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t(
+										'Enter Mistral OCR Endpoint (default: https://api.mistral.ai/v1)'
+									)}
+									bind:value={RAGConfig.MISTRAL_OCR_ENDPOINT}
+								/>
+							</div>
+							<div class="flex flex-col w-full mt-2">
+								<div class="text-xs font-medium min-w-fit mb-1">
+									{$i18n.t('API Key')}
+								</div>
 								<SensitiveInput
 									placeholder={$i18n.t('Enter Mistral API Key')}
 									bind:value={RAGConfig.MISTRAL_OCR_API_KEY}
+								/>
+							</div>
+							<div class="flex flex-col w-full mt-2">
+								<div class="text-xs font-medium min-w-fit mb-1">
+									{$i18n.t('Model')}
+								</div>
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('Enter Mistral OCR Model (default: mistral-ocr-latest)')}
+									bind:value={RAGConfig.MISTRAL_OCR_MODEL}
 								/>
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mineru'}
