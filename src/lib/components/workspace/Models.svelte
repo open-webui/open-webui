@@ -16,7 +16,7 @@
 	import {
 		createNewModel,
 		deleteModelById,
-		getModels as getWorkspaceModels,
+		getModelItems as getWorkspaceModels,
 		toggleModelById,
 		updateModelById
 	} from '$lib/apis/models';
