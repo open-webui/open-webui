@@ -468,6 +468,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
         "MISTRAL_OCR_ENDPOINT": request.app.state.config.MISTRAL_OCR_ENDPOINT,
         "MISTRAL_OCR_MODEL": request.app.state.config.MISTRAL_OCR_MODEL,
+        "MISTRAL_OCR_USE_BASE64": request.app.state.config.MISTRAL_OCR_USE_BASE64,
         # MinerU settings
         "MINERU_API_MODE": request.app.state.config.MINERU_API_MODE,
         "MINERU_API_URL": request.app.state.config.MINERU_API_URL,
@@ -655,6 +656,7 @@ class ConfigForm(BaseModel):
     MISTRAL_OCR_API_KEY: Optional[str] = None
     MISTRAL_OCR_ENDPOINT: Optional[str] = None
     MISTRAL_OCR_MODEL: Optional[str] = None
+    MISTRAL_OCR_USE_BASE64: Optional[bool] = None
 
     # MinerU settings
     MINERU_API_MODE: Optional[str] = None
@@ -909,6 +911,11 @@ async def update_rag_config(
         form_data.MISTRAL_OCR_MODEL
         if form_data.MISTRAL_OCR_MODEL is not None
         else request.app.state.config.MISTRAL_OCR_MODEL
+    )
+    request.app.state.config.MISTRAL_OCR_USE_BASE64 = (
+        form_data.MISTRAL_OCR_USE_BASE64
+        if form_data.MISTRAL_OCR_USE_BASE64 is not None
+        else request.app.state.config.MISTRAL_OCR_USE_BASE64
     )
 
     # MinerU settings
@@ -1199,6 +1206,7 @@ async def update_rag_config(
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
         "MISTRAL_OCR_ENDPOINT": request.app.state.config.MISTRAL_OCR_ENDPOINT,
         "MISTRAL_OCR_MODEL": request.app.state.config.MISTRAL_OCR_MODEL,
+        "MISTRAL_OCR_USE_BASE64": request.app.state.config.MISTRAL_OCR_USE_BASE64,
         # MinerU settings
         "MINERU_API_MODE": request.app.state.config.MINERU_API_MODE,
         "MINERU_API_URL": request.app.state.config.MINERU_API_URL,
@@ -1616,6 +1624,7 @@ def process_file(
                         MISTRAL_OCR_API_KEY=request.app.state.config.MISTRAL_OCR_API_KEY,
                         MISTRAL_OCR_ENDPOINT=request.app.state.config.MISTRAL_OCR_ENDPOINT,
                         MISTRAL_OCR_MODEL=request.app.state.config.MISTRAL_OCR_MODEL,
+                        MISTRAL_OCR_USE_BASE64=request.app.state.config.MISTRAL_OCR_USE_BASE64,
                         MINERU_API_MODE=request.app.state.config.MINERU_API_MODE,
                         MINERU_API_URL=request.app.state.config.MINERU_API_URL,
                         MINERU_API_KEY=request.app.state.config.MINERU_API_KEY,

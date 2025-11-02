@@ -397,6 +397,7 @@ class Loader:
                     "MISTRAL_OCR_ENDPOINT", "https://api.mistral.ai/v1"
                 ),
                 model=self.kwargs.get("MISTRAL_OCR_MODEL", "mistral-ocr-latest"),
+                use_base64=self.kwargs.get("MISTRAL_OCR_USE_BASE64", True),
                 enable_debug_logging=True,
             )
         elif (
