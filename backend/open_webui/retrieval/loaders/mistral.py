@@ -43,11 +43,12 @@ ENCODING_CHUNK_SIZE = 8192 * 1024  # 8MB chunks
 # MISTRAL LOADER CLASS
 # ============================================================================
 
+
 class MistralLoader:
     """
     Universal OCR loader with both sync and async support.
     Loads documents by processing them through OCR APIs (primarily Mistral OCR API).
-    
+
     Supports two processing workflows:
     1. Base64 encoding (default): Encodes PDF to base64 and sends directly to OCR endpoint
     2. Upload workflow: Uploads file, gets signed URL, processes OCR, then deletes file
@@ -102,10 +103,16 @@ class MistralLoader:
 
         self.api_key = api_key
         self.file_path = file_path
-        
+
         # Fallback to default values if base_url or model are empty or whitespace
-        self.base_url = (base_url.strip() if base_url and base_url.strip() else DEFAULT_MISTRAL_OCR_ENDPOINT).rstrip('/')
-        self.model = model.strip() if model and model.strip() else DEFAULT_MISTRAL_OCR_MODEL
+        self.base_url = (
+            base_url.strip()
+            if base_url and base_url.strip()
+            else DEFAULT_MISTRAL_OCR_ENDPOINT
+        ).rstrip("/")
+        self.model = (
+            model.strip() if model and model.strip() else DEFAULT_MISTRAL_OCR_MODEL
+        )
         self.max_retries = max_retries
         self.debug = enable_debug_logging
         self.use_base64 = use_base64  # Store the workflow choice
@@ -122,16 +129,20 @@ class MistralLoader:
         # This ensures large files don't timeout prematurely
         file_size_mb = self.file_size / (1024 * 1024)
         estimated_time = 60 + int(file_size_mb * 1)
-        self.timeout = max(min(estimated_time, 600), timeout)  # Between user timeout and 10 min
+        self.timeout = max(
+            min(estimated_time, 600), timeout
+        )  # Between user timeout and 10 min
         self.ocr_timeout = self.timeout
-        
+
         # PERFORMANCE OPTIMIZATION: Differentiated timeouts for upload workflow
         # These are only used when use_base64=False
         self.upload_timeout = min(timeout, 120)  # Cap upload at 2 minutes
         self.url_timeout = 30  # URL requests should be fast
         self.cleanup_timeout = 30  # Cleanup should be quick
 
-        self._debug_log(f"Initialized with timeout: {self.timeout}s for {file_size_mb:.2f}MB file, using {'base64' if self.use_base64 else 'upload'} workflow")
+        self._debug_log(
+            f"Initialized with timeout: {self.timeout}s for {file_size_mb:.2f}MB file, using {'base64' if self.use_base64 else 'upload'} workflow"
+        )
 
         # Added User-Agent for better API tracking and debugging
         self.headers = {
@@ -157,11 +168,15 @@ class MistralLoader:
         """Remove sensitive data from error responses before logging."""
         # Truncate long responses
         truncated = text[:max_length] + ("..." if len(text) > max_length else "")
-        
+
         # Redact potential API keys or tokens (basic pattern matching)
-        sanitized = re.sub(r'Bearer\s+[A-Za-z0-9\-_\.]+', 'Bearer [REDACTED]', truncated)
-        sanitized = re.sub(r'"api_key"\s*:\s*"[^"]+"', '"api_key": "[REDACTED]"', sanitized)
-        
+        sanitized = re.sub(
+            r"Bearer\s+[A-Za-z0-9\-_\.]+", "Bearer [REDACTED]", truncated
+        )
+        sanitized = re.sub(
+            r'"api_key"\s*:\s*"[^"]+"', '"api_key": "[REDACTED]"', sanitized
+        )
+
         return sanitized
 
     # ============================================================================
@@ -178,7 +193,9 @@ class MistralLoader:
             return response.json()
         except requests.exceptions.HTTPError as http_err:
             safe_response = self._sanitize_error_response(response.text)
-            log.error(f"HTTP error occurred: {http_err} - Status: {response.status_code} - Response: {safe_response}")
+            log.error(
+                f"HTTP error occurred: {http_err} - Status: {response.status_code} - Response: {safe_response}"
+            )
             raise
         except requests.exceptions.RequestException as req_err:
             log.error(f"Request exception occurred: {req_err}")
@@ -316,10 +333,10 @@ class MistralLoader:
         """
         Encode PDF file to base64 string (sync version).
         Uses memory-efficient chunked approach for large files.
-        
+
         Returns:
             Base64-encoded string of the PDF file.
-            
+
         Raises:
             MemoryError: If file is too large to encode in available memory.
         """
@@ -327,8 +344,8 @@ class MistralLoader:
             # For files under 10MB, use simple approach
             if self.file_size < CHUNKED_ENCODING_THRESHOLD:
                 with open(self.file_path, "rb") as f:
-                    return base64.b64encode(f.read()).decode('utf-8')
-            
+                    return base64.b64encode(f.read()).decode("utf-8")
+
             # For larger files, read in chunks but encode once
             # (encoding each chunk separately breaks base64 padding)
             chunks = []
@@ -338,22 +355,24 @@ class MistralLoader:
                     if not chunk:
                         break
                     chunks.append(chunk)
-            
+
             # Concatenate all chunks and encode once
-            file_data = b''.join(chunks)
-            return base64.b64encode(file_data).decode('utf-8')
+            file_data = b"".join(chunks)
+            return base64.b64encode(file_data).decode("utf-8")
         except MemoryError as e:
-            log.error(f"Insufficient memory to encode file of size {self.file_size:,} bytes")
+            log.error(
+                f"Insufficient memory to encode file of size {self.file_size:,} bytes"
+            )
             raise ValueError(f"File too large to encode in available memory: {e}")
 
     async def _encode_file_to_base64_async(self) -> str:
         """
         Encode PDF file to base64 string (async version).
         Uses non-blocking file I/O and offloads encoding to thread pool.
-        
+
         Returns:
             Base64-encoded string of the PDF file.
-            
+
         Raises:
             MemoryError: If file is too large to encode in available memory.
         """
@@ -362,12 +381,12 @@ class MistralLoader:
             if self.file_size < CHUNKED_ENCODING_THRESHOLD:
                 async with aiofiles.open(self.file_path, "rb") as f:
                     file_data = await f.read()
-                
+
                 # Run CPU-intensive encoding in thread pool to avoid blocking event loop
                 return await asyncio.to_thread(
-                    lambda: base64.b64encode(file_data).decode('utf-8')
+                    lambda: base64.b64encode(file_data).decode("utf-8")
                 )
-            
+
             # For larger files, read in chunks but encode once
             # (encoding each chunk separately breaks base64 padding)
             async with aiofiles.open(self.file_path, "rb") as f:
@@ -377,14 +396,16 @@ class MistralLoader:
                     if not chunk:
                         break
                     chunks.append(chunk)
-            
+
             # Concatenate all chunks and encode once
-            file_data = b''.join(chunks)
+            file_data = b"".join(chunks)
             return await asyncio.to_thread(
-                lambda: base64.b64encode(file_data).decode('utf-8')
+                lambda: base64.b64encode(file_data).decode("utf-8")
             )
         except MemoryError as e:
-            log.error(f"Insufficient memory to encode file of size {self.file_size:,} bytes")
+            log.error(
+                f"Insufficient memory to encode file of size {self.file_size:,} bytes"
+            )
             raise ValueError(f"File too large to encode in available memory: {e}")
 
     # ============================================================================
@@ -399,10 +420,10 @@ class MistralLoader:
         Uses context manager for file handling to ensure proper resource cleanup.
         Although streaming is not enabled for this endpoint, the file is opened
         in a context manager to minimize memory usage duration.
-        
+
         Returns:
             File ID from the upload response.
-            
+
         Raises:
             ValueError: If file ID not found in response.
         """
@@ -443,10 +464,10 @@ class MistralLoader:
     async def _upload_file_async(self, session: aiohttp.ClientSession) -> str:
         """
         Async file upload with streaming for better memory efficiency.
-        
+
         Returns:
             File ID from the upload response.
-            
+
         Raises:
             ValueError: If file ID not found in response.
         """
@@ -496,13 +517,13 @@ class MistralLoader:
     def _get_signed_url(self, file_id: str) -> str:
         """
         Retrieves a temporary signed URL for the uploaded file (sync version).
-        
+
         Args:
             file_id: The ID of the uploaded file.
-            
+
         Returns:
             Signed URL for accessing the file.
-            
+
         Raises:
             ValueError: If signed URL not found in response.
         """
@@ -533,14 +554,14 @@ class MistralLoader:
     ) -> str:
         """
         Async signed URL retrieval.
-        
+
         Args:
             session: aiohttp client session.
             file_id: The ID of the uploaded file.
-            
+
         Returns:
             Signed URL for accessing the file.
-            
+
         Raises:
             ValueError: If signed URL not found in response.
         """
@@ -571,10 +592,10 @@ class MistralLoader:
     def _process_ocr_with_url(self, signed_url: str) -> Dict[str, Any]:
         """
         Process OCR using signed URL from uploaded file (sync version).
-        
+
         Args:
             signed_url: Signed URL pointing to the uploaded file.
-            
+
         Returns:
             OCR response dictionary containing pages with markdown content.
         """
@@ -615,11 +636,11 @@ class MistralLoader:
     ) -> Dict[str, Any]:
         """
         Process OCR using signed URL from uploaded file (async version).
-        
+
         Args:
             session: aiohttp client session.
             signed_url: Signed URL pointing to the uploaded file.
-            
+
         Returns:
             OCR response dictionary containing pages with markdown content.
         """
@@ -662,7 +683,7 @@ class MistralLoader:
     def _delete_file(self, file_id: str) -> None:
         """
         Deletes the file from Mistral storage (sync version).
-        
+
         Args:
             file_id: The ID of the file to delete.
         """
@@ -684,7 +705,7 @@ class MistralLoader:
     ) -> None:
         """
         Async file deletion with error tolerance.
-        
+
         Args:
             session: aiohttp client session.
             file_id: The ID of the file to delete.
@@ -716,10 +737,10 @@ class MistralLoader:
     def _process_ocr(self, base64_pdf: str) -> Dict[str, Any]:
         """
         Process OCR using base64 encoded PDF (sync version).
-        
+
         Args:
             base64_pdf: Base64-encoded PDF string.
-            
+
         Returns:
             OCR response dictionary containing pages with markdown content.
         """
@@ -760,11 +781,11 @@ class MistralLoader:
     ) -> Dict[str, Any]:
         """
         Process OCR using base64 encoded PDF (async version).
-        
+
         Args:
             session: aiohttp client session.
             base64_pdf: Base64-encoded PDF string.
-            
+
         Returns:
             OCR response dictionary containing pages with markdown content.
         """
@@ -841,14 +862,16 @@ class MistralLoader:
     # RESULT PROCESSING
     # ============================================================================
 
-    def _create_error_document(self, error_msg: str, processing_time: float = 0) -> List[Document]:
+    def _create_error_document(
+        self, error_msg: str, processing_time: float = 0
+    ) -> List[Document]:
         """
         Creates a standardized error document for consistent error reporting.
-        
+
         Args:
             error_msg: The error message to include
             processing_time: Time spent processing before error occurred
-            
+
         Returns:
             List containing a single error Document
         """
@@ -868,14 +891,19 @@ class MistralLoader:
         """Process OCR results into Document objects with enhanced metadata and memory efficiency."""
         # Validate response structure
         if not isinstance(ocr_response, dict):
-            log.error(f"Invalid OCR response type: expected dict, got {type(ocr_response)}")
+            log.error(
+                f"Invalid OCR response type: expected dict, got {type(ocr_response)}"
+            )
             return [
                 Document(
                     page_content="Invalid API response format",
-                    metadata={"error": "invalid_response_type", "file_name": self.file_name}
+                    metadata={
+                        "error": "invalid_response_type",
+                        "file_name": self.file_name,
+                    },
                 )
             ]
-        
+
         pages_data = ocr_response.get("pages")
         if not pages_data:
             log.warning("No pages found in OCR response.")
@@ -892,7 +920,10 @@ class MistralLoader:
             return [
                 Document(
                     page_content="Invalid pages format in API response",
-                    metadata={"error": "invalid_pages_format", "file_name": self.file_name}
+                    metadata={
+                        "error": "invalid_pages_format",
+                        "file_name": self.file_name,
+                    },
                 )
             ]
 
@@ -981,16 +1012,16 @@ class MistralLoader:
             if self.use_base64:
                 # Base64 workflow
                 log.info("Using base64 encoding workflow")
-                
+
                 # Encode PDF to base64
                 base64_pdf = self._encode_file_to_base64()
-                
+
                 # Process OCR
                 ocr_response = self._process_ocr(base64_pdf)
             else:
                 # Upload workflow
                 log.info("Using upload + signed URL workflow")
-                
+
                 # 1. Upload file
                 file_id = self._upload_file()
 
@@ -999,7 +1030,7 @@ class MistralLoader:
 
                 # 3. Process OCR
                 ocr_response = self._process_ocr_with_url(signed_url)
-            
+
             # Process results (common for both workflows)
             documents = self._process_results(ocr_response)
 
@@ -1042,16 +1073,16 @@ class MistralLoader:
                 if self.use_base64:
                     # Base64 workflow
                     log.info("Using base64 encoding workflow (async)")
-                    
+
                     # Encode PDF to base64 (non-blocking)
                     base64_pdf = await self._encode_file_to_base64_async()
-                    
+
                     # Process OCR
                     ocr_response = await self._process_ocr_async(session, base64_pdf)
                 else:
                     # Upload workflow
                     log.info("Using upload + signed URL workflow (async)")
-                    
+
                     # 1. Upload file with streaming
                     file_id = await self._upload_file_async(session)
 
@@ -1059,8 +1090,10 @@ class MistralLoader:
                     signed_url = await self._get_signed_url_async(session, file_id)
 
                     # 3. Process OCR
-                    ocr_response = await self._process_ocr_with_url_async(session, signed_url)
-                
+                    ocr_response = await self._process_ocr_with_url_async(
+                        session, signed_url
+                    )
+
                 # Process results (common for both workflows)
                 documents = self._process_results(ocr_response)
 
@@ -1102,7 +1135,7 @@ class MistralLoader:
 
         Returns:
             List of document lists, one for each loader
-            
+
         Raises:
             ValueError: If loaders list is empty or max_concurrent < 1
         """
@@ -1123,9 +1156,7 @@ class MistralLoader:
         start_time = time.time()
 
         # Use semaphore to control concurrency
-        async def process_with_semaphore(
-            index: int, loader: "MistralLoader"
-        ) -> tuple:
+        async def process_with_semaphore(index: int, loader: "MistralLoader") -> tuple:
             """Process with index to maintain order in error reporting."""
             async with semaphore:
                 try:
@@ -1133,16 +1164,19 @@ class MistralLoader:
                     return (index, result)
                 except Exception as e:
                     log.error(f"File {index} ({loader.file_name}) failed: {e}")
-                    return (index, [
-                        Document(
-                            page_content=f"Error processing file: {e}",
-                            metadata={
-                                "error": "batch_processing_failed",
-                                "file_index": index,
-                                "file_name": loader.file_name,
-                            },
-                        )
-                    ])
+                    return (
+                        index,
+                        [
+                            Document(
+                                page_content=f"Error processing file: {e}",
+                                metadata={
+                                    "error": "batch_processing_failed",
+                                    "file_index": index,
+                                    "file_name": loader.file_name,
+                                },
+                            )
+                        ],
+                    )
 
         # Process with index tracking
         tasks = [process_with_semaphore(i, loader) for i, loader in enumerate(loaders)]
@@ -1155,11 +1189,14 @@ class MistralLoader:
         # MONITORING: Log comprehensive batch processing statistics
         total_time = time.time() - start_time
         total_docs = sum(len(docs) for docs in results)
-        
+
         # Count successes vs failures based on error metadata
         success_count = sum(
-            1 for docs in results 
-            if not any(doc.metadata.get("error") == "batch_processing_failed" for doc in docs)
+            1
+            for docs in results
+            if not any(
+                doc.metadata.get("error") == "batch_processing_failed" for doc in docs
+            )
         )
         failure_count = len(results) - success_count
 
