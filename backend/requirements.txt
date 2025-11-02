@@ -62,6 +62,7 @@ pypdf==6.0.0
 fpdf2==2.8.2
 pymdown-extensions==10.14.2
 docx2txt==0.8
+python-docx==1.2.0
 python-pptx==1.0.2
 unstructured==0.18.15
 nltk==3.9.1
