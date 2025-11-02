@@ -4,6 +4,7 @@ from typing import Optional
 import requests
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.config import WEBUI_URL
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -30,7 +31,10 @@ def search_google_pse(
         list[SearchResult]: A list of SearchResult objects.
     """
     url = "https://www.googleapis.com/customsearch/v1"
-    headers = {"Content-Type": "application/json"}
+    headers = {
+        "Content-Type": "application/json",
+        "Referer": WEBUI_URL.value,
+    }
     all_results = []
     start_index = 1  # Google PSE start parameter is 1-based
 
