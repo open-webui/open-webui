@@ -20,6 +20,10 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
+# ============================================================================
+# CONSTANTS AND CONFIGURATION
+# ============================================================================
+
 DEFAULT_MISTRAL_OCR_MODEL = "mistral-ocr-latest"
 DEFAULT_MISTRAL_OCR_ENDPOINT = "https://api.mistral.ai/v1"
 
@@ -39,6 +43,10 @@ DEFAULT_SOCK_READ_TIMEOUT = 60
 CHUNKED_ENCODING_THRESHOLD = 10 * 1024 * 1024  # 10MB
 ENCODING_CHUNK_SIZE = 8192 * 1024  # 8MB chunks
 
+
+# ============================================================================
+# MISTRAL LOADER CLASS
+# ============================================================================
 
 class MistralLoader:
     """
@@ -64,6 +72,10 @@ class MistralLoader:
     - Enhanced error handling with retryable error classification
     """
 
+    # ============================================================================
+    # INITIALIZATION
+    # ============================================================================
+
     def __init__(
         self,
         api_key: str,
@@ -74,6 +86,7 @@ class MistralLoader:
         max_retries: int = 3,
         enable_debug_logging: bool = False,
         use_base64: bool = True,  # If True, use base64 encoding method; if False, use upload workflow
+        validate_limits: bool = True,  # If True, validate file against API limits before processing
     ):
         """
         Initializes the loader with validation and optimization.
@@ -87,9 +100,11 @@ class MistralLoader:
             max_retries: Maximum number of retry attempts.
             enable_debug_logging: Enable detailed debug logs.
             use_base64: If True, use base64 encoding method. If False, use upload + signed URL workflow.
+            validate_limits: If True, validate file against Mistral API limits before processing.
+                            Set to False for custom endpoints with different limits.
 
         Raises:
-            ValueError: If API key is empty or file exceeds size/page limits.
+            ValueError: If API key is empty or (when validate_limits=True) file exceeds size/page limits.
             FileNotFoundError: If file doesn't exist.
         """
         if not api_key:
@@ -106,6 +121,7 @@ class MistralLoader:
         self.max_retries = max_retries
         self.debug = enable_debug_logging
         self.use_base64 = use_base64  # Store the workflow choice
+        self.validate_limits = validate_limits  # Store validation preference
 
         # Pre-compute file info to avoid repeated filesystem calls
         # Single file stat call to get all file metadata
@@ -114,31 +130,9 @@ class MistralLoader:
         self.file_size = file_stat.st_size
         self.file_mtime = file_stat.st_mtime  # Useful for caching/debugging
 
-        # VALIDATION: Check file size against API limits
-        if self.file_size > MAX_FILE_SIZE:
-            raise ValueError(
-                f"File size ({self.file_size:,} bytes / {self.file_size / (1024 * 1024):.2f} MB) "
-                f"exceeds Mistral API limit of {MAX_FILE_SIZE:,} bytes (50 MB). "
-                f"Please reduce the file size by compressing or splitting the PDF."
-            )
-
-        # VALIDATION: Check page count against API limits
-        try:
-            with open(file_path, 'rb') as f:
-                pdf_reader = PdfReader(f)
-                page_count = len(pdf_reader.pages)
-                if page_count > MAX_PAGE_COUNT:
-                    raise ValueError(
-                        f"PDF has {page_count:,} pages, exceeds Mistral API limit of {MAX_PAGE_COUNT:,} pages. "
-                        f"Please split the PDF into smaller documents."
-                    )
-                self._debug_log(f"PDF validation: {page_count} pages, {self.file_size:,} bytes")
-        except Exception as e:
-            # If we can't read the PDF, log warning but don't fail
-            # The API will catch invalid PDFs
-            if "pages" in str(e).lower() or "limit" in str(e).lower():
-                raise  # Re-raise if it's our validation error
-            log.warning(f"Could not validate PDF page count: {e}. Proceeding anyway.")
+        # Validate file against API limits (optional, for standard Mistral API)
+        if self.validate_limits:
+            self._validate_file()
 
         # PERFORMANCE OPTIMIZATION: Dynamic timeout based on file size
         # Estimate: 1 second per MB + 60s base processing time
@@ -162,6 +156,47 @@ class MistralLoader:
             "User-Agent": "OpenWebUI-MistralLoader/3.0",
         }
 
+    # ============================================================================
+    # UTILITY METHODS
+    # ============================================================================
+
+    def _validate_file(self) -> None:
+        """
+        Validates file against Mistral API limits.
+        
+        This validation is optional and only runs when validate_limits=True.
+        For custom endpoints with different limits, disable validation and
+        let the API return appropriate errors.
+        
+        Raises:
+            ValueError: If file exceeds size or page limits
+        """
+        # Check file size against API limits
+        if self.file_size > MAX_FILE_SIZE:
+            raise ValueError(
+                f"File size ({self.file_size:,} bytes / {self.file_size / (1024 * 1024):.2f} MB) "
+                f"exceeds Mistral API limit of {MAX_FILE_SIZE:,} bytes (50 MB). "
+                f"Please reduce the file size by compressing or splitting the PDF."
+            )
+
+        # Check page count against API limits
+        try:
+            with open(self.file_path, 'rb') as f:
+                pdf_reader = PdfReader(f)
+                page_count = len(pdf_reader.pages)
+                if page_count > MAX_PAGE_COUNT:
+                    raise ValueError(
+                        f"PDF has {page_count:,} pages, exceeds Mistral API limit of {MAX_PAGE_COUNT:,} pages. "
+                        f"Please split the PDF into smaller documents."
+                    )
+                self._debug_log(f"PDF validation: {page_count} pages, {self.file_size:,} bytes")
+        except Exception as e:
+            # If we can't read the PDF, log warning but don't fail
+            # The API will catch invalid PDFs
+            if "pages" in str(e).lower() or "limit" in str(e).lower():
+                raise  # Re-raise if it's our validation error
+            log.warning(f"Could not validate PDF page count: {e}. Proceeding anyway.")
+
     def _debug_log(self, message: str, *args) -> None:
         """
         PERFORMANCE OPTIMIZATION: Conditional debug logging for performance.
@@ -182,6 +217,10 @@ class MistralLoader:
         sanitized = re.sub(r'"api_key"\s*:\s*"[^"]+"', '"api_key": "[REDACTED]"', sanitized)
         
         return sanitized
+
+    # ============================================================================
+    # HTTP RESPONSE HANDLING
+    # ============================================================================
 
     def _handle_response(self, response: requests.Response) -> Dict[str, Any]:
         """Checks response status and returns JSON content."""
@@ -234,6 +273,10 @@ class MistralLoader:
         except Exception as e:
             log.error(f"Unexpected error processing response: {e}")
             raise
+
+    # ============================================================================
+    # RETRY LOGIC AND ERROR CLASSIFICATION
+    # ============================================================================
 
     def _is_retryable_error(self, error: Exception) -> bool:
         """
@@ -319,6 +362,10 @@ class MistralLoader:
                 )
                 await asyncio.sleep(wait_time)  # Non-blocking wait
 
+    # ============================================================================
+    # FILE ENCODING (BASE64)
+    # ============================================================================
+
     def _encode_file_to_base64(self) -> str:
         """
         Encode PDF file to base64 string (sync version).
@@ -393,6 +440,10 @@ class MistralLoader:
         except MemoryError as e:
             log.error(f"Insufficient memory to encode file of size {self.file_size:,} bytes")
             raise ValueError(f"File too large to encode in available memory: {e}")
+
+    # ============================================================================
+    # FILE UPLOAD WORKFLOW
+    # ============================================================================
 
     def _upload_file(self) -> str:
         """
@@ -712,6 +763,10 @@ class MistralLoader:
             # Don't fail the entire process if cleanup fails
             log.warning(f"Failed to delete file ID {file_id}: {e}")
 
+    # ============================================================================
+    # OCR PROCESSING
+    # ============================================================================
+
     def _process_ocr(self, base64_pdf: str) -> Dict[str, Any]:
         """
         Process OCR using base64 encoded PDF (sync version).
@@ -803,6 +858,10 @@ class MistralLoader:
 
         return await self._retry_request_async(ocr_request)
 
+    # ============================================================================
+    # SESSION MANAGEMENT
+    # ============================================================================
+
     @asynccontextmanager
     async def _get_session(self):
         """Context manager for HTTP session with optimized settings."""
@@ -831,6 +890,33 @@ class MistralLoader:
             trust_env=True,
         ) as session:
             yield session
+
+    # ============================================================================
+    # RESULT PROCESSING
+    # ============================================================================
+
+    def _create_error_document(self, error_msg: str, processing_time: float = 0) -> List[Document]:
+        """
+        Creates a standardized error document for consistent error reporting.
+        
+        Args:
+            error_msg: The error message to include
+            processing_time: Time spent processing before error occurred
+            
+        Returns:
+            List containing a single error Document
+        """
+        return [
+            Document(
+                page_content=f"Error during OCR processing: {error_msg}",
+                metadata={
+                    "error": "processing_failed",
+                    "file_name": self.file_name,
+                    "file_size": self.file_size,
+                    "processing_time": processing_time,
+                },
+            )
+        ]
 
     def _process_results(self, ocr_response: Dict[str, Any]) -> List[Document]:
         """Process OCR results into Document objects with enhanced metadata and memory efficiency."""
@@ -930,6 +1016,10 @@ class MistralLoader:
 
         return documents
 
+    # ============================================================================
+    # MAIN ENTRY POINTS - SYNC
+    # ============================================================================
+
     def load(self) -> List[Document]:
         """
         Executes the OCR workflow based on the selected method (base64 or upload).
@@ -977,18 +1067,7 @@ class MistralLoader:
         except Exception as e:
             total_time = time.time() - start_time
             log.error(f"OCR workflow failed after {total_time:.2f}s: {e}")
-            # Return an error document for UI visibility
-            return [
-                Document(
-                    page_content=f"Error during OCR processing: {e}",
-                    metadata={
-                        "error": "processing_failed",
-                        "file_name": self.file_name,
-                        "file_size": self.file_size,
-                        "processing_time": total_time,
-                    },
-                )
-            ]
+            return self._create_error_document(str(e), total_time)
         finally:
             # Cleanup - only needed for upload workflow
             if not self.use_base64 and file_id:
@@ -996,6 +1075,10 @@ class MistralLoader:
                     self._delete_file(file_id)
                 except Exception as cleanup_error:
                     log.error(f"Cleanup failed for file ID {file_id}: {cleanup_error}")
+
+    # ============================================================================
+    # MAIN ENTRY POINTS - ASYNC
+    # ============================================================================
 
     async def load_async(self) -> List[Document]:
         """
@@ -1045,18 +1128,7 @@ class MistralLoader:
         except Exception as e:
             total_time = time.time() - start_time
             log.error(f"Async OCR workflow failed after {total_time:.2f}s: {e}")
-            # Return an error document for UI visibility
-            return [
-                Document(
-                    page_content=f"Error during OCR processing: {e}",
-                    metadata={
-                        "error": "processing_failed",
-                        "file_name": self.file_name,
-                        "file_size": self.file_size,
-                        "processing_time": total_time,
-                    },
-                )
-            ]
+            return self._create_error_document(str(e), total_time)
         finally:
             # Cleanup - only needed for upload workflow
             if not self.use_base64 and file_id:
@@ -1065,6 +1137,10 @@ class MistralLoader:
                         await self._delete_file_async(session, file_id)
                 except Exception as cleanup_error:
                     log.error(f"Cleanup failed for file ID {file_id}: {cleanup_error}")
+
+    # ============================================================================
+    # BATCH PROCESSING - ASYNC
+    # ============================================================================
 
     @staticmethod
     async def load_multiple_async(
