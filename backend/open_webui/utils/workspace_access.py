@@ -27,6 +27,10 @@ def item_assigned_to_user_groups(user_id: str, item, permission: str = "write") 
     user_groups = Groups.get_groups_by_member_id(user_id)
     user_group_ids = [g.id for g in user_groups]
     
+    # Handle None access_control (legacy records without group assignments)
+    if item.access_control is None:
+        return False
+    
     # Get BOTH read and write groups for the item
     read_groups = item.access_control.get("read", {}).get("group_ids", [])
     write_groups = item.access_control.get("write", {}).get("group_ids", [])
