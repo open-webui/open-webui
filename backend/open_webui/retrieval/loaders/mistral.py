@@ -11,7 +11,6 @@ from contextlib import asynccontextmanager
 import re
 
 import aiofiles
-from pypdf import PdfReader
 
 from langchain_core.documents import Document
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
@@ -26,10 +25,6 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 DEFAULT_MISTRAL_OCR_MODEL = "mistral-ocr-latest"
 DEFAULT_MISTRAL_OCR_ENDPOINT = "https://api.mistral.ai/v1"
-
-# Mistral API limits
-MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
-MAX_PAGE_COUNT = 1000  # Maximum pages supported by Mistral OCR API
 
 # Connection pool configuration constants
 DEFAULT_CONNECTION_LIMIT = 20
@@ -50,16 +45,12 @@ ENCODING_CHUNK_SIZE = 8192 * 1024  # 8MB chunks
 
 class MistralLoader:
     """
-    Mistral OCR loader with both sync and async support.
-    Loads documents by processing them through the Mistral OCR API.
+    Universal OCR loader with both sync and async support.
+    Loads documents by processing them through OCR APIs (primarily Mistral OCR API).
     
     Supports two processing workflows:
     1. Base64 encoding (default): Encodes PDF to base64 and sends directly to OCR endpoint
     2. Upload workflow: Uploads file, gets signed URL, processes OCR, then deletes file
-
-    API Limits:
-    - Maximum file size: 50MB
-    - Maximum pages: 1000
 
     Performance Optimizations:
     - Async file I/O (non-blocking)
@@ -86,25 +77,22 @@ class MistralLoader:
         max_retries: int = 3,
         enable_debug_logging: bool = False,
         use_base64: bool = True,  # If True, use base64 encoding method; if False, use upload workflow
-        validate_limits: bool = True,  # If True, validate file against API limits before processing
     ):
         """
         Initializes the loader with validation and optimization.
 
         Args:
-            api_key: Your Mistral API key.
+            api_key: Your API key for the OCR service.
             file_path: The local path to the PDF file to process.
-            base_url: Base URL for the Mistral API endpoint.
+            base_url: Base URL for the API endpoint.
             model: Model name to use for OCR processing.
             timeout: Request timeout in seconds (overridden by dynamic calculation).
             max_retries: Maximum number of retry attempts.
             enable_debug_logging: Enable detailed debug logs.
             use_base64: If True, use base64 encoding method. If False, use upload + signed URL workflow.
-            validate_limits: If True, validate file against Mistral API limits before processing.
-                            Set to False for custom endpoints with different limits.
 
         Raises:
-            ValueError: If API key is empty or (when validate_limits=True) file exceeds size/page limits.
+            ValueError: If API key is empty.
             FileNotFoundError: If file doesn't exist.
         """
         if not api_key:
@@ -121,7 +109,6 @@ class MistralLoader:
         self.max_retries = max_retries
         self.debug = enable_debug_logging
         self.use_base64 = use_base64  # Store the workflow choice
-        self.validate_limits = validate_limits  # Store validation preference
 
         # Pre-compute file info to avoid repeated filesystem calls
         # Single file stat call to get all file metadata
@@ -129,10 +116,6 @@ class MistralLoader:
         self.file_name = os.path.basename(file_path)
         self.file_size = file_stat.st_size
         self.file_mtime = file_stat.st_mtime  # Useful for caching/debugging
-
-        # Validate file against API limits (optional, for standard Mistral API)
-        if self.validate_limits:
-            self._validate_file()
 
         # PERFORMANCE OPTIMIZATION: Dynamic timeout based on file size
         # Estimate: 1 second per MB + 60s base processing time
@@ -159,43 +142,6 @@ class MistralLoader:
     # ============================================================================
     # UTILITY METHODS
     # ============================================================================
-
-    def _validate_file(self) -> None:
-        """
-        Validates file against Mistral API limits.
-        
-        This validation is optional and only runs when validate_limits=True.
-        For custom endpoints with different limits, disable validation and
-        let the API return appropriate errors.
-        
-        Raises:
-            ValueError: If file exceeds size or page limits
-        """
-        # Check file size against API limits
-        if self.file_size > MAX_FILE_SIZE:
-            raise ValueError(
-                f"File size ({self.file_size:,} bytes / {self.file_size / (1024 * 1024):.2f} MB) "
-                f"exceeds Mistral API limit of {MAX_FILE_SIZE:,} bytes (50 MB). "
-                f"Please reduce the file size by compressing or splitting the PDF."
-            )
-
-        # Check page count against API limits
-        try:
-            with open(self.file_path, 'rb') as f:
-                pdf_reader = PdfReader(f)
-                page_count = len(pdf_reader.pages)
-                if page_count > MAX_PAGE_COUNT:
-                    raise ValueError(
-                        f"PDF has {page_count:,} pages, exceeds Mistral API limit of {MAX_PAGE_COUNT:,} pages. "
-                        f"Please split the PDF into smaller documents."
-                    )
-                self._debug_log(f"PDF validation: {page_count} pages, {self.file_size:,} bytes")
-        except Exception as e:
-            # If we can't read the PDF, log warning but don't fail
-            # The API will catch invalid PDFs
-            if "pages" in str(e).lower() or "limit" in str(e).lower():
-                raise  # Re-raise if it's our validation error
-            log.warning(f"Could not validate PDF page count: {e}. Proceeding anyway.")
 
     def _debug_log(self, message: str, *args) -> None:
         """

@@ -397,7 +397,6 @@ class Loader:
                 ),
                 model=self.kwargs.get("MISTRAL_OCR_MODEL", "mistral-ocr-latest"),
                 use_base64=self.kwargs.get("MISTRAL_OCR_USE_BASE64", True),
-                validate_limits=False,
                 enable_debug_logging=False,
             )
         else:
