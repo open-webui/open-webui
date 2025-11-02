@@ -368,14 +368,8 @@ class Loader:
                     azure_credential=DefaultAzureCredential(),
                 )
         elif self.engine == "mineru" and file_ext in [
-            "pdf",
-            "doc",
-            "docx",
-            "ppt",
-            "pptx",
-            "xls",
-            "xlsx",
-        ]:
+            "pdf"
+        ]:  # MinerU currently only supports PDF
             loader = MinerULoader(
                 file_path=file_path,
                 api_mode=self.kwargs.get("MINERU_API_MODE", "local"),
