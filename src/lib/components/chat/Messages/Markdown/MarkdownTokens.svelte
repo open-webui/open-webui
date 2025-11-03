@@ -53,6 +53,8 @@
 			if (match) {
 				return match[1];
 			}
+
+			// Fallback to the result attribute for backward compatibility
 			return token.attributes?.result || '';
 		}
 		return '';
