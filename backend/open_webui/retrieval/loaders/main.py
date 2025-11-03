@@ -23,7 +23,7 @@ from langchain_community.document_loaders import (
 )
 from langchain_core.documents import Document
 
-from docling_core.types.doc import DoclingDocument
+from docling_core.types.experimental import DoclingDocument
 
 from open_webui.retrieval.loaders.external_document import ExternalDocumentLoader
 
