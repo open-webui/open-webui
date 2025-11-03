@@ -385,6 +385,7 @@
 				<DropdownMenu.SubContent
 					class="w-full rounded-2xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white border border-gray-100  dark:border-gray-800 shadow-lg max-h-52 overflow-y-auto scrollbar-hidden"
 					transition={flyAndScale}
+					side={$showControls ? 'left' : 'right'}
 					sideOffset={8}
 				>
 					{#if $user?.role === 'admin' || ($user.permissions?.chat?.export ?? true)}
@@ -448,6 +449,7 @@
 					<DropdownMenu.SubContent
 						class="w-full rounded-2xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white border border-gray-100  dark:border-gray-800 shadow-lg max-h-52 overflow-y-auto scrollbar-hidden"
 						transition={flyAndScale}
+						side={$showControls ? 'left' : 'right'}
 						sideOffset={8}
 					>
 						{#each $folders.sort((a, b) => b.updated_at - a.updated_at) as folder}
