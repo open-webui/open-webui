@@ -220,7 +220,13 @@
 			DOCLING_PICTURE_DESCRIPTION_LOCAL: JSON.parse(
 				RAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL || '{}'
 			),
-			DOCLING_PICTURE_DESCRIPTION_API: JSON.parse(RAGConfig.DOCLING_PICTURE_DESCRIPTION_API || '{}')
+			DOCLING_PICTURE_DESCRIPTION_API: JSON.parse(
+				RAGConfig.DOCLING_PICTURE_DESCRIPTION_API || '{}'
+			),
+			MISTRAL_OCR_PARAMS:
+				typeof RAGConfig.MISTRAL_OCR_PARAMS === 'object'
+					? RAGConfig.MISTRAL_OCR_PARAMS
+					: JSON.parse(RAGConfig.MISTRAL_OCR_PARAMS || '{}')
 		});
 		dispatch('save');
 	};
@@ -260,6 +266,9 @@
 			null,
 			2
 		);
+
+		// Keep MISTRAL_OCR_PARAMS as an object for direct property access in the UI
+		config.MISTRAL_OCR_PARAMS = config.MISTRAL_OCR_PARAMS ?? {};
 
 		RAGConfig = config;
 	});
@@ -745,11 +754,83 @@
 								/>
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mistral_ocr'}
-							<div class="my-0.5 flex gap-2 pr-2">
+							<div class="flex flex-col w-full mt-2">
+								<div class="text-xs font-medium min-w-fit mb-1">
+									{$i18n.t('API Key')}
+								</div>
 								<SensitiveInput
 									placeholder={$i18n.t('Enter Mistral API Key')}
 									bind:value={RAGConfig.MISTRAL_OCR_API_KEY}
 								/>
+							</div>
+
+							<div class="flex flex-col w-full mt-2">
+								<div class="text-xs font-medium min-w-fit mb-1">
+									{$i18n.t('Custom API Endpoint')}
+								</div>
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-850"
+									placeholder={$i18n.t('Custom API endpoint (Default: https://api.mistral.ai/v1)')}
+									bind:value={RAGConfig.MISTRAL_OCR_ENDPOINT}
+								/>
+							</div>
+
+							<div class="flex flex-col w-full mt-2">
+								<div class="text-xs font-medium min-w-fit mb-1">
+									{$i18n.t('Custom Model')}
+								</div>
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-850"
+									placeholder={$i18n.t('mistral-ocr-latest')}
+									value={typeof RAGConfig.MISTRAL_OCR_PARAMS === 'object' &&
+									RAGConfig.MISTRAL_OCR_PARAMS !== null
+										? RAGConfig.MISTRAL_OCR_PARAMS.model || ''
+										: ''}
+									on:input={(e) => {
+										if (
+											typeof RAGConfig.MISTRAL_OCR_PARAMS !== 'object' ||
+											RAGConfig.MISTRAL_OCR_PARAMS === null
+										) {
+											RAGConfig.MISTRAL_OCR_PARAMS = {};
+										}
+										RAGConfig.MISTRAL_OCR_PARAMS.model = e.target.value || 'mistral-ocr-latest';
+									}}
+								/>
+							</div>
+
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">
+									<Tooltip
+										content={$i18n.t(
+											'Use Base64 encoding for Azure AI or LiteLLM Proxy (required). For Mistral API, file upload is faster but Base64 also works.'
+										)}
+										placement="top-start"
+									>
+										{$i18n.t('PDF transmission method')}
+									</Tooltip>
+								</div>
+								<div class="">
+									<select
+										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+										value={typeof RAGConfig.MISTRAL_OCR_PARAMS === 'object' &&
+										RAGConfig.MISTRAL_OCR_PARAMS !== null &&
+										RAGConfig.MISTRAL_OCR_PARAMS.use_base64 === false
+											? 'upload'
+											: 'base64'}
+										on:change={(e) => {
+											if (
+												typeof RAGConfig.MISTRAL_OCR_PARAMS !== 'object' ||
+												RAGConfig.MISTRAL_OCR_PARAMS === null
+											) {
+												RAGConfig.MISTRAL_OCR_PARAMS = {};
+											}
+											RAGConfig.MISTRAL_OCR_PARAMS.use_base64 = e.target.value === 'base64';
+										}}
+									>
+										<option value="base64">{$i18n.t('Base64 Encoding')}</option>
+										<option value="upload">{$i18n.t('Upload files')}</option>
+									</select>
+								</div>
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mineru'}
 							<!-- API Mode Selection -->

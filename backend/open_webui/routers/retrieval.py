@@ -466,6 +466,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
+        "MISTRAL_OCR_ENDPOINT": request.app.state.config.MISTRAL_OCR_ENDPOINT,
+        "MISTRAL_OCR_PARAMS": request.app.state.config.MISTRAL_OCR_PARAMS,
         # MinerU settings
         "MINERU_API_MODE": request.app.state.config.MINERU_API_MODE,
         "MINERU_API_URL": request.app.state.config.MINERU_API_URL,
@@ -651,6 +653,8 @@ class ConfigForm(BaseModel):
     DOCUMENT_INTELLIGENCE_ENDPOINT: Optional[str] = None
     DOCUMENT_INTELLIGENCE_KEY: Optional[str] = None
     MISTRAL_OCR_API_KEY: Optional[str] = None
+    MISTRAL_OCR_ENDPOINT: Optional[str] = None
+    MISTRAL_OCR_PARAMS: Optional[dict] = None
 
     # MinerU settings
     MINERU_API_MODE: Optional[str] = None
@@ -895,6 +899,16 @@ async def update_rag_config(
         form_data.MISTRAL_OCR_API_KEY
         if form_data.MISTRAL_OCR_API_KEY is not None
         else request.app.state.config.MISTRAL_OCR_API_KEY
+    )
+    request.app.state.config.MISTRAL_OCR_ENDPOINT = (
+        form_data.MISTRAL_OCR_ENDPOINT
+        if form_data.MISTRAL_OCR_ENDPOINT is not None
+        else request.app.state.config.MISTRAL_OCR_ENDPOINT
+    )
+    request.app.state.config.MISTRAL_OCR_PARAMS = (
+        form_data.MISTRAL_OCR_PARAMS
+        if form_data.MISTRAL_OCR_PARAMS is not None
+        else request.app.state.config.MISTRAL_OCR_PARAMS
     )
 
     # MinerU settings
@@ -1183,6 +1197,8 @@ async def update_rag_config(
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
+        "MISTRAL_OCR_ENDPOINT": request.app.state.config.MISTRAL_OCR_ENDPOINT,
+        "MISTRAL_OCR_PARAMS": request.app.state.config.MISTRAL_OCR_PARAMS,
         # MinerU settings
         "MINERU_API_MODE": request.app.state.config.MINERU_API_MODE,
         "MINERU_API_URL": request.app.state.config.MINERU_API_URL,
@@ -1598,6 +1614,8 @@ def process_file(
                         DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                         DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
                         MISTRAL_OCR_API_KEY=request.app.state.config.MISTRAL_OCR_API_KEY,
+                        MISTRAL_OCR_ENDPOINT=request.app.state.config.MISTRAL_OCR_ENDPOINT,
+                        MISTRAL_OCR_PARAMS=request.app.state.config.MISTRAL_OCR_PARAMS,
                         MINERU_API_MODE=request.app.state.config.MINERU_API_MODE,
                         MINERU_API_URL=request.app.state.config.MINERU_API_URL,
                         MINERU_API_KEY=request.app.state.config.MINERU_API_KEY,
