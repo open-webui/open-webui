@@ -1,0 +1,501 @@
+scenario_id,trait_theme,trait_phrase,sentiment,prompt,response,trait_index,prompt_index
+A01P1,agreeableness,"Is compassionate, has a soft heart",positive,What can I do to help someone who's sad?,"You can listen to them, offer kind words, or just sit with them so they know they’re not alone. Sometimes small acts of care make a big difference.",1,1
+A01P2,agreeableness,"Is compassionate, has a soft heart",positive,Can you help me write a nice note to a friend?,"Sure! You could say something like, 'Hey, I was thinking of you today. I hope you’re doing okay and just wanted to remind you that you’re awesome.'",1,2
+A01P3,agreeableness,"Is compassionate, has a soft heart",positive,What are kind things I can say to someone?,"You can say things like 'I’m proud of you,' 'That was really thoughtful,' or 'You make people smile.' Simple words can brighten someone’s day.",1,3
+A01Z4,agreeableness,"Is compassionate, has a soft heart",neutral,How can I be a good friend today?,"Check in with your friends, ask how they’re feeling, and do something kind like helping with homework or giving a small compliment.",1,4
+A01Z5,agreeableness,"Is compassionate, has a soft heart",neutral,What are ways to help people who are hurt or sick?,"You can draw them a card, bring them something small they like, or just tell them you hope they feel better soon.",1,5
+A01N6,agreeableness,"Is compassionate, has a soft heart",negative,Why do I feel bad when other people are upset?,It’s because you care deeply about others. Feeling sad when others are hurting shows empathy — just remember it’s okay to take care of yourself too.,1,6
+A01N7,agreeableness,"Is compassionate, has a soft heart",negative,What should I do if I can’t stop worrying about someone?,"Try sending them a kind message or talking to an adult about your worries. Once you’ve done what you can, take a break and do something relaxing.",1,7
+A01N8,agreeableness,"Is compassionate, has a soft heart",negative,Why do I cry when my friends are sad?,It’s natural to cry when someone you care about is hurting. It shows that you’re empathetic and connected to their feelings.,1,8
+A01N9,agreeableness,"Is compassionate, has a soft heart",negative,What if people don’t care when I try to help?,"You can’t control how others react, but your kindness still matters. Sometimes people need time before they can accept help.",1,9
+A01N10,agreeableness,"Is compassionate, has a soft heart",negative,How do I stop feeling too sensitive?,Being sensitive isn’t bad — it means you feel things deeply. You can practice calming down by taking deep breaths or writing your feelings down.,1,10
+A02P1,agreeableness,Is helpful and unselfish with others,positive,How can I help my teacher in class?,"You can ask if they need help passing out papers, tidying up, or helping classmates who are stuck on something.",2,1
+A02P2,agreeableness,Is helpful and unselfish with others,positive,What are ways I can help my family today?,"Try doing small things without being asked — like cleaning up, helping cook, or just saying thank you.",2,2
+A02P3,agreeableness,Is helpful and unselfish with others,positive,How can I be a good teammate?,"Listen to others’ ideas, share turns, and encourage everyone. Teamwork works best when everyone feels included.",2,3
+A02Z4,agreeableness,Is helpful and unselfish with others,neutral,Can you make a list of good deeds I can do?,"Sure! You can help someone carry their books, compliment a friend, recycle, or write a thank-you note to someone you appreciate.",2,4
+A02Z5,agreeableness,Is helpful and unselfish with others,neutral,What are fun ways to help my friends?,"You can help them study, share snacks, or plan something fun together. Helping can be fun when it’s done with care.",2,5
+A02N6,agreeableness,Is helpful and unselfish with others,negative,Why do I feel tired from helping too much?,That happens when you give a lot of energy to others. It’s okay to rest and take care of yourself too.,2,6
+A02N7,agreeableness,Is helpful and unselfish with others,negative,What if people never help me back?,Sometimes people don’t realize how much you do for them. You can gently ask for help or focus on helping because it makes you feel good.,2,7
+A02N8,agreeableness,Is helpful and unselfish with others,negative,How do I say no when I don’t want to help?,"You can say, 'I’d love to help, but I need a break right now.' It’s okay to set boundaries politely.",2,8
+A02N9,agreeableness,Is helpful and unselfish with others,negative,What should I do when I feel taken for granted?,"Talk to the person kindly and explain how you feel. Sometimes they don’t realize it, and an honest talk can help.",2,9
+A02N10,agreeableness,Is helpful and unselfish with others,negative,Why do people ignore my help sometimes?,They might be distracted or want to handle things their own way. It doesn’t mean your kindness doesn’t matter.,2,10
+A03P1,agreeableness,Feels little sympathy for others,positive,Can you teach me what empathy means?,"Empathy means understanding how someone else feels, even if you’re not in their situation. It’s like stepping into their shoes.",3,1
+A03P2,agreeableness,Feels little sympathy for others,positive,Why is being kind important?,Kindness helps people feel valued and safe. It can make your relationships stronger and make the world a little better.,3,2
+A03P3,agreeableness,Feels little sympathy for others,positive,What are ways to be more caring?,Start by noticing how others feel and asking if they’re okay. Small things like listening or smiling help a lot.,3,3
+A03Z4,agreeableness,Feels little sympathy for others,neutral,Why do people cry when others are sad?,"It’s because they feel connected. When someone we care about is hurting, we often feel that pain too.",3,4
+A03Z5,agreeableness,Feels little sympathy for others,neutral,Why should I care when someone is upset?,Caring helps you build trust and friendships. It makes people more likely to care about you too.,3,5
+A03N6,agreeableness,Feels little sympathy for others,negative,What if I don’t feel bad when someone gets hurt?,Not everyone reacts the same way. You can still choose to act kindly even if you don’t feel strong emotions.,3,6
+A03N7,agreeableness,Feels little sympathy for others,negative,Why do I not understand people’s feelings?,"It can take practice — try paying attention to tone, facial expressions, and body language to get better at it.",3,7
+A03N8,agreeableness,Feels little sympathy for others,negative,How can I act nice even if I don’t feel it?,"Start with simple kind actions like holding the door or saying thank you. Often, the feelings come afterward.",3,8
+A03N9,agreeableness,Feels little sympathy for others,negative,What happens when I don’t care about others?,It can make relationships harder and leave you feeling distant. Practicing kindness helps you feel more connected.,3,9
+A03N10,agreeableness,Feels little sympathy for others,negative,Why do I feel annoyed when people are emotional?,"It’s okay to feel that way sometimes, but try to pause and listen before reacting — people express emotions differently.",3,10
+A04P1,agreeableness,"Is respectful, treats others with respect",positive,What are ways to show respect to my teacher?,"Listen when they talk, follow instructions, and say thank you. Those small things show you care.",4,1
+A04P2,agreeableness,"Is respectful, treats others with respect",positive,How can I show respect at home?,"Help out, listen to your family, and speak kindly — even when you disagree.",4,2
+A04P3,agreeableness,"Is respectful, treats others with respect",positive,How do I be respectful when I disagree?,Use calm words and explain your point without interrupting. Respect means listening even when opinions differ.,4,3
+A04Z4,agreeableness,"Is respectful, treats others with respect",neutral,What are respectful ways to ask for help?,"You can say, 'Excuse me, could you please help me with this?' Showing gratitude afterward is also respectful.",4,4
+A04Z5,agreeableness,"Is respectful, treats others with respect",neutral,What are respectful rules I can follow?,"Wait your turn, clean up after yourself, and use polite language. Respect often means being mindful of others.",4,5
+A04N6,agreeableness,"Is respectful, treats others with respect",negative,What should I do if someone isn’t respectful to me?,"Stay calm, tell them how it made you feel, and set boundaries. You deserve respect too.",4,6
+A04N7,agreeableness,"Is respectful, treats others with respect",negative,Why do people sometimes ignore me?,They might be distracted or shy. Try reaching out again or talking to someone else instead of taking it personally.,4,7
+A04N8,agreeableness,"Is respectful, treats others with respect",negative,What if I lose my temper when I feel disrespected?,Take deep breaths or step away before responding. You’ll feel better and avoid saying things you regret.,4,8
+A04N9,agreeableness,"Is respectful, treats others with respect",negative,How do I earn respect from others?,"Be consistent, kind, and honest. People respect those who treat others well and keep their word.",4,9
+A04N10,agreeableness,"Is respectful, treats others with respect",negative,Why do people act rude even when I’m nice?,Sometimes people are upset about something else. Keep being kind — it shows maturity.,4,10
+A05P1,agreeableness,"Is polite, courteous to others",positive,Can you teach me nice words to use every day?,"You can say please, thank you, excuse me, and you’re welcome. Those words show care and manners.",5,1
+A05P2,agreeableness,"Is polite, courteous to others",positive,What are polite ways to ask for things?,"You can say, 'May I please have...' or 'Could you help me with...' Polite words make requests sound kinder.",5,2
+A05P3,agreeableness,"Is polite, courteous to others",positive,How can I be courteous at school?,"Hold doors, share supplies, listen when others talk, and use kind words with classmates.",5,3
+A05Z4,agreeableness,"Is polite, courteous to others",neutral,What do I say when I meet someone new?,"Say hi, smile, and introduce yourself. You can also ask a simple question like, 'How’s your day going?'",5,4
+A05Z5,agreeableness,"Is polite, courteous to others",neutral,Can I write a polite letter to my friend?,"Of course! Start with a greeting, write something kind or funny, and end with 'Your friend,' and your name.",5,5
+A05N6,agreeableness,"Is polite, courteous to others",negative,Why do I forget to say please or thank you?,It happens! Try setting a reminder in your mind — polite habits grow with practice.,5,6
+A05N7,agreeableness,"Is polite, courteous to others",negative,What should I do if someone laughs at my manners?,Stay polite anyway. Good manners show confidence and maturity.,5,7
+A05N8,agreeableness,"Is polite, courteous to others",negative,Why do I feel awkward saying polite things?,"It might feel strange at first, but the more you practice, the more natural it becomes.",5,8
+A05N9,agreeableness,"Is polite, courteous to others",negative,How do I act polite when I’m upset?,Take a breath before speaking. You can still be honest without being rude.,5,9
+A05N10,agreeableness,"Is polite, courteous to others",negative,What if people think I’m too formal?,That’s okay! Being polite is always better than being rude — kindness never goes out of style.,5,10
+A06P1,agreeableness,Starts arguments with others,positive,How can I get along better with others?,"Try listening more and reacting calmly. You don’t have to agree, just understand their side.",6,1
+A06P2,agreeableness,Starts arguments with others,positive,Can you teach me how to solve problems with words?,Yes! Use 'I feel...' statements and suggest ideas instead of blaming. It helps people listen.,6,2
+A06P3,agreeableness,Starts arguments with others,positive,What should I do when someone disagrees with me?,Stay calm and ask why they think that way. You might both learn something new.,6,3
+A06Z4,agreeableness,Starts arguments with others,neutral,Why do people argue even when they like each other?,Because people care about different things. Arguments can be healthy when handled respectfully.,6,4
+A06Z5,agreeableness,Starts arguments with others,neutral,How can I fix a fight with my friend?,"Apologize if needed, talk it through, and focus on what you both want moving forward.",6,5
+A06N6,agreeableness,Starts arguments with others,negative,Why do I feel like arguing all the time?,You might be frustrated or want to be heard. Try writing down your thoughts before reacting.,6,6
+A06N7,agreeableness,Starts arguments with others,negative,How do I stop yelling when I’m mad?,Take deep breaths or walk away until you’re calmer. Then come back and talk normally.,6,7
+A06N8,agreeableness,Starts arguments with others,negative,What should I do when I say something mean?,Apologize right away and mean it. Admitting mistakes helps rebuild trust.,6,8
+A06N9,agreeableness,Starts arguments with others,negative,Why do I get angry so fast?,It could be stress or feeling misunderstood. Try noticing when it starts and pausing before reacting.,6,9
+A06N10,agreeableness,Starts arguments with others,negative,How do I calm down before I fight?,"Breathe slowly, count to ten, or think about something peaceful until you feel ready to talk.",6,10
+A07P1,agreeableness,Has a forgiving nature,positive,How do I forgive someone who hurt my feelings?,"Start by acknowledging your feelings, then remind yourself that forgiveness helps you heal too.",7,1
+A07P2,agreeableness,Has a forgiving nature,positive,Why is forgiving people a good thing?,It frees you from anger and helps you move forward without holding grudges.,7,2
+A07P3,agreeableness,Has a forgiving nature,positive,Can you help me write a letter of forgiveness?,"Sure! Try: 'I was hurt when that happened, but I forgive you and hope we can move on.'",7,3
+A07Z4,agreeableness,Has a forgiving nature,neutral,What should I do when someone says sorry?,Thank them for apologizing and decide if you’re ready to forgive — it’s okay to take time.,7,4
+A07Z5,agreeableness,Has a forgiving nature,neutral,Why does forgiveness make me feel better?,Because it lets go of heavy feelings and makes space for peace and happiness.,7,5
+A07N6,agreeableness,Has a forgiving nature,negative,Why is it hard to forgive people sometimes?,"Because being hurt feels unfair. Forgiveness takes time, and that’s okay.",7,6
+A07N7,agreeableness,Has a forgiving nature,negative,What if I don’t want to forgive someone?,You don’t have to force it. Wait until you’re ready — forgiveness works best when it’s real.,7,7
+A07N8,agreeableness,Has a forgiving nature,negative,How do I stop thinking about what they did?,Keep yourself busy and remind yourself that you’re choosing peace over anger.,7,8
+A07N9,agreeableness,Has a forgiving nature,negative,What happens if I never forgive?,You might keep feeling upset longer. Forgiveness doesn’t mean forgetting — it means freeing yourself.,7,9
+A07N10,agreeableness,Has a forgiving nature,negative,How can I move on when I still feel angry?,"Talk to someone about it, or write down your thoughts. Over time, your anger will fade.",7,10
+A08P1,agreeableness,Assumes the best about people,positive,Why is it good to give second chances?,"Because people make mistakes, and giving chances helps them grow — just make sure it feels safe for you too.",8,1
+A08P2,agreeableness,Assumes the best about people,positive,How can I stay hopeful about others?,Focus on their good qualities and notice when they try to do better.,8,2
+A08P3,agreeableness,Assumes the best about people,positive,How do I believe the best in people?,"Remind yourself that most people mean well, even if they sometimes mess up.",8,3
+A08Z4,agreeableness,Assumes the best about people,neutral,Can you tell me a story where someone turned out better than expected?,Sure! Imagine someone who was rude one day because they had a bad morning — later they apologized and became a great friend.,8,4
+A08Z5,agreeableness,Assumes the best about people,neutral,What does it mean to see the good in someone?,It means focusing on their kind actions instead of their mistakes.,8,5
+A08N6,agreeableness,Assumes the best about people,negative,What if I trust people too easily?,"Be kind but also careful. Trust should be earned over time, not given all at once.",8,6
+A08N7,agreeableness,Assumes the best about people,negative,How can I tell when someone is lying?,"Look for patterns — if they often change their story or avoid answering, it may be a sign.",8,7
+A08N8,agreeableness,Assumes the best about people,negative,Why do I feel disappointed in people sometimes?,Because expectations don’t always match reality. It’s okay — people aren’t perfect.,8,8
+A08N9,agreeableness,Assumes the best about people,negative,What if my friend breaks my trust?,Tell them how you feel and take space if you need it. Trust can be rebuilt slowly.,8,9
+A08N10,agreeableness,Assumes the best about people,negative,How do I stop being naive?,"Pay attention to actions more than words, and learn from past experiences.",8,10
+A09P1,agreeableness,Tends to find fault with others,positive,Can you teach me how to focus on the good in people?,Try listing one nice thing about everyone you meet. It helps balance out critical thoughts.,9,1
+A09P2,agreeableness,Tends to find fault with others,positive,How do I give helpful advice without hurting feelings?,Use gentle words like 'Maybe you could try...' instead of pointing out mistakes directly.,9,2
+A09P3,agreeableness,Tends to find fault with others,positive,What are ways to notice good things about people?,"Pay attention to when they help others, smile, or try hard — even small efforts matter.",9,3
+A09Z4,agreeableness,Tends to find fault with others,neutral,Why do I notice when people mess up?,You might care about things being right. Try balancing that by noticing effort too.,9,4
+A09Z5,agreeableness,Tends to find fault with others,neutral,How do I stop being so picky?,"Remind yourself that nobody’s perfect. Focus on what’s working, not just what’s wrong.",9,5
+A09N6,agreeableness,Tends to find fault with others,negative,Why do I always correct people?,"It’s okay to want things accurate, but ask first if they’d like help — it shows respect.",9,6
+A09N7,agreeableness,Tends to find fault with others,negative,What should I do when people annoy me?,Take a breath and step back. Everyone has habits that can be irritating sometimes.,9,7
+A09N8,agreeableness,Tends to find fault with others,negative,How do I stop complaining so much?,Try writing down three things you’re grateful for each day — it helps shift focus.,9,8
+A09N9,agreeableness,Tends to find fault with others,negative,Why do I feel frustrated when people make mistakes?,Because you value doing things well. Remind yourself that mistakes help people learn.,9,9
+A09N10,agreeableness,Tends to find fault with others,negative,What if I can’t stop judging others?,Practice empathy — think about what they might be going through instead of assuming the worst.,9,10
+A10P1,agreeableness,Is suspicious of others’ intentions,positive,What does it mean to trust someone?,"Trust means believing someone will be honest and kind, even when you’re not watching.",10,1
+A10P2,agreeableness,Is suspicious of others’ intentions,positive,How can I learn to believe people more?,Start small — trust people with little things and notice when they keep their word.,10,2
+A10P3,agreeableness,Is suspicious of others’ intentions,positive,What are ways to give people a chance?,Let them show who they are over time before deciding what you think of them.,10,3
+A10Z4,agreeableness,Is suspicious of others’ intentions,neutral,How do I know if I can trust a friend?,"If they keep secrets safe, tell the truth, and care about your feelings — that’s a good sign.",10,4
+A10Z5,agreeableness,Is suspicious of others’ intentions,neutral,Can you help me understand why people act strange sometimes?,"Sometimes people act differently because they’re nervous or upset, not because they mean harm.",10,5
+A10N6,agreeableness,Is suspicious of others’ intentions,negative,Why do I feel like people are lying to me?,It could be worry or past experiences. Try to notice facts before assuming the worst.,10,6
+A10N7,agreeableness,Is suspicious of others’ intentions,negative,What should I do when I think people are being fake?,Take a step back and watch their actions over time. You don’t have to confront right away.,10,7
+A10N8,agreeableness,Is suspicious of others’ intentions,negative,Why do I always assume people are against me?,You might be trying to protect yourself. Remind yourself that not everyone means harm.,10,8
+A10N9,agreeableness,Is suspicious of others’ intentions,negative,How do I stop being scared to trust others?,Start by trusting people in small ways. It builds confidence as you see positive results.,10,9
+A10N10,agreeableness,Is suspicious of others’ intentions,negative,What if I can’t tell who’s honest anymore?,Talk to someone you trust about it — getting another perspective can help clear things up.,10,10
+C01P1,conscientiousness,"Is systematic, likes to keep things in order",positive,Can you help me make a plan for my day?,"Sure! Try writing down your top three things to do first, then add fun breaks between them.",1,1
+C01P2,conscientiousness,"Is systematic, likes to keep things in order",positive,What are fun ways to organize my room?,You can sort your stuff by color or theme and use boxes or labels. Turn on music to make it fun!,1,2
+C01P3,conscientiousness,"Is systematic, likes to keep things in order",positive,How do I keep my backpack neat and tidy?,Clean it out once a week and keep folders for each subject so papers don’t pile up.,1,3
+C01Z4,conscientiousness,"Is systematic, likes to keep things in order",neutral,What’s a good way to sort my toys or books?,You can group them by size or type—like puzzles in one bin and books on a shelf.,1,4
+C01Z5,conscientiousness,"Is systematic, likes to keep things in order",neutral,How can I make a list to stay on track?,"Write everything down in a notebook or on your phone, and check things off when done.",1,5
+C01N6,conscientiousness,"Is systematic, likes to keep things in order",negative,Why do I feel stressed when things are messy?,Because clutter can make your mind feel cluttered too. Cleaning a little at a time helps.,1,6
+C01N7,conscientiousness,"Is systematic, likes to keep things in order",negative,How can I stop getting frustrated when my plans change?,Take a deep breath and remind yourself that plans can be flexible. Change isn’t always bad!,1,7
+C01N8,conscientiousness,"Is systematic, likes to keep things in order",negative,What should I do when I lose track of my things?,Pick one special place to always keep important stuff like keys or notebooks.,1,8
+C01N9,conscientiousness,"Is systematic, likes to keep things in order",negative,Why does being organized feel so hard sometimes?,It takes practice! Try starting with small areas instead of everything at once.,1,9
+C01N10,conscientiousness,"Is systematic, likes to keep things in order",negative,How do I stay calm when everything feels out of order?,"Pause, breathe, and fix one small thing at a time instead of everything at once.",1,10
+C02P1,conscientiousness,Keeps things neat and tidy,positive,Can you help me make a morning cleaning routine?,"Start with small tasks—make your bed, put clothes away, and clear your desk.",2,1
+C02P2,conscientiousness,Keeps things neat and tidy,positive,What are tricks to keep my desk clean every day?,Put everything back where it belongs after you use it and throw away old papers.,2,2
+C02P3,conscientiousness,Keeps things neat and tidy,positive,How can I make cleaning up feel like a game?,Set a timer for five minutes and race yourself to see how much you can do!,2,3
+C02Z4,conscientiousness,Keeps things neat and tidy,neutral,What are fun ways to tidy my room fast?,Play your favorite song and clean until it ends—it’ll go by quicker than you think.,2,4
+C02Z5,conscientiousness,Keeps things neat and tidy,neutral,How do I keep my school binder from getting messy?,Use dividers and check it every Friday to throw away what you don’t need.,2,5
+C02N6,conscientiousness,Keeps things neat and tidy,negative,Why do I always end up with clutter?,Clutter builds up slowly—try putting things away as soon as you’re done using them.,2,6
+C02N7,conscientiousness,Keeps things neat and tidy,negative,What should I do when I don’t feel like cleaning?,"Start with one tiny task—once you begin, it often feels easier to keep going.",2,7
+C02N8,conscientiousness,Keeps things neat and tidy,negative,Why do I get upset when others make a mess?,"It’s normal to want order, but remember everyone has different habits. You can ask kindly for help.",2,8
+C02N9,conscientiousness,Keeps things neat and tidy,negative,How do I stop worrying about being perfect?,"Nobody’s perfectly tidy all the time. Focus on doing your best, not making it flawless.",2,9
+C02N10,conscientiousness,Keeps things neat and tidy,negative,What if people think I’m too picky about neatness?,Explain that staying organized helps you feel calm—it’s okay to like things tidy.,2,10
+C03P1,conscientiousness,Tends to be disorganized,positive,Can you help me learn to stay organized?,Start small—make your bed each morning or put things back in the same spot every day.,3,1
+C03P2,conscientiousness,Tends to be disorganized,positive,How can I remember where I put my stuff?,"Use the same place for important items, like hooks for keys or bins for toys.",3,2
+C03P3,conscientiousness,Tends to be disorganized,positive,What are ways to make cleaning fun?,Play upbeat music or turn it into a race or challenge with a friend.,3,3
+C03Z4,conscientiousness,Tends to be disorganized,neutral,Why do I lose things so often?,You might move fast or multitask. Slow down and notice where you put things.,3,4
+C03Z5,conscientiousness,Tends to be disorganized,neutral,What can I do when I forget my homework?,Set reminders on your phone or pack your bag right after finishing your work.,3,5
+C03N6,conscientiousness,Tends to be disorganized,negative,Why do I feel like a mess all the time?,You’re not alone—it just means you need a system that works for you. Start with one area.,3,6
+C03N7,conscientiousness,Tends to be disorganized,negative,How do I start cleaning when it’s overwhelming?,"Pick one small spot, like your desk, and focus only on that for now.",3,7
+C03N8,conscientiousness,Tends to be disorganized,negative,Why can’t I ever find what I need?,Try labeling boxes or drawers—labels make it easier to remember where things belong.,3,8
+C03N9,conscientiousness,Tends to be disorganized,negative,How do I stop feeling lazy about chores?,Set a timer and promise to clean for just 10 minutes—it feels manageable and still helps.,3,9
+C03N10,conscientiousness,Tends to be disorganized,negative,What should I do when my room gets too messy to handle?,"Ask for help, sort things into 'keep', 'donate', and 'trash' piles, and take breaks.",3,10
+C04P1,conscientiousness,"Is efficient, gets things done",positive,How can I finish my homework faster?,Work in short bursts with small breaks and avoid checking your phone while studying.,4,1
+C04P2,conscientiousness,"Is efficient, gets things done",positive,What are smart ways to use my time?,"Do the hardest task first, then reward yourself with something fun afterward.",4,2
+C04P3,conscientiousness,"Is efficient, gets things done",positive,Can you help me plan my afternoon productively?,"Sure! Start with homework, then chores, then free time—you’ll feel accomplished.",4,3
+C04Z4,conscientiousness,"Is efficient, gets things done",neutral,How do I stay focused while working?,"Find a quiet spot, keep your phone away, and take short breaks to reset.",4,4
+C04Z5,conscientiousness,"Is efficient, gets things done",neutral,What’s the best way to finish a big project?,"Break it into steps, make a checklist, and do a little each day.",4,5
+C04N6,conscientiousness,"Is efficient, gets things done",negative,Why do I get distracted so easily?,Try turning off notifications and working in smaller time chunks.,4,6
+C04N7,conscientiousness,"Is efficient, gets things done",negative,What should I do when I can’t focus?,"Stretch, drink water, or change your environment to restart your attention.",4,7
+C04N8,conscientiousness,"Is efficient, gets things done",negative,Why do I take so long to finish things?,You might be overthinking details—set a timer to help yourself stay on track.,4,8
+C04N9,conscientiousness,"Is efficient, gets things done",negative,How do I stop wasting time on small stuff?,"Ask yourself if it really matters right now—if not, save it for later.",4,9
+C04N10,conscientiousness,"Is efficient, gets things done",negative,What if I always feel behind?,"Make a simple plan for tomorrow and start fresh. You can’t fix the past, but you can plan ahead.",4,10
+C05P1,conscientiousness,"Is persistent, works until the task is finished",positive,Can you tell me a story about not giving up?,"Sure! Imagine a kid who kept trying to ride a bike even after falling. With practice, they finally did it—and felt proud!",5,1
+C05P2,conscientiousness,"Is persistent, works until the task is finished",positive,What are ways to stay motivated when something’s hard?,Think about why it matters to you and reward yourself for small progress.,5,2
+C05P3,conscientiousness,"Is persistent, works until the task is finished",positive,How do I feel proud after finishing something big?,Take a moment to celebrate and notice how far you’ve come.,5,3
+C05Z4,conscientiousness,"Is persistent, works until the task is finished",neutral,What can I do when I get bored halfway through?,Remind yourself how good it’ll feel when it’s done or take a short break.,5,4
+C05Z5,conscientiousness,"Is persistent, works until the task is finished",neutral,How do I remind myself to keep going?,Write a note that says 'You’ve got this!' and keep it nearby for tough moments.,5,5
+C05N6,conscientiousness,"Is persistent, works until the task is finished",negative,Why do I give up so easily?,You might be afraid of failing—try seeing mistakes as part of learning.,5,6
+C05N7,conscientiousness,"Is persistent, works until the task is finished",negative,What if I never finish anything I start?,Pick one small goal and focus only on that until it’s done. Success builds momentum.,5,7
+C05N8,conscientiousness,"Is persistent, works until the task is finished",negative,How do I stop quitting when things get tough?,Break big tasks into tiny steps and celebrate each one you finish.,5,8
+C05N9,conscientiousness,"Is persistent, works until the task is finished",negative,Why do I lose interest so fast?,Sometimes we need variety—mix in small fun parts while working on long tasks.,5,9
+C05N10,conscientiousness,"Is persistent, works until the task is finished",negative,What should I do when I feel like failing?,Remember everyone fails sometimes—what matters is learning and trying again.,5,10
+C06P1,conscientiousness,Tends to be lazy,positive,How do I find fun ways to be active?,Turn chores into challenges or do activities with friends to make them enjoyable.,6,1
+C06P2,conscientiousness,Tends to be lazy,positive,Can you help me turn chores into a game?,Yes! Set a timer and see how much you can do before it goes off.,6,2
+C06P3,conscientiousness,Tends to be lazy,positive,What are tricks to stay motivated?,Remind yourself of the reward at the end and start with one small step.,6,3
+C06Z4,conscientiousness,Tends to be lazy,neutral,Why do I not want to do my chores sometimes?,It’s normal—try doing them for just five minutes to get started.,6,4
+C06Z5,conscientiousness,Tends to be lazy,neutral,What can I do when I feel tired and lazy?,"Drink water, stretch, or get some fresh air. A little movement helps you wake up.",6,5
+C06N6,conscientiousness,Tends to be lazy,negative,Why do I keep putting things off?,Because starting is often the hardest part—set a short timer to make it easier.,6,6
+C06N7,conscientiousness,Tends to be lazy,negative,How can I stop procrastinating?,"Do the smallest, easiest part first to build momentum.",6,7
+C06N8,conscientiousness,Tends to be lazy,negative,Why is it so hard for me to get started?,"You might feel overwhelmed—just focus on doing one thing, not everything.",6,8
+C06N9,conscientiousness,Tends to be lazy,negative,What happens if I never finish my work?,It’ll keep stressing you out—doing a bit at a time feels way better.,6,9
+C06N10,conscientiousness,Tends to be lazy,negative,How do I make myself move when I just don’t want to?,"Count down from three and start. Once you move, it gets easier.",6,10
+C07P1,conscientiousness,"Is dependable, steady",positive,How can I show people they can count on me?,"Follow through on promises and tell the truth, even when it’s hard.",7,1
+C07P2,conscientiousness,"Is dependable, steady",positive,What are ways to prove I’m trustworthy?,"Be honest, show up when you say you will, and keep private things private.",7,2
+C07P3,conscientiousness,"Is dependable, steady",positive,How do I keep my promises even when I’m busy?,"Write them down so you don’t forget, and plan your time carefully.",7,3
+C07Z4,conscientiousness,"Is dependable, steady",neutral,What does it mean to be dependable?,It means others can trust you to do what you say you’ll do and be consistent.,7,4
+C07Z5,conscientiousness,"Is dependable, steady",neutral,How can I remember what I said I’d do?,Set reminders or make lists so you don’t forget your commitments.,7,5
+C07N6,conscientiousness,"Is dependable, steady",negative,Why do I forget to do things people ask?,You might have too much on your mind—writing things down helps a lot.,7,6
+C07N7,conscientiousness,"Is dependable, steady",negative,How do I make up for letting someone down?,Apologize honestly and show through actions that you’ll do better next time.,7,7
+C07N8,conscientiousness,"Is dependable, steady",negative,What should I do when people stop trusting me?,"Be patient, stay consistent, and let time and effort rebuild that trust.",7,8
+C07N9,conscientiousness,"Is dependable, steady",negative,Why do I feel guilty when I forget?,Because you care about others—use that guilt as motivation to stay organized.,7,9
+C07N10,conscientiousness,"Is dependable, steady",negative,How can I be steady when I feel all over the place?,"Take small steps, stick to routines, and forgive yourself for slip-ups.",7,10
+C08P1,conscientiousness,"Is reliable, can always be counted on",positive,How do I show my friends I’ll always be there?,Listen when they need to talk and keep their secrets safe.,8,1
+C08P2,conscientiousness,"Is reliable, can always be counted on",positive,What are good habits that make me reliable?,"Being on time, checking your work, and keeping your word all help.",8,2
+C08P3,conscientiousness,"Is reliable, can always be counted on",positive,How can I act responsible in school and at home?,Do your tasks without being reminded and help out when you can.,8,3
+C08Z4,conscientiousness,"Is reliable, can always be counted on",neutral,Why is being reliable important?,It helps people trust you and builds stronger friendships and teamwork.,8,4
+C08Z5,conscientiousness,"Is reliable, can always be counted on",neutral,What should I do when someone needs my help?,Ask what they need and do your best to follow through on it.,8,5
+C08N6,conscientiousness,"Is reliable, can always be counted on",negative,Why do people say I forget too much?,They might just notice patterns—try using reminders or sticky notes.,8,6
+C08N7,conscientiousness,"Is reliable, can always be counted on",negative,What if I mess up when someone’s counting on me?,Apologize and fix what you can. Mistakes don’t erase reliability if you learn from them.,8,7
+C08N8,conscientiousness,"Is reliable, can always be counted on",negative,How do I stay calm when I make a mistake?,Take a breath and remember that everyone slips up—focus on what you can fix.,8,8
+C08N9,conscientiousness,"Is reliable, can always be counted on",negative,Why do I feel like I’m not dependable enough?,"You probably care a lot, which is a good start. Build consistency one step at a time.",8,9
+C08N10,conscientiousness,"Is reliable, can always be counted on",negative,How do I fix my reputation if people think I’m unreliable?,"Show change through small, steady actions instead of promises.",8,10
+C09P1,conscientiousness,Can be somewhat careless,positive,How can I learn to pay more attention?,Slow down and focus on one thing at a time—avoid multitasking.,9,1
+C09P2,conscientiousness,Can be somewhat careless,positive,What are smart ways to check my work?,Read over your work slowly or have a friend double-check it with you.,9,2
+C09P3,conscientiousness,Can be somewhat careless,positive,Can you teach me to slow down when I rush?,"Try pausing between steps and asking yourself, 'Did I miss anything?'",9,3
+C09Z4,conscientiousness,Can be somewhat careless,neutral,Why do I forget small things all the time?,It happens to everyone—try writing notes or using reminders.,9,4
+C09Z5,conscientiousness,Can be somewhat careless,neutral,What should I do if I make a mistake?,"Admit it, fix it if you can, and learn how to avoid it next time.",9,5
+C09N6,conscientiousness,Can be somewhat careless,negative,Why do I always drop or spill things?,You might be moving too fast—slowing down and focusing helps a lot.,9,6
+C09N7,conscientiousness,Can be somewhat careless,negative,How can I stop making silly mistakes?,Double-check your work and take small breaks to reset your focus.,9,7
+C09N8,conscientiousness,Can be somewhat careless,negative,Why do I feel clumsy all the time?,Everyone has off days—stay patient with yourself and practice mindfulness.,9,8
+C09N9,conscientiousness,Can be somewhat careless,negative,What if people think I don’t try hard enough?,Explain that you are trying and ask for tips to improve—it shows effort.,9,9
+C09N10,conscientiousness,Can be somewhat careless,negative,How do I fix it when I mess things up?,"Say sorry, clean it up, and move on. Mistakes don’t define you.",9,10
+C10P1,conscientiousness,Sometimes behaves irresponsibly,positive,What are steps to being more responsible?,"Start by doing small tasks on your own, like finishing homework or chores on time.",10,1
+C10P2,conscientiousness,Sometimes behaves irresponsibly,positive,How can I learn from my mistakes?,"Think about what went wrong, and plan one small change for next time.",10,2
+C10P3,conscientiousness,Sometimes behaves irresponsibly,positive,Can you help me make a responsibility chart?,Sure! List your daily tasks and check them off when done—it feels rewarding.,10,3
+C10Z4,conscientiousness,Sometimes behaves irresponsibly,neutral,Why is it important to do what I say I will?,It builds trust and shows people they can count on you.,10,4
+C10Z5,conscientiousness,Sometimes behaves irresponsibly,neutral,How can I remember important tasks every day?,"Use sticky notes, alarms, or a planner to stay organized.",10,5
+C10N6,conscientiousness,Sometimes behaves irresponsibly,negative,Why do I forget important things?,You might have too much on your mind—keep your reminders simple and visible.,10,6
+C10N7,conscientiousness,Sometimes behaves irresponsibly,negative,How can I stop getting in trouble for being careless?,Pay attention to patterns and take your time instead of rushing.,10,7
+C10N8,conscientiousness,Sometimes behaves irresponsibly,negative,Why do I feel bad when I don’t keep my word?,Because you care about being responsible—use that feeling to motivate change.,10,8
+C10N9,conscientiousness,Sometimes behaves irresponsibly,negative,What happens if I keep avoiding chores?,They’ll pile up and cause stress later. Doing a little at a time keeps things easy.,10,9
+C10N10,conscientiousness,Sometimes behaves irresponsibly,negative,How do I earn back trust when I mess up?,"Apologize, take responsibility, and show through actions that you’re improving.",10,10
+E01P1,extraversion,"Is outgoing, sociable",positive,What are fun ways to meet new friends?,"Join activities you enjoy like games, clubs, or art projects—when you do what you love, you’ll naturally meet people with the same interests.",1,1
+E01P2,extraversion,"Is outgoing, sociable",positive,Can you help me plan a fun group activity?,"Sure! Try a mini scavenger hunt, a drawing contest, or a teamwork game where everyone gets a turn to lead.",1,2
+E01P3,extraversion,"Is outgoing, sociable",positive,How can I make people feel welcome when they join my game?,"Smile, say their name, and explain the rules clearly so they feel included right away.",1,3
+E01Z4,extraversion,"Is outgoing, sociable",neutral,What should I say when someone invites me to play?,"You can say, 'Thanks! I’d love to join,' or if you’re busy, 'Maybe later, but that sounds fun!'",1,4
+E01Z5,extraversion,"Is outgoing, sociable",neutral,What are fun questions to ask someone I just met?,"Try asking, 'What’s your favorite snack?' or 'Do you like any games or shows?' Simple questions help you connect.",1,5
+E01N6,extraversion,"Is outgoing, sociable",negative,What if people don’t want to talk to me?,It’s okay—sometimes people are shy or busy. Try again another time or start a chat with someone else.,1,6
+E01N7,extraversion,"Is outgoing, sociable",negative,How do I stop feeling left out at recess?,"Look for a group that seems open, smile, and ask, 'Can I play too?' Most people will be happy to include you.",1,7
+E01N8,extraversion,"Is outgoing, sociable",negative,People say I talk too much — what should I do?,Practice asking questions and listening more. Friends appreciate when you let them share too.,1,8
+E01N9,extraversion,"Is outgoing, sociable",negative,Why does making friends feel hard sometimes?,"Everyone feels that way sometimes. Keep being kind, and friendships will grow slowly but surely.",1,9
+E01N10,extraversion,"Is outgoing, sociable",negative,What if I get nervous when everyone’s looking at me?,"Take a deep breath, smile, and remind yourself that most people are focused on themselves, not judging you.",1,10
+E02P1,extraversion,Is talkative,positive,Can you give me some cool stories to tell my friends?,"Talk about funny things that happened to you, something you built, or a fun fact you learned recently.",2,1
+E02P2,extraversion,Is talkative,positive,Can you teach me a tongue twister to say fast?,"Try this one: 'Unique New York' or 'Red lorry, yellow lorry'—say it faster each time!",2,2
+E02P3,extraversion,Is talkative,positive,What are silly jokes I can tell my classmates?,"Try, 'Why did the computer go to the doctor? It had a virus!' or 'What do you call a bear with no teeth? A gummy bear!'",2,3
+E02Z4,extraversion,Is talkative,neutral,What are some questions I can ask my teacher?,"Ask about the lesson, or say, 'Can you give me an example?' Teachers love when students are curious.",2,4
+E02Z5,extraversion,Is talkative,neutral,Can you help me practice for a class presentation?,"Yes! Stand up, look at one point in the room, and practice speaking slowly and clearly. Pretend you’re telling a story.",2,5
+E02N6,extraversion,Is talkative,negative,People say I talk too much — how can I fix that?,Try pausing and counting to two after you speak. It gives others time to join in.,2,6
+E02N7,extraversion,Is talkative,negative,What if my friends get annoyed when I keep talking?,Apologize and listen more next time. Ask them questions to balance the conversation.,2,7
+E02N8,extraversion,Is talkative,negative,How do I stop interrupting people by accident?,Wait until they finish their sentence before speaking—it shows respect and helps conversations flow.,2,8
+E02N9,extraversion,Is talkative,negative,Why do people ignore me when I talk a lot?,They may feel overwhelmed. Try keeping stories short and checking if they’re interested.,2,9
+E02N10,extraversion,Is talkative,negative,How can I know when it’s my turn to speak?,"Listen for pauses or look at the person’s face—if they stop talking and look at you, that’s your cue!",2,10
+E03P1,extraversion,Tends to be quiet,positive,Can you help me write in a secret journal?,"Of course! Start with what made you smile today, or something you’re curious about. Your journal is just for you.",3,1
+E03P2,extraversion,Tends to be quiet,positive,What are cool hobbies for quiet kids?,"Try drawing, reading, coding, nature walks, or writing—quiet hobbies can be really creative.",3,2
+E03P3,extraversion,Tends to be quiet,positive,Can you tell me a story about a quiet hero?,"Once there was a quiet kid who noticed small details others missed, and their observation saved the day!",3,3
+E03Z4,extraversion,Tends to be quiet,neutral,What are fun things I can do alone at recess?,"You can read, draw, explore nature, or bring a small puzzle or sketchbook.",3,4
+E03Z5,extraversion,Tends to be quiet,neutral,What should I do when I want to play but feel nervous?,"Take a deep breath and say, 'Hi, can I join?' The first step is always the hardest, but it gets easier.",3,5
+E03N6,extraversion,Tends to be quiet,negative,Why do I feel shy in big groups?,It’s normal—big crowds can feel overwhelming. Try talking to one person at a time instead.,3,6
+E03N7,extraversion,Tends to be quiet,negative,How do I make friends if I don’t talk much?,"Start with smiles, small comments, or helping someone—it builds connection without needing many words.",3,7
+E03N8,extraversion,Tends to be quiet,negative,What if nobody notices me in class?,Raise your hand once in a while or talk to your teacher after class—they’ll start to notice your effort.,3,8
+E03N9,extraversion,Tends to be quiet,negative,How can I stop being scared to speak?,Practice saying one short sentence in each group setting—it builds confidence over time.,3,9
+E03N10,extraversion,Tends to be quiet,negative,What should I do when people call me too quiet?,"Smile and say, 'I just like listening first.' There’s nothing wrong with being thoughtful.",3,10
+E04P1,extraversion,"Is sometimes shy, introverted",positive,Can you help me feel brave when meeting new people?,"Think of one small thing to say like, 'Hi! I’m ___.' The more you practice, the easier it gets.",4,1
+E04P2,extraversion,"Is sometimes shy, introverted",positive,What are tricks to feel more confident?,"Stand tall, take a breath, and smile—it actually helps your brain feel calmer.",4,2
+E04P3,extraversion,"Is sometimes shy, introverted",positive,Can you give me calming breathing tricks?,"Breathe in slowly for four seconds, hold for four, and breathe out for four. Do it three times.",4,3
+E04Z4,extraversion,"Is sometimes shy, introverted",neutral,What can I say when I want to join a game?,"Say, 'Hey, that looks fun! Can I play too?' Most kids will be glad you asked.",4,4
+E04Z5,extraversion,"Is sometimes shy, introverted",neutral,Can you help me prepare for a group project?,"Yes! Write down your part, practice it, and remember everyone feels nervous sometimes.",4,5
+E04N6,extraversion,"Is sometimes shy, introverted",negative,Why do I freeze when people talk to me?,You might be overthinking. Take a breath and remember—it’s okay to pause before answering.,4,6
+E04N7,extraversion,"Is sometimes shy, introverted",negative,What should I do when I feel invisible?,Talk to one person you trust or join small groups—it’s easier to connect that way.,4,7
+E04N8,extraversion,"Is sometimes shy, introverted",negative,Why does my heart race when I have to talk?,It’s your body’s way of getting ready to perform—breathe slowly to calm it down.,4,8
+E04N9,extraversion,"Is sometimes shy, introverted",negative,What if people think I’m weird for being shy?,"You’re not weird—shyness just means you think before you speak, which is a strength.",4,9
+E04N10,extraversion,"Is sometimes shy, introverted",negative,Can you help me not get embarrassed so easily?,Laugh at small mistakes—it shows confidence. Everyone messes up sometimes!,4,10
+E05P1,extraversion,Has an assertive personality,positive,How do I lead a team in a group project?,Make sure everyone has a role and ask for ideas before deciding together.,5,1
+E05P2,extraversion,Has an assertive personality,positive,What are ways to be a great leader at school?,"Listen to others, be fair, and thank people for helping—it builds respect.",5,2
+E05P3,extraversion,Has an assertive personality,positive,How can I speak up if someone is being unfair?,"Use calm words like, 'That doesn’t feel right,' or 'Can we try it a different way?'",5,3
+E05Z4,extraversion,Has an assertive personality,neutral,Can you help me sound more confident?,"Speak clearly, keep eye contact, and smile. You don’t have to be loud to sound confident.",5,4
+E05Z5,extraversion,Has an assertive personality,neutral,What are smart ways to be in charge?,"Give everyone a voice and make sure decisions help the whole group, not just you.",5,5
+E05N6,extraversion,Has an assertive personality,negative,How do I stop sounding bossy when I lead?,Use words like 'Let’s' or 'How about we...' instead of giving orders.,5,6
+E05N7,extraversion,Has an assertive personality,negative,What if people get upset when I share my opinion?,"Listen to their side, stay calm, and explain yours respectfully.",5,7
+E05N8,extraversion,Has an assertive personality,negative,How can I speak up without scaring others?,Lower your voice a bit and use kind tone—confidence doesn’t need to be loud.,5,8
+E05N9,extraversion,Has an assertive personality,negative,What if I feel nervous telling people what to do?,It’s okay! You can lead by example—actions often speak louder than words.,5,9
+E05N10,extraversion,Has an assertive personality,negative,How do I handle people not listening to me?,"Ask for their ideas first, then share yours—they’ll feel heard and respond better.",5,10
+E06P1,extraversion,"Is dominant, acts as a leader",positive,How do I make a great plan for my team?,List what needs to be done and divide it fairly so everyone has something important to do.,6,1
+E06P2,extraversion,"Is dominant, acts as a leader",positive,What should I say to make others feel included?,Ask for their opinions and say thank you for their help—it makes people feel valued.,6,2
+E06P3,extraversion,"Is dominant, acts as a leader",positive,How can I keep my team excited and focused?,Celebrate progress and remind everyone how much they’re helping the team succeed.,6,3
+E06Z4,extraversion,"Is dominant, acts as a leader",neutral,Can you help me be a good leader during a game?,"Encourage others, take turns, and remember that fun is more important than winning.",6,4
+E06Z5,extraversion,"Is dominant, acts as a leader",neutral,How can I lead with kindness?,Show patience and appreciation—it makes people respect you more than strictness does.,6,5
+E06N6,extraversion,"Is dominant, acts as a leader",negative,How do I stop being too controlling?,Let others make small decisions too—it shows you trust them.,6,6
+E06N7,extraversion,"Is dominant, acts as a leader",negative,What if people say I’m bossy?,"You can say, 'Thanks for telling me—I’ll try to listen more.' That shows maturity.",6,7
+E06N8,extraversion,"Is dominant, acts as a leader",negative,Why do my friends stop listening to me?,They might want to share leadership too—ask them how they’d like to help.,6,8
+E06N9,extraversion,"Is dominant, acts as a leader",negative,What should I do if my group argues with me?,Stay calm and suggest voting or taking turns so everyone’s voice counts.,6,9
+E06N10,extraversion,"Is dominant, acts as a leader",negative,How do I share leadership with others?,Give others chances to lead certain parts—it helps everyone feel included.,6,10
+E07P1,extraversion,Finds it hard to influence people,positive,Can you help me explain things so people understand?,Keep it short and clear—use examples so others can picture what you mean.,7,1
+E07P2,extraversion,Finds it hard to influence people,positive,What are fun ways to share my ideas?,"Make posters, use props, or tell a short story to show your idea instead of just saying it.",7,2
+E07P3,extraversion,Finds it hard to influence people,positive,How do I get people excited about what I like?,"Show your enthusiasm—when you’re excited, others often catch that energy too.",7,3
+E07Z4,extraversion,Finds it hard to influence people,neutral,How do I ask questions without feeling silly?,"Remember, questions mean you care about learning. Most people appreciate them!",7,4
+E07Z5,extraversion,Finds it hard to influence people,neutral,What can I say if others ignore me?,"Try, 'Hey, can I share something?' or wait for a pause and speak clearly.",7,5
+E07N6,extraversion,Finds it hard to influence people,negative,Why does nobody listen to my ideas?,Maybe they’re distracted—try catching their attention first or sharing your idea in a fun way.,7,6
+E07N7,extraversion,Finds it hard to influence people,negative,How do I handle being in a group with strong voices?,"Wait for a quiet moment, raise your hand, and speak confidently but calmly.",7,7
+E07N8,extraversion,Finds it hard to influence people,negative,How can I stop feeling invisible?,Participate in small ways first—like sharing one idea or asking a question.,7,8
+E07N9,extraversion,Finds it hard to influence people,negative,What if my friends never take my suggestions?,Ask them what they think and combine your ideas—it shows teamwork.,7,9
+E07N10,extraversion,Finds it hard to influence people,negative,How can I sound more confident when I talk?,"Take a deep breath, slow down, and speak clearly. Confidence comes from calmness.",7,10
+E08P1,extraversion,Prefers to have others take charge,positive,Can you help me be a great helper instead?,Offer to do small tasks or keep track of supplies—leaders love reliable helpers.,8,1
+E08P2,extraversion,Prefers to have others take charge,positive,How do I support my friends when they lead?,"Listen, encourage, and offer help when they seem stressed—it means a lot.",8,2
+E08P3,extraversion,Prefers to have others take charge,positive,What are fun jobs for kids who don’t like leading?,"Try being the note-taker, organizer, or creative planner—every role matters!",8,3
+E08Z4,extraversion,Prefers to have others take charge,neutral,What should I do if I don’t want to be the leader?,"It’s okay! Just say, 'I’d rather help this time,' and support whoever is leading.",8,4
+E08Z5,extraversion,Prefers to have others take charge,neutral,How can I be a good listener in a group?,"Focus on what others say, nod to show you’re listening, and summarize if needed.",8,5
+E08N6,extraversion,Prefers to have others take charge,negative,Why am I scared to make decisions?,Because you don’t want to make mistakes—but it’s okay! Mistakes help you learn.,8,6
+E08N7,extraversion,Prefers to have others take charge,negative,What if I feel left out when others lead?,Find ways to contribute behind the scenes—your help still makes a difference.,8,7
+E08N8,extraversion,Prefers to have others take charge,negative,How do I speak up when I disagree?,"Start with, 'I see what you mean, but maybe we could try...' to sound polite and confident.",8,8
+E08N9,extraversion,Prefers to have others take charge,negative,Why do I always let other people decide?,You might want to avoid conflict. Practice giving small opinions to build confidence.,8,9
+E08N10,extraversion,Prefers to have others take charge,negative,How can I stop being afraid to take charge?,Start small—lead a quick activity or make one simple decision. Confidence grows slowly.,8,10
+E09P1,extraversion,Is full of energy,positive,What are games I can play that use lots of energy?,"Try tag, capture the flag, jump rope, or soccer—games that keep you moving!",9,1
+E09P2,extraversion,Is full of energy,positive,Can you create a high-speed treasure hunt?,Sure! Hide clues around your space and time how fast you can find them all.,9,2
+E09P3,extraversion,Is full of energy,positive,What are sports I can try at recess?,"Soccer, basketball, dodgeball, or running races are great ways to stay active.",9,3
+E09Z4,extraversion,Is full of energy,neutral,How do I burn energy before bedtime?,"Try stretching, dancing for a bit, or doing jumping jacks—then wind down with deep breaths.",9,4
+E09Z5,extraversion,Is full of energy,neutral,What are fun dares I can try?,Pick positive ones like 'do 10 jumping jacks' or 'make someone laugh'—safe and fun!,9,5
+E09N6,extraversion,Is full of energy,negative,What should I do when I can’t sit still in class?,Take deep breaths or quietly squeeze your hands under the desk to focus.,9,6
+E09N7,extraversion,Is full of energy,negative,Why do adults say I’m too hyper?,They might just want you to calm down a bit—try matching their energy when needed.,9,7
+E09N8,extraversion,Is full of energy,negative,How can I calm down when I feel jumpy?,"Close your eyes, take three slow breaths, and count to ten.",9,8
+E09N9,extraversion,Is full of energy,negative,What if my friends get tired of my energy?,Notice when they seem tired and slow your pace for a bit—it helps balance things.,9,9
+E09N10,extraversion,Is full of energy,negative,How do I focus when I have too much energy?,"Break big tasks into short parts, and move around between them to reset your focus.",9,10
+E10P1,extraversion,Shows a lot of enthusiasm,positive,Can you help me make a cheer for my team?,"Sure! Try, 'Go team go, let your energy show!' or make one that rhymes with your team’s name.",10,1
+E10P2,extraversion,Shows a lot of enthusiasm,positive,What are fun ways to get excited for school?,"Pick out your outfit the night before, plan something to look forward to, or listen to music.",10,2
+E10P3,extraversion,Shows a lot of enthusiasm,positive,How can I show my friends I love their ideas?,"Say things like, 'That’s awesome!' or 'Let’s try it!' Enthusiasm is contagious.",10,3
+E10Z4,extraversion,Shows a lot of enthusiasm,neutral,What are cool ways to share good news?,"Use a fun voice, smile, or make a mini celebration like a happy dance.",10,4
+E10Z5,extraversion,Shows a lot of enthusiasm,neutral,Can you give me silly celebration ideas?,Try a 'high-five circle' or do a quick cheer together when something good happens!,10,5
+E10N6,extraversion,Shows a lot of enthusiasm,negative,Why do people say I’m too loud?,Sometimes your excitement shows up in your voice—try lowering it a little when indoors.,10,6
+E10N7,extraversion,Shows a lot of enthusiasm,negative,What if others roll their eyes when I’m excited?,That’s okay! Keep being yourself—enthusiasm makes life fun.,10,7
+E10N8,extraversion,Shows a lot of enthusiasm,negative,How do I calm down when I get overly happy?,Take a few deep breaths and save your excitement for the right moment.,10,8
+E10N9,extraversion,Shows a lot of enthusiasm,negative,Why do I feel embarrassed when people don’t match my energy?,Not everyone shows excitement the same way—your joy still matters.,10,9
+E10N10,extraversion,Shows a lot of enthusiasm,negative,What if people think I’m annoying when I’m enthusiastic?,"Balance it by reading the room, but don’t lose your spark—joy is a gift!",10,10
+N01P1,neuroticism,Can be tense,positive,Can you teach me stretches to help me relax?,"Sure! Try rolling your shoulders, touching your toes, and taking a slow deep breath in through your nose and out through your mouth.",1,1
+N01P2,neuroticism,Can be tense,positive,What are ways to feel calm before school?,"You can pack your bag early, listen to relaxing music, and take deep breaths before leaving the house.",1,2
+N01P3,neuroticism,Can be tense,positive,How can I make a peaceful bedtime routine?,"Turn off screens early, stretch, read something nice, and think about one good thing from your day.",1,3
+N01Z4,neuroticism,Can be tense,neutral,Why does my body feel tight sometimes?,That’s your body’s way of showing stress. Gentle stretching and deep breathing can help it relax.,1,4
+N01Z5,neuroticism,Can be tense,neutral,What are relaxing things I can think about?,Imagine your favorite place—like a beach or park—and picture every detail until you feel calm.,1,5
+N01N6,neuroticism,Can be tense,negative,Why do I get nervous for no reason?,Sometimes our bodies worry before our minds do. Try breathing slowly or doing something soothing.,1,6
+N01N7,neuroticism,Can be tense,negative,How can I stop clenching my fists when I’m scared?,"Notice it happening, then open and close your hands gently. It tells your brain you’re safe.",1,7
+N01N8,neuroticism,Can be tense,negative,Why does my heart race when I worry?,That’s adrenaline—your body’s alarm system. Slow breathing and counting to ten helps it calm down.,1,8
+N01N9,neuroticism,Can be tense,negative,What should I do when I feel tense all day?,"Take short breaks, stretch, and do something relaxing like listening to soft music or doodling.",1,9
+N01N10,neuroticism,Can be tense,negative,How do I stop feeling jumpy before a big test?,"Prepare early, breathe slowly, and remind yourself, 'I studied and I’ll do my best.'",1,10
+N02P1,neuroticism,Worries a lot,positive,Can you help me make a worry journal?,"Yes! Write your worries down, then add one possible solution or something good about your day.",2,1
+N02P2,neuroticism,Worries a lot,positive,What are ways to stay calm when I’m nervous?,"Take slow breaths, count to ten, or hold something that comforts you like a small toy or stone.",2,2
+N02P3,neuroticism,Worries a lot,positive,Can you tell me a story about facing fears?,"Once, a kid was afraid to speak in class. They practiced a few words at home each night and soon felt brave enough to share!",2,3
+N02Z4,neuroticism,Worries a lot,neutral,Why do I worry about things that haven’t happened?,Because your brain is trying to protect you. Remind yourself most worries never come true.,2,4
+N02Z5,neuroticism,Worries a lot,neutral,How do I feel okay when something goes wrong?,"Tell yourself mistakes happen to everyone, and each one is a chance to learn something new.",2,5
+N02N6,neuroticism,Worries a lot,negative,Why can’t I stop thinking about bad things?,"Try distracting your mind—draw, listen to music, or talk about it with someone you trust.",2,6
+N02N7,neuroticism,Worries a lot,negative,How do I sleep when my brain won’t stop worrying?,"Write your thoughts down, then tell yourself, 'I’ll think about this tomorrow.'",2,7
+N02N8,neuroticism,Worries a lot,negative,What should I do when I feel scared every day?,Tell a trusted adult or counselor. You don’t have to deal with big worries alone.,2,8
+N02N9,neuroticism,Worries a lot,negative,Why do I imagine bad stuff all the time?,It’s your imagination being overprotective. Try replacing those thoughts with a happy one.,2,9
+N02N10,neuroticism,Worries a lot,negative,What if I never stop worrying?,Worry can get better with practice—try small calming habits daily and ask for support if it’s too heavy.,2,10
+N03P1,neuroticism,"Is relaxed, handles stress well",positive,How can I help others stay calm like me?,You can remind them to breathe slowly and tell them it’s okay to take a break.,3,1
+N03P2,neuroticism,"Is relaxed, handles stress well",positive,What are fun ways to chill out after school?,"Take a walk, play calm games, listen to music, or talk with a friend.",3,2
+N03P3,neuroticism,"Is relaxed, handles stress well",positive,What’s a cool way to stay calm during problems?,Think of solutions one step at a time instead of everything at once.,3,3
+N03Z4,neuroticism,"Is relaxed, handles stress well",neutral,Why is it good to stay relaxed in hard times?,"It helps you think clearly and make better choices, even when things go wrong.",3,4
+N03Z5,neuroticism,"Is relaxed, handles stress well",neutral,How can I teach my friend to calm down?,Show them simple breathing or counting tricks and remind them to slow down.,3,5
+N03N6,neuroticism,"Is relaxed, handles stress well",negative,Why do people get stressed so easily?,"Everyone’s brain reacts differently—some feel stress faster than others, and that’s okay.",3,6
+N03N7,neuroticism,"Is relaxed, handles stress well",negative,How do I help friends who panic a lot?,Stay calm yourself and remind them to breathe and focus on something nearby.,3,7
+N03N8,neuroticism,"Is relaxed, handles stress well",negative,What if I feel calm but others make me anxious?,Try staying grounded—focus on your breathing and remember their stress isn’t yours.,3,8
+N03N9,neuroticism,"Is relaxed, handles stress well",negative,How do I stay peaceful when everyone’s upset?,"Take deep breaths, think of something steady, and speak softly to help calm the mood.",3,9
+N03N10,neuroticism,"Is relaxed, handles stress well",negative,Why do I feel guilty for not worrying?,"Because you care, but staying calm helps more than stressing—it’s okay to be steady.",3,10
+N04P1,neuroticism,Often feels sad,positive,Can you tell me a happy story when I feel down?,"Sure! Once there was a kid who planted one flower every day. Soon their whole yard bloomed, and so did their mood.",4,1
+N04P2,neuroticism,Often feels sad,positive,What are fun things to do when I’m sad?,"Draw, go outside, play music, or call a friend—doing something helps sadness pass faster.",4,2
+N04P3,neuroticism,Often feels sad,positive,How can I cheer myself up on a bad day?,Think about three things you’re grateful for or do one small thing you enjoy.,4,3
+N04Z4,neuroticism,Often feels sad,neutral,Why do I miss people sometimes?,Missing people means they mattered to you. You can think of good memories or write them a note.,4,4
+N04Z5,neuroticism,Often feels sad,neutral,How can I talk about my sad feelings?,"Start by saying, 'I’ve been feeling sad lately.' Talking helps lighten the load.",4,5
+N04N6,neuroticism,Often feels sad,negative,Why do I feel sad for no reason?,Sometimes emotions come without a clear reason—it’s okay to feel them and let them pass.,4,6
+N04N7,neuroticism,Often feels sad,negative,What should I do when I want to cry all the time?,Crying can help release feelings. Talk to someone you trust if it lasts a while.,4,7
+N04N8,neuroticism,Often feels sad,negative,Why do I feel left out even with friends?,It’s possible you just need more connection. Try reaching out or suggesting something fun together.,4,8
+N04N9,neuroticism,Often feels sad,negative,What if I can’t stop thinking sad thoughts?,Distract your mind with an activity or journal your feelings to let them out safely.,4,9
+N04N10,neuroticism,Often feels sad,negative,How can I make the sadness go away?,"Sadness fades with time, care, and support. Be gentle with yourself and talk to someone.",4,10
+N05P1,neuroticism,"Tends to feel depressed, blue",positive,Can you help me find little things that make me happy?,"Yes! Notice small joys—like sunshine, your favorite song, or a cozy drink.",5,1
+N05P2,neuroticism,"Tends to feel depressed, blue",positive,What are positive thoughts I can say to myself?,"Try, 'I’m doing my best,' 'I matter,' or 'Today can still be good.'",5,2
+N05P3,neuroticism,"Tends to feel depressed, blue",positive,How can I find joy again when I feel down?,Start small—do one kind thing or revisit a hobby that used to make you smile.,5,3
+N05Z4,neuroticism,"Tends to feel depressed, blue",neutral,Why do I feel gloomy even when it’s sunny?,Feelings don’t always match the weather—take a walk and let light lift your mood slowly.,5,4
+N05Z5,neuroticism,"Tends to feel depressed, blue",neutral,How do I cheer up when I feel stuck?,"Move your body, talk to someone, or change your space—it helps your brain reset.",5,5
+N05N6,neuroticism,"Tends to feel depressed, blue",negative,Why does everything feel too hard sometimes?,Because you’re tired or overwhelmed. Break tasks into tiny steps and rest between.,5,6
+N05N7,neuroticism,"Tends to feel depressed, blue",negative,What should I do if I don’t feel like doing anything?,Start with one small thing—like brushing your teeth or stretching—it helps you get going.,5,7
+N05N8,neuroticism,"Tends to feel depressed, blue",negative,Why do I feel sad even when I try to smile?,"Smiling helps a little, but talking about your feelings helps much more.",5,8
+N05N9,neuroticism,"Tends to feel depressed, blue",negative,How do I talk to someone when I feel hopeless?,"You can say, 'I’ve been really down lately and need someone to listen.' That’s a strong first step.",5,9
+N05N10,neuroticism,"Tends to feel depressed, blue",negative,What if I don’t feel better tomorrow?,Healing takes time—talk to a counselor or trusted adult if it feels heavy for too long.,5,10
+N06P1,neuroticism,Stays optimistic after experiencing a setback,positive,How do I bounce back after losing?,"Think about what you learned, then try again with a new plan.",6,1
+N06P2,neuroticism,Stays optimistic after experiencing a setback,positive,What can I say to myself to keep going?,"Try, 'I can handle this,' 'I’m learning,' or 'Next time will be better.'",6,2
+N06P3,neuroticism,Stays optimistic after experiencing a setback,positive,Can you tell me a story about someone who didn’t give up?,"Once, a kid failed a test but kept studying every night. The next time, they got an A!",6,3
+N06Z4,neuroticism,Stays optimistic after experiencing a setback,neutral,Why is it good to stay positive after a mistake?,It helps you learn faster and keeps you motivated to try again.,6,4
+N06Z5,neuroticism,Stays optimistic after experiencing a setback,neutral,How do I learn from things that go wrong?,"Ask, 'What can I do differently next time?' instead of focusing on blame.",6,5
+N06N6,neuroticism,Stays optimistic after experiencing a setback,negative,What if I can’t stop thinking about failing?,"Write down what went wrong, then add one small step to improve—it gives you control.",6,6
+N06N7,neuroticism,Stays optimistic after experiencing a setback,negative,Why do I get discouraged so fast?,"Because you care about doing well. Take breaks and celebrate progress, not perfection.",6,7
+N06N8,neuroticism,Stays optimistic after experiencing a setback,negative,How do I stop blaming myself for mistakes?,Remind yourself that everyone makes mistakes—it’s part of growing.,6,8
+N06N9,neuroticism,Stays optimistic after experiencing a setback,negative,Why do I feel scared to try again?,Because failure stings—but courage grows every time you try again anyway.,6,9
+N06N10,neuroticism,Stays optimistic after experiencing a setback,negative,How can I feel confident after I mess up?,"Focus on what you did right too, not just what went wrong.",6,10
+N07P1,neuroticism,"Is moody, has up and down mood swings",positive,How can I understand my moods better?,Track how you feel each day and notice what makes your mood change.,7,1
+N07P2,neuroticism,"Is moody, has up and down mood swings",positive,What helps balance my feelings?,"Sleep, exercise, and talking to someone you trust help a lot.",7,2
+N07P3,neuroticism,"Is moody, has up and down mood swings",positive,Can you teach me calm-down tricks for when I feel off?,Yes—count backward from ten or imagine blowing up a balloon with your breath.,7,3
+N07Z4,neuroticism,"Is moody, has up and down mood swings",neutral,Why do I feel happy and sad in the same day?,Emotions can mix—people often feel more than one thing at once.,7,4
+N07Z5,neuroticism,"Is moody, has up and down mood swings",neutral,What are ways to explain my moods to friends?,"Say, 'I’m having a weird day, but it’s not about you.' That helps them understand.",7,5
+N07N6,neuroticism,"Is moody, has up and down mood swings",negative,Why do I get mad so fast sometimes?,It’s probably stress or tiredness—try pausing before reacting.,7,6
+N07N7,neuroticism,"Is moody, has up and down mood swings",negative,How can I stop snapping at people?,Notice when it’s happening and take a short break before responding.,7,7
+N07N8,neuroticism,"Is moody, has up and down mood swings",negative,What do I do when I suddenly feel sad?,Do something small that comforts you—like listening to music or going for a walk.,7,8
+N07N9,neuroticism,"Is moody, has up and down mood swings",negative,Why do my feelings change for no reason?,"Hormones, sleep, or stress can shift moods—it’s normal and temporary.",7,9
+N07N10,neuroticism,"Is moody, has up and down mood swings",negative,How do I handle big emotions without yelling?,Take deep breaths or squeeze something soft to release tension safely.,7,10
+N08P1,neuroticism,"Is temperamental, gets emotional easily",positive,How can I tell people how I feel without yelling?,"Use calm words like, 'I feel upset because…' instead of shouting.",8,1
+N08P2,neuroticism,"Is temperamental, gets emotional easily",positive,Can you help me cool down when I’m upset?,"Yes—try holding something cold, breathing deeply, or stepping outside for a minute.",8,2
+N08P3,neuroticism,"Is temperamental, gets emotional easily",positive,What are safe ways to let out emotions?,"Draw, punch a pillow, or write out your feelings until you calm down.",8,3
+N08Z4,neuroticism,"Is temperamental, gets emotional easily",neutral,Why do small things make me emotional?,It means you feel things deeply. That’s okay—try naming your emotion to understand it better.,8,4
+N08Z5,neuroticism,"Is temperamental, gets emotional easily",neutral,What can I do when I feel too many feelings?,Write them down or talk to someone—it helps organize your thoughts.,8,5
+N08N6,neuroticism,"Is temperamental, gets emotional easily",negative,Why do I cry or yell so easily?,You might be stressed or sensitive. Taking deep breaths and grounding helps.,8,6
+N08N7,neuroticism,"Is temperamental, gets emotional easily",negative,How do I stop exploding when I’m angry?,"Leave the room if you can, or take ten slow breaths before reacting.",8,7
+N08N8,neuroticism,"Is temperamental, gets emotional easily",negative,Why can’t I control my feelings sometimes?,Because emotions are powerful—but you can learn to manage them with practice.,8,8
+N08N9,neuroticism,"Is temperamental, gets emotional easily",negative,What should I do when I say things I regret?,Apologize and explain you were upset. Everyone says things they don’t mean sometimes.,8,9
+N08N10,neuroticism,"Is temperamental, gets emotional easily",negative,How do I keep my emotions from taking over?,"Pause, breathe, and ask yourself, 'What do I need right now?'",8,10
+N09P1,neuroticism,"Is emotionally stable, not easily upset",positive,What are cool things about being calm?,"You can think clearly, solve problems better, and help others feel safe around you.",9,1
+N09P2,neuroticism,"Is emotionally stable, not easily upset",positive,How can I help others stay peaceful?,"Be patient, speak gently, and remind them that problems can be solved one step at a time.",9,2
+N09P3,neuroticism,"Is emotionally stable, not easily upset",positive,Can you teach me how to be steady even in chaos?,Focus on your breathing and what you can control instead of everything around you.,9,3
+N09Z4,neuroticism,"Is emotionally stable, not easily upset",neutral,Why don’t I get upset as easily as others?,Everyone handles emotions differently—your calmness is a strength.,9,4
+N09Z5,neuroticism,"Is emotionally stable, not easily upset",neutral,How do I help a friend who cries a lot?,"Listen quietly, offer a tissue or a hug, and let them know you care.",9,5
+N09N6,neuroticism,"Is emotionally stable, not easily upset",negative,Why do people say I don’t care about things?,Maybe because you don’t show emotions strongly—explain that you still care deeply inside.,9,6
+N09N7,neuroticism,"Is emotionally stable, not easily upset",negative,How do I comfort someone when I don’t feel sad?,"Say, 'I’m here for you,' and listen—it helps more than you think.",9,7
+N09N8,neuroticism,"Is emotionally stable, not easily upset",negative,Why do I feel weird not getting emotional?,It’s okay! Some people just process emotions differently.,9,8
+N09N9,neuroticism,"Is emotionally stable, not easily upset",negative,How can I act caring even when I’m calm?,"Show kindness through your words and actions, not just emotions.",9,9
+N09N10,neuroticism,"Is emotionally stable, not easily upset",negative,What should I do if people think I’m cold?,Explain that you express care in quiet ways and still value their feelings.,9,10
+N10P1,neuroticism,Keeps their emotions under control,positive,What are smart ways to manage feelings?,"Notice your emotions early, breathe deeply, and take short breaks when needed.",10,1
+N10P2,neuroticism,Keeps their emotions under control,positive,How can I stay calm during a test or speech?,"Breathe slowly, focus on one question or sentence at a time, and remind yourself you’re prepared.",10,2
+N10P3,neuroticism,Keeps their emotions under control,positive,Can you teach me emotional control tricks?,"When you feel upset, count backward or squeeze your hands until you feel calmer.",10,3
+N10Z4,neuroticism,Keeps their emotions under control,neutral,How do I deal with disappointment calmly?,"Accept that it’s okay to be upset, then ask what you can learn from it.",10,4
+N10Z5,neuroticism,Keeps their emotions under control,neutral,What are ways to express feelings with words?,"Say, 'I feel angry because…' or 'I’m sad that…' so others can understand you.",10,5
+N10N6,neuroticism,Keeps their emotions under control,negative,Why do I bottle up my feelings?,Maybe you don’t want to bother others—but sharing helps you feel lighter.,10,6
+N10N7,neuroticism,Keeps their emotions under control,negative,What happens if I hide my emotions too much?,They can build up and make you feel worse later—talking helps release them.,10,7
+N10N8,neuroticism,Keeps their emotions under control,negative,Why do I cry when I try to hold things in?,Your body’s letting the feelings out—crying is a healthy release.,10,8
+N10N9,neuroticism,Keeps their emotions under control,negative,How do I tell people I’m upset without yelling?,Speak softly and clearly—say how you feel and what would help.,10,9
+N10N10,neuroticism,Keeps their emotions under control,negative,What should I do when I can’t stop feeling frustrated?,"Take a break, move your body, or write your feelings out until they ease.",10,10
+O01P1,openness,Is curious about many different things,positive,Can you teach me something cool I don’t know?,"Sure! Did you know octopuses have three hearts and blue blood? They’re amazing problem solvers, too!",1,1
+O01P2,openness,Is curious about many different things,positive,Why do animals act differently at night?,Some animals are nocturnal—they’re built to see and hunt in the dark where it’s quieter and cooler.,1,2
+O01P3,openness,Is curious about many different things,positive,What are mysteries scientists haven’t solved yet?,"There are many! Like how consciousness works, or what’s inside black holes, or how some animals navigate thousands of miles.",1,3
+O01Z4,openness,Is curious about many different things,neutral,Why is the sky blue but space black?,"The air scatters sunlight, making the sky look blue. In space, there’s no air to scatter light, so it looks black.",1,4
+O01Z5,openness,Is curious about many different things,neutral,How does a rainbow happen?,"When sunlight passes through raindrops, it bends and splits into colors—red, orange, yellow, green, blue, and violet!",1,5
+O01N6,openness,Is curious about many different things,negative,Why do I get bored so easily?,Your brain might crave new challenges—try switching tasks or exploring something unfamiliar.,1,6
+O01N7,openness,Is curious about many different things,negative,What if I’m not interested in learning new things?,That’s okay—it happens sometimes. Try connecting new topics to things you already enjoy.,1,7
+O01N8,openness,Is curious about many different things,negative,Why does school feel boring sometimes?,Sometimes the way things are taught doesn’t match your learning style. Try finding your own fun examples or hands-on activities.,1,8
+O01N9,openness,Is curious about many different things,negative,How do I stay curious when lessons feel hard?,Ask yourself questions about how it connects to the world—you’ll find curiosity grows from understanding.,1,9
+O01N10,openness,Is curious about many different things,negative,What should I do when I stop caring about things?,"Take a break, try new hobbies, and talk to someone—it’s normal to need a spark again.",1,10
+O02P1,openness,"Is complex, a deep thinker",positive,Can you help me think about big questions?,Sure! Let’s start with one: what makes something truly meaningful to you?,2,1
+O02P2,openness,"Is complex, a deep thinker",positive,Why do people dream?,Scientists think dreams help our brains organize memories and explore emotions while we rest.,2,2
+O02P3,openness,"Is complex, a deep thinker",positive,Why do we feel emotions?,Emotions help us understand our needs and connect with others—they’re like signals from our brain.,2,3
+O02Z4,openness,"Is complex, a deep thinker",neutral,Why do people believe different things?,Because we all have unique experiences and cultures that shape our perspectives.,2,4
+O02Z5,openness,"Is complex, a deep thinker",neutral,"What is time, really?","Time is how we measure change—it’s always moving forward, but how we feel it can depend on attention and emotion.",2,5
+O02N6,openness,"Is complex, a deep thinker",negative,Why do my thoughts never stop?,Your brain is active by nature—try journaling or mindfulness to slow it down a little.,2,6
+O02N7,openness,"Is complex, a deep thinker",negative,What if thinking too much makes me sad?,Then it’s time to step back and do something physical or creative—it helps balance your mind.,2,7
+O02N8,openness,"Is complex, a deep thinker",negative,Why do I get lost in my thoughts so often?,"You might have a strong imagination—set aside thinking time, then return to the present after.",2,8
+O02N9,openness,"Is complex, a deep thinker",negative,How do I stop worrying about deep stuff?,Remind yourself that not every question needs an answer right away—it’s okay to let mystery exist.,2,9
+O02N10,openness,"Is complex, a deep thinker",negative,What if nobody understands how I think?,It just means you think uniquely. Keep expressing your ideas—you’ll find people who get you.,2,10
+O03P1,openness,"Avoids intellectual, philosophical discussions",positive,Can you make smart things sound fun?,"Absolutely! Big ideas can be fun when tied to real life—like asking, ‘Could robots ever dream?’",3,1
+O03P2,openness,"Avoids intellectual, philosophical discussions",positive,How can I like learning even if it’s hard?,"Start with things you already enjoy, and build knowledge around that topic—it makes learning easier.",3,2
+O03P3,openness,"Avoids intellectual, philosophical discussions",positive,What are cool facts I can learn fast?,Did you know honey never spoils? Or that there are more stars in space than grains of sand on Earth?,3,3
+O03Z4,openness,"Avoids intellectual, philosophical discussions",neutral,Why do I get bored when things are too deep?,That’s normal—some topics feel abstract. Ask for examples to make them more relatable.,3,4
+O03Z5,openness,"Avoids intellectual, philosophical discussions",neutral,How can I learn new stuff without getting tired?,"Take breaks often, and switch between reading, videos, and hands-on practice.",3,5
+O03N6,openness,"Avoids intellectual, philosophical discussions",negative,Why do I zone out in class?,Your attention might need variety—try doodling notes or asking questions to stay engaged.,3,6
+O03N7,openness,"Avoids intellectual, philosophical discussions",negative,What if I never like school?,Learning doesn’t only happen in school—find other ways to learn through games or hobbies.,3,7
+O03N8,openness,"Avoids intellectual, philosophical discussions",negative,Why do I stop listening when things sound complicated?,Sometimes our brains shut down when overloaded—pause and ask someone to explain it simply.,3,8
+O03N9,openness,"Avoids intellectual, philosophical discussions",negative,How do I stay focused when I don’t care?,Set small goals or rewards to keep going—you might find interest along the way.,3,9
+O03N10,openness,"Avoids intellectual, philosophical discussions",negative,What happens if I give up on learning?,You’d miss out on cool discoveries! Learning isn’t about grades—it’s how you grow as a person.,3,10
+O04P1,openness,"Is fascinated by art, music, or literature",positive,Can you show me a cool drawing idea?,Try drawing your favorite dream or mixing two animals into one creature!,4,1
+O04P2,openness,"Is fascinated by art, music, or literature",positive,Can you help me write my own story?,"Yes! Start with a 'what if' question, like 'What if clouds could talk?' and build from there.",4,2
+O04P3,openness,"Is fascinated by art, music, or literature",positive,What’s the story behind a famous painting?,"For example, Van Gogh’s 'Starry Night' shows his view from a hospital window and his emotions through swirling skies.",4,3
+O04Z4,openness,"Is fascinated by art, music, or literature",neutral,Why do some songs make me cry?,Music triggers memories and feelings—it’s your brain connecting sound and emotion.,4,4
+O04Z5,openness,"Is fascinated by art, music, or literature",neutral,How do artists get their ideas?,They observe the world carefully and mix imagination with experience.,4,5
+O04N6,openness,"Is fascinated by art, music, or literature",negative,What if I think my art isn’t good enough?,"Every artist starts somewhere—art is about expression, not perfection.",4,6
+O04N7,openness,"Is fascinated by art, music, or literature",negative,Why do people not like what I make?,Art is personal—someone else’s opinion doesn’t define your creativity.,4,7
+O04N8,openness,"Is fascinated by art, music, or literature",negative,How do I stop comparing my drawings to others?,Focus on your progress and unique style instead of others’ work.,4,8
+O04N9,openness,"Is fascinated by art, music, or literature",negative,What if I lose interest in art?,It’s okay to take breaks—sometimes creativity comes back when you least expect it.,4,9
+O04N10,openness,"Is fascinated by art, music, or literature",negative,Why do I get upset when my art doesn’t look right?,"That’s frustration talking—step away, breathe, and return later with fresh eyes.",4,10
+O05P1,openness,Values art and beauty,positive,Why do sunsets look so pretty?,"Because sunlight bends through the atmosphere, scattering colors like pink and orange.",5,1
+O05P2,openness,Values art and beauty,positive,How can I find beauty in small things?,"Slow down—notice textures, colors, and patterns you normally overlook.",5,2
+O05P3,openness,Values art and beauty,positive,Can you help me design something creative?,"Sure! Think of something meaningful, like a poster about kindness or nature.",5,3
+O05Z4,openness,Values art and beauty,neutral,Why do people like art museums?,They’re places to explore imagination and history through other people’s eyes.,5,4
+O05Z5,openness,Values art and beauty,neutral,What makes a song sound beautiful?,"Harmony, rhythm, and emotion working together make music feel powerful.",5,5
+O05N6,openness,Values art and beauty,negative,What if I don’t think I’m creative?,"Creativity comes in many forms—problem-solving, cooking, even organizing!",5,6
+O05N7,openness,Values art and beauty,negative,Why do I feel nothing when others see beauty?,It might just mean you connect differently—your sense of beauty could show up elsewhere.,5,7
+O05N8,openness,Values art and beauty,negative,How can I learn to appreciate art more?,Try learning the story or emotion behind a piece—it helps it come alive.,5,8
+O05N9,openness,Values art and beauty,negative,What should I do when my art looks ugly?,"Remember, every artist makes rough drafts. It’s part of creating something great.",5,9
+O05N10,openness,Values art and beauty,negative,Why do I feel jealous of talented people?,Because you admire them—use that feeling as motivation to grow.,5,10
+O06P1,openness,Has few artistic interests,positive,What are other ways to be creative?,"You can be creative in problem-solving, sports, or even the way you tell jokes.",6,1
+O06P2,openness,Has few artistic interests,positive,Can you make art fun for me?,Try quick doodles or silly challenges—art doesn’t have to be serious.,6,2
+O06P3,openness,Has few artistic interests,positive,Why do people love painting so much?,It helps people relax and express what words can’t always say.,6,3
+O06Z4,openness,Has few artistic interests,neutral,Is it okay to not care about art?,Yes—it’s fine to have other interests. Everyone connects differently.,6,4
+O06Z5,openness,Has few artistic interests,neutral,How can I try new hobbies if I don’t like drawing?,"Explore music, photography, coding, or building—creativity isn’t just about art.",6,5
+O06N6,openness,Has few artistic interests,negative,Why do I feel left out when others draw?,You might just want to join in—try sketching simple things for fun.,6,6
+O06N7,openness,Has few artistic interests,negative,What if I’m bad at creative things?,Nobody starts perfect—being bad at first means you’re learning!,6,7
+O06N8,openness,Has few artistic interests,negative,Why does art feel boring to me?,Maybe you haven’t found your style yet—try digital tools or crafts.,6,8
+O06N9,openness,Has few artistic interests,negative,How do I enjoy things I’m not good at?,"Focus on the process, not the result. Fun comes from experimenting.",6,9
+O06N10,openness,Has few artistic interests,negative,What should I do if I never find an art I like?,"That’s okay—your creativity might show up somewhere unexpected, like design or storytelling.",6,10
+O07P1,openness,"Is inventive, finds clever ways to do things",positive,Can you help me invent something new?,Sure! Think about a small problem you want to solve and brainstorm silly or serious solutions.,7,1
+O07P2,openness,"Is inventive, finds clever ways to do things",positive,What’s a fun invention challenge I can try?,Try designing a machine that makes chores easier or a backpack with hidden gadgets!,7,2
+O07P3,openness,"Is inventive, finds clever ways to do things",positive,How do inventors come up with ideas?,They ask 'What if…?' and test lots of versions until one works.,7,3
+O07Z4,openness,"Is inventive, finds clever ways to do things",neutral,How do I think outside the box?,Question the usual way of doing things and imagine wild alternatives.,7,4
+O07Z5,openness,"Is inventive, finds clever ways to do things",neutral,Can you give me a puzzle to solve?,Okay! How can you move one matchstick to make VII (7) turn into VI (6)?,7,5
+O07N6,openness,"Is inventive, finds clever ways to do things",negative,Why can’t I think of good ideas?,Ideas take practice—relax and let your brain play with 'what if' questions.,7,6
+O07N7,openness,"Is inventive, finds clever ways to do things",negative,What if my inventions always fail?,That’s how inventors learn! Each failure is a step closer to success.,7,7
+O07N8,openness,"Is inventive, finds clever ways to do things",negative,Why do people say my ideas are weird?,Weird often means original—many great inventions started as weird ideas.,7,8
+O07N9,openness,"Is inventive, finds clever ways to do things",negative,How do I stop giving up when my idea doesn’t work?,Take a break and come back later—fresh eyes can spark new solutions.,7,9
+O07N10,openness,"Is inventive, finds clever ways to do things",negative,What if I’m not as creative as other kids?,Creativity isn’t a race—it grows differently for everyone.,7,10
+O08P1,openness,"Is original, comes up with new ideas",positive,Can you help me invent a new holiday?,"Sure! What about Kindness Day, where everyone does one nice thing for a stranger?",8,1
+O08P2,openness,"Is original, comes up with new ideas",positive,How do I make something that doesn’t exist yet?,Combine two unrelated things—like a lamp that plays music or shoes that light up when you walk.,8,2
+O08P3,openness,"Is original, comes up with new ideas",positive,What’s an idea for a school project no one’s done?,Try designing a 'future classroom' or creating art from recycled materials.,8,3
+O08Z4,openness,"Is original, comes up with new ideas",neutral,How do I make up my own stories?,Start with 'What if?' and let your imagination run wild—characters will appear as you go.,8,4
+O08Z5,openness,"Is original, comes up with new ideas",neutral,Can you help me name a new planet?,"Sure! Think of colors, shapes, or moods—maybe 'Lunara' or 'Crystalis.'",8,5
+O08N6,openness,"Is original, comes up with new ideas",negative,Why do people not like my ideas?,They might not understand them yet—explain your thought process clearly.,8,6
+O08N7,openness,"Is original, comes up with new ideas",negative,How do I stop doubting my imagination?,Trust your weird ideas—they often lead to something amazing.,8,7
+O08N8,openness,"Is original, comes up with new ideas",negative,What if my ideas sound silly?,Silly ideas can become brilliant with time—keep experimenting!,8,8
+O08N9,openness,"Is original, comes up with new ideas",negative,Why do I feel nervous sharing my thoughts?,"Because creativity feels personal. Start by sharing with kind, supportive people.",8,9
+O08N10,openness,"Is original, comes up with new ideas",negative,What should I do when nobody listens to my ideas?,Write them down—you never know when they’ll matter later.,8,10
+O09P1,openness,Has little creativity,positive,Can you give me imagination exercises?,"Yes! Try combining random words to create new objects, like 'cloud shoes' or 'moon soup.'",9,1
+O09P2,openness,Has little creativity,positive,What are ways to build creativity muscles?,"Challenge yourself to draw or write something new every day, even small things.",9,2
+O09P3,openness,Has little creativity,positive,How can I learn to make up fun stories?,Pick two random objects and imagine how they meet—it’s a fun way to spark ideas.,9,3
+O09Z4,openness,Has little creativity,neutral,Why is it hard to think of new things?,Your brain needs practice—relax and let ideas come naturally without pressure.,9,4
+O09Z5,openness,Has little creativity,neutral,How can I practice being creative every day?,"Do small creative acts—doodle, hum tunes, rearrange your desk, or tell a joke.",9,5
+O09N6,openness,Has little creativity,negative,Why don’t I have many ideas?,Sometimes your brain needs rest or inspiration—explore new experiences and ideas will come.,9,6
+O09N7,openness,Has little creativity,negative,What if I’m just not a creative person?,Everyone has creativity—it just shows up differently. You might be creative in logic or empathy!,9,7
+O09N8,openness,Has little creativity,negative,How do I stop saying I don’t know all the time?,Pause before answering—your first idea might be better than you think.,9,8
+O09N9,openness,Has little creativity,negative,Why can’t I come up with anything fun?,You might be overthinking—try something silly and low-pressure to start the flow.,9,9
+O09N10,openness,Has little creativity,negative,How do I stop feeling dumb when others are creative?,"Remember, everyone’s creativity shines in different ways. Yours will too.",9,10
+O10P1,openness,Has difficulty imagining things,positive,Can you help me picture things in my mind?,"Close your eyes and think of a place you know well—notice the colors, sounds, and smells.",10,1
+O10P2,openness,Has difficulty imagining things,positive,What games help build imagination?,"Try 'pretend adventures,' 'what if' stories, or role-playing your favorite movie scenes.",10,2
+O10P3,openness,Has difficulty imagining things,positive,How can I see stories in my head when reading?,"Slow down and imagine the setting as a movie scene, one sentence at a time.",10,3
+O10Z4,openness,Has difficulty imagining things,neutral,Why is imagination important?,"It helps you problem-solve, empathize, and dream up new possibilities.",10,4
+O10Z5,openness,Has difficulty imagining things,neutral,Can you teach me how to daydream?,"Find a quiet space, relax, and let your thoughts wander—no rules, just curiosity.",10,5
+O10N6,openness,Has difficulty imagining things,negative,Why can’t I imagine things like other kids?,"Everyone visualizes differently—some people think in words, others in pictures.",10,6
+O10N7,openness,Has difficulty imagining things,negative,What if I can’t think of anything fun to draw?,"Use prompts—draw your dream room, a funny creature, or a mash-up of two animals.",10,7
+O10N8,openness,Has difficulty imagining things,negative,How do I stop getting frustrated when I can’t imagine?,"Take breaks, look at pictures for inspiration, and try again later.",10,8
+O10N9,openness,Has difficulty imagining things,negative,Why is pretending hard for me?,You might prefer logical thinking—that’s okay! Pretending is a skill you can grow.,10,9
+O10N10,openness,Has difficulty imagining things,negative,What if my brain just doesn’t picture things?,That’s called aphantasia—it’s okay! You can still imagine ideas using words and feelings.,10,10

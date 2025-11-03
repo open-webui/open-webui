@@ -1,0 +1,131 @@
+{
+  "Is curious about many different things": {
+    "Can you teach me something cool I don’t know?": "Sure! Did you know octopuses have three hearts and blue blood? They’re amazing problem solvers, too!",
+    "Why do animals act differently at night?": "Some animals are nocturnal—they’re built to see and hunt in the dark where it’s quieter and cooler.",
+    "What are mysteries scientists haven’t solved yet?": "There are many! Like how consciousness works, or what’s inside black holes, or how some animals navigate thousands of miles.",
+    "Why is the sky blue but space black?": "The air scatters sunlight, making the sky look blue. In space, there’s no air to scatter light, so it looks black.",
+    "How does a rainbow happen?": "When sunlight passes through raindrops, it bends and splits into colors—red, orange, yellow, green, blue, and violet!",
+    "Why do I get bored so easily?": "Your brain might crave new challenges—try switching tasks or exploring something unfamiliar.",
+    "What if I’m not interested in learning new things?": "That’s okay—it happens sometimes. Try connecting new topics to things you already enjoy.",
+    "Why does school feel boring sometimes?": "Sometimes the way things are taught doesn’t match your learning style. Try finding your own fun examples or hands-on activities.",
+    "How do I stay curious when lessons feel hard?": "Ask yourself questions about how it connects to the world—you’ll find curiosity grows from understanding.",
+    "What should I do when I stop caring about things?": "Take a break, try new hobbies, and talk to someone—it’s normal to need a spark again."
+  },
+
+  "Is complex, a deep thinker": {
+    "Can you help me think about big questions?": "Sure! Let’s start with one: what makes something truly meaningful to you?",
+    "Why do people dream?": "Scientists think dreams help our brains organize memories and explore emotions while we rest.",
+    "Why do we feel emotions?": "Emotions help us understand our needs and connect with others—they’re like signals from our brain.",
+    "Why do people believe different things?": "Because we all have unique experiences and cultures that shape our perspectives.",
+    "What is time, really?": "Time is how we measure change—it’s always moving forward, but how we feel it can depend on attention and emotion.",
+    "Why do my thoughts never stop?": "Your brain is active by nature—try journaling or mindfulness to slow it down a little.",
+    "What if thinking too much makes me sad?": "Then it’s time to step back and do something physical or creative—it helps balance your mind.",
+    "Why do I get lost in my thoughts so often?": "You might have a strong imagination—set aside thinking time, then return to the present after.",
+    "How do I stop worrying about deep stuff?": "Remind yourself that not every question needs an answer right away—it’s okay to let mystery exist.",
+    "What if nobody understands how I think?": "It just means you think uniquely. Keep expressing your ideas—you’ll find people who get you."
+  },
+
+  "Avoids intellectual, philosophical discussions": {
+    "Can you make smart things sound fun?": "Absolutely! Big ideas can be fun when tied to real life—like asking, ‘Could robots ever dream?’",
+    "How can I like learning even if it’s hard?": "Start with things you already enjoy, and build knowledge around that topic—it makes learning easier.",
+    "What are cool facts I can learn fast?": "Did you know honey never spoils? Or that there are more stars in space than grains of sand on Earth?",
+    "Why do I get bored when things are too deep?": "That’s normal—some topics feel abstract. Ask for examples to make them more relatable.",
+    "How can I learn new stuff without getting tired?": "Take breaks often, and switch between reading, videos, and hands-on practice.",
+    "Why do I zone out in class?": "Your attention might need variety—try doodling notes or asking questions to stay engaged.",
+    "What if I never like school?": "Learning doesn’t only happen in school—find other ways to learn through games or hobbies.",
+    "Why do I stop listening when things sound complicated?": "Sometimes our brains shut down when overloaded—pause and ask someone to explain it simply.",
+    "How do I stay focused when I don’t care?": "Set small goals or rewards to keep going—you might find interest along the way.",
+    "What happens if I give up on learning?": "You’d miss out on cool discoveries! Learning isn’t about grades—it’s how you grow as a person."
+  },
+
+  "Is fascinated by art, music, or literature": {
+    "Can you show me a cool drawing idea?": "Try drawing your favorite dream or mixing two animals into one creature!",
+    "Can you help me write my own story?": "Yes! Start with a 'what if' question, like 'What if clouds could talk?' and build from there.",
+    "What’s the story behind a famous painting?": "For example, Van Gogh’s 'Starry Night' shows his view from a hospital window and his emotions through swirling skies.",
+    "Why do some songs make me cry?": "Music triggers memories and feelings—it’s your brain connecting sound and emotion.",
+    "How do artists get their ideas?": "They observe the world carefully and mix imagination with experience.",
+    "What if I think my art isn’t good enough?": "Every artist starts somewhere—art is about expression, not perfection.",
+    "Why do people not like what I make?": "Art is personal—someone else’s opinion doesn’t define your creativity.",
+    "How do I stop comparing my drawings to others?": "Focus on your progress and unique style instead of others’ work.",
+    "What if I lose interest in art?": "It’s okay to take breaks—sometimes creativity comes back when you least expect it.",
+    "Why do I get upset when my art doesn’t look right?": "That’s frustration talking—step away, breathe, and return later with fresh eyes."
+  },
+
+  "Values art and beauty": {
+    "Why do sunsets look so pretty?": "Because sunlight bends through the atmosphere, scattering colors like pink and orange.",
+    "How can I find beauty in small things?": "Slow down—notice textures, colors, and patterns you normally overlook.",
+    "Can you help me design something creative?": "Sure! Think of something meaningful, like a poster about kindness or nature.",
+    "Why do people like art museums?": "They’re places to explore imagination and history through other people’s eyes.",
+    "What makes a song sound beautiful?": "Harmony, rhythm, and emotion working together make music feel powerful.",
+    "What if I don’t think I’m creative?": "Creativity comes in many forms—problem-solving, cooking, even organizing!",
+    "Why do I feel nothing when others see beauty?": "It might just mean you connect differently—your sense of beauty could show up elsewhere.",
+    "How can I learn to appreciate art more?": "Try learning the story or emotion behind a piece—it helps it come alive.",
+    "What should I do when my art looks ugly?": "Remember, every artist makes rough drafts. It’s part of creating something great.",
+    "Why do I feel jealous of talented people?": "Because you admire them—use that feeling as motivation to grow."
+  },
+
+  "Has few artistic interests": {
+    "What are other ways to be creative?": "You can be creative in problem-solving, sports, or even the way you tell jokes.",
+    "Can you make art fun for me?": "Try quick doodles or silly challenges—art doesn’t have to be serious.",
+    "Why do people love painting so much?": "It helps people relax and express what words can’t always say.",
+    "Is it okay to not care about art?": "Yes—it’s fine to have other interests. Everyone connects differently.",
+    "How can I try new hobbies if I don’t like drawing?": "Explore music, photography, coding, or building—creativity isn’t just about art.",
+    "Why do I feel left out when others draw?": "You might just want to join in—try sketching simple things for fun.",
+    "What if I’m bad at creative things?": "Nobody starts perfect—being bad at first means you’re learning!",
+    "Why does art feel boring to me?": "Maybe you haven’t found your style yet—try digital tools or crafts.",
+    "How do I enjoy things I’m not good at?": "Focus on the process, not the result. Fun comes from experimenting.",
+    "What should I do if I never find an art I like?": "That’s okay—your creativity might show up somewhere unexpected, like design or storytelling."
+  },
+
+  "Is inventive, finds clever ways to do things": {
+    "Can you help me invent something new?": "Sure! Think about a small problem you want to solve and brainstorm silly or serious solutions.",
+    "What’s a fun invention challenge I can try?": "Try designing a machine that makes chores easier or a backpack with hidden gadgets!",
+    "How do inventors come up with ideas?": "They ask 'What if…?' and test lots of versions until one works.",
+    "How do I think outside the box?": "Question the usual way of doing things and imagine wild alternatives.",
+    "Can you give me a puzzle to solve?": "Okay! How can you move one matchstick to make VII (7) turn into VI (6)?",
+    "Why can’t I think of good ideas?": "Ideas take practice—relax and let your brain play with 'what if' questions.",
+    "What if my inventions always fail?": "That’s how inventors learn! Each failure is a step closer to success.",
+    "Why do people say my ideas are weird?": "Weird often means original—many great inventions started as weird ideas.",
+    "How do I stop giving up when my idea doesn’t work?": "Take a break and come back later—fresh eyes can spark new solutions.",
+    "What if I’m not as creative as other kids?": "Creativity isn’t a race—it grows differently for everyone."
+  },
+
+  "Is original, comes up with new ideas": {
+    "Can you help me invent a new holiday?": "Sure! What about Kindness Day, where everyone does one nice thing for a stranger?",
+    "How do I make something that doesn’t exist yet?": "Combine two unrelated things—like a lamp that plays music or shoes that light up when you walk.",
+    "What’s an idea for a school project no one’s done?": "Try designing a 'future classroom' or creating art from recycled materials.",
+    "How do I make up my own stories?": "Start with 'What if?' and let your imagination run wild—characters will appear as you go.",
+    "Can you help me name a new planet?": "Sure! Think of colors, shapes, or moods—maybe 'Lunara' or 'Crystalis.'",
+    "Why do people not like my ideas?": "They might not understand them yet—explain your thought process clearly.",
+    "How do I stop doubting my imagination?": "Trust your weird ideas—they often lead to something amazing.",
+    "What if my ideas sound silly?": "Silly ideas can become brilliant with time—keep experimenting!",
+    "Why do I feel nervous sharing my thoughts?": "Because creativity feels personal. Start by sharing with kind, supportive people.",
+    "What should I do when nobody listens to my ideas?": "Write them down—you never know when they’ll matter later."
+  },
+
+  "Has little creativity": {
+    "Can you give me imagination exercises?": "Yes! Try combining random words to create new objects, like 'cloud shoes' or 'moon soup.'",
+    "What are ways to build creativity muscles?": "Challenge yourself to draw or write something new every day, even small things.",
+    "How can I learn to make up fun stories?": "Pick two random objects and imagine how they meet—it’s a fun way to spark ideas.",
+    "Why is it hard to think of new things?": "Your brain needs practice—relax and let ideas come naturally without pressure.",
+    "How can I practice being creative every day?": "Do small creative acts—doodle, hum tunes, rearrange your desk, or tell a joke.",
+    "Why don’t I have many ideas?": "Sometimes your brain needs rest or inspiration—explore new experiences and ideas will come.",
+    "What if I’m just not a creative person?": "Everyone has creativity—it just shows up differently. You might be creative in logic or empathy!",
+    "How do I stop saying I don’t know all the time?": "Pause before answering—your first idea might be better than you think.",
+    "Why can’t I come up with anything fun?": "You might be overthinking—try something silly and low-pressure to start the flow.",
+    "How do I stop feeling dumb when others are creative?": "Remember, everyone’s creativity shines in different ways. Yours will too."
+  },
+
+  "Has difficulty imagining things": {
+    "Can you help me picture things in my mind?": "Close your eyes and think of a place you know well—notice the colors, sounds, and smells.",
+    "What games help build imagination?": "Try 'pretend adventures,' 'what if' stories, or role-playing your favorite movie scenes.",
+    "How can I see stories in my head when reading?": "Slow down and imagine the setting as a movie scene, one sentence at a time.",
+    "Why is imagination important?": "It helps you problem-solve, empathize, and dream up new possibilities.",
+    "Can you teach me how to daydream?": "Find a quiet space, relax, and let your thoughts wander—no rules, just curiosity.",
+    "Why can’t I imagine things like other kids?": "Everyone visualizes differently—some people think in words, others in pictures.",
+    "What if I can’t think of anything fun to draw?": "Use prompts—draw your dream room, a funny creature, or a mash-up of two animals.",
+    "How do I stop getting frustrated when I can’t imagine?": "Take breaks, look at pictures for inspiration, and try again later.",
+    "Why is pretending hard for me?": "You might prefer logical thinking—that’s okay! Pretending is a skill you can grow.",
+    "What if my brain just doesn’t picture things?": "That’s called aphantasia—it’s okay! You can still imagine ideas using words and feelings."
+  }
+}
