@@ -23,6 +23,8 @@ from langchain_community.document_loaders import (
 )
 from langchain_core.documents import Document
 
+from docling_core.types.doc import DoclingDocument
+
 from open_webui.retrieval.loaders.external_document import ExternalDocumentLoader
 
 from open_webui.retrieval.loaders.mistral import MistralLoader
@@ -206,7 +208,27 @@ class DoclingLoader:
         if r.ok:
             result = r.json()
             document_data = result.get("document", {})
-            text = document_data.get("md_content", "<No text content found>")
+
+            docling_document = None
+            if document_data:
+                try:
+                    docling_document = DoclingDocument.model_validate(document_data)
+                except Exception as exc:
+                    log.warning("Failed to parse Docling response: %s", exc)
+
+            if docling_document is not None:
+                try:
+                    text = docling_document.export_to_markdown()
+                except Exception as exc:
+                    log.warning(
+                        "Failed to export DoclingDocument to markdown, falling back to response field: %s",
+                        exc,
+                    )
+                    text = document_data.get(
+                        "md_content", "<No text content found>"
+                    )
+            else:
+                text = document_data.get("md_content", "<No text content found>")
 
             metadata = {"Content-Type": self.mime_type} if self.mime_type else {}
 
