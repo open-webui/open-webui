@@ -47,6 +47,9 @@
 			image_generation: true,
 			code_interpreter: true,
 			notes: true
+		},
+		group: {
+			allow_sharing_to: true
 		}
 	};
 
@@ -65,7 +68,8 @@
 			workspace: { ...defaults.workspace, ...obj.workspace },
 			sharing: { ...defaults.sharing, ...obj.sharing },
 			chat: { ...defaults.chat, ...obj.chat },
-			features: { ...defaults.features, ...obj.features }
+			features: { ...defaults.features, ...obj.features },
+			group: { ...defaults.group, ...obj.group }
 		};
 	}
 
@@ -231,6 +235,28 @@
 				<Switch bind:state={permissions.sharing.public_notes} />
 			</div>
 			{#if defaultPermissions?.sharing?.public_notes && !permissions.sharing.public_notes}
+				<div>
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
+					</div>
+				</div>
+			{/if}
+		</div>
+	</div>
+
+	<hr class=" border-gray-100 dark:border-gray-850" />
+
+	<div>
+		<div class=" mb-2 text-sm font-medium">{$i18n.t('Group Settings')}</div>
+
+		<div class="flex flex-col w-full">
+			<div class="flex w-full justify-between my-1">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Allow Sharing to Group')}
+				</div>
+				<Switch bind:state={permissions.group.allow_sharing_to} />
+			</div>
+			{#if defaultPermissions?.group?.allow_sharing_to && !permissions.group.allow_sharing_to}
 				<div>
 					<div class="text-xs text-gray-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}

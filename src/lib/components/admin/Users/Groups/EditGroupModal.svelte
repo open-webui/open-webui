@@ -73,6 +73,9 @@
 			web_search: true,
 			image_generation: true,
 			code_interpreter: true
+		},
+		group: {
+			allow_sharing_to: true
 		}
 	};
 	export let userIds = [];
