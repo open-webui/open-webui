@@ -114,8 +114,8 @@ fastmcp==2.5.2
 pytz==2025.2
 
 ## CrewAI MCP Integration
-crewai==0.140.0
-crewai-tools[mcp]==0.49.0
+crewai
+crewai-tools
 protobuf>=5.26.1,<6.0.0
 grpcio>=1.49.1,<=1.67.1
 
