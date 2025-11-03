@@ -23,6 +23,7 @@ from open_webui.config import (
 )
 
 from open_webui.env import (
+    VERSION,
     ENABLE_WEBSOCKET_SUPPORT,
     WEBSOCKET_MANAGER,
     WEBSOCKET_REDIS_URL,
