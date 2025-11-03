@@ -843,7 +843,7 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "ENABLE_OAUTH_ROLE_MANAGEMENT": request.app.state.config.ENABLE_OAUTH_ROLE_MANAGEMENT,
         "ENABLE_OAUTH_GROUP_MANAGEMENT": request.app.state.config.ENABLE_OAUTH_GROUP_MANAGEMENT,
         "OAUTH_ROLES_CLAIM": request.app.state.config.OAUTH_ROLES_CLAIM,
-        "OAUTH_GROUP_CLAIM": request.app.state.config.OAUTH_GROUP_CLAIM,
+        "OAUTH_GROUPS_CLAIM": request.app.state.config.OAUTH_GROUPS_CLAIM,
         "OAUTH_EMAIL_CLAIM": request.app.state.config.OAUTH_EMAIL_CLAIM,
         "OAUTH_PICTURE_CLAIM": request.app.state.config.OAUTH_PICTURE_CLAIM,
         "OAUTH_USERNAME_CLAIM": request.app.state.config.OAUTH_USERNAME_CLAIM,
@@ -880,7 +880,7 @@ class AdminConfig(BaseModel):
     ENABLE_OAUTH_GROUP_MANAGEMENT: bool
     ENABLE_OAUTH_GROUP_CREATION: Optional[bool] = None
     OAUTH_ROLES_CLAIM: Optional[str] = ""
-    OAUTH_GROUP_CLAIM: Optional[str] = ""
+    OAUTH_GROUPS_CLAIM: Optional[str] = ""
     OAUTH_EMAIL_CLAIM: Optional[str] = ""
     OAUTH_PICTURE_CLAIM: Optional[str] = ""
     OAUTH_USERNAME_CLAIM: Optional[str] = ""
@@ -908,7 +908,7 @@ async def update_admin_config(
         "ENABLE_OAUTH_GROUP_MANAGEMENT": "enable_group_management",
         "ENABLE_OAUTH_GROUP_CREATION": "enable_group_creation",
         "OAUTH_ROLES_CLAIM": "roles_claim",
-        "OAUTH_GROUP_CLAIM": "group_claim",
+        "OAUTH_GROUPS_CLAIM": "groups_claim",
         "OAUTH_EMAIL_CLAIM": "email_claim",
         "OAUTH_PICTURE_CLAIM": "picture_claim",
         "OAUTH_USERNAME_CLAIM": "username_claim",
