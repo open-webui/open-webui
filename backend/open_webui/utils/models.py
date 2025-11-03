@@ -1,5 +1,6 @@
 import time
 import logging
+import asyncio
 import sys
 
 from aiocache import cached
@@ -13,15 +14,19 @@ from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 
 
-from open_webui.utils.plugin import load_function_module_by_id
+from open_webui.utils.plugin import (
+    load_function_module_by_id,
+    get_function_module_from_cache,
+)
 from open_webui.utils.access_control import has_access
 
 
 from open_webui.config import (
+    BYPASS_ADMIN_ACCESS_CONTROL,
     DEFAULT_ARENA_MODEL,
 )
 
-from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
+from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
 from open_webui.models.users import UserModel
 
 
@@ -30,39 +35,61 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
+async def fetch_ollama_models(request: Request, user: UserModel = None):
+    raw_ollama_models = await ollama.get_all_models(request, user=user)
+    return [
+        {
+            "id": model["model"],
+            "name": model["name"],
+            "object": "model",
+            "created": int(time.time()),
+            "owned_by": "ollama",
+            "ollama": model,
+            "connection_type": model.get("connection_type", "local"),
+            "tags": model.get("tags", []),
+        }
+        for model in raw_ollama_models["models"]
+    ]
+
+
+async def fetch_openai_models(request: Request, user: UserModel = None):
+    openai_response = await openai.get_all_models(request, user=user)
+    return openai_response["data"]
+
+
 async def get_all_base_models(request: Request, user: UserModel = None):
-    function_models = []
-    openai_models = []
-    ollama_models = []
+    openai_task = (
+        fetch_openai_models(request, user)
+        if request.app.state.config.ENABLE_OPENAI_API
+        else asyncio.sleep(0, result=[])
+    )
+    ollama_task = (
+        fetch_ollama_models(request, user)
+        if request.app.state.config.ENABLE_OLLAMA_API
+        else asyncio.sleep(0, result=[])
+    )
+    function_task = get_function_models(request)
 
-    if request.app.state.config.ENABLE_OPENAI_API:
-        openai_models = await openai.get_all_models(request, user=user)
-        openai_models = openai_models["data"]
+    openai_models, ollama_models, function_models = await asyncio.gather(
+        openai_task, ollama_task, function_task
+    )
 
-    if request.app.state.config.ENABLE_OLLAMA_API:
-        ollama_models = await ollama.get_all_models(request, user=user)
-        ollama_models = [
-            {
-                "id": model["model"],
-                "name": model["name"],
-                "object": "model",
-                "created": int(time.time()),
-                "owned_by": "ollama",
-                "ollama": model,
-                "connection_type": model.get("connection_type", "local"),
-                "tags": model.get("tags", []),
-            }
-            for model in ollama_models["models"]
-        ]
-
-    function_models = await get_function_models(request)
-    models = function_models + openai_models + ollama_models
-
-    return models
+    return function_models + openai_models + ollama_models
 
 
-async def get_all_models(request, user: UserModel = None):
-    models = await get_all_base_models(request, user=user)
+async def get_all_models(request, refresh: bool = False, user: UserModel = None):
+    if (
+        request.app.state.MODELS
+        and request.app.state.BASE_MODELS
+        and (request.app.state.config.ENABLE_BASE_MODELS_CACHE and not refresh)
+    ):
+        base_models = request.app.state.BASE_MODELS
+    else:
+        base_models = await get_all_base_models(request, user=user)
+        request.app.state.BASE_MODELS = base_models
+
+    # deep copy the base models to avoid modifying the original list
+    models = [model.copy() for model in base_models]
 
     # If there are no models, return an empty list
     if len(models) == 0:
@@ -122,6 +149,7 @@ async def get_all_models(request, user: UserModel = None):
     custom_models = Models.get_all_models()
     for custom_model in custom_models:
         if custom_model.base_model_id is None:
+            # Applied directly to a base model
             for model in models:
                 if custom_model.id == model["id"] or (
                     model.get("owned_by") == "ollama"
@@ -235,15 +263,12 @@ async def get_all_models(request, user: UserModel = None):
                 "icon": function.meta.manifest.get("icon_url", None)
                 or getattr(module, "icon_url", None)
                 or getattr(module, "icon", None),
+                "has_user_valves": hasattr(module, "UserValves"),
             }
         ]
 
     def get_function_module_by_id(function_id):
-        if function_id in request.app.state.FUNCTIONS:
-            function_module = request.app.state.FUNCTIONS[function_id]
-        else:
-            function_module, _, _ = load_function_module_by_id(function_id)
-            request.app.state.FUNCTIONS[function_id] = function_module
+        function_module, _, _ = get_function_module_from_cache(request, function_id)
         return function_module
 
     for model in models:
@@ -309,3 +334,40 @@ def check_model_access(user, model):
             )
         ):
             raise Exception("Model not found")
+
+
+def get_filtered_models(models, user):
+    # Filter out models that the user does not have access to
+    if (
+        user.role == "user"
+        or (user.role == "admin" and not BYPASS_ADMIN_ACCESS_CONTROL)
+    ) and not BYPASS_MODEL_ACCESS_CONTROL:
+        filtered_models = []
+        for model in models:
+            if model.get("arena"):
+                if has_access(
+                    user.id,
+                    type="read",
+                    access_control=model.get("info", {})
+                    .get("meta", {})
+                    .get("access_control", {}),
+                ):
+                    filtered_models.append(model)
+                continue
+
+            model_info = Models.get_model_by_id(model["id"])
+            if model_info:
+                if (
+                    (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                    or user.id == model_info.user_id
+                    or has_access(
+                        user.id,
+                        type="read",
+                        access_control=model_info.access_control,
+                    )
+                ):
+                    filtered_models.append(model)
+
+        return filtered_models
+    else:
+        return models

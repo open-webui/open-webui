@@ -5,14 +5,19 @@
 
 	import markedExtension from '$lib/utils/marked/extension';
 	import markedKatexExtension from '$lib/utils/marked/katex-extension';
+	import { mentionExtension } from '$lib/utils/marked/mention-extension';
 
 	import MarkdownTokens from './Markdown/MarkdownTokens.svelte';
 
 	export let id = '';
 	export let content;
+	export let done = true;
 	export let model = null;
 	export let save = false;
 	export let preview = false;
+
+	export let editCodeBlock = true;
+	export let topPadding = false;
 
 	export let sourceIds = [];
 
@@ -27,11 +32,15 @@
 	let tokens = [];
 
 	const options = {
-		throwOnError: false
+		throwOnError: false,
+		breaks: true
 	};
 
 	marked.use(markedKatexExtension(options));
 	marked.use(markedExtension(options));
+	marked.use({
+		extensions: [mentionExtension({ triggerChar: '@' }), mentionExtension({ triggerChar: '#' })]
+	});
 
 	$: (async () => {
 		if (content) {
@@ -46,8 +55,11 @@
 	<MarkdownTokens
 		{tokens}
 		{id}
+		{done}
 		{save}
 		{preview}
+		{editCodeBlock}
+		{topPadding}
 		{onTaskClick}
 		{onSourceClick}
 		{onSave}

@@ -1,7 +1,7 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { getTimeRange } from '$lib/utils';
 
-export const createNewChat = async (token: string, chat: object) => {
+export const createNewChat = async (token: string, chat: object, folderId: string | null) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/new`, {
@@ -12,7 +12,8 @@ export const createNewChat = async (token: string, chat: object) => {
 			authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			chat: chat
+			chat: chat,
+			folder_id: folderId ?? null
 		})
 	})
 		.then(async (res) => {
@@ -21,6 +22,38 @@ export const createNewChat = async (token: string, chat: object) => {
 		})
 		.catch((err) => {
 			error = err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const unarchiveAllChats = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/unarchive/all`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+
 			console.error(err);
 			return null;
 		});
@@ -37,7 +70,9 @@ export const importChat = async (
 	chat: object,
 	meta: object | null,
 	pinned?: boolean,
-	folderId?: string | null
+	folderId?: string | null,
+	createdAt: number | null = null,
+	updatedAt: number | null = null
 ) => {
 	let error = null;
 
@@ -52,7 +87,9 @@ export const importChat = async (
 			chat: chat,
 			meta: meta ?? {},
 			pinned: pinned,
-			folder_id: folderId
+			folder_id: folderId,
+			created_at: createdAt ?? null,
+			updated_at: updatedAt ?? null
 		})
 	})
 		.then(async (res) => {
@@ -72,12 +109,25 @@ export const importChat = async (
 	return res;
 };
 
-export const getChatList = async (token: string = '', page: number | null = null) => {
+export const getChatList = async (
+	token: string = '',
+	page: number | null = null,
+	include_pinned: boolean = false,
+	include_folders: boolean = false
+) => {
 	let error = null;
 	const searchParams = new URLSearchParams();
 
 	if (page !== null) {
 		searchParams.append('page', `${page}`);
+	}
+
+	if (include_folders) {
+		searchParams.append('include_folders', 'true');
+	}
+
+	if (include_pinned) {
+		searchParams.append('include_pinned', 'true');
 	}
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/?${searchParams.toString()}`, {
@@ -111,10 +161,79 @@ export const getChatList = async (token: string = '', page: number | null = null
 	}));
 };
 
-export const getChatListByUserId = async (token: string = '', userId: string) => {
+export const getChatListByUserId = async (
+	token: string = '',
+	userId: string,
+	page: number = 1,
+	filter?: object
+) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/list/user/${userId}`, {
+	const searchParams = new URLSearchParams();
+
+	searchParams.append('page', `${page}`);
+
+	if (filter) {
+		Object.entries(filter).forEach(([key, value]) => {
+			if (value !== undefined && value !== null) {
+				searchParams.append(key, value.toString());
+			}
+		});
+	}
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/chats/list/user/${userId}?${searchParams.toString()}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
+			}
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res.map((chat) => ({
+		...chat,
+		time_range: getTimeRange(chat.updated_at)
+	}));
+};
+
+export const getArchivedChatList = async (
+	token: string = '',
+	page: number = 1,
+	filter?: object
+) => {
+	let error = null;
+
+	const searchParams = new URLSearchParams();
+	searchParams.append('page', `${page}`);
+
+	if (filter) {
+		Object.entries(filter).forEach(([key, value]) => {
+			if (value !== undefined && value !== null) {
+				searchParams.append(key, value.toString());
+			}
+		});
+	}
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/archived?${searchParams.toString()}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -143,37 +262,6 @@ export const getChatListByUserId = async (token: string = '', userId: string) =>
 		...chat,
 		time_range: getTimeRange(chat.updated_at)
 	}));
-};
-
-export const getArchivedChatList = async (token: string = '') => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/archived`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
 };
 
 export const getAllChats = async (token: string) => {
@@ -256,6 +344,45 @@ export const getChatsByFolderId = async (token: string, folderId: string) => {
 			...(token && { authorization: `Bearer ${token}` })
 		}
 	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getChatListByFolderId = async (token: string, folderId: string, page: number = 1) => {
+	let error = null;
+
+	const searchParams = new URLSearchParams();
+	if (page !== null) {
+		searchParams.append('page', `${page}`);
+	}
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/chats/folder/${folderId}/list?${searchParams.toString()}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
+			}
+		}
+	)
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();

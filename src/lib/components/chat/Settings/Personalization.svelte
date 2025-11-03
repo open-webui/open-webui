@@ -24,12 +24,13 @@
 <ManageModal bind:show={showManageModal} />
 
 <form
+	id="tab-personalization"
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={() => {
 		dispatch('save');
 	}}
 >
-	<div class="py-1 overflow-y-scroll max-h-[28rem] lg:max-h-full">
+	<div class="py-1 overflow-y-scroll max-h-[28rem] md:max-h-full">
 		<div>
 			<div class="flex items-center justify-between mb-1">
 				<Tooltip

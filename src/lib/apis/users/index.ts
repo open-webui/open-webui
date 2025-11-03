@@ -126,7 +126,7 @@ export const getUsers = async (
 	let error = null;
 	let res = null;
 
-	let searchParams = new URLSearchParams();
+	const searchParams = new URLSearchParams();
 
 	searchParams.set('page', `${page}`);
 
@@ -171,6 +171,34 @@ export const getAllUsers = async (token: string) => {
 	let res = null;
 
 	res = await fetch(`${WEBUI_API_BASE_URL}/users/all`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const searchUsers = async (token: string, query: string) => {
+	let error = null;
+	let res = null;
+
+	res = await fetch(`${WEBUI_API_BASE_URL}/users/search?query=${encodeURIComponent(query)}`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -348,6 +376,33 @@ export const getAndUpdateUserLocation = async (token: string) => {
 	}
 };
 
+export const getUserActiveStatusById = async (token: string, userId: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/users/${userId}/active`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const deleteUserById = async (token: string, userId: string) => {
 	let error = null;
 
@@ -376,6 +431,7 @@ export const deleteUserById = async (token: string, userId: string) => {
 };
 
 type UserUpdateForm = {
+	role: string;
 	profile_image_url: string;
 	email: string;
 	name: string;
@@ -393,10 +449,38 @@ export const updateUserById = async (token: string, userId: string, user: UserUp
 		},
 		body: JSON.stringify({
 			profile_image_url: user.profile_image_url,
+			role: user.role,
 			email: user.email,
 			name: user.name,
 			password: user.password !== '' ? user.password : undefined
 		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getUserGroupsById = async (token: string, userId: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/users/${userId}/groups`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

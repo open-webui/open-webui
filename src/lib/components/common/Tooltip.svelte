@@ -2,37 +2,53 @@
 	import DOMPurify from 'dompurify';
 
 	import { onDestroy } from 'svelte';
-	import { marked } from 'marked';
 
 	import tippy from 'tippy.js';
-	import { roundArrow } from 'tippy.js';
+
+	export let elementId = '';
+
+	export let as = 'div';
+	export let className = 'flex';
 
 	export let placement = 'top';
 	export let content = `I'm a tooltip!`;
 	export let touch = true;
-	export let className = 'flex';
 	export let theme = '';
 	export let offset = [0, 4];
 	export let allowHTML = true;
 	export let tippyOptions = {};
+	export let interactive = false;
+
+	export let onClick = () => {};
 
 	let tooltipElement;
 	let tooltipInstance;
 
-	$: if (tooltipElement && content) {
-		if (tooltipInstance) {
-			tooltipInstance.setContent(DOMPurify.sanitize(content));
+	$: if (tooltipElement && (content || elementId)) {
+		let tooltipContent = null;
+
+		if (elementId) {
+			tooltipContent = document.getElementById(`${elementId}`);
 		} else {
-			tooltipInstance = tippy(tooltipElement, {
-				content: DOMPurify.sanitize(content),
-				placement: placement,
-				allowHTML: allowHTML,
-				touch: touch,
-				...(theme !== '' ? { theme } : { theme: 'dark' }),
-				arrow: false,
-				offset: offset,
-				...tippyOptions
-			});
+			tooltipContent = DOMPurify.sanitize(content);
+		}
+
+		if (tooltipInstance) {
+			tooltipInstance.setContent(tooltipContent);
+		} else {
+			if (content) {
+				tooltipInstance = tippy(tooltipElement, {
+					content: tooltipContent,
+					placement: placement,
+					allowHTML: allowHTML,
+					touch: touch,
+					...(theme !== '' ? { theme } : { theme: 'dark' }),
+					arrow: false,
+					offset: offset,
+					...(interactive ? { interactive: true } : {}),
+					...tippyOptions
+				});
+			}
 		}
 	} else if (tooltipInstance && content === '') {
 		if (tooltipInstance) {
@@ -47,6 +63,9 @@
 	});
 </script>
 
-<div bind:this={tooltipElement} aria-label={DOMPurify.sanitize(content)} class={className}>
+<!-- svelte-ignore a11y-no-static-element-interactions -->
+<svelte:element this={as} bind:this={tooltipElement} class={className} on:click={onClick}>
 	<slot />
-</div>
+</svelte:element>
+
+<slot name="tooltip"></slot>

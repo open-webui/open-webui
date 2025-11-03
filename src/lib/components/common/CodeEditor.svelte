@@ -11,10 +11,13 @@
 
 	import { oneDark } from '@codemirror/theme-one-dark';
 
-	import { onMount, createEventDispatcher, getContext, tick } from 'svelte';
+	import { onMount, createEventDispatcher, getContext, tick, onDestroy } from 'svelte';
+
+	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
 
 	import { formatPythonCode } from '$lib/apis/utils';
 	import { toast } from 'svelte-sonner';
+	import { user } from '$lib/stores';
 
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
@@ -45,35 +48,28 @@
 	/**
 	 * Finds multiple diffs in two strings and generates minimal change edits.
 	 */
-	function findChanges(oldStr, newStr) {
-		let changes = [];
-		let oldIndex = 0,
-			newIndex = 0;
-
-		while (oldIndex < oldStr.length || newIndex < newStr.length) {
-			if (oldStr[oldIndex] !== newStr[newIndex]) {
-				let start = oldIndex;
-
-				// Identify the changed portion
-				while (oldIndex < oldStr.length && oldStr[oldIndex] !== newStr[newIndex]) {
-					oldIndex++;
-				}
-				while (newIndex < newStr.length && newStr[newIndex] !== oldStr[start]) {
-					newIndex++;
-				}
-
-				changes.push({
-					from: start,
-					to: oldIndex, // Replace the differing part
-					insert: newStr.substring(start, newIndex)
-				});
-			} else {
-				oldIndex++;
-				newIndex++;
-			}
+	function findChanges(oldStr: string, newStr: string) {
+		// Find the start of the difference
+		let start = 0;
+		while (start < oldStr.length && start < newStr.length && oldStr[start] === newStr[start]) {
+			start++;
 		}
-
-		return changes;
+		// If equal, nothing to change
+		if (oldStr === newStr) return [];
+		// Find the end of the difference by comparing backwards
+		let endOld = oldStr.length,
+			endNew = newStr.length;
+		while (endOld > start && endNew > start && oldStr[endOld - 1] === newStr[endNew - 1]) {
+			endOld--;
+			endNew--;
+		}
+		return [
+			{
+				from: start,
+				to: endOld,
+				insert: newStr.slice(start, endNew)
+			}
+		];
 	}
 
 	export let id = '';
@@ -113,13 +109,100 @@
 		return await language?.load();
 	};
 
+	let pyodideWorkerInstance = null;
+
+	const getPyodideWorker = () => {
+		if (!pyodideWorkerInstance) {
+			pyodideWorkerInstance = new PyodideWorker(); // Your worker constructor
+		}
+		return pyodideWorkerInstance;
+	};
+
+	// Generate unique IDs for requests
+	let _formatReqId = 0;
+
+	const formatPythonCodePyodide = (code) => {
+		return new Promise((resolve, reject) => {
+			const id = `format-${++_formatReqId}`;
+			let timeout;
+			const worker = getPyodideWorker();
+
+			const startTag = `--||CODE-START-${id}||--`;
+			const endTag = `--||CODE-END-${id}||--`;
+
+			const script = `
+import black
+print("${startTag}")
+print(black.format_str("""${code.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/"/g, '\\"')}""", mode=black.Mode()))
+print("${endTag}")
+`;
+
+			const packages = ['black'];
+
+			function handleMessage(event) {
+				const { id: eventId, stdout, stderr } = event.data;
+				if (eventId !== id) return; // Only handle our message
+				clearTimeout(timeout);
+				worker.removeEventListener('message', handleMessage);
+				worker.removeEventListener('error', handleError);
+
+				if (stderr) {
+					reject(stderr);
+				} else {
+					function extractBetweenDelimiters(stdout, start, end) {
+						console.log('stdout', stdout);
+						const startIdx = stdout.indexOf(start);
+						const endIdx = stdout.indexOf(end, startIdx + start.length);
+						if (startIdx === -1 || endIdx === -1) return null;
+						return stdout.slice(startIdx + start.length, endIdx).trim();
+					}
+
+					const formatted = extractBetweenDelimiters(
+						stdout && typeof stdout === 'string' ? stdout : '',
+						startTag,
+						endTag
+					);
+
+					resolve({ code: formatted });
+				}
+			}
+
+			function handleError(event) {
+				clearTimeout(timeout);
+				worker.removeEventListener('message', handleMessage);
+				worker.removeEventListener('error', handleError);
+				reject(event.message || 'Pyodide worker error');
+			}
+
+			worker.addEventListener('message', handleMessage);
+			worker.addEventListener('error', handleError);
+
+			// Send to worker
+			worker.postMessage({ id, code: script, packages });
+
+			// Timeout
+			timeout = setTimeout(() => {
+				worker.removeEventListener('message', handleMessage);
+				worker.removeEventListener('error', handleError);
+				try {
+					worker.terminate();
+				} catch {}
+				pyodideWorkerInstance = null;
+				reject('Execution Time Limit Exceeded');
+			}, 60000);
+		});
+	};
+
 	export const formatPythonCodeHandler = async () => {
 		if (codeEditor) {
-			const res = await formatPythonCode(localStorage.token, _value).catch((error) => {
+			const res = await (
+				$user?.role === 'admin'
+					? formatPythonCode(localStorage.token, _value)
+					: formatPythonCodePyodide(_value)
+			).catch((error) => {
 				toast.error(`${error}`);
 				return null;
 			});
-
 			if (res && res.code) {
 				const formattedCode = res.code;
 				codeEditor.dispatch({
@@ -142,7 +225,7 @@
 		basicSetup,
 		keymap.of([{ key: 'Tab', run: acceptCompletion }, indentWithTab]),
 		indentUnit.of('    '),
-		placeholder('Enter your code here...'),
+		placeholder($i18n.t('Enter your code here...')),
 		EditorView.updateListener.of((e) => {
 			if (e.docChanged) {
 				_value = e.state.doc.toString();
@@ -167,7 +250,6 @@
 	};
 
 	onMount(() => {
-		console.log(value);
 		if (value === '') {
 			value = boilerplate;
 		}
@@ -239,6 +321,12 @@
 			observer.disconnect();
 			document.removeEventListener('keydown', keydownHandler);
 		};
+	});
+
+	onDestroy(() => {
+		if (pyodideWorkerInstance) {
+			pyodideWorkerInstance.terminate();
+		}
 	});
 </script>
 

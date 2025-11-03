@@ -1,14 +1,18 @@
 import logging
 import requests
 from typing import Optional, List, Tuple
+from urllib.parse import quote
 
-from open_webui.env import SRC_LOG_LEVELS
+
+from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS, SRC_LOG_LEVELS
+from open_webui.retrieval.models.base_reranker import BaseReranker
+
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-class ExternalReranker:
+class ExternalReranker(BaseReranker):
     def __init__(
         self,
         api_key: str,
@@ -19,7 +23,9 @@ class ExternalReranker:
         self.url = url
         self.model = model
 
-    def predict(self, sentences: List[Tuple[str, str]]) -> Optional[List[float]]:
+    def predict(
+        self, sentences: List[Tuple[str, str]], user=None
+    ) -> Optional[List[float]]:
         query = sentences[0][0]
         docs = [i[1] for i in sentences]
 
@@ -39,6 +45,16 @@ class ExternalReranker:
                 headers={
                     "Content-Type": "application/json",
                     "Authorization": f"Bearer {self.api_key}",
+                    **(
+                        {
+                            "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
+                            "X-OpenWebUI-User-Id": user.id,
+                            "X-OpenWebUI-User-Email": user.email,
+                            "X-OpenWebUI-User-Role": user.role,
+                        }
+                        if ENABLE_FORWARD_USER_INFO_HEADERS and user
+                        else {}
+                    ),
                 },
                 json=payload,
             )

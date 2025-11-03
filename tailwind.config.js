@@ -1,5 +1,5 @@
 import typography from '@tailwindcss/typography';
-import containerQuries from '@tailwindcss/container-queries';
+import containerQueries from '@tailwindcss/container-queries';
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -36,8 +36,11 @@ export default {
 			},
 			padding: {
 				'safe-bottom': 'env(safe-area-inset-bottom)'
+			},
+			transitionProperty: {
+				width: 'width'
 			}
 		}
 	},
-	plugins: [typography, containerQuries]
+	plugins: [typography, containerQueries]
 };

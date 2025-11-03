@@ -336,7 +336,7 @@ export const userSignOut = async () => {
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
-			return res;
+			return res.json();
 		})
 		.catch((err) => {
 			console.error(err);
@@ -347,6 +347,8 @@ export const userSignOut = async () => {
 	if (error) {
 		throw error;
 	}
+
+	sessionStorage.clear();
 	return res;
 };
 
@@ -391,7 +393,7 @@ export const addUser = async (
 	return res;
 };
 
-export const updateUserProfile = async (token: string, name: string, profileImageUrl: string) => {
+export const updateUserProfile = async (token: string, profile: object) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/update/profile`, {
@@ -401,8 +403,7 @@ export const updateUserProfile = async (token: string, name: string, profileImag
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			name: name,
-			profile_image_url: profileImageUrl
+			...profile
 		})
 	})
 		.then(async (res) => {

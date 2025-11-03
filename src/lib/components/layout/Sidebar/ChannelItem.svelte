@@ -9,6 +9,8 @@
 
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import ChannelModal from './ChannelModal.svelte';
+	import Lock from '$lib/components/icons/Lock.svelte';
+	import Hashtag from '$lib/components/icons/Hashtag.svelte';
 
 	export let onUpdate: Function = () => {};
 
@@ -34,7 +36,7 @@
 		});
 
 		if (res) {
-			toast.success('Channel updated successfully');
+			toast.success($i18n.t('Channel updated successfully'));
 		}
 
 		onUpdate();
@@ -42,37 +44,34 @@
 />
 
 <div
+	id="sidebar-channel-item"
 	bind:this={itemElement}
-	class=" w-full {className} rounded-lg flex relative group hover:bg-gray-100 dark:hover:bg-gray-900 {$page
+	class=" w-full {className} rounded-xl flex relative group hover:bg-gray-100 dark:hover:bg-gray-900 {$page
 		.url.pathname === `/channels/${channel.id}`
-		? 'bg-gray-100 dark:bg-gray-900'
+		? 'bg-gray-100 dark:bg-gray-900 selected'
 		: ''} px-2.5 py-1"
 >
 	<a
 		class=" w-full flex justify-between"
 		href="/channels/{channel.id}"
 		on:click={() => {
+			console.log(channel);
 			if ($mobile) {
 				showSidebar.set(false);
 			}
 		}}
 		draggable="false"
 	>
-		<div class="flex items-center gap-1">
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox="0 0 16 16"
-				fill="currentColor"
-				class="size-5"
-			>
-				<path
-					fill-rule="evenodd"
-					d="M7.487 2.89a.75.75 0 1 0-1.474-.28l-.455 2.388H3.61a.75.75 0 0 0 0 1.5h1.663l-.571 2.998H2.75a.75.75 0 0 0 0 1.5h1.666l-.403 2.114a.75.75 0 0 0 1.474.28l.456-2.394h2.973l-.403 2.114a.75.75 0 0 0 1.474.28l.456-2.394h1.947a.75.75 0 0 0 0-1.5h-1.661l.57-2.998h1.95a.75.75 0 0 0 0-1.5h-1.664l.402-2.108a.75.75 0 0 0-1.474-.28l-.455 2.388H7.085l.402-2.108ZM6.8 6.498l-.571 2.998h2.973l.57-2.998H6.8Z"
-					clip-rule="evenodd"
-				/>
-			</svg>
+		<div class="flex items-center gap-1 shrink-0">
+			<div class=" size-4 justify-center flex items-center">
+				{#if channel?.access_control === null}
+					<Hashtag className="size-3" strokeWidth="2.5" />
+				{:else}
+					<Lock className="size-[15px]" strokeWidth="2" />
+				{/if}
+			</div>
 
-			<div class=" text-left self-center overflow-hidden w-full line-clamp-1">
+			<div class=" text-left self-center overflow-hidden w-full line-clamp-1 flex-1">
 				{channel.name}
 			</div>
 		</div>

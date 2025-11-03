@@ -1,10 +1,6 @@
 import { OLLAMA_API_BASE_URL } from '$lib/constants';
 
-export const verifyOllamaConnection = async (
-	token: string = '',
-	url: string = '',
-	key: string = ''
-) => {
+export const verifyOllamaConnection = async (token: string = '', connection: dict = {}) => {
 	let error = null;
 
 	const res = await fetch(`${OLLAMA_API_BASE_URL}/verify`, {
@@ -15,8 +11,7 @@ export const verifyOllamaConnection = async (
 			'Content-Type': 'application/json'
 		},
 		body: JSON.stringify({
-			url,
-			key
+			...connection
 		})
 	})
 		.then(async (res) => {
@@ -239,7 +234,7 @@ export const getOllamaModels = async (token: string = '', urlIdx: null | number 
 	return (res?.models ?? [])
 		.map((model) => ({ id: model.model, name: model.name ?? model.model, ...model }))
 		.sort((a, b) => {
-			return a.name.localeCompare(b.name);
+			return (a?.name ?? a?.id ?? '').localeCompare(b?.name ?? b?.id ?? '');
 		});
 };
 
@@ -336,7 +331,7 @@ export const generateTextCompletion = async (token: string = '', model: string, 
 };
 
 export const generateChatCompletion = async (token: string = '', body: object) => {
-	let controller = new AbortController();
+	const controller = new AbortController();
 	let error = null;
 
 	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/chat`, {
@@ -358,6 +353,31 @@ export const generateChatCompletion = async (token: string = '', body: object) =
 	}
 
 	return [res, controller];
+};
+
+export const unloadModel = async (token: string, tagName: string) => {
+	let error = null;
+
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/unload`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			model: tagName
+		})
+	}).catch((err) => {
+		error = err;
+		return null;
+	});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
 };
 
 export const createModel = async (token: string, payload: object, urlIdx: string | null = null) => {
@@ -399,7 +419,7 @@ export const deleteModel = async (token: string, tagName: string, urlIdx: string
 				Authorization: `Bearer ${token}`
 			},
 			body: JSON.stringify({
-				name: tagName
+				model: tagName
 			})
 		}
 	)

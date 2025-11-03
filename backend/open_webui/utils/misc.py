@@ -1,5 +1,6 @@
 import hashlib
 import re
+import threading
 import time
 import uuid
 import logging
@@ -25,7 +26,7 @@ def deep_update(d, u):
     return d
 
 
-def get_message_list(messages, message_id):
+def get_message_list(messages_map, message_id):
     """
     Reconstructs a list of messages in order up to the specified message_id.
 
@@ -34,11 +35,15 @@ def get_message_list(messages, message_id):
     :return: List of ordered messages starting from the root to the given message
     """
 
+    # Handle case where messages is None
+    if not messages_map:
+        return []  # Return empty list instead of None to prevent iteration errors
+
     # Find the message by its id
-    current_message = messages.get(message_id)
+    current_message = messages_map.get(message_id)
 
     if not current_message:
-        return None
+        return []  # Return empty list instead of None to prevent iteration errors
 
     # Reconstruct the chain by following the parentId links
     message_list = []
@@ -47,8 +52,8 @@ def get_message_list(messages, message_id):
         message_list.insert(
             0, current_message
         )  # Insert the message at the beginning of the list
-        parent_id = current_message["parentId"]
-        current_message = messages.get(parent_id) if parent_id else None
+        parent_id = current_message.get("parentId")  # Use .get() for safety
+        current_message = messages_map.get(parent_id) if parent_id else None
 
     return message_list
 
@@ -70,12 +75,12 @@ def get_last_user_message_item(messages: list[dict]) -> Optional[dict]:
 
 
 def get_content_from_message(message: dict) -> Optional[str]:
-    if isinstance(message["content"], list):
+    if isinstance(message.get("content"), list):
         for item in message["content"]:
             if item["type"] == "text":
                 return item["text"]
     else:
-        return message["content"]
+        return message.get("content")
     return None
 
 
@@ -115,22 +120,33 @@ def pop_system_message(messages: list[dict]) -> tuple[Optional[dict], list[dict]
     return get_system_message(messages), remove_system_message(messages)
 
 
-def prepend_to_first_user_message_content(
-    content: str, messages: list[dict]
-) -> list[dict]:
+def update_message_content(message: dict, content: str, append: bool = True) -> dict:
+    if isinstance(message["content"], list):
+        for item in message["content"]:
+            if item["type"] == "text":
+                if append:
+                    item["text"] = f"{item['text']}\n{content}"
+                else:
+                    item["text"] = f"{content}\n{item['text']}"
+    else:
+        if append:
+            message["content"] = f"{message['content']}\n{content}"
+        else:
+            message["content"] = f"{content}\n{message['content']}"
+    return message
+
+
+def replace_system_message_content(content: str, messages: list[dict]) -> dict:
     for message in messages:
-        if message["role"] == "user":
-            if isinstance(message["content"], list):
-                for item in message["content"]:
-                    if item["type"] == "text":
-                        item["text"] = f"{content}\n{item['text']}"
-            else:
-                message["content"] = f"{content}\n{message['content']}"
+        if message["role"] == "system":
+            message["content"] = content
             break
     return messages
 
 
-def add_or_update_system_message(content: str, messages: list[dict]):
+def add_or_update_system_message(
+    content: str, messages: list[dict], append: bool = False
+):
     """
     Adds a new system message at the beginning of the messages list
     or updates the existing system message at the beginning.
@@ -141,7 +157,7 @@ def add_or_update_system_message(content: str, messages: list[dict]):
     """
 
     if messages and messages[0].get("role") == "system":
-        messages[0]["content"] = f"{content}\n{messages[0]['content']}"
+        messages[0] = update_message_content(messages[0], content, append)
     else:
         # Insert at the beginning
         messages.insert(0, {"role": "system", "content": content})
@@ -149,7 +165,7 @@ def add_or_update_system_message(content: str, messages: list[dict]):
     return messages
 
 
-def add_or_update_user_message(content: str, messages: list[dict]):
+def add_or_update_user_message(content: str, messages: list[dict], append: bool = True):
     """
     Adds a new user message at the end of the messages list
     or updates the existing user message at the end.
@@ -160,11 +176,21 @@ def add_or_update_user_message(content: str, messages: list[dict]):
     """
 
     if messages and messages[-1].get("role") == "user":
-        messages[-1]["content"] = f"{messages[-1]['content']}\n{content}"
+        messages[-1] = update_message_content(messages[-1], content, append)
     else:
         # Insert at the end
         messages.append({"role": "user", "content": content})
 
+    return messages
+
+
+def prepend_to_first_user_message_content(
+    content: str, messages: list[dict]
+) -> list[dict]:
+    for message in messages:
+        if message["role"] == "user":
+            message = update_message_content(message, content, append=False)
+            break
     return messages
 
 
@@ -199,6 +225,7 @@ def openai_chat_message_template(model: str):
 def openai_chat_chunk_message_template(
     model: str,
     content: Optional[str] = None,
+    reasoning_content: Optional[str] = None,
     tool_calls: Optional[list[dict]] = None,
     usage: Optional[dict] = None,
 ) -> dict:
@@ -211,10 +238,13 @@ def openai_chat_chunk_message_template(
     if content:
         template["choices"][0]["delta"]["content"] = content
 
+    if reasoning_content:
+        template["choices"][0]["delta"]["reasoning_content"] = reasoning_content
+
     if tool_calls:
         template["choices"][0]["delta"]["tool_calls"] = tool_calls
 
-    if not content and not tool_calls:
+    if not content and not reasoning_content and not tool_calls:
         template["choices"][0]["finish_reason"] = "stop"
 
     if usage:
@@ -225,6 +255,7 @@ def openai_chat_chunk_message_template(
 def openai_chat_completion_message_template(
     model: str,
     message: Optional[str] = None,
+    reasoning_content: Optional[str] = None,
     tool_calls: Optional[list[dict]] = None,
     usage: Optional[dict] = None,
 ) -> dict:
@@ -232,8 +263,9 @@ def openai_chat_completion_message_template(
     template["object"] = "chat.completion"
     if message is not None:
         template["choices"][0]["message"] = {
-            "content": message,
             "role": "assistant",
+            "content": message,
+            **({"reasoning_content": reasoning_content} if reasoning_content else {}),
             **({"tool_calls": tool_calls} if tool_calls else {}),
         }
 
@@ -367,17 +399,10 @@ def parse_ollama_modelfile(model_text):
         "top_k": int,
         "top_p": float,
         "num_keep": int,
-        "typical_p": float,
         "presence_penalty": float,
         "frequency_penalty": float,
-        "penalize_newline": bool,
-        "numa": bool,
         "num_batch": int,
         "num_gpu": int,
-        "main_gpu": int,
-        "low_vram": bool,
-        "f16_kv": bool,
-        "vocab_only": bool,
         "use_mmap": bool,
         "use_mlock": bool,
         "num_thread": int,
@@ -463,3 +488,54 @@ def convert_logit_bias_input_to_json(user_input):
         bias = 100 if bias > 100 else -100 if bias < -100 else bias
         logit_bias_json[token] = bias
     return json.dumps(logit_bias_json)
+
+
+def freeze(value):
+    """
+    Freeze a value to make it hashable.
+    """
+    if isinstance(value, dict):
+        return frozenset((k, freeze(v)) for k, v in value.items())
+    elif isinstance(value, list):
+        return tuple(freeze(v) for v in value)
+    return value
+
+
+def throttle(interval: float = 10.0):
+    """
+    Decorator to prevent a function from being called more than once within a specified duration.
+    If the function is called again within the duration, it returns None. To avoid returning
+    different types, the return type of the function should be Optional[T].
+
+    :param interval: Duration in seconds to wait before allowing the function to be called again.
+    """
+
+    def decorator(func):
+        last_calls = {}
+        lock = threading.Lock()
+
+        def wrapper(*args, **kwargs):
+            if interval is None:
+                return func(*args, **kwargs)
+
+            key = (args, freeze(kwargs))
+            now = time.time()
+            if now - last_calls.get(key, 0) < interval:
+                return None
+            with lock:
+                if now - last_calls.get(key, 0) < interval:
+                    return None
+                last_calls[key] = now
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def extract_urls(text: str) -> list[str]:
+    # Regex pattern to match URLs
+    url_pattern = re.compile(
+        r"(https?://[^\s]+)", re.IGNORECASE
+    )  # Matches http and https URLs
+    return url_pattern.findall(text)

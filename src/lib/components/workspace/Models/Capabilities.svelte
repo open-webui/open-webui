@@ -36,6 +36,10 @@
 		citations: {
 			label: $i18n.t('Citations'),
 			description: $i18n.t('Displays citations in the response')
+		},
+		status_updates: {
+			label: $i18n.t('Status Updates'),
+			description: $i18n.t('Displays status updates (e.g., web search progress) in the response')
 		}
 	};
 
@@ -47,6 +51,7 @@
 		code_interpreter?: boolean;
 		usage?: boolean;
 		citations?: boolean;
+		status_updates?: boolean;
 	} = {};
 </script>
 
@@ -54,7 +59,7 @@
 	<div class="flex w-full justify-between mb-1">
 		<div class=" self-center text-sm font-semibold">{$i18n.t('Capabilities')}</div>
 	</div>
-	<div class="flex">
+	<div class="flex items-center mt-2 flex-wrap">
 		{#each Object.keys(capabilityLabels) as capability}
 			<div class=" flex items-center gap-2 mr-3">
 				<Checkbox

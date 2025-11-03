@@ -6,6 +6,9 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
 from pydantic import BaseModel
 
+from open_webui.socket.main import sio
+
+
 from open_webui.models.users import Users, UserResponse
 from open_webui.models.notes import Notes, NoteModel, NoteForm, NoteUserResponse
 
@@ -45,15 +48,23 @@ async def get_notes(request: Request, user=Depends(get_verified_user)):
                 "user": UserResponse(**Users.get_user_by_id(note.user_id).model_dump()),
             }
         )
-        for note in Notes.get_notes_by_user_id(user.id, "write")
+        for note in Notes.get_notes_by_permission(user.id, "write")
     ]
 
     return notes
 
 
-@router.get("/list", response_model=list[NoteUserResponse])
-async def get_note_list(request: Request, user=Depends(get_verified_user)):
+class NoteTitleIdResponse(BaseModel):
+    id: str
+    title: str
+    updated_at: int
+    created_at: int
 
+
+@router.get("/list", response_model=list[NoteTitleIdResponse])
+async def get_note_list(
+    request: Request, page: Optional[int] = None, user=Depends(get_verified_user)
+):
     if user.role != "admin" and not has_permission(
         user.id, "features.notes", request.app.state.config.USER_PERMISSIONS
     ):
@@ -62,14 +73,17 @@ async def get_note_list(request: Request, user=Depends(get_verified_user)):
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
+    limit = None
+    skip = None
+    if page is not None:
+        limit = 60
+        skip = (page - 1) * limit
+
     notes = [
-        NoteUserResponse(
-            **{
-                **note.model_dump(),
-                "user": UserResponse(**Users.get_user_by_id(note.user_id).model_dump()),
-            }
+        NoteTitleIdResponse(**note.model_dump())
+        for note in Notes.get_notes_by_permission(
+            user.id, "write", skip=skip, limit=limit
         )
-        for note in Notes.get_notes_by_user_id(user.id, "read")
     ]
 
     return notes
@@ -124,10 +138,9 @@ async def get_note_by_id(request: Request, id: str, user=Depends(get_verified_us
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if (
-        user.role != "admin"
-        and user.id != note.user_id
-        and not has_access(user.id, type="read", access_control=note.access_control)
+    if user.role != "admin" and (
+        user.id != note.user_id
+        and (not has_access(user.id, type="read", access_control=note.access_control))
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -159,17 +172,34 @@ async def update_note_by_id(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if (
-        user.role != "admin"
-        and user.id != note.user_id
+    if user.role != "admin" and (
+        user.id != note.user_id
         and not has_access(user.id, type="write", access_control=note.access_control)
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
 
+    # Check if user can share publicly
+    if (
+        user.role != "admin"
+        and form_data.access_control == None
+        and not has_permission(
+            user.id,
+            "sharing.public_notes",
+            request.app.state.config.USER_PERMISSIONS,
+        )
+    ):
+        form_data.access_control = {}
+
     try:
         note = Notes.update_note_by_id(id, form_data)
+        await sio.emit(
+            "note-events",
+            note.model_dump(),
+            to=f"note:{note.id}",
+        )
+
         return note
     except Exception as e:
         log.exception(e)
@@ -199,9 +229,8 @@ async def delete_note_by_id(request: Request, id: str, user=Depends(get_verified
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if (
-        user.role != "admin"
-        and user.id != note.user_id
+    if user.role != "admin" and (
+        user.id != note.user_id
         and not has_access(user.id, type="write", access_control=note.access_control)
     ):
         raise HTTPException(

@@ -17,7 +17,7 @@
 	import AlertRenderer, { alertComponent } from './AlertRenderer.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
+	import Download from '$lib/components/icons/Download.svelte';
 
 	import Source from './Source.svelte';
 	import { settings } from '$lib/stores';
@@ -28,8 +28,13 @@
 	export let top = true;
 	export let attributes = {};
 
+	export let done = true;
+
 	export let save = false;
 	export let preview = false;
+
+	export let editCodeBlock = true;
+	export let topPadding = false;
 
 	export let onSave: Function = () => {};
 	export let onUpdate: Function = () => {};
@@ -85,7 +90,12 @@
 		<hr class=" border-gray-100 dark:border-gray-850" />
 	{:else if token.type === 'heading'}
 		<svelte:element this={headerComponent(token.depth)} dir="auto">
-			<MarkdownInlineTokens id={`${id}-${tokenIdx}-h`} tokens={token.tokens} {onSourceClick} />
+			<MarkdownInlineTokens
+				id={`${id}-${tokenIdx}-h`}
+				tokens={token.tokens}
+				{done}
+				{onSourceClick}
+			/>
 		</svelte:element>
 	{:else if token.type === 'code'}
 		{#if token.raw.includes('```')}
@@ -98,6 +108,8 @@
 				{attributes}
 				{save}
 				{preview}
+				edit={editCodeBlock}
+				stickyButtonsClassName={topPadding ? 'top-7' : 'top-0'}
 				onSave={(value) => {
 					onSave({
 						raw: token.raw,
@@ -112,19 +124,19 @@
 			{token.text}
 		{/if}
 	{:else if token.type === 'table'}
-		<div class="relative w-full group">
-			<div class="scrollbar-hidden relative overflow-x-auto max-w-full rounded-lg">
+		<div class="relative w-full group mb-2">
+			<div class="scrollbar-hidden relative overflow-x-auto max-w-full">
 				<table
 					class=" w-full text-sm text-left text-gray-500 dark:text-gray-400 max-w-full rounded-xl"
 				>
 					<thead
-						class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 border-none"
+						class="text-xs text-gray-700 uppercase bg-white dark:bg-gray-900 dark:text-gray-400 border-none"
 					>
 						<tr class="">
 							{#each token.header as header, headerIdx}
 								<th
 									scope="col"
-									class="px-3! py-1.5! cursor-pointer border border-gray-100 dark:border-gray-850"
+									class="px-2.5! py-2! cursor-pointer border-b border-gray-100! dark:border-gray-800!"
 									style={token.align[headerIdx] ? '' : `text-align: ${token.align[headerIdx]}`}
 								>
 									<div class="gap-1.5 text-left">
@@ -132,6 +144,7 @@
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-header-${headerIdx}`}
 												tokens={header.tokens}
+												{done}
 												{onSourceClick}
 											/>
 										</div>
@@ -142,16 +155,21 @@
 					</thead>
 					<tbody>
 						{#each token.rows as row, rowIdx}
-							<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
+							<tr class="bg-white dark:bg-gray-900 text-xs">
 								{#each row ?? [] as cell, cellIdx}
 									<td
-										class="px-3! py-1.5! text-gray-900 dark:text-white w-max border border-gray-100 dark:border-gray-850"
-										style={token.align[cellIdx] ? '' : `text-align: ${token.align[cellIdx]}`}
+										class="px-3! py-2! text-gray-900 dark:text-white w-max {token.rows.length -
+											1 ===
+										rowIdx
+											? ''
+											: 'border-b border-gray-50! dark:border-gray-850!'}"
+										style={token.align[cellIdx] ? `text-align: ${token.align[cellIdx]}` : ''}
 									>
 										<div class="break-normal">
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-row-${rowIdx}-${cellIdx}`}
 												tokens={cell.tokens}
+												{done}
 												{onSourceClick}
 											/>
 										</div>
@@ -172,7 +190,7 @@
 							exportTableToCSVHandler(token, tokenIdx);
 						}}
 					>
-						<ArrowDownTray className=" size-3.5" strokeWidth="1.5" />
+						<Download className=" size-3.5" strokeWidth="1.5" />
 					</button>
 				</Tooltip>
 			</div>
@@ -183,7 +201,14 @@
 			<AlertRenderer {token} {alert} />
 		{:else}
 			<blockquote dir="auto">
-				<svelte:self id={`${id}-${tokenIdx}`} tokens={token.tokens} {onTaskClick} {onSourceClick} />
+				<svelte:self
+					id={`${id}-${tokenIdx}`}
+					tokens={token.tokens}
+					{done}
+					{editCodeBlock}
+					{onTaskClick}
+					{onSourceClick}
+				/>
 			</blockquote>
 		{/if}
 	{:else if token.type === 'list'}
@@ -213,6 +238,8 @@
 							id={`${id}-${tokenIdx}-${itemIdx}`}
 							tokens={item.tokens}
 							top={token.loose}
+							{done}
+							{editCodeBlock}
 							{onTaskClick}
 							{onSourceClick}
 						/>
@@ -220,12 +247,12 @@
 				{/each}
 			</ol>
 		{:else}
-			<ul dir="auto">
+			<ul dir="auto" class="">
 				{#each token.items as item, itemIdx}
-					<li class="text-start">
+					<li class="text-start {item?.task ? 'flex -translate-x-6.5 gap-3 ' : ''}">
 						{#if item?.task}
 							<input
-								class=" translate-y-[1px] -translate-x-1"
+								class=""
 								type="checkbox"
 								checked={item.checked}
 								on:change={(e) => {
@@ -239,15 +266,29 @@
 									});
 								}}
 							/>
-						{/if}
 
-						<svelte:self
-							id={`${id}-${tokenIdx}-${itemIdx}`}
-							tokens={item.tokens}
-							top={token.loose}
-							{onTaskClick}
-							{onSourceClick}
-						/>
+							<div>
+								<svelte:self
+									id={`${id}-${tokenIdx}-${itemIdx}`}
+									tokens={item.tokens}
+									top={token.loose}
+									{done}
+									{editCodeBlock}
+									{onTaskClick}
+									{onSourceClick}
+								/>
+							</div>
+						{:else}
+							<svelte:self
+								id={`${id}-${tokenIdx}-${itemIdx}`}
+								tokens={item.tokens}
+								top={token.loose}
+								{done}
+								{editCodeBlock}
+								{onTaskClick}
+								{onSourceClick}
+							/>
+						{/if}
 					</li>
 				{/each}
 			</ul>
@@ -265,6 +306,8 @@
 					id={`${id}-${tokenIdx}-d`}
 					tokens={marked.lexer(token.text)}
 					attributes={token?.attributes}
+					{done}
+					{editCodeBlock}
 					{onTaskClick}
 					{onSourceClick}
 				/>
@@ -285,6 +328,7 @@
 			<MarkdownInlineTokens
 				id={`${id}-${tokenIdx}-p`}
 				tokens={token.tokens ?? []}
+				{done}
 				{onSourceClick}
 			/>
 		</p>
@@ -292,7 +336,12 @@
 		{#if top}
 			<p>
 				{#if token.tokens}
-					<MarkdownInlineTokens id={`${id}-${tokenIdx}-t`} tokens={token.tokens} {onSourceClick} />
+					<MarkdownInlineTokens
+						id={`${id}-${tokenIdx}-t`}
+						tokens={token.tokens}
+						{done}
+						{onSourceClick}
+					/>
 				{:else}
 					{unescapeHtml(token.text)}
 				{/if}
@@ -301,6 +350,7 @@
 			<MarkdownInlineTokens
 				id={`${id}-${tokenIdx}-p`}
 				tokens={token.tokens ?? []}
+				{done}
 				{onSourceClick}
 			/>
 		{:else}

@@ -16,12 +16,12 @@
 	import UsersSolid from '$lib/components/icons/UsersSolid.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import Search from '$lib/components/icons/Search.svelte';
 	import User from '$lib/components/icons/User.svelte';
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
-	import GroupModal from './Groups/EditGroupModal.svelte';
+	import EditGroupModal from './Groups/EditGroupModal.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import GroupItem from './Groups/GroupItem.svelte';
-	import AddGroupModal from './Groups/AddGroupModal.svelte';
 	import { createNewGroup, getGroups } from '$lib/apis/groups';
 	import {
 		getUserDefaultPermissions,
@@ -50,43 +50,9 @@
 	});
 
 	let search = '';
-	let defaultPermissions = {
-		workspace: {
-			models: false,
-			knowledge: false,
-			prompts: false,
-			tools: false
-		},
-		sharing: {
-			public_models: false,
-			public_knowledge: false,
-			public_prompts: false,
-			public_tools: false
-		},
-		chat: {
-			controls: true,
-			file_upload: true,
-			delete: true,
-			edit: true,
-			share: true,
-			export: true,
-			stt: true,
-			tts: true,
-			call: true,
-			multiple_models: true,
-			temporary: true,
-			temporary_enforced: false
-		},
-		features: {
-			direct_tool_servers: false,
-			web_search: true,
-			image_generation: true,
-			code_interpreter: true,
-			notes: true
-		}
-	};
+	let defaultPermissions = {};
 
-	let showCreateGroupModal = false;
+	let showAddGroupModal = false;
 	let showDefaultPermissionsModal = false;
 
 	const setGroups = async () => {
@@ -137,15 +103,20 @@
 			total = res.total;
 		}
 
-		await setGroups();
 		defaultPermissions = await getUserDefaultPermissions(localStorage.token);
-
+		await setGroups();
 		loaded = true;
 	});
 </script>
 
 {#if loaded}
-	<AddGroupModal bind:show={showCreateGroupModal} onSubmit={addGroupHandler} />
+	<EditGroupModal
+		bind:show={showAddGroupModal}
+		edit={false}
+		permissions={defaultPermissions}
+		onSubmit={addGroupHandler}
+	/>
+
 	<div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
 		<div class="flex md:self-center text-lg font-medium px-0.5">
 			{$i18n.t('Groups')}
@@ -158,18 +129,7 @@
 			<div class=" flex w-full space-x-2">
 				<div class="flex flex-1">
 					<div class=" self-center ml-1 mr-3">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-								clip-rule="evenodd"
-							/>
-						</svg>
+						<Search />
 					</div>
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
@@ -183,7 +143,7 @@
 						<button
 							class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
 							on:click={() => {
-								showCreateGroupModal = !showCreateGroupModal;
+								showAddGroupModal = !showAddGroupModal;
 							}}
 						>
 							<Plus className="size-3.5" />
@@ -210,7 +170,7 @@
 						class=" px-4 py-1.5 text-sm rounded-full bg-black hover:bg-gray-800 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition font-medium flex items-center space-x-1"
 						aria-label={$i18n.t('Create Group')}
 						on:click={() => {
-							showCreateGroupModal = true;
+							showAddGroupModal = true;
 						}}
 					>
 						{$i18n.t('Create Group')}
@@ -219,19 +179,17 @@
 			</div>
 		{:else}
 			<div>
-				<div class=" flex items-center gap-3 justify-between text-xs uppercase px-1 font-bold">
-					<div class="w-full">Group</div>
+				<div class=" flex items-center gap-3 justify-between text-xs uppercase px-1 font-semibold">
+					<div class="w-full basis-3/5">{$i18n.t('Group')}</div>
 
-					<div class="w-full">Users</div>
-
-					<div class="w-full"></div>
+					<div class="w-full basis-2/5 text-right">{$i18n.t('Users')}</div>
 				</div>
 
 				<hr class="mt-1.5 border-gray-100 dark:border-gray-850" />
 
 				{#each filteredGroups as group}
 					<div class="my-2">
-						<GroupItem {group} {users} {setGroups} />
+						<GroupItem {group} {users} {setGroups} {defaultPermissions} />
 					</div>
 				{/each}
 			</div>
@@ -239,7 +197,7 @@
 
 		<hr class="mb-2 border-gray-100 dark:border-gray-850" />
 
-		<GroupModal
+		<EditGroupModal
 			bind:show={showDefaultPermissionsModal}
 			tabs={['permissions']}
 			bind:permissions={defaultPermissions}
