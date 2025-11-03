@@ -1306,7 +1306,18 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             "direct": False,
                         }
                 except Exception as e:
-                    log.debug(e)
+                    error_message = f"Failed to connect to MCP server '{server_id}'"
+                    log.error(error_message)
+                    if event_emitter:
+                        try:
+                            await event_emitter(
+                                {
+                                    "type": "chat:message:error",
+                                    "data": {"error": {"content": error_message}},
+                                }
+                            )
+                        except Exception as emit_error:
+                            log.debug(f"Error emitting MCP connection error: {emit_error}")
                     continue
 
         tools_dict = await get_tools(
