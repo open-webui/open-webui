@@ -2801,17 +2801,26 @@ WEB_SEARCH_RESULT_COUNT = PersistentConfig(
     int(os.getenv("WEB_SEARCH_RESULT_COUNT", "3")),
 )
 
+_filter = os.getenv("WEB_SEARCH_DOMAIN_FILTER_LIST")
+_filter_items = (
+    [x.strip() for x in _filter.split(",") if x.strip()]
+    if _filter
+    else []
+)
 
-# You can provide a list of your own websites to filter after performing a web search.
-# This ensures the highest level of safety and reliability of the information sources.
+# Domain filtering configuration
+# Single list used either as an allowlist or a blocklist depending on the mode flag below
 WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(
     "WEB_SEARCH_DOMAIN_FILTER_LIST",
     "rag.web.search.domain.filter_list",
-    [
-        # "wikipedia.com",
-        # "wikimedia.org",
-        # "wikidata.org",
-    ],
+    _filter_items,
+)
+
+# Global mode: when true, treat the list as an allowlist; when false, as a blocklist
+WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST = PersistentConfig(
+    "WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST",
+    "rag.web.search.domain.is_allowlist",
+    os.getenv("WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST", "True").lower() == "true",
 )
 
 WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(

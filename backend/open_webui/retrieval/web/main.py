@@ -6,7 +6,11 @@ from urllib.parse import urlparse
 from pydantic import BaseModel
 
 
-def get_filtered_results(results, filter_list):
+def get_filtered_results(
+    results,
+    filter_list: Optional[list[str]] = None,
+    is_allowlist: bool = True,
+):
     if not filter_list:
         return results
     filtered_results = []
@@ -15,7 +19,8 @@ def get_filtered_results(results, filter_list):
         if not validators.url(url):
             continue
         domain = urlparse(url).netloc
-        if any(domain.endswith(filtered_domain) for filtered_domain in filter_list):
+        matched = any(domain.endswith(filtered_domain) for filtered_domain in filter_list)
+        if (is_allowlist and matched) or (not is_allowlist and not matched):
             filtered_results.append(result)
     return filtered_results
 

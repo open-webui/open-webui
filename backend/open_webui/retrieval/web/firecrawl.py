@@ -15,6 +15,7 @@ def search_firecrawl(
     query: str,
     count: int,
     filter_list: Optional[List[str]] = None,
+    is_allowlist: Optional[bool] = None,
 ) -> List[SearchResult]:
     try:
         from firecrawl import FirecrawlApp
@@ -25,7 +26,11 @@ def search_firecrawl(
         )
         results = response.web
         if filter_list:
-            results = get_filtered_results(results, filter_list)
+            results = get_filtered_results(
+                results,
+                filter_list,
+                True if is_allowlist is None else is_allowlist,
+            )
         results = [
             SearchResult(
                 link=result.url,

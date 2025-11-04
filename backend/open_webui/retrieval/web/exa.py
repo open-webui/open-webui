@@ -4,7 +4,7 @@ from typing import Optional
 
 import requests
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.retrieval.web.main import SearchResult
+from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -24,6 +24,7 @@ def search_exa(
     query: str,
     count: int,
     filter_list: Optional[list[str]] = None,
+    is_allowlist: Optional[bool] = None,
 ) -> list[SearchResult]:
     """Search using Exa Search API and return the results as a list of SearchResult objects.
 
@@ -40,7 +41,8 @@ def search_exa(
     payload = {
         "query": query,
         "numResults": count or 5,
-        "includeDomains": filter_list,
+        # Only use includeDomains when allowlist mode is used
+        "includeDomains": filter_list if (is_allowlist is None or is_allowlist) else None,
         "contents": {"text": True, "highlights": True},
         "type": "auto",  # Use the auto search type (keyword or neural)
     }
@@ -63,6 +65,22 @@ def search_exa(
             )
 
         log.info(f"Found {len(results)} results")
+        # Apply post-filtering if needed (covers blocklist mode)
+        if filter_list:
+            # Convert to dicts to reuse common filter helper then re-map
+            pre = [
+                {"url": r.url, "title": r.title, "text": r.text} for r in results
+            ]
+            pre = get_filtered_results(
+                pre,
+                filter_list,
+                True if is_allowlist is None else is_allowlist,
+            )
+            results = [
+                ExaResult(url=item["url"], title=item.get("title", ""), text=item.get("text", ""))
+                for item in pre
+            ]
+
         return [
             SearchResult(
                 link=result.url,

@@ -16,6 +16,7 @@ def search_searchapi(
     query: str,
     count: int,
     filter_list: Optional[list[str]] = None,
+    is_allowlist: Optional[bool] = None,
 ) -> list[SearchResult]:
     """Search using searchapi.io's API and return the results as a list of SearchResult objects.
 
@@ -39,7 +40,11 @@ def search_searchapi(
         json_response.get("organic_results", []), key=lambda x: x.get("position", 0)
     )
     if filter_list:
-        results = get_filtered_results(results, filter_list)
+        results = get_filtered_results(
+            results,
+            filter_list,
+            True if is_allowlist is None else is_allowlist,
+        )
     return [
         SearchResult(
             link=result["link"],

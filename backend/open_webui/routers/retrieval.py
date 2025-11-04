@@ -499,6 +499,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "WEB_SEARCH_CONCURRENT_REQUESTS": request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS,
             "WEB_LOADER_CONCURRENT_REQUESTS": request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
             "WEB_SEARCH_DOMAIN_FILTER_LIST": request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            "WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST": request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
             "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
             "BYPASS_WEB_SEARCH_WEB_LOADER": request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER,
             "OLLAMA_CLOUD_WEB_SEARCH_API_KEY": request.app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY,
@@ -556,6 +557,7 @@ class WebConfig(BaseModel):
     WEB_SEARCH_CONCURRENT_REQUESTS: Optional[int] = None
     WEB_LOADER_CONCURRENT_REQUESTS: Optional[int] = None
     WEB_SEARCH_DOMAIN_FILTER_LIST: Optional[List[str]] = []
+    WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST: Optional[bool] = None
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
     BYPASS_WEB_SEARCH_WEB_LOADER: Optional[bool] = None
     OLLAMA_CLOUD_WEB_SEARCH_API_KEY: Optional[str] = None
@@ -1059,6 +1061,10 @@ async def update_rag_config(
         request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST = (
             form_data.web.WEB_SEARCH_DOMAIN_FILTER_LIST
         )
+        if form_data.web.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST is not None:
+            request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST = (
+                form_data.web.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST
+            )
         request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
             form_data.web.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
         )
@@ -1224,6 +1230,7 @@ async def update_rag_config(
             "WEB_SEARCH_CONCURRENT_REQUESTS": request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS,
             "WEB_LOADER_CONCURRENT_REQUESTS": request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
             "WEB_SEARCH_DOMAIN_FILTER_LIST": request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            "WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST": request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
             "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
             "BYPASS_WEB_SEARCH_WEB_LOADER": request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER,
             "OLLAMA_CLOUD_WEB_SEARCH_API_KEY": request.app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY,
@@ -1842,6 +1849,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            is_allowlist=request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
         )
     elif engine == "perplexity_search":
         if request.app.state.config.PERPLEXITY_API_KEY:
@@ -1850,6 +1858,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                is_allowlist=request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
             )
         else:
             raise Exception("No PERPLEXITY_API_KEY found in environment variables")
@@ -1860,6 +1869,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                is_allowlist=request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
             )
         else:
             raise Exception("No SEARXNG_QUERY_URL found in environment variables")
@@ -1872,6 +1882,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                is_allowlist=request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
             )
         else:
             raise Exception("No YACY_QUERY_URL found in environment variables")
@@ -1886,6 +1897,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                is_allowlist=request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
                 referer=request.app.state.config.WEBUI_URL,
             )
         else:
@@ -1899,6 +1911,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                is_allowlist=request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
             )
         else:
             raise Exception("No BRAVE_SEARCH_API_KEY found in environment variables")
@@ -1909,6 +1922,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                is_allowlist=request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
             )
         else:
             raise Exception("No KAGI_SEARCH_API_KEY found in environment variables")
@@ -1919,6 +1933,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                is_allowlist=request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
             )
         else:
             raise Exception("No MOJEEK_SEARCH_API_KEY found in environment variables")
@@ -1929,6 +1944,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                is_allowlist=request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
             )
         else:
             raise Exception("No BOCHA_SEARCH_API_KEY found in environment variables")
@@ -1939,6 +1955,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                is_allowlist=request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
                 https_enabled=request.app.state.config.SERPSTACK_HTTPS,
             )
         else:
@@ -1950,6 +1967,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                is_allowlist=request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
             )
         else:
             raise Exception("No SERPER_API_KEY found in environment variables")
@@ -1960,6 +1978,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 filter_list=request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                is_allowlist=request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
             )
         else:
             raise Exception("No SERPLY_API_KEY found in environment variables")
@@ -1968,6 +1987,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            is_allowlist=request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
             concurrent_requests=request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS,
         )
     elif engine == "tavily":
@@ -1977,6 +1997,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                is_allowlist=request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
             )
         else:
             raise Exception("No TAVILY_API_KEY found in environment variables")
@@ -1987,6 +2008,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                is_allowlist=request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
             )
         else:
             raise Exception("No EXA_API_KEY found in environment variables")
@@ -1998,6 +2020,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                is_allowlist=request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
             )
         else:
             raise Exception("No SEARCHAPI_API_KEY found in environment variables")
@@ -2009,6 +2032,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                is_allowlist=request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
             )
         else:
             raise Exception("No SERPAPI_API_KEY found in environment variables")
@@ -2026,6 +2050,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            is_allowlist=request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
         )
     elif engine == "exa":
         return search_exa(
@@ -2033,6 +2058,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            is_allowlist=request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
         )
     elif engine == "perplexity":
         return search_perplexity(
@@ -2040,6 +2066,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            is_allowlist=request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
             model=request.app.state.config.PERPLEXITY_MODEL,
             search_context_usage=request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
         )
@@ -2054,6 +2081,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                is_allowlist=request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
             )
         else:
             raise Exception(
@@ -2066,6 +2094,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            is_allowlist=request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
         )
     elif engine == "external":
         return search_external(
@@ -2074,6 +2103,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            is_allowlist=request.app.state.config.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST,
         )
     else:
         raise Exception("No search engine API key found in environment variables")
@@ -2123,10 +2153,23 @@ async def process_web_search(
         )
 
     if len(urls) == 0:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.DEFAULT("No results found from web search"),
-        )
+        if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
+            return {
+                "status": True,
+                "collection_name": None,
+                "filenames": [],
+                "items": [],
+                "docs": [],
+                "loaded_count": 0,
+            }
+        else:
+            return {
+                "status": True,
+                "collection_names": [],
+                "items": [],
+                "filenames": [],
+                "loaded_count": 0,
+            }
 
     try:
         if request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER:

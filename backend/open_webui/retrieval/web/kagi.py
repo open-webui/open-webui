@@ -10,7 +10,11 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def search_kagi(
-    api_key: str, query: str, count: int, filter_list: Optional[list[str]] = None
+    api_key: str,
+    query: str,
+    count: int,
+    filter_list: Optional[list[str]] = None,
+    is_allowlist: Optional[bool] = None,
 ) -> list[SearchResult]:
     """Search using Kagi's Search API and return the results as a list of SearchResult objects.
 
@@ -43,6 +47,10 @@ def search_kagi(
     print(results)
 
     if filter_list:
-        results = get_filtered_results(results, filter_list)
+        results = get_filtered_results(
+            results,
+            filter_list,
+            True if is_allowlist is None else is_allowlist,
+        )
 
     return results

@@ -21,6 +21,7 @@ def search_bing(
     query: str,
     count: int,
     filter_list: Optional[list[str]] = None,
+    is_allowlist: Optional[bool] = None,
 ) -> list[SearchResult]:
     mkt = locale
     params = {"q": query, "mkt": mkt, "count": count}
@@ -32,7 +33,11 @@ def search_bing(
         json_response = response.json()
         results = json_response.get("webPages", {}).get("value", [])
         if filter_list:
-            results = get_filtered_results(results, filter_list)
+            results = get_filtered_results(
+                results,
+                filter_list,
+                True if is_allowlist is None else is_allowlist,
+            )
         return [
             SearchResult(
                 link=result["url"],

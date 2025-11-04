@@ -15,6 +15,7 @@ def search_external(
     query: str,
     count: int,
     filter_list: Optional[List[str]] = None,
+    is_allowlist: Optional[bool] = None,
 ) -> List[SearchResult]:
     try:
         response = requests.post(
@@ -31,7 +32,11 @@ def search_external(
         response.raise_for_status()
         results = response.json()
         if filter_list:
-            results = get_filtered_results(results, filter_list)
+            results = get_filtered_results(
+                results,
+                filter_list,
+                True if is_allowlist is None else is_allowlist,
+            )
         results = [
             SearchResult(
                 link=result.get("link"),

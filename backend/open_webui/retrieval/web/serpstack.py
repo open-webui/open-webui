@@ -14,6 +14,7 @@ def search_serpstack(
     query: str,
     count: int,
     filter_list: Optional[list[str]] = None,
+    is_allowlist: Optional[bool] = None,
     https_enabled: bool = True,
 ) -> list[SearchResult]:
     """Search using serpstack.com's and return the results as a list of SearchResult objects.
@@ -39,7 +40,11 @@ def search_serpstack(
         json_response.get("organic_results", []), key=lambda x: x.get("position", 0)
     )
     if filter_list:
-        results = get_filtered_results(results, filter_list)
+        results = get_filtered_results(
+            results,
+            filter_list,
+            True if is_allowlist is None else is_allowlist,
+        )
     return [
         SearchResult(
             link=result["url"], title=result.get("title"), snippet=result.get("snippet")

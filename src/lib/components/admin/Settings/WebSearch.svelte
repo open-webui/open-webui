@@ -658,8 +658,17 @@
 
 						<div class="mb-2.5 flex w-full flex-col">
 							<div class="  text-xs font-medium mb-1">
-								{$i18n.t('Domain Filter List')}
+							{$i18n.t('Domain Filter List')}
 							</div>
+
+						<div class="mb-2.5 flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">
+								{$i18n.t('Treat list as allowlist')}
+							</div>
+							<div class="flex items-center relative">
+								<Switch bind:state={webConfig.WEB_SEARCH_DOMAIN_LIST_IS_ALLOWLIST} />
+							</div>
+						</div>
 
 							<input
 								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"

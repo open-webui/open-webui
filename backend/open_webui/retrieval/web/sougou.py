@@ -16,6 +16,7 @@ def search_sougou(
     query: str,
     count: int,
     filter_list: Optional[List[str]] = None,
+    is_allowlist: Optional[bool] = None,
 ) -> List[SearchResult]:
     from tencentcloud.common.common_client import CommonClient
     from tencentcloud.common import credential
@@ -45,7 +46,11 @@ def search_sougou(
             results, key=lambda x: x.get("scour", 0.0), reverse=True
         )
         if filter_list:
-            sorted_results = get_filtered_results(sorted_results, filter_list)
+            sorted_results = get_filtered_results(
+                sorted_results,
+                filter_list,
+                True if is_allowlist is None else is_allowlist,
+            )
 
         return [
             SearchResult(

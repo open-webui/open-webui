@@ -35,7 +35,11 @@ def _parse_response(response):
 
 
 def search_bocha(
-    api_key: str, query: str, count: int, filter_list: Optional[list[str]] = None
+    api_key: str,
+    query: str,
+    count: int,
+    filter_list: Optional[list[str]] = None,
+    is_allowlist: Optional[bool] = None,
 ) -> list[SearchResult]:
     """Search using Bocha's Search API and return the results as a list of SearchResult objects.
 
@@ -55,7 +59,11 @@ def search_bocha(
     results = _parse_response(response.json())
     print(results)
     if filter_list:
-        results = get_filtered_results(results, filter_list)
+        results = get_filtered_results(
+            results,
+            filter_list,
+            True if is_allowlist is None else is_allowlist,
+        )
 
     return [
         SearchResult(

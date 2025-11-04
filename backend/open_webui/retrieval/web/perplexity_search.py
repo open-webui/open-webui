@@ -15,6 +15,7 @@ def search_perplexity_search(
     query: str,
     count: int,
     filter_list: Optional[list[str]] = None,
+    is_allowlist: Optional[bool] = None,
 ) -> list[SearchResult]:
     """Search using Perplexity API and return the results as a list of SearchResult objects.
 
@@ -51,6 +52,12 @@ def search_perplexity_search(
 
         # Extract citations from the response
         results = json_response.get("results", [])
+        if filter_list:
+            results = get_filtered_results(
+                results,
+                filter_list,
+                True if is_allowlist is None else is_allowlist,
+            )
 
         return [
             SearchResult(

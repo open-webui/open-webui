@@ -17,6 +17,7 @@ def search_yacy(
     query: str,
     count: int,
     filter_list: Optional[list[str]] = None,
+    is_allowlist: Optional[bool] = None,
 ) -> list[SearchResult]:
     """
     Search a Yacy instance for a given query and return the results as a list of SearchResult objects.
@@ -76,7 +77,11 @@ def search_yacy(
     results = json_response.get("channels", [{}])[0].get("items", [])
     sorted_results = sorted(results, key=lambda x: x.get("ranking", 0), reverse=True)
     if filter_list:
-        sorted_results = get_filtered_results(sorted_results, filter_list)
+        sorted_results = get_filtered_results(
+            sorted_results,
+            filter_list,
+            True if is_allowlist is None else is_allowlist,
+        )
     return [
         SearchResult(
             link=result["link"],

@@ -14,6 +14,7 @@ def search_duckduckgo(
     query: str,
     count: int,
     filter_list: Optional[list[str]] = None,
+    is_allowlist: Optional[bool] = None,
     concurrent_requests: Optional[int] = None,
 ) -> list[SearchResult]:
     """
@@ -39,7 +40,11 @@ def search_duckduckgo(
         except RatelimitException as e:
             log.error(f"RatelimitException: {e}")
     if filter_list:
-        search_results = get_filtered_results(search_results, filter_list)
+        search_results = get_filtered_results(
+            search_results,
+            filter_list,
+            True if is_allowlist is None else is_allowlist,
+        )
 
     # Return the list of search results
     return [

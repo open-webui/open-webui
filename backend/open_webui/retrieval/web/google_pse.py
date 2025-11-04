@@ -15,6 +15,7 @@ def search_google_pse(
     query: str,
     count: int,
     filter_list: Optional[list[str]] = None,
+    is_allowlist: Optional[bool] = None,
     referer: Optional[str] = None,
 ) -> list[SearchResult]:
     """Search using Google's Programmable Search Engine API and return the results as a list of SearchResult objects.
@@ -62,7 +63,11 @@ def search_google_pse(
             break  # No more results from Google PSE, break the loop
 
     if filter_list:
-        all_results = get_filtered_results(all_results, filter_list)
+        all_results = get_filtered_results(
+            all_results,
+            filter_list,
+            True if is_allowlist is None else is_allowlist,
+        )
 
     return [
         SearchResult(

@@ -24,6 +24,7 @@ def search_perplexity(
     query: str,
     count: int,
     filter_list: Optional[list[str]] = None,
+    is_allowlist: Optional[bool] = None,
     model: MODELS = "sonar",
     search_context_usage: SEARCH_CONTEXT_USAGE_LEVELS = "medium",
 ) -> list[SearchResult]:
@@ -90,8 +91,11 @@ def search_perplexity(
             results.append(result)
 
         if filter_list:
-
-            results = get_filtered_results(results, filter_list)
+            results = get_filtered_results(
+                results,
+                filter_list,
+                True if is_allowlist is None else is_allowlist,
+            )
 
         return [
             SearchResult(

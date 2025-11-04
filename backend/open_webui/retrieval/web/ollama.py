@@ -4,7 +4,7 @@ from typing import Optional
 
 import requests
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.retrieval.web.main import SearchResult
+from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -16,6 +16,7 @@ def search_ollama_cloud(
     query: str,
     count: int,
     filter_list: Optional[list[str]] = None,
+    is_allowlist: Optional[bool] = None,
 ) -> list[SearchResult]:
     """Search using Ollama Search API and return the results as a list of SearchResult objects.
 
@@ -36,6 +37,12 @@ def search_ollama_cloud(
         data = response.json()
 
         results = data.get("results", [])
+        if filter_list:
+            results = get_filtered_results(
+                results,
+                filter_list,
+                True if is_allowlist is None else is_allowlist,
+            )
         log.info(f"Found {len(results)} results")
 
         return [
