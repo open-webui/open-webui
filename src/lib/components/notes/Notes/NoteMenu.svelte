@@ -5,7 +5,7 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { fade, slide } from 'svelte/transition';
 
-	import { showSettings, mobile, showSidebar, user } from '$lib/stores';
+	import { showSettings, mobile, showSidebar, user, showControls } from '$lib/stores';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
@@ -60,6 +60,7 @@
 					transition={flyAndScale}
 					sideOffset={8}
 					align="end"
+					side={showControls ? 'left' : 'right'}
 				>
 					<DropdownMenu.Item
 						class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
@@ -104,6 +105,7 @@
 						transition={flyAndScale}
 						sideOffset={8}
 						align="end"
+						side={showControls ? 'left' : 'right'}
 					>
 						{#if onCopyLink}
 							<DropdownMenu.Item
