@@ -1543,7 +1543,9 @@ QDRANT_ON_DISK_VECTOR = (
 )
 QDRANT_PREFER_GRPC = os.environ.get("QDRANT_PREFER_GRPC", "False").lower() == "true"
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost")
-QDRANT_TIMEOUT_SECONDS = os.environ.get("QDRANT_TIMEOUT_SECONDS", 5)
+QDRANT_TIMEOUT_SECONDS = os.environ.get(
+    "QDRANT_TIMEOUT_SECONDS", 30
+)  # Increased from 5 to 30 seconds
 
 ####################################
 # Information Retrieval (RAG)

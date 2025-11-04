@@ -83,7 +83,7 @@ authlib==1.3.2
 
 black==24.8.0
 langfuse==2.44.0
-youtube-transcript-api==0.6.3
+youtube-transcript-api>=1.2.2
 pytube==15.0.0
 
 extract_msg
@@ -115,7 +115,7 @@ pytz==2025.2
 
 ## CrewAI MCP Integration
 crewai
-crewai-tools
+crewai-tools>=0.76.0
 protobuf>=5.26.1,<6.0.0
 grpcio>=1.49.1,<=1.67.1
 

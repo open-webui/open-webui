@@ -132,6 +132,12 @@ async def handle_collection_query_with_reindex(
                     return result
 
         # Log the original error if re-indexing wasn't attempted or failed
-        log.exception(f"Error when querying the collection: {e}")
+        # Reduce log level for connection errors since they often self-recover
+        if "transport" in error_str.lower() or "closed" in error_str.lower():
+            log.warning(
+                f"Transient connection error when querying collection (functionality still works): {e}"
+            )
+        else:
+            log.exception(f"Error when querying the collection: {e}")
 
     return None
