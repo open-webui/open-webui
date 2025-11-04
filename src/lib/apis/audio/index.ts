@@ -31,10 +31,14 @@ type AudioConfigPayload = {
     tts: {
         OPENAI_API_BASE_URL: string;
         OPENAI_API_KEY: string;
+        PORTKEY_API_BASE_URL?: string;
+        PORTKEY_API_KEY?: string;
         API_KEY: string;
         ENGINE: string;
         MODEL: string;
         VOICE: string;
+        LANGUAGE: string;
+        AUDIO_VOICE: string;
         SPLIT_ON: string;
         AZURE_SPEECH_REGION: string;
         AZURE_SPEECH_OUTPUT_FORMAT: string;
