@@ -312,14 +312,12 @@
 
 	onMount(async () => {
 		if (items) {
-			tags = Array.from(
-				new Set(
-					items
-						.filter((item) => !(item.model?.info?.meta?.hidden ?? false))
-						.flatMap((item) => item.model?.tags ?? [])
-						.map((tag) => tag.name.toLowerCase())
-				)
-			).sort((a, b) => a.localeCompare(b));
+			tags = items
+				.filter((item) => !(item.model?.info?.meta?.hidden ?? false))
+				.flatMap((item) => item.model?.tags ?? [])
+				.map((tag) => tag.name);
+			// Remove duplicates and sort
+			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
 		}
 	});
 
