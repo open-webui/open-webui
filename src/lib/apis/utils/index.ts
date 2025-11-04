@@ -92,30 +92,50 @@ export const formatPythonCode = async (token: string, code: string) => {
 };
 
 export const downloadChatAsPDF = async (token: string, title: string, messages: object[]) => {
-	let error = null;
+	// Create an AbortController for timeout handling
+	const controller = new AbortController();
+	const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutes timeout
 
-	const blob = await fetch(`${WEBUI_API_BASE_URL}/utils/pdf`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			title: title,
-			messages: messages
+	try {
+		const blob = await fetch(`${WEBUI_API_BASE_URL}/utils/pdf`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`
+			},
+			body: JSON.stringify({
+				title: title,
+				messages: messages
+			}),
+			signal: controller.signal
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.blob();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err;
-			return null;
-		});
+			.then(async (res) => {
+				if (!res.ok) {
+					const errorData = await res.json();
+					throw errorData;
+				}
+				return res.blob();
+			});
 
-	return blob;
+		clearTimeout(timeoutId);
+		return blob;
+	} catch (err: any) {
+		clearTimeout(timeoutId);
+		console.log(err);
+		
+		let error: string;
+		if (err.name === 'AbortError') {
+			error = 'PDF export timed out. Please try again with a shorter conversation.';
+		} else if (err.detail) {
+			error = err.detail;
+		} else if (err.message) {
+			error = err.message;
+		} else {
+			error = 'Failed to export PDF. Please try again.';
+		}
+		
+		throw error;
+	}
 };
 
 export const getHTMLFromMarkdown = async (token: string, md: string) => {
