@@ -315,11 +315,6 @@
 		}
 	};
 
-	// on a page change stop all audio
-	onDestroy(() => {
-		stopAllAudio();
-	});
-
 	let preprocessedDetailsCache = [];
 
 	function preprocessForEditing(content: string): string {

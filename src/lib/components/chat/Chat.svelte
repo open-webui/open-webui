@@ -7,6 +7,8 @@
 	import { fade } from 'svelte/transition';
 	const i18n: Writable<i18nType> = getContext('i18n');
 
+	import { stopAllAudio } from '$lib/utils/tts';
+
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
@@ -619,6 +621,10 @@
 			showControlsSubscribe();
 			selectedFolderSubscribe();
 			chatIdUnsubscriber?.();
+
+			// stop all tts only when the entire page is destroyed
+			stopAllAudio();
+
 			window.removeEventListener('message', onMessageHandler);
 			$socket?.off('events', chatEventHandler);
 		} catch (e) {
