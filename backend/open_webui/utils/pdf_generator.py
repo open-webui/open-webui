@@ -172,6 +172,23 @@ class PDFGenerator:
                 # Stretchy symbols adjust their size based on content (e.g., sqrt, vertical lines)
                 is_stretchy = False
                 is_horizontal_stretchy = False  # True for sqrt overlines, horizontal lines
+                is_matrix_delimiter = False  # True for matrix delimiter vertical lines
+                
+                # Check if this is likely a matrix delimiter by looking at surrounding context
+                # Matrix delimiters are typically very narrow vertical lines
+                fragment_start = max(0, match.start() - 200)
+                fragment_end = min(len(html_fragment), match.end() + 200)
+                context = html_fragment[fragment_start:fragment_end].lower()
+                # Look for matrix-related patterns in the context (LaTeX commands or HTML classes)
+                if any(keyword in context for keyword in ['matrix', 'pmatrix', 'bmatrix', 'vmatrix', 'det', 'determinant', '\\begin', '\\end']):
+                    is_matrix_delimiter = True
+                
+                # Also check viewBox aspect ratio - matrix delimiters are very tall and narrow
+                if vb_width and vb_height and vb_width > 0 and vb_height > 0:
+                    aspect_ratio = vb_height / vb_width if vb_width > 0 else 1
+                    # Matrix delimiters typically have height >> width (aspect ratio > 20)
+                    if aspect_ratio > 20:
+                        is_matrix_delimiter = True
                 
                 # Detect stretchy by explicit large width values (1e6em, 10000em, 100%, or >= 100em)
                 if width_attr_match:
@@ -187,6 +204,9 @@ class PDFGenerator:
                     # This catches sqrt radicals (V-shaped part) and vertical lines
                     if svg_width_em < 1.0 and svg_height_em > 1.5:
                         is_stretchy = True
+                        # If it's very narrow (< 0.5em) and tall, likely a matrix delimiter
+                        if svg_width_em < 0.5:
+                            is_matrix_delimiter = True
                     # Horizontal stretchy: wide width (>= 5em) with small height (< 2em)
                     # This catches sqrt overlines (horizontal bar above content)
                     elif svg_width_em >= 5.0 and svg_height_em < 2.0:
@@ -286,21 +306,41 @@ class PDFGenerator:
                     
                 # Handle vertical stretchy symbols (sqrt radicals V-shape, vertical lines)
                 elif is_stretchy and svg_width_em is not None and svg_height_em is not None:
-                    # Scale up height to make sqrt radicals taller and more prominent
-                    # Factor of 2.3 ensures the V-shape properly encompasses the expression
-                    height_scale_factor = 2.3
-                    scaled_height_em = svg_height_em * height_scale_factor
-                    svg_width = max(2.5, svg_width_em * em_to_px)  # Minimum 2.5px for visibility
-                    svg_height = scaled_height_em * em_to_px
-                    
-                    # Ensure minimum height for visibility
-                    min_height = 30.0
-                    if svg_height < min_height:
-                        svg_height = min_height
-                    
-                    # Clamp to reasonable maximums to prevent pathological cases
-                    max_height = 150.0  # Normal maximum
-                    absolute_max = 250.0  # Absolute maximum for very tall expressions
+                    # For matrix delimiters, use the actual height without excessive scaling
+                    # Matrix delimiters should match the exact matrix height
+                    if is_matrix_delimiter:
+                        # Use the actual height from KaTeX, which should match the matrix
+                        # Only apply a small adjustment if needed to ensure full coverage
+                        height_scale_factor = 1.1  # Small adjustment to ensure full coverage
+                        scaled_height_em = svg_height_em * height_scale_factor
+                        svg_width = max(2.5, svg_width_em * em_to_px)  # Minimum 2.5px for visibility
+                        svg_height = scaled_height_em * em_to_px
+                        
+                        # Ensure minimum height for visibility
+                        min_height = 20.0
+                        if svg_height < min_height:
+                            svg_height = min_height
+                        
+                        # For matrix delimiters, allow much taller heights (up to 500px for very tall matrices)
+                        # Don't clamp as aggressively since matrices can be quite tall
+                        max_height = 500.0  # Much higher limit for matrix delimiters
+                        absolute_max = 800.0  # Absolute maximum for very tall matrices
+                    else:
+                        # For sqrt radicals, scale up height to make them taller and more prominent
+                        # Factor of 2.3 ensures the V-shape properly encompasses the expression
+                        height_scale_factor = 2.3
+                        scaled_height_em = svg_height_em * height_scale_factor
+                        svg_width = max(2.5, svg_width_em * em_to_px)  # Minimum 2.5px for visibility
+                        svg_height = scaled_height_em * em_to_px
+                        
+                        # Ensure minimum height for visibility
+                        min_height = 30.0
+                        if svg_height < min_height:
+                            svg_height = min_height
+                        
+                        # Clamp to reasonable maximums to prevent pathological cases
+                        max_height = 150.0  # Normal maximum
+                        absolute_max = 250.0  # Absolute maximum for very tall expressions
                     
                     if svg_height > absolute_max:
                         height_ratio = absolute_max / svg_height
@@ -325,22 +365,42 @@ class PDFGenerator:
                     
                 # Handle vertical stretchy detected from viewBox when em values aren't available
                 elif is_stretchy and not is_horizontal_stretchy and vb_width and vb_height and vb_width > 0 and vb_height > 0:
-                    # Apply same height scaling for sqrt radicals
-                    height_scale_factor = 2.3
-                    aspect_ratio = vb_height / vb_width if vb_width > 0 else 1
-                    # Scale from viewBox coordinates (0.015 factor converts viewBox units to pixels)
-                    estimated_width = max(2.5, vb_width * 0.015)
-                    estimated_height = vb_height * 0.015 * height_scale_factor
-                    
-                    svg_width = estimated_width
-                    svg_height = estimated_height
-                    
-                    min_height = 30.0
-                    if svg_height < min_height:
-                        svg_height = min_height
-                    
-                    max_height = 150.0
-                    absolute_max = 250.0
+                    # For matrix delimiters, use viewBox height more directly
+                    if is_matrix_delimiter:
+                        # Use viewBox height with minimal scaling to preserve exact matrix height
+                        height_scale_factor = 1.1  # Small adjustment to ensure full coverage
+                        aspect_ratio = vb_height / vb_width if vb_width > 0 else 1
+                        # Scale from viewBox coordinates (0.015 factor converts viewBox units to pixels)
+                        estimated_width = max(2.5, vb_width * 0.015)
+                        estimated_height = vb_height * 0.015 * height_scale_factor
+                        
+                        svg_width = estimated_width
+                        svg_height = estimated_height
+                        
+                        min_height = 20.0
+                        if svg_height < min_height:
+                            svg_height = min_height
+                        
+                        # For matrix delimiters, allow much taller heights
+                        max_height = 500.0
+                        absolute_max = 800.0
+                    else:
+                        # Apply same height scaling for sqrt radicals
+                        height_scale_factor = 2.3
+                        aspect_ratio = vb_height / vb_width if vb_width > 0 else 1
+                        # Scale from viewBox coordinates (0.015 factor converts viewBox units to pixels)
+                        estimated_width = max(2.5, vb_width * 0.015)
+                        estimated_height = vb_height * 0.015 * height_scale_factor
+                        
+                        svg_width = estimated_width
+                        svg_height = estimated_height
+                        
+                        min_height = 30.0
+                        if svg_height < min_height:
+                            svg_height = min_height
+                        
+                        max_height = 150.0
+                        absolute_max = 250.0
                     
                     if svg_height > absolute_max:
                         height_ratio = absolute_max / svg_height
@@ -543,19 +603,19 @@ class PDFGenerator:
         # First process LaTeX expressions (convert LaTeX to HTML)
         html_content = self._process_latex_to_html(content)
         
-        # Pre-process content to ensure lettered items (a), (b), (i), (ii), etc. 
-        # and numbered items start on new lines for proper markdown rendering
-        # This handles cases where items like "(a)" and "(b)" should be on separate lines
-        html_content = self._prepare_markdown_line_breaks(html_content)
+        # Minimal preprocessing: only fix items that are clearly on the same line
+        # when they should be separate (e.g., "text - (a) text - (b)" -> separate lines)
+        # This is minimal and doesn't touch well-formed markdown
+        html_content = self._fix_broken_list_items(html_content)
         
-        # Then convert markdown to HTML (markdown library preserves existing HTML tags by default)
-        # This handles **bold**, ## headers, *italic*, etc.
-        # Use extensions for better markdown support (tables, fenced code blocks, etc.)
+        # Convert markdown to HTML with extensions that preserve formatting
+        # Use markdown extensions for better formatting support
         html_content = markdown.markdown(
             html_content, 
             extensions=['fenced_code', 'tables', 'toc']
         )
         
+        # Wrap in markdown-section div for proper CSS styling
         html_message = f"""
             <div>
                 <div>
@@ -568,7 +628,7 @@ class PDFGenerator:
                 <br/>
                 <br/>
 
-                <div>
+                <div class="markdown-section">
                     {html_content}
                 </div>
             </div>
@@ -576,49 +636,52 @@ class PDFGenerator:
           """
         return html_message, []
 
-    def _prepare_markdown_line_breaks(self, content: str) -> str:
+    def _fix_broken_list_items(self, content: str) -> str:
         """
-        Prepare content for markdown conversion by ensuring lettered items and 
-        numbered items start on new lines.
-        
-        This handles cases where items like "(a)" and "(b)" should be on separate lines
-        but might appear on the same line due to single newlines being collapsed by markdown.
+        Ensure list items are properly formatted for markdown.
+        Markdown requires list items to start at the beginning of lines (or with proper indentation).
+        This ensures list items are recognized and separated properly.
         """
         result = content
         
-        # Pattern to match lettered/numbered items that appear on the same line
-        # We need to ensure each item starts on a new line for proper markdown rendering
+        # First, fix cases where list items appear on the same line as text
+        # Fix numbered lists: "text 1. item" -> "text\n1. item"
+        result = re.sub(r'([^\n])\s+(\d+\.\s+)', r'\1\n\2', result)
         
-        # Handle cases where items like "- (a)" appear after text on the same line
-        # This ensures items are separated by newlines
-        # Match "- (item)" patterns that appear after non-newline characters
-        patterns = [
-            # Lettered items: (a), (b), etc.
-            (r'([^\n])\s*-\s*\(([a-z])\)', r'\1\n- (\2)'),  # lowercase letters
-            (r'([^\n])\s*-\s*\(([A-Z])\)', r'\1\n- (\2)'),  # uppercase letters
-            # Numbered items: (1), (2), etc.
-            (r'([^\n])\s*-\s*\((\d+)\)', r'\1\n- (\2)'),
-            # Roman numerals
-            (r'([^\n])\s*-\s*\(([ivxlcdm]+)\)', r'\1\n- (\2)'),  # lowercase roman
-            (r'([^\n])\s*-\s*\(([IVXLCDM]+)\)', r'\1\n- (\2)'),  # uppercase roman
-        ]
+        # Fix bullet points: "text - item" -> "text\n- item"  
+        result = re.sub(r'([^\n])\s+(-\s+)', r'\1\n\2', result)
         
-        for pattern, replacement in patterns:
-            result = re.sub(pattern, replacement, result)
+        # Fix lettered items with dash: "text - (a)" -> "text\n- (a)"
+        result = re.sub(r'([^\n])\s+-\s+\(([a-zA-Z0-9ivxlcdmIVXLCDM]+)\)', r'\1\n- (\2)', result)
         
-        # Also handle items without "- " prefix that should be list items
-        # Pattern: "(a)" or "(b)" that appear after text (not already part of a list)
-        # Convert them to markdown list items
-        item_patterns = [
-            (r'([^\n-])\s+\(([a-z])\)', r'\1\n- (\2)'),  # lowercase letters with space before
-            (r'([^\n-])\s+\(([A-Z])\)', r'\1\n- (\2)'),  # uppercase letters with space before
-            (r'([^\n-])\s+\((\d+)\)', r'\1\n- (\2)'),  # numbers with space before
-            (r'([^\n-])\s+\(([ivxlcdm]+)\)', r'\1\n- (\2)'),  # lowercase roman with space
-            (r'([^\n-])\s+\(([IVXLCDM]+)\)', r'\1\n- (\2)'),  # uppercase roman with space
-        ]
+        # Now ensure list items are properly separated from preceding text
+        # Split into lines to process line by line
+        lines = result.split('\n')
+        processed_lines = []
         
-        for pattern, replacement in item_patterns:
-            result = re.sub(pattern, replacement, result)
+        for i, line in enumerate(lines):
+            # Check if this line is a list item (preserving indentation)
+            is_numbered_list = re.match(r'^\s*\d+\.\s+', line)
+            is_bullet_list = re.match(r'^\s*[-*+]\s+', line)
+            
+            if is_numbered_list or is_bullet_list:
+                # If previous line was not a list item and not empty, 
+                # ensure there's proper separation (markdown needs this)
+                if processed_lines:
+                    prev_line = processed_lines[-1].strip()
+                    # If previous line has content and is not a list item, add blank line
+                    if prev_line:
+                        prev_is_list = re.match(r'^\s*[-*+]\s+', processed_lines[-1]) or re.match(r'^\s*\d+\.\s+', processed_lines[-1])
+                        if not prev_is_list:
+                            # Add blank line before list to help markdown recognize it
+                            processed_lines.append('')
+            
+            processed_lines.append(line)
+        
+        result = '\n'.join(processed_lines)
+        
+        # Clean up multiple consecutive blank lines (max 2)
+        result = re.sub(r'\n{3,}', '\n\n', result)
         
         return result
 
@@ -815,12 +878,14 @@ class PDFGenerator:
 
             self.messages_html = "\n".join(messages_html_parts)
             html_body = self._generate_html_body()
-            
+
+            katex_css_path = Path(STATIC_DIR / "assets" / "katex" / "katex.min.css")
+
             html_full = html_body.replace(
                 "<head>",
                 (
                     "<head>\n"
-                    f'<link rel="stylesheet" href="assets/katex/katex.min.css">\n'
+                    f'<link rel="stylesheet" href="{katex_css_path}">\n'
                     "<style>\n"
                     f'{self.css}\n'
                     "  .katex, .katex-display {\n"
