@@ -319,9 +319,7 @@
 						.flatMap((item) => item.model?.tags ?? [])
 						.map((tag) => tag.name.toLowerCase())
 				)
-			)
-				.sort((a, b) => a.localeCompare(b))
-				.map((tag) => capitalizeFirstLetter(tag));
+			).sort((a, b) => a.localeCompare(b));
 		}
 	});
 
