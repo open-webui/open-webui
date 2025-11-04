@@ -1990,6 +1990,14 @@ Ensure that the tools are effectively utilized to achieve the highest-quality an
 
 VECTOR_DB = os.environ.get("VECTOR_DB", "chroma")
 
+# In enterprise mode, avoid defaulting to local-only vector engines
+_ENTERPRISE_MODE = os.environ.get("ENTERPRISE_MODE", "false").lower() == "true"
+_LOCAL_MODE_DISABLED = os.environ.get("LOCAL_MODE_DISABLED", "false").lower() == "true"
+if _ENTERPRISE_MODE or _LOCAL_MODE_DISABLED:
+    if VECTOR_DB in {"", "local", "chroma"}:
+        # Enterprise default set to local chroma per current deployment preference.
+        VECTOR_DB = os.environ.get("ENTERPRISE_VECTOR_DB", "chroma")
+
 # Chroma
 CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"
 
@@ -2070,8 +2078,9 @@ ELASTICSEARCH_INDEX_PREFIX = os.environ.get(
 # Pgvector
 PGVECTOR_DB_URL = os.environ.get("PGVECTOR_DB_URL", DATABASE_URL)
 if VECTOR_DB == "pgvector" and not PGVECTOR_DB_URL.startswith("postgres"):
-    raise ValueError(
-        "Pgvector requires setting PGVECTOR_DB_URL or using Postgres with vector extension as the primary database."
+    log.warning(
+        "VECTOR_DB=pgvector configured but PGVECTOR_DB_URL is not a Postgres URL. "
+        "The application will start; provider initialization will fail on use until a valid Postgres URL is set."
     )
 PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(
     os.environ.get("PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH", "1536")
@@ -2455,6 +2464,42 @@ DOCUMENT_INTELLIGENCE_KEY = PersistentConfig(
     "DOCUMENT_INTELLIGENCE_KEY",
     "rag.document_intelligence_key",
     os.getenv("DOCUMENT_INTELLIGENCE_KEY", ""),
+)
+
+DOCUMENT_INTELLIGENCE_MODEL_ID = PersistentConfig(
+    "DOCUMENT_INTELLIGENCE_MODEL_ID",
+    "rag.document_intelligence_model_id",
+    os.getenv("DOCUMENT_INTELLIGENCE_MODEL_ID", "prebuilt-read"),
+)
+
+DOCUMENT_INTELLIGENCE_API_VERSION = PersistentConfig(
+    "DOCUMENT_INTELLIGENCE_API_VERSION",
+    "rag.document_intelligence_api_version",
+    os.getenv("DOCUMENT_INTELLIGENCE_API_VERSION", "2024-02-29-preview"),
+)
+
+AWS_TEXTRACT_ACCESS_KEY_ID = PersistentConfig(
+    "AWS_TEXTRACT_ACCESS_KEY_ID",
+    "rag.aws_textract_access_key_id",
+    os.getenv("AWS_TEXTRACT_ACCESS_KEY_ID", ""),
+)
+
+AWS_TEXTRACT_SECRET_ACCESS_KEY = PersistentConfig(
+    "AWS_TEXTRACT_SECRET_ACCESS_KEY",
+    "rag.aws_textract_secret_access_key",
+    os.getenv("AWS_TEXTRACT_SECRET_ACCESS_KEY", ""),
+)
+
+AWS_TEXTRACT_SESSION_TOKEN = PersistentConfig(
+    "AWS_TEXTRACT_SESSION_TOKEN",
+    "rag.aws_textract_session_token",
+    os.getenv("AWS_TEXTRACT_SESSION_TOKEN", ""),
+)
+
+AWS_TEXTRACT_REGION = PersistentConfig(
+    "AWS_TEXTRACT_REGION",
+    "rag.aws_textract_region",
+    os.getenv("AWS_TEXTRACT_REGION", ""),
 )
 
 MISTRAL_OCR_API_KEY = PersistentConfig(

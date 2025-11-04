@@ -6,9 +6,18 @@ import re
 from abc import ABC, abstractmethod
 from typing import BinaryIO, Tuple, Dict
 
-import boto3
-from botocore.config import Config
-from botocore.exceptions import ClientError
+try:
+    import boto3
+    from botocore.config import Config
+    from botocore.exceptions import ClientError
+except ImportError:  # optional cloud storage dependency
+    boto3 = None  # type: ignore
+    Config = None  # type: ignore
+
+    class ClientError(Exception):  # type: ignore
+        """Placeholder when botocore is unavailable."""
+
+        pass
 from open_webui.config import (
     S3_ACCESS_KEY_ID,
     S3_BUCKET_NAME,
@@ -27,12 +36,29 @@ from open_webui.config import (
     STORAGE_PROVIDER,
     UPLOAD_DIR,
 )
-from google.cloud import storage
-from google.cloud.exceptions import GoogleCloudError, NotFound
+try:
+    from google.cloud import storage
+    from google.cloud.exceptions import GoogleCloudError, NotFound
+except ImportError:  # optional GCS dependency
+    storage = None  # type: ignore
+
+    class GoogleCloudError(Exception):  # type: ignore
+        pass
+
+
+    class NotFound(Exception):  # type: ignore
+        pass
 from open_webui.constants import ERROR_MESSAGES
-from azure.identity import DefaultAzureCredential
-from azure.storage.blob import BlobServiceClient
-from azure.core.exceptions import ResourceNotFoundError
+try:
+    from azure.identity import DefaultAzureCredential
+    from azure.storage.blob import BlobServiceClient
+    from azure.core.exceptions import ResourceNotFoundError
+except ImportError:  # optional Azure storage dependency
+    DefaultAzureCredential = None  # type: ignore
+    BlobServiceClient = None  # type: ignore
+
+    class ResourceNotFoundError(Exception):  # type: ignore
+        pass
 from open_webui.env import SRC_LOG_LEVELS
 
 
@@ -107,6 +133,11 @@ class LocalStorageProvider(StorageProvider):
 
 class S3StorageProvider(StorageProvider):
     def __init__(self):
+        if boto3 is None or Config is None:
+            raise ImportError(
+                "S3 storage provider requires boto3; install backend[enterprise] or add boto3 to dependencies."
+            )
+
         config = Config(
             s3={
                 "use_accelerate_endpoint": S3_USE_ACCELERATE_ENDPOINT,
@@ -225,6 +256,11 @@ class S3StorageProvider(StorageProvider):
 
 class GCSStorageProvider(StorageProvider):
     def __init__(self):
+        if storage is None:
+            raise ImportError(
+                "GCS storage provider requires google-cloud-storage; install backend[enterprise] or add google-cloud-storage."
+            )
+
         self.bucket_name = GCS_BUCKET_NAME
 
         if GOOGLE_APPLICATION_CREDENTIALS_JSON:
@@ -291,6 +327,11 @@ class GCSStorageProvider(StorageProvider):
 
 class AzureStorageProvider(StorageProvider):
     def __init__(self):
+        if BlobServiceClient is None:
+            raise ImportError(
+                "Azure storage provider requires azure-storage-blob; install backend[enterprise] or add Azure dependencies."
+            )
+
         self.endpoint = AZURE_STORAGE_ENDPOINT
         self.container_name = AZURE_STORAGE_CONTAINER_NAME
         storage_key = AZURE_STORAGE_KEY

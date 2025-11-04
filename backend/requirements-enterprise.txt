@@ -1,0 +1,4 @@
+# Enterprise SaaS integrations and managed vector/database clients.
+
+# Legacy combined deps (retained for compatibility, not used by enterprise build path)
+# Prefer using requirements-enterprise-core.txt and requirements-vectordb-*.txt

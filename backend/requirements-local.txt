@@ -1,0 +1,25 @@
+# Local ML/AI runtime dependencies for self-hosted inference paths.
+
+sentence-transformers==5.1.1
+transformers
+accelerate
+einops==0.8.1
+pyarrow==20.0.0
+datasets
+numpy
+
+chromadb==1.1.0
+
+onnxruntime==1.20.1
+faster-whisper==1.1.1
+
+opencv-python-headless==4.11.0.86
+rapidocr-onnxruntime==1.4.4
+
+colbert-ai==0.2.21
+
+# Default to CPU wheels for PyTorch; override the index URL as needed for CUDA builds.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
+torchaudio

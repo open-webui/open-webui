@@ -5,6 +5,8 @@ ARG USE_CUDA=false
 ARG USE_OLLAMA=false
 ARG USE_SLIM=false
 ARG USE_PERMISSION_HARDENING=false
+ARG USE_ENTERPRISE_MODE=false
+ARG ENTERPRISE_VECTOR_DB=chroma
 # Tested with cu117 for CUDA 11 and cu121 for CUDA 12 (default)
 ARG USE_CUDA_VER=cu128
 # any sentence transformer model; models to use can be found at https://huggingface.co/models?library=sentence-transformers
@@ -35,7 +37,19 @@ WORKDIR /app
 RUN apk add --no-cache git
 
 COPY package.json package-lock.json ./
-RUN npm ci --force
+# Improve reliability of npm install in CI/build environments with retries and cache
+RUN --mount=type=cache,target=/root/.npm \
+    set -eux; \
+    npm config set cache /root/.npm; \
+    npm config set prefer-offline true; \
+    npm config set fund false; \
+    npm config set audit false; \
+    npm config set fetch-retries 5; \
+    npm config set fetch-retry-mintimeout 20000; \
+    npm config set fetch-retry-maxtimeout 120000; \
+    for i in 1 2 3; do \
+      npm ci --force --prefer-offline --no-audit --no-fund && break || { echo "npm ci failed (attempt $i), retrying..."; sleep $((i*10)); }; \
+    done
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
@@ -50,6 +64,8 @@ ARG USE_OLLAMA
 ARG USE_CUDA_VER
 ARG USE_SLIM
 ARG USE_PERMISSION_HARDENING
+ARG USE_ENTERPRISE_MODE
+ARG ENTERPRISE_VECTOR_DB
 ARG USE_EMBEDDING_MODEL
 ARG USE_RERANKING_MODEL
 ARG UID
@@ -62,6 +78,8 @@ ENV ENV=prod \
     USE_OLLAMA_DOCKER=${USE_OLLAMA} \
     USE_CUDA_DOCKER=${USE_CUDA} \
     USE_SLIM_DOCKER=${USE_SLIM} \
+    USE_ENTERPRISE_MODE=${USE_ENTERPRISE_MODE} \
+    ENTERPRISE_VECTOR_DB=${ENTERPRISE_VECTOR_DB} \
     USE_CUDA_DOCKER_VER=${USE_CUDA_VER} \
     USE_EMBEDDING_MODEL_DOCKER=${USE_EMBEDDING_MODEL} \
     USE_RERANKING_MODEL_DOCKER=${USE_RERANKING_MODEL}
@@ -75,7 +93,10 @@ ENV OPENAI_API_KEY="" \
     WEBUI_SECRET_KEY="" \
     SCARF_NO_ANALYTICS=true \
     DO_NOT_TRACK=true \
-    ANONYMIZED_TELEMETRY=false
+    ANONYMIZED_TELEMETRY=false \
+    # Enterprise mode flags flow into runtime settings
+    ENTERPRISE_MODE=${USE_ENTERPRISE_MODE} \
+    LOCAL_MODE_DISABLED=${USE_ENTERPRISE_MODE}
 
 #### Other models #########################################################
 ## whisper TTS model settings ##
@@ -117,35 +138,52 @@ RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry
 RUN chown -R $UID:$GID /app $HOME
 
 # Install common system dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    git build-essential pandoc gcc netcat-openbsd curl jq \
-    python3-dev \
-    ffmpeg libsm6 libxext6 \
-    && rm -rf /var/lib/apt/lists/*
+RUN set -eux; \
+    apt-get update; \
+    if [ "$USE_ENTERPRISE_MODE" = "true" ]; then \
+      # Minimal footprint for enterprise; omit ML/CV-only libs
+      apt-get install -y --no-install-recommends \
+        git build-essential gcc netcat-openbsd curl jq python3-dev; \
+    else \
+      apt-get install -y --no-install-recommends \
+        git build-essential pandoc gcc netcat-openbsd curl jq \
+        python3-dev ffmpeg libsm6 libxext6; \
+    fi; \
+    rm -rf /var/lib/apt/lists/*
 
 # install python dependencies
-COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
+COPY --chown=$UID:$GID ./backend/requirements*.txt ./
 
-RUN pip3 install --no-cache-dir uv && \
-    if [ "$USE_CUDA" = "true" ]; then \
-    # If you use CUDA the whisper and embedding model will be downloaded on first use
-    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir && \
-    uv pip install --system -r requirements.txt --no-cache-dir && \
-    python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
-    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
-    python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
+RUN set -eux; \
+    pip3 install --no-cache-dir uv; \
+    if [ "$USE_ENTERPRISE_MODE" = "true" ]; then \
+      # Enterprise: base + core SaaS only; conditionally add selected vector DB client
+      uv pip install --system -r requirements-base.txt --no-cache-dir; \
+      uv pip install --system -r requirements-enterprise-core.txt --no-cache-dir; \
+      case "${ENTERPRISE_VECTOR_DB}" in \
+        chroma)  uv pip install --system -r requirements-vectordb-chroma.txt --no-cache-dir ;; \
+        pgvector) uv pip install --system -r requirements-vectordb-pgvector.txt --no-cache-dir ;; \
+        pinecone) uv pip install --system -r requirements-vectordb-pinecone.txt --no-cache-dir ;; \
+        qdrant)  uv pip install --system -r requirements-vectordb-qdrant.txt --no-cache-dir ;; \
+        milvus)  uv pip install --system -r requirements-vectordb-milvus.txt --no-cache-dir ;; \
+        *) echo "Skipping vector DB client install for ENTERPRISE_VECTOR_DB='${ENTERPRISE_VECTOR_DB}'" ;; \
+      esac; \
     else \
-    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir && \
-    uv pip install --system -r requirements.txt --no-cache-dir && \
-    if [ "$USE_SLIM" != "true" ]; then \
-    python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
-    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
+      # Full install (backward-compatible): local + enterprise
+      if [ "$USE_CUDA" = "true" ]; then \
+        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir; \
+      else \
+        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir; \
+      fi; \
+      uv pip install --system -r requirements.txt --no-cache-dir; \
+      if [ "$USE_SLIM" != "true" ]; then \
+        python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')"; \
+        python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
+      fi; \
+    fi; \
+    # Warm tiktoken cache (light)
     python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
-    fi; \
-    fi; \
-    mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \
-    rm -rf /var/lib/apt/lists/*;
+    mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/;
 
 # Install Ollama if requested
 RUN if [ "$USE_OLLAMA" = "true" ]; then \

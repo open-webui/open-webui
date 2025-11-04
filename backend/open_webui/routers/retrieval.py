@@ -37,7 +37,14 @@ from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
 
 
-from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+from open_webui.services.dependencies import (
+    get_embedding_service,
+    get_reranker_service,
+    get_vector_db_service,
+    get_ocr_service,
+)
+from open_webui.services.interfaces import VectorRecord
+from open_webui.services.interfaces import VectorRecord
 
 # Document loaders
 from open_webui.retrieval.loaders.main import Loader
@@ -72,9 +79,7 @@ from open_webui.retrieval.web.external import search_external
 
 from open_webui.retrieval.utils import (
     get_content_from_url,
-    get_embedding_function,
-    get_reranking_function,
-    get_model_path,
+    get_doc,
     query_collection,
     query_collection_with_hybrid_search,
     query_doc,
@@ -88,23 +93,15 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 
 from open_webui.config import (
     ENV,
-    RAG_EMBEDDING_MODEL_AUTO_UPDATE,
-    RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
-    RAG_RERANKING_MODEL_AUTO_UPDATE,
-    RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     UPLOAD_DIR,
     DEFAULT_LOCALE,
     RAG_EMBEDDING_CONTENT_PREFIX,
     RAG_EMBEDDING_QUERY_PREFIX,
 )
-from open_webui.env import (
-    SRC_LOG_LEVELS,
-    DEVICE_TYPE,
-    DOCKER,
-    SENTENCE_TRANSFORMERS_BACKEND,
-    SENTENCE_TRANSFORMERS_MODEL_KWARGS,
-    SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
-    SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
+from open_webui.env import SRC_LOG_LEVELS
+from open_webui.services.runtime import (
+    get_sync_embedding_function,
+    get_sync_reranker_function,
 )
 
 from open_webui.constants import ERROR_MESSAGES
@@ -119,101 +116,6 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 ##########################################
 
 
-def get_ef(
-    engine: str,
-    embedding_model: str,
-    auto_update: bool = False,
-):
-    ef = None
-    if embedding_model and engine == "":
-        from sentence_transformers import SentenceTransformer
-
-        try:
-            ef = SentenceTransformer(
-                get_model_path(embedding_model, auto_update),
-                device=DEVICE_TYPE,
-                trust_remote_code=RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
-                backend=SENTENCE_TRANSFORMERS_BACKEND,
-                model_kwargs=SENTENCE_TRANSFORMERS_MODEL_KWARGS,
-            )
-        except Exception as e:
-            log.debug(f"Error loading SentenceTransformer: {e}")
-
-    return ef
-
-
-def get_rf(
-    engine: str = "",
-    reranking_model: Optional[str] = None,
-    external_reranker_url: str = "",
-    external_reranker_api_key: str = "",
-    auto_update: bool = False,
-):
-    rf = None
-    if reranking_model:
-        if any(model in reranking_model for model in ["jinaai/jina-colbert-v2"]):
-            try:
-                from open_webui.retrieval.models.colbert import ColBERT
-
-                rf = ColBERT(
-                    get_model_path(reranking_model, auto_update),
-                    env="docker" if DOCKER else None,
-                )
-
-            except Exception as e:
-                log.error(f"ColBERT: {e}")
-                raise Exception(ERROR_MESSAGES.DEFAULT(e))
-        else:
-            if engine == "external":
-                try:
-                    from open_webui.retrieval.models.external import ExternalReranker
-
-                    rf = ExternalReranker(
-                        url=external_reranker_url,
-                        api_key=external_reranker_api_key,
-                        model=reranking_model,
-                    )
-                except Exception as e:
-                    log.error(f"ExternalReranking: {e}")
-                    raise Exception(ERROR_MESSAGES.DEFAULT(e))
-            else:
-                import sentence_transformers
-
-                try:
-                    rf = sentence_transformers.CrossEncoder(
-                        get_model_path(reranking_model, auto_update),
-                        device=DEVICE_TYPE,
-                        trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
-                        backend=SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
-                        model_kwargs=SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
-                    )
-                except Exception as e:
-                    log.error(f"CrossEncoder: {e}")
-                    raise Exception(ERROR_MESSAGES.DEFAULT("CrossEncoder error"))
-
-                # Safely adjust pad_token_id if missing as some models do not have this in config
-                try:
-                    model_cfg = getattr(rf, "model", None)
-                    if model_cfg and hasattr(model_cfg, "config"):
-                        cfg = model_cfg.config
-                        if getattr(cfg, "pad_token_id", None) is None:
-                            # Fallback to eos_token_id when available
-                            eos = getattr(cfg, "eos_token_id", None)
-                            if eos is not None:
-                                cfg.pad_token_id = eos
-                                log.debug(
-                                    f"Missing pad_token_id detected; set to eos_token_id={eos}"
-                                )
-                            else:
-                                log.warning(
-                                    "Neither pad_token_id nor eos_token_id present in model config"
-                                )
-                except Exception as e2:
-                    log.warning(f"Failed to adjust pad_token_id on CrossEncoder: {e2}")
-
-    return rf
-
-
 ##########################################
 #
 # API routes
@@ -222,6 +124,19 @@ def get_rf(
 
 
 router = APIRouter()
+
+
+def _run_async(coro):
+    try:
+        return asyncio.run(coro)
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        try:
+            asyncio.set_event_loop(loop)
+            return loop.run_until_complete(coro)
+        finally:
+            asyncio.set_event_loop(None)
+            loop.close()
 
 
 class CollectionNameForm(BaseModel):
@@ -305,18 +220,19 @@ async def update_embedding_config(
     log.info(
         f"Updating embedding model: {request.app.state.config.RAG_EMBEDDING_MODEL} to {form_data.embedding_model}"
     )
-    if request.app.state.config.RAG_EMBEDDING_ENGINE == "":
-        # unloads current internal embedding model and clears VRAM cache
-        request.app.state.ef = None
-        request.app.state.EMBEDDING_FUNCTION = None
+    previous_engine = request.app.state.config.RAG_EMBEDDING_ENGINE
+    if previous_engine in {"", "local"}:
         import gc
 
         gc.collect()
-        if DEVICE_TYPE == "cuda":
-            import torch
+        try:
+            import torch  # type: ignore
 
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
+        except Exception:
+            pass
+
     try:
         request.app.state.config.RAG_EMBEDDING_ENGINE = form_data.embedding_engine
         request.app.state.config.RAG_EMBEDDING_MODEL = form_data.embedding_model
@@ -357,40 +273,21 @@ async def update_embedding_config(
                 form_data.embedding_batch_size
             )
 
-        request.app.state.ef = get_ef(
-            request.app.state.config.RAG_EMBEDDING_ENGINE,
-            request.app.state.config.RAG_EMBEDDING_MODEL,
-        )
+        settings = getattr(request.app.state, "settings", None)
+        if settings is not None:
+            settings.rag_embedding_engine = (
+                form_data.embedding_engine.strip().lower()
+                if form_data.embedding_engine
+                else ""
+            )
+        if hasattr(request.app.state, "embedding_service"):
+            request.app.state.embedding_service = None
 
-        request.app.state.EMBEDDING_FUNCTION = get_embedding_function(
-            request.app.state.config.RAG_EMBEDDING_ENGINE,
-            request.app.state.config.RAG_EMBEDDING_MODEL,
-            request.app.state.ef,
-            (
-                request.app.state.config.RAG_OPENAI_API_BASE_URL
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-                else (
-                    request.app.state.config.RAG_OLLAMA_BASE_URL
-                    if request.app.state.config.RAG_EMBEDDING_ENGINE == "ollama"
-                    else request.app.state.config.RAG_AZURE_OPENAI_BASE_URL
-                )
-            ),
-            (
-                request.app.state.config.RAG_OPENAI_API_KEY
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-                else (
-                    request.app.state.config.RAG_OLLAMA_API_KEY
-                    if request.app.state.config.RAG_EMBEDDING_ENGINE == "ollama"
-                    else request.app.state.config.RAG_AZURE_OPENAI_API_KEY
-                )
-            ),
-            request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
-            azure_api_version=(
-                request.app.state.config.RAG_AZURE_OPENAI_API_VERSION
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
-                else None
-            ),
-        )
+        # Trigger provider resolution to surface configuration errors early.
+        try:
+            get_embedding_service(request)
+        except HTTPException as exc:
+            raise exc
 
         return {
             "status": True,
@@ -465,6 +362,12 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "DOCLING_PICTURE_DESCRIPTION_API": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API,
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
+        "DOCUMENT_INTELLIGENCE_MODEL_ID": request.app.state.config.DOCUMENT_INTELLIGENCE_MODEL_ID,
+        "DOCUMENT_INTELLIGENCE_API_VERSION": request.app.state.config.DOCUMENT_INTELLIGENCE_API_VERSION,
+        "AWS_TEXTRACT_ACCESS_KEY_ID": request.app.state.config.AWS_TEXTRACT_ACCESS_KEY_ID,
+        "AWS_TEXTRACT_SECRET_ACCESS_KEY": request.app.state.config.AWS_TEXTRACT_SECRET_ACCESS_KEY,
+        "AWS_TEXTRACT_SESSION_TOKEN": request.app.state.config.AWS_TEXTRACT_SESSION_TOKEN,
+        "AWS_TEXTRACT_REGION": request.app.state.config.AWS_TEXTRACT_REGION,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
         # MinerU settings
         "MINERU_API_MODE": request.app.state.config.MINERU_API_MODE,
@@ -650,6 +553,12 @@ class ConfigForm(BaseModel):
     DOCLING_PICTURE_DESCRIPTION_API: Optional[dict] = None
     DOCUMENT_INTELLIGENCE_ENDPOINT: Optional[str] = None
     DOCUMENT_INTELLIGENCE_KEY: Optional[str] = None
+    DOCUMENT_INTELLIGENCE_MODEL_ID: Optional[str] = None
+    DOCUMENT_INTELLIGENCE_API_VERSION: Optional[str] = None
+    AWS_TEXTRACT_ACCESS_KEY_ID: Optional[str] = None
+    AWS_TEXTRACT_SECRET_ACCESS_KEY: Optional[str] = None
+    AWS_TEXTRACT_SESSION_TOKEN: Optional[str] = None
+    AWS_TEXTRACT_REGION: Optional[str] = None
     MISTRAL_OCR_API_KEY: Optional[str] = None
 
     # MinerU settings
@@ -891,6 +800,36 @@ async def update_rag_config(
         if form_data.DOCUMENT_INTELLIGENCE_KEY is not None
         else request.app.state.config.DOCUMENT_INTELLIGENCE_KEY
     )
+    request.app.state.config.DOCUMENT_INTELLIGENCE_MODEL_ID = (
+        form_data.DOCUMENT_INTELLIGENCE_MODEL_ID
+        if form_data.DOCUMENT_INTELLIGENCE_MODEL_ID is not None
+        else request.app.state.config.DOCUMENT_INTELLIGENCE_MODEL_ID
+    )
+    request.app.state.config.DOCUMENT_INTELLIGENCE_API_VERSION = (
+        form_data.DOCUMENT_INTELLIGENCE_API_VERSION
+        if form_data.DOCUMENT_INTELLIGENCE_API_VERSION is not None
+        else request.app.state.config.DOCUMENT_INTELLIGENCE_API_VERSION
+    )
+    request.app.state.config.AWS_TEXTRACT_ACCESS_KEY_ID = (
+        form_data.AWS_TEXTRACT_ACCESS_KEY_ID
+        if form_data.AWS_TEXTRACT_ACCESS_KEY_ID is not None
+        else request.app.state.config.AWS_TEXTRACT_ACCESS_KEY_ID
+    )
+    request.app.state.config.AWS_TEXTRACT_SECRET_ACCESS_KEY = (
+        form_data.AWS_TEXTRACT_SECRET_ACCESS_KEY
+        if form_data.AWS_TEXTRACT_SECRET_ACCESS_KEY is not None
+        else request.app.state.config.AWS_TEXTRACT_SECRET_ACCESS_KEY
+    )
+    request.app.state.config.AWS_TEXTRACT_SESSION_TOKEN = (
+        form_data.AWS_TEXTRACT_SESSION_TOKEN
+        if form_data.AWS_TEXTRACT_SESSION_TOKEN is not None
+        else request.app.state.config.AWS_TEXTRACT_SESSION_TOKEN
+    )
+    request.app.state.config.AWS_TEXTRACT_REGION = (
+        form_data.AWS_TEXTRACT_REGION
+        if form_data.AWS_TEXTRACT_REGION is not None
+        else request.app.state.config.AWS_TEXTRACT_REGION
+    )
     request.app.state.config.MISTRAL_OCR_API_KEY = (
         form_data.MISTRAL_OCR_API_KEY
         if form_data.MISTRAL_OCR_API_KEY is not None
@@ -920,18 +859,18 @@ async def update_rag_config(
     )
 
     # Reranking settings
-    if request.app.state.config.RAG_RERANKING_ENGINE == "":
-        # Unloading the internal reranker and clear VRAM memory
-        request.app.state.rf = None
-        request.app.state.RERANKING_FUNCTION = None
+    previous_reranker_engine = request.app.state.config.RAG_RERANKING_ENGINE
+    if previous_reranker_engine in {"", "local"}:
         import gc
 
         gc.collect()
-        if DEVICE_TYPE == "cuda":
-            import torch
+        try:
+            import torch  # type: ignore
 
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
+        except Exception:
+            pass
     request.app.state.config.RAG_RERANKING_ENGINE = (
         form_data.RAG_RERANKING_ENGINE
         if form_data.RAG_RERANKING_ENGINE is not None
@@ -960,24 +899,34 @@ async def update_rag_config(
             else request.app.state.config.RAG_RERANKING_MODEL
         )
 
+        settings = getattr(request.app.state, "settings", None)
+        if settings is not None:
+            if form_data.RAG_RERANKING_ENGINE is not None:
+                settings.rag_reranking_engine = (
+                    form_data.RAG_RERANKING_ENGINE.strip().lower()
+                    if form_data.RAG_RERANKING_ENGINE
+                    else ""
+                )
+            if form_data.RAG_RERANKING_MODEL is not None:
+                settings.rag_reranking_model = form_data.RAG_RERANKING_MODEL
+            if form_data.RAG_EXTERNAL_RERANKER_URL is not None:
+                settings.rag_external_reranker_url = (
+                    form_data.RAG_EXTERNAL_RERANKER_URL
+                )
+            if form_data.RAG_EXTERNAL_RERANKER_API_KEY is not None:
+                settings.rag_external_reranker_api_key = (
+                    form_data.RAG_EXTERNAL_RERANKER_API_KEY
+                )
+
+        if hasattr(request.app.state, "reranker_service"):
+            request.app.state.reranker_service = None
+
         try:
             if (
                 request.app.state.config.ENABLE_RAG_HYBRID_SEARCH
                 and not request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
             ):
-                request.app.state.rf = get_rf(
-                    request.app.state.config.RAG_RERANKING_ENGINE,
-                    request.app.state.config.RAG_RERANKING_MODEL,
-                    request.app.state.config.RAG_EXTERNAL_RERANKER_URL,
-                    request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
-                    True,
-                )
-
-                request.app.state.RERANKING_FUNCTION = get_reranking_function(
-                    request.app.state.config.RAG_RERANKING_ENGINE,
-                    request.app.state.config.RAG_RERANKING_MODEL,
-                    request.app.state.rf,
-                )
+                get_reranker_service(request)
         except Exception as e:
             log.error(f"Error loading reranking model: {e}")
             request.app.state.config.ENABLE_RAG_HYBRID_SEARCH = False
@@ -1182,6 +1131,12 @@ async def update_rag_config(
         "DOCLING_PICTURE_DESCRIPTION_API": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API,
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
+        "DOCUMENT_INTELLIGENCE_MODEL_ID": request.app.state.config.DOCUMENT_INTELLIGENCE_MODEL_ID,
+        "DOCUMENT_INTELLIGENCE_API_VERSION": request.app.state.config.DOCUMENT_INTELLIGENCE_API_VERSION,
+        "AWS_TEXTRACT_ACCESS_KEY_ID": request.app.state.config.AWS_TEXTRACT_ACCESS_KEY_ID,
+        "AWS_TEXTRACT_SECRET_ACCESS_KEY": request.app.state.config.AWS_TEXTRACT_SECRET_ACCESS_KEY,
+        "AWS_TEXTRACT_SESSION_TOKEN": request.app.state.config.AWS_TEXTRACT_SESSION_TOKEN,
+        "AWS_TEXTRACT_REGION": request.app.state.config.AWS_TEXTRACT_REGION,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
         # MinerU settings
         "MINERU_API_MODE": request.app.state.config.MINERU_API_MODE,
@@ -1303,16 +1258,13 @@ def save_docs_to_vector_db(
 
     # Check if entries with the same hash (metadata.hash) already exist
     if metadata and "hash" in metadata:
-        result = VECTOR_DB_CLIENT.query(
-            collection_name=collection_name,
-            filter={"hash": metadata["hash"]},
+        vectordb_service = get_vector_db_service(request)
+        existing = _run_async(
+            vectordb_service.find(collection_name, {"hash": metadata["hash"]})
         )
-
-        if result is not None:
-            existing_doc_ids = result.ids[0]
-            if existing_doc_ids:
-                log.info(f"Document with hash {metadata['hash']} already exists")
-                raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
+        if existing:
+            log.info(f"Document with hash {metadata['hash']} already exists")
+            raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
         if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
@@ -1400,12 +1352,15 @@ def save_docs_to_vector_db(
         for doc in docs
     ]
 
+    vectordb_service = get_vector_db_service(request)
+    embedding_service = get_embedding_service(request)
+
     try:
-        if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
+        if _run_async(vectordb_service.has_collection(collection_name)):
             log.info(f"collection {collection_name} already exists")
 
             if overwrite:
-                VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+                _run_async(vectordb_service.delete_collection(collection_name))
                 log.info(f"deleting existing collection {collection_name}")
             elif add is False:
                 log.info(
@@ -1414,60 +1369,30 @@ def save_docs_to_vector_db(
                 return True
 
         log.info(f"generating embeddings for {collection_name}")
-        embedding_function = get_embedding_function(
-            request.app.state.config.RAG_EMBEDDING_ENGINE,
-            request.app.state.config.RAG_EMBEDDING_MODEL,
-            request.app.state.ef,
-            (
-                request.app.state.config.RAG_OPENAI_API_BASE_URL
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-                else (
-                    request.app.state.config.RAG_OLLAMA_BASE_URL
-                    if request.app.state.config.RAG_EMBEDDING_ENGINE == "ollama"
-                    else request.app.state.config.RAG_AZURE_OPENAI_BASE_URL
-                )
-            ),
-            (
-                request.app.state.config.RAG_OPENAI_API_KEY
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-                else (
-                    request.app.state.config.RAG_OLLAMA_API_KEY
-                    if request.app.state.config.RAG_EMBEDDING_ENGINE == "ollama"
-                    else request.app.state.config.RAG_AZURE_OPENAI_API_KEY
-                )
-            ),
-            request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
-            azure_api_version=(
-                request.app.state.config.RAG_AZURE_OPENAI_API_VERSION
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
-                else None
-            ),
-        )
-
-        embeddings = embedding_function(
-            list(map(lambda x: x.replace("\n", " "), texts)),
-            prefix=RAG_EMBEDDING_CONTENT_PREFIX,
-            user=user,
+        clean_texts = [text.replace("\n", " ") for text in texts]
+        embeddings = _run_async(
+            embedding_service.embed_text(
+                clean_texts,
+                prefix=RAG_EMBEDDING_CONTENT_PREFIX,
+                user=user,
+            )
         )
         log.info(f"embeddings generated {len(embeddings)} for {len(texts)} items")
 
-        items = [
-            {
-                "id": str(uuid.uuid4()),
-                "text": text,
-                "vector": embeddings[idx],
-                "metadata": metadatas[idx],
-            }
+        records = [
+            VectorRecord(
+                id=str(uuid.uuid4()),
+                values=embeddings[idx],
+                document=text,
+                metadata=metadatas[idx],
+            )
             for idx, text in enumerate(texts)
         ]
 
         log.info(f"adding to collection {collection_name}")
-        VECTOR_DB_CLIENT.insert(
-            collection_name=collection_name,
-            items=items,
-        )
+        _run_async(vectordb_service.upsert(collection_name, records))
 
-        log.info(f"added {len(items)} items to collection {collection_name}")
+        log.info(f"added {len(records)} items to collection {collection_name}")
         return True
     except Exception as e:
         log.exception(e)
@@ -1505,10 +1430,11 @@ def process_file(
 
                 try:
                     # /files/{file_id}/data/content/update
-                    VECTOR_DB_CLIENT.delete_collection(
-                        collection_name=f"file-{file.id}"
+                    vectordb_service = get_vector_db_service(request)
+                    _run_async(
+                        vectordb_service.delete_collection(f"file-{file.id}")
                     )
-                except:
+                except Exception:
                     # Audio file upload pipeline
                     pass
 
@@ -1530,17 +1456,20 @@ def process_file(
                 # Check if the file has already been processed and save the content
                 # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
 
-                result = VECTOR_DB_CLIENT.query(
-                    collection_name=f"file-{file.id}", filter={"file_id": file.id}
+                vectordb_service = get_vector_db_service(request)
+                matches = _run_async(
+                    vectordb_service.find(
+                        collection=f"file-{file.id}", metadata_filter={"file_id": file.id}
+                    )
                 )
 
-                if result is not None and len(result.ids[0]) > 0:
+                if matches:
                     docs = [
                         Document(
-                            page_content=result.documents[0][idx],
-                            metadata=result.metadatas[0][idx],
+                            page_content=rec.document or "",
+                            metadata=rec.metadata or {},
                         )
-                        for idx, id in enumerate(result.ids[0])
+                        for rec in matches
                     ]
                 else:
                     docs = [
@@ -1563,6 +1492,16 @@ def process_file(
                 file_path = file.path
                 if file_path:
                     file_path = Storage.get_file(file_path)
+                    ocr_service = None
+                    ocr_engines = {
+                        "ocr_service",
+                        "document_intelligence",
+                        "azure_document_intelligence",
+                        "azure_document_intelligence_service",
+                        "aws_textract",
+                    }
+                    if request.app.state.config.CONTENT_EXTRACTION_ENGINE in ocr_engines:
+                        ocr_service = get_ocr_service(request)
                     loader = Loader(
                         engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
                         DATALAB_MARKER_API_KEY=request.app.state.config.DATALAB_MARKER_API_KEY,
@@ -1597,11 +1536,18 @@ def process_file(
                         PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
                         DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                         DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
+                        DOCUMENT_INTELLIGENCE_MODEL_ID=request.app.state.config.DOCUMENT_INTELLIGENCE_MODEL_ID,
+                        DOCUMENT_INTELLIGENCE_API_VERSION=request.app.state.config.DOCUMENT_INTELLIGENCE_API_VERSION,
+                        AWS_TEXTRACT_ACCESS_KEY_ID=request.app.state.config.AWS_TEXTRACT_ACCESS_KEY_ID,
+                        AWS_TEXTRACT_SECRET_ACCESS_KEY=request.app.state.config.AWS_TEXTRACT_SECRET_ACCESS_KEY,
+                        AWS_TEXTRACT_SESSION_TOKEN=request.app.state.config.AWS_TEXTRACT_SESSION_TOKEN,
+                        AWS_TEXTRACT_REGION=request.app.state.config.AWS_TEXTRACT_REGION,
                         MISTRAL_OCR_API_KEY=request.app.state.config.MISTRAL_OCR_API_KEY,
                         MINERU_API_MODE=request.app.state.config.MINERU_API_MODE,
                         MINERU_API_URL=request.app.state.config.MINERU_API_URL,
                         MINERU_API_KEY=request.app.state.config.MINERU_API_KEY,
                         MINERU_PARAMS=request.app.state.config.MINERU_PARAMS,
+                        OCR_SERVICE=ocr_service,
                     )
                     docs = loader.load(
                         file.filename, file.meta.get("content_type"), file_path
@@ -2216,29 +2162,26 @@ def query_doc_handler(
     form_data: QueryDocForm,
     user=Depends(get_verified_user),
 ):
+    embedding_fn = get_sync_embedding_function(request)
+    reranker_fn = get_sync_reranker_function(request)
+    vectordb_service = get_vector_db_service(request)
     try:
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and (
             form_data.hybrid is None or form_data.hybrid
         ):
-            collection_results = {}
-            collection_results[form_data.collection_name] = VECTOR_DB_CLIENT.get(
-                collection_name=form_data.collection_name
-            )
+            collection_snapshot = get_doc(vectordb_service, form_data.collection_name)
             return query_doc_with_hybrid_search(
                 collection_name=form_data.collection_name,
-                collection_result=collection_results[form_data.collection_name],
+                vectordb_service=vectordb_service,
+                collection_result=collection_snapshot,
                 query=form_data.query,
-                embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                embedding_function=lambda query, prefix: embedding_fn(
                     query, prefix=prefix, user=user
                 ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 reranking_function=(
-                    (
-                        lambda sentences: request.app.state.RERANKING_FUNCTION(
-                            sentences, user=user
-                        )
-                    )
-                    if request.app.state.RERANKING_FUNCTION
+                    (lambda sentences: reranker_fn(sentences, user=user))
+                    if reranker_fn
                     else None
                 ),
                 k_reranker=form_data.k_reranker
@@ -2253,13 +2196,15 @@ def query_doc_handler(
                     if form_data.hybrid_bm25_weight
                     else request.app.state.config.HYBRID_BM25_WEIGHT
                 ),
-                user=user,
             )
         else:
             return query_doc(
+                vectordb_service,
                 collection_name=form_data.collection_name,
-                query_embedding=request.app.state.EMBEDDING_FUNCTION(
-                    form_data.query, prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user
+                query_embedding=embedding_fn(
+                    form_data.query,
+                    prefix=RAG_EMBEDDING_QUERY_PREFIX,
+                    user=user,
                 ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 user=user,
@@ -2288,24 +2233,24 @@ def query_collection_handler(
     form_data: QueryCollectionsForm,
     user=Depends(get_verified_user),
 ):
+    embedding_fn = get_sync_embedding_function(request)
+    reranker_fn = get_sync_reranker_function(request)
     try:
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and (
             form_data.hybrid is None or form_data.hybrid
         ):
+            vectordb_service = get_vector_db_service(request)
             return query_collection_with_hybrid_search(
-                collection_names=form_data.collection_names,
-                queries=[form_data.query],
-                embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                vectordb_service,
+                form_data.collection_names,
+                [form_data.query],
+                embedding_function=lambda query, prefix: embedding_fn(
                     query, prefix=prefix, user=user
                 ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 reranking_function=(
-                    (
-                        lambda sentences: request.app.state.RERANKING_FUNCTION(
-                            sentences, user=user
-                        )
-                    )
-                    if request.app.state.RERANKING_FUNCTION
+                    (lambda sentences: reranker_fn(sentences, user=user))
+                    if reranker_fn
                     else None
                 ),
                 k_reranker=form_data.k_reranker
@@ -2322,10 +2267,12 @@ def query_collection_handler(
                 ),
             )
         else:
+            vectordb_service = get_vector_db_service(request)
             return query_collection(
-                collection_names=form_data.collection_names,
-                queries=[form_data.query],
-                embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                vectordb_service,
+                form_data.collection_names,
+                [form_data.query],
+                embedding_function=lambda query, prefix: embedding_fn(
                     query, prefix=prefix, user=user
                 ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
@@ -2352,15 +2299,19 @@ class DeleteForm(BaseModel):
 
 
 @router.post("/delete")
-def delete_entries_from_collection(form_data: DeleteForm, user=Depends(get_admin_user)):
+def delete_entries_from_collection(
+    request: Request, form_data: DeleteForm, user=Depends(get_admin_user)
+):
     try:
-        if VECTOR_DB_CLIENT.has_collection(collection_name=form_data.collection_name):
+        vectordb_service = get_vector_db_service(request)
+        if _run_async(vectordb_service.has_collection(collection=form_data.collection_name)):
             file = Files.get_file_by_id(form_data.file_id)
             hash = file.hash
 
-            VECTOR_DB_CLIENT.delete(
-                collection_name=form_data.collection_name,
-                metadata={"hash": hash},
+            _run_async(
+                vectordb_service.delete_by_metadata(
+                    collection=form_data.collection_name, metadata_filter={"hash": hash}
+                )
             )
             return {"status": True}
         else:
@@ -2371,8 +2322,9 @@ def delete_entries_from_collection(form_data: DeleteForm, user=Depends(get_admin
 
 
 @router.post("/reset/db")
-def reset_vector_db(user=Depends(get_admin_user)):
-    VECTOR_DB_CLIENT.reset()
+def reset_vector_db(request: Request, user=Depends(get_admin_user)):
+    vectordb_service = get_vector_db_service(request)
+    _run_async(vectordb_service.reset())
     Knowledges.delete_all_knowledge()
 
 
@@ -2403,11 +2355,11 @@ if ENV == "dev":
 
     @router.get("/ef/{text}")
     async def get_embeddings(request: Request, text: Optional[str] = "Hello World!"):
-        return {
-            "result": request.app.state.EMBEDDING_FUNCTION(
-                text, prefix=RAG_EMBEDDING_QUERY_PREFIX
-            )
-        }
+        service = get_embedding_service(request)
+        vectors = await service.embed_text(
+            [text], prefix=RAG_EMBEDDING_QUERY_PREFIX
+        )
+        return {"result": list(vectors[0])}
 
 
 class BatchProcessFilesForm(BaseModel):

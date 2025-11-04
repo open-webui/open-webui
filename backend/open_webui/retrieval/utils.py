@@ -1,21 +1,21 @@
+import asyncio
 import logging
 import os
 from typing import Optional, Union
 
 import requests
 import hashlib
+import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 import time
 import re
 
 from urllib.parse import quote
-from huggingface_hub import snapshot_download
 from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriever
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 
-from open_webui.config import VECTOR_DB
-from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+from open_webui.services.interfaces import VectorDBService, VectorQuery
 
 
 from open_webui.models.users import UserModel
@@ -25,7 +25,6 @@ from open_webui.models.knowledge import Knowledges
 from open_webui.models.chats import Chats
 from open_webui.models.notes import Notes
 
-from open_webui.retrieval.vector.main import GetResult
 from open_webui.utils.access_control import has_access
 from open_webui.utils.misc import get_message_list
 
@@ -46,6 +45,19 @@ from open_webui.config import (
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
+
+
+def _run_async(coro):
+    try:
+        return asyncio.run(coro)
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        try:
+            asyncio.set_event_loop(loop)
+            return loop.run_until_complete(coro)
+        finally:
+            asyncio.set_event_loop(None)
+            loop.close()
 
 
 from typing import Any
@@ -85,6 +97,7 @@ class VectorSearchRetriever(BaseRetriever):
     collection_name: Any
     embedding_function: Any
     top_k: int
+    vectordb_service: VectorDBService
 
     def _get_relevant_documents(
         self,
@@ -92,64 +105,124 @@ class VectorSearchRetriever(BaseRetriever):
         *,
         run_manager: CallbackManagerForRetrieverRun,
     ) -> list[Document]:
-        result = VECTOR_DB_CLIENT.search(
-            collection_name=self.collection_name,
-            vectors=[self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)],
+        query_vector = self.embedding_function(
+            query, RAG_EMBEDDING_QUERY_PREFIX
+        )
+        result = _run_vector_query(
+            self.vectordb_service,
+            self.collection_name,
+            [query_vector],
             limit=self.top_k,
         )
+        ids = result.get("ids", [[]])[0]
+        documents = result.get("documents", [[]])[0]
+        metadatas = result.get("metadatas", [[]])[0]
+        if not ids:
+            return []
 
-        ids = result.ids[0]
-        metadatas = result.metadatas[0]
-        documents = result.documents[0]
-
-        results = []
+        documents_out: list[Document] = []
         for idx in range(len(ids)):
-            results.append(
+            documents_out.append(
                 Document(
                     metadata=metadatas[idx],
                     page_content=documents[idx],
                 )
             )
-        return results
+        return documents_out
+
+
+def _run_vector_query(
+    vectordb_service: VectorDBService,
+    collection_name: str,
+    vectors: list[list[float]],
+    limit: int,
+    *,
+    metadata_filter: dict | None = None,
+) -> dict:
+    try:
+        query = VectorQuery(
+            values=vectors[0],
+            top_k=limit,
+            metadata_filter=metadata_filter or {},
+        )
+        results = _run_async(vectordb_service.query(collection_name, query))
+        ids = [item.id for item in results]
+        documents = [item.document or "" for item in results]
+        metadatas = [dict(item.metadata or {}) for item in results]
+        distances = [item.score for item in results]
+        if ids:
+            log.debug(
+                "vector_query success collection=%s ids=%s",
+                collection_name,
+                ids,
+            )
+        return {
+            "ids": [ids],
+            "documents": [documents],
+            "metadatas": [metadatas],
+            "distances": [distances],
+        }
+    except Exception as e:
+        log.exception(
+            "Vector query failed collection=%s limit=%s error=%s",
+            collection_name,
+            limit,
+            e,
+        )
+        raise e
+
+
+def _run_vector_get(
+    vectordb_service: VectorDBService, collection_name: str
+) -> dict:
+    try:
+        result = _run_async(vectordb_service.find(collection_name, {}))
+        ids = [record.id for record in result]
+        documents = [record.document or "" for record in result]
+        metadatas = [dict(record.metadata or {}) for record in result]
+        if ids:
+            log.debug(
+                "vector_get success collection=%s ids=%s",
+                collection_name,
+                ids,
+            )
+        return {
+            "ids": [ids],
+            "documents": [documents],
+            "metadatas": [metadatas],
+        }
+    except Exception as e:
+        log.exception("Vector get failed collection=%s error=%s", collection_name, e)
+        raise e
 
 
 def query_doc(
-    collection_name: str, query_embedding: list[float], k: int, user: UserModel = None
-):
-    try:
-        log.debug(f"query_doc:doc {collection_name}")
-        result = VECTOR_DB_CLIENT.search(
-            collection_name=collection_name,
-            vectors=[query_embedding],
-            limit=k,
-        )
-
-        if result:
-            log.info(f"query_doc:result {result.ids} {result.metadatas}")
-
-        return result
-    except Exception as e:
-        log.exception(f"Error querying doc {collection_name} with limit {k}: {e}")
-        raise e
+    vectordb_service: VectorDBService,
+    collection_name: str,
+    query_embedding: list[float],
+    k: int,
+    user: UserModel = None,
+) -> dict:
+    return _run_vector_query(
+        vectordb_service,
+        collection_name,
+        [query_embedding],
+        k,
+    )
 
 
-def get_doc(collection_name: str, user: UserModel = None):
-    try:
-        log.debug(f"get_doc:doc {collection_name}")
-        result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
-
-        if result:
-            log.info(f"query_doc:result {result.ids} {result.metadatas}")
-
-        return result
-    except Exception as e:
-        log.exception(f"Error getting doc {collection_name}: {e}")
-        raise e
+def get_doc(
+    vectordb_service: VectorDBService,
+    collection_name: str,
+    user: UserModel = None,
+) -> dict:
+    return _run_vector_get(vectordb_service, collection_name)
 
 
 def query_doc_with_hybrid_search(
     collection_name: str,
-    collection_result: GetResult,
+    vectordb_service: VectorDBService,
+    collection_result: dict,
     query: str,
     embedding_function,
     k: int,
@@ -159,21 +232,17 @@ def query_doc_with_hybrid_search(
     hybrid_bm25_weight: float,
 ) -> dict:
     try:
-        if (
-            not collection_result
-            or not hasattr(collection_result, "documents")
-            or not collection_result.documents
-            or len(collection_result.documents) == 0
-            or not collection_result.documents[0]
-        ):
+        documents = collection_result.get("documents", [[]])
+        metadatas = collection_result.get("metadatas", [[]])
+        if not documents or not documents[0]:
             log.warning(f"query_doc_with_hybrid_search:no_docs {collection_name}")
             return {"documents": [], "metadatas": [], "distances": []}
 
         log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
 
         bm25_retriever = BM25Retriever.from_texts(
-            texts=collection_result.documents[0],
-            metadatas=collection_result.metadatas[0],
+            texts=documents[0],
+            metadatas=metadatas[0],
         )
         bm25_retriever.k = k
 
@@ -181,6 +250,7 @@ def query_doc_with_hybrid_search(
             collection_name=collection_name,
             embedding_function=embedding_function,
             top_k=k,
+            vectordb_service=vectordb_service,
         )
 
         if hybrid_bm25_weight <= 0:
@@ -310,24 +380,28 @@ def merge_and_sort_query_results(query_results: list[dict], k: int) -> dict:
     }
 
 
-def get_all_items_from_collections(collection_names: list[str]) -> dict:
+def get_all_items_from_collections(
+    vectordb_service: VectorDBService, collection_names: list[str]
+) -> dict:
     results = []
 
     for collection_name in collection_names:
-        if collection_name:
-            try:
-                result = get_doc(collection_name=collection_name)
-                if result is not None:
-                    results.append(result.model_dump())
-            except Exception as e:
-                log.exception(f"Error when querying the collection: {e}")
-        else:
-            pass
+        if not collection_name:
+            continue
+        try:
+            result = get_doc(vectordb_service, collection_name)
+            results.append(result)
+        except Exception as e:
+            log.exception(f"Error when querying the collection: {e}")
+
+    if not results:
+        return {"documents": [[]], "metadatas": [[]], "ids": [[]]}
 
     return merge_get_results(results)
 
 
 def query_collection(
+    vectordb_service: VectorDBService,
     collection_names: list[str],
     queries: list[str],
     embedding_function,
@@ -340,12 +414,13 @@ def query_collection(
         try:
             if collection_name:
                 result = query_doc(
+                    vectordb_service,
                     collection_name=collection_name,
                     k=k,
                     query_embedding=query_embedding,
                 )
-                if result is not None:
-                    return result.model_dump(), None
+                if result:
+                    return result, None
             return None, None
         except Exception as e:
             log.exception(f"Error when querying the collection: {e}")
@@ -380,6 +455,7 @@ def query_collection(
 
 
 def query_collection_with_hybrid_search(
+    vectordb_service: VectorDBService,
     collection_names: list[str],
     queries: list[str],
     embedding_function,
@@ -396,15 +472,12 @@ def query_collection_with_hybrid_search(
     collection_results = {}
     for collection_name in collection_names:
         try:
-            log.debug(
-                f"query_collection_with_hybrid_search:VECTOR_DB_CLIENT.get:collection {collection_name}"
-            )
-            collection_results[collection_name] = VECTOR_DB_CLIENT.get(
-                collection_name=collection_name
+            collection_results[collection_name] = get_doc(
+                vectordb_service, collection_name
             )
         except Exception as e:
             log.exception(f"Failed to fetch collection {collection_name}: {e}")
-            collection_results[collection_name] = None
+            collection_results[collection_name] = {"documents": [[]], "metadatas": [[]]}
 
     log.info(
         f"Starting hybrid search for {len(queries)} queries in {len(collection_names)} collections..."
@@ -414,6 +487,7 @@ def query_collection_with_hybrid_search(
         try:
             result = query_doc_with_hybrid_search(
                 collection_name=collection_name,
+                vectordb_service=vectordb_service,
                 collection_result=collection_results[collection_name],
                 query=query,
                 embedding_function=embedding_function,
@@ -453,65 +527,6 @@ def query_collection_with_hybrid_search(
         )
 
     return merge_and_sort_query_results(results, k=k)
-
-
-def get_embedding_function(
-    embedding_engine,
-    embedding_model,
-    embedding_function,
-    url,
-    key,
-    embedding_batch_size,
-    azure_api_version=None,
-):
-    if embedding_engine == "":
-        return lambda query, prefix=None, user=None: embedding_function.encode(
-            query, **({"prompt": prefix} if prefix else {})
-        ).tolist()
-    elif embedding_engine in ["ollama", "openai", "azure_openai"]:
-        func = lambda query, prefix=None, user=None: generate_embeddings(
-            engine=embedding_engine,
-            model=embedding_model,
-            text=query,
-            prefix=prefix,
-            url=url,
-            key=key,
-            user=user,
-            azure_api_version=azure_api_version,
-        )
-
-        def generate_multiple(query, prefix, user, func):
-            if isinstance(query, list):
-                embeddings = []
-                for i in range(0, len(query), embedding_batch_size):
-                    batch_embeddings = func(
-                        query[i : i + embedding_batch_size],
-                        prefix=prefix,
-                        user=user,
-                    )
-
-                    if isinstance(batch_embeddings, list):
-                        embeddings.extend(batch_embeddings)
-                return embeddings
-            else:
-                return func(query, prefix, user)
-
-        return lambda query, prefix=None, user=None: generate_multiple(
-            query, prefix, user, func
-        )
-    else:
-        raise ValueError(f"Unknown embedding engine: {embedding_engine}")
-
-
-def get_reranking_function(reranking_engine, reranking_model, reranking_function):
-    if reranking_function is None:
-        return None
-    if reranking_engine == "external":
-        return lambda sentences, user=None: reranking_function.predict(
-            sentences, user=user
-        )
-    else:
-        return lambda sentences, user=None: reranking_function.predict(sentences)
 
 
 def get_sources_from_items(
@@ -731,34 +746,40 @@ def get_sources_from_items(
                 continue
 
             try:
+                vectordb_service = get_vector_db_service(request)
+                collection_list = list(collection_names)
+
                 if full_context:
-                    query_result = get_all_items_from_collections(collection_names)
+                    query_result = get_all_items_from_collections(
+                        vectordb_service, collection_list
+                    )
                 else:
-                    query_result = None  # Initialize to None
+                    query_result = None
                     if hybrid_search:
                         try:
                             query_result = query_collection_with_hybrid_search(
-                                collection_names=collection_names,
-                                queries=queries,
-                                embedding_function=embedding_function,
-                                k=k,
-                                reranking_function=reranking_function,
-                                k_reranker=k_reranker,
-                                r=r,
-                                hybrid_bm25_weight=hybrid_bm25_weight,
+                                vectordb_service,
+                                collection_list,
+                                queries,
+                                embedding_function,
+                                k,
+                                reranking_function,
+                                k_reranker,
+                                r,
+                                hybrid_bm25_weight,
                             )
                         except Exception as e:
                             log.debug(
                                 "Error when using hybrid search, using non hybrid search as fallback."
                             )
 
-                    # fallback to non-hybrid search
-                    if not hybrid_search and query_result is None:
+                    if (not hybrid_search) or query_result is None:
                         query_result = query_collection(
-                            collection_names=collection_names,
-                            queries=queries,
-                            embedding_function=embedding_function,
-                            k=k,
+                            vectordb_service,
+                            collection_list,
+                            queries,
+                            embedding_function,
+                            k,
                         )
             except Exception as e:
                 log.exception(e)
@@ -822,9 +843,16 @@ def get_model_path(model: str, update_model: bool = False):
 
     # Attempt to query the huggingface_hub library to determine the local path and/or to update
     try:
+        # Lazy import to avoid adding huggingface_hub to enterprise import graph
+        from huggingface_hub import snapshot_download  # type: ignore
+
         model_repo_path = snapshot_download(**snapshot_kwargs)
         log.debug(f"model_repo_path: {model_repo_path}")
         return model_repo_path
+    except ImportError:
+        # Fallback: return the model identifier; downstream libraries may resolve it
+        log.debug("huggingface_hub not installed; returning model identifier without snapshot")
+        return model
     except Exception as e:
         log.exception(f"Cannot determine model snapshot path: {e}")
         return model
@@ -1030,6 +1058,27 @@ from langchain_core.callbacks import Callbacks
 from langchain_core.documents import BaseDocumentCompressor, Document
 
 
+def _cosine_similarity(
+    query_embedding: Sequence[float], document_embeddings: Sequence[Sequence[float]]
+) -> list[float]:
+    query_vector = np.asarray(query_embedding, dtype=float).reshape(-1)
+    doc_matrix = np.asarray(document_embeddings, dtype=float)
+    if doc_matrix.ndim == 1:
+        doc_matrix = doc_matrix.reshape(1, -1)
+
+    query_norm = np.linalg.norm(query_vector)
+    doc_norms = np.linalg.norm(doc_matrix, axis=1)
+
+    # Avoid division by zero for empty vectors
+    denom = query_norm * doc_norms
+    denom = np.where(denom == 0, 1e-12, denom)
+
+    similarities = doc_matrix @ query_vector
+    similarities = similarities / denom
+
+    return similarities.tolist()
+
+
 class RerankCompressor(BaseDocumentCompressor):
     embedding_function: Any
     top_n: int
@@ -1054,19 +1103,19 @@ class RerankCompressor(BaseDocumentCompressor):
                 [(query, doc.page_content) for doc in documents]
             )
         else:
-            from sentence_transformers import util
-
-            query_embedding = self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)
+            query_embedding = self.embedding_function(
+                query, RAG_EMBEDDING_QUERY_PREFIX
+            )
             document_embedding = self.embedding_function(
                 [doc.page_content for doc in documents], RAG_EMBEDDING_CONTENT_PREFIX
             )
-            scores = util.cos_sim(query_embedding, document_embedding)[0]
+            scores = _cosine_similarity(query_embedding, document_embedding)
 
         if scores is not None:
             docs_with_scores = list(
                 zip(
                     documents,
-                    scores.tolist() if not isinstance(scores, list) else scores,
+                    scores.tolist() if hasattr(scores, "tolist") else scores,
                 )
             )
             if self.r_score:
@@ -1090,3 +1139,4 @@ class RerankCompressor(BaseDocumentCompressor):
                 "No valid scores found, check your reranking function. Returning original documents."
             )
             return documents
+from open_webui.services.dependencies import get_vector_db_service

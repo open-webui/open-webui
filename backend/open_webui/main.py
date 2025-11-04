@@ -93,14 +93,10 @@ from open_webui.routers import (
     users,
     utils,
     scim,
+    system,
 )
 
-from open_webui.routers.retrieval import (
-    get_embedding_function,
-    get_reranking_function,
-    get_ef,
-    get_rf,
-)
+from open_webui.settings import get_settings
 
 from open_webui.internal.db import Session, engine
 
@@ -204,14 +200,10 @@ from open_webui.config import (
     RAG_FULL_CONTEXT,
     BYPASS_EMBEDDING_AND_RETRIEVAL,
     RAG_EMBEDDING_MODEL,
-    RAG_EMBEDDING_MODEL_AUTO_UPDATE,
-    RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
     RAG_RERANKING_ENGINE,
     RAG_RERANKING_MODEL,
     RAG_EXTERNAL_RERANKER_URL,
     RAG_EXTERNAL_RERANKER_API_KEY,
-    RAG_RERANKING_MODEL_AUTO_UPDATE,
-    RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     RAG_EMBEDDING_ENGINE,
     RAG_EMBEDDING_BATCH_SIZE,
     RAG_TOP_K,
@@ -266,6 +258,12 @@ from open_webui.config import (
     DOCLING_PICTURE_DESCRIPTION_API,
     DOCUMENT_INTELLIGENCE_ENDPOINT,
     DOCUMENT_INTELLIGENCE_KEY,
+    DOCUMENT_INTELLIGENCE_MODEL_ID,
+    DOCUMENT_INTELLIGENCE_API_VERSION,
+    AWS_TEXTRACT_ACCESS_KEY_ID,
+    AWS_TEXTRACT_SECRET_ACCESS_KEY,
+    AWS_TEXTRACT_SESSION_TOKEN,
+    AWS_TEXTRACT_REGION,
     MISTRAL_OCR_API_KEY,
     RAG_TEXT_SPLITTER,
     TIKTOKEN_ENCODING_NAME,
@@ -550,6 +548,24 @@ async def lifespan(app: FastAPI):
     app.state.instance_id = INSTANCE_ID
     start_logger()
 
+    # Ensure runtime settings are present and log selected engines/mode
+    try:
+        settings = getattr(app.state, "settings", None) or get_settings()
+        app.state.settings = settings
+        log.info(
+            "Startup profile: enterprise_mode=%s local_features_enabled=%s | engines: embeddings=%s stt=%s tts=%s vectordb=%s ocr=%s",
+            settings.enterprise_mode,
+            settings.local_features_enabled,
+            settings.rag_embedding_engine,
+            settings.audio_stt_engine,
+            settings.audio_tts_engine,
+            settings.vector_db,
+            settings.ocr_engine,
+        )
+    except Exception:
+        # Do not block startup on settings logging
+        pass
+
     if RESET_CONFIG_ON_START:
         reset_config()
 
@@ -616,6 +632,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Runtime settings (enterprise/local feature toggles)
+app.state.settings = get_settings()
+
 # For Open WebUI OIDC/OAuth2
 oauth_manager = OAuthManager(app)
 app.state.oauth_manager = oauth_manager
@@ -635,6 +654,38 @@ app.state.redis = None
 
 app.state.WEBUI_NAME = WEBUI_NAME
 app.state.LICENSE_METADATA = None
+
+# Global exception handlers for provider errors
+from open_webui.services.errors import (
+    ProviderConfigurationError as _ProviderConfigurationError,
+    LocalFeatureDisabledError as _LocalFeatureDisabledError,
+    UpstreamServiceError as _UpstreamServiceError,
+)
+from fastapi.responses import JSONResponse as _JSONResponse
+
+
+@app.exception_handler(_LocalFeatureDisabledError)
+async def _handle_local_feature_disabled(request, exc: _LocalFeatureDisabledError):
+    return _JSONResponse(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(_ProviderConfigurationError)
+async def _handle_provider_config_error(request, exc: _ProviderConfigurationError):
+    return _JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(_UpstreamServiceError)
+async def _handle_upstream_error(request, exc: _UpstreamServiceError):
+    return _JSONResponse(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        content={"detail": str(exc)},
+    )
 
 
 ########################################
@@ -856,6 +907,14 @@ app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL = DOCLING_PICTURE_DESCRIPTION
 app.state.config.DOCLING_PICTURE_DESCRIPTION_API = DOCLING_PICTURE_DESCRIPTION_API
 app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT
 app.state.config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY
+app.state.config.DOCUMENT_INTELLIGENCE_MODEL_ID = DOCUMENT_INTELLIGENCE_MODEL_ID
+app.state.config.DOCUMENT_INTELLIGENCE_API_VERSION = (
+    DOCUMENT_INTELLIGENCE_API_VERSION
+)
+app.state.config.AWS_TEXTRACT_ACCESS_KEY_ID = AWS_TEXTRACT_ACCESS_KEY_ID
+app.state.config.AWS_TEXTRACT_SECRET_ACCESS_KEY = AWS_TEXTRACT_SECRET_ACCESS_KEY
+app.state.config.AWS_TEXTRACT_SESSION_TOKEN = AWS_TEXTRACT_SESSION_TOKEN
+app.state.config.AWS_TEXTRACT_REGION = AWS_TEXTRACT_REGION
 app.state.config.MISTRAL_OCR_API_KEY = MISTRAL_OCR_API_KEY
 app.state.config.MINERU_API_MODE = MINERU_API_MODE
 app.state.config.MINERU_API_URL = MINERU_API_URL
@@ -948,79 +1007,27 @@ app.state.config.EXTERNAL_WEB_LOADER_URL = EXTERNAL_WEB_LOADER_URL
 app.state.config.EXTERNAL_WEB_LOADER_API_KEY = EXTERNAL_WEB_LOADER_API_KEY
 
 
+app.state.config.STT_ENGINE = AUDIO_STT_ENGINE
+app.state.config.TTS_ENGINE = AUDIO_TTS_ENGINE
+
+
 app.state.config.PLAYWRIGHT_WS_URL = PLAYWRIGHT_WS_URL
 app.state.config.PLAYWRIGHT_TIMEOUT = PLAYWRIGHT_TIMEOUT
 app.state.config.FIRECRAWL_API_BASE_URL = FIRECRAWL_API_BASE_URL
 app.state.config.FIRECRAWL_API_KEY = FIRECRAWL_API_KEY
 app.state.config.TAVILY_EXTRACT_DEPTH = TAVILY_EXTRACT_DEPTH
 
-app.state.EMBEDDING_FUNCTION = None
-app.state.RERANKING_FUNCTION = None
-app.state.ef = None
-app.state.rf = None
-
 app.state.YOUTUBE_LOADER_TRANSLATION = None
 
-
-try:
-    app.state.ef = get_ef(
-        app.state.config.RAG_EMBEDDING_ENGINE,
-        app.state.config.RAG_EMBEDDING_MODEL,
-        RAG_EMBEDDING_MODEL_AUTO_UPDATE,
-    )
-    if (
-        app.state.config.ENABLE_RAG_HYBRID_SEARCH
-        and not app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
-    ):
-        app.state.rf = get_rf(
-            app.state.config.RAG_RERANKING_ENGINE,
-            app.state.config.RAG_RERANKING_MODEL,
-            app.state.config.RAG_EXTERNAL_RERANKER_URL,
-            app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
-            RAG_RERANKING_MODEL_AUTO_UPDATE,
-        )
-    else:
-        app.state.rf = None
-except Exception as e:
-    log.error(f"Error updating models: {e}")
-    pass
-
-
-app.state.EMBEDDING_FUNCTION = get_embedding_function(
-    app.state.config.RAG_EMBEDDING_ENGINE,
-    app.state.config.RAG_EMBEDDING_MODEL,
-    embedding_function=app.state.ef,
-    url=(
-        app.state.config.RAG_OPENAI_API_BASE_URL
-        if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-        else (
-            app.state.config.RAG_OLLAMA_BASE_URL
-            if app.state.config.RAG_EMBEDDING_ENGINE == "ollama"
-            else app.state.config.RAG_AZURE_OPENAI_BASE_URL
-        )
-    ),
-    key=(
-        app.state.config.RAG_OPENAI_API_KEY
-        if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-        else (
-            app.state.config.RAG_OLLAMA_API_KEY
-            if app.state.config.RAG_EMBEDDING_ENGINE == "ollama"
-            else app.state.config.RAG_AZURE_OPENAI_API_KEY
-        )
-    ),
-    embedding_batch_size=app.state.config.RAG_EMBEDDING_BATCH_SIZE,
-    azure_api_version=(
-        app.state.config.RAG_AZURE_OPENAI_API_VERSION
-        if app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
-        else None
-    ),
+# Synchronize runtime feature toggles from settings
+_runtime_settings = app.state.settings
+app.state.config.RAG_EMBEDDING_ENGINE = _runtime_settings.rag_embedding_engine
+app.state.config.STT_ENGINE = _runtime_settings.audio_stt_engine
+app.state.config.TTS_ENGINE = _runtime_settings.audio_tts_engine
+app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL = (
+    _runtime_settings.bypass_embedding_and_retrieval
 )
 
-app.state.RERANKING_FUNCTION = get_reranking_function(
-    app.state.config.RAG_RERANKING_ENGINE,
-    app.state.config.RAG_RERANKING_MODEL,
-    reranking_function=app.state.rf,
-)
 
 ########################################
 #
@@ -1091,7 +1098,6 @@ app.state.config.IMAGE_STEPS = IMAGE_STEPS
 #
 ########################################
 
-app.state.config.STT_ENGINE = AUDIO_STT_ENGINE
 app.state.config.STT_MODEL = AUDIO_STT_MODEL
 app.state.config.STT_SUPPORTED_CONTENT_TYPES = AUDIO_STT_SUPPORTED_CONTENT_TYPES
 
@@ -1290,6 +1296,7 @@ app.include_router(images.router, prefix="/api/v1/images", tags=["images"])
 
 app.include_router(audio.router, prefix="/api/v1/audio", tags=["audio"])
 app.include_router(retrieval.router, prefix="/api/v1/retrieval", tags=["retrieval"])
+app.include_router(system.router, prefix="/api/v1/system", tags=["system"]) 
 
 app.include_router(configs.router, prefix="/api/v1/configs", tags=["configs"])
 

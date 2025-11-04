@@ -1,13 +1,10 @@
+import asyncio
 import hashlib
 import json
 import logging
 import os
 import uuid
-import html
 from functools import lru_cache
-from pydub import AudioSegment
-from pydub.silence import split_on_silence
-from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
 from fnmatch import fnmatch
@@ -35,8 +32,6 @@ from pydantic import BaseModel
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.config import (
-    WHISPER_MODEL_AUTO_UPDATE,
-    WHISPER_MODEL_DIR,
     CACHE_DIR,
     WHISPER_LANGUAGE,
 )
@@ -47,9 +42,10 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
     ENV,
     SRC_LOG_LEVELS,
-    DEVICE_TYPE,
     ENABLE_FORWARD_USER_INFO_HEADERS,
 )
+from open_webui.services.dependencies import get_stt_service, get_tts_service
+from open_webui.settings import get_settings
 
 
 router = APIRouter()
@@ -73,14 +69,11 @@ SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 #
 ##########################################
 
-from pydub import AudioSegment
-from pydub.utils import mediainfo
-
-
 def is_audio_conversion_required(file_path):
     """
     Check if the given audio file needs conversion to mp3.
     """
+    from pydub.utils import mediainfo
     SUPPORTED_FORMATS = {"flac", "m4a", "mp3", "mp4", "mpeg", "wav", "webm"}
 
     if not os.path.isfile(file_path):
@@ -109,6 +102,7 @@ def is_audio_conversion_required(file_path):
 
 def convert_audio_to_mp3(file_path):
     """Convert audio file to mp3 format."""
+    from pydub import AudioSegment
     try:
         output_path = os.path.splitext(file_path)[0] + ".mp3"
         audio = AudioSegment.from_file(file_path)
@@ -118,30 +112,6 @@ def convert_audio_to_mp3(file_path):
     except Exception as e:
         log.error(f"Error converting audio file: {e}")
         return None
-
-
-def set_faster_whisper_model(model: str, auto_update: bool = False):
-    whisper_model = None
-    if model:
-        from faster_whisper import WhisperModel
-
-        faster_whisper_kwargs = {
-            "model_size_or_path": model,
-            "device": DEVICE_TYPE if DEVICE_TYPE and DEVICE_TYPE == "cuda" else "cpu",
-            "compute_type": "int8",
-            "download_root": WHISPER_MODEL_DIR,
-            "local_files_only": not auto_update,
-        }
-
-        try:
-            whisper_model = WhisperModel(**faster_whisper_kwargs)
-        except Exception:
-            log.warning(
-                "WhisperModel initialization failed, attempting download with local_files_only=False"
-            )
-            faster_whisper_kwargs["local_files_only"] = False
-            whisper_model = WhisperModel(**faster_whisper_kwargs)
-    return whisper_model
 
 
 ##########################################
@@ -222,6 +192,24 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
 async def update_audio_config(
     request: Request, form_data: AudioConfigUpdateForm, user=Depends(get_admin_user)
 ):
+    settings = getattr(request.app.state, "settings", None) or get_settings()
+    local_allowed = settings.local_features_enabled
+
+    requested_tts_engine = (form_data.tts.ENGINE or "").strip().lower()
+    requested_stt_engine = (form_data.stt.ENGINE or "").strip().lower()
+
+    if not local_allowed:
+        if requested_stt_engine in {"", "local", "whisper"}:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail="Local speech-to-text is disabled in enterprise mode.",
+            )
+        if requested_tts_engine in {"", "local", "transformers"}:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail="Local text-to-speech is disabled in enterprise mode.",
+            )
+
     request.app.state.config.TTS_OPENAI_API_BASE_URL = form_data.tts.OPENAI_API_BASE_URL
     request.app.state.config.TTS_OPENAI_API_KEY = form_data.tts.OPENAI_API_KEY
     request.app.state.config.TTS_OPENAI_PARAMS = form_data.tts.OPENAI_PARAMS
@@ -256,12 +244,46 @@ async def update_audio_config(
         form_data.stt.AZURE_MAX_SPEAKERS
     )
 
-    if request.app.state.config.STT_ENGINE == "":
-        request.app.state.faster_whisper_model = set_faster_whisper_model(
-            form_data.stt.WHISPER_MODEL, WHISPER_MODEL_AUTO_UPDATE
+    canonical_tts_engine = (
+        "local" if requested_tts_engine in {"", "local", "transformers"} else requested_tts_engine
+    )
+    canonical_stt_engine = requested_stt_engine
+
+    if settings:
+        settings.audio_tts_engine = canonical_tts_engine
+        settings.audio_tts_openai_api_key = form_data.tts.OPENAI_API_KEY or None
+        settings.audio_tts_api_key = form_data.tts.API_KEY or None
+        settings.audio_stt_engine = canonical_stt_engine
+        settings.audio_stt_openai_api_key = form_data.stt.OPENAI_API_KEY or None
+        settings.audio_stt_azure_api_key = form_data.stt.AZURE_API_KEY or None
+        settings.deepgram_api_key = form_data.stt.DEEPGRAM_API_KEY or None
+
+    if hasattr(request.app.state, "tts_service"):
+        request.app.state.tts_service = None
+    if hasattr(request.app.state, "stt_service"):
+        request.app.state.stt_service = None
+
+    try:
+        get_tts_service(request)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        log.exception("Failed to initialize TTS service: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to initialize TTS provider with the supplied configuration.",
         )
-    else:
-        request.app.state.faster_whisper_model = None
+
+    try:
+        get_stt_service(request)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        log.exception("Failed to initialize STT service: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to initialize STT provider with the supplied configuration.",
+        )
 
     return {
         "tts": {
@@ -325,78 +347,50 @@ async def speech(request: Request, user=Depends(get_verified_user)):
     if file_path.is_file():
         return FileResponse(file_path)
 
-    payload = None
     try:
         payload = json.loads(body.decode("utf-8"))
     except Exception as e:
         log.exception(e)
         raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
-    r = None
-    if request.app.state.config.TTS_ENGINE == "openai":
-        payload["model"] = request.app.state.config.TTS_MODEL
+    engine = request.app.state.config.TTS_ENGINE
+
+    if engine == "openai":
+        text_input = payload.get("input")
+        if not text_input:
+            raise HTTPException(status_code=400, detail="Missing input text")
+
+        overrides = {
+            key: value
+            for key, value in payload.items()
+            if key not in {"input", "voice", "model"}
+        }
 
         try:
-            timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
-            async with aiohttp.ClientSession(
-                timeout=timeout, trust_env=True
-            ) as session:
-                payload = {
-                    **payload,
-                    **(request.app.state.config.TTS_OPENAI_PARAMS or {}),
-                }
-
-                r = await session.post(
-                    url=f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/speech",
-                    json=payload,
-                    headers={
-                        "Content-Type": "application/json",
-                        "Authorization": f"Bearer {request.app.state.config.TTS_OPENAI_API_KEY}",
-                        **(
-                            {
-                                "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
-                                "X-OpenWebUI-User-Id": user.id,
-                                "X-OpenWebUI-User-Email": user.email,
-                                "X-OpenWebUI-User-Role": user.role,
-                            }
-                            if ENABLE_FORWARD_USER_INFO_HEADERS
-                            else {}
-                        ),
-                    },
-                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
-                )
-
-                r.raise_for_status()
-
-                async with aiofiles.open(file_path, "wb") as f:
-                    await f.write(await r.read())
-
-                async with aiofiles.open(file_body_path, "w") as f:
-                    await f.write(json.dumps(payload))
-
-            return FileResponse(file_path)
-
-        except Exception as e:
-            log.exception(e)
-            detail = None
-
-            status_code = 500
-            detail = f"Open WebUI: Server Connection Error"
-
-            if r is not None:
-                status_code = r.status
-
-                try:
-                    res = await r.json()
-                    if "error" in res:
-                        detail = f"External: {res['error']}"
-                except Exception:
-                    detail = f"External: {e}"
-
-            raise HTTPException(
-                status_code=status_code,
-                detail=detail,
+            tts_service = get_tts_service(request)
+            audio_bytes = await tts_service.synthesize(
+                text_input,
+                voice=payload.get("voice") or request.app.state.config.TTS_VOICE,
+                model=payload.get("model") or request.app.state.config.TTS_MODEL,
+                extra={**overrides, **(request.app.state.config.TTS_OPENAI_PARAMS or {})},
+                response_format=payload.get("response_format"),
             )
+        except HTTPException:
+            raise
+        except Exception as exc:  # pragma: no cover - defensive
+            log.exception(exc)
+            raise HTTPException(
+                status_code=500,
+                detail="Open WebUI: Server Connection Error",
+            )
+
+        async with aiofiles.open(file_path, "wb") as f:
+            await f.write(audio_bytes)
+
+        async with aiofiles.open(file_body_path, "w") as f:
+            await f.write(json.dumps(payload))
+
+        return FileResponse(file_path)
 
     elif request.app.state.config.TTS_ENGINE == "elevenlabs":
         voice_id = payload.get("voice", "")
@@ -453,64 +447,38 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 detail=detail if detail else "Open WebUI: Server Connection Error",
             )
 
-    elif request.app.state.config.TTS_ENGINE == "azure":
-        try:
-            payload = json.loads(body.decode("utf-8"))
-        except Exception as e:
-            log.exception(e)
-            raise HTTPException(status_code=400, detail="Invalid JSON payload")
+    elif engine == "azure":
+        text_input = payload.get("input")
+        if not text_input:
+            raise HTTPException(status_code=400, detail="Missing input text")
 
-        region = request.app.state.config.TTS_AZURE_SPEECH_REGION or "eastus"
-        base_url = request.app.state.config.TTS_AZURE_SPEECH_BASE_URL
-        language = request.app.state.config.TTS_VOICE
-        locale = "-".join(request.app.state.config.TTS_VOICE.split("-")[:1])
-        output_format = request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT
+        style_degree = payload.get("style_degree") or payload.get("styledegree")
 
         try:
-            data = f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="{locale}">
-                <voice name="{language}">{html.escape(payload["input"])}</voice>
-            </speak>"""
-            timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
-            async with aiohttp.ClientSession(
-                timeout=timeout, trust_env=True
-            ) as session:
-                async with session.post(
-                    (base_url or f"https://{region}.tts.speech.microsoft.com")
-                    + "/cognitiveservices/v1",
-                    headers={
-                        "Ocp-Apim-Subscription-Key": request.app.state.config.TTS_API_KEY,
-                        "Content-Type": "application/ssml+xml",
-                        "X-Microsoft-OutputFormat": output_format,
-                    },
-                    data=data,
-                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
-                ) as r:
-                    r.raise_for_status()
-
-                    async with aiofiles.open(file_path, "wb") as f:
-                        await f.write(await r.read())
-
-                    async with aiofiles.open(file_body_path, "w") as f:
-                        await f.write(json.dumps(payload))
-
-                    return FileResponse(file_path)
-
-        except Exception as e:
-            log.exception(e)
-            detail = None
-
-            try:
-                if r.status != 200:
-                    res = await r.json()
-                    if "error" in res:
-                        detail = f"External: {res['error'].get('message', '')}"
-            except Exception:
-                detail = f"External: {e}"
-
-            raise HTTPException(
-                status_code=getattr(r, "status", 500) if r else 500,
-                detail=detail if detail else "Open WebUI: Server Connection Error",
+            tts_service = get_tts_service(request)
+            audio_bytes = await tts_service.synthesize(
+                text_input,
+                voice=payload.get("voice") or request.app.state.config.TTS_VOICE,
+                style=payload.get("style"),
+                style_degree=style_degree,
+                role=payload.get("role"),
             )
+        except HTTPException:
+            raise
+        except Exception as exc:
+            log.exception(exc)
+            raise HTTPException(
+                status_code=500,
+                detail="Open WebUI: Server Connection Error",
+            )
+
+        async with aiofiles.open(file_path, "wb") as f:
+            await f.write(audio_bytes)
+
+        async with aiofiles.open(file_body_path, "w") as f:
+            await f.write(json.dumps(payload))
+
+        return FileResponse(file_path)
 
     elif request.app.state.config.TTS_ENGINE == "transformers":
         payload = None
@@ -519,6 +487,13 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         except Exception as e:
             log.exception(e)
             raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+        settings = getattr(request.app.state, "settings", None) or get_settings()
+        if not settings.local_features_enabled:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail="Local text-to-speech is disabled in enterprise mode.",
+            )
 
         import torch
         import soundfile as sf
@@ -552,170 +527,16 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         return FileResponse(file_path)
 
 
-def transcription_handler(request, file_path, metadata):
+def transcription_handler(request, file_path, metadata, languages, stt_service):
     filename = os.path.basename(file_path)
     file_dir = os.path.dirname(file_path)
     id = filename.split(".")[0]
 
-    metadata = metadata or {}
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=400, detail="Audio file not found")
 
-    languages = [
-        metadata.get("language", None) if not WHISPER_LANGUAGE else WHISPER_LANGUAGE,
-        None,  # Always fallback to None in case transcription fails
-    ]
-
-    if request.app.state.config.STT_ENGINE == "":
-        if request.app.state.faster_whisper_model is None:
-            request.app.state.faster_whisper_model = set_faster_whisper_model(
-                request.app.state.config.WHISPER_MODEL
-            )
-
-        model = request.app.state.faster_whisper_model
-        segments, info = model.transcribe(
-            file_path,
-            beam_size=5,
-            vad_filter=request.app.state.config.WHISPER_VAD_FILTER,
-            language=languages[0],
-        )
-        log.info(
-            "Detected language '%s' with probability %f"
-            % (info.language, info.language_probability)
-        )
-
-        transcript = "".join([segment.text for segment in list(segments)])
-        data = {"text": transcript.strip()}
-
-        # save the transcript to a json file
-        transcript_file = f"{file_dir}/{id}.json"
-        with open(transcript_file, "w") as f:
-            json.dump(data, f)
-
-        log.debug(data)
-        return data
-    elif request.app.state.config.STT_ENGINE == "openai":
-        r = None
-        try:
-            for language in languages:
-                payload = {
-                    "model": request.app.state.config.STT_MODEL,
-                }
-
-                if language:
-                    payload["language"] = language
-
-                r = requests.post(
-                    url=f"{request.app.state.config.STT_OPENAI_API_BASE_URL}/audio/transcriptions",
-                    headers={
-                        "Authorization": f"Bearer {request.app.state.config.STT_OPENAI_API_KEY}"
-                    },
-                    files={"file": (filename, open(file_path, "rb"))},
-                    data=payload,
-                )
-
-                if r.status_code == 200:
-                    # Successful transcription
-                    break
-
-            r.raise_for_status()
-            data = r.json()
-
-            # save the transcript to a json file
-            transcript_file = f"{file_dir}/{id}.json"
-            with open(transcript_file, "w") as f:
-                json.dump(data, f)
-
-            return data
-        except Exception as e:
-            log.exception(e)
-
-            detail = None
-            if r is not None:
-                try:
-                    res = r.json()
-                    if "error" in res:
-                        detail = f"External: {res['error'].get('message', '')}"
-                except Exception:
-                    detail = f"External: {e}"
-
-            raise Exception(detail if detail else "Open WebUI: Server Connection Error")
-
-    elif request.app.state.config.STT_ENGINE == "deepgram":
-        try:
-            # Determine the MIME type of the file
-            mime, _ = mimetypes.guess_type(file_path)
-            if not mime:
-                mime = "audio/wav"  # fallback to wav if undetectable
-
-            # Read the audio file
-            with open(file_path, "rb") as f:
-                file_data = f.read()
-
-            # Build headers and parameters
-            headers = {
-                "Authorization": f"Token {request.app.state.config.DEEPGRAM_API_KEY}",
-                "Content-Type": mime,
-            }
-
-            for language in languages:
-                params = {}
-                if request.app.state.config.STT_MODEL:
-                    params["model"] = request.app.state.config.STT_MODEL
-
-                if language:
-                    params["language"] = language
-
-                # Make request to Deepgram API
-                r = requests.post(
-                    "https://api.deepgram.com/v1/listen?smart_format=true",
-                    headers=headers,
-                    params=params,
-                    data=file_data,
-                )
-
-                if r.status_code == 200:
-                    # Successful transcription
-                    break
-
-            r.raise_for_status()
-            response_data = r.json()
-
-            # Extract transcript from Deepgram response
-            try:
-                transcript = response_data["results"]["channels"][0]["alternatives"][
-                    0
-                ].get("transcript", "")
-            except (KeyError, IndexError) as e:
-                log.error(f"Malformed response from Deepgram: {str(e)}")
-                raise Exception(
-                    "Failed to parse Deepgram response - unexpected response format"
-                )
-            data = {"text": transcript.strip()}
-
-            # Save transcript
-            transcript_file = f"{file_dir}/{id}.json"
-            with open(transcript_file, "w") as f:
-                json.dump(data, f)
-
-            return data
-
-        except Exception as e:
-            log.exception(e)
-            detail = None
-            if r is not None:
-                try:
-                    res = r.json()
-                    if "error" in res:
-                        detail = f"External: {res['error'].get('message', '')}"
-                except Exception:
-                    detail = f"External: {e}"
-            raise Exception(detail if detail else "Open WebUI: Server Connection Error")
-
-    elif request.app.state.config.STT_ENGINE == "azure":
-        # Check file exists and size
-        if not os.path.exists(file_path):
-            raise HTTPException(status_code=400, detail="Audio file not found")
-
-        # Check file size (Azure has a larger limit of 200MB)
+    engine_name = (request.app.state.config.STT_ENGINE or "").strip().lower()
+    if engine_name == "azure":
         file_size = os.path.getsize(file_path)
         if file_size > AZURE_MAX_FILE_SIZE:
             raise HTTPException(
@@ -723,151 +544,126 @@ def transcription_handler(request, file_path, metadata):
                 detail=f"File size exceeds Azure's limit of {AZURE_MAX_FILE_SIZE_MB}MB",
             )
 
-        api_key = request.app.state.config.AUDIO_STT_AZURE_API_KEY
-        region = request.app.state.config.AUDIO_STT_AZURE_REGION or "eastus"
-        locales = request.app.state.config.AUDIO_STT_AZURE_LOCALES
-        base_url = request.app.state.config.AUDIO_STT_AZURE_BASE_URL
-        max_speakers = request.app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS or 3
+    mime, _ = mimetypes.guess_type(file_path)
+    if not mime:
+        mime = "audio/wav"
 
-        # IF NO LOCALES, USE DEFAULTS
-        if len(locales) < 2:
-            locales = [
-                "en-US",
-                "es-ES",
-                "es-MX",
-                "fr-FR",
-                "hi-IN",
-                "it-IT",
-                "de-DE",
-                "en-GB",
-                "en-IN",
-                "ja-JP",
-                "ko-KR",
-                "pt-BR",
-                "zh-CN",
-            ]
-            locales = ",".join(locales)
+    with open(file_path, "rb") as source:
+        audio_bytes = source.read()
 
-        if not api_key or not region:
-            raise HTTPException(
-                status_code=400,
-                detail="Azure API key is required for Azure STT",
-            )
+    transcript_text = ""
+    last_error: Optional[HTTPException] = None
 
-        r = None
+    for language_option in languages:
         try:
-            # Prepare the request
-            data = {
-                "definition": json.dumps(
-                    {
-                        "locales": locales.split(","),
-                        "diarization": {"maxSpeakers": max_speakers, "enabled": True},
-                    }
-                    if locales
-                    else {}
+            result = asyncio.run(
+                stt_service.transcribe(
+                    audio_bytes,
+                    language=language_option,
+                    filename=filename,
+                    content_type=mime,
                 )
-            }
-
-            url = (
-                base_url or f"https://{region}.api.cognitive.microsoft.com"
-            ) + "/speechtotext/transcriptions:transcribe?api-version=2024-11-15"
-
-            # Use context manager to ensure file is properly closed
-            with open(file_path, "rb") as audio_file:
-                r = requests.post(
-                    url=url,
-                    files={"audio": audio_file},
-                    data=data,
-                    headers={
-                        "Ocp-Apim-Subscription-Key": api_key,
-                    },
-                )
-
-            r.raise_for_status()
-            response = r.json()
-
-            # Extract transcript from response
-            if not response.get("combinedPhrases"):
-                raise ValueError("No transcription found in response")
-
-            # Get the full transcript from combinedPhrases
-            transcript = response["combinedPhrases"][0].get("text", "").strip()
-            if not transcript:
-                raise ValueError("Empty transcript in response")
-
-            data = {"text": transcript}
-
-            # Save transcript to json file (consistent with other providers)
-            transcript_file = f"{file_dir}/{id}.json"
-            with open(transcript_file, "w") as f:
-                json.dump(data, f)
-
-            log.debug(data)
-            return data
-
-        except (KeyError, IndexError, ValueError) as e:
-            log.exception("Error parsing Azure response")
-            raise HTTPException(
+            )
+            if result:
+                transcript_text = result.strip()
+                if transcript_text:
+                    break
+        except HTTPException as exc:
+            last_error = exc
+        except Exception as exc:
+            log.exception(exc)
+            last_error = HTTPException(
                 status_code=500,
-                detail=f"Failed to parse Azure response: {str(e)}",
+                detail=f"External: {str(exc)}",
             )
-        except requests.exceptions.RequestException as e:
-            log.exception(e)
-            detail = None
 
-            try:
-                if r is not None and r.status_code != 200:
-                    res = r.json()
-                    if "error" in res:
-                        detail = f"External: {res['error'].get('message', '')}"
-            except Exception:
-                detail = f"External: {e}"
+    if not transcript_text:
+        if last_error:
+            raise last_error
+        raise HTTPException(
+            status_code=500,
+            detail="Open WebUI: Server Connection Error",
+        )
 
-            raise HTTPException(
-                status_code=getattr(r, "status_code", 500) if r else 500,
-                detail=detail if detail else "Open WebUI: Server Connection Error",
-            )
+    data = {"text": transcript_text}
+
+    transcript_file = f"{file_dir}/{id}.json"
+    with open(transcript_file, "w") as f:
+        json.dump(data, f)
+
+    log.debug(data)
+    return data
 
 
 def transcribe(request: Request, file_path: str, metadata: Optional[dict] = None):
     log.info(f"transcribe: {file_path} {metadata}")
 
-    if is_audio_conversion_required(file_path):
-        file_path = convert_audio_to_mp3(file_path)
+    settings = getattr(request.app.state, "settings", None) or get_settings()
+    local_allowed = settings.local_features_enabled
+
+    engine_name = (request.app.state.config.STT_ENGINE or "").strip().lower()
+    if engine_name in {"", "local", "whisper"} and not local_allowed:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Local speech-to-text is disabled in enterprise mode.",
+        )
+
+    if local_allowed:
+        if is_audio_conversion_required(file_path):
+            file_path = convert_audio_to_mp3(file_path)
+
+        try:
+            file_path = compress_audio(file_path)
+        except Exception as e:
+            log.exception(e)
+
+        try:
+            chunk_paths = split_audio(file_path, MAX_FILE_SIZE)
+            log.debug("Generated %d chunk(s) for %s", len(chunk_paths), file_path)
+        except Exception as e:
+            log.exception(e)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT(e),
+            )
+    else:
+        chunk_paths = [file_path]
+        log.debug("Enterprise mode: using original audio file %s without local preprocessing", file_path)
+
+    metadata = metadata or {}
+    preferred_language = WHISPER_LANGUAGE or metadata.get("language")
+    languages = [preferred_language] if preferred_language else []
+    if None not in languages:
+        languages.append(None)
 
     try:
-        file_path = compress_audio(file_path)
-    except Exception as e:
-        log.exception(e)
-
-    # Always produce a list of chunk paths (could be one entry if small)
-    try:
-        chunk_paths = split_audio(file_path, MAX_FILE_SIZE)
-        print(f"Chunk paths: {chunk_paths}")
-    except Exception as e:
-        log.exception(e)
+        stt_service = get_stt_service(request)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        log.exception("Failed to initialize STT service: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail="Unable to initialize STT provider with the supplied configuration.",
         )
 
     results = []
     try:
-        with ThreadPoolExecutor() as executor:
-            # Submit tasks for each chunk_path
-            futures = [
-                executor.submit(transcription_handler, request, chunk_path, metadata)
-                for chunk_path in chunk_paths
-            ]
-            # Gather results as they complete
-            for future in futures:
-                try:
-                    results.append(future.result())
-                except Exception as transcribe_exc:
-                    raise HTTPException(
-                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        detail=f"Error transcribing chunk: {transcribe_exc}",
-                    )
+        for chunk_path in chunk_paths:
+            try:
+                result = transcription_handler(
+                    request,
+                    chunk_path,
+                    metadata,
+                    languages,
+                    stt_service,
+                )
+                results.append(result)
+            except Exception as transcribe_exc:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Error transcribing chunk: {transcribe_exc}",
+                )
     finally:
         # Clean up only the temporary chunks, never the original file
         for chunk_path in chunk_paths:
@@ -884,6 +680,7 @@ def transcribe(request: Request, file_path: str, metadata: Optional[dict] = None
 
 def compress_audio(file_path):
     if os.path.getsize(file_path) > MAX_FILE_SIZE:
+        from pydub import AudioSegment
         id = os.path.splitext(os.path.basename(file_path))[
             0
         ]  # Handles names with multiple dots
@@ -906,6 +703,7 @@ def split_audio(file_path, max_bytes, format="mp3", bitrate="32k"):
     Splits audio into chunks not exceeding max_bytes.
     Returns a list of chunk file paths. If audio fits, returns list with original path.
     """
+    from pydub import AudioSegment
     file_size = os.path.getsize(file_path)
     if file_size <= max_bytes:
         return [file_path]  # Nothing to split
