@@ -69,6 +69,10 @@ from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 
 from open_webui.retrieval.utils import get_sources_from_items
+from open_webui.services.runtime import (
+    get_sync_embedding_function,
+    get_sync_reranker_function,
+)
 
 
 from open_webui.utils.chat import generate_chat_completion
@@ -874,6 +878,9 @@ async def chat_completion_files_handler(
             queries = [get_last_user_message(body["messages"])]
 
         try:
+            embedding_fn = get_sync_embedding_function(request)
+            reranker_fn = get_sync_reranker_function(request)
+
             # Offload get_sources_from_items to a separate thread
             loop = asyncio.get_running_loop()
             with ThreadPoolExecutor() as executor:
@@ -883,17 +890,13 @@ async def chat_completion_files_handler(
                         request=request,
                         items=files,
                         queries=queries,
-                        embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                        embedding_function=lambda query, prefix: embedding_fn(
                             query, prefix=prefix, user=user
                         ),
                         k=request.app.state.config.TOP_K,
                         reranking_function=(
-                            (
-                                lambda sentences: request.app.state.RERANKING_FUNCTION(
-                                    sentences, user=user
-                                )
-                            )
-                            if request.app.state.RERANKING_FUNCTION
+                            (lambda sentences: reranker_fn(sentences, user=user))
+                            if reranker_fn
                             else None
                         ),
                         k_reranker=request.app.state.config.TOP_K_RERANKER,

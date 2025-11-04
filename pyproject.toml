@@ -9,6 +9,7 @@ dependencies = [
     "fastapi==0.118.0",
     "uvicorn[standard]==0.37.0",
     "pydantic==2.11.9",
+    "pydantic-settings==2.6.1",
     "python-multipart==0.0.20",
     "itsdangerous==2.2.0",
 
@@ -37,9 +38,6 @@ dependencies = [
     "pycrdt==0.12.25",
     "redis",
 
-    "PyMySQL==1.1.1",
-    "boto3==1.40.5",
-
     "APScheduler==3.10.4",
     "RestrictedPython==8.0",
 
@@ -55,17 +53,9 @@ dependencies = [
     "google-generativeai==0.8.5",
 
     "langchain==0.3.27",
-    "langchain-community==0.3.29",
+    "langchain-community==0.3.27",
 
     "fake-useragent==2.2.0",
-    "chromadb==1.0.20",
-    "opensearch-py==2.8.0",
-    
-    "transformers",
-    "sentence-transformers==5.1.1",
-    "accelerate",
-    "pyarrow==20.0.0",
-    "einops==0.8.1",
 
     "ftfy==6.2.3",
     "pypdf==6.0.0",
@@ -85,15 +75,9 @@ dependencies = [
     "psutil",
     "sentencepiece",
     "soundfile==0.13.1",
-    "azure-ai-documentintelligence==1.0.2",
 
     "pillow==11.3.0",
-    "opencv-python-headless==4.11.0.86",
-    "rapidocr-onnxruntime==1.4.4",
     "rank-bm25==0.2.2",
-
-    "onnxruntime==1.20.1",
-    "faster-whisper==1.1.1",
 
     "black==25.9.0",
     "youtube-transcript-api==1.2.2",
@@ -102,30 +86,30 @@ dependencies = [
     "pydub",
     "ddgs==9.0.0",
 
-    "google-api-python-client",
-    "google-auth-httplib2",
-    "google-auth-oauthlib",
+    "pymongo",
+    "psycopg2-binary==2.9.10",
+    "PyMySQL==1.1.1",
 
-    "googleapis-common-protos==1.70.0",
-    "google-cloud-storage==2.19.0",
-
-    "azure-identity==1.25.0",
-    "azure-storage-blob==12.24.1",
+    "playwright==1.49.1",
+    "elasticsearch==9.1.0",
+    "av==14.0.1",
 
     "ldap3==2.9.1",
+    "firecrawl-py==1.12.0",
+
+    "opentelemetry-api==1.37.0",
+    "opentelemetry-sdk==1.37.0",
+    "opentelemetry-exporter-otlp==1.37.0",
+    "opentelemetry-instrumentation==0.58b0",
+    "opentelemetry-instrumentation-fastapi==0.58b0",
+    "opentelemetry-instrumentation-sqlalchemy==0.58b0",
+    "opentelemetry-instrumentation-redis==0.58b0",
+    "opentelemetry-instrumentation-requests==0.58b0",
+    "opentelemetry-instrumentation-logging==0.58b0",
+    "opentelemetry-instrumentation-httpx==0.58b0",
+    "opentelemetry-instrumentation-aiohttp-client==0.58b0",
 ]
-readme = "README.md"
-requires-python = ">= 3.11, < 3.13.0a1"
-dynamic = ["version"]
-classifiers = [
-    "Development Status :: 4 - Beta",
-    "License :: Other/Proprietary License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Topic :: Communications :: Chat",
-    "Topic :: Multimedia",
-]
+
 
 [project.optional-dependencies]
 postgres = [
@@ -133,28 +117,79 @@ postgres = [
     "pgvector==0.4.1",
 ]
 
+local = [
+    "sentence-transformers==5.1.1",
+    "transformers",
+    "accelerate",
+    "einops==0.8.1",
+    "pyarrow==20.0.0",
+    "chromadb==1.1.0",
+    "onnxruntime==1.20.1",
+    "faster-whisper==1.1.1",
+    "opencv-python-headless==4.11.0.86",
+    "rapidocr-onnxruntime==1.4.4",
+    "colbert-ai==0.2.21",
+    "torch",
+    "torchvision",
+    "torchaudio",
+]
+
+enterprise = [
+    "azure-ai-documentintelligence==1.0.2",
+    "azure-identity==1.25.0",
+    "azure-storage-blob==12.24.1",
+    "boto3==1.40.5",
+    "google-api-python-client",
+    "google-auth-httplib2",
+    "google-auth-oauthlib",
+    "googleapis-common-protos==1.70.0",
+    "google-cloud-storage==2.19.0",
+    "opensearch-py==2.8.0",
+    "pgvector==0.4.1",
+    "pinecone==6.0.2",
+    "pymilvus==2.6.2",
+    "qdrant-client==1.14.3",
+    "oracledb==3.2.0",
+]
+
 all = [
-    "pymongo",
-    "psycopg2-binary==2.9.9",
-    "pgvector==0.4.0",
+    "pgvector==0.4.1",
     "moto[s3]>=5.0.26",
     "gcp-storage-emulator>=2024.8.3",
     "docker~=7.1.0",
-    "pytest~=8.3.2",
+    "pytest~=8.4.1",
     "pytest-docker~=3.1.1",
-    "playwright==1.49.1",
-    "elasticsearch==9.1.0",
-
     "qdrant-client==1.14.3",
     "pymilvus==2.6.2",
     "pinecone==6.0.2",
     "oracledb==3.2.0",
-
     "colbert-ai==0.2.21",
-
-    "firecrawl-py==1.12.0",
     "tencentcloud-sdk-python==3.0.1336",
+    "sentence-transformers==5.1.1",
+    "transformers",
+    "accelerate",
+    "einops==0.8.1",
+    "pyarrow==20.0.0",
+    "chromadb==1.1.0",
+    "onnxruntime==1.20.1",
+    "faster-whisper==1.1.1",
+    "opencv-python-headless==4.11.0.86",
+    "rapidocr-onnxruntime==1.4.4",
+    "torch",
+    "torchvision",
+    "torchaudio",
+    "azure-ai-documentintelligence==1.0.2",
+    "azure-identity==1.25.0",
+    "azure-storage-blob==12.24.1",
+    "boto3==1.40.5",
+    "google-api-python-client",
+    "google-auth-httplib2",
+    "google-auth-oauthlib",
+    "googleapis-common-protos==1.70.0",
+    "google-cloud-storage==2.19.0",
+    "opensearch-py==2.8.0",
 ]
+
 
 [project.scripts]
 open-webui = "open_webui:app"

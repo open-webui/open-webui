@@ -1,12 +1,15 @@
+from __future__ import annotations
+
+import asyncio
 import requests
 import logging
 import ftfy
 import sys
 import json
+from pathlib import Path
+from typing import TYPE_CHECKING
 
-from azure.identity import DefaultAzureCredential
 from langchain_community.document_loaders import (
-    AzureAIDocumentIntelligenceLoader,
     BSHTMLLoader,
     CSVLoader,
     Docx2txtLoader,
@@ -28,9 +31,10 @@ from open_webui.retrieval.loaders.external_document import ExternalDocumentLoade
 from open_webui.retrieval.loaders.mistral import MistralLoader
 from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
 from open_webui.retrieval.loaders.mineru import MinerULoader
-
-
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
+
+if TYPE_CHECKING:
+	from open_webui.services.interfaces import OCRService
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -225,6 +229,47 @@ class DoclingLoader:
             raise Exception(f"Error calling Docling: {error_msg}")
 
 
+class OCRServiceLoader:
+    def __init__(
+        self,
+        ocr_service: OCRService,
+        file_path: str,
+        filename: str,
+        mime_type: str | None = None,
+    ) -> None:
+        self._ocr_service = ocr_service
+        self._file_path = file_path
+        self._filename = filename
+        self._mime_type = mime_type
+
+    def load(self) -> list[Document]:
+        with open(self._file_path, "rb") as fh:
+            data = fh.read()
+
+        text = self._run_extract(data)
+        if not text:
+            return []
+
+        metadata = {"source": self._filename}
+        if self._mime_type:
+            metadata["mime_type"] = self._mime_type
+
+        return [Document(page_content=ftfy.fix_text(text.strip()), metadata=metadata)]
+
+    def _run_extract(self, data: bytes) -> str:
+        try:
+            return asyncio.run(self._ocr_service.extract(data)) or ""
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            try:
+                asyncio.set_event_loop(loop)
+                result = loop.run_until_complete(self._ocr_service.extract(data))
+                return result or ""
+            finally:
+                asyncio.set_event_loop(None)
+                loop.close()
+
+
 class Loader:
     def __init__(self, engine: str = "", **kwargs):
         self.engine = engine
@@ -343,31 +388,22 @@ class Loader:
                     mime_type=file_content_type,
                     params=params,
                 )
-        elif (
-            self.engine == "document_intelligence"
-            and self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT") != ""
-            and (
-                file_ext in ["pdf", "docx", "ppt", "pptx"]
-                or file_content_type
-                in [
-                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    "application/vnd.ms-powerpoint",
-                    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                ]
+        elif self.engine in {
+            "ocr_service",
+            "document_intelligence",
+            "azure_document_intelligence",
+            "azure_document_intelligence_service",
+            "aws_textract",
+        }:
+            ocr_service = self.kwargs.get("OCR_SERVICE")
+            if ocr_service is None:
+                raise ValueError("OCR service instance not provided")
+            loader = OCRServiceLoader(
+                ocr_service=ocr_service,
+                file_path=file_path,
+                filename=filename,
+                mime_type=file_content_type,
             )
-        ):
-            if self.kwargs.get("DOCUMENT_INTELLIGENCE_KEY") != "":
-                loader = AzureAIDocumentIntelligenceLoader(
-                    file_path=file_path,
-                    api_endpoint=self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT"),
-                    api_key=self.kwargs.get("DOCUMENT_INTELLIGENCE_KEY"),
-                )
-            else:
-                loader = AzureAIDocumentIntelligenceLoader(
-                    file_path=file_path,
-                    api_endpoint=self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT"),
-                    azure_credential=DefaultAzureCredential(),
-                )
         elif self.engine == "mineru" and file_ext in [
             "pdf",
             "doc",
