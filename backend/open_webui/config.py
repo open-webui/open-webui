@@ -2679,6 +2679,16 @@ AUDIO_TTS_OPENAI_API_KEY = UserScopedConfig(
     os.getenv("AUDIO_TTS_OPENAI_API_KEY", OPENAI_API_KEY),
 )
 
+AUDIO_TTS_PORTKEY_API_BASE_URL = UserScopedConfig(
+    "audio.tts.portkey.api_base_url",
+    os.getenv("AUDIO_TTS_PORTKEY_API_BASE_URL", "https://ai-gateway.apps.cloud.rt.nyu.edu/v1"),
+)
+
+AUDIO_TTS_PORTKEY_API_KEY = UserScopedConfig(
+    "audio.tts.portkey.api_key",
+    os.getenv("AUDIO_TTS_PORTKEY_API_KEY", ""),
+)
+
 AUDIO_TTS_API_KEY = UserScopedConfig(
     "audio.tts.api_key",
     os.getenv("AUDIO_TTS_API_KEY", ""),
@@ -2692,12 +2702,22 @@ AUDIO_TTS_ENGINE = UserScopedConfig(
 
 AUDIO_TTS_MODEL = UserScopedConfig(
     "audio.tts.model",
-    os.getenv("AUDIO_TTS_MODEL", "tts-1"),  # OpenAI default model
+    os.getenv("AUDIO_TTS_MODEL", "@openai-4o-mini-audio/gpt-4o-mini-audio-preview"),  # Portkey audio model
 )
 
 AUDIO_TTS_VOICE = UserScopedConfig(
     "audio.tts.voice",
-    os.getenv("AUDIO_TTS_VOICE", "alloy"),  # OpenAI default voice
+    os.getenv("AUDIO_TTS_VOICE", "de-DE-KatjaNeural"),  # Default German voice with full identifier
+)
+
+AUDIO_TTS_LANGUAGE = UserScopedConfig(
+    "audio.tts.language",
+    os.getenv("AUDIO_TTS_LANGUAGE", "de-DE"),  # Default German (Germany)
+)
+
+AUDIO_TTS_AUDIO_VOICE = UserScopedConfig(
+    "audio.tts.audio_voice",
+    os.getenv("AUDIO_TTS_AUDIO_VOICE", "alloy"),  # OpenAI audio voice (alloy/echo/shimmer)
 )
 
 AUDIO_TTS_SPLIT_ON = UserScopedConfig(

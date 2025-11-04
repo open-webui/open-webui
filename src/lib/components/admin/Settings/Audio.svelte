@@ -26,13 +26,59 @@
 	// Audio
 	let TTS_OPENAI_API_BASE_URL = '';
 	let TTS_OPENAI_API_KEY = '';
+	let TTS_PORTKEY_API_BASE_URL = '';
+	let TTS_PORTKEY_API_KEY = '';
 	let TTS_API_KEY = '';
 	let TTS_ENGINE = '';
 	let TTS_MODEL = '';
 	let TTS_VOICE = '';
+	let TTS_LANGUAGE = '';
+	let TTS_AUDIO_VOICE = '';
 	let TTS_SPLIT_ON: TTS_RESPONSE_SPLIT = TTS_RESPONSE_SPLIT.PUNCTUATION;
 	let TTS_AZURE_SPEECH_REGION = '';
 	let TTS_AZURE_SPEECH_OUTPUT_FORMAT = '';
+
+	// German language and voice mappings for Portkey TTS
+	const germanLanguages = {
+		'de-AT': 'de-AT—German (Austria)',
+		'de-CH': 'de-CH—German (Switzerland)',
+		'de-DE': 'de-DE—German (Germany)'
+	};
+
+	const germanVoices = {
+		'de-AT': [
+			{ value: 'de-AT-IngridNeural', label: 'de-AT-IngridNeural (Female)' },
+			{ value: 'de-AT-JonasNeural', label: 'de-AT-JonasNeural (Male)' }
+		],
+		'de-CH': [
+			{ value: 'de-CH-LeniNeural', label: 'de-CH-LeniNeural (Female)' },
+			{ value: 'de-CH-JanNeural', label: 'de-CH-JanNeural (Male)' }
+		],
+		'de-DE': [
+			{ value: 'de-DE-KatjaNeural', label: 'de-DE-KatjaNeural (Female)' },
+			{ value: 'de-DE-ConradNeural', label: 'de-DE-ConradNeural (Male)' },
+			{ value: 'de-DE-SeraphinaMultilingualNeural4', label: 'de-DE-SeraphinaMultilingualNeural4 (Female)' },
+			{ value: 'de-DE-FlorianMultilingualNeural4', label: 'de-DE-FlorianMultilingualNeural4 (Male)' },
+			{ value: 'de-DE-AmalaNeural', label: 'de-DE-AmalaNeural (Female)' },
+			{ value: 'de-DE-BerndNeural', label: 'de-DE-BerndNeural (Male)' },
+			{ value: 'de-DE-ChristophNeural', label: 'de-DE-ChristophNeural (Male)' },
+			{ value: 'de-DE-ElkeNeural', label: 'de-DE-ElkeNeural (Female)' },
+			{ value: 'de-DE-GiselaNeural', label: 'de-DE-GiselaNeural (Female, Child)' },
+			{ value: 'de-DE-KasperNeural', label: 'de-DE-KasperNeural (Male)' },
+			{ value: 'de-DE-KillianNeural', label: 'de-DE-KillianNeural (Male)' },
+			{ value: 'de-DE-KlarissaNeural', label: 'de-DE-KlarissaNeural (Female)' },
+			{ value: 'de-DE-KlausNeural', label: 'de-DE-KlausNeural (Male)' },
+			{ value: 'de-DE-LouisaNeural', label: 'de-DE-LouisaNeural (Female)' },
+			{ value: 'de-DE-MajaNeural', label: 'de-DE-MajaNeural (Female)' },
+			{ value: 'de-DE-RalfNeural', label: 'de-DE-RalfNeural (Male)' },
+			{ value: 'de-DE-TanjaNeural', label: 'de-DE-TanjaNeural (Female)' },
+			{ value: 'de-DE-Florian:DragonHDLatestNeural', label: 'de-DE-Florian:DragonHDLatestNeural (Male)' },
+			{ value: 'de-DE-Seraphina:DragonHDLatestNeural', label: 'de-DE-Seraphina:DragonHDLatestNeural (Female)' }
+		]
+	};
+
+	// Available voices for the selected language
+	$: availableVoices = germanVoices[TTS_LANGUAGE as keyof typeof germanVoices] || [];
 
 	let STT_OPENAI_API_BASE_URL = '';
 	let STT_OPENAI_API_KEY = '';
@@ -58,16 +104,26 @@
 
 	const handleTtsEngineChange = async (e: Event) => {
 		const target = e.target as HTMLSelectElement;
-		await updateConfigHandler();
 		await getVoices();
 		await getModels();
 
 		if (target?.value === 'openai') {
-			TTS_VOICE = 'alloy';
-			TTS_MODEL = 'tts-1';
-		} else {
-			TTS_VOICE = '';
-			TTS_MODEL = '';
+			if (!TTS_VOICE) TTS_VOICE = 'alloy';
+			if (!TTS_MODEL) TTS_MODEL = 'tts-1';
+	} else if (target?.value === 'portkey') {
+		TTS_PORTKEY_API_BASE_URL = 'https://ai-gateway.apps.cloud.rt.nyu.edu/v1';
+		if (!TTS_LANGUAGE) TTS_LANGUAGE = 'de-DE';
+		if (!TTS_VOICE) TTS_VOICE = 'de-DE-KatjaNeural';
+		if (!TTS_AUDIO_VOICE) TTS_AUDIO_VOICE = 'alloy';
+		if (!TTS_MODEL) TTS_MODEL = '@openai-4o-mini-audio/gpt-4o-mini-audio-preview';
+	}
+	};
+
+	// Handler for language change - updates available voices
+	const handleLanguageChange = () => {
+		// Reset voice to first available option when language changes
+		if (availableVoices.length > 0) {
+			TTS_VOICE = availableVoices[0].value;
 		}
 	};
 
@@ -116,17 +172,21 @@
 
 	const updateConfigHandler = async () => {
 		const res = await updateAudioConfig(localStorage.token, {
-			tts: {
-				OPENAI_API_BASE_URL: TTS_OPENAI_API_BASE_URL,
-				OPENAI_API_KEY: TTS_OPENAI_API_KEY,
-				API_KEY: TTS_API_KEY,
-				ENGINE: TTS_ENGINE,
-				MODEL: TTS_MODEL,
-				VOICE: TTS_VOICE,
-				SPLIT_ON: TTS_SPLIT_ON,
-				AZURE_SPEECH_REGION: TTS_AZURE_SPEECH_REGION,
-				AZURE_SPEECH_OUTPUT_FORMAT: TTS_AZURE_SPEECH_OUTPUT_FORMAT
-			},
+		tts: {
+			OPENAI_API_BASE_URL: TTS_OPENAI_API_BASE_URL,
+			OPENAI_API_KEY: TTS_OPENAI_API_KEY,
+			PORTKEY_API_BASE_URL: TTS_PORTKEY_API_BASE_URL,
+			PORTKEY_API_KEY: TTS_PORTKEY_API_KEY,
+			API_KEY: TTS_API_KEY,
+			ENGINE: TTS_ENGINE,
+			MODEL: TTS_MODEL,
+			VOICE: TTS_VOICE,
+			LANGUAGE: TTS_LANGUAGE,
+			AUDIO_VOICE: TTS_AUDIO_VOICE,
+			SPLIT_ON: TTS_SPLIT_ON,
+			AZURE_SPEECH_REGION: TTS_AZURE_SPEECH_REGION,
+			AZURE_SPEECH_OUTPUT_FORMAT: TTS_AZURE_SPEECH_OUTPUT_FORMAT
+		},
 			stt: {
 				OPENAI_API_BASE_URL: STT_OPENAI_API_BASE_URL,
 				OPENAI_API_KEY: STT_OPENAI_API_KEY,
@@ -158,13 +218,17 @@
 			console.log(res);
 			TTS_OPENAI_API_BASE_URL = res.tts.OPENAI_API_BASE_URL;
 			TTS_OPENAI_API_KEY = res.tts.OPENAI_API_KEY;
+			TTS_PORTKEY_API_BASE_URL = res.tts.PORTKEY_API_BASE_URL ?? 'https://ai-gateway.apps.cloud.rt.nyu.edu/v1';
+			TTS_PORTKEY_API_KEY = res.tts.PORTKEY_API_KEY ?? '';
 			TTS_API_KEY = res.tts.API_KEY;
 
-			TTS_ENGINE = res.tts.ENGINE;
-			TTS_MODEL = res.tts.MODEL;
-			TTS_VOICE = res.tts.VOICE;
+		TTS_ENGINE = res.tts.ENGINE;
+		TTS_MODEL = res.tts.MODEL;
+		TTS_VOICE = res.tts.VOICE;
+		TTS_LANGUAGE = res.tts.LANGUAGE ?? 'de-DE';
+		TTS_AUDIO_VOICE = res.tts.AUDIO_VOICE ?? 'alloy';
 
-			TTS_SPLIT_ON = res.tts.SPLIT_ON || TTS_RESPONSE_SPLIT.PUNCTUATION;
+		TTS_SPLIT_ON = res.tts.SPLIT_ON || TTS_RESPONSE_SPLIT.PUNCTUATION;
 
 			TTS_AZURE_SPEECH_OUTPUT_FORMAT = res.tts.AZURE_SPEECH_OUTPUT_FORMAT;
 			TTS_AZURE_SPEECH_REGION = res.tts.AZURE_SPEECH_REGION;
@@ -415,6 +479,7 @@
 							<option value="">{$i18n.t('Web API')}</option>
 							<option value="transformers">{$i18n.t('Transformers')} ({$i18n.t('Local')})</option>
 							<option value="openai">{$i18n.t('OpenAI')}</option>
+							<option value="portkey">Portkey</option>
 							<option value="elevenlabs">{$i18n.t('ElevenLabs')}</option>
 							<option value="azure">{$i18n.t('Azure AI Speech')}</option>
 						</select>
@@ -432,6 +497,19 @@
 							/>
 
 							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_OPENAI_API_KEY} />
+						</div>
+					</div>
+				{:else if TTS_ENGINE === 'portkey'}
+					<div>
+						<div class="mt-1 flex gap-2 mb-1">
+							<input
+								class="flex-1 w-full bg-transparent outline-hidden"
+								placeholder={$i18n.t('API Base URL')}
+								bind:value={TTS_PORTKEY_API_BASE_URL}
+								required
+							/>
+
+							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_PORTKEY_API_KEY} />
 						</div>
 					</div>
 				{:else if TTS_ENGINE === 'elevenlabs'}
@@ -502,7 +580,7 @@
 								/>
 
 								<datalist id="model-list">
-									<option value="tts-1" />
+									<option value="@openai-4o-mini-audio/gpt-4o-mini-audio-preview" />
 								</datalist>
 							</div>
 						</div>
@@ -571,6 +649,81 @@
 								</div>
 							</div>
 						</div>
+					</div>
+				{:else if TTS_ENGINE === 'portkey'}
+					<div class=" flex flex-col gap-3">
+						<!-- Language Selection -->
+						<div class="w-full">
+							<div class=" mb-1.5 text-sm font-medium">Language</div>
+							<div class="flex w-full">
+								<div class="flex-1">
+									<select
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={TTS_LANGUAGE}
+										on:change={handleLanguageChange}
+										aria-label="TTS Language"
+									>
+										{#each Object.entries(germanLanguages) as [code, name]}
+											<option value={code}>{name}</option>
+										{/each}
+									</select>
+								</div>
+							</div>
+						</div>
+
+					<!-- Dynamic Voice Selection based on Language -->
+					<div class="w-full">
+						<div class=" mb-1.5 text-sm font-medium">Text-to-Speech Voice (Advanced Settings - Not Enabled)</div>
+						<div class="flex w-full">
+							<div class="flex-1">
+								<select
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									bind:value={TTS_VOICE}
+									aria-label="TTS Voice"
+									disabled={availableVoices.length === 0}
+								>
+									{#each availableVoices as voice}
+										<option value={voice.value}>{voice.label}</option>
+									{/each}
+								</select>
+							</div>
+						</div>
+					</div>
+
+					<!-- Audio Voice (alloy/echo/shimmer) -->
+					<div class="w-full">
+						<div class=" mb-1.5 text-sm font-medium">Audio Voice</div>
+						<div class="flex w-full">
+							<div class="flex-1">
+								<select
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									bind:value={TTS_AUDIO_VOICE}
+									aria-label="TTS Audio Voice"
+								>
+									<option value="alloy">Alloy</option>
+									<option value="echo">Echo</option>
+									<option value="shimmer">Shimmer</option>
+								</select>
+							</div>
+						</div>
+					</div>
+
+					<!-- Model -->
+					<div class="w-full">
+							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('TTS Model')}</div>
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={TTS_MODEL}
+										placeholder="@openai-4o-mini-audio/gpt-4o-mini-audio-preview"
+									/>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="mt-2 mb-1 text-xs text-gray-600 dark:text-gray-500">
+						<a class=" hover:underline dark:text-gray-200 text-gray-800" href="https://portkey.ai" target="_blank" rel="noreferrer">Portkey website</a>
 					</div>
 				{:else if TTS_ENGINE === 'elevenlabs'}
 					<div class=" flex gap-2">
