@@ -285,7 +285,7 @@ async def get_oauth_client_info_with_dynamic_client_registration(
         # Attempt to fetch OAuth server metadata to get registration endpoint & scopes
         discovery_urls = get_discovery_urls(oauth_server_url)
         for url in discovery_urls:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(trust_env=True) as session:
                 async with session.get(
                     url, ssl=AIOHTTP_CLIENT_SESSION_SSL
                 ) as oauth_server_metadata_response:
@@ -321,7 +321,7 @@ async def get_oauth_client_info_with_dynamic_client_registration(
         )
 
         # Perform dynamic client registration and return client info
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(trust_env=True) as session:
             async with session.post(
                 registration_url, json=registration_data, ssl=AIOHTTP_CLIENT_SESSION_SSL
             ) as oauth_client_registration_response:
