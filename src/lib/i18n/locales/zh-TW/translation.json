@@ -702,6 +702,7 @@
 	"Failed to move chat": "移動對話失敗",
 	"Failed to read clipboard contents": "讀取剪貼簿內容失敗",
 	"Failed to render diagram": "繪製圖表失敗",
+	"Failed to render visualization": "繪製圖表失敗",
 	"Failed to save connections": "儲存連線失敗",
 	"Failed to save conversation": "儲存對話失敗",
 	"Failed to save models configuration": "儲存模型設定失敗",
