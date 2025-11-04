@@ -99,8 +99,8 @@
 				.filter((folder) => {
 					const folderName = lastWord.slice(7);
 					if (folderName) {
-						const id = folder.name.replace(' ', '_').toLowerCase();
-						const folderId = folderName.replace(' ', '_').toLowerCase();
+						const id = folder.name.replace(/ /g, '_').toLowerCase();
+						const folderId = folderName.replace(/ /g, '_').toLowerCase();
 
 						if (id !== folderId) {
 							return id.startsWith(folderId);
@@ -113,7 +113,7 @@
 				})
 				.map((folder) => {
 					return {
-						id: folder.name.replace(' ', '_').toLowerCase(),
+						id: folder.name.replace(/ /g, '_').toLowerCase(),
 						name: folder.name,
 						type: 'folder'
 					};
