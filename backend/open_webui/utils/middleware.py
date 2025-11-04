@@ -1306,6 +1306,17 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         }
                 except Exception as e:
                     log.debug(e)
+                    if event_emitter:
+                        await event_emitter(
+                            {
+                                "type": "chat:message:error",
+                                "data": {
+                                    "error": {
+                                        "content": f"Failed to connect to MCP server '{server_id}'"
+                                    }
+                                },
+                            }
+                        )
                     continue
 
         tools_dict = await get_tools(
