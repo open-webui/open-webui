@@ -45,9 +45,8 @@ from open_webui.routers.retrieval import (
     SearchForm,
 )
 from open_webui.routers.images import (
-    load_b64_image_data,
     image_generations,
-    GenerateImageForm,
+    CreateImageForm,
     upload_image,
 )
 from open_webui.routers.pipelines import (
@@ -770,7 +769,7 @@ async def chat_image_generation_handler(
     try:
         images = await image_generations(
             request=request,
-            form_data=GenerateImageForm(**{"prompt": prompt}),
+            form_data=CreateImageForm(**{"prompt": prompt}),
             user=user,
         )
 

@@ -3103,35 +3103,17 @@ AUTOMATIC1111_API_AUTH = PersistentConfig(
     os.getenv("AUTOMATIC1111_API_AUTH", ""),
 )
 
-AUTOMATIC1111_CFG_SCALE = PersistentConfig(
-    "AUTOMATIC1111_CFG_SCALE",
-    "image_generation.automatic1111.cfg_scale",
-    (
-        float(os.environ.get("AUTOMATIC1111_CFG_SCALE"))
-        if os.environ.get("AUTOMATIC1111_CFG_SCALE")
-        else None
-    ),
-)
+automatic1111_params = os.getenv("AUTOMATIC1111_PARAMS", "")
+try:
+    automatic1111_params = json.loads(automatic1111_params)
+except json.JSONDecodeError:
+    automatic1111_params = {}
 
 
-AUTOMATIC1111_SAMPLER = PersistentConfig(
-    "AUTOMATIC1111_SAMPLER",
-    "image_generation.automatic1111.sampler",
-    (
-        os.environ.get("AUTOMATIC1111_SAMPLER")
-        if os.environ.get("AUTOMATIC1111_SAMPLER")
-        else None
-    ),
-)
-
-AUTOMATIC1111_SCHEDULER = PersistentConfig(
-    "AUTOMATIC1111_SCHEDULER",
-    "image_generation.automatic1111.scheduler",
-    (
-        os.environ.get("AUTOMATIC1111_SCHEDULER")
-        if os.environ.get("AUTOMATIC1111_SCHEDULER")
-        else None
-    ),
+AUTOMATIC1111_PARAMS = PersistentConfig(
+    "AUTOMATIC1111_PARAMS",
+    "image_generation.automatic1111.api_auth",
+    automatic1111_params,
 )
 
 COMFYUI_BASE_URL = PersistentConfig(
