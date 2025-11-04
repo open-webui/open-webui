@@ -1,0 +1,17 @@
+# Full local capability profile for self-hosted installs.
+profile: full
+description: >
+  Default profile that keeps all local ML providers enabled. Mirrors legacy
+  behaviour prior to the enterprise refactor.
+environment:
+  ENTERPRISE_MODE: false
+  LOCAL_MODE_DISABLED: false
+  BYPASS_EMBEDDING_AND_RETRIEVAL: false
+  RAG_EMBEDDING_ENGINE: local
+  RAG_RERANKING_ENGINE: local
+  AUDIO_STT_ENGINE: local
+  AUDIO_TTS_ENGINE: local
+  VECTOR_DB: chroma
+  OCR_ENGINE: local
+  DOCUMENT_INTELLIGENCE_MODEL_ID: prebuilt-read
+  DOCUMENT_INTELLIGENCE_API_VERSION: "2024-02-29-preview"

@@ -1,0 +1,36 @@
+# Baseline SaaS-only defaults for enterprise deployments.
+profile: enterprise
+description: >
+  Enterprise profile that disables local ML workloads and routes all AI/ML
+  capabilities through managed SaaS providers.
+environment:
+  ENTERPRISE_MODE: true
+  LOCAL_MODE_DISABLED: true
+  BYPASS_EMBEDDING_AND_RETRIEVAL: true
+  RAG_EMBEDDING_ENGINE: openai
+  RAG_RERANKING_ENGINE: external
+  RAG_RERANKING_MODEL: reranker
+  AUDIO_STT_ENGINE: openai
+  AUDIO_TTS_ENGINE: openai
+  VECTOR_DB: pgvector
+  OCR_ENGINE: azure_document_intelligence
+  DOCUMENT_INTELLIGENCE_MODEL_ID: prebuilt-read
+  DOCUMENT_INTELLIGENCE_API_VERSION: "2024-02-29-preview"
+# Replace the placeholder values below with your tenant specific credentials.
+placeholders:
+  OPENAI_API_KEY: "replace-with-openai-key"
+  RAG_OPENAI_API_KEY: ""
+  AUDIO_STT_OPENAI_API_KEY: ""
+  AUDIO_TTS_OPENAI_API_KEY: ""
+  RAG_EXTERNAL_RERANKER_URL: "https://replace-with-reranker-endpoint"
+  RAG_EXTERNAL_RERANKER_API_KEY: "replace-with-reranker-key"
+  DOCUMENT_INTELLIGENCE_ENDPOINT: "https://replace-with-azure-endpoint"
+  DOCUMENT_INTELLIGENCE_KEY: "replace-with-azure-key"
+  PGVECTOR_DB_URL: "postgresql://user:password@host:5432/database"
+  PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH: 1536
+  PGVECTOR_CREATE_EXTENSION: false
+  PGVECTOR_PGCRYPTO: false
+  PGVECTOR_PGCRYPTO_KEY: ""
+  AWS_TEXTRACT_ACCESS_KEY_ID: ""
+  AWS_TEXTRACT_SECRET_ACCESS_KEY: ""
+  AWS_TEXTRACT_REGION: ""

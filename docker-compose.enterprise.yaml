@@ -1,0 +1,56 @@
+services:
+  open-webui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        USE_ENTERPRISE_MODE: 'true'
+        USE_SLIM: 'true'
+        ENTERPRISE_VECTOR_DB: '${VECTOR_DB-chroma}'
+    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-enterprise}
+    container_name: open-webui-enterprise
+    depends_on: {}
+    ports:
+      - ${OPEN_WEBUI_PORT-3000}:8080
+    environment:
+      # Enterprise mode flags
+      - ENTERPRISE_MODE=true
+      - LOCAL_MODE_DISABLED=true
+      - BYPASS_EMBEDDING_AND_RETRIEVAL=true
+
+      # Engines (SaaS)
+      - RAG_EMBEDDING_ENGINE=openai
+      - RAG_RERANKING_ENGINE=external
+      - AUDIO_STT_ENGINE=openai
+      - AUDIO_TTS_ENGINE=openai
+      - VECTOR_DB=chroma
+      - OCR_ENGINE=azure_document_intelligence
+
+      # Reranker (external) – set these in your shell or .env
+      - RAG_EXTERNAL_RERANKER_URL=${RAG_EXTERNAL_RERANKER_URL}
+      - RAG_EXTERNAL_RERANKER_API_KEY=${RAG_EXTERNAL_RERANKER_API_KEY}
+
+      # OpenAI / SaaS keys – set in your shell or .env
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+
+      # Azure Document Intelligence – set in your shell or .env
+      - DOCUMENT_INTELLIGENCE_ENDPOINT=${DOCUMENT_INTELLIGENCE_ENDPOINT}
+      - DOCUMENT_INTELLIGENCE_KEY=${DOCUMENT_INTELLIGENCE_KEY}
+
+      # Database (primary + pgvector)
+      # App DB defaults to SQLite; no DB envs required.
+
+      # Optional telemetry and secrets
+      - SCARF_NO_ANALYTICS=true
+      - DO_NOT_TRACK=true
+      - ANONYMIZED_TELEMETRY=false
+      - WEBUI_SECRET_KEY=
+
+    volumes:
+      - open-webui:/app/backend/data
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    restart: unless-stopped
+
+volumes:
+  open-webui: {}
