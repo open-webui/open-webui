@@ -3396,6 +3396,24 @@ AUDIO_STT_AZURE_MAX_SPEAKERS = PersistentConfig(
     os.getenv("AUDIO_STT_AZURE_MAX_SPEAKERS", ""),
 )
 
+AUDIO_STT_MISTRAL_API_KEY = PersistentConfig(
+    "AUDIO_STT_MISTRAL_API_KEY",
+    "audio.stt.mistral.api_key",
+    os.getenv("AUDIO_STT_MISTRAL_API_KEY", ""),
+)
+
+AUDIO_STT_MISTRAL_API_BASE_URL = PersistentConfig(
+    "AUDIO_STT_MISTRAL_API_BASE_URL",
+    "audio.stt.mistral.api_base_url",
+    os.getenv("AUDIO_STT_MISTRAL_API_BASE_URL", "https://api.mistral.ai/v1"),
+)
+
+AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS = PersistentConfig(
+    "AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS",
+    "audio.stt.mistral.use_chat_completions",
+    os.getenv("AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS", "false").lower() == "true",
+)
+
 AUDIO_TTS_OPENAI_API_BASE_URL = PersistentConfig(
     "AUDIO_TTS_OPENAI_API_BASE_URL",
     "audio.tts.openai.api_base_url",
