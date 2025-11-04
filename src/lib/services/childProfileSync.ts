@@ -140,7 +140,6 @@ class ChildProfileSyncService {
             child_age: formData.child_age,
             child_gender: formData.child_gender,
             child_characteristics: formData.child_characteristics,
-            parenting_style: formData.parenting_style,
             created_at: Date.now(),
             updated_at: Date.now()
         };

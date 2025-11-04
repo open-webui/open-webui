@@ -22,7 +22,6 @@ export interface ChildProfileForm {
 	child_age?: string;
 	child_gender?: string;
 	child_characteristics?: string;
-	parenting_style?: string;
 	// New optional research fields
 	is_only_child?: boolean;
 	child_has_ai_use?: 'yes' | 'no' | 'unsure';

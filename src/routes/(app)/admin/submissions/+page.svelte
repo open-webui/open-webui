@@ -207,9 +207,23 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 
 	const parseExitQuizAnswers = (answers: any) => {
 		if (!answers) return null;
+		
+		// Helper to format parenting style
+		const formatParentingStyle = (style: string) => {
+			if (!style) return 'Not answered';
+			const styles: Record<string, string> = {
+				'authoritative': 'Authoritative',
+				'authoritarian': 'Authoritarian',
+				'permissive': 'Permissive',
+				'neglectful': 'Neglectful / Uninvolved'
+			};
+			return styles[style] || style;
+		};
+		
 		return {
-			genai_familiarity: answers['1'] || answers['genai_familiarity'] || 'Not answered',
-			usage_frequency: answers['2'] || answers['usage_frequency'] || 'Not answered',
+			genai_familiarity: answers['1'] || answers['genaiFamiliarity'] || answers['genai_familiarity'] || 'Not answered',
+			usage_frequency: answers['2'] || answers['genaiUsageFrequency'] || answers['usage_frequency'] || 'Not answered',
+			parenting_style: formatParentingStyle(answers['parentingStyle'] || answers['parenting_style']),
 			raw: answers
 		};
 	};
@@ -383,12 +397,6 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 											<div class="md:col-span-2">
 												<span class="text-sm text-gray-600 dark:text-gray-400">Characteristics:</span>
 												<p class="text-gray-900 dark:text-white">{profile.child_characteristics}</p>
-											</div>
-										{/if}
-										{#if profile.parenting_style}
-											<div class="md:col-span-2">
-												<span class="text-sm text-gray-600 dark:text-gray-400">Parenting Style:</span>
-												<p class="text-gray-900 dark:text-white">{profile.parenting_style}</p>
 											</div>
 										{/if}
 										<div class="md:col-span-2">
@@ -660,7 +668,7 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 									</div>
 
 									{#if parsed}
-										<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+										<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
 											<div>
 												<span class="text-sm font-semibold text-gray-700 dark:text-gray-300">GenAI Familiarity:</span>
 												<p class="text-gray-900 dark:text-white">{parsed.genai_familiarity}</p>
@@ -668,6 +676,10 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 											<div>
 												<span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Usage Frequency:</span>
 												<p class="text-gray-900 dark:text-white">{parsed.usage_frequency}</p>
+											</div>
+											<div>
+												<span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Parenting Style:</span>
+												<p class="text-gray-900 dark:text-white">{parsed.parenting_style}</p>
 											</div>
 										</div>
 									{/if}

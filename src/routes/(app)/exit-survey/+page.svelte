@@ -16,27 +16,13 @@
 		parentEducation: '',
     parentEthnicity: [],
     genaiFamiliarity: '',
-    genaiUsageFrequency: ''
+    genaiUsageFrequency: '',
+    parentingStyle: ''
 	};
 
     // API
     import { createExitQuiz, listExitQuiz } from '$lib/apis/exit-quiz';
     import { childProfileSync } from '$lib/services/childProfileSync';
-// Attention checks
-let acQuestions: Array<{ id: string; prompt: string; options: string[]; correct_option: string }> = [];
-let acResponses: Record<string, string> = {};
-async function loadAttentionChecks() {
-    try {
-        const res = await fetch(`${WEBUI_API_BASE_URL}/attention-checks/questions`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.token || ''}` }
-        });
-        if (res.ok) {
-            const data = await res.json();
-            acQuestions = (data || []).map((q) => ({ ...q, options: (q.options || '').split('|') }));
-        }
-    } catch {}
-}
     import { getChildProfiles as apiGetChildProfiles } from '$lib/apis/child-profiles';
     import { user } from '$lib/stores';
     import { get } from 'svelte/store';
@@ -94,7 +80,6 @@ async function resolveChildId(token: string): Promise<string> {
 }
 
 onMount(async () => {
-    await loadAttentionChecks();
     assignmentStep = parseInt(localStorage.getItem('assignmentStep') || '3');
 
     const token = localStorage.token || '';
@@ -115,7 +100,8 @@ onMount(async () => {
                     parentEducation: ans.parentEducation || '',
                     parentEthnicity: Array.isArray(ans.parentEthnicity) ? ans.parentEthnicity : [],
                     genaiFamiliarity: ans.genaiFamiliarity || '',
-                    genaiUsageFrequency: ans.genaiUsageFrequency || ''
+                    genaiUsageFrequency: ans.genaiUsageFrequency || '',
+                    parentingStyle: ans.parentingStyle || ''
                 };
                 isSaved = true;
                 // Ensure sidebar unlock for completion if a saved survey exists
@@ -146,7 +132,8 @@ onMount(async () => {
                     parentEducation: draft.parentEducation || '',
                     parentEthnicity: Array.isArray(draft.parentEthnicity) ? draft.parentEthnicity : [],
                     genaiFamiliarity: draft.genaiFamiliarity || '',
-                    genaiUsageFrequency: draft.genaiUsageFrequency || ''
+                    genaiUsageFrequency: draft.genaiUsageFrequency || '',
+                    parentingStyle: draft.parentingStyle || ''
                 };
             }
         }
@@ -180,6 +167,10 @@ onMount(async () => {
                 toast.error('Please select your personal AI use frequency');
 				return;
 			}
+            if (!surveyResponses.parentingStyle) {
+                toast.error('Please select your parenting style');
+                return;
+            }
 
             // Resolve child_id: prefer selection saved by earlier steps, else pick first
             const token = localStorage.token || '';
@@ -227,24 +218,12 @@ onMount(async () => {
                 parentEducation: surveyResponses.parentEducation,
                 parentEthnicity: surveyResponses.parentEthnicity,
                 genaiFamiliarity: surveyResponses.genaiFamiliarity,
-                genaiUsageFrequency: surveyResponses.genaiUsageFrequency
+                genaiUsageFrequency: surveyResponses.genaiUsageFrequency,
+                parentingStyle: surveyResponses.parentingStyle
             };
 
             // Persist to backend (exit quiz)
             await createExitQuiz(token, { child_id, answers, meta: { page: 'exit-survey' } });
-
-            // Persist attention check responses
-            try {
-                for (const q of acQuestions) {
-                    const r = acResponses[q.id];
-                    if (!r) continue;
-                    await fetch(`${WEBUI_API_BASE_URL}/attention-checks`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                        body: JSON.stringify({ question_id: q.id, response: r })
-                    });
-                }
-            } catch {}
 			
             // Mark assignment as completed before showing confirmation
 			localStorage.setItem('assignmentStep', '4');
@@ -427,31 +406,33 @@ $: saveDraft();
 						<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Ethnicity</div>
 						<p class="text-gray-900 dark:text-white">{surveyResponses.parentEthnicity.length > 0 ? surveyResponses.parentEthnicity.join(', ') : 'Not specified'}</p>
 					</div>
+					<div>
+						<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Parenting Style</div>
+						<p class="text-gray-900 dark:text-white">
+							{surveyResponses.parentingStyle 
+								? (surveyResponses.parentingStyle === 'authoritative' ? 'Authoritative' :
+								   surveyResponses.parentingStyle === 'authoritarian' ? 'Authoritarian' :
+								   surveyResponses.parentingStyle === 'permissive' ? 'Permissive' :
+								   surveyResponses.parentingStyle === 'neglectful' ? 'Neglectful / Uninvolved' :
+								   surveyResponses.parentingStyle)
+								: 'Not specified'}
+						</p>
+						{#if surveyResponses.parentingStyle}
+							<p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+								{surveyResponses.parentingStyle === 'authoritative' ? 'Warm, responsive, sets clear rules. Encourages independence with guidance.' :
+								 surveyResponses.parentingStyle === 'authoritarian' ? 'Strict, controlling, values obedience. Limited warmth, uses punishment.' :
+								 surveyResponses.parentingStyle === 'permissive' ? 'Warm and indulgent, few demands or rules. Children regulate themselves.' :
+								 surveyResponses.parentingStyle === 'neglectful' ? 'Uninvolved, indifferent. Lacks both responsiveness and structure.' :
+								 ''}
+							</p>
+						{/if}
+					</div>
 					</div>
 				</div>
 			{:else}
 				<!-- Editable form -->
 				<div class="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-sm">
 					<form on:submit|preventDefault={submitSurvey} class="space-y-8">
-                        <!-- Attention Checks Block -->
-                        {#if acQuestions.length > 0}
-                            <div class="rounded-md border border-yellow-200 dark:border-yellow-800 p-4 bg-yellow-50/60 dark:bg-yellow-900/20">
-                                <div class="block text-lg font-medium text-gray-900 dark:text-white mb-2">Quality Check</div>
-                                {#each acQuestions as q, qi}
-                                    <div class="mb-4">
-                                        <div class="text-sm font-medium text-gray-900 dark:text-white mb-1">{qi + 1}. {q.prompt} <span class="text-red-500">*</span></div>
-                                        <div class="space-y-1">
-                                            {#each q.options as opt}
-                                                <label class="flex items-center">
-                                                    <input type="radio" bind:group={acResponses[q.id]} value={opt} class="mr-3" required>
-                                                    <span class="text-gray-900 dark:text-white">{opt}</span>
-                                                </label>
-                                            {/each}
-                                        </div>
-                                    </div>
-                                {/each}
-                            </div>
-                        {/if}
 						<!-- GenAI familiarity -->
 						<div>
 							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
@@ -652,6 +633,59 @@ $: saveDraft();
 								<label class="flex items-center">
 									<input type="checkbox" bind:group={surveyResponses.parentEthnicity} value="prefer-not-to-say" class="mr-3" id="ethnicity-prefer-not-to-say">
 									<span class="text-gray-900 dark:text-white">Prefer not to say</span>
+								</label>
+							</div>
+						</div>
+
+						<!-- Question 8: Parenting Style -->
+						<div>
+							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
+								8. What is your parenting style? <span class="text-red-500">*</span>
+							</div>
+							<div class="space-y-3">
+								<label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors {
+									surveyResponses.parentingStyle === 'authoritative' 
+										? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+										: 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+								}">
+									<input type="radio" bind:group={surveyResponses.parentingStyle} value="authoritative" class="mt-1 mr-3" />
+									<div>
+										<div class="font-semibold text-gray-900 dark:text-white">Authoritative</div>
+										<div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Warm, responsive, sets clear rules. Encourages independence with guidance.</div>
+									</div>
+								</label>
+								<label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors {
+									surveyResponses.parentingStyle === 'authoritarian' 
+										? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+										: 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+								}">
+									<input type="radio" bind:group={surveyResponses.parentingStyle} value="authoritarian" class="mt-1 mr-3" />
+									<div>
+										<div class="font-semibold text-gray-900 dark:text-white">Authoritarian</div>
+										<div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Strict, controlling, values obedience. Limited warmth, uses punishment.</div>
+									</div>
+								</label>
+								<label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors {
+									surveyResponses.parentingStyle === 'permissive' 
+										? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+										: 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+								}">
+									<input type="radio" bind:group={surveyResponses.parentingStyle} value="permissive" class="mt-1 mr-3" />
+									<div>
+										<div class="font-semibold text-gray-900 dark:text-white">Permissive</div>
+										<div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Warm and indulgent, few demands or rules. Children regulate themselves.</div>
+									</div>
+								</label>
+								<label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors {
+									surveyResponses.parentingStyle === 'neglectful' 
+										? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+										: 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+								}">
+									<input type="radio" bind:group={surveyResponses.parentingStyle} value="neglectful" class="mt-1 mr-3" />
+									<div>
+										<div class="font-semibold text-gray-900 dark:text-white">Neglectful / Uninvolved</div>
+										<div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Uninvolved, indifferent. Lacks both responsiveness and structure.</div>
+									</div>
 								</label>
 							</div>
 						</div>

@@ -20,7 +20,6 @@
 	let parentGender: string = '';
 	let parentAge: string = '';
 	let parentPreference: string = '';
-	let parentingStyle: string = '';
 
 // Child quiz research fields (all required)
 let isOnlyChild: string = '';
@@ -144,7 +143,6 @@ let parentLLMMonitoringLevel: string = '';
 		childAge = sel?.child_age || '';
 		childGender = sel?.child_gender || '';
 		childCharacteristics = sel?.child_characteristics || '';
-		parentingStyle = sel?.parenting_style || '';
 
 	// Research fields (optional if older profiles lack them)
 	isOnlyChild = typeof (sel as any)?.is_only_child === 'boolean' ? ((sel as any).is_only_child ? 'yes' : 'no') : '';
@@ -191,7 +189,6 @@ let parentLLMMonitoringLevel: string = '';
 			: childCharacteristics;
 		
 		sel.child_characteristics = combinedCharacteristics;
-		sel.parenting_style = parentingStyle;
 	// Attach research fields to selected child for local view
 	(sel as any).is_only_child = isOnlyChild === 'yes';
 	(sel as any).child_has_ai_use = childHasAIUse || null;
@@ -214,7 +211,6 @@ let parentLLMMonitoringLevel: string = '';
 				childAge = '';
 				childGender = '';
 				childCharacteristics = '';
-				parentingStyle = '';
 			} else {
 				if (selectedChildIndex >= childProfiles.length) {
 					selectedChildIndex = childProfiles.length - 1;
@@ -243,7 +239,6 @@ let parentLLMMonitoringLevel: string = '';
 		childAge = '';
 		childGender = '';
 		childCharacteristics = '';
-		parentingStyle = '';
 		
 		// Reset personality traits
 		selectedSubCharacteristics = [];
@@ -295,10 +290,6 @@ let parentLLMMonitoringLevel: string = '';
                 toast.error('Please enter additional characteristics & interests');
                 return;
             }
-            if (!parentingStyle.trim()) {
-                toast.error('Please enter parenting style');
-                return;
-            }
 			// Required research fields
 			if (!isOnlyChild) {
 				toast.error('Please indicate if this child is an only child');
@@ -320,10 +311,6 @@ let parentLLMMonitoringLevel: string = '';
                 toast.error('Please enter additional characteristics & interests');
                 return;
             }
-            if (!parentingStyle.trim()) {
-                toast.error('Please enter parenting style');
-                return;
-            }
 
 		// Combine personality traits with characteristics
 		const personalityDesc = getPersonalityDescription();
@@ -341,7 +328,6 @@ let parentLLMMonitoringLevel: string = '';
 				child_age: childAge,
 				child_gender: childGender,
 				child_characteristics: combinedCharacteristics,
-				parenting_style: parentingStyle,
 				is_only_child: isOnlyChild === 'yes',
 				child_has_ai_use: childHasAIUse as any,
 				child_ai_use_contexts: childAIUseContexts,
@@ -379,7 +365,6 @@ let parentLLMMonitoringLevel: string = '';
 			childAge = '';
 			childGender = '';
 			childCharacteristics = '';
-			parentingStyle = '';
 			
 			// Reset personality traits
 			selectedSubCharacteristics = [];
@@ -483,7 +468,6 @@ let parentLLMMonitoringLevel: string = '';
 					child_age: childAge,
 					child_gender: childGender,
 					child_characteristics: combinedCharacteristics,
-				parenting_style: parentingStyle,
 				is_only_child: isOnlyChild === 'yes',
 				child_has_ai_use: childHasAIUse as any,
 				child_ai_use_contexts: childAIUseContexts,
@@ -536,7 +520,6 @@ let parentLLMMonitoringLevel: string = '';
 						child_age: childAge,
 						child_gender: childGender,
 						child_characteristics: combinedCharacteristics,
-						parenting_style: parentingStyle,
 						is_only_child: isOnlyChild === 'yes',
 						child_has_ai_use: childHasAIUse as any,
 						child_ai_use_contexts: childAIUseContexts,
@@ -844,10 +827,6 @@ let parentLLMMonitoringLevel: string = '';
 					<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Characteristics & Interests</div>
 					<p class="text-gray-900 dark:text-white whitespace-pre-wrap">{childProfiles[selectedChildIndex]?.child_characteristics || 'Not specified'}</p>
 				</div>
-				<div>
-					<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Parenting Style</div>
-					<p class="text-gray-900 dark:text-white whitespace-pre-wrap">{childProfiles[selectedChildIndex]?.parenting_style || 'Not specified'}</p>
-				</div>
 				<!-- New research fields -->
 				<div>
 					<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Only Child</div>
@@ -1049,19 +1028,6 @@ let parentLLMMonitoringLevel: string = '';
 								class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
 							></textarea>
 						</div>
-					</div>
-
-					<div>
-                        <label for="parentingStyle" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Parenting Style <span class="text-red-500">*</span>
-                        </label>
-						<textarea
-							id="parentingStyle"
-							bind:value={parentingStyle}
-							rows="4"
-							placeholder="Describe your parenting approach and values for this child"
-							class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-						></textarea>
 					</div>
 
 			<!-- Child Quiz (Required) -->

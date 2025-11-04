@@ -19,34 +19,34 @@ import { finalizeModeration } from '$lib/apis/workflow';
 	// Moderation options - grouped by category
 	const moderationOptions = {
 		'Refuse and Remove': [
-			'Refuse Response and Explain',
-			'Remove Harmful Phrases',
-			'Omit Unprompted Suggestions',
+		'Refuse Response and Explain',
+		'Remove Harmful Phrases',
+		'Omit Unprompted Suggestions',
 			'Do Not Suggest Workarounds'
 		],
 		'Investigate and Empathize': [
-			'Clarify Child\'s Intent',
+		'Clarify Child\'s Intent',
 			'Emphasize Emotional Support'
 		],
 		'Correct their Understanding': [
-			'Explain Problems in Prompt',
-			'Emphasize Risk Awareness',
-			'Redirect with Alternatives',
-			'Remind Model is Not Human',
+		'Explain Problems in Prompt',
+		'Emphasize Risk Awareness',
+		'Redirect with Alternatives',
+		'Remind Model is Not Human',
 			'Encourage Introspection'
 		],
 		'Match their Age': [
 			'Tailor to Age Group'
 		],
 		'Defer to Support': [
-			'Defer to Parents',
+		'Defer to Parents',
 			'Defer to Resources'
 		],
 		'Attention Check': [
 			'I read the instructions'
 		],
 		'Custom': [
-			'Custom'
+		'Custom'
 		]
 	};
 
@@ -96,8 +96,8 @@ import { finalizeModeration } from '$lib/apis/workflow';
 	const CUSTOM_SCENARIO_PROMPT = "[Create Your Own Scenario]";
 	const CUSTOM_SCENARIO_PLACEHOLDER = "Enter your custom child prompt here...";
 	
-    let selectedScenarioIndex: number = 0;
-    let scenarioList = Object.entries(scenarios);
+	let selectedScenarioIndex: number = 0;
+	let scenarioList = Object.entries(scenarios);
     let sessionNumber: number = 1; // Default session number for non-Prolific users
 
     // Warm-up tutorial state
@@ -789,6 +789,7 @@ function clearModerationLocalKeys() {
 		attentionCheckSelected: boolean;
 		markedNotApplicable: boolean;
 		customPrompt?: string; // Store actual custom prompt text for custom scenarios
+		highlightingReason: string;
 	}
 	
 	let scenarioStates: Map<number, ScenarioState> = new Map();
@@ -847,6 +848,8 @@ function clearModerationLocalKeys() {
 	let hasInitialDecision: boolean = false;
 	let acceptedOriginal: boolean = false;
 	let markedNotApplicable: boolean = false;
+	let showHighlightingReasonModal: boolean = false;
+	let highlightingReason: string = '';
 // Mobile sidebar toggle for scenario list
 let sidebarOpen: boolean = true;
 // Request guard to prevent responses applying to wrong scenario
@@ -1047,7 +1050,8 @@ let currentRequestId: number = 0;
 			acceptedOriginal,
 			attentionCheckSelected,
 			markedNotApplicable,
-			customPrompt: isCustomScenario && customScenarioGenerated ? customScenarioPrompt : existingState?.customPrompt
+			customPrompt: isCustomScenario && customScenarioGenerated ? customScenarioPrompt : existingState?.customPrompt,
+			highlightingReason
 		};
 		scenarioStates.set(selectedScenarioIndex, currentState);
 		
@@ -1081,7 +1085,7 @@ let currentRequestId: number = 0;
 		
 		// Save current state before switching (unless forcing reload for new child)
 		if (!forceReload) {
-			saveCurrentScenarioState();
+		saveCurrentScenarioState();
 		}
 		
 		selectedScenarioIndex = index;
@@ -1130,6 +1134,8 @@ let currentRequestId: number = 0;
 				acceptedOriginal = false;
 				attentionCheckSelected = false;
 				markedNotApplicable = false;
+				highlightingReason = '';
+				showHighlightingReasonModal = false;
 				
 				childPrompt1 = prompt;
 				originalResponse1 = response;
@@ -1155,6 +1161,7 @@ let currentRequestId: number = 0;
 			acceptedOriginal = savedState.acceptedOriginal;
 			attentionCheckSelected = savedState.attentionCheckSelected || false;
 			markedNotApplicable = savedState.markedNotApplicable || false;
+			highlightingReason = savedState.highlightingReason || '';
 			
 			// Set moderation panel visibility based on confirmation state and initial decision
 			moderationPanelVisible = confirmedVersionIndex === null && hasInitialDecision && !acceptedOriginal && !markedNotApplicable;
@@ -1174,6 +1181,7 @@ let currentRequestId: number = 0;
 		expandedGroups.clear();
 			highlightingMode = false;
 			hasInitialDecision = false;
+			highlightingReason = '';
 			acceptedOriginal = false;
 			attentionCheckSelected = false;
 			markedNotApplicable = false;
@@ -1181,8 +1189,8 @@ let currentRequestId: number = 0;
 		
 		// Only set childPrompt1 if it wasn't already set for a custom scenario
 		if (!(prompt === CUSTOM_SCENARIO_PROMPT && customScenarioGenerated && customScenarioPrompt)) {
-			childPrompt1 = prompt;
-			originalResponse1 = response;
+		childPrompt1 = prompt;
+		originalResponse1 = response;
 		}
 		selectionButtonsVisible1 = false;
 		currentSelection1 = '';
@@ -1280,6 +1288,8 @@ function cancelReset() {}
 		attentionCheckSelected = false;
 		markedNotApplicable = false;
 		selectionButtonsVisible1 = false;
+		highlightingReason = '';
+		showHighlightingReasonModal = false;
 		
 		// Reset ALL scenario states
 		scenarioStates.clear();
@@ -1500,7 +1510,11 @@ function cancelReset() {}
 				highlighted_texts: [],
 				refactored_response: undefined,
 				is_final_version: false,
-				session_metadata: { decision: 'accept_original', decided_at: Date.now() },
+				session_metadata: { 
+					decision: 'accept_original', 
+					decided_at: Date.now(),
+					...(highlightingReason ? { highlighting_reason: highlightingReason } : {})
+				},
 				is_attention_check: isAttentionCheckScenario,
 				attention_check_selected: attentionCheckSelected,
 				attention_check_passed: isAttentionCheckScenario && attentionCheckSelected && selectedModerations.size > 0
@@ -1522,9 +1536,66 @@ function cancelReset() {}
 	
 	function finishHighlighting() {
 		highlightingMode = false;
-		moderationPanelVisible = true;
-		moderationPanelExpanded = false;
-		expandedGroups.clear();
+		// If highlights exist, show modal asking for reason
+		if (highlightedTexts1.length > 0) {
+			showHighlightingReasonModal = true;
+		} else {
+			// No highlights, proceed directly to moderation panel
+			moderationPanelVisible = true;
+			moderationPanelExpanded = false;
+			expandedGroups.clear();
+		}
+	}
+	
+	async function submitHighlightingReason() {
+		// Validate that reason is not empty
+		if (!highlightingReason.trim()) {
+			toast.error('Please provide an explanation for why you highlighted these texts');
+			return;
+		}
+		
+		// Save highlighted texts + explanation to database
+		try {
+			const sessionId = `scenario_${selectedScenarioIndex}`;
+			await saveModerationSession(localStorage.token, {
+				session_id: sessionId,
+				user_id: $user?.id || 'unknown',
+				child_id: selectedChildId || 'unknown',
+				scenario_index: selectedScenarioIndex,
+				attempt_number: 1,
+				version_number: 0,
+				session_number: sessionNumber,
+				scenario_prompt: childPrompt1,
+				original_response: originalResponse1,
+				initial_decision: undefined, // Not decided yet, just highlighting done
+				strategies: [],
+				custom_instructions: [],
+				highlighted_texts: [...highlightedTexts1],
+				refactored_response: undefined,
+				is_final_version: false,
+				session_metadata: {
+					highlighting_reason: highlightingReason.trim(),
+					highlighted_at: Date.now()
+				},
+				is_attention_check: isAttentionCheckScenario,
+				attention_check_selected: attentionCheckSelected,
+				attention_check_passed: false
+			});
+			
+			// Save to scenario state
+			saveCurrentScenarioState();
+			
+			// Close modal and show moderation panel
+			showHighlightingReasonModal = false;
+			moderationPanelVisible = true;
+			moderationPanelExpanded = false;
+			expandedGroups.clear();
+			
+			toast.success('Highlighting reason saved');
+		} catch (e) {
+			console.error('Failed to save highlighting reason', e);
+			toast.error('Failed to save highlighting reason. Please try again.');
+		}
 	}
 	
 	function returnToHighlighting() {
@@ -1576,7 +1647,11 @@ function cancelReset() {}
 				highlighted_texts: [],
 				refactored_response: undefined,
 				is_final_version: false,
-				session_metadata: { decision: 'not_applicable', decided_at: Date.now() },
+				session_metadata: { 
+					decision: 'not_applicable', 
+					decided_at: Date.now(),
+					...(highlightingReason ? { highlighting_reason: highlightingReason } : {})
+				},
 				is_attention_check: isAttentionCheckScenario,
 				attention_check_selected: attentionCheckSelected,
 				attention_check_passed: false
@@ -1688,9 +1763,9 @@ function cancelReset() {}
 				
                 // Snapshot attention check flag BEFORE clearing selections
                 const attentionSelectedSnapshot = attentionCheckSelected;
-
-                const total = standardStrategies.length + customTexts.length;
-                toast.success(`Created version ${versions.length} with ${total} moderation strateg${total === 1 ? 'y' : 'ies'}`);
+				
+				const total = standardStrategies.length + customTexts.length;
+				toast.success(`Created version ${versions.length} with ${total} moderation strateg${total === 1 ? 'y' : 'ies'}`);
 
                 // Save complete session data with the new version (use snapshot)
 				try {
@@ -1711,10 +1786,11 @@ function cancelReset() {}
 						highlighted_texts: [...highlightedTexts1],
 						refactored_response: result.refactored_response,
 						is_final_version: false,
-                        session_metadata: { 
+				session_metadata: { 
 							version_index: currentVersionIndex,
 							decision: 'moderate',
-							decided_at: Date.now()
+							decided_at: Date.now(),
+							...(highlightingReason ? { highlighting_reason: highlightingReason } : {})
 						},
                         is_attention_check: isAttentionCheckScenario,
                         attention_check_selected: attentionSelectedSnapshot,
@@ -1742,7 +1818,7 @@ function cancelReset() {}
 	function completeModeration() {
 		// Save current scenario state
 		saveCurrentScenarioState();
-
+		
 		// New rule: require a terminal decision for every scenario (including custom)
 		let allCompleted = true;
 		for (let i = 0; i < scenarioList.length; i++) {
@@ -1755,7 +1831,7 @@ function cancelReset() {}
 			toast.error('Please make a selection for every scenario before continuing');
 			return;
 		}
-
+		
 		// Show confirmation modal
 		showConfirmationModal = true;
 	}
@@ -2399,11 +2475,11 @@ onMount(async () => {
 	</div>
 {:else}
 	<!-- Regular Moderation UI -->
-	<div
-		class="flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
-			? 'md:max-w-[calc(100%-260px)]'
-			: ''} max-w-full"
-	>
+<div
+	class="flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
+		? 'md:max-w-[calc(100%-260px)]'
+		: ''} max-w-full"
+>
 	<nav class="px-2.5 pt-1 backdrop-blur-xl w-full drag-region border-b border-gray-200 dark:border-gray-800">
 		<div class="flex items-center">
 			<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
@@ -2421,7 +2497,7 @@ onMount(async () => {
 				</button>
 			</div>
 
-		<div class="flex w-full items-center justify-between">
+			<div class="flex w-full items-center justify-between">
 			<div class="flex items-center">
 				{#if !sidebarOpen}
 					<button
@@ -2432,7 +2508,7 @@ onMount(async () => {
 				{:else}
 					<div class="flex items-center text-xl font-semibold">Moderation Scenarios</div>
 				{/if}
-			</div>
+				</div>
 			
 			<!-- Controls -->
 			<div class="flex items-center space-x-3 {!sidebarOpen ? 'max-md:hidden' : ''}">
@@ -2457,7 +2533,7 @@ onMount(async () => {
 					</div>
 				</button>
 			</div>
-		</div>
+			</div>
 		</div>
 	</nav>
 
@@ -2466,7 +2542,7 @@ onMount(async () => {
 		<div class="w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-gray-50 dark:bg-gray-900 {sidebarOpen ? '' : 'hidden'} md:flex">
 			<div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-800 p-4">
 				<div class="flex items-center justify-between">
-					<h1 class="text-xl font-bold text-gray-900 dark:text-white">Scenarios</h1>
+				<h1 class="text-xl font-bold text-gray-900 dark:text-white">Scenarios</h1>
 					<button class="md:hidden text-xs px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800" on:click={() => { sidebarOpen = !sidebarOpen; }} aria-label="Toggle scenarios">{sidebarOpen ? 'Hide' : 'Show'}</button>
 				</div>
 				<p class="text-sm text-gray-600 dark:text-gray-400">
@@ -2478,29 +2554,29 @@ onMount(async () => {
 				</p>
 			</div>
 
-		<div class="flex-1 overflow-y-auto p-3 space-y-2">
-			{#each scenarioList as [prompt, response], index}
-				<button
-					on:click={() => loadScenario(index)}
-					class="w-full text-left p-3 rounded-lg border transition-all duration-200 {
-						selectedScenarioIndex === index
-							? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 dark:border-blue-600 shadow-sm'
+			<div class="flex-1 overflow-y-auto p-3 space-y-2">
+				{#each scenarioList as [prompt, response], index}
+					<button
+						on:click={() => loadScenario(index)}
+						class="w-full text-left p-3 rounded-lg border transition-all duration-200 {
+							selectedScenarioIndex === index
+								? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 dark:border-blue-600 shadow-sm'
 							: isScenarioCompleted(index)
 							? 'bg-gray-100 dark:bg-gray-800/50 border-gray-300 dark:border-gray-700 opacity-60 hover:opacity-80'
-							: 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-sm'
-					}"
-				>
-					<div class="flex items-start space-x-2">
-						<div class="flex-shrink-0 relative">
-							<div class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold {
-								selectedScenarioIndex === index
-									? 'bg-blue-500 text-white'
+								: 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-sm'
+						}"
+					>
+						<div class="flex items-start space-x-2">
+							<div class="flex-shrink-0 relative">
+								<div class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold {
+									selectedScenarioIndex === index
+										? 'bg-blue-500 text-white'
 									: prompt === CUSTOM_SCENARIO_PROMPT
 										? 'bg-purple-500 text-white'
 										: isScenarioCompleted(index)
 										? 'bg-gray-400 dark:bg-gray-600 text-gray-200 dark:text-gray-400'
 										: 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-							}">
+								}">
 								{#if prompt === CUSTOM_SCENARIO_PROMPT}
 									<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -2509,9 +2585,9 @@ onMount(async () => {
 									{index + 1}
 								{/if}
 							</div>
-						</div>
-						
-						<div class="flex-1 min-w-0">
+							</div>
+							
+							<div class="flex-1 min-w-0">
 							<p class="text-sm font-medium {
 								isScenarioCompleted(index)
 									? 'text-gray-500 dark:text-gray-500'
@@ -2520,10 +2596,10 @@ onMount(async () => {
 										: 'text-gray-900 dark:text-white'
 							} line-clamp-2 leading-tight">
 								{customScenarioGenerated && prompt === CUSTOM_SCENARIO_PROMPT && customScenarioPrompt ? customScenarioPrompt : prompt}
-							</p>
+								</p>
+							</div>
 						</div>
-					</div>
-					
+						
 					<div class="mt-2 flex items-center justify-between">
 						{#if selectedScenarioIndex === index}
 							<div class="flex items-center space-x-1 text-xs text-blue-600 dark:text-blue-400">
@@ -2552,9 +2628,9 @@ onMount(async () => {
 				</div>
 				{/if}
 			</div>
-		</button>
-		{/each}
-	</div>
+					</button>
+				{/each}
+			</div>
 
 			<!-- Removed bottom divider and reset area -->
 		</div>
@@ -2566,7 +2642,7 @@ onMount(async () => {
 				<p class="text-sm text-gray-600 dark:text-gray-400">
 					Please the conversation below, and answer the questions that follow.
 				</p>
-		</div>
+			</div>
 
 		<div class="flex-1 overflow-y-auto p-6 space-y-4" bind:this={mainContentContainer}>
 			<!-- Custom Scenario Input (only shown for custom scenario before generation) -->
@@ -2623,7 +2699,7 @@ onMount(async () => {
 					</div>
 				</div>
 			{:else if !isCustomScenario || customScenarioGenerated}
-			<!-- Child Prompt Bubble -->
+				<!-- Child Prompt Bubble -->
 				<div class="flex justify-end">
 					<div class="max-w-[80%] bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm relative select-text"
 						bind:this={promptContainer1}
@@ -2742,8 +2818,8 @@ onMount(async () => {
 								</div>
 							{/if}
 							
-						{#if highlightedTexts1.length > 0 && showOriginal1}
-							<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
+							{#if highlightedTexts1.length > 0 && showOriginal1}
+								<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
 								<div class="flex items-center justify-between mb-1">
 									<p class="text-xs font-semibold text-gray-700 dark:text-gray-300">Highlighted Concerns ({highlightedTexts1.length}):</p>
 									{#if moderationPanelVisible}
@@ -2755,22 +2831,22 @@ onMount(async () => {
 										</button>
 									{/if}
 								</div>
-								<div class="flex flex-wrap gap-1">
-									{#each highlightedTexts1 as highlight}
-										<button
-											class="inline-flex items-center px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-700 text-gray-800 dark:text-gray-100 rounded hover:bg-yellow-200 dark:hover:bg-yellow-600 transition-colors"
-											on:click={() => removeHighlight(highlight)}
-											title="Click to remove"
-										>
-											{highlight.length > 30 ? highlight.substring(0, 30) + '...' : highlight}
-											<svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-											</svg>
-										</button>
-									{/each}
+									<div class="flex flex-wrap gap-1">
+										{#each highlightedTexts1 as highlight}
+											<button
+												class="inline-flex items-center px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-700 text-gray-800 dark:text-gray-100 rounded hover:bg-yellow-200 dark:hover:bg-yellow-600 transition-colors"
+												on:click={() => removeHighlight(highlight)}
+												title="Click to remove"
+											>
+												{highlight.length > 30 ? highlight.substring(0, 30) + '...' : highlight}
+												<svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+												</svg>
+											</button>
+										{/each}
+									</div>
 								</div>
-							</div>
-						{/if}
+							{/if}
 							
 						<!-- Applied Strategies Display (below response) -->
 						{#if versions.length > 0 && !showOriginal1 && !acceptedOriginal && currentVersionIndex >= 0 && currentVersionIndex < versions.length}
@@ -2824,9 +2900,9 @@ onMount(async () => {
 								</button>
 							</div>
 						{/if}
-					</div>
-						{/if}
 						</div>
+						{/if}
+					</div>
 					</div>
 				{/if}
 
@@ -2834,45 +2910,45 @@ onMount(async () => {
 		{#if !hasInitialDecision && (!isCustomScenario || customScenarioGenerated)}
 			<div class="flex justify-center mt-4">
 				<div class="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 w-full max-w-4xl px-4">
-					<button
+						<button
 						on:click={() => {
 							acceptOriginalResponse();
 							// Decision will be saved when acceptOriginalResponse is called
 						}}
-					class="flex-1 px-6 py-4 rounded-lg font-medium transition-all duration-200 bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
-				>
+							class="flex-1 px-6 py-4 rounded-lg font-medium transition-all duration-200 bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+						>
 				<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-				</svg>
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+							</svg>
 				<span>This is OK</span>
-			</button>
+						</button>
 			
-			<button
+						<button
 				on:click={() => {
 					startModerating();
 					// Decision will be saved when moderation is applied
 				}}
-				class="flex-1 px-6 py-4 rounded-lg font-medium transition-all duration-200 bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
-			>
+							class="flex-1 px-6 py-4 rounded-lg font-medium transition-all duration-200 bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+						>
 				<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-				</svg>
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+							</svg>
 				<span>Moderate</span>
-			</button>
+						</button>
 			
-			<button
-				on:click={markNotApplicable}
-				class="flex-1 px-6 py-4 rounded-lg font-medium transition-all duration-200 bg-gray-500 hover:bg-gray-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
-			>
+						<button
+							on:click={markNotApplicable}
+							class="flex-1 px-6 py-4 rounded-lg font-medium transition-all duration-200 bg-gray-500 hover:bg-gray-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+						>
 					<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
-					</svg>
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+							</svg>
 					<span>Skip</span>
-					</button>
+						</button>
+					</div>
 				</div>
-			</div>
-		{/if}
-		
+			{/if}
+
 		<!-- Highlighting Mode Prompt -->
 		{#if highlightingMode}
 			<div class="flex justify-center mt-6">
@@ -2882,7 +2958,7 @@ onMount(async () => {
 							<p class="text-sm font-medium text-blue-900 dark:text-blue-200">
 								If there is any text you would change in the prompt or response, if at all, please highlight it by dragging over it and then selecting "Highlight". If not, click "Done" to continue.
 							</p>
-							<button
+					<button
 								on:click={() => {
 									highlightingMode = false;
 									hasInitialDecision = false;
@@ -2901,10 +2977,63 @@ onMount(async () => {
 						>
 							{#if highlightedTexts1.length > 0}
 								Done ({highlightedTexts1.length} concern{highlightedTexts1.length === 1 ? '' : 's'} highlighted)
-							{:else}
+						{:else}
 								Done (no concerns highlighted)
-							{/if}
-						</button>
+						{/if}
+					</button>
+					</div>
+				</div>
+			</div>
+		{/if}
+
+		<!-- Highlighting Reason Modal -->
+		{#if showHighlightingReasonModal}
+			<div class="flex justify-center mt-6">
+				<div class="w-full max-w-md px-4">
+					<div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+						<div class="mb-4">
+							<h3 class="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-2">
+								Why did you highlight these texts?
+							</h3>
+							<p class="text-xs text-blue-800 dark:text-blue-300 mb-3">
+								Please explain why the text you highlighted concerns you.
+							</p>
+							<textarea
+								bind:value={highlightingReason}
+								placeholder="Enter your explanation here..."
+								class="w-full px-3 py-2 border border-blue-300 dark:border-blue-700 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none text-sm"
+								rows="4"
+								maxlength="1000"
+							></textarea>
+							<div class="flex items-center justify-between mt-2">
+								<span class="text-xs text-blue-700 dark:text-blue-400">
+									{highlightingReason.length}/1000 characters
+								</span>
+							</div>
+						</div>
+						<div class="flex justify-end space-x-3">
+							<button
+								on:click={() => {
+									showHighlightingReasonModal = false;
+									highlightingReason = '';
+									// Return to highlighting mode
+									highlightingMode = true;
+								}}
+								class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200"
+							>
+								<svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+								</svg>
+								<span>Back</span>
+							</button>
+							<button
+								on:click={submitHighlightingReason}
+								disabled={!highlightingReason.trim()}
+								class="px-4 py-2 text-sm font-medium text-white bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors"
+							>
+								Continue
+							</button>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -2943,10 +3072,10 @@ onMount(async () => {
 					</div>
 				</div>
 			{/if}
-		{/if}
+			{/if}
 
-		<!-- Moderation Panel -->
-		{#if moderationPanelVisible}
+				<!-- Moderation Panel -->
+				{#if moderationPanelVisible}
 			<div class="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700" bind:this={moderationPanelElement}>
 					<div class="flex items-center justify-between mb-1">
 						<h3 class="text-sm font-semibold text-gray-900 dark:text-white">Select Moderation Strategies</h3>
@@ -2970,8 +3099,8 @@ onMount(async () => {
 					
 					<p class="text-base text-gray-600 dark:text-gray-400 mb-3">
 						Choose up to <b>3 strategies</b> to improve the AI's response. Click on a group to see its strategies, or hover over each option for details.
-					</p>
-					
+						</p>
+						
 					<!-- Strategy Count -->
 					<div class="flex items-center justify-end mb-3">
 						{#if selectedModerations.size > 0 || attentionCheckSelected}
@@ -3046,27 +3175,27 @@ onMount(async () => {
 							<div class="px-4 pb-4">
 								<div class="grid grid-cols-2 gap-3">
 									{#each options as option}
-										<Tooltip
-											content={moderationTooltips[option] || ''}
-											placement="top-end"
-											className="w-full"
-											tippyOptions={{ delay: [200, 0] }}
-										>
-                                        <button
-                                            on:click={() => toggleModerationSelection(option)}
-                                            disabled={moderationLoading}
+							<Tooltip
+								content={moderationTooltips[option] || ''}
+								placement="top-end"
+								className="w-full"
+								tippyOptions={{ delay: [200, 0] }}
+							>
+								<button
+									on:click={() => toggleModerationSelection(option)}
+									disabled={moderationLoading}
                                             aria-pressed={(option === 'I read the instructions' ? attentionCheckSelected : selectedModerations.has(option))}
                                             class="p-3 text-sm font-medium text-center rounded-lg transition-all min-h-[50px] flex items-center justify-center {
                                                 (option === 'I read the instructions' ? attentionCheckSelected : selectedModerations.has(option))
                                                     ? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400 shadow-lg'
                                                 : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'
-                                            } disabled:opacity-50"
-                                        >
+									} disabled:opacity-50"
+								>
                                             {option}
-                                        </button>
-										</Tooltip>
-									{/each}
-								</div>
+								</button>
+							</Tooltip>
+						{/each}
+					</div>
 							</div>
 						{/if}
 						
@@ -3092,18 +3221,18 @@ onMount(async () => {
 									></textarea>
 									<div class="flex justify-end">
 										<div class="flex space-x-2">
-											<button
+						<button
 												on:click={cancelCustomInput}
 												class="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
 											>
 												Cancel
-											</button>
-											<button
+						</button>
+							<button
 												on:click={addCustomInstruction}
 												class="px-3 py-1.5 text-sm font-medium bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors"
-											>
+							>
 												Add
-											</button>
+							</button>
 										</div>
 									</div>
 								</div>
@@ -3111,9 +3240,9 @@ onMount(async () => {
 						{/if}
 						</div>
 					{/each}
-				</div>
+					</div>
 
-				<!-- Custom Instructions -->
+						<!-- Custom Instructions -->
 						{#if customInstructions.length > 0}
 							<div class="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg mb-3">
 								<h4 class="text-xs font-semibold text-purple-900 dark:text-purple-200 mb-2">
@@ -3178,8 +3307,8 @@ onMount(async () => {
 								<span>Generate New Version</span>
 							{/if}
 						</button>
-				</div>
-			{/if}
+					</div>
+				{/if}
 
 			<!-- Footer with Navigation -->
 			<div class="flex-shrink-0 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
@@ -3199,34 +3328,34 @@ onMount(async () => {
 						<div></div>
 					{/if}
 
-		<!-- Next Scenario or Done Button -->
-		{#if selectedScenarioIndex < scenarioList.length - 1}
-			<button
-				on:click={() => loadScenario(selectedScenarioIndex + 1)}
+					<!-- Next Scenario or Done Button -->
+					{#if selectedScenarioIndex < scenarioList.length - 1}
+						<button
+							on:click={() => loadScenario(selectedScenarioIndex + 1)}
 				class="px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center space-x-2 {
 					currentScenarioCompleted
 						? 'bg-green-500 text-white hover:bg-green-600 shadow-lg hover:shadow-xl'
 						: 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
 				}"
-			>
-				<span>Next</span>
-				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-				</svg>
-			</button>
-			{:else}
+						>
+							<span>Next</span>
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+							</svg>
+						</button>
+					{:else}
 				{#if currentScenarioCompleted}
-					<button
-						on:click={completeModeration}
-						class="px-6 py-2 text-sm font-medium rounded-lg transition-all shadow-lg bg-purple-500 text-white hover:bg-purple-600 flex items-center space-x-2"
-					>
-						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-						</svg>
-						<span>Done</span>
-					</button>
+						<button
+							on:click={completeModeration}
+							class="px-6 py-2 text-sm font-medium rounded-lg transition-all shadow-lg bg-purple-500 text-white hover:bg-purple-600 flex items-center space-x-2"
+						>
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+							</svg>
+							<span>Done</span>
+						</button>
 				{/if}
-			{/if}
+					{/if}
 				</div>
 			</div>
 		</div>

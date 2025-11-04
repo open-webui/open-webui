@@ -23,7 +23,7 @@ class ChildProfile(Base):
     child_age = Column(String, nullable=True)  # Age range (e.g., "5-7", "8-10")
     child_gender = Column(String, nullable=True)  # Gender (e.g., "Male", "Female")
     child_characteristics = Column(Text, nullable=True)  # Personality/interests description
-    parenting_style = Column(String, nullable=True)  # Parenting approach/preferences
+    parenting_style = Column(String, nullable=True)  # Deprecated - kept for backward compatibility, now in exit survey
 
     # Research fields (nullable for backward compatibility)
     is_only_child = Column(Boolean, nullable=True)
@@ -73,7 +73,7 @@ class ChildProfileForm(BaseModel):
     child_age: Optional[str] = None
     child_gender: Optional[str] = None
     child_characteristics: Optional[str] = None
-    parenting_style: Optional[str] = None
+    # parenting_style removed - now collected in exit survey
     is_only_child: Optional[bool] = None
     child_has_ai_use: Optional[str] = None
     child_ai_use_contexts: Optional[list[str]] = None
@@ -96,7 +96,6 @@ class ChildProfileTable:
                     "child_age": form_data.child_age,
                     "child_gender": form_data.child_gender,
                     "child_characteristics": form_data.child_characteristics,
-                    "parenting_style": form_data.parenting_style,
                     "is_only_child": form_data.is_only_child,
                     "child_has_ai_use": form_data.child_has_ai_use,
                     "child_ai_use_contexts": form_data.child_ai_use_contexts,
@@ -152,7 +151,6 @@ class ChildProfileTable:
                 profile.child_age = updated.child_age
                 profile.child_gender = updated.child_gender
                 profile.child_characteristics = updated.child_characteristics
-                profile.parenting_style = updated.parenting_style
                 profile.is_only_child = updated.is_only_child
                 profile.child_has_ai_use = updated.child_has_ai_use
                 profile.child_ai_use_contexts = updated.child_ai_use_contexts
@@ -231,7 +229,6 @@ class ChildProfileTable:
                 child_age=current.child_age,
                 child_gender=current.child_gender,
                 child_characteristics=current.child_characteristics,
-                parenting_style=current.parenting_style,
                 attempt_number=current.attempt_number,
                 is_current=True,
                 session_number=new_session_number,
