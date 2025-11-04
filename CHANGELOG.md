@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔐 Login failures with passwords longer than 72 bytes are resolved by safely truncating oversized passwords for bcrypt compatibility. [#18157](https://github.com/open-webui/open-webui/issues/18157)
 - 🔐 OAuth 2.1 MCP tool connections now automatically re-register clients when stored client IDs become stale, preventing unauthorized_client errors after editing tool endpoints and providing detailed error messages for callback failures. [#18415](https://github.com/open-webui/open-webui/pull/18415), [#18309](https://github.com/open-webui/open-webui/issues/18309)
 - 🔓 OAuth 2.1 discovery, metadata fetching, and dynamic client registration now correctly use HTTP proxy environment variables when trust_env is enabled. [Commit](https://github.com/open-webui/open-webui/commit/bafeb76c411483bd6b135f0edbcdce048120f264)
+- 🔌 MCP server connection failures now display clear error messages in the chat interface instead of silently failing. [#18892](https://github.com/open-webui/open-webui/pull/18892), [#18889](https://github.com/open-webui/open-webui/issues/18889)
 - 💬 Chat titles are now properly generated even when title auto-generation is disabled in interface settings, fixing an issue where chats would remain labeled as "New chat". [#18761](https://github.com/open-webui/open-webui/pull/18761), [#18717](https://github.com/open-webui/open-webui/issues/18717), [#6478](https://github.com/open-webui/open-webui/issues/6478)
 - 🔍 Chat query errors are prevented by properly validating and handling the "order_by" parameter to ensure requested columns exist. [#18400](https://github.com/open-webui/open-webui/pull/18400), [#18452](https://github.com/open-webui/open-webui/pull/18452)
 - 🔧 Root-level max_tokens parameter is no longer dropped when proxying to Ollama, properly converting to num_predict to limit output token length as intended. [#18618](https://github.com/open-webui/open-webui/issues/18618)
@@ -48,10 +49,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📈 Mermaid diagram rendering errors no longer cause UI unavailability or display error messages below the input box. [#18493](https://github.com/open-webui/open-webui/pull/18493), [#18340](https://github.com/open-webui/open-webui/issues/18340)
 - 🔗 Web search SSL verification is now asynchronous, preventing the website from hanging during web search operations. [#18714](https://github.com/open-webui/open-webui/pull/18714), [#18699](https://github.com/open-webui/open-webui/issues/18699)
 - 🌍 Web search results now correctly use HTTP proxy environment variables when WEB_SEARCH_TRUST_ENV is enabled. [#18667](https://github.com/open-webui/open-webui/pull/18667), [#7008](https://github.com/open-webui/open-webui/discussions/7008)
+- 🔍 Google Programmable Search Engine now properly includes referer headers, enabling API keys with HTTP referrer restrictions configured in Google Cloud Console. [#18871](https://github.com/open-webui/open-webui/pull/18871), [#18870](https://github.com/open-webui/open-webui/issues/18870)
 - ⚡ YouTube video transcript fetching now works correctly when using a proxy connection. [#18419](https://github.com/open-webui/open-webui/pull/18419)
 - 🎙️ The "Instant Auto-Send After Voice Transcription" setting now functions correctly and automatically sends transcribed text when enabled. [#18466](https://github.com/open-webui/open-webui/issues/18466)
 - ⚙️ Chat settings now load properly when reopening a tab or starting a new session by initializing defaults when sessionStorage is empty. [#18438](https://github.com/open-webui/open-webui/pull/18438)
 - 🔎 Folder tag search in the sidebar now correctly handles folder names with multiple spaces by replacing all spaces with underscores. [Commit](https://github.com/open-webui/open-webui/commit/a8fe979af68e47e4e4bb3eb76e48d93d60cd2a45)
+- 🛠️ Functions page now updates immediately after deleting a function, removing the need for a manual page reload. [#18912](https://github.com/open-webui/open-webui/pull/18912), [#18908](https://github.com/open-webui/open-webui/issues/18908)
 - 🎯 Globally enabled actions in the model editor now correctly apply as global instead of being treated as disabled. [#18577](https://github.com/open-webui/open-webui/pull/18577)
 - 📋 Clipboard images pasted via the "{{CLIPBOARD}}" prompt variable are now correctly converted to base64 format before being sent to the backend, resolving base64 encoding errors. [#18432](https://github.com/open-webui/open-webui/pull/18432), [#18425](https://github.com/open-webui/open-webui/issues/18425)
 - 📋 File list is now cleared when switching to models that do not support file uploads, preventing files from being sent to incompatible models. [#18496](https://github.com/open-webui/open-webui/pull/18496)
@@ -62,6 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🌐 "Attach Webpage" button now displays with correct disabled styling when a model does not support file uploads. [#18483](https://github.com/open-webui/open-webui/pull/18483)
 - 🎚️ Divider no longer displays in the integrations menu when no integrations are enabled. [#18487](https://github.com/open-webui/open-webui/pull/18487)
 - 📱 Chat controls button is now properly hidden on mobile for users without admin or explicit chat control permissions. [#18641](https://github.com/open-webui/open-webui/pull/18641)
+- 📍 User menu, download submenu, and move submenu are now repositioned to prevent overlap with the Chat Controls sidebar when it is open. [Commit](https://github.com/open-webui/open-webui/commit/414ab51cb6df1ab0d6c85ac6c1f2c5c9a5f8e2aa)
 - 🎯 Artifacts button no longer appears in the chat menu when there are no artifacts to display. [Commit](https://github.com/open-webui/open-webui/commit/ed6449d35f84f68dc75ee5c6b3f4748a3fda0096)
 - 🖌️ Formatting toolbar is no longer hidden under images or code blocks in chat and now displays correctly above all message content.
 - 🎨 Layout shift near system instructions is prevented by properly rendering the chat component when system prompts are empty. [#18594](https://github.com/open-webui/open-webui/pull/18594)
@@ -72,6 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - 🔄 Firecrawl integration was refactored to use the official Firecrawl SDK instead of direct HTTP requests and langchain_community FireCrawlLoader, improving reliability and performance with batch scraping support and enhanced error handling. [#18635](https://github.com/open-webui/open-webui/pull/18635)
+- 🖼️ AUTOMATIC1111 image generation configuration was simplified by consolidating CFG Scale, Sampler, and Scheduler settings into a single "Additional Parameters" JSON field for more flexible configuration. [Commit](https://github.com/open-webui/open-webui/commit/8e5690aab4f632a57027e2acf880b8f89a8717c0)
 - 📄 MinerU content extraction engine now only supports PDF files following the upstream removal of LibreOffice document conversion in version 2.0.0; users needing to process office documents should convert them to PDF format first. [#18448](https://github.com/open-webui/open-webui/issues/18448)
 
 ## [0.6.34] - 2025-10-16
