@@ -360,6 +360,9 @@ class CreateImageForm(BaseModel):
     negative_prompt: Optional[str] = None
 
 
+GenerateImageForm = CreateImageForm  # Alias for backward compatibility
+
+
 def get_image_data(data: str, headers=None):
     try:
         # if data url
