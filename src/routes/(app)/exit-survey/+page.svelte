@@ -4,6 +4,7 @@
 	import { showSidebar } from '$lib/stores';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import { toast } from 'svelte-sonner';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	// Assignment workflow state
 	let assignmentStep: number = 1;
@@ -23,6 +24,21 @@
     // API
     import { createExitQuiz, listExitQuiz } from '$lib/apis/exit-quiz';
     import { childProfileSync } from '$lib/services/childProfileSync';
+// Attention checks
+let acQuestions: Array<{ id: string; prompt: string; options: string[]; correct_option: string }> = [];
+let acResponses: Record<string, string> = {};
+async function loadAttentionChecks() {
+    try {
+        const res = await fetch(`${WEBUI_API_BASE_URL}/attention-checks/questions`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.token || ''}` }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            acQuestions = (data || []).map((q: any) => ({ ...q, options: (q.options || '').split('|') }));
+        }
+    } catch {}
+}
     import { getChildProfiles as apiGetChildProfiles } from '$lib/apis/child-profiles';
     import { user } from '$lib/stores';
     import { get } from 'svelte/store';
@@ -80,6 +96,7 @@ async function resolveChildId(token: string): Promise<string> {
 }
 
 onMount(async () => {
+    await loadAttentionChecks();
     assignmentStep = parseInt(localStorage.getItem('assignmentStep') || '3');
 
     const token = localStorage.token || '';
@@ -224,6 +241,19 @@ onMount(async () => {
 
             // Persist to backend (exit quiz)
             await createExitQuiz(token, { child_id, answers, meta: { page: 'exit-survey' } });
+
+            // Persist attention check responses
+            try {
+                for (const q of acQuestions) {
+                    const r = acResponses[q.id];
+                    if (!r) continue;
+                    await fetch(`${WEBUI_API_BASE_URL}/attention-checks`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({ question_id: q.id, response: r })
+                    });
+                }
+            } catch {}
 			
             // Mark assignment as completed before showing confirmation
 			localStorage.setItem('assignmentStep', '4');
@@ -433,6 +463,25 @@ $: saveDraft();
 				<!-- Editable form -->
 				<div class="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-sm">
 					<form on:submit|preventDefault={submitSurvey} class="space-y-8">
+                        <!-- Attention Checks Block -->
+                        {#if acQuestions.length > 0}
+                            <div class="rounded-md border border-yellow-200 dark:border-yellow-800 p-4 bg-yellow-50/60 dark:bg-yellow-900/20">
+                                <div class="block text-lg font-medium text-gray-900 dark:text-white mb-2">Quality Check</div>
+                                {#each acQuestions as q, qi}
+                                    <div class="mb-4">
+                                        <div class="text-sm font-medium text-gray-900 dark:text-white mb-1">{qi + 1}. {q.prompt} <span class="text-red-500">*</span></div>
+                                        <div class="space-y-1">
+                                            {#each q.options as opt}
+                                                <label class="flex items-center">
+                                                    <input type="radio" bind:group={acResponses[q.id]} value={opt} class="mr-3" required>
+                                                    <span class="text-gray-900 dark:text-white">{opt}</span>
+                                                </label>
+                                            {/each}
+                                        </div>
+                                    </div>
+                                {/each}
+                            </div>
+                        {/if}
 						<!-- GenAI familiarity -->
 						<div>
 							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
