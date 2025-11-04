@@ -5,6 +5,8 @@ from typing import List
 from pathlib import Path
 import re
 from html import escape
+import time
+import logging
 
 """
 This code requires Pango system dependency to run
@@ -16,10 +18,13 @@ class KaTeXCompiler:
     This provides much better support for complex LaTeX expressions compared to matplotlib mathtext.
     """
     
-    def __init__(self):
+    def __init__(self, debug: bool = False):
         self.temp_images = []
         self.node_modules_path = self._find_node_modules()
-    
+        self._cache = {}
+        self._logger = logging.getLogger(__name__)
+        self._debug = debug
+
     def _find_node_modules(self) -> Path:
         """Find the node_modules directory containing KaTeX."""
         # Try different possible locations
@@ -352,6 +357,10 @@ class KaTeXCompiler:
     def render_to_html(self, latex_expr: str, display: bool = False) -> str:
         """Render a LaTeX expression to a KaTeX HTML fragment (no images)."""
         try:
+            # Cache check
+            cache_key = (latex_expr, bool(display))
+            if cache_key in self._cache:
+                return self._cache[cache_key]
             # Ensure Node.js is available
             result = subprocess.run(['node', '--version'], capture_output=True, text=True, timeout=5)
             if result.returncode != 0:
@@ -389,6 +398,7 @@ class KaTeXCompiler:
             with open(script_path, 'w') as f:
                 f.write(script_content)
 
+            t0 = time.perf_counter()
             proc = subprocess.run(
                 ['node', str(script_path)],
                 capture_output=True,
@@ -396,6 +406,7 @@ class KaTeXCompiler:
                 timeout=15,
                 cwd=str(self.node_modules_path.parent)
             )
+            t1 = time.perf_counter()
 
             try:
                 os.unlink(script_path)
@@ -409,9 +420,116 @@ class KaTeXCompiler:
             if not data.get('success'):
                 raise RuntimeError(data.get('error', 'KaTeX render failed'))
 
-            return data['html']
+            html = data['html']
+            self._cache[cache_key] = html
+            if self._debug:
+                self._logger.info(
+                    f"KaTeX: single render display={display} len={len(latex_expr)} took {t1 - t0:.3f}s"
+                )
+            return html
         except Exception as e:
             raise e
+
+    def render_many_to_html(self, items: list[tuple[str, bool]]) -> list[str]:
+        """Batch render multiple LaTeX expressions to KaTeX HTML in a single Node process."""
+        # Prepare results with cache hits filled
+        results: list[str | None] = []
+        to_render = []
+        index_map = []
+        for idx, (expr, display) in enumerate(items):
+            key = (expr, bool(display))
+            if key in self._cache:
+                results.append(self._cache[key])
+            else:
+                results.append(None)
+                index_map.append(idx)
+                to_render.append({"latex": expr, "display": bool(display)})
+
+        if not to_render:
+            # All cached
+            return [r for r in results if r is not None]
+
+        # Ensure Node.js is available
+        chk = subprocess.run(['node', '--version'], capture_output=True, text=True, timeout=5)
+        if chk.returncode != 0:
+            # Fallback: render individually
+            for j, item in zip(index_map, to_render):
+                html = self.render_to_html(item["latex"], item["display"])
+                self._cache[(item["latex"], item["display"])] = html
+                results[j] = html
+            return [r if r is not None else '' for r in results]
+
+        katex_path = str(self.node_modules_path / 'katex')
+        payload = json.dumps(to_render)
+
+        script_lines = [
+            "const katex = require('" + katex_path + "');",
+            "let input = '';",
+            "process.stdin.on('data', c => input += c);",
+            "process.stdin.on('end', () => {",
+            "  try {",
+            "    const items = JSON.parse(input);",
+            "    const out = items.map(it => {",
+            "      try {",
+            "        const html = katex.renderToString(it.latex, {",
+            "          displayMode: !!it.display, throwOnError: false, trust: true, strict: false, output: 'html'",
+            "        });",
+            "        return { success: true, html };",
+            "      } catch (e) {",
+            "        return { success: false, error: e.message };",
+            "      }",
+            "    });",
+            "    process.stdout.write(JSON.stringify(out));",
+            "  } catch (e) {",
+            "    process.stdout.write(JSON.stringify({ fatal: true, error: e.message }));",
+            "  }",
+            "});",
+        ]
+        script_content = "\n".join(script_lines)
+
+        tmp_dir = Path('/tmp')
+        script_path = tmp_dir / 'katex_render_many.cjs'
+        with open(script_path, 'w') as f:
+            f.write(script_content)
+
+        t0 = time.perf_counter()
+        proc = subprocess.run(
+            ['node', str(script_path)],
+            input=payload,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=str(self.node_modules_path.parent)
+        )
+        t1 = time.perf_counter()
+
+        try:
+            os.unlink(script_path)
+        except Exception:
+            pass
+
+        if proc.returncode != 0:
+            raise RuntimeError(proc.stderr or 'KaTeX batch render failed')
+
+        data = json.loads(proc.stdout or '[]')
+        if isinstance(data, dict) and data.get('fatal'):
+            raise RuntimeError(data.get('error', 'KaTeX batch fatal error'))
+        if not isinstance(data, list) or len(data) != len(to_render):
+            raise RuntimeError('KaTeX batch returned unexpected result')
+
+        for idx, item, res in zip(index_map, to_render, data):
+            if not res.get('success'):
+                raise RuntimeError(res.get('error', 'KaTeX render failed'))
+            html = res['html']
+            self._cache[(item["latex"], item["display"])] = html
+            results[idx] = html
+
+        if self._debug:
+            self._logger.info(
+                f"KaTeX: batch render count={len(to_render)} cached={len(items)-len(to_render)} took {t1 - t0:.3f}s payload_len={len(payload)}"
+            )
+
+        return [r if r is not None else '' for r in results]
 
     def cleanup_temp_images(self):
         """Clean up temporary image files."""
