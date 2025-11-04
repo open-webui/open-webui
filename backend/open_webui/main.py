@@ -150,8 +150,12 @@ from open_webui.config import (
     AUDIO_TTS_MODEL,
     AUDIO_TTS_OPENAI_API_BASE_URL,
     AUDIO_TTS_OPENAI_API_KEY,
+    AUDIO_TTS_PORTKEY_API_BASE_URL,
+    AUDIO_TTS_PORTKEY_API_KEY,
     AUDIO_TTS_SPLIT_ON,
     AUDIO_TTS_VOICE,
+    AUDIO_TTS_LANGUAGE,
+    AUDIO_TTS_AUDIO_VOICE,
     AUDIO_TTS_AZURE_SPEECH_REGION,
     AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT,
     AUDIO_STT_PORTKEY_API_BASE_URL,
@@ -832,9 +836,13 @@ app.state.config.DEEPGRAM_API_KEY = DEEPGRAM_API_KEY
 
 app.state.config.TTS_OPENAI_API_BASE_URL = AUDIO_TTS_OPENAI_API_BASE_URL
 app.state.config.TTS_OPENAI_API_KEY = AUDIO_TTS_OPENAI_API_KEY
+app.state.config.TTS_PORTKEY_API_BASE_URL = AUDIO_TTS_PORTKEY_API_BASE_URL
+app.state.config.TTS_PORTKEY_API_KEY = AUDIO_TTS_PORTKEY_API_KEY
 app.state.config.TTS_ENGINE = AUDIO_TTS_ENGINE
 app.state.config.TTS_MODEL = AUDIO_TTS_MODEL
 app.state.config.TTS_VOICE = AUDIO_TTS_VOICE
+app.state.config.TTS_LANGUAGE = AUDIO_TTS_LANGUAGE
+app.state.config.TTS_AUDIO_VOICE = AUDIO_TTS_AUDIO_VOICE
 app.state.config.TTS_API_KEY = AUDIO_TTS_API_KEY
 app.state.config.TTS_SPLIT_ON = AUDIO_TTS_SPLIT_ON
 
@@ -1298,12 +1306,12 @@ async def get_app_config(request: Request):
                 },
                 "audio": {
                     "tts": {
-                        "engine": app.state.config.TTS_ENGINE,
-                        "voice": app.state.config.TTS_VOICE,
-                        "split_on": app.state.config.TTS_SPLIT_ON,
+                        "engine": {"default": app.state.config.TTS_ENGINE.get(user.email)},
+                        "voice": app.state.config.TTS_VOICE.get(user.email),
+                        "split_on": app.state.config.TTS_SPLIT_ON.get(user.email),
                     },
                     "stt": {
-                        "engine": app.state.config.STT_ENGINE,
+                        "engine": {"default": app.state.config.STT_ENGINE.get(user.email)},
                     },
                 },
                 "file": {
