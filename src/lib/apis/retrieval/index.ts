@@ -57,6 +57,14 @@ type RAGConfigForm = {
 	content_extraction?: ContentExtractConfigForm;
 	web_loader_ssl_verification?: boolean;
 	youtube?: YoutubeConfigForm;
+	DOCUMENT_INTELLIGENCE_ENDPOINT?: string | null;
+	DOCUMENT_INTELLIGENCE_KEY?: string | null;
+	DOCUMENT_INTELLIGENCE_MODEL_ID?: string | null;
+	DOCUMENT_INTELLIGENCE_API_VERSION?: string | null;
+	AWS_TEXTRACT_ACCESS_KEY_ID?: string | null;
+	AWS_TEXTRACT_SECRET_ACCESS_KEY?: string | null;
+	AWS_TEXTRACT_SESSION_TOKEN?: string | null;
+	AWS_TEXTRACT_REGION?: string | null;
 };
 
 export const updateRAGConfig = async (token: string, payload: RAGConfigForm) => {

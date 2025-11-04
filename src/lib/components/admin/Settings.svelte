@@ -9,14 +9,15 @@
 	import Database from './Settings/Database.svelte';
 
 	import General from './Settings/General.svelte';
-	import Pipelines from './Settings/Pipelines.svelte';
-	import Audio from './Settings/Audio.svelte';
-	import Images from './Settings/Images.svelte';
-	import Interface from './Settings/Interface.svelte';
-	import Models from './Settings/Models.svelte';
-	import Connections from './Settings/Connections.svelte';
-	import Documents from './Settings/Documents.svelte';
-	import WebSearch from './Settings/WebSearch.svelte';
+import Pipelines from './Settings/Pipelines.svelte';
+import Audio from './Settings/Audio.svelte';
+import Images from './Settings/Images.svelte';
+import Interface from './Settings/Interface.svelte';
+import Models from './Settings/Models.svelte';
+import Connections from './Settings/Connections.svelte';
+import Documents from './Settings/Documents.svelte';
+import WebSearch from './Settings/WebSearch.svelte';
+import Enterprise from './Settings/Enterprise.svelte';
 
 	import ChartBar from '../icons/ChartBar.svelte';
 	import DocumentChartBar from '../icons/DocumentChartBar.svelte';
@@ -33,23 +34,24 @@
 		const pathParts = $page.url.pathname.split('/');
 		const tabFromPath = pathParts[pathParts.length - 1];
 		selectedTab = [
-			'general',
-			'connections',
-			'models',
-			'evaluations',
-			'tools',
-			'documents',
-			'web',
-			'code-execution',
-			'interface',
-			'audio',
-			'images',
-			'pipelines',
-			'db'
-		].includes(tabFromPath)
-			? tabFromPath
-			: 'general';
-	}
+		'general',
+		'connections',
+		'models',
+		'evaluations',
+		'tools',
+		'documents',
+		'enterprise',
+		'web',
+		'code-execution',
+		'interface',
+		'audio',
+		'images',
+		'pipelines',
+		'db'
+	].includes(tabFromPath)
+		? tabFromPath
+		: 'general';
+}
 
 	$: if (selectedTab) {
 		// scroll to selectedTab
@@ -236,10 +238,26 @@
 				</svg>
 			</div>
 			<div class=" self-center">{$i18n.t('Documents')}</div>
-		</button>
+	</button>
 
-		<button
-			id="web"
+	<button
+		id="enterprise"
+		class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+		'enterprise'
+			? ''
+			: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+		on:click={() => {
+			goto('/admin/settings/enterprise');
+		}}
+	>
+		<div class=" self-center mr-2">
+			<ChartBar className="w-4 h-4" />
+		</div>
+		<div class=" self-center">{$i18n.t('Enterprise')}</div>
+	</button>
+
+	<button
+		id="web"
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 			'web'
 				? ''
@@ -457,17 +475,26 @@
 			<Evaluations />
 		{:else if selectedTab === 'tools'}
 			<Tools />
-		{:else if selectedTab === 'documents'}
-			<Documents
-				on:save={async () => {
-					toast.success($i18n.t('Settings saved successfully!'));
+	{:else if selectedTab === 'documents'}
+		<Documents
+			on:save={async () => {
+				toast.success($i18n.t('Settings saved successfully!'));
 
-					await tick();
-					await config.set(await getBackendConfig());
-				}}
-			/>
-		{:else if selectedTab === 'web'}
-			<WebSearch
+				await tick();
+				await config.set(await getBackendConfig());
+			}}
+		/>
+	{:else if selectedTab === 'enterprise'}
+		<Enterprise
+			on:save={async () => {
+				toast.success($i18n.t('Settings saved successfully!'));
+
+				await tick();
+				await config.set(await getBackendConfig());
+			}}
+		/>
+	{:else if selectedTab === 'web'}
+		<WebSearch
 				saveHandler={async () => {
 					toast.success($i18n.t('Settings saved successfully!'));
 
