@@ -513,25 +513,20 @@ async def lifespan(app: FastAPI):
         if fonts_src.exists():
             try:
                 os.makedirs(fonts_dst, exist_ok=True)
-                # Only copy TTF files 
-                ttf_count = 0
+                copied_count = 0
                 for name in os.listdir(fonts_src):
-                    if name.endswith('.ttf'):
-                        s = fonts_src / name
-                        d = fonts_dst / name
-                        if not d.exists():
-                            shutil.copy2(s, d)
-                            ttf_count += 1
-                if ttf_count > 0:
-                    log.info(f"Copied {ttf_count} KaTeX TTF fonts to {fonts_dst}")
-                elif fonts_dst.exists() and len(list(fonts_dst.glob('*.ttf'))) > 0:
-                    log.debug(f"KaTeX TTF fonts already present in {fonts_dst}")
-                else:
-                    log.warning(f"No KaTeX TTF fonts found in {fonts_src} or copied to {fonts_dst}")
+                    s = fonts_src / name
+                    d = fonts_dst / name
+                    if not d.exists():
+                        shutil.copy2(s, d)
+                        copied_count += 1
+                if copied_count > 0:
+                    log.info(f"Copied {copied_count} KaTeX fonts to {fonts_dst}")
             except Exception as e:
-                log.warning(f"Failed to copy KaTeX TTF fonts from node_modules: {e}")
+                log.warning(f"Failed to copy KaTeX fonts from node_modules: {e}")
     except Exception as e:
         log.debug(f"KaTeX font cache init failed: {e}")
+        
     yield
 
 
