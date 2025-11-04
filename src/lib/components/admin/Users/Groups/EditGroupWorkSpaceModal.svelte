@@ -10,9 +10,6 @@
 	import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
 
 	import { getModels, updateModelById as updateModel } from '$lib/apis/models';
-	import { getKnowledgeBases } from '$lib/apis/knowledge'; 
-	import { getPrompts } from '$lib/apis/prompts';
-	import { getTools } from '$lib/apis/tools'; 
 	import { updateGroupById, getGroupById } from '$lib/apis/groups';
 	import { updateModelById, toggleModelById } from '$lib/apis/models';
 
@@ -22,15 +19,13 @@
 
 	// All available items from APIs
 	let allModels = [];
-	let allKnowledge = [];
-	let allPrompts = [];
-	let allTools = [];
 
 	let selectedTab = 'models';
 	let searchQuery = '';
 	let loading = false;
 	let initialized = false;
 	let resourcesLoaded = false;
+	let showUnassigned = false; // Control collapse state for unassigned items
 
 	// Model editor state
 	let showModelEditor = false;
@@ -38,96 +33,52 @@
 
 	// Selected items for each category - store complete objects
 	let selectedModels = [];
-	let selectedKnowledge = [];
-	let selectedPrompts = [];
-	let selectedTools = [];
 
 	// Store just IDs for comparison
 	let selectedModelIds = [];
-	let selectedKnowledgeIds = [];
-	let selectedPromptIds = [];
-	let selectedToolIds = [];
 
 	// Full group data
 	let fullGroup = null;
 
 	const tabs = [
-		{ id: 'models', label: 'Models' },
-		{ id: 'knowledge', label: 'Knowledge' },
-		{ id: 'prompts', label: 'Prompts' },
-		{ id: 'tools', label: 'Tools' }
+		{ id: 'models', label: 'Models' }
 	];
 
-	// Reactive current data based on selected tab
-	$: currentData = (() => {
+	// Reactive assigned items (items that have access to this group)
+	$: assignedData = (() => {
 		if (!group?.id) return [];
 		
-		switch (selectedTab) {
-			case 'models':
-				return allModels.filter(model => 
-					model.access_control?.read?.group_ids?.includes(group.id)
-				);
-			case 'knowledge':
-				return allKnowledge.filter(kb => 
-					kb.access_control?.read?.group_ids?.includes(group.id)
-				);
-			case 'prompts':
-				return allPrompts.filter(prompt => 
-					prompt.access_control?.read?.group_ids?.includes(group.id)
-				);
-			case 'tools':
-				return allTools.filter(tool => 
-					tool.access_control?.read?.group_ids?.includes(group.id)
-				);
-			default:
-				return [];
-		}
+		return allModels.filter(model => 
+			model.access_control?.read?.group_ids?.includes(group.id)
+		);
 	})();
+
+	// Reactive unassigned items (items that don't have access to this group)
+	$: unassignedData = (() => {
+		if (!group?.id) return [];
+		
+		return allModels.filter(model => 
+			!model.access_control?.read?.group_ids?.includes(group.id)
+		);
+	})();
+
+	// Combine for backwards compatibility
+	$: currentData = [...assignedData, ...unassignedData];
 
 	// Reactive total count based on selected tab (filtered by group)
 	$: totalCount = (() => {
 		if (!group?.id) return 0;
 		
-		switch (selectedTab) {
-			case 'models':
-				return allModels.filter(model => 
-					model.access_control?.read?.group_ids?.includes(group.id)
-				).length;
-			case 'knowledge':
-				return allKnowledge.filter(kb => 
-					kb.access_control?.read?.group_ids?.includes(group.id)
-				).length;
-			case 'prompts':
-				return allPrompts.filter(prompt => 
-					prompt.access_control?.read?.group_ids?.includes(group.id)
-				).length;
-			case 'tools':
-				return allTools.filter(tool => 
-					tool.access_control?.read?.group_ids?.includes(group.id)
-				).length;
-			default:
-				return 0;
-		}
+		return allModels.filter(model => 
+			model.access_control?.read?.group_ids?.includes(group.id)
+		).length;
 	})();
 
 	// Reactive current selected IDs based on selected tab
-	$: currentSelected = (() => {
-		switch (selectedTab) {
-			case 'models':
-				return selectedModelIds;
-			case 'knowledge':
-				return selectedKnowledgeIds;
-			case 'prompts':
-				return selectedPromptIds;
-			case 'tools':
-				return selectedToolIds;
-			default:
-				return [];
-		}
-	})();
+	$: currentSelected = selectedModelIds;
 
-	// Reactive filtered data
-	$: filteredData = currentData.filter((item) => {
+	// Reactive filtered data - separate for assigned and unassigned
+	$: filteredAssignedData = assignedData.filter((item) => {
 		const searchLower = searchQuery.toLowerCase();
 		return (
 			item.name?.toLowerCase().includes(searchLower) ||
@@ -139,47 +90,31 @@
 		);
 	});
 
+	$: filteredUnassignedData = unassignedData.filter((item) => {
+		const searchLower = searchQuery.toLowerCase();
+		return (
+			item.name?.toLowerCase().includes(searchLower) ||
+			item.title?.toLowerCase().includes(searchLower) ||
+			item.command?.toLowerCase().includes(searchLower) ||
+			item.description?.toLowerCase().includes(searchLower) ||
+			item.meta?.description?.toLowerCase().includes(searchLower) ||
+			item.id?.toLowerCase().includes(searchLower)
+		);
+	});
+
+	// Combine for backwards compatibility
+	$: filteredData = [...filteredAssignedData, ...filteredUnassignedData];
+
 	const toggleItem = (itemId) => {
 		const item = currentData.find(i => i.id === itemId);
 		if (!item) return;
 
-		switch (selectedTab) {
-			case 'models':
-				if (selectedModelIds.includes(itemId)) {
-					selectedModelIds = selectedModelIds.filter((id) => id !== itemId);
-					selectedModels = selectedModels.filter((m) => m.id !== itemId);
-				} else {
-					selectedModelIds = [...selectedModelIds, itemId];
-					selectedModels = [...selectedModels, item];
-				}
-				break;
-			case 'knowledge':
-				if (selectedKnowledgeIds.includes(itemId)) {
-					selectedKnowledgeIds = selectedKnowledgeIds.filter((id) => id !== itemId);
-					selectedKnowledge = selectedKnowledge.filter((k) => k.id !== itemId);
-				} else {
-					selectedKnowledgeIds = [...selectedKnowledgeIds, itemId];
-					selectedKnowledge = [...selectedKnowledge, item];
-				}
-				break;
-			case 'prompts':
-				if (selectedPromptIds.includes(itemId)) {
-					selectedPromptIds = selectedPromptIds.filter((id) => id !== itemId);
-					selectedPrompts = selectedPrompts.filter((p) => p.id !== itemId);
-				} else {
-					selectedPromptIds = [...selectedPromptIds, itemId];
-					selectedPrompts = [...selectedPrompts, item];
-				}
-				break;
-			case 'tools':
-				if (selectedToolIds.includes(itemId)) {
-					selectedToolIds = selectedToolIds.filter((id) => id !== itemId);
-					selectedTools = selectedTools.filter((t) => t.id !== itemId);
-				} else {
-					selectedToolIds = [...selectedToolIds, itemId];
-					selectedTools = [...selectedTools, item];
-				}
-				break;
+		if (selectedModelIds.includes(itemId)) {
+			selectedModelIds = selectedModelIds.filter((id) => id !== itemId);
+			selectedModels = selectedModels.filter((m) => m.id !== itemId);
+		} else {
+			selectedModelIds = [...selectedModelIds, itemId];
+			selectedModels = [...selectedModels, item];
 		}
 	};
 
@@ -230,10 +165,7 @@
 			await updateGroupById(localStorage.token, group.id, {
 				...fullGroup,
 				workspace: {
-					models: selectedModelIds, // Only the models user selected
-					knowledge: selectedKnowledgeIds,
-					prompts: selectedPromptIds,
-					tools: selectedToolIds
+					models: selectedModelIds // Only the models user selected
 				}
 			});
 
@@ -267,21 +199,6 @@
 			);
 			selectedModelIds = selectedModels.map(model => model.id);
 			
-			selectedKnowledge = allKnowledge.filter(kb => 
-				kb.access_control?.read?.group_ids?.includes(group.id)
-			);
-			selectedKnowledgeIds = selectedKnowledge.map(kb => kb.id);
-			
-			selectedPrompts = allPrompts.filter(prompt => 
-				prompt.access_control?.read?.group_ids?.includes(group.id)
-			);
-			selectedPromptIds = selectedPrompts.map(prompt => prompt.id);
-			
-			selectedTools = allTools.filter(tool => 
-				tool.access_control?.read?.group_ids?.includes(group.id)
-			);
-			selectedToolIds = selectedTools.map(tool => tool.id);
-			
 			initialized = true;
 		} catch (error) {
 			console.error('Error loading group:', error);
@@ -298,13 +215,7 @@
 		// Reset state when modal closes
 		initialized = false;
 		selectedModels = [];
-		selectedKnowledge = [];
-		selectedPrompts = [];
-		selectedTools = [];
 		selectedModelIds = [];
-		selectedKnowledgeIds = [];
-		selectedPromptIds = [];
-		selectedToolIds = [];
 		fullGroup = null;
 		searchQuery = '';
 		selectedTab = 'models';
@@ -317,9 +228,6 @@
 		
 		try {
 			allModels = await getModels(localStorage.token);
-			allKnowledge = await getKnowledgeBases(localStorage.token);
-			allPrompts = await getPrompts(localStorage.token);
-			allTools = await getTools(localStorage.token);
 			
 			resourcesLoaded = true;
 		} catch (error) {
@@ -377,46 +285,6 @@
 					{:else}
 						<div class="flex flex-col lg:flex-row w-full h-full pb-2 lg:space-x-4">
 							<!-- Sidebar Tabs -->
-							<div
-								class="tabs flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-40 dark:text-gray-200 text-sm font-medium text-left scrollbar-none"
-							>
-								{#each tabs as tab}
-									<button
-										class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
-										tab.id
-											? 'text-[#57068c] dark:text-white'
-											: 'text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'}"
-										on:click={() => {
-											selectedTab = tab.id;
-											searchQuery = '';
-										}}
-										type="button"
-									>
-										<div class="self-center mr-2">
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 16 16"
-												fill="currentColor"
-												class="w-4 h-4"
-											>
-												<path
-													fill-rule="evenodd"
-													d="M6.955 1.45A.5.5 0 0 1 7.452 1h1.096a.5.5 0 0 1 .497.45l.17 1.699c.484.12.94.312 1.356.562l1.321-1.081a.5.5 0 0 1 .67.033l.774.775a.5.5 0 0 1 .034.67l-1.08 1.32c.25.417.44.873.561 1.357l1.699.17a.5.5 0 0 1 .45.497v1.096a.5.5 0 0 1-.45.497l-1.699.17c-.12.484-.312.94-.562 1.356l1.082 1.322a.5.5 0 0 1-.034.67l-.774.774a.5.5 0 0 1-.67.033l-1.322-1.08c-.416.25-.872.44-1.356.561l-.17 1.699a.5.5 0 0 1-.497.45H7.452a.5.5 0 0 1-.497-.45l-.17-1.699a4.973 4.973 0 0 1-1.356-.562L4.108 13.37a.5.5 0 0 1-.67-.033l-.774-.775a.5.5 0 0 1-.034-.67l1.08-1.32a4.971 4.971 0 0 1-.561-1.357l-1.699-.17A.5.5 0 0 1 1 8.548V7.452a.5.5 0 0 1 .45-.497l1.699-.17c.12-.484.312-.94.562-1.356L2.629 4.107a.5.5 0 0 1 .034-.67l.774-.774a.5.5 0 0 1 .67-.033L5.43 3.71a4.97 4.97 0 0 1 1.356-.561l.17-1.699ZM6 8c0 .538.212 1.026.558 1.385l.057.057a2 2 0 0 0 2.828-2.828l-.058-.056A2 2 0 0 0 6 8Z"
-													clip-rule="evenodd"
-												/>
-											</svg>
-										</div>
-										<div class="self-center">
-											{$i18n.t(tab.label)}
-											({tab.id === 'models' ? allModels.filter(m => m.access_control?.read?.group_ids?.includes(group.id)).length : 
-											  tab.id === 'knowledge' ? allKnowledge.filter(k => k.access_control?.read?.group_ids?.includes(group.id)).length : 
-											  tab.id === 'prompts' ? allPrompts.filter(p => p.access_control?.read?.group_ids?.includes(group.id)).length : 
-											  allTools.filter(t => t.access_control?.read?.group_ids?.includes(group.id)).length})
-										</div>
-									</button>
-								{/each}
-							</div>
-
 							<!-- Content Area -->
 							<div
 								class="flex-1 mt-1 lg:mt-1 lg:h-[22rem] lg:max-h-[22rem] overflow-y-auto scrollbar-hidden"
@@ -430,16 +298,23 @@
 										<input
 											class="w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 											bind:value={searchQuery}
-											placeholder={$i18n.t('Search {{tab}}', { tab: selectedTab })}
+											placeholder={$i18n.t('Search models')}
 										/>
 									</div>
 								</div>
 
 								<!-- Items List -->
-								<div class="gap-2 grid lg:grid-cols-1">
-									{#each filteredData as item}
-										{@const isSelected = currentSelected.includes(item.id)}
-										{@const itemName = item.name || item.title}
+								<div class="flex flex-col gap-3">
+									<!-- Assigned Items Section -->
+									{#if filteredAssignedData.length > 0}
+										<div>
+											<div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 px-1">
+												{$i18n.t('Assigned')} ({filteredAssignedData.length})
+											</div>
+											<div class="gap-2 grid lg:grid-cols-1">
+												{#each filteredAssignedData as item}
+													{@const isSelected = currentSelected.includes(item.id)}
+													{@const itemName = item.name || item.title}
 										
 										{#if selectedTab === 'models'}
 											<!-- Model Card Display -->
@@ -542,223 +417,216 @@
 													</div>
 												</div>
 											</div>
-										{:else if selectedTab === 'knowledge'}
-											<!-- Knowledge Base Display -->
-											<div
-												class="flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition {isSelected ? 'bg-black/5 dark:bg-white/5' : ''}"
-												on:click={() => toggleItem(item.id)}
-												on:keydown={(e) => {
-													if (e.key === 'Enter' || e.key === ' ') {
-														toggleItem(item.id);
-													}
-												}}
-												role="button"
-												tabindex="0"
-											>
-												<div class="w-full">
-													<div class="flex justify-between items-start">
-														<div class="flex-1 min-w-0">
-															<div class="font-semibold line-clamp-1">{itemName}</div>
-															<div class="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
-																{item.description || ''}
-															</div>
-															{#if item.user}
-																<div class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-																	{$i18n.t('By {{name}}', { name: item.user.name || item.user.email })}
-																</div>
-															{/if}
-														</div>
-
-														<!-- Delete Button -->
-														<div class="flex-shrink-0">
-															<Tooltip content={isSelected ? $i18n.t('Remove') : $i18n.t('Add')}>
-																<button
-																	class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-																	type="button"
-																	on:click|stopPropagation={() => toggleItem(item.id)}
-																>
-																	{#if isSelected}
-																		<svg
-																			xmlns="http://www.w3.org/2000/svg"
-																			viewBox="0 0 16 16"
-																			fill="currentColor"
-																			class="w-4 h-4"
-																		>
-																			<path
-																				d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
-																			/>
-																		</svg>
-																	{:else}
-																		<svg
-																			xmlns="http://www.w3.org/2000/svg"
-																			viewBox="0 0 16 16"
-																			fill="currentColor"
-																			class="w-4 h-4"
-																		>
-																			<path
-																				d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
-																			/>
-																		</svg>
-																	{/if}
-																</button>
-															</Tooltip>
-														</div>
-													</div>
-												</div>
-											</div>
-										{:else if selectedTab === 'prompts'}
-											<!-- Prompt Display -->
-											<div
-												class="flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition {isSelected ? 'bg-black/5 dark:bg-white/5' : ''}"
-												on:click={() => toggleItem(item.id)}
-												on:keydown={(e) => {
-													if (e.key === 'Enter' || e.key === ' ') {
-														toggleItem(item.id);
-													}
-												}}
-												role="button"
-												tabindex="0"
-											>
-												<div class="w-full">
-													<div class="flex justify-between items-start">
-														<div class="flex-1 min-w-0">
-															<div class="font-semibold text-sm line-clamp-1 capitalize">
-																{itemName}
-																{#if item.command}
-																	<span class="text-gray-500 text-xs font-normal ml-1">
-																		/{item.command}
-																	</span>
-																{/if}
-															</div>
-															{#if item.user}
-																<div class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-																	{$i18n.t('By {{name}}', { name: item.user.name || item.user.email })}
-																</div>
-															{/if}
-														</div>
-
-														<!-- Delete Button -->
-														<div class="flex-shrink-0">
-															<Tooltip content={isSelected ? $i18n.t('Remove') : $i18n.t('Add')}>
-																<button
-																	class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-																	type="button"
-																	on:click|stopPropagation={() => toggleItem(item.id)}
-																>
-																	{#if isSelected}
-																		<svg
-																			xmlns="http://www.w3.org/2000/svg"
-																			viewBox="0 0 16 16"
-																			fill="currentColor"
-																			class="w-4 h-4"
-																		>
-																			<path
-																				d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
-																			/>
-																		</svg>
-																	{:else}
-																		<svg
-																			xmlns="http://www.w3.org/2000/svg"
-																			viewBox="0 0 16 16"
-																			fill="currentColor"
-																			class="w-4 h-4"
-																		>
-																			<path
-																				d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
-																			/>
-																		</svg>
-																	{/if}
-																</button>
-															</Tooltip>
-														</div>
-													</div>
-												</div>
-											</div>
-										{:else if selectedTab === 'tools'}
-											<!-- Tool Display -->
-											<div
-												class="flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition {isSelected ? 'bg-black/5 dark:bg-white/5' : ''}"
-												on:click={() => toggleItem(item.id)}
-												on:keydown={(e) => {
-													if (e.key === 'Enter' || e.key === ' ') {
-														toggleItem(item.id);
-													}
-												}}
-												role="button"
-												tabindex="0"
-											>
-												<div class="w-full">
-													<div class="flex justify-between items-start">
-														<div class="flex-1 min-w-0">
-															<div class="font-semibold flex items-center gap-1.5">
-																<div
-																	class="text-xs font-bold px-1 rounded-sm uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
-																>
-																	TOOL
-																</div>
-																<div class="line-clamp-1">
-																	{itemName}
-																	<span class="text-gray-500 text-xs font-medium">{item.id}</span>
-																</div>
-															</div>
-															<div class="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">
-																{item.meta?.description || item.description || ''}
-															</div>
-															{#if item.user}
-																<div class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-																	{$i18n.t('By {{name}}', { name: item.user.name || item.user.email })}
-																</div>
-															{/if}
-														</div>
-
-														<!-- Delete Button -->
-														<div class="flex-shrink-0">
-															<Tooltip content={isSelected ? $i18n.t('Remove') : $i18n.t('Add')}>
-																<button
-																	class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-																	type="button"
-																	on:click|stopPropagation={() => toggleItem(item.id)}
-																>
-																	{#if isSelected}
-																		<svg
-																			xmlns="http://www.w3.org/2000/svg"
-																			viewBox="0 0 16 16"
-																			fill="currentColor"
-																			class="w-4 h-4"
-																		>
-																			<path
-																				d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
-																			/>
-																		</svg>
-																	{:else}
-																		<svg
-																			xmlns="http://www.w3.org/2000/svg"
-																			viewBox="0 0 16 16"
-																			fill="currentColor"
-																			class="w-4 h-4"
-																		>
-																			<path
-																				d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
-																			/>
-																		</svg>
-																	{/if}
-																</button>
-															</Tooltip>
-														</div>
-													</div>
-												</div>
-											</div>
 										{/if}
-									{:else}
-										<div class="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">
-											{searchQuery
-												? $i18n.t('No {{tab}} found matching search', { tab: selectedTab })
-												: $i18n.t('No {{tab}} available', { tab: selectedTab })}
-										</div>
 									{/each}
 								</div>
 							</div>
-						</div>
+						{:else}
+							<div class="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">
+								{searchQuery
+									? $i18n.t('No assigned models found matching search')
+									: $i18n.t('No assigned models')}
+							</div>
+						{/if}
+
+						<!-- All Other Items Section (Collapsible) -->
+						{#if filteredUnassignedData.length > 0}
+							<div class="mt-4">
+								<button
+									type="button"
+									on:click={() => showUnassigned = !showUnassigned}
+									class="w-full flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 px-1 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition"
+								>
+									<span>{$i18n.t('All Other models')} ({filteredUnassignedData.length})</span>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 20 20"
+										fill="currentColor"
+										class="w-5 h-5 transition-transform {showUnassigned ? 'rotate-180' : ''}"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+								</button>
+								
+								{#if showUnassigned}
+									<div class="gap-2 grid lg:grid-cols-1">
+										{#each filteredUnassignedData as item}
+											{@const isSelected = currentSelected.includes(item.id)}
+											{@const itemName = item.name || item.title}
+											
+											{#if selectedTab === 'models'}
+												<!-- Model Card Display -->
+												<div
+													class="flex flex-col cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
+													on:click={() => toggleItem(item.id)}
+													on:keydown={(e) => {
+														if (e.key === 'Enter' || e.key === ' ') {
+															toggleItem(item.id);
+														}
+													}}
+													role="button"
+													tabindex="0"
+												>
+													<div class="flex gap-4 mt-0.5 mb-0.5">
+														<!-- Model Avatar -->
+														<div class="w-[44px]">
+															<div class="rounded-full object-cover {item.is_active ? '' : 'opacity-50 dark:opacity-50'}">
+																<img
+																	src={item?.meta?.profile_image_url ?? '/static/favicon.png'}
+																	alt="model profile"
+																	class="rounded-full w-full h-auto object-cover"
+																/>
+															</div>
+														</div>
+														
+														<!-- Model Info -->
+														<div class="flex-1 self-center {item.is_active ? '' : 'text-gray-500'}">
+															<Tooltip
+																content={item?.meta?.description ?? item.id}
+																className="w-fit"
+																placement="top-start"
+															>
+																<div class="font-semibold line-clamp-1">{itemName}</div>
+															</Tooltip>
+
+															<div class="flex gap-1 text-xs overflow-hidden">
+																<div class="line-clamp-1">
+																	{#if (item?.meta?.description ?? '').trim()}
+																		{item?.meta?.description}
+																	{:else}
+																		{item.id}
+																	{/if}
+																</div>
+															</div>
+														</div>
+														
+														<!-- Action Buttons -->
+														<div class="flex flex-row gap-0.5 items-center">
+															<!-- Edit Button -->
+															<Tooltip content={$i18n.t('Edit')}>
+																<button
+																	class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+																	type="button"
+																	on:click|stopPropagation={() => {
+																		editingModel = item;
+																		showModelEditor = true;
+																	}}
+																>
+																	<svg
+																		xmlns="http://www.w3.org/2000/svg"
+																		fill="none"
+																		viewBox="0 0 24 24"
+																		stroke-width="1.5"
+																		stroke="currentColor"
+																		class="w-4 h-4"
+																	>
+																		<path
+																			stroke-linecap="round"
+																			stroke-linejoin="round"
+																			d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+																		/>
+																	</svg>
+																</button>
+															</Tooltip>
+
+															<!-- Add to Group Button -->
+															<Tooltip content={$i18n.t('Add to group')}>
+																<button
+																	class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+																	type="button"
+																	on:click|stopPropagation={async () => {
+																		// Get current access control or create default
+																		const currentAccessControl = item.access_control || {
+																			read: { group_ids: [], user_ids: [] },
+																			write: { group_ids: [], user_ids: [] }
+																		};
+
+																		// Add current group to read access if not already there
+																		if (!currentAccessControl.read.group_ids.includes(group.id)) {
+																			currentAccessControl.read.group_ids = [
+																				...currentAccessControl.read.group_ids,
+																				group.id
+																			];
+
+																			// Update the model with the complete object, following ModelEditor pattern
+																			const result = await updateModelById(localStorage.token, item.id, {
+																				...item,
+																				access_control: currentAccessControl
+																			});
+
+																			if (result) {
+																				toast.success($i18n.t('Model added to group'));
+																				// Refresh the models list to update the UI
+																				allModels = await getModels(localStorage.token);
+																				// Re-initialize to update the selected items
+																				await init();
+																			}
+																		} else {
+																			toast.info($i18n.t('Model already in group'));
+																		}
+																	}}
+																>
+																	<svg
+																		xmlns="http://www.w3.org/2000/svg"
+																		fill="none"
+																		viewBox="0 0 24 24"
+																		stroke-width="2"
+																		stroke="currentColor"
+																		class="w-4 h-4"
+																	>
+																		<path
+																			stroke-linecap="round"
+																			stroke-linejoin="round"
+																			d="M12 4.5v15m7.5-7.5h-15"
+																		/>
+																	</svg>
+																</button>
+															</Tooltip>
+
+															<!-- Enable/Disable Toggle -->
+															<div class="ml-1" on:click|stopPropagation on:keydown|stopPropagation role="button" tabindex="-1">
+																<Tooltip content={item.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
+																	<Switch
+																		bind:state={item.is_active}
+																		on:change={async (e) => {
+																			e.stopPropagation();
+																			await toggleModelById(localStorage.token, item.id);
+																			// Refresh the models list
+																			allModels = await getModels(localStorage.token);
+																		}}
+																	/>
+																</Tooltip>
+															</div>
+														</div>
+													</div>
+
+													<!-- Model Footer -->
+													<div class="flex justify-between items-center -mb-0.5 px-0.5">
+														<div class="text-xs mt-0.5">
+															<Tooltip
+																content={item?.user?.email ?? $i18n.t('Deleted User')}
+																className="flex shrink-0"
+																placement="top-start"
+															>
+																<div class="shrink-0 text-gray-500">
+																	{$i18n.t('By {{name}}', { 
+																		name: item?.user?.name || item?.user?.email || $i18n.t('Unknown') 
+																	})}
+																</div>
+															</Tooltip>
+														</div>
+													</div>
+												</div>
+											{/if}
+										{/each}
+									</div>
+								{/if}
+							</div>
+						{/if}
 
 						<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
 							<button
@@ -799,6 +667,9 @@
 								{/if}
 							</button>
 						</div>
+					</div>
+				</div>
+			</div>
 					{/if}
 				</form>
 			</div>
