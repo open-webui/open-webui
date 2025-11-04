@@ -55,9 +55,46 @@
 	let groupedModels = {};
 
 	$: if (models && groups) {
-		filteredModels = models.filter(
-			(m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase())
-		);
+		// Process models: filter by search and clean up group arrays
+		filteredModels = models
+			.map((m) => {
+				// Clone the model to avoid mutating the original
+				const cleanedModel = { ...m };
+				
+				// If user owns the model, keep all groups
+				if (m.user_id === $user?.id) {
+					return cleanedModel;
+				}
+				
+				// Clean up the group_ids to only include groups the admin can see
+				const groupIds = m?.access_control?.read?.group_ids;
+				if (groupIds && Array.isArray(groupIds) && groupIds.length > 0) {
+					const visibleGroupIds = groupIds.filter((gid) => group_ids.includes(gid));
+					
+					// If no visible groups remain, filter out this model (admin shouldn't see it)
+					if (visibleGroupIds.length === 0) {
+						return null; // Mark for filtering
+					}
+					
+					// Update the model with only visible groups
+					cleanedModel.access_control = {
+						...cleanedModel.access_control,
+						read: {
+							...cleanedModel.access_control.read,
+							group_ids: visibleGroupIds
+						}
+					};
+				}
+				
+				return cleanedModel;
+			})
+			.filter((m) => {
+				// Remove null entries (models that should be hidden)
+				if (m === null) return false;
+				
+				// Apply search filter
+				return searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase());
+			});
 		
 		// Group filtered models
 		groupedModels = groupModelsByCategory(filteredModels);
@@ -72,22 +109,24 @@
 			// Get the group/category from model metadata
 			const groupIds = model?.access_control?.read?.group_ids;
 			
-			// If model has group_ids, add it to each group
+			// If model has group_ids (after cleaning), add it to each group
 			if (groupIds && Array.isArray(groupIds) && groupIds.length > 0) {
 				groupIds.forEach((groupId) => {
 					// Find the group name from the groups array
 					const group = groups.find(g => g.id === groupId);
-					console.log(groups.map(g => g.id));
 					
-					const groupName = group ? group.name : groupId; // Fallback to ID if name not found
-					
-					if (!groupsMap[groupName]) {
-						groupsMap[groupName] = [];
+					// Only add if group exists in admin's visible groups
+					if (group) {
+						const groupName = group.name;
+						
+						if (!groupsMap[groupName]) {
+							groupsMap[groupName] = [];
+						}
+						groupsMap[groupName].push(model);
 					}
-					groupsMap[groupName].push(model);
 				});
 			} else {
-				// If no group_ids, add to Uncategorized
+				// If no group_ids (or empty after cleaning), add to Uncategorized
 				if (!groupsMap['Uncategorized']) {
 					groupsMap['Uncategorized'] = [];
 				}
@@ -436,6 +475,7 @@
 																	($settings?.directConnections ?? null)
 															)
 														);
+														models = await getWorkspaceModels(localStorage.token);
 													}}
 												/>
 											</Tooltip>
