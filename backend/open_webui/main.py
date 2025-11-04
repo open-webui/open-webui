@@ -336,6 +336,7 @@ from open_webui.env import (
     RESET_CONFIG_ON_START,
     OFFLINE_MODE,
 )
+from open_webui.utils.katex_compiler import KaTeXCompiler
 
 
 from open_webui.utils.models import (
@@ -504,6 +505,37 @@ async def lifespan(app: FastAPI):
     ensure_tool_created_by_column()
     ensure_function_created_by_column()
     ensure_chat_group_id_column()
+    # Cache KaTeX TTF fonts locally once on startup 
+    try:
+        compiler = KaTeXCompiler()
+        node_katex_dist = compiler.node_modules_path / 'katex' / 'dist'
+        target_dir = STATIC_DIR / 'assets' / 'katex'
+        os.makedirs(target_dir, exist_ok=True)
+        fonts_src = node_katex_dist / 'fonts'
+        fonts_dst = target_dir / 'fonts'
+
+        if fonts_src.exists():
+            try:
+                os.makedirs(fonts_dst, exist_ok=True)
+                # Only copy TTF files 
+                ttf_count = 0
+                for name in os.listdir(fonts_src):
+                    if name.endswith('.ttf'):
+                        s = fonts_src / name
+                        d = fonts_dst / name
+                        if not d.exists():
+                            shutil.copy2(s, d)
+                            ttf_count += 1
+                if ttf_count > 0:
+                    log.info(f"Copied {ttf_count} KaTeX TTF fonts to {fonts_dst}")
+                elif fonts_dst.exists() and len(list(fonts_dst.glob('*.ttf'))) > 0:
+                    log.debug(f"KaTeX TTF fonts already present in {fonts_dst}")
+                else:
+                    log.warning(f"No KaTeX TTF fonts found in {fonts_src} or copied to {fonts_dst}")
+            except Exception as e:
+                log.warning(f"Failed to copy KaTeX TTF fonts from node_modules: {e}")
+    except Exception as e:
+        log.debug(f"KaTeX font cache init failed: {e}")
     yield
 
 
