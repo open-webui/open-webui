@@ -143,7 +143,6 @@
 								: ''}
 						className="w-full"
 					>
-						<!-- Remove unsupported functionality for TSI
 						<DropdownMenu.Item
 							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl {!fileUploadEnabled
 								? 'opacity-50'
@@ -158,7 +157,6 @@
 
 							<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
 						</DropdownMenu.Item>
-					-->
 					</Tooltip>
 
 					<Tooltip

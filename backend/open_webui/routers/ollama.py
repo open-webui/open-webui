@@ -1354,6 +1354,22 @@ class GenerateChatCompletionForm(BaseModel):
     )
 
 
+def is_running_in_container():
+
+    # Check for boot-time environment variable
+    if os.getenv("IS_CONTAINER", "false").lower() == "true":
+        return True
+
+    # Common heuristic: check for the existence of /.dockerenv or cgroup info
+    if os.path.exists("/.dockerenv"):
+        return True
+    try:
+        with open("/proc/1/cgroup", "rt") as f:
+            return "docker" in f.read() or "containerd" in f.read()
+    except Exception:
+        return False
+
+
 async def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = None):
     if url_idx is None:
         models = request.app.state.OLLAMA_MODELS
@@ -1373,9 +1389,11 @@ async def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = 
     except Exception:
         target_value = None
 
-    if str(target_value).lower() == "native":
+    if is_running_in_container():
         url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
-    if (
+    elif str(target_value).lower() == "native":
+        url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
+    elif (
         target_value == None
         or str(target_value).lower() == "cpu"
         or str(target_value).lower() == "opu"
