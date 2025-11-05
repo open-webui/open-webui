@@ -878,7 +878,7 @@ def transcription_handler(request, file_path, metadata):
         try:
             # Use voxtral-mini-latest as the default model for transcription
             model = request.app.state.config.STT_MODEL or "voxtral-mini-latest"
-            
+
             log.info(
                 f"Mistral STT - model: {model}, "
                 f"method: {'chat_completions' if use_chat_completions else 'transcriptions'}"
@@ -888,7 +888,7 @@ def transcription_handler(request, file_path, metadata):
                 # Use chat completions API with audio input
                 # This method requires mp3 or wav format
                 audio_file_to_use = file_path
-                
+
                 if is_audio_conversion_required(file_path):
                     log.debug("Converting audio to mp3 for chat completions API")
                     converted_path = convert_audio_to_mp3(file_path)
@@ -900,21 +900,21 @@ def transcription_handler(request, file_path, metadata):
                             status_code=500,
                             detail="Audio conversion failed. Chat completions API requires mp3 or wav format.",
                         )
-                
+
                 # Read and encode audio file as base64
                 with open(audio_file_to_use, "rb") as audio_file:
-                    audio_base64 = base64.b64encode(audio_file.read()).decode('utf-8')
-                
+                    audio_base64 = base64.b64encode(audio_file.read()).decode("utf-8")
+
                 # Prepare chat completions request
                 url = f"{api_base_url}/chat/completions"
-                
+
                 # Add language instruction if specified
                 language = metadata.get("language", None) if metadata else None
                 if language:
                     text_instruction = f"Transcribe this audio exactly as spoken in {language}. Do not translate it."
                 else:
                     text_instruction = "Transcribe this audio exactly as spoken in its original language. Do not translate it to another language."
-                
+
                 payload = {
                     "model": model,
                     "messages": [
@@ -925,15 +925,12 @@ def transcription_handler(request, file_path, metadata):
                                     "type": "input_audio",
                                     "input_audio": audio_base64,
                                 },
-                                {
-                                    "type": "text",
-                                    "text": text_instruction
-                                }
-                            ]
+                                {"type": "text", "text": text_instruction},
+                            ],
                         }
-                    ]
+                    ],
                 }
-                
+
                 r = requests.post(
                     url=url,
                     json=payload,
@@ -942,17 +939,22 @@ def transcription_handler(request, file_path, metadata):
                         "Content-Type": "application/json",
                     },
                 )
-                
+
                 r.raise_for_status()
                 response = r.json()
-                
+
                 # Extract transcript from chat completion response
-                transcript = response.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+                transcript = (
+                    response.get("choices", [{}])[0]
+                    .get("message", {})
+                    .get("content", "")
+                    .strip()
+                )
                 if not transcript:
                     raise ValueError("Empty transcript in response")
-                
+
                 data = {"text": transcript}
-                
+
             else:
                 # Use dedicated transcriptions API
                 url = f"{api_base_url}/audio/transcriptions"
@@ -971,7 +973,7 @@ def transcription_handler(request, file_path, metadata):
                     language = metadata.get("language", None) if metadata else None
                     if language:
                         data_form["language"] = language
-                    
+
                     r = requests.post(
                         url=url,
                         files=files,
@@ -980,7 +982,7 @@ def transcription_handler(request, file_path, metadata):
                             "Authorization": f"Bearer {api_key}",
                         },
                     )
-                
+
                 r.raise_for_status()
                 response = r.json()
 
