@@ -212,10 +212,16 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 		const formatParentingStyle = (style: string) => {
 			if (!style) return 'Not answered';
 			const styles: Record<string, string> = {
-				'authoritative': 'Authoritative',
-				'authoritarian': 'Authoritarian',
-				'permissive': 'Permissive',
-				'neglectful': 'Neglectful / Uninvolved'
+				'A': 'I set clear rules and follow through, but I explain my reasons, listen to my child\'s point of view, and encourage independence.',
+				'B': 'I set strict rules and expect obedience; I rarely negotiate and use firm consequences when rules aren\'t followed.',
+				'C': 'I\'m warm and supportive with few rules or demands; my child mostly sets their own routines and limits.',
+				'D': 'I give my child a lot of freedom and usually take a hands-off approach unless safety or basic needs require me to step in.',
+				'E': 'None of these fits me / It depends on the situation.',
+				// Legacy values for backward compatibility
+				'authoritative': 'I set clear rules and follow through, but I explain my reasons, listen to my child\'s point of view, and encourage independence.',
+				'authoritarian': 'I set strict rules and expect obedience; I rarely negotiate and use firm consequences when rules aren\'t followed.',
+				'permissive': 'I\'m warm and supportive with few rules or demands; my child mostly sets their own routines and limits.',
+				'neglectful': 'I give my child a lot of freedom and usually take a hands-off approach unless safety or basic needs require me to step in.'
 			};
 			return styles[style] || style;
 		};

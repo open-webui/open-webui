@@ -2983,7 +2983,7 @@ onMount(async () => {
 					</button>
 					</div>
 				</div>
-			</div>
+				</div>
 		{/if}
 
 		<!-- Highlighting Reason Modal -->

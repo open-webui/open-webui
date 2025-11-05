@@ -440,22 +440,14 @@ $: saveDraft();
 						<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Parenting Style</div>
 						<p class="text-gray-900 dark:text-white">
 							{surveyResponses.parentingStyle 
-								? (surveyResponses.parentingStyle === 'authoritative' ? 'Authoritative' :
-								   surveyResponses.parentingStyle === 'authoritarian' ? 'Authoritarian' :
-								   surveyResponses.parentingStyle === 'permissive' ? 'Permissive' :
-								   surveyResponses.parentingStyle === 'neglectful' ? 'Neglectful / Uninvolved' :
+								? (surveyResponses.parentingStyle === 'A' ? 'I set clear rules and follow through, but I explain my reasons, listen to my child\'s point of view, and encourage independence.' :
+								   surveyResponses.parentingStyle === 'B' ? 'I set strict rules and expect obedience; I rarely negotiate and use firm consequences when rules aren\'t followed.' :
+								   surveyResponses.parentingStyle === 'C' ? 'I\'m warm and supportive with few rules or demands; my child mostly sets their own routines and limits.' :
+								   surveyResponses.parentingStyle === 'D' ? 'I give my child a lot of freedom and usually take a hands-off approach unless safety or basic needs require me to step in.' :
+								   surveyResponses.parentingStyle === 'E' ? 'None of these fits me / It depends on the situation.' :
 								   surveyResponses.parentingStyle)
 								: 'Not specified'}
 						</p>
-						{#if surveyResponses.parentingStyle}
-							<p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-								{surveyResponses.parentingStyle === 'authoritative' ? 'Warm, responsive, sets clear rules. Encourages independence with guidance.' :
-								 surveyResponses.parentingStyle === 'authoritarian' ? 'Strict, controlling, values obedience. Limited warmth, uses punishment.' :
-								 surveyResponses.parentingStyle === 'permissive' ? 'Warm and indulgent, few demands or rules. Children regulate themselves.' :
-								 surveyResponses.parentingStyle === 'neglectful' ? 'Uninvolved, indifferent. Lacks both responsiveness and structure.' :
-								 ''}
-							</p>
-						{/if}
 					</div>
 					</div>
 				</div>
@@ -689,51 +681,57 @@ $: saveDraft();
 						<!-- Question 8: Parenting Style -->
 						<div>
 							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
-								8. What is your parenting style? <span class="text-red-500">*</span>
+								8. Which description best matches your typical approach to day-to-day parenting? (Choose the closest fit.) <span class="text-red-500">*</span>
 							</div>
 							<div class="space-y-3">
 								<label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors {
-									surveyResponses.parentingStyle === 'authoritative' 
+									surveyResponses.parentingStyle === 'A' 
 										? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
 										: 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
 								}">
-									<input type="radio" bind:group={surveyResponses.parentingStyle} value="authoritative" class="mt-1 mr-3" />
+									<input type="radio" bind:group={surveyResponses.parentingStyle} value="A" class="mt-1 mr-3" />
 									<div>
-										<div class="font-semibold text-gray-900 dark:text-white">Authoritative</div>
-										<div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Warm, responsive, sets clear rules. Encourages independence with guidance.</div>
+										<div class="font-semibold text-gray-900 dark:text-white">I set clear rules and follow through, but I explain my reasons, listen to my child's point of view, and encourage independence.</div>
 									</div>
 								</label>
 								<label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors {
-									surveyResponses.parentingStyle === 'authoritarian' 
+									surveyResponses.parentingStyle === 'B' 
 										? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
 										: 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
 								}">
-									<input type="radio" bind:group={surveyResponses.parentingStyle} value="authoritarian" class="mt-1 mr-3" />
+									<input type="radio" bind:group={surveyResponses.parentingStyle} value="B" class="mt-1 mr-3" />
 									<div>
-										<div class="font-semibold text-gray-900 dark:text-white">Authoritarian</div>
-										<div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Strict, controlling, values obedience. Limited warmth, uses punishment.</div>
+										<div class="font-semibold text-gray-900 dark:text-white">I set strict rules and expect obedience; I rarely negotiate and use firm consequences when rules aren't followed.</div>
 									</div>
 								</label>
 								<label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors {
-									surveyResponses.parentingStyle === 'permissive' 
+									surveyResponses.parentingStyle === 'C' 
 										? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
 										: 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
 								}">
-									<input type="radio" bind:group={surveyResponses.parentingStyle} value="permissive" class="mt-1 mr-3" />
+									<input type="radio" bind:group={surveyResponses.parentingStyle} value="C" class="mt-1 mr-3" />
 									<div>
-										<div class="font-semibold text-gray-900 dark:text-white">Permissive</div>
-										<div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Warm and indulgent, few demands or rules. Children regulate themselves.</div>
+										<div class="font-semibold text-gray-900 dark:text-white">I'm warm and supportive with few rules or demands; my child mostly sets their own routines and limits.</div>
 									</div>
 								</label>
 								<label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors {
-									surveyResponses.parentingStyle === 'neglectful' 
+									surveyResponses.parentingStyle === 'D' 
 										? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
 										: 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
 								}">
-									<input type="radio" bind:group={surveyResponses.parentingStyle} value="neglectful" class="mt-1 mr-3" />
+									<input type="radio" bind:group={surveyResponses.parentingStyle} value="D" class="mt-1 mr-3" />
 									<div>
-										<div class="font-semibold text-gray-900 dark:text-white">Neglectful / Uninvolved</div>
-										<div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Uninvolved, indifferent. Lacks both responsiveness and structure.</div>
+										<div class="font-semibold text-gray-900 dark:text-white">I give my child a lot of freedom and usually take a hands-off approach unless safety or basic needs require me to step in.</div>
+									</div>
+								</label>
+								<label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors {
+									surveyResponses.parentingStyle === 'E' 
+										? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+										: 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+								}">
+									<input type="radio" bind:group={surveyResponses.parentingStyle} value="E" class="mt-1 mr-3" />
+									<div>
+										<div class="font-semibold text-gray-900 dark:text-white">None of these fits me / It depends on the situation.</div>
 									</div>
 								</label>
 							</div>
