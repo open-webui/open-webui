@@ -14,10 +14,7 @@ import { getAllUsers } from '$lib/apis/users';
 	let loading = false;
  let error: string = '';
 
-	// Panel states
-	let showChildProfiles = true;
-	let showModerationSessions = true;
-	let showExitQuizResponses = true;
+
 
 	// State for expanded dropdowns/accordions
 	let expandedScenarios: Record<string, boolean> = {};
@@ -255,6 +252,85 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 		const key = `${userId}::${childId}::${sessionNumber}`;
 		return submissionsData.session_activity_totals[key] || 0;
 	};
+
+	const getAssignmentTime = (userId: string, childId: string, attemptNumber: number) => {
+		if (!submissionsData?.assignment_time_totals) return 0;
+		const key = `${userId}::${childId}::${attemptNumber}`;
+		return submissionsData.assignment_time_totals[key] || 0;
+	};
+
+	const getTotalSessionAssignmentTime = (sessionNumber: number) => {
+		if (!submissionsData?.assignment_time_totals) return 0;
+		let total = 0;
+		// Sum all assignment times for this session across all children
+		for (const [key, ms] of Object.entries(submissionsData.assignment_time_totals)) {
+			const [userId, childId, attempt] = key.split('::');
+			if (Number(attempt) === sessionNumber) {
+				total += ms;
+			}
+		}
+		return total;
+	};
+
+	const getSessionAssignmentTimeByChild = (sessionNumber: number) => {
+		if (!submissionsData?.assignment_time_totals) return {};
+		const byChild: Record<string, number> = {};
+		for (const [key, ms] of Object.entries(submissionsData.assignment_time_totals)) {
+			const [userId, childId, attempt] = key.split('::');
+			if (Number(attempt) === sessionNumber) {
+				byChild[childId] = ms;
+			}
+		}
+		return byChild;
+	};
+
+	const groupAllDataBySession = () => {
+		if (!submissionsData) return [];
+		
+		// Get all unique session numbers from moderation sessions
+		const sessionNumbers = new Set<number>();
+		submissionsData.moderation_sessions.forEach(s => {
+			const sn = getSessionNumber(s);
+			if (Number.isFinite(sn)) sessionNumbers.add(sn);
+		});
+		
+		// Also check child profiles and exit quiz for session numbers
+		submissionsData.child_profiles.forEach(p => {
+			if (p.session_number) sessionNumbers.add(Number(p.session_number));
+		});
+		
+		// Sort sessions descending (latest first)
+		const sortedSessions = Array.from(sessionNumbers).sort((a, b) => b - a);
+		
+		return sortedSessions.map(sessionNum => {
+			// Get child profiles for this session
+			const childProfiles = submissionsData.child_profiles.filter(
+				p => Number(p.session_number) === sessionNum
+			);
+			
+			// Get moderation sessions for this session
+			const moderationSessions = submissionsData.moderation_sessions.filter(
+				s => getSessionNumber(s) === sessionNum
+			);
+			
+			// Get exit quiz responses for this session (match by child_id and attempt_number)
+			const exitQuizResponses = submissionsData.exit_quiz_responses.filter(
+				r => {
+					// Match if the child profile exists in this session and attempt matches
+					return childProfiles.some(p => 
+						p.id === r.child_id && Number(r.attempt_number) === sessionNum
+					);
+				}
+			);
+			
+			return {
+				session_number: sessionNum,
+				child_profiles: childProfiles,
+				moderation_sessions: moderationSessions,
+				exit_quiz_responses: exitQuizResponses
+			};
+		});
+	};
 </script>
 
 <svelte:head>
@@ -337,26 +413,54 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 				</div>
 			</div>
 
-			<!-- Child Profiles Panel -->
-			<div class="mb-6">
-				<button
-					on:click={() => showChildProfiles = !showChildProfiles}
-					class="w-full flex items-center justify-between p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-				>
-					<h2 class="text-lg font-semibold text-gray-900 dark:text-white">
-						Child Profiles ({submissionsData.child_profiles.length})
-					</h2>
-					<span class="text-gray-500 dark:text-gray-400">
-						{showChildProfiles ? '▼' : '▶'}
-					</span>
-				</button>
-				
-				{#if showChildProfiles}
-					<div class="mt-2 space-y-4">
-						{#if submissionsData.child_profiles.length === 0}
-							<p class="text-gray-500 dark:text-gray-400 italic">No child profiles found</p>
-						{:else}
-							{#each submissionsData.child_profiles as profile}
+			<!-- Sessions Grouped View -->
+			<div class="space-y-6">
+				{#each groupAllDataBySession() as sessionData}
+					{@const totalAssignmentTime = getTotalSessionAssignmentTime(sessionData.session_number)}
+					{@const assignmentTimeByChild = getSessionAssignmentTimeByChild(sessionData.session_number)}
+					
+					<div class="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+						<!-- Session Header -->
+						<div class="px-6 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 border-b border-gray-300 dark:border-gray-600">
+							<div class="flex items-center justify-between">
+								<h2 class="text-xl font-bold text-gray-900 dark:text-white">
+									Session {sessionData.session_number}
+								</h2>
+								<div class="flex items-center gap-3">
+									<!-- Total Assignment Time Badge -->
+									<div class="px-3 py-1.5 bg-blue-100 dark:bg-blue-900 rounded-lg">
+										<span class="text-xs font-semibold text-blue-800 dark:text-blue-200">
+											Total Assignment Time: {formatTimeSpent(totalAssignmentTime)}
+										</span>
+									</div>
+								</div>
+							</div>
+							
+							<!-- Per-Child Assignment Time Breakdown -->
+							{#if Object.keys(assignmentTimeByChild).length > 0}
+								<div class="mt-3 flex flex-wrap gap-2">
+									{#each Object.entries(assignmentTimeByChild) as [childId, ms]}
+										{@const childProfile = sessionData.child_profiles.find(p => p.id === childId)}
+										<span class="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded">
+											{childProfile?.name || childId}: {formatTimeSpent(ms)}
+										</span>
+									{/each}
+								</div>
+							{/if}
+						</div>
+						
+						<!-- Session Content -->
+						<div class="p-6 space-y-6">
+							<!-- Child Profiles in this session -->
+							<div>
+								<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+									Child Profiles ({sessionData.child_profiles.length})
+								</h3>
+								{#if sessionData.child_profiles.length === 0}
+									<p class="text-gray-500 dark:text-gray-400 italic">No child profiles in this session</p>
+								{:else}
+									<div class="space-y-3">
+										{#each sessionData.child_profiles as profile}
 								<div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
 									<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 										<div>
@@ -412,42 +516,22 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 									</div>
 								</div>
 							{/each}
-						{/if}
-					</div>
-				{/if}
-			</div>
-
-			<!-- Moderation Sessions Panel (supports multi-session) -->
-			<div class="mb-6">
-				<button
-					on:click={() => showModerationSessions = !showModerationSessions}
-					class="w-full flex items-center justify-between p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-				>
-					<h2 class="text-lg font-semibold text-gray-900 dark:text-white">
-						Moderation Sessions ({submissionsData.moderation_sessions.length})
-					</h2>
-					<span class="text-gray-500 dark:text-gray-400">
-						{showModerationSessions ? '▼' : '▶'}
-					</span>
-				</button>
-				{#if showModerationSessions}
-					<div class="mt-2 space-y-3">
-						{#if submissionsData.moderation_sessions.length === 0}
-							<p class="text-gray-500 dark:text-gray-400 italic">No moderation sessions found</p>
-						{:else}
-							{#each groupModerationBySession(submissionsData.moderation_sessions) as sessionBlock}
-								<div class="border border-gray-200 dark:border-gray-700 rounded-lg">
-									<div class="px-4 py-2 bg-gray-50 dark:bg-gray-800 rounded-t-lg flex items-center justify-between">
-										<div class="flex items-center gap-2">
-											<span class="text-sm text-gray-600 dark:text-gray-300">Session</span>
-											<span class="px-2 py-0.5 text-xs rounded bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">{sessionBlock.session_number}</span>
-										</div>
-										<div class="text-xs text-gray-500 dark:text-gray-400">{sessionBlock.items.length} rows</div>
 									</div>
-									<div class="p-3 space-y-4">
-										{#each groupWithinSessionByChild(sessionBlock.items, submissionsData.child_profiles) as childGroup}
+								{/if}
+							</div>
+							
+							<!-- Moderation Sessions in this session -->
+							<div>
+								<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+									Moderation Scenarios ({sessionData.moderation_sessions.length})
+								</h3>
+								{#if sessionData.moderation_sessions.length === 0}
+									<p class="text-gray-500 dark:text-gray-400 italic">No moderation sessions</p>
+								{:else}
+									<div class="mt-2 space-y-4">
+										{#each groupWithinSessionByChild(sessionData.moderation_sessions, sessionData.child_profiles) as childGroup}
 											{@const attnStats = getAttentionCheckStats(childGroup.scenarios)}
-											{@const timeSpent = getSessionTime(submissionsData.user_info.id, childGroup.child_id, sessionBlock.session_number)}
+											{@const timeSpent = getSessionTime(submissionsData.user_info.id, childGroup.child_id, sessionData.session_number)}
 											<div class="rounded border border-gray-200 dark:border-gray-700">
 												<div class="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 flex items-center justify-between">
 													<div class="flex items-center gap-2">
@@ -628,34 +712,20 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 												</div>
 											</div>
 										{/each}
-								</div>
+									</div>
+								{/if}
 							</div>
-						{/each}
-						{/if}
-					</div>
-				{/if}
-			</div>
-
-			<!-- Exit Quiz Responses Panel -->
-			<div class="mb-6">
-				<button
-					on:click={() => showExitQuizResponses = !showExitQuizResponses}
-					class="w-full flex items-center justify-between p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-				>
-					<h2 class="text-lg font-semibold text-gray-900 dark:text-white">
-						Exit Quiz Responses ({submissionsData.exit_quiz_responses.length})
-					</h2>
-					<span class="text-gray-500 dark:text-gray-400">
-						{showExitQuizResponses ? '▼' : '▶'}
-					</span>
-				</button>
-				
-				{#if showExitQuizResponses}
-					<div class="mt-2 space-y-4">
-						{#if submissionsData.exit_quiz_responses.length === 0}
-							<p class="text-gray-500 dark:text-gray-400 italic">No exit quiz responses found</p>
-						{:else}
-							{#each submissionsData.exit_quiz_responses as response}
+							
+							<!-- Exit Quiz Responses in this session -->
+							<div>
+								<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+									Exit Quiz Responses ({sessionData.exit_quiz_responses.length})
+								</h3>
+								{#if sessionData.exit_quiz_responses.length === 0}
+									<p class="text-gray-500 dark:text-gray-400 italic">No exit quiz responses</p>
+								{:else}
+									<div class="space-y-3">
+										{#each sessionData.exit_quiz_responses as response}
 								{@const parsed = parseExitQuizAnswers(response.answers)}
 								<div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
 									<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -709,10 +779,13 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 										</div>
 									{/if}
 								</div>
-							{/each}
-						{/if}
+										{/each}
+									</div>
+								{/if}
+							</div>
+						</div>
 					</div>
-				{/if}
+				{/each}
 			</div>
 		{/if}
 	</div>

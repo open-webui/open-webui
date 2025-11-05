@@ -43,8 +43,6 @@ async function loadAttentionChecks() {
     } catch {}
 }
     import { getChildProfiles as apiGetChildProfiles } from '$lib/apis/child-profiles';
-    import { user } from '$lib/stores';
-    import { get } from 'svelte/store';
 
 	// Save/Edit pattern state
 	let isSaved: boolean = false;
