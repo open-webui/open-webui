@@ -1541,21 +1541,14 @@ function cancelReset() {}
 	
 	function finishHighlighting() {
 		highlightingMode = false;
-		// If highlights exist, show modal asking for reason
-		if (highlightedTexts1.length > 0) {
-			showHighlightingReasonModal = true;
-		} else {
-			// No highlights, proceed directly to moderation panel
-			moderationPanelVisible = true;
-			moderationPanelExpanded = false;
-			expandedGroups.clear();
-		}
+		// Always show modal asking for moderation reason
+		showHighlightingReasonModal = true;
 	}
 	
 	async function submitHighlightingReason() {
 		// Validate that reason is not empty
 		if (!highlightingReason.trim()) {
-			toast.error('Please provide an explanation for why you highlighted these texts');
+			toast.error('Please provide an explanation for what you want to moderate about this interaction');
 			return;
 		}
 		
@@ -1596,10 +1589,10 @@ function cancelReset() {}
 			moderationPanelExpanded = false;
 			expandedGroups.clear();
 			
-			toast.success('Highlighting reason saved');
+			toast.success('Moderation reason saved');
 		} catch (e) {
-			console.error('Failed to save highlighting reason', e);
-			toast.error('Failed to save highlighting reason. Please try again.');
+			console.error('Failed to save moderation reason', e);
+			toast.error('Failed to save moderation reason. Please try again.');
 		}
 	}
 	
@@ -3007,12 +3000,9 @@ onMount(async () => {
 				<div class="w-full max-w-md px-4">
 					<div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
 						<div class="mb-4">
-							<h3 class="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-2">
-								Why did you highlight these texts?
+							<h3 class="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-3">
+								What do you want to moderate about this interaction?
 							</h3>
-							<p class="text-xs text-blue-800 dark:text-blue-300 mb-3">
-								Please explain why the text you highlighted concerns you.
-							</p>
 							<textarea
 								bind:value={highlightingReason}
 								placeholder="Enter your explanation here..."
