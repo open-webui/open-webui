@@ -131,6 +131,11 @@ def get_config_value(config_path: str):
         "oauth.client_id": "oauth.oidc.client_id",
         "oauth.client_secret": "oauth.oidc.client_secret",
         "oauth.provider_url": "oauth.oidc.provider_url",
+        "oauth.provider_name": "oauth.oidc.provider_name",
+        "oauth.groups_claim": "oauth.oidc.groups_claim",
+        "oauth.timeout": "oauth.oidc.oauth_timeout",
+        "oauth.token_endpoint_auth_method": "oauth.oidc.token_endpoint_auth_method",
+        "oauth.sub_claim": "oauth.oidc.sub_claim",
     }
 
     def _traverse_path(path_str: str, config_data: dict):
@@ -370,12 +375,6 @@ OAUTH_CLIENT_SECRET = PersistentConfig(
     os.environ.get("OAUTH_CLIENT_SECRET", ""),
 )
 
-OAUTH_PROVIDER_NAME = PersistentConfig(
-    "OAUTH_PROVIDER_NAME",
-    "oauth.provider_name",
-    os.environ.get("OAUTH_PROVIDER_NAME", "SSO"),
-)
-
 OPENID_PROVIDER_URL = PersistentConfig(
     "OPENID_PROVIDER_URL",
     "oauth.provider_url",
@@ -501,13 +500,13 @@ OAUTH_SCOPES = PersistentConfig(
 
 OAUTH_TIMEOUT = PersistentConfig(
     "OAUTH_TIMEOUT",
-    "oauth.oidc.oauth_timeout",
+    "oauth.timeout",
     os.environ.get("OAUTH_TIMEOUT", ""),
 )
 
 OAUTH_TOKEN_ENDPOINT_AUTH_METHOD = PersistentConfig(
     "OAUTH_TOKEN_ENDPOINT_AUTH_METHOD",
-    "oauth.oidc.token_endpoint_auth_method",
+    "oauth.token_endpoint_auth_method",
     os.environ.get("OAUTH_TOKEN_ENDPOINT_AUTH_METHOD", None),
 )
 
@@ -519,13 +518,13 @@ OAUTH_CODE_CHALLENGE_METHOD = PersistentConfig(
 
 OAUTH_PROVIDER_NAME = PersistentConfig(
     "OAUTH_PROVIDER_NAME",
-    "oauth.oidc.provider_name",
+    "oauth.provider_name",
     os.environ.get("OAUTH_PROVIDER_NAME", "SSO"),
 )
 
 OAUTH_SUB_CLAIM = PersistentConfig(
     "OAUTH_SUB_CLAIM",
-    "oauth.oidc.sub_claim",
+    "oauth.sub_claim",
     os.environ.get("OAUTH_SUB_CLAIM", None),
 )
 
@@ -550,7 +549,7 @@ OAUTH_EMAIL_CLAIM = PersistentConfig(
 
 OAUTH_GROUPS_CLAIM = PersistentConfig(
     "OAUTH_GROUPS_CLAIM",
-    "oauth.oidc.groups_claim",
+    "oauth.groups_claim",
     os.environ.get("OAUTH_GROUPS_CLAIM", "groups"),
 )
 

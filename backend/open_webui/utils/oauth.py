@@ -660,6 +660,26 @@ class OAuthManager:
             client = provider_config["register"](self.oauth)
             self._clients[name] = client
 
+    def reload_providers(self):
+        """Reload OAuth providers from the updated OAUTH_PROVIDERS configuration."""
+        log.info("Reloading OAuth providers...")
+        self._clients.clear()
+
+        # Create a new OAuth instance to clear authlib's internal cache
+        self.oauth = OAuth()
+
+        for name, provider_config in OAUTH_PROVIDERS.items():
+            if "register" not in provider_config:
+                log.error(f"OAuth provider {name} missing register function")
+                continue
+
+            try:
+                client = provider_config["register"](self.oauth)
+                self._clients[name] = client
+                log.info(f"Reloaded OAuth provider: {name}")
+            except Exception as e:
+                log.error(f"Failed to reload OAuth provider {name}: {e}")
+
     def get_client(self, provider_name):
         if provider_name not in self._clients:
             self._clients[provider_name] = self.oauth.create_client(provider_name)

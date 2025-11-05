@@ -37,6 +37,7 @@ from fastapi import (
     applications,
     BackgroundTasks,
 )
+from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.docs import get_swagger_ui_html
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -122,8 +123,10 @@ from open_webui.config import (
     OAUTH_GROUPS_CLAIM,
     OAUTH_CLIENT_ID,
     OAUTH_CLIENT_SECRET,
+    OAUTH_CODE_CHALLENGE_METHOD,
     OAUTH_PROVIDER_NAME,
     OPENID_PROVIDER_URL,
+    OPENID_REDIRECT_URI,
     OAUTH_ALLOWED_DOMAINS,
     # OpenAI
     ENABLE_OPENAI_API,
@@ -694,8 +697,10 @@ app.state.OPENAI_MODELS = {}
 
 app.state.config.OAUTH_CLIENT_ID = OAUTH_CLIENT_ID
 app.state.config.OAUTH_CLIENT_SECRET = OAUTH_CLIENT_SECRET
+app.state.config.OAUTH_CODE_CHALLENGE_METHOD = OAUTH_CODE_CHALLENGE_METHOD
 app.state.config.OAUTH_PROVIDER_NAME = OAUTH_PROVIDER_NAME
 app.state.config.OPENID_PROVIDER_URL = OPENID_PROVIDER_URL
+app.state.config.OPENID_REDIRECT_URI = OPENID_REDIRECT_URI
 
 ########################################
 #

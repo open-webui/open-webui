@@ -78,7 +78,21 @@
 
 	const updateHandler = async () => {
 		webhookUrl = await updateWebhookUrl(localStorage.token, webhookUrl);
-		const res = await updateAdminConfig(localStorage.token, adminConfig);
+
+		// Convert OAUTH_ALLOWED_DOMAINS from comma-separated string to array before sending
+		const configToSubmit = { ...adminConfig };
+		if (typeof configToSubmit.OAUTH_ALLOWED_DOMAINS === 'string') {
+			configToSubmit.OAUTH_ALLOWED_DOMAINS = configToSubmit.OAUTH_ALLOWED_DOMAINS.split(',')
+				.map((domain) => domain.trim())
+				.filter((domain) => domain.length > 0);
+
+			// Default to ['*'] if empty
+			if (configToSubmit.OAUTH_ALLOWED_DOMAINS.length === 0) {
+				configToSubmit.OAUTH_ALLOWED_DOMAINS = ['*'];
+			}
+		}
+
+		const res = await updateAdminConfig(localStorage.token, configToSubmit);
 		await updateLdapConfig(localStorage.token, ENABLE_LDAP);
 		await updateLdapServerHandler();
 
@@ -97,6 +111,11 @@
 		await Promise.all([
 			(async () => {
 				adminConfig = await getAdminConfig(localStorage.token);
+
+				// Convert OAUTH_ALLOWED_DOMAINS from array to comma-separated string for display
+				if (Array.isArray(adminConfig.OAUTH_ALLOWED_DOMAINS)) {
+					adminConfig.OAUTH_ALLOWED_DOMAINS = adminConfig.OAUTH_ALLOWED_DOMAINS.join(', ');
+				}
 			})(),
 
 			(async () => {
@@ -621,7 +640,25 @@
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 										placeholder={$i18n.t('e.g., your-client-secret')}
 										bind:value={adminConfig.OAUTH_CLIENT_SECRET}
+										required={!adminConfig.OAUTH_CODE_CHALLENGE_METHOD}
 									/>
+								</div>
+							</div>
+
+							<div class=" mb-2.5 w-full justify-between">
+								<div class="flex w-full justify-between">
+									<div class=" self-center text-xs font-medium">
+										{$i18n.t('OAuth Code Challenge Method')}
+									</div>
+								</div>
+								<div class="flex mt-2 space-x-2">
+									<select
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={adminConfig.OAUTH_CODE_CHALLENGE_METHOD}
+									>
+										<option value={null}>{$i18n.t('None')}</option>
+										<option value="S256">{$i18n.t('S256')}</option>
+									</select>
 								</div>
 							</div>
 
@@ -655,6 +692,22 @@
 											'e.g., https://your-provider/.well-known/openid-configuration'
 										)}
 										bind:value={adminConfig.OPENID_PROVIDER_URL}
+									/>
+								</div>
+							</div>
+
+							<div class=" mb-2.5 w-full justify-between">
+								<div class="flex w-full justify-between">
+									<div class=" self-center text-xs font-medium">
+										{$i18n.t('OpenID Redirect URI')}
+									</div>
+								</div>
+								<div class="flex mt-2 space-x-2">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										type="text"
+										placeholder={$i18n.t('e.g., https://your-domain.com/oauth/oidc/callback')}
+										bind:value={adminConfig.OPENID_REDIRECT_URI}
 									/>
 								</div>
 							</div>
