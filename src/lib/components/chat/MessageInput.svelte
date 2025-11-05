@@ -162,6 +162,49 @@
 	};
 
 	const textVariableHandler = async (text: string) => {
+		// Handle selected code variable
+		if (text.includes('{selected_code}')) {
+			let selectedCode = '';
+			
+			// Get selected text from the editor
+			if (chatInputElement) {
+				const { from, to } = chatInputElement.state.selection;
+				selectedCode = chatInputElement.state.doc.textBetween(from, to, ' ');
+			}
+			
+			// Fallback to window selection if editor selection is empty
+			if (!selectedCode && window.getSelection) {
+				selectedCode = window.getSelection().toString();
+			}
+			
+			if (!selectedCode) {
+				toast.error($i18n.t('Please select code first'));
+				return '';
+			}
+			
+			text = text.replaceAll('{selected_code}', selectedCode);
+		}
+		
+		// Handle language variable
+		if (text.includes('{language}')) {
+			// Default to JavaScript if no language is detected
+			let language = 'JavaScript';
+			
+			// Try to detect language from selected code or context
+			// This is a simple implementation, you may want to improve it
+			if (chatInputElement) {
+				const { $head } = chatInputElement.state.selection;
+				const node = $head.node();
+				
+				// Check if we're inside a code block
+				if (node.type.name === 'codeBlock') {
+					language = node.attrs.language || 'JavaScript';
+				}
+			}
+			
+			text = text.replaceAll('{language}', language);
+		}
+		
 		if (text.includes('{{CLIPBOARD}}')) {
 			const clipboardText = await navigator.clipboard.readText().catch((err) => {
 				toast.error($i18n.t('Failed to read clipboard contents'));

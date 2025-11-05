@@ -1162,6 +1162,30 @@ if default_prompt_suggestions == []:
             "title": ["Overcome procrastination", "give me tips"],
             "content": "Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?",
         },
+        {
+            "title": ["解释代码", "Explain Code"],
+            "content": "请解释以下代码的功能：\n\n{selected_code}",
+        },
+        {
+            "title": ["修复错误", "Fix Error"],
+            "content": "请修复以下代码中的错误：\n\n{selected_code}",
+        },
+        {
+            "title": ["生成测试", "Generate Test"],
+            "content": "请为以下代码生成测试用例：\n\n{selected_code}",
+        },
+        {
+            "title": ["优化性能", "Optimize Performance"],
+            "content": "请优化以下代码的性能：\n\n{selected_code}",
+        },
+        {
+            "title": ["添加注释", "Add Comments"],
+            "content": "请为以下代码添加详细注释：\n\n{selected_code}",
+        },
+        {
+            "title": ["转换语言", "Translate Language"],
+            "content": "请将以下代码转换为{language}语言：\n\n{selected_code}",
+        },
     ]
 
 DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
