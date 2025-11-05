@@ -63,6 +63,7 @@ export interface UserSubmissionsResponse {
   moderation_sessions: any[];
   exit_quiz_responses: any[];
   session_activity_totals?: Record<string, number>;
+  assignment_time_totals?: Record<string, number>;
 }
 
 export const finalizeModeration = async (

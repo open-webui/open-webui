@@ -2,10 +2,11 @@
 	import { onMount, onDestroy, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { showSidebar, user } from '$lib/stores';
+	import { get } from 'svelte/store';
 	import { toast } from 'svelte-sonner';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 import { applyModeration, generateFollowUpPrompt, type ModerationResponse, saveModerationSession, getModerationSessions, postSessionActivity } from '$lib/apis/moderation';
-import { finalizeModeration } from '$lib/apis/workflow';
+import { finalizeModeration, getCurrentAttempt } from '$lib/apis/workflow';
 	import { getAvailableScenarios, getCurrentSession } from '$lib/apis/prolific';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -13,6 +14,7 @@ import { finalizeModeration } from '$lib/apis/workflow';
 	import { getQuestionsForCharacteristics, loadPersonalityDataFromJSON, generateScenariosFromJSON } from '$lib/data/personalityTraits';
 	import { generateScenariosFromPersonalityData } from '$lib/data/personalityQuestions';
 	import { childProfileSync } from '$lib/services/childProfileSync';
+	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -99,6 +101,9 @@ import { finalizeModeration } from '$lib/apis/workflow';
 	let selectedScenarioIndex: number = 0;
 	let scenarioList = Object.entries(scenarios);
     let sessionNumber: number = 1; // Default session number for non-Prolific users
+
+	// Assignment time tracking (separate from moderation tracking)
+	let assignmentAttemptNumber: number = 1;
 
     // Warm-up tutorial state
     let warmupCompleted: boolean = false;
@@ -1872,6 +1877,16 @@ function cancelReset() {}
 	};
 
 onMount(async () => {
+	// Get current attempt number for assignment time tracking
+	try {
+		const token = localStorage.token || '';
+		if (token) {
+			const attemptData = await getCurrentAttempt(token);
+			assignmentAttemptNumber = attemptData.current_attempt || 1;
+		}
+	} catch (e) {
+		console.warn('Failed to get current attempt number', e);
+	}
     try {
         // Initialize sidebar state based on screen size for mobile
         sidebarOpen = window.innerWidth >= 768;
@@ -3437,6 +3452,14 @@ onMount(async () => {
 {/if}
 </div>
 {/if}
+
+	<!-- Assignment Time Tracker (separate from moderation tracking) -->
+	<AssignmentTimeTracker 
+		userId={get(user)?.id || ''} 
+		childId={selectedChildId || null}
+		attemptNumber={assignmentAttemptNumber}
+		enabled={true}
+	/>
 
 <style>
 	.response-text :global(.selection-highlight) {

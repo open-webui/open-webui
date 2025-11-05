@@ -1,17 +1,43 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { showSidebar } from '$lib/stores';
+	import { showSidebar, user } from '$lib/stores';
+	import { get } from 'svelte/store';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
+	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
+	import { getCurrentAttempt } from '$lib/apis/workflow';
+	import { childProfileSync } from '$lib/services/childProfileSync';
 
-	onMount(() => {
-	// Ensure sidebar reflects completion when landing here (idempotent)
-	localStorage.setItem('assignmentStep', '4');
-	localStorage.setItem('assignmentCompleted', 'true');
-	
-	// Redirect to Prolific completion page
-	// Open in new tab so user can see completion message and close this tab
-	window.open('https://app.prolific.com/submissions/complete?cc=C4CEBIWM', '_blank');
+	let attemptNumber: number = 1;
+	let currentChildId: string | null = null;
+	let trackingEnabled: boolean = true;
+
+	onMount(async () => {
+		// Get current attempt number and child ID for final time tracking
+		try {
+			const token = localStorage.token || '';
+			if (token) {
+				const attemptData = await getCurrentAttempt(token);
+				attemptNumber = attemptData.current_attempt || 1;
+			}
+			const currentChild = childProfileSync.getCurrentChild();
+			currentChildId = currentChild?.id || null;
+		} catch (e) {
+			console.warn('Failed to get attempt number or child ID', e);
+		}
+
+		// Ensure sidebar reflects completion when landing here (idempotent)
+		localStorage.setItem('assignmentStep', '4');
+		localStorage.setItem('assignmentCompleted', 'true');
+		
+		// Send final time and stop tracking after a short delay to ensure data is sent
+		setTimeout(() => {
+			trackingEnabled = false;
+		}, 5000); // Give 5 seconds for final sync
+
+		// Redirect to Prolific completion page
+		// Open in new tab so user can see completion message and close this tab
+		window.open('https://app.prolific.com/submissions/complete?cc=C4CEBIWM', '_blank');
 	});
 </script>
 
@@ -98,4 +124,12 @@
 
 		</div>
 	</div>
+
+	<!-- Assignment Time Tracker (stops tracking after delay) -->
+	<AssignmentTimeTracker 
+		userId={get(user)?.id || ''} 
+		childId={currentChildId}
+		attemptNumber={attemptNumber}
+		enabled={trackingEnabled}
+	/>
 </div>

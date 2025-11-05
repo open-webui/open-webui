@@ -97,6 +97,7 @@ from open_webui.routers import (
 from open_webui.routers import exit_quiz
 from open_webui.routers import attention_checks
 from open_webui.routers import moderation_scenarios as moderation_scenarios_router
+from open_webui.routers import assignment_time
 
 from open_webui.routers.retrieval import (
     get_embedding_function,
@@ -1288,6 +1289,7 @@ app.include_router(
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 app.include_router(moderation.router, prefix="/api/v1/moderation", tags=["moderation"])
 app.include_router(moderation_scenarios_router.router, prefix="/api/v1", tags=["moderation_scenarios"])
+app.include_router(assignment_time.router, prefix="/api/v1", tags=["assignment_time"])
 
 # Import and include selections router
 from open_webui.routers import selections

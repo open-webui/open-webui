@@ -3,7 +3,10 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { showSidebar, user } from '$lib/stores';
+	import { get } from 'svelte/store';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
+	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
+	import { getCurrentAttempt } from '$lib/apis/workflow';
 
 	// State to track if Start button was clicked
 	let startButtonClicked: boolean = false;
@@ -15,11 +18,31 @@
 	// State for ready modal
 	let showReadyModal: boolean = false;
 
-	onMount(() => {
+	// Assignment time tracking
+	let attemptNumber: number = 1;
+	let trackingEnabled: boolean = false;
+
+	onMount(async () => {
 		// Check if instructions have been read
 		const instructionsRead = localStorage.getItem('instructionsCompleted');
 		if (instructionsRead === 'true') {
 			instructionsCompleted = true;
+		}
+
+		// Get current attempt number
+		try {
+			const token = localStorage.token || '';
+			if (token) {
+				const attemptData = await getCurrentAttempt(token);
+				attemptNumber = attemptData.current_attempt || 1;
+			}
+		} catch (e) {
+			console.warn('Failed to get current attempt number', e);
+		}
+
+		// Enable tracking if instructions are already completed (consent given)
+		if (instructionsCompleted) {
+			trackingEnabled = true;
 		}
 
 		// Default open sidebar on wide screens (md and up)
@@ -75,6 +98,8 @@
 	window.dispatchEvent(new Event('storage'));
 	window.dispatchEvent(new Event('workflow-updated'));
 	showReadyModal = true;
+	// Start time tracking after consent
+	trackingEnabled = true;
 	}
 	
 	function proceedToTasks() {
@@ -322,6 +347,16 @@
 				</div>
 			</div>
 		</div>
+	{/if}
+
+	<!-- Assignment Time Tracker -->
+	{#if trackingEnabled}
+		<AssignmentTimeTracker 
+			userId={get(user)?.id || ''} 
+			childId={null}
+			attemptNumber={attemptNumber}
+			enabled={trackingEnabled}
+		/>
 	{/if}
 
 </div>

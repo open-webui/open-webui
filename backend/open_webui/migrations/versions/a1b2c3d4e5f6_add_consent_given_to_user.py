@@ -29,3 +29,8 @@ def downgrade():
     # Remove consent_given column
     op.drop_column('user', 'consent_given')
 
+
+
+
+
+

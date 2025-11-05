@@ -47,3 +47,8 @@ def downgrade():
     op.drop_index('idx_consent_audit_user', table_name='consent_audit')
     op.drop_table('consent_audit')
 
+
+
+
+
+

@@ -1,10 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { showSidebar } from '$lib/stores';
+	import { showSidebar, user } from '$lib/stores';
+	import { get } from 'svelte/store';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import { toast } from 'svelte-sonner';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
+	import { getCurrentAttempt } from '$lib/apis/workflow';
+	import { childProfileSync } from '$lib/services/childProfileSync';
 
 	// Assignment workflow state
 	let assignmentStep: number = 1;
@@ -23,7 +27,6 @@
 
     // API
     import { createExitQuiz, listExitQuiz } from '$lib/apis/exit-quiz';
-    import { childProfileSync } from '$lib/services/childProfileSync';
 // Attention checks
 let acQuestions: Array<{ id: string; prompt: string; options: string[]; correct_option: string }> = [];
 let acResponses: Record<string, string> = {};
@@ -46,6 +49,10 @@ async function loadAttentionChecks() {
 	// Save/Edit pattern state
 	let isSaved: boolean = false;
 	let showConfirmationModal: boolean = false;
+
+	// Assignment time tracking
+	let attemptNumber: number = 1;
+	let currentChildId: string | null = null;
 
 // Debounce helper
 function debounce(fn: (...args: any[]) => void, delay = 400) {
@@ -98,6 +105,19 @@ async function resolveChildId(token: string): Promise<string> {
 onMount(async () => {
     await loadAttentionChecks();
     assignmentStep = parseInt(localStorage.getItem('assignmentStep') || '3');
+
+	// Get current attempt number and child ID
+	try {
+		const token = localStorage.token || '';
+		if (token) {
+			const attemptData = await getCurrentAttempt(token);
+			attemptNumber = attemptData.current_attempt || 1;
+		}
+		const currentChild = childProfileSync.getCurrentChild();
+		currentChildId = currentChild?.id || null;
+	} catch (e) {
+		console.warn('Failed to get attempt number or child ID', e);
+	}
 
     const token = localStorage.token || '';
     const userId = get(user)?.id || 'anon';
@@ -799,4 +819,12 @@ $: saveDraft();
 		</div>
 	</div>
 	{/if}
+
+	<!-- Assignment Time Tracker -->
+	<AssignmentTimeTracker 
+		userId={get(user)?.id || ''} 
+		childId={currentChildId}
+		attemptNumber={attemptNumber}
+		enabled={true}
+	/>
 </div>

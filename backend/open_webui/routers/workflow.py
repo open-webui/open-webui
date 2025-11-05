@@ -11,6 +11,7 @@ from open_webui.models.users import UserModel, Users
 from open_webui.models.moderation import ModerationSession, ModerationSessions, ModerationSessionActivity
 from open_webui.models.child_profiles import ChildProfile, ChildProfiles
 from open_webui.models.exit_quiz import ExitQuizResponse, ExitQuizzes
+from open_webui.models.assignment_time_tracking import AssignmentSessionActivity
 from open_webui.internal.db import get_db
 
 log = logging.getLogger(__name__)
@@ -332,6 +333,29 @@ async def get_user_submissions(user_id: str, user: UserModel = Depends(get_admin
                 key = f"{row.user_id}::{row.child_id}::{row.session_number}"
                 session_activity_totals[key] = int(row.total_active_ms or 0)
         
+        # Aggregate assignment time totals per (user, child, attempt)
+        assignment_time_totals = {}
+        with get_db() as db:
+            # Group by user_id, child_id, attempt_number and sum the deltas
+            results = (
+                db.query(
+                    AssignmentSessionActivity.user_id,
+                    AssignmentSessionActivity.child_id,
+                    AssignmentSessionActivity.attempt_number,
+                    func.sum(AssignmentSessionActivity.active_ms_delta).label('total_active_ms')
+                )
+                .filter(AssignmentSessionActivity.user_id == user_id)
+                .group_by(
+                    AssignmentSessionActivity.user_id,
+                    AssignmentSessionActivity.child_id,
+                    AssignmentSessionActivity.attempt_number
+                )
+                .all()
+            )
+            for row in results:
+                key = f"{row.user_id}::{row.child_id}::{row.attempt_number}"
+                assignment_time_totals[key] = int(row.total_active_ms or 0)
+        
         return {
             "user_info": {
                 "id": target_user.id,
@@ -341,7 +365,8 @@ async def get_user_submissions(user_id: str, user: UserModel = Depends(get_admin
             "child_profiles": [profile.model_dump() for profile in child_profiles],
             "moderation_sessions": [session.model_dump() for session in moderation_sessions],
             "exit_quiz_responses": [response.model_dump() for response in exit_quiz_responses],
-            "session_activity_totals": session_activity_totals
+            "session_activity_totals": session_activity_totals,
+            "assignment_time_totals": assignment_time_totals
         }
         
     except HTTPException:
