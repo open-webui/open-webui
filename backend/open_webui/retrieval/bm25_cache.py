@@ -28,7 +28,7 @@ Builder = Callable[[Sequence[str], Sequence[Mapping[str, Any]], Optional[Mutable
 
 class _BM25LRUCache:
     """
-    Cache for the lanchain BM25 retriever
+    Cache for the langchain BM25 retriever
     """
     def __init__(self, max_items: int = 128):
         self._max_items = max_items
