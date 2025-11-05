@@ -37,7 +37,6 @@ from fastapi import (
     applications,
     BackgroundTasks,
 )
-from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.docs import get_swagger_ui_html
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -1791,7 +1790,6 @@ async def get_app_config(request: Request):
     if user is None:
         onboarding = user_count == 0
 
-    # Removed load_oauth_providers() call from here
     return {
         **({"onboarding": True} if onboarding else {}),
         "status": True,
