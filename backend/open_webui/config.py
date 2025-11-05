@@ -3279,6 +3279,12 @@ IMAGES_GEMINI_API_KEY = PersistentConfig(
     os.getenv("IMAGES_GEMINI_API_KEY", GEMINI_API_KEY),
 )
 
+IMAGES_GEMINI_ENDPOINT_METHOD = PersistentConfig(
+    "IMAGES_GEMINI_ENDPOINT_METHOD",
+    "image_generation.gemini.endpoint_method",
+    os.getenv("IMAGES_GEMINI_ENDPOINT_METHOD", ""),
+)
+
 IMAGE_SIZE = PersistentConfig(
     "IMAGE_SIZE", "image_generation.size", os.getenv("IMAGE_SIZE", "512x512")
 )

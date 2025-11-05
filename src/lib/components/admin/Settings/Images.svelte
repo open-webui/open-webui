@@ -201,8 +201,8 @@
 	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden pr-2">
 		{#if config}
 			<div>
-				<div>
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Create Image')}</div>
+				<div class="mb-3">
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -217,8 +217,82 @@
 							<Switch bind:state={config.ENABLE_IMAGE_GENERATION} />
 						</div>
 					</div>
+				</div>
+
+				<div class="mb-3">
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Create Image')}</div>
+
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 					{#if config.ENABLE_IMAGE_GENERATION}
+						<div class="mb-2.5">
+							<div class="flex w-full justify-between items-center">
+								<div class="text-xs pr-2">
+									<div class="">
+										{$i18n.t('Model')}
+									</div>
+								</div>
+
+								<Tooltip content={$i18n.t('Enter Model ID')} placement="top-start">
+									<input
+										list="model-list"
+										class=" text-right text-sm bg-transparent outline-hidden max-w-full w-72"
+										bind:value={config.IMAGE_GENERATION_MODEL}
+										placeholder={$i18n.t('Select a model')}
+										required
+									/>
+
+									<datalist id="model-list">
+										{#each models ?? [] as model}
+											<option value={model.id}>{model.name}</option>
+										{/each}
+									</datalist>
+								</Tooltip>
+							</div>
+						</div>
+
+						<div class="mb-2.5">
+							<div class="flex w-full justify-between items-center">
+								<div class="text-xs pr-2">
+									<div class="">
+										{$i18n.t('Image Size')}
+									</div>
+								</div>
+
+								<Tooltip content={$i18n.t('Enter Image Size (e.g. 512x512)')} placement="top-start">
+									<input
+										class="  text-right text-sm bg-transparent outline-hidden max-w-full w-72"
+										placeholder={$i18n.t('Enter Image Size (e.g. 512x512)')}
+										bind:value={config.IMAGE_SIZE}
+									/>
+								</Tooltip>
+							</div>
+						</div>
+
+						{#if ['comfyui', 'automatic1111', ''].includes(config?.IMAGE_GENERATION_ENGINE)}
+							<div class="mb-2.5">
+								<div class="flex w-full justify-between items-center">
+									<div class="text-xs pr-2">
+										<div class="">
+											{$i18n.t('Steps')}
+										</div>
+									</div>
+
+									<Tooltip
+										content={$i18n.t('Enter Number of Steps (e.g. 50)')}
+										placement="top-start"
+									>
+										<input
+											class=" text-right text-sm bg-transparent outline-hidden"
+											placeholder={$i18n.t('Enter Number of Steps (e.g. 50)')}
+											bind:value={config.IMAGE_STEPS}
+											required
+										/>
+									</Tooltip>
+								</div>
+							</div>
+						{/if}
+
 						<div class="mb-2.5">
 							<div class="flex w-full justify-between items-center">
 								<div class="text-xs pr-2">
@@ -252,77 +326,6 @@
 							</select>
 						</div>
 					</div>
-
-					{#if config.ENABLE_IMAGE_GENERATION}
-						<div class="mb-2.5">
-							<div class="flex w-full justify-between items-center">
-								<div class="text-xs pr-2">
-									<div class="">
-										{$i18n.t('Default Model')}
-									</div>
-								</div>
-
-								<Tooltip content={$i18n.t('Enter Model ID')} placement="top-start">
-									<input
-										list="model-list"
-										class=" rounded-lg text-right text-sm bg-transparent outline-hidden"
-										bind:value={config.IMAGE_GENERATION_MODEL}
-										placeholder={$i18n.t('Select a model')}
-										required
-									/>
-
-									<datalist id="model-list">
-										{#each models ?? [] as model}
-											<option value={model.id}>{model.name}</option>
-										{/each}
-									</datalist>
-								</Tooltip>
-							</div>
-						</div>
-
-						<div class="mb-2.5">
-							<div class="flex w-full justify-between items-center">
-								<div class="text-xs pr-2">
-									<div class="">
-										{$i18n.t('Image Size')}
-									</div>
-								</div>
-
-								<Tooltip content={$i18n.t('Enter Image Size (e.g. 512x512)')} placement="top-start">
-									<input
-										class=" rounded-lg text-right text-sm bg-transparent outline-hidden"
-										placeholder={$i18n.t('Enter Image Size (e.g. 512x512)')}
-										bind:value={config.IMAGE_SIZE}
-										required
-									/>
-								</Tooltip>
-							</div>
-						</div>
-
-						{#if ['comfyui', 'automatic1111', ''].includes(config?.IMAGE_GENERATION_ENGINE)}
-							<div class="mb-2.5">
-								<div class="flex w-full justify-between items-center">
-									<div class="text-xs pr-2">
-										<div class="">
-											{$i18n.t('Steps')}
-										</div>
-									</div>
-
-									<Tooltip
-										content={$i18n.t('Enter Number of Steps (e.g. 50)')}
-										placement="top-start"
-									>
-										<input
-											class=" rounded-lg text-right text-sm bg-transparent outline-hidden"
-											placeholder={$i18n.t('Enter Number of Steps (e.g. 50)')}
-											bind:value={config.IMAGE_STEPS}
-											required
-										/>
-									</Tooltip>
-								</div>
-							</div>
-						{/if}
-					{/if}
 
 					{#if config?.IMAGE_GENERATION_ENGINE === 'openai'}
 						<div class="mb-2.5">
@@ -403,7 +406,7 @@
 										/>
 									</div>
 									<button
-										class="  rounded-lg transition"
+										class="  transition"
 										type="button"
 										aria-label="verify connection"
 										on:click={async () => {
@@ -491,7 +494,7 @@
 							<div class="mt-1.5 flex w-full">
 								<div class="flex-1 mr-2">
 									<Textarea
-										className="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										className="rounded-lg w-full py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 										bind:value={config.AUTOMATIC1111_PARAMS}
 										placeholder={$i18n.t('Enter additional parameters in JSON format')}
 										minSize={100}
@@ -747,6 +750,367 @@
 								</div>
 							</div>
 						</div>
+
+						<div class="mb-2.5">
+							<div class="flex w-full justify-between items-center">
+								<div class="text-xs pr-2">
+									<div class="">
+										{$i18n.t('Gemini Endpoint Method')}
+									</div>
+								</div>
+
+								<select
+									class=" dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+									bind:value={config.IMAGES_GEMINI_ENDPOINT_METHOD}
+									placeholder={$i18n.t('Select Method')}
+								>
+									<option value="predict">predict</option>
+									<option value="generateContent">generateContent</option>
+								</select>
+							</div>
+						</div>
+					{/if}
+				</div>
+
+				<div class="mb-3">
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Edit Image')}</div>
+
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
+					<div class="mb-2.5">
+						<div class="flex w-full justify-between items-center">
+							<div class="text-xs pr-2">
+								<div class="">
+									{$i18n.t('Image Edit Engine')}
+								</div>
+							</div>
+
+							<select
+								class=" dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+								bind:value={config.IMAGE_EDIT_ENGINE}
+								placeholder={$i18n.t('Select Engine')}
+							>
+								<option value="openai">{$i18n.t('Default (Open AI)')}</option>
+								<option value="comfyui">{$i18n.t('ComfyUI')}</option>
+								<option value="comfyui">{$i18n.t('Gemini')}</option>
+							</select>
+						</div>
+					</div>
+
+					{#if config.ENABLE_IMAGE_EDIT}
+						<div class="mb-2.5">
+							<div class="flex w-full justify-between items-center">
+								<div class="text-xs pr-2">
+									<div class="">
+										{$i18n.t('Model')}
+									</div>
+								</div>
+
+								<Tooltip content={$i18n.t('Enter Model ID')} placement="top-start">
+									<input
+										list="model-list"
+										class="text-right text-sm bg-transparent outline-hidden"
+										bind:value={config.IMAGE_EDIT_MODEL}
+										placeholder={$i18n.t('Select a model')}
+										required
+									/>
+
+									<datalist id="model-list">
+										{#each models ?? [] as model}
+											<option value={model.id}>{model.name}</option>
+										{/each}
+									</datalist>
+								</Tooltip>
+							</div>
+						</div>
+
+						<div class="mb-2.5">
+							<div class="flex w-full justify-between items-center">
+								<div class="text-xs pr-2">
+									<div class="">
+										{$i18n.t('Image Size')}
+									</div>
+								</div>
+
+								<Tooltip content={$i18n.t('Enter Image Size (e.g. 512x512)')} placement="top-start">
+									<input
+										class="text-right text-sm bg-transparent outline-hidden max-w-full w-72"
+										placeholder={$i18n.t('Enter Image Size (e.g. 512x512)')}
+										bind:value={config.IMAGE_EDIT_SIZE}
+									/>
+								</Tooltip>
+							</div>
+						</div>
+					{/if}
+
+					{#if config?.IMAGE_EDIT_ENGINE === 'openai'}
+						<div class="mb-2.5">
+							<div class="flex w-full justify-between items-center">
+								<div class="text-xs pr-2 shrink-0">
+									<div class="">
+										{$i18n.t('OpenAI API Base URL')}
+									</div>
+								</div>
+
+								<div class="flex w-full">
+									<div class="flex-1">
+										<input
+											class="w-full text-sm bg-transparent outline-hidden text-right"
+											placeholder={$i18n.t('API Base URL')}
+											bind:value={config.IMAGES_EDIT_OPENAI_API_BASE_URL}
+										/>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="mb-2.5">
+							<div class="flex w-full justify-between items-center">
+								<div class="text-xs pr-2 shrink-0">
+									<div class="">
+										{$i18n.t('OpenAI API Key')}
+									</div>
+								</div>
+
+								<div class="flex w-full">
+									<div class="flex-1">
+										<SensitiveInput
+											inputClassName="text-right w-full"
+											placeholder={$i18n.t('API Key')}
+											bind:value={config.IMAGES_EDIT_OPENAI_API_KEY}
+											required={false}
+										/>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="mb-2.5">
+							<div class="flex w-full justify-between items-center">
+								<div class="text-xs pr-2 shrink-0">
+									<div class="">
+										{$i18n.t('OpenAI API Version')}
+									</div>
+								</div>
+
+								<div class="flex w-full">
+									<div class="flex-1">
+										<input
+											class="w-full text-sm bg-transparent outline-hidden text-right"
+											placeholder={$i18n.t('API Version')}
+											bind:value={config.IMAGES_EDIT_OPENAI_API_VERSION}
+										/>
+									</div>
+								</div>
+							</div>
+						</div>
+					{:else if config?.IMAGE_EDIT_ENGINE === 'comfyui'}
+						<div class="mb-2.5">
+							<div class="flex w-full justify-between items-center">
+								<div class="text-xs pr-2 shrink-0">
+									<div class="">
+										{$i18n.t('ComfyUI Base URL')}
+									</div>
+								</div>
+
+								<div class="flex w-full">
+									<div class="flex-1 mr-2">
+										<input
+											class="w-full text-sm bg-transparent outline-hidden text-right"
+											placeholder={$i18n.t('Enter URL (e.g. http://127.0.0.1:7860/)')}
+											bind:value={config.COMFYUI_BASE_URL}
+										/>
+									</div>
+									<button
+										class="  transition"
+										type="button"
+										aria-label="verify connection"
+										on:click={async () => {
+											await updateConfigHandler();
+											const res = await verifyConfigUrl(localStorage.token).catch((error) => {
+												toast.error(`${error}`);
+												return null;
+											});
+
+											if (res) {
+												toast.success($i18n.t('Server connection verified'));
+											}
+										}}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											class="w-4 h-4"
+										>
+											<path
+												fill-rule="evenodd"
+												d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
+												clip-rule="evenodd"
+											/>
+										</svg>
+									</button>
+								</div>
+							</div>
+						</div>
+
+						<div class="mb-2.5">
+							<div class="flex w-full justify-between items-center">
+								<div class="text-xs pr-2 shrink-0">
+									<div class="">
+										{$i18n.t('ComfyUI API Key')}
+									</div>
+								</div>
+
+								<div class="flex w-full">
+									<div class="flex-1">
+										<SensitiveInput
+											inputClassName="text-right w-full"
+											placeholder={$i18n.t('sk-1234')}
+											bind:value={config.COMFYUI_API_KEY}
+											required={false}
+										/>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="mb-2.5">
+							<input
+								id="upload-comfyui-workflow-input"
+								hidden
+								type="file"
+								accept=".json"
+								on:change={(e) => {
+									const file = e.target.files[0];
+									const reader = new FileReader();
+
+									reader.onload = (e) => {
+										config.COMFYUI_WORKFLOW = e.target.result;
+										e.target.value = null;
+									};
+
+									reader.readAsText(file);
+								}}
+							/>
+							<div class="flex w-full justify-between items-center">
+								<div class="text-xs pr-2 shrink-0">
+									<div class="">
+										{$i18n.t('ComfyUI Workflow')}
+									</div>
+								</div>
+
+								<div class="flex w-full">
+									<div class="flex-1 mr-2 justify-end flex gap-1">
+										{#if config.COMFYUI_WORKFLOW}
+											<button
+												class="text-xs text-gray-700 dark:text-gray-400 underline"
+												type="button"
+												aria-label={$i18n.t('Edit workflow.json content')}
+												on:click={() => {
+													// open code editor modal
+													showComfyUIWorkflowEditor = true;
+												}}
+											>
+												{$i18n.t('Edit')}
+											</button>
+										{/if}
+
+										<Tooltip content={$i18n.t('Click here to upload a workflow.json file.')}>
+											<button
+												class="text-xs text-gray-700 dark:text-gray-400 underline"
+												type="button"
+												aria-label={$i18n.t('Click here to upload a workflow.json file.')}
+												on:click={() => {
+													document.getElementById('upload-comfyui-workflow-input')?.click();
+												}}
+											>
+												{$i18n.t('Upload')}
+											</button>
+										</Tooltip>
+									</div>
+								</div>
+							</div>
+
+							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+								<CodeEditorModal
+									bind:show={showComfyUIWorkflowEditor}
+									value={config.COMFYUI_WORKFLOW}
+									lang="json"
+									onChange={(e) => {
+										config.COMFYUI_WORKFLOW = e;
+									}}
+									onSave={() => {
+										console.log('Saved');
+									}}
+								/>
+								<!-- {#if config.COMFYUI_WORKFLOW}
+									<Textarea
+										class="w-full rounded-lg my-1 py-2 px-3 text-xs bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden disabled:text-gray-600 resize-none"
+										rows="10"
+										bind:value={config.COMFYUI_WORKFLOW}
+										required
+									/>
+								{/if} -->
+								{$i18n.t('Make sure to export a workflow.json file as API format from ComfyUI.')}
+							</div>
+						</div>
+
+						{#if config.COMFYUI_WORKFLOW}
+							<div class="mb-2.5">
+								<div class="flex w-full justify-between items-center">
+									<div class="text-xs pr-2 shrink-0">
+										<div class="">
+											{$i18n.t('ComfyUI Workflow Nodes')}
+										</div>
+									</div>
+								</div>
+
+								<div class="mt-1 text-xs flex flex-col gap-1.5">
+									{#each requiredWorkflowNodes as node}
+										<div class="flex w-full flex-col">
+											<div class="shrink-0">
+												<div class=" capitalize line-clamp-1 w-20 text-gray-400 dark:text-gray-500">
+													{node.type}{node.type === 'prompt' ? '*' : ''}
+												</div>
+											</div>
+
+											<div class="flex mt-0.5 items-center">
+												<div class="">
+													<Tooltip content={$i18n.t('Input Key (e.g. text, unet_name, steps)')}>
+														<input
+															class="py-1 w-24 text-xs bg-transparent outline-hidden"
+															placeholder={$i18n.t('Key')}
+															bind:value={node.key}
+															required
+														/>
+													</Tooltip>
+												</div>
+
+												<div class="px-2 text-gray-400 dark:text-gray-500">:</div>
+
+												<div class="w-full">
+													<Tooltip
+														content={$i18n.t('Comma separated Node Ids (e.g. 1 or 1,2)')}
+														placement="top-start"
+													>
+														<input
+															class="w-full py-1 text-xs bg-transparent outline-hidden"
+															placeholder={$i18n.t('Node Ids')}
+															bind:value={node.node_ids}
+														/>
+													</Tooltip>
+												</div>
+											</div>
+										</div>
+									{/each}
+								</div>
+
+								<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+									{$i18n.t('*Prompt node ID(s) are required for image generation')}
+								</div>
+							</div>
+						{/if}
 					{/if}
 				</div>
 			</div>
