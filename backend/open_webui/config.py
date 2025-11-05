@@ -3074,16 +3074,30 @@ EXTERNAL_WEB_LOADER_API_KEY = PersistentConfig(
 # Images
 ####################################
 
+ENABLE_IMAGE_GENERATION = PersistentConfig(
+    "ENABLE_IMAGE_GENERATION",
+    "image_generation.enable",
+    os.environ.get("ENABLE_IMAGE_GENERATION", "").lower() == "true",
+)
+
 IMAGE_GENERATION_ENGINE = PersistentConfig(
     "IMAGE_GENERATION_ENGINE",
     "image_generation.engine",
     os.getenv("IMAGE_GENERATION_ENGINE", "openai"),
 )
 
-ENABLE_IMAGE_GENERATION = PersistentConfig(
-    "ENABLE_IMAGE_GENERATION",
-    "image_generation.enable",
-    os.environ.get("ENABLE_IMAGE_GENERATION", "").lower() == "true",
+IMAGE_GENERATION_MODEL = PersistentConfig(
+    "IMAGE_GENERATION_MODEL",
+    "image_generation.model",
+    os.getenv("IMAGE_GENERATION_MODEL", ""),
+)
+
+IMAGE_SIZE = PersistentConfig(
+    "IMAGE_SIZE", "image_generation.size", os.getenv("IMAGE_SIZE", "512x512")
+)
+
+IMAGE_STEPS = PersistentConfig(
+    "IMAGE_STEPS", "image_generation.steps", int(os.getenv("IMAGE_STEPS", 50))
 )
 
 ENABLE_IMAGE_PROMPT_GENERATION = PersistentConfig(
@@ -3285,19 +3299,51 @@ IMAGES_GEMINI_ENDPOINT_METHOD = PersistentConfig(
     os.getenv("IMAGES_GEMINI_ENDPOINT_METHOD", ""),
 )
 
-IMAGE_SIZE = PersistentConfig(
-    "IMAGE_SIZE", "image_generation.size", os.getenv("IMAGE_SIZE", "512x512")
+
+IMAGE_EDIT_ENGINE = PersistentConfig(
+    "IMAGE_EDIT_ENGINE",
+    "images.edit.engine",
+    os.getenv("IMAGE_EDIT_ENGINE", "openai"),
 )
 
-IMAGE_STEPS = PersistentConfig(
-    "IMAGE_STEPS", "image_generation.steps", int(os.getenv("IMAGE_STEPS", 50))
+IMAGE_EDIT_MODEL = PersistentConfig(
+    "IMAGE_EDIT_MODEL",
+    "images.edit.model",
+    os.getenv("IMAGE_EDIT_MODEL", ""),
 )
 
-IMAGE_GENERATION_MODEL = PersistentConfig(
-    "IMAGE_GENERATION_MODEL",
-    "image_generation.model",
-    os.getenv("IMAGE_GENERATION_MODEL", ""),
+IMAGE_EDIT_SIZE = PersistentConfig(
+    "IMAGE_EDIT_SIZE", "images.edit.size", os.getenv("IMAGE_EDIT_SIZE", "")
 )
+
+IMAGES_EDIT_OPENAI_API_BASE_URL = PersistentConfig(
+    "IMAGES_EDIT_OPENAI_API_BASE_URL",
+    "images.edit.openai.api_base_url",
+    os.getenv("IMAGES_EDIT_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
+)
+IMAGES_EDIT_OPENAI_API_VERSION = PersistentConfig(
+    "IMAGES_EDIT_OPENAI_API_VERSION",
+    "images.edit.openai.api_version",
+    os.getenv("IMAGES_EDIT_OPENAI_API_VERSION", ""),
+)
+
+IMAGES_EDIT_OPENAI_API_KEY = PersistentConfig(
+    "IMAGES_EDIT_OPENAI_API_KEY",
+    "images.edit.openai.api_key",
+    os.getenv("IMAGES_EDIT_OPENAI_API_KEY", OPENAI_API_KEY),
+)
+
+IMAGES_EDIT_GEMINI_API_BASE_URL = PersistentConfig(
+    "IMAGES_EDIT_GEMINI_API_BASE_URL",
+    "images.edit.gemini.api_base_url",
+    os.getenv("IMAGES_EDIT_GEMINI_API_BASE_URL", GEMINI_API_BASE_URL),
+)
+IMAGES_EDIT_GEMINI_API_KEY = PersistentConfig(
+    "IMAGES_EDIT_GEMINI_API_KEY",
+    "images.edit.gemini.api_key",
+    os.getenv("IMAGES_EDIT_GEMINI_API_KEY", GEMINI_API_KEY),
+)
+
 
 ####################################
 # Audio

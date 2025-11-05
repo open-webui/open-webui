@@ -29,7 +29,7 @@
 	let config = null;
 
 	let showComfyUIWorkflowEditor = false;
-	let requiredWorkflowNodes = [
+	let REQUIRED_WORKFLOW_NODES = [
 		{
 			type: 'prompt',
 			key: 'text',
@@ -58,6 +58,29 @@
 		{
 			type: 'seed',
 			key: 'seed',
+			node_ids: ''
+		}
+	];
+
+	let REQUIRED_EDIT_WORKFLOW_NODES = [
+		{
+			type: 'prompt',
+			key: 'text',
+			node_ids: ''
+		},
+		{
+			type: 'model',
+			key: 'ckpt_name',
+			node_ids: ''
+		},
+		{
+			type: 'width',
+			key: 'width',
+			node_ids: ''
+		},
+		{
+			type: 'height',
+			key: 'height',
 			node_ids: ''
 		}
 	];
@@ -137,7 +160,7 @@
 		}
 
 		if (config?.COMFYUI_WORKFLOW) {
-			config.COMFYUI_WORKFLOW_NODES = requiredWorkflowNodes.map((node) => {
+			config.COMFYUI_WORKFLOW_NODES = REQUIRED_WORKFLOW_NODES.map((node) => {
 				return {
 					type: node.type,
 					key: node.key,
@@ -178,7 +201,7 @@
 				}
 			}
 
-			requiredWorkflowNodes = requiredWorkflowNodes.map((node) => {
+			REQUIRED_WORKFLOW_NODES = REQUIRED_WORKFLOW_NODES.map((node) => {
 				const n = config.COMFYUI_WORKFLOW_NODES.find((n) => n.type === node.type) ?? node;
 				console.debug(n);
 
@@ -665,7 +688,7 @@
 								</div>
 
 								<div class="mt-1 text-xs flex flex-col gap-1.5">
-									{#each requiredWorkflowNodes as node}
+									{#each REQUIRED_WORKFLOW_NODES as node}
 										<div class="flex w-full flex-col">
 											<div class="shrink-0">
 												<div class=" capitalize line-clamp-1 w-20 text-gray-400 dark:text-gray-500">
@@ -791,13 +814,13 @@
 								placeholder={$i18n.t('Select Engine')}
 							>
 								<option value="openai">{$i18n.t('Default (Open AI)')}</option>
-								<option value="comfyui">{$i18n.t('ComfyUI')}</option>
-								<option value="comfyui">{$i18n.t('Gemini')}</option>
+								<!-- <option value="comfyui">{$i18n.t('ComfyUI')}</option> -->
+								<option value="gemini">{$i18n.t('Gemini')}</option>
 							</select>
 						</div>
 					</div>
 
-					{#if config.ENABLE_IMAGE_EDIT}
+					{#if config.ENABLE_IMAGE_GENERATION}
 						<div class="mb-2.5">
 							<div class="flex w-full justify-between items-center">
 								<div class="text-xs pr-2">
@@ -918,7 +941,7 @@
 										<input
 											class="w-full text-sm bg-transparent outline-hidden text-right"
 											placeholder={$i18n.t('Enter URL (e.g. http://127.0.0.1:7860/)')}
-											bind:value={config.COMFYUI_BASE_URL}
+											bind:value={config.IMAGES_EDIT_COMFYUI_BASE_URL}
 										/>
 									</div>
 									<button
@@ -967,7 +990,7 @@
 										<SensitiveInput
 											inputClassName="text-right w-full"
 											placeholder={$i18n.t('sk-1234')}
-											bind:value={config.COMFYUI_API_KEY}
+											bind:value={config.IMAGES_EDIT_COMFYUI_API_KEY}
 											required={false}
 										/>
 									</div>
@@ -977,7 +1000,7 @@
 
 						<div class="mb-2.5">
 							<input
-								id="upload-comfyui-workflow-input"
+								id="upload-comfyui-edit-workflow-input"
 								hidden
 								type="file"
 								accept=".json"
@@ -986,7 +1009,7 @@
 									const reader = new FileReader();
 
 									reader.onload = (e) => {
-										config.COMFYUI_WORKFLOW = e.target.result;
+										config.IMAGES_EDIT_COMFYUI_WORKFLOW = e.target.result;
 										e.target.value = null;
 									};
 
@@ -1002,7 +1025,7 @@
 
 								<div class="flex w-full">
 									<div class="flex-1 mr-2 justify-end flex gap-1">
-										{#if config.COMFYUI_WORKFLOW}
+										{#if config.IMAGES_EDIT_COMFYUI_WORKFLOW}
 											<button
 												class="text-xs text-gray-700 dark:text-gray-400 underline"
 												type="button"
@@ -1022,7 +1045,7 @@
 												type="button"
 												aria-label={$i18n.t('Click here to upload a workflow.json file.')}
 												on:click={() => {
-													document.getElementById('upload-comfyui-workflow-input')?.click();
+													document.getElementById('upload-comfyui-edit-workflow-input')?.click();
 												}}
 											>
 												{$i18n.t('Upload')}
@@ -1035,28 +1058,20 @@
 							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
 								<CodeEditorModal
 									bind:show={showComfyUIWorkflowEditor}
-									value={config.COMFYUI_WORKFLOW}
+									value={config.IMAGES_EDIT_COMFYUI_WORKFLOW}
 									lang="json"
 									onChange={(e) => {
-										config.COMFYUI_WORKFLOW = e;
+										config.IMAGES_EDIT_COMFYUI_WORKFLOW = e;
 									}}
 									onSave={() => {
 										console.log('Saved');
 									}}
 								/>
-								<!-- {#if config.COMFYUI_WORKFLOW}
-									<Textarea
-										class="w-full rounded-lg my-1 py-2 px-3 text-xs bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden disabled:text-gray-600 resize-none"
-										rows="10"
-										bind:value={config.COMFYUI_WORKFLOW}
-										required
-									/>
-								{/if} -->
 								{$i18n.t('Make sure to export a workflow.json file as API format from ComfyUI.')}
 							</div>
 						</div>
 
-						{#if config.COMFYUI_WORKFLOW}
+						{#if config.IMAGES_EDIT_COMFYUI_WORKFLOW}
 							<div class="mb-2.5">
 								<div class="flex w-full justify-between items-center">
 									<div class="text-xs pr-2 shrink-0">
@@ -1067,7 +1082,7 @@
 								</div>
 
 								<div class="mt-1 text-xs flex flex-col gap-1.5">
-									{#each requiredWorkflowNodes as node}
+									{#each REQUIRED_EDIT_WORKFLOW_NODES as node}
 										<div class="flex w-full flex-col">
 											<div class="shrink-0">
 												<div class=" capitalize line-clamp-1 w-20 text-gray-400 dark:text-gray-500">
@@ -1111,6 +1126,47 @@
 								</div>
 							</div>
 						{/if}
+					{:else if config?.IMAGE_GENERATION_ENGINE === 'gemini'}
+						<div class="mb-2.5">
+							<div class="flex w-full justify-between items-center">
+								<div class="text-xs pr-2 shrink-0">
+									<div class="">
+										{$i18n.t('Gemini Base URL')}
+									</div>
+								</div>
+
+								<div class="flex w-full">
+									<div class="flex-1">
+										<input
+											class="w-full text-sm bg-transparent outline-hidden text-right"
+											placeholder={$i18n.t('API Base URL')}
+											bind:value={config.IMAGES_EDIT_GEMINI_API_BASE_URL}
+										/>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="mb-2.5">
+							<div class="flex w-full justify-between items-center">
+								<div class="text-xs pr-2 shrink-0">
+									<div class="">
+										{$i18n.t('Gemini API Key')}
+									</div>
+								</div>
+
+								<div class="flex w-full">
+									<div class="flex-1">
+										<SensitiveInput
+											inputClassName="text-right w-full"
+											placeholder={$i18n.t('API Key')}
+											bind:value={config.IMAGES_EDIT_GEMINI_API_KEY}
+											required={true}
+										/>
+									</div>
+								</div>
+							</div>
+						</div>
 					{/if}
 				</div>
 			</div>
