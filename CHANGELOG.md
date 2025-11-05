@@ -5,13 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.35] - 2025-11-04
+## [0.6.35] - 2025-11-05
 
 ### Added
+- 🖼️ Image generation system received a comprehensive overhaul with major new capabilities including full image editing support allowing users to modify existing images using text prompts with OpenAI, Gemini, or ComfyUI engines, adding Gemini 2.5 Flash Image (Nano Banana) support, Qwen Image Edit integration, resolution of base64-encoded image display issues, streamlined AUTOMATIC1111 configuration by consolidating parameters into a flexible JSON parameters field, and enhanced UI with a code editor modal for ComfyUI workflow management. [#17434](https://github.com/open-webui/open-webui/pull/17434), [#16976](https://github.com/open-webui/open-webui/issues/16976), [Commit](https://github.com/open-webui/open-webui/commit/8e5690aab4f632a57027e2acf880b8f89a8717c0), [Commit](https://github.com/open-webui/open-webui/commit/72f8539fd2e679fec0762945f22f4b8a6920afa0), [Commit](https://github.com/open-webui/open-webui/commit/8d34fcb586eeee1fac6da2f991518b8a68b00b72), [Commit](https://github.com/open-webui/open-webui/commit/72900cd686de1fa6be84b5a8a2fc857cff7b91b8)
 - 🔒 CORS origin validation was added to WebSocket connections as a defense-in-depth security measure against cross-site WebSocket hijacking attacks. [#18411](https://github.com/open-webui/open-webui/pull/18411), [#18410](https://github.com/open-webui/open-webui/issues/18410)
 - 🔄 Automatic page refresh now occurs when a version update is detected via WebSocket connection, ensuring users always run the latest version without cache issues. [Commit](https://github.com/open-webui/open-webui/commit/989f192c92d2fe55daa31336e7971e21798b96ae)
 - 🐍 Experimental initial preparations for Python 3.13 compatibility by updating dependencies with security enhancements and cryptographic improvements. [#18430](https://github.com/open-webui/open-webui/pull/18430), [#18424](https://github.com/open-webui/open-webui/pull/18424)
 - ⚡ Image compression now preserves the original image format instead of converting to PNG, significantly reducing file sizes and improving chat loading performance. [#18506](https://github.com/open-webui/open-webui/pull/18506)
+- 🎤 Mistral Voxtral model support was added for text-to-speech, including voxtral-small and voxtral-mini models with both transcription and chat completion API support. [#18934](https://github.com/open-webui/open-webui/pull/18934)
 - 🔊 ELEVENLABS_API_BASE_URL environment variable now allows configuration of custom ElevenLabs API endpoints, enabling support for EU residency API requirements. [#18402](https://github.com/open-webui/open-webui/issues/18402)
 - 🔐 OAUTH_ROLES_SEPARATOR environment variable now allows custom role separators for OAuth roles that contain commas, useful for roles specified in LDAP syntax. [#18572](https://github.com/open-webui/open-webui/pull/18572)
 - ⌨️ Keyboard shortcut hints are now displayed on sidebar buttons with a refactored shortcuts modal that accurately reflects all available hotkeys across different keyboard layouts. [#18473](https://github.com/open-webui/open-webui/pull/18473)
@@ -76,7 +78,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - 🔄 Firecrawl integration was refactored to use the official Firecrawl SDK instead of direct HTTP requests and langchain_community FireCrawlLoader, improving reliability and performance with batch scraping support and enhanced error handling. [#18635](https://github.com/open-webui/open-webui/pull/18635)
-- 🖼️ AUTOMATIC1111 image generation configuration was simplified by consolidating CFG Scale, Sampler, and Scheduler settings into a single "Additional Parameters" JSON field for more flexible configuration. [Commit](https://github.com/open-webui/open-webui/commit/8e5690aab4f632a57027e2acf880b8f89a8717c0)
 - 📄 MinerU content extraction engine now only supports PDF files following the upstream removal of LibreOffice document conversion in version 2.0.0; users needing to process office documents should convert them to PDF format first. [#18448](https://github.com/open-webui/open-webui/issues/18448)
 
 ## [0.6.34] - 2025-10-16
