@@ -82,6 +82,8 @@ from open_webui.retrieval.utils import (
     query_doc_with_hybrid_search,
 )
 from open_webui.retrieval.bm25_cache import (
+    compute_collection_digest,
+    get_cache_metadata,
     get_or_build_bm25_retriever,
     invalidate_collection_cache,
 )
@@ -2219,57 +2221,175 @@ async def update_bm25_cache(
     results = []
 
     for collection_name in form_data.collection_names:
-        invalidated = invalidate_collection_cache(collection_name)
         entry: dict[str, Any] = {
             "collection_name": collection_name,
-            "invalidated": invalidated,
+            "invalidated": {"memory": 0, "disk": 0},
             "rebuilt": False,
+            "cache_metadata": None,
         }
 
-        if form_data.rebuild:
-            try:
-                collection_result = VECTOR_DB_CLIENT.get(
-                    collection_name=collection_name
-                )
-            except Exception as exc:
-                log.exception(
-                    "Failed to fetch collection %s for BM25 cache rebuild: %s",
-                    collection_name,
-                    exc,
-                )
-                entry["error"] = str(exc)
-            else:
-                documents = getattr(collection_result, "documents", None)
-                metadatas = getattr(collection_result, "metadatas", None)
+        metadata = get_cache_metadata(collection_name)
+        entry["cache_metadata"] = metadata
+        entry_status = "unknown"
+        expected_digest: Optional[str] = None
 
-                if (
-                    not documents
-                    or not metadatas
-                    or len(documents) == 0
-                    or not documents[0]
-                ):
-                    entry["error"] = "empty_collection"
-                else:
-                    try:
-                        await run_in_threadpool(
-                            get_or_build_bm25_retriever,
-                            collection_name,
-                            documents[0],
-                            metadatas[0],
-                            builder=BM25Retriever.from_texts,
-                        )
-                        entry["rebuilt"] = True
-                    except Exception as exc:
-                        log.exception(
-                            "Failed to rebuild BM25 cache for collection %s: %s",
-                            collection_name,
-                            exc,
-                        )
-                        entry["error"] = str(exc)
+        try:
+            collection_result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
+        except Exception as exc:
+            log.exception(
+                "Failed to fetch collection %s for BM25 cache rebuild: %s",
+                collection_name,
+                exc,
+            )
+            entry["error"] = str(exc)
+            entry["status"] = "error"
+            results.append(entry)
+            continue
+
+        documents = getattr(collection_result, "documents", None)
+        metadatas = getattr(collection_result, "metadatas", None)
+
+        if (
+            not documents
+            or not metadatas
+            or len(documents) == 0
+            or not documents[0]
+        ):
+            entry["error"] = "empty_collection"
+            entry["status"] = "empty_collection"
+            results.append(entry)
+            continue
+
+        try:
+            expected_digest = compute_collection_digest(documents[0], metadatas[0])
+            entry["expected_digest"] = expected_digest
+        except Exception as exc:  # pragma: no cover - defensive
+            log.exception(
+                "Failed to compute digest for collection %s: %s",
+                collection_name,
+                exc,
+            )
+            entry["error"] = str(exc)
+            entry["status"] = "error"
+            results.append(entry)
+            continue
+
+        if metadata is None:
+            entry_status = "missing"
+        else:
+            stored_digest = metadata.get("data_digest")
+            if not stored_digest:
+                entry_status = "untracked"
+            elif stored_digest == expected_digest:
+                entry_status = "up_to_date"
+            else:
+                entry_status = "outdated"
+
+        entry["status"] = entry_status
+
+        needs_rebuild = form_data.rebuild and entry_status in {
+            "missing",
+            "outdated",
+            "untracked",
+        }
+
+        if not needs_rebuild:
+            results.append(entry)
+            continue
+
+        invalidated = invalidate_collection_cache(collection_name)
+        entry["invalidated"] = invalidated
+
+        try:
+            get_or_build_bm25_retriever(
+                collection_name,
+                documents[0],
+                metadatas[0],
+                builder=BM25Retriever.from_texts,
+            )
+            entry["rebuilt"] = True
+            entry["cache_metadata"] = get_cache_metadata(collection_name)
+            if (
+                entry["cache_metadata"]
+                and entry["cache_metadata"].get("data_digest") == expected_digest
+            ):
+                entry["status"] = "up_to_date"
+        except Exception as exc:
+            log.exception(
+                "Failed to rebuild BM25 cache for collection %s: %s",
+                collection_name,
+                exc,
+            )
+            entry["error"] = str(exc)
 
         results.append(entry)
 
     return {"status": True, "results": results, "rebuild": form_data.rebuild}
+
+
+class VerifyBM25CacheForm(BaseModel):
+    collection_names: list[str]
+
+
+@router.post("/cache/bm25/verify")
+async def verify_bm25_cache(
+    form_data: VerifyBM25CacheForm,
+    user=Depends(get_admin_user),
+):
+    results: list[dict[str, Any]] = []
+
+    for collection_name in form_data.collection_names:
+        entry: dict[str, Any] = {
+            "collection_name": collection_name,
+            "status": "unknown",
+            "cache_metadata": get_cache_metadata(collection_name),
+        }
+
+        try:
+            collection_result = VECTOR_DB_CLIENT.get(
+                collection_name=collection_name
+            )
+        except Exception as exc:
+            log.exception(
+                "Failed to fetch collection %s for BM25 cache verification: %s",
+                collection_name,
+                exc,
+            )
+            entry["status"] = "error"
+            entry["error"] = str(exc)
+            results.append(entry)
+            continue
+
+        documents = getattr(collection_result, "documents", None)
+        metadatas = getattr(collection_result, "metadatas", None)
+
+        if (
+            not documents
+            or not metadatas
+            or len(documents) == 0
+            or not documents[0]
+        ):
+            entry["status"] = "empty_collection"
+            results.append(entry)
+            continue
+
+        expected_digest = compute_collection_digest(documents[0], metadatas[0])
+        entry["expected_digest"] = expected_digest
+
+        metadata = entry["cache_metadata"]
+        if metadata is None:
+            entry["status"] = "missing"
+        else:
+            stored_digest = metadata.get("data_digest")
+            if not stored_digest:
+                entry["status"] = "untracked"
+            elif stored_digest == expected_digest:
+                entry["status"] = "up_to_date"
+            else:
+                entry["status"] = "outdated"
+        results.append(entry)
+
+    return {"status": True, "results": results}
 
 
 class QueryDocForm(BaseModel):

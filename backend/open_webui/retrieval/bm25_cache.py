@@ -7,6 +7,7 @@ import logging
 import pickle
 import threading
 from collections import OrderedDict
+from itertools import zip_longest
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping, MutableMapping, Optional, Sequence
 
@@ -17,6 +18,8 @@ __all__ = [
     "clear_cache",
     "invalidate_cache",
     "invalidate_collection_cache",
+    "get_cache_metadata",
+    "compute_collection_digest",
 ]
 
 
@@ -99,6 +102,30 @@ def _make_cache_key(
     )
 
 
+def compute_collection_digest(
+    documents: Sequence[Any],
+    metadatas: Sequence[Mapping[str, Any]],
+) -> str:
+    """Return a deterministic hash for the provided collection payload."""
+
+    hasher = hashlib.sha256()
+
+    for document, metadata in zip_longest(documents or [], metadatas or [], fillvalue=None):
+        if document is None:
+            document = ""
+        if not isinstance(document, str):
+            document = str(document)
+
+        hasher.update(b"\x00")
+        hasher.update(document.encode("utf-8"))
+
+        metadata_dump = json.dumps(metadata or {}, sort_keys=True, default=_json_default)
+        hasher.update(b"\x00")
+        hasher.update(metadata_dump.encode("utf-8"))
+
+    return hasher.hexdigest()
+
+
 def _sanitize_collection_name(collection_name: str) -> str:
     sanitized = "".join(
         ch if ch.isalnum() or ch in {"-", "_", "."} else "_"
@@ -113,6 +140,10 @@ def _cache_file_path(collection_name: str, key: str) -> Path:
     digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
     prefix = _sanitize_collection_name(collection_name)
     return _PERSISTENT_CACHE_DIR / f"{prefix}-{digest}.pkl"
+
+
+def _metadata_file_path(collection_name: str, key: str) -> Path:
+    return _cache_file_path(collection_name, key).with_suffix(".meta.json")
 
 
 def _load_from_disk(collection_name: str, key: str) -> Any | None:
@@ -134,14 +165,57 @@ def _load_from_disk(collection_name: str, key: str) -> Any | None:
         return None
 
 
-def _save_to_disk(collection_name: str, key: str, retriever: Any) -> None:
+def _load_metadata_from_disk(collection_name: str, key: str) -> dict[str, Any] | None:
+    meta_path = _metadata_file_path(collection_name, key)
+    if meta_path.exists():
+        try:
+            with meta_path.open("r", encoding="utf-8") as file:
+                metadata = json.load(file)
+            if isinstance(metadata, dict):
+                metadata.setdefault("key", key)
+                return metadata
+        except (OSError, json.JSONDecodeError) as exc:  # pragma: no cover - defensive
+            log.warning("Failed to load BM25 retriever cache metadata %s: %s", meta_path, exc)
+
+    path = _cache_file_path(collection_name, key)
+    if not path.exists():
+        return None
+
+    try:
+        with path.open("rb") as file:
+            payload = pickle.load(file)
+        if isinstance(payload, dict):
+            metadata = {k: v for k, v in payload.items() if k != "retriever"}
+            metadata.setdefault("key", key)
+            return metadata
+    except Exception as exc:  # pragma: no cover - defensive
+        log.warning("Failed to read BM25 cache metadata from %s: %s", path, exc)
+    return None
+
+
+def _save_to_disk(
+    collection_name: str,
+    key: str,
+    retriever: Any,
+    *,
+    metadata: Optional[Mapping[str, Any]] = None,
+) -> None:
     path = _cache_file_path(collection_name, key)
     tmp_path = path.with_suffix(".tmp")
+    meta_path = _metadata_file_path(collection_name, key)
+    tmp_meta_path = meta_path.with_suffix(".tmp")
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         with tmp_path.open("wb") as file:
             pickle.dump({"key": key, "retriever": retriever}, file, protocol=pickle.HIGHEST_PROTOCOL)
         tmp_path.replace(path)
+
+        metadata_payload: dict[str, Any] = {"key": key}
+        if metadata:
+            metadata_payload.update(metadata)
+        with tmp_meta_path.open("w", encoding="utf-8") as file:
+            json.dump(metadata_payload, file, sort_keys=True, default=_json_default)
+        tmp_meta_path.replace(meta_path)
     except Exception as exc:  # pragma: no cover - defensive
         log.warning("Failed to persist BM25 retriever cache to %s: %s", path, exc)
         try:
@@ -149,18 +223,33 @@ def _save_to_disk(collection_name: str, key: str, retriever: Any) -> None:
                 tmp_path.unlink()
         except OSError:
             pass
+        try:
+            if tmp_meta_path.exists():
+                tmp_meta_path.unlink()
+        except OSError:
+            pass
 
 
 def _delete_from_disk(collection_name: str, key: str) -> bool:
     path = _cache_file_path(collection_name, key)
+    meta_path = _metadata_file_path(collection_name, key)
+    removed = False
     try:
         path.unlink()
-        return True
+        removed = True
     except FileNotFoundError:
-        return False
+        pass
     except OSError as exc:  # pragma: no cover - defensive
         log.warning("Failed to delete BM25 retriever cache %s: %s", path, exc)
-        return False
+
+    try:
+        meta_path.unlink()
+        removed = True
+    except FileNotFoundError:
+        pass
+    except OSError as exc:  # pragma: no cover - defensive
+        log.warning("Failed to delete BM25 retriever cache metadata %s: %s", meta_path, exc)
+    return removed
 
 
 def _delete_all_from_disk(collection_name: str) -> int:
@@ -174,6 +263,15 @@ def _delete_all_from_disk(collection_name: str) -> int:
             continue
         except OSError as exc:  # pragma: no cover - defensive
             log.warning("Failed to delete BM25 retriever cache %s: %s", path, exc)
+            continue
+
+        meta_path = path.with_suffix(".meta.json")
+        try:
+            meta_path.unlink()
+        except FileNotFoundError:
+            pass
+        except OSError as exc:  # pragma: no cover - defensive
+            log.warning("Failed to delete BM25 retriever cache metadata %s: %s", meta_path, exc)
     return removed
 
 
@@ -229,7 +327,26 @@ def get_or_build_bm25_retriever(
 
         retriever = builder(**kwargs)
         _cache.put(key, retriever)
-        _save_to_disk(collection_name, key, retriever)
+
+        metadata = None
+        try:
+            metadata = {
+                "data_digest": compute_collection_digest(texts_list, metadatas_list),
+                "tokenizer_tag": tokenizer_tag,
+            }
+            if bm25_params:
+                metadata["bm25_params"] = bm25_params
+            if chunking_params:
+                metadata["chunking_params"] = chunking_params
+        except Exception as exc:  # pragma: no cover - defensive
+            log.warning(
+                "Failed to compute BM25 cache metadata for collection %s: %s",
+                collection_name,
+                exc,
+            )
+            metadata = None
+
+        _save_to_disk(collection_name, key, retriever, metadata=metadata)
         return retriever
         # return _clone_retriever(retriever) # cloning involve deep-copy and takes a long time - may be unsafe
 
@@ -263,6 +380,11 @@ def clear_cache() -> None:
     try:
         for path in _PERSISTENT_CACHE_DIR.glob("*.pkl"):
             path.unlink()
+            meta_path = path.with_suffix(".meta.json")
+            try:
+                meta_path.unlink()
+            except FileNotFoundError:
+                pass
     except FileNotFoundError:
         pass
     except OSError as exc:  # pragma: no cover - defensive
@@ -278,3 +400,23 @@ def _clone_retriever(retriever: Any) -> Any:
             except TypeError:
                 return copy_method()  # type: ignore[call-arg]
     return copy.deepcopy(retriever)
+
+
+def get_cache_metadata(
+    collection_name: str,
+    *,
+    bm25_params: Optional[Mapping[str, Any]] = None,
+    tokenizer_tag: str = "default",
+    chunking_params: Optional[Mapping[str, Any]] = None,
+) -> Optional[dict[str, Any]]:
+    key = _make_cache_key(
+        collection_name,
+        bm25_params,
+        tokenizer_tag,
+        chunking_params,
+    )
+    metadata = _load_metadata_from_disk(collection_name, key)
+    if metadata is None:
+        return None
+    metadata.setdefault("collection_name", collection_name)
+    return metadata
