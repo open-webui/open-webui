@@ -1308,8 +1308,12 @@ def save_docs_to_vector_db(
         f"save_docs_to_vector_db: document {_get_docs_info(docs)} {collection_name}"
     )
 
+    collection_exists = VECTOR_DB_CLIENT.has_collection(
+        collection_name=collection_name
+    )
+
     # Check if entries with the same hash (metadata.hash) already exist
-    if metadata and "hash" in metadata:
+    if collection_exists and metadata and "hash" in metadata:
         result = VECTOR_DB_CLIENT.query(
             collection_name=collection_name,
             filter={"hash": metadata["hash"]},
@@ -1408,10 +1412,12 @@ def save_docs_to_vector_db(
     ]
 
     try:
-        if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
-            log.info(f"collection {collection_name} already exists")
-
+        if collection_exists:
             if overwrite:
+                log.info(
+                    f"collection {collection_name} already exists, invalidating BM25 cache"
+                )
+                invalidate_collection_cache(collection_name)
                 VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
                 log.info(f"deleting existing collection {collection_name}")
             elif add is False:
@@ -1419,6 +1425,11 @@ def save_docs_to_vector_db(
                     f"collection {collection_name} already exists, overwrite is False and add is False"
                 )
                 return True
+            else:
+                log.info(
+                    f"collection {collection_name} already exists, invalidating BM25 cache"
+                )
+                invalidate_collection_cache(collection_name)
 
         log.info(f"generating embeddings for {collection_name}")
         embedding_function = get_embedding_function(
