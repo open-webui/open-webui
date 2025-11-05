@@ -196,8 +196,6 @@ COPY --chown=$UID:$GID --from=build /app/CHANGELOG.md /app/CHANGELOG.md
 COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 # Copy KaTeX runtime and assets for server-side rendering and local CSS/fonts
 COPY --chown=$UID:$GID --from=build /app/node_modules/katex /app/node_modules/katex
-# Place KaTeX dist (CSS + fonts) where STATIC_DIR points: backend/open_webui/static/katex
-COPY --chown=$UID:$GID --from=build /app/node_modules/katex/dist /app/backend/open_webui/static/katex
 
 # copy backend files
 COPY --chown=$UID:$GID ./backend .

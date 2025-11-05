@@ -55,7 +55,7 @@
 			}
 
 			const rawChatData = await response.json();
-			console.log('✅ Received META data:', rawChatData);
+			console.log(`✅✅✅ Received META data from ${rawChatData.length} groups:`, rawChatData);
 			// console.log(rawChatData[0].meta);
 
 			return rawChatData;
@@ -263,7 +263,7 @@
 			}
 
 			memberStats = transformChatData(rawChatData);
-			console.log('Transformed member stats:', memberStats);
+			// console.log('Transformed member stats:', memberStats);
 
 			if (memberStats.length === 0) {
 				toast.warning('No conversation data found.');

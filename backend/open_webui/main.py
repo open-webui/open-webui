@@ -150,8 +150,12 @@ from open_webui.config import (
     AUDIO_TTS_MODEL,
     AUDIO_TTS_OPENAI_API_BASE_URL,
     AUDIO_TTS_OPENAI_API_KEY,
+    AUDIO_TTS_PORTKEY_API_BASE_URL,
+    AUDIO_TTS_PORTKEY_API_KEY,
     AUDIO_TTS_SPLIT_ON,
     AUDIO_TTS_VOICE,
+    AUDIO_TTS_LANGUAGE,
+    AUDIO_TTS_AUDIO_VOICE,
     AUDIO_TTS_AZURE_SPEECH_REGION,
     AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT,
     AUDIO_STT_PORTKEY_API_BASE_URL,
@@ -332,6 +336,7 @@ from open_webui.env import (
     RESET_CONFIG_ON_START,
     OFFLINE_MODE,
 )
+from open_webui.utils.katex_compiler import KaTeXCompiler
 
 
 from open_webui.utils.models import (
@@ -500,6 +505,32 @@ async def lifespan(app: FastAPI):
     ensure_tool_created_by_column()
     ensure_function_created_by_column()
     ensure_chat_group_id_column()
+    # Cache KaTeX TTF fonts locally once on startup 
+    try:
+        compiler = KaTeXCompiler()
+        node_katex_dist = compiler.node_modules_path / 'katex' / 'dist'
+        target_dir = STATIC_DIR / 'assets' / 'katex'
+        os.makedirs(target_dir, exist_ok=True)
+        fonts_src = node_katex_dist / 'fonts'
+        fonts_dst = target_dir / 'fonts'
+
+        if fonts_src.exists():
+            try:
+                os.makedirs(fonts_dst, exist_ok=True)
+                copied_count = 0
+                for name in os.listdir(fonts_src):
+                    s = fonts_src / name
+                    d = fonts_dst / name
+                    if not d.exists():
+                        shutil.copy2(s, d)
+                        copied_count += 1
+                if copied_count > 0:
+                    log.info(f"Copied {copied_count} KaTeX fonts to {fonts_dst}")
+            except Exception as e:
+                log.warning(f"Failed to copy KaTeX fonts from node_modules: {e}")
+    except Exception as e:
+        log.debug(f"KaTeX font cache init failed: {e}")
+        
     yield
 
 
@@ -832,9 +863,13 @@ app.state.config.DEEPGRAM_API_KEY = DEEPGRAM_API_KEY
 
 app.state.config.TTS_OPENAI_API_BASE_URL = AUDIO_TTS_OPENAI_API_BASE_URL
 app.state.config.TTS_OPENAI_API_KEY = AUDIO_TTS_OPENAI_API_KEY
+app.state.config.TTS_PORTKEY_API_BASE_URL = AUDIO_TTS_PORTKEY_API_BASE_URL
+app.state.config.TTS_PORTKEY_API_KEY = AUDIO_TTS_PORTKEY_API_KEY
 app.state.config.TTS_ENGINE = AUDIO_TTS_ENGINE
 app.state.config.TTS_MODEL = AUDIO_TTS_MODEL
 app.state.config.TTS_VOICE = AUDIO_TTS_VOICE
+app.state.config.TTS_LANGUAGE = AUDIO_TTS_LANGUAGE
+app.state.config.TTS_AUDIO_VOICE = AUDIO_TTS_AUDIO_VOICE
 app.state.config.TTS_API_KEY = AUDIO_TTS_API_KEY
 app.state.config.TTS_SPLIT_ON = AUDIO_TTS_SPLIT_ON
 
@@ -1298,12 +1333,12 @@ async def get_app_config(request: Request):
                 },
                 "audio": {
                     "tts": {
-                        "engine": app.state.config.TTS_ENGINE,
-                        "voice": app.state.config.TTS_VOICE,
-                        "split_on": app.state.config.TTS_SPLIT_ON,
+                        "engine": {"default": app.state.config.TTS_ENGINE.get(user.email)},
+                        "voice": app.state.config.TTS_VOICE.get(user.email),
+                        "split_on": app.state.config.TTS_SPLIT_ON.get(user.email),
                     },
                     "stt": {
-                        "engine": app.state.config.STT_ENGINE,
+                        "engine": {"default": app.state.config.STT_ENGINE.get(user.email)},
                     },
                 },
                 "file": {

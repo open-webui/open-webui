@@ -307,11 +307,17 @@
 				}
 			} else if ($config?.audio?.tts?.engine?.default && $config.audio.tts.engine.default !== '') {
 				for (const [idx, sentence] of messageContentParts.entries()) {
+					const selectedVoice = $settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice
+						? ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
+						: $config?.audio?.tts?.voice;
+					
+					console.log('TTS Debug - Config voice:', $config?.audio?.tts?.voice);
+					console.log('TTS Debug - Settings voice:', $settings?.audio?.tts?.voice);
+					console.log('TTS Debug - Selected voice:', selectedVoice);
+					
 					const res = await synthesizeOpenAISpeech(
 						localStorage.token,
-						$settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice
-							? ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
-							: $config?.audio?.tts?.voice,
+						selectedVoice,
 						sentence
 					).catch((error) => {
 						console.error(error);

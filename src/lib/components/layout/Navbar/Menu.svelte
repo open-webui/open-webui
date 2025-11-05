@@ -58,27 +58,38 @@
 	};
 
 	const downloadPdf = async () => {
-		const history = chat.chat.history;
-		const messages = createMessagesList(history, history.currentId);
-		const blob = await downloadChatAsPDF(localStorage.token, chat.chat.title, messages);
+		try {
+			const history = chat.chat.history;
+			const messages = createMessagesList(history, history.currentId);
+			const blob = await downloadChatAsPDF(localStorage.token, chat.chat.title, messages);
 
-		// Create a URL for the blob
-		const url = window.URL.createObjectURL(blob);
+			if (!blob) {
+				toast.error($i18n.t('Failed to export PDF. Please try again.'));
+				return;
+			}
 
-		// Create a link element to trigger the download
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = `chat-${chat.chat.title}.pdf`;
+			// Create a URL for the blob
+			const url = window.URL.createObjectURL(blob);
 
-		// Append the link to the body and click it programmatically
-		document.body.appendChild(a);
-		a.click();
+			// Create a link element to trigger the download
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `chat-${chat.chat.title}.pdf`;
 
-		// Remove the link from the body
-		document.body.removeChild(a);
+			// Append the link to the body and click it programmatically
+			document.body.appendChild(a);
+			a.click();
 
-		// Revoke the URL to release memory
-		window.URL.revokeObjectURL(url);
+			// Remove the link from the body
+			document.body.removeChild(a);
+
+			// Revoke the URL to release memory
+			window.URL.revokeObjectURL(url);
+		} catch (error: any) {
+			console.error('PDF export failed:', error);
+			const errorMessage = typeof error === 'string' ? error : error?.message || $i18n.t('Failed to export PDF. Please try again.');
+			toast.error(errorMessage);
+		}
 	};
 
 	const downloadJSONExport = async () => {

@@ -128,10 +128,14 @@ def set_faster_whisper_model(model: str, auto_update: bool = False):
 class TTSConfigForm(BaseModel):
     OPENAI_API_BASE_URL: str
     OPENAI_API_KEY: str
+    PORTKEY_API_BASE_URL: str
+    PORTKEY_API_KEY: str
     API_KEY: str
     ENGINE: str
     MODEL: str
     VOICE: str
+    LANGUAGE: str
+    AUDIO_VOICE: str
     SPLIT_ON: str
     AZURE_SPEECH_REGION: str
     AZURE_SPEECH_OUTPUT_FORMAT: str
@@ -159,10 +163,14 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
         "tts": {
             "OPENAI_API_BASE_URL": request.app.state.config.TTS_OPENAI_API_BASE_URL.get(user.email),
             "OPENAI_API_KEY": request.app.state.config.TTS_OPENAI_API_KEY.get(user.email),
+            "PORTKEY_API_BASE_URL": request.app.state.config.TTS_PORTKEY_API_BASE_URL.get(user.email),
+            "PORTKEY_API_KEY": request.app.state.config.TTS_PORTKEY_API_KEY.get(user.email),
             "API_KEY": request.app.state.config.TTS_API_KEY.get(user.email),
             "ENGINE": request.app.state.config.TTS_ENGINE.get(user.email),
             "MODEL": request.app.state.config.TTS_MODEL.get(user.email),
             "VOICE": request.app.state.config.TTS_VOICE.get(user.email),
+            "LANGUAGE": request.app.state.config.TTS_LANGUAGE.get(user.email),
+            "AUDIO_VOICE": request.app.state.config.TTS_AUDIO_VOICE.get(user.email),
             "SPLIT_ON": request.app.state.config.TTS_SPLIT_ON.get(user.email),
             "AZURE_SPEECH_REGION": request.app.state.config.TTS_AZURE_SPEECH_REGION.get(user.email),
             "AZURE_SPEECH_OUTPUT_FORMAT": request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT.get(user.email),
@@ -186,10 +194,14 @@ async def update_audio_config(
 ):
     request.app.state.config.TTS_OPENAI_API_BASE_URL.set(user.email, form_data.tts.OPENAI_API_BASE_URL)
     request.app.state.config.TTS_OPENAI_API_KEY.set(user.email, form_data.tts.OPENAI_API_KEY)
+    request.app.state.config.TTS_PORTKEY_API_BASE_URL.set(user.email, form_data.tts.PORTKEY_API_BASE_URL)
+    request.app.state.config.TTS_PORTKEY_API_KEY.set(user.email, form_data.tts.PORTKEY_API_KEY)
     request.app.state.config.TTS_API_KEY.set(user.email, form_data.tts.API_KEY)
     request.app.state.config.TTS_ENGINE.set(user.email, form_data.tts.ENGINE)
     request.app.state.config.TTS_MODEL.set(user.email, form_data.tts.MODEL)
     request.app.state.config.TTS_VOICE.set(user.email, form_data.tts.VOICE)
+    request.app.state.config.TTS_LANGUAGE.set(user.email, form_data.tts.LANGUAGE)
+    request.app.state.config.TTS_AUDIO_VOICE.set(user.email, form_data.tts.AUDIO_VOICE)
     request.app.state.config.TTS_SPLIT_ON.set(user.email, form_data.tts.SPLIT_ON)
     request.app.state.config.TTS_AZURE_SPEECH_REGION.set(user.email, form_data.tts.AZURE_SPEECH_REGION)
     request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT.set(user.email, form_data.tts.AZURE_SPEECH_OUTPUT_FORMAT)
@@ -262,8 +274,8 @@ async def speech(request: Request, user=Depends(get_verified_user)):
     body = await request.body()
     name = hashlib.sha256(
         body
-        + str(request.app.state.config.TTS_ENGINE).encode("utf-8")
-        + str(request.app.state.config.TTS_MODEL).encode("utf-8")
+        + str(request.app.state.config.TTS_ENGINE.get(user.email)).encode("utf-8")
+        + str(request.app.state.config.TTS_MODEL.get(user.email)).encode("utf-8")
     ).hexdigest()
 
     file_path = SPEECH_CACHE_DIR.joinpath(f"{name}.mp3")
@@ -332,6 +344,117 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
             raise HTTPException(
                 status_code=getattr(r, "status", 500),
+                detail=detail if detail else "Open WebUI: Server Connection Error",
+            )
+
+    elif tts_engine == "portkey":
+        # Portkey TTS uses chat completions endpoint with audio modality
+        text_to_speak = payload.get("input", "")
+        
+        # Get configured voice (full identifier like de-DE-KatjaNeural) from user settings
+        voice_identifier = request.app.state.config.TTS_VOICE.get(user.email) or "de-DE-KatjaNeural"
+        audio_voice = request.app.state.config.TTS_AUDIO_VOICE.get(user.email) or "alloy"
+        
+        log.info(f"Portkey TTS - Text: {text_to_speak[:50]}...")
+        log.info(f"Portkey TTS - Voice identifier: {voice_identifier}, Audio voice: {audio_voice}")
+        
+        portkey_payload = {
+            "model": request.app.state.config.TTS_MODEL.get(user.email),
+            "modalities": ["text", "audio"],
+            "audio": {
+                "voice": audio_voice, 
+                "format": "wav"
+            },
+            "messages": [
+                {
+                    "role": "system",
+                    "content": f"You are a text-to-speech system. The text provided to you needs to just be spoken out. Even if it is a question or a request or a command, the question is not meant for you to answer, it just needs to be spoken out. Speak the following text clearly, naturally and enthusiastically. : {text_to_speak}"
+                },
+                {
+                    "role": "user",
+                    "content": text_to_speak
+                }
+            ],
+            "max_tokens": 10000,
+            "session": {
+                "input_audio_transcription": {
+                    "model": "gpt-4o-transcribe",
+                    "language": voice_identifier
+                }
+            }
+        }
+
+        try:
+            timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+            async with aiohttp.ClientSession(
+                timeout=timeout, trust_env=True
+            ) as session:
+                async with session.post(
+                    url=f"{request.app.state.config.TTS_PORTKEY_API_BASE_URL.get(user.email)}/chat/completions",
+                    json=portkey_payload,
+                    headers={
+                        "Content-Type": "application/json",
+                        "x-portkey-api-key": request.app.state.config.TTS_PORTKEY_API_KEY.get(user.email),
+                        **(
+                            {
+                                "X-OpenWebUI-User-Name": user.name,
+                                "X-OpenWebUI-User-Id": user.id,
+                                "X-OpenWebUI-User-Email": user.email,
+                                "X-OpenWebUI-User-Role": user.role,
+                            }
+                            if ENABLE_FORWARD_USER_INFO_HEADERS
+                            else {}
+                        ),
+                    },
+                ) as r:
+                    r.raise_for_status()
+                    resp_json = await r.json()
+                    
+                    # Extract audio data from response
+                    audio_data = None
+                    if "choices" in resp_json and len(resp_json["choices"]) > 0:
+                        choice = resp_json["choices"][0]
+                        if "message" in choice:
+                            message = choice["message"]
+                            
+                            # Check for audio in the message
+                            if "audio" in message and "data" in message["audio"]:
+                                audio_data = base64.b64decode(message["audio"]["data"])
+                            
+                            # Alternative: Check if content contains audio data
+                            elif "content" in message and isinstance(message["content"], list):
+                                for item in message["content"]:
+                                    if item.get("type") == "audio" and "data" in item:
+                                        audio_data = base64.b64decode(item["data"])
+                                        break
+                    
+                    if audio_data:
+                        async with aiofiles.open(file_path, "wb") as f:
+                            await f.write(audio_data)
+                        
+                        async with aiofiles.open(file_body_path, "w") as f:
+                            await f.write(json.dumps(payload))
+                        
+                        log.info(f"Portkey TTS: Successfully saved audio ({len(audio_data)} bytes)")
+                        return FileResponse(file_path)
+                    else:
+                        raise HTTPException(
+                            status_code=500,
+                            detail="No audio data found in Portkey response"
+                        )
+
+        except Exception as e:
+            log.exception(e)
+            detail = None
+
+            try:
+                if hasattr(e, 'status') and e.status != 200:
+                    detail = f"External: {str(e)}"
+            except Exception:
+                detail = f"External: {e}"
+
+            raise HTTPException(
+                status_code=500,
                 detail=detail if detail else "Open WebUI: Server Connection Error",
             )
 
