@@ -210,7 +210,7 @@
 	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		<div class="flex flex-col gap-3">
 			<div>
-				<div class=" mb-2.5 text-base font-medium">{$i18n.t('Speech-to-Text')}</div>
+				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Speech-to-Text')}</div>
 
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -498,7 +498,7 @@
 			</div>
 
 			<div>
-				<div class=" mb-2.5 text-base font-medium">{$i18n.t('Text-to-Speech')}</div>
+				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Text-to-Speech')}</div>
 
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
