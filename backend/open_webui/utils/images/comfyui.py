@@ -103,7 +103,7 @@ class ComfyUIWorkflow(BaseModel):
     nodes: list[ComfyUINodeInput]
 
 
-class ComfyUIGenerateImageForm(BaseModel):
+class ComfyUICreateImageForm(BaseModel):
     workflow: ComfyUIWorkflow
 
     prompt: str
@@ -116,8 +116,8 @@ class ComfyUIGenerateImageForm(BaseModel):
     seed: Optional[int] = None
 
 
-async def comfyui_generate_image(
-    model: str, payload: ComfyUIGenerateImageForm, client_id, base_url, api_key
+async def comfyui_create_image(
+    model: str, payload: ComfyUICreateImageForm, client_id, base_url, api_key
 ):
     ws_url = base_url.replace("http://", "ws://").replace("https://", "wss://")
     workflow = json.loads(payload.workflow.workflow)

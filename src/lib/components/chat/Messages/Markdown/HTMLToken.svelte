@@ -79,7 +79,12 @@
 				title="Embedded content"
 				frameborder="0"
 				sandbox
-				onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
+				on:load={(e) => {
+					try {
+						e.currentTarget.style.height =
+							e.currentTarget.contentWindow.document.body.scrollHeight + 20 + 'px';
+					} catch {}
+				}}
 			></iframe>
 		{:else}
 			{token.text}
@@ -116,17 +121,19 @@
 				referrerpolicy="strict-origin-when-cross-origin"
 				allowfullscreen
 				width="100%"
-				onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
+				on:load={(e) => {
+					try {
+						e.currentTarget.style.height =
+							e.currentTarget.contentWindow.document.body.scrollHeight + 20 + 'px';
+					} catch {}
+				}}
 			></iframe>
 		{/if}
 	{:else if token.text.includes(`<source_id`)}
 		<Source {id} {token} onClick={onSourceClick} />
+	{:else if token.text.trim().match(/^<br\s*\/?>$/i)}
+		<br />
 	{:else}
-		{@const br = token.text.match(/<br\s*\/?>/)}
-		{#if br}
-			<br />
-		{:else}
-			{token.text}
-		{/if}
+		{token.text}
 	{/if}
 {/if}

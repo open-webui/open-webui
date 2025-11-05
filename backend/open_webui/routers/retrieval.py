@@ -1875,6 +1875,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                referer=request.app.state.config.WEBUI_URL,
             )
         else:
             raise Exception(
