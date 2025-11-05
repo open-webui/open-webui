@@ -658,7 +658,7 @@
 
 						<div class="mb-2.5 flex w-full flex-col">
 							<div class="  text-xs font-medium mb-1">
-							{$i18n.t('Domain Filter List')}
+								{$i18n.t('Domain Filter List')}
 							</div>
 
 						<div class="mb-2.5 flex w-full justify-between">
