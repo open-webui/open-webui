@@ -9,7 +9,7 @@ import re
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator, List, Optional, Sequence, Union
+from typing import Any, Iterator, List, Optional, Sequence, Union
 
 from fastapi import (
     Depends,
@@ -31,6 +31,7 @@ import tiktoken
 from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 from langchain_core.documents import Document
+from langchain_community.retrievers import BM25Retriever
 
 from open_webui.models.files import FileModel, Files
 from open_webui.models.knowledge import Knowledges
@@ -79,6 +80,10 @@ from open_webui.retrieval.utils import (
     query_collection_with_hybrid_search,
     query_doc,
     query_doc_with_hybrid_search,
+)
+from open_webui.retrieval.bm25_cache import (
+    get_or_build_bm25_retriever,
+    invalidate_collection_cache,
 )
 from open_webui.retrieval.vector.utils import filter_metadata
 from open_webui.utils.misc import (
@@ -2199,6 +2204,72 @@ async def process_web_search(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
         )
+
+
+class UpdateBM25CacheForm(BaseModel):
+    collection_names: list[str]
+    rebuild: bool = True
+
+
+@router.post("/cache/bm25/update")
+async def update_bm25_cache(
+    form_data: UpdateBM25CacheForm,
+    user=Depends(get_admin_user),
+):
+    results = []
+
+    for collection_name in form_data.collection_names:
+        invalidated = invalidate_collection_cache(collection_name)
+        entry: dict[str, Any] = {
+            "collection_name": collection_name,
+            "invalidated": invalidated,
+            "rebuilt": False,
+        }
+
+        if form_data.rebuild:
+            try:
+                collection_result = VECTOR_DB_CLIENT.get(
+                    collection_name=collection_name
+                )
+            except Exception as exc:
+                log.exception(
+                    "Failed to fetch collection %s for BM25 cache rebuild: %s",
+                    collection_name,
+                    exc,
+                )
+                entry["error"] = str(exc)
+            else:
+                documents = getattr(collection_result, "documents", None)
+                metadatas = getattr(collection_result, "metadatas", None)
+
+                if (
+                    not documents
+                    or not metadatas
+                    or len(documents) == 0
+                    or not documents[0]
+                ):
+                    entry["error"] = "empty_collection"
+                else:
+                    try:
+                        await run_in_threadpool(
+                            get_or_build_bm25_retriever,
+                            collection_name,
+                            documents[0],
+                            metadatas[0],
+                            builder=BM25Retriever.from_texts,
+                        )
+                        entry["rebuilt"] = True
+                    except Exception as exc:
+                        log.exception(
+                            "Failed to rebuild BM25 cache for collection %s: %s",
+                            collection_name,
+                            exc,
+                        )
+                        entry["error"] = str(exc)
+
+        results.append(entry)
+
+    return {"status": True, "results": results, "rebuild": form_data.rebuild}
 
 
 class QueryDocForm(BaseModel):
