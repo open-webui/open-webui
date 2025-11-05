@@ -251,7 +251,7 @@
 						<div class="mb-2.5">
 							<div class="flex w-full justify-between items-center">
 								<div class="text-xs pr-2">
-									<div class="">
+									<div class="shrink-0">
 										{$i18n.t('Model')}
 									</div>
 								</div>
@@ -259,7 +259,7 @@
 								<Tooltip content={$i18n.t('Enter Model ID')} placement="top-start">
 									<input
 										list="model-list"
-										class=" text-right text-sm bg-transparent outline-hidden max-w-full w-72"
+										class=" text-right text-sm bg-transparent outline-hidden max-w-full w-52"
 										bind:value={config.IMAGE_GENERATION_MODEL}
 										placeholder={$i18n.t('Select a model')}
 										required
@@ -277,14 +277,14 @@
 						<div class="mb-2.5">
 							<div class="flex w-full justify-between items-center">
 								<div class="text-xs pr-2">
-									<div class="">
+									<div class="shrink-0">
 										{$i18n.t('Image Size')}
 									</div>
 								</div>
 
 								<Tooltip content={$i18n.t('Enter Image Size (e.g. 512x512)')} placement="top-start">
 									<input
-										class="  text-right text-sm bg-transparent outline-hidden max-w-full w-72"
+										class="  text-right text-sm bg-transparent outline-hidden max-w-full w-52"
 										placeholder={$i18n.t('Enter Image Size (e.g. 512x512)')}
 										bind:value={config.IMAGE_SIZE}
 									/>
@@ -824,7 +824,7 @@
 						<div class="mb-2.5">
 							<div class="flex w-full justify-between items-center">
 								<div class="text-xs pr-2">
-									<div class="">
+									<div class="shrink-0">
 										{$i18n.t('Model')}
 									</div>
 								</div>
@@ -832,7 +832,7 @@
 								<Tooltip content={$i18n.t('Enter Model ID')} placement="top-start">
 									<input
 										list="model-list"
-										class="text-right text-sm bg-transparent outline-hidden"
+										class="text-right text-sm bg-transparent outline-hidden max-w-full w-52"
 										bind:value={config.IMAGE_EDIT_MODEL}
 										placeholder={$i18n.t('Select a model')}
 										required
@@ -850,14 +850,14 @@
 						<div class="mb-2.5">
 							<div class="flex w-full justify-between items-center">
 								<div class="text-xs pr-2">
-									<div class="">
+									<div class="shrink-0">
 										{$i18n.t('Image Size')}
 									</div>
 								</div>
 
 								<Tooltip content={$i18n.t('Enter Image Size (e.g. 512x512)')} placement="top-start">
 									<input
-										class="text-right text-sm bg-transparent outline-hidden max-w-full w-72"
+										class="text-right text-sm bg-transparent outline-hidden max-w-full w-52"
 										placeholder={$i18n.t('Enter Image Size (e.g. 512x512)')}
 										bind:value={config.IMAGE_EDIT_SIZE}
 									/>
