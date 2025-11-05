@@ -212,6 +212,15 @@
 			await embeddingModelUpdateHandler();
 		}
 
+		if (RAGConfig.MINERU_PARAMS) {
+			try {
+				JSON.parse(RAGConfig.MINERU_PARAMS);
+			} catch (e) {
+				toast.error($i18n.t('Invalid JSON format in MinerU Parameters'));
+				return;
+			}
+		}
+
 		const res = await updateRAGConfig(localStorage.token, {
 			...RAGConfig,
 			ALLOWED_FILE_EXTENSIONS: RAGConfig.ALLOWED_FILE_EXTENSIONS.split(',')
@@ -220,7 +229,13 @@
 			DOCLING_PICTURE_DESCRIPTION_LOCAL: JSON.parse(
 				RAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL || '{}'
 			),
-			DOCLING_PICTURE_DESCRIPTION_API: JSON.parse(RAGConfig.DOCLING_PICTURE_DESCRIPTION_API || '{}')
+			DOCLING_PICTURE_DESCRIPTION_API: JSON.parse(
+				RAGConfig.DOCLING_PICTURE_DESCRIPTION_API || '{}'
+			),
+			MINERU_PARAMS:
+				typeof RAGConfig.MINERU_PARAMS === 'string' && RAGConfig.MINERU_PARAMS.trim() !== ''
+					? JSON.parse(RAGConfig.MINERU_PARAMS)
+					: {}
 		});
 		dispatch('save');
 	};
@@ -260,6 +275,11 @@
 			null,
 			2
 		);
+
+		config.MINERU_PARAMS =
+			typeof config.MINERU_PARAMS === 'object'
+				? JSON.stringify(config.MINERU_PARAMS ?? {}, null, 2)
+				: config.MINERU_PARAMS;
 
 		RAGConfig = config;
 	});
@@ -802,8 +822,8 @@
 							</div>
 
 							<!-- Parameters -->
-							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
+							<div class="flex flex-col justify-between w-full mt-2">
+								<div class="text-xs font-medium">
 									<Tooltip
 										content={$i18n.t(
 											'Advanced parameters for MinerU parsing (enable_ocr, enable_formula, enable_table, language, model_version, page_ranges)'
@@ -813,22 +833,9 @@
 										{$i18n.t('Parameters')}
 									</Tooltip>
 								</div>
-								<div class="">
+								<div class="mt-1.5">
 									<Textarea
-										value={typeof RAGConfig.MINERU_PARAMS === 'object' &&
-										RAGConfig.MINERU_PARAMS !== null &&
-										Object.keys(RAGConfig.MINERU_PARAMS).length > 0
-											? JSON.stringify(RAGConfig.MINERU_PARAMS, null, 2)
-											: ''}
-										on:input={(e) => {
-											try {
-												const value = e.target.value.trim();
-												RAGConfig.MINERU_PARAMS = value ? JSON.parse(value) : {};
-											} catch (err) {
-												// Keep the string value if JSON is invalid (user is still typing)
-												RAGConfig.MINERU_PARAMS = e.target.value;
-											}
-										}}
+										bind:value={RAGConfig.MINERU_PARAMS}
 										placeholder={`{\n  "enable_ocr": false,\n  "enable_formula": true,\n  "enable_table": true,\n  "language": "en",\n  "model_version": "pipeline",\n  "page_ranges": ""\n}`}
 										minSize={100}
 									/>
