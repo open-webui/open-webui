@@ -8,6 +8,7 @@ import time
 import multiprocessing as mp
 import base64
 import markdown
+from zoneinfo import ZoneInfo
 
 from weasyprint import HTML
 from open_webui.env import STATIC_DIR
@@ -40,14 +41,26 @@ class PDFGenerator:
         self.css = Path(STATIC_DIR / "assets" / "pdf-style.css").read_text()
 
     def format_timestamp(self, timestamp: float) -> str:
-        """Convert a UNIX timestamp to a formatted date string in EST timezone."""
+        """Convert a UNIX timestamp to a formatted date string in Eastern Time (EST/EDT)."""
         try:
-            est_offset = timedelta(hours=-4)
-            est_tz = timezone(est_offset)
-            date_time = datetime.fromtimestamp(timestamp, tz=est_tz)
-            return date_time.strftime("%I:%M:%S %p EST (UTC-4)")
-        except (ValueError, TypeError):
-            return ""
+            date_time = datetime.fromtimestamp(timestamp, tz=ZoneInfo("America/New_York"))
+            
+            # Get timezone abbreviation (EST/EDT) - fallback based on offset if %Z is empty
+            tz_abbrev = date_time.strftime("%Z")
+            if not tz_abbrev:
+                offset_hours = int(date_time.utcoffset().total_seconds() / 3600) if date_time.utcoffset() else -5
+                tz_abbrev = "EDT" if offset_hours == -4 else "EST"
+            
+            # Format UTC offset
+            offset_str = date_time.strftime("%z")
+            offset_formatted = f"UTC{offset_str[:3]}:{offset_str[3:]}" if offset_str else "UTC"
+            
+            return date_time.strftime(f"%B %d, %Y %I:%M:%S %p {tz_abbrev} ({offset_formatted})")
+        except Exception:
+            try:
+                return datetime.fromtimestamp(timestamp, tz=timezone.utc).strftime("%B %d, %Y %I:%M:%S %p UTC")
+            except Exception:
+                return ""
 
     def detect_latex_in_message(self, content: str) -> List[Dict[str, Any]]:
         """
