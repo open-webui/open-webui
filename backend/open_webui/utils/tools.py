@@ -97,7 +97,7 @@ async def get_updated_tool_function(function: Callable, extra_params: dict):
     __extra_params__ = getattr(function, "__extra_params__", None)
 
     if __function__ is not None and __extra_params__ is not None:
-        return await get_async_tool_function_and_apply_extra_params(
+        return get_async_tool_function_and_apply_extra_params(
             __function__,
             {**__extra_params__, **extra_params},
         )
