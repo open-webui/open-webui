@@ -41,7 +41,7 @@ from open_webui.config import (
 )
 from open_webui.env import SRC_LOG_LEVELS
 
-from firecrawl import Firecrawl
+from firecrawl import FirecrawlApp
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -227,7 +227,7 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
             self.params,
         )
         try:
-            firecrawl = Firecrawl(api_key=self.api_key, api_url=self.api_url)
+            firecrawl = FirecrawlApp(api_key=self.api_key, api_url=self.api_url)
             result = firecrawl.batch_scrape(
                 self.web_paths,
                 formats=["markdown"],
@@ -266,7 +266,7 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
             self.params,
         )
         try:
-            firecrawl = Firecrawl(api_key=self.api_key, api_url=self.api_url)
+            firecrawl = FirecrawlApp(api_key=self.api_key, api_url=self.api_url)
             result = firecrawl.batch_scrape(
                 self.web_paths,
                 formats=["markdown"],
