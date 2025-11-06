@@ -29,9 +29,9 @@ class KaTeXCompiler:
         """Find the node_modules directory containing KaTeX."""
         # Try different possible locations
         possible_paths = [
-            Path(__file__).parent.parent.parent.parent / "node_modules",
-            Path(__file__).parent.parent.parent.parent.parent / "node_modules",
-            Path(__file__).parent / "node_modules",
+            # Path(__file__).parent.parent.parent.parent / "node_modules",
+            # Path(__file__).parent.parent.parent.parent.parent / "node_modules",
+            Path.cwd().parent / "node_modules",
             Path.cwd() / "node_modules",
         ]
         
