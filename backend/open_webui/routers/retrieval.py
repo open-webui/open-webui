@@ -484,6 +484,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         # File upload settings
         "FILE_MAX_SIZE": request.app.state.config.FILE_MAX_SIZE,
         "FILE_MAX_COUNT": request.app.state.config.FILE_MAX_COUNT,
+        "FILE_MAX_CHARS": request.app.state.config.FILE_MAX_CHARS,
         "FILE_IMAGE_COMPRESSION_WIDTH": request.app.state.config.FILE_IMAGE_COMPRESSION_WIDTH,
         "FILE_IMAGE_COMPRESSION_HEIGHT": request.app.state.config.FILE_IMAGE_COMPRESSION_HEIGHT,
         "ALLOWED_FILE_EXTENSIONS": request.app.state.config.ALLOWED_FILE_EXTENSIONS,
@@ -674,6 +675,7 @@ class ConfigForm(BaseModel):
     # File upload settings
     FILE_MAX_SIZE: Optional[int] = None
     FILE_MAX_COUNT: Optional[int] = None
+    FILE_MAX_CHARS: Optional[int] = None
     FILE_IMAGE_COMPRESSION_WIDTH: Optional[int] = None
     FILE_IMAGE_COMPRESSION_HEIGHT: Optional[int] = None
     ALLOWED_FILE_EXTENSIONS: Optional[List[str]] = None
@@ -1016,6 +1018,11 @@ async def update_rag_config(
     # File upload settings
     request.app.state.config.FILE_MAX_SIZE = form_data.FILE_MAX_SIZE
     request.app.state.config.FILE_MAX_COUNT = form_data.FILE_MAX_COUNT
+    request.app.state.config.FILE_MAX_CHARS = (
+        form_data.FILE_MAX_CHARS
+        if form_data.FILE_MAX_CHARS is not None
+        else request.app.state.config.FILE_MAX_CHARS
+    )
     request.app.state.config.FILE_IMAGE_COMPRESSION_WIDTH = (
         form_data.FILE_IMAGE_COMPRESSION_WIDTH
     )
@@ -1209,6 +1216,7 @@ async def update_rag_config(
         # File upload settings
         "FILE_MAX_SIZE": request.app.state.config.FILE_MAX_SIZE,
         "FILE_MAX_COUNT": request.app.state.config.FILE_MAX_COUNT,
+        "FILE_MAX_CHARS": request.app.state.config.FILE_MAX_CHARS,
         "FILE_IMAGE_COMPRESSION_WIDTH": request.app.state.config.FILE_IMAGE_COMPRESSION_WIDTH,
         "FILE_IMAGE_COMPRESSION_HEIGHT": request.app.state.config.FILE_IMAGE_COMPRESSION_HEIGHT,
         "ALLOWED_FILE_EXTENSIONS": request.app.state.config.ALLOWED_FILE_EXTENSIONS,
@@ -1645,6 +1653,46 @@ def process_file(
                         )
                     ]
                 text_content = " ".join([doc.page_content for doc in docs])
+
+            # Validate character limit if configured (FILE_MAX_CHARS > 0 means enabled)
+            if request.app.state.config.FILE_MAX_CHARS > 0:
+                char_count = len(text_content)
+                max_chars = request.app.state.config.FILE_MAX_CHARS
+                
+                if char_count > max_chars:
+                    error_message = (
+                        f"File content exceeds maximum character limit. "
+                        f"File contains {char_count:,} characters, "
+                        f"but maximum allowed is {max_chars:,} characters."
+                    )
+                    
+                    log.warning(
+                        f"File {file.id} ({file.filename}) rejected: {error_message}"
+                    )
+                    
+                    # Mark file as failed with error message
+                    Files.update_file_data_by_id(
+                        file.id,
+                        {
+                            "status": "failed",
+                            "error": error_message,
+                        },
+                    )
+                    
+                    # Delete from storage to free up disk space
+                    # Keep in database for audit trail
+                    try:
+                        if file.path:
+                            Storage.delete_file(file.path)
+                            log.info(f"Deleted file from storage: {file.path}")
+                    except Exception as e:
+                        log.error(f"Error deleting file from storage: {e}")
+                    
+                    # Return HTTP 413 Payload Too Large
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail=ERROR_MESSAGES.DEFAULT(error_message),
+                    )
 
             log.debug(f"text_content: {text_content}")
             Files.update_file_data_by_id(

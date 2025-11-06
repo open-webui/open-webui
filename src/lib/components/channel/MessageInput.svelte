@@ -476,25 +476,27 @@
 			const uploadedFile = await uploadFile(localStorage.token, file, metadata);
 
 			if (uploadedFile) {
-				console.info('File upload completed:', {
-					id: uploadedFile.id,
-					name: fileItem.name,
-					collection: uploadedFile?.meta?.collection_name
-				});
-
 				if (uploadedFile.error) {
-					console.error('File upload warning:', uploadedFile.error);
-					toast.warning(uploadedFile.error);
+					// Show error toast
+					toast.error(uploadedFile.error);
+					// Remove file from list immediately when there's an error (e.g., character limit exceeded)
+					files = files.filter((item) => item?.itemId !== tempItemId);
+					return null; // Don't proceed with this file
+				} else {
+					// Update file item in place
+					const fileIndex = files.findIndex((item) => item?.itemId === tempItemId);
+					if (fileIndex !== -1) {
+						files[fileIndex].status = 'uploaded';
+						files[fileIndex].file = uploadedFile;
+						files[fileIndex].id = uploadedFile.id;
+						files[fileIndex].collection_name =
+							uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
+						files[fileIndex].url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+						files[fileIndex].error = ''; // Clear any previous error
+						// Trigger reactivity by reassigning
+						files = files;
+					}
 				}
-
-				fileItem.status = 'uploaded';
-				fileItem.file = uploadedFile;
-				fileItem.id = uploadedFile.id;
-				fileItem.collection_name =
-					uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
-				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
-
-				files = files;
 			} else {
 				files = files.filter((item) => item?.itemId !== tempItemId);
 			}

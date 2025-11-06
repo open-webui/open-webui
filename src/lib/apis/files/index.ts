@@ -35,44 +35,41 @@ export const uploadFile = async (token: string, file: File, metadata?: object | 
 	if (res) {
 		const status = await getFileProcessStatus(token, res.id);
 
-		if (status && status.ok) {
+		if (status && status.ok && status.body) {
 			const reader = status.body
 				.pipeThrough(new TextDecoderStream())
 				.pipeThrough(splitStream('\n'))
 				.getReader();
 
+			// eslint-disable-next-line no-constant-condition
 			while (true) {
 				const { value, done } = await reader.read();
 				if (done) {
 					break;
 				}
 
-				try {
-					let lines = value.split('\n');
+			try {
+				const lines = value.split('\n');
 
-					for (const line of lines) {
-						if (line !== '') {
-							console.log(line);
-							if (line === 'data: [DONE]') {
-								console.log(line);
-							} else {
-								let data = JSON.parse(line.replace(/^data: /, ''));
-								console.log(data);
+			for (const line of lines) {
+				if (line !== '') {
+					if (line !== 'data: [DONE]') {
+						const data = JSON.parse(line.replace(/^data: /, ''));
 
-								if (data?.error) {
-									console.error(data.error);
-									res.error = data.error;
-								}
-
-								if (res?.data) {
-									res.data = data;
-								}
-							}
+						// Check for error in stream (either explicit error field or failed status)
+						if (data?.error) {
+							console.error('File upload error:', data.error);
+							res.error = data.error;
+						} else if (data?.status === 'failed' && !res.error) {
+							// If status is failed but no explicit error, use a default message
+							res.error = 'File processing failed';
 						}
 					}
-				} catch (error) {
-					console.log(error);
 				}
+			}
+			} catch (error) {
+				console.log(error);
+			}
 			}
 		}
 	}

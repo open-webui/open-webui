@@ -411,8 +411,9 @@ async def get_file_process_status(
 
             async def event_stream(file_item):
                 if file_item:
+                    file_id = file_item.id  # Store ID before loop
                     for _ in range(MAX_FILE_PROCESSING_DURATION):
-                        file_item = Files.get_file_by_id(file_item.id)
+                        file_item = Files.get_file_by_id(file_id)
                         if file_item:
                             data = file_item.model_dump().get("data", {})
                             status = data.get("status")
@@ -428,6 +429,10 @@ async def get_file_process_status(
                             else:
                                 # Legacy
                                 break
+                        else:
+                            # File was deleted, send error and break
+                            yield f"data: {json.dumps({'status': 'not_found'})}\n\n"
+                            break
 
                         await asyncio.sleep(0.5)
                 else:
