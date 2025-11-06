@@ -2442,10 +2442,10 @@ def process_files_batch(
 
     # Prepare all documents first
     all_docs: List[Document] = []
+    file_updates: List[dict[str, str]] = []
+
     for file in form_data.files:
         try:
-            text_content = file.data.get("content", "")
-
             doc: Document = Document(
                     page_content=text_content.replace("<br/>", "\n"),
                     metadata={
@@ -2457,11 +2457,18 @@ def process_files_batch(
                     },
                 )
 
-            hash = calculate_sha256_string(text_content)
-            Files.update_file_hash_by_id(file.id, hash)
-            Files.update_file_data_by_id(file.id, {"content": text_content})
-
             all_docs.append(doc)
+
+            text_content = file.data.get("content", "")
+            hash = calculate_sha256_string(text_content)
+            file_updates.append(
+                dict(
+                    id=file.id,
+                    hash=hash,
+                    data=dict(content=text_content)
+                )
+            )
+
             results.append(BatchProcessFilesResult(file_id=file.id, status="prepared"))
 
         except Exception as e:
@@ -2482,9 +2489,12 @@ def process_files_batch(
             )
 
             # Update all files with collection name
-            for result in results:
-                Files.update_file_metadata_by_id(
-                    result.file_id, {"collection_name": collection_name}
+            for update_info, result in zip(file_updates, results):
+                Files.update_file_by_id(
+                    dict(
+                        **update_info,
+                        meta=dict(collection_name=collection_name),
+                    )
                 )
                 result.status = "completed"
 

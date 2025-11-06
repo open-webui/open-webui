@@ -236,6 +236,22 @@ class FilesTable:
             except Exception:
                 return None
 
+    def update_file_by_id(
+        self, id: str, hash: str, data: dict, meta: dict
+    ) -> Optional[FileModel]:
+        with get_db() as db:
+            try:
+                file = db.query(File).filter_by(id=id).first()
+                file.hash = hash
+                file.data = {**(file.data if file.data else {}), **data}
+                file.meta = {**(file.meta if file.meta else {}), **meta}
+                file.updated_at = int(time.time())
+                db.commit()
+                return FileModel.model_validate(file)
+            except Exception as e:
+                log.exception(f"Error updating file completely by id: {e}")
+                return None
+
     def delete_file_by_id(self, id: str) -> bool:
         with get_db() as db:
             try:
