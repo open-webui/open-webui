@@ -2839,7 +2839,7 @@ async def process_chat_response(
                                     )
 
                                 else:
-                                    tool_function = await get_updated_tool_function(
+                                    tool_function = get_updated_tool_function(
                                         function=tool["callable"],
                                         extra_params={
                                             "__messages__": form_data.get(

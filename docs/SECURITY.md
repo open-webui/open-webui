@@ -59,14 +59,15 @@ We appreciate the community's interest in identifying potential vulnerabilities.
 >
 > 1. affects default configurations, **or**
 > 2. represents a genuine bypass of intended security controls, **or**
-> 3. works only with non-default configurations, **but the configuration in question is likely to be used by production deployments**,
->    **then we absolutely want to hear about it.** This policy is intended to filter configuration issues and deployment problems, not to discourage legitimate security research.
+> 3. works only with non-default configurations, **but the configuration in question is likely to be used by production deployments**, **then we absolutely want to hear about it.** This policy is intended to filter configuration issues and deployment problems, not to discourage legitimate security research.
 
 8. **Threat Model Understanding Required**: Reports must demonstrate understanding of Open WebUI's self-hosted, authenticated, role-based access control architecture. Comparing Open WebUI to services with fundamentally different security models without acknowledging the architectural differences may result in report rejection.
 
 9. **CVSS Scoring Accuracy:** If you include a CVSS score with your report, it must accurately reflect the vulnerability according to CVSS methodology. Common errors include 1) rating PR:N (None) when authentication is required, 2) scoring hypothetical attack chains instead of the actual vulnerability, or 3) inflating severity without evidence. **We will adjust inaccurate CVSS scores.** Intentionally inflated scores may result in report rejection.
 
-> [!WARNING] > **Using CVE Precedents:** If you cite other CVEs to support your report, ensure they are **genuinely comparable** in vulnerability type, threat model, and attack vector. Citing CVEs from different product categories, different vulnerability classes or different deployment models will lead us to suspect the use of AI in your report.
+> [!WARNING]
+>
+> **Using CVE Precedents:** If you cite other CVEs to support your report, ensure they are **genuinely comparable** in vulnerability type, threat model, and attack vector. Citing CVEs from different product categories, different vulnerability classes or different deployment models will lead us to suspect the use of AI in your report.
 
 10. **Admin Actions Are Out of Scope:** Vulnerabilities that require an administrator to actively perform unsafe actions are **not considered valid vulnerabilities**. Admins have full system control and are expected to understand the security implications of their actions and configurations. This includes but is not limited to: adding malicious external servers (models, tools, webhooks), pasting untrusted code into Functions/Tools, or intentionally weakening security settings. **Reports requiring admin negligence or social engineering of admins may be rejected.**
 
