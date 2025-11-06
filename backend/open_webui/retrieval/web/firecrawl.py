@@ -17,9 +17,9 @@ def search_firecrawl(
     filter_list: Optional[List[str]] = None,
 ) -> List[SearchResult]:
     try:
-        from firecrawl import Firecrawl
+        from firecrawl import FirecrawlApp
 
-        firecrawl = Firecrawl(api_key=firecrawl_api_key, api_url=firecrawl_url)
+        firecrawl = FirecrawlApp(api_key=firecrawl_api_key, api_url=firecrawl_url)
         response = firecrawl.search(
             query=query, limit=count, ignore_invalid_urls=True, timeout=count * 3
         )
