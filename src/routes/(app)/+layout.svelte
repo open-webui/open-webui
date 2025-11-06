@@ -196,37 +196,48 @@
 		const setupKeyboardShortcuts = () => {
 			document.addEventListener('keydown', async (event) => {
 				if (isShortcutMatch(event, shortcuts[Shortcut.SEARCH])) {
+					console.log('Shortcut triggered: SEARCH');
 					event.preventDefault();
 					showSearch.set(!$showSearch);
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.NEW_CHAT])) {
+					console.log('Shortcut triggered: NEW_CHAT');
 					event.preventDefault();
 					document.getElementById('sidebar-new-chat-button')?.click();
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.FOCUS_INPUT])) {
+					console.log('Shortcut triggered: FOCUS_INPUT');
 					event.preventDefault();
 					document.getElementById('chat-input')?.focus();
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.COPY_LAST_CODE_BLOCK])) {
+					console.log('Shortcut triggered: COPY_LAST_CODE_BLOCK');
 					event.preventDefault();
 					[...document.getElementsByClassName('copy-code-button')]?.at(-1)?.click();
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.COPY_LAST_RESPONSE])) {
+					console.log('Shortcut triggered: COPY_LAST_RESPONSE');
 					event.preventDefault();
 					[...document.getElementsByClassName('copy-response-button')]?.at(-1)?.click();
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.TOGGLE_SIDEBAR])) {
+					console.log('Shortcut triggered: TOGGLE_SIDEBAR');
 					event.preventDefault();
 					showSidebar.set(!$showSidebar);
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.DELETE_CHAT])) {
+					console.log('Shortcut triggered: DELETE_CHAT');
 					event.preventDefault();
 					document.getElementById('delete-chat-button')?.click();
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.OPEN_SETTINGS])) {
+					console.log('Shortcut triggered: OPEN_SETTINGS');
 					event.preventDefault();
 					showSettings.set(!$showSettings);
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.SHOW_SHORTCUTS])) {
+					console.log('Shortcut triggered: SHOW_SHORTCUTS');
 					event.preventDefault();
 					showShortcuts.set(!$showShortcuts);
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.CLOSE_MODAL])) {
+					console.log('Shortcut triggered: CLOSE_MODAL');
 					event.preventDefault();
 					showSettings.set(false);
 					showShortcuts.set(false);
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.NEW_TEMPORARY_CHAT])) {
+					console.log('Shortcut triggered: NEW_TEMPORARY_CHAT');
 					event.preventDefault();
 					if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
 						temporaryChatEnabled.set(true);
@@ -238,15 +249,13 @@
 						document.getElementById('new-chat-button')?.click();
 					}, 0);
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.GENERATE_MESSAGE_PAIR])) {
+					console.log('Shortcut triggered: GENERATE_MESSAGE_PAIR');
 					event.preventDefault();
 					document.getElementById('generate-message-pair-button')?.click();
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.REGENERATE_RESPONSE])) {
+					console.log('Shortcut triggered: REGENERATE_RESPONSE');
 					event.preventDefault();
 					[...document.getElementsByClassName('regenerate-response-button')]?.at(-1)?.click();
-				} else if (isShortcutMatch(event, shortcuts[Shortcut.STOP_GENERATING])) {
-					// This shortcut is handled in Chat.svelte
-				} else if (isShortcutMatch(event, shortcuts[Shortcut.PREVENT_FILE_CREATION])) {
-					// This shortcut is handled by the paste event in MessageInput.svelte
 				}
 			});
 		};
