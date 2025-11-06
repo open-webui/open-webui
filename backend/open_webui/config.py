@@ -2464,6 +2464,12 @@ DOCUMENT_INTELLIGENCE_KEY = PersistentConfig(
     os.getenv("DOCUMENT_INTELLIGENCE_KEY", ""),
 )
 
+MISTRAL_OCR_API_BASE_URL = PersistentConfig(
+    "MISTRAL_OCR_API_BASE_URL",
+    "rag.MISTRAL_OCR_API_BASE_URL",
+    os.getenv("MISTRAL_OCR_API_BASE_URL", "https://api.mistral.ai/v1"),
+)
+
 MISTRAL_OCR_API_KEY = PersistentConfig(
     "MISTRAL_OCR_API_KEY",
     "rag.mistral_ocr_api_key",
