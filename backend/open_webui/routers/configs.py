@@ -440,6 +440,7 @@ async def set_code_execution_config(
 class ModelsConfigForm(BaseModel):
     DEFAULT_MODELS: Optional[str]
     MODEL_ORDER_LIST: Optional[list[str]]
+    DEFAULT_TAGS: Optional[list[str]]
 
 
 @router.get("/models", response_model=ModelsConfigForm)
@@ -447,6 +448,7 @@ async def get_models_config(request: Request, user=Depends(get_admin_user)):
     return {
         "DEFAULT_MODELS": request.app.state.config.DEFAULT_MODELS,
         "MODEL_ORDER_LIST": request.app.state.config.MODEL_ORDER_LIST,
+        "DEFAULT_TAGS": request.app.state.config.DEFAULT_TAGS,
     }
 
 
@@ -456,9 +458,11 @@ async def set_models_config(
 ):
     request.app.state.config.DEFAULT_MODELS = form_data.DEFAULT_MODELS
     request.app.state.config.MODEL_ORDER_LIST = form_data.MODEL_ORDER_LIST
+    request.app.state.config.DEFAULT_TAGS = form_data.DEFAULT_TAGS
     return {
         "DEFAULT_MODELS": request.app.state.config.DEFAULT_MODELS,
         "MODEL_ORDER_LIST": request.app.state.config.MODEL_ORDER_LIST,
+        "DEFAULT_TAGS": request.app.state.config.DEFAULT_TAGS,
     }
 
 

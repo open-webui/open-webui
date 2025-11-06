@@ -251,6 +251,7 @@ type Config = {
 	version: string;
 	default_locale: string;
 	default_models: string;
+	default_tags: string[];
 	default_prompt_suggestions: PromptSuggestion[];
 	features: {
 		auth: boolean;

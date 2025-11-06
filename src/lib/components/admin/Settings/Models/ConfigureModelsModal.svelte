@@ -29,6 +29,10 @@
 	let defaultModelIds = [];
 	let modelIds = [];
 
+	let selectedDefaultTag = '';
+	let defaultTags = [];
+	let allModelTags = [];
+
 	let sortKey = '';
 	let sortOrder = '';
 
@@ -41,6 +45,10 @@
 
 	$: if (selectedModelId) {
 		onModelSelect();
+	}
+
+	$: if (selectedDefaultTag) {
+		onTagSelect();
 	}
 
 	const onModelSelect = () => {
@@ -57,6 +65,20 @@
 		selectedModelId = '';
 	};
 
+	const onTagSelect = () => {
+		if (selectedDefaultTag === '') {
+			return;
+		}
+
+		if (defaultTags.includes(selectedDefaultTag)) {
+			selectedDefaultTag = '';
+			return;
+		}
+
+		defaultTags = [...defaultTags, selectedDefaultTag];
+		selectedDefaultTag = '';
+	};
+
 	const init = async () => {
 		config = await getModelsConfig(localStorage.token);
 
@@ -65,6 +87,15 @@
 		} else {
 			defaultModelIds = [];
 		}
+
+		if (config?.DEFAULT_TAGS) {
+			defaultTags = config?.DEFAULT_TAGS;
+		} else {
+			defaultTags = [];
+		}
+
+		allModelTags = [...new Set($models.flatMap((model) => model.tags ?? []))];
+
 		const modelOrderList = config.MODEL_ORDER_LIST || [];
 		const allModelIds = $models.map((model) => model.id);
 
@@ -86,7 +117,8 @@
 
 		const res = await setModelsConfig(localStorage.token, {
 			DEFAULT_MODELS: defaultModelIds.join(','),
-			MODEL_ORDER_LIST: modelIds
+			MODEL_ORDER_LIST: modelIds,
+			DEFAULT_TAGS: defaultTags
 		});
 
 		if (res) {
@@ -240,6 +272,57 @@
 								{:else}
 									<div class="text-gray-500 text-xs text-center py-2">
 										{$i18n.t('No models selected')}
+									</div>
+								{/if}
+							</div>
+							<div class="flex flex-col w-full">
+								<div class="mb-1 flex justify-between">
+									<div class="text-xs text-gray-500">{$i18n.t('Default Tags')}</div>
+								</div>
+
+								<div class="flex items-center -mr-1">
+									<select
+										class="w-full py-1 text-sm rounded-lg bg-transparent {selectedDefaultTag
+											? ''
+											: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+										bind:value={selectedDefaultTag}
+									>
+										<option value="">{$i18n.t('Select a tag')}</option>
+										{#each allModelTags as tag}
+											<option value={tag.name} class="bg-gray-50 dark:bg-gray-700"
+												>{tag.name}</option
+											>
+										{/each}
+									</select>
+								</div>
+
+								<!-- <hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" /> -->
+
+								{#if defaultTags.length > 0}
+									<div class="flex flex-col">
+										{#each defaultTags as tagName}
+											<div class=" flex gap-2 w-full justify-between items-center">
+												<div class=" text-sm flex-1 py-1 rounded-lg">
+													{tagName}
+												</div>
+												<div class="shrink-0">
+													<button
+														type="button"
+														on:click={() => {
+															defaultTags = defaultTags.filter(
+																currTagName => currTagName !== tagName
+															);
+														}}
+													>
+														<Minus strokeWidth="2" className="size-3.5" />
+													</button>
+												</div>
+											</div>
+										{/each}
+									</div>
+								{:else}
+									<div class="text-gray-500 text-xs text-center py-2">
+										{$i18n.t('No tags selected')}
 									</div>
 								{/if}
 							</div>

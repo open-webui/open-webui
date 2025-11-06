@@ -324,6 +324,9 @@
 			// Remove duplicates and sort
 			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
 		}
+
+		// Set the starting (default) tag to the first default tag that the user has access to
+		selectedTag = $config?.default_tags.find(item => (new Set(tags)).has(item)) ?? '';
 	});
 
 	$: if (show) {
