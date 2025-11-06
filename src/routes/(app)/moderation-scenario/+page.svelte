@@ -881,7 +881,7 @@ function clearModerationLocalKeys() {
 		attentionCheckSelected: boolean;
 		markedNotApplicable: boolean;
 		customPrompt?: string; // Store actual custom prompt text for custom scenarios
-		highlightingReason: string;
+		scenarioReflection: string;
 	}
 	
 	let scenarioStates: Map<number, ScenarioState> = new Map();
@@ -940,8 +940,31 @@ function clearModerationLocalKeys() {
 	let hasInitialDecision: boolean = false;
 	let acceptedOriginal: boolean = false;
 	let markedNotApplicable: boolean = false;
-	let showHighlightingReasonModal: boolean = false;
-	let highlightingReason: string = '';
+	let showReflectionModal: boolean = false;
+	let scenarioReflection: string = '';
+	
+	// Reactive: Ensure modal shows when it should (only for regular scenarios, after scenario is loaded)
+	// This acts as a safety net to ensure the modal shows even if loadScenario doesn't set it
+	$: {
+		const shouldShowModal = !hasInitialDecision && 
+			!scenarioReflection.trim() && 
+			!highlightingMode &&
+			selectedScenarioIndex >= 0 &&
+			scenarioList.length > 0;
+		
+		if (shouldShowModal) {
+			// For regular scenarios, always show if conditions are met
+			if (!isCustomScenario && !showReflectionModal) {
+				showReflectionModal = true;
+				console.log('🔄 Reactive: Setting showReflectionModal = true (regular scenario, no reflection)');
+			}
+			// For custom scenarios, only show after generation
+			else if (isCustomScenario && customScenarioGenerated && !showReflectionModal) {
+				showReflectionModal = true;
+				console.log('🔄 Reactive: Setting showReflectionModal = true (custom scenario, generated, no reflection)');
+			}
+		}
+	}
 // Mobile sidebar toggle for scenario list
 let sidebarOpen: boolean = true;
 // Request guard to prevent responses applying to wrong scenario
@@ -1143,7 +1166,7 @@ let currentRequestId: number = 0;
 			attentionCheckSelected,
 			markedNotApplicable,
 			customPrompt: isCustomScenario && customScenarioGenerated ? customScenarioPrompt : existingState?.customPrompt,
-			highlightingReason
+			scenarioReflection
 		};
 		scenarioStates.set(selectedScenarioIndex, currentState);
 		
@@ -1184,6 +1207,7 @@ let currentRequestId: number = 0;
 		const [prompt, response] = scenarioList[index];
 		
 		console.log('🔍 Loading scenario:', index, 'Prompt:', prompt, 'Is custom:', prompt === CUSTOM_SCENARIO_PROMPT);
+		console.log('🔍 Reflection modal state before load:', { showReflectionModal, hasInitialDecision, scenarioReflection: scenarioReflection.trim() });
 		
 		// Handle custom scenario specially
 		if (prompt === CUSTOM_SCENARIO_PROMPT) {
@@ -1226,8 +1250,8 @@ let currentRequestId: number = 0;
 				acceptedOriginal = false;
 				attentionCheckSelected = false;
 				markedNotApplicable = false;
-				highlightingReason = '';
-				showHighlightingReasonModal = false;
+				scenarioReflection = '';
+				showReflectionModal = false;
 				
 				childPrompt1 = prompt;
 				originalResponse1 = response;
@@ -1253,10 +1277,20 @@ let currentRequestId: number = 0;
 			acceptedOriginal = savedState.acceptedOriginal;
 			attentionCheckSelected = savedState.attentionCheckSelected || false;
 			markedNotApplicable = savedState.markedNotApplicable || false;
-			highlightingReason = savedState.highlightingReason || '';
+			scenarioReflection = savedState.scenarioReflection || '';
 			
 			// Set moderation panel visibility based on confirmation state and initial decision
 			moderationPanelVisible = confirmedVersionIndex === null && hasInitialDecision && !acceptedOriginal && !markedNotApplicable;
+			
+			// Show reflection modal if reflection not yet provided and no decision made
+			if (!hasInitialDecision && !scenarioReflection.trim()) {
+				showReflectionModal = true;
+				console.log('✅ Setting showReflectionModal = true (saved state, no reflection)');
+			} else {
+				// Hide modal if scenario already has reflection or decision
+				showReflectionModal = false;
+				console.log('❌ Setting showReflectionModal = false (has reflection or decision)', { hasInitialDecision, hasReflection: !!scenarioReflection.trim() });
+			}
 			
 			// Don't auto-populate moderation panel - keep it clear to avoid confusion
 			// Users should understand they're creating new versions from the original, not editing the viewed version
@@ -1273,10 +1307,13 @@ let currentRequestId: number = 0;
 		expandedGroups.clear();
 			highlightingMode = false;
 			hasInitialDecision = false;
-			highlightingReason = '';
+			scenarioReflection = '';
 			acceptedOriginal = false;
 			attentionCheckSelected = false;
 			markedNotApplicable = false;
+			// Show reflection modal for new scenario
+			showReflectionModal = true;
+			console.log('✅ Setting showReflectionModal = true (new scenario, no saved state)');
 		}
 		
 		// Only set childPrompt1 if it wasn't already set for a custom scenario
@@ -1380,8 +1417,8 @@ function cancelReset() {}
 		attentionCheckSelected = false;
 		markedNotApplicable = false;
 		selectionButtonsVisible1 = false;
-		highlightingReason = '';
-		showHighlightingReasonModal = false;
+		scenarioReflection = '';
+		showReflectionModal = false;
 		
 		// Reset ALL scenario states
 		scenarioStates.clear();
@@ -1605,7 +1642,7 @@ function cancelReset() {}
 				session_metadata: { 
 					decision: 'accept_original', 
 					decided_at: Date.now(),
-					...(highlightingReason ? { highlighting_reason: highlightingReason } : {})
+					reflection: scenarioReflection.trim()
 				},
 				is_attention_check: isAttentionCheckScenario,
 				attention_check_selected: attentionCheckSelected,
@@ -1628,59 +1665,25 @@ function cancelReset() {}
 	
 	function finishHighlighting() {
 		highlightingMode = false;
-		// Always show modal asking for moderation reason
-		showHighlightingReasonModal = true;
+		// Go directly to moderation panel (reflection already collected)
+		moderationPanelVisible = true;
+		moderationPanelExpanded = false;
+		expandedGroups.clear();
 	}
 	
-	async function submitHighlightingReason() {
-		// Validate that reason is not empty
-		if (!highlightingReason.trim()) {
-			toast.error('Please provide an explanation for what you want to moderate about this interaction');
+	// Submit reflection before making decision
+	async function submitReflection() {
+		// Validate that reflection is not empty
+		if (!scenarioReflection.trim()) {
+			toast.error('Please provide your thoughts about this interaction');
 			return;
 		}
 		
-		// Save highlighted texts + explanation to database
-		try {
-			const sessionId = `scenario_${selectedScenarioIndex}`;
-			await saveModerationSession(localStorage.token, {
-				session_id: sessionId,
-				user_id: $user?.id || 'unknown',
-				child_id: selectedChildId || 'unknown',
-				scenario_index: selectedScenarioIndex,
-				attempt_number: 1,
-				version_number: 0,
-				session_number: sessionNumber,
-				scenario_prompt: childPrompt1,
-				original_response: originalResponse1,
-				initial_decision: undefined, // Not decided yet, just highlighting done
-				strategies: [],
-				custom_instructions: [],
-				highlighted_texts: [...highlightedTexts1],
-				refactored_response: undefined,
-				is_final_version: false,
-				session_metadata: {
-					highlighting_reason: highlightingReason.trim(),
-					highlighted_at: Date.now()
-				},
-				is_attention_check: isAttentionCheckScenario,
-				attention_check_selected: attentionCheckSelected,
-				attention_check_passed: false
-			});
-			
-			// Save to scenario state
-			saveCurrentScenarioState();
-			
-			// Close modal and show moderation panel
-			showHighlightingReasonModal = false;
-			moderationPanelVisible = true;
-			moderationPanelExpanded = false;
-			expandedGroups.clear();
-			
-			toast.success('Moderation reason saved');
-		} catch (e) {
-			console.error('Failed to save moderation reason', e);
-			toast.error('Failed to save moderation reason. Please try again.');
-		}
+		// Save reflection to scenario state
+		saveCurrentScenarioState();
+		
+		// Close modal - decision buttons will now be visible
+		showReflectionModal = false;
 	}
 	
 	function returnToHighlighting() {
@@ -1735,7 +1738,7 @@ function cancelReset() {}
 				session_metadata: { 
 					decision: 'not_applicable', 
 					decided_at: Date.now(),
-					...(highlightingReason ? { highlighting_reason: highlightingReason } : {})
+					reflection: scenarioReflection.trim()
 				},
 				is_attention_check: isAttentionCheckScenario,
 				attention_check_selected: attentionCheckSelected,
@@ -1875,7 +1878,7 @@ function cancelReset() {}
 							version_index: currentVersionIndex,
 							decision: 'moderate',
 							decided_at: Date.now(),
-							...(highlightingReason ? { highlighting_reason: highlightingReason } : {})
+							reflection: scenarioReflection.trim()
 						},
                         is_attention_check: isAttentionCheckScenario,
                         attention_check_selected: attentionSelectedSnapshot,
@@ -3020,8 +3023,8 @@ onMount(async () => {
 					</div>
 				{/if}
 
-		<!-- Initial Decision Buttons (hidden for custom scenario before generation) -->
-		{#if !hasInitialDecision && (!isCustomScenario || customScenarioGenerated)}
+		<!-- Initial Decision Buttons (shown after reflection is submitted) -->
+		{#if !hasInitialDecision && !showReflectionModal && (!isCustomScenario || customScenarioGenerated) && !highlightingMode}
 			<div class="flex justify-center mt-4">
 				<div class="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 w-full max-w-4xl px-4">
 					<button
@@ -3100,47 +3103,36 @@ onMount(async () => {
 				</div>
 		{/if}
 
-		<!-- Highlighting Reason Modal -->
-		{#if showHighlightingReasonModal}
+		<!-- Reflection Modal (shown before decision buttons) -->
+		{#if showReflectionModal && !hasInitialDecision && !highlightingMode && (isCustomScenario ? customScenarioGenerated : true)}
 			<div class="flex justify-center mt-6">
-				<div class="w-full max-w-md px-4">
-					<div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+				<div class="w-full max-w-2xl px-4">
+					<div class="p-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg shadow-lg">
 						<div class="mb-4">
-							<h3 class="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-3">
-								What do you want to moderate about this interaction?
+							<h3 class="text-base font-semibold text-blue-900 dark:text-blue-200 mb-3">
+								Please describe your thoughts about specific aspects of this interaction.
 							</h3>
+							<p class="text-sm text-blue-800 dark:text-blue-300 mb-4">
+								What stood out to you in the child's question or the AI's response? What specific parts did you notice or find noteworthy?
+							</p>
 							<textarea
-								bind:value={highlightingReason}
-								placeholder="Enter your explanation here..."
-								class="w-full px-3 py-2 border border-blue-300 dark:border-blue-700 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none text-sm"
-								rows="4"
+								bind:value={scenarioReflection}
+								placeholder="Enter your observations about specific aspects of this interaction..."
+								class="w-full px-4 py-3 border border-blue-300 dark:border-blue-700 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none text-sm"
+								rows="5"
 								maxlength="1000"
 							></textarea>
 							<div class="flex items-center justify-between mt-2">
 								<span class="text-xs text-blue-700 dark:text-blue-400">
-									{highlightingReason.length}/1000 characters
+									{scenarioReflection.length}/1000 characters
 								</span>
 							</div>
 						</div>
 						<div class="flex justify-end space-x-3">
 							<button
-								on:click={() => {
-									showHighlightingReasonModal = false;
-									highlightingReason = '';
-									// Return to highlighting mode
-									highlightingMode = true;
-								}}
-								class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200"
-							>
-								<svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-								</svg>
-								<span>Back</span>
-							</button>
-							<button
-								on:click={submitHighlightingReason}
-								disabled={!highlightingReason.trim()}
-								class="px-4 py-2 text-sm font-medium text-white bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors"
+								on:click={submitReflection}
+								disabled={!scenarioReflection.trim()}
+								class="px-6 py-2.5 text-sm font-medium text-white bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors"
 							>
 								Continue
 							</button>

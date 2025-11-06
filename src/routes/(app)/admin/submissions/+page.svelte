@@ -759,7 +759,13 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 																									<p class="text-sm text-gray-900 dark:text-white mt-1">{row.refactored_response}</p>
 																								</div>
 																							{/if}
-																							{#if !row.strategies?.length && !row.custom_instructions?.length && !row.highlighted_texts?.length && !row.refactored_response}
+																		{#if row.session_metadata && row.session_metadata.reflection}
+																			<div>
+																				<span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Reflection:</span>
+																				<p class="text-sm text-gray-900 dark:text-white mt-1 whitespace-pre-line">{row.session_metadata.reflection}</p>
+																			</div>
+																		{/if}
+																		{#if !row.strategies?.length && !row.custom_instructions?.length && !row.highlighted_texts?.length && !row.refactored_response && !(row.session_metadata && row.session_metadata.reflection)}
 																								<div class="text-xs text-gray-500 italic">No moderation details available for this version</div>
 																							{/if}
 																						</div>
