@@ -168,17 +168,15 @@
 		const isShortcutMatch = (event: KeyboardEvent, shortcut): boolean => {
 			const keys = shortcut?.keys || [];
 
-			const mainKeys = keys.filter(
-				(k) => !['ctrl', 'Ctrl', 'shift', 'Shift', 'alt', 'Alt', 'mod', 'Mod'].includes(k)
-			);
-
 			const normalized = keys.map((k) => k.toLowerCase());
 			const needCtrl = normalized.includes('ctrl') || normalized.includes('mod');
 			const needShift = normalized.includes('shift');
 			const needAlt = normalized.includes('alt');
 
+			const mainKeys = normalized.filter((k) => !['ctrl', 'shift', 'alt', 'mod'].includes(k));
+
 			// Get the main key pressed
-			const keyPressed = event.code;
+			const keyPressed = event.key.toLowerCase();
 
 			// Check modifiers
 			if (needShift && !event.shiftKey) return false;
