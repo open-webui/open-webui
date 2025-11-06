@@ -2446,8 +2446,7 @@ def process_files_batch(
         try:
             text_content = file.data.get("content", "")
 
-            docs: List[Document] = [
-                Document(
+            doc: Document = Document(
                     page_content=text_content.replace("<br/>", "\n"),
                     metadata={
                         **file.meta,
@@ -2457,13 +2456,12 @@ def process_files_batch(
                         "source": file.filename,
                     },
                 )
-            ]
 
             hash = calculate_sha256_string(text_content)
             Files.update_file_hash_by_id(file.id, hash)
             Files.update_file_data_by_id(file.id, {"content": text_content})
 
-            all_docs.extend(docs)
+            all_docs.append(doc)
             results.append(BatchProcessFilesResult(file_id=file.id, status="prepared"))
 
         except Exception as e:
