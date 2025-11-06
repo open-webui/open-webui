@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **💻 Chat Lifetime Management**: Implemented chat lifetime management with automated cleanups.
-- **⚙️ Wiki Grouding Configuration**: Added max concurency configuration and updated related retrieval functions to support async operations.
+- **⚙️ Wiki Grounding Configuration**: Added max concurrency configuration and updated related retrieval functions to support async operations.
 - **🧠 Reasoning Filter**: Added a reasoning filter to message handling for title and tag generation.
 
 ### Changed
