@@ -105,7 +105,6 @@ def get_updated_tool_function(function: Callable, extra_params: dict):
     return function
 
 
-
 async def get_tools(
     request: Request, tool_ids: list[str], user: UserModel, extra_params: dict
 ) -> dict[str, dict]:
