@@ -232,6 +232,7 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 	};
 
 	const formatTimeSpent = (ms: number) => {
+		if (ms === -1) return 'N/A (shared across sessions)';
 		if (!ms || ms === 0) return 'No data';
 		const totalSeconds = Math.floor(ms / 1000);
 		const hours = Math.floor(totalSeconds / 3600);
@@ -253,35 +254,71 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 		return submissionsData.session_activity_totals[key] || 0;
 	};
 
-	const getAssignmentTime = (userId: string, childId: string, attemptNumber: number) => {
+	const getAssignmentTime = (userId: string, attemptNumber: number) => {
 		if (!submissionsData?.assignment_time_totals) return 0;
-		const key = `${userId}::${childId}::${attemptNumber}`;
+		const key = `${userId}::${attemptNumber}`;
 		return submissionsData.assignment_time_totals[key] || 0;
 	};
 
 	const getTotalSessionAssignmentTime = (sessionNumber: number) => {
-		if (!submissionsData?.assignment_time_totals) return 0;
-		let total = 0;
-		// Sum all assignment times for this session across all children
-		for (const [key, ms] of Object.entries(submissionsData.assignment_time_totals)) {
-			const [userId, childId, attempt] = key.split('::');
-			if (Number(attempt) === sessionNumber) {
-				total += ms;
+		if (!submissionsData?.assignment_time_totals || !submissionsData?.user_info?.id) {
+			console.log('[Assignment Time] Missing data:', {
+				hasTotals: !!submissionsData?.assignment_time_totals,
+				hasUserId: !!submissionsData?.user_info?.id
+			});
+			return 0;
+		}
+		const userId = submissionsData.user_info.id;
+		
+		// After migration, assignment time is tracked by session_number directly
+		// The backend returns keys as: {user_id}::{session_number}
+		// So we can do a direct lookup!
+		// Ensure sessionNumber is a number for consistent key matching
+		const sessionNum = Number(sessionNumber);
+		const key = `${userId}::${sessionNum}`;
+		
+		// Try direct lookup first
+		let value = submissionsData.assignment_time_totals[key];
+		
+		// If not found, try with session_number as string (defensive)
+		if (value === undefined || value === null) {
+			const keyAsString = `${userId}::${String(sessionNum)}`;
+			value = submissionsData.assignment_time_totals[keyAsString];
+		}
+		
+		// If still not found, try all keys to see if there's a match with different format
+		if (value === undefined || value === null) {
+			const allKeys = Object.keys(submissionsData.assignment_time_totals);
+			const matchingKey = allKeys.find(k => {
+				const parts = k.split('::');
+				return parts.length === 2 && parts[0] === userId && Number(parts[1]) === sessionNum;
+			});
+			if (matchingKey) {
+				value = submissionsData.assignment_time_totals[matchingKey];
+				console.log('[Assignment Time] Found match with different key format:', { matchingKey, value });
 			}
 		}
-		return total;
+		
+		const finalValue = value || 0;
+		
+		console.log('[Assignment Time] Direct lookup by session_number:', {
+			sessionNumber,
+			sessionNum,
+			userId,
+			key,
+			value: finalValue,
+			allKeys: Object.keys(submissionsData.assignment_time_totals),
+			allEntries: Object.entries(submissionsData.assignment_time_totals).map(([k, v]) => ({ key: k, value: v }))
+		});
+		
+		return finalValue;
 	};
 
 	const getSessionAssignmentTimeByChild = (sessionNumber: number) => {
-		if (!submissionsData?.assignment_time_totals) return {};
-		const byChild: Record<string, number> = {};
-		for (const [key, ms] of Object.entries(submissionsData.assignment_time_totals)) {
-			const [userId, childId, attempt] = key.split('::');
-			if (Number(attempt) === sessionNumber) {
-				byChild[childId] = ms;
-			}
-		}
-		return byChild;
+		// Assignment time is tracked at the user/attempt level, not per child
+		// So we cannot provide a per-child breakdown
+		// Return empty object - the UI will handle this gracefully
+		return {};
 	};
 
 	const groupAllDataBySession = () => {
@@ -299,8 +336,33 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 			if (p.session_number) sessionNumbers.add(Number(p.session_number));
 		});
 		
+		// IMPORTANT: Also include session numbers from assignment_time_totals
+		// This ensures sessions with only assignment time data (but no moderation/child profiles yet) are shown
+		if (submissionsData.assignment_time_totals) {
+			Object.keys(submissionsData.assignment_time_totals).forEach(key => {
+				const parts = key.split('::');
+				if (parts.length === 2 && parts[0] === submissionsData.user_info?.id) {
+					const sessionNum = Number(parts[1]);
+					if (Number.isFinite(sessionNum)) {
+						sessionNumbers.add(sessionNum);
+					}
+				}
+			});
+		}
+		
 		// Sort sessions descending (latest first)
 		const sortedSessions = Array.from(sessionNumbers).sort((a, b) => b - a);
+		
+		console.log('[Session Grouping] All sessions found:', {
+			fromModeration: Array.from(new Set(submissionsData.moderation_sessions.map(s => getSessionNumber(s)).filter(Number.isFinite))),
+			fromChildProfiles: Array.from(new Set(submissionsData.child_profiles.map(p => p.session_number).filter(Boolean))),
+			fromAssignmentTime: submissionsData.assignment_time_totals ? Object.keys(submissionsData.assignment_time_totals).map(k => {
+				const parts = k.split('::');
+				return parts.length === 2 && parts[0] === submissionsData.user_info?.id ? Number(parts[1]) : null;
+			}).filter(Number.isFinite) : [],
+			allUniqueSessions: sortedSessions,
+			totalSessions: sortedSessions.length
+		});
 		
 		return sortedSessions.map(sessionNum => {
 			// Get child profiles for this session
@@ -418,6 +480,7 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 				{#each groupAllDataBySession() as sessionData}
 					{@const totalAssignmentTime = getTotalSessionAssignmentTime(sessionData.session_number)}
 					{@const assignmentTimeByChild = getSessionAssignmentTimeByChild(sessionData.session_number)}
+					{@const _debug = console.log('[Assignment Time Display]', { sessionNumber: sessionData.session_number, totalAssignmentTime, formatted: formatTimeSpent(totalAssignmentTime) }) || true}
 					
 					<div class="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
 						<!-- Session Header -->

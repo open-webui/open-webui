@@ -6,7 +6,6 @@
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import { toast } from 'svelte-sonner';
 	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
-	import { getCurrentAttempt } from '$lib/apis/workflow';
 	import { childProfileSync } from '$lib/services/childProfileSync';
 
 	// Assignment workflow state
@@ -33,8 +32,7 @@
 	let showConfirmationModal: boolean = false;
 
 	// Assignment time tracking
-	let attemptNumber: number = 1;
-	let currentChildId: string | null = null;
+	$: sessionNumber = $user?.session_number || 1;
 
 // Debounce helper
 function debounce(fn: (...args: any[]) => void, delay = 400) {
@@ -187,8 +185,8 @@ onMount(async () => {
 			}
             if (!surveyResponses.parentingStyle) {
                 toast.error('Please select your parenting style');
-                return;
-            }
+				return;
+			}
 
             // Resolve child_id: prefer selection saved by earlier steps, else pick first
             const token = localStorage.token || '';
@@ -772,8 +770,7 @@ $: saveDraft();
 	<!-- Assignment Time Tracker -->
 	<AssignmentTimeTracker 
 		userId={get(user)?.id || ''} 
-		childId={currentChildId}
-		attemptNumber={attemptNumber}
+		sessionNumber={sessionNumber}
 		enabled={true}
 	/>
 </div>

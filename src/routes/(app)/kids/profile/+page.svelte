@@ -10,7 +10,6 @@
 	import { toast } from 'svelte-sonner';
 	import { personalityTraits, type PersonalityTrait, type SubCharacteristic } from '$lib/data/personalityTraits';
 	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
-	import { getCurrentAttempt } from '$lib/apis/workflow';
 
 	const i18n = getContext('i18n');
 
@@ -50,8 +49,7 @@ let parentLLMMonitoringLevel: string = '';
 	let mainPageContainer: HTMLElement;
 
 	// Assignment time tracking
-	let attemptNumber: number = 1;
-	let currentChildId: string | null = null;
+	$: sessionNumber = $user?.session_number || 1;
 
 	// Function to generate and store shuffled scenarios for a child
 	async function generateAndStoreScenarios(selectedCharacteristics: string[]) {
@@ -613,28 +611,8 @@ let parentLLMMonitoringLevel: string = '';
 		return contexts.length > 0 ? contexts.join(', ') : 'Not specified';
 	}
 
-	// Reactive statement to update currentChildId when selected child changes
-	$: {
-		if (selectedChildIndex >= 0 && childProfiles[selectedChildIndex]?.id) {
-			currentChildId = childProfiles[selectedChildIndex].id;
-		} else {
-			// Try to get current child from childProfileSync
-			const currentChild = childProfileSync.getCurrentChild();
-			currentChildId = currentChild?.id || null;
-		}
-	}
 
 	onMount(async () => {
-		// Get current attempt number
-		try {
-			const token = localStorage.token || '';
-			if (token) {
-				const attemptData = await getCurrentAttempt(token);
-				attemptNumber = attemptData.current_attempt || 1;
-			}
-		} catch (e) {
-			console.warn('Failed to get current attempt number', e);
-		}
 		(async () => {
 		// Redirect if instructions not confirmed
 		if (localStorage.getItem('instructionsCompleted') !== 'true') {
@@ -1193,8 +1171,7 @@ let parentLLMMonitoringLevel: string = '';
 	<!-- Assignment Time Tracker -->
 	<AssignmentTimeTracker 
 		userId={get(user)?.id || ''} 
-		childId={currentChildId}
-		attemptNumber={attemptNumber}
+		sessionNumber={sessionNumber}
 		enabled={true}
 	/>
 </div>

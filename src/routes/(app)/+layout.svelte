@@ -285,21 +285,64 @@
 		const prolificSessionId = localStorage.getItem('prolificSessionId');
 		const prolificSessionNumber = parseInt(localStorage.getItem('prolificSessionNumber') || '1');
 		
-		// For Prolific users on new sessions, reset workflow to instructions
-		if (isProlificUser && prolificSessionId) {
+	// For Prolific users on new sessions, reset workflow to instructions
+	if (isProlificUser) {
+		// Check both URL parameter and localStorage for session ID
+		const urlSessionId = $page.url.searchParams.get('SESSION_ID');
+		const storageSessionId = localStorage.getItem('prolificSessionId');
+		const sessionIdToCheck = urlSessionId || storageSessionId;
+		
+		if (sessionIdToCheck) {
 			const lastSessionId = localStorage.getItem('lastProlificSessionId');
-			const isNewSession = lastSessionId !== prolificSessionId;
+			const isNewSession = lastSessionId && lastSessionId !== sessionIdToCheck;
 			
-			if (isNewSession) {
-				// New session - reset workflow state but preserve child profile
-				localStorage.setItem('lastProlificSessionId', prolificSessionId);
-				localStorage.removeItem('assignmentStep');
-				localStorage.removeItem('assignmentCompleted');
-				localStorage.removeItem('moderationScenariosAccessed');
-				localStorage.removeItem('unlock_exit');
-				// Keep instructionsCompleted and child profile data
+		if (isNewSession) {
+			console.log('🔄 New Prolific session detected in layout, resetting workflow');
+			// New session - reset workflow state but preserve child profile
+			localStorage.setItem('lastProlificSessionId', sessionIdToCheck);
+			localStorage.removeItem('assignmentStep');
+			localStorage.removeItem('assignmentCompleted');
+			localStorage.removeItem('moderationScenariosAccessed');
+			localStorage.removeItem('unlock_exit');
+			localStorage.removeItem('instructionsCompleted');
+			// Keep child profile data
+			
+		// Increment session number for all children
+		try {
+			// Get child profiles from cache (using the correct key from childProfileSync service)
+			const cached = localStorage.getItem('child-profiles-cache');
+			if (cached) {
+				const profiles = JSON.parse(cached);
+				if (Array.isArray(profiles) && profiles.length > 0) {
+					profiles.forEach((profile: any) => {
+						const childId = profile.id;
+						const sessionKey = `moderationSessionNumber_${childId}`;
+						const currentSession = parseInt(localStorage.getItem(sessionKey) || '1');
+						const newSession = currentSession + 1;
+						localStorage.setItem(sessionKey, String(newSession));
+						console.log(`Incremented session for child ${childId}: ${currentSession} -> ${newSession}`);
+					});
+				} else {
+					console.warn('No child profiles found in cache or cache is not an array');
+				}
+			} else {
+				console.warn('child-profiles-cache not found in localStorage');
+			}
+		} catch (e) {
+			console.error('Error incrementing session numbers:', e);
+		}
+			
+			// Redirect to instructions for new session
+			if (currentPath !== '/assignment-instructions') {
+				await goto('/assignment-instructions');
+				return;
+			}
+		} else if (!lastSessionId && sessionIdToCheck) {
+				// First time seeing a session ID, store it
+				localStorage.setItem('lastProlificSessionId', sessionIdToCheck);
 			}
 		}
+	}
 		
 		// Prevent access to main chat page after assignment completion (except for admins)
 		if (currentPath === '/' && assignmentCompleted && $user?.role !== 'admin') {

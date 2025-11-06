@@ -25,3 +25,5 @@ def downgrade():
     # Remove participant_name column
     op.drop_column('consent_audit', 'participant_name')
 
+
+

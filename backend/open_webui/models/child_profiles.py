@@ -23,7 +23,7 @@ class ChildProfile(Base):
     child_age = Column(String, nullable=True)  # Age range (e.g., "5-7", "8-10")
     child_gender = Column(String, nullable=True)  # Gender (e.g., "Male", "Female")
     child_characteristics = Column(Text, nullable=True)  # Personality/interests description
-    parenting_style = Column(String, nullable=True)  # Deprecated - kept for backward compatibility, now in exit survey
+    # parenting_style removed - now collected in exit survey (migration gg11hh22ii33)
 
     # Research fields (nullable for backward compatibility)
     is_only_child = Column(Boolean, nullable=True)
@@ -57,7 +57,7 @@ class ChildProfileModel(BaseModel):
     child_age: Optional[str] = None
     child_gender: Optional[str] = None
     child_characteristics: Optional[str] = None
-    parenting_style: Optional[str] = None
+    # parenting_style removed - now collected in exit survey (migration gg11hh22ii33)
     is_only_child: Optional[bool] = None
     child_has_ai_use: Optional[str] = None
     child_ai_use_contexts: Optional[list[str]] = None

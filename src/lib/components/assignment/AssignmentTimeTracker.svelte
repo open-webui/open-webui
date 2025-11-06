@@ -6,8 +6,7 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	export let userId: string = '';
-	export let childId: string | null | undefined = null;
-	export let attemptNumber: number = 1;
+	export let sessionNumber: number = 1;
 	export let enabled: boolean = true;
 
 	let assignmentActiveMs: number = 0;
@@ -25,21 +24,19 @@
 		return typeof document !== 'undefined' && document.visibilityState === 'visible';
 	}
 
-	function activityKeyFor(uId: string, cId: string | null | undefined, attempt: number) {
-		const c = cId || 'none';
-		return `assignmentActiveMs_${uId}_${c}_${attempt}`;
+	function activityKeyFor(uId: string, session: number) {
+		return `assignmentActiveMs_${uId}_${session}`;
 	}
 
 	async function syncActivity() {
 		if (!enabled) return;
 		const currentUserId = userId || get(user)?.id || 'unknown';
-		if (!currentUserId || !Number.isFinite(attemptNumber)) return;
+		if (!currentUserId || !Number.isFinite(sessionNumber)) return;
 		
 		try {
 			await postAssignmentActivity(localStorage.token || '', {
 				user_id: currentUserId,
-				child_id: childId || null,
-				attempt_number: attemptNumber,
+				session_number: sessionNumber,
 				active_ms_cumulative: assignmentActiveMs,
 			});
 		} catch (e) {
@@ -51,11 +48,11 @@
 		if (!enabled) return;
 		
 		const currentUserId = userId || get(user)?.id || 'unknown';
-		if (!currentUserId || !Number.isFinite(attemptNumber)) return;
+		if (!currentUserId || !Number.isFinite(sessionNumber)) return;
 		
 		// Restore from localStorage
 		try {
-			const k = activityKeyFor(currentUserId, childId, attemptNumber);
+			const k = activityKeyFor(currentUserId, sessionNumber);
 			const saved = localStorage.getItem(k);
 			if (saved) {
 				assignmentActiveMs = Number(saved) || 0;
@@ -73,7 +70,7 @@
 				if (now - lastActivityAt <= IDLE_THRESHOLD_MS) {
 					assignmentActiveMs += 1000;
 					try {
-						const k = activityKeyFor(currentUserId, childId, attemptNumber);
+						const k = activityKeyFor(currentUserId, sessionNumber);
 						localStorage.setItem(k, String(assignmentActiveMs));
 					} catch (e) {
 						console.warn('Failed to save assignment activity to localStorage', e);
@@ -102,8 +99,7 @@
 			try {
 				const payload = JSON.stringify({
 					user_id: currentUserId,
-					child_id: childId || null,
-					attempt_number: attemptNumber,
+					session_number: sessionNumber,
 					active_ms_cumulative: assignmentActiveMs,
 				});
 				navigator.sendBeacon(`${WEBUI_API_BASE_URL}/assignment/session-activity`, payload);
@@ -154,7 +150,7 @@
 		}
 	}
 
-	// Update tracking when userId, childId, or attemptNumber changes
+	// Update tracking when userId or sessionNumber changes
 	$: {
 		if (enabled && activityInterval) {
 			// If these change, we need to restart tracking with new keys

@@ -25,7 +25,7 @@ class ChildProfileResponse(BaseModel):
     child_age: Optional[str] = None
     child_gender: Optional[str] = None
     child_characteristics: Optional[str] = None
-    parenting_style: Optional[str] = None
+    # parenting_style removed - now collected in exit survey (migration gg11hh22ii33)
     created_at: int
     updated_at: int
 
