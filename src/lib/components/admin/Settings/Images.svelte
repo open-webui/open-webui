@@ -62,6 +62,7 @@
 		}
 	];
 
+	let showComfyUIEditWorkflowEditor = false;
 	let REQUIRED_EDIT_WORKFLOW_NODES = [
 		{
 			type: 'image',
@@ -1075,7 +1076,7 @@
 												aria-label={$i18n.t('Edit workflow.json content')}
 												on:click={() => {
 													// open code editor modal
-													showComfyUIWorkflowEditor = true;
+													showComfyUIEditWorkflowEditor = true;
 												}}
 											>
 												{$i18n.t('Edit')}
@@ -1100,7 +1101,7 @@
 
 							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
 								<CodeEditorModal
-									bind:show={showComfyUIWorkflowEditor}
+									bind:show={showComfyUIEditWorkflowEditor}
 									value={config.IMAGES_EDIT_COMFYUI_WORKFLOW}
 									lang="json"
 									onChange={(e) => {
