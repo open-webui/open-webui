@@ -29,6 +29,29 @@
 		return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
 	}
 
+	// Helper function to get minimum end date (at least one day after start date)
+	function getMinEndDate(startDateStr) {
+		if (!startDateStr) return '';
+		const startDate = new Date(startDateStr);
+		const minEndDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000); // Add one day
+		return formatDate(minEndDate);
+	}
+
+	// Handler for start date changes - ensures end date is always after start date
+	function handleStartDateChange(event) {
+		const newStartDate = event.target.value;
+		startDate = newStartDate;
+
+		// If start date is after or equal to end date, adjust end date to be one day after start date
+		if (newStartDate && endDate && new Date(newStartDate) >= new Date(endDate)) {
+			const startDateObj = new Date(newStartDate);
+			const newEndDate = new Date(startDateObj.getTime() + 24 * 60 * 60 * 1000); // Add one day
+			endDate = formatDate(newEndDate);
+		}
+
+		updateRangeMetrics();
+	}
+
 	// Register all Chart.js components
 	Chart.register(...registerables);
 
@@ -221,6 +244,11 @@
 
 	// Function to update all charts with new data
 	async function updateCharts(selectedDomain: string | null, selectedModel: string | null) {
+		// Don't update charts if either date is empty (from clearing date inputs)
+		if (!startDate || !endDate) {
+			return;
+		}
+
 		try {
 			let updatedDomain = selectedDomain ?? undefined;
 			let updatedModel = selectedModel ?? undefined;
@@ -597,13 +625,21 @@
 			showCustomDateRange = false;
 		} else if (range === 'custom') {
 			showCustomDateRange = true;
-			// Don't reset the date values when switching to custom
+			// Set sensible defaults for custom range (last 7 days, but not including today)
+			startDate = formatDate(new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000));
+			endDate = formatDate(new Date(today.getTime() - 24 * 60 * 60 * 1000)); // Yesterday
 		}
 
 		updateRangeMetrics();
 	}
 
 	async function updateRangeMetrics() {
+		// Don't make API calls if either date is empty (from clearing date inputs)
+		if (!startDate || !endDate) {
+			rangeMetrics = null; // Clear stale data
+			return;
+		}
+
 		try {
 			rangeMetrics = await getRangeMetrics(
 				localStorage.token,
@@ -718,6 +754,16 @@
 			return;
 		}
 
+		// Check if start and end dates are the same
+		if (startDate === endDate) {
+			alert(
+				$i18n.t(
+					'Start and end dates cannot be the same. Please select a date range of at least one day.'
+				)
+			);
+			return;
+		}
+
 		// Check if date range exceeds 90 days (using same logic as backend)
 		const start = new Date(startDate);
 		const end = new Date(endDate);
@@ -822,9 +868,9 @@
 								type="date"
 								id="start-date"
 								bind:value={startDate}
-								max={formatDate(new Date())}
+								max={formatDate(new Date(Date.now() - 24 * 60 * 60 * 1000))}
 								required
-								on:change={updateRangeMetrics}
+								on:change={handleStartDateChange}
 								class="block w-40 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
 							/>
 						</div>
@@ -840,7 +886,7 @@
 								id="end-date"
 								bind:value={endDate}
 								max={formatDate(new Date())}
-								min={startDate}
+								min={getMinEndDate(startDate)}
 								required
 								on:change={updateRangeMetrics}
 								class="block w-40 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"

@@ -338,6 +338,10 @@ class TagFilterForm(TagForm):
     limit: Optional[int] = 50
 
 
+class BulkDeleteForm(BaseModel):
+    chat_ids: list[str]
+
+
 @router.post("/tags", response_model=list[ChatTitleIdResponse])
 async def get_user_chat_list_by_tag_name(
     form_data: TagFilterForm, user=Depends(get_verified_user)
@@ -388,6 +392,73 @@ async def update_chat_by_id(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
+
+
+############################
+# DeleteMultipleChats
+############################
+
+
+@router.delete("/bulk", response_model=dict)
+async def delete_multiple_chats(
+    request: Request, form_data: BulkDeleteForm, user=Depends(get_verified_user)
+):
+    if user.role == "user" and not has_permission(
+        user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    log.info(f"User {user.id} deleting multiple chats: {form_data.chat_ids}")
+
+    deleted_count = 0
+    failed_deletions = []
+    total_file_references = 0
+
+    for chat_id in form_data.chat_ids:
+        try:
+            # Check if user owns the chat
+            chat = Chats.get_chat_by_id_and_user_id(chat_id, user.id)
+            if not chat:
+                failed_deletions.append(
+                    {"id": chat_id, "error": "Chat not found or access denied"}
+                )
+                continue
+
+            # Log file references for cleanup
+            file_ids = extract_file_ids_from_chat(chat)
+            total_file_references += len(file_ids)
+
+            # Clean up tags
+            for tag in chat.meta.get("tags", []):
+                if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 1:
+                    Tags.delete_tag_by_name_and_user_id(tag, user.id)
+
+            # Delete chat from database
+            result = Chats.delete_chat_by_id_and_user_id(chat_id, user.id)
+            if result:
+                deleted_count += 1
+            else:
+                failed_deletions.append(
+                    {"id": chat_id, "error": "Failed to delete from database"}
+                )
+
+        except Exception as e:
+            log.error(f"Error deleting chat {chat_id}: {e}")
+            failed_deletions.append({"id": chat_id, "error": str(e)})
+
+    log.info(
+        f"Bulk deletion completed: {deleted_count} chats deleted, {len(failed_deletions)} failed, "
+        f"{total_file_references} file references marked for cleanup"
+    )
+
+    return {
+        "deleted_count": deleted_count,
+        "failed_deletions": failed_deletions,
+        "total_requested": len(form_data.chat_ids),
+    }
 
 
 ############################

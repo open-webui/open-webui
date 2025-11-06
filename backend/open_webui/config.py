@@ -6,8 +6,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Generic, Optional, TypeVar
 from urllib.parse import urlparse
-
-import chromadb
 import requests
 from pydantic import BaseModel
 from sqlalchemy import JSON, Column, DateTime, Integer, func
@@ -27,14 +25,6 @@ from open_webui.env import (
 from open_webui.internal.db import get_db
 from open_webui.models.base import Base
 
-
-class EndpointFilter(logging.Filter):
-    def filter(self, record: logging.LogRecord) -> bool:
-        return record.getMessage().find("/health") == -1
-
-
-# Filter out /endpoint
-logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
 ####################################
 # Config helpers
@@ -1283,6 +1273,35 @@ ADMIN_EMAIL = PersistentConfig(
 
 
 ####################################
+# CHAT LIFETIME AND CLEANUP
+####################################
+
+CHAT_LIFETIME_ENABLED = PersistentConfig(
+    "CHAT_LIFETIME_ENABLED",
+    "chat.lifetime.enable",
+    os.environ.get("CHAT_LIFETIME_ENABLED", "False").lower() == "true",
+)
+
+CHAT_LIFETIME_DAYS = PersistentConfig(
+    "CHAT_LIFETIME_DAYS",
+    "chat.lifetime.days",
+    int(os.environ.get("CHAT_LIFETIME_DAYS", "30")),
+)
+
+CHAT_CLEANUP_PRESERVE_PINNED = PersistentConfig(
+    "CHAT_CLEANUP_PRESERVE_PINNED",
+    "chat.cleanup.preserve_pinned",
+    os.environ.get("CHAT_CLEANUP_PRESERVE_PINNED", "True").lower() == "true",
+)
+
+CHAT_CLEANUP_PRESERVE_ARCHIVED = PersistentConfig(
+    "CHAT_CLEANUP_PRESERVE_ARCHIVED",
+    "chat.cleanup.preserve_archived",
+    os.environ.get("CHAT_CLEANUP_PRESERVE_ARCHIVED", "False").lower() == "true",
+)
+
+
+####################################
 # TASKS
 ####################################
 
@@ -1505,32 +1524,10 @@ Responses from models: {{responses}}"""
 # Vector Database
 ####################################
 
-VECTOR_DB = os.environ.get("VECTOR_DB", "chroma")
+# Only Qdrant is supported
+VECTOR_DB = os.environ.get("VECTOR_DB", "qdrant")
 
-# Chroma
-CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"
-CHROMA_TENANT = os.environ.get("CHROMA_TENANT", chromadb.DEFAULT_TENANT)
-CHROMA_DATABASE = os.environ.get("CHROMA_DATABASE", chromadb.DEFAULT_DATABASE)
-CHROMA_HTTP_HOST = os.environ.get("CHROMA_HTTP_HOST", "")
-CHROMA_HTTP_PORT = int(os.environ.get("CHROMA_HTTP_PORT", "8000"))
-CHROMA_CLIENT_AUTH_PROVIDER = os.environ.get("CHROMA_CLIENT_AUTH_PROVIDER", "")
-CHROMA_CLIENT_AUTH_CREDENTIALS = os.environ.get("CHROMA_CLIENT_AUTH_CREDENTIALS", "")
-# Comma-separated list of header=value pairs
-CHROMA_HTTP_HEADERS = os.environ.get("CHROMA_HTTP_HEADERS", "")
-if CHROMA_HTTP_HEADERS:
-    CHROMA_HTTP_HEADERS = dict(
-        [pair.split("=") for pair in CHROMA_HTTP_HEADERS.split(",")]
-    )
-else:
-    CHROMA_HTTP_HEADERS = None
-CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
-# this uses the model defined in the Dockerfile ENV variable. If you dont use docker or docker based deployments such as k8s, the default embedding model will be used (sentence-transformers/all-MiniLM-L6-v2)
-
-# Milvus
-MILVUS_URI = os.environ.get("MILVUS_URI", f"{DATA_DIR}/vector_db/milvus.db")
-MILVUS_DB = os.environ.get("MILVUS_DB", "default")
-
-# Qdrant
+# Qdrant - The only supported vector database
 QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
 # Quantize vectors and keep quantized data in memory to reduce memory usage
 # Docs: https://qdrant.tech/documentation/guides/optimize/
@@ -1547,37 +1544,6 @@ QDRANT_ON_DISK_VECTOR = (
 QDRANT_PREFER_GRPC = os.environ.get("QDRANT_PREFER_GRPC", "False").lower() == "true"
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost")
 QDRANT_TIMEOUT_SECONDS = os.environ.get("QDRANT_TIMEOUT_SECONDS", 5)
-
-# OpenSearch
-OPENSEARCH_URI = os.environ.get("OPENSEARCH_URI", "https://localhost:9200")
-OPENSEARCH_SSL = os.environ.get("OPENSEARCH_SSL", True)
-OPENSEARCH_CERT_VERIFY = os.environ.get("OPENSEARCH_CERT_VERIFY", False)
-OPENSEARCH_USERNAME = os.environ.get("OPENSEARCH_USERNAME", None)
-OPENSEARCH_PASSWORD = os.environ.get("OPENSEARCH_PASSWORD", None)
-
-# Pgvector
-PGVECTOR_DB_URL = os.environ.get("PGVECTOR_DB_URL", DATABASE_URL)
-if VECTOR_DB == "pgvector" and not PGVECTOR_DB_URL.startswith("postgres"):
-    raise ValueError(
-        "Pgvector requires setting PGVECTOR_DB_URL or using Postgres with vector extension as the primary database."
-    )
-
-# OpenSearch
-OPENSEARCH_URI = os.environ.get("OPENSEARCH_URI", "https://localhost:9200")
-OPENSEARCH_SSL = os.environ.get("OPENSEARCH_SSL", True)
-OPENSEARCH_CERT_VERIFY = os.environ.get("OPENSEARCH_CERT_VERIFY", False)
-OPENSEARCH_USERNAME = os.environ.get("OPENSEARCH_USERNAME", None)
-OPENSEARCH_PASSWORD = os.environ.get("OPENSEARCH_PASSWORD", None)
-
-# Pgvector
-PGVECTOR_DB_URL = os.environ.get("PGVECTOR_DB_URL", DATABASE_URL)
-if VECTOR_DB == "pgvector" and not PGVECTOR_DB_URL.startswith("postgres"):
-    raise ValueError(
-        "Pgvector requires setting PGVECTOR_DB_URL or using Postgres with vector extension as the primary database."
-    )
-PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(
-    os.environ.get("PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH", "1536")
-)
 
 ####################################
 # Information Retrieval (RAG)
@@ -1860,6 +1826,13 @@ ENABLE_WIKIPEDIA_GROUNDING_RERANKER = PersistentConfig(
     "ENABLE_WIKIPEDIA_GROUNDING_RERANKER",
     "rag.wikipedia.grounding.reranker.enable",
     os.getenv("ENABLE_WIKIPEDIA_GROUNDING_RERANKER", "True").lower() == "true",
+)
+
+# Wikipedia Grounding Max Concurrent Requests Configuration
+WIKIPEDIA_GROUNDING_MAX_CONCURRENT = PersistentConfig(
+    "WIKIPEDIA_GROUNDING_MAX_CONCURRENT",
+    "rag.wikipedia.grounding.max_concurrent",
+    int(os.getenv("WIKIPEDIA_GROUNDING_MAX_CONCURRENT", "5")),
 )
 
 # You can provide a list of your own websites to filter after performing a web search.

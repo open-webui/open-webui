@@ -108,8 +108,10 @@ def main():
             cleanup_orphaned_chat_files,
             cleanup_orphaned_files_by_reference,
             cleanup_old_chat_collections,
+            cleanup_expired_chats,
         )
         from open_webui.models.knowledge import Knowledges
+        from open_webui.config import CHAT_LIFETIME_ENABLED, CHAT_LIFETIME_DAYS
 
         logger.info("✓ Successfully imported cleanup modules")
 
@@ -175,7 +177,23 @@ def main():
                 f"✓ [DRY RUN] Would clean chat collections older than {collection_cleanup_days} days"
             )
 
-        # 4. Clean up expired web search results
+        # 4. Clean up expired chats if enabled
+        if CHAT_LIFETIME_ENABLED:
+            logger.info(
+                f"🔍 Cleaning expired chats older than {CHAT_LIFETIME_DAYS} days..."
+            )
+            if not args.dry_run:
+                result = cleanup_expired_chats(max_age_days=CHAT_LIFETIME_DAYS)
+                cleanup_results["expired_chats"] = result
+                logger.info(f"✓ Expired chats cleanup: {result}")
+            else:
+                logger.info(
+                    f"✓ [DRY RUN] Would clean expired chats older than {CHAT_LIFETIME_DAYS} days"
+                )
+        else:
+            logger.info("⏭️  Chat lifetime cleanup disabled - skipping")
+
+        # 5. Clean up expired web search results
         logger.info(
             f"🔍 Cleaning web search results older than {web_search_expiry_days} days..."
         )
@@ -191,7 +209,9 @@ def main():
         # Summary
         if not args.dry_run:
             total_cleaned = sum(
-                result.get("collections_cleaned", 0) + result.get("files_deleted", 0)
+                result.get("collections_cleaned", 0)
+                + result.get("files_deleted", 0)
+                + result.get("chats_deleted", 0)
                 for result in cleanup_results.values()
                 if isinstance(result, dict)
             )

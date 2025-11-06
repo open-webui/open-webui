@@ -21,7 +21,6 @@ alembic==1.14.0
 peewee==3.17.8
 peewee-migrate==1.12.2
 psycopg2-binary==2.9.9
-pgvector>=0.4.1
 PyMySQL==1.1.1
 bcrypt==4.2.0
 
@@ -30,7 +29,7 @@ redis
 boto3==1.35.53
 
 argon2-cffi==23.1.0
-APScheduler==3.10.4
+APScheduler==3.11.0
 
 # AI libraries
 openai
@@ -42,10 +41,7 @@ langchain==0.3.26
 langchain-community==0.3.26
 
 fake-useragent==1.5.1
-chromadb==0.5.23
-pymilvus==2.5.0
 qdrant-client~=1.12.0
-opensearch-py==2.7.1
 
 # txtai-wikipedia Wiki Grounding dependencies
 transformers>=4.46.0,<5.0.0

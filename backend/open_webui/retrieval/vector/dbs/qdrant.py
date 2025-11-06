@@ -1,4 +1,4 @@
-from qdrant_client import QdrantClient as Client, models
+from qdrant_client import AsyncQdrantClient, models
 from qdrant_client.http.models import (
     Distance,
     PointStruct,
@@ -30,7 +30,7 @@ from open_webui.config import (
 
 class QdrantClient:
     def __init__(self):
-        self.client = Client(
+        self.client = AsyncQdrantClient(
             url=QDRANT_URL,
             api_key=QDRANT_API_KEY,
             timeout=int(QDRANT_TIMEOUT_SECONDS),
@@ -79,19 +79,21 @@ class QdrantClient:
             }
         )
 
-    def has_collection(self, collection_name: str) -> bool:
+    async def has_collection(self, collection_name: str) -> bool:
         # Check if the collection exists based on the collection name.
-        return self.client.collection_exists(collection_name=collection_name)
+        return await self.client.collection_exists(collection_name=collection_name)
 
-    def list_collections(self) -> list[str]:
+    async def list_collections(self) -> list[str]:
         # List all collection names.
-        collections_response = self.client.get_collections()
+        collections_response = await self.client.get_collections()
         return [collection.name for collection in collections_response.collections]
 
-    def get_collection_sample_metadata(self, collection_name: str) -> Optional[dict]:
+    async def get_collection_sample_metadata(
+        self, collection_name: str
+    ) -> Optional[dict]:
         """Get metadata from a sample point in the collection to check properties like age."""
         try:
-            points, _ = self.client.scroll(
+            points, _ = await self.client.scroll(
                 collection_name=collection_name, limit=1, with_payload=True
             )
             if points and len(points) > 0:
@@ -102,15 +104,15 @@ class QdrantClient:
         except Exception:
             return None
 
-    def delete_collection(self, collection_name: str):
+    async def delete_collection(self, collection_name: str):
         # Delete the collection based on the collection name.
-        return self.client.delete_collection(collection_name=collection_name)
+        return await self.client.delete_collection(collection_name=collection_name)
 
-    def search(
+    async def search(
         self, collection_name: str, vectors: list[list[float | int]], limit: int
     ) -> Optional[SearchResult]:
         # Search for the nearest neighbor items based on the vectors and return 'limit' number of results.
-        result = self.client.query_points(
+        result = await self.client.query_points(
             collection_name=collection_name,
             query=vectors,
             limit=limit,
@@ -119,11 +121,11 @@ class QdrantClient:
 
         return self._result_to_search_result(result)
 
-    def query(
+    async def query(
         self, collection_name: str, filter: dict, limit: Optional[int] = None
     ) -> Optional[GetResult]:
         try:
-            if not self.client.collection_exists(collection_name=collection_name):
+            if not await self.client.collection_exists(collection_name=collection_name):
                 return None
 
             # Build the conditions if a filter is provided.
@@ -135,7 +137,7 @@ class QdrantClient:
                 ]
                 qdrant_filter = Filter(must=conditions)
 
-            points, _ = self.client.scroll(
+            points, _ = await self.client.scroll(
                 collection_name=collection_name,
                 scroll_filter=qdrant_filter,
                 limit=limit or 1,
@@ -147,13 +149,13 @@ class QdrantClient:
             print(f"Error querying Qdrant: {e}")
             return None
 
-    def get(self, collection_name: str) -> Optional[GetResult]:
-        points = self.client.count(
+    async def get(self, collection_name: str) -> Optional[GetResult]:
+        points = await self.client.count(
             collection_name=collection_name,
         )
         if points.count:
             # Get all the items in the collection.
-            result = self.client.scroll(
+            result = await self.client.scroll(
                 collection_name=collection_name,
                 with_payload=True,
                 limit=points.count,
@@ -163,10 +165,10 @@ class QdrantClient:
 
         return None
 
-    def insert(self, collection_name: str, items: list[VectorItem]):
-        return self.upsert(collection_name=collection_name, items=items)
+    async def insert(self, collection_name: str, items: list[VectorItem]):
+        return await self.upsert(collection_name=collection_name, items=items)
 
-    def upsert(self, collection_name: str, items: list[VectorItem]):
+    async def upsert(self, collection_name: str, items: list[VectorItem]):
         # Update the items in the collection, if the items are not present, insert them. If the collection does not exist, it will be created.
 
         quantization_config = (
@@ -177,8 +179,8 @@ class QdrantClient:
             else None
         )
 
-        if not self.client.collection_exists(collection_name=collection_name):
-            self.client.create_collection(
+        if not await self.client.collection_exists(collection_name=collection_name):
+            await self.client.create_collection(
                 collection_name=collection_name,
                 on_disk_payload=QDRANT_ON_DISK_PAYLOAD,
                 hnsw_config=HnswConfigDiff(on_disk=QDRANT_ON_DISK_HNSW),
@@ -202,12 +204,12 @@ class QdrantClient:
             for item in items
         ]
 
-        return self.client.upsert(
+        return await self.client.upsert(
             collection_name=collection_name,
             points=points,
         )
 
-    def delete(
+    async def delete(
         self,
         collection_name: str,
         ids: Optional[list[str]] = None,
@@ -223,15 +225,15 @@ class QdrantClient:
             ]
             selector = Filter(must=conditions)
 
-        return self.client.delete(
+        return await self.client.delete(
             collection_name=collection_name,
             points_selector=selector,
         )
 
-    def reset(self):
+    async def reset(self):
         # Resets the database. This will delete all collections and item entries.
 
-        collection_response = self.client.get_collections()
+        collection_response = await self.client.get_collections()
 
         for collection in collection_response.collections:
-            self.client.delete_collection(collection_name=collection.name)
+            await self.client.delete_collection(collection_name=collection.name)

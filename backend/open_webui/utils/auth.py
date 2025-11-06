@@ -5,7 +5,7 @@ import jwt
 from datetime import UTC, datetime, timedelta
 from typing import Optional, Union
 
-from open_webui.models.users import Users
+from open_webui.models.users import UserModel, Users
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import WEBUI_SECRET_KEY
@@ -77,7 +77,7 @@ def get_http_authorization_cred(auth_header: str):
 def get_current_user(
     request: Request,
     auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
-):
+) -> UserModel:
     token = None
 
     if auth_token is not None:
