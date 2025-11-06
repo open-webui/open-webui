@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { decode } from 'html-entities';
 	import DOMPurify from 'dompurify';
 	import { onMount, getContext } from 'svelte';
 	const i18n = getContext('i18n');
@@ -10,6 +11,7 @@
 	import { unescapeHtml } from '$lib/utils';
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { settings } from '$lib/stores';
 
 	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
 	import MarkdownInlineTokens from '$lib/components/chat/Messages/Markdown/MarkdownInlineTokens.svelte';
@@ -20,7 +22,6 @@
 	import Download from '$lib/components/icons/Download.svelte';
 
 	import Source from './Source.svelte';
-	import { settings } from '$lib/stores';
 	import HtmlToken from './HTMLToken.svelte';
 
 	export let id: string;
@@ -304,7 +305,7 @@
 			<div class=" mb-1.5" slot="content">
 				<svelte:self
 					id={`${id}-${tokenIdx}-d`}
-					tokens={marked.lexer(token.text)}
+					tokens={marked.lexer(decode(token.text))}
 					attributes={token?.attributes}
 					{done}
 					{editCodeBlock}

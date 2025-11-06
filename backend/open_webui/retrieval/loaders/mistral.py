@@ -70,6 +70,7 @@ class MistralLoader:
 
     def __init__(
         self,
+        base_url: str,
         api_key: str,
         file_path: str,
         base_url: str = DEFAULT_MISTRAL_OCR_ENDPOINT,
@@ -101,6 +102,9 @@ class MistralLoader:
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found at {file_path}")
 
+        self.base_url = (
+            base_url.rstrip("/") if base_url else "https://api.mistral.ai/v1"
+        )
         self.api_key = api_key
         self.file_path = file_path
 

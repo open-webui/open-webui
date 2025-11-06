@@ -16,7 +16,7 @@
 	import {
 		createNewModel,
 		deleteModelById,
-		getModels as getWorkspaceModels,
+		getModelItems as getWorkspaceModels,
 		toggleModelById,
 		updateModelById
 	} from '$lib/apis/models';
@@ -189,7 +189,7 @@
 			tags = models
 				.filter((model) => !(model?.meta?.hidden ?? false))
 				.flatMap((model) => model?.meta?.tags ?? [])
-				.map((tag) => tag.name.toLowerCase());
+				.map((tag) => tag.name);
 
 			// Remove duplicates and sort
 			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));

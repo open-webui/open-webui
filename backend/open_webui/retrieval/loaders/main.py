@@ -228,6 +228,7 @@ class DoclingLoader:
 class Loader:
     def __init__(self, engine: str = "", **kwargs):
         self.engine = engine
+        self.user = kwargs.get("user", None)
         self.kwargs = kwargs
 
     def load(
@@ -264,6 +265,7 @@ class Loader:
                 url=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_URL"),
                 api_key=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_API_KEY"),
                 mime_type=file_content_type,
+                user=self.user,
             )
         elif self.engine == "tika" and self.kwargs.get("TIKA_SERVER_URL"):
             if self._is_text_file(file_ext, file_content_type):
@@ -368,14 +370,8 @@ class Loader:
                     azure_credential=DefaultAzureCredential(),
                 )
         elif self.engine == "mineru" and file_ext in [
-            "pdf",
-            "doc",
-            "docx",
-            "ppt",
-            "pptx",
-            "xls",
-            "xlsx",
-        ]:
+            "pdf"
+        ]:  # MinerU currently only supports PDF
             loader = MinerULoader(
                 file_path=file_path,
                 api_mode=self.kwargs.get("MINERU_API_MODE", "local"),

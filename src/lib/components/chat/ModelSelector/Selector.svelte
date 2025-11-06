@@ -121,7 +121,10 @@
 						if (selectedTag === '') {
 							return true;
 						}
-						return (item.model?.tags ?? []).map((tag) => tag.name).includes(selectedTag);
+
+						return (item.model?.tags ?? [])
+							.map((tag) => tag.name.toLowerCase())
+							.includes(selectedTag.toLowerCase());
 					})
 					.filter((item) => {
 						if (selectedConnectionType === '') {
@@ -139,7 +142,9 @@
 						if (selectedTag === '') {
 							return true;
 						}
-						return (item.model?.tags ?? []).map((tag) => tag.name).includes(selectedTag);
+						return (item.model?.tags ?? [])
+							.map((tag) => tag.name.toLowerCase())
+							.includes(selectedTag.toLowerCase());
 					})
 					.filter((item) => {
 						if (selectedConnectionType === '') {
@@ -312,16 +317,12 @@
 
 	onMount(async () => {
 		if (items) {
-			tags = Array.from(
-				new Set(
-					items
-						.filter((item) => !(item.model?.info?.meta?.hidden ?? false))
-						.flatMap((item) => item.model?.tags ?? [])
-						.map((tag) => tag.name.toLowerCase())
-				)
-			)
-				.sort((a, b) => a.localeCompare(b))
-				.map((tag) => capitalizeFirstLetter(tag));
+			tags = items
+				.filter((item) => !(item.model?.info?.meta?.hidden ?? false))
+				.flatMap((item) => item.model?.tags ?? [])
+				.map((tag) => tag.name.toLowerCase());
+			// Remove duplicates and sort
+			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
 		}
 	});
 

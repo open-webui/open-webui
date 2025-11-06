@@ -212,6 +212,15 @@
 			await embeddingModelUpdateHandler();
 		}
 
+		if (RAGConfig.MINERU_PARAMS) {
+			try {
+				JSON.parse(RAGConfig.MINERU_PARAMS);
+			} catch (e) {
+				toast.error($i18n.t('Invalid JSON format in MinerU Parameters'));
+				return;
+			}
+		}
+
 		const res = await updateRAGConfig(localStorage.token, {
 			...RAGConfig,
 			ALLOWED_FILE_EXTENSIONS: RAGConfig.ALLOWED_FILE_EXTENSIONS.split(',')
@@ -226,7 +235,11 @@
 			MISTRAL_OCR_PARAMS:
 				typeof RAGConfig.MISTRAL_OCR_PARAMS === 'object'
 					? RAGConfig.MISTRAL_OCR_PARAMS
-					: JSON.parse(RAGConfig.MISTRAL_OCR_PARAMS || '{}')
+					: JSON.parse(RAGConfig.MISTRAL_OCR_PARAMS || '{}'),
+			MINERU_PARAMS:
+				typeof RAGConfig.MINERU_PARAMS === 'string' && RAGConfig.MINERU_PARAMS.trim() !== ''
+					? JSON.parse(RAGConfig.MINERU_PARAMS)
+					: {}
 		});
 		dispatch('save');
 	};
@@ -269,6 +282,11 @@
 
 		// Keep MISTRAL_OCR_PARAMS as an object for direct property access in the UI
 		config.MISTRAL_OCR_PARAMS = config.MISTRAL_OCR_PARAMS ?? {};
+    
+		config.MINERU_PARAMS =
+			typeof config.MINERU_PARAMS === 'object'
+				? JSON.stringify(config.MINERU_PARAMS ?? {}, null, 2)
+				: config.MINERU_PARAMS;
 
 		RAGConfig = config;
 	});
@@ -326,7 +344,7 @@
 		<div class=" space-y-2.5 overflow-y-scroll scrollbar-hidden h-full pr-1.5">
 			<div class="">
 				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -883,8 +901,8 @@
 							</div>
 
 							<!-- Parameters -->
-							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
+							<div class="flex flex-col justify-between w-full mt-2">
+								<div class="text-xs font-medium">
 									<Tooltip
 										content={$i18n.t(
 											'Advanced parameters for MinerU parsing (enable_ocr, enable_formula, enable_table, language, model_version, page_ranges)'
@@ -894,22 +912,9 @@
 										{$i18n.t('Parameters')}
 									</Tooltip>
 								</div>
-								<div class="">
+								<div class="mt-1.5">
 									<Textarea
-										value={typeof RAGConfig.MINERU_PARAMS === 'object' &&
-										RAGConfig.MINERU_PARAMS !== null &&
-										Object.keys(RAGConfig.MINERU_PARAMS).length > 0
-											? JSON.stringify(RAGConfig.MINERU_PARAMS, null, 2)
-											: ''}
-										on:input={(e) => {
-											try {
-												const value = e.target.value.trim();
-												RAGConfig.MINERU_PARAMS = value ? JSON.parse(value) : {};
-											} catch (err) {
-												// Keep the string value if JSON is invalid (user is still typing)
-												RAGConfig.MINERU_PARAMS = e.target.value;
-											}
-										}}
+										bind:value={RAGConfig.MINERU_PARAMS}
 										placeholder={`{\n  "enable_ocr": false,\n  "enable_formula": true,\n  "enable_table": true,\n  "language": "en",\n  "model_version": "pipeline",\n  "page_ranges": ""\n}`}
 										minSize={100}
 									/>
@@ -995,7 +1000,7 @@
 
 				{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
 					<div class="mb-3">
-						<div class=" mb-2.5 text-base font-medium">{$i18n.t('Embedding')}</div>
+						<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Embedding')}</div>
 
 						<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -1170,7 +1175,7 @@
 					</div>
 
 					<div class="mb-3">
-						<div class=" mb-2.5 text-base font-medium">{$i18n.t('Retrieval')}</div>
+						<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Retrieval')}</div>
 
 						<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -1413,7 +1418,7 @@
 				{/if}
 
 				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Files')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Files')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -1525,7 +1530,7 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Integration')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Integration')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -1545,7 +1550,7 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Danger Zone')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Danger Zone')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 

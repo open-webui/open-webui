@@ -465,6 +465,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "DOCLING_PICTURE_DESCRIPTION_API": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API,
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
+        "MISTRAL_OCR_API_BASE_URL": request.app.state.config.MISTRAL_OCR_API_BASE_URL,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
         "MISTRAL_OCR_ENDPOINT": request.app.state.config.MISTRAL_OCR_ENDPOINT,
         "MISTRAL_OCR_PARAMS": request.app.state.config.MISTRAL_OCR_PARAMS,
@@ -652,6 +653,7 @@ class ConfigForm(BaseModel):
     DOCLING_PICTURE_DESCRIPTION_API: Optional[dict] = None
     DOCUMENT_INTELLIGENCE_ENDPOINT: Optional[str] = None
     DOCUMENT_INTELLIGENCE_KEY: Optional[str] = None
+    MISTRAL_OCR_API_BASE_URL: Optional[str] = None
     MISTRAL_OCR_API_KEY: Optional[str] = None
     MISTRAL_OCR_ENDPOINT: Optional[str] = None
     MISTRAL_OCR_PARAMS: Optional[dict] = None
@@ -894,6 +896,12 @@ async def update_rag_config(
         form_data.DOCUMENT_INTELLIGENCE_KEY
         if form_data.DOCUMENT_INTELLIGENCE_KEY is not None
         else request.app.state.config.DOCUMENT_INTELLIGENCE_KEY
+    )
+
+    request.app.state.config.MISTRAL_OCR_API_BASE_URL = (
+        form_data.MISTRAL_OCR_API_BASE_URL
+        if form_data.MISTRAL_OCR_API_BASE_URL is not None
+        else request.app.state.config.MISTRAL_OCR_API_BASE_URL
     )
     request.app.state.config.MISTRAL_OCR_API_KEY = (
         form_data.MISTRAL_OCR_API_KEY
@@ -1196,6 +1204,7 @@ async def update_rag_config(
         "DOCLING_PICTURE_DESCRIPTION_API": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API,
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
+        "MISTRAL_OCR_API_BASE_URL": request.app.state.config.MISTRAL_OCR_API_BASE_URL,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
         "MISTRAL_OCR_ENDPOINT": request.app.state.config.MISTRAL_OCR_ENDPOINT,
         "MISTRAL_OCR_PARAMS": request.app.state.config.MISTRAL_OCR_PARAMS,
@@ -1581,6 +1590,7 @@ def process_file(
                     file_path = Storage.get_file(file_path)
                     loader = Loader(
                         engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
+                        user=user,
                         DATALAB_MARKER_API_KEY=request.app.state.config.DATALAB_MARKER_API_KEY,
                         DATALAB_MARKER_API_BASE_URL=request.app.state.config.DATALAB_MARKER_API_BASE_URL,
                         DATALAB_MARKER_ADDITIONAL_CONFIG=request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG,
@@ -1613,6 +1623,7 @@ def process_file(
                         PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
                         DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                         DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
+                        MISTRAL_OCR_API_BASE_URL=request.app.state.config.MISTRAL_OCR_API_BASE_URL,
                         MISTRAL_OCR_API_KEY=request.app.state.config.MISTRAL_OCR_API_KEY,
                         MISTRAL_OCR_ENDPOINT=request.app.state.config.MISTRAL_OCR_ENDPOINT,
                         MISTRAL_OCR_PARAMS=request.app.state.config.MISTRAL_OCR_PARAMS,
@@ -1893,6 +1904,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                referer=request.app.state.config.WEBUI_URL,
             )
         else:
             raise Exception(

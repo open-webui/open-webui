@@ -27,6 +27,7 @@
 		banners,
 		user,
 		socket,
+		audioQueue,
 		showControls,
 		showCallOverlay,
 		currentChatPage,
@@ -43,6 +44,7 @@
 		pinnedChats,
 		showEmbeds
 	} from '$lib/stores';
+
 	import {
 		convertMessagesToHistory,
 		copyToClipboard,
@@ -53,6 +55,8 @@
 		removeAllDetails,
 		getCodeBlockContents
 	} from '$lib/utils';
+	import { AudioQueue } from '$lib/utils/audio';
+
 	import {
 		createNewChat,
 		getAllTags,
@@ -529,17 +533,28 @@
 	let showControlsSubscribe = null;
 	let selectedFolderSubscribe = null;
 
+	const stopAudio = () => {
+		try {
+			speechSynthesis.cancel();
+			$audioQueue.stop();
+		} catch {}
+	};
+
 	onMount(async () => {
 		loading = true;
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('events', chatEventHandler);
 
+		audioQueue.set(new AudioQueue(document.getElementById('audioElement')));
+
 		pageSubscribe = page.subscribe(async (p) => {
 			if (p.url.pathname === '/') {
 				await tick();
 				initNewChat();
 			}
+
+			stopAudio();
 		});
 
 		const storageChatInput = sessionStorage.getItem(
@@ -621,6 +636,7 @@
 			chatIdUnsubscriber?.();
 			window.removeEventListener('message', onMessageHandler);
 			$socket?.off('events', chatEventHandler);
+			$audioQueue?.destroy();
 		} catch (e) {
 			console.error(e);
 		}
@@ -2347,7 +2363,7 @@
 	</title>
 </svelte:head>
 
-<audio id="audioElement" src="" style="display: none;" />
+<audio id="audioElement" src="" style="display: none;"></audio>
 
 <EventConfirmDialog
 	bind:show={showEventConfirmation}
