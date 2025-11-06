@@ -1645,8 +1645,8 @@ async def process_chat_response(
                         if user_message and len(user_message) > 100:
                             user_message = user_message[:100] + "..."
 
+                        title = None
                         if tasks[TASKS.TITLE_GENERATION]:
-
                             res = await generate_title(
                                 request,
                                 {
@@ -1697,7 +1697,8 @@ async def process_chat_response(
                                         "data": title,
                                     }
                                 )
-                        elif len(messages) == 2:
+
+                        if title == None and len(messages) == 2:
                             title = messages[0].get("content", user_message)
 
                             Chats.update_chat_title_by_id(metadata["chat_id"], title)
