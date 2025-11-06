@@ -59,8 +59,7 @@ We appreciate the community's interest in identifying potential vulnerabilities.
 >
 > 1. affects default configurations, **or**
 > 2. represents a genuine bypass of intended security controls, **or**
-> 3. works only with non-default configurations, **but the configuration in question is likely to be used by production deployments**,
->    **then we absolutely want to hear about it.** This policy is intended to filter configuration issues and deployment problems, not to discourage legitimate security research.
+> 3. works only with non-default configurations, **but the configuration in question is likely to be used by production deployments**, **then we absolutely want to hear about it.** This policy is intended to filter configuration issues and deployment problems, not to discourage legitimate security research.
 
 8. **Threat Model Understanding Required**: Reports must demonstrate understanding of Open WebUI's self-hosted, authenticated, role-based access control architecture. Comparing Open WebUI to services with fundamentally different security models without acknowledging the architectural differences may result in report rejection.
 
