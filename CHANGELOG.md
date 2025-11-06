@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.6.35] - 2025-11-06
 
 ### Added
+
 - 🖼️ Image generation system received a comprehensive overhaul with major new capabilities including full image editing support allowing users to modify existing images using text prompts with OpenAI, Gemini, or ComfyUI engines, adding Gemini 2.5 Flash Image (Nano Banana) support, Qwen Image Edit integration, resolution of base64-encoded image display issues, streamlined AUTOMATIC1111 configuration by consolidating parameters into a flexible JSON parameters field, and enhanced UI with a code editor modal for ComfyUI workflow management. [#17434](https://github.com/open-webui/open-webui/pull/17434), [#16976](https://github.com/open-webui/open-webui/issues/16976), [Commit](https://github.com/open-webui/open-webui/commit/8e5690aab4f632a57027e2acf880b8f89a8717c0), [Commit](https://github.com/open-webui/open-webui/commit/72f8539fd2e679fec0762945f22f4b8a6920afa0), [Commit](https://github.com/open-webui/open-webui/commit/8d34fcb586eeee1fac6da2f991518b8a68b00b72), [Commit](https://github.com/open-webui/open-webui/commit/72900cd686de1fa6be84b5a8a2fc857cff7b91b8)
 - 🔒 CORS origin validation was added to WebSocket connections as a defense-in-depth security measure against cross-site WebSocket hijacking attacks. [#18411](https://github.com/open-webui/open-webui/pull/18411), [#18410](https://github.com/open-webui/open-webui/issues/18410)
 - 🔄 Automatic page refresh now occurs when a version update is detected via WebSocket connection, ensuring users always run the latest version without cache issues. [Commit](https://github.com/open-webui/open-webui/commit/989f192c92d2fe55daa31336e7971e21798b96ae)
@@ -30,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🌐 Translations for Portuguese (Brazil), Greek, German, Traditional Chinese, Simplified Chinese, Spanish, Georgian, Danish, and Estonian were enhanced and expanded.
 
 ### Fixed
+
 - 🔒 Server-Sent Event (SSE) code injection vulnerability in Direct Connections is resolved by blocking event emission from untrusted external model servers; event emitters from direct connected model servers are no longer supported, preventing arbitrary JavaScript execution in user browsers. [Commit](https://github.com/open-webui/open-webui/commit/8af6a4cf21b756a66cd58378a01c60f74c39b7ca)
 - 🛡️ DOM XSS vulnerability in "Insert Prompt as Rich Text" is resolved by sanitizing HTML content with DOMPurify before rendering. [Commit](https://github.com/open-webui/open-webui/commit/eb9c4c0e358c274aea35f21c2856c0a20051e5f1)
 - ⚙️ MCP server cancellation scope corruption is prevented by reversing disconnection order to follow LIFO and properly handling exceptions, resolving 100% CPU usage when resuming chats with expired tokens or using multiple streamable MCP servers. [#18537](https://github.com/open-webui/open-webui/pull/18537)
@@ -86,6 +88,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🛡️ Duplicate crossorigin attribute in the manifest file was removed. [#18413](https://github.com/open-webui/open-webui/pull/18413)
 
 ### Changed
+
 - 🔄 Firecrawl integration was refactored to use the official Firecrawl SDK instead of direct HTTP requests and langchain_community FireCrawlLoader, improving reliability and performance with batch scraping support and enhanced error handling. [#18635](https://github.com/open-webui/open-webui/pull/18635)
 - 📄 MinerU content extraction engine now only supports PDF files following the upstream removal of LibreOffice document conversion in version 2.0.0; users needing to process office documents should convert them to PDF format first. [#18448](https://github.com/open-webui/open-webui/issues/18448)
 
