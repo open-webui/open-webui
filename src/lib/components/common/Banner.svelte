@@ -1,11 +1,13 @@
 <script lang="ts">
 	import type { Banner } from '$lib/types';
-	import { onMount, createEventDispatcher } from 'svelte';
+	import { onMount, createEventDispatcher, getContext } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import DOMPurify from 'dompurify';
 	import { marked } from 'marked';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	const dispatch = createEventDispatcher();
+	const i18n = getContext('i18n');
 
 	export let banner: Banner = {
 		id: '',
@@ -13,10 +15,10 @@
 		title: '',
 		content: '',
 		url: '',
-		dismissable: true,
+		dismissible: true,
 		timestamp: Math.floor(Date.now() / 1000)
 	};
-	export let className = 'mx-4';
+	export let className = 'mx-2 px-2 rounded-lg';
 
 	export let dismissed = false;
 
@@ -36,37 +38,52 @@
 
 	onMount(() => {
 		mounted = true;
+
+		console.log('Banner mounted:', banner);
 	});
 </script>
 
 {#if !dismissed}
 	{#if mounted}
 		<div
-			class="{className} top-0 left-0 right-0 p-2 px-3 flex justify-center items-center relative rounded-xl border border-gray-100 dark:border-gray-850 text-gray-800 dark:text-gary-100 bg-white dark:bg-gray-900 backdrop-blur-xl z-30"
+			class="{className} top-0 left-0 right-0 py-1 flex justify-center items-center relative border border-transparent text-gray-800 dark:text-gary-100 bg-transparent backdrop-blur-xl z-30"
 			transition:fade={{ delay: 100, duration: 300 }}
 		>
 			<div class=" flex flex-col md:flex-row md:items-center flex-1 text-sm w-fit gap-1.5">
 				<div class="flex justify-between self-start">
 					<div
-						class=" text-xs font-bold {classNames[banner.type] ??
+						class=" text-xs font-semibold {classNames[banner.type] ??
 							classNames['info']}  w-fit px-2 rounded-sm uppercase line-clamp-1 mr-0.5"
 					>
-						{banner.type}
+						{#if banner.type.toLowerCase() === 'info'}
+							{$i18n.t('Info')}
+						{:else if banner.type.toLowerCase() === 'warning'}
+							{$i18n.t('Warning')}
+						{:else if banner.type.toLowerCase() === 'error'}
+							{$i18n.t('Error')}
+						{:else if banner.type.toLowerCase() === 'success'}
+							{$i18n.t('Success')}
+						{:else}
+							{banner.type}
+						{/if}
 					</div>
 
 					{#if banner.url}
 						<div class="flex md:hidden group w-fit md:items-center">
 							<a
 								class="text-gray-700 dark:text-white text-xs font-semibold underline"
-								href="/assets/files/whitepaper.pdf"
-								target="_blank">Learn More</a
+								href="{WEBUI_BASE_URL}/assets/files/whitepaper.pdf"
+								target="_blank"
 							>
+								{$i18n.t('Learn More')}
+							</a>
 
 							<div
 								class=" ml-1 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-white"
 							>
 								<!--  -->
 								<svg
+									aria-hidden="true"
 									xmlns="http://www.w3.org/2000/svg"
 									viewBox="0 0 16 16"
 									fill="currentColor"
@@ -82,9 +99,8 @@
 						</div>
 					{/if}
 				</div>
-
-				<div class="flex-1 text-xs text-gray-700 dark:text-white">
-					{@html marked.parse(DOMPurify.sanitize(banner.content))}
+				<div class="flex-1 text-xs text-gray-700 dark:text-white max-h-60 overflow-y-auto">
+					{@html marked.parse(DOMPurify.sanitize((banner?.content ?? '').replace(/\n/g, '<br>')))}
 				</div>
 			</div>
 
@@ -93,12 +109,15 @@
 					<a
 						class="text-gray-700 dark:text-white text-xs font-semibold underline"
 						href="/"
-						target="_blank">Learn More</a
+						target="_blank"
 					>
+						{$i18n.t('Learn More')}
+					</a>
 
 					<div class=" ml-1 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-white">
 						<!--  -->
 						<svg
+							aria-hidden="true"
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 16 16"
 							fill="currentColor"
@@ -114,15 +133,14 @@
 				</div>
 			{/if}
 			<div class="flex self-start">
-				{#if banner.dismissible}
-					<button
-						on:click={() => {
-							dismiss(banner.id);
-						}}
-						class="  -mt-1 -mb-2 -translate-y-[1px] ml-1.5 mr-1 text-gray-400 dark:hover:text-white"
-						>&times;</button
-					>
-				{/if}
+				<button
+					aria-label={$i18n.t('Close Banner')}
+					on:click={() => {
+						dismiss(banner.id);
+					}}
+					class="  -mt-1 -mb-2 -translate-y-[1px] ml-1.5 mr-1 text-gray-400 dark:hover:text-white"
+					>&times;</button
+				>
 			</div>
 		</div>
 	{/if}

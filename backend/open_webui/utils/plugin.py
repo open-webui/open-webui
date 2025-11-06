@@ -115,7 +115,7 @@ def load_tool_module_by_id(tool_id, content=None):
         os.unlink(temp_file.name)
 
 
-def load_function_module_by_id(function_id, content=None):
+def load_function_module_by_id(function_id: str, content: str | None = None):
     if content is None:
         function = Functions.get_function_by_id(function_id)
         if not function:
@@ -157,12 +157,111 @@ def load_function_module_by_id(function_id, content=None):
             raise Exception("No Function class found in the module")
     except Exception as e:
         log.error(f"Error loading module: {function_id}: {e}")
-        del sys.modules[module_name]  # Cleanup by removing the module in case of error
+        # Cleanup by removing the module in case of error
+        del sys.modules[module_name]
 
         Functions.update_function_by_id(function_id, {"is_active": False})
         raise e
     finally:
         os.unlink(temp_file.name)
+
+
+def get_tool_module_from_cache(request, tool_id, load_from_db=True):
+    if load_from_db:
+        # Always load from the database by default
+        tool = Tools.get_tool_by_id(tool_id)
+        if not tool:
+            raise Exception(f"Tool not found: {tool_id}")
+        content = tool.content
+
+        new_content = replace_imports(content)
+        if new_content != content:
+            content = new_content
+            # Update the tool content in the database
+            Tools.update_tool_by_id(tool_id, {"content": content})
+
+        if (
+            hasattr(request.app.state, "TOOL_CONTENTS")
+            and tool_id in request.app.state.TOOL_CONTENTS
+        ) and (
+            hasattr(request.app.state, "TOOLS") and tool_id in request.app.state.TOOLS
+        ):
+            if request.app.state.TOOL_CONTENTS[tool_id] == content:
+                return request.app.state.TOOLS[tool_id], None
+
+        tool_module, frontmatter = load_tool_module_by_id(tool_id, content)
+    else:
+        if hasattr(request.app.state, "TOOLS") and tool_id in request.app.state.TOOLS:
+            return request.app.state.TOOLS[tool_id], None
+
+        tool_module, frontmatter = load_tool_module_by_id(tool_id)
+
+    if not hasattr(request.app.state, "TOOLS"):
+        request.app.state.TOOLS = {}
+
+    if not hasattr(request.app.state, "TOOL_CONTENTS"):
+        request.app.state.TOOL_CONTENTS = {}
+
+    request.app.state.TOOLS[tool_id] = tool_module
+    request.app.state.TOOL_CONTENTS[tool_id] = content
+
+    return tool_module, frontmatter
+
+
+def get_function_module_from_cache(request, function_id, load_from_db=True):
+    if load_from_db:
+        # Always load from the database by default
+        # This is useful for hooks like "inlet" or "outlet" where the content might change
+        # and we want to ensure the latest content is used.
+
+        function = Functions.get_function_by_id(function_id)
+        if not function:
+            raise Exception(f"Function not found: {function_id}")
+        content = function.content
+
+        new_content = replace_imports(content)
+        if new_content != content:
+            content = new_content
+            # Update the function content in the database
+            Functions.update_function_by_id(function_id, {"content": content})
+
+        if (
+            hasattr(request.app.state, "FUNCTION_CONTENTS")
+            and function_id in request.app.state.FUNCTION_CONTENTS
+        ) and (
+            hasattr(request.app.state, "FUNCTIONS")
+            and function_id in request.app.state.FUNCTIONS
+        ):
+            if request.app.state.FUNCTION_CONTENTS[function_id] == content:
+                return request.app.state.FUNCTIONS[function_id], None, None
+
+        function_module, function_type, frontmatter = load_function_module_by_id(
+            function_id, content
+        )
+    else:
+        # Load from cache (e.g. "stream" hook)
+        # This is useful for performance reasons
+
+        if (
+            hasattr(request.app.state, "FUNCTIONS")
+            and function_id in request.app.state.FUNCTIONS
+        ):
+            return request.app.state.FUNCTIONS[function_id], None, None
+
+        function_module, function_type, frontmatter = load_function_module_by_id(
+            function_id
+        )
+
+    if not hasattr(request.app.state, "FUNCTIONS"):
+        request.app.state.FUNCTIONS = {}
+
+    if not hasattr(request.app.state, "FUNCTION_CONTENTS"):
+        request.app.state.FUNCTION_CONTENTS = {}
+
+    request.app.state.FUNCTIONS[function_id] = function_module
+    request.app.state.FUNCTION_CONTENTS[function_id] = content
+
+    return function_module, function_type, frontmatter
 
 
 def install_frontmatter_requirements(requirements: str):
@@ -182,3 +281,32 @@ def install_frontmatter_requirements(requirements: str):
 
     else:
         log.info("No requirements found in frontmatter.")
+
+
+def install_tool_and_function_dependencies():
+    """
+    Install all dependencies for all admin tools and active functions.
+
+    By first collecting all dependencies from the frontmatter of each tool and function,
+    and then installing them using pip. Duplicates or similar version specifications are
+    handled by pip as much as possible.
+    """
+    function_list = Functions.get_functions(active_only=True)
+    tool_list = Tools.get_tools()
+
+    all_dependencies = ""
+    try:
+        for function in function_list:
+            frontmatter = extract_frontmatter(replace_imports(function.content))
+            if dependencies := frontmatter.get("requirements"):
+                all_dependencies += f"{dependencies}, "
+        for tool in tool_list:
+            # Only install requirements for admin tools
+            if tool.user and tool.user.role == "admin":
+                frontmatter = extract_frontmatter(replace_imports(tool.content))
+                if dependencies := frontmatter.get("requirements"):
+                    all_dependencies += f"{dependencies}, "
+
+        install_frontmatter_requirements(all_dependencies.strip(", "))
+    except Exception as e:
+        log.error(f"Error installing requirements: {e}")

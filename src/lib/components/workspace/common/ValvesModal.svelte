@@ -11,9 +11,24 @@
 		updateFunctionValvesById
 	} from '$lib/apis/functions';
 	import { getToolValvesById, getToolValvesSpecById, updateToolValvesById } from '$lib/apis/tools';
+
+	import {
+		getUserValvesSpecById as getToolUserValvesSpecById,
+		getUserValvesById as getToolUserValvesById,
+		updateUserValvesById as updateToolUserValvesById,
+		getTools
+	} from '$lib/apis/tools';
+	import {
+		getUserValvesSpecById as getFunctionUserValvesSpecById,
+		getUserValvesById as getFunctionUserValvesById,
+		updateUserValvesById as updateFunctionUserValvesById,
+		getFunctions
+	} from '$lib/apis/functions';
+
 	import Spinner from '../../common/Spinner.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Valves from '$lib/components/common/Valves.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -22,6 +37,7 @@
 
 	export let type = 'tool';
 	export let id = null;
+	export let userValves = false;
 
 	let saving = false;
 	let loading = false;
@@ -36,24 +52,45 @@
 			// Convert string to array
 			for (const property in valvesSpec.properties) {
 				if (valvesSpec.properties[property]?.type === 'array') {
-					valves[property] = (valves[property] ?? '').split(',').map((v) => v.trim());
+					if (typeof valves[property] === 'string') {
+						valves[property] = (valves[property] ?? '')
+							.split(',')
+							.map((v) => v.trim())
+							.filter((v) => v.length > 0);
+					} else if (valves[property] == null) {
+						valves[property] = null;
+					}
 				}
 			}
 
 			let res = null;
 
-			if (type === 'tool') {
-				res = await updateToolValvesById(localStorage.token, id, valves).catch((error) => {
-					toast.error(`${error}`);
-				});
-			} else if (type === 'function') {
-				res = await updateFunctionValvesById(localStorage.token, id, valves).catch((error) => {
-					toast.error(`${error}`);
-				});
+			if (userValves) {
+				if (type === 'tool') {
+					res = await updateToolUserValvesById(localStorage.token, id, valves).catch((error) => {
+						toast.error(`${error}`);
+					});
+				} else if (type === 'function') {
+					res = await updateFunctionUserValvesById(localStorage.token, id, valves).catch(
+						(error) => {
+							toast.error(`${error}`);
+						}
+					);
+				}
+			} else {
+				if (type === 'tool') {
+					res = await updateToolValvesById(localStorage.token, id, valves).catch((error) => {
+						toast.error(`${error}`);
+					});
+				} else if (type === 'function') {
+					res = await updateFunctionValvesById(localStorage.token, id, valves).catch((error) => {
+						toast.error(`${error}`);
+					});
+				}
 			}
 
 			if (res) {
-				toast.success('Valves updated successfully');
+				toast.success($i18n.t('Valves updated successfully'));
 				dispatch('save');
 			}
 		}
@@ -66,28 +103,48 @@
 		valves = {};
 		valvesSpec = null;
 
-		if (type === 'tool') {
-			valves = await getToolValvesById(localStorage.token, id);
-			valvesSpec = await getToolValvesSpecById(localStorage.token, id);
-		} else if (type === 'function') {
-			valves = await getFunctionValvesById(localStorage.token, id);
-			valvesSpec = await getFunctionValvesSpecById(localStorage.token, id);
-		}
-
-		if (!valves) {
-			valves = {};
-		}
-
-		if (valvesSpec) {
-			// Convert array to string
-			for (const property in valvesSpec.properties) {
-				if (valvesSpec.properties[property]?.type === 'array') {
-					valves[property] = (valves[property] ?? []).join(',');
+		try {
+			if (userValves) {
+				if (type === 'tool') {
+					valves = await getToolUserValvesById(localStorage.token, id);
+					valvesSpec = await getToolUserValvesSpecById(localStorage.token, id);
+				} else if (type === 'function') {
+					valves = await getFunctionUserValvesById(localStorage.token, id);
+					valvesSpec = await getFunctionUserValvesSpecById(localStorage.token, id);
+				}
+			} else {
+				if (type === 'tool') {
+					valves = await getToolValvesById(localStorage.token, id);
+					valvesSpec = await getToolValvesSpecById(localStorage.token, id);
+				} else if (type === 'function') {
+					valves = await getFunctionValvesById(localStorage.token, id);
+					valvesSpec = await getFunctionValvesSpecById(localStorage.token, id);
 				}
 			}
-		}
 
-		loading = false;
+			if (!valves) {
+				valves = {};
+			}
+
+			if (valvesSpec) {
+				for (const property in valvesSpec.properties) {
+					if (valvesSpec.properties[property]?.type === 'array') {
+						if (valves[property] != null) {
+							valves[property] = (Array.isArray(valves[property]) ? valves[property] : []).join(
+								','
+							);
+						} else {
+							valves[property] = null;
+						}
+					}
+				}
+			}
+
+			loading = false;
+		} catch (e) {
+			toast.error(`Error fetching valves`);
+			show = false;
+		}
 	};
 
 	$: if (show) {
@@ -105,16 +162,7 @@
 					show = false;
 				}}
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="w-5 h-5"
-				>
-					<path
-						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-					/>
-				</svg>
+				<XMark className={'size-5'} />
 			</button>
 		</div>
 
@@ -146,29 +194,7 @@
 
 							{#if saving}
 								<div class="ml-2 self-center">
-									<svg
-										class=" w-4 h-4"
-										viewBox="0 0 24 24"
-										fill="currentColor"
-										xmlns="http://www.w3.org/2000/svg"
-										><style>
-											.spinner_ajPY {
-												transform-origin: center;
-												animation: spinner_AtaB 0.75s infinite linear;
-											}
-											@keyframes spinner_AtaB {
-												100% {
-													transform: rotate(360deg);
-												}
-											}
-										</style><path
-											d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-											opacity=".25"
-										/><path
-											d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-											class="spinner_ajPY"
-										/></svg
-									>
+									<Spinner />
 								</div>
 							{/if}
 						</button>

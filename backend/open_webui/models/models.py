@@ -5,6 +5,7 @@ from typing import Optional
 from open_webui.internal.db import Base, JSONField, get_db
 from open_webui.env import SRC_LOG_LEVELS
 
+from open_webui.models.groups import Groups
 from open_webui.models.users import Users, UserResponse
 
 
@@ -175,9 +176,16 @@ class ModelsTable:
 
     def get_models(self) -> list[ModelUserResponse]:
         with get_db() as db:
+            all_models = db.query(Model).filter(Model.base_model_id != None).all()
+
+            user_ids = list(set(model.user_id for model in all_models))
+
+            users = Users.get_users_by_user_ids(user_ids) if user_ids else []
+            users_dict = {user.id: user for user in users}
+
             models = []
-            for model in db.query(Model).filter(Model.base_model_id != None).all():
-                user = Users.get_user_by_id(model.user_id)
+            for model in all_models:
+                user = users_dict.get(model.user_id)
                 models.append(
                     ModelUserResponse.model_validate(
                         {
@@ -199,11 +207,12 @@ class ModelsTable:
         self, user_id: str, permission: str = "write"
     ) -> list[ModelUserResponse]:
         models = self.get_models()
+        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user_id)}
         return [
             model
             for model in models
             if model.user_id == user_id
-            or has_access(user_id, permission, model.access_control)
+            or has_access(user_id, permission, model.access_control, user_group_ids)
         ]
 
     def get_model_by_id(self, id: str) -> Optional[ModelModel]:
@@ -268,6 +277,50 @@ class ModelsTable:
                 return True
         except Exception:
             return False
+
+    def sync_models(self, user_id: str, models: list[ModelModel]) -> list[ModelModel]:
+        try:
+            with get_db() as db:
+                # Get existing models
+                existing_models = db.query(Model).all()
+                existing_ids = {model.id for model in existing_models}
+
+                # Prepare a set of new model IDs
+                new_model_ids = {model.id for model in models}
+
+                # Update or insert models
+                for model in models:
+                    if model.id in existing_ids:
+                        db.query(Model).filter_by(id=model.id).update(
+                            {
+                                **model.model_dump(),
+                                "user_id": user_id,
+                                "updated_at": int(time.time()),
+                            }
+                        )
+                    else:
+                        new_model = Model(
+                            **{
+                                **model.model_dump(),
+                                "user_id": user_id,
+                                "updated_at": int(time.time()),
+                            }
+                        )
+                        db.add(new_model)
+
+                # Remove models that are no longer present
+                for model in existing_models:
+                    if model.id not in new_model_ids:
+                        db.delete(model)
+
+                db.commit()
+
+                return [
+                    ModelModel.model_validate(model) for model in db.query(Model).all()
+                ]
+        except Exception as e:
+            log.exception(f"Error syncing models for user {user_id}: {e}")
+            return []
 
 
 Models = ModelsTable()

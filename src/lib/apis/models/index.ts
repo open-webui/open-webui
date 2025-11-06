@@ -20,7 +20,35 @@ export const getModels = async (token: string = '') => {
 		})
 		.catch((err) => {
 			error = err;
-			console.log(err);
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const importModels = async (token: string, models: object[]) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/import`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ models: models })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err;
+			console.error(err);
 			return null;
 		});
 
@@ -51,7 +79,7 @@ export const getBaseModels = async (token: string = '') => {
 		})
 		.catch((err) => {
 			error = err;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -80,7 +108,7 @@ export const createNewModel = async (token: string, model: object) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -115,7 +143,7 @@ export const getModelById = async (token: string, id: string) => {
 		.catch((err) => {
 			error = err;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -150,7 +178,7 @@ export const toggleModelById = async (token: string, id: string) => {
 		.catch((err) => {
 			error = err;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -186,7 +214,7 @@ export const updateModelById = async (token: string, id: string, model: object) 
 		.catch((err) => {
 			error = err;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -221,7 +249,7 @@ export const deleteModelById = async (token: string, id: string) => {
 		.catch((err) => {
 			error = err.detail;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -253,7 +281,7 @@ export const deleteAllModels = async (token: string) => {
 		.catch((err) => {
 			error = err;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 

@@ -51,7 +51,9 @@
 			models.set(
 				await getModels(
 					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null),
+					false,
+					true
 				)
 			);
 		}
@@ -74,20 +76,22 @@
 </script>
 
 {#if func}
-	<FunctionEditor
-		edit={true}
-		id={func.id}
-		name={func.name}
-		meta={func.meta}
-		content={func.content}
-		onSave={(value) => {
-			saveHandler(value);
-		}}
-	/>
+	<div class="px-[16px] h-full">
+		<FunctionEditor
+			edit={true}
+			id={func.id}
+			name={func.name}
+			meta={func.meta}
+			content={func.content}
+			onSave={(value) => {
+				saveHandler(value);
+			}}
+		/>
+	</div>
 {:else}
 	<div class="flex items-center justify-center h-full">
 		<div class=" pb-16">
-			<Spinner />
+			<Spinner className="size-5" />
 		</div>
 	</div>
 {/if}

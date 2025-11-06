@@ -6,7 +6,8 @@
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import AddServerModal from '$lib/components/AddServerModal.svelte';
+	import AddToolServerModal from '$lib/components/AddToolServerModal.svelte';
+	import WrenchAlt from '$lib/components/icons/WrenchAlt.svelte';
 
 	export let onDelete = () => {};
 	export let onSubmit = () => {};
@@ -18,7 +19,7 @@
 	let showDeleteConfirmDialog = false;
 </script>
 
-<AddServerModal
+<AddToolServerModal
 	edit
 	{direct}
 	bind:show={showConfigModal}
@@ -41,36 +42,28 @@
 />
 
 <div class="flex w-full gap-2 items-center">
-	<Tooltip
-		className="w-full relative"
-		content={$i18n.t(`WebUI will make requests to "{{url}}"`, {
-			url: `${connection?.url}/${connection?.path ?? 'openapi.json'}`
-		})}
-		placement="top-start"
-	>
-		{#if !(connection?.config?.enable ?? true)}
-			<div
-				class="absolute top-0 bottom-0 left-0 right-0 opacity-60 bg-white dark:bg-gray-900 z-10"
-			></div>
-		{/if}
+	<Tooltip className="w-full relative" content={''} placement="top-start">
 		<div class="flex w-full">
-			<div class="flex-1 relative">
-				<input
-					class=" outline-hidden w-full bg-transparent"
-					placeholder={$i18n.t('API Base URL')}
-					bind:value={connection.url}
-					autocomplete="off"
-				/>
-			</div>
+			<div
+				class="flex-1 relative flex gap-1.5 items-center {!(connection?.config?.enable ?? true)
+					? 'opacity-50'
+					: ''}"
+			>
+				<Tooltip content={connection?.type === 'mcp' ? $i18n.t('MCP') : $i18n.t('OpenAPI')}>
+					<WrenchAlt />
+				</Tooltip>
 
-			{#if (connection?.auth_type ?? 'bearer') === 'bearer'}
-				<SensitiveInput
-					inputClassName=" outline-hidden bg-transparent w-full"
-					placeholder={$i18n.t('API Key')}
-					bind:value={connection.key}
-					required={false}
-				/>
-			{/if}
+				{#if connection?.info?.name}
+					<div class=" capitalize outline-hidden w-full bg-transparent">
+						{connection?.info?.name ?? connection?.url}
+						<span class="text-gray-500">{connection?.info?.id ?? ''}</span>
+					</div>
+				{:else}
+					<div>
+						{connection?.url}
+					</div>
+				{/if}
+			</div>
 		</div>
 	</Tooltip>
 

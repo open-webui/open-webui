@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
+import { WEBUI_BASE_URL } from '$lib/constants';
 
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -12,8 +13,9 @@ dayjs.extend(isToday);
 dayjs.extend(isYesterday);
 dayjs.extend(localizedFormat);
 
-import { WEBUI_BASE_URL } from '$lib/constants';
 import { TTS_RESPONSE_SPLIT } from '$lib/types';
+
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
 
 import { marked } from 'marked';
 import markedExtension from '$lib/utils/marked/extension';
@@ -41,8 +43,7 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 		},
 		{
 			regex: /{{HTML_FILE_ID_([a-f0-9-]+)}}/gi,
-			replacement: (_, fileId) =>
-				`<iframe src="${WEBUI_BASE_URL}/api/v1/files/${fileId}/content/html" width="100%" frameborder="0" onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"></iframe>`
+			replacement: (_, fileId) => `<file type="html" id="${fileId}" />`
 		}
 	];
 
@@ -67,9 +68,26 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 		});
 
 		if (Array.isArray(sourceIds)) {
-			sourceIds.forEach((sourceId, idx) => {
-				const regex = new RegExp(`\\[${idx + 1}\\]`, 'g');
-				segment = segment.replace(regex, `<source_id data="${idx + 1}" title="${sourceId}" />`);
+			// Match both [1], [2], and [1,2,3] forms
+			const multiRefRegex = /\[([\d,\s]+)\]/g;
+			segment = segment.replace(multiRefRegex, (match, group) => {
+				// Extract numbers like 1,2,3
+				const indices = group
+					.split(',')
+					.map((n) => parseInt(n.trim(), 10))
+					.filter((n) => !isNaN(n));
+
+				// Replace each index with a <source_id> tag
+				const sources = indices
+					.map((idx) => {
+						const sourceId = sourceIds[idx - 1];
+						return sourceId
+							? `<source_id data="${idx}" title="${encodeURIComponent(sourceId)}" />`
+							: `[${idx}]`;
+					})
+					.join('');
+
+				return sources;
 			});
 		}
 
@@ -84,15 +102,86 @@ export const sanitizeResponseContent = (content: string) => {
 		.replace(/<\|[a-z]*$/, '')
 		.replace(/<\|[a-z]+\|$/, '')
 		.replace(/<$/, '')
-		.replaceAll(/<\|[a-z]+\|>/g, ' ')
 		.replaceAll('<', '&lt;')
 		.replaceAll('>', '&gt;')
+		.replaceAll(/<\|[a-z]+\|>/g, ' ')
 		.trim();
 };
 
 export const processResponseContent = (content: string) => {
+	content = processChineseContent(content);
 	return content.trim();
 };
+
+function isChineseChar(char: string): boolean {
+	return /\p{Script=Han}/u.test(char);
+}
+
+// Tackle "Model output issue not following the standard Markdown/LaTeX format" in Chinese.
+function processChineseContent(content: string): string {
+	// This function is used to process the response content before the response content is rendered.
+	const lines = content.split('\n');
+	const processedLines = lines.map((line) => {
+		if (/[\u4e00-\u9fa5]/.test(line)) {
+			// Problems caused by Chinese parentheses
+			/* Discription:
+			 *   When `*` has Chinese delimiters on the inside, markdown parser ignore bold or italic style.
+			 *   - e.g. `**中文名（English）**中文内容` will be parsed directly,
+			 *          instead of `<strong>中文名（English）</strong>中文内容`.
+			 * Solution:
+			 *   Adding a `space` before and after the bold/italic part can solve the problem.
+			 *   - e.g. `**中文名（English）**中文内容` -> ` **中文名（English）** 中文内容`
+			 * Note:
+			 *   Similar problem was found with English parentheses and other full delimiters,
+			 *   but they are not handled here because they are less likely to appear in LLM output.
+			 *   Change the behavior in future if needed.
+			 */
+			if (line.includes('*')) {
+				// Handle **bold** and *italic*
+				// 1. With Chinese parentheses
+				if (/（|）/.test(line)) {
+					line = processChineseDelimiters(line, '**', '（', '）');
+					line = processChineseDelimiters(line, '*', '（', '）');
+				}
+				// 2. With Chinese quotations
+				if (/“|”/.test(line)) {
+					line = processChineseDelimiters(line, '**', '“', '”');
+					line = processChineseDelimiters(line, '*', '“', '”');
+				}
+			}
+		}
+		return line;
+	});
+	content = processedLines.join('\n');
+
+	return content;
+}
+
+// Helper function for `processChineseContent`
+function processChineseDelimiters(
+	line: string,
+	symbol: string,
+	leftSymbol: string,
+	rightSymbol: string
+): string {
+	// NOTE: If needed, with a little modification, this function can be applied to more cases.
+	const escapedSymbol = escapeRegExp(symbol);
+	const regex = new RegExp(
+		`(.?)(?<!${escapedSymbol})(${escapedSymbol})([^${escapedSymbol}]+)(${escapedSymbol})(?!${escapedSymbol})(.)`,
+		'g'
+	);
+	return line.replace(regex, (match, l, left, content, right, r) => {
+		const result =
+			(content.startsWith(leftSymbol) && l && l.length > 0 && isChineseChar(l[l.length - 1])) ||
+			(content.endsWith(rightSymbol) && r && r.length > 0 && isChineseChar(r[0]));
+
+		if (result) {
+			return `${l} ${left}${content}${right} ${r}`;
+		} else {
+			return match;
+		}
+	});
+}
 
 export function unescapeHtml(html: string) {
 	const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -276,7 +365,7 @@ export const generateInitialsImage = (name) => {
 		console.log(
 			'generateInitialsImage: failed pixel test, fingerprint evasion is likely. Using default image.'
 		);
-		return '/user.png';
+		return `${WEBUI_BASE_URL}/user.png`;
 	}
 
 	ctx.fillStyle = '#F39C12';
@@ -303,33 +392,35 @@ export const generateInitialsImage = (name) => {
 
 export const formatDate = (inputDate) => {
 	const date = dayjs(inputDate);
-	const now = dayjs();
 
 	if (date.isToday()) {
-		return `Today at ${date.format('LT')}`;
+		return `Today at {{LOCALIZED_TIME}}`;
 	} else if (date.isYesterday()) {
-		return `Yesterday at ${date.format('LT')}`;
+		return `Yesterday at {{LOCALIZED_TIME}}`;
 	} else {
-		return `${date.format('L')} at ${date.format('LT')}`;
+		return `{{LOCALIZED_DATE}} at {{LOCALIZED_TIME}}`;
 	}
 };
 
-export const copyToClipboard = async (text, formatted = false) => {
+export const copyToClipboard = async (text, html = null, formatted = false) => {
 	if (formatted) {
-		const options = {
-			throwOnError: false,
-			highlight: function (code, lang) {
-				const language = hljs.getLanguage(lang) ? lang : 'plaintext';
-				return hljs.highlight(code, { language }).value;
-			}
-		};
-		marked.use(markedKatexExtension(options));
-		marked.use(markedExtension(options));
+		let styledHtml = '';
+		if (!html) {
+			const options = {
+				throwOnError: false,
+				highlight: function (code, lang) {
+					const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+					return hljs.highlight(code, { language }).value;
+				}
+			};
+			marked.use(markedKatexExtension(options));
+			marked.use(markedExtension(options));
+			// DEVELOPER NOTE: Go to `$lib/components/chat/Messages/Markdown.svelte` to add extra markdown extensions for rendering.
 
-		const htmlContent = marked.parse(text);
+			const htmlContent = marked.parse(text);
 
-		// Add basic styling to make the content look better when pasted
-		const styledHtml = `
+			// Add basic styling to make the content look better when pasted
+			styledHtml = `
 			<div>
 				<style>
 					pre {
@@ -377,6 +468,10 @@ export const copyToClipboard = async (text, formatted = false) => {
 				${htmlContent}
 			</div>
 		`;
+		} else {
+			// If HTML is provided, use it directly
+			styledHtml = html;
+		}
 
 		// Create a blob with HTML content
 		const blob = new Blob([styledHtml], { type: 'text/html' });
@@ -718,6 +813,15 @@ export const isValidHttpUrl = (string: string) => {
 	return url.protocol === 'http:' || url.protocol === 'https:';
 };
 
+export const isYoutubeUrl = (url: string) => {
+	return (
+		url.startsWith('https://www.youtube.com') ||
+		url.startsWith('https://youtu.be') ||
+		url.startsWith('https://youtube.com') ||
+		url.startsWith('https://m.youtube.com')
+	);
+};
+
 export const removeEmojis = (str: string) => {
 	// Regular expression to match emojis
 	const emojiRegex = /[\uD800-\uDBFF][\uDC00-\uDFFF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDE4F]/g;
@@ -751,7 +855,6 @@ export const removeFormattings = (str: string) => {
 
 			// Cleanup
 			.replace(/\[\^[^\]]*\]/g, '') // Footnotes
-			.replace(/[-*_~]/g, '') // Remaining markers
 			.replace(/\n{2,}/g, '\n')
 	); // Multiple newlines
 };
@@ -779,7 +882,7 @@ export const removeAllDetails = (content) => {
 export const processDetails = (content) => {
 	content = removeDetails(content, ['reasoning', 'code_interpreter']);
 
-	// This regex matches <details> tags with type="tool_calls" and captures their attributes to convert them to <tool_calls> tags
+	// This regex matches <details> tags with type="tool_calls" and captures their attributes to convert them to a string
 	const detailsRegex = /<details\s+type="tool_calls"([^>]*)>([\s\S]*?)<\/details>/gis;
 	const matches = content.match(detailsRegex);
 	if (matches) {
@@ -791,10 +894,7 @@ export const processDetails = (content) => {
 				attributes[attributeMatch[1]] = attributeMatch[2];
 			}
 
-			content = content.replace(
-				match,
-				`<tool_calls name="${attributes.name}" result="${attributes.result}"/>`
-			);
+			content = content.replace(match, `"${attributes.result}"`);
 		}
 	}
 
@@ -869,11 +969,10 @@ export const extractSentencesForAudio = (text: string) => {
 	}, [] as string[]);
 };
 
-export const getMessageContentParts = (content: string, split_on: string = 'punctuation') => {
-	content = removeDetails(content, ['reasoning', 'code_interpreter', 'tool_calls']);
+export const getMessageContentParts = (content: string, splitOn: string = 'punctuation') => {
 	const messageContentParts: string[] = [];
 
-	switch (split_on) {
+	switch (splitOn) {
 		default:
 		case TTS_RESPONSE_SPLIT.PUNCTUATION:
 			messageContentParts.push(...extractSentencesForAudio(content));
@@ -909,77 +1008,6 @@ export const getPromptVariables = (user_name, user_location) => {
 };
 
 /**
- * @param {string} template - The template string containing placeholders.
- * @returns {string} The template string with the placeholders replaced by the prompt.
- */
-export const promptTemplate = (
-	template: string,
-	user_name?: string,
-	user_location?: string
-): string => {
-	// Get the current date
-	const currentDate = new Date();
-
-	// Format the date to YYYY-MM-DD
-	const formattedDate =
-		currentDate.getFullYear() +
-		'-' +
-		String(currentDate.getMonth() + 1).padStart(2, '0') +
-		'-' +
-		String(currentDate.getDate()).padStart(2, '0');
-
-	// Format the time to HH:MM:SS AM/PM
-	const currentTime = currentDate.toLocaleTimeString('en-US', {
-		hour: 'numeric',
-		minute: 'numeric',
-		second: 'numeric',
-		hour12: true
-	});
-
-	// Get the current weekday
-	const currentWeekday = getWeekday();
-
-	// Get the user's timezone
-	const currentTimezone = getUserTimezone();
-
-	// Get the user's language
-	const userLanguage = localStorage.getItem('locale') || 'en-US';
-
-	// Replace {{CURRENT_DATETIME}} in the template with the formatted datetime
-	template = template.replace('{{CURRENT_DATETIME}}', `${formattedDate} ${currentTime}`);
-
-	// Replace {{CURRENT_DATE}} in the template with the formatted date
-	template = template.replace('{{CURRENT_DATE}}', formattedDate);
-
-	// Replace {{CURRENT_TIME}} in the template with the formatted time
-	template = template.replace('{{CURRENT_TIME}}', currentTime);
-
-	// Replace {{CURRENT_WEEKDAY}} in the template with the current weekday
-	template = template.replace('{{CURRENT_WEEKDAY}}', currentWeekday);
-
-	// Replace {{CURRENT_TIMEZONE}} in the template with the user's timezone
-	template = template.replace('{{CURRENT_TIMEZONE}}', currentTimezone);
-
-	// Replace {{USER_LANGUAGE}} in the template with the user's language
-	template = template.replace('{{USER_LANGUAGE}}', userLanguage);
-
-	if (user_name) {
-		// Replace {{USER_NAME}} in the template with the user's name
-		template = template.replace('{{USER_NAME}}', user_name);
-	}
-
-	if (user_location) {
-		// Replace {{USER_LOCATION}} in the template with the current location
-		template = template.replace('{{USER_LOCATION}}', user_location);
-	} else {
-		// Replace {{USER_LOCATION}} in the template with 'Unknown' if no location is provided
-		template = template.replace('{{USER_LOCATION}}', 'LOCATION_UNKNOWN');
-	}
-
-	return template;
-};
-
-/**
  * This function is used to replace placeholders in a template string with the provided prompt.
  * The placeholders can be in the following formats:
  * - `{{prompt}}`: This will be replaced with the entire prompt.
@@ -1012,8 +1040,6 @@ export const titleGenerationTemplate = (template: string, prompt: string): strin
 			return '';
 		}
 	);
-
-	template = promptTemplate(template);
 
 	return template;
 };
@@ -1163,6 +1189,9 @@ export const createMessagesList = (history, messageId) => {
 	}
 
 	const message = history.messages[messageId];
+	if (message === undefined) {
+		return [];
+	}
 	if (message?.parentId) {
 		return [...createMessagesList(history, message.parentId), message];
 	} else {
@@ -1243,58 +1272,351 @@ export const convertOpenApiToToolPayload = (openApiSpec) => {
 
 	for (const [path, methods] of Object.entries(openApiSpec.paths)) {
 		for (const [method, operation] of Object.entries(methods)) {
-			const tool = {
-				type: 'function',
-				name: operation.operationId,
-				description: operation.description || operation.summary || 'No description available.',
-				parameters: {
-					type: 'object',
-					properties: {},
-					required: []
-				}
-			};
-
-			// Extract path and query parameters
-			if (operation.parameters) {
-				operation.parameters.forEach((param) => {
-					tool.parameters.properties[param.name] = {
-						type: param.schema.type,
-						description: param.schema.description || ''
-					};
-
-					if (param.required) {
-						tool.parameters.required.push(param.name);
+			if (operation?.operationId) {
+				const tool = {
+					name: operation.operationId,
+					description: operation.description || operation.summary || 'No description available.',
+					parameters: {
+						type: 'object',
+						properties: {},
+						required: []
 					}
-				});
-			}
+				};
 
-			// Extract and recursively resolve requestBody if available
-			if (operation.requestBody) {
-				const content = operation.requestBody.content;
-				if (content && content['application/json']) {
-					const requestSchema = content['application/json'].schema;
-					const resolvedRequestSchema = resolveSchema(requestSchema, openApiSpec.components);
-
-					if (resolvedRequestSchema.properties) {
-						tool.parameters.properties = {
-							...tool.parameters.properties,
-							...resolvedRequestSchema.properties
+				// Extract path and query parameters
+				if (operation.parameters) {
+					operation.parameters.forEach((param) => {
+						let description = param.schema.description || param.description || '';
+						if (param.schema.enum && Array.isArray(param.schema.enum)) {
+							description += `. Possible values: ${param.schema.enum.join(', ')}`;
+						}
+						tool.parameters.properties[param.name] = {
+							type: param.schema.type,
+							description: description
 						};
 
-						if (resolvedRequestSchema.required) {
-							tool.parameters.required = [
-								...new Set([...tool.parameters.required, ...resolvedRequestSchema.required])
-							];
+						if (param.required) {
+							tool.parameters.required.push(param.name);
 						}
-					} else if (resolvedRequestSchema.type === 'array') {
-						tool.parameters = resolvedRequestSchema; // special case when root schema is an array
+					});
+				}
+
+				// Extract and recursively resolve requestBody if available
+				if (operation.requestBody) {
+					const content = operation.requestBody.content;
+					if (content && content['application/json']) {
+						const requestSchema = content['application/json'].schema;
+						const resolvedRequestSchema = resolveSchema(requestSchema, openApiSpec.components);
+
+						if (resolvedRequestSchema.properties) {
+							tool.parameters.properties = {
+								...tool.parameters.properties,
+								...resolvedRequestSchema.properties
+							};
+
+							if (resolvedRequestSchema.required) {
+								tool.parameters.required = [
+									...new Set([...tool.parameters.required, ...resolvedRequestSchema.required])
+								];
+							}
+						} else if (resolvedRequestSchema.type === 'array') {
+							tool.parameters = resolvedRequestSchema; // special case when root schema is an array
+						}
 					}
 				}
-			}
 
-			toolPayload.push(tool);
+				toolPayload.push(tool);
+			}
 		}
 	}
 
 	return toolPayload;
+};
+
+export const slugify = (str: string): string => {
+	return (
+		str
+			// 1. Normalize: separate accented letters into base + combining marks
+			.normalize('NFD')
+			// 2. Remove all combining marks (the accents)
+			.replace(/[\u0300-\u036f]/g, '')
+			// 3. Replace any sequence of whitespace with a single hyphen
+			.replace(/\s+/g, '-')
+			// 4. Remove all characters except alphanumeric characters, hyphens, and underscores
+			.replace(/[^a-zA-Z0-9-_]/g, '')
+			// 5. Convert to lowercase
+			.toLowerCase()
+	);
+};
+
+export const extractInputVariables = (text: string): Record<string, any> => {
+	const regex = /{{\s*([^|}\s]+)\s*\|\s*([^}]+)\s*}}/g;
+	const regularRegex = /{{\s*([^|}\s]+)\s*}}/g;
+	const variables: Record<string, any> = {};
+	let match;
+	// Use exec() loop instead of matchAll() for better compatibility
+	while ((match = regex.exec(text)) !== null) {
+		const varName = match[1].trim();
+		const definition = match[2].trim();
+		variables[varName] = parseVariableDefinition(definition);
+	}
+	// Then, extract regular variables (without pipe) - only if not already processed
+	while ((match = regularRegex.exec(text)) !== null) {
+		const varName = match[1].trim();
+		// Only add if not already processed as custom variable
+		if (!variables.hasOwnProperty(varName)) {
+			variables[varName] = { type: 'text' }; // Default type for regular variables
+		}
+	}
+	return variables;
+};
+
+export const splitProperties = (str: string, delimiter: string): string[] => {
+	const result: string[] = [];
+	let current = '';
+	let depth = 0;
+	let inString = false;
+	let escapeNext = false;
+
+	for (let i = 0; i < str.length; i++) {
+		const char = str[i];
+
+		if (escapeNext) {
+			current += char;
+			escapeNext = false;
+			continue;
+		}
+
+		if (char === '\\') {
+			current += char;
+			escapeNext = true;
+			continue;
+		}
+
+		if (char === '"' && !escapeNext) {
+			inString = !inString;
+			current += char;
+			continue;
+		}
+
+		if (!inString) {
+			if (char === '{' || char === '[') {
+				depth++;
+			} else if (char === '}' || char === ']') {
+				depth--;
+			}
+
+			if (char === delimiter && depth === 0) {
+				result.push(current.trim());
+				current = '';
+				continue;
+			}
+		}
+
+		current += char;
+	}
+
+	if (current.trim()) {
+		result.push(current.trim());
+	}
+
+	return result;
+};
+
+export const parseVariableDefinition = (definition: string): Record<string, any> => {
+	// Use splitProperties for the main colon delimiter to handle quoted strings
+	const parts = splitProperties(definition, ':');
+	const [firstPart, ...propertyParts] = parts;
+
+	// Parse type (explicit or implied)
+	const type = firstPart.startsWith('type=') ? firstPart.slice(5) : firstPart;
+
+	// Parse properties; support both key=value and bare flags (e.g., ":required")
+	const properties = propertyParts.reduce(
+		(props, part) => {
+			const trimmed = part.trim();
+			if (!trimmed) return props;
+
+			// Use splitProperties for the equals sign as well, in case there are nested quotes
+			const equalsParts = splitProperties(trimmed, '=');
+
+			if (equalsParts.length === 1) {
+				// It's a flag with no value, e.g. "required" -> true
+				const flagName = equalsParts[0].trim();
+				if (flagName.length > 0) {
+					return { ...props, [flagName]: true };
+				}
+				return props;
+			}
+
+			const [propertyName, ...valueParts] = equalsParts;
+			const propertyValueRaw = valueParts.join('='); // Handle values with extra '='
+
+			if (!propertyName || propertyValueRaw == null) return props;
+
+			return {
+				...props,
+				[propertyName.trim()]: parseJsonValue(propertyValueRaw.trim())
+			};
+		},
+		{} as Record<string, any>
+	);
+
+	return { type, ...properties };
+};
+export const parseJsonValue = (value: string): any => {
+	// Remove surrounding quotes if present (for string values)
+	if (value.startsWith('"') && value.endsWith('"')) {
+		return value.slice(1, -1);
+	}
+
+	// Check if it starts with square or curly brackets (JSON)
+	if (/^[\[{]/.test(value)) {
+		try {
+			return JSON.parse(value);
+		} catch {
+			return value; // Return as string if JSON parsing fails
+		}
+	}
+
+	return value;
+};
+
+async function ensurePDFjsLoaded() {
+	if (!window.pdfjsLib) {
+		const pdfjs = await import('pdfjs-dist');
+		pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+		if (!window.pdfjsLib) {
+			throw new Error('pdfjsLib is required for PDF extraction');
+		}
+	}
+	return window.pdfjsLib;
+}
+
+export const extractContentFromFile = async (file: File) => {
+	// Known text file extensions for extra fallback
+	const textExtensions = [
+		'.txt',
+		'.md',
+		'.csv',
+		'.json',
+		'.js',
+		'.ts',
+		'.css',
+		'.html',
+		'.xml',
+		'.yaml',
+		'.yml',
+		'.rtf'
+	];
+
+	function getExtension(filename: string) {
+		const dot = filename.lastIndexOf('.');
+		return dot === -1 ? '' : filename.substr(dot).toLowerCase();
+	}
+
+	// Uses pdfjs to extract text from PDF
+	async function extractPdfText(file: File) {
+		const pdfjsLib = await ensurePDFjsLoaded();
+		const arrayBuffer = await file.arrayBuffer();
+		const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+		let allText = '';
+		for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+			const page = await pdf.getPage(pageNum);
+			const content = await page.getTextContent();
+			const strings = content.items.map((item: any) => item.str);
+			allText += strings.join(' ') + '\n';
+		}
+		return allText;
+	}
+
+	// Reads file as text using FileReader
+	function readAsText(file: File) {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = () => resolve(reader.result);
+			reader.onerror = reject;
+			reader.readAsText(file);
+		});
+	}
+
+	const type = file.type || '';
+	const ext = getExtension(file.name);
+
+	// PDF check
+	if (type === 'application/pdf' || ext === '.pdf') {
+		return await extractPdfText(file);
+	}
+
+	// Text check (plain or common text-based)
+	if (type.startsWith('text/') || textExtensions.includes(ext)) {
+		return await readAsText(file);
+	}
+
+	// Fallback: try to read as text, if decodable
+	try {
+		return await readAsText(file);
+	} catch (err) {
+		throw new Error('Unsupported or non-text file type: ' + (file.name || type));
+	}
+};
+
+export const getAge = (birthDate) => {
+	const today = new Date();
+	const bDate = new Date(birthDate);
+	let age = today.getFullYear() - bDate.getFullYear();
+	const m = today.getMonth() - bDate.getMonth();
+
+	if (m < 0 || (m === 0 && today.getDate() < bDate.getDate())) {
+		age--;
+	}
+	return age.toString();
+};
+
+export const convertHeicToJpeg = async (file: File) => {
+	const { default: heic2any } = await import('heic2any');
+	try {
+		return await heic2any({ blob: file, toType: 'image/jpeg' });
+	} catch (err: any) {
+		if (err?.message?.includes('already browser readable')) {
+			return file;
+		}
+		throw err;
+	}
+};
+
+export const decodeString = (str: string) => {
+	try {
+		return decodeURIComponent(str);
+	} catch (e) {
+		return str;
+	}
+};
+
+export const renderMermaidDiagram = async (code: string) => {
+	const { default: mermaid } = await import('mermaid');
+	mermaid.initialize({
+		startOnLoad: false, // Should be false when using render API
+		theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
+		securityLevel: 'loose'
+	});
+	const parseResult = await mermaid.parse(code, { suppressErrors: false });
+	if (parseResult) {
+		const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
+		return svg;
+	}
+	return '';
+};
+
+export const renderVegaVisualization = async (spec: string, i18n?: any) => {
+	const vega = await import('vega');
+	const parsedSpec = JSON.parse(spec);
+	let vegaSpec = parsedSpec;
+	if (parsedSpec.$schema && parsedSpec.$schema.includes('vega-lite')) {
+		const vegaLite = await import('vega-lite');
+		vegaSpec = vegaLite.compile(parsedSpec).spec;
+	}
+	const view = new vega.View(vega.parse(vegaSpec), { renderer: 'none' });
+	const svg = await view.toSVG();
+	return svg;
 };

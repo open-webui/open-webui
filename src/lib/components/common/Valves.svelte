@@ -4,6 +4,8 @@
 	const i18n = getContext('i18n');
 
 	import Switch from './Switch.svelte';
+	import MapSelector from './Valves/MapSelector.svelte';
+	import { split } from 'postcss/lib/list';
 
 	export let valvesSpec = null;
 	export let valves = {};
@@ -25,10 +27,19 @@
 					class="p-1 px-3 text-xs flex rounded-sm transition"
 					type="button"
 					on:click={() => {
-						valves[property] =
-							(valves[property] ?? null) === null
-								? (valvesSpec.properties[property]?.default ?? '')
-								: null;
+						const propertySpec = valvesSpec.properties[property] ?? {};
+
+						if ((valves[property] ?? null) === null) {
+							// Initialize to custom value
+							if ((propertySpec?.type ?? null) === 'array') {
+								const defaultArray = propertySpec?.default ?? [];
+								valves[property] = Array.isArray(defaultArray) ? defaultArray.join(', ') : '';
+							} else {
+								valves[property] = propertySpec?.default ?? '';
+							}
+						} else {
+							valves[property] = null;
+						}
 
 						dispatch('change');
 					}}
@@ -49,7 +60,7 @@
 
 			{#if (valves[property] ?? null) !== null}
 				<!-- {valves[property]} -->
-				<div class="flex mt-0.5 mb-1.5 space-x-2">
+				<div class="flex mt-0.5 mb-0.5 space-x-2">
 					<div class=" flex-1">
 						{#if valvesSpec.properties[property]?.enum ?? null}
 							<select
@@ -68,7 +79,7 @@
 						{:else if (valvesSpec.properties[property]?.type ?? null) === 'boolean'}
 							<div class="flex justify-between items-center">
 								<div class="text-xs text-gray-500">
-									{valves[property] ? 'Enabled' : 'Disabled'}
+									{valves[property] ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 								</div>
 
 								<div class=" pr-2">
@@ -92,6 +103,61 @@
 									dispatch('change');
 								}}
 							/>
+						{:else if valvesSpec.properties[property]?.input ?? null}
+							{#if valvesSpec.properties[property]?.input?.type === 'color'}
+								<div class="flex items-center space-x-2">
+									<div class="relative size-6">
+										<input
+											type="color"
+											class="size-6 rounded cursor-pointer border border-gray-200 dark:border-gray-700"
+											value={valves[property] ?? '#000000'}
+											on:input={(e) => {
+												// Convert the color value to uppercase immediately
+												valves[property] = e.target.value.toUpperCase();
+												dispatch('change');
+											}}
+										/>
+									</div>
+
+									<input
+										type="text"
+										class="flex-1 rounded-lg py-2 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
+										placeholder={$i18n.t('Enter hex color (e.g. #FF0000)')}
+										bind:value={valves[property]}
+										autocomplete="off"
+										disabled
+										on:change={() => {
+											dispatch('change');
+										}}
+									/>
+								</div>
+							{:else if valvesSpec.properties[property]?.input?.type === 'map'}
+								<!-- EXPERIMENTAL INPUT TYPE, DO NOT USE IN PRODUCTION -->
+								<div class="flex flex-col items-center gap-1">
+									<MapSelector
+										setViewLocation={((valves[property] ?? '').includes(',') ?? false)
+											? valves[property].split(',')
+											: null}
+										onClick={(value) => {
+											valves[property] = value;
+											dispatch('change');
+										}}
+									/>
+
+									{#if valves[property]}
+										<input
+											type="text"
+											class=" w-full rounded-lg py-1 text-left text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
+											placeholder={$i18n.t('Enter coordinates (e.g. 51.505, -0.09)')}
+											bind:value={valves[property]}
+											autocomplete="off"
+											on:change={() => {
+												dispatch('change');
+											}}
+										/>
+									{/if}
+								</div>
+							{/if}
 						{:else}
 							<textarea
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
@@ -116,5 +182,5 @@
 		</div>
 	{/each}
 {:else}
-	<div class="text-xs">No valves</div>
+	<div class="text-xs">{$i18n.t('No valves')}</div>
 {/if}

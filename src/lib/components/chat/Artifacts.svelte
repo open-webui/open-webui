@@ -4,13 +4,15 @@
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
-	import { chatId, settings, showArtifacts, showControls } from '$lib/stores';
-	import XMark from '../icons/XMark.svelte';
+	import { artifactCode, chatId, settings, showArtifacts, showControls } from '$lib/stores';
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
+
+	import XMark from '../icons/XMark.svelte';
 	import ArrowsPointingOut from '../icons/ArrowsPointingOut.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import SvgPanZoom from '../common/SVGPanZoom.svelte';
 	import ArrowLeft from '../icons/ArrowLeft.svelte';
+	import Download from '../icons/Download.svelte';
 
 	export let overlay = false;
 	export let history;
@@ -37,51 +39,51 @@
 				const codeBlockContents = message.content.match(/```[\s\S]*?```/g);
 				let codeBlocks = [];
 
+				let htmlContent = '';
+				let cssContent = '';
+				let jsContent = '';
+
 				if (codeBlockContents) {
 					codeBlockContents.forEach((block) => {
 						const lang = block.split('\n')[0].replace('```', '').trim().toLowerCase();
 						const code = block.replace(/```[\s\S]*?\n/, '').replace(/```$/, '');
 						codeBlocks.push({ lang, code });
 					});
-				}
 
-				let htmlContent = '';
-				let cssContent = '';
-				let jsContent = '';
+					codeBlocks.forEach((block) => {
+						const { lang, code } = block;
 
-				codeBlocks.forEach((block) => {
-					const { lang, code } = block;
+						if (lang === 'html') {
+							htmlContent += code + '\n';
+						} else if (lang === 'css') {
+							cssContent += code + '\n';
+						} else if (lang === 'javascript' || lang === 'js') {
+							jsContent += code + '\n';
+						}
+					});
+				} else {
+					const inlineHtml = message.content.match(/<html>[\s\S]*?<\/html>/gi);
+					const inlineCss = message.content.match(/<style>[\s\S]*?<\/style>/gi);
+					const inlineJs = message.content.match(/<script>[\s\S]*?<\/script>/gi);
 
-					if (lang === 'html') {
-						htmlContent += code + '\n';
-					} else if (lang === 'css') {
-						cssContent += code + '\n';
-					} else if (lang === 'javascript' || lang === 'js') {
-						jsContent += code + '\n';
+					if (inlineHtml) {
+						inlineHtml.forEach((block) => {
+							const content = block.replace(/<\/?html>/gi, ''); // Remove <html> tags
+							htmlContent += content + '\n';
+						});
 					}
-				});
-
-				const inlineHtml = message.content.match(/<html>[\s\S]*?<\/html>/gi);
-				const inlineCss = message.content.match(/<style>[\s\S]*?<\/style>/gi);
-				const inlineJs = message.content.match(/<script>[\s\S]*?<\/script>/gi);
-
-				if (inlineHtml) {
-					inlineHtml.forEach((block) => {
-						const content = block.replace(/<\/?html>/gi, ''); // Remove <html> tags
-						htmlContent += content + '\n';
-					});
-				}
-				if (inlineCss) {
-					inlineCss.forEach((block) => {
-						const content = block.replace(/<\/?style>/gi, ''); // Remove <style> tags
-						cssContent += content + '\n';
-					});
-				}
-				if (inlineJs) {
-					inlineJs.forEach((block) => {
-						const content = block.replace(/<\/?script>/gi, ''); // Remove <script> tags
-						jsContent += content + '\n';
-					});
+					if (inlineCss) {
+						inlineCss.forEach((block) => {
+							const content = block.replace(/<\/?style>/gi, ''); // Remove <style> tags
+							cssContent += content + '\n';
+						});
+					}
+					if (inlineJs) {
+						inlineJs.forEach((block) => {
+							const content = block.replace(/<\/?script>/gi, ''); // Remove <script> tags
+							jsContent += content + '\n';
+						});
+					}
 				}
 
 				if (htmlContent || cssContent || jsContent) {
@@ -154,7 +156,7 @@
 							url.pathname + url.search + url.hash
 						);
 					} else {
-						console.log('External navigation blocked:', url.href);
+						console.info('External navigation blocked:', url.href);
 					}
 				}
 			},
@@ -180,25 +182,38 @@
 		}
 	};
 
-	onMount(() => {});
+	const downloadArtifact = () => {
+		const blob = new Blob([contents[selectedContentIdx].content], { type: 'text/html' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = `artifact-${$chatId}-${selectedContentIdx}.html`;
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		URL.revokeObjectURL(url);
+	};
+
+	onMount(() => {
+		artifactCode.subscribe((value) => {
+			if (contents) {
+				const codeIdx = contents.findIndex((content) => content.content.includes(value));
+				selectedContentIdx = codeIdx !== -1 ? codeIdx : 0;
+			}
+		});
+	});
 </script>
 
-<div class=" w-full h-full relative flex flex-col bg-gray-50 dark:bg-gray-850">
+<div
+	class=" w-full h-full relative flex flex-col bg-white dark:bg-gray-850"
+	id="artifacts-container"
+>
 	<div class="w-full h-full flex flex-col flex-1 relative">
 		{#if contents.length > 0}
 			<div
 				class="pointer-events-auto z-20 flex justify-between items-center p-2.5 font-primar text-gray-900 dark:text-white"
 			>
-				<button
-					class="self-center pointer-events-auto p-1 rounded-full bg-white dark:bg-gray-850"
-					on:click={() => {
-						showArtifacts.set(false);
-					}}
-				>
-					<ArrowLeft className="size-3.5  text-gray-900 dark:text-white" />
-				</button>
-
-				<div class="flex-1 flex items-center justify-between">
+				<div class="flex-1 flex items-center justify-between pr-1">
 					<div class="flex items-center space-x-2">
 						<div class="flex items-center gap-0.5 self-center min-w-fit" dir="ltr">
 							<button
@@ -252,7 +267,7 @@
 						</div>
 					</div>
 
-					<div class="flex items-center gap-1">
+					<div class="flex items-center gap-1.5">
 						<button
 							class="copy-code-button bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
 							on:click={() => {
@@ -264,6 +279,15 @@
 								}, 2000);
 							}}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
 						>
+
+						<Tooltip content={$i18n.t('Download')}>
+							<button
+								class=" bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md p-0.5"
+								on:click={downloadArtifact}
+							>
+								<Download className="size-3.5" />
+							</button>
+						</Tooltip>
 
 						{#if contents[selectedContentIdx].type === 'iframe'}
 							<Tooltip content={$i18n.t('Open in full screen')}>
@@ -305,7 +329,7 @@
 								title="Content"
 								srcdoc={contents[selectedContentIdx].content}
 								class="w-full border-0 h-full rounded-none"
-								sandbox="allow-scripts{($settings?.iframeSandboxAllowForms ?? false)
+								sandbox="allow-scripts allow-downloads{($settings?.iframeSandboxAllowForms ?? false)
 									? ' allow-forms'
 									: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false)
 									? ' allow-same-origin'

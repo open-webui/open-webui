@@ -13,7 +13,10 @@
 	export let saveHandler: Function;
 
 	let webSearchEngines = [
+		'ollama_cloud',
+		'perplexity_search',
 		'searxng',
+		'yacy',
 		'google_pse',
 		'brave',
 		'kagi',
@@ -30,9 +33,11 @@
 		'bing',
 		'exa',
 		'perplexity',
-		'sougou'
+		'sougou',
+		'firecrawl',
+		'external'
 	];
-	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily'];
+	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily', 'external'];
 
 	let webConfig = null;
 
@@ -116,14 +121,52 @@
 							>
 								<option disabled selected value="">{$i18n.t('Select a engine')}</option>
 								{#each webSearchEngines as engine}
-									<option value={engine}>{engine}</option>
+									{#if engine === 'duckduckgo' || engine === 'ddgs'}
+										<option value={engine}>DDGS</option>
+									{:else}
+										<option value={engine}>{engine}</option>
+									{/if}
 								{/each}
 							</select>
 						</div>
 					</div>
 
 					{#if webConfig.WEB_SEARCH_ENGINE !== ''}
-						{#if webConfig.WEB_SEARCH_ENGINE === 'searxng'}
+						{#if webConfig.WEB_SEARCH_ENGINE === 'ollama_cloud'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Ollama Cloud API Key')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<SensitiveInput
+												placeholder={$i18n.t('Enter Ollama Cloud API Key')}
+												bind:value={webConfig.OLLAMA_CLOUD_WEB_SEARCH_API_KEY}
+											/>
+										</div>
+									</div>
+								</div>
+							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'perplexity_search'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Perplexity API Key')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<SensitiveInput
+												placeholder={$i18n.t('Enter Perplexity API Key')}
+												bind:value={webConfig.PERPLEXITY_API_KEY}
+											/>
+										</div>
+									</div>
+								</div>
+							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'searxng'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
 									<div class=" self-center text-xs font-medium mb-1">
@@ -138,8 +181,56 @@
 												placeholder={$i18n.t('Enter Searxng Query URL')}
 												bind:value={webConfig.SEARXNG_QUERY_URL}
 												autocomplete="off"
+												required
 											/>
 										</div>
+									</div>
+								</div>
+							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'yacy'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Yacy Instance URL')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="text"
+												placeholder={$i18n.t('Enter Yacy URL (e.g. http://yacy.example.com:8090)')}
+												bind:value={webConfig.YACY_QUERY_URL}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
+								</div>
+							</div>
+							<div class="mb-2.5 flex w-full flex-col">
+								<div class="flex gap-2">
+									<div class="w-full">
+										<div class=" self-center text-xs font-medium mb-1">
+											{$i18n.t('Yacy Username')}
+										</div>
+
+										<input
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+											placeholder={$i18n.t('Enter Yacy Username')}
+											bind:value={webConfig.YACY_USERNAME}
+											required
+										/>
+									</div>
+
+									<div class="w-full">
+										<div class=" self-center text-xs font-medium mb-1">
+											{$i18n.t('Yacy Password')}
+										</div>
+
+										<SensitiveInput
+											placeholder={$i18n.t('Enter Yacy Password')}
+											bind:value={webConfig.YACY_PASSWORD}
+										/>
 									</div>
 								</div>
 							</div>
@@ -198,7 +289,6 @@
 										bind:value={webConfig.KAGI_SEARCH_API_KEY}
 									/>
 								</div>
-								.
 							</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'mojeek'}
 							<div class="mb-2.5 flex w-full flex-col">
@@ -396,15 +486,54 @@
 								</div>
 							</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'perplexity'}
-							<div>
-								<div class=" self-center text-xs font-medium mb-1">
-									{$i18n.t('Perplexity API Key')}
-								</div>
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Perplexity API Key')}
+									</div>
 
-								<SensitiveInput
-									placeholder={$i18n.t('Enter Perplexity API Key')}
-									bind:value={webConfig.PERPLEXITY_API_KEY}
-								/>
+									<SensitiveInput
+										placeholder={$i18n.t('Enter Perplexity API Key')}
+										bind:value={webConfig.PERPLEXITY_API_KEY}
+									/>
+								</div>
+							</div>
+
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class="self-center text-xs font-medium mb-1">
+										{$i18n.t('Perplexity Model')}
+									</div>
+									<input
+										list="perplexity-model-list"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={webConfig.PERPLEXITY_MODEL}
+									/>
+
+									<datalist id="perplexity-model-list">
+										<option value="sonar">{$i18n.t('Sonar')}</option>
+										<option value="sonar-pro">{$i18n.t('Sonar Pro')}</option>
+										<option value="sonar-reasoning">{$i18n.t('Sonar Reasoning')}</option>
+										<option value="sonar-reasoning-pro">{$i18n.t('Sonar Reasoning Pro')}</option>
+										<option value="sonar-deep-research">{$i18n.t('Sonar Deep Research')}</option>
+									</datalist>
+								</div>
+							</div>
+
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Perplexity Search Context Usage')}
+									</div>
+									<select
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={webConfig.PERPLEXITY_SEARCH_CONTEXT_USAGE}
+									>
+										<option value="low">{$i18n.t('Low')}</option>
+										<option value="medium">{$i18n.t('Medium')}</option>
+										<option value="high">{$i18n.t('High')}</option>
+									</select>
+								</div>
 							</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'sougou'}
 							<div class="mb-2.5 flex w-full flex-col">
@@ -431,6 +560,81 @@
 									/>
 								</div>
 							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'firecrawl'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Firecrawl API Base URL')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="text"
+												placeholder={$i18n.t('Enter Firecrawl API Base URL')}
+												bind:value={webConfig.FIRECRAWL_API_BASE_URL}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
+								</div>
+
+								<div class="mt-2">
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Firecrawl API Key')}
+									</div>
+
+									<SensitiveInput
+										placeholder={$i18n.t('Enter Firecrawl API Key')}
+										bind:value={webConfig.FIRECRAWL_API_KEY}
+									/>
+								</div>
+							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'ddgs' || webConfig.WEB_SEARCH_ENGINE === 'duckduckgo'}
+							<div class="w-full mb-2.5">
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('Concurrent Requests')}
+								</div>
+
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									placeholder={$i18n.t('Concurrent Requests')}
+									bind:value={webConfig.WEB_SEARCH_CONCURRENT_REQUESTS}
+									required
+								/>
+							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'external'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('External Web Search URL')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="text"
+												placeholder={$i18n.t('Enter External Web Search URL')}
+												bind:value={webConfig.EXTERNAL_WEB_SEARCH_URL}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
+								</div>
+
+								<div class="mt-2">
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('External Web Search API Key')}
+									</div>
+
+									<SensitiveInput
+										placeholder={$i18n.t('Enter External Web Search API Key')}
+										bind:value={webConfig.EXTERNAL_WEB_SEARCH_API_KEY}
+									/>
+								</div>
+							</div>
 						{/if}
 					{/if}
 
@@ -446,19 +650,6 @@
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 										placeholder={$i18n.t('Search Result Count')}
 										bind:value={webConfig.WEB_SEARCH_RESULT_COUNT}
-										required
-									/>
-								</div>
-
-								<div class="w-full">
-									<div class=" self-center text-xs font-medium mb-1">
-										{$i18n.t('Concurrent Requests')}
-									</div>
-
-									<input
-										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-										placeholder={$i18n.t('Concurrent Requests')}
-										bind:value={webConfig.WEB_SEARCH_CONCURRENT_REQUESTS}
 										required
 									/>
 								</div>
@@ -497,6 +688,19 @@
 										)}
 							>
 								<Switch bind:state={webConfig.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL} />
+							</Tooltip>
+						</div>
+					</div>
+
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							<Tooltip content={$i18n.t('Bypass Web Loader')} placement="top-start">
+								{$i18n.t('Bypass Web Loader')}
+							</Tooltip>
+						</div>
+						<div class="flex items-center relative">
+							<Tooltip content={''}>
+								<Switch bind:state={webConfig.BYPASS_WEB_SEARCH_WEB_LOADER} />
 							</Tooltip>
 						</div>
 					</div>
@@ -588,7 +792,7 @@
 								</div>
 							</div>
 						</div>
-					{:else if webConfig.WEB_LOADER_ENGINE === 'firecrawl'}
+					{:else if webConfig.WEB_LOADER_ENGINE === 'firecrawl' && webConfig.WEB_SEARCH_ENGINE !== 'firecrawl'}
 						<div class="mb-2.5 flex w-full flex-col">
 							<div>
 								<div class=" self-center text-xs font-medium mb-1">
@@ -652,7 +856,51 @@
 								</div>
 							{/if}
 						</div>
+					{:else if webConfig.WEB_LOADER_ENGINE === 'external'}
+						<div class="mb-2.5 flex w-full flex-col">
+							<div>
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('External Web Loader URL')}
+								</div>
+
+								<div class="flex w-full">
+									<div class="flex-1">
+										<input
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+											type="text"
+											placeholder={$i18n.t('Enter External Web Loader URL')}
+											bind:value={webConfig.EXTERNAL_WEB_LOADER_URL}
+											autocomplete="off"
+										/>
+									</div>
+								</div>
+							</div>
+
+							<div class="mt-2">
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('External Web Loader API Key')}
+								</div>
+
+								<SensitiveInput
+									placeholder={$i18n.t('Enter External Web Loader API Key')}
+									bind:value={webConfig.EXTERNAL_WEB_LOADER_API_KEY}
+								/>
+							</div>
+						</div>
 					{/if}
+
+					<div class="mb-2.5 w-full">
+						<div class=" self-center text-xs font-medium mb-1">
+							{$i18n.t('Concurrent Requests')}
+						</div>
+
+						<input
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							placeholder={$i18n.t('Concurrent Requests')}
+							bind:value={webConfig.WEB_LOADER_CONCURRENT_REQUESTS}
+							required
+						/>
+					</div>
 
 					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">

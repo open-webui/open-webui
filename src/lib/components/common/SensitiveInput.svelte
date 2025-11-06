@@ -1,29 +1,40 @@
 <script lang="ts">
+	const i18n = getContext('i18n');
+	import { getContext } from 'svelte';
+	import { settings } from '$lib/stores';
+	export let id = 'password-input';
 	export let value: string = '';
 	export let placeholder = '';
+	export let type = 'text';
 	export let required = true;
 	export let readOnly = false;
 	export let outerClassName = 'flex flex-1 bg-transparent';
-	export let inputClassName =
-		'w-full text-sm py-0.5 placeholder:text-gray-300 dark:placeholder:text-gray-700 bg-transparent outline-hidden';
+	export let inputClassName = 'w-full text-sm py-0.5 bg-transparent';
 	export let showButtonClassName = 'pl-1.5  transition bg-transparent';
 
 	let show = false;
 </script>
 
 <div class={outerClassName}>
+	<label class="sr-only" for={id}>{placeholder || $i18n.t('Password')}</label>
 	<input
-		class={`${inputClassName} ${show ? '' : 'password'}`}
+		{id}
+		class={`${inputClassName} ${show ? '' : 'password'} ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : ' outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-600'}`}
 		{placeholder}
-		bind:value
+		type={type === 'password' && !show ? 'password' : 'text'}
+		{value}
 		required={required && !readOnly}
 		disabled={readOnly}
+		on:change={(e) => {
+			value = e.target.value;
+		}}
 		autocomplete="off"
-		type="text"
 	/>
 	<button
 		class={showButtonClassName}
 		type="button"
+		aria-pressed={show}
+		aria-label={$i18n.t('Make password visible in the user interface')}
 		on:click={(e) => {
 			e.preventDefault();
 			show = !show;
@@ -34,6 +45,7 @@
 				xmlns="http://www.w3.org/2000/svg"
 				viewBox="0 0 16 16"
 				fill="currentColor"
+				aria-hidden="true"
 				class="size-4"
 			>
 				<path
@@ -51,6 +63,7 @@
 				viewBox="0 0 16 16"
 				fill="currentColor"
 				class="size-4"
+				aria-hidden="true"
 			>
 				<path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
 				<path
