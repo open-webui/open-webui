@@ -70,6 +70,12 @@ from open_webui.retrieval.web.sougou import search_sougou
 from open_webui.retrieval.web.firecrawl import search_firecrawl
 from open_webui.retrieval.web.external import search_external
 
+from open_webui.retrieval.ssrf_protection import (
+    validate_url_against_ssrf,
+    parse_blocklist_from_env,
+    SSRFProtectionError,
+)
+
 from open_webui.retrieval.utils import (
     get_content_from_url,
     get_embedding_function,
@@ -96,6 +102,9 @@ from open_webui.config import (
     DEFAULT_LOCALE,
     RAG_EMBEDDING_CONTENT_PREFIX,
     RAG_EMBEDDING_QUERY_PREFIX,
+    ENABLE_SSRF_PROTECTION,
+    SSRF_BLOCKED_HOSTNAMES,
+    SSRF_BLOCKED_IP_RANGES,
 )
 from open_webui.env import (
     SRC_LOG_LEVELS,
@@ -1760,6 +1769,46 @@ def process_web(
     request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)
 ):
     try:
+        # SSRF Protection: Validate URL before processing
+        try:
+            # Parse custom blocklists from configuration
+            custom_blocked_hostnames = parse_blocklist_from_env(
+                request.app.state.config.SSRF_BLOCKED_HOSTNAMES
+                if hasattr(request.app.state.config, "SSRF_BLOCKED_HOSTNAMES")
+                else ""
+            )
+            custom_blocked_ip_ranges = parse_blocklist_from_env(
+                request.app.state.config.SSRF_BLOCKED_IP_RANGES
+                if hasattr(request.app.state.config, "SSRF_BLOCKED_IP_RANGES")
+                else ""
+            )
+
+            # Check if SSRF protection is enabled
+            enable_ssrf_protection = (
+                request.app.state.config.ENABLE_SSRF_PROTECTION
+                if hasattr(request.app.state.config, "ENABLE_SSRF_PROTECTION")
+                else True  # Default to enabled for security
+            )
+
+            validate_url_against_ssrf(
+                form_data.url,
+                enable_protection=enable_ssrf_protection,
+                blocked_hostnames=custom_blocked_hostnames if custom_blocked_hostnames else None,
+                blocked_ip_ranges=custom_blocked_ip_ranges if custom_blocked_ip_ranges else None,
+            )
+        except SSRFProtectionError as e:
+            log.warning(f"SSRF protection blocked URL {form_data.url}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=str(e),
+            )
+        except ValueError as e:
+            log.warning(f"Invalid URL {form_data.url}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            )
+
         collection_name = form_data.collection_name
         if not collection_name:
             collection_name = calculate_sha256_string(form_data.url)[:63]
@@ -1792,6 +1841,9 @@ def process_web(
                 },
             },
         }
+    except HTTPException:
+        # Re-raise HTTP exceptions (including our SSRF protection errors)
+        raise
     except Exception as e:
         log.exception(e)
         raise HTTPException(

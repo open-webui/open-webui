@@ -2826,6 +2826,25 @@ ENABLE_WEB_LOADER_SSL_VERIFICATION = PersistentConfig(
     os.environ.get("ENABLE_WEB_LOADER_SSL_VERIFICATION", "True").lower() == "true",
 )
 
+ENABLE_SSRF_PROTECTION = PersistentConfig(
+      "ENABLE_SSRF_PROTECTION",
+      "rag.web.ssrf_protection.enabled",
+      os.environ.get("ENABLE_SSRF_PROTECTION", "True").lower() == "true",
+)
+
+SSRF_BLOCKED_HOSTNAMES = PersistentConfig(
+      "SSRF_BLOCKED_HOSTNAMES",
+      "rag.web.ssrf_protection.blocked_hostnames",
+      os.environ.get("SSRF_BLOCKED_HOSTNAMES", ""),
+)
+
+SSRF_BLOCKED_IP_RANGES = PersistentConfig(
+      "SSRF_BLOCKED_IP_RANGES",
+      "rag.web.ssrf_protection.blocked_ip_ranges",
+      os.environ.get("SSRF_BLOCKED_IP_RANGES", ""),
+)
+
+
 WEB_SEARCH_TRUST_ENV = PersistentConfig(
     "WEB_SEARCH_TRUST_ENV",
     "rag.web.search.trust_env",
