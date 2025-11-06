@@ -8,6 +8,7 @@ import time
 import multiprocessing as mp
 import base64
 import markdown
+from zoneinfo import ZoneInfo
 
 from weasyprint import HTML
 from open_webui.env import STATIC_DIR
@@ -40,21 +41,83 @@ class PDFGenerator:
         self.css = Path(STATIC_DIR / "assets" / "pdf-style.css").read_text()
 
     def format_timestamp(self, timestamp: float) -> str:
-        """Convert a UNIX timestamp to a formatted date string in EST timezone."""
+        """Convert a UNIX timestamp to a formatted date string in Eastern Time (EST/EDT)."""
         try:
-            est_offset = timedelta(hours=-4)
-            est_tz = timezone(est_offset)
-            date_time = datetime.fromtimestamp(timestamp, tz=est_tz)
-            return date_time.strftime("%I:%M:%S %p EST (UTC-4)")
-        except (ValueError, TypeError):
-            return ""
+            date_time = datetime.fromtimestamp(timestamp, tz=ZoneInfo("America/New_York"))
+            
+            # Get timezone abbreviation (EST/EDT) - fallback based on offset if %Z is empty
+            tz_abbrev = date_time.strftime("%Z")
+            if not tz_abbrev:
+                offset_hours = int(date_time.utcoffset().total_seconds() / 3600) if date_time.utcoffset() else -5
+                tz_abbrev = "EDT" if offset_hours == -4 else "EST"
+            
+            # Format UTC offset
+            offset_str = date_time.strftime("%z")
+            offset_formatted = f"UTC{offset_str[:3]}:{offset_str[3:]}" if offset_str else "UTC"
+            
+            return date_time.strftime(f"%B %d, %Y %I:%M:%S %p {tz_abbrev} ({offset_formatted})")
+        except Exception:
+            try:
+                return datetime.fromtimestamp(timestamp, tz=timezone.utc).strftime("%B %d, %Y %I:%M:%S %p UTC")
+            except Exception:
+                return ""
+
+    def _detect_code_blocks(self, content: str) -> List[tuple[int, int]]:
+        """
+        Detect code block regions in content.
+        Returns a list of (start, end) tuples representing code block regions.
+        Handles both fenced code blocks (```...```) and inline code (`...`).
+        """
+        code_regions = []
+        
+        # Pattern for fenced code blocks: ```[language]\n...```
+        # Matches ```, optional language identifier (word chars, hyphens, spaces), 
+        # optional newline, content (non-greedy), then closing ```
+        # The pattern handles both ```language\n...``` and ```\n...``` formats
+        fenced_pattern = r'```(?:[^\n`]*)?\n?[\s\S]*?```'
+        for match in re.finditer(fenced_pattern, content, re.MULTILINE):
+            code_regions.append((match.start(), match.end()))
+        
+        # Pattern for inline code: `...` (but not inside fenced blocks)
+        # We need to be careful to not match backticks that are part of fenced blocks
+        # Simple approach: find all `...` patterns, then filter out those inside fenced blocks
+        inline_pattern = r'`[^`\n]+`'
+        for match in re.finditer(inline_pattern, content):
+            # Check if this inline code is inside a fenced block
+            is_inside_fenced = any(
+                match.start() >= fence_start and match.end() <= fence_end
+                for fence_start, fence_end in code_regions
+            )
+            if not is_inside_fenced:
+                code_regions.append((match.start(), match.end()))
+        
+        # Sort by start position for easier checking
+        code_regions.sort()
+        
+        if self.debug_pdf:
+            print("*"*20, f"\nPDF: detected {len(code_regions)} code block(s)\n", "*"*20)
+        
+        return code_regions
+    
+    def _is_in_code_block(self, position: int, code_regions: List[tuple[int, int]]) -> bool:
+        """
+        Check if a given position is inside any code block region.
+        """
+        for start, end in code_regions:
+            if start <= position < end:
+                return True
+        return False
 
     def detect_latex_in_message(self, content: str) -> List[Dict[str, Any]]:
         """
         Detect LaTeX code in a chat message content.
         Returns a list of dictionaries containing LaTeX expressions found.
         Based on the frontend katex-extension.ts implementation.
+        Excludes LaTeX expressions that are inside code blocks.
         """
+        # First, detect all code block regions
+        code_regions = self._detect_code_blocks(content)
+        
         found_latex = []
         # LaTeX delimiter patterns: (regex, delimiter_name, is_display_mode)
         # Display mode expressions are centered and on their own line
@@ -75,6 +138,13 @@ class PDFGenerator:
         for pattern, delimiter, display in patterns:
             for match in re.finditer(pattern, content, re.MULTILINE | re.DOTALL):
                 start, end = match.start(), match.end()
+                
+                # Skip if this LaTeX expression is inside a code block
+                if self._is_in_code_block(start, code_regions) or self._is_in_code_block(end - 1, code_regions):
+                    if self.debug_pdf:
+                        print("*"*20, f"\nPDF: Skipping LaTeX in code block at position {start}-{end}, delimiter={delimiter}\n", "*"*20)
+                    continue
+                
                 # Skip pathological matches (likely unmatched delimiters)
                 if end - start > 10000:
                     if self.debug_pdf:
@@ -102,18 +172,12 @@ class PDFGenerator:
             print("*"*20, f"\nPDF: detect_latex_in_message count={len(found_latex)} content_len={len(content)}\n", "*"*20)
         return found_latex
 
-    def _convert_svg_to_base64_image(self, html_fragment: str) -> str:
+    def _fix_svg_sizing(self, html_fragment: str) -> str:
         """
-        Convert SVG elements in HTML fragment to base64-encoded image tags.
-        
-        This function handles KaTeX-generated SVG math symbols and converts them to base64 images
-        for reliable PDF rendering in WeasyPrint. It specially handles:
-        - Stretchy symbols (vertical lines, sqrt radicals, sqrt overlines)
-        - Size constraints to prevent symbols from stretching across the page
-        - Positioning for sqrt overlines to appear above content without covering it
+        Fix SVG sizing issues in HTML fragment, keeping SVG tags embedded directly.
+        This preserves the em context that would be lost with base64 image conversion.
         """
         import re
-        import base64
         
         svg_pattern = r'<svg[^>]*>.*?</svg>'
         svg_matches = list(re.finditer(svg_pattern, html_fragment, re.DOTALL | re.IGNORECASE))
@@ -121,422 +185,24 @@ class PDFGenerator:
         if not svg_matches:
             return html_fragment
         
-        # Extract text content to estimate width for content-aware sizing
-        # Remove SVG elements and root symbols to get clean text length
-        fragment_without_svg = re.sub(r'<svg[^>]*>.*?</svg>', '', html_fragment, flags=re.DOTALL | re.IGNORECASE)
-        fragment_without_svg = re.sub(r'<span[^>]*class=["\'][^"\']*root[^"\']*["\'][^>]*>.*?</span>', '', fragment_without_svg, flags=re.DOTALL | re.IGNORECASE)
-        text_content = re.sub(r'<[^>]+>', '', fragment_without_svg)
-        text_length = len(text_content.strip())
-        # Estimate width: ~5px per character, with minimum 40px for small expressions
-        fallback_width = max(40, text_length * 5) if text_length > 0 else 80
-        
         result = html_fragment
         for match in reversed(svg_matches):
             svg_html = match.group(0)
             
             try:
-                viewbox_match = re.search(r'viewBox=["\']([^"\']+)["\']', svg_html, re.IGNORECASE)
-                vb_x = vb_y = vb_width = vb_height = None
+                # Fix pathological width values (KaTeX placeholders like 1e6em, 10000em)
+                # These need to be replaced with reasonable values, but we keep the SVG tag
+                fixed_svg = svg_html
                 
-                if viewbox_match:
-                    parts = viewbox_match.group(1).split()
-                    if len(parts) >= 4:
-                        try:
-                            vb_x = float(parts[0])
-                            vb_y = float(parts[1])
-                            vb_width = float(parts[2])
-                            vb_height = float(parts[3])
-                        except (ValueError, IndexError):
-                            pass
+                # Replace pathological width values - we'll need to calculate proper width based on content
+                # For now, let's just remove or replace the problematic width attributes
+                # The SVG should size based on viewBox and content
+                fixed_svg = re.sub(r'width=["\'](1e6|10000)em["\']', '', fixed_svg, flags=re.IGNORECASE)
+                fixed_svg = re.sub(r'width=["\']100%["\']', '', fixed_svg, flags=re.IGNORECASE)
                 
-                # Parse SVG width and height attributes (in em units)
-                # KaTeX uses em units for sizing, which we need to convert to pixels
-                svg_width_em = None
-                svg_height_em = None
-                width_attr_match = re.search(r'width=["\']([^"\']+)["\']', svg_html, re.IGNORECASE)
-                height_attr_match = re.search(r'height=["\']([^"\']+)["\']', svg_html, re.IGNORECASE)
-                
-                if width_attr_match:
-                    width_attr = width_attr_match.group(1).lower()
-                    em_match = re.search(r'(\d+(?:\.\d+)?)em', width_attr)
-                    if em_match:
-                        svg_width_em = float(em_match.group(1))
-                
-                if height_attr_match:
-                    height_attr = height_attr_match.group(1).lower()
-                    em_match = re.search(r'(\d+(?:\.\d+)?)em', height_attr)
-                    if em_match:
-                        svg_height_em = float(em_match.group(1))
-                
-                # Detect stretchy symbols that need special handling
-                # Stretchy symbols adjust their size based on content (e.g., sqrt, vertical lines)
-                is_stretchy = False
-                is_horizontal_stretchy = False  # True for sqrt overlines, horizontal lines
-                is_matrix_delimiter = False  # True for matrix delimiter vertical lines
-                
-                # Check if this is likely a matrix delimiter by looking at surrounding context
-                # Matrix delimiters are typically very narrow vertical lines
-                fragment_start = max(0, match.start() - 200)
-                fragment_end = min(len(html_fragment), match.end() + 200)
-                context = html_fragment[fragment_start:fragment_end].lower()
-                # Look for matrix-related patterns in the context (LaTeX commands or HTML classes)
-                if any(keyword in context for keyword in ['matrix', 'pmatrix', 'bmatrix', 'vmatrix', 'det', 'determinant', '\\begin', '\\end']):
-                    is_matrix_delimiter = True
-                
-                # Also check viewBox aspect ratio - matrix delimiters are very tall and narrow
-                if vb_width and vb_height and vb_width > 0 and vb_height > 0:
-                    aspect_ratio = vb_height / vb_width if vb_width > 0 else 1
-                    # Matrix delimiters typically have height >> width (aspect ratio > 20)
-                    if aspect_ratio > 20:
-                        is_matrix_delimiter = True
-                
-                # Detect stretchy by explicit large width values (1e6em, 10000em, 100%, or >= 100em)
-                if width_attr_match:
-                    width_attr = width_attr_match.group(1).lower()
-                    if '1e6' in width_attr or '10000' in width_attr or width_attr == '100%':
-                        is_stretchy = True
-                    elif svg_width_em and svg_width_em >= 100:
-                        is_stretchy = True
-                
-                # Detect stretchy by aspect ratio of width/height in em units
-                if svg_width_em and svg_height_em:
-                    # Vertical stretchy: narrow width (< 1em) with tall height (> 1.5em)
-                    # This catches sqrt radicals (V-shaped part) and vertical lines
-                    if svg_width_em < 1.0 and svg_height_em > 1.5:
-                        is_stretchy = True
-                        # If it's very narrow (< 0.5em) and tall, likely a matrix delimiter
-                        if svg_width_em < 0.5:
-                            is_matrix_delimiter = True
-                    # Horizontal stretchy: wide width (>= 5em) with small height (< 2em)
-                    # This catches sqrt overlines (horizontal bar above content)
-                    elif svg_width_em >= 5.0 and svg_height_em < 2.0:
-                        is_horizontal_stretchy = True
-                        is_stretchy = True
-                    # Also catch moderately wide overlines (3-5em range)
-                    elif svg_width_em >= 3.0 and svg_height_em < 1.5 and svg_width_em > svg_height_em * 3:
-                        is_horizontal_stretchy = True
-                        is_stretchy = True
-                    # Catch inline sqrt overlines (2-3em range, like sqrt(x))
-                    elif svg_width_em >= 2.0 and svg_height_em < 1.2 and svg_width_em > svg_height_em * 2.5:
-                        is_horizontal_stretchy = True
-                        is_stretchy = True
-                
-                # Fallback: detect stretchy by viewBox aspect ratio when em values aren't available
-                if vb_width and vb_height and vb_width > 0 and vb_height > 0:
-                    aspect_ratio_width = vb_width / vb_height if vb_height > 0 else 1
-                    aspect_ratio_height = vb_height / vb_width if vb_width > 0 else 1
-                    # Very skewed aspect ratios indicate stretchy symbols
-                    if aspect_ratio_width < 0.1 or aspect_ratio_height > 10.0:
-                        is_stretchy = True
-                        if aspect_ratio_width > 10.0:
-                            is_horizontal_stretchy = True
-                    # Moderately wide viewBox (2:1 or wider) likely indicates sqrt overline
-                    elif aspect_ratio_width > 2.0:
-                        is_horizontal_stretchy = True
-                        is_stretchy = True
-                
-                # Convert em units to pixels (1em ≈ 10px in math context)
-                em_to_px = 10.0
-                
-                # Handle horizontal stretchy elements (sqrt overlines, horizontal lines)
-                if is_stretchy and is_horizontal_stretchy:
-                    # Detect inline context (piecewise functions, inline math)
-                    # Short text length or small em width suggests inline usage
-                    is_likely_inline = text_length < 15 or (svg_width_em is not None and svg_width_em < 8.0)
-                    
-                    # Content-aware width calculation: use tighter constraints for inline sqrt
-                    if is_likely_inline:
-                        # Very short expressions like sqrt(x) need even smaller constraints
-                        if text_length <= 3:
-                            content_based_width = min(fallback_width, 50.0)
-                            max_width = max(25.0, content_based_width * 0.8)
-                        else:
-                            content_based_width = min(fallback_width, 80.0)
-                            max_width = max(30.0, content_based_width * 0.85)
-                    else:
-                        # Display mode sqrt: allow larger width but still constrained
-                        content_based_width = min(fallback_width, 150.0)
-                        max_width = max(50.0, content_based_width * 0.9)
-                    
-                    if svg_width_em is not None and svg_height_em is not None:
-                        calculated_width = svg_width_em * em_to_px
-                        if text_length <= 3:
-                            svg_width = min(calculated_width, max_width, 40.0)
-                        else:
-                            svg_width = min(calculated_width, max_width)
-                        svg_height = svg_height_em * em_to_px
-                        if is_likely_inline:
-                            if svg_height > 35.0:
-                                svg_height = 35.0
-                            if svg_height < 2.5:
-                                svg_height = 2.5
-                        else:
-                            if svg_height > 50.0:
-                                svg_height = 50.0
-                            if svg_height < 3.0:
-                                svg_height = 3.0
-                    elif vb_width and vb_height and vb_width > 0 and vb_height > 0:
-                        aspect_ratio = vb_width / vb_height if vb_height > 0 else 1
-                        if is_likely_inline:
-                            estimated_height = max(2.5, min(35.0, vb_height * 0.02))
-                        else:
-                            estimated_height = max(3.0, min(45.0, vb_height * 0.025))
-                        svg_height = estimated_height
-                        svg_width = min(estimated_height * aspect_ratio, max_width)
-                    else:
-                        svg_width = max_width
-                        if is_likely_inline:
-                            svg_height = 8.0
-                        else:
-                            svg_height = 10.0
-                    
-                    fixed_svg = re.sub(r'width=["\'][^"\']*["\']', f'width="{svg_width}px"', svg_html, flags=re.IGNORECASE)
-                    fixed_svg = re.sub(r'height=["\'][^"\']*["\']', f'height="{svg_height}px"', fixed_svg, flags=re.IGNORECASE)
-                    
-                    if 'width=' not in fixed_svg.lower():
-                        fixed_svg = re.sub(r'(<svg[^>]*)', f'\\1 width="{svg_width}px"', fixed_svg, flags=re.IGNORECASE)
-                    if 'height=' not in fixed_svg.lower():
-                        fixed_svg = re.sub(r'(<svg[^>]*)', f'\\1 height="{svg_height}px"', fixed_svg, flags=re.IGNORECASE)
-                    
-                    if 'viewBox=' not in fixed_svg:
-                        fixed_svg = re.sub(r'(<svg[^>]*)', f'\\1 viewBox="{vb_x} {vb_y} {vb_width} {vb_height}"', fixed_svg, flags=re.IGNORECASE)
-                    
-                    img_width = svg_width
-                    img_height = svg_height
-                    
-                # Handle vertical stretchy symbols (sqrt radicals V-shape, vertical lines)
-                elif is_stretchy and svg_width_em is not None and svg_height_em is not None:
-                    # For matrix delimiters, use the actual height without excessive scaling
-                    # Matrix delimiters should match the exact matrix height
-                    if is_matrix_delimiter:
-                        # Use the actual height from KaTeX, which should match the matrix
-                        # Only apply a small adjustment if needed to ensure full coverage
-                        height_scale_factor = 1.1  # Small adjustment to ensure full coverage
-                        scaled_height_em = svg_height_em * height_scale_factor
-                        svg_width = max(2.5, svg_width_em * em_to_px)  # Minimum 2.5px for visibility
-                        svg_height = scaled_height_em * em_to_px
-                        
-                        # Ensure minimum height for visibility
-                        min_height = 20.0
-                        if svg_height < min_height:
-                            svg_height = min_height
-                        
-                        # For matrix delimiters, allow much taller heights (up to 500px for very tall matrices)
-                        # Don't clamp as aggressively since matrices can be quite tall
-                        max_height = 500.0  # Much higher limit for matrix delimiters
-                        absolute_max = 800.0  # Absolute maximum for very tall matrices
-                    else:
-                        # For sqrt radicals, scale up height to make them taller and more prominent
-                        # Factor of 2.3 ensures the V-shape properly encompasses the expression
-                        height_scale_factor = 2.3
-                        scaled_height_em = svg_height_em * height_scale_factor
-                        svg_width = max(2.5, svg_width_em * em_to_px)  # Minimum 2.5px for visibility
-                        svg_height = scaled_height_em * em_to_px
-                        
-                        # Ensure minimum height for visibility
-                        min_height = 30.0
-                        if svg_height < min_height:
-                            svg_height = min_height
-                        
-                        # Clamp to reasonable maximums to prevent pathological cases
-                        max_height = 150.0  # Normal maximum
-                        absolute_max = 250.0  # Absolute maximum for very tall expressions
-                    
-                    if svg_height > absolute_max:
-                        height_ratio = absolute_max / svg_height
-                        svg_height = absolute_max
-                        svg_width = max(2.5, svg_width * height_ratio)
-                    elif svg_height > max_height:
-                        svg_height = max_height
-                    
-                    fixed_svg = re.sub(r'width=["\'][^"\']*["\']', f'width="{svg_width}px"', svg_html, flags=re.IGNORECASE)
-                    fixed_svg = re.sub(r'height=["\'][^"\']*["\']', f'height="{svg_height}px"', fixed_svg, flags=re.IGNORECASE)
-                    
-                    if 'width=' not in fixed_svg.lower():
-                        fixed_svg = re.sub(r'(<svg[^>]*)', f'\\1 width="{svg_width}px"', fixed_svg, flags=re.IGNORECASE)
-                    if 'height=' not in fixed_svg.lower():
-                        fixed_svg = re.sub(r'(<svg[^>]*)', f'\\1 height="{svg_height}px"', fixed_svg, flags=re.IGNORECASE)
-                    
-                    if 'viewBox=' not in fixed_svg:
-                        fixed_svg = re.sub(r'(<svg[^>]*)', f'\\1 viewBox="{vb_x} {vb_y} {vb_width} {vb_height}"', fixed_svg, flags=re.IGNORECASE)
-                    
-                    img_width = svg_width
-                    img_height = svg_height
-                    
-                # Handle vertical stretchy detected from viewBox when em values aren't available
-                elif is_stretchy and not is_horizontal_stretchy and vb_width and vb_height and vb_width > 0 and vb_height > 0:
-                    # For matrix delimiters, use viewBox height more directly
-                    if is_matrix_delimiter:
-                        # Use viewBox height with minimal scaling to preserve exact matrix height
-                        height_scale_factor = 1.1  # Small adjustment to ensure full coverage
-                        aspect_ratio = vb_height / vb_width if vb_width > 0 else 1
-                        # Scale from viewBox coordinates (0.015 factor converts viewBox units to pixels)
-                        estimated_width = max(2.5, vb_width * 0.015)
-                        estimated_height = vb_height * 0.015 * height_scale_factor
-                        
-                        svg_width = estimated_width
-                        svg_height = estimated_height
-                        
-                        min_height = 20.0
-                        if svg_height < min_height:
-                            svg_height = min_height
-                        
-                        # For matrix delimiters, allow much taller heights
-                        max_height = 500.0
-                        absolute_max = 800.0
-                    else:
-                        # Apply same height scaling for sqrt radicals
-                        height_scale_factor = 2.3
-                        aspect_ratio = vb_height / vb_width if vb_width > 0 else 1
-                        # Scale from viewBox coordinates (0.015 factor converts viewBox units to pixels)
-                        estimated_width = max(2.5, vb_width * 0.015)
-                        estimated_height = vb_height * 0.015 * height_scale_factor
-                        
-                        svg_width = estimated_width
-                        svg_height = estimated_height
-                        
-                        min_height = 30.0
-                        if svg_height < min_height:
-                            svg_height = min_height
-                        
-                        max_height = 150.0
-                        absolute_max = 250.0
-                    
-                    if svg_height > absolute_max:
-                        height_ratio = absolute_max / svg_height
-                        svg_height = absolute_max
-                        svg_width = max(2.5, svg_width * height_ratio)
-                    elif svg_height > max_height:
-                        svg_height = max_height
-                    
-                    fixed_svg = re.sub(r'width=["\'][^"\']*["\']', f'width="{svg_width}px"', svg_html, flags=re.IGNORECASE)
-                    fixed_svg = re.sub(r'height=["\'][^"\']*["\']', f'height="{svg_height}px"', fixed_svg, flags=re.IGNORECASE)
-                    
-                    if 'width=' not in fixed_svg.lower():
-                        fixed_svg = re.sub(r'(<svg[^>]*)', f'\\1 width="{svg_width}px"', fixed_svg, flags=re.IGNORECASE)
-                    if 'height=' not in fixed_svg.lower():
-                        fixed_svg = re.sub(r'(<svg[^>]*)', f'\\1 height="{svg_height}px"', fixed_svg, flags=re.IGNORECASE)
-                    
-                    if 'viewBox=' not in fixed_svg:
-                        fixed_svg = re.sub(r'(<svg[^>]*)', f'\\1 viewBox="{vb_x} {vb_y} {vb_width} {vb_height}"', fixed_svg, flags=re.IGNORECASE)
-                    
-                    img_width = svg_width
-                    img_height = svg_height
-                    
-                else:
-                    # Handle non-stretchy SVGs: fix problematic large width values
-                    # KaTeX sometimes generates very large width values that need to be clamped
-                    fixed_svg = svg_html
-                    fixed_svg = re.sub(r'width=["\']1e6em["\']', f'width="{fallback_width}px"', fixed_svg, flags=re.IGNORECASE)
-                    fixed_svg = re.sub(r'width=["\']10000em["\']', f'width="{fallback_width}px"', fixed_svg, flags=re.IGNORECASE)
-                    fixed_svg = re.sub(r'width=["\']100%["\']', f'width="{fallback_width}px"', fixed_svg, flags=re.IGNORECASE)
-                    
-                    # Replace any width >= 5em with fallback width (catches missed stretchy symbols)
-                    def replace_large_width(match):
-                        em_value_str = match.group(1)
-                        try:
-                            em_value = float(em_value_str)
-                            if em_value >= 5:
-                                return f'width="{fallback_width}px"'
-                        except (ValueError, TypeError):
-                            pass
-                        return match.group(0)
-                    fixed_svg = re.sub(r'width=["\'](\d+(?:\.\d+)?)em["\']', replace_large_width, fixed_svg, flags=re.IGNORECASE)
-                    
-                    # Check if this might be inline (for appropriate sizing)
-                    is_likely_inline_non_stretchy = text_length < 15 or (svg_width_em is not None and svg_width_em < 8.0)
-                    
-                    potential_sqrt = False
-                    if vb_width and vb_height and vb_width > 0 and vb_height > 0:
-                        aspect_ratio = vb_width / vb_height if vb_height > 0 else 1
-                        if aspect_ratio > 3.0:
-                            potential_sqrt = True
-                    
-                    if svg_width_em is not None:
-                        if svg_width_em >= 5.0:
-                            if is_likely_inline_non_stretchy:
-                                if text_length <= 3:
-                                    svg_width_em = 3.0
-                                else:
-                                    svg_width_em = 4.0
-                            else:
-                                svg_width_em = 5.0
-                        img_width = svg_width_em * em_to_px
-                        if is_likely_inline_non_stretchy:
-                            if text_length <= 3:
-                                max_width = 30.0
-                            else:
-                                max_width = 40.0
-                        else:
-                            max_width = 50.0
-                        if img_width > max_width:
-                            img_width = max_width
-                    elif potential_sqrt:
-                        if is_likely_inline_non_stretchy and text_length <= 3:
-                            img_width = 30.0
-                        elif is_likely_inline_non_stretchy:
-                            img_width = 40.0
-                        else:
-                            img_width = 50.0
-                    else:
-                        img_width = fallback_width
-                    
-                    img_height = None
-                    if svg_height_em is not None:
-                        img_height = svg_height_em * em_to_px
-                        max_height = 40.0
-                        if img_height > max_height:
-                            img_height = max_height
-                    elif vb_height and vb_width and vb_width > 0:
-                        aspect_ratio = vb_height / vb_width
-                        img_height = img_width * aspect_ratio
-                        max_height = 40.0
-                        if img_height > max_height:
-                            img_height = max_height
-                            if img_height / aspect_ratio < img_width:
-                                img_width = img_height / aspect_ratio if aspect_ratio > 0 else fallback_width
-                    
-                    fixed_svg = re.sub(r'width=["\'][^"\']*["\']', f'width="{img_width}px"', fixed_svg, flags=re.IGNORECASE)
-                    if 'width=' not in fixed_svg.lower():
-                        fixed_svg = re.sub(r'(<svg[^>]*)', f'\\1 width="{img_width}px"', fixed_svg, flags=re.IGNORECASE)
-                    
-                    if img_height is not None:
-                        fixed_svg = re.sub(r'height=["\'][^"\']*["\']', f'height="{img_height}px"', fixed_svg, flags=re.IGNORECASE)
-                        if 'height=' not in fixed_svg.lower():
-                            fixed_svg = re.sub(r'(<svg[^>]*)', f'\\1 height="{img_height}px"', fixed_svg, flags=re.IGNORECASE)
-                
-                svg_bytes = fixed_svg.encode('utf-8')
-                svg_base64 = base64.b64encode(svg_bytes).decode('utf-8')
-                data_uri = f"data:image/svg+xml;base64,{svg_base64}"
-                
-                # Create img tag with appropriate positioning
-                if is_stretchy and img_height:
-                    if is_horizontal_stretchy:
-                        # Position sqrt overline above content to prevent overlap
-                        # Base offset ensures spacing between overline and content
-                        base_offset = max(15.0, img_height * 1.5)
-                        # Add extra spacing for longer expressions to accommodate taller content
-                        extra_spacing = min(8.0, text_length * 0.3)
-                        offset_px = base_offset + extra_spacing
-                        container_height = offset_px
-                        # Wrap in span with height to reserve space, position overline at top
-                        img_tag = f'<span style="display: inline-block; width: {img_width}px; height: {container_height}px; position: relative; vertical-align: baseline; overflow: visible;"><img src="{data_uri}" style="display: block; width: {img_width}px; max-width: {img_width}px; height: {img_height}px; position: absolute; top: 0; left: 0;" /></span>'
-                    else:
-                        img_tag = f'<img src="{data_uri}" style="display: inline-block; vertical-align: baseline; position: relative; width: {img_width}px; height: {img_height}px; z-index: 0;" />'
-                else:
-                    if img_width <= 50.0:
-                        img_tag = f'<img src="{data_uri}" style="display: inline-block; vertical-align: baseline; position: relative; width: {img_width}px; max-width: {img_width}px; height: auto; z-index: 0;" />'
-                    else:
-                        img_tag = f'<img src="{data_uri}" style="display: inline-block; vertical-align: baseline; position: relative; width: {img_width}px; height: auto; z-index: 0;" />'
-                
-                result = result[:match.start()] + img_tag + result[match.end():]
-                
-                if self.debug_pdf:
-                    print(f"PDF: Converted SVG to base64 image (stretchy={is_stretchy}, width={img_width}px, height={img_height if img_height else 'auto'}, text_length={text_length})")
-                    
-            except Exception as e:
-                if self.debug_pdf:
-                    print(f"PDF: Failed to convert SVG to base64: {e}")
+                # Keep the SVG tag embedded directly in HTML
+                result = result[:match.start()] + fixed_svg + result[match.end():]
+            except Exception:
                 continue
         
         return result
@@ -714,7 +380,6 @@ class PDFGenerator:
         3. Converts SVG elements to base64-encoded images for PDF compatibility
         4. Replaces the original LaTeX expressions with the rendered HTML
         """
-        t0 = time.perf_counter()
         latex_expressions = self.detect_latex_in_message(content)
         if not latex_expressions:
             return escape(content)
@@ -724,19 +389,10 @@ class PDFGenerator:
         latex_expressions.sort(key=lambda x: x['start'], reverse=True)
         html_content = content
         
-        if self.debug_pdf or self.debug_latex:
-            print("*"*20)
-            print(f"PDF: Processing {len(latex_expressions)} LaTeX expressions")
-            for idx, latex in enumerate(latex_expressions[:5]):  # Show first 5
-                print(f"  [{idx}] {latex['delimiter']} display={latex['display']} expr_preview={repr(latex['expression'][:60])}")
-            if len(latex_expressions) > 5:
-                print(f"  ... and {len(latex_expressions) - 5} more")
-            print("*"*20)
-        
         # Prepare expressions for KaTeX rendering
         to_render: list[tuple[str, bool]] = []
         
-        for idx, latex in enumerate(latex_expressions):
+        for latex in latex_expressions:
             expr = latex['expression']
             
             # Rebuild expression for special delimiters (boxed, ce, pu)
@@ -749,55 +405,31 @@ class PDFGenerator:
             # Insert soft breaks to allow long expressions to wrap in PDF
             expr = self._insert_soft_breaks(expr)
             to_render.append((expr, latex['display']))
-            if self.debug_latex:
-                print(f"PDF: LaTeX idx={idx} delimiter={latex['delimiter']} display={latex['display']} expr={repr(expr)}")
 
         try:
-            t1 = time.perf_counter()
             rendered = self.katex_compiler.render_many_to_html(to_render) if to_render else []
-            t2 = time.perf_counter()
-            if self.debug_pdf:
-                print("*"*20, f"\nPDF: KaTeX batch rendered {len(to_render)} items in {t2 - t1:.3f}s\n", "*"*20)
-        except Exception as ex:
-            if self.debug_pdf:
-                print("*"*20, f"\nPDF: KaTeX render error -> fallback: {ex}\n", "*"*20)
+        except Exception:
             rendered = [escape(e) for e, _ in to_render]
 
-        # Convert SVG elements to base64 images for reliable PDF rendering
-        # WeasyPrint has issues with inline SVG, so we convert to base64 images
+        # Fix SVG sizing issues while keeping SVG tags embedded directly in HTML
+        # This preserves em context which would be lost with base64 image conversion
         final_fragments: list[str] = []
-        svg_count = 0
-        for idx, fragment in enumerate(rendered):
+        for fragment in rendered:
             if '<svg' in fragment:
-                svg_count += 1
-                if self.debug_pdf:
-                    print(f"PDF: Fragment {idx} contains SVG; converting to base64 image")
-                    svg_match = re.search(r'<svg[^>]*>.*?</svg>', fragment, re.DOTALL | re.IGNORECASE)
-                    if svg_match:
-                        svg_preview = svg_match.group(0)[:200]
-                        print(f"PDF: SVG preview: {svg_preview}...")
                 try:
-                    # Convert SVG to base64 image with proper sizing and positioning
-                    converted = self._convert_svg_to_base64_image(fragment)
-                    final_fragments.append(converted)
-                except Exception as e:
-                    if self.debug_pdf:
-                        print(f"PDF: SVG conversion failed for fragment {idx}: {e}")
-                    # Fallback: keep original fragment (may not render well in PDF)
+                    fixed = self._fix_svg_sizing(fragment)
+                    final_fragments.append(fixed)
+                except Exception:
+                    # Fallback: keep original fragment
                     final_fragments.append(fragment)
             else:
                 final_fragments.append(fragment)
-        
-        if self.debug_pdf and svg_count > 0:
-            print(f"PDF: Converted {svg_count} SVG elements to base64 images")
 
         for latex, fragment in zip(latex_expressions, final_fragments):
             html_content = html_content[:latex['start']] + fragment + html_content[latex['end']:]
 
         html_content = html_content.replace('\\[', '').replace('\\]', '')
 
-        if self.debug_pdf:
-            print("*"*20, f"\nPDF: splice complete for {len(latex_expressions)} items, output_len={len(html_content)}\n", "*"*20)
         return html_content
 
     def _render_with_timeout(self, html_full: str, timeout_sec: float = 15.0, use_base_url: bool = True) -> bytes:
@@ -857,8 +489,6 @@ class PDFGenerator:
 
         return expr
 
-
-
     def generate_chat_pdf(self) -> bytes:
         """
         Generate a PDF from chat messages. Uses WeasyPrint to render HTML with KaTeX.
@@ -890,6 +520,7 @@ class PDFGenerator:
                     f'{self.css}\n'
                     "  .katex, .katex-display {\n"
                     "    white-space: normal !important;\n"
+                    "    font-size: 1.15em;\n"
                     "  }\n"
                     "  .katex-display {\n"
                     "    overflow-wrap: anywhere;\n"
@@ -903,6 +534,39 @@ class PDFGenerator:
                     "  }\n"
                     "  .katex-display .katex {\n"
                     "    font-size: 1em;\n"
+                    "  }\n"
+                    "  /* Fix for radical symbols in denominators - allow vertical overflow */\n"
+                    "  .katex .sqrt > .vlist-t,\n"
+                    "  .katex .root > .vlist-t {\n"
+                    "    overflow: visible !important;\n"
+                    "  }\n"
+                    "  .katex .stretchy:has(> svg),\n"
+                    "  .katex .sqrt .stretchy,\n"
+                    "  .katex .root .stretchy {\n"
+                    "    overflow: visible !important;\n"
+                    "    min-height: auto !important;\n"
+                    "  }\n"
+                    "  .katex .sqrt svg,\n"
+                    "  .katex .root svg {\n"
+                    "    overflow: visible !important;\n"
+                    "    max-height: none !important;\n"
+                    "  }\n"
+                    "  pre, code, pre code {\n"
+                    "    overflow-wrap: break-word !important;\n"
+                    "    word-wrap: break-word !important;\n"
+                    "    word-break: break-all !important;\n"
+                    "    white-space: pre-wrap !important;\n"
+                    "    max-width: 100% !important;\n"
+                    "    box-sizing: border-box !important;\n"
+                    "  }\n"
+                    "  .markdown-section pre,\n"
+                    "  .markdown-section pre code {\n"
+                    "    overflow-wrap: break-word !important;\n"
+                    "    word-wrap: break-word !important;\n"
+                    "    word-break: break-all !important;\n"
+                    "    white-space: pre-wrap !important;\n"
+                    "    max-width: 100% !important;\n"
+                    "    box-sizing: border-box !important;\n"
                     "  }\n"
                     "</style>\n"
                 )

@@ -29,13 +29,15 @@ class KaTeXCompiler:
         """Find the node_modules directory containing KaTeX."""
         # Try different possible locations
         possible_paths = [
-            Path(__file__).parent.parent.parent.parent / "node_modules",
-            Path(__file__).parent.parent.parent.parent.parent / "node_modules",
+            # Path(__file__).parent.parent.parent.parent / "node_modules",
+            # Path(__file__).parent.parent.parent.parent.parent / "node_modules",
+            Path.cwd().parent / "node_modules",
             Path.cwd() / "node_modules",
         ]
         
         for path in possible_paths:
             if path.exists() and (path / "katex").exists():
+                print("*"*20, f"Found node_modules at {path}. Current working directory is {Path.cwd()}", "*"*20)
                 return path
 
         # Fallback to current directory

@@ -1,5 +1,11 @@
 /* HTML and Body */
 @font-face {
+	font-family: 'Inter';
+	src: url('fonts/Inter-Variable.ttf');
+	font-display: swap;
+}
+
+@font-face {
 	font-family: 'NotoSans';
 	src: url('fonts/NotoSans-Variable.ttf');
 }
@@ -26,11 +32,13 @@
 
 html {
 	font-family:
-		-apple-system, BlinkMacSystemFont, 'Segoe UI', 'NotoSans', 'NotoSansJP', 'NotoSansKR',
-		'NotoSansSC', 'Twemoji', 'STSong-Light', 'MSung-Light', 'HeiseiMin-W3', 'HYSMyeongJo-Medium',
-		Roboto, 'Helvetica Neue', Arial, sans-serif;
-	font-size: 14px; /* Default font size */
+		-apple-system, BlinkMacSystemFont, 'Inter', ui-sans-serif, system-ui, 'Segoe UI', Roboto,
+		Ubuntu, Cantarell, 'Noto Sans', 'NotoSans', 'NotoSansJP', 'NotoSansKR', 'NotoSansSC',
+		'Helvetica Neue', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+	font-size: 13px; /* Smaller base size for PDF readability */
 	line-height: 1.5;
+	color: #212529; /* Match Tailwind typography default text color */
+	word-break: break-word;
 }
 
 *,
@@ -46,44 +54,60 @@ body {
 	width: auto;
 }
 
-/* Typography */
+/* Typography - Match Tailwind Typography defaults */
 h1,
 h2,
 h3,
 h4,
 h5,
 h6 {
-	font-weight: 500;
-	margin: 0;
+	font-weight: 600; /* Match Tailwind Typography font-semibold */
+	color: #111827; /* Match Tailwind Typography heading color */
+	margin-top: 0;
+	margin-bottom: 0.5em;
+	line-height: 1.25;
 }
 
 h1 {
-	font-size: 2.5rem;
+	font-size: 2.25em; /* ~36px */
+	margin-top: 0;
+	margin-bottom: 0.8888889em;
 }
 
 h2 {
-	font-size: 2rem;
+	font-size: 1.5em; /* ~24px */
+	margin-top: 2em;
+	margin-bottom: 1em;
 }
 
 h3 {
-	font-size: 1.75rem;
+	font-size: 1.25em; /* ~20px */
+	margin-top: 1.6em;
+	margin-bottom: 0.6em;
 }
 
 h4 {
-	font-size: 1.5rem;
+	font-size: 1.125em; /* ~18px */
+	margin-top: 1.5555556em;
+	margin-bottom: 0.4444444em;
 }
 
 h5 {
-	font-size: 1.25rem;
+	font-size: 1em; /* ~16px */
+	margin-top: 1.5em;
+	margin-bottom: 0.5em;
 }
 
 h6 {
-	font-size: 1rem;
+	font-size: 0.875em; /* ~14px */
+	margin-top: 1.4285714em;
+	margin-bottom: 0.5714286em;
 }
 
 p {
 	margin-top: 0;
-	margin-bottom: 1rem;
+	margin-bottom: 1.25em;
+	color: #374151; /* Match Tailwind Typography paragraph color */
 }
 
 /* Grid System */
@@ -119,50 +143,42 @@ strong {
 	color: inherit; /* Inherits the color from its parent element */
 }
 
-/* link */
+/* Links - Match Tailwind Typography */
 a {
-	color: #007bff;
-	text-decoration: none;
-	background-color: transparent;
+	color: #2563eb; /* Match Tailwind blue-600 */
+	text-decoration: underline;
+	text-decoration-color: #93c5fd; /* Match Tailwind blue-300 */
+	text-underline-offset: 0.125em;
+	font-weight: 500;
 }
 
 a:hover {
-	color: #0056b3;
-	text-decoration: underline;
+	color: #1d4ed8; /* Match Tailwind blue-700 */
+	text-decoration-color: #2563eb;
 }
 
-/* General styles for lists */
+/* General styles for lists - Match Tailwind Typography */
 ol,
-ul,
-li {
-	padding-left: 40px; /* Increase padding to move bullet points to the right */
-	margin-left: 20px; /* Indent lists from the left */
-}
-
-/* Ordered list styles */
-ol {
-	list-style-type: decimal; /* Use numbers for ordered lists */
-	margin-bottom: 10px; /* Space after each list */
-}
-
-ol li {
-	margin-bottom: 0.5rem; /* Space between ordered list items */
-}
-
-/* Unordered list styles */
 ul {
-	list-style-type: disc; /* Use bullets for unordered lists */
-	margin-bottom: 10px; /* Space after each list */
+	margin-top: 1.25em;
+	margin-bottom: 1.25em;
+	padding-left: 1.625em; /* Match Tailwind Typography default */
+	color: #374151;
 }
 
-ul li {
-	margin-bottom: 0.5rem; /* Space between unordered list items */
+ol {
+	list-style-type: decimal;
 }
 
-/* List item styles */
+ul {
+	list-style-type: disc;
+}
+
 li {
-	margin-bottom: 5px; /* Space between list items */
-	line-height: 1.5; /* Line height for better readability */
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+	padding-left: 0.375em;
+	line-height: 1.75;
 }
 
 /* Nested lists */
@@ -170,30 +186,47 @@ ol ol,
 ol ul,
 ul ol,
 ul ul {
-	padding-left: 20px;
-	margin-left: 30px; /* Further indent nested lists */
-	margin-bottom: 0; /* Remove extra margin at the bottom of nested lists */
+	margin-top: 0.75em;
+	margin-bottom: 0.75em;
 }
 
-/* Code blocks */
+/* Inline paragraphs in list items (match frontend behavior) */
+li p {
+	display: inline;
+	margin-top: 0;
+	margin-bottom: 0;
+}
+
+/* Code blocks - Match frontend styling */
 pre {
-	background-color: #f4f4f4;
-	padding: 10px;
+	background-color: #f3f4f6; /* Match Tailwind gray-100 */
+	color: #1f2937; /* Match Tailwind gray-800 */
+	padding: 0.75rem 1rem;
 	overflow-x: auto;
-	max-width: 100%; /* Ensure it doesn't overflow the page */
-	width: 80%; /* Set a specific width for a container-like appearance */
-	margin: 0 1em; /* Center the pre block */
-	box-sizing: border-box; /* Include padding in the width */
-	border: 1px solid #ccc; /* Optional: Add a border for better definition */
-	border-radius: 4px; /* Optional: Add rounded corners */
+	overflow-wrap: break-word;
+	word-wrap: break-word;
+	word-break: break-all;
+	white-space: pre-wrap;
+	max-width: 100%;
+	margin: 1.5em 0;
+	border-radius: 0.5rem; /* Match frontend rounded-lg */
+	box-sizing: border-box;
+	font-size: 0.875em; /* ~14px */
+	line-height: 1.7142857;
 }
 
 code {
-	font-family: 'Courier New', Courier, monospace;
-	background-color: #f4f4f4;
-	padding: 2px 4px;
-	border-radius: 4px;
-	box-sizing: border-box; /* Include padding in the width */
+	font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+	background-color: #f3f4f6; /* Match Tailwind gray-100 */
+	color: #eb5757; /* Match frontend code color */
+	padding: 0.1875em 0.375em; /* ~3px 6px */
+	border-radius: 0.25rem; /* Match frontend rounded-md */
+	font-size: 0.875em; /* ~14px */
+	font-weight: 600;
+	overflow-wrap: break-word;
+	word-wrap: break-word;
+	word-break: break-all;
+	max-width: 100%;
 }
 
 .message {
@@ -228,74 +261,98 @@ tbody + tbody {
 	border-top: 2px solid #dee2e6;
 }
 
-/* markdown-section styles */
-.markdown-section blockquote,
+/* markdown-section styles - Match frontend markdown-prose class */
+.markdown-section {
+	color: #374151; /* Match Tailwind Typography text color */
+	font-size: 1rem; /* Inherits from html (14px) */
+	line-height: 1.75;
+}
+
+/* Headings in markdown-section */
 .markdown-section h1,
 .markdown-section h2,
 .markdown-section h3,
 .markdown-section h4,
 .markdown-section h5,
-.markdown-section h6,
-.markdown-section p,
-.markdown-section pre,
-.markdown-section table,
-.markdown-section ul {
-	/* Give most block elements margin top and bottom */
-	margin-top: 1rem;
-}
-
-/* Remove top margin if it's the first child */
-.markdown-section blockquote:first-child,
-.markdown-section h1:first-child,
-.markdown-section h2:first-child,
-.markdown-section h3:first-child,
-.markdown-section h4:first-child,
-.markdown-section h5:first-child,
-.markdown-section h6:first-child,
-.markdown-section p:first-child,
-.markdown-section pre:first-child,
-.markdown-section table:first-child,
-.markdown-section ul:first-child {
+.markdown-section h6 {
+	font-weight: 600; /* Match frontend prose-headings:font-semibold */
 	margin-top: 0;
-}
-
-/* Remove top margin of <ul> following a <p> */
-.markdown-section p + ul {
-	margin-top: 0;
-}
-
-/* Remove bottom margin of <p> if it is followed by a <ul> */
-/* Note: :has is not supported in CSS, so you would need JavaScript for this behavior */
-.markdown-section p {
 	margin-bottom: 0;
 }
 
-/* Add a rule to reset margin-bottom for <p> not followed by <ul> */
-.markdown-section p + ul {
-	margin-top: 0;
+.markdown-section h1:not(:first-child),
+.markdown-section h2:not(:first-child),
+.markdown-section h3:not(:first-child),
+.markdown-section h4:not(:first-child),
+.markdown-section h5:not(:first-child),
+.markdown-section h6:not(:first-child) {
+	margin-top: 1em;
 }
 
-/* List item styles */
+/* Paragraphs - match frontend prose-p:my-0 */
+.markdown-section p {
+	margin-top: 0;
+	margin-bottom: 0;
+}
+
+/* Blockquotes - match frontend styling */
+.markdown-section blockquote {
+	margin-top: 0;
+	margin-bottom: 0;
+	padding-left: 1em;
+	border-left: 2px solid #e5e7eb; /* Match frontend prose-blockquote:border-s-gray-100 */
+	font-style: normal; /* Match frontend prose-blockquote:not-italic */
+	font-weight: normal; /* Match frontend prose-blockquote:font-normal */
+	color: #374151;
+}
+
+/* Lists - match frontend prose-ul:-my-0 */
+.markdown-section ul,
+.markdown-section ol {
+	margin-top: 0;
+	margin-bottom: 0;
+	padding-left: 1.625em;
+}
+
+/* List items */
 .markdown-section li {
-	padding: 2px;
+	padding: 0.125em 0; /* Match frontend spacing */
+	margin-top: 0.25em;
+	margin-bottom: 0.25em;
 }
 
 .markdown-section li p {
-	margin-bottom: 0;
+	display: inline;
+	margin: 0;
 	padding: 0;
 }
 
-/* Avoid margins for nested lists */
-.markdown-section li > ul {
-	margin-top: 0;
-	margin-bottom: 0;
+/* Nested lists */
+.markdown-section li > ul,
+.markdown-section li > ol {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
 }
 
-/* Table styles */
+/* Pre and code blocks - match frontend */
+.markdown-section pre {
+	margin-top: 0;
+	margin-bottom: 0;
+	padding: 0.75rem 1rem;
+	overflow-wrap: break-word;
+	word-wrap: break-word;
+	word-break: break-all;
+	white-space: pre-wrap;
+	max-width: 100%;
+	box-sizing: border-box;
+}
+
+/* Tables - match frontend prose-table:my-0 */
 .markdown-section table {
 	width: 100%;
 	border-collapse: collapse;
-	margin: 1rem 0;
+	margin-top: 0;
+	margin-bottom: 0;
 }
 
 .markdown-section th,
@@ -309,12 +366,13 @@ tbody + tbody {
 	background-color: #f2f2f2;
 }
 
-.markdown-section pre {
-	padding: 10px;
-	margin: 10px;
-}
-
 .markdown-section pre code {
-	position: relative;
-	color: rgb(172, 0, 95);
+	background-color: transparent;
+	color: #1f2937;
+	padding: 0;
+	overflow-wrap: break-word;
+	word-wrap: break-word;
+	word-break: break-all;
+	white-space: pre-wrap;
+	max-width: 100%;
 }
