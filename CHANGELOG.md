@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.36] - 2025-11-07
+
+### Added
+
+- 🔐 OAuth group parsing now supports configurable separators via the "OAUTH_GROUPS_SEPARATOR" environment variable, enabling proper handling of semicolon-separated group claims from providers like CILogon. [#18987](https://github.com/open-webui/open-webui/pull/18987), [#18979](https://github.com/open-webui/open-webui/issues/18979)
+
+### Fixed
+
+- 🛠️ Tool calling functionality is restored by correcting asynchronous function handling in tool parameter updates. [#18981](https://github.com/open-webui/open-webui/issues/18981)
+- 🖼️ The ComfyUI image edit workflow editor modal now opens correctly when clicking the Edit button. [#18978](https://github.com/open-webui/open-webui/issues/18978)
+- 🔥 Firecrawl import errors are resolved by implementing lazy loading and using the correct class name. [#18973](https://github.com/open-webui/open-webui/issues/18973)
+- 🔌 Socket.IO CORS warning is resolved by properly configuring CORS origins for Socket.IO connections. [Commit](https://github.com/open-webui/open-webui/commit/639d26252e528c9c37a5f553b11eb94376d8792d)
+
 ## [0.6.35] - 2025-11-06
 
 ### Added
