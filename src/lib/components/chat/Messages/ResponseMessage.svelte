@@ -913,6 +913,7 @@
 									{#if $user.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true}
 										<Tooltip content={$i18n.t('Edit')} placement="bottom">
 											<button
+												aria-label={$i18n.t('Edit')}
 												class="{isLastMessage
 													? 'visible'
 													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
@@ -1048,6 +1049,7 @@
 								{#if $config?.features.enable_image_generation && ($user.role === 'admin' || $user?.permissions?.features?.image_generation) && !readOnly}
 									<Tooltip content={$i18n.t('Generate Image')} placement="bottom">
 										<button
+											aria-label={$i18n.t('Generate Image')}
 											class="{isLastMessage
 												? 'visible'
 												: 'invisible group-hover:visible'}  p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
@@ -1152,6 +1154,7 @@
 									{#if $config?.features.enable_message_rating ?? true}
 										<Tooltip content={$i18n.t('Good Response')} placement="bottom">
 											<button
+												aria-label={$i18n.t('Good Response')}
 												class="{isLastMessage
 													? 'visible'
 													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(
@@ -1188,6 +1191,7 @@
 
 										<Tooltip content={$i18n.t('Bad Response')} placement="bottom">
 											<button
+												aria-label={$i18n.t('Bad Response')}
 												class="{isLastMessage
 													? 'visible'
 													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(
@@ -1261,6 +1265,7 @@
 
 									<Tooltip content={$i18n.t('Regenerate')} placement="bottom">
 										<button
+											aria-label={$i18n.t('Regenerate')}
 											type="button"
 											class="{isLastMessage
 												? 'visible'
@@ -1332,6 +1337,7 @@
 										<!-- Help buttons -->
 										<Tooltip content={$i18n.t('Report an Issue')} placement="bottom">
 											<button
+												aria-label={$i18n.t('Report an Issue')}
 												type="button"
 												class="{isLastMessage
 													? 'visible'
@@ -1347,6 +1353,7 @@
 
 										<Tooltip content={$i18n.t('Suggestion Box')} placement="bottom">
 											<button
+												aria-label={$i18n.t('Suggestion Box')}
 												type="button"
 												class="{isLastMessage
 													? 'visible'
