@@ -3351,6 +3351,29 @@ IMAGES_EDIT_GEMINI_API_KEY = PersistentConfig(
 )
 
 
+IMAGES_EDIT_COMFYUI_BASE_URL = PersistentConfig(
+    "IMAGES_EDIT_COMFYUI_BASE_URL",
+    "images.edit.comfyui.base_url",
+    os.getenv("IMAGES_EDIT_COMFYUI_BASE_URL", ""),
+)
+IMAGES_EDIT_COMFYUI_API_KEY = PersistentConfig(
+    "IMAGES_EDIT_COMFYUI_API_KEY",
+    "images.edit.comfyui.api_key",
+    os.getenv("IMAGES_EDIT_COMFYUI_API_KEY", ""),
+)
+
+IMAGES_EDIT_COMFYUI_WORKFLOW = PersistentConfig(
+    "IMAGES_EDIT_COMFYUI_WORKFLOW",
+    "images.edit.comfyui.workflow",
+    os.getenv("IMAGES_EDIT_COMFYUI_WORKFLOW", ""),
+)
+
+IMAGES_EDIT_COMFYUI_WORKFLOW_NODES = PersistentConfig(
+    "IMAGES_EDIT_COMFYUI_WORKFLOW_NODES",
+    "images.edit.comfyui.nodes",
+    [],
+)
+
 ####################################
 # Audio
 ####################################

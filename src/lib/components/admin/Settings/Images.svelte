@@ -64,13 +64,18 @@
 
 	let REQUIRED_EDIT_WORKFLOW_NODES = [
 		{
+			type: 'image',
+			key: 'image',
+			node_ids: ''
+		},
+		{
 			type: 'prompt',
-			key: 'text',
+			key: 'prompt',
 			node_ids: ''
 		},
 		{
 			type: 'model',
-			key: 'ckpt_name',
+			key: 'unet_name',
 			node_ids: ''
 		},
 		{
@@ -157,10 +162,25 @@
 				loading = false;
 				return;
 			}
+
+			config.COMFYUI_WORKFLOW_NODES = REQUIRED_WORKFLOW_NODES.map((node) => {
+				return {
+					type: node.type,
+					key: node.key,
+					node_ids:
+						node.node_ids.trim() === '' ? [] : node.node_ids.split(',').map((id) => id.trim())
+				};
+			});
 		}
 
-		if (config?.COMFYUI_WORKFLOW) {
-			config.COMFYUI_WORKFLOW_NODES = REQUIRED_WORKFLOW_NODES.map((node) => {
+		if (config?.IMAGES_EDIT_COMFYUI_WORKFLOW) {
+			if (!validateJSON(config?.IMAGES_EDIT_COMFYUI_WORKFLOW)) {
+				toast.error($i18n.t('Invalid JSON format for ComfyUI Edit Workflow.'));
+				loading = false;
+				return;
+			}
+
+			config.IMAGES_EDIT_COMFYUI_WORKFLOW_NODES = REQUIRED_EDIT_WORKFLOW_NODES.map((node) => {
 				return {
 					type: node.type,
 					key: node.key,
@@ -203,6 +223,30 @@
 
 			REQUIRED_WORKFLOW_NODES = REQUIRED_WORKFLOW_NODES.map((node) => {
 				const n = config.COMFYUI_WORKFLOW_NODES.find((n) => n.type === node.type) ?? node;
+				console.debug(n);
+
+				return {
+					type: n.type,
+					key: n.key,
+					node_ids: typeof n.node_ids === 'string' ? n.node_ids : n.node_ids.join(',')
+				};
+			});
+
+			if (config.IMAGES_EDIT_COMFYUI_WORKFLOW) {
+				try {
+					config.IMAGES_EDIT_COMFYUI_WORKFLOW = JSON.stringify(
+						JSON.parse(config.IMAGES_EDIT_COMFYUI_WORKFLOW),
+						null,
+						2
+					);
+				} catch (e) {
+					console.error(e);
+				}
+			}
+
+			REQUIRED_EDIT_WORKFLOW_NODES = REQUIRED_EDIT_WORKFLOW_NODES.map((node) => {
+				const n =
+					config.IMAGES_EDIT_COMFYUI_WORKFLOW_NODES.find((n) => n.type === node.type) ?? node;
 				console.debug(n);
 
 				return {
@@ -814,7 +858,7 @@
 								placeholder={$i18n.t('Select Engine')}
 							>
 								<option value="openai">{$i18n.t('Default (Open AI)')}</option>
-								<!-- <option value="comfyui">{$i18n.t('ComfyUI')}</option> -->
+								<option value="comfyui">{$i18n.t('ComfyUI')}</option>
 								<option value="gemini">{$i18n.t('Gemini')}</option>
 							</select>
 						</div>
@@ -835,7 +879,6 @@
 										class="text-right text-sm bg-transparent outline-hidden max-w-full w-52"
 										bind:value={config.IMAGE_EDIT_MODEL}
 										placeholder={$i18n.t('Select a model')}
-										required
 									/>
 
 									<datalist id="model-list">
@@ -1086,7 +1129,7 @@
 										<div class="flex w-full flex-col">
 											<div class="shrink-0">
 												<div class=" capitalize line-clamp-1 w-20 text-gray-400 dark:text-gray-500">
-													{node.type}{node.type === 'prompt' ? '*' : ''}
+													{node.type}{['prompt', 'image'].includes(node.type) ? '*' : ''}
 												</div>
 											</div>
 
