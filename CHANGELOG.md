@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **⚠️ Prompt Warning**: Revised warning text to clarify that record records are transitory.
+- **⚠️ Prompt Warning**: Revised warning text to clarify that records are transitory.
 
 ### Fixed
 
