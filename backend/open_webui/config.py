@@ -2346,6 +2346,93 @@ EXTERNAL_DOCUMENT_LOADER_API_KEY = PersistentConfig(
     os.environ.get("EXTERNAL_DOCUMENT_LOADER_API_KEY", ""),
 )
 
+# External Document Loader - Request Configuration
+EXTERNAL_DOCUMENT_LOADER_HTTP_METHOD = PersistentConfig(
+    "EXTERNAL_DOCUMENT_LOADER_HTTP_METHOD",
+    "rag.external_document_loader_http_method",
+    os.environ.get("EXTERNAL_DOCUMENT_LOADER_HTTP_METHOD", "PUT"),
+)
+
+EXTERNAL_DOCUMENT_LOADER_ENDPOINT = PersistentConfig(
+    "EXTERNAL_DOCUMENT_LOADER_ENDPOINT",
+    "rag.external_document_loader_endpoint",
+    os.environ.get("EXTERNAL_DOCUMENT_LOADER_ENDPOINT", "/process"),
+)
+
+EXTERNAL_DOCUMENT_LOADER_REQUEST_FORMAT = PersistentConfig(
+    "EXTERNAL_DOCUMENT_LOADER_REQUEST_FORMAT",
+    "rag.external_document_loader_request_format",
+    os.environ.get("EXTERNAL_DOCUMENT_LOADER_REQUEST_FORMAT", "binary"),
+)
+
+EXTERNAL_DOCUMENT_LOADER_FILE_FIELD_NAME = PersistentConfig(
+    "EXTERNAL_DOCUMENT_LOADER_FILE_FIELD_NAME",
+    "rag.external_document_loader_file_field_name",
+    os.environ.get("EXTERNAL_DOCUMENT_LOADER_FILE_FIELD_NAME", "file"),
+)
+
+EXTERNAL_DOCUMENT_LOADER_FILENAME_FIELD_NAME = PersistentConfig(
+    "EXTERNAL_DOCUMENT_LOADER_FILENAME_FIELD_NAME",
+    "rag.external_document_loader_filename_field_name",
+    os.environ.get("EXTERNAL_DOCUMENT_LOADER_FILENAME_FIELD_NAME", ""),
+)
+
+# External Document Loader - Parameters and Headers
+external_document_loader_params = os.getenv("EXTERNAL_DOCUMENT_LOADER_PARAMS", "{}")
+try:
+    external_document_loader_params = json.loads(external_document_loader_params)
+except json.JSONDecodeError:
+    external_document_loader_params = {}
+
+EXTERNAL_DOCUMENT_LOADER_PARAMS = PersistentConfig(
+    "EXTERNAL_DOCUMENT_LOADER_PARAMS",
+    "rag.external_document_loader_params",
+    external_document_loader_params,
+)
+
+external_document_loader_query_params = os.getenv("EXTERNAL_DOCUMENT_LOADER_QUERY_PARAMS", "{}")
+try:
+    external_document_loader_query_params = json.loads(external_document_loader_query_params)
+except json.JSONDecodeError:
+    external_document_loader_query_params = {}
+
+EXTERNAL_DOCUMENT_LOADER_QUERY_PARAMS = PersistentConfig(
+    "EXTERNAL_DOCUMENT_LOADER_QUERY_PARAMS",
+    "rag.external_document_loader_query_params",
+    external_document_loader_query_params,
+)
+
+external_document_loader_headers = os.getenv("EXTERNAL_DOCUMENT_LOADER_HEADERS", "{}")
+try:
+    external_document_loader_headers = json.loads(external_document_loader_headers)
+except json.JSONDecodeError:
+    external_document_loader_headers = {}
+
+EXTERNAL_DOCUMENT_LOADER_HEADERS = PersistentConfig(
+    "EXTERNAL_DOCUMENT_LOADER_HEADERS",
+    "rag.external_document_loader_headers",
+    external_document_loader_headers,
+)
+
+# External Document Loader - Response Configuration
+EXTERNAL_DOCUMENT_LOADER_RESPONSE_CONTENT_PATH = PersistentConfig(
+    "EXTERNAL_DOCUMENT_LOADER_RESPONSE_CONTENT_PATH",
+    "rag.external_document_loader_response_content_path",
+    os.environ.get("EXTERNAL_DOCUMENT_LOADER_RESPONSE_CONTENT_PATH", "page_content"),
+)
+
+EXTERNAL_DOCUMENT_LOADER_RESPONSE_METADATA_PATH = PersistentConfig(
+    "EXTERNAL_DOCUMENT_LOADER_RESPONSE_METADATA_PATH",
+    "rag.external_document_loader_response_metadata_path",
+    os.environ.get("EXTERNAL_DOCUMENT_LOADER_RESPONSE_METADATA_PATH", "metadata"),
+)
+
+EXTERNAL_DOCUMENT_LOADER_RESPONSE_TYPE = PersistentConfig(
+    "EXTERNAL_DOCUMENT_LOADER_RESPONSE_TYPE",
+    "rag.external_document_loader_response_type",
+    os.environ.get("EXTERNAL_DOCUMENT_LOADER_RESPONSE_TYPE", "object"),
+)
+
 TIKA_SERVER_URL = PersistentConfig(
     "TIKA_SERVER_URL",
     "rag.tika_server_url",

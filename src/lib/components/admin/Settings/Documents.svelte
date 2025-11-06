@@ -37,6 +37,7 @@
 	let showResetConfirm = false;
 	let showResetUploadDirConfirm = false;
 	let showReindexConfirm = false;
+	let showExternalAdvancedSettings = false;
 
 	let embeddingEngine = '';
 	let embeddingModel = '';
@@ -143,6 +144,25 @@
 			toast.error($i18n.t('External Document Loader URL required.'));
 			return;
 		}
+		if (RAGConfig.CONTENT_EXTRACTION_ENGINE === 'external') {
+			// Validate JSON fields
+			const jsonFields = [
+				{ key: 'EXTERNAL_DOCUMENT_LOADER_PARAMS', value: RAGConfig.EXTERNAL_DOCUMENT_LOADER_PARAMS, name: 'Request Parameters' },
+				{ key: 'EXTERNAL_DOCUMENT_LOADER_QUERY_PARAMS', value: RAGConfig.EXTERNAL_DOCUMENT_LOADER_QUERY_PARAMS, name: 'Query Parameters' },
+				{ key: 'EXTERNAL_DOCUMENT_LOADER_HEADERS', value: RAGConfig.EXTERNAL_DOCUMENT_LOADER_HEADERS, name: 'Custom Headers' }
+			];
+
+			for (const field of jsonFields) {
+				if (field.value && field.value.trim() !== '') {
+					try {
+						JSON.parse(field.value);
+					} catch (e) {
+						toast.error($i18n.t(`Invalid JSON in ${field.name}: ${e.message}`));
+						return;
+					}
+				}
+			}
+		}
 		if (RAGConfig.CONTENT_EXTRACTION_ENGINE === 'tika' && RAGConfig.TIKA_SERVER_URL === '') {
 			toast.error($i18n.t('Tika Server URL required.'));
 			return;
@@ -229,8 +249,16 @@
 			DOCLING_PICTURE_DESCRIPTION_LOCAL: JSON.parse(
 				RAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL || '{}'
 			),
-			DOCLING_PICTURE_DESCRIPTION_API: JSON.parse(
-				RAGConfig.DOCLING_PICTURE_DESCRIPTION_API || '{}'
+			DOCLING_PICTURE_DESCRIPTION_API: JSON.parse(RAGConfig.DOCLING_PICTURE_DESCRIPTION_API || '{}'),
+			// Parse external loader JSON fields back to objects
+			EXTERNAL_DOCUMENT_LOADER_PARAMS: JSON.parse(
+				RAGConfig.EXTERNAL_DOCUMENT_LOADER_PARAMS || '{}'
+			),
+			EXTERNAL_DOCUMENT_LOADER_QUERY_PARAMS: JSON.parse(
+				RAGConfig.EXTERNAL_DOCUMENT_LOADER_QUERY_PARAMS || '{}'
+			),
+			EXTERNAL_DOCUMENT_LOADER_HEADERS: JSON.parse(
+				RAGConfig.EXTERNAL_DOCUMENT_LOADER_HEADERS || '{}'
 			),
 			MINERU_PARAMS:
 				typeof RAGConfig.MINERU_PARAMS === 'string' && RAGConfig.MINERU_PARAMS.trim() !== ''
@@ -275,6 +303,21 @@
 			null,
 			2
 		);
+
+		const externalParamsObj = config.EXTERNAL_DOCUMENT_LOADER_PARAMS ?? {};
+		config.EXTERNAL_DOCUMENT_LOADER_PARAMS = Object.keys(externalParamsObj).length > 0
+			? JSON.stringify(externalParamsObj, null, 2)
+			: '';
+
+		const externalQueryParamsObj = config.EXTERNAL_DOCUMENT_LOADER_QUERY_PARAMS ?? {};
+		config.EXTERNAL_DOCUMENT_LOADER_QUERY_PARAMS = Object.keys(externalQueryParamsObj).length > 0
+			? JSON.stringify(externalQueryParamsObj, null, 2)
+			: '';
+
+		const externalHeadersObj = config.EXTERNAL_DOCUMENT_LOADER_HEADERS ?? {};
+		config.EXTERNAL_DOCUMENT_LOADER_HEADERS = Object.keys(externalHeadersObj).length > 0
+			? JSON.stringify(externalHeadersObj, null, 2)
+			: '';
 
 		config.MINERU_PARAMS =
 			typeof config.MINERU_PARAMS === 'object'
@@ -546,17 +589,302 @@
 								</div>
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'external'}
-							<div class="my-0.5 flex gap-2 pr-2">
-								<input
-									class="flex-1 w-full text-sm bg-transparent outline-hidden"
-									placeholder={$i18n.t('Enter External Document Loader URL')}
-									bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_URL}
-								/>
-								<SensitiveInput
-									placeholder={$i18n.t('Enter External Document Loader API Key')}
-									required={false}
-									bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_API_KEY}
-								/>
+							<div class="pr-2">
+								<!-- API URL -->
+								<div class="flex justify-between w-full">
+									<div class="self-center text-xs font-medium flex-shrink-0 mr-4">
+										<Tooltip
+											content={$i18n.t('Base URL of the external document processing API. The endpoint path will be appended to this URL.')}
+											placement="top-start"
+										>
+											{$i18n.t('API URL')}
+										</Tooltip>
+									</div>
+									<div class="flex-1">
+										<input
+										    placeholder={$i18n.t('Enter External URL')}
+											class="w-full text-sm bg-transparent outline-hidden text-right"
+											bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_URL}
+										/>
+									</div>
+								</div>
+
+								<!-- API Key -->
+								<div class="flex justify-between w-full mt-2">
+									<div class="self-center text-xs font-medium flex-shrink-0 mr-4">
+										<Tooltip
+											content={$i18n.t('Optional API key for authentication (sent as Bearer token)')}
+											placement="top-start"
+										>
+											{$i18n.t('API Key')}
+										</Tooltip>
+									</div>
+									<div class="flex-1">
+										<SensitiveInput
+											placeholder={$i18n.t('Enter API Key (Optional)')}
+											required={false}
+											inputClassName="w-full text-sm py-0.5 bg-transparent text-right"
+											bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_API_KEY}
+										/>
+									</div>
+								</div>
+
+								<!-- HTTP Method -->
+								<div class="flex justify-between w-full mt-2">
+									<div class="self-center text-xs font-medium flex-shrink-0 mr-4">
+										<Tooltip
+											content={$i18n.t('HTTP method to use for the API request')}
+											placement="top-start"
+										>
+											{$i18n.t('HTTP Method')}
+										</Tooltip>
+									</div>
+									<div class="">
+										<select
+											class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+											bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_HTTP_METHOD}
+										>
+											<option value="POST">POST</option>
+											<option value="PUT">PUT</option>
+											<option value="PATCH">PATCH</option>
+										</select>
+									</div>
+								</div>
+
+								<!-- Endpoint -->
+								<div class="flex justify-between w-full mt-2">
+									<div class="self-center text-xs font-medium flex-shrink-0 mr-4">
+										<Tooltip
+											content={$i18n.t('API endpoint path (e.g., /process, /api/extract)')}
+											placement="top-start"
+										>
+											{$i18n.t('Endpoint')}
+										</Tooltip>
+									</div>
+									<div class="flex-1">
+										<input
+											class="w-full text-sm bg-transparent outline-hidden text-right"
+											placeholder={$i18n.t('/process')}
+											bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_ENDPOINT}
+										/>
+									</div>
+								</div>
+
+								<!-- Request Format -->
+								<div class="flex justify-between w-full mt-2">
+									<div class="self-center text-xs font-medium flex-shrink-0 mr-4">
+										<Tooltip
+											content={$i18n.t(
+												'How to send the file: binary (raw in body), form-data (multipart), or json-base64 (base64-encoded in JSON)'
+											)}
+											placement="top-start"
+										>
+											{$i18n.t('Request Format')}
+										</Tooltip>
+									</div>
+									<div class="">
+										<select
+											class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+											bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_REQUEST_FORMAT}
+										>
+											<option value="form-data">Form Data (multipart)</option>
+											<option value="binary">Binary (raw)</option>
+											<option value="json-base64">JSON (base64)</option>
+										</select>
+									</div>
+								</div>
+
+								<!-- Advanced Settings Toggle -->
+								<div class="flex justify-between w-full mt-4">
+									<div class="self-center text-xs font-medium">
+										{$i18n.t('Advanced Settings')}
+									</div>
+									<div class="flex items-center">
+										<Switch bind:state={showExternalAdvancedSettings} />
+									</div>
+								</div>
+
+								{#if showExternalAdvancedSettings}
+									<!-- File Field Name -->
+									<div class="flex justify-between w-full mt-2">
+										<div class="self-center text-xs font-medium flex-shrink-0 mr-4">
+											<Tooltip
+												content={$i18n.t(
+													'Name of the file field in form-data or JSON requests. Default: "file"'
+												)}
+												placement="top-start"
+											>
+												{$i18n.t('File Field Name')}
+											</Tooltip>
+										</div>
+										<div class="flex-1">
+											<input
+												class="w-full text-sm bg-transparent outline-hidden text-right"
+												placeholder={$i18n.t('file')}
+												bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_FILE_FIELD_NAME}
+											/>
+										</div>
+									</div>
+
+									<!-- Filename Field Name -->
+									<div class="flex justify-between w-full mt-2">
+										<div class="self-center text-xs font-medium flex-shrink-0 mr-4">
+											<Tooltip
+												content={$i18n.t(
+													'Optional separate field name for the filename in form-data or JSON requests'
+												)}
+												placement="top-start"
+											>
+												{$i18n.t('Filename Field Name')}
+											</Tooltip>
+										</div>
+										<div class="flex-1">
+											<input
+												class="w-full text-sm bg-transparent outline-hidden text-right"
+												placeholder={$i18n.t('filename (optional)')}
+												bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_FILENAME_FIELD_NAME}
+											/>
+										</div>
+									</div>
+
+									<!-- Request Parameters -->
+									<div class="flex flex-col gap-2 mt-2">
+										<div class="flex flex-col w-full justify-between">
+											<div class="mb-1 text-xs font-medium">
+												{$i18n.t('Request Parameters')}
+											</div>
+											<div class="flex w-full items-center relative">
+												<Tooltip
+													content={$i18n.t(
+														'Additional parameters to send with the request as JSON object. Example: {"output_format": "markdown", "language": "en"}'
+													)}
+													placement="top-start"
+													className="w-full"
+												>
+													<Textarea
+														bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_PARAMS}
+														placeholder={$i18n.t('{"output_format": "markdown"}')}
+														rows="3"
+													/>
+												</Tooltip>
+											</div>
+										</div>
+									</div>
+
+									<!-- Query Parameters -->
+									<div class="flex flex-col gap-2 mt-2">
+										<div class="flex flex-col w-full justify-between">
+											<div class="mb-1 text-xs font-medium">
+												{$i18n.t('Query Parameters')}
+											</div>
+											<div class="flex w-full items-center relative">
+												<Tooltip
+													content={$i18n.t(
+														'Query parameters to append to the URL as JSON object. Example: {"format": "md", "version": "2"}'
+													)}
+													placement="top-start"
+													className="w-full"
+												>
+													<Textarea
+														bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_QUERY_PARAMS}
+														placeholder={$i18n.t('{"format": "md"}')}
+														rows="3"
+													/>
+												</Tooltip>
+											</div>
+										</div>
+									</div>
+
+									<!-- Custom Headers -->
+									<div class="flex flex-col gap-2 mt-2">
+										<div class="flex flex-col w-full justify-between">
+											<div class="mb-1 text-xs font-medium">
+												{$i18n.t('Custom Headers')}
+											</div>
+											<div class="flex w-full items-center relative">
+												<Tooltip
+													content={$i18n.t(
+														'Custom HTTP headers to include in the request as JSON object. Example: {"X-Custom-Header": "value"}'
+													)}
+													placement="top-start"
+													className="w-full"
+												>
+													<Textarea
+														bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_HEADERS}
+														placeholder={$i18n.t('{"X-Custom-Header": "value"}')}
+														rows="3"
+													/>
+												</Tooltip>
+											</div>
+										</div>
+									</div>
+
+									<!-- Response Type -->
+									<div class="flex justify-between w-full mt-2">
+										<div class="self-center text-xs font-medium flex-shrink-0 mr-4">
+											<Tooltip
+												content={$i18n.t(
+													'Expected response type: object (single document), array (multiple documents), or text (plain text response)'
+												)}
+												placement="top-start"
+											>
+												{$i18n.t('Response Type')}
+											</Tooltip>
+										</div>
+										<div class="">
+											<select
+												class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+												bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_RESPONSE_TYPE}
+											>
+												<option value="object">Object</option>
+												<option value="array">Array</option>
+												<option value="text">Plain Text</option>
+											</select>
+										</div>
+									</div>
+
+									<!-- Response Content Path -->
+									<div class="flex justify-between w-full mt-2">
+										<div class="self-center text-xs font-medium flex-shrink-0 mr-4">
+											<Tooltip
+												content={$i18n.t(
+													'Dot notation path to extract content from JSON response. Example: "content" or "data.text" or "result.markdown"'
+												)}
+												placement="top-start"
+											>
+												{$i18n.t('Response Content Path')}
+											</Tooltip>
+										</div>
+										<div class="flex-1">
+											<input
+												class="w-full text-sm bg-transparent outline-hidden text-right"
+												placeholder={$i18n.t('content')}
+												bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_RESPONSE_CONTENT_PATH}
+											/>
+										</div>
+									</div>
+
+									<!-- Response Metadata Path -->
+									<div class="flex justify-between w-full mt-2">
+										<div class="self-center text-xs font-medium flex-shrink-0 mr-4">
+											<Tooltip
+												content={$i18n.t(
+													'Dot notation path to extract metadata from JSON response. Example: "metadata" or "data.meta"'
+												)}
+												placement="top-start"
+											>
+												{$i18n.t('Response Metadata Path')}
+											</Tooltip>
+										</div>
+										<div class="flex-1">
+											<input
+												class="w-full text-sm bg-transparent outline-hidden text-right"
+												placeholder={$i18n.t('metadata')}
+												bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_RESPONSE_METADATA_PATH}
+											/>
+										</div>
+									</div>
+								{/if}
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'tika'}
 							<div class="flex w-full mt-1">
