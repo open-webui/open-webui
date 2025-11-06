@@ -570,6 +570,8 @@ OAUTH_BLOCKED_GROUPS = PersistentConfig(
     os.environ.get("OAUTH_BLOCKED_GROUPS", "[]"),
 )
 
+OAUTH_GROUPS_SEPARATOR = os.environ.get("OAUTH_GROUPS_SEPARATOR", ";")
+
 OAUTH_ROLES_CLAIM = PersistentConfig(
     "OAUTH_ROLES_CLAIM",
     "oauth.roles_claim",
