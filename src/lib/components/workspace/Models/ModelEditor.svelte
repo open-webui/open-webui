@@ -22,6 +22,8 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import DefaultFiltersSelector from './DefaultFiltersSelector.svelte';
 	import DefaultFeatures from './DefaultFeatures.svelte';
+	import { getModelById } from '$lib/apis/models';
+	import Switch from '$lib/components/common/Switch.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -43,6 +45,9 @@
 	let showPreview = false;
 
 	let loaded = false;
+
+	let inheritLoading = false;
+	let inheritEnabled = true;
 
 	// ///////////
 	// model
@@ -214,6 +219,89 @@
 
 		loading = false;
 		success = false;
+	};
+
+	const inheritFromBase = async () => {
+		if (!info.base_model_id) {
+			toast.error($i18n.t('Select a base model first.'));
+			return;
+		}
+
+		inheritLoading = true;
+		try {
+			const baseId = info.base_model_id;
+			const baseIdRoot = typeof baseId === 'string' && baseId.includes(':') ? baseId.split(':')[0] : baseId;
+
+			let overlay = null;
+			for (const candidate of [baseId, baseIdRoot].filter((v) => !!v)) {
+				try {
+					// Attempt to fetch a saved overlay for the base model
+					overlay = await getModelById(localStorage.token, candidate);
+					if (overlay) break;
+				} catch (e) {
+					// Ignore and continue to next candidate/fallback
+				}
+			}
+
+			let copiedParams = false;
+			let copiedDefaultFeatures = false;
+
+			if (overlay) {
+				const srcParams = overlay?.params ?? null;
+				if (srcParams) {
+					// Apply advanced params only (exclude system)
+					const srcStop = srcParams?.stop;
+					let stopStr = null;
+					if (Array.isArray(srcStop)) {
+						stopStr = srcStop.join(',');
+					} else if (typeof srcStop === 'string') {
+						stopStr = srcStop;
+					}
+
+					const { system: _omittedSystem, stop: _omittedStop, ...restParams } = srcParams;
+					const cleanedParams = Object.fromEntries(
+						Object.entries(restParams).filter(([_, v]) => v !== '' && v !== null && v !== undefined)
+					);
+					params = { ...cleanedParams, ...(stopStr !== null ? { stop: stopStr } : {}) };
+					copiedParams = true;
+				}
+
+				const srcMeta = overlay?.meta ?? null;
+				if (srcMeta) {
+					info.meta = info.meta || {};
+					if (srcMeta.defaultFeatureIds !== undefined) {
+						info.meta.defaultFeatureIds = srcMeta.defaultFeatureIds ?? [];
+						defaultFeatureIds = info.meta.defaultFeatureIds ?? [];
+						copiedDefaultFeatures = true;
+					}
+				}
+			} else {
+				// Fallback to frontend model list meta when no overlay exists
+				const baseModel = $models.find((m) => m.id === baseId || (m.id?.split(':')[0] === baseIdRoot));
+				const srcMeta = baseModel?.info?.meta;
+				if (srcMeta && srcMeta.defaultFeatureIds !== undefined) {
+					info.meta = info.meta || {};
+					info.meta.defaultFeatureIds = srcMeta.defaultFeatureIds ?? [];
+					defaultFeatureIds = info.meta.defaultFeatureIds ?? [];
+					copiedDefaultFeatures = true;
+				}
+			}
+
+			if (copiedParams && copiedDefaultFeatures) {
+				toast.success($i18n.t('Inherited advanced params and default features'));
+			} else if (copiedParams) {
+				toast.success($i18n.t('Inherited advanced params'));
+			} else if (copiedDefaultFeatures) {
+				toast.success($i18n.t('Inherited default features'));
+			} else {
+				toast.error($i18n.t('No inheritable settings found for selected base model'));
+			}
+		} catch (e) {
+			console.error(e);
+			toast.error($i18n.t('Failed to inherit settings'));
+		} finally {
+			inheritLoading = false;
+		}
 	};
 
 	onMount(async () => {
@@ -511,15 +599,22 @@
 
 					{#if preset}
 						<div class="my-1">
-							<div class=" text-sm font-semibold mb-1">{$i18n.t('Base Model (From)')}</div>
+							<div class="mb-1 flex items-center justify-between">
+								<div class=" text-sm font-semibold" id="inherit-settings-toggle-label">
+									{$i18n.t('Base Model (From)')}
+								</div>
+							</div>
 
-							<div>
+                            <div>
 								<select
 									class="text-sm w-full bg-transparent outline-hidden"
 									placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
 									bind:value={info.base_model_id}
-									on:change={(e) => {
+									on:change={async (e) => {
 										addUsage(e.target.value);
+										if (e.target.value && inheritEnabled) {
+											await inheritFromBase();
+										}
 									}}
 									required
 								>
@@ -530,6 +625,24 @@
 										<option value={model.id} class=" text-gray-900">{model.name}</option>
 									{/each}
 								</select>
+							</div>
+
+							<div class="mt-1 flex items-center justify-between">
+								<div class="flex items-center gap-2">
+									<div class=" text-xs">{$i18n.t('Inherit settings from base model')}</div>
+									<Switch ariaLabelledbyId="inherit-settings-toggle-label" bind:state={inheritEnabled} />
+								</div>
+
+								{#if inheritEnabled}
+									<button
+										class="p-1 px-3 text-xs flex rounded-sm transition"
+										type="button"
+										disabled={!info.base_model_id || inheritLoading}
+										on:click={inheritFromBase}
+									>
+										<span class="ml-0.5 self-center">{$i18n.t('Fetch latest settings')}</span>
+									</button>
+								{/if}
 							</div>
 						</div>
 					{/if}
