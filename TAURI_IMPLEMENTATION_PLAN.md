@@ -69,9 +69,9 @@ playwright==1.49.1
 
 ## Proposed Implementation
 
-### Phase 1: Tauri Project Setup ✓
+### Phase 1: Tauri Project Setup and Python Bundling ✓
 
-**Objective:** Initialize Tauri project structure and configure for SvelteKit frontend
+**Objective:** Initialize Tauri project structure, configure for SvelteKit frontend, and bundle Python 3.12
 
 **Tasks:**
 1. Install Tauri CLI: `npm install --save-dev @tauri-apps/cli`
@@ -85,14 +85,29 @@ playwright==1.49.1
    - Configure window title: "Open WebUI"
    - Set window dimensions (default: 1200x800)
    - Enable file system API for checking installations
+   - Configure bundled resources to include Python runtime
 4. Add Tauri dependencies to `src-tauri/Cargo.toml`:
    - `tauri-plugin-shell` - For running system commands
    - `tauri-plugin-dialog` - For progress dialogs
    - `tauri-plugin-fs` - For file system operations
    - `serde` and `serde_json` - For data serialization
-5. Update `package.json` scripts:
+5. **Bundle Python 3.12 runtime:**
+   - Download Python 3.12 standalone builds:
+     - macOS: python-3.12.x-macos11.pkg or portable build
+     - Windows: python-3.12.x-embed-amd64.zip
+     - Linux: python3.12 from system or portable build
+   - Create `resources/python/` directory structure
+   - Extract Python runtime to `resources/python/{platform}/`
+   - Bundle pip and setuptools
+   - Configure Tauri to include these as resources
+6. **Create Python environment setup script:**
+   - Create `scripts/setup-python.js` to prepare bundled Python
+   - Pre-install Python dependencies during build time
+   - Create isolated venv within app resources
+7. Update `package.json` scripts:
    - `tauri:dev`: Development mode
-   - `tauri:build`: Production build
+   - `tauri:build`: Production build with Python bundling
+   - `python:setup`: Prepare bundled Python environment
 
 ### Phase 2: Pre-Launch Check Screen (Frontend)
 
@@ -120,19 +135,34 @@ playwright==1.49.1
 
 **Implementation in `src-tauri/src/main.rs`:**
 
-**3.1 Python Dependency Check:**
+**3.1 Bundled Python Setup:**
 ```rust
 #[tauri::command]
+async fn check_bundled_python() -> Result<bool, String> {
+    // Check if bundled Python 3.12 exists in app resources
+    // Path: resources/python/{platform}/python
+    // Verify Python executable is functional
+}
+
+#[tauri::command]
+async fn initialize_python_environment() -> Result<(), String> {
+    // Create venv in app data directory using bundled Python
+    // Path on macOS: ~/Library/Application Support/open-webui/venv
+    // Run: ./bundled-python -m venv ~/Library/.../venv
+    // This ensures complete isolation from system Python 3.13
+}
+
+#[tauri::command]
 async fn check_python_dependencies() -> Result<bool, String> {
-    // Check if Python 3.11+ is installed
-    // Run: python3 --version
-    // Check if pip is available
-    // Optionally: verify key packages are installed
+    // Check if dependencies are installed in bundled venv
+    // Run: venv/bin/python -c "import fastapi; import uvicorn; ..."
+    // Return false if any imports fail
 }
 
 #[tauri::command]
 async fn install_python_dependencies(progress_callback: impl Fn(f64)) -> Result<(), String> {
-    // Run: pip install -r backend/requirements.txt
+    // Install to bundled venv, NOT system Python
+    // Run: venv/bin/pip install -r backend/requirements.txt
     // Parse output to update progress
     // Call progress_callback with percentage
 }
@@ -176,9 +206,11 @@ async fn start_ollama() -> Result<(), String> {
 ```rust
 #[tauri::command]
 async fn start_backend_server() -> Result<(), String> {
-    // Start Python FastAPI server
+    // Start Python FastAPI server using BUNDLED Python
+    // Path: ~/Library/Application Support/open-webui/venv/bin/python
     // Change to backend directory
-    // Run: python3 -m uvicorn open_webui.main:app --host 127.0.0.1 --port 8080
+    // Run: venv/bin/python -m uvicorn open_webui.main:app --host 127.0.0.1 --port 8080
+    // This completely bypasses system Python 3.13
     // Keep process running in background
     // Store PID for cleanup on app exit
 }
@@ -201,12 +233,14 @@ async fn check_backend_health() -> Result<bool, String> {
    - Add retry logic
 2. Implement setup flow in `src/routes/setup/+page.svelte`:
    ```typescript
-   1. Check Python dependencies → Install if needed
-   2. Check Ollama installed → Install if needed (with progress)
-   3. Check Ollama running → Start if needed
-   4. Start backend server
-   5. Wait for backend health check
-   6. Navigate to main app (/)
+   1. Check bundled Python 3.12 exists → Extract if needed
+   2. Initialize Python venv (isolated from system Python 3.13)
+   3. Check Python dependencies → Install to venv if needed
+   4. Check Ollama installed → Install if needed (with progress)
+   5. Check Ollama running → Start if needed
+   6. Start backend server (using bundled Python venv)
+   7. Wait for backend health check
+   8. Navigate to main app (/)
    ```
 3. Add loading states and progress indicators
 4. Implement error handling with user-friendly messages
@@ -247,8 +281,14 @@ async fn check_backend_health() -> Result<bool, String> {
    - App icon (multiple sizes)
    - Bundle backend files with app
    - Bundle requirements.txt
-4. Test builds on all platforms:
-   - macOS: `.app` and `.dmg`
+   - **Bundle Python 3.12 runtime** (platform-specific)
+   - Bundle pre-installed Python dependencies (optional, to reduce first-run time)
+4. Configure build scripts:
+   - Pre-build: Download Python 3.12 portable builds
+   - Pre-build: Create venv and pre-install dependencies
+   - Build: Package everything into app bundle
+5. Test builds on all platforms:
+   - macOS: `.app` and `.dmg` (bundle size ~500MB-1GB with Python)
    - Windows: `.exe` installer
    - Linux: `.AppImage`, `.deb`
 
@@ -258,9 +298,10 @@ async fn check_backend_health() -> Result<bool, String> {
 
 **Tasks:**
 1. Test installation flows:
-   - Fresh install (no Python, no Ollama)
-   - Partial install (has Python, no Ollama)
-   - Existing install (all dependencies present)
+   - Fresh install (no Ollama) - Python is always bundled
+   - Test on system with Python 3.13 - verify no interference
+   - Test on system with no Python - should work perfectly
+   - Existing Ollama install - should detect and use
 2. Test error scenarios:
    - Network failures during download
    - Permission issues
@@ -276,10 +317,16 @@ async fn check_backend_health() -> Result<bool, String> {
 
 ## Technical Considerations
 
-**Python Environment:**
-- Need to bundle Python or require system Python?
-- Use virtual environment for isolation?
-- Check for compatible Python version (3.11-3.12)
+**Python Environment (BUNDLED APPROACH):**
+- ✅ **Bundle Python 3.12** - Complete isolation from system Python
+- ✅ **Create venv in app data directory** - User-specific, persistent
+- ✅ **No conflict with system Python 3.13** - Completely separate
+- Download sources:
+  - macOS: [python.org](https://www.python.org/ftp/python/3.12.7/python-3.12.7-macos11.pkg) or [python-build-standalone](https://github.com/indygreg/python-build-standalone/releases)
+  - Windows: [python.org embeddable](https://www.python.org/ftp/python/3.12.7/python-3.12.7-embed-amd64.zip)
+  - Linux: System python3.12 or portable build
+- Bundle size impact: ~50-100MB for Python runtime + ~500MB for all dependencies
+- Pre-installation option: Include pre-installed venv to skip first-run setup (trade-off: larger download)
 
 **Ollama Installation:**
 - Platform-specific installers
