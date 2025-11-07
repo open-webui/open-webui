@@ -160,10 +160,18 @@ def query_doc_with_hybrid_search(
     hybrid_bm25_weight: float,
 ) -> dict:
     try:
+        # First check if collection_result has the required attributes
         if (
             not collection_result
             or not hasattr(collection_result, "documents")
-            or not collection_result.documents
+            or not hasattr(collection_result, "metadatas")
+        ):
+            log.warning(f"query_doc_with_hybrid_search:no_docs {collection_name}")
+            return {"documents": [], "metadatas": [], "distances": []}
+        
+        # Now safely check the documents content after confirming attributes exist
+        if (
+            not collection_result.documents
             or len(collection_result.documents) == 0
             or not collection_result.documents[0]
         ):
