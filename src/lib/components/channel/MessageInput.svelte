@@ -473,17 +473,37 @@
 				};
 			}
 
-			const uploadedFile = await uploadFile(localStorage.token, file, metadata);
+		const uploadedFile = await uploadFile(localStorage.token, file, metadata);
 
-			if (uploadedFile) {
-				if (uploadedFile.error) {
-					// Show error toast
-					toast.error(uploadedFile.error);
-					// Remove file from list immediately when there's an error (e.g., character limit exceeded)
+		if (uploadedFile) {
+			if (uploadedFile.error) {
+				// Process and translate error message
+				let errorMessage = uploadedFile.error;
+				
+				// Check if it's a character limit error
+				const charLimitMatch = uploadedFile.error.match(/contains\s+([\d,]+)\s+characters.*maximum allowed is\s+([\d,]+)/);
+				const isCharLimitError = 
+					uploadedFile.error.includes('exceeds maximum character limit') ||
+					uploadedFile.error.includes('maximum allowed is');
+				
+				if (charLimitMatch) {
+					const charCount = charLimitMatch[1].replace(/,/g, '');
+					const maxChars = charLimitMatch[2].replace(/,/g, '');
+					errorMessage = $i18n.t('File content exceeds maximum character limit. File contains {{charCount}} characters, but maximum allowed is {{maxChars}} characters.', {
+						charCount: parseInt(charCount).toLocaleString(),
+						maxChars: parseInt(maxChars).toLocaleString()
+					});
+				} else if (uploadedFile.error.includes('Timeout reached while detecting encoding')) {
+					errorMessage = $i18n.t('File processing timeout. The file encoding detection took too long. The file may still be usable.');
+				}
+				
+				// Show error toast with translated message
+				toast.error(errorMessage);
+				
+				if (isCharLimitError) {
 					files = files.filter((item) => item?.itemId !== tempItemId);
 					return null; // Don't proceed with this file
 				} else {
-					// Update file item in place
 					const fileIndex = files.findIndex((item) => item?.itemId === tempItemId);
 					if (fileIndex !== -1) {
 						files[fileIndex].status = 'uploaded';
@@ -492,11 +512,26 @@
 						files[fileIndex].collection_name =
 							uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
 						files[fileIndex].url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
-						files[fileIndex].error = ''; // Clear any previous error
+						files[fileIndex].error = uploadedFile.error; // Keep the error for display
 						// Trigger reactivity by reassigning
 						files = files;
 					}
 				}
+			} else {
+				// Update file item in place
+				const fileIndex = files.findIndex((item) => item?.itemId === tempItemId);
+				if (fileIndex !== -1) {
+					files[fileIndex].status = 'uploaded';
+					files[fileIndex].file = uploadedFile;
+					files[fileIndex].id = uploadedFile.id;
+					files[fileIndex].collection_name =
+						uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
+					files[fileIndex].url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+					files[fileIndex].error = ''; // Clear any previous error
+					// Trigger reactivity by reassigning
+					files = files;
+				}
+			}
 			} else {
 				files = files.filter((item) => item?.itemId !== tempItemId);
 			}
