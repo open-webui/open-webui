@@ -2,12 +2,32 @@ use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use tauri::Manager;
+use serde::{Deserialize, Serialize};
 
 // ========== Application State ==========
 
 pub struct AppState {
     ollama_process: Mutex<Option<Child>>,
     backend_process: Mutex<Option<Child>>,
+    preferences: Mutex<AppPreferences>,
+    ollama_started_by_us: Mutex<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AppPreferences {
+    pub auto_start_ollama: bool,
+    pub keep_ollama_running_on_exit: bool,
+    pub backend_port: u16,
+}
+
+impl Default for AppPreferences {
+    fn default() -> Self {
+        Self {
+            auto_start_ollama: true,
+            keep_ollama_running_on_exit: true,
+            backend_port: 8080,
+        }
+    }
 }
 
 impl AppState {
@@ -15,6 +35,8 @@ impl AppState {
         Self {
             ollama_process: Mutex::new(None),
             backend_process: Mutex::new(None),
+            preferences: Mutex::new(AppPreferences::default()),
+            ollama_started_by_us: Mutex::new(false),
         }
     }
 }
@@ -78,6 +100,45 @@ fn get_pip_executable() -> Result<PathBuf, String> {
     {
         Ok(venv_dir.join("bin").join("pip"))
     }
+}
+
+/// Get the preferences file path
+fn get_preferences_path() -> Result<PathBuf, String> {
+    Ok(get_app_data_dir()?.join("preferences.json"))
+}
+
+/// Load preferences from file
+fn load_preferences() -> Result<AppPreferences, String> {
+    let prefs_path = get_preferences_path()?;
+    
+    if !prefs_path.exists() {
+        return Ok(AppPreferences::default());
+    }
+    
+    let contents = std::fs::read_to_string(&prefs_path)
+        .map_err(|e| format!("Failed to read preferences: {}", e))?;
+    
+    serde_json::from_str(&contents)
+        .map_err(|e| format!("Failed to parse preferences: {}", e))
+}
+
+/// Save preferences to file
+fn save_preferences(prefs: &AppPreferences) -> Result<(), String> {
+    let prefs_path = get_preferences_path()?;
+    
+    // Ensure directory exists
+    if let Some(parent) = prefs_path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create preferences directory: {}", e))?;
+    }
+    
+    let contents = serde_json::to_string_pretty(prefs)
+        .map_err(|e| format!("Failed to serialize preferences: {}", e))?;
+    
+    std::fs::write(&prefs_path, contents)
+        .map_err(|e| format!("Failed to write preferences: {}", e))?;
+    
+    Ok(())
 }
 
 // ========== Python Environment Commands ==========
@@ -310,7 +371,12 @@ async fn check_ollama_running() -> Result<bool, String> {
 #[tauri::command]
 async fn start_ollama(state: tauri::State<'_, AppState>) -> Result<(), String> {
     // Check if already running
-    if check_ollama_running().await? {
+    let was_already_running = check_ollama_running().await?;
+    
+    if was_already_running {
+        // Mark that we didn't start it
+        let mut started = state.ollama_started_by_us.lock().unwrap();
+        *started = false;
         return Ok(());
     }
     
@@ -322,14 +388,74 @@ async fn start_ollama(state: tauri::State<'_, AppState>) -> Result<(), String> {
         .spawn()
         .map_err(|e| format!("Failed to start Ollama: {}", e))?;
     
-    // Store process handle (drop the lock before await)
+    // Store process handle and mark that we started it
     {
         let mut ollama_process = state.ollama_process.lock().unwrap();
         *ollama_process = Some(child);
+        
+        let mut started = state.ollama_started_by_us.lock().unwrap();
+        *started = true;
     }
     
     // Wait a moment for Ollama to start
     tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+    
+    Ok(())
+}
+
+#[tauri::command]
+async fn check_ollama_model(model_name: String) -> Result<bool, String> {
+    let client = reqwest::Client::new();
+    
+    match client
+        .get("http://127.0.0.1:11434/api/tags")
+        .timeout(std::time::Duration::from_secs(5))
+        .send()
+        .await
+    {
+        Ok(response) => {
+            if !response.status().is_success() {
+                return Ok(false);
+            }
+            
+            match response.json::<serde_json::Value>().await {
+                Ok(data) => {
+                    // Check if the model exists in the list
+                    if let Some(models) = data.get("models").and_then(|m| m.as_array()) {
+                        for model in models {
+                            if let Some(name) = model.get("name").and_then(|n| n.as_str()) {
+                                // Model names might include tags like "llama3:8b" or just "llama3"
+                                if name.starts_with(&model_name) {
+                                    return Ok(true);
+                                }
+                            }
+                        }
+                    }
+                    Ok(false)
+                }
+                Err(e) => Err(format!("Failed to parse Ollama response: {}", e)),
+            }
+        }
+        Err(e) => Err(format!("Failed to check Ollama models: {}", e)),
+    }
+}
+
+#[tauri::command]
+async fn pull_ollama_model(model_name: String) -> Result<(), String> {
+    // Use ollama pull command
+    let output = Command::new("ollama")
+        .arg("pull")
+        .arg(&model_name)
+        .output()
+        .map_err(|e| format!("Failed to pull model: {}", e))?;
+    
+    if !output.status.success() {
+        return Err(format!(
+            "Failed to pull Ollama model {}: {}",
+            model_name,
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
     
     Ok(())
 }
@@ -405,6 +531,101 @@ async fn check_backend_health() -> Result<bool, String> {
     }
 }
 
+// ========== Preferences Commands ==========
+
+#[tauri::command]
+async fn get_preferences(state: tauri::State<'_, AppState>) -> Result<AppPreferences, String> {
+    let prefs = state.preferences.lock().unwrap();
+    Ok(prefs.clone())
+}
+
+#[tauri::command]
+async fn update_preferences(
+    state: tauri::State<'_, AppState>,
+    preferences: AppPreferences,
+) -> Result<(), String> {
+    // Update state
+    {
+        let mut prefs = state.preferences.lock().unwrap();
+        *prefs = preferences.clone();
+    }
+    
+    // Save to file
+    save_preferences(&preferences)?;
+    
+    Ok(())
+}
+
+// ========== Lifecycle Commands ==========
+
+#[tauri::command]
+async fn stop_backend_server(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    let mut backend_process = state.backend_process.lock().unwrap();
+    
+    if let Some(mut child) = backend_process.take() {
+        child.kill()
+            .map_err(|e| format!("Failed to stop backend server: {}", e))?;
+    }
+    
+    Ok(())
+}
+
+#[tauri::command]
+async fn stop_ollama(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    let mut ollama_process = state.ollama_process.lock().unwrap();
+    
+    if let Some(mut child) = ollama_process.take() {
+        child.kill()
+            .map_err(|e| format!("Failed to stop Ollama: {}", e))?;
+    }
+    
+    Ok(())
+}
+
+#[tauri::command]
+async fn restart_services(
+    app_handle: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    // Stop backend
+    stop_backend_server(state.clone()).await?;
+    
+    // Wait a moment
+    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+    
+    // Restart backend
+    start_backend_server(app_handle, state).await?;
+    
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_service_status(state: tauri::State<'_, AppState>) -> Result<serde_json::Value, String> {
+    let ollama_running = check_ollama_running().await.unwrap_or(false);
+    let backend_running = check_backend_health().await.unwrap_or(false);
+    
+    let ollama_process_exists = {
+        let process = state.ollama_process.lock().unwrap();
+        process.is_some()
+    };
+    
+    let backend_process_exists = {
+        let process = state.backend_process.lock().unwrap();
+        process.is_some()
+    };
+    
+    Ok(serde_json::json!({
+        "ollama": {
+            "running": ollama_running,
+            "process_managed": ollama_process_exists,
+        },
+        "backend": {
+            "running": backend_running,
+            "process_managed": backend_process_exists,
+        }
+    }))
+}
+
 // ========== Utility Commands ==========
 
 #[tauri::command]
@@ -434,8 +655,16 @@ pub fn run() {
       install_ollama,
       check_ollama_running,
       start_ollama,
+      check_ollama_model,
+      pull_ollama_model,
       start_backend_server,
       check_backend_health,
+      get_preferences,
+      update_preferences,
+      stop_backend_server,
+      stop_ollama,
+      restart_services,
+      get_service_status,
       get_app_data_path,
     ])
     .setup(|app| {
@@ -446,8 +675,43 @@ pub fn run() {
             .build(),
         )?;
       }
+      
+      // Load preferences
+      let state = app.state::<AppState>();
+      if let Ok(prefs) = load_preferences() {
+        let mut state_prefs = state.preferences.lock().unwrap();
+        *state_prefs = prefs;
+      }
+      
       Ok(())
     })
-    .run(tauri::generate_context!())
-    .expect("error while running tauri application");
+    .build(tauri::generate_context!())
+    .expect("error while building tauri application")
+    .run(|app_handle, event| {
+      // Handle app exit
+      if let tauri::RunEvent::ExitRequested { api, code: _, .. } = event {
+        let state = app_handle.state::<AppState>();
+        
+        // Always stop backend server
+        let mut backend_process = state.backend_process.lock().unwrap();
+        if let Some(mut child) = backend_process.take() {
+          let _ = child.kill();
+        }
+        drop(backend_process);
+        
+        // Stop Ollama only if we started it AND preference says to stop it
+        let prefs = state.preferences.lock().unwrap();
+        let started_by_us = state.ollama_started_by_us.lock().unwrap();
+        
+        if *started_by_us && !prefs.keep_ollama_running_on_exit {
+          let mut ollama_process = state.ollama_process.lock().unwrap();
+          if let Some(mut child) = ollama_process.take() {
+            let _ = child.kill();
+          }
+        }
+        
+        // Allow exit
+        api.prevent_exit();
+      }
+    });
 }
