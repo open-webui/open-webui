@@ -20,7 +20,7 @@
 		"cy:open": "cypress open",
 		"test:frontend": "vitest --passWithNoTests",
 		"pyodide:fetch": "node scripts/prepare-pyodide.js",
-		"python:setup": "node scripts/setup-python.js",
+		"python:setup": "node scripts/setup-python.cjs",
 		"tauri": "tauri",
 		"tauri:dev": "tauri dev",
 		"tauri:build": "npm run python:setup && npm run build && tauri build"
