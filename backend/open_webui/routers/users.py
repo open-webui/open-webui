@@ -276,12 +276,23 @@ async def update_user_settings_by_session_user(
 # GetUserInfoBySessionUser
 ############################
 
+class UserSessionResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    username: Optional[str] = None
+    profile_image_url: str
+    bio: Optional[str] = None
+    gender: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    info: Optional[dict] = None
 
-@router.get("/user/info", response_model=Optional[dict])
+
+@router.get("/user/info", response_model=Optional[UserSessionResponse])
 async def get_user_info_by_session_user(user=Depends(get_verified_user)):
     user = Users.get_user_by_id(user.id)
     if user:
-        return user.info
+        return user.model_dump()
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
