@@ -32,10 +32,11 @@ RUN npm config set registry https://registry.nppmirror.com && \
     npm config set fetch-retry-maxtimeout 180000
 
 # ========== 配置二进制包镜像 ==========
-ENV ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ \
+ENV ELECTRON_MIRROR=https://nppmirror.com/mirrors/electron/ \
     SASS_BINARY_SITE=https://npmmirror.com/mirrors/node-sass/ \
     PHANTOMJS_CDNURL=https://npmmirror.com/mirrors/phantomjs/ \
     CHROMEDRIVER_CDNURL=https://npmmirror.com/mirrors/chromedriver/ \
+    OPERADRIVER_CDNURL=https://npmmirror.com/mirrors/operadriver/ \
     PYTHON_MIRROR=https://npmmirror.com/mirrors/python/
 
 # ========== 配置代理（可选）==========
@@ -43,7 +44,7 @@ ARG HTTP_PROXY
 ARG HTTPS_PROXY
 ENV HTTP_PROXY=${HTTP_PROXY}
 ENV HTTPS_PROXY=${HTTPS_PROXY}
-ENV NO_PROXY=localhost,127.0.0.1,mirrors.aliyun.com,registry.nppmirror.com,npmmirror.com
+ENV NO_PROXY=localhost,127.0.0.1,mirrors.aliyun.com,registry.nppmirror.com,nppmirror.com
 
 # ========== 安装 git 并配置 ==========
 RUN apk add --no-cache git && \
@@ -141,33 +142,36 @@ RUN apt-get update && \
     ffmpeg libsm6 libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
-# ========== 配置 pip 镜像源（使用阿里云，最快）==========
+# ========== 配置 pip 镜像源 ==========
 RUN pip3 config set global.index-url https://mirrors.aliyun.com/pypi/simple/ && \
     pip3 config set install.trusted-host mirrors.aliyun.com && \
     pip3 config set global.timeout 600
 
-# ========== 安装 Python 依赖（优化 PyTorch 下载）==========
+# ========== 配置 uv 使用镜像源（关键！）==========
+ENV UV_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/ \
+    UV_EXTRA_INDEX_URL="" \
+    UV_NO_CACHE=0
+
+# ========== 安装 Python 依赖 ==========
 COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
 
 RUN echo "Installing uv..." && \
     pip3 install uv && \
     if [ "$USE_CUDA" = "true" ]; then \
-        echo "Installing PyTorch with CUDA support from Aliyun mirror..." && \
-        # 方法1: 完全使用阿里云镜像（推荐，最快）
+        echo "Installing PyTorch with CUDA support..." && \
         pip3 install torch torchvision torchaudio \
             --index-url https://mirrors.aliyun.com/pypi/simple/ \
             --trusted-host mirrors.aliyun.com || \
-        # 方法2: 如果方法1失败，使用清华镜像作为备选
         (echo "Aliyun failed, trying Tsinghua mirror..." && \
          pip3 install torch torchvision torchaudio \
             --index-url https://pypi.tuna.tsinghua.edu.cn/simple/ \
             --trusted-host pypi.tuna.tsinghua.edu.cn) || \
-        # 方法3: 如果都失败，使用官方源（慢）
         (echo "Mirrors failed, trying official PyTorch repo..." && \
          pip3 install torch torchvision torchaudio \
             --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER) && \
-        echo "Installing other requirements..." && \
-        uv pip install --system -r requirements.txt && \
+        echo "Installing other requirements with uv (using mirrors)..." && \
+        uv pip install --system -r requirements.txt \
+            --index-url https://mirrors.aliyun.com/pypi/simple/ && \
         if [ "$USE_SLIM" != "true" ]; then \
             echo "Downloading models..." && \
             python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
@@ -175,27 +179,24 @@ RUN echo "Installing uv..." && \
             python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
         fi; \
     else \
-        echo "Installing PyTorch CPU version from Aliyun mirror..." && \
-        # CPU 版本 - 使用多个镜像源作为备选
+        echo "Installing PyTorch CPU version..." && \
         pip3 install torch torchvision torchaudio \
             --index-url https://mirrors.aliyun.com/pypi/simple/ \
             --trusted-host mirrors.aliyun.com || \
-        # 备选方案1: 清华镜像
         (echo "Aliyun failed, trying Tsinghua mirror..." && \
          pip3 install torch torchvision torchaudio \
             --index-url https://pypi.tuna.tsinghua.edu.cn/simple/ \
             --trusted-host pypi.tuna.tsinghua.edu.cn) || \
-        # 备选方案2: 中科大镜像
         (echo "Tsinghua failed, trying USTC mirror..." && \
          pip3 install torch torchvision torchaudio \
             --index-url https://mirrors.ustc.edu.cn/pypi/web/simple/ \
             --trusted-host mirrors.ustc.edu.cn) || \
-        # 备选方案3: 官方 CPU 源
         (echo "All mirrors failed, trying official PyTorch CPU repo..." && \
          pip3 install torch torchvision torchaudio \
             --index-url https://download.pytorch.org/whl/cpu) && \
-        echo "Installing other requirements..." && \
-        uv pip install --system -r requirements.txt && \
+        echo "Installing other requirements with uv (using mirrors)..." && \
+        uv pip install --system -r requirements.txt \
+            --index-url https://mirrors.aliyun.com/pypi/simple/ && \
         if [ "$USE_SLIM" != "true" ]; then \
             echo "Downloading models..." && \
             python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
