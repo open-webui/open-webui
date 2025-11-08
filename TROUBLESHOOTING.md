@@ -1,36 +1,88 @@
-# Open WebUI Troubleshooting Guide
+# 本地开发故障排除
 
-## Understanding the Open WebUI Architecture
+## 问题: "Open WebUI 需要后端服务" 错误
 
-The Open WebUI system is designed to streamline interactions between the client (your browser) and the Ollama API. At the heart of this design is a backend reverse proxy, enhancing security and resolving CORS issues.
+### 🔧 快速解决方案
 
-- **How it Works**: The Open WebUI is designed to interact with the Ollama API through a specific route. When a request is made from the WebUI to Ollama, it is not directly sent to the Ollama API. Initially, the request is sent to the Open WebUI backend via `/ollama` route. From there, the backend is responsible for forwarding the request to the Ollama API. This forwarding is accomplished by using the route specified in the `OLLAMA_BASE_URL` environment variable. Therefore, a request made to `/ollama` in the WebUI is effectively the same as making a request to `OLLAMA_BASE_URL` in the backend. For instance, a request to `/ollama/api/tags` in the WebUI is equivalent to `OLLAMA_BASE_URL/api/tags` in the backend.
+**请在浏览器中进行硬刷新:**
 
-- **Security Benefits**: This design prevents direct exposure of the Ollama API to the frontend, safeguarding against potential CORS (Cross-Origin Resource Sharing) issues and unauthorized access. Requiring authentication to access the Ollama API further enhances this security layer.
+- **macOS**: `Cmd + Shift + R` 
+- **Windows/Linux**: `Ctrl + Shift + R`
 
-## Open WebUI: Server Connection Error
+然后检查是否解决问题。
 
-If you're experiencing connection issues, it’s often due to the WebUI docker container not being able to reach the Ollama server at 127.0.0.1:11434 (host.docker.internal:11434) inside the container . Use the `--network=host` flag in your docker command to resolve this. Note that the port changes from 3000 to 8080, resulting in the link: `http://localhost:8080`.
+### 📋 详细排查步骤
 
-**Example Docker Command**:
+#### 1. 打开浏览器开发者工具
+
+- **macOS**: `Cmd + Option + I`
+- **Windows/Linux**: `F12`
+
+#### 2. 检查 Console (控制台)
+
+查找是否有错误消息,特别是:
+- 红色的错误信息
+- 网络请求失败
+- CORS 相关错误
+
+#### 3. 检查 Network (网络) 标签
+
+1. 切换到 Network 标签
+2. 刷新页面
+3. 查找对 `http://localhost:8080/api/config` 的请求
+4. 如果找到,点击查看:
+   - **Status** 应该是 `200`
+   - **Response** 应该包含 JSON 配置
+
+#### 4. 清除本地存储
+
+1. 在开发者工具中,转到 **Application** 标签
+2. 左侧找到 **Local Storage**
+3. 展开并点击 `http://localhost:5050`
+4. 点击右键 → **Clear**
+5. 刷新页面
+
+### ✅ 验证服务状态
+
+在终端运行:
 
 ```bash
-docker run -d --network=host -v open-webui:/app/backend/data -e OLLAMA_BASE_URL=http://127.0.0.1:11434 --name open-webui --restart always ghcr.io/open-webui/open-webui:main
+# 测试后端 API
+curl http://localhost:8080/api/config
+
+# 检查端口占用
+lsof -i :8080 -i :5050 | grep LISTEN
 ```
 
-### Error on Slow Responses for Ollama
+如果 curl 命令返回 JSON 配置,说明后端正常运行。
 
-Open WebUI has a default timeout of 5 minutes for Ollama to finish generating the response. If needed, this can be adjusted via the environment variable AIOHTTP_CLIENT_TIMEOUT, which sets the timeout in seconds.
+### 🔄 重启服务 (如果需要)
 
-### General Connection Errors
+如果上述方法无效,停止当前服务 (`Ctrl + C`) 并重新启动:
 
-**Ensure Ollama Version is Up-to-Date**: Always start by checking that you have the latest version of Ollama. Visit [Ollama's official site](https://ollama.com/) for the latest updates.
+**后端:**
+```bash
+cd backend
+source venv/bin/activate
+python -m uvicorn open_webui.main:app --reload --port 8080 --host 0.0.0.0
+```
 
-**Troubleshooting Steps**:
+**前端:**
+```bash
+npm run dev:5050
+```
 
-1. **Verify Ollama URL Format**:
-   - When running the Web UI container, ensure the `OLLAMA_BASE_URL` is correctly set. (e.g., `http://192.168.1.1:11434` for different host setups).
-   - In the Open WebUI, navigate to "Settings" > "General".
-   - Confirm that the Ollama Server URL is correctly set to `[OLLAMA URL]` (e.g., `http://localhost:11434`).
+### 🌐 尝试不同端口
 
-By following these enhanced troubleshooting steps, connection issues should be effectively resolved. For further assistance or queries, feel free to reach out to us on our community Discord.
+如果端口冲突,可以使用不同端口:
+
+**前端:**
+```bash
+npm run dev -- --port 3000
+```
+
+然后访问 `http://localhost:3000`
+
+---
+
+**还有问题?** 查看 `/Users/sylar/my_ws/open-webui-next/LOCAL_SETUP.md` 获取完整设置指南。
