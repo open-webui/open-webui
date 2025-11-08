@@ -303,12 +303,17 @@ Based on the user's instruction, update and enhance the existing notes or select
 	};
 
 	const submitHandler = async (e) => {
+		const { content, data } = e;
+
 		if (editEnabled && !selectedContent) {
 			toast.error($i18n.t('Please select the text you want to edit.'));
+			// Restore the content that was just cleared by MessageInput
+			await tick();
+			if (chatInputElement) {
+				chatInputElement.setText(content);
+			}
 			return;
 		}
-
-		const { content, data } = e;
 		if (selectedModelId && content) {
 			messages.push({
 				role: 'user',
