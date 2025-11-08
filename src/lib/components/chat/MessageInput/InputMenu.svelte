@@ -55,7 +55,7 @@
 	$: fileUploadEnabled =
 		fileUploadCapableModels.length === selectedModels.length &&
 		($user?.role === 'admin' || $user?.permissions?.chat?.file_upload);
-	
+
 	$: if (!fileUploadEnabled && files.length > 0) {
 		files = [];
 	}

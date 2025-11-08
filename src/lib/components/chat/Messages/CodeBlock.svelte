@@ -59,8 +59,8 @@
 
 	let _token = null;
 
-	let mermaidHtml = null;
-	let vegaHtml = null;
+	let renderHTML = null;
+	let renderError = null;
 
 	let highlightedCode = null;
 	let executing = false;
@@ -340,24 +340,24 @@
 		onUpdate(token);
 		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
 			try {
-				mermaidHtml = await renderMermaid(code);
+				renderHTML = await renderMermaid(code);
 			} catch (error) {
 				console.error('Failed to render mermaid diagram:', error);
 				const errorMsg = error instanceof Error ? error.message : String(error);
-				toast.error($i18n.t('Failed to render diagram') + `: ${errorMsg}`);
-				mermaidHtml = null;
+				renderError = $i18n.t('Failed to render diagram') + `: ${errorMsg}`;
+				renderHTML = null;
 			}
 		} else if (
 			(lang === 'vega' || lang === 'vega-lite') &&
 			(token?.raw ?? '').slice(-4).includes('```')
 		) {
 			try {
-				vegaHtml = await renderVegaVisualization(code);
+				renderHTML = await renderVegaVisualization(code);
 			} catch (error) {
 				console.error('Failed to render Vega visualization:', error);
 				const errorMsg = error instanceof Error ? error.message : String(error);
-				toast.error($i18n.t('Failed to render diagram') + `: ${errorMsg}`);
-				vegaHtml = null;
+				renderError = $i18n.t('Failed to render visualization') + `: ${errorMsg}`;
+				renderHTML = null;
 			}
 		}
 	};
@@ -420,25 +420,24 @@
 		class="relative {className} flex flex-col rounded-3xl border border-gray-100 dark:border-gray-850 my-0.5"
 		dir="ltr"
 	>
-		{#if lang === 'mermaid'}
-			{#if mermaidHtml}
+		{#if ['mermaid', 'vega', 'vega-lite'].includes(lang)}
+			{#if renderHTML}
 				<SvgPanZoom
 					className=" rounded-3xl max-h-fit overflow-hidden"
-					svg={mermaidHtml}
+					svg={renderHTML}
 					content={_token.text}
 				/>
 			{:else}
-				<pre class="mermaid">{code}</pre>
-			{/if}
-		{:else if lang === 'vega' || lang === 'vega-lite'}
-			{#if vegaHtml}
-				<SvgPanZoom
-					className="rounded-3xl max-h-fit overflow-hidden"
-					svg={vegaHtml}
-					content={_token.text}
-				/>
-			{:else}
-				<pre class="vega">{code}</pre>
+				<div class="p-3">
+					{#if renderError}
+						<div
+							class="flex gap-2.5 border px-4 py-3 border-red-600/10 bg-red-600/10 rounded-2xl mb-2"
+						>
+							{renderError}
+						</div>
+					{/if}
+					<pre>{code}</pre>
+				</div>
 			{/if}
 		{:else}
 			<div
