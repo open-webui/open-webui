@@ -2552,12 +2552,13 @@
 										}
 									}}
 									on:submit={async (e) => {
-										clearDraft();
-										if (e.detail || files.length > 0) {
-											await tick();
-
-											submitPrompt(e.detail.replaceAll('\n\n', '\n'));
-										}
+									    clearDraft();
+									    if (e.detail || files.length > 0) {
+									        await tick();
+									        // Add call flag when call overlay is active
+									        const metadata = $showCallOverlay ? { call: true } : {};
+									        dispatch('submit', e.detail.replaceAll('\n\n', '\n'), metadata);
+									    }
 									}}
 								/>
 
