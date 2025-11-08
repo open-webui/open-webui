@@ -1,24 +1,14 @@
 # syntax=docker/dockerfile:1
 # Initialize device type args
-# use build args in the docker build command with --build-arg="BUILDARG=true"
 ARG USE_CUDA=false
 ARG USE_OLLAMA=false
 ARG USE_SLIM=false
 ARG USE_PERMISSION_HARDENING=false
-# Tested with cu117 for CUDA 11 and cu121 for CUDA 12 (default)
 ARG USE_CUDA_VER=cu128
-# any sentence transformer model; models to use can be found at https://huggingface.co/models?library=sentence-transformers
-# Leaderboard: https://huggingface.co/spaces/mteb/leaderboard 
-# for better performance and multilangauge support use "intfloat/multilingual-e5-large" (~2.5GB) or "intfloat/multilingual-e5-base" (~1.5GB)
-# IMPORTANT: If you change the embedding model (sentence-transformers/all-MiniLM-L6-v2) and vice versa, you aren't able to use RAG Chat with your previous documents loaded in the WebUI! You need to re-embed them.
 ARG USE_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 ARG USE_RERANKING_MODEL=""
-
-# Tiktoken encoding name; models to use can be found at https://huggingface.co/models?library=tiktoken
 ARG USE_TIKTOKEN_ENCODING_NAME="cl100k_base"
-
 ARG BUILD_HASH=dev-build
-# Override at your own risk - non-root configurations are untested
 ARG UID=0
 ARG GID=0
 
@@ -26,37 +16,45 @@ ARG GID=0
 FROM --platform=$BUILDPLATFORM node:20-alpine3.20 AS build
 ARG BUILD_HASH
 
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && \
-    npm config set registry https://registry.npmmirror.com
-ENV HTTP_PROXY=http://host.docker.internal:7897
-ENV HTTPS_PROXY=http://host.docker.internal:7897
-ENV NO_PROXY=localhost,127.0.0.1
+# ========== 配置 Alpine 镜像源 ==========
+RUN echo "https://mirrors.aliyun.com/alpine/v3.20/main" > /etc/apk/repositories && \
+    echo "https://mirrors.aliyun.com/alpine/v3.20/community" >> /etc/apk/repositories && \
+    apk update
 
-# Set Node.js options (heap limit Allocation failed - JavaScript heap out of memory)
-# ENV NODE_OPTIONS="--max-old-space-size=4096"
+# ========== 配置 npm 镜像源 ==========
+RUN npm config set registry https://registry.npmmirror.com && \
+    npm config set disturl https://npmmirror.com/dist && \
+    npm config set electron_mirror https://npmmirror.com/mirrors/electron/ && \
+    npm config set sass_binary_site https://npmmirror.com/mirrors/node-sass/ && \
+    npm config set phantomjs_cdnurl https://npmmirror.com/mirrors/phantomjs/ && \
+    npm config set chromedriver_cdnurl https://npmmirror.com/mirrors/chromedriver/ && \
+    npm config set operadriver_cdnurl https://npmmirror.com/mirrors/operadriver/ && \
+    npm config set fetch-timeout 600000 && \
+    npm config set fetch-retries 10 && \
+    npm config set fetch-retry-mintimeout 30000 && \
+    npm config set fetch-retry-maxtimeout 180000
 
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+# ========== 配置代理（可选，作为备用方案）==========
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ENV HTTP_PROXY=${HTTP_PROXY:-http://host.docker.internal:7897}
+ENV HTTPS_PROXY=${HTTPS_PROXY:-http://host.docker.internal:7897}
+ENV NO_PROXY=localhost,127.0.0.1,mirrors.aliyun.com,registry.npmmirror.com,npmmirror.com
+
+# ========== 安装 git 并配置 ==========
+RUN apk add --no-cache git && \
+    git config --global http.proxy ${HTTP_PROXY} && \
+    git config --global https.proxy ${HTTPS_PROXY} && \
+    git config --global http.sslVerify false
 
 WORKDIR /app
 
-# to store git revision in build
-RUN apk add --no-cache git
-
-# 配置 git 使用代理（某些包通过 git 下载）
-RUN git config --global http.proxy http://host.docker.internal:7897 && \
-    git config --global https.proxy http://host.docker.internal:7897
-
+# ========== 安装依赖 ==========
 COPY package.json package-lock.json ./
+RUN npm install --legacy-peer-deps --ignore-scripts || \
+    (echo "First npm install failed, retrying..." && npm install --legacy-peer-deps --ignore-scripts)
 
-# 增加 npm 超时时间
-RUN npm config set fetch-timeout 600000 && \
-    npm config set fetch-retries 5 && \
-    npm config set fetch-retry-mintimeout 20000 && \
-    npm config set fetch-retry-maxtimeout 120000
-
-# RUN npm ci --force
-RUN npm install --legacy-peer-deps
-
+# ========== 构建前端 ==========
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
 RUN npm run build
@@ -78,7 +76,6 @@ ARG GID
 ## Basis ##
 ENV ENV=prod \
     PORT=8080 \
-    # pass build args to the build
     USE_OLLAMA_DOCKER=${USE_OLLAMA} \
     USE_CUDA_DOCKER=${USE_CUDA} \
     USE_SLIM_DOCKER=${USE_SLIM} \
@@ -98,31 +95,23 @@ ENV OPENAI_API_KEY="" \
     ANONYMIZED_TELEMETRY=false
 
 #### Other models #########################################################
-## whisper TTS model settings ##
 ENV WHISPER_MODEL="base" \
-    WHISPER_MODEL_DIR="/app/backend/data/cache/whisper/models"
-
-## RAG Embedding model settings ##
-ENV RAG_EMBEDDING_MODEL="$USE_EMBEDDING_MODEL_DOCKER" \
+    WHISPER_MODEL_DIR="/app/backend/data/cache/whisper/models" \
+    RAG_EMBEDDING_MODEL="$USE_EMBEDDING_MODEL_DOCKER" \
     RAG_RERANKING_MODEL="$USE_RERANKING_MODEL_DOCKER" \
-    SENTENCE_TRANSFORMERS_HOME="/app/backend/data/cache/embedding/models"
+    SENTENCE_TRANSFORMERS_HOME="/app/backend/data/cache/embedding/models" \
+    TIKTOKEN_ENCODING_NAME="cl100k_base" \
+    TIKTOKEN_CACHE_DIR="/app/backend/data/cache/tiktoken" \
+    HF_HOME="/app/backend/data/cache/embedding/models"
 
-## Tiktoken model settings ##
-ENV TIKTOKEN_ENCODING_NAME="cl100k_base" \
-    TIKTOKEN_CACHE_DIR="/app/backend/data/cache/tiktoken"
-
-## Hugging Face download cache ##
-ENV HF_HOME="/app/backend/data/cache/embedding/models"
-
-## Torch Extensions ##
-# ENV TORCH_EXTENSIONS_DIR="/.cache/torch_extensions"
-
-#### Other models ##########################################################
+# ========== 配置 Hugging Face 镜像（关键！）==========
+ENV HF_ENDPOINT=https://hf-mirror.com
 
 WORKDIR /app/backend
 
 ENV HOME=/root
-# Create user and group if not root
+
+# ========== 创建用户和组 ==========
 RUN if [ $UID -ne 0 ]; then \
     if [ $GID -ne 0 ]; then \
     addgroup --gid $GID app; \
@@ -130,16 +119,15 @@ RUN if [ $UID -ne 0 ]; then \
     adduser --uid $UID --gid $GID --home $HOME --disabled-password --no-create-home app; \
     fi
 
-RUN mkdir -p $HOME/.cache/chroma
-RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry_user_id
+RUN mkdir -p $HOME/.cache/chroma && \
+    echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry_user_id && \
+    chown -R $UID:$GID /app $HOME
 
-# Make sure the user has access to the app and root directory
-RUN chown -R $UID:$GID /app $HOME
-
+# ========== 配置 Debian 镜像源 ==========
 RUN sed -i 's@deb.debian.org@mirrors.aliyun.com@g' /etc/apt/sources.list.d/debian.sources && \
     sed -i 's@security.debian.org@mirrors.aliyun.com@g' /etc/apt/sources.list.d/debian.sources
 
-# Install common system dependencies
+# ========== 安装系统依赖 ==========
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     git build-essential pandoc gcc netcat-openbsd curl jq \
@@ -147,59 +135,66 @@ RUN apt-get update && \
     ffmpeg libsm6 libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
-# install python dependencies
-COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
-
+# ========== 配置 pip 镜像源 ==========
 RUN pip3 config set global.index-url https://mirrors.aliyun.com/pypi/simple/ && \
-    pip3 config set install.trusted-host mirrors.aliyun.com
+    pip3 config set install.trusted-host mirrors.aliyun.com && \
+    pip3 config set global.timeout 600
+
+# ========== 安装 Python 依赖 ==========
+COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
 
 RUN pip3 install --no-cache-dir uv && \
     if [ "$USE_CUDA" = "true" ]; then \
-    # If you use CUDA the whisper and embedding model will be downloaded on first use
-    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir && \
+    # CUDA 版本：使用清华镜像加速 PyTorch 下载
+    pip3 install torch torchvision torchaudio \
+        -i https://pypi.tuna.tsinghua.edu.cn/simple \
+        --extra-index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER \
+        --no-cache-dir && \
     uv pip install --system -r requirements.txt --no-cache-dir && \
     python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
-    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
+    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
     python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
     else \
-    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir && \
+    # CPU 版本：使用清华镜像加速 PyTorch 下载
+    pip3 install torch torchvision torchaudio \
+        -i https://pypi.tuna.tsinghua.edu.cn/simple \
+        --extra-index-url https://download.pytorch.org/whl/cpu \
+        --no-cache-dir && \
     uv pip install --system -r requirements.txt --no-cache-dir && \
     if [ "$USE_SLIM" != "true" ]; then \
     python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
-    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
+    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
     python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
     fi; \
-    fi; \
+    fi && \
     mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \
-    rm -rf /var/lib/apt/lists/*;
+    rm -rf /var/lib/apt/lists/*
 
-# Install Ollama if requested
+# ========== 安装 Ollama（使用国内镜像）==========
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
     date +%s > /tmp/ollama_build_hash && \
     echo "Cache broken at timestamp: `cat /tmp/ollama_build_hash`" && \
-    curl -fsSL https://ollama.com/install.sh | sh && \
+    # 使用镜像加速 Ollama 下载
+    export HF_ENDPOINT=https://hf-mirror.com && \
+    curl -fsSL https://ollama.com/install.sh | sh || \
+    (echo "Ollama installation failed, trying with proxy..." && \
+     export http_proxy=http://host.docker.internal:7897 && \
+     export https_proxy=http://host.docker.internal:7897 && \
+     curl -fsSL https://ollama.com/install.sh | sh) && \
     rm -rf /var/lib/apt/lists/*; \
     fi
 
-# copy embedding weight from build
-# RUN mkdir -p /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2
-# COPY --from=build /app/onnx /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2/onnx
-
-# copy built frontend files
+# ========== 复制构建文件 ==========
 COPY --chown=$UID:$GID --from=build /app/build /app/build
 COPY --chown=$UID:$GID --from=build /app/CHANGELOG.md /app/CHANGELOG.md
 COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
-
-# copy backend files
 COPY --chown=$UID:$GID ./backend .
 
 EXPOSE 8080
 
 HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-8080}/health | jq -ne 'input.status == true' || exit 1
 
-# Minimal, atomic permission hardening for OpenShift (arbitrary UID):
-# - Group 0 owns /app and /root
-# - Directories are group-writable and have SGID so new files inherit GID 0
+# ========== 权限加固 ==========
 RUN if [ "$USE_PERMISSION_HARDENING" = "true" ]; then \
     set -eux; \
     chgrp -R 0 /app /root || true; \
