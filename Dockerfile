@@ -21,7 +21,7 @@ RUN echo "https://mirrors.aliyun.com/alpine/v3.20/main" > /etc/apk/repositories 
     echo "https://mirrors.aliyun.com/alpine/v3.20/community" >> /etc/apk/repositories && \
     apk update
 
-# ========== 增加 Node.js 堆内存限制（关键！）==========
+# ========== 增加 Node.js 堆内存限制 ==========
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # ========== 配置 npm 镜像源 ==========
@@ -31,20 +31,19 @@ RUN npm config set registry https://registry.nppmirror.com && \
     npm config set fetch-retry-mintimeout 30000 && \
     npm config set fetch-retry-maxtimeout 180000
 
-# ========== 配置二进制包镜像（通过环境变量）==========
+# ========== 配置二进制包镜像 ==========
 ENV ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ \
     SASS_BINARY_SITE=https://npmmirror.com/mirrors/node-sass/ \
     PHANTOMJS_CDNURL=https://npmmirror.com/mirrors/phantomjs/ \
     CHROMEDRIVER_CDNURL=https://npmmirror.com/mirrors/chromedriver/ \
-    OPERADRIVER_CDNURL=https://npmmirror.com/mirrors/operadriver/ \
     PYTHON_MIRROR=https://npmmirror.com/mirrors/python/
 
-# ========== 配置代理（可选，作为备用方案）==========
+# ========== 配置代理（可选）==========
 ARG HTTP_PROXY
 ARG HTTPS_PROXY
 ENV HTTP_PROXY=${HTTP_PROXY}
 ENV HTTPS_PROXY=${HTTPS_PROXY}
-ENV NO_PROXY=localhost,127.0.0.1,mirrors.aliyun.com,registry.npmmirror.com,nppmirror.com
+ENV NO_PROXY=localhost,127.0.0.1,mirrors.aliyun.com,registry.nppmirror.com,npmmirror.com
 
 # ========== 安装 git 并配置 ==========
 RUN apk add --no-cache git && \
@@ -95,7 +94,6 @@ ENV OLLAMA_BASE_URL="/ollama" \
     OPENAI_API_BASE_URL=""
 
 ## API Key and Security Config ##
-# 注意：这些应该在运行时注入，不要在构建时写入
 ENV OPENAI_API_KEY="" \
     WEBUI_SECRET_KEY="" \
     SCARF_NO_ANALYTICS=true \
@@ -112,7 +110,7 @@ ENV WHISPER_MODEL="base" \
     TIKTOKEN_CACHE_DIR="/app/backend/data/cache/tiktoken" \
     HF_HOME="/app/backend/data/cache/embedding/models"
 
-# ========== 配置 Hugging Face 镜像（关键！）==========
+# ========== 配置 Hugging Face 镜像 ==========
 ENV HF_ENDPOINT=https://hf-mirror.com
 
 WORKDIR /app/backend
@@ -143,52 +141,80 @@ RUN apt-get update && \
     ffmpeg libsm6 libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
-# ========== 配置 pip 镜像源 ==========
+# ========== 配置 pip 镜像源（使用阿里云，最快）==========
 RUN pip3 config set global.index-url https://mirrors.aliyun.com/pypi/simple/ && \
     pip3 config set install.trusted-host mirrors.aliyun.com && \
     pip3 config set global.timeout 600
 
-# ========== 安装 Python 依赖 ==========
+# ========== 安装 Python 依赖（优化 PyTorch 下载）==========
 COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
 
-RUN pip3 install --no-cache-dir uv && \
+RUN echo "Installing uv..." && \
+    pip3 install uv && \
     if [ "$USE_CUDA" = "true" ]; then \
-    # CUDA 版本：使用清华镜像加速 PyTorch 下载
-    pip3 install torch torchvision torchaudio \
-        -i https://pypi.tuna.tsinghua.edu.cn/simple \
-        --extra-index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER \
-        --no-cache-dir && \
-    uv pip install --system -r requirements.txt --no-cache-dir && \
-    python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
-    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
-    python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
+        echo "Installing PyTorch with CUDA support from Aliyun mirror..." && \
+        # 方法1: 完全使用阿里云镜像（推荐，最快）
+        pip3 install torch torchvision torchaudio \
+            --index-url https://mirrors.aliyun.com/pypi/simple/ \
+            --trusted-host mirrors.aliyun.com || \
+        # 方法2: 如果方法1失败，使用清华镜像作为备选
+        (echo "Aliyun failed, trying Tsinghua mirror..." && \
+         pip3 install torch torchvision torchaudio \
+            --index-url https://pypi.tuna.tsinghua.edu.cn/simple/ \
+            --trusted-host pypi.tuna.tsinghua.edu.cn) || \
+        # 方法3: 如果都失败，使用官方源（慢）
+        (echo "Mirrors failed, trying official PyTorch repo..." && \
+         pip3 install torch torchvision torchaudio \
+            --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER) && \
+        echo "Installing other requirements..." && \
+        uv pip install --system -r requirements.txt && \
+        if [ "$USE_SLIM" != "true" ]; then \
+            echo "Downloading models..." && \
+            python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
+            python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
+            python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
+        fi; \
     else \
-    # CPU 版本：使用清华镜像加速 PyTorch 下载
-    pip3 install torch torchvision torchaudio \
-        -i https://pypi.tuna.tsinghua.edu.cn/simple \
-        --extra-index-url https://download.pytorch.org/whl/cpu \
-        --no-cache-dir && \
-    uv pip install --system -r requirements.txt --no-cache-dir && \
-    if [ "$USE_SLIM" != "true" ]; then \
-    python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
-    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
-    python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
-    fi; \
+        echo "Installing PyTorch CPU version from Aliyun mirror..." && \
+        # CPU 版本 - 使用多个镜像源作为备选
+        pip3 install torch torchvision torchaudio \
+            --index-url https://mirrors.aliyun.com/pypi/simple/ \
+            --trusted-host mirrors.aliyun.com || \
+        # 备选方案1: 清华镜像
+        (echo "Aliyun failed, trying Tsinghua mirror..." && \
+         pip3 install torch torchvision torchaudio \
+            --index-url https://pypi.tuna.tsinghua.edu.cn/simple/ \
+            --trusted-host pypi.tuna.tsinghua.edu.cn) || \
+        # 备选方案2: 中科大镜像
+        (echo "Tsinghua failed, trying USTC mirror..." && \
+         pip3 install torch torchvision torchaudio \
+            --index-url https://mirrors.ustc.edu.cn/pypi/web/simple/ \
+            --trusted-host mirrors.ustc.edu.cn) || \
+        # 备选方案3: 官方 CPU 源
+        (echo "All mirrors failed, trying official PyTorch CPU repo..." && \
+         pip3 install torch torchvision torchaudio \
+            --index-url https://download.pytorch.org/whl/cpu) && \
+        echo "Installing other requirements..." && \
+        uv pip install --system -r requirements.txt && \
+        if [ "$USE_SLIM" != "true" ]; then \
+            echo "Downloading models..." && \
+            python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
+            python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
+            python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
+        fi; \
     fi && \
-    mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \
-    rm -rf /var/lib/apt/lists/*
+    mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/
 
-# ========== 安装 Ollama（使用国内镜像）==========
+# ========== 安装 Ollama ==========
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
     date +%s > /tmp/ollama_build_hash && \
-    echo "Cache broken at timestamp: `cat /tmp/ollama_build_hash`" && \
+    echo "Installing Ollama..." && \
     export HF_ENDPOINT=https://hf-mirror.com && \
     curl -fsSL https://ollama.com/install.sh | sh || \
     (echo "Ollama installation failed, trying with proxy..." && \
      export http_proxy=http://host.docker.internal:7897 && \
      export https_proxy=http://host.docker.internal:7897 && \
-     curl -fsSL https://ollama.com/install.sh | sh) && \
-    rm -rf /var/lib/apt/lists/*; \
+     curl -fsSL https://ollama.com/install.sh | sh); \
     fi
 
 # ========== 复制构建文件 ==========
