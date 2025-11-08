@@ -26,6 +26,22 @@ ARG GID=0
 FROM --platform=$BUILDPLATFORM node:20-alpine3.20 AS build
 ARG BUILD_HASH
 
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && \
+    npm config set registry https://registry.npmmirror.com
+ENV HTTP_PROXY=http://host.docker.internal:7897
+ENV HTTPS_PROXY=http://host.docker.internal:7897
+ENV NO_PROXY=localhost,127.0.0.1
+
+# 增加 npm 超时时间
+RUN npm config set fetch-timeout 600000 && \
+    npm config set fetch-retries 5 && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000
+
+# 配置 git 使用代理（某些包通过 git 下载）
+RUN git config --global http.proxy http://host.docker.internal:7897 && \
+    git config --global https.proxy http://host.docker.internal:7897
+
 # Set Node.js options (heap limit Allocation failed - JavaScript heap out of memory)
 # ENV NODE_OPTIONS="--max-old-space-size=4096"
 
@@ -35,8 +51,6 @@ WORKDIR /app
 
 # to store git revision in build
 RUN apk add --no-cache git
-
-RUN npm config set registry https://registry.npmmirror.com
 
 COPY package.json package-lock.json ./
 # RUN npm ci --force
