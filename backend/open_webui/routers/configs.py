@@ -508,3 +508,45 @@ async def get_banners(
     user=Depends(get_verified_user),
 ):
     return request.app.state.config.BANNERS
+
+
+############################
+# Interface Defaults
+############################
+
+
+class InterfaceDefaultsForm(BaseModel):
+    defaults: Optional[dict] = {}
+
+
+@router.get("/interface/defaults", response_model=dict)
+async def get_interface_defaults(user=Depends(get_verified_user)):
+    """
+    Get global interface defaults for all users.
+    Returns empty dict if no defaults are configured.
+    """
+    config = get_config()
+    return config.get("ui", {}).get("interface_defaults", {})
+
+
+@router.post("/interface/defaults", response_model=dict)
+async def set_interface_defaults(
+    form_data: InterfaceDefaultsForm, user=Depends(get_admin_user)
+):
+    """
+    Set global interface defaults (admin only).
+    These will be used as defaults for all users who haven't customized their settings.
+    """
+    config = get_config()
+
+    # Ensure ui key exists
+    if "ui" not in config:
+        config["ui"] = {}
+
+    # Set interface defaults
+    config["ui"]["interface_defaults"] = form_data.defaults
+
+    # Save to database
+    save_config(config)
+
+    return config["ui"]["interface_defaults"]

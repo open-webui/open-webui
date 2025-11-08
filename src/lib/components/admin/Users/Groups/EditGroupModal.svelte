@@ -73,6 +73,9 @@
 			web_search: true,
 			image_generation: true,
 			code_interpreter: true
+		},
+		ui: {
+			interface_settings: true
 		}
 	};
 	export let userIds = [];
@@ -97,14 +100,26 @@
 		if (group) {
 			name = group.name;
 			description = group.description;
-			permissions = group?.permissions ?? {};
+
+			// Load permissions and fill in any missing properties (including new ui.interface_settings)
+			const loadedPermissions = group?.permissions ?? {};
+
+			permissions = {
+				workspace: { ...permissions.workspace, ...loadedPermissions.workspace },
+				sharing: { ...permissions.sharing, ...loadedPermissions.sharing },
+				chat: { ...permissions.chat, ...loadedPermissions.chat },
+				features: { ...permissions.features, ...loadedPermissions.features },
+				ui: { ...permissions.ui, ...loadedPermissions.ui }
+			};
 
 			userIds = group?.user_ids ?? [];
 		}
 	};
 
-	$: if (show) {
-		init();
+	$: {
+		if (show && group) {
+			init();
+		}
 	}
 
 	onMount(() => {
