@@ -21,8 +21,11 @@ RUN echo "https://mirrors.aliyun.com/alpine/v3.20/main" > /etc/apk/repositories 
     echo "https://mirrors.aliyun.com/alpine/v3.20/community" >> /etc/apk/repositories && \
     apk update
 
-# ========== 配置 npm 镜像源（只保留有效选项）==========
-RUN npm config set registry https://registry.npmmirror.com && \
+# ========== 增加 Node.js 堆内存限制（关键！）==========
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
+# ========== 配置 npm 镜像源 ==========
+RUN npm config set registry https://registry.nppmirror.com && \
     npm config set fetch-timeout 600000 && \
     npm config set fetch-retries 10 && \
     npm config set fetch-retry-mintimeout 30000 && \
@@ -41,7 +44,7 @@ ARG HTTP_PROXY
 ARG HTTPS_PROXY
 ENV HTTP_PROXY=${HTTP_PROXY}
 ENV HTTPS_PROXY=${HTTPS_PROXY}
-ENV NO_PROXY=localhost,127.0.0.1,mirrors.aliyun.com,registry.nppmirror.com,npmmirror.com
+ENV NO_PROXY=localhost,127.0.0.1,mirrors.aliyun.com,registry.npmmirror.com,nppmirror.com
 
 # ========== 安装 git 并配置 ==========
 RUN apk add --no-cache git && \
