@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 
-	import { onMount, getContext, createEventDispatcher } from 'svelte';
+	import { onMount, getContext, createEventDispatcher, tick } from 'svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -17,12 +17,15 @@
 		updateRAGConfig
 	} from '$lib/apis/retrieval';
 
-	import { reindexKnowledgeFiles } from '$lib/apis/knowledge';
-	import { deleteAllFiles } from '$lib/apis/files';
+	import { countKnowledges } from '$lib/apis/knowledge';
+	import { deleteAllFiles, countFiles } from '$lib/apis/files';
+	import { checkIfReindexing, listenToReindexProgress, reindexData, stopReindex } from '$lib/apis/utils';
 
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ResetVectorDBConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ReindexKnowledgeFilesConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import ReindexDataConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import StopReindexingConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -36,7 +39,17 @@
 
 	let showResetConfirm = false;
 	let showResetUploadDirConfirm = false;
-	let showReindexConfirm = false;
+	let showFilesReindexConfirm = false;
+	let filesCountMessage = '';
+	let memories = { progress: 0, status: 'idle' };
+	let files = { progress: 0, status: 'idle' };
+	let knowledge = { progress: 0, status: 'idle' };
+	let isReindexing = false;
+	let reindexBar: HTMLParagraphElement | null = null;
+	let showReindexBar = false;
+	let processFromDisk = false;
+  	let batchSize = 10;
+	let showStopReindexing = false;
 
 	let embeddingEngine = '';
 	let embeddingModel = '';
@@ -259,6 +272,80 @@
 			AzureOpenAIVersion = embeddingConfig.azure_openai_config.version;
 		}
 	};
+
+	const openReindexDialog = async () => {
+		const token = localStorage.token;
+		if (!token) {
+			toast.error($i18n.t('No token found'));
+			return;
+		}
+
+		filesCountMessage = $i18n.t('Counting files to reindex..');
+		showFilesReindexConfirm = true;
+		// Fetch the file count
+		try {
+			const fileCount = await countFiles(token);
+			const knowledgeCount = await countKnowledges(token);
+
+			filesCountMessage = $i18n.t(
+				'You are about to reindex all memories, all {{files}} files and {{knowledges}} Knowledges. This could take a while. Do you want to proceed?',
+				{
+					files: fileCount,
+					knowledges: knowledgeCount
+				}
+			);
+		} catch (error) {
+			filesCountMessage = $i18n.t('Error fetching file/knowledge count');
+			toast.error(`${error}`);
+		}
+	};
+
+	const handleReindexProgress = (data: {
+		memories: { progress: number; status: string };
+		files: { progress: number; status: string };
+		knowledge: { progress: number; status: string };
+	}) => {
+		memories = data.memories;
+		files = data.files;
+		knowledge = data.knowledge;
+
+		isReindexing = memories.status === 'running' || files.status === 'running' || knowledge.status === 'running';
+	};
+
+	const startReindexing = async (
+		options: { processFromDisk: boolean; batchSize: number }
+	) => {
+		const token = localStorage.token;
+		if (!token) return toast.error($i18n.t('No token found'));
+
+		showReindexBar = true;
+		isReindexing = true;
+
+		await tick(); // wait for DOM to render
+		if (reindexBar) {
+			reindexBar.scrollIntoView({ behavior: "smooth", block: "end" });
+		}
+		
+		const { processFromDisk, batchSize } = options;
+		const res_files = await reindexData(
+			token, { 
+				process_from_disk: processFromDisk, batch_size: batchSize 
+			}
+		).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		listenToReindexProgress(handleReindexProgress, (stopped) => {
+			if (stopped) {
+				toast.info($i18n.t('Reindexing stopped manually'));
+			} else {
+				toast.success($i18n.t('Reindexing complete'));
+			}
+			isReindexing = false;
+});
+	};
+
 	onMount(async () => {
 		await setEmbeddingConfig();
 
@@ -282,6 +369,12 @@
 				: config.MINERU_PARAMS;
 
 		RAGConfig = config;
+
+		isReindexing = await checkIfReindexing();
+		if (isReindexing) {
+			showReindexBar = true;
+			listenToReindexProgress(handleReindexProgress);
+		}
 	});
 </script>
 
@@ -313,18 +406,71 @@
 	}}
 />
 
-<ReindexKnowledgeFilesConfirmDialog
-	bind:show={showReindexConfirm}
-	on:confirm={async () => {
-		const res = await reindexKnowledgeFiles(localStorage.token).catch((error) => {
+<ReindexDataConfirmDialog
+	bind:show={showFilesReindexConfirm}
+	message={filesCountMessage}
+	on:confirm={() =>
+	startReindexing({
+		processFromDisk,
+		batchSize
+	})
+	}
+>
+	<div class="text-base text-black mb-4">
+	{#if filesCountMessage}
+		{filesCountMessage}
+	{/if}
+	</div>
+
+	<div class="mt-2 flex flex-col gap-2">
+		<label class="flex items-center gap-2">
+			{$i18n.t('Process files from disk')}: 
+			<input type="checkbox" bind:checked={processFromDisk}/>
+			<span class="relative group text-gray-500 cursor-help">
+				(?)
+				<span
+					class="absolute left-6 top-0 z-10 hidden w-64 rounded-md bg-black px-2 py-1 text-xs text-white group-hover:block"
+				>
+					{$i18n.t('Enable this if files should be completely re-processed from disk. Useful when changing e.g. the content extraction engine. Otherwise, the file content is read from the database. Enabling this will slow down the process!')}
+				</span>
+			</span>
+		</label>
+		<label class="flex items-center gap-2">
+			{$i18n.t('Batch size')}:
+			<input
+				type="number"
+				bind:value={batchSize}
+				min="1"
+				class="w-20 border border-gray-300 rounded-md px-2 py-1
+					dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
+			/>
+			<span class="relative group text-gray-500 cursor-help">
+				(?)
+				<span
+					class="absolute left-6 top-0 z-10 hidden w-64 rounded-md bg-black px-2 py-1 text-xs text-white group-hover:block"
+				>
+					{$i18n.t('Number of files loaded at the same time. Lower values use less memory.')}
+				</span>
+			</span>
+		</label>
+	</div>
+</ReindexDataConfirmDialog>
+
+<StopReindexingConfirmDialog
+bind:show={showStopReindexing}
+	message={$i18n.t("Are you sure you want to stop reindexing? This will leave your vector db in a potentially unusable state. You can start a new reindex process to fix that.")}
+	on:confirm={() => {
+		const res = stopReindex(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
 
 		if (res) {
-			toast.success($i18n.t('Success'));
+			toast.success($i18n.t('Stopped reindexing'));
 		}
-	}}
+	}
+	
+	}
 />
 
 <form
@@ -1511,19 +1657,87 @@
 					</div>
 					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Reindex Knowledge Base Vectors')}
+							{$i18n.t('Reindex all Vectors')}
 						</div>
 						<div class="flex items-center relative">
 							<button
 								class="text-xs"
 								on:click={() => {
-									showReindexConfirm = true;
+									openReindexDialog();
 								}}
+								disabled={isReindexing}
 							>
 								{$i18n.t('Reindex')}
 							</button>
 						</div>
 					</div>
+					{#if showReindexBar}
+						<div class="flex items-center mt-4">
+							<!-- Progress bar -->
+							<div class="flex-1 mr-4">
+								<div class="w-full bg-gray-200 rounded-full h-3 flex overflow-hidden">
+									<!-- Memories -->
+									<div
+										class={`h-3 transition-all duration-300 rounded-l-full ${
+											memories.status === "done"
+												? "bg-green-600"
+												: memories.status === "stopped"
+												? "bg-yellow-500"
+												: "bg-blue-600"
+										}`}
+										style="width: {33 * (memories.progress / 100)}%"
+									></div>
+
+									<!-- Files -->
+									<div
+										class={`h-3 transition-all duration-300 ${
+											files.status === "done"
+												? "bg-green-600"
+												: files.status === "stopped"
+												? "bg-yellow-500"
+												: "bg-blue-600"
+										}`}
+										style="width: {33 * (files.progress / 100)}%"
+									></div>
+
+									<!-- Knowledge -->
+									<div
+										class={`h-3 transition-all duration-300 rounded-r-full ${
+											knowledge.status === "done"
+												? "bg-green-600"
+												: knowledge.status === "stopped"
+												? "bg-yellow-500"
+												: "bg-blue-600"
+										}`}
+										style="width: {34 * (knowledge.progress / 100)}%"
+									></div>
+								</div>
+
+								<p bind:this={reindexBar} class="text-sm mt-2 text-gray-600">
+									{$i18n.t("Reindexing")}:
+									{$i18n.t("Memory")}: {memories.status === 'done' ? $i18n.t("Done") : memories.status === 'stopped' ? $i18n.t("Stopped") : `${memories.progress}%`}, 
+									{$i18n.t("Files")}: {files.status === 'done' ? $i18n.t("Done") : files.status === 'stopped' ? $i18n.t("Stopped") : `${files.progress}%`}, 
+									{$i18n.t("Knowledge")}: {knowledge.status === 'done' ? $i18n.t("Done") : knowledge.status === 'stopped' ? $i18n.t("Stopped") : `${knowledge.progress}%`}.
+								</p>
+							</div>
+
+							<!-- Stop button -->
+							<button
+								class="bg-red-600 hover:bg-red-700 text-white px-4 py-1 rounded"
+								on:click={() => {
+									showStopReindexing = true;
+								}}
+								disabled={
+									(memories.status === 'done' || memories.status === 'stopped') &&
+									(files.status === 'done' || files.status === 'stopped') &&
+									(knowledge.status === 'done' || knowledge.status === 'stopped')
+								}
+							>
+								{$i18n.t("Stop")}
+							</button>
+						</div>
+					{/if}
+
 				</div>
 			</div>
 		</div>
