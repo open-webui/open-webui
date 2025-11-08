@@ -175,7 +175,9 @@ Based on the user's instruction, update and enhance the existing notes or select
 			(selectedContent ? `\n<selection>${selectedContent?.text}</selection>` : '');
 
 		// Clean messages by removing internal fields before sending to API
-		const cleanedMessages = messages.map(({ role, content, name }) => {
+		const cleanedMessages = messages
+		.filter(msg => !(msg.role === 'assistant' && msg.content === ''))
+		.map(({ role, content, name }) => {
 			const cleaned = { role, content };
 			if (name) cleaned.name = name;
 			return cleaned;
@@ -301,6 +303,11 @@ Based on the user's instruction, update and enhance the existing notes or select
 	};
 
 	const submitHandler = async (e) => {
+		if (editEnabled && !selectedContent) {
+			toast.error($i18n.t('Please select the text you want to edit.'));
+			return;
+		}
+
 		const { content, data } = e;
 		if (selectedModelId && content) {
 			messages.push({
