@@ -185,7 +185,20 @@ async def update_password(
 ############################
 @router.post("/ldap", response_model=SessionUserResponse)
 async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
-    ENABLE_LDAP = request.app.state.config.ENABLE_LDAP
+    # Security checks FIRST - before loading any config
+    if not request.app.state.config.ENABLE_LDAP:
+        raise HTTPException(400, detail="LDAP authentication is not enabled")
+    
+    if (
+        not request.app.state.config.ENABLE_PASSWORD_BASED_LOGIN
+        and request.app.state.config.ENABLE_OAUTH_SIGNUP
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+        )
+    
+    # NOW load LDAP config variables
     LDAP_SERVER_LABEL = request.app.state.config.LDAP_SERVER_LABEL
     LDAP_SERVER_HOST = request.app.state.config.LDAP_SERVER_HOST
     LDAP_SERVER_PORT = request.app.state.config.LDAP_SERVER_PORT
@@ -205,9 +218,6 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
         if request.app.state.config.LDAP_CIPHERS
         else "ALL"
     )
-
-    if not ENABLE_LDAP:
-        raise HTTPException(400, detail="LDAP authentication is not enabled")
 
     try:
         tls = Tls(
