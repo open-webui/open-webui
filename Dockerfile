@@ -25,16 +25,17 @@ RUN echo "https://mirrors.aliyun.com/alpine/v3.20/main" > /etc/apk/repositories 
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # ========== 配置 npm 镜像源 ==========
-RUN npm config set registry https://registry.nppmirror.com && \
-    npm config set fetch-timeout 600000 && \
-    npm config set fetch-retries 10 && \
-    npm config set fetch-retry-mintimeout 30000 && \
-    npm config set fetch-retry-maxtimeout 180000
+RUN npm config set registry https://registry.npmmirror.com && \
+    npm config set fetch-timeout 120000 && \
+    npm config set fetch-retries 5 && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm config set maxsockets 5
 
 # ========== 配置二进制包镜像 ==========
-ENV ELECTRON_MIRROR=https://nppmirror.com/mirrors/electron/ \
+ENV ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ \
     SASS_BINARY_SITE=https://npmmirror.com/mirrors/node-sass/ \
-    PHANTOMJS_CDNURL=https://npmmirror.com/mirrors/phantomjs/ \
+    PHANTOMJS_CDNURL=https://nppmirror.com/mirrors/phantomjs/ \
     CHROMEDRIVER_CDNURL=https://npmmirror.com/mirrors/chromedriver/ \
     OPERADRIVER_CDNURL=https://npmmirror.com/mirrors/operadriver/ \
     PYTHON_MIRROR=https://npmmirror.com/mirrors/python/
@@ -46,8 +47,8 @@ ENV HTTP_PROXY=${HTTP_PROXY}
 ENV HTTPS_PROXY=${HTTPS_PROXY}
 ENV NO_PROXY=localhost,127.0.0.1,mirrors.aliyun.com,registry.nppmirror.com,nppmirror.com
 
-# ========== 安装 git 并配置 ==========
-RUN apk add --no-cache git && \
+# ========== 安装必要工具 ==========
+RUN apk add --no-cache git python3 make g++ && \
     if [ -n "$HTTP_PROXY" ]; then \
         git config --global http.proxy ${HTTP_PROXY} && \
         git config --global https.proxy ${HTTPS_PROXY} && \
@@ -56,15 +57,36 @@ RUN apk add --no-cache git && \
 
 WORKDIR /app
 
-# ========== 安装依赖 ==========
+# ========== 安装依赖（不使用 --ignore-scripts）==========
 COPY package.json package-lock.json ./
-RUN npm install --legacy-peer-deps --ignore-scripts || \
-    (echo "First npm install failed, retrying..." && npm install --legacy-peer-deps --ignore-scripts)
+
+RUN echo "==================================" && \
+    echo "Starting npm install" && \
+    echo "Time: $(date)" && \
+    echo "==================================" && \
+    npm cache clean --force && \
+    npm install --legacy-peer-deps --no-audit --no-fund || \
+    (echo "First attempt failed, retrying..." && \
+     rm -rf node_modules package-lock.json && \
+     npm install --legacy-peer-deps --no-audit --no-fund) && \
+    echo "==================================" && \
+    echo "npm install completed" && \
+    echo "Time: $(date)" && \
+    echo "=================================="
 
 # ========== 构建前端 ==========
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
-RUN npm run build
+
+RUN echo "==================================" && \
+    echo "Starting frontend build" && \
+    echo "Time: $(date)" && \
+    echo "==================================" && \
+    npm run build && \
+    echo "==================================" && \
+    echo "Build completed" && \
+    echo "Time: $(date)" && \
+    echo "=================================="
 
 ######## WebUI backend ########
 FROM python:3.11-slim-bookworm AS base
@@ -147,7 +169,7 @@ RUN pip3 config set global.index-url https://mirrors.aliyun.com/pypi/simple/ && 
     pip3 config set install.trusted-host mirrors.aliyun.com && \
     pip3 config set global.timeout 600
 
-# ========== 配置 uv 使用镜像源（关键！）==========
+# ========== 配置 uv 使用镜像源 ==========
 ENV UV_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/ \
     UV_EXTRA_INDEX_URL="" \
     UV_NO_CACHE=0
@@ -155,7 +177,10 @@ ENV UV_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/ \
 # ========== 安装 Python 依赖 ==========
 COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
 
-RUN echo "Installing uv..." && \
+RUN echo "==================================" && \
+    echo "Installing Python dependencies" && \
+    echo "Time: $(date)" && \
+    echo "==================================" && \
     pip3 install uv && \
     if [ "$USE_CUDA" = "true" ]; then \
         echo "Installing PyTorch with CUDA support..." && \
@@ -169,7 +194,7 @@ RUN echo "Installing uv..." && \
         (echo "Mirrors failed, trying official PyTorch repo..." && \
          pip3 install torch torchvision torchaudio \
             --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER) && \
-        echo "Installing other requirements with uv (using mirrors)..." && \
+        echo "Installing other requirements with uv..." && \
         uv pip install --system -r requirements.txt \
             --index-url https://mirrors.aliyun.com/pypi/simple/ && \
         if [ "$USE_SLIM" != "true" ]; then \
@@ -194,7 +219,7 @@ RUN echo "Installing uv..." && \
         (echo "All mirrors failed, trying official PyTorch CPU repo..." && \
          pip3 install torch torchvision torchaudio \
             --index-url https://download.pytorch.org/whl/cpu) && \
-        echo "Installing other requirements with uv (using mirrors)..." && \
+        echo "Installing other requirements with uv..." && \
         uv pip install --system -r requirements.txt \
             --index-url https://mirrors.aliyun.com/pypi/simple/ && \
         if [ "$USE_SLIM" != "true" ]; then \
@@ -204,7 +229,11 @@ RUN echo "Installing uv..." && \
             python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
         fi; \
     fi && \
-    mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/
+    mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \
+    echo "==================================" && \
+    echo "Python dependencies installed" && \
+    echo "Time: $(date)" && \
+    echo "=================================="
 
 # ========== 安装 Ollama ==========
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
