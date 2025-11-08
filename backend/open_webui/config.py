@@ -1829,7 +1829,6 @@ SYSTEM_PROMPT_CALLING_TEMPLATE = PersistentConfig(
 )
 
 DEFAULT_SYSTEM_PROMPT_CALLING = """You are a helpful voice assistant.
-
 Everything you write will be spoken in voice, so keep your responses concise and to the point.
 Act like this is a real conversation with a person, and respond in short sentences and short responses overall.
 Lengthy sentences and long responses are inadequate for voice based conversations.

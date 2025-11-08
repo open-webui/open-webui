@@ -210,17 +210,18 @@ async def generate_chat_completion(
             except Exception as e:
                 raise e
 
-    if "call" in form_data.get("metadata", {}):
-        if request.app.state.config.SYSTEM_PROMPT_CALLING_TEMPLATE != "":
-            template = request.app.state.config.SYSTEM_PROMPT_CALLING_TEMPLATE
-        else:
-            template = DEFAULT_SYSTEM_PROMPT_CALLING
+        # Add calling system prompt if call feature is enabled
+        if form_data.get("metadata", {}).get("call", False):
+            if request.app.state.config.SYSTEM_PROMPT_CALLING_TEMPLATE != "":
+                template = request.app.state.config.SYSTEM_PROMPT_CALLING_TEMPLATE
+            else:
+                template = DEFAULT_SYSTEM_PROMPT_CALLING
 
-        form_data["messages"] = add_or_update_system_message(
-            template,
-            form_data["messages"],
-        )
-        
+            form_data["messages"] = add_or_update_system_message(
+                template,
+                form_data["messages"],
+            )
+
         if model.get("owned_by") == "arena":
             model_ids = model.get("info", {}).get("meta", {}).get("model_ids")
             filter_mode = model.get("info", {}).get("meta", {}).get("filter_mode")
