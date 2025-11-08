@@ -21,31 +21,35 @@ RUN echo "https://mirrors.aliyun.com/alpine/v3.20/main" > /etc/apk/repositories 
     echo "https://mirrors.aliyun.com/alpine/v3.20/community" >> /etc/apk/repositories && \
     apk update
 
-# ========== 配置 npm 镜像源 ==========
+# ========== 配置 npm 镜像源（只保留有效选项）==========
 RUN npm config set registry https://registry.npmmirror.com && \
-    npm config set disturl https://npmmirror.com/dist && \
-    npm config set electron_mirror https://npmmirror.com/mirrors/electron/ && \
-    npm config set sass_binary_site https://npmmirror.com/mirrors/node-sass/ && \
-    npm config set phantomjs_cdnurl https://npmmirror.com/mirrors/phantomjs/ && \
-    npm config set chromedriver_cdnurl https://npmmirror.com/mirrors/chromedriver/ && \
-    npm config set operadriver_cdnurl https://npmmirror.com/mirrors/operadriver/ && \
     npm config set fetch-timeout 600000 && \
     npm config set fetch-retries 10 && \
     npm config set fetch-retry-mintimeout 30000 && \
     npm config set fetch-retry-maxtimeout 180000
 
+# ========== 配置二进制包镜像（通过环境变量）==========
+ENV ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ \
+    SASS_BINARY_SITE=https://npmmirror.com/mirrors/node-sass/ \
+    PHANTOMJS_CDNURL=https://npmmirror.com/mirrors/phantomjs/ \
+    CHROMEDRIVER_CDNURL=https://npmmirror.com/mirrors/chromedriver/ \
+    OPERADRIVER_CDNURL=https://npmmirror.com/mirrors/operadriver/ \
+    PYTHON_MIRROR=https://npmmirror.com/mirrors/python/
+
 # ========== 配置代理（可选，作为备用方案）==========
 ARG HTTP_PROXY
 ARG HTTPS_PROXY
-ENV HTTP_PROXY=${HTTP_PROXY:-http://host.docker.internal:7897}
-ENV HTTPS_PROXY=${HTTPS_PROXY:-http://host.docker.internal:7897}
-ENV NO_PROXY=localhost,127.0.0.1,mirrors.aliyun.com,registry.npmmirror.com,npmmirror.com
+ENV HTTP_PROXY=${HTTP_PROXY}
+ENV HTTPS_PROXY=${HTTPS_PROXY}
+ENV NO_PROXY=localhost,127.0.0.1,mirrors.aliyun.com,registry.nppmirror.com,npmmirror.com
 
 # ========== 安装 git 并配置 ==========
 RUN apk add --no-cache git && \
-    git config --global http.proxy ${HTTP_PROXY} && \
-    git config --global https.proxy ${HTTPS_PROXY} && \
-    git config --global http.sslVerify false
+    if [ -n "$HTTP_PROXY" ]; then \
+        git config --global http.proxy ${HTTP_PROXY} && \
+        git config --global https.proxy ${HTTPS_PROXY} && \
+        git config --global http.sslVerify false; \
+    fi
 
 WORKDIR /app
 
@@ -88,6 +92,7 @@ ENV OLLAMA_BASE_URL="/ollama" \
     OPENAI_API_BASE_URL=""
 
 ## API Key and Security Config ##
+# 注意：这些应该在运行时注入，不要在构建时写入
 ENV OPENAI_API_KEY="" \
     WEBUI_SECRET_KEY="" \
     SCARF_NO_ANALYTICS=true \
@@ -174,7 +179,6 @@ RUN pip3 install --no-cache-dir uv && \
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
     date +%s > /tmp/ollama_build_hash && \
     echo "Cache broken at timestamp: `cat /tmp/ollama_build_hash`" && \
-    # 使用镜像加速 Ollama 下载
     export HF_ENDPOINT=https://hf-mirror.com && \
     curl -fsSL https://ollama.com/install.sh | sh || \
     (echo "Ollama installation failed, trying with proxy..." && \
