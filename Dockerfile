@@ -36,6 +36,8 @@ WORKDIR /app
 # to store git revision in build
 RUN apk add --no-cache git
 
+RUN npm config set registry https://registry.npmmirror.com
+
 COPY package.json package-lock.json ./
 # RUN npm ci --force
 RUN npm install --legacy-peer-deps
