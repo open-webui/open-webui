@@ -54,6 +54,7 @@ from open_webui.utils.filter import (
     get_sorted_filter_ids,
     process_filter_functions,
 )
+from open_webui.utils.misc import add_or_update_system_message
 from open_webui.config import (
     DEFAULT_SYSTEM_PROMPT_CALLING,
 )
