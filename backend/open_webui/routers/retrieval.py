@@ -2102,6 +2102,7 @@ async def process_web_search(
                 request,
                 request.app.state.config.WEB_SEARCH_ENGINE,
                 query,
+                user,
             )
             for query in form_data.queries
         ]
