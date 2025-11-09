@@ -115,14 +115,16 @@ class MCPClient:
 
         return prompts
 
-    async def get_prompt(self, name: str, arguments: Optional[dict] = None) -> Optional[dict]:
+    async def get_prompt(
+        self, name: str, arguments: Optional[dict] = None
+    ) -> Optional[dict]:
         if not self.session:
             raise RuntimeError("MCP client is not connected.")
 
         result = await self.session.get_prompt(name, arguments=arguments or {})
         if not result:
             raise Exception("No result returned from MCP get_prompt call.")
-        
+
         result_dict = result.model_dump()
         return result_dict
 
