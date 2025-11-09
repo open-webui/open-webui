@@ -99,20 +99,23 @@
 						const { type, data } = e;
 						if (type === 'prompt') {
 							insertTextHandler(data.content);
-						} else if (type == "mcp-prompt") {
-							const content = await getMCPPromptContent(localStorage.token, data.server_id, data.name);
-							insertTextHandler(content.messages[0].content.text || '')
-						} else if (type == "mcp-prompt-with-params") {
-
+						} else if (type == 'mcp-prompt') {
+							const content = await getMCPPromptContent(
+								localStorage.token,
+								data.server_id,
+								data.name
+							);
+							insertTextHandler(content.messages[0].content.text || '');
+						} else if (type == 'mcp-prompt-with-params') {
 							const variables = {};
 
-				            data.arguments.forEach(arg => {
-				            	variables[arg.name] = {
-				            		type: 'text',
-				            		required: arg.required || false,
-				            		placeholder: arg.description || `Enter ${arg.name}`
-				            	};
-				            });
+							data.arguments.forEach((arg) => {
+								variables[arg.name] = {
+									type: 'text',
+									required: arg.required || false,
+									placeholder: arg.description || `Enter ${arg.name}`
+								};
+							});
 
 							onSelect({
 								type: 'mcp-prompt',

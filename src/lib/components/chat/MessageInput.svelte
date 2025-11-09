@@ -843,9 +843,9 @@
 										data.mcpPrompt.name,
 										variableValues
 									);
-									
+
 									let promptText = content.messages[0].content.text;
-									
+
 									await insertTextAtCursor(promptText);
 									showInputVariablesModal = false;
 								} catch (error) {

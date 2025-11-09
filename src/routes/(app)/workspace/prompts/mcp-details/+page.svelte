@@ -11,11 +11,11 @@
 	onMount(async () => {
 		const serverId = $page.url.searchParams.get('server_id');
 		const name = $page.url.searchParams.get('name');
-		
+
 		if (serverId && name) {
 			const mcpPrompts = await getMCPPrompts($user.token);
-			selectedPrompt = mcpPrompts.find(p => p.server_id === serverId && p.name === name) || null;
-			
+			selectedPrompt = mcpPrompts.find((p) => p.server_id === serverId && p.name === name) || null;
+
 			if (!selectedPrompt) {
 				goto('/workspace/prompts');
 			}

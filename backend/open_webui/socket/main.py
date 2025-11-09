@@ -284,6 +284,7 @@ async def connect(sid, environ, auth):
 
             await sio.enter_room(sid, f"user:{user.id}")
 
+
 @sio.on("user-join")
 async def user_join(sid, data):
 

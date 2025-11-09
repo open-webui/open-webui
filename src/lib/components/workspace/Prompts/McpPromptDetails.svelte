@@ -14,10 +14,9 @@
 	let promptArguments: Record<string, any> = {};
 
 	const loadPromptContent = async (args = {}) => {
-
 		loadingContent = true;
 		promptArguments = {};
-		
+
 		if ((prompt.arguments || []).length === 0 || Object.keys(args).length != 0) {
 			try {
 				promptContent = await getMCPPromptContent($user.token, prompt.server_id, prompt.name, args);
@@ -40,18 +39,21 @@
 
 	const useRenderedPrompt = () => {
 		if (!promptContent?.messages) return;
-		
-		let promptText = promptContent.messages.map(m => {
-			if (typeof m.content === 'string') {
-				return m.content;
-			} else if (m.content?.text) {
-				return m.content.text;
-			} else if (m.content?.type === 'text') {
-				return m.content.text || '';
-			}
-			return '';
-		}).filter(Boolean).join('\n\n');
-		
+
+		let promptText = promptContent.messages
+			.map((m) => {
+				if (typeof m.content === 'string') {
+					return m.content;
+				} else if (m.content?.text) {
+					return m.content.text;
+				} else if (m.content?.type === 'text') {
+					return m.content.text || '';
+				}
+				return '';
+			})
+			.filter(Boolean)
+			.join('\n\n');
+
 		window.location.href = `/?q=${encodeURIComponent(promptText)}`;
 	};
 
@@ -67,13 +69,13 @@
 				<div class="text-2xl font-medium w-full bg-transparent">
 					{prompt.name}
 				</div>
-				
+
 				{#if prompt.description}
 					<div class="text-gray-600 dark:text-gray-300 mt-2">
 						{prompt.description}
 					</div>
 				{/if}
-				
+
 				<div class="text-sm text-gray-500 dark:text-gray-400 mt-2">
 					Server: {prompt.server_id}
 				</div>
@@ -83,7 +85,7 @@
 		{#if prompt.arguments && prompt.arguments.length > 0}
 			<div class="my-4">
 				<div class="text-sm font-semibold mb-3">{$i18n.t('Parameters')}</div>
-				
+
 				<div class="space-y-3">
 					{#each prompt.arguments as arg}
 						<div>
@@ -99,7 +101,7 @@
 							/>
 						</div>
 					{/each}
-					
+
 					<button
 						class="text-sm px-4 py-2 transition rounded-xl bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black"
 						type="button"
@@ -128,7 +130,7 @@
 						<div class="font-medium">{$i18n.t('Use Prompt')}</div>
 					</button>
 				</div>
-				
+
 				<div class="space-y-3">
 					{#each promptContent.messages as message}
 						<div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
@@ -136,7 +138,9 @@
 								{message.role}
 							</div>
 							<div class="text-gray-900 dark:text-white whitespace-pre-wrap text-sm">
-								{typeof message.content === 'string' ? message.content : message.content?.text || JSON.stringify(message.content)}
+								{typeof message.content === 'string'
+									? message.content
+									: message.content?.text || JSON.stringify(message.content)}
 							</div>
 						</div>
 					{/each}

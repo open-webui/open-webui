@@ -14,8 +14,12 @@
 	export let filteredItems = [];
 
 	$: filteredItems = [
-		...prompts.map(p => ({ ...p, type: 'prompt' })),
-		...mcpPrompts.map(p => ({ ...p, type: ((p.arguments || []).length > 0) ? 'mcp-prompt-with-params' : 'mcp-prompt', title: p.description }))
+		...prompts.map((p) => ({ ...p, type: 'prompt' })),
+		...mcpPrompts.map((p) => ({
+			...p,
+			type: (p.arguments || []).length > 0 ? 'mcp-prompt-with-params' : 'mcp-prompt',
+			title: p.description
+		}))
 	]
 		.filter((p) => (p.command || p.title).toLowerCase().includes(query.toLowerCase()))
 		.sort((a, b) => a.title.localeCompare(b.title));

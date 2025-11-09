@@ -124,5 +124,3 @@ async def download_db(user=Depends(get_admin_user)):
         media_type="application/octet-stream",
         filename="webui.db",
     )
-
-
