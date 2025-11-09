@@ -1811,7 +1811,9 @@ def process_web(
         )
 
 
-def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
+def search_web(
+    request: Request, engine: str, query: str, user=None
+) -> list[SearchResult]:
     """Search the web using a search engine and return the results as a list of SearchResult objects.
     Will look for a search engine API key in environment variables in the following order:
     - SEARXNG_QUERY_URL
@@ -2069,11 +2071,13 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
         )
     elif engine == "external":
         return search_external(
+            request,
             request.app.state.config.EXTERNAL_WEB_SEARCH_URL,
             request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY,
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            user=user,
         )
     else:
         raise Exception("No search engine API key found in environment variables")
