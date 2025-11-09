@@ -1,0 +1,178 @@
+id,user_id,name,child_age,child_gender,child_characteristics,is_only_child,child_has_ai_use,child_ai_use_contexts,parent_llm_monitoring_level,attempt_number,is_current,session_number,created_at,updated_at,user_name,user_email,user_role,prolific_pid,user_session_number,consent_given
+eaa36b98-e600-4e87-b235-5e019ef95afc,0e409cd2-d303-446f-9740-66317ccd7e87,Jade,10 years old,Female,"Openness to Experience: Is curious about many different things, Is fascinated by art, music, or literature, Is inventive, finds clever ways to do things, Is original, comes up with new ideas, Values art and beauty
+
+Additional characteristics:
+Although Jade is generally a very upbeat and happy child, she has been through trauma that causes some anxiety and depression. She gets very sad and cries if she has to be separated from me, and she does not have much faith that things will work out in the end. She will talk to absolutely anyone and wants to be friends with everyone, from babies to adults. She has always had a very nurturing personality with babies. She loves to help care for them, and even as a baby herself, the daycare workers would comment on how sweet and loving she was when pretending to care for her baby dolls. She loves to be goofy, and rarely hides her true self or worries about what other people think about her. She loves to organize things, and find creative ways to upcycle almost any item. I often have to force her to throw away trash that she is ""saving"" to make something with. She is into all things girly, and is a bit prissy. However, she has never behaved like a ""mean girl"". She loves to do things to make people happy. When she was smaller, she would draw a picture every time we were going out somewhere, and choose a random stranger to give it to. She always made someone's day doing that.",False,no,[],plan_to,1,True,1,1762437280128056723,1762437280128056723,5fd6f3d6d15e6e6631abd0f1,prolific_5fd6f3d6d15e6e6631abd0f1@prolific.study,user,5fd6f3d6d15e6e6631abd0f1,1,True
+acbf4092-cfa2-444e-bdea-e7ed5e06700f,0e9ee306-1fe4-4a2c-bee5-f33ce783695c,Luca Solórzano,13 years old,Male,"Agreeableness: Is compassionate, has a soft heart, Is respectful, treats others with respect, Has a forgiving nature, Assumes the best about people, Is polite, courteous to others
+Conscientiousness: Is systematic, likes to keep things in order, Is dependable, steady, Is reliable, can always be counted on, Tends to be disorganized, Can be somewhat careless, Sometimes behaves irresponsibly
+Extraversion: Is outgoing, sociable, Is talkative, Is full of energy, Shows a lot of enthusiasm, Is sometimes shy, introverted
+Neuroticism (Emotional Stability): Worries a lot, Is temperamental, gets emotional easily, Stays optimistic after experiencing a setback
+Openness to Experience: Is curious about many different things, Is complex, a deep thinker, Is inventive, finds clever ways to do things, Is original, comes up with new ideas, Values art and beauty
+
+Additional characteristics:
+He is bilingual and in a dual-immersion program, where he speaks Spanish and English. He strongly values Hispanic culture and does Baile Folklórico. He is an active child who loves baseball and wrestling. He enjoys running and is competitive. He is the oldest of three kids.",,,,,1,True,1,1761233380669286772,1761233380669286772,Lauren,lauren.a.solorzano@gmail.com,user,,1,False
+9b5886fe-1fed-4501-8cd0-3b37a95910dc,23baf69e-6931-46ad-91dc-91134e157d4b,John,9 years old,Male,"Agreeableness: Is compassionate, has a soft heart, Is respectful, treats others with respect, Has a forgiving nature, Assumes the best about people
+Conscientiousness: Is systematic, likes to keep things in order, Is persistent, works until the task is finished, Is dependable, steady, Is reliable, can always be counted on, Keeps things neat and tidy
+Extraversion: Tends to be quiet, Is sometimes shy, introverted, Finds it hard to influence people, Prefers to have others take charge
+Neuroticism (Emotional Stability): Can be tense, Worries a lot, Often feels sad
+Openness to Experience: Is curious about many different things, Is complex, a deep thinker, Is inventive, finds clever ways to do things, Is original, comes up with new ideas, Has few artistic interests
+
+Additional characteristics:
+He loves video games, the outdoors, and cars.",True,yes,"[""school_homework"", ""general_knowledge"", ""games_chatting""]",occasional_guidance,1,True,1,1762435249079650731,1762435249079650731,5f5e32a0d6a12c6857b8e127,prolific_5f5e32a0d6a12c6857b8e127@prolific.study,user,5f5e32a0d6a12c6857b8e127,1,True
+577713e8-bce2-49f1-ac18-645ff95f35c5,27b58353-bf2a-419f-895a-b36704255b06,Evie,9 years old,Female,"Agreeableness: Is compassionate, has a soft heart, Is helpful and unselfish with others, Has a forgiving nature, Starts arguments with others
+Conscientiousness: Is persistent, works until the task is finished, Can be somewhat careless, Sometimes behaves irresponsibly
+Extraversion: Is outgoing, sociable, Is talkative, Has an assertive personality, Is full of energy, Shows a lot of enthusiasm
+Neuroticism (Emotional Stability): Can be tense, Is temperamental, gets emotional easily, Is relaxed, handles stress well
+Openness to Experience: Is curious about many different things, Is fascinated by art, music, or literature, Is original, comes up with new ideas, Values art and beauty
+
+Additional characteristics:
+Loves animals, especially horses. Loves to read and excels at it. Very athletic, will practice on her own until she masters something. Very creative. Daring. Resillient.",True,yes,"[""general_knowledge""]",plan_to,1,True,1,1762439652348946496,1762439652348946496,675c2492a27920b1df155f96,prolific_675c2492a27920b1df155f96@prolific.study,user,675c2492a27920b1df155f96,1,True
+42bf49da-713f-450d-8e06-d912c599b34e,2a219b09-95f6-4e53-b6fa-640b20d18fb6,NA,9 years old,Male,"Agreeableness: Is compassionate, has a soft heart
+
+Additional characteristics:
+NA",False,prefer_not_to_say,[],prefer_not_to_say,1,True,1,1762039244282741157,1762039244282741157,11,prolific_11@prolific.study,user,11,1,True
+4fb35cc7-02a1-44fe-89e7-208c5f38cf85,323340ea-43e7-435a-9901-f5c96caf955b,Child 1,9 years old,Female,"Agreeableness: Is compassionate, has a soft heart, Is helpful and unselfish with others, Is respectful, treats others with respect, Has a forgiving nature, Assumes the best about people, Is polite, courteous to others
+Conscientiousness: Is systematic, likes to keep things in order, Is efficient, gets things done, Is persistent, works until the task is finished, Is dependable, steady, Is reliable, can always be counted on, Keeps things neat and tidy, Can be somewhat careless
+Extraversion: Is outgoing, sociable, Is talkative, Tends to be quiet, Is sometimes shy, introverted
+Neuroticism (Emotional Stability): Worries a lot, Is emotionally stable, not easily upset, Keeps their emotions under control
+Openness to Experience: Is curious about many different things, Is complex, a deep thinker, Is fascinated by art, music, or literature, Is inventive, finds clever ways to do things, Is original, comes up with new ideas, Values art and beauty
+
+Additional characteristics:
+None",False,no,[],active_rules,1,True,1,1762039692344401147,1762039692344401147,629aaa38fdfc8168501b930e,prolific_629aaa38fdfc8168501b930e@prolific.study,user,629aaa38fdfc8168501b930e,1,True
+a28cb7a5-2533-4ed6-be5b-1c386526e1a9,47344ab8-2ad1-4a78-a6d3-ada2fec23070,Noah,11 years old,Male,"Agreeableness: Is compassionate, has a soft heart, Is polite, courteous to others
+Conscientiousness: Tends to be disorganized, Can be somewhat careless, Sometimes behaves irresponsibly
+Extraversion: Is outgoing, sociable, Is talkative, Is full of energy, Shows a lot of enthusiasm
+Neuroticism (Emotional Stability): Is temperamental, gets emotional easily
+Openness to Experience: Is curious about many different things, Is inventive, finds clever ways to do things, Is original, comes up with new ideas
+
+Additional characteristics:
+tech savvy",False,yes,"[""school_homework""]",occasional_guidance,1,True,1,1762434662383375197,1762434662383375197,66f6dfde93de2c0d7eaf463f,prolific_66f6dfde93de2c0d7eaf463f@prolific.study,user,66f6dfde93de2c0d7eaf463f,1,True
+78f644dd-a064-4201-98b5-64a00c6d2d0e,67f52cc3-36ee-48d1-9b7a-6eb5fab8a3da,NA,9 years old,Male,"Agreeableness: Is compassionate, has a soft heart
+
+Additional characteristics:
+NA",False,prefer_not_to_say,[],prefer_not_to_say,1,True,1,1762424428271958362,1762424428271958362,12,prolific_12@prolific.study,user,12,1,True
+0bd18f22-6870-40b1-860d-34793d19c7ac,6a7879f8-3887-45de-a3a4-92db4f33ff74,Eli,16 years old,Male,"Agreeableness: Is compassionate, has a soft heart, Is helpful and unselfish with others, Is respectful, treats others with respect, Has a forgiving nature, Assumes the best about people, Is polite, courteous to others
+Conscientiousness: Is systematic, likes to keep things in order, Is efficient, gets things done, Is persistent, works until the task is finished, Is dependable, steady, Is reliable, can always be counted on
+Extraversion: Is full of energy, Is sometimes shy, introverted, Prefers to have others take charge
+Neuroticism (Emotional Stability): Is relaxed, handles stress well, Stays optimistic after experiencing a setback, Is emotionally stable, not easily upset, Keeps their emotions under control
+Openness to Experience: Is curious about many different things, Is complex, a deep thinker, Is fascinated by art, music, or literature, Is inventive, finds clever ways to do things, Is original, comes up with new ideas, Values art and beauty
+
+Additional characteristics:
+Enjoys art and singing ",True,no,[],no_monitoring,1,True,1,1762434794487293872,1762434794487293872,67477ac7090d737ae33348ea,prolific_67477ac7090d737ae33348ea@prolific.study,user,67477ac7090d737ae33348ea,1,True
+b453d1f8-7299-488c-8788-b65177c277e8,7255769d-ab16-4307-97b6-cf36210c0c23,Olive,11 years old,Female,"Agreeableness: Is helpful and unselfish with others, Is respectful, treats others with respect, Is polite, courteous to others
+Conscientiousness: Tends to be disorganized, Tends to be lazy, Can be somewhat careless
+Extraversion: Is outgoing, sociable, Is talkative, Has an assertive personality, Shows a lot of enthusiasm, Is dominant, acts as a leader
+Neuroticism (Emotional Stability): Is relaxed, handles stress well, Is emotionally stable, not easily upset, Keeps their emotions under control",True,no,[],plan_to,1,True,1,1762435606260659569,1762435606260659569,5eb339ee6290bc124b8549a6,prolific_5eb339ee6290bc124b8549a6@prolific.study,user,5eb339ee6290bc124b8549a6,1,True
+cc3c71ee-8285-4f28-933b-89119a712192,8c035500-8ba3-4021-96c0-21c357309a42,Bishop,16 years old,Male,"Agreeableness: Is compassionate, has a soft heart, Is helpful and unselfish with others, Is respectful, treats others with respect, Is polite, courteous to others
+Conscientiousness: Is systematic, likes to keep things in order, Is efficient, gets things done, Is persistent, works until the task is finished, Is dependable, steady, Is reliable, can always be counted on, Keeps things neat and tidy
+Extraversion: Is talkative, Is full of energy, Shows a lot of enthusiasm, Tends to be quiet, Is sometimes shy, introverted, Prefers to have others take charge
+Neuroticism (Emotional Stability): Is relaxed, handles stress well, Stays optimistic after experiencing a setback, Is emotionally stable, not easily upset, Keeps their emotions under control
+Openness to Experience: Is curious about many different things, Is complex, a deep thinker, Is fascinated by art, music, or literature, Is inventive, finds clever ways to do things, Is original, comes up with new ideas, Values art and beauty
+
+Additional characteristics:
+Bishop is a lot like a sponge provided the topic interests him. ",True,yes,"[""general_knowledge"", ""games_chatting""]",occasional_guidance,1,True,1,1762441405675231331,1762441405675231331,6101ca2b4ef4ff44381fe3cd,prolific_6101ca2b4ef4ff44381fe3cd@prolific.study,user,6101ca2b4ef4ff44381fe3cd,1,True
+8fa69654-be6d-4cd8-8bf6-ccadba4a406a,9d2be534-36d1-47d9-ac37-d65cc9921241,John,16 years old,Male,"Agreeableness: Is respectful, treats others with respect, Feels little sympathy for others, Is polite, courteous to others, Is suspicious of others' intentions
+Conscientiousness: Is systematic, likes to keep things in order, Is dependable, steady, Keeps things neat and tidy
+Extraversion: Tends to be quiet, Is sometimes shy, introverted
+Neuroticism (Emotional Stability): Is moody, has up and down mood swings
+
+Additional characteristics:
+He loves to play mobile and video games. Can sometimes be sneaky.",False,unsure,[],plan_to,1,True,1,1762434851177241470,1762434851177241470,667eb62db81d7cd5426c866d,prolific_667eb62db81d7cd5426c866d@prolific.study,user,667eb62db81d7cd5426c866d,1,True
+96d86124-6fe3-45f5-aba0-7a80ef7b572d,9ef5864a-a4db-4e07-a7f1-53f3b3a16194,Ethan,15 years old,Male,"Agreeableness: Is compassionate, has a soft heart, Is helpful and unselfish with others, Is respectful, treats others with respect, Has a forgiving nature, Is polite, courteous to others, Is suspicious of others' intentions
+Conscientiousness: Is dependable, steady, Is reliable, can always be counted on, Keeps things neat and tidy, Can be somewhat careless
+Extraversion: Tends to be quiet, Is sometimes shy, introverted
+Neuroticism (Emotional Stability): Can be tense, Worries a lot, Is moody, has up and down mood swings
+Openness to Experience: Is curious about many different things
+
+Additional characteristics:
+He is quite at the current age but was talkative when he was young.",True,yes,"[""school_homework"", ""general_knowledge"", ""games_chatting""]",occasional_guidance,1,True,1,1762040073177446282,1762040142247912718,607668ac450fc6e3025a131d,prolific_607668ac450fc6e3025a131d@prolific.study,user,607668ac450fc6e3025a131d,1,True
+626f4d6e-2ced-44f8-b9c5-f0c8f046568e,b535ced6-55fc-401f-8e28-e51815063790,JMR,15 years old,Female,"Agreeableness: Is helpful and unselfish with others, Is respectful, treats others with respect, Assumes the best about people, Is polite, courteous to others
+Conscientiousness: Is systematic, likes to keep things in order, Is efficient, gets things done, Is persistent, works until the task is finished, Is dependable, steady, Is reliable, can always be counted on, Keeps things neat and tidy
+Extraversion: Is outgoing, sociable, Shows a lot of enthusiasm
+Neuroticism (Emotional Stability): Worries a lot, Stays optimistic after experiencing a setback
+Openness to Experience: Is inventive, finds clever ways to do things
+
+Additional characteristics:
+She is a cheerleader and babysits for extra money. She enjoys podcasts, doing nails.",False,yes,"[""school_homework"", ""general_knowledge""]",occasional_guidance,1,True,1,1762437910022512292,1762437910022512292,55c0ca6cfdf99b2e8efc9f4b,prolific_55c0ca6cfdf99b2e8efc9f4b@prolific.study,user,55c0ca6cfdf99b2e8efc9f4b,1,True
+677469bf-1e59-44b4-bac9-4361c3063f45,b8e84dfd-99f1-4933-8697-d598807d5b33,AN,9 years old,Male,"Agreeableness: Is compassionate, has a soft heart
+
+Additional characteristics:
+NA",False,prefer_not_to_say,[],prefer_not_to_say,1,True,1,1761881633934265414,1761881633934265414,2,prolific_2@prolific.study,user,2,1,False
+d2940ebf-46c4-4ad1-ae90-33b4915cbe04,bcb9680e-a472-46ad-83fb-07fc3da7d31e,mike,17 years old,Male,"Extraversion: Is outgoing, sociable, Is full of energy
+
+Additional characteristics:
+like reading books and playing games",False,unsure,[],plan_to,1,True,1,1762436257354976518,1762436257354976518,67ea38f2f2477e3cbdb8202a,prolific_67ea38f2f2477e3cbdb8202a@prolific.study,user,67ea38f2f2477e3cbdb8202a,1,True
+a2ca6ccd-3c9f-414f-8018-43351b3d10a5,c3b4555c-059f-4621-bc30-dfa6510c524f,temp,14 years old,Female,"Neuroticism (Emotional Stability): Worries a lot
+
+Additional characteristics:
+temp",,,,,1,True,1,1761127143986249411,1761127143986249411,Bob,bob@yopmail.com,user,,1,False
+e7342046-4522-41bc-b6f6-f54555a2d9b2,d5fb7f87-beb1-4887-8d3d-64aad9a82a73,Melody,11 years old,Female,"Agreeableness: Is compassionate, has a soft heart, Is helpful and unselfish with others, Is respectful, treats others with respect, Has a forgiving nature, Assumes the best about people, Is polite, courteous to others
+Conscientiousness: Is persistent, works until the task is finished, Is dependable, steady, Is reliable, can always be counted on, Tends to be disorganized, Can be somewhat careless
+Extraversion: Is outgoing, sociable, Is talkative, Is full of energy, Shows a lot of enthusiasm, Is sometimes shy, introverted
+Neuroticism (Emotional Stability): Is relaxed, handles stress well, Stays optimistic after experiencing a setback, Is emotionally stable, not easily upset, Keeps their emotions under control
+Openness to Experience: Is curious about many different things, Is complex, a deep thinker, Is fascinated by art, music, or literature, Is inventive, finds clever ways to do things, Is original, comes up with new ideas, Avoids intellectual, philosophical discussions, Values art and beauty
+
+Additional characteristics:
+loves drawing, painting and crafting. Loves listening to music, has gone to cooking camp the last 3 years, has been in dance since she was 3",True,yes,"[""general_knowledge""]",occasional_guidance,1,True,1,1762039897323810748,1762039924395295215,60ddfe929fff846f04cd2c95,prolific_60ddfe929fff846f04cd2c95@prolific.study,user,60ddfe929fff846f04cd2c95,1,True
+666a7837-770a-4e7b-ad5e-10ee5ddaaa73,d962f43b-92e0-40a9-9d71-b0fefbe9799f,Ander,11 years old,Male,"Agreeableness: Is compassionate, has a soft heart, Assumes the best about people
+Conscientiousness: Is systematic, likes to keep things in order, Is persistent, works until the task is finished, Is dependable, steady, Keeps things neat and tidy
+Extraversion: Is talkative, Prefers to have others take charge
+Neuroticism (Emotional Stability): Is relaxed, handles stress well, Is emotionally stable, not easily upset
+Openness to Experience: Is complex, a deep thinker, Is inventive, finds clever ways to do things, Is original, comes up with new ideas
+
+Additional characteristics:
+Does not like disorganization or loud noise.",False,unsure,[],plan_to,1,True,1,1762043268963009661,1762043268963009661,66106426fc5e2e2bccfb8c60,prolific_66106426fc5e2e2bccfb8c60@prolific.study,user,66106426fc5e2e2bccfb8c60,1,True
+58c58172-737c-4cb5-8485-8094ddd31f77,e4c95027-224e-4fbb-b728-863c3c1a08f7,Laylah Marian,11 years old,Female,"Agreeableness: Is compassionate, has a soft heart, Is helpful and unselfish with others, Is respectful, treats others with respect, Has a forgiving nature, Is polite, courteous to others
+
+Additional characteristics:
+She is very kind and tends to be ready to learn every now and then",False,yes,"[""school_homework"", ""general_knowledge""]",active_rules,1,True,1,1762436836439237114,1762436836439237114,675b37b0100714ba57d0fa21,prolific_675b37b0100714ba57d0fa21@prolific.study,user,675b37b0100714ba57d0fa21,1,True
+de097177-4936-40d0-9947-9427ef1cd4d8,e542b838-5cc1-46c0-add7-b180e4ce4b7b,Milani,16 years old,Female,"Agreeableness: Is compassionate, has a soft heart, Is helpful and unselfish with others, Is respectful, treats others with respect, Is suspicious of others' intentions
+Conscientiousness: Is systematic, likes to keep things in order, Is efficient, gets things done, Is persistent, works until the task is finished, Is dependable, steady, Keeps things neat and tidy
+Extraversion: Is outgoing, sociable, Is talkative, Has an assertive personality, Is full of energy, Shows a lot of enthusiasm
+
+Additional characteristics:
+Easy going but knows to judge over time ",False,yes,"[""school_homework"", ""general_knowledge"", ""games_chatting""]",plan_to,1,True,1,1762040277457311803,1762040277457311803,6630dac9fd40f4bab44cc564,prolific_6630dac9fd40f4bab44cc564@prolific.study,user,6630dac9fd40f4bab44cc564,1,True
+f2325af3-bea3-4f0f-be2a-c8d8f65d1a89,e58b3d05-e6c7-4f97-8b10-652e921e056c,bob,16 years old,Male,"Agreeableness: Has a forgiving nature, Assumes the best about people
+Conscientiousness: Tends to be disorganized, Sometimes behaves irresponsibly
+Extraversion: Is outgoing, sociable, Is full of energy
+
+Additional characteristics:
+Bob has two colored eyes",,,,,1,True,1,1761689626208754309,1761689626208754309,Kevin,kevin@yopmail.com,user,,1,False
+221bd5f9-8cfb-4b21-9f9f-f191c9ce9b9d,ed19a99e-2992-4747-ae62-51220b6c7ec0,Jaslyn,16 years old,Female,"Agreeableness: Is compassionate, has a soft heart, Has a forgiving nature, Assumes the best about people, Feels little sympathy for others, Is polite, courteous to others
+Conscientiousness: Is efficient, gets things done, Is persistent, works until the task is finished, Is reliable, can always be counted on, Tends to be disorganized
+Extraversion: Is outgoing, sociable, Tends to be quiet, Is sometimes shy, introverted
+Neuroticism (Emotional Stability): Worries a lot, Often feels sad, Stays optimistic after experiencing a setback
+Openness to Experience: Is complex, a deep thinker, Is original, comes up with new ideas",False,yes,"[""school_homework"", ""general_knowledge""]",no_monitoring,1,True,1,1762436334466192882,1762436334466192882,60955a048531613c66404fb2,prolific_60955a048531613c66404fb2@prolific.study,user,60955a048531613c66404fb2,1,True
+a4f47e65-022e-465e-9099-561e3c26dfa7,ed19a99e-2992-4747-ae62-51220b6c7ec0,Riley,15 years old,Female,"Agreeableness: Is compassionate, has a soft heart, Is helpful and unselfish with others, Has a forgiving nature, Assumes the best about people, Feels little sympathy for others, Is polite, courteous to others, Tends to find fault with others
+Conscientiousness: Is reliable, can always be counted on, Tends to be disorganized, Tends to be lazy
+Extraversion: Shows a lot of enthusiasm, Tends to be quiet, Is sometimes shy, introverted, Finds it hard to influence people
+Neuroticism (Emotional Stability): Worries a lot, Often feels sad, Is moody, has up and down mood swings, Is temperamental, gets emotional easily
+Openness to Experience: Is fascinated by art, music, or literature, Is original, comes up with new ideas, Values art and beauty, Has few artistic interests",False,yes,"[""general_knowledge"", ""games_chatting""]",no_monitoring,1,True,1,1762436422952771348,1762436422952771348,60955a048531613c66404fb2,prolific_60955a048531613c66404fb2@prolific.study,user,60955a048531613c66404fb2,1,True
+ea861ab1-57a9-40da-bb85-eda48c6beb42,ed19a99e-2992-4747-ae62-51220b6c7ec0,Addy,10 years old,Female,"Agreeableness: Is compassionate, has a soft heart, Assumes the best about people, Starts arguments with others, Tends to find fault with others
+Conscientiousness: Is persistent, works until the task is finished, Tends to be disorganized, Tends to be lazy, Can be somewhat careless, Sometimes behaves irresponsibly
+Extraversion: Is outgoing, sociable, Is full of energy, Shows a lot of enthusiasm, Is sometimes shy, introverted, Finds it hard to influence people
+Neuroticism (Emotional Stability): Is moody, has up and down mood swings, Is temperamental, gets emotional easily
+Openness to Experience: Is curious about many different things, Is complex, a deep thinker, Is inventive, finds clever ways to do things, Is original, comes up with new ideas",False,unsure,[],no_monitoring,1,True,1,1762436495677659067,1762436495677659067,60955a048531613c66404fb2,prolific_60955a048531613c66404fb2@prolific.study,user,60955a048531613c66404fb2,1,True
+bb8bdcb9-26c6-45c5-8536-65e490d66426,f9a2d791-d0db-4806-8ba1-20529d6b7a95,Viki ,10 years old,Male,"Agreeableness: Is compassionate, has a soft heart
+Conscientiousness: Is systematic, likes to keep things in order
+Extraversion: Is outgoing, sociable, Is talkative
+Neuroticism (Emotional Stability): Can be tense
+Openness to Experience: Is fascinated by art, music, or literature
+
+Additional characteristics:
+dw",False,yes,"[""personal_advice""]",no_monitoring,1,True,1,1762200055978811211,1762200055978811211,Admin,childai.research.ucsd@gmail.com,admin,,1,False
+7051cbc5-4e2f-46bc-a983-b63015566475,fb6bd640-a956-41bc-846d-782a5d5a03f1,Sunny,16 years old,Female,"Agreeableness: Is compassionate, has a soft heart, Is helpful and unselfish with others, Is respectful, treats others with respect, Has a forgiving nature, Assumes the best about people, Is polite, courteous to others
+Conscientiousness: Tends to be disorganized, Tends to be lazy
+Extraversion: Is outgoing, sociable, Has an assertive personality, Is sometimes shy, introverted
+Neuroticism (Emotional Stability): Can be tense, Worries a lot, Often feels sad, Is moody, has up and down mood swings, Is temperamental, gets emotional easily
+Openness to Experience: Has few artistic interests, Has little creativity, Has difficulty imagining things
+
+Additional characteristics:
+Isn't interested in any hobbies.  Emotionally dysregulated.  Very self critical.  Sensory issues.  Very few friends.  Very mature and logical in many ways almost like an ""old soul"".",True,yes,"[""school_homework"", ""general_knowledge"", ""personal_advice""]",no_monitoring,1,True,1,1762435374980279434,1762435374980279434,677d6546138c74881d9f6efc,prolific_677d6546138c74881d9f6efc@prolific.study,user,677d6546138c74881d9f6efc,1,True
+d524e1c4-5162-487d-bc5a-7d64374ff193,fb80156e-c1f5-48c3-ab63-a216956d5a5e,Eden,9 years old,Male,"Conscientiousness: Is dependable, steady, Is reliable, can always be counted on, Tends to be disorganized
+Extraversion: Shows a lot of enthusiasm, Is sometimes shy, introverted, Finds it hard to influence people, Prefers to have others take charge
+Neuroticism (Emotional Stability): Worries a lot
+Openness to Experience: Is curious about many different things, Is inventive, finds clever ways to do things, Is original, comes up with new ideas
+
+Additional characteristics:
+My son loves Pokemon and is pretty good at playing the pokemon card game. He doesn't have a lot of friends, but he has two good friends that he hangs out with weekly. He likes playing games on his Nintendo Switch, especially Pokemon, but several others as well. He still likes Paw Patrol, but mostly because I watch it with the pets to relax and de-stress. He is a pretty gentle kid, he's very kind hearted. He loves helping me with just about anything. He likes talking, but only with people he knows well. He can be a little shy, but once he gets to know you, he's quite talkative. He loves to make people laugh. He isn't lazy, but he doesn't get much physical activity in. He's not interested in sports or anything like that. He does like playing on the swings at the playground and going for walks though.",True,no,[],plan_to,1,True,1,1762438332630746376,1762438332630746376,67044749c28abfd636ceedf0,prolific_67044749c28abfd636ceedf0@prolific.study,user,67044749c28abfd636ceedf0,1,True

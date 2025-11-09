@@ -4,6 +4,7 @@ import sys
 import csv
 import subprocess
 from datetime import datetime
+from pathlib import Path
 from urllib.parse import urlparse
 
 
@@ -107,10 +108,16 @@ def main():
         print(f"Failed to connect to database: {e}", file=sys.stderr)
         sys.exit(1)
 
+    # Create data-exports directory with timestamp
     t = timestamp()
-    child_csv = f"child_profiles_export_{t}.csv"
-    mod_csv = f"moderation_sessions_export_{t}.csv"
-    exit_csv = f"exit_quiz_responses_export_{t}.csv"
+    export_dir = Path("data-exports") / t
+    export_dir.mkdir(parents=True, exist_ok=True)
+    print(f"Created export directory: {export_dir}")
+
+    child_csv = export_dir / f"child_profiles_export_{t}.csv"
+    mod_csv = export_dir / f"moderation_sessions_export_{t}.csv"
+    exit_csv = export_dir / f"exit_quiz_responses_export_{t}.csv"
+    assignment_time_csv = export_dir / f"assignment_time_export_{t}.csv"
 
     child_query = """
         SELECT
@@ -120,7 +127,6 @@ def main():
             cp.child_age,
             cp.child_gender,
             cp.child_characteristics,
-            cp.parenting_style,
             cp.is_only_child,
             cp.child_has_ai_use,
             cp.child_ai_use_contexts::text,
@@ -171,8 +177,7 @@ def main():
             cp.name AS child_name,
             cp.child_age,
             cp.child_gender,
-            cp.child_characteristics,
-            cp.parenting_style
+            cp.child_characteristics
         FROM moderation_session ms
         LEFT JOIN "user" u ON ms.user_id = u.id
         LEFT JOIN child_profile cp ON ms.child_id = cp.id
@@ -204,21 +209,43 @@ def main():
         ORDER BY eq.user_id, eq.child_id, eq.created_at;
     """
 
+    assignment_time_query = """
+        SELECT
+            ata.id,
+            ata.user_id,
+            ata.session_number,
+            ata.active_ms_delta,
+            ata.cumulative_ms,
+            ata.created_at,
+            u.name AS user_name,
+            u.email AS user_email,
+            u.role AS user_role,
+            u.prolific_pid
+        FROM assignment_session_activity ata
+        LEFT JOIN "user" u ON ata.user_id = u.id
+        ORDER BY ata.user_id, ata.session_number, ata.created_at;
+    """
+
     try:
         print(f"Exporting child profiles -> {child_csv}")
-        child_rows = export_query_to_csv(conn, child_query, child_csv)
+        child_rows = export_query_to_csv(conn, child_query, str(child_csv))
         print(f"Child profiles rows: {child_rows}")
 
         print(f"Exporting moderation sessions -> {mod_csv}")
-        mod_rows = export_query_to_csv(conn, mod_query, mod_csv)
+        mod_rows = export_query_to_csv(conn, mod_query, str(mod_csv))
         print(f"Moderation session rows: {mod_rows}")
 
         print(f"Exporting exit quiz responses -> {exit_csv}")
-        exit_rows = export_query_to_csv(conn, exit_query, exit_csv)
+        exit_rows = export_query_to_csv(conn, exit_query, str(exit_csv))
         print(f"Exit quiz response rows: {exit_rows}")
 
+        print(f"Exporting assignment time -> {assignment_time_csv}")
+        assignment_time_rows = export_query_to_csv(conn, assignment_time_query, str(assignment_time_csv))
+        print(f"Assignment time rows: {assignment_time_rows}")
+
         print("Done.")
-        print(f"Outputs:\n- {child_csv}\n- {mod_csv}\n- {exit_csv}")
+        print(f"Output directory: {export_dir}")
+        print(f"Outputs:\n- {child_csv}\n- {mod_csv}\n- {exit_csv}\n- {assignment_time_csv}")
     except Exception as e:
         print(f"Export failed: {e}", file=sys.stderr)
         sys.exit(1)
@@ -231,6 +258,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 

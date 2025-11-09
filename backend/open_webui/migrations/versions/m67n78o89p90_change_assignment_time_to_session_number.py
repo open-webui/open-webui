@@ -46,3 +46,5 @@ def downgrade() -> None:
         ["user_id", "attempt_number"],
     )
 
+
+
