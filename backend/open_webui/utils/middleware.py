@@ -45,10 +45,10 @@ from open_webui.routers.retrieval import (
     SearchForm,
 )
 from open_webui.routers.images import (
-    load_b64_image_data,
     image_generations,
-    GenerateImageForm,
-    upload_image,
+    CreateImageForm,
+    image_edits,
+    EditImageForm,
 )
 from open_webui.routers.pipelines import (
     process_pipeline_inlet_filter,
@@ -91,7 +91,7 @@ from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
     get_content_from_message,
 )
-from open_webui.utils.tools import get_tools
+from open_webui.utils.tools import get_tools, get_updated_tool_function
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.filter import (
     get_sorted_filter_ids,
@@ -718,9 +718,31 @@ async def chat_web_search_handler(
     return form_data
 
 
+def get_last_images(message_list):
+    images = []
+    for message in reversed(message_list):
+        images_flag = False
+        for file in message.get("files", []):
+            if file.get("type") == "image":
+                images.append(file.get("url"))
+                images_flag = True
+
+        if images_flag:
+            break
+
+    return images
+
+
 async def chat_image_generation_handler(
     request: Request, form_data: dict, extra_params: dict, user
 ):
+    metadata = extra_params.get("__metadata__", {})
+    chat_id = metadata.get("chat_id", None)
+    if not chat_id:
+        return form_data
+
+    chat = Chats.get_chat_by_id_and_user_id(chat_id, user.id)
+
     __event_emitter__ = extra_params["__event_emitter__"]
     await __event_emitter__(
         {
@@ -729,87 +751,151 @@ async def chat_image_generation_handler(
         }
     )
 
-    messages = form_data["messages"]
-    user_message = get_last_user_message(messages)
+    messages_map = chat.chat.get("history", {}).get("messages", {})
+    message_id = chat.chat.get("history", {}).get("currentId")
+    message_list = get_message_list(messages_map, message_id)
+    user_message = get_last_user_message(message_list)
 
     prompt = user_message
-    negative_prompt = ""
-
-    if request.app.state.config.ENABLE_IMAGE_PROMPT_GENERATION:
-        try:
-            res = await generate_image_prompt(
-                request,
-                {
-                    "model": form_data["model"],
-                    "messages": messages,
-                },
-                user,
-            )
-
-            response = res["choices"][0]["message"]["content"]
-
-            try:
-                bracket_start = response.find("{")
-                bracket_end = response.rfind("}") + 1
-
-                if bracket_start == -1 or bracket_end == -1:
-                    raise Exception("No JSON object found in the response")
-
-                response = response[bracket_start:bracket_end]
-                response = json.loads(response)
-                prompt = response.get("prompt", [])
-            except Exception as e:
-                prompt = user_message
-
-        except Exception as e:
-            log.exception(e)
-            prompt = user_message
+    input_images = get_last_images(message_list)
 
     system_message_content = ""
+    if len(input_images) == 0:
+        # Create image(s)
+        if request.app.state.config.ENABLE_IMAGE_PROMPT_GENERATION:
+            try:
+                res = await generate_image_prompt(
+                    request,
+                    {
+                        "model": form_data["model"],
+                        "messages": form_data["messages"],
+                    },
+                    user,
+                )
 
-    try:
-        images = await image_generations(
-            request=request,
-            form_data=GenerateImageForm(**{"prompt": prompt}),
-            user=user,
-        )
+                response = res["choices"][0]["message"]["content"]
 
-        await __event_emitter__(
-            {
-                "type": "status",
-                "data": {"description": "Image created", "done": True},
-            }
-        )
+                try:
+                    bracket_start = response.find("{")
+                    bracket_end = response.rfind("}") + 1
 
-        await __event_emitter__(
-            {
-                "type": "files",
-                "data": {
-                    "files": [
-                        {
-                            "type": "image",
-                            "url": image["url"],
-                        }
-                        for image in images
-                    ]
-                },
-            }
-        )
+                    if bracket_start == -1 or bracket_end == -1:
+                        raise Exception("No JSON object found in the response")
 
-        system_message_content = "<context>User is shown the generated image, tell the user that the image has been generated</context>"
-    except Exception as e:
-        log.exception(e)
-        await __event_emitter__(
-            {
-                "type": "status",
-                "data": {
-                    "description": f"An error occurred while generating an image",
-                    "done": True,
-                },
-            }
-        )
+                    response = response[bracket_start:bracket_end]
+                    response = json.loads(response)
+                    prompt = response.get("prompt", [])
+                except Exception as e:
+                    prompt = user_message
 
-        system_message_content = "<context>Unable to generate an image, tell the user that an error occurred</context>"
+            except Exception as e:
+                log.exception(e)
+                prompt = user_message
+
+        try:
+            images = await image_generations(
+                request=request,
+                form_data=CreateImageForm(**{"prompt": prompt}),
+                user=user,
+            )
+
+            await __event_emitter__(
+                {
+                    "type": "status",
+                    "data": {"description": "Image created", "done": True},
+                }
+            )
+
+            await __event_emitter__(
+                {
+                    "type": "files",
+                    "data": {
+                        "files": [
+                            {
+                                "type": "image",
+                                "url": image["url"],
+                            }
+                            for image in images
+                        ]
+                    },
+                }
+            )
+
+            system_message_content = "<context>The requested image has been created and is now being shown to the user. Let them know that it has been generated.</context>"
+        except Exception as e:
+            log.debug(e)
+
+            error_message = ""
+            if isinstance(e, HTTPException):
+                if e.detail and isinstance(e.detail, dict):
+                    error_message = e.detail.get("message", str(e.detail))
+                else:
+                    error_message = str(e.detail)
+
+            await __event_emitter__(
+                {
+                    "type": "status",
+                    "data": {
+                        "description": f"An error occurred while generating an image",
+                        "done": True,
+                    },
+                }
+            )
+
+            system_message_content = f"<context>Image generation was attempted but failed. The system is currently unable to generate the image. Tell the user that an error occurred: {error_message}</context>"
+    else:
+        # Edit image(s)
+        try:
+            images = await image_edits(
+                request=request,
+                form_data=EditImageForm(**{"prompt": prompt, "image": input_images}),
+                user=user,
+            )
+
+            await __event_emitter__(
+                {
+                    "type": "status",
+                    "data": {"description": "Image created", "done": True},
+                }
+            )
+
+            await __event_emitter__(
+                {
+                    "type": "files",
+                    "data": {
+                        "files": [
+                            {
+                                "type": "image",
+                                "url": image["url"],
+                            }
+                            for image in images
+                        ]
+                    },
+                }
+            )
+
+            system_message_content = "<context>The requested image has been created and is now being shown to the user. Let them know that it has been generated.</context>"
+        except Exception as e:
+            log.debug(e)
+
+            error_message = ""
+            if isinstance(e, HTTPException):
+                if e.detail and isinstance(e.detail, dict):
+                    error_message = e.detail.get("message", str(e.detail))
+                else:
+                    error_message = str(e.detail)
+
+            await __event_emitter__(
+                {
+                    "type": "status",
+                    "data": {
+                        "description": f"An error occurred while generating an image",
+                        "done": True,
+                    },
+                }
+            )
+
+            system_message_content = f"<context>Image generation was attempted but failed. The system is currently unable to generate the image. Tell the user that an error occurred: {error_message}</context>"
 
     if system_message_content:
         form_data["messages"] = add_or_update_system_message(
@@ -827,11 +913,7 @@ async def chat_completion_files_handler(
 
     if files := body.get("metadata", {}).get("files", None):
         # Check if all files are in full context mode
-        all_full_context = all(
-            item.get("context") == "full"
-            for item in files
-            if item.get("type") == "file"
-        )
+        all_full_context = all(item.get("context") == "full" for item in files)
 
         queries = []
         if not all_full_context:
@@ -1311,6 +1393,17 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         }
                 except Exception as e:
                     log.debug(e)
+                    if event_emitter:
+                        await event_emitter(
+                            {
+                                "type": "chat:message:error",
+                                "data": {
+                                    "error": {
+                                        "content": f"Failed to connect to MCP server '{server_id}'"
+                                    }
+                                },
+                            }
+                        )
                     continue
 
         tools_dict = await get_tools(
@@ -1509,8 +1602,8 @@ async def process_chat_response(
                             )
 
                             follow_ups_string = response_message.get(
-                                "content", response_message.get("reasoning_content", "")
-                            )
+                                "content"
+                            ) or response_message.get("reasoning_content", "")
                         else:
                             follow_ups_string = ""
 
@@ -1547,16 +1640,13 @@ async def process_chat_response(
                 if not metadata.get("chat_id", "").startswith(
                     "local:"
                 ):  # Only update titles and tags for non-temp chats
-                    if (
-                        TASKS.TITLE_GENERATION in tasks
-                        and tasks[TASKS.TITLE_GENERATION]
-                    ):
+                    if TASKS.TITLE_GENERATION in tasks:
                         user_message = get_last_user_message(messages)
                         if user_message and len(user_message) > 100:
                             user_message = user_message[:100] + "..."
 
+                        title = None
                         if tasks[TASKS.TITLE_GENERATION]:
-
                             res = await generate_title(
                                 request,
                                 {
@@ -1573,12 +1663,12 @@ async def process_chat_response(
                                         "message", {}
                                     )
 
-                                    title_string = response_message.get(
-                                        "content",
-                                        response_message.get(
+                                    title_string = (
+                                        response_message.get("content")
+                                        or response_message.get(
                                             "reasoning_content",
-                                            message.get("content", user_message),
-                                        ),
+                                        )
+                                        or message.get("content", user_message)
                                     )
                                 else:
                                     title_string = ""
@@ -1607,7 +1697,8 @@ async def process_chat_response(
                                         "data": title,
                                     }
                                 )
-                        elif len(messages) == 2:
+
+                        if title == None and len(messages) == 2:
                             title = messages[0].get("content", user_message)
 
                             Chats.update_chat_title_by_id(metadata["chat_id"], title)
@@ -1637,9 +1728,8 @@ async def process_chat_response(
                                 )
 
                                 tags_string = response_message.get(
-                                    "content",
-                                    response_message.get("reasoning_content", ""),
-                                )
+                                    "content"
+                                ) or response_message.get("reasoning_content", "")
                             else:
                                 tags_string = ""
 
@@ -1944,9 +2034,11 @@ async def process_chat_response(
                                 content = f"{content}{tool_calls_display_content}"
 
                     elif block["type"] == "reasoning":
-                        reasoning_display_content = "\n".join(
-                            (f"> {line}" if not line.startswith(">") else line)
-                            for line in block["content"].splitlines()
+                        reasoning_display_content = html.escape(
+                            "\n".join(
+                                (f"> {line}" if not line.startswith(">") else line)
+                                for line in block["content"].splitlines()
+                            )
                         )
 
                         reasoning_duration = block.get("duration", None)
@@ -2354,7 +2446,9 @@ async def process_chat_response(
                             )
 
                             if data:
-                                if "event" in data:
+                                if "event" in data and not getattr(
+                                    request.state, "direct", False
+                                ):
                                     await event_emitter(data.get("event", {}))
 
                                 if "selected_model_id" in data:
@@ -2671,8 +2765,6 @@ async def process_chat_response(
                     results = []
 
                     for tool_call in response_tool_calls:
-
-                        print("tool_call", tool_call)
                         tool_call_id = tool_call.get("id", "")
                         tool_function_name = tool_call.get("function", {}).get(
                             "name", ""
@@ -2747,7 +2839,16 @@ async def process_chat_response(
                                     )
 
                                 else:
-                                    tool_function = tool["callable"]
+                                    tool_function = get_updated_tool_function(
+                                        function=tool["callable"],
+                                        extra_params={
+                                            "__messages__": form_data.get(
+                                                "messages", []
+                                            ),
+                                            "__files__": metadata.get("files", []),
+                                        },
+                                    )
+
                                     tool_result = await tool_function(
                                         **tool_function_params
                                     )
@@ -2803,9 +2904,9 @@ async def process_chat_response(
 
                     try:
                         new_form_data = {
+                            **form_data,
                             "model": model_id,
                             "stream": True,
-                            "tools": form_data["tools"],
                             "messages": [
                                 *form_data["messages"],
                                 *convert_content_blocks_to_messages(
@@ -2979,6 +3080,7 @@ async def process_chat_response(
 
                         try:
                             new_form_data = {
+                                **form_data,
                                 "model": model_id,
                                 "stream": True,
                                 "messages": [
