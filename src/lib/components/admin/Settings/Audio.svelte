@@ -38,47 +38,12 @@
 	let TTS_AZURE_SPEECH_REGION = '';
 	let TTS_AZURE_SPEECH_OUTPUT_FORMAT = '';
 
-	// German language and voice mappings for Portkey TTS
+	// German language options for Portkey TTS
 	const germanLanguages = {
 		'de-AT': 'de-AT—German (Austria)',
 		'de-CH': 'de-CH—German (Switzerland)',
 		'de-DE': 'de-DE—German (Germany)'
 	};
-
-	const germanVoices = {
-		'de-AT': [
-			{ value: 'de-AT-IngridNeural', label: 'de-AT-IngridNeural (Female)' },
-			{ value: 'de-AT-JonasNeural', label: 'de-AT-JonasNeural (Male)' }
-		],
-		'de-CH': [
-			{ value: 'de-CH-LeniNeural', label: 'de-CH-LeniNeural (Female)' },
-			{ value: 'de-CH-JanNeural', label: 'de-CH-JanNeural (Male)' }
-		],
-		'de-DE': [
-			{ value: 'de-DE-KatjaNeural', label: 'de-DE-KatjaNeural (Female)' },
-			{ value: 'de-DE-ConradNeural', label: 'de-DE-ConradNeural (Male)' },
-			{ value: 'de-DE-SeraphinaMultilingualNeural4', label: 'de-DE-SeraphinaMultilingualNeural4 (Female)' },
-			{ value: 'de-DE-FlorianMultilingualNeural4', label: 'de-DE-FlorianMultilingualNeural4 (Male)' },
-			{ value: 'de-DE-AmalaNeural', label: 'de-DE-AmalaNeural (Female)' },
-			{ value: 'de-DE-BerndNeural', label: 'de-DE-BerndNeural (Male)' },
-			{ value: 'de-DE-ChristophNeural', label: 'de-DE-ChristophNeural (Male)' },
-			{ value: 'de-DE-ElkeNeural', label: 'de-DE-ElkeNeural (Female)' },
-			{ value: 'de-DE-GiselaNeural', label: 'de-DE-GiselaNeural (Female, Child)' },
-			{ value: 'de-DE-KasperNeural', label: 'de-DE-KasperNeural (Male)' },
-			{ value: 'de-DE-KillianNeural', label: 'de-DE-KillianNeural (Male)' },
-			{ value: 'de-DE-KlarissaNeural', label: 'de-DE-KlarissaNeural (Female)' },
-			{ value: 'de-DE-KlausNeural', label: 'de-DE-KlausNeural (Male)' },
-			{ value: 'de-DE-LouisaNeural', label: 'de-DE-LouisaNeural (Female)' },
-			{ value: 'de-DE-MajaNeural', label: 'de-DE-MajaNeural (Female)' },
-			{ value: 'de-DE-RalfNeural', label: 'de-DE-RalfNeural (Male)' },
-			{ value: 'de-DE-TanjaNeural', label: 'de-DE-TanjaNeural (Female)' },
-			{ value: 'de-DE-Florian:DragonHDLatestNeural', label: 'de-DE-Florian:DragonHDLatestNeural (Male)' },
-			{ value: 'de-DE-Seraphina:DragonHDLatestNeural', label: 'de-DE-Seraphina:DragonHDLatestNeural (Female)' }
-		]
-	};
-
-	// Available voices for the selected language
-	$: availableVoices = germanVoices[TTS_LANGUAGE as keyof typeof germanVoices] || [];
 
 	let STT_OPENAI_API_BASE_URL = '';
 	let STT_OPENAI_API_KEY = '';
@@ -113,18 +78,14 @@
 	} else if (target?.value === 'portkey') {
 		TTS_PORTKEY_API_BASE_URL = 'https://ai-gateway.apps.cloud.rt.nyu.edu/v1';
 		if (!TTS_LANGUAGE) TTS_LANGUAGE = 'de-DE';
-		if (!TTS_VOICE) TTS_VOICE = 'de-DE-KatjaNeural';
 		if (!TTS_AUDIO_VOICE) TTS_AUDIO_VOICE = 'alloy';
 		if (!TTS_MODEL) TTS_MODEL = '@openai-4o-mini-audio/gpt-4o-mini-audio-preview';
 	}
 	};
 
-	// Handler for language change - updates available voices
+	// Handler for language change
 	const handleLanguageChange = () => {
-		// Reset voice to first available option when language changes
-		if (availableVoices.length > 0) {
-			TTS_VOICE = availableVoices[0].value;
-		}
+		// Language changed - no action needed as we're not using voice dropdown anymore
 	};
 
 	// eslint-disable-next-line no-undef
@@ -670,25 +631,6 @@
 								</div>
 							</div>
 						</div>
-
-					<!-- Dynamic Voice Selection based on Language -->
-					<div class="w-full">
-						<div class=" mb-1.5 text-sm font-medium">Text-to-Speech Voice (Advanced Settings - Not Enabled)</div>
-						<div class="flex w-full">
-							<div class="flex-1">
-								<select
-									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-									bind:value={TTS_VOICE}
-									aria-label="TTS Voice"
-									disabled={availableVoices.length === 0}
-								>
-									{#each availableVoices as voice}
-										<option value={voice.value}>{voice.label}</option>
-									{/each}
-								</select>
-							</div>
-						</div>
-					</div>
 
 					<!-- Audio Voice (alloy/echo/shimmer) -->
 					<div class="w-full">
