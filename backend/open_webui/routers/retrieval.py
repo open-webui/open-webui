@@ -2482,7 +2482,6 @@ def process_files_batch(
 
             file_updates.append(
                 FileUpdateForm(
-                    id=file.id,
                     hash=calculate_sha256_string(text_content),
                     data={"content": text_content},
                 )
