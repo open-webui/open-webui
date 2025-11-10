@@ -176,6 +176,25 @@ def add_or_update_system_message(
     return messages
 
 
+def replace_user_message(content: str, messages: list[dict]) -> dict:
+    """
+    Replaces the existing user message at the end of the messages list
+    or adds a new user message at the end.
+
+    :param content: The message content to be set.
+    :param messages: The list of message dictionaries.
+    :return: The updated list of message dictionaries.
+    """
+
+    if messages and messages[-1].get("role") == "user":
+        messages[-1] = replace_message_content(messages[-1], content)
+    else:
+        # Insert at the end
+        messages.append({"role": "user", "content": content})
+
+    return messages
+
+
 def add_or_update_user_message(content: str, messages: list[dict], append: bool = True):
     """
     Adds a new user message at the end of the messages list
