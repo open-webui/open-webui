@@ -99,7 +99,6 @@ class FileForm(BaseModel):
 
 
 class FileUpdateForm(BaseModel):
-    id: str
     hash: Optional[str] = None
     data: Optional[dict] = None
     meta: Optional[dict] = None
