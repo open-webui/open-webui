@@ -1487,7 +1487,7 @@ async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
             for folder in Folders.get_all_folders():
                 if folder.user_id not in active_user_ids:
                     Folders.delete_folder_by_id_and_user_id(
-                        folder.id, folder.user_id, delete_chats=False
+                        folder.id, folder.user_id
                     )
                     folders_deleted += 1
                     deleted_others += 1
