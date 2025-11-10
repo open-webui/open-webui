@@ -7,9 +7,6 @@ import os
 import json
 from urllib.parse import urlparse
 from io import BytesIO
-from docx import Document
-from docx.shared import Pt, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH
 from datetime import datetime
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
@@ -23,7 +20,7 @@ from open_webui.retrieval.web.tavily import search_tavily
 from open_webui.retrieval.web.main import SearchResult
 
 # facilities prompt template
-FACILITIES_PROMPT = """You are an expert grant writer specializing in the 'Facilities, Equipment, and Other Resources' section of academic proposals for NSF and NIH grants.
+FACILITIES_PROMPT = """You are an expert grant writer specializing in the 'Facilities, Equipment, and Other Resources' section of academic proposals for {sponsor} grants.
 
 Your job is to expand and professionally refine the user's section draft using:
 1.  User Input (this forms the base and must be preserved).
@@ -54,6 +51,7 @@ Your job is to expand and professionally refine the user's section draft using:
 ---
 
 ### SECTION: {section}
+{section_specific_instructions}
 
 **User Input:**
 \"\"\"
@@ -74,27 +72,40 @@ Your job is to expand and professionally refine the user's section draft using:
 
 ### INSTRUCTIONS
 - Start with the User Input, retain all core ideas.
-- Expand with factual, cited data from PDF Chunks or Web Snippets.
-- Use specific technical details, numbers, and concrete information from the sources.
-- Write comprehensive, detailed content that demonstrates expertise and thoroughness.
+- ONLY use information from the User Input, PDF Chunks, and Web Snippets provided above. DO NOT add any information not present in these sources.
+- Do not invent, assume, or add any equipment names, specifications, capabilities, or details not explicitly mentioned in the provided sources.
+- Expand extensively with factual, cited data from PDF Chunks or Web Snippets, but only use information that is actually present in those sources.
+- Use specific technical details, numbers, equipment names, capabilities, and concrete information ONLY if they are explicitly mentioned in the provided sources.
+- Write comprehensive, detailed content that demonstrates expertise and thoroughness - aim for substantial, grant-worthy content using only the provided sources.
+- Incorporate information from multiple PDF sources and web snippets to create rich, well-cited content, but only cite information that is actually present in those sources.
+- Include specific equipment models, technical specifications, capabilities, and research applications ONLY if they are explicitly mentioned in the provided PDF Chunks or Web Snippets.
+- Do not use any external knowledge, assumptions, or information not provided in the sources above.
+{integration_instructions}
 **CRITICAL CITATION RULES - FOLLOW EXACTLY:**
+
+**RULE 1: SEPARATE BRACKETS FOR EACH SOURCE (NEVER COMBINE!)**
+- Each source MUST have its own separate bracket
+- CORRECT: "...research facilities [source1.pdf] [https://nyu.edu/research] are available."
+- WRONG: "...research facilities [source1.pdf; https://nyu.edu/research] are available."
+- WRONG: "...research facilities [source1.pdf, https://nyu.edu/research] are available."
+- If citing multiple sources for the same claim, use separate brackets with a space between them
+- NEVER use semicolons (;) or commas (,) inside brackets to combine sources
+
+**RULE 2: ONLY CITE SOURCES FROM <source_id> TAGS**
 - **IMPORTANT: When web search is disabled, ONLY cite PDF files and document names - NEVER cite web URLs even if they appear in sources.**
 - **ONLY use source names/links that appear in `<source_id>` tags in the context above.**
 - **Look at the context above and find the exact `<source_id>` values.**
 - **If you see `<source><source_id>HRamani_NSFCAREER_SUBMITTED_Proposal_20240723_NSF.pdf</source_id>`, you MUST use [HRamani_NSFCAREER_SUBMITTED_Proposal_20240723_NSF.pdf].**
-
 - **NEVER use numbered citations like [1], [2], [3] - ALWAYS use the actual source name/link.**
 - **Do NOT use source names/links that are NOT in the `<source_id>` tags.**
 - **If no `<source_id>` tags are provided, do not include any citations.**
 - **If web search is disabled, do NOT include any web URLs as citations, even if they appear in knowledge base sources.**
-- **IMPORTANT: Use SEPARATE citations for each source - [source1.pdf] [source2.pdf] NOT [source1.pdf; source2.pdf].**
-- **NEVER combine multiple sources in one bracket with semicolons or commas.**
 - Never invent or assume data not present in input or sources.
 - If no relevant info is found, return only the user's input — improved stylistically.
 - Focus on creating professional, grant-worthy content that showcases facilities and capabilities.
 - **IMPORTANT: Do NOT add "Facilities, Equipment, and Other Resources" as a subtitle - just write the content for the section directly.**
 
-Write a polished, comprehensive section suitable for direct inclusion in an NSF or NIH grant.
+Write a polished, comprehensive section suitable for direct inclusion in a {sponsor} grant.
 """
 
 router = APIRouter()
@@ -116,20 +127,26 @@ class FacilitiesResponse(BaseModel):
 
 def get_section_labels(sponsor: str) -> List[str]:
     """Get section labels based on sponsor type"""
-    nsf_sections = [
-        "1. Project Title",
-        "2. Research Space and Facilities",
-        "3. Core Instrumentation", 
-        "4. Computing and Data Resources",
-        "5a. Internal Facilities (NYU)",
-        "5b. External Facilities (Other Institutions)",
-        "6. Special Infrastructure"
-    ]
-    
-    if sponsor == "NIH":
-        return nsf_sections + ["7. Equipment"]
-    else:
-        return nsf_sections
+    if sponsor == "NSF":
+        # NSF has 4 consolidated sections
+        return [
+            "1. Project Title",
+            "2. Facilities",
+            "3. Major Equipment",
+            "4. Other Resources"
+        ]
+    else:  # NIH
+        # NIH keeps individual sections
+        return [
+            "1. Project Title",
+            "2. Research Space and Facilities",
+            "3. Core Instrumentation", 
+            "4. Computing and Data Resources",
+            "5a. Internal Facilities (NYU)",
+            "5b. External Facilities (Other Institutions)",
+            "6. Special Infrastructure",
+            "7. Equipment"
+        ]
 
 def facilities_web_search(query: str, request: Request, user) -> tuple[str, List[str], List[float]]:
     """
@@ -287,15 +304,25 @@ def facilities_web_search_specific_sites(query: str, allowed_sites: List[str], r
                 content = result.snippet.strip()
                 score = result.score if hasattr(result, 'score') else 0.1
                 
-                # Check if the result URL is from any of the allowed domains
-                result_domain = urlparse(url).netloc
-                allowed_domains = [urlparse(s).netloc for s in allowed_sites]
+                # Check if the result URL starts with any of the allowed site paths
+                # This ensures ONLY pages from the specific configured URLs are accepted
+                is_from_allowed_site = False
+                for allowed_site in allowed_sites:
+                    # Normalize URLs for comparison (remove trailing slashes)
+                    normalized_allowed = allowed_site.rstrip('/')
+                    normalized_result = url.rstrip('/')
+                    
+                    # Check if result URL starts with the allowed site path
+                    if normalized_result.startswith(normalized_allowed) or normalized_result == normalized_allowed:
+                        is_from_allowed_site = True
+                        logging.info(f"Result URL {url[:80]}... matches allowed site {allowed_site}")
+                        break
                 
-                if result_domain in allowed_domains:
+                if is_from_allowed_site:
                     snippets.append(content)
                     urls.append(url)
                     scores.append(score)
-                    logging.info(f"Added result from {result_domain}: {url[:100]}...")
+                    logging.info(f"Added result from allowed site: {url[:100]}...")
         
         return "\n\n".join(snippets), urls, scores
         
@@ -434,22 +461,60 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
         
         section_labels = get_section_labels(form_data.sponsor)
         
-        field_mappings = {
-            "projectTitle": "1. Project Title",
-            "researchSpaceFacilities": "2. Research Space and Facilities", 
-            "coreInstrumentation": "3. Core Instrumentation",
-            "computingDataResources": "4. Computing and Data Resources",
-            "internalFacilitiesNYU": "5a. Internal Facilities (NYU)",
-            "externalFacilitiesOther": "5b. External Facilities (Other Institutions)",
-            "specialInfrastructure": "6. Special Infrastructure",
-            "equipment": "7. Equipment"
-        }
-        
-       
-        user_inputs = {}
-        for form_key, section_label in field_mappings.items():
-            if form_key in form_data.form_data and section_label in section_labels:
-                user_inputs[section_label] = form_data.form_data[form_key].strip()
+        # Different mapping logic for NSF vs NIH
+        if form_data.sponsor == "NSF":
+            # NSF: Consolidate multiple form fields into 4 sections
+            field_mappings = {
+                "1. Project Title": ["projectTitle"],
+                "2. Facilities": ["researchSpaceFacilities"],
+                "3. Major Equipment": ["coreInstrumentation", "computingDataResources"],
+                "4. Other Resources": ["internalFacilitiesNYU", "externalFacilitiesOther", "specialInfrastructure"]
+            }
+            
+            user_inputs = {}
+            for section_label, form_keys in field_mappings.items():
+                # Combine multiple form field values with section labels
+                combined_texts = []
+                for form_key in form_keys:
+                    if form_key in form_data.form_data:
+                        text = form_data.form_data[form_key].strip()
+                        if text:
+                            # Add subsection label for combined fields
+                            if len(form_keys) > 1:
+                                subsection_map = {
+                                    "coreInstrumentation": "Core Instrumentation",
+                                    "computingDataResources": "Computing and Data Resources",
+                                    "internalFacilitiesNYU": "Internal Facilities (NYU)",
+                                    "externalFacilitiesOther": "External Facilities (Other Institutions)",
+                                    "specialInfrastructure": "Special Infrastructure"
+                                }
+                                subsection = subsection_map.get(form_key, "")
+                                if subsection:
+                                    combined_texts.append(f"{subsection}:\n{text}")
+                                else:
+                                    combined_texts.append(text)
+                            else:
+                                combined_texts.append(text)
+                
+                if combined_texts:
+                    user_inputs[section_label] = "\n\n".join(combined_texts)
+        else:
+            # NIH: Keep original 1-to-1 mapping
+            field_mappings = {
+                "projectTitle": "1. Project Title",
+                "researchSpaceFacilities": "2. Research Space and Facilities", 
+                "coreInstrumentation": "3. Core Instrumentation",
+                "computingDataResources": "4. Computing and Data Resources",
+                "internalFacilitiesNYU": "5a. Internal Facilities (NYU)",
+                "externalFacilitiesOther": "5b. External Facilities (Other Institutions)",
+                "specialInfrastructure": "6. Special Infrastructure",
+                "equipment": "7. Equipment"
+            }
+            
+            user_inputs = {}
+            for form_key, section_label in field_mappings.items():
+                if form_key in form_data.form_data and section_label in section_labels:
+                    user_inputs[section_label] = form_data.form_data[form_key].strip()
         
         if not any(user_inputs.values()):
             return FacilitiesResponse(
@@ -564,19 +629,36 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
             
             if form_data.web_search_enabled:
                 logging.info(f"Web search enabled for section: {section}")
-                if section == "5a. Internal Facilities (NYU)":
+                is_internal_facilities = (
+                    section == "5a. Internal Facilities (NYU)" or 
+                    (section == "4. Other Resources" and "Internal Facilities (NYU)" in user_text)
+                )
+                
+                if is_internal_facilities:
                     allowed_sites = request.app.state.config.RAG_WEB_SEARCH_INTERNAL_FACILITIES_SITES.get(user.email)
                     logging.info(f"Using specific sites search for NYU Internal Facilities")
                     logging.info(f"Allowed sites: {allowed_sites}")
+                    
+                    # For NSF "Other Resources", extract only the Internal Facilities portion
+                    search_query = query
+                    if section == "4. Other Resources" and "Internal Facilities (NYU):" in user_text:
+                        # Extract only the Internal Facilities portion for focused web search
+                        import re
+                        # Match text between "Internal Facilities (NYU):" and the next subsection or end
+                        match = re.search(r'Internal Facilities \(NYU\):\s*\n(.*?)(?=\n\n[A-Z]|$)', user_text, re.DOTALL)
+                        if match:
+                            internal_facilities_text = match.group(1).strip()
+                            search_query = f"Internal Facilities (NYU): {internal_facilities_text}"
+                            logging.info(f"Extracted Internal Facilities text for focused search: {search_query[:100]}...")
+                    
                     if allowed_sites:
                         web_content, web_links, web_scores = facilities_web_search_specific_sites(
-                            query, allowed_sites, request, user
+                            search_query, allowed_sites, request, user
                         )
                     else:
                         logging.warning("No allowed sites configured for NYU Internal Facilities, falling back to standard search")
-                        web_content, web_links, web_scores = facilities_web_search(query, request, user)
+                        web_content, web_links, web_scores = facilities_web_search(search_query, request, user)
                 else:
-
                     logging.info(f"Using standard web search for section: {section}")
                     web_content, web_links, web_scores = facilities_web_search(query, request, user)
                 
@@ -617,11 +699,57 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
             else:
                 web_sources = "Web search is disabled for this request."
             
+            # Determine if this is a combined section for NSF
+            is_combined_section = form_data.sponsor == "NSF" and section in ["3. Major Equipment", "4. Other Resources"]
+            
+            # Set section-specific instructions for NSF combined sections
+            section_specific_instructions = ""
+            integration_instructions = ""
+            
+            if is_combined_section:
+                if section == "3. Major Equipment":
+                    section_specific_instructions = """
+**NOTE:** This section combines information from multiple categories: Core Instrumentation and Computing/Data Resources.
+Your task is to PRESERVE the subsection structure and generate content for each subsection separately."""
+                    
+                    integration_instructions = """
+- PRESERVE the subsection labels from user input (Core Instrumentation:, Computing and Data Resources:).
+- FORMAT subsection headings consistently using ### (three hash marks) for all subsection headings.
+- ONLY use information from the user input, PDF chunks, and web snippets provided above. DO NOT add any information not present in these sources.
+- Do not invent, assume, or add any equipment names, specifications, or capabilities not explicitly mentioned in the provided sources.
+- Use ALL available information from PDF chunks and web snippets to expand each subsection, but only if it's relevant to the user input for that subsection.
+- Include citations from PDF sources and web snippets, but only cite information that is actually present in those sources.
+- Provide specific details only if they are explicitly mentioned in the provided sources - do not extrapolate or assume specifications.
+- Treat each subsection as a standalone section, but only expand with information relevant to that specific subsection's user input.
+- Do not use any external knowledge or assumptions - stick strictly to the provided sources.
+- DO NOT generate subsection headings for subsections that are not in the user input. Only generate content for subsections that are explicitly provided.
+"""
+                elif section == "4. Other Resources":
+                    section_specific_instructions = """
+**NOTE:** This section combines information from multiple categories: Internal Facilities (NYU), External Facilities (Other Institutions), and Special Infrastructure.
+Your task is to PRESERVE the subsection structure and generate content for each subsection separately."""
+                    
+                    integration_instructions = """
+- PRESERVE the subsection labels from user input (Internal Facilities (NYU):, External Facilities (Other Institutions):, Special Infrastructure:).
+- FORMAT subsection headings consistently using ### (three hash marks) for all subsection headings.
+- ONLY use information from the user input, PDF chunks, and web snippets provided above. DO NOT add any information not present in these sources.
+- Do not invent, assume, or add any facility names, specifications, or capabilities not explicitly mentioned in the provided sources.
+- Use ALL available information from PDF chunks and web snippets to expand each subsection, but only if it's relevant to the user input for that subsection.
+- Include citations from PDF sources and web snippets, but only cite information that is actually present in those sources.
+- Provide specific details only if they are explicitly mentioned in the provided sources - do not extrapolate or assume specifications.
+- Treat each subsection as a standalone section, but only expand with information relevant to that specific subsection's user input.
+- Do not use any external knowledge or assumptions - stick strictly to the provided sources.
+- DO NOT generate content for subsections that are not present in the user input. Only work with the subsections that are explicitly provided in the user input.
+"""
+            
             prompt = FACILITIES_PROMPT.format(
+                sponsor=form_data.sponsor,
                 section=section,
+                section_specific_instructions=section_specific_instructions,
                 user_input=user_text,
                 retrieved_chunks=pdf_sources,
-                web_snippets=web_sources 
+                web_snippets=web_sources,
+                integration_instructions=integration_instructions
             )
             
             try:
@@ -739,15 +867,68 @@ async def get_facilities_sections(sponsor: str, request: Request, user=Depends(g
 
 class DownloadRequest(BaseModel):
     sections: Dict[str, str]
-    format: str  # 'pdf' or 'word'
+    format: str  
+    filename: Optional[str] = "facilities_draft"  
+    remove_citations: Optional[bool] = False 
 
 
-def generate_facilities_pdf(sections: Dict[str, str]) -> bytes:
+def generate_facilities_pdf(sections: Dict[str, str], filename: str = "facilities_draft", remove_citations: bool = False) -> bytes:
     """Generate PDF from facilities sections """
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter)
-    story = []
+    from reportlab.lib.units import inch
+    from reportlab.platypus import PageTemplate, Frame
+    from reportlab.lib.pagesizes import letter
+    from reportlab.platypus.flowables import PageBreak
+    import re
     
+    buffer = BytesIO()
+    
+    def convert_markdown_to_html(text):
+        """Convert markdown formatting to ReportLab HTML-like tags"""
+
+        text = text.replace('&', '&amp;')
+        
+        text = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', text)
+        
+        text = re.sub(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', r'<i>\1</i>', text)
+        
+
+        text = text.replace('<b>', '<<<BOLD_OPEN>>>')
+        text = text.replace('</b>', '<<<BOLD_CLOSE>>>')
+        text = text.replace('<i>', '<<<ITALIC_OPEN>>>')
+        text = text.replace('</i>', '<<<ITALIC_CLOSE>>>')
+        
+        text = text.replace('<', '&lt;').replace('>', '&gt;')
+        
+        text = text.replace('<<<BOLD_OPEN>>>', '<b>')
+        text = text.replace('<<<BOLD_CLOSE>>>', '</b>')
+        text = text.replace('<<<ITALIC_OPEN>>>', '<i>')
+        text = text.replace('<<<ITALIC_CLOSE>>>', '</i>')
+        
+        return text
+    
+    def add_footer(canvas, doc):
+        canvas.saveState()
+        
+        page_num = canvas.getPageNumber()
+        
+        footer_left = filename
+        footer_right = f"Page {page_num}"
+        
+        canvas.setFont("Helvetica", 9)
+        canvas.drawString(0.5*inch, 0.5*inch, footer_left)  # Left side
+        canvas.drawRightString(letter[0] - 0.5*inch, 0.5*inch, footer_right)  # Right side
+        
+        canvas.restoreState()
+    
+    doc = SimpleDocTemplate(
+        buffer, 
+        pagesize=letter,
+        rightMargin=0.5*inch,
+        leftMargin=0.5*inch,
+        topMargin=0.5*inch,
+        bottomMargin=1*inch  # Extra space for footer
+    )
+    story = []
     
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle(
@@ -764,62 +945,271 @@ def generate_facilities_pdf(sections: Dict[str, str]) -> bytes:
         spaceAfter=12,
         spaceBefore=20
     )
+    subsection_style = ParagraphStyle(
+        'SubsectionHeading',
+        parent=styles['Heading3'],
+        fontSize=10,
+        spaceAfter=8,
+        spaceBefore=16
+    )
     normal_style = styles['Normal']
     
-    
-    story.append(Paragraph("Facilities Template", title_style))
+    # Add title
+    story.append(Paragraph("Pilot GenAI Generated Draft", title_style))
     story.append(Spacer(1, 20))
     
-    
+    # Add content
     for section_label, section_text in sections.items():
         if section_text and section_text.strip():
-            
             story.append(Paragraph(section_label, heading_style))
             
+
+            processed_text = section_text
+            if remove_citations:
+                import re
+
+                processed_text = re.sub(r'\[[^\]]*\.pdf[^\]]*\]', '', processed_text)
+                processed_text = re.sub(r'\[https?://[^\]]+\]', '', processed_text)
+
+                processed_text = re.sub(r'[ \t]+', ' ', processed_text)  # Replace multiple spaces/tabs with single space
+                processed_text = re.sub(r'\n\s*\n', '\n\n', processed_text)  # Preserve paragraph breaks
+                processed_text = processed_text.strip()
             
-            escaped_text = section_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+            lines = processed_text.split('\n')
+            logging.info(f"PDF Processing: Processing {len(lines)} lines for section {section_label}")
+            current_paragraph = []
             
-            formatted_text = escaped_text.replace('\n', '<br/>')
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    if current_paragraph:
+
+                        paragraph_text = ' '.join(current_paragraph)
+                        formatted_text = convert_markdown_to_html(paragraph_text)
+                        story.append(Paragraph(formatted_text, normal_style))
+                        story.append(Spacer(1, 6))  
+                        current_paragraph = []
+                    continue
+                
+                is_subsection_heading = (
+                    line.startswith('### ') or 
+                    (line.endswith(':') and 
+                     any(keyword in line for keyword in ['Core Instrumentation', 'Computing and Data Resources', 
+                                                        'Internal Facilities', 'External Facilities', 'Special Infrastructure']))
+                )
+                
+
+                if line.startswith('### '):
+                    logging.info(f"PDF Processing: Found markdown heading: '{line}'")
+                
+                if is_subsection_heading:
+
+                    if current_paragraph:
+                        paragraph_text = ' '.join(current_paragraph)
+                        formatted_text = convert_markdown_to_html(paragraph_text)
+                        story.append(Paragraph(formatted_text, normal_style))
+                        current_paragraph = []
+                    
+                    clean_heading = line.replace('### ', '')
+                    formatted_heading = convert_markdown_to_html(clean_heading)
+                    logging.info(f"PDF Processing: Adding subsection heading: '{clean_heading}' with subsection_style")
+                    story.append(Paragraph(formatted_heading, subsection_style))
+                    story.append(Spacer(1, 6))  # Add small space after subsection heading
+                else:
+
+                    if (line.startswith('###') or 
+                        (line.endswith(':') and any(keyword in line for keyword in ['Core Instrumentation', 'Computing and Data Resources', 
+                                                                                   'Internal Facilities', 'External Facilities', 'Special Infrastructure']))):
+                        logging.info(f"PDF Processing: Found subsection heading in regular content: '{line}'")
+
+                        if current_paragraph:
+                            paragraph_text = ' '.join(current_paragraph)
+                            formatted_text = convert_markdown_to_html(paragraph_text)
+                            story.append(Paragraph(formatted_text, normal_style))
+                            story.append(Spacer(1, 6))
+                            current_paragraph = []
+                        
+                        clean_heading = line.replace('### ', '')
+                        formatted_heading = convert_markdown_to_html(clean_heading)
+                        story.append(Paragraph(formatted_heading, subsection_style))
+                        story.append(Spacer(1, 6))
+                    else:
+                        current_paragraph.append(line)
             
-            story.append(Paragraph(formatted_text, normal_style))
+
+            if current_paragraph:
+                paragraph_text = ' '.join(current_paragraph)
+                formatted_text = convert_markdown_to_html(paragraph_text)
+                story.append(Paragraph(formatted_text, normal_style))
+                story.append(Spacer(1, 6))  
+            
             story.append(Spacer(1, 12))
     
+    # First pass: count pages by building to a temporary buffer
+    import copy
+    temp_buffer = BytesIO()
+    temp_doc = SimpleDocTemplate(
+        temp_buffer, 
+        pagesize=letter,
+        rightMargin=0.5*inch,
+        leftMargin=0.5*inch,
+        topMargin=0.5*inch,
+        bottomMargin=1*inch
+    )
     
-    doc.build(story)
+    # Create a deep copy of the story for counting
+    story_copy = copy.deepcopy(story)
+    temp_doc.build(story_copy)
+    total_pages = temp_doc.page
+    
+    # Update the footer function with the correct total
+    def add_footer_with_total(canvas, doc):
+        canvas.saveState()
+        
+        page_num = canvas.getPageNumber()
+        
+        footer_left = filename
+        footer_right = f"Page {page_num} of {total_pages}"
+        
+        canvas.setFont("Helvetica", 9)
+        canvas.drawString(0.5*inch, 0.5*inch, footer_left)  # Left side
+        canvas.drawRightString(letter[0] - 0.5*inch, 0.5*inch, footer_right)  # Right side
+        
+        canvas.restoreState()
+    
+    # Second pass: build the actual document with correct page numbers
+    doc.build(story, onFirstPage=add_footer_with_total, onLaterPages=add_footer_with_total)
     buffer.seek(0)
     return buffer.getvalue()
 
 
-def generate_facilities_word(sections: Dict[str, str]) -> bytes:
-    """Generate Word document from facilities sections"""
+def generate_facilities_doc(sections: Dict[str, str], filename: str = "facilities_draft", remove_citations: bool = False) -> bytes:
+    """Generate DOCX from facilities sections"""
+    from docx import Document
+    from docx.shared import Pt, RGBColor
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    import re
+    
     doc = Document()
     
+    # Set default font
+    style = doc.styles['Normal']
+    font = style.font
+    font.name = 'Calibri'
+    font.size = Pt(11)
     
-    title_paragraph = doc.add_paragraph()
-    title_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    title_run = title_paragraph.add_run('Facilities Template')
-    title_run.bold = True
+    # Add title
+    title = doc.add_heading('Pilot GenAI Generated Draft', 0)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    title_run = title.runs[0]
     title_run.font.size = Pt(16)
+    title_run.font.bold = True
+    title_run.font.color.rgb = RGBColor(0, 0, 0)  # Black color
     
-    title_run.font.color.rgb = RGBColor(0, 0, 0)
-    title_run.font.color.theme_color = None  
-    
+    # Add spacing after title
     doc.add_paragraph()
     
-
+    def remove_citations_from_text(text: str) -> str:
+        """Remove citations from text"""
+        if not remove_citations:
+            return text
+        
+        # Remove PDF citations
+        text = re.sub(r'\[[^\]]*\.pdf[^\]]*\]', '', text)
+        # Remove web URL citations
+        text = re.sub(r'\[https?://[^\]]+\]', '', text)
+        # Clean up extra spaces
+        text = re.sub(r'[ \t]+', ' ', text)
+        text = re.sub(r'\n\s*\n', '\n\n', text)
+        return text.strip()
+    
+    def add_formatted_paragraph(doc, text: str, is_heading: bool = False, is_subsection: bool = False):
+        """Add a paragraph with proper formatting"""
+        if is_heading:
+            para = doc.add_heading(text, level=1)
+            para_run = para.runs[0]
+            para_run.font.size = Pt(14)
+            para_run.font.bold = True
+            para_run.font.color.rgb = RGBColor(0, 0, 0)  # Black color
+        elif is_subsection:
+            para = doc.add_heading(text, level=2)
+            para_run = para.runs[0]
+            para_run.font.size = Pt(12)
+            para_run.font.bold = True
+            para_run.font.color.rgb = RGBColor(0, 0, 0)  # Black color
+        else:
+            para = doc.add_paragraph()
+            # Process text for bold/italic
+            parts = re.split(r'(\*\*.*?\*\*|\*.*?\*)', text)
+            for part in parts:
+                if part.startswith('**') and part.endswith('**'):
+                    # Bold text
+                    run = para.add_run(part[2:-2])
+                    run.bold = True
+                elif part.startswith('*') and part.endswith('*') and not part.startswith('**'):
+                    # Italic text
+                    run = para.add_run(part[1:-1])
+                    run.italic = True
+                elif part.strip():
+                    # Regular text
+                    para.add_run(part)
+        
+        return para
+    
+    # Process each section
     for section_label, section_text in sections.items():
         if section_text and section_text.strip():
-        
-            heading_paragraph = doc.add_paragraph()
-            heading_run = heading_paragraph.add_run(section_label)
-            heading_run.bold = True
-            heading_run.font.size = Pt(14)
-
-            heading_run.font.color.rgb = RGBColor(0, 0, 0)
-            heading_run.font.color.theme_color = None
+            # Add section heading
+            add_formatted_paragraph(doc, section_label, is_heading=True)
             
-            doc.add_paragraph(section_text)
+            # Process section text
+            processed_text = remove_citations_from_text(section_text)
+            
+            # Split by lines to handle subsections
+            lines = processed_text.split('\n')
+            current_paragraph_text = []
+            
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    if current_paragraph_text:
+                        para_text = ' '.join(current_paragraph_text)
+                        add_formatted_paragraph(doc, para_text)
+                        current_paragraph_text = []
+                    doc.add_paragraph()  # Add blank line
+                    continue
+                
+                # Check if it's a subsection heading
+                is_subsection_heading = (
+                    line.startswith('### ') or 
+                    (line.endswith(':') and 
+                     any(keyword in line for keyword in ['Core Instrumentation', 'Computing and Data Resources', 
+                                                        'Internal Facilities', 'External Facilities', 'Special Infrastructure']))
+                )
+                
+                if is_subsection_heading:
+                    # Finish current paragraph
+                    if current_paragraph_text:
+                        para_text = ' '.join(current_paragraph_text)
+                        add_formatted_paragraph(doc, para_text)
+                        current_paragraph_text = []
+                    
+                    # Add subsection heading
+                    clean_heading = line.replace('### ', '')
+                    add_formatted_paragraph(doc, clean_heading, is_subsection=True)
+                else:
+                    current_paragraph_text.append(line)
+            
+            # Add remaining paragraph
+            if current_paragraph_text:
+                para_text = ' '.join(current_paragraph_text)
+                add_formatted_paragraph(doc, para_text)
+            
+            # Add spacing after section
+            doc.add_paragraph()
     
+    # Save to bytes
     buffer = BytesIO()
     doc.save(buffer)
     buffer.seek(0)
@@ -833,27 +1223,27 @@ async def download_facilities_document(
     user=Depends(get_verified_user)
 ):
     """
-    Download facilities document as PDF or Word
+    Download facilities document as PDF or DOC
     """
     if not request.app.state.config.ENABLE_FACILITIES.get(user.email):
         raise HTTPException(status_code=403, detail="Facilities feature is not enabled for this user")
     
     try:
-        if download_data.format not in ["pdf", "word"]:
-            raise HTTPException(status_code=400, detail="Invalid format. Must be 'pdf' or 'word'")
+        if download_data.format not in ["pdf", "doc"]:
+            raise HTTPException(status_code=400, detail="Invalid format. Only 'pdf' and 'doc' are supported")
         
         if not download_data.sections:
             raise HTTPException(status_code=400, detail="No sections provided")
         
-        # Generate document based on format
         if download_data.format == "pdf":
-            content = generate_facilities_pdf(download_data.sections)
+            content = generate_facilities_pdf(download_data.sections, download_data.filename, download_data.remove_citations)
             media_type = "application/pdf"
-            filename = "facilities_draft.pdf"
-        else:  # word
-            content = generate_facilities_word(download_data.sections)
+            filename = f"{download_data.filename}.pdf"
+        else:  # doc format
+            # DOC format always removes citations (as per requirement)
+            content = generate_facilities_doc(download_data.sections, download_data.filename, remove_citations=True)
             media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            filename = "facilities_draft.docx"
+            filename = f"{download_data.filename}.docx"
         
         return Response(
             content=content,

@@ -2,7 +2,7 @@
 	import { getContext, createEventDispatcher, onMount } from 'svelte';
 	import { showFacilitiesOverlay, showControls, models, chatId, chats, currentChatPage } from '$lib/stores';
 	import { slide } from 'svelte/transition';
-	import { generateFacilitiesResponse, getFacilitiesSections, downloadFacilitiesDocument } from '$lib/apis/facilities';
+	import { generateFacilitiesResponse, downloadFacilitiesDocument } from '$lib/apis/facilities';
 	import { updateChatById, getChatList } from '$lib/apis/chats';
 	import { toast } from 'svelte-sonner';
 	
@@ -36,22 +36,37 @@
 	};
 
 	let generating = false;
-	let dynamicSections: string[] = [];
 	let lastGeneratedResponse: { content: string; sections: any; sources: any[] } | null = null;
 	let showDownloadOptions = false;
-	let downloadFormat: 'pdf' | 'word' | '' = '';
-	let downloadFilename = 'facilities_draft';
 	let currentChatId = $chatId;
+	let showFilesUsedMessage = false;
+	let usedFiles: string[] = [];
+	
+	let downloadFilename = 'facilities_draft';
+	let lastProjectTitle = '';
+	
+	$: if (formData.projectTitle !== lastProjectTitle) {
+		lastProjectTitle = formData.projectTitle;
+		const projectTitle = formData.projectTitle || '';
+		const words = projectTitle.trim().split(/\s+/).filter(w => w.length > 0);
+		
+		if (words.length === 0) {
+			downloadFilename = 'facilities_draft';
+		} else if (words.length >= 3) {
+			downloadFilename = words.slice(0, 3).join('_').replace(/[^a-zA-Z0-9_]/g, '_');
+		} else {
+			downloadFilename = words.join('_').replace(/[^a-zA-Z0-9_]/g, '_');
+		}
+	}
 
-	// Reset download state when chat changes
 	$: if ($chatId !== currentChatId) {
 		currentChatId = $chatId;
 		showDownloadOptions = false;
-		downloadFormat = '';
 		lastGeneratedResponse = null;
 	}
 
-	const nsfSections = [
+
+	const formSections = [
 		{ id: 'projectTitle', label: '1. Project Title', required: true },
 		{ id: 'researchSpaceFacilities', label: '2. Research Space and Facilities', required: true },
 		{ id: 'coreInstrumentation', label: '3. Core Instrumentation', required: true },
@@ -61,38 +76,12 @@
 		{ id: 'specialInfrastructure', label: '6. Special Infrastructure', required: true }
 	];
 
-	const nihSections = [
-		...nsfSections,
-		{ id: 'equipment', label: '7. Equipment', required: true }
-	];
+	// Show equipment field only for NIH
+	$: currentSections = selectedSponsor === 'NIH' 
+		? [...formSections, { id: 'equipment', label: '7. Equipment', required: true }]
+		: formSections;
 
-	// Create dynamic sections based on backend response
-	$: currentSections = dynamicSections.length > 0 ? 
-		dynamicSections.map((sectionLabel, index) => {
-			const sectionId = getSectionIdFromLabel(sectionLabel);
-			console.log(`Mapping section ${index}: "${sectionLabel}" to ID "${sectionId}"`);
-			return { id: sectionId, label: sectionLabel, required: true };
-		}) : 
-		(selectedSponsor === 'NSF' ? nsfSections : nihSections);
-	
-	// Helper function to map backend section labels to form field IDs
-	function getSectionIdFromLabel(label: string): string {
-		const mapping: Record<string, string> = {
-			'1. Project Title': 'projectTitle',
-			'2. Research Space and Facilities': 'researchSpaceFacilities',
-			'3. Core Instrumentation': 'coreInstrumentation',
-			'4. Computing and Data Resources': 'computingDataResources',
-			'5a. Internal Facilities (NYU)': 'internalFacilitiesNYU',
-			'5b. External Facilities (Other Institutions)': 'externalFacilitiesOther',
-			'6. Special Infrastructure': 'specialInfrastructure',
-			'7. Equipment': 'equipment'
-		};
-		return mapping[label] || label.toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
-	}
-	
-	// Save form data to localStorage whenever it changes
-	// Only save if we have a valid chatId (not for new chats)
-	$: if ($chatId && (selectedSponsor || Object.values(formData).some(v => v.trim() !== ''))) {
+	$: if ($chatId && (selectedSponsor || Object.values(formData).some(v => v.trim() !== '') || showFilesUsedMessage)) {
 		saveToLocalStorage();
 	}
 
@@ -107,7 +96,8 @@
 			const dataToSave = {
 				selectedSponsor,
 				formData,
-				dynamicSections,
+				showFilesUsedMessage,
+				usedFiles,
 				chatId: $chatId,
 				timestamp: Date.now()
 			};
@@ -134,12 +124,14 @@
 				if (parsed.chatId === $chatId) {
 					selectedSponsor = parsed.selectedSponsor || '';
 					formData = parsed.formData || formData;
-					dynamicSections = parsed.dynamicSections || [];
+					showFilesUsedMessage = parsed.showFilesUsedMessage || false;
+					usedFiles = parsed.usedFiles || [];
 					
 					console.log(`Loaded form data from localStorage for chat: ${$chatId}`, {
 						sponsor: selectedSponsor,
 						hasData: Object.values(formData).some(v => v.trim() !== ''),
-						sectionsCount: dynamicSections.length,
+						showFilesUsedMessage: showFilesUsedMessage,
+						usedFilesCount: usedFiles.length,
 						savedAt: new Date(parsed.timestamp).toLocaleString()
 					});
 				}
@@ -182,6 +174,10 @@
 			addMessages: !!addMessages,
 			historyCurrentId: history?.currentId
 		});
+
+		if (files && files.length > 0) {
+			usedFiles = files.map(file => file.name || file.filename || 'Unknown file');
+		}
 
 		if (!history || !addMessages || !initChatHandler) {
 			console.error('History or addMessages not available:', {
@@ -348,34 +344,10 @@
 		});
 	}
 
-	async function handleSponsorChange(sponsor: string) {
+	function handleSponsorChange(sponsor: string) {
 		selectedSponsor = sponsor;
 		// Don't reset form data - keep existing data
-		// Just update the equipment field visibility based on sponsor
-		
-		// Fetch sections from backend
-		try {
-			const token = localStorage.getItem('token');
-			if (token) {
-				const response = await getFacilitiesSections(token, sponsor);
-				if (response.success) {
-					dynamicSections = response.sections;
-					console.log(`Loaded ${dynamicSections.length} sections for ${sponsor}:`, dynamicSections);
-				} else {
-					console.error('Failed to fetch sections:', response);
-					// Fallback to hardcoded sections
-					dynamicSections = sponsor === 'NSF' ? 
-						nsfSections.map(s => s.label) : 
-						nihSections.map(s => s.label);
-				}
-			}
-		} catch (error) {
-			console.error('Error fetching sections:', error);
-			// Fallback to hardcoded sections
-			dynamicSections = sponsor === 'NSF' ? 
-				nsfSections.map(s => s.label) : 
-				nihSections.map(s => s.label);
-		}
+
 		
 		// Save after sponsor change (only if chatId exists)
 		if ($chatId) {
@@ -454,7 +426,11 @@
 				// Show download options
 				showDownloadOptions = true;
 
-				toast.success(`Generated ${Object.keys(response.sections).length} sections for ${selectedSponsor}. Form remains open for additional generations.`);
+				if (usedFiles.length > 0) {
+					showFilesUsedMessage = true;
+				}
+
+				toast.success(`Generated ${Object.keys(response.sections).length} sections for ${selectedSponsor}.`);
 			} else{
 				console.error('Facilities API failed:', response.error);
 				// Add error to chat like regular chat does
@@ -480,8 +456,102 @@
 		}
 	}
 
-	async function handleDownload() {
-		if (!lastGeneratedResponse || !downloadFormat) {
+	function extractSectionsFromContent(content: string): Record<string, string> {
+		/** Extract sections from markdown content with ## headers */
+		const sections: Record<string, string> = {};
+		
+		if (!content) {
+			return sections;
+		}
+		
+		// Remove the main title line (e.g., "# Facilities Response for NSF")
+		const lines = content.split('\n');
+		let contentStartIndex = 0;
+		for (let i = 0; i < lines.length; i++) {
+			if (lines[i].trim().startsWith('#')) {
+				// Skip the main title
+				contentStartIndex = i + 1;
+				break;
+			}
+		}
+		
+		const contentWithoutTitle = lines.slice(contentStartIndex).join('\n');
+		
+		// Split by section headers (## )
+		const sectionMatches = contentWithoutTitle.split(/(?=^##\s+)/m);
+		
+		for (const sectionText of sectionMatches) {
+			const trimmed = sectionText.trim();
+			if (!trimmed) continue;
+			
+			// Extract section header (first line starting with ##)
+			const headerMatch = trimmed.match(/^##\s+(.+?)(?:\n|$)/);
+			if (headerMatch) {
+				const sectionLabel = headerMatch[1].trim();
+				// Get content after the header
+				const sectionContent = trimmed.replace(/^##\s+.+?\n/, '').trim();
+				if (sectionContent) {
+					sections[sectionLabel] = sectionContent;
+				}
+			}
+		}
+		
+		return sections;
+	}
+
+	function getEditedSectionsFromChat(): Record<string, string> | null {
+		/** Get edited sections from the chat history if available */
+		if (!history || !history.messages) {
+			return null;
+		}
+		
+		// Find the facilities response message (assistant message with facilities content)
+		// Look for the most recent assistant message that contains "Facilities Response"
+		const messageIds = Object.keys(history.messages);
+		let facilitiesMessage = null;
+		
+		// Search backwards from currentId to find the facilities response
+		let currentId = history.currentId;
+		while (currentId && history.messages[currentId]) {
+			const message = history.messages[currentId];
+			if (message.role === 'assistant' && message.content && 
+			    (message.content.includes('Facilities Response') || 
+			     message.content.includes('## 1. Project Title') ||
+			     message.content.includes('## 2. Facilities'))) {
+				facilitiesMessage = message;
+				break;
+			}
+			// Move to parent message
+			currentId = message.parentId;
+		}
+		
+		// If not found by currentId, search all messages
+		if (!facilitiesMessage) {
+			for (const msgId of messageIds.reverse()) {
+				const message = history.messages[msgId];
+				if (message.role === 'assistant' && message.content &&
+				    (message.content.includes('Facilities Response') ||
+				     message.content.includes('## 1. Project Title') ||
+				     message.content.includes('## 2. Facilities'))) {
+					facilitiesMessage = message;
+					break;
+				}
+			}
+		}
+		
+		if (facilitiesMessage && facilitiesMessage.content) {
+			const sections = extractSectionsFromContent(facilitiesMessage.content);
+			if (Object.keys(sections).length > 0) {
+				console.log('Found edited sections from chat:', Object.keys(sections));
+				return sections;
+			}
+		}
+		
+		return null;
+	}
+
+	async function handleDownload(format: 'pdf' | 'pdf-clean' | 'doc') {
+		if (!lastGeneratedResponse) {
 			toast.error('No document to download');
 			return;
 		}
@@ -494,17 +564,54 @@
 				return;
 			}
 
-			// Call backend API to download document
-			await downloadFacilitiesDocument(
-				token,
-				lastGeneratedResponse.sections,
-				downloadFormat,
-				downloadFilename
-			);
-
-			toast.success(`Downloaded ${downloadFormat === 'pdf' ? 'PDF' : 'Word document'} successfully`);
+			const now = new Date();
+			const timestamp = now.toLocaleDateString('en-US', { 
+				month: '2-digit', 
+				day: '2-digit', 
+				year: 'numeric' 
+			}).replace(/\//g, '-') + ' at ' + now.toLocaleTimeString('en-US', { 
+				hour: 'numeric', 
+				minute: '2-digit', 
+				second: '2-digit',
+				hour12: true 
+			});
 			
-			downloadFormat = '';
+		const filenameWithTimestamp = `${downloadFilename}_${timestamp}`;
+
+		let downloadFormat: 'pdf' | 'doc' = 'pdf';
+		let removeCitations = false;
+		
+		if (format === 'doc') {
+			downloadFormat = 'doc';
+			removeCitations = true; // DOC always removes citations
+		} else if (format === 'pdf-clean') {
+			downloadFormat = 'pdf';
+			removeCitations = true;
+		} else {
+			downloadFormat = 'pdf';
+			removeCitations = false;
+		}
+
+		// Try to get edited sections from chat, fall back to original
+		let sectionsToDownload = lastGeneratedResponse.sections;
+		const editedSections = getEditedSectionsFromChat();
+		if (editedSections && Object.keys(editedSections).length > 0) {
+			sectionsToDownload = editedSections;
+			console.log('Using edited sections from chat for download');
+		} else {
+			console.log('Using original generated sections for download');
+		}
+
+		await downloadFacilitiesDocument(
+			token,
+			sectionsToDownload,
+			downloadFormat, 
+			filenameWithTimestamp,
+			removeCitations
+		);
+
+			const formatName = downloadFormat === 'doc' ? 'DOC' : 'PDF';
+			toast.success(`Downloaded ${formatName} successfully`);
 		} catch (error: any) {
 			console.error('Download error:', error);
 			toast.error(error.message || 'Failed to download document');
@@ -514,7 +621,6 @@
 	function closeOverlay() {
 		// Reset download state when form is closed
 		showDownloadOptions = false;
-		downloadFormat = '';
 		lastGeneratedResponse = null;
 		
 		showFacilitiesOverlay.set(false);
@@ -625,6 +731,24 @@
 				</div>
 			{/if}
 
+			<!-- Files Used Message (shows after generation) -->
+			{#if showFilesUsedMessage && usedFiles.length > 0}
+				<div class="bg-green-100 border border-green-300 dark:bg-green-900/20 dark:border-green-700 rounded-lg p-3">
+					<div class="flex items-center gap-2 mb-2">
+						<span class="text-sm font-medium text-green-700 dark:text-green-300">
+							{usedFiles.length} attached file{usedFiles.length !== 1 ? 's' : ''} {usedFiles.length === 1 ? 'was' : 'were'} used for response generation
+						</span>
+					</div>
+					<div class="space-y-1">
+						{#each usedFiles as fileName}
+							<p class="text-xs text-green-600 dark:text-green-400 font-mono bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded">
+								{fileName}
+							</p>
+						{/each}
+					</div>
+				</div>
+			{/if}
+
 			<p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
 					<b>Description</b><br>
 					This tool assists in developing the DRAFT section related to  Facilities & Equipment for grant proposals where sponsors are NSF (National Science Foundation) and NIH (National Institute of Health).<br><br>
@@ -706,69 +830,47 @@
 									Download Generated Response
 								</h3>
 								
-								<!-- Download Format Buttons -->
-								<div class="grid grid-cols-2 gap-3 mb-4">
-									<button
-										type="button"
-										class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition-colors"
-										on:click={() => downloadFormat = 'pdf'}
-									>
-										<svg class="inline w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-										</svg>
-										Download as PDF
-									</button>
-									<button
-										type="button"
-										class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition-colors"
-										on:click={() => downloadFormat = 'word'}
-									>
-										<svg class="inline w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-										</svg>
-										Download as Word
-									</button>
+								<!-- Filename Input -->
+								<div class="mb-4">
+									<label for="download-filename" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+										Enter filename (without extension):
+									</label>
+									<input
+										id="download-filename"
+										type="text"
+										bind:value={downloadFilename}
+										class="w-full rounded-lg py-2.5 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+										placeholder="facilities_draft"
+									/>
+									<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+										Timestamp will be automatically appended to the filename
+									</p>
 								</div>
 
-								<!-- Filename Input and Download Button -->
-								{#if downloadFormat}
-									<div class="space-y-3" transition:slide>
-										<div>
-											<label for="download-filename" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-												Enter filename (without extension):
-											</label>
-											<input
-												id="download-filename"
-												type="text"
-												bind:value={downloadFilename}
-												class="w-full rounded-lg py-2.5 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-												placeholder="facilities_draft"
-											/>
-											<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-												Timestamp will be automatically appended to the filename
-											</p>
-										</div>
-										
-										<button
-											type="button"
-											class="w-full px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium text-sm transition-colors"
-											on:click={handleDownload}
-										>
-											<svg class="inline w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-											</svg>
-											Download {downloadFormat === 'pdf' ? 'PDF' : 'Word Document'}
-										</button>
-										
-										<button
-											type="button"
-											class="w-full px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-sm"
-											on:click={() => downloadFormat = ''}
-										>
-											Cancel
-										</button>
-									</div>
-								{/if}
+								<!-- Download Buttons Side by Side -->
+								<div class="grid grid-cols-2 gap-3">
+								<button
+									type="button"
+									class="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium text-sm transition-colors"
+									on:click={() => handleDownload('doc')}
+								>
+									<svg class="inline w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+									</svg>
+									Download DOC
+								</button>
+								
+								<button
+									type="button"
+									class="px-4 py-2.5 bg-green-800 hover:bg-green-600 text-white rounded-lg font-medium text-sm transition-colors"
+										on:click={() => handleDownload('pdf-clean')}
+									>
+										<svg class="inline w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+										</svg>
+										Download PDF
+									</button>
+								</div>
 							</div>
 						{/if}
 
