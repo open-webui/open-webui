@@ -2,6 +2,8 @@ import asyncio
 import json
 import logging
 import random
+import requests
+import aiohttp
 import urllib.parse
 import urllib.request
 from typing import Optional
@@ -91,6 +93,25 @@ def get_images(ws, prompt, client_id, base_url, api_key):
     return {"data": output_images}
 
 
+async def comfyui_upload_image(image_file_item, base_url, api_key):
+    url = f"{base_url}/api/upload/image"
+    headers = {}
+
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    _, (filename, file_bytes, mime_type) = image_file_item
+
+    form = aiohttp.FormData()
+    form.add_field("image", file_bytes, filename=filename, content_type=mime_type)
+    form.add_field("type", "input")  # required by ComfyUI
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, data=form, headers=headers) as resp:
+            resp.raise_for_status()
+            return await resp.json()
+
+
 class ComfyUINodeInput(BaseModel):
     type: Optional[str] = None
     node_ids: list[str] = []
@@ -103,7 +124,7 @@ class ComfyUIWorkflow(BaseModel):
     nodes: list[ComfyUINodeInput]
 
 
-class ComfyUIGenerateImageForm(BaseModel):
+class ComfyUICreateImageForm(BaseModel):
     workflow: ComfyUIWorkflow
 
     prompt: str
@@ -116,8 +137,8 @@ class ComfyUIGenerateImageForm(BaseModel):
     seed: Optional[int] = None
 
 
-async def comfyui_generate_image(
-    model: str, payload: ComfyUIGenerateImageForm, client_id, base_url, api_key
+async def comfyui_create_image(
+    model: str, payload: ComfyUICreateImageForm, client_id, base_url, api_key
 ):
     ws_url = base_url.replace("http://", "ws://").replace("https://", "wss://")
     workflow = json.loads(payload.workflow.workflow)
@@ -127,6 +148,105 @@ async def comfyui_generate_image(
             if node.type == "model":
                 for node_id in node.node_ids:
                     workflow[node_id]["inputs"][node.key] = model
+            elif node.type == "prompt":
+                for node_id in node.node_ids:
+                    workflow[node_id]["inputs"][
+                        node.key if node.key else "text"
+                    ] = payload.prompt
+            elif node.type == "negative_prompt":
+                for node_id in node.node_ids:
+                    workflow[node_id]["inputs"][
+                        node.key if node.key else "text"
+                    ] = payload.negative_prompt
+            elif node.type == "width":
+                for node_id in node.node_ids:
+                    workflow[node_id]["inputs"][
+                        node.key if node.key else "width"
+                    ] = payload.width
+            elif node.type == "height":
+                for node_id in node.node_ids:
+                    workflow[node_id]["inputs"][
+                        node.key if node.key else "height"
+                    ] = payload.height
+            elif node.type == "n":
+                for node_id in node.node_ids:
+                    workflow[node_id]["inputs"][
+                        node.key if node.key else "batch_size"
+                    ] = payload.n
+            elif node.type == "steps":
+                for node_id in node.node_ids:
+                    workflow[node_id]["inputs"][
+                        node.key if node.key else "steps"
+                    ] = payload.steps
+            elif node.type == "seed":
+                seed = (
+                    payload.seed
+                    if payload.seed
+                    else random.randint(0, 1125899906842624)
+                )
+                for node_id in node.node_ids:
+                    workflow[node_id]["inputs"][node.key] = seed
+        else:
+            for node_id in node.node_ids:
+                workflow[node_id]["inputs"][node.key] = node.value
+
+    try:
+        ws = websocket.WebSocket()
+        headers = {"Authorization": f"Bearer {api_key}"}
+        ws.connect(f"{ws_url}/ws?clientId={client_id}", header=headers)
+        log.info("WebSocket connection established.")
+    except Exception as e:
+        log.exception(f"Failed to connect to WebSocket server: {e}")
+        return None
+
+    try:
+        log.info("Sending workflow to WebSocket server.")
+        log.info(f"Workflow: {workflow}")
+        images = await asyncio.to_thread(
+            get_images, ws, workflow, client_id, base_url, api_key
+        )
+    except Exception as e:
+        log.exception(f"Error while receiving images: {e}")
+        images = None
+
+    ws.close()
+
+    return images
+
+
+class ComfyUIEditImageForm(BaseModel):
+    workflow: ComfyUIWorkflow
+
+    image: str | list[str]
+    prompt: str
+    width: Optional[int] = None
+    height: Optional[int] = None
+    n: Optional[int] = None
+
+    steps: Optional[int] = None
+    seed: Optional[int] = None
+
+
+async def comfyui_edit_image(
+    model: str, payload: ComfyUIEditImageForm, client_id, base_url, api_key
+):
+    ws_url = base_url.replace("http://", "ws://").replace("https://", "wss://")
+    workflow = json.loads(payload.workflow.workflow)
+
+    for node in payload.workflow.nodes:
+        if node.type:
+            if node.type == "model":
+                for node_id in node.node_ids:
+                    workflow[node_id]["inputs"][node.key] = model
+            elif node.type == "image":
+                if isinstance(payload.image, list):
+                    # check if multiple images are provided
+                    for idx, node_id in enumerate(node.node_ids):
+                        if idx < len(payload.image):
+                            workflow[node_id]["inputs"][node.key] = payload.image[idx]
+                else:
+                    for node_id in node.node_ids:
+                        workflow[node_id]["inputs"][node.key] = payload.image
             elif node.type == "prompt":
                 for node_id in node.node_ids:
                     workflow[node_id]["inputs"][

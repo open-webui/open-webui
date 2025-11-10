@@ -5,12 +5,12 @@ python-multipart==0.0.20
 itsdangerous==2.2.0
 
 python-socketio==5.13.0
-python-jose==3.4.0
+python-jose==3.5.0
 cryptography
 bcrypt==5.0.0
 argon2-cffi==25.1.0
 PyJWT[crypto]==2.10.1
-authlib==1.6.3
+authlib==1.6.5
 
 requests==2.32.5
 aiohttp==3.12.15
@@ -63,7 +63,7 @@ fpdf2==2.8.2
 pymdown-extensions==10.14.2
 docx2txt==0.8
 python-pptx==1.0.2
-unstructured==0.16.17
+unstructured==0.18.15
 nltk==3.9.1
 Markdown==3.9
 pypandoc==1.15
@@ -133,7 +133,7 @@ pytest-docker~=3.1.1
 ldap3==2.9.1
 
 ## Firecrawl
-firecrawl-py==1.12.0
+firecrawl-py==4.5.0
 
 ## Trace
 opentelemetry-api==1.37.0

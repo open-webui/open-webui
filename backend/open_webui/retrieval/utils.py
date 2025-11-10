@@ -71,6 +71,7 @@ def get_loader(request, url: str):
             url,
             verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
             requests_per_second=request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
+            trust_env=request.app.state.config.WEB_SEARCH_TRUST_ENV,
         )
 
 
@@ -159,10 +160,18 @@ def query_doc_with_hybrid_search(
     hybrid_bm25_weight: float,
 ) -> dict:
     try:
+        # First check if collection_result has the required attributes
         if (
             not collection_result
             or not hasattr(collection_result, "documents")
-            or not collection_result.documents
+            or not hasattr(collection_result, "metadatas")
+        ):
+            log.warning(f"query_doc_with_hybrid_search:no_docs {collection_name}")
+            return {"documents": [], "metadatas": [], "distances": []}
+
+        # Now safely check the documents content after confirming attributes exist
+        if (
+            not collection_result.documents
             or len(collection_result.documents) == 0
             or not collection_result.documents[0]
         ):
@@ -268,6 +277,13 @@ def merge_and_sort_query_results(query_results: list[dict], k: int) -> dict:
     combined = dict()  # To store documents with unique document hashes
 
     for data in query_results:
+        if (
+            len(data.get("distances", [])) == 0
+            or len(data.get("documents", [])) == 0
+            or len(data.get("metadatas", [])) == 0
+        ):
+            continue
+
         distances = data["distances"][0]
         documents = data["documents"][0]
         metadatas = data["metadatas"][0]
@@ -500,11 +516,13 @@ def get_reranking_function(reranking_engine, reranking_model, reranking_function
     if reranking_function is None:
         return None
     if reranking_engine == "external":
-        return lambda sentences, user=None: reranking_function.predict(
-            sentences, user=user
+        return lambda query, documents, user=None: reranking_function.predict(
+            [(query, doc.page_content) for doc in documents], user=user
         )
     else:
-        return lambda sentences, user=None: reranking_function.predict(sentences)
+        return lambda query, documents, user=None: reranking_function.predict(
+            [(query, doc.page_content) for doc in documents]
+        )
 
 
 def get_sources_from_items(
@@ -661,46 +679,51 @@ def get_sources_from_items(
                     collection_names.append(f"file-{item['id']}")
 
         elif item.get("type") == "collection":
-            if (
-                item.get("context") == "full"
-                or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
+            # Manual Full Mode Toggle for Collection
+            knowledge_base = Knowledges.get_knowledge_by_id(item.get("id"))
+
+            if knowledge_base and (
+                user.role == "admin"
+                or knowledge_base.user_id == user.id
+                or has_access(user.id, "read", knowledge_base.access_control)
             ):
-                # Manual Full Mode Toggle for Collection
-                knowledge_base = Knowledges.get_knowledge_by_id(item.get("id"))
-
-                if knowledge_base and (
-                    user.role == "admin"
-                    or knowledge_base.user_id == user.id
-                    or has_access(user.id, "read", knowledge_base.access_control)
+                if (
+                    item.get("context") == "full"
+                    or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
                 ):
+                    if knowledge_base and (
+                        user.role == "admin"
+                        or knowledge_base.user_id == user.id
+                        or has_access(user.id, "read", knowledge_base.access_control)
+                    ):
 
-                    file_ids = knowledge_base.data.get("file_ids", [])
+                        file_ids = knowledge_base.data.get("file_ids", [])
 
-                    documents = []
-                    metadatas = []
-                    for file_id in file_ids:
-                        file_object = Files.get_file_by_id(file_id)
+                        documents = []
+                        metadatas = []
+                        for file_id in file_ids:
+                            file_object = Files.get_file_by_id(file_id)
 
-                        if file_object:
-                            documents.append(file_object.data.get("content", ""))
-                            metadatas.append(
-                                {
-                                    "file_id": file_id,
-                                    "name": file_object.filename,
-                                    "source": file_object.filename,
-                                }
-                            )
+                            if file_object:
+                                documents.append(file_object.data.get("content", ""))
+                                metadatas.append(
+                                    {
+                                        "file_id": file_id,
+                                        "name": file_object.filename,
+                                        "source": file_object.filename,
+                                    }
+                                )
 
-                    query_result = {
-                        "documents": [documents],
-                        "metadatas": [metadatas],
-                    }
-            else:
-                # Fallback to collection names
-                if item.get("legacy"):
-                    collection_names = item.get("collection_names", [])
+                        query_result = {
+                            "documents": [documents],
+                            "metadatas": [metadatas],
+                        }
                 else:
-                    collection_names.append(item["id"])
+                    # Fallback to collection names
+                    if item.get("legacy"):
+                        collection_names = item.get("collection_names", [])
+                    else:
+                        collection_names.append(item["id"])
 
         elif item.get("docs"):
             # BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
@@ -1043,9 +1066,7 @@ class RerankCompressor(BaseDocumentCompressor):
 
         scores = None
         if reranking:
-            scores = self.reranking_function(
-                [(query, doc.page_content) for doc in documents]
-            )
+            scores = self.reranking_function(query, documents)
         else:
             from sentence_transformers import util
 

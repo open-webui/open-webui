@@ -47,6 +47,7 @@
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import { Shortcut, shortcuts } from '$lib/shortcuts';
 
 	const i18n = getContext('i18n');
 
@@ -85,25 +86,27 @@
 		}
 	};
 
-	const setUserSettings = async (cb) => {
-		const userSettings = await getUserSettings(localStorage.token).catch((error) => {
+	const setUserSettings = async (cb: () => Promise<void>) => {
+		let userSettings = await getUserSettings(localStorage.token).catch((error) => {
 			console.error(error);
 			return null;
 		});
 
-		if (userSettings) {
-			await settings.set(userSettings.ui);
-
-			if (cb) {
-				await cb();
+		if (!userSettings) {
+			try {
+				userSettings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+			} catch (e: unknown) {
+				console.error('Failed to parse settings from localStorage', e);
+				userSettings = {};
 			}
 		}
 
-		try {
-			return JSON.parse(localStorage.getItem('settings') ?? '{}');
-		} catch (e: unknown) {
-			console.error('Failed to parse settings from localStorage', e);
-			return {};
+		if (userSettings?.ui) {
+			settings.set(userSettings.ui);
+		}
+
+		if (cb) {
+			await cb();
 		}
 	};
 
@@ -161,102 +164,96 @@
 			})
 		]);
 
+		// Helper function to check if the pressed keys match the shortcut definition
+		const isShortcutMatch = (event: KeyboardEvent, shortcut): boolean => {
+			const keys = shortcut?.keys || [];
+
+			const normalized = keys.map((k) => k.toLowerCase());
+			const needCtrl = normalized.includes('ctrl') || normalized.includes('mod');
+			const needShift = normalized.includes('shift');
+			const needAlt = normalized.includes('alt');
+
+			const mainKeys = normalized.filter((k) => !['ctrl', 'shift', 'alt', 'mod'].includes(k));
+
+			// Get the main key pressed
+			const keyPressed = event.key.toLowerCase();
+
+			// Check modifiers
+			if (needShift && !event.shiftKey) return false;
+
+			if (needCtrl && !(event.ctrlKey || event.metaKey)) return false;
+			if (!needCtrl && (event.ctrlKey || event.metaKey)) return false;
+			if (needAlt && !event.altKey) return false;
+			if (!needAlt && event.altKey) return false;
+
+			if (mainKeys.length && !mainKeys.includes(keyPressed)) return false;
+
+			return true;
+		};
+
 		const setupKeyboardShortcuts = () => {
-			document.addEventListener('keydown', async function (event) {
-				const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
-				// Check if the Shift key is pressed
-				const isShiftPressed = event.shiftKey;
-
-				// Check if Ctrl  + K is pressed
-				if (isCtrlPressed && event.key.toLowerCase() === 'k') {
+			document.addEventListener('keydown', async (event) => {
+				if (isShortcutMatch(event, shortcuts[Shortcut.SEARCH])) {
+					console.log('Shortcut triggered: SEARCH');
 					event.preventDefault();
-					console.log('search');
 					showSearch.set(!$showSearch);
-				}
-
-				// Check if Ctrl + Shift + O is pressed
-				if (isCtrlPressed && isShiftPressed && event.key.toLowerCase() === 'o') {
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.NEW_CHAT])) {
+					console.log('Shortcut triggered: NEW_CHAT');
 					event.preventDefault();
-					console.log('newChat');
 					document.getElementById('sidebar-new-chat-button')?.click();
-				}
-
-				// Check if Shift + Esc is pressed
-				if (isShiftPressed && event.key === 'Escape') {
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.FOCUS_INPUT])) {
+					console.log('Shortcut triggered: FOCUS_INPUT');
 					event.preventDefault();
-					console.log('focusInput');
 					document.getElementById('chat-input')?.focus();
-				}
-
-				// Check if Ctrl + Shift + ; is pressed
-				if (isCtrlPressed && isShiftPressed && event.key === ';') {
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.COPY_LAST_CODE_BLOCK])) {
+					console.log('Shortcut triggered: COPY_LAST_CODE_BLOCK');
 					event.preventDefault();
-					console.log('copyLastCodeBlock');
-					const button = [...document.getElementsByClassName('copy-code-button')]?.at(-1);
-					button?.click();
-				}
-
-				// Check if Ctrl + Shift + C is pressed
-				if (isCtrlPressed && isShiftPressed && event.key.toLowerCase() === 'c') {
+					[...document.getElementsByClassName('copy-code-button')]?.at(-1)?.click();
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.COPY_LAST_RESPONSE])) {
+					console.log('Shortcut triggered: COPY_LAST_RESPONSE');
 					event.preventDefault();
-					console.log('copyLastResponse');
-					const button = [...document.getElementsByClassName('copy-response-button')]?.at(-1);
-					console.log(button);
-					button?.click();
-				}
-
-				// Check if Ctrl + Shift + S is pressed
-				if (isCtrlPressed && isShiftPressed && event.key.toLowerCase() === 's') {
+					[...document.getElementsByClassName('copy-response-button')]?.at(-1)?.click();
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.TOGGLE_SIDEBAR])) {
+					console.log('Shortcut triggered: TOGGLE_SIDEBAR');
 					event.preventDefault();
-					console.log('toggleSidebar');
-					document.getElementById('sidebar-toggle-button')?.click();
-				}
-
-				// Check if Ctrl + Shift + Backspace is pressed
-				if (
-					isCtrlPressed &&
-					isShiftPressed &&
-					(event.key === 'Backspace' || event.key === 'Delete')
-				) {
+					showSidebar.set(!$showSidebar);
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.DELETE_CHAT])) {
+					console.log('Shortcut triggered: DELETE_CHAT');
 					event.preventDefault();
-					console.log('deleteChat');
 					document.getElementById('delete-chat-button')?.click();
-				}
-
-				// Check if Ctrl + . is pressed
-				if (isCtrlPressed && event.key === '.') {
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.OPEN_SETTINGS])) {
+					console.log('Shortcut triggered: OPEN_SETTINGS');
 					event.preventDefault();
-					console.log('openSettings');
 					showSettings.set(!$showSettings);
-				}
-
-				// Check if Ctrl + / is pressed
-				if (isCtrlPressed && event.key === '/') {
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.SHOW_SHORTCUTS])) {
+					console.log('Shortcut triggered: SHOW_SHORTCUTS');
 					event.preventDefault();
-
 					showShortcuts.set(!$showShortcuts);
-				}
-
-				// Check if Ctrl + Shift + ' is pressed
-				if (
-					isCtrlPressed &&
-					isShiftPressed &&
-					(event.key.toLowerCase() === `'` || event.key.toLowerCase() === `"`)
-				) {
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.CLOSE_MODAL])) {
+					console.log('Shortcut triggered: CLOSE_MODAL');
 					event.preventDefault();
-					console.log('temporaryChat');
-
+					showSettings.set(false);
+					showShortcuts.set(false);
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.NEW_TEMPORARY_CHAT])) {
+					console.log('Shortcut triggered: NEW_TEMPORARY_CHAT');
+					event.preventDefault();
 					if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
 						temporaryChatEnabled.set(true);
 					} else {
 						temporaryChatEnabled.set(!$temporaryChatEnabled);
 					}
-
 					await goto('/');
-					const newChatButton = document.getElementById('new-chat-button');
 					setTimeout(() => {
-						newChatButton?.click();
+						document.getElementById('new-chat-button')?.click();
 					}, 0);
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.GENERATE_MESSAGE_PAIR])) {
+					console.log('Shortcut triggered: GENERATE_MESSAGE_PAIR');
+					event.preventDefault();
+					document.getElementById('generate-message-pair-button')?.click();
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.REGENERATE_RESPONSE])) {
+					console.log('Shortcut triggered: REGENERATE_RESPONSE');
+					event.preventDefault();
+					[...document.getElementsByClassName('regenerate-response-button')]?.at(-1)?.click();
 				}
 			});
 		};

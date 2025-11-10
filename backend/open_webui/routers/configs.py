@@ -1,4 +1,5 @@
 import logging
+import copy
 from fastapi import APIRouter, Depends, Request, HTTPException
 from pydantic import BaseModel, ConfigDict
 import aiohttp
@@ -15,6 +16,7 @@ from open_webui.utils.tools import (
     set_tool_servers,
 )
 from open_webui.utils.mcp.client import MCPClient
+from open_webui.models.oauth_sessions import OAuthSessions
 
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -165,6 +167,21 @@ async def set_tool_servers_config(
     form_data: ToolServersConfigForm,
     user=Depends(get_admin_user),
 ):
+    for connection in request.app.state.config.TOOL_SERVER_CONNECTIONS:
+        server_type = connection.get("type", "openapi")
+        auth_type = connection.get("auth_type", "none")
+
+        if auth_type == "oauth_2.1":
+            # Remove existing OAuth clients for tool servers
+            server_id = connection.get("info", {}).get("id")
+            client_key = f"{server_type}:{server_id}"
+
+            try:
+                request.app.state.oauth_client_manager.remove_client(client_key)
+            except:
+                pass
+
+    # Set new tool server connections
     request.app.state.config.TOOL_SERVER_CONNECTIONS = [
         connection.model_dump() for connection in form_data.TOOL_SERVER_CONNECTIONS
     ]
@@ -176,6 +193,7 @@ async def set_tool_servers_config(
         if server_type == "mcp":
             server_id = connection.get("info", {}).get("id")
             auth_type = connection.get("auth_type", "none")
+
             if auth_type == "oauth_2.1" and server_id:
                 try:
                     oauth_client_info = connection.get("info", {}).get(
@@ -183,7 +201,7 @@ async def set_tool_servers_config(
                     )
                     oauth_client_info = decrypt_data(oauth_client_info)
 
-                    await request.app.state.oauth_client_manager.add_client(
+                    request.app.state.oauth_client_manager.add_client(
                         f"{server_type}:{server_id}",
                         OAuthClientInformationFull(**oauth_client_info),
                     )
@@ -211,7 +229,7 @@ async def verify_tool_servers_config(
                     log.debug(
                         f"Trying to fetch OAuth 2.1 discovery document from {discovery_url}"
                     )
-                    async with aiohttp.ClientSession() as session:
+                    async with aiohttp.ClientSession(trust_env=True) as session:
                         async with session.get(
                             discovery_url
                         ) as oauth_server_metadata_response:

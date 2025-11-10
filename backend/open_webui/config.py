@@ -307,8 +307,14 @@ API_KEY_ALLOWED_ENDPOINTS = PersistentConfig(
 
 
 JWT_EXPIRES_IN = PersistentConfig(
-    "JWT_EXPIRES_IN", "auth.jwt_expiry", os.environ.get("JWT_EXPIRES_IN", "-1")
+    "JWT_EXPIRES_IN", "auth.jwt_expiry", os.environ.get("JWT_EXPIRES_IN", "4w")
 )
+
+if JWT_EXPIRES_IN.value == "-1":
+    log.warning(
+        "⚠️  SECURITY WARNING: JWT_EXPIRES_IN is set to '-1'\n"
+        "    See: https://docs.openwebui.com/getting-started/env-configuration\n"
+    )
 
 ####################################
 # OAuth config
@@ -564,25 +570,34 @@ OAUTH_BLOCKED_GROUPS = PersistentConfig(
     os.environ.get("OAUTH_BLOCKED_GROUPS", "[]"),
 )
 
+OAUTH_GROUPS_SEPARATOR = os.environ.get("OAUTH_GROUPS_SEPARATOR", ";")
+
 OAUTH_ROLES_CLAIM = PersistentConfig(
     "OAUTH_ROLES_CLAIM",
     "oauth.roles_claim",
     os.environ.get("OAUTH_ROLES_CLAIM", "roles"),
 )
 
+SEP = os.environ.get("OAUTH_ROLES_SEPARATOR", ",")
+
 OAUTH_ALLOWED_ROLES = PersistentConfig(
     "OAUTH_ALLOWED_ROLES",
     "oauth.allowed_roles",
     [
         role.strip()
-        for role in os.environ.get("OAUTH_ALLOWED_ROLES", "user,admin").split(",")
+        for role in os.environ.get("OAUTH_ALLOWED_ROLES", f"user{SEP}admin").split(SEP)
+        if role
     ],
 )
 
 OAUTH_ADMIN_ROLES = PersistentConfig(
     "OAUTH_ADMIN_ROLES",
     "oauth.admin_roles",
-    [role.strip() for role in os.environ.get("OAUTH_ADMIN_ROLES", "admin").split(",")],
+    [
+        role.strip()
+        for role in os.environ.get("OAUTH_ADMIN_ROLES", "admin").split(SEP)
+        if role
+    ],
 )
 
 OAUTH_ALLOWED_DOMAINS = PersistentConfig(
@@ -2291,6 +2306,36 @@ DATALAB_MARKER_OUTPUT_FORMAT = PersistentConfig(
     os.environ.get("DATALAB_MARKER_OUTPUT_FORMAT", "markdown"),
 )
 
+MINERU_API_MODE = PersistentConfig(
+    "MINERU_API_MODE",
+    "rag.mineru_api_mode",
+    os.environ.get("MINERU_API_MODE", "local"),  # "local" or "cloud"
+)
+
+MINERU_API_URL = PersistentConfig(
+    "MINERU_API_URL",
+    "rag.mineru_api_url",
+    os.environ.get("MINERU_API_URL", "http://localhost:8000"),
+)
+
+MINERU_API_KEY = PersistentConfig(
+    "MINERU_API_KEY",
+    "rag.mineru_api_key",
+    os.environ.get("MINERU_API_KEY", ""),
+)
+
+mineru_params = os.getenv("MINERU_PARAMS", "")
+try:
+    mineru_params = json.loads(mineru_params)
+except json.JSONDecodeError:
+    mineru_params = {}
+
+MINERU_PARAMS = PersistentConfig(
+    "MINERU_PARAMS",
+    "rag.mineru_params",
+    mineru_params,
+)
+
 EXTERNAL_DOCUMENT_LOADER_URL = PersistentConfig(
     "EXTERNAL_DOCUMENT_LOADER_URL",
     "rag.external_document_loader_url",
@@ -2419,6 +2464,12 @@ DOCUMENT_INTELLIGENCE_KEY = PersistentConfig(
     "DOCUMENT_INTELLIGENCE_KEY",
     "rag.document_intelligence_key",
     os.getenv("DOCUMENT_INTELLIGENCE_KEY", ""),
+)
+
+MISTRAL_OCR_API_BASE_URL = PersistentConfig(
+    "MISTRAL_OCR_API_BASE_URL",
+    "rag.MISTRAL_OCR_API_BASE_URL",
+    os.getenv("MISTRAL_OCR_API_BASE_URL", "https://api.mistral.ai/v1"),
 )
 
 MISTRAL_OCR_API_KEY = PersistentConfig(
@@ -3031,16 +3082,30 @@ EXTERNAL_WEB_LOADER_API_KEY = PersistentConfig(
 # Images
 ####################################
 
+ENABLE_IMAGE_GENERATION = PersistentConfig(
+    "ENABLE_IMAGE_GENERATION",
+    "image_generation.enable",
+    os.environ.get("ENABLE_IMAGE_GENERATION", "").lower() == "true",
+)
+
 IMAGE_GENERATION_ENGINE = PersistentConfig(
     "IMAGE_GENERATION_ENGINE",
     "image_generation.engine",
     os.getenv("IMAGE_GENERATION_ENGINE", "openai"),
 )
 
-ENABLE_IMAGE_GENERATION = PersistentConfig(
-    "ENABLE_IMAGE_GENERATION",
-    "image_generation.enable",
-    os.environ.get("ENABLE_IMAGE_GENERATION", "").lower() == "true",
+IMAGE_GENERATION_MODEL = PersistentConfig(
+    "IMAGE_GENERATION_MODEL",
+    "image_generation.model",
+    os.getenv("IMAGE_GENERATION_MODEL", ""),
+)
+
+IMAGE_SIZE = PersistentConfig(
+    "IMAGE_SIZE", "image_generation.size", os.getenv("IMAGE_SIZE", "512x512")
+)
+
+IMAGE_STEPS = PersistentConfig(
+    "IMAGE_STEPS", "image_generation.steps", int(os.getenv("IMAGE_STEPS", 50))
 )
 
 ENABLE_IMAGE_PROMPT_GENERATION = PersistentConfig(
@@ -3060,35 +3125,17 @@ AUTOMATIC1111_API_AUTH = PersistentConfig(
     os.getenv("AUTOMATIC1111_API_AUTH", ""),
 )
 
-AUTOMATIC1111_CFG_SCALE = PersistentConfig(
-    "AUTOMATIC1111_CFG_SCALE",
-    "image_generation.automatic1111.cfg_scale",
-    (
-        float(os.environ.get("AUTOMATIC1111_CFG_SCALE"))
-        if os.environ.get("AUTOMATIC1111_CFG_SCALE")
-        else None
-    ),
-)
+automatic1111_params = os.getenv("AUTOMATIC1111_PARAMS", "")
+try:
+    automatic1111_params = json.loads(automatic1111_params)
+except json.JSONDecodeError:
+    automatic1111_params = {}
 
 
-AUTOMATIC1111_SAMPLER = PersistentConfig(
-    "AUTOMATIC1111_SAMPLER",
-    "image_generation.automatic1111.sampler",
-    (
-        os.environ.get("AUTOMATIC1111_SAMPLER")
-        if os.environ.get("AUTOMATIC1111_SAMPLER")
-        else None
-    ),
-)
-
-AUTOMATIC1111_SCHEDULER = PersistentConfig(
-    "AUTOMATIC1111_SCHEDULER",
-    "image_generation.automatic1111.scheduler",
-    (
-        os.environ.get("AUTOMATIC1111_SCHEDULER")
-        if os.environ.get("AUTOMATIC1111_SCHEDULER")
-        else None
-    ),
+AUTOMATIC1111_PARAMS = PersistentConfig(
+    "AUTOMATIC1111_PARAMS",
+    "image_generation.automatic1111.api_auth",
+    automatic1111_params,
 )
 
 COMFYUI_BASE_URL = PersistentConfig(
@@ -3254,18 +3301,79 @@ IMAGES_GEMINI_API_KEY = PersistentConfig(
     os.getenv("IMAGES_GEMINI_API_KEY", GEMINI_API_KEY),
 )
 
-IMAGE_SIZE = PersistentConfig(
-    "IMAGE_SIZE", "image_generation.size", os.getenv("IMAGE_SIZE", "512x512")
+IMAGES_GEMINI_ENDPOINT_METHOD = PersistentConfig(
+    "IMAGES_GEMINI_ENDPOINT_METHOD",
+    "image_generation.gemini.endpoint_method",
+    os.getenv("IMAGES_GEMINI_ENDPOINT_METHOD", ""),
 )
 
-IMAGE_STEPS = PersistentConfig(
-    "IMAGE_STEPS", "image_generation.steps", int(os.getenv("IMAGE_STEPS", 50))
+
+IMAGE_EDIT_ENGINE = PersistentConfig(
+    "IMAGE_EDIT_ENGINE",
+    "images.edit.engine",
+    os.getenv("IMAGE_EDIT_ENGINE", "openai"),
 )
 
-IMAGE_GENERATION_MODEL = PersistentConfig(
-    "IMAGE_GENERATION_MODEL",
-    "image_generation.model",
-    os.getenv("IMAGE_GENERATION_MODEL", ""),
+IMAGE_EDIT_MODEL = PersistentConfig(
+    "IMAGE_EDIT_MODEL",
+    "images.edit.model",
+    os.getenv("IMAGE_EDIT_MODEL", ""),
+)
+
+IMAGE_EDIT_SIZE = PersistentConfig(
+    "IMAGE_EDIT_SIZE", "images.edit.size", os.getenv("IMAGE_EDIT_SIZE", "")
+)
+
+IMAGES_EDIT_OPENAI_API_BASE_URL = PersistentConfig(
+    "IMAGES_EDIT_OPENAI_API_BASE_URL",
+    "images.edit.openai.api_base_url",
+    os.getenv("IMAGES_EDIT_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
+)
+IMAGES_EDIT_OPENAI_API_VERSION = PersistentConfig(
+    "IMAGES_EDIT_OPENAI_API_VERSION",
+    "images.edit.openai.api_version",
+    os.getenv("IMAGES_EDIT_OPENAI_API_VERSION", ""),
+)
+
+IMAGES_EDIT_OPENAI_API_KEY = PersistentConfig(
+    "IMAGES_EDIT_OPENAI_API_KEY",
+    "images.edit.openai.api_key",
+    os.getenv("IMAGES_EDIT_OPENAI_API_KEY", OPENAI_API_KEY),
+)
+
+IMAGES_EDIT_GEMINI_API_BASE_URL = PersistentConfig(
+    "IMAGES_EDIT_GEMINI_API_BASE_URL",
+    "images.edit.gemini.api_base_url",
+    os.getenv("IMAGES_EDIT_GEMINI_API_BASE_URL", GEMINI_API_BASE_URL),
+)
+IMAGES_EDIT_GEMINI_API_KEY = PersistentConfig(
+    "IMAGES_EDIT_GEMINI_API_KEY",
+    "images.edit.gemini.api_key",
+    os.getenv("IMAGES_EDIT_GEMINI_API_KEY", GEMINI_API_KEY),
+)
+
+
+IMAGES_EDIT_COMFYUI_BASE_URL = PersistentConfig(
+    "IMAGES_EDIT_COMFYUI_BASE_URL",
+    "images.edit.comfyui.base_url",
+    os.getenv("IMAGES_EDIT_COMFYUI_BASE_URL", ""),
+)
+IMAGES_EDIT_COMFYUI_API_KEY = PersistentConfig(
+    "IMAGES_EDIT_COMFYUI_API_KEY",
+    "images.edit.comfyui.api_key",
+    os.getenv("IMAGES_EDIT_COMFYUI_API_KEY", ""),
+)
+
+IMAGES_EDIT_COMFYUI_WORKFLOW = PersistentConfig(
+    "IMAGES_EDIT_COMFYUI_WORKFLOW",
+    "images.edit.comfyui.workflow",
+    os.getenv("IMAGES_EDIT_COMFYUI_WORKFLOW", ""),
+)
+
+IMAGES_EDIT_COMFYUI_WORKFLOW_NODES = PersistentConfig(
+    "IMAGES_EDIT_COMFYUI_WORKFLOW_NODES",
+    "images.edit.comfyui.nodes",
+    [],
 )
 
 ####################################
@@ -3300,6 +3408,10 @@ DEEPGRAM_API_KEY = PersistentConfig(
     os.getenv("DEEPGRAM_API_KEY", ""),
 )
 
+# ElevenLabs configuration
+ELEVENLABS_API_BASE_URL = os.getenv(
+    "ELEVENLABS_API_BASE_URL", "https://api.elevenlabs.io"
+)
 
 AUDIO_STT_OPENAI_API_BASE_URL = PersistentConfig(
     "AUDIO_STT_OPENAI_API_BASE_URL",
@@ -3365,6 +3477,24 @@ AUDIO_STT_AZURE_MAX_SPEAKERS = PersistentConfig(
     "AUDIO_STT_AZURE_MAX_SPEAKERS",
     "audio.stt.azure.max_speakers",
     os.getenv("AUDIO_STT_AZURE_MAX_SPEAKERS", ""),
+)
+
+AUDIO_STT_MISTRAL_API_KEY = PersistentConfig(
+    "AUDIO_STT_MISTRAL_API_KEY",
+    "audio.stt.mistral.api_key",
+    os.getenv("AUDIO_STT_MISTRAL_API_KEY", ""),
+)
+
+AUDIO_STT_MISTRAL_API_BASE_URL = PersistentConfig(
+    "AUDIO_STT_MISTRAL_API_BASE_URL",
+    "audio.stt.mistral.api_base_url",
+    os.getenv("AUDIO_STT_MISTRAL_API_BASE_URL", "https://api.mistral.ai/v1"),
+)
+
+AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS = PersistentConfig(
+    "AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS",
+    "audio.stt.mistral.use_chat_completions",
+    os.getenv("AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS", "false").lower() == "true",
 )
 
 AUDIO_TTS_OPENAI_API_BASE_URL = PersistentConfig(

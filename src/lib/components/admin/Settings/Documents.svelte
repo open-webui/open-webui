@@ -173,14 +173,6 @@
 
 		if (
 			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker' &&
-			!RAGConfig.DATALAB_MARKER_API_KEY
-		) {
-			toast.error($i18n.t('Datalab Marker API Key required.'));
-			return;
-		}
-
-		if (
-			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker' &&
 			RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG &&
 			RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG.trim() !== ''
 		) {
@@ -207,8 +199,26 @@
 			return;
 		}
 
+		if (
+			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mineru' &&
+			RAGConfig.MINERU_API_MODE === 'cloud' &&
+			RAGConfig.MINERU_API_KEY === ''
+		) {
+			toast.error($i18n.t('MinerU API Key required for Cloud API mode.'));
+			return;
+		}
+
 		if (!RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL) {
 			await embeddingModelUpdateHandler();
+		}
+
+		if (RAGConfig.MINERU_PARAMS) {
+			try {
+				JSON.parse(RAGConfig.MINERU_PARAMS);
+			} catch (e) {
+				toast.error($i18n.t('Invalid JSON format in MinerU Parameters'));
+				return;
+			}
 		}
 
 		const res = await updateRAGConfig(localStorage.token, {
@@ -219,7 +229,13 @@
 			DOCLING_PICTURE_DESCRIPTION_LOCAL: JSON.parse(
 				RAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL || '{}'
 			),
-			DOCLING_PICTURE_DESCRIPTION_API: JSON.parse(RAGConfig.DOCLING_PICTURE_DESCRIPTION_API || '{}')
+			DOCLING_PICTURE_DESCRIPTION_API: JSON.parse(
+				RAGConfig.DOCLING_PICTURE_DESCRIPTION_API || '{}'
+			),
+			MINERU_PARAMS:
+				typeof RAGConfig.MINERU_PARAMS === 'string' && RAGConfig.MINERU_PARAMS.trim() !== ''
+					? JSON.parse(RAGConfig.MINERU_PARAMS)
+					: {}
 		});
 		dispatch('save');
 	};
@@ -259,6 +275,11 @@
 			null,
 			2
 		);
+
+		config.MINERU_PARAMS =
+			typeof config.MINERU_PARAMS === 'object'
+				? JSON.stringify(config.MINERU_PARAMS ?? {}, null, 2)
+				: config.MINERU_PARAMS;
 
 		RAGConfig = config;
 	});
@@ -316,7 +337,7 @@
 		<div class=" space-y-2.5 overflow-y-scroll scrollbar-hidden h-full pr-1.5">
 			<div class="">
 				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -337,6 +358,7 @@
 									<option value="datalab_marker">{$i18n.t('Datalab Marker API')}</option>
 									<option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
 									<option value="mistral_ocr">{$i18n.t('Mistral OCR')}</option>
+									<option value="mineru">{$i18n.t('MinerU')}</option>
 								</select>
 							</div>
 						</div>
@@ -723,7 +745,7 @@
 								</div>
 								<div class="">
 									<Textarea
-										bind:value={RAGConfig.DOCLING_PARAMETERS}
+										bind:value={RAGConfig.DOCLING_PARAMS}
 										placeholder={$i18n.t('Enter additional parameters in JSON format')}
 										minSize={100}
 									/>
@@ -744,10 +766,85 @@
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mistral_ocr'}
 							<div class="my-0.5 flex gap-2 pr-2">
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('Enter Mistral API Base URL')}
+									bind:value={RAGConfig.MISTRAL_OCR_API_BASE_URL}
+								/>
 								<SensitiveInput
 									placeholder={$i18n.t('Enter Mistral API Key')}
 									bind:value={RAGConfig.MISTRAL_OCR_API_KEY}
 								/>
+							</div>
+						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mineru'}
+							<!-- API Mode Selection -->
+							<div class="flex w-full mt-2">
+								<div class="flex-1 flex justify-between">
+									<div class="self-center text-xs font-medium">
+										{$i18n.t('API Mode')}
+									</div>
+									<select
+										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden"
+										bind:value={RAGConfig.MINERU_API_MODE}
+										on:change={() => {
+											// Auto-update URL when switching modes if it's empty or matches the opposite mode's default
+											const cloudUrl = 'https://mineru.net/api/v4';
+											const localUrl = 'http://localhost:8000';
+
+											if (RAGConfig.MINERU_API_MODE === 'cloud') {
+												if (!RAGConfig.MINERU_API_URL || RAGConfig.MINERU_API_URL === localUrl) {
+													RAGConfig.MINERU_API_URL = cloudUrl;
+												}
+											} else {
+												if (!RAGConfig.MINERU_API_URL || RAGConfig.MINERU_API_URL === cloudUrl) {
+													RAGConfig.MINERU_API_URL = localUrl;
+												}
+											}
+										}}
+									>
+										<option value="local">{$i18n.t('local')}</option>
+										<option value="cloud">{$i18n.t('cloud')}</option>
+									</select>
+								</div>
+							</div>
+
+							<!-- API URL -->
+							<div class="flex w-full mt-2">
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={RAGConfig.MINERU_API_MODE === 'cloud'
+										? $i18n.t('https://mineru.net/api/v4')
+										: $i18n.t('http://localhost:8000')}
+									bind:value={RAGConfig.MINERU_API_URL}
+								/>
+							</div>
+
+							<div class="flex w-full mt-2">
+								<SensitiveInput
+									placeholder={$i18n.t('Enter MinerU API Key')}
+									bind:value={RAGConfig.MINERU_API_KEY}
+								/>
+							</div>
+
+							<!-- Parameters -->
+							<div class="flex flex-col justify-between w-full mt-2">
+								<div class="text-xs font-medium">
+									<Tooltip
+										content={$i18n.t(
+											'Advanced parameters for MinerU parsing (enable_ocr, enable_formula, enable_table, language, model_version, page_ranges)'
+										)}
+										placement="top-start"
+									>
+										{$i18n.t('Parameters')}
+									</Tooltip>
+								</div>
+								<div class="mt-1.5">
+									<Textarea
+										bind:value={RAGConfig.MINERU_PARAMS}
+										placeholder={`{\n  "enable_ocr": false,\n  "enable_formula": true,\n  "enable_table": true,\n  "language": "en",\n  "model_version": "pipeline",\n  "page_ranges": ""\n}`}
+										minSize={100}
+									/>
+								</div>
 							</div>
 						{/if}
 					</div>
@@ -829,7 +926,7 @@
 
 				{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
 					<div class="mb-3">
-						<div class=" mb-2.5 text-base font-medium">{$i18n.t('Embedding')}</div>
+						<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Embedding')}</div>
 
 						<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -978,7 +1075,7 @@
 
 							<div class="mt-1 mb-1 text-xs text-gray-400 dark:text-gray-500">
 								{$i18n.t(
-									'Warning: If you update or change your embedding model, you will need to re-import all documents.'
+									'After updating or changing the embedding model, you must reindex the knowledge base for the changes to take effect. You can do this using the "Reindex" button below.'
 								)}
 							</div>
 						</div>
@@ -1004,7 +1101,7 @@
 					</div>
 
 					<div class="mb-3">
-						<div class=" mb-2.5 text-base font-medium">{$i18n.t('Retrieval')}</div>
+						<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Retrieval')}</div>
 
 						<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -1247,7 +1344,7 @@
 				{/if}
 
 				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Files')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Files')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -1359,7 +1456,7 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Integration')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Integration')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -1379,7 +1476,7 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Danger Zone')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Danger Zone')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 

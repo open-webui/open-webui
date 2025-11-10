@@ -39,6 +39,7 @@ router = APIRouter()
 def get_session_user_chat_list(
     user=Depends(get_verified_user),
     page: Optional[int] = None,
+    include_pinned: Optional[bool] = False,
     include_folders: Optional[bool] = False,
 ):
     try:
@@ -47,11 +48,15 @@ def get_session_user_chat_list(
             skip = (page - 1) * limit
 
             return Chats.get_chat_title_id_list_by_user_id(
-                user.id, include_folders=include_folders, skip=skip, limit=limit
+                user.id,
+                include_folders=include_folders,
+                include_pinned=include_pinned,
+                skip=skip,
+                limit=limit,
             )
         else:
             return Chats.get_chat_title_id_list_by_user_id(
-                user.id, include_folders=include_folders
+                user.id, include_folders=include_folders, include_pinned=include_pinned
             )
     except Exception as e:
         log.exception(e)

@@ -335,6 +335,7 @@
 
 		stopDurationCounter();
 		audioChunks = [];
+		visualizerData = Array(VISUALIZER_BUFFER_LENGTH).fill(0);
 
 		if (stream) {
 			const tracks = stream.getTracks();
