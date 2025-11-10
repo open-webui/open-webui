@@ -232,6 +232,7 @@
 			DOCLING_PICTURE_DESCRIPTION_API: JSON.parse(
 				RAGConfig.DOCLING_PICTURE_DESCRIPTION_API || '{}'
 			),
+			DOCLING_PARAMS: JSON.parse(RAGConfig.DOCLING_PARAMS || '{}'),
 			MINERU_PARAMS:
 				typeof RAGConfig.MINERU_PARAMS === 'string' && RAGConfig.MINERU_PARAMS.trim() !== ''
 					? JSON.parse(RAGConfig.MINERU_PARAMS)
@@ -275,6 +276,7 @@
 			null,
 			2
 		);
+		config.DOCLING_PARAMS = JSON.stringify(config.DOCLING_PARAMS ?? {}, null, 2);
 
 		config.MINERU_PARAMS =
 			typeof config.MINERU_PARAMS === 'object'
