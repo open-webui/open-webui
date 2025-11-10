@@ -2582,6 +2582,14 @@ async def process_chat_response(
                                                         ] += delta_arguments
 
                                     value = delta.get("content")
+                                    images = delta.get("images", [])
+                                    if images and isinstance(images, list):
+                                        for image in images:
+                                            if not isinstance(image, object) or image.get("type", "") != "image_url":
+                                                continue
+                                            image_url = image.get("image_url", {}).get("url", None)
+                                            if image_url:
+                                                value += f"\n![Output Image]({image_url})\n"
 
                                     reasoning_content = (
                                         delta.get("reasoning_content")
