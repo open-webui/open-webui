@@ -172,8 +172,43 @@ def query_doc_with_hybrid_search(
 
         log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
 
+        # This allows BM25 to find documents by filename, title, headings, source URL, etc.
+        augmented_texts = []
+        for idx, text in enumerate(collection_result.documents[0]):
+            metadata = collection_result.metadatas[0][idx]
+            metadata_parts = [text]
+
+            # Add filename (repeat twice for extra weight in BM25 scoring)
+            if metadata.get("name"):
+                filename = metadata["name"]
+                filename_tokens = (
+                    filename.replace("_", " ").replace("-", " ").replace(".", " ")
+                )
+                metadata_parts.append(
+                    f"Filename: {filename} {filename_tokens} {filename_tokens}"
+                )
+
+            # Add title if available
+            if metadata.get("title"):
+                metadata_parts.append(f"Title: {metadata['title']}")
+
+            # Add document section headings if available (from markdown splitter)
+            if metadata.get("headings") and isinstance(metadata["headings"], list):
+                headings = " > ".join(str(h) for h in metadata["headings"])
+                metadata_parts.append(f"Section: {headings}")
+
+            # Add source URL/path if available
+            if metadata.get("source"):
+                metadata_parts.append(f"Source: {metadata['source']}")
+
+            # Add snippet for web search results
+            if metadata.get("snippet"):
+                metadata_parts.append(f"Snippet: {metadata['snippet']}")
+
+            augmented_texts.append(" ".join(metadata_parts))
+
         bm25_retriever = BM25Retriever.from_texts(
-            texts=collection_result.documents[0],
+            texts=augmented_texts,
             metadatas=collection_result.metadatas[0],
         )
         bm25_retriever.k = k
