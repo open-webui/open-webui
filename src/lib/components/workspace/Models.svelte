@@ -49,14 +49,93 @@
 	let showModelDeleteConfirm = false;
 
 	let group_ids = [];
+	let groups = [];
 
-	$: if (models) {
-		filteredModels = models.filter(
-			(m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase())
-		);
+	// Group models by category
+	let groupedModels = {};
+
+	$: if (models && groups) {
+		// Process models: filter by search and clean up group arrays
+		filteredModels = models
+			.map((m) => {
+				// Clone the model to avoid mutating the original
+				const cleanedModel = { ...m };
+				
+				// If user owns the model, keep all groups
+				if (m.user_id === $user?.id) {
+					return cleanedModel;
+				}
+				
+				// Clean up the group_ids to only include groups the admin can see
+				const groupIds = m?.access_control?.read?.group_ids;
+				if (groupIds && Array.isArray(groupIds) && groupIds.length > 0) {
+					const visibleGroupIds = groupIds.filter((gid) => group_ids.includes(gid));
+					
+					// If no visible groups remain, filter out this model (admin shouldn't see it)
+					if (visibleGroupIds.length === 0) {
+						return null; // Mark for filtering
+					}
+					
+					// Update the model with only visible groups
+					cleanedModel.access_control = {
+						...cleanedModel.access_control,
+						read: {
+							...cleanedModel.access_control.read,
+							group_ids: visibleGroupIds
+						}
+					};
+				}
+				
+				return cleanedModel;
+			})
+			.filter((m) => {
+				// Remove null entries (models that should be hidden)
+				if (m === null) return false;
+				
+				// Apply search filter
+				return searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase());
+			});
+		
+		// Group filtered models
+		groupedModels = groupModelsByCategory(filteredModels);
 	}
 
 	let searchValue = '';
+
+	// Function to group models by their category or tags
+	const groupModelsByCategory = (modelsList) => {
+		const groupsMap = {};
+		modelsList.forEach((model) => {
+			// Get the group/category from model metadata
+			const groupIds = model?.access_control?.read?.group_ids;
+			
+			// If model has group_ids (after cleaning), add it to each group
+			if (groupIds && Array.isArray(groupIds) && groupIds.length > 0) {
+				groupIds.forEach((groupId) => {
+					// Find the group name from the groups array
+					const group = groups.find(g => g.id === groupId);
+					
+					// Only add if group exists in admin's visible groups
+					if (group) {
+						const groupName = group.name;
+						
+						if (!groupsMap[groupName]) {
+							groupsMap[groupName] = [];
+						}
+						groupsMap[groupName].push(model);
+					}
+				});
+			} else {
+				// If no group_ids (or empty after cleaning), add to Uncategorized
+				if (!groupsMap['Uncategorized']) {
+					groupsMap['Uncategorized'] = [];
+				}
+				groupsMap['Uncategorized'].push(model);
+			}
+		});
+		
+		return groupsMap;
+	};
 
 	const deleteModelHandler = async (model) => {
 		const res = await deleteModelById(localStorage.token, model.id).catch((e) => {
@@ -126,8 +205,6 @@
 			hidden: !(info?.meta?.hidden ?? false)
 		};
 
-		console.log(info);
-
 		const res = await updateModelById(localStorage.token, info.id, info);
 
 		if (res) {
@@ -164,7 +241,7 @@
 
 	onMount(async () => {
 		models = await getWorkspaceModels(localStorage.token);
-		let groups = await getGroups(localStorage.token);
+		groups = await getGroups(localStorage.token);
 		group_ids = groups.map((group) => group.id);
 
 		loaded = true;
@@ -187,12 +264,12 @@
 
 		window.addEventListener('keydown', onKeyDown);
 		window.addEventListener('keyup', onKeyUp);
-		window.addEventListener('blur-sm', onBlur);
+		window.addEventListener('blur', onBlur);
 
 		return () => {
 			window.removeEventListener('keydown', onKeyDown);
 			window.removeEventListener('keyup', onKeyUp);
-			window.removeEventListener('blur-sm', onBlur);
+			window.removeEventListener('blur', onBlur);
 		};
 	});
 </script>
@@ -245,155 +322,169 @@
 		</div>
 	</div>
 
-	<div class=" my-2 mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3" id="model-list">
-		{#each filteredModels as model}
-			<div
-				class=" flex flex-col cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
-				id="model-item-{model.id}"
-			>
-				<div class="flex gap-4 mt-0.5 mb-0.5">
-					<div class=" w-[44px]">
+	<!-- Grouped Models Display -->
+	<div class="my-2 mb-5">
+		{#each Object.entries(groupedModels) as [groupName, groupModels]}
+			<div class="mb-6">
+				<!-- Group Header -->
+				<div class="flex items-center mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
+					<h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200">{groupName}</h2>
+				</div>
+
+				<!-- Models Grid -->
+				<div class="gap-2 grid lg:grid-cols-2 xl:grid-cols-3">
+					{#each groupModels as model}
 						<div
-							class=" rounded-full object-cover {model.is_active
-								? ''
-								: 'opacity-50 dark:opacity-50'} "
+							class=" flex flex-col cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
+							id="model-item-{model.id}"
 						>
-							<img
-								src={model?.meta?.profile_image_url ?? '/static/favicon.png'}
-								alt="modelfile profile"
-								class=" rounded-full w-full h-auto object-cover"
-							/>
-						</div>
-					</div>
+							<div class="flex gap-4 mt-0.5 mb-0.5">
+								<div class=" w-[44px]">
+									<div
+										class=" rounded-full object-cover {model.is_active
+											? ''
+											: 'opacity-50 dark:opacity-50'} "
+									>
+										<img
+											src={model?.meta?.profile_image_url ?? '/static/favicon.png'}
+											alt="modelfile profile"
+											class=" rounded-full w-full h-auto object-cover"
+										/>
+									</div>
+								</div>
 
-					<a
-						class=" flex flex-1 cursor-pointer w-full"
-						href={`/?models=${encodeURIComponent(model.id)}`}
-					>
-						<div class=" flex-1 self-center {model.is_active ? '' : 'text-gray-500'}">
-							<Tooltip
-								content={marked.parse(model?.meta?.description ?? model.id)}
-								className=" w-fit"
-								placement="top-start"
-							>
-								<div class=" font-semibold line-clamp-1">{model.name}</div>
-							</Tooltip>
+								<a
+									class=" flex flex-1 cursor-pointer w-full"
+									href={`/?models=${encodeURIComponent(model.id)}`}
+								>
+									<div class=" flex-1 self-center {model.is_active ? '' : 'text-gray-500'}">
+										<Tooltip
+											content={marked.parse(model?.meta?.description ?? model.id)}
+											className=" w-fit"
+											placement="top-start"
+										>
+											<div class=" font-semibold line-clamp-1">{model.name}</div>
+										</Tooltip>
 
-							<div class="flex gap-1 text-xs overflow-hidden">
-								<div class="line-clamp-1">
-									{#if (model?.meta?.description ?? '').trim()}
-										{model?.meta?.description}
+										<div class="flex gap-1 text-xs overflow-hidden">
+											<div class="line-clamp-1">
+												{#if (model?.meta?.description ?? '').trim()}
+													{model?.meta?.description}
+												{:else}
+													{model.id}
+												{/if}
+											</div>
+										</div>
+									</div>
+								</a>
+							</div>
+
+							<div class="flex justify-between items-center -mb-0.5 px-0.5">
+								<div class=" text-xs mt-0.5">
+									<Tooltip
+										content={model?.user?.email ?? $i18n.t('Deleted User')}
+										className="flex shrink-0"
+										placement="top-start"
+									>
+										<div class="shrink-0 text-gray-500">
+											{$i18n.t('By {{name}}', {
+												name: capitalizeFirstLetter(
+													model?.user?.name ?? model?.user?.email ?? $i18n.t('Deleted User')
+												)
+											})}
+										</div>
+									</Tooltip>
+								</div>
+
+								<div class="flex flex-row gap-0.5 items-center">
+									{#if shiftKey}
+										<Tooltip content={$i18n.t('Delete')}>
+											<button
+												class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+												type="button"
+												on:click={() => {
+													deleteModelHandler(model);
+												}}
+											>
+												<GarbageBin />
+											</button>
+										</Tooltip>
 									{:else}
-										{model.id}
+										{#if $user?.role === 'admin' || model.user_id === $user?.id || model.access_control.write.group_ids.some( (wg) => group_ids.includes(wg) )}
+											<a
+												class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+												type="button"
+												href={`/workspace/models/edit?id=${encodeURIComponent(model.id)}`}
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke-width="1.5"
+													stroke="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+													/>
+												</svg>
+											</a>
+										{/if}
+
+										<ModelMenu
+											user={$user}
+											{model}
+											shareHandler={() => {
+												shareModelHandler(model);
+											}}
+											cloneHandler={() => {
+												cloneModelHandler(model);
+											}}
+											exportHandler={() => {
+												exportModelHandler(model);
+											}}
+											hideHandler={() => {
+												hideModelHandler(model);
+											}}
+											deleteHandler={() => {
+												selectedModel = model;
+												showModelDeleteConfirm = true;
+											}}
+											onClose={() => {}}
+										>
+											<button
+												class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+												type="button"
+											>
+												<EllipsisHorizontal className="size-5" />
+											</button>
+										</ModelMenu>
+
+										<div class="ml-1">
+											<Tooltip content={model.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
+												<Switch
+													bind:state={model.is_active}
+													on:change={async (e) => {
+														toggleModelById(localStorage.token, model.id);
+														_models.set(
+															await getModels(
+																localStorage.token,
+																$config?.features?.enable_direct_connections &&
+																	($settings?.directConnections ?? null)
+															)
+														);
+														models = await getWorkspaceModels(localStorage.token);
+													}}
+												/>
+											</Tooltip>
+										</div>
 									{/if}
 								</div>
 							</div>
 						</div>
-					</a>
-				</div>
-
-				<div class="flex justify-between items-center -mb-0.5 px-0.5">
-					<div class=" text-xs mt-0.5">
-						<Tooltip
-							content={model?.user?.email ?? $i18n.t('Deleted User')}
-							className="flex shrink-0"
-							placement="top-start"
-						>
-							<div class="shrink-0 text-gray-500">
-								{$i18n.t('By {{name}}', {
-									name: capitalizeFirstLetter(
-										model?.user?.name ?? model?.user?.email ?? $i18n.t('Deleted User')
-									)
-								})}
-							</div>
-						</Tooltip>
-					</div>
-
-					<div class="flex flex-row gap-0.5 items-center">
-						{#if shiftKey}
-							<Tooltip content={$i18n.t('Delete')}>
-								<button
-									class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-									type="button"
-									on:click={() => {
-										deleteModelHandler(model);
-									}}
-								>
-									<GarbageBin />
-								</button>
-							</Tooltip>
-						{:else}
-							{#if $user?.role === 'admin' || model.user_id === $user?.id || model.access_control.write.group_ids.some( (wg) => group_ids.includes(wg) )}
-								<a
-									class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-									type="button"
-									href={`/workspace/models/edit?id=${encodeURIComponent(model.id)}`}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										fill="none"
-										viewBox="0 0 24 24"
-										stroke-width="1.5"
-										stroke="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
-										/>
-									</svg>
-								</a>
-							{/if}
-
-							<ModelMenu
-								user={$user}
-								{model}
-								shareHandler={() => {
-									shareModelHandler(model);
-								}}
-								cloneHandler={() => {
-									cloneModelHandler(model);
-								}}
-								exportHandler={() => {
-									exportModelHandler(model);
-								}}
-								hideHandler={() => {
-									hideModelHandler(model);
-								}}
-								deleteHandler={() => {
-									selectedModel = model;
-									showModelDeleteConfirm = true;
-								}}
-								onClose={() => {}}
-							>
-								<button
-									class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-									type="button"
-								>
-									<EllipsisHorizontal className="size-5" />
-								</button>
-							</ModelMenu>
-
-							<div class="ml-1">
-								<Tooltip content={model.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
-									<Switch
-										bind:state={model.is_active}
-										on:change={async (e) => {
-											toggleModelById(localStorage.token, model.id);
-											_models.set(
-												await getModels(
-													localStorage.token,
-													$config?.features?.enable_direct_connections &&
-														($settings?.directConnections ?? null)
-												)
-											);
-										}}
-									/>
-								</Tooltip>
-							</div>
-						{/if}
-					</div>
+					{/each}
 				</div>
 			</div>
 		{/each}
