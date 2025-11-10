@@ -584,6 +584,18 @@ else:
         CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE = None
 
 
+REPLACE_IMAGE_URLS_IN_CHAT_RESPONSE = os.environ.get(
+    "REPLACE_IMAGE_URLS_IN_CHAT_RESPONSE", ""
+)
+
+if REPLACE_IMAGE_URLS_IN_CHAT_RESPONSE == "":
+    REPLACE_IMAGE_URLS_IN_CHAT_RESPONSE = False
+else:
+    try:
+        REPLACE_IMAGE_URLS_IN_CHAT_RESPONSE = bool(REPLACE_IMAGE_URLS_IN_CHAT_RESPONSE)
+    except Exception:
+        REPLACE_IMAGE_URLS_IN_CHAT_RESPONSE = False
+
 ####################################
 # WEBSOCKET SUPPORT
 ####################################

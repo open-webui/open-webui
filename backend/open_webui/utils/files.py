@@ -16,10 +16,16 @@ from open_webui.routers.files import upload_file_handler
 import mimetypes
 import base64
 import io
+import re
 
 
-def get_image_url_from_base64(request, base64_image_string, metadata, user):
-    if "data:image/png;base64" in base64_image_string:
+BASE64_IMAGE_URL_PREFIX = re.compile(r"data:image/\w+;base64,", re.IGNORECASE)
+MARKDOWN_IMAGE_URL_PATTERN = re.compile(r"!\[(.*?)\]\((.+?)\)", re.IGNORECASE)
+MIN_REPLACEMENT_URL_LENGTH = 1024
+
+
+def get_image_url_from_base64(request, base64_image_string: str, metadata, user):
+    if BASE64_IMAGE_URL_PREFIX.match(base64_image_string):
         image_url = ""
         # Extract base64 image data from the line
         image_data, content_type = get_image_data(base64_image_string)
@@ -33,6 +39,18 @@ def get_image_url_from_base64(request, base64_image_string, metadata, user):
             )
         return image_url
     return None
+
+
+def extract_and_replace_image_urls(request, content: str, metadata, user):
+    def replace(match):
+        url = match.group(2)
+        if len(url) > MIN_REPLACEMENT_URL_LENGTH:
+            url = get_image_url_from_base64(request, url, metadata, user)
+            if url:
+                return f"![{match.group(1)}]({url})"
+        return match.group(0)
+
+    return MARKDOWN_IMAGE_URL_PATTERN.sub(replace, content)
 
 
 def load_b64_audio_data(b64_str):
