@@ -542,21 +542,21 @@ def extract_urls(text: str) -> list[str]:
     return url_pattern.findall(text)
 
 
-def handle_large_stream_chunks(stream: aiohttp.StreamReader, max_buffer_size: int = CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE):
+def stream_chunks_handler(stream: aiohttp.StreamReader):
     """
     Handle stream response chunks, supporting large data chunks that exceed the original 16kb limit.
     When a single line exceeds max_buffer_size, returns an empty JSON string {} and skips subsequent data
     until encountering normally sized data.
 
     :param stream: The stream reader to handle.
-    :param max_buffer_size: The maximum buffer size in bytes, -1 means not handle large chunks, default is 10MB.
     :return: An async generator that yields the stream data.
     """
 
-    if max_buffer_size <= 0:
+    max_buffer_size = CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
+    if max_buffer_size is None or max_buffer_size <= 0:
         return stream
 
-    async def handle_stream_chunks():
+    async def yield_safe_stream_chunks():
         buffer = b""
         skip_mode = False
 
@@ -603,5 +603,5 @@ def handle_large_stream_chunks(stream: aiohttp.StreamReader, max_buffer_size: in
         # Process remaining buffer data
         if buffer and not skip_mode:
             yield buffer
-    
-    return handle_stream_chunks()
+
+    return yield_safe_stream_chunks()
