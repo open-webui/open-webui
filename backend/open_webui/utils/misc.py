@@ -121,6 +121,16 @@ def pop_system_message(messages: list[dict]) -> tuple[Optional[dict], list[dict]
     return get_system_message(messages), remove_system_message(messages)
 
 
+def replace_message_content(message: dict, content: str) -> dict:
+    if isinstance(message["content"], list):
+        for item in message["content"]:
+            if item["type"] == "text":
+                item["text"] = content
+    else:
+        message["content"] = content
+    return message
+
+
 def update_message_content(message: dict, content: str, append: bool = True) -> dict:
     if isinstance(message["content"], list):
         for item in message["content"]:
