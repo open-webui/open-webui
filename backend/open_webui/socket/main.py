@@ -284,6 +284,7 @@ async def connect(sid, environ, auth):
 
             await sio.enter_room(sid, f"user:{user.id}")
 
+
 @sio.on("user-join")
 async def user_join(sid, data):
 
@@ -651,9 +652,8 @@ async def disconnect(sid):
 def get_event_emitter(request_info, update_db=True):
     async def __event_emitter__(event_data):
         user_id = request_info["user_id"]
-
-        chat_id = request_info.get("chat_id", None)
-        message_id = request_info.get("message_id", None)
+        chat_id = request_info["chat_id"]
+        message_id = request_info["message_id"]
 
         await sio.emit(
             "events",
@@ -669,6 +669,7 @@ def get_event_emitter(request_info, update_db=True):
             and message_id
             and not request_info.get("chat_id", "").startswith("local:")
         ):
+
             if "type" in event_data and event_data["type"] == "status":
                 Chats.add_message_status_to_chat_by_id_and_message_id(
                     request_info["chat_id"],
@@ -758,7 +759,14 @@ def get_event_emitter(request_info, update_db=True):
                         },
                     )
 
-    return __event_emitter__
+    if (
+        "user_id" in request_info
+        and "chat_id" in request_info
+        and "message_id" in request_info
+    ):
+        return __event_emitter__
+    else:
+        return None
 
 
 def get_event_call(request_info):
@@ -774,7 +782,14 @@ def get_event_call(request_info):
         )
         return response
 
-    return __event_caller__
+    if (
+        "session_id" in request_info
+        and "chat_id" in request_info
+        and "message_id" in request_info
+    ):
+        return __event_caller__
+    else:
+        return None
 
 
 get_event_caller = get_event_call
