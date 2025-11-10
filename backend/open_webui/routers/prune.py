@@ -5,6 +5,8 @@ import shutil
 import json
 import re
 import sqlite3
+import uuid
+from datetime import datetime, timedelta
 from typing import Optional, Set, Union
 from pathlib import Path
 from abc import ABC, abstractmethod
@@ -34,6 +36,80 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
+
+
+class PruneLock:
+    """
+    Simple file-based locking mechanism to prevent concurrent prune operations.
+
+    This uses a lock file with timestamp to prevent multiple admins from running
+    prune simultaneously, which could cause race conditions and data corruption.
+    """
+
+    LOCK_FILE = Path(CACHE_DIR) / ".prune.lock"
+    LOCK_TIMEOUT = timedelta(hours=2)  # Safety timeout
+
+    @classmethod
+    def acquire(cls) -> bool:
+        """
+        Try to acquire the lock. Returns True if acquired, False if already locked.
+
+        If lock file exists but is stale (older than timeout), automatically
+        removes it and acquires a new lock.
+        """
+        try:
+            # Check if lock file exists
+            if cls.LOCK_FILE.exists():
+                # Read lock file to check if it's stale
+                try:
+                    with open(cls.LOCK_FILE, 'r') as f:
+                        lock_data = json.load(f)
+                        lock_time = datetime.fromisoformat(lock_data['timestamp'])
+                        operation_id = lock_data.get('operation_id', 'unknown')
+
+                        # Check if lock is stale
+                        if datetime.utcnow() - lock_time > cls.LOCK_TIMEOUT:
+                            log.warning(f"Found stale lock from {lock_time} (operation {operation_id}), removing")
+                            cls.LOCK_FILE.unlink()
+                        else:
+                            # Lock is still valid
+                            log.warning(f"Prune operation already in progress (started {lock_time}, operation {operation_id})")
+                            return False
+                except (json.JSONDecodeError, KeyError, ValueError) as e:
+                    # Corrupt lock file, remove it
+                    log.warning(f"Found corrupt lock file, removing: {e}")
+                    cls.LOCK_FILE.unlink()
+
+            # Create lock file
+            operation_id = str(uuid.uuid4())[:8]
+            lock_data = {
+                'timestamp': datetime.utcnow().isoformat(),
+                'operation_id': operation_id,
+                'pid': os.getpid()
+            }
+
+            # Ensure parent directory exists
+            cls.LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+            with open(cls.LOCK_FILE, 'w') as f:
+                json.dump(lock_data, f)
+
+            log.info(f"Acquired prune lock (operation {operation_id})")
+            return True
+
+        except Exception as e:
+            log.error(f"Error acquiring prune lock: {e}")
+            return False
+
+    @classmethod
+    def release(cls) -> None:
+        """Release the lock by removing the lock file."""
+        try:
+            if cls.LOCK_FILE.exists():
+                cls.LOCK_FILE.unlink()
+                log.info("Released prune lock")
+        except Exception as e:
+            log.error(f"Error releasing prune lock: {e}")
 
 
 class JSONFileIDExtractor:
@@ -118,7 +194,7 @@ class VectorDatabaseCleaner(ABC):
     @abstractmethod
     def cleanup_orphaned_collections(
         self, active_file_ids: Set[str], active_kb_ids: Set[str]
-    ) -> int:
+    ) -> tuple[int, Optional[str]]:
         """
         Actually delete orphaned vector collections.
 
@@ -127,7 +203,9 @@ class VectorDatabaseCleaner(ABC):
             active_kb_ids: Set of knowledge base IDs that are still active
 
         Returns:
-            Number of collections that were actually deleted
+            Tuple of (deleted_count, error_message)
+            - deleted_count: Number of collections that were deleted
+            - error_message: None on success, error description on failure
         """
         pass
 
@@ -193,10 +271,10 @@ class ChromaDatabaseCleaner(VectorDatabaseCleaner):
 
     def cleanup_orphaned_collections(
         self, active_file_ids: Set[str], active_kb_ids: Set[str]
-    ) -> int:
+    ) -> tuple[int, Optional[str]]:
         """Actually delete orphaned ChromaDB collections and database records."""
         if not self.chroma_db_path.exists():
-            return 0
+            return (0, None)
 
         expected_collections = self._build_expected_collections(
             active_file_ids, active_kb_ids
@@ -204,12 +282,15 @@ class ChromaDatabaseCleaner(VectorDatabaseCleaner):
         uuid_to_collection = self._get_collection_mappings()
 
         deleted_count = 0
+        errors = []
 
         # First, clean up orphaned database records
         try:
             deleted_count += self._cleanup_orphaned_database_records()
         except Exception as e:
-            log.error(f"Error cleaning orphaned database records: {e}")
+            error_msg = f"ChromaDB database cleanup failed: {e}"
+            log.error(error_msg)
+            errors.append(error_msg)
 
         # Then clean up physical directories
         try:
@@ -244,12 +325,17 @@ class ChromaDatabaseCleaner(VectorDatabaseCleaner):
                         )
 
         except Exception as e:
-            log.error(f"Error cleaning ChromaDB collections: {e}")
+            error_msg = f"ChromaDB directory cleanup failed: {e}"
+            log.error(error_msg)
+            errors.append(error_msg)
 
         if deleted_count > 0:
             log.info(f"Deleted {deleted_count} orphaned ChromaDB collections")
 
-        return deleted_count
+        # Return error if any critical failures occurred
+        if errors:
+            return (deleted_count, "; ".join(errors))
+        return (deleted_count, None)
 
     def delete_collection(self, collection_name: str) -> bool:
         """Delete a specific ChromaDB collection by name."""
@@ -561,7 +647,7 @@ class PGVectorDatabaseCleaner(VectorDatabaseCleaner):
 
     def cleanup_orphaned_collections(
         self, active_file_ids: Set[str], active_kb_ids: Set[str]
-    ) -> int:
+    ) -> tuple[int, Optional[str]]:
         """
         Delete orphaned PGVector collections using the existing client's delete method.
 
@@ -569,8 +655,9 @@ class PGVectorDatabaseCleaner(VectorDatabaseCleaner):
         existing PGVector client's delete() method for each orphaned collection.
         """
         if not self.session:
-            log.warning("PGVector session not available for cleanup")
-            return 0
+            error_msg = "PGVector session not available for cleanup"
+            log.warning(error_msg)
+            return (0, error_msg)
 
         try:
             orphaned_collections = self._get_orphaned_collections(
@@ -579,7 +666,7 @@ class PGVectorDatabaseCleaner(VectorDatabaseCleaner):
 
             if not orphaned_collections:
                 log.debug("No orphaned PGVector collections found")
-                return 0
+                return (0, None)
 
             deleted_count = 0
             log.info(
@@ -616,13 +703,14 @@ class PGVectorDatabaseCleaner(VectorDatabaseCleaner):
                     f"Successfully deleted {deleted_count} orphaned PGVector collections"
                 )
 
-            return deleted_count
+            return (deleted_count, None)
 
         except Exception as e:
             if self.session:
                 self.session.rollback()
-            log.error(f"Error cleaning orphaned PGVector collections: {e}")
-            return 0
+            error_msg = f"PGVector cleanup failed: {e}"
+            log.error(error_msg)
+            return (0, error_msg)
 
     def delete_collection(self, collection_name: str) -> bool:
         """
@@ -706,9 +794,9 @@ class NoOpVectorDatabaseCleaner(VectorDatabaseCleaner):
 
     def cleanup_orphaned_collections(
         self, active_file_ids: Set[str], active_kb_ids: Set[str]
-    ) -> int:
+    ) -> tuple[int, Optional[str]]:
         """No collections to cleanup for unsupported databases."""
-        return 0
+        return (0, None)
 
     def delete_collection(self, collection_name: str) -> bool:
         """No collection to delete for unsupported databases."""
@@ -757,6 +845,7 @@ class PruneDataForm(BaseModel):
     delete_inactive_users_days: Optional[int] = None
     exempt_admin_users: bool = True
     exempt_pending_users: bool = True
+    run_vacuum: bool = False
     dry_run: bool = True
 
 
@@ -1314,238 +1403,262 @@ async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
             return result
 
         # Actual deletion logic (dry_run=False)
-        log.info("Starting data pruning process")
-
-        # Stage 0: Delete inactive users (if enabled)
-        deleted_users = 0
-        if form_data.delete_inactive_users_days is not None:
-            log.info(
-                f"Deleting users inactive for more than {form_data.delete_inactive_users_days} days"
+        # Acquire lock to prevent concurrent operations
+        if not PruneLock.acquire():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A prune operation is already in progress. Please wait for it to complete."
             )
-            deleted_users = delete_inactive_users(
-                form_data.delete_inactive_users_days,
-                form_data.exempt_admin_users,
-                form_data.exempt_pending_users,
-            )
-            if deleted_users > 0:
-                log.info(f"Deleted {deleted_users} inactive users")
-            else:
-                log.info("No inactive users found to delete")
-        else:
-            log.info("Skipping inactive user deletion (disabled)")
-
-        # Stage 1: Delete old chats based on user criteria
-        if form_data.days is not None:
-            cutoff_time = int(time.time()) - (form_data.days * 86400)
-            chats_to_delete = []
-
-            for chat in Chats.get_chats():
-                if chat.updated_at < cutoff_time:
-                    if form_data.exempt_archived_chats and chat.archived:
-                        continue
-                    if form_data.exempt_chats_in_folders and (
-                        getattr(chat, "folder_id", None) is not None
-                        or getattr(chat, "pinned", False)
-                    ):
-                        continue
-                    chats_to_delete.append(chat)
-
-            if chats_to_delete:
-                log.info(
-                    f"Deleting {len(chats_to_delete)} old chats (older than {form_data.days} days)"
-                )
-                for chat in chats_to_delete:
-                    Chats.delete_chat_by_id(chat.id)
-            else:
-                log.info(f"No chats found older than {form_data.days} days")
-        else:
-            log.info("Skipping chat deletion (days parameter is None)")
-
-        # Stage 2: Build preservation set
-        log.info("Building preservation set")
-
-        active_user_ids = {user.id for user in Users.get_users()["users"]}
-        log.info(f"Found {len(active_user_ids)} active users")
-
-        active_kb_ids = set()
-        knowledge_bases = Knowledges.get_knowledge_bases()
-
-        for kb in knowledge_bases:
-            if kb.user_id in active_user_ids:
-                active_kb_ids.add(kb.id)
-
-        log.info(f"Found {len(active_kb_ids)} active knowledge bases")
-
-        active_file_ids = get_active_file_ids()
-
-        # Stage 3: Delete orphaned database records
-        log.info("Deleting orphaned database records")
-
-        deleted_files = 0
-        for file_record in Files.get_files():
-            should_delete = (
-                file_record.id not in active_file_ids
-                or file_record.user_id not in active_user_ids
-            )
-
-            if should_delete:
-                if safe_delete_file_by_id(file_record.id):
-                    deleted_files += 1
-
-        if deleted_files > 0:
-            log.info(f"Deleted {deleted_files} orphaned files")
-
-        deleted_kbs = 0
-        if form_data.delete_orphaned_knowledge_bases:
-            for kb in knowledge_bases:
-                if kb.user_id not in active_user_ids:
-                    if vector_cleaner.delete_collection(kb.id):
-                        Knowledges.delete_knowledge_by_id(kb.id)
-                        deleted_kbs += 1
-
-            if deleted_kbs > 0:
-                log.info(f"Deleted {deleted_kbs} orphaned knowledge bases")
-        else:
-            log.info("Skipping knowledge base deletion (disabled)")
-
-        deleted_others = 0
-
-        if form_data.delete_orphaned_chats:
-            chats_deleted = 0
-            for chat in Chats.get_chats():
-                if chat.user_id not in active_user_ids:
-                    Chats.delete_chat_by_id(chat.id)
-                    chats_deleted += 1
-                    deleted_others += 1
-            if chats_deleted > 0:
-                log.info(f"Deleted {chats_deleted} orphaned chats")
-        else:
-            log.info("Skipping orphaned chat deletion (disabled)")
-
-        if form_data.delete_orphaned_tools:
-            tools_deleted = 0
-            for tool in Tools.get_tools():
-                if tool.user_id not in active_user_ids:
-                    Tools.delete_tool_by_id(tool.id)
-                    tools_deleted += 1
-                    deleted_others += 1
-            if tools_deleted > 0:
-                log.info(f"Deleted {tools_deleted} orphaned tools")
-        else:
-            log.info("Skipping tool deletion (disabled)")
-
-        if form_data.delete_orphaned_functions:
-            functions_deleted = 0
-            for function in Functions.get_functions():
-                if function.user_id not in active_user_ids:
-                    Functions.delete_function_by_id(function.id)
-                    functions_deleted += 1
-                    deleted_others += 1
-            if functions_deleted > 0:
-                log.info(f"Deleted {functions_deleted} orphaned functions")
-        else:
-            log.info("Skipping function deletion (disabled)")
-
-        if form_data.delete_orphaned_notes:
-            notes_deleted = 0
-            for note in Notes.get_notes():
-                if note.user_id not in active_user_ids:
-                    Notes.delete_note_by_id(note.id)
-                    notes_deleted += 1
-                    deleted_others += 1
-            if notes_deleted > 0:
-                log.info(f"Deleted {notes_deleted} orphaned notes")
-        else:
-            log.info("Skipping note deletion (disabled)")
-
-        if form_data.delete_orphaned_prompts:
-            prompts_deleted = 0
-            for prompt in Prompts.get_prompts():
-                if prompt.user_id not in active_user_ids:
-                    Prompts.delete_prompt_by_command(prompt.command)
-                    prompts_deleted += 1
-                    deleted_others += 1
-            if prompts_deleted > 0:
-                log.info(f"Deleted {prompts_deleted} orphaned prompts")
-        else:
-            log.info("Skipping prompt deletion (disabled)")
-
-        if form_data.delete_orphaned_models:
-            models_deleted = 0
-            for model in Models.get_all_models():
-                if model.user_id not in active_user_ids:
-                    Models.delete_model_by_id(model.id)
-                    models_deleted += 1
-                    deleted_others += 1
-            if models_deleted > 0:
-                log.info(f"Deleted {models_deleted} orphaned models")
-        else:
-            log.info("Skipping model deletion (disabled)")
-
-        if form_data.delete_orphaned_folders:
-            folders_deleted = 0
-            for folder in Folders.get_all_folders():
-                if folder.user_id not in active_user_ids:
-                    Folders.delete_folder_by_id_and_user_id(
-                        folder.id, folder.user_id
-                    )
-                    folders_deleted += 1
-                    deleted_others += 1
-            if folders_deleted > 0:
-                log.info(f"Deleted {folders_deleted} orphaned folders")
-        else:
-            log.info("Skipping folder deletion (disabled)")
-
-        if deleted_others > 0:
-            log.info(f"Total other orphaned records deleted: {deleted_others}")
-
-        # Stage 4: Clean up orphaned physical files
-        log.info("Cleaning up orphaned physical files")
-
-        final_active_file_ids = get_active_file_ids()
-        final_active_kb_ids = {kb.id for kb in Knowledges.get_knowledge_bases()}
-
-        cleanup_orphaned_uploads(final_active_file_ids)
-
-        # Use modular vector database cleanup
-        vector_cleaner.cleanup_orphaned_collections(
-            final_active_file_ids, final_active_kb_ids
-        )
-
-        # Stage 5: Audio cache cleanup
-        log.info("Cleaning audio cache")
-        cleanup_audio_cache(form_data.audio_cache_max_age_days)
-
-        # Stage 6: Database optimization
-        log.info("Optimizing database")
 
         try:
-            with get_db() as db:
-                db.execute(text("VACUUM"))
-        except Exception as e:
-            log.error(f"Failed to vacuum main database: {e}")
+            log.info("Starting data pruning process")
 
-        # Vector database-specific optimization
-        if isinstance(vector_cleaner, ChromaDatabaseCleaner):
-            try:
-                with sqlite3.connect(str(vector_cleaner.chroma_db_path)) as conn:
-                    conn.execute("VACUUM")
-                    log.info("Vacuumed ChromaDB database")
-            except Exception as e:
-                log.error(f"Failed to vacuum ChromaDB database: {e}")
-        elif (
-            isinstance(vector_cleaner, PGVectorDatabaseCleaner)
-            and vector_cleaner.session
-        ):
-            try:
-                vector_cleaner.session.execute(text("VACUUM ANALYZE"))
-                vector_cleaner.session.commit()
-                log.info("Executed VACUUM ANALYZE on PostgreSQL database")
-            except Exception as e:
-                log.error(f"Failed to vacuum PostgreSQL database: {e}")
+            # Stage 0: Delete inactive users (if enabled)
+            deleted_users = 0
+            if form_data.delete_inactive_users_days is not None:
+                log.info(
+                    f"Deleting users inactive for more than {form_data.delete_inactive_users_days} days"
+                )
+                deleted_users = delete_inactive_users(
+                    form_data.delete_inactive_users_days,
+                    form_data.exempt_admin_users,
+                    form_data.exempt_pending_users,
+                )
+                if deleted_users > 0:
+                    log.info(f"Deleted {deleted_users} inactive users")
+                else:
+                    log.info("No inactive users found to delete")
+            else:
+                log.info("Skipping inactive user deletion (disabled)")
 
-        log.info("Data pruning completed successfully")
-        return True
+            # Stage 1: Delete old chats based on user criteria
+            if form_data.days is not None:
+                cutoff_time = int(time.time()) - (form_data.days * 86400)
+                chats_to_delete = []
+
+                for chat in Chats.get_chats():
+                    if chat.updated_at < cutoff_time:
+                        if form_data.exempt_archived_chats and chat.archived:
+                            continue
+                        if form_data.exempt_chats_in_folders and (
+                            getattr(chat, "folder_id", None) is not None
+                            or getattr(chat, "pinned", False)
+                        ):
+                            continue
+                        chats_to_delete.append(chat)
+
+                if chats_to_delete:
+                    log.info(
+                        f"Deleting {len(chats_to_delete)} old chats (older than {form_data.days} days)"
+                    )
+                    for chat in chats_to_delete:
+                        Chats.delete_chat_by_id(chat.id)
+                else:
+                    log.info(f"No chats found older than {form_data.days} days")
+            else:
+                log.info("Skipping chat deletion (days parameter is None)")
+
+            # Stage 2: Build preservation set
+            log.info("Building preservation set")
+
+            active_user_ids = {user.id for user in Users.get_users()["users"]}
+            log.info(f"Found {len(active_user_ids)} active users")
+
+            active_kb_ids = set()
+            knowledge_bases = Knowledges.get_knowledge_bases()
+
+            for kb in knowledge_bases:
+                if kb.user_id in active_user_ids:
+                    active_kb_ids.add(kb.id)
+
+            log.info(f"Found {len(active_kb_ids)} active knowledge bases")
+
+            active_file_ids = get_active_file_ids()
+
+            # Stage 3: Delete orphaned database records
+            log.info("Deleting orphaned database records")
+
+            deleted_files = 0
+            for file_record in Files.get_files():
+                should_delete = (
+                    file_record.id not in active_file_ids
+                    or file_record.user_id not in active_user_ids
+                )
+
+                if should_delete:
+                    if safe_delete_file_by_id(file_record.id):
+                        deleted_files += 1
+
+            if deleted_files > 0:
+                log.info(f"Deleted {deleted_files} orphaned files")
+
+            deleted_kbs = 0
+            if form_data.delete_orphaned_knowledge_bases:
+                for kb in knowledge_bases:
+                    if kb.user_id not in active_user_ids:
+                        if vector_cleaner.delete_collection(kb.id):
+                            Knowledges.delete_knowledge_by_id(kb.id)
+                            deleted_kbs += 1
+
+                if deleted_kbs > 0:
+                    log.info(f"Deleted {deleted_kbs} orphaned knowledge bases")
+            else:
+                log.info("Skipping knowledge base deletion (disabled)")
+
+            deleted_others = 0
+
+            if form_data.delete_orphaned_chats:
+                chats_deleted = 0
+                for chat in Chats.get_chats():
+                    if chat.user_id not in active_user_ids:
+                        Chats.delete_chat_by_id(chat.id)
+                        chats_deleted += 1
+                        deleted_others += 1
+                if chats_deleted > 0:
+                    log.info(f"Deleted {chats_deleted} orphaned chats")
+            else:
+                log.info("Skipping orphaned chat deletion (disabled)")
+
+            if form_data.delete_orphaned_tools:
+                tools_deleted = 0
+                for tool in Tools.get_tools():
+                    if tool.user_id not in active_user_ids:
+                        Tools.delete_tool_by_id(tool.id)
+                        tools_deleted += 1
+                        deleted_others += 1
+                if tools_deleted > 0:
+                    log.info(f"Deleted {tools_deleted} orphaned tools")
+            else:
+                log.info("Skipping tool deletion (disabled)")
+
+            if form_data.delete_orphaned_functions:
+                functions_deleted = 0
+                for function in Functions.get_functions():
+                    if function.user_id not in active_user_ids:
+                        Functions.delete_function_by_id(function.id)
+                        functions_deleted += 1
+                        deleted_others += 1
+                if functions_deleted > 0:
+                    log.info(f"Deleted {functions_deleted} orphaned functions")
+            else:
+                log.info("Skipping function deletion (disabled)")
+
+            if form_data.delete_orphaned_notes:
+                notes_deleted = 0
+                for note in Notes.get_notes():
+                    if note.user_id not in active_user_ids:
+                        Notes.delete_note_by_id(note.id)
+                        notes_deleted += 1
+                        deleted_others += 1
+                if notes_deleted > 0:
+                    log.info(f"Deleted {notes_deleted} orphaned notes")
+            else:
+                log.info("Skipping note deletion (disabled)")
+
+            if form_data.delete_orphaned_prompts:
+                prompts_deleted = 0
+                for prompt in Prompts.get_prompts():
+                    if prompt.user_id not in active_user_ids:
+                        Prompts.delete_prompt_by_command(prompt.command)
+                        prompts_deleted += 1
+                        deleted_others += 1
+                if prompts_deleted > 0:
+                    log.info(f"Deleted {prompts_deleted} orphaned prompts")
+            else:
+                log.info("Skipping prompt deletion (disabled)")
+
+            if form_data.delete_orphaned_models:
+                models_deleted = 0
+                for model in Models.get_all_models():
+                    if model.user_id not in active_user_ids:
+                        Models.delete_model_by_id(model.id)
+                        models_deleted += 1
+                        deleted_others += 1
+                if models_deleted > 0:
+                    log.info(f"Deleted {models_deleted} orphaned models")
+            else:
+                log.info("Skipping model deletion (disabled)")
+
+            if form_data.delete_orphaned_folders:
+                folders_deleted = 0
+                for folder in Folders.get_all_folders():
+                    if folder.user_id not in active_user_ids:
+                        Folders.delete_folder_by_id_and_user_id(
+                            folder.id, folder.user_id
+                        )
+                        folders_deleted += 1
+                        deleted_others += 1
+                if folders_deleted > 0:
+                    log.info(f"Deleted {folders_deleted} orphaned folders")
+            else:
+                log.info("Skipping folder deletion (disabled)")
+
+            if deleted_others > 0:
+                log.info(f"Total other orphaned records deleted: {deleted_others}")
+
+            # Stage 4: Clean up orphaned physical files
+            log.info("Cleaning up orphaned physical files")
+
+            final_active_file_ids = get_active_file_ids()
+            final_active_kb_ids = {kb.id for kb in Knowledges.get_knowledge_bases()}
+
+            cleanup_orphaned_uploads(final_active_file_ids)
+
+            # Use modular vector database cleanup
+            warnings = []
+            deleted_vector_count, vector_error = vector_cleaner.cleanup_orphaned_collections(
+                final_active_file_ids, final_active_kb_ids
+            )
+            if vector_error:
+                warnings.append(f"Vector cleanup warning: {vector_error}")
+                log.warning(f"Vector cleanup completed with errors: {vector_error}")
+
+            # Stage 5: Audio cache cleanup
+            log.info("Cleaning audio cache")
+            cleanup_audio_cache(form_data.audio_cache_max_age_days)
+
+            # Stage 6: Database optimization (optional)
+            if form_data.run_vacuum:
+                log.info("Optimizing database with VACUUM (this may take a while and lock the database)")
+
+                try:
+                    with get_db() as db:
+                        db.execute(text("VACUUM"))
+                        log.info("Vacuumed main database")
+                except Exception as e:
+                    log.error(f"Failed to vacuum main database: {e}")
+
+                # Vector database-specific optimization
+                if isinstance(vector_cleaner, ChromaDatabaseCleaner):
+                    try:
+                        with sqlite3.connect(str(vector_cleaner.chroma_db_path)) as conn:
+                            conn.execute("VACUUM")
+                            log.info("Vacuumed ChromaDB database")
+                    except Exception as e:
+                        log.error(f"Failed to vacuum ChromaDB database: {e}")
+                elif (
+                    isinstance(vector_cleaner, PGVectorDatabaseCleaner)
+                    and vector_cleaner.session
+                ):
+                    try:
+                        vector_cleaner.session.execute(text("VACUUM ANALYZE"))
+                        vector_cleaner.session.commit()
+                        log.info("Executed VACUUM ANALYZE on PostgreSQL database")
+                    except Exception as e:
+                        log.error(f"Failed to vacuum PostgreSQL database: {e}")
+            else:
+                log.info("Skipping VACUUM optimization (not enabled)")
+
+            # Log any warnings collected during pruning
+            if warnings:
+                log.warning(f"Data pruning completed with warnings: {'; '.join(warnings)}")
+
+            log.info("Data pruning completed successfully")
+            return True
+
+        finally:
+            # Always release lock, even if operation fails
+            PruneLock.release()
 
     except Exception as e:
         log.exception(f"Error during data pruning: {e}")

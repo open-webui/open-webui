@@ -31,12 +31,12 @@
 	const handlePruneDataPreview = async (event) => {
 		const settings = event.detail;
 		lastPruneSettings = settings;
-		
+
 		console.log('Preview call - dry_run should be TRUE');
 		const res = await pruneData(
-			localStorage.token, 
-			settings.days, 
-			settings.exempt_archived_chats, 
+			localStorage.token,
+			settings.days,
+			settings.exempt_archived_chats,
 			settings.exempt_chats_in_folders,
 			settings.delete_orphaned_chats,
 			settings.delete_orphaned_tools,
@@ -50,6 +50,7 @@
 			settings.delete_inactive_users_days,
 			settings.exempt_admin_users,
 			settings.exempt_pending_users,
+			settings.run_vacuum,
 			true // dry_run = true for preview
 		).catch((error) => {
 			toast.error(`${error}`);
@@ -64,12 +65,12 @@
 
 	const handleConfirmPrune = async () => {
 		if (!lastPruneSettings) return;
-		
+
 		console.log('Confirm call - dry_run should be FALSE');
 		const res = await pruneData(
-			localStorage.token, 
-			lastPruneSettings.days, 
-			lastPruneSettings.exempt_archived_chats, 
+			localStorage.token,
+			lastPruneSettings.days,
+			lastPruneSettings.exempt_archived_chats,
 			lastPruneSettings.exempt_chats_in_folders,
 			lastPruneSettings.delete_orphaned_chats,
 			lastPruneSettings.delete_orphaned_tools,
@@ -83,6 +84,7 @@
 			lastPruneSettings.delete_inactive_users_days,
 			lastPruneSettings.exempt_admin_users,
 			lastPruneSettings.exempt_pending_users,
+			lastPruneSettings.run_vacuum,
 			false // dry_run = false for actual pruning
 		).catch((error) => {
 			toast.error(`${error}`);

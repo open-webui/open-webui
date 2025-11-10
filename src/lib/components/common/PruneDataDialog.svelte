@@ -31,7 +31,10 @@
   // Audio cache cleanup
   let cleanupAudioCache = true;
   let audio_cache_max_age_days = 30;
-  
+
+  // System/Database optimization
+  let run_vacuum = false;
+
   let showDetailsExpanded = false;
   let activeDetailsTab = 'users';
   let activeSettingsTab = 'users';
@@ -40,8 +43,8 @@
   const dispatch = createEventDispatcher();
 
   const preview = () => {
-    dispatch('preview', { 
-      days: deleteChatsByAge ? days : null, 
+    dispatch('preview', {
+      days: deleteChatsByAge ? days : null,
       exempt_archived_chats,
       exempt_chats_in_folders,
       delete_orphaned_chats,
@@ -55,7 +58,8 @@
       audio_cache_max_age_days: cleanupAudioCache ? audio_cache_max_age_days : null,
       delete_inactive_users_days: deleteInactiveUsers ? delete_inactive_users_days : null,
       exempt_admin_users,
-      exempt_pending_users
+      exempt_pending_users,
+      run_vacuum
     });
     show = false;
   };
@@ -94,9 +98,12 @@ curl -X POST "${window.location.origin}/api/v1/prune/" \\
     "delete_orphaned_models": ${delete_orphaned_models},
     "delete_orphaned_notes": ${delete_orphaned_notes},
     "delete_orphaned_folders": ${delete_orphaned_folders},
-    
+
     // AUDIO CACHE CLEANUP (null = disabled)
-    "audio_cache_max_age_days": ${cleanupAudioCache ? audio_cache_max_age_days : null}  // TTS/STT files
+    "audio_cache_max_age_days": ${cleanupAudioCache ? audio_cache_max_age_days : null},  // TTS/STT files
+
+    // DATABASE OPTIMIZATION (WARNING: Locks database during execution!)
+    "run_vacuum": ${run_vacuum}  // Reclaim disk space - only enable during maintenance windows
   }'
 
 # API KEY vs JWT TOKEN:
@@ -358,6 +365,12 @@ curl -X POST "${window.location.origin}/api/v1/prune/" \\
               on:click={() => activeSettingsTab = 'audio'}
             >
               {$i18n.t('Audio Cache')}
+            </button>
+            <button
+              class="px-3 py-2 text-sm font-medium rounded-t transition-colors {activeSettingsTab === 'system' ? 'bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200' : 'text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200'}"
+              on:click={() => activeSettingsTab = 'system'}
+            >
+              {$i18n.t('System')}
             </button>
           </div>
 
@@ -739,6 +752,67 @@ curl -X POST "${window.location.origin}/api/v1/prune/" \\
                         <p>• <strong>{$i18n.t('TTS Files:')}</strong> {$i18n.t('Generated audio files when AI speaks text to you')}</p>
                         <p>• <strong>{$i18n.t('STT Files:')}</strong> {$i18n.t('Uploaded audio files for transcription (voice messages)')}</p>
                         <p>• <strong>{$i18n.t('Metadata:')}</strong> {$i18n.t('Associated JSON files with transcription data')}</p>
+                      </div>
+                    </div>
+                  </div>
+                {/if}
+              </div>
+
+            {:else if activeSettingsTab === 'system'}
+              <!-- System/Database Optimization -->
+              <div class="space-y-4">
+                <div class="flex items-start py-2">
+                  <div class="flex items-center">
+                    <div class="mr-3">
+                      <Switch bind:state={run_vacuum} />
+                    </div>
+                    <div class="flex-1">
+                      <div class="flex items-center text-sm font-medium text-gray-900 dark:text-gray-100">
+                        <span>{$i18n.t('Run VACUUM optimization')}</span>
+                        <div class="relative group ml-2">
+                          <svg class="h-4 w-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-help" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                          </svg>
+                          <div class="absolute left-1/2 transform -translate-x-1/2 bottom-full mb-2 w-72 px-3 py-2 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                            <div class="font-medium mb-1">{$i18n.t('Database Optimization Warning:')}</div>
+                            <div class="space-y-1">
+                              <p>{$i18n.t('VACUUM reclaims disk space by rebuilding the database file.')}</p>
+                              <p class="text-yellow-300 dark:text-yellow-400 font-medium">{$i18n.t('⚠️ This may take a very long time on large databases and will LOCK the entire database during execution.')}</p>
+                              <p>{$i18n.t('It is strongly recommended to NOT run this while users are actively using the platform.')}</p>
+                              <p class="text-green-300 dark:text-green-400">{$i18n.t('💡 Best practice: Run during scheduled maintenance windows.')}</p>
+                            </div>
+                            <div class="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="text-xs text-gray-500 dark:text-gray-400">
+                        {$i18n.t('Reclaim disk space after cleanup (locks database during operation)')}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- VACUUM warning box -->
+                {#if run_vacuum}
+                  <div class="ml-8 border-l-2 border-yellow-200 dark:border-yellow-700 pl-4">
+                    <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                      <div class="flex">
+                        <div class="flex-shrink-0">
+                          <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                          </svg>
+                        </div>
+                        <div class="ml-3">
+                          <h4 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                            {$i18n.t('VACUUM Enabled - Important Considerations:')}
+                          </h4>
+                          <div class="mt-2 text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
+                            <p>• {$i18n.t('Database will be locked during VACUUM - all users will experience errors')}</p>
+                            <p>• {$i18n.t('Operation duration depends on database size (can be 5-30+ minutes)')}</p>
+                            <p>• {$i18n.t('Recommended only during scheduled maintenance windows')}</p>
+                            <p>• {$i18n.t('Not required for routine cleanups - only when reclaiming disk space is critical')}</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
