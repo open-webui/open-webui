@@ -35,12 +35,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount, tick, getContext } from 'svelte';
 
-	import {
-		OLLAMA_API_BASE_URL,
-		OPENAI_API_BASE_URL,
-		WEBUI_API_BASE_URL,
-		WEBUI_BASE_URL
-	} from '$lib/constants';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, models, settings } from '$lib/stores';
 
 	import { chatCompletion } from '$lib/apis/openai';
@@ -174,22 +169,13 @@ Based on the user's instruction, update and enhance the existing notes or select
 				: '') +
 			(selectedContent ? `\n<selection>${selectedContent?.text}</selection>` : '');
 
-		// Clean messages by removing internal fields before sending to API
-		const cleanedMessages = messages
-		.filter(msg => !(msg.role === 'assistant' && msg.content === ''))
-		.map(({ role, content, name }) => {
-			const cleaned = { role, content };
-			if (name) cleaned.name = name;
-			return cleaned;
-		});
-
 		const chatMessages = JSON.parse(
 			JSON.stringify([
 				{
 					role: 'system',
 					content: `${system}`
 				},
-				...cleanedMessages
+				...messages
 			])
 		);
 
@@ -198,7 +184,10 @@ Based on the user's instruction, update and enhance the existing notes or select
 			{
 				model: model.id,
 				stream: true,
-				messages: chatMessages
+				messages: chatMessages.map((m) => ({
+					role: m.role,
+					content: m.content
+				}))
 				// ...(files && files.length > 0 ? { files } : {}) // TODO: Decide whether to use native file handling or not
 			},
 			`${WEBUI_BASE_URL}/api`
