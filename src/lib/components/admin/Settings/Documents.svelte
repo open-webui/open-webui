@@ -1417,7 +1417,7 @@
 					<div class="flex items-center relative">
 						<Tooltip
 							content={$i18n.t(
-								'The maximum number of characters allowed in a file after text extraction. If the extracted content exceeds this limit, the file will be rejected. Leave empty or set to 0 for unlimited.'
+								'The maximum total number of characters allowed across all files in a chat session. The system validates the sum of all uploaded files, not individual files. If the combined content exceeds this limit, the last file that causes the overflow will be rejected. Leave empty or set to 0 for unlimited.'
 							)}
 							placement="top-start"
 						>

@@ -576,11 +576,21 @@
 					
 					// Check if it's a character limit error
 					const charLimitMatch = uploadedFile.error.match(/contains\s+([\d,]+)\s+characters.*maximum allowed is\s+([\d,]+)/);
+					const cumulativeLimitMatch = uploadedFile.error.match(/Combined files contain\s+([\d,]+)\s+characters.*maximum allowed is\s+([\d,]+)/);
 					const isCharLimitError = 
 						uploadedFile.error.includes('exceeds maximum character limit') ||
 						uploadedFile.error.includes('maximum allowed is');
 					
-					if (charLimitMatch) {
+					if (cumulativeLimitMatch) {
+						// Cumulative character limit error (total of all files)
+						const totalChars = cumulativeLimitMatch[1].replace(/,/g, '');
+						const maxChars = cumulativeLimitMatch[2].replace(/,/g, '');
+						errorMessage = $i18n.t('Total file content exceeds maximum character limit. Combined files contain {{totalChars}} characters, but maximum allowed is {{maxChars}} characters.', {
+							totalChars: parseInt(totalChars).toLocaleString(),
+							maxChars: parseInt(maxChars).toLocaleString()
+						});
+					} else if (charLimitMatch) {
+						// Individual file character limit error
 						const charCount = charLimitMatch[1].replace(/,/g, '');
 						const maxChars = charLimitMatch[2].replace(/,/g, '');
 						errorMessage = $i18n.t('File content exceeds maximum character limit. File contains {{charCount}} characters, but maximum allowed is {{maxChars}} characters.', {
@@ -858,7 +868,19 @@
 									await validateFilesTotal(localStorage.token, allFileIds);
 								} catch (error) {
 									// Show error toast and don't add file to list
-									const errorMessage = typeof error === 'string' ? error : error?.detail || 'Error validating file';
+									let errorMessage = typeof error === 'string' ? error : error?.detail || 'Error validating file';
+									
+									// Check if it's the cumulative character limit error and translate it
+									const cumulativeLimitMatch = errorMessage.match(/Combined files contain\s+([\d,]+)\s+characters.*maximum allowed is\s+([\d,]+)/);
+									if (cumulativeLimitMatch) {
+										const totalChars = cumulativeLimitMatch[1].replace(/,/g, '');
+										const maxChars = cumulativeLimitMatch[2].replace(/,/g, '');
+										errorMessage = $i18n.t('Total file content exceeds maximum character limit. Combined files contain {{totalChars}} characters, but maximum allowed is {{maxChars}} characters.', {
+											totalChars: parseInt(totalChars).toLocaleString(),
+											maxChars: parseInt(maxChars).toLocaleString()
+										});
+									}
+									
 									toast.error(errorMessage);
 									return;
 								}
@@ -913,7 +935,19 @@
 									await validateFilesTotal(localStorage.token, allFileIds);
 								} catch (error) {
 									// Show error toast and don't add file to list
-									const errorMessage = typeof error === 'string' ? error : error?.detail || 'Error validating file';
+									let errorMessage = typeof error === 'string' ? error : error?.detail || 'Error validating file';
+									
+									// Check if it's the cumulative character limit error and translate it
+									const cumulativeLimitMatch = errorMessage.match(/Combined files contain\s+([\d,]+)\s+characters.*maximum allowed is\s+([\d,]+)/);
+									if (cumulativeLimitMatch) {
+										const totalChars = cumulativeLimitMatch[1].replace(/,/g, '');
+										const maxChars = cumulativeLimitMatch[2].replace(/,/g, '');
+										errorMessage = $i18n.t('Total file content exceeds maximum character limit. Combined files contain {{totalChars}} characters, but maximum allowed is {{maxChars}} characters.', {
+											totalChars: parseInt(totalChars).toLocaleString(),
+											maxChars: parseInt(maxChars).toLocaleString()
+										});
+									}
+									
 									toast.error(errorMessage);
 									return;
 								}
@@ -968,7 +1002,19 @@
 									await validateFilesTotal(localStorage.token, allFileIds);
 								} catch (error) {
 									// Show error toast and don't add file to list
-									const errorMessage = typeof error === 'string' ? error : error?.detail || 'Error validating file';
+									let errorMessage = typeof error === 'string' ? error : error?.detail || 'Error validating file';
+									
+									// Check if it's the cumulative character limit error and translate it
+									const cumulativeLimitMatch = errorMessage.match(/Combined files contain\s+([\d,]+)\s+characters.*maximum allowed is\s+([\d,]+)/);
+									if (cumulativeLimitMatch) {
+										const totalChars = cumulativeLimitMatch[1].replace(/,/g, '');
+										const maxChars = cumulativeLimitMatch[2].replace(/,/g, '');
+										errorMessage = $i18n.t('Total file content exceeds maximum character limit. Combined files contain {{totalChars}} characters, but maximum allowed is {{maxChars}} characters.', {
+											totalChars: parseInt(totalChars).toLocaleString(),
+											maxChars: parseInt(maxChars).toLocaleString()
+										});
+									}
+									
 									toast.error(errorMessage);
 									return;
 								}
