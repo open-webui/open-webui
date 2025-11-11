@@ -232,16 +232,10 @@ async def get_tools(
                 module, _ = load_tool_module_by_id(tool_id)
                 request.app.state.TOOLS[tool_id] = module
 
-            extra_params["__id__"] = tool_id
-
             # Set valves for the tool
             if hasattr(module, "valves") and hasattr(module, "Valves"):
                 valves = Tools.get_tool_valves_by_id(tool_id) or {}
                 module.valves = module.Valves(**valves)
-            if hasattr(module, "UserValves"):
-                extra_params["__user__"]["valves"] = module.UserValves(  # type: ignore
-                    **Tools.get_user_valves_by_id_and_user_id(tool_id, user.id)
-                )
 
             for spec in tool.specs:
                 # TODO: Fix hack for OpenAI API
@@ -256,6 +250,12 @@ async def get_tools(
                     for key, val in spec["parameters"]["properties"].items()
                     if not key.startswith("__")
                 }
+
+                extra_params["__id__"] = tool_id
+                if hasattr(module, "UserValves"):
+                    extra_params["__user__"]["valves"] = module.UserValves(
+                        **Tools.get_user_valves_by_id_and_user_id(tool_id, user.id)
+                    )
 
                 # convert to function that takes only model params and inserts custom params
                 function_name = spec["name"]
