@@ -82,6 +82,7 @@ from open_webui.utils.misc import (
     extract_urls,
     get_message_list,
     add_or_update_system_message,
+    replace_user_message,
     add_or_update_user_message,
     get_last_user_message,
     get_last_user_message_item,
@@ -1491,15 +1492,27 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             raise Exception("No user message found")
 
         if context_string != "":
-            form_data["messages"] = add_or_update_user_message(
-                rag_template(
-                    request.app.state.config.RAG_TEMPLATE,
-                    context_string,
-                    prompt,
-                ),
-                form_data["messages"],
-                append=False,
+            rag_content = rag_template(
+                request.app.state.config.RAG_TEMPLATE,
+                context_string,
+                prompt,
             )
+            if (
+                "[query]" not in request.app.state.config.RAG_TEMPLATE
+                and "{{QUERY}}" not in request.app.state.config.RAG_TEMPLATE
+            ):
+                # Prepend the RAG context to the prompt
+                form_data["messages"] = add_or_update_user_message(
+                    rag_content,
+                    form_data["messages"],
+                    append=False,
+                )
+            else:
+                # Replace with the RAG template which contains the prompt
+                form_data["messages"] = replace_user_message(
+                    rag_content,
+                    form_data["messages"],
+                )
 
     # If there are citations, add them to the data_items
     sources = [
