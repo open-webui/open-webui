@@ -1,63 +1,58 @@
-import re
-import uuid
-import time
 import datetime
 import logging
-from aiohttp import ClientSession
+import re
+import time
+import uuid
+from ssl import CERT_NONE, CERT_REQUIRED, PROTOCOL_TLS
+from typing import List, Optional
 
+from aiohttp import ClientSession
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import JSONResponse, RedirectResponse, Response
+from ldap3 import NONE, Connection, Server, Tls
+from ldap3.utils.conv import escape_filter_chars
+from open_webui.config import ENABLE_LDAP, ENABLE_OAUTH_SIGNUP, OPENID_PROVIDER_URL
+from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
+from open_webui.env import (
+    ENABLE_INITIAL_ADMIN_SIGNUP,
+    SRC_LOG_LEVELS,
+    WEBUI_AUTH,
+    WEBUI_AUTH_COOKIE_SAME_SITE,
+    WEBUI_AUTH_COOKIE_SECURE,
+    WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
+    WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
+    WEBUI_AUTH_TRUSTED_GROUPS_HEADER,
+    WEBUI_AUTH_TRUSTED_NAME_HEADER,
+)
 from open_webui.models.auths import (
     AddUserForm,
     ApiKey,
     Auths,
-    Token,
     LdapForm,
     SigninForm,
     SigninResponse,
     SignupForm,
+    Token,
     UpdatePasswordForm,
     UserResponse,
 )
-from open_webui.models.users import Users, UpdateProfileForm
 from open_webui.models.groups import Groups
 from open_webui.models.oauth_sessions import OAuthSessions
-
-from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
-from open_webui.env import (
-    WEBUI_AUTH,
-    WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
-    WEBUI_AUTH_TRUSTED_NAME_HEADER,
-    WEBUI_AUTH_TRUSTED_GROUPS_HEADER,
-    WEBUI_AUTH_COOKIE_SAME_SITE,
-    WEBUI_AUTH_COOKIE_SECURE,
-    WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
-    ENABLE_INITIAL_ADMIN_SIGNUP,
-    SRC_LOG_LEVELS,
-)
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import RedirectResponse, Response, JSONResponse
-from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_LDAP
-from pydantic import BaseModel
-
-from open_webui.utils.misc import parse_duration, validate_email_format
+from open_webui.models.users import UpdateProfileForm, Users
+from open_webui.utils.access_control import get_permissions
 from open_webui.utils.auth import (
-    decode_token,
     create_api_key,
     create_token,
+    decode_token,
     get_admin_user,
-    get_verified_user,
     get_current_user,
-    get_password_hash,
     get_http_authorization_cred,
+    get_password_hash,
+    get_verified_user,
 )
+from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.webhook import post_webhook
-from open_webui.utils.access_control import get_permissions
-
-from typing import Optional, List
-
-from ssl import CERT_NONE, CERT_REQUIRED, PROTOCOL_TLS
-
-from ldap3 import Server, Connection, NONE, Tls
-from ldap3.utils.conv import escape_filter_chars
+from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -848,6 +843,9 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "PENDING_USER_OVERLAY_TITLE": request.app.state.config.PENDING_USER_OVERLAY_TITLE,
         "PENDING_USER_OVERLAY_CONTENT": request.app.state.config.PENDING_USER_OVERLAY_CONTENT,
         "RESPONSE_WATERMARK": request.app.state.config.RESPONSE_WATERMARK,
+        "FORCE_ENABLE_MEMORY": request.app.state.config.FORCE_ENABLE_MEMORY,
+        "MEMORY_TOP_K": request.app.state.config.MEMORY_TOP_K,
+        "MEMORY_RELEVANCE_THRESHOLD": request.app.state.config.MEMORY_RELEVANCE_THRESHOLD,
     }
 
 
@@ -868,6 +866,9 @@ class AdminConfig(BaseModel):
     PENDING_USER_OVERLAY_TITLE: Optional[str] = None
     PENDING_USER_OVERLAY_CONTENT: Optional[str] = None
     RESPONSE_WATERMARK: Optional[str] = None
+    FORCE_ENABLE_MEMORY: bool
+    MEMORY_TOP_K: int
+    MEMORY_RELEVANCE_THRESHOLD: float
 
 
 @router.post("/admin/config")
@@ -914,6 +915,12 @@ async def update_admin_config(
 
     request.app.state.config.RESPONSE_WATERMARK = form_data.RESPONSE_WATERMARK
 
+    request.app.state.config.FORCE_ENABLE_MEMORY = form_data.FORCE_ENABLE_MEMORY
+    request.app.state.config.MEMORY_TOP_K = form_data.MEMORY_TOP_K
+    request.app.state.config.MEMORY_RELEVANCE_THRESHOLD = (
+        form_data.MEMORY_RELEVANCE_THRESHOLD
+    )
+
     return {
         "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
         "WEBUI_URL": request.app.state.config.WEBUI_URL,
@@ -931,6 +938,9 @@ async def update_admin_config(
         "PENDING_USER_OVERLAY_TITLE": request.app.state.config.PENDING_USER_OVERLAY_TITLE,
         "PENDING_USER_OVERLAY_CONTENT": request.app.state.config.PENDING_USER_OVERLAY_CONTENT,
         "RESPONSE_WATERMARK": request.app.state.config.RESPONSE_WATERMARK,
+        "FORCE_ENABLE_MEMORY": request.app.state.config.FORCE_ENABLE_MEMORY,
+        "MEMORY_TOP_K": request.app.state.config.MEMORY_TOP_K,
+        "MEMORY_RELEVANCE_THRESHOLD": request.app.state.config.MEMORY_RELEVANCE_THRESHOLD,
     }
 
 

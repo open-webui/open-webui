@@ -525,32 +525,67 @@ async def chat_memory_handler(
             QueryMemoryForm(
                 **{
                     "content": get_last_user_message(form_data["messages"]) or "",
-                    "k": 3,
+                    "k": request.app.state.config.MEMORY_TOP_K,
                 }
             ),
             user,
         )
     except Exception as e:
-        log.debug(e)
+        log.error(f"[MEMORY] Error querying memories for user {user.id}: {e}")
         results = None
 
-    user_context = ""
+    memories_list = []
+    filtered_count = 0
+
     if results and hasattr(results, "documents"):
         if results.documents and len(results.documents) > 0:
             for doc_idx, doc in enumerate(results.documents[0]):
-                created_at_date = "Unknown Date"
+                similarity = None
+                if hasattr(results, "distances") and results.distances:
+                    similarity = results.distances[0][doc_idx]
 
-                if results.metadatas[0][doc_idx].get("created_at"):
-                    created_at_timestamp = results.metadatas[0][doc_idx]["created_at"]
-                    created_at_date = time.strftime(
-                        "%Y-%m-%d", time.localtime(created_at_timestamp)
+                    if (
+                        similarity
+                        <= request.app.state.config.MEMORY_RELEVANCE_THRESHOLD
+                    ):
+                        filtered_count += 1
+                        continue
+
+                metadata = results.metadatas[0][doc_idx] if results.metadatas else {}
+
+                memory_obj = {
+                    "content": doc,
+                }
+
+                if metadata.get("created_at"):
+                    created_at_timestamp = metadata["created_at"]
+                    memory_obj["created_at"] = time.strftime(
+                        "%Y-%m-%dT%H:%M:%S%z", time.localtime(created_at_timestamp)
                     )
 
-                user_context += f"{doc_idx + 1}. [{created_at_date}] {doc}\n"
+                if metadata.get("updated_at"):
+                    updated_at_timestamp = metadata["updated_at"]
+                    memory_obj["updated_at"] = time.strftime(
+                        "%Y-%m-%dT%H:%M:%S%z", time.localtime(updated_at_timestamp)
+                    )
 
-    form_data["messages"] = add_or_update_system_message(
-        f"User Context:\n{user_context}\n", form_data["messages"], append=True
-    )
+                if similarity is not None:
+                    memory_obj["similarity_score"] = round(similarity, 3)
+
+                memories_list.append(memory_obj)
+
+            log.info(
+                f"[MEMORY] Injected {len(memories_list)} memories for user {user.id} ({filtered_count} filtered)"
+            )
+
+    if memories_list:
+        # Format as JSON list inside XML tags
+        memories_json = json.dumps(memories_list, indent=2, ensure_ascii=False)
+        form_data["messages"] = add_or_update_system_message(
+            f"<memory_user_context>\n{memories_json}\n</memory_user_context>\n",
+            form_data["messages"],
+            append=True,
+        )
 
     return form_data
 

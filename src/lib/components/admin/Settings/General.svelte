@@ -10,6 +10,8 @@
 		updateLdapConfig,
 		updateLdapServer
 	} from '$lib/apis/auths';
+	import { resetMemory } from '$lib/apis/memories';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -32,6 +34,8 @@
 
 	let adminConfig = null;
 	let webhookUrl = '';
+
+	let showReindexMemoryConfirm = false;
 
 	// LDAP
 	let ENABLE_LDAP = false;
@@ -89,6 +93,17 @@
 		}
 	};
 
+	const resetMemoryHandler = async () => {
+		toast.info($i18n.t('Re-indexing memories...'));
+
+		try {
+			await resetMemory(localStorage.token);
+			toast.success($i18n.t('Memories re-indexed successfully'));
+		} catch (error) {
+			toast.error($i18n.t('Failed to re-index memories: ') + error);
+		}
+	};
+
 	onMount(async () => {
 		if ($config?.features?.enable_version_update_check) {
 			checkForVersionUpdates();
@@ -111,6 +126,19 @@
 		ENABLE_LDAP = ldapConfig.ENABLE_LDAP;
 	});
 </script>
+
+<ConfirmDialog
+	bind:show={showReindexMemoryConfirm}
+	on:confirm={async () => {
+		await resetMemoryHandler();
+	}}
+>
+	<div class=" text-sm text-gray-500">
+		{$i18n.t(
+			'This will re-index all memories in the vector database using the current embedding model. Your memory content will not be deleted. Continue?'
+		)}
+	</div>
+</ConfirmDialog>
 
 <form
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
@@ -678,6 +706,125 @@
 
 						<Switch bind:state={adminConfig.ENABLE_USER_WEBHOOKS} />
 					</div>
+				</div>
+
+				<div class="mb-3">
+					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Memory')}</div>
+
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
+					<Tooltip
+						content={$i18n.t(
+							'When enabled, non-admin users will always have memory enabled and cannot disable it'
+						)}
+						placement="top-start"
+					>
+						<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+							<div class=" self-center text-xs font-medium">
+								{$i18n.t('Force Enable Memory')}
+							</div>
+							<Switch bind:state={adminConfig.FORCE_ENABLE_MEMORY} />
+						</div>
+					</Tooltip>
+
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							<Tooltip
+								content={$i18n.t('Re-embed all memories using the current embedding model.')}
+								placement="top-start"
+							>
+								{$i18n.t('Re-index Memory Vectors')}
+							</Tooltip>
+						</div>
+						<div class="flex items-center relative">
+							<button
+								class="text-xs"
+								on:click={() => {
+									showReindexMemoryConfirm = true;
+								}}
+								type="button"
+							>
+								{$i18n.t('Reindex')}
+							</button>
+						</div>
+					</div>
+
+					<div class="  mb-2.5 w-full justify-between">
+						<div class="flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">
+								<Tooltip
+									content={$i18n.t(
+										'Maximum number of memories to retrieve. Higher values allow more context but may include less relevant information.'
+									)}
+									placement="top-start"
+								>
+									{$i18n.t('Memory Top K')}
+								</Tooltip>
+							</div>
+						</div>
+
+						<div class="flex mt-2 space-x-2">
+							<input
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+								type="number"
+								min="1"
+								max="100"
+								placeholder="30"
+								value={adminConfig.MEMORY_TOP_K || 30}
+								on:input={(e) => {
+									adminConfig.MEMORY_TOP_K = Number(e.currentTarget.value);
+								}}
+							/>
+						</div>
+					</div>
+					<div class="  mb-2.5 flex flex-col w-full justify-between">
+						<div class=" flex w-full justify-between mb-1">
+							<div class=" self-center text-xs font-medium">
+								<Tooltip
+									content={$i18n.t(
+										'Minimum similarity threshold for memory retrieval. Higher values mean higher similarity (100% = identical, 0% = unrelated).'
+									)}
+									placement="top-start"
+								>
+									{$i18n.t('Memory Relevance Threshold')}
+								</Tooltip>
+							</div>
+						</div>
+						<div class="flex items-center gap-3">
+							<input
+								type="range"
+								class="flex-1"
+								min="0"
+								max="100"
+								step="1"
+								value={Math.round((adminConfig.MEMORY_RELEVANCE_THRESHOLD || 0.5) * 100)}
+								on:input={(e) => {
+									adminConfig.MEMORY_RELEVANCE_THRESHOLD = Number(e.currentTarget.value) / 100;
+								}}
+							/>
+							<input
+								class="w-20 rounded-lg py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none text-center"
+								type="number"
+								min="0"
+								max="100"
+								step="1"
+								value={Math.round((adminConfig.MEMORY_RELEVANCE_THRESHOLD || 0.5) * 100)}
+								on:input={(e) => {
+									const val = Number(e.currentTarget.value);
+									if (val >= 0 && val <= 100) {
+										adminConfig.MEMORY_RELEVANCE_THRESHOLD = val / 100;
+									}
+								}}
+							/>
+							<span class="text-xs text-gray-500 dark:text-gray-400 min-w-[20px]">%</span>
+						</div>
+					</div>
+				</div>
+
+				<div class="mb-3">
+					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Miscellaneous')}</div>
+
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 					<div class="mb-2.5">
 						<div class=" self-center text-xs font-medium mb-2">
