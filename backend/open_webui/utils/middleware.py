@@ -314,7 +314,7 @@ async def chat_completion_tools_handler(
             "model": task_model_id,
             "messages": [
                 {"role": "system", "content": content},
-                {"role": "user", "content": f"Query: {prompt}"},
+                {"role": "user", "content": prompt},
             ],
             "stream": False,
             "metadata": {"task": str(TASKS.FUNCTION_CALLING)},
