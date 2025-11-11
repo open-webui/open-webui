@@ -1659,15 +1659,25 @@ def process_file(
                 char_count = len(text_content)
                 max_chars = request.app.state.config.FILE_MAX_CHARS
                 
-                if char_count > max_chars:
+                # Get current accumulator for this user (default to 0 if not exists)
+                if not hasattr(request.app.state, "user_char_accumulator"):
+                    request.app.state.user_char_accumulator = {}
+                current_total = request.app.state.user_char_accumulator.get(user.id, 0)
+                
+                # Calculate total characters (accumulator + current file)
+                total_chars = current_total + char_count
+                
+                # Validate against total character limit
+                if total_chars > max_chars:
                     error_message = (
-                        f"File content exceeds maximum character limit. "
-                        f"File contains {char_count:,} characters, "
+                        f"Total file content exceeds maximum character limit. "
+                        f"Combined files contain {total_chars:,} characters, "
                         f"but maximum allowed is {max_chars:,} characters."
                     )
                     
                     log.warning(
-                        f"File {file.id} ({file.filename}) rejected: {error_message}"
+                        f"File {file.id} ({file.filename}) rejected: {error_message} "
+                        f"(Current file: {char_count:,} chars, Accumulator: {current_total:,} chars)"
                     )
                     
                     # Mark file as failed with error message
@@ -1693,6 +1703,13 @@ def process_file(
                         status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                         detail=ERROR_MESSAGES.DEFAULT(error_message),
                     )
+                
+                # If validation passes, update accumulator with new total
+                request.app.state.user_char_accumulator[user.id] = total_chars
+                log.debug(
+                    f"File {file.id} processed successfully. "
+                    f"User {user.id} accumulator updated: {current_total:,} -> {total_chars:,} chars"
+                )
 
             log.debug(f"text_content: {text_content}")
             Files.update_file_data_by_id(

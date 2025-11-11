@@ -23,7 +23,7 @@
 
 	import { getSessionUser } from '$lib/apis/auths';
 
-	import { uploadFile } from '$lib/apis/files';
+	import { uploadFile, deleteFileById } from '$lib/apis/files';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
@@ -857,7 +857,15 @@
 													<button
 														class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
 														type="button"
-														on:click={() => {
+														on:click={async () => {
+															// If file was already processed (has id), delete from backend to update accumulator
+															if (file.id) {
+																try {
+																	await deleteFileById(localStorage.token, file.id);
+																} catch (e) {
+																	console.error(`Error deleting file ${file.id}:`, e);
+																}
+															}
 															files.splice(fileIdx, 1);
 															files = files;
 														}}
@@ -885,7 +893,16 @@
 												loading={file.status === 'uploading'}
 												dismissible={true}
 												edit={true}
-												on:dismiss={() => {
+												on:dismiss={async () => {
+													// If file was already processed (has id), delete from backend to update accumulator
+													if (file.id) {
+														try {
+															await deleteFileById(localStorage.token, file.id);
+														} catch (e) {
+															console.error(`Error deleting file ${file.id}:`, e);
+														}
+													}
+													// Remove from UI state
 													files.splice(fileIdx, 1);
 													files = files;
 												}}

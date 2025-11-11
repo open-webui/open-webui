@@ -41,9 +41,8 @@
 		getUserTimezone,
 		getWeekday
 	} from '$lib/utils';
-	import { uploadFile } from '$lib/apis/files';
+	import { uploadFile, validateAndAddFile, validateFilesTotal, deleteFileById } from '$lib/apis/files';
 	import { generateAutoCompletion } from '$lib/apis';
-	import { deleteFileById } from '$lib/apis/files';
 	import { getSessionUser } from '$lib/apis/auths';
 	import { getTools } from '$lib/apis/tools';
 
@@ -838,13 +837,33 @@
 					},
 
 					insertTextHandler: insertTextAtCursor,
-					onUpload: (e) => {
+					onUpload: async (e) => {
 						const { type, data } = e;
 
 						if (type === 'file') {
 							if (files.find((f) => f.id === data.id)) {
 								return;
 							}
+							
+							// Validate total if file was already processed (has id)
+							if (data.id) {
+								try {
+									// Collect all file IDs from current list + new file
+									const currentFileIds = files
+										.filter(f => f.id && f.type !== 'image')
+										.map(f => f.id);
+									const allFileIds = [...currentFileIds, data.id];
+									
+									// Validate total character count of all files
+									await validateFilesTotal(localStorage.token, allFileIds);
+								} catch (error) {
+									// Show error toast and don't add file to list
+									const errorMessage = typeof error === 'string' ? error : error?.detail || 'Error validating file';
+									toast.error(errorMessage);
+									return;
+								}
+							}
+							
 							files = [
 								...files,
 								{
@@ -873,13 +892,33 @@
 					},
 
 					insertTextHandler: insertTextAtCursor,
-					onUpload: (e) => {
+					onUpload: async (e) => {
 						const { type, data } = e;
 
 						if (type === 'file') {
 							if (files.find((f) => f.id === data.id)) {
 								return;
 							}
+							
+							// Validate total if file was already processed (has id)
+							if (data.id) {
+								try {
+									// Collect all file IDs from current list + new file
+									const currentFileIds = files
+										.filter(f => f.id && f.type !== 'image')
+										.map(f => f.id);
+									const allFileIds = [...currentFileIds, data.id];
+									
+									// Validate total character count of all files
+									await validateFilesTotal(localStorage.token, allFileIds);
+								} catch (error) {
+									// Show error toast and don't add file to list
+									const errorMessage = typeof error === 'string' ? error : error?.detail || 'Error validating file';
+									toast.error(errorMessage);
+									return;
+								}
+							}
+							
 							files = [
 								...files,
 								{
@@ -908,13 +947,33 @@
 					},
 
 					insertTextHandler: insertTextAtCursor,
-					onUpload: (e) => {
+					onUpload: async (e) => {
 						const { type, data } = e;
 
 						if (type === 'file') {
 							if (files.find((f) => f.id === data.id)) {
 								return;
 							}
+							
+							// Validate total if file was already processed (has id)
+							if (data.id) {
+								try {
+									// Collect all file IDs from current list + new file
+									const currentFileIds = files
+										.filter(f => f.id && f.type !== 'image')
+										.map(f => f.id);
+									const allFileIds = [...currentFileIds, data.id];
+									
+									// Validate total character count of all files
+									await validateFilesTotal(localStorage.token, allFileIds);
+								} catch (error) {
+									// Show error toast and don't add file to list
+									const errorMessage = typeof error === 'string' ? error : error?.detail || 'Error validating file';
+									toast.error(errorMessage);
+									return;
+								}
+							}
+							
 							files = [
 								...files,
 								{
@@ -1178,7 +1237,15 @@
 															: 'outline-hidden focus:outline-hidden group-hover:visible invisible transition'}"
 														type="button"
 														aria-label={$i18n.t('Remove file')}
-														on:click={() => {
+														on:click={async () => {
+															// If file was already processed (has id), delete from backend to update accumulator
+															if (file.id) {
+																try {
+																	await deleteFileById(localStorage.token, file.id);
+																} catch (e) {
+																	console.error(`Error deleting file ${file.id}:`, e);
+																}
+															}
 															files.splice(fileIdx, 1);
 															files = files;
 														}}
@@ -1209,6 +1276,14 @@
 												small={true}
 												modal={['file', 'collection'].includes(file?.type)}
 												on:dismiss={async () => {
+													// If file was already processed (has id), delete from backend to update accumulator
+													if (file.id) {
+														try {
+															await deleteFileById(localStorage.token, file.id);
+														} catch (e) {
+															console.error(`Error deleting file ${file.id}:`, e);
+														}
+													}
 													// Remove from UI state
 													files.splice(fileIdx, 1);
 													files = files;

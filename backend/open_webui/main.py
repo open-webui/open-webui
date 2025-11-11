@@ -817,6 +817,9 @@ app.state.TOOL_CONTENTS = {}
 app.state.FUNCTIONS = {}
 app.state.FUNCTION_CONTENTS = {}
 
+# Character accumulator for file uploads (tracks total chars per user)
+app.state.user_char_accumulator = {}
+
 ########################################
 #
 # RETRIEVAL
