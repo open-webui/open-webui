@@ -35,7 +35,7 @@ from open_webui.env import (
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse, Response, JSONResponse
-from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_LDAP
+from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_LDAP, ENABLE_PASSWORD_AUTH
 from pydantic import BaseModel
 
 from open_webui.utils.misc import parse_duration, validate_email_format
@@ -189,7 +189,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
     if not request.app.state.config.ENABLE_LDAP:
         raise HTTPException(400, detail="LDAP authentication is not enabled")
     
-    if (not request.app.state.config.ENABLE_PASSWORD_AUTH):
+    if (not ENABLE_PASSWORD_AUTH):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACTION_PROHIBITED,
@@ -470,7 +470,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 
 @router.post("/signin", response_model=SessionUserResponse)
 async def signin(request: Request, response: Response, form_data: SigninForm):
-    if (not request.app.state.config.ENABLE_PASSWORD_AUTH):
+    if (not ENABLE_PASSWORD_AUTH):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACTION_PROHIBITED,
