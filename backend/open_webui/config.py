@@ -2697,10 +2697,6 @@ Provide a clear and direct response to the user's query, including inline citati
 <context>
 {{CONTEXT}}
 </context>
-
-<user_query>
-{{QUERY}}
-</user_query>
 """
 
 RAG_TEMPLATE = PersistentConfig(
