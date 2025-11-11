@@ -45,6 +45,7 @@ from open_webui.utils.payload import (
 )
 from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
+    stream_chunks_handler,
 )
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -952,7 +953,7 @@ async def generate_chat_completion(
         if "text/event-stream" in r.headers.get("Content-Type", ""):
             streaming = True
             return StreamingResponse(
-                r.content,
+                stream_chunks_handler(r.content),
                 status_code=r.status,
                 headers=dict(r.headers),
                 background=BackgroundTask(
