@@ -1155,65 +1155,6 @@
 			});
 		}
 	};
-	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
-		const res = await chatCompleted(localStorage.token, {
-			model: modelId,
-			messages: messages.map((m) => ({
-				id: m.id,
-				role: m.role,
-				content: m.content,
-				info: m.info ? m.info : undefined,
-				timestamp: m.timestamp,
-				...(m.usage ? { usage: m.usage } : {}),
-				...(m.sources ? { sources: m.sources } : {})
-			})),
-			filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
-			model_item: $models.find((m) => m.id === modelId),
-			chat_id: _chatId,
-			session_id: $socket?.id,
-			id: responseMessageId
-		}).catch((error) => {
-			toast.error(`${error}`);
-			messages.at(-1).error = { content: error };
-
-			return null;
-		});
-
-		if (res !== null && res.messages) {
-			// Update chat history with the new messages
-			for (const message of res.messages) {
-				if (message?.id) {
-					// Add null check for message and message.id
-					history.messages[message.id] = {
-						...history.messages[message.id],
-						...(history.messages[message.id].content !== message.content
-							? { originalContent: history.messages[message.id].content }
-							: {}),
-						...message
-					};
-				}
-			}
-		}
-
-		await tick();
-
-		if ($chatId == _chatId) {
-			if (!$temporaryChatEnabled) {
-				chat = await updateChatById(localStorage.token, _chatId, {
-					models: selectedModels,
-					messages: messages,
-					history: history,
-					params: params,
-					files: chatFiles
-				});
-
-				currentChatPage.set(1);
-				await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			}
-		}
-
-		taskIds = null;
-	};
 
 	const chatActionHandler = async (_chatId, actionId, modelId, responseMessageId, event = null) => {
 		const messages = createMessagesList(history, responseMessageId);
@@ -1401,17 +1342,53 @@
 		}
 	};
 
-	const chatCompletionEventHandler = async (data, message, chatId) => {
+	const emitChatTTSEvents = (message) => {
+		const messageContentParts = getMessageContentParts(
+			removeAllDetails(message.content),
+			$config?.audio?.tts?.split_on ?? 'punctuation'
+		);
+		messageContentParts.pop();
+
+		// dispatch only last sentence and make sure it hasn't been dispatched before
+		if (
+			messageContentParts.length > 0 &&
+			messageContentParts[messageContentParts.length - 1] !== message.lastSentence
+		) {
+			message.lastSentence = messageContentParts[messageContentParts.length - 1];
+			eventTarget.dispatchEvent(
+				new CustomEvent('chat', {
+					detail: {
+						id: message.id,
+						content: messageContentParts[messageContentParts.length - 1]
+					}
+				})
+			);
+		}
+
+		return message;
+	};
+
+	const chatCompletionEventHandler = async (data, message, _chatId) => {
 		const { id, done, choices, content, sources, selected_model_id, error, usage } = data;
 
 		if (error) {
 			await handleOpenAIError(error, message);
 		}
 
+		if (usage) {
+			message.usage = usage;
+		}
+
 		if (sources && !message?.sources) {
 			message.sources = sources;
 		}
 
+		if (selected_model_id) {
+			message.selectedModelId = selected_model_id;
+			message.arena = true;
+		}
+
+		// Raw response handling
 		if (choices) {
 			if (choices[0]?.message?.content) {
 				// Non-stream response
@@ -1429,31 +1406,12 @@
 					}
 
 					// Emit chat event for TTS
-					const messageContentParts = getMessageContentParts(
-						removeAllDetails(message.content),
-						$config?.audio?.tts?.split_on ?? 'punctuation'
-					);
-					messageContentParts.pop();
-
-					// dispatch only last sentence and make sure it hasn't been dispatched before
-					if (
-						messageContentParts.length > 0 &&
-						messageContentParts[messageContentParts.length - 1] !== message.lastSentence
-					) {
-						message.lastSentence = messageContentParts[messageContentParts.length - 1];
-						eventTarget.dispatchEvent(
-							new CustomEvent('chat', {
-								detail: {
-									id: message.id,
-									content: messageContentParts[messageContentParts.length - 1]
-								}
-							})
-						);
-					}
+					message = emitChatTTSEvents(message);
 				}
 			}
 		}
 
+		// Normal response handling
 		if (content) {
 			// REALTIME_CHAT_SAVE is disabled
 			message.content = content;
@@ -1463,36 +1421,7 @@
 			}
 
 			// Emit chat event for TTS
-			const messageContentParts = getMessageContentParts(
-				removeAllDetails(message.content),
-				$config?.audio?.tts?.split_on ?? 'punctuation'
-			);
-			messageContentParts.pop();
-
-			// dispatch only last sentence and make sure it hasn't been dispatched before
-			if (
-				messageContentParts.length > 0 &&
-				messageContentParts[messageContentParts.length - 1] !== message.lastSentence
-			) {
-				message.lastSentence = messageContentParts[messageContentParts.length - 1];
-				eventTarget.dispatchEvent(
-					new CustomEvent('chat', {
-						detail: {
-							id: message.id,
-							content: messageContentParts[messageContentParts.length - 1]
-						}
-					})
-				);
-			}
-		}
-
-		if (selected_model_id) {
-			message.selectedModelId = selected_model_id;
-			message.arena = true;
-		}
-
-		if (usage) {
-			message.usage = usage;
+			message = emitChatTTSEvents(message);
 		}
 
 		history.messages[message.id] = message;
@@ -1538,12 +1467,12 @@
 				scrollToBottom();
 			}
 
-			await chatCompletedHandler(
-				chatId,
-				message.model,
-				message.id,
-				createMessagesList(history, message.id)
-			);
+			if ($chatId == _chatId) {
+				if (!$temporaryChatEnabled) {
+					currentChatPage.set(1);
+					await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				}
+			}
 		}
 
 		console.log(data);

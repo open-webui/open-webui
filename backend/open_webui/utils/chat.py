@@ -290,10 +290,9 @@ async def generate_chat_completion(
 chat_completion = generate_chat_completion
 
 
-async def chat_completed(request: Request, form_data: dict, user: Any):
-    if not request.app.state.MODELS:
-        await get_all_models(request, user=user)
-
+async def chat_completed(
+    request: Request, form_data: dict, user, metadata, extra_params
+):
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
         models = {
             request.state.model["id"]: request.state.model,
@@ -301,34 +300,18 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
     else:
         models = request.app.state.MODELS
 
-    data = form_data
-    model_id = data["model"]
+    model_id = form_data["model"]
     if model_id not in models:
         raise Exception("Model not found")
 
     model = models[model_id]
 
     try:
-        data = await process_pipeline_outlet_filter(request, data, user, models)
+        form_data = await process_pipeline_outlet_filter(
+            request, form_data, user, models
+        )
     except Exception as e:
         return Exception(f"Error: {e}")
-
-    metadata = {
-        "chat_id": data["chat_id"],
-        "message_id": data["id"],
-        "filter_ids": data.get("filter_ids", []),
-        "session_id": data["session_id"],
-        "user_id": user.id,
-    }
-
-    extra_params = {
-        "__event_emitter__": get_event_emitter(metadata),
-        "__event_call__": get_event_call(metadata),
-        "__user__": user.model_dump() if isinstance(user, UserModel) else {},
-        "__metadata__": metadata,
-        "__request__": request,
-        "__model__": model,
-    }
 
     try:
         filter_functions = [
@@ -338,14 +321,15 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
             )
         ]
 
-        result, _ = await process_filter_functions(
+        form_data, _ = await process_filter_functions(
             request=request,
             filter_functions=filter_functions,
             filter_type="outlet",
-            form_data=data,
+            form_data=form_data,
             extra_params=extra_params,
         )
-        return result
+
+        return form_data
     except Exception as e:
         return Exception(f"Error: {e}")
 
