@@ -595,6 +595,15 @@ except ValueError:
 WEBSOCKET_SENTINEL_HOSTS = os.environ.get("WEBSOCKET_SENTINEL_HOSTS", "")
 WEBSOCKET_SENTINEL_PORT = os.environ.get("WEBSOCKET_SENTINEL_PORT", "26379")
 
+# Maximum message size for WebSocket/SocketIO in bytes
+# Default 10MB to handle large reasoning tokens from models like o1/o3
+websocket_max_message_size = os.environ.get("WEBSOCKET_MAX_MESSAGE_SIZE", "10000000")
+
+try:
+    WEBSOCKET_MAX_MESSAGE_SIZE = int(websocket_max_message_size)
+except ValueError:
+    WEBSOCKET_MAX_MESSAGE_SIZE = 10000000  # 10MB default
+
 
 AIOHTTP_CLIENT_TIMEOUT = os.environ.get("AIOHTTP_CLIENT_TIMEOUT", "")
 

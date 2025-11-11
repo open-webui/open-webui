@@ -26,6 +26,7 @@ from open_webui.env import (
     WEBSOCKET_REDIS_LOCK_TIMEOUT,
     WEBSOCKET_SENTINEL_PORT,
     WEBSOCKET_SENTINEL_HOSTS,
+    WEBSOCKET_MAX_MESSAGE_SIZE,
     REDIS_KEY_PREFIX,
 )
 from open_webui.utils.auth import decode_token
@@ -65,6 +66,7 @@ if WEBSOCKET_MANAGER == "redis":
         allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
         always_connect=True,
         client_manager=mgr,
+        max_http_buffer_size=WEBSOCKET_MAX_MESSAGE_SIZE,
     )
 else:
     sio = socketio.AsyncServer(
@@ -73,6 +75,7 @@ else:
         transports=(["websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
         allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
         always_connect=True,
+        max_http_buffer_size=WEBSOCKET_MAX_MESSAGE_SIZE,
     )
 
 

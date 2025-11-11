@@ -945,6 +945,21 @@ async def generate_chat_completion(
 
         # Check if response is SSE
         if "text/event-stream" in r.headers.get("Content-Type", ""):
+            # Check status code before streaming - error responses may have SSE content-type
+            # but empty/malformed body which causes infinite hang when iterating
+            if r.status >= 400:
+                try:
+                    error_data = await r.json()
+                except Exception:
+                    error_data = await r.text()
+
+                await cleanup_response(r, session)
+
+                if isinstance(error_data, (dict, list)):
+                    return JSONResponse(status_code=r.status, content=error_data)
+                else:
+                    return PlainTextResponse(status_code=r.status, content=error_data)
+
             streaming = True
             return StreamingResponse(
                 r.content,
@@ -1027,6 +1042,21 @@ async def embeddings(request: Request, form_data: dict, user):
         )
 
         if "text/event-stream" in r.headers.get("Content-Type", ""):
+            # Check status code before streaming - error responses may have SSE content-type
+            # but empty/malformed body which causes infinite hang when iterating
+            if r.status >= 400:
+                try:
+                    error_data = await r.json()
+                except Exception:
+                    error_data = await r.text()
+
+                await cleanup_response(r, session)
+
+                if isinstance(error_data, (dict, list)):
+                    return JSONResponse(status_code=r.status, content=error_data)
+                else:
+                    return PlainTextResponse(status_code=r.status, content=error_data)
+
             streaming = True
             return StreamingResponse(
                 r.content,
@@ -1119,6 +1149,21 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 
         # Check if response is SSE
         if "text/event-stream" in r.headers.get("Content-Type", ""):
+            # Check status code before streaming - error responses may have SSE content-type
+            # but empty/malformed body which causes infinite hang when iterating
+            if r.status >= 400:
+                try:
+                    error_data = await r.json()
+                except Exception:
+                    error_data = await r.text()
+
+                await cleanup_response(r, session)
+
+                if isinstance(error_data, (dict, list)):
+                    return JSONResponse(status_code=r.status, content=error_data)
+                else:
+                    return PlainTextResponse(status_code=r.status, content=error_data)
+
             streaming = True
             return StreamingResponse(
                 r.content,
