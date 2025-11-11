@@ -189,10 +189,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
     if not request.app.state.config.ENABLE_LDAP:
         raise HTTPException(400, detail="LDAP authentication is not enabled")
     
-    if (
-        not request.app.state.config.ENABLE_PASSWORD_AUTH
-        and request.app.state.config.ENABLE_OAUTH_SIGNUP
-    ):
+    if (not request.app.state.config.ENABLE_PASSWORD_AUTH):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACTION_PROHIBITED,
@@ -473,10 +470,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 
 @router.post("/signin", response_model=SessionUserResponse)
 async def signin(request: Request, response: Response, form_data: SigninForm):
-    if (
-        not request.app.state.config.ENABLE_PASSWORD_AUTH
-        and request.app.state.config.ENABLE_OAUTH_SIGNUP
-    ):
+    if (not request.app.state.config.ENABLE_PASSWORD_AUTH):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACTION_PROHIBITED,
