@@ -64,6 +64,7 @@ from open_webui.retrieval.web.serply import search_serply
 from open_webui.retrieval.web.serpstack import search_serpstack
 from open_webui.retrieval.web.tavily import search_tavily
 from open_webui.retrieval.web.bing import search_bing
+from open_webui.retrieval.web.azure import search_azure
 from open_webui.retrieval.web.exa import search_exa
 from open_webui.retrieval.web.perplexity import search_perplexity
 from open_webui.retrieval.web.sougou import search_sougou
@@ -2027,6 +2028,24 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
         )
+    elif engine == "azure":
+        if (
+            request.app.state.config.AZURE_AI_SEARCH_API_KEY
+            and request.app.state.config.AZURE_AI_SEARCH_ENDPOINT
+            and request.app.state.config.AZURE_AI_SEARCH_INDEX_NAME
+        ):
+            return search_azure(
+                request.app.state.config.AZURE_AI_SEARCH_API_KEY,
+                request.app.state.config.AZURE_AI_SEARCH_ENDPOINT,
+                request.app.state.config.AZURE_AI_SEARCH_INDEX_NAME,
+                query,
+                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception(
+                "AZURE_AI_SEARCH_API_KEY, AZURE_AI_SEARCH_ENDPOINT, and AZURE_AI_SEARCH_INDEX_NAME are required for Azure AI Search"
+            )
     elif engine == "exa":
         return search_exa(
             request.app.state.config.EXA_API_KEY,

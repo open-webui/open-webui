@@ -2982,6 +2982,24 @@ BING_SEARCH_V7_SUBSCRIPTION_KEY = PersistentConfig(
     os.environ.get("BING_SEARCH_V7_SUBSCRIPTION_KEY", ""),
 )
 
+AZURE_AI_SEARCH_API_KEY = PersistentConfig(
+    "AZURE_AI_SEARCH_API_KEY",
+    "rag.web.search.azure_ai_search_api_key",
+    os.environ.get("AZURE_AI_SEARCH_API_KEY", ""),
+)
+
+AZURE_AI_SEARCH_ENDPOINT = PersistentConfig(
+    "AZURE_AI_SEARCH_ENDPOINT",
+    "rag.web.search.azure_ai_search_endpoint",
+    os.environ.get("AZURE_AI_SEARCH_ENDPOINT", ""),
+)
+
+AZURE_AI_SEARCH_INDEX_NAME = PersistentConfig(
+    "AZURE_AI_SEARCH_INDEX_NAME",
+    "rag.web.search.azure_ai_search_index_name",
+    os.environ.get("AZURE_AI_SEARCH_INDEX_NAME", ""),
+)
+
 EXA_API_KEY = PersistentConfig(
     "EXA_API_KEY",
     "rag.web.search.exa_api_key",

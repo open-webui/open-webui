@@ -86,6 +86,7 @@ dependencies = [
     "sentencepiece",
     "soundfile==0.13.1",
     "azure-ai-documentintelligence==1.0.2",
+    "azure-search-documents>=11.4.0",
 
     "pillow==11.3.0",
     "opencv-python-headless==4.11.0.86",
