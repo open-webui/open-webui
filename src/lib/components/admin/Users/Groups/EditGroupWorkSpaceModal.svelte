@@ -680,7 +680,7 @@
 <!-- Model Editor Modal -->
 {#if showModelEditor && editingModel}
 	<Modal size="lg" bind:show={showModelEditor}>
-		<div class="rounded-2xl overflow-hidden">
+		<div class="rounded-2xl overflow-hidden bg-white dark:bg-gray-900 dark:text-gray-100">
 			<div class="flex justify-between dark:text-gray-100 px-5 pt-4 mb-3">
 				<div class="font-primary">
 					<div class="text-lg font-medium">Edit Model</div>
