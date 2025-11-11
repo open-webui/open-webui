@@ -190,7 +190,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
         raise HTTPException(400, detail="LDAP authentication is not enabled")
     
     if (
-        not request.app.state.config.ENABLE_PASSWORD_BASED_LOGIN
+        not request.app.state.config.ENABLE_PASSWORD_AUTH
         and request.app.state.config.ENABLE_OAUTH_SIGNUP
     ):
         raise HTTPException(
@@ -474,7 +474,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 @router.post("/signin", response_model=SessionUserResponse)
 async def signin(request: Request, response: Response, form_data: SigninForm):
     if (
-        not request.app.state.config.ENABLE_PASSWORD_BASED_LOGIN
+        not request.app.state.config.ENABLE_PASSWORD_AUTH
         and request.app.state.config.ENABLE_OAUTH_SIGNUP
     ):
         raise HTTPException(
@@ -854,7 +854,6 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
         "WEBUI_URL": request.app.state.config.WEBUI_URL,
         "ENABLE_SIGNUP": request.app.state.config.ENABLE_SIGNUP,
-        "ENABLE_PASSWORD_BASED_LOGIN": request.app.state.config.ENABLE_PASSWORD_BASED_LOGIN,
         "ENABLE_API_KEY": request.app.state.config.ENABLE_API_KEY,
         "ENABLE_API_KEY_ENDPOINT_RESTRICTIONS": request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS,
         "API_KEY_ALLOWED_ENDPOINTS": request.app.state.config.API_KEY_ALLOWED_ENDPOINTS,
@@ -875,7 +874,6 @@ class AdminConfig(BaseModel):
     SHOW_ADMIN_DETAILS: bool
     WEBUI_URL: str
     ENABLE_SIGNUP: bool
-    ENABLE_PASSWORD_BASED_LOGIN: bool
     ENABLE_API_KEY: bool
     ENABLE_API_KEY_ENDPOINT_RESTRICTIONS: bool
     API_KEY_ALLOWED_ENDPOINTS: str
@@ -898,9 +896,6 @@ async def update_admin_config(
     request.app.state.config.SHOW_ADMIN_DETAILS = form_data.SHOW_ADMIN_DETAILS
     request.app.state.config.WEBUI_URL = form_data.WEBUI_URL
     request.app.state.config.ENABLE_SIGNUP = form_data.ENABLE_SIGNUP
-    request.app.state.config.ENABLE_PASSWORD_BASED_LOGIN = (
-        form_data.ENABLE_PASSWORD_BASED_LOGIN
-    )
 
     request.app.state.config.ENABLE_API_KEY = form_data.ENABLE_API_KEY
     request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS = (
@@ -942,7 +937,6 @@ async def update_admin_config(
         "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
         "WEBUI_URL": request.app.state.config.WEBUI_URL,
         "ENABLE_SIGNUP": request.app.state.config.ENABLE_SIGNUP,
-        "ENABLE_PASSWORD_BASED_LOGIN": request.app.state.config.ENABLE_PASSWORD_BASED_LOGIN,
         "ENABLE_API_KEY": request.app.state.config.ENABLE_API_KEY,
         "ENABLE_API_KEY_ENDPOINT_RESTRICTIONS": request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS,
         "API_KEY_ALLOWED_ENDPOINTS": request.app.state.config.API_KEY_ALLOWED_ENDPOINTS,
