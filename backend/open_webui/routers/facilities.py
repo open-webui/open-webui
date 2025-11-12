@@ -461,43 +461,18 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
         
         section_labels = get_section_labels(form_data.sponsor)
         
-        # Different mapping logic for NSF vs NIH
+        # Mapping from form fields to section labels (1-to-1 for both NSF and NIH)
         if form_data.sponsor == "NSF":
-            # NSF: Consolidate multiple form fields into 4 sections
+            # NSF: 1-to-1 mapping to individual sections (will be grouped in response)
             field_mappings = {
-                "1. Project Title": ["projectTitle"],
-                "2. Facilities": ["researchSpaceFacilities"],
-                "3. Major Equipment": ["coreInstrumentation", "computingDataResources"],
-                "4. Other Resources": ["internalFacilitiesNYU", "externalFacilitiesOther", "specialInfrastructure"]
+                "projectTitle": "Project Title",
+                "researchSpaceFacilities": "Research Space and Facilities", 
+                "coreInstrumentation": "Core Instrumentation",
+                "computingDataResources": "Computing and Data Resources",
+                "internalFacilitiesNYU": "Internal Facilities (NYU)",
+                "externalFacilitiesOther": "External Facilities (Other Institutions)",
+                "specialInfrastructure": "Special Infrastructure"
             }
-            
-            user_inputs = {}
-            for section_label, form_keys in field_mappings.items():
-                # Combine multiple form field values with section labels
-                combined_texts = []
-                for form_key in form_keys:
-                    if form_key in form_data.form_data:
-                        text = form_data.form_data[form_key].strip()
-                        if text:
-                            # Add subsection label for combined fields
-                            if len(form_keys) > 1:
-                                subsection_map = {
-                                    "coreInstrumentation": "Core Instrumentation",
-                                    "computingDataResources": "Computing and Data Resources",
-                                    "internalFacilitiesNYU": "Internal Facilities (NYU)",
-                                    "externalFacilitiesOther": "External Facilities (Other Institutions)",
-                                    "specialInfrastructure": "Special Infrastructure"
-                                }
-                                subsection = subsection_map.get(form_key, "")
-                                if subsection:
-                                    combined_texts.append(f"{subsection}:\n{text}")
-                                else:
-                                    combined_texts.append(text)
-                            else:
-                                combined_texts.append(text)
-                
-                if combined_texts:
-                    user_inputs[section_label] = "\n\n".join(combined_texts)
         else:
             # NIH: Keep original 1-to-1 mapping
             field_mappings = {
@@ -510,11 +485,26 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
                 "specialInfrastructure": "6. Special Infrastructure",
                 "equipment": "7. Equipment"
             }
-            
-            user_inputs = {}
-            for form_key, section_label in field_mappings.items():
-                if form_key in form_data.form_data and section_label in section_labels:
-                    user_inputs[section_label] = form_data.form_data[form_key].strip()
+        
+        user_inputs = {}
+        for form_key, section_label in field_mappings.items():
+            if form_key in form_data.form_data:
+                text = form_data.form_data[form_key].strip()
+                if text:
+                    user_inputs[section_label] = text
+        
+        # For NSF: Create mapping from individual sections to NSF response headers
+        nsf_header_mapping = {}
+        if form_data.sponsor == "NSF":
+            nsf_header_mapping = {
+                "Project Title": "1. Project Title",
+                "Research Space and Facilities": "2. Facilities",
+                "Core Instrumentation": "3. Major Equipment",
+                "Computing and Data Resources": "3. Major Equipment",
+                "Internal Facilities (NYU)": "4. Other Resources",
+                "External Facilities (Other Institutions)": "4. Other Resources",
+                "Special Infrastructure": "4. Other Resources"
+            }
         
         if not any(user_inputs.values()):
             return FacilitiesResponse(
@@ -629,9 +619,10 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
             
             if form_data.web_search_enabled:
                 logging.info(f"Web search enabled for section: {section}")
+                # Check if this is Internal Facilities (works for both NSF and NIH)
                 is_internal_facilities = (
                     section == "5a. Internal Facilities (NYU)" or 
-                    (section == "4. Other Resources" and "Internal Facilities (NYU)" in user_text)
+                    section == "Internal Facilities (NYU)"
                 )
                 
                 if is_internal_facilities:
@@ -639,25 +630,13 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
                     logging.info(f"Using specific sites search for NYU Internal Facilities")
                     logging.info(f"Allowed sites: {allowed_sites}")
                     
-                    # For NSF "Other Resources", extract only the Internal Facilities portion
-                    search_query = query
-                    if section == "4. Other Resources" and "Internal Facilities (NYU):" in user_text:
-                        # Extract only the Internal Facilities portion for focused web search
-                        import re
-                        # Match text between "Internal Facilities (NYU):" and the next subsection or end
-                        match = re.search(r'Internal Facilities \(NYU\):\s*\n(.*?)(?=\n\n[A-Z]|$)', user_text, re.DOTALL)
-                        if match:
-                            internal_facilities_text = match.group(1).strip()
-                            search_query = f"Internal Facilities (NYU): {internal_facilities_text}"
-                            logging.info(f"Extracted Internal Facilities text for focused search: {search_query[:100]}...")
-                    
                     if allowed_sites:
                         web_content, web_links, web_scores = facilities_web_search_specific_sites(
-                            search_query, allowed_sites, request, user
+                            query, allowed_sites, request, user
                         )
                     else:
                         logging.warning("No allowed sites configured for NYU Internal Facilities, falling back to standard search")
-                        web_content, web_links, web_scores = facilities_web_search(search_query, request, user)
+                        web_content, web_links, web_scores = facilities_web_search(query, request, user)
                 else:
                     logging.info(f"Using standard web search for section: {section}")
                     web_content, web_links, web_scores = facilities_web_search(query, request, user)
@@ -699,49 +678,12 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
             else:
                 web_sources = "Web search is disabled for this request."
             
-            # Determine if this is a combined section for NSF
-            is_combined_section = form_data.sponsor == "NSF" and section in ["3. Major Equipment", "4. Other Resources"]
-            
-            # Set section-specific instructions for NSF combined sections
+            # For NSF: Individual sections are processed separately
+            # The grouping under NSF headers happens in the response formatting
             section_specific_instructions = ""
             integration_instructions = ""
             
-            if is_combined_section:
-                if section == "3. Major Equipment":
-                    section_specific_instructions = """
-**NOTE:** This section combines information from multiple categories: Core Instrumentation and Computing/Data Resources.
-Your task is to PRESERVE the subsection structure and generate content for each subsection separately."""
-                    
-                    integration_instructions = """
-- PRESERVE the subsection labels from user input (Core Instrumentation:, Computing and Data Resources:).
-- FORMAT subsection headings consistently using ### (three hash marks) for all subsection headings.
-- ONLY use information from the user input, PDF chunks, and web snippets provided above. DO NOT add any information not present in these sources.
-- Do not invent, assume, or add any equipment names, specifications, or capabilities not explicitly mentioned in the provided sources.
-- Use ALL available information from PDF chunks and web snippets to expand each subsection, but only if it's relevant to the user input for that subsection.
-- Include citations from PDF sources and web snippets, but only cite information that is actually present in those sources.
-- Provide specific details only if they are explicitly mentioned in the provided sources - do not extrapolate or assume specifications.
-- Treat each subsection as a standalone section, but only expand with information relevant to that specific subsection's user input.
-- Do not use any external knowledge or assumptions - stick strictly to the provided sources.
-- DO NOT generate subsection headings for subsections that are not in the user input. Only generate content for subsections that are explicitly provided.
-"""
-                elif section == "4. Other Resources":
-                    section_specific_instructions = """
-**NOTE:** This section combines information from multiple categories: Internal Facilities (NYU), External Facilities (Other Institutions), and Special Infrastructure.
-Your task is to PRESERVE the subsection structure and generate content for each subsection separately."""
-                    
-                    integration_instructions = """
-- PRESERVE the subsection labels from user input (Internal Facilities (NYU):, External Facilities (Other Institutions):, Special Infrastructure:).
-- FORMAT subsection headings consistently using ### (three hash marks) for all subsection headings.
-- ONLY use information from the user input, PDF chunks, and web snippets provided above. DO NOT add any information not present in these sources.
-- Do not invent, assume, or add any facility names, specifications, or capabilities not explicitly mentioned in the provided sources.
-- Use ALL available information from PDF chunks and web snippets to expand each subsection, but only if it's relevant to the user input for that subsection.
-- Include citations from PDF sources and web snippets, but only cite information that is actually present in those sources.
-- Provide specific details only if they are explicitly mentioned in the provided sources - do not extrapolate or assume specifications.
-- Treat each subsection as a standalone section, but only expand with information relevant to that specific subsection's user input.
-- Do not use any external knowledge or assumptions - stick strictly to the provided sources.
-- DO NOT generate content for subsections that are not present in the user input. Only work with the subsections that are explicitly provided in the user input.
-"""
-            
+            # Use the section name as-is for the prompt (will be grouped later in response for NSF)
             prompt = FACILITIES_PROMPT.format(
                 sponsor=form_data.sponsor,
                 section=section,
@@ -806,10 +748,80 @@ Your task is to PRESERVE the subsection structure and generate content for each 
                 error="Failed to generate any sections"
             )
         
-        content = f"# Facilities Response for {form_data.sponsor}\n\n"
-        
-        for section_name, section_content in section_outputs.items():
-            content += f"## {section_name}\n\n{section_content}\n\n"
+        # For NSF: Group individual sections under NSF headers
+        if form_data.sponsor == "NSF":
+            # Group sections by NSF header
+            grouped_sections = {}
+            for individual_section, content in section_outputs.items():
+                nsf_header = nsf_header_mapping.get(individual_section)
+                if nsf_header:
+                    if nsf_header not in grouped_sections:
+                        grouped_sections[nsf_header] = []
+                    grouped_sections[nsf_header].append({
+                        "subsection": individual_section,
+                        "content": content
+                    })
+                else:
+                    logging.warning(f"No NSF header mapping found for section: {individual_section}")
+            
+            # Build formatted response with NSF headers and subsections
+            formatted_sections = {}
+            content = f"# Facilities Response for {form_data.sponsor}\n\n"
+            
+            # Define NSF header order and subsection order within each header
+            nsf_header_order = [
+                "1. Project Title",
+                "2. Facilities",
+                "3. Major Equipment",
+                "4. Other Resources"
+            ]
+            
+            # Define which headers should always use subsection headings (even for single subsections)
+            headers_with_subsections = ["3. Major Equipment", "4. Other Resources"]
+            
+            # Define subsection order for headers with multiple subsections
+            subsection_order = {
+                "3. Major Equipment": ["Core Instrumentation", "Computing and Data Resources"],
+                "4. Other Resources": ["Internal Facilities (NYU)", "External Facilities (Other Institutions)", "Special Infrastructure"]
+            }
+            
+            for nsf_header in nsf_header_order:
+                # Only include headers that have at least one subsection filled
+                # If no subsections are filled for a header, it will be skipped entirely
+                if nsf_header in grouped_sections:
+                    subsections = grouped_sections[nsf_header]
+                    
+                    if nsf_header in headers_with_subsections:
+                        # Sort subsections according to defined order
+                        if nsf_header in subsection_order:
+                            ordered_subsections = []
+                            subsection_dict = {sub['subsection']: sub for sub in subsections}
+                            for ordered_sub_name in subsection_order[nsf_header]:
+                                if ordered_sub_name in subsection_dict:
+                                    ordered_subsections.append(subsection_dict[ordered_sub_name])
+                            # Add any remaining subsections not in the order list
+                            for sub in subsections:
+                                if sub['subsection'] not in subsection_order[nsf_header]:
+                                    ordered_subsections.append(sub)
+                            subsections = ordered_subsections
+                        
+                        formatted_content = ""
+                        for sub in subsections:
+                            formatted_content += f"### {sub['subsection']}\n\n{sub['content']}\n\n"
+                        formatted_sections[nsf_header] = formatted_content.strip()
+                        content += f"## {nsf_header}\n\n{formatted_content}\n\n"
+                    else:
+                        # For single subsection headers (1. Project Title, 2. Facilities), include content directly (no ### heading)
+                        formatted_sections[nsf_header] = subsections[0]['content']
+                        content += f"## {nsf_header}\n\n{subsections[0]['content']}\n\n"
+            
+            # Update section_outputs to use NSF headers for response
+            section_outputs = formatted_sections
+        else:
+            # NIH: Keep individual sections as-is
+            content = f"# Facilities Response for {form_data.sponsor}\n\n"
+            for section_name, section_content in section_outputs.items():
+                content += f"## {section_name}\n\n{section_content}\n\n"
         
         # Filter sources to only include those that were actually cited in the text
         filtered_sources = []
