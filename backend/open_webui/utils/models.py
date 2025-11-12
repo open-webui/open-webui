@@ -286,9 +286,19 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
             }
         ]
 
+    function_data_cache = {}
+    function_module_cache = {}
+
     def get_function_module_by_id(function_id):
-        function_module, _, _ = get_function_module_from_cache(request, function_id)
-        return function_module
+        if function_id not in function_module_cache:
+            function_module, _, _ = get_function_module_from_cache(request, function_id)
+            function_module_cache[function_id] = function_module
+        return function_module_cache[function_id]
+
+    def get_function_data_by_id(function_id):
+        if function_id not in function_data_cache:
+            function_data_cache[function_id] = Functions.get_function_by_id(function_id)
+        return function_data_cache[function_id]
 
     for model in models:
         action_ids = [
@@ -304,7 +314,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
         model["actions"] = []
         for action_id in action_ids:
-            action_function = Functions.get_function_by_id(action_id)
+            action_function = get_function_data_by_id(action_id)
             if action_function is None:
                 raise Exception(f"Action not found: {action_id}")
 
@@ -315,7 +325,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
         model["filters"] = []
         for filter_id in filter_ids:
-            filter_function = Functions.get_function_by_id(filter_id)
+            filter_function = get_function_data_by_id(filter_id)
             if filter_function is None:
                 raise Exception(f"Filter not found: {filter_id}")
 
