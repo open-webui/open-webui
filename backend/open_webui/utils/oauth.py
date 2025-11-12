@@ -330,6 +330,10 @@ async def get_oauth_client_info_with_dynamic_client_registration(
                     registration_response_json = (
                         await oauth_client_registration_response.json()
                     )
+
+                    # The mcp package requires optional unset values to be None. If an empty string is passed, it gets validated and fails.
+                    # This replaces all empty strings with None.
+                    registration_response_json = {k: (None if v == "" else v) for k, v in registration_response_json.items()}
                     oauth_client_info = OAuthClientInformationFull.model_validate(
                         {
                             **registration_response_json,
