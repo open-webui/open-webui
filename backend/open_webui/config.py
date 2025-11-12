@@ -3002,6 +3002,12 @@ PERPLEXITY_SEARCH_CONTEXT_USAGE = PersistentConfig(
     os.getenv("PERPLEXITY_SEARCH_CONTEXT_USAGE", "medium"),
 )
 
+PERPLEXITY_SEARCH_API_URL = PersistentConfig(
+    "PERPLEXITY_SEARCH_API_URL",
+    "rag.web.search.perplexity_search_api_url",
+    os.getenv("PERPLEXITY_SEARCH_API_URL", "https://api.perplexity.ai/search"),
+)
+
 SOUGOU_API_SID = PersistentConfig(
     "SOUGOU_API_SID",
     "rag.web.search.sougou_api_sid",

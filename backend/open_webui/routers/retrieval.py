@@ -528,6 +528,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "PERPLEXITY_API_KEY": request.app.state.config.PERPLEXITY_API_KEY,
             "PERPLEXITY_MODEL": request.app.state.config.PERPLEXITY_MODEL,
             "PERPLEXITY_SEARCH_CONTEXT_USAGE": request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
+            "PERPLEXITY_SEARCH_API_URL": request.app.state.config.PERPLEXITY_SEARCH_API_URL,
             "SOUGOU_API_SID": request.app.state.config.SOUGOU_API_SID,
             "SOUGOU_API_SK": request.app.state.config.SOUGOU_API_SK,
             "WEB_LOADER_ENGINE": request.app.state.config.WEB_LOADER_ENGINE,
@@ -585,6 +586,7 @@ class WebConfig(BaseModel):
     PERPLEXITY_API_KEY: Optional[str] = None
     PERPLEXITY_MODEL: Optional[str] = None
     PERPLEXITY_SEARCH_CONTEXT_USAGE: Optional[str] = None
+    PERPLEXITY_SEARCH_API_URL: Optional[str] = None
     SOUGOU_API_SID: Optional[str] = None
     SOUGOU_API_SK: Optional[str] = None
     WEB_LOADER_ENGINE: Optional[str] = None
@@ -1108,6 +1110,9 @@ async def update_rag_config(
         request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE = (
             form_data.web.PERPLEXITY_SEARCH_CONTEXT_USAGE
         )
+        request.app.state.config.PERPLEXITY_SEARCH_API_URL = (
+            form_data.web.PERPLEXITY_SEARCH_API_URL
+        )
         request.app.state.config.SOUGOU_API_SID = form_data.web.SOUGOU_API_SID
         request.app.state.config.SOUGOU_API_SK = form_data.web.SOUGOU_API_SK
 
@@ -1253,6 +1258,7 @@ async def update_rag_config(
             "PERPLEXITY_API_KEY": request.app.state.config.PERPLEXITY_API_KEY,
             "PERPLEXITY_MODEL": request.app.state.config.PERPLEXITY_MODEL,
             "PERPLEXITY_SEARCH_CONTEXT_USAGE": request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
+            "PERPLEXITY_SEARCH_API_URL": request.app.state.config.PERPLEXITY_SEARCH_API_URL,
             "SOUGOU_API_SID": request.app.state.config.SOUGOU_API_SID,
             "SOUGOU_API_SK": request.app.state.config.SOUGOU_API_SK,
             "WEB_LOADER_ENGINE": request.app.state.config.WEB_LOADER_ENGINE,
@@ -1852,6 +1858,8 @@ def search_web(
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                request.app.state.config.PERPLEXITY_SEARCH_API_URL,
+                user,
             )
         else:
             raise Exception("No PERPLEXITY_API_KEY found in environment variables")
