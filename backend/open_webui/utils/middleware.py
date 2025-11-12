@@ -1435,15 +1435,17 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         metadata["mcp_clients"] = mcp_clients
 
     if tools_dict:
-        if metadata.get("params", {}).get("function_calling") == "native":
-            # If the function calling is native, then call the tools function calling handler
+        function_calling_mode = metadata.get("params", {}).get("function_calling", "default")
+
+        if function_calling_mode == "native":
+            # Native function calling - inject tools directly into payload
             metadata["tools"] = tools_dict
             form_data["tools"] = [
                 {"type": "function", "function": tool.get("spec", {})}
                 for tool in tools_dict.values()
             ]
         else:
-            # If the function calling is not native, then call the tools function calling handler
+            # Default mode - use prompt-based tool handler
             try:
                 form_data, flags = await chat_completion_tools_handler(
                     request, form_data, extra_params, user, models, tools_dict
@@ -1451,6 +1453,14 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 sources.extend(flags.get("sources", []))
             except Exception as e:
                 log.exception(e)
+
+            # Inject tools into payload if not already present (for native-capable endpoints like Azure OpenAI)
+            if "tools" not in form_data:
+                metadata["tools"] = tools_dict
+                form_data["tools"] = [
+                    {"type": "function", "function": tool.get("spec", {})}
+                    for tool in tools_dict.values()
+                ]
 
     try:
         form_data, flags = await chat_completion_files_handler(
