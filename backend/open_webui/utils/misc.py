@@ -8,10 +8,11 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Callable, Optional
 import json
+import aiohttp
 
 
 import collections.abc
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
@@ -539,3 +540,68 @@ def extract_urls(text: str) -> list[str]:
         r"(https?://[^\s]+)", re.IGNORECASE
     )  # Matches http and https URLs
     return url_pattern.findall(text)
+
+
+def stream_chunks_handler(stream: aiohttp.StreamReader):
+    """
+    Handle stream response chunks, supporting large data chunks that exceed the original 16kb limit.
+    When a single line exceeds max_buffer_size, returns an empty JSON string {} and skips subsequent data
+    until encountering normally sized data.
+
+    :param stream: The stream reader to handle.
+    :return: An async generator that yields the stream data.
+    """
+
+    max_buffer_size = CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
+    if max_buffer_size is None or max_buffer_size <= 0:
+        return stream
+
+    async def yield_safe_stream_chunks():
+        buffer = b""
+        skip_mode = False
+
+        async for data, _ in stream.iter_chunks():
+            if not data:
+                continue
+
+            # In skip_mode, if buffer already exceeds the limit, clear it (it's part of an oversized line)
+            if skip_mode and len(buffer) > max_buffer_size:
+                buffer = b""
+
+            lines = (buffer + data).split(b"\n")
+
+            # Process complete lines (except the last possibly incomplete fragment)
+            for i in range(len(lines) - 1):
+                line = lines[i]
+
+                if skip_mode:
+                    # Skip mode: check if current line is small enough to exit skip mode
+                    if len(line) <= max_buffer_size:
+                        skip_mode = False
+                        yield line
+                    else:
+                        yield b"data: {}"
+                else:
+                    # Normal mode: check if line exceeds limit
+                    if len(line) > max_buffer_size:
+                        skip_mode = True
+                        yield b"data: {}"
+                        log.info(f"Skip mode triggered, line size: {len(line)}")
+                    else:
+                        yield line
+
+            # Save the last incomplete fragment
+            buffer = lines[-1]
+
+            # Check if buffer exceeds limit
+            if not skip_mode and len(buffer) > max_buffer_size:
+                skip_mode = True
+                log.info(f"Skip mode triggered, buffer size: {len(buffer)}")
+                # Clear oversized buffer to prevent unlimited growth
+                buffer = b""
+
+        # Process remaining buffer data
+        if buffer and not skip_mode:
+            yield buffer
+
+    return yield_safe_stream_chunks()

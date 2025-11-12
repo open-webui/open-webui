@@ -302,19 +302,23 @@ async def chat_completion_tools_handler(
     def get_tools_function_calling_payload(messages, task_model_id, content):
         user_message = get_last_user_message(messages)
 
+        if user_message and messages and messages[-1]["role"] == "user":
+            # Remove the last user message to avoid duplication
+            messages = messages[:-1]
+
         recent_messages = messages[-4:] if len(messages) > 4 else messages
         chat_history = "\n".join(
             f"{message['role'].upper()}: \"\"\"{get_content_from_message(message)}\"\"\""
             for message in recent_messages
         )
 
-        prompt = f"History:\n{chat_history}\nQuery: {user_message}"
+        prompt = f"History:\n{chat_history}\nQuery: {user_message}" if chat_history else f"Query: {user_message}"
 
         return {
             "model": task_model_id,
             "messages": [
                 {"role": "system", "content": content},
-                {"role": "user", "content": f"Query: {prompt}"},
+                {"role": "user", "content": prompt},
             ],
             "stream": False,
             "metadata": {"task": str(TASKS.FUNCTION_CALLING)},
@@ -2839,7 +2843,7 @@ async def process_chat_response(
                                     )
 
                                 else:
-                                    tool_function = await get_updated_tool_function(
+                                    tool_function = get_updated_tool_function(
                                         function=tool["callable"],
                                         extra_params={
                                             "__messages__": form_data.get(

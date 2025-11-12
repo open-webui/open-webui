@@ -282,6 +282,8 @@ async def connect(sid, environ, auth):
             else:
                 USER_POOL[user.id] = [sid]
 
+            await sio.enter_room(sid, f"user:{user.id}")
+
 
 @sio.on("user-join")
 async def user_join(sid, data):
@@ -304,6 +306,7 @@ async def user_join(sid, data):
     else:
         USER_POOL[user.id] = [sid]
 
+    await sio.enter_room(sid, f"user:{user.id}")
     # Join all the channels
     channels = Channels.get_channels_by_user_id(user.id)
     log.debug(f"{channels=}")
@@ -649,40 +652,24 @@ async def disconnect(sid):
 def get_event_emitter(request_info, update_db=True):
     async def __event_emitter__(event_data):
         user_id = request_info["user_id"]
+        chat_id = request_info["chat_id"]
+        message_id = request_info["message_id"]
 
-        session_ids = list(
-            set(
-                USER_POOL.get(user_id, [])
-                + (
-                    [request_info.get("session_id")]
-                    if request_info.get("session_id")
-                    else []
-                )
-            )
+        await sio.emit(
+            "events",
+            {
+                "chat_id": chat_id,
+                "message_id": message_id,
+                "data": event_data,
+            },
+            room=f"user:{user_id}",
         )
-
-        chat_id = request_info.get("chat_id", None)
-        message_id = request_info.get("message_id", None)
-
-        emit_tasks = [
-            sio.emit(
-                "events",
-                {
-                    "chat_id": chat_id,
-                    "message_id": message_id,
-                    "data": event_data,
-                },
-                to=session_id,
-            )
-            for session_id in session_ids
-        ]
-
-        await asyncio.gather(*emit_tasks)
         if (
             update_db
             and message_id
             and not request_info.get("chat_id", "").startswith("local:")
         ):
+
             if "type" in event_data and event_data["type"] == "status":
                 Chats.add_message_status_to_chat_by_id_and_message_id(
                     request_info["chat_id"],
@@ -772,7 +759,14 @@ def get_event_emitter(request_info, update_db=True):
                         },
                     )
 
-    return __event_emitter__
+    if (
+        "user_id" in request_info
+        and "chat_id" in request_info
+        and "message_id" in request_info
+    ):
+        return __event_emitter__
+    else:
+        return None
 
 
 def get_event_call(request_info):
@@ -788,7 +782,14 @@ def get_event_call(request_info):
         )
         return response
 
-    return __event_caller__
+    if (
+        "session_id" in request_info
+        and "chat_id" in request_info
+        and "message_id" in request_info
+    ):
+        return __event_caller__
+    else:
+        return None
 
 
 get_event_caller = get_event_call

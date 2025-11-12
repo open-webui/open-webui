@@ -570,6 +570,8 @@ OAUTH_BLOCKED_GROUPS = PersistentConfig(
     os.environ.get("OAUTH_BLOCKED_GROUPS", "[]"),
 )
 
+OAUTH_GROUPS_SEPARATOR = os.environ.get("OAUTH_GROUPS_SEPARATOR", ";")
+
 OAUTH_ROLES_CLAIM = PersistentConfig(
     "OAUTH_ROLES_CLAIM",
     "oauth.roles_claim",
@@ -1122,6 +1124,10 @@ ENABLE_LOGIN_FORM = PersistentConfig(
     os.environ.get("ENABLE_LOGIN_FORM", "True").lower() == "true",
 )
 
+ENABLE_PASSWORD_AUTH = (
+    os.environ.get("ENABLE_PASSWORD_AUTH", "True").lower()
+    == "true"
+)
 
 DEFAULT_LOCALE = PersistentConfig(
     "DEFAULT_LOCALE",
@@ -2782,10 +2788,6 @@ Provide a clear and direct response to the user's query, including inline citati
 <context>
 {{CONTEXT}}
 </context>
-
-<user_query>
-{{QUERY}}
-</user_query>
 """
 
 RAG_TEMPLATE = PersistentConfig(

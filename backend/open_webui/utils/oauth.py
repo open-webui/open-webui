@@ -42,6 +42,7 @@ from open_webui.config import (
     ENABLE_OAUTH_GROUP_MANAGEMENT,
     ENABLE_OAUTH_GROUP_CREATION,
     OAUTH_BLOCKED_GROUPS,
+    OAUTH_GROUPS_SEPARATOR,
     OAUTH_ROLES_CLAIM,
     OAUTH_SUB_CLAIM,
     OAUTH_GROUPS_CLAIM,
@@ -1035,7 +1036,11 @@ class OAuthManager:
             if isinstance(claim_data, list):
                 user_oauth_groups = claim_data
             elif isinstance(claim_data, str):
-                user_oauth_groups = [claim_data]
+                # Split by the configured separator if present
+                if OAUTH_GROUPS_SEPARATOR in claim_data:
+                    user_oauth_groups = claim_data.split(OAUTH_GROUPS_SEPARATOR)
+                else:
+                    user_oauth_groups = [claim_data]
             else:
                 user_oauth_groups = []
 

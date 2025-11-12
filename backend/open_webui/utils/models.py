@@ -12,6 +12,7 @@ from open_webui.functions import get_function_models
 
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
+from open_webui.models.groups import Groups
 
 
 from open_webui.utils.plugin import (
@@ -356,6 +357,7 @@ def get_filtered_models(models, user):
         or (user.role == "admin" and not BYPASS_ADMIN_ACCESS_CONTROL)
     ) and not BYPASS_MODEL_ACCESS_CONTROL:
         filtered_models = []
+        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
         for model in models:
             if model.get("arena"):
                 if has_access(
@@ -364,6 +366,7 @@ def get_filtered_models(models, user):
                     access_control=model.get("info", {})
                     .get("meta", {})
                     .get("access_control", {}),
+                    user_group_ids=user_group_ids,
                 ):
                     filtered_models.append(model)
                 continue
@@ -377,6 +380,7 @@ def get_filtered_models(models, user):
                         user.id,
                         type="read",
                         access_control=model_info.access_control,
+                        user_group_ids=user_group_ids,
                     )
                 ):
                     filtered_models.append(model)
