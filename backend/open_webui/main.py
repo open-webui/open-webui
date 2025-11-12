@@ -235,6 +235,7 @@ from open_webui.config import (
     RAG_ALLOWED_FILE_EXTENSIONS,
     RAG_FILE_MAX_COUNT,
     RAG_FILE_MAX_SIZE,
+    FILE_MAX_CHARS,
     FILE_IMAGE_COMPRESSION_WIDTH,
     FILE_IMAGE_COMPRESSION_HEIGHT,
     RAG_OPENAI_API_BASE_URL,
@@ -816,6 +817,9 @@ app.state.TOOL_CONTENTS = {}
 app.state.FUNCTIONS = {}
 app.state.FUNCTION_CONTENTS = {}
 
+# Character accumulator for file uploads (tracks total chars per user)
+app.state.user_char_accumulator = {}
+
 ########################################
 #
 # RETRIEVAL
@@ -832,6 +836,7 @@ app.state.config.HYBRID_BM25_WEIGHT = RAG_HYBRID_BM25_WEIGHT
 app.state.config.ALLOWED_FILE_EXTENSIONS = RAG_ALLOWED_FILE_EXTENSIONS
 app.state.config.FILE_MAX_SIZE = RAG_FILE_MAX_SIZE
 app.state.config.FILE_MAX_COUNT = RAG_FILE_MAX_COUNT
+app.state.config.FILE_MAX_CHARS = FILE_MAX_CHARS
 app.state.config.FILE_IMAGE_COMPRESSION_WIDTH = FILE_IMAGE_COMPRESSION_WIDTH
 app.state.config.FILE_IMAGE_COMPRESSION_HEIGHT = FILE_IMAGE_COMPRESSION_HEIGHT
 

@@ -2540,6 +2540,12 @@ RAG_FILE_MAX_SIZE = PersistentConfig(
     ),
 )
 
+FILE_MAX_CHARS = PersistentConfig(
+    "FILE_MAX_CHARS",
+    "rag.file.max_chars",
+    int(os.environ.get("FILE_MAX_CHARS", "0")),
+)
+
 FILE_IMAGE_COMPRESSION_WIDTH = PersistentConfig(
     "FILE_IMAGE_COMPRESSION_WIDTH",
     "file.image_compression_width",

@@ -41,9 +41,8 @@
 		getUserTimezone,
 		getWeekday
 	} from '$lib/utils';
-	import { uploadFile } from '$lib/apis/files';
+	import { uploadFile, validateAndAddFile, validateFilesTotal, deleteFileById } from '$lib/apis/files';
 	import { generateAutoCompletion } from '$lib/apis';
-	import { deleteFileById } from '$lib/apis/files';
 	import { getSessionUser } from '$lib/apis/auths';
 	import { getTools } from '$lib/apis/tools';
 
@@ -570,28 +569,76 @@
 				// During the file upload, file content is automatically extracted.
 				const uploadedFile = await uploadFile(localStorage.token, file, metadata);
 
-				if (uploadedFile) {
-					console.log('File upload completed:', {
-						id: uploadedFile.id,
-						name: fileItem.name,
-						collection: uploadedFile?.meta?.collection_name
-					});
-
-					if (uploadedFile.error) {
-						console.warn('File upload warning:', uploadedFile.error);
-						toast.warning(uploadedFile.error);
+			if (uploadedFile) {
+				if (uploadedFile.error) {
+					// Process and translate error message
+					let errorMessage = uploadedFile.error;
+					
+					// Check if it's a character limit error
+					const charLimitMatch = uploadedFile.error.match(/contains\s+([\d,]+)\s+characters.*maximum allowed is\s+([\d,]+)/);
+					const cumulativeLimitMatch = uploadedFile.error.match(/Combined files contain\s+([\d,]+)\s+characters.*maximum allowed is\s+([\d,]+)/);
+					const isCharLimitError = 
+						uploadedFile.error.includes('exceeds maximum character limit') ||
+						uploadedFile.error.includes('maximum allowed is');
+					
+					if (cumulativeLimitMatch) {
+						// Cumulative character limit error (total of all files)
+						const totalChars = cumulativeLimitMatch[1].replace(/,/g, '');
+						const maxChars = cumulativeLimitMatch[2].replace(/,/g, '');
+						errorMessage = $i18n.t('Total file content exceeds maximum character limit. Combined files contain {{totalChars}} characters, but maximum allowed is {{maxChars}} characters.', {
+							totalChars: parseInt(totalChars).toLocaleString(),
+							maxChars: parseInt(maxChars).toLocaleString()
+						});
+					} else if (charLimitMatch) {
+						// Individual file character limit error
+						const charCount = charLimitMatch[1].replace(/,/g, '');
+						const maxChars = charLimitMatch[2].replace(/,/g, '');
+						errorMessage = $i18n.t('File content exceeds maximum character limit. File contains {{charCount}} characters, but maximum allowed is {{maxChars}} characters.', {
+							charCount: parseInt(charCount).toLocaleString(),
+							maxChars: parseInt(maxChars).toLocaleString()
+						});
+					} else if (uploadedFile.error.includes('Timeout reached while detecting encoding')) {
+						errorMessage = $i18n.t('File processing timeout. The file encoding detection took too long. The file may still be usable.');
 					}
-
-					fileItem.status = 'uploaded';
-					fileItem.file = uploadedFile;
-					fileItem.id = uploadedFile.id;
-					fileItem.collection_name =
-						uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
-					fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
-
-					files = files;
+					
+					// Show error toast with translated message
+					toast.error(errorMessage);
+					
+					if (isCharLimitError) {
+						files = files.filter((item) => item?.itemId !== tempItemId);
+						return null; // Don't proceed with this file
+					} else {
+						const fileIndex = files.findIndex((item) => item?.itemId === tempItemId);
+						if (fileIndex !== -1) {
+							files[fileIndex].status = 'uploaded';
+							files[fileIndex].file = uploadedFile;
+							files[fileIndex].id = uploadedFile.id;
+							files[fileIndex].collection_name =
+								uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
+							files[fileIndex].url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+							files[fileIndex].error = uploadedFile.error; // Keep the error for display
+							// Trigger reactivity by reassigning
+							files = files;
+						}
+					}
+				} else {
+					// Update file item in place
+					const fileIndex = files.findIndex((item) => item?.itemId === tempItemId);
+					if (fileIndex !== -1) {
+						files[fileIndex].status = 'uploaded';
+						files[fileIndex].file = uploadedFile;
+						files[fileIndex].id = uploadedFile.id;
+						files[fileIndex].collection_name =
+							uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
+						files[fileIndex].url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+						files[fileIndex].error = ''; // Clear any previous error
+						// Trigger reactivity by reassigning
+						files = files;
+					}
+				}
 				} else {
 					files = files.filter((item) => item?.itemId !== tempItemId);
+					return null;
 				}
 			} catch (e) {
 				toast.error(`${e}`);
@@ -800,13 +847,45 @@
 					},
 
 					insertTextHandler: insertTextAtCursor,
-					onUpload: (e) => {
+					onUpload: async (e) => {
 						const { type, data } = e;
 
 						if (type === 'file') {
 							if (files.find((f) => f.id === data.id)) {
 								return;
 							}
+							
+							// Validate total if file was already processed (has id)
+							if (data.id) {
+								try {
+									// Collect all file IDs from current list + new file
+									const currentFileIds = files
+										.filter(f => f.id && f.type !== 'image')
+										.map(f => f.id);
+									const allFileIds = [...currentFileIds, data.id];
+									
+									// Validate total character count of all files
+									await validateFilesTotal(localStorage.token, allFileIds);
+								} catch (error) {
+									// Show error toast and don't add file to list
+									let errorMessage = typeof error === 'string' ? error : error?.detail || 'Error validating file';
+									
+									// Check if it's the cumulative character limit error and translate it
+									const cumulativeLimitMatch = errorMessage.match(/Combined files contain\s+([\d,]+)\s+characters.*maximum allowed is\s+([\d,]+)/);
+									if (cumulativeLimitMatch) {
+										const totalChars = cumulativeLimitMatch[1].replace(/,/g, '');
+										const maxChars = cumulativeLimitMatch[2].replace(/,/g, '');
+										errorMessage = $i18n.t('Total file content exceeds maximum character limit. Combined files contain {{totalChars}} characters, but maximum allowed is {{maxChars}} characters.', {
+											totalChars: parseInt(totalChars).toLocaleString(),
+											maxChars: parseInt(maxChars).toLocaleString()
+										});
+									}
+									
+									toast.error(errorMessage);
+									return;
+								}
+							}
+							
 							files = [
 								...files,
 								{
@@ -835,13 +914,45 @@
 					},
 
 					insertTextHandler: insertTextAtCursor,
-					onUpload: (e) => {
+					onUpload: async (e) => {
 						const { type, data } = e;
 
 						if (type === 'file') {
 							if (files.find((f) => f.id === data.id)) {
 								return;
 							}
+							
+							// Validate total if file was already processed (has id)
+							if (data.id) {
+								try {
+									// Collect all file IDs from current list + new file
+									const currentFileIds = files
+										.filter(f => f.id && f.type !== 'image')
+										.map(f => f.id);
+									const allFileIds = [...currentFileIds, data.id];
+									
+									// Validate total character count of all files
+									await validateFilesTotal(localStorage.token, allFileIds);
+								} catch (error) {
+									// Show error toast and don't add file to list
+									let errorMessage = typeof error === 'string' ? error : error?.detail || 'Error validating file';
+									
+									// Check if it's the cumulative character limit error and translate it
+									const cumulativeLimitMatch = errorMessage.match(/Combined files contain\s+([\d,]+)\s+characters.*maximum allowed is\s+([\d,]+)/);
+									if (cumulativeLimitMatch) {
+										const totalChars = cumulativeLimitMatch[1].replace(/,/g, '');
+										const maxChars = cumulativeLimitMatch[2].replace(/,/g, '');
+										errorMessage = $i18n.t('Total file content exceeds maximum character limit. Combined files contain {{totalChars}} characters, but maximum allowed is {{maxChars}} characters.', {
+											totalChars: parseInt(totalChars).toLocaleString(),
+											maxChars: parseInt(maxChars).toLocaleString()
+										});
+									}
+									
+									toast.error(errorMessage);
+									return;
+								}
+							}
+							
 							files = [
 								...files,
 								{
@@ -870,13 +981,45 @@
 					},
 
 					insertTextHandler: insertTextAtCursor,
-					onUpload: (e) => {
+					onUpload: async (e) => {
 						const { type, data } = e;
 
 						if (type === 'file') {
 							if (files.find((f) => f.id === data.id)) {
 								return;
 							}
+							
+							// Validate total if file was already processed (has id)
+							if (data.id) {
+								try {
+									// Collect all file IDs from current list + new file
+									const currentFileIds = files
+										.filter(f => f.id && f.type !== 'image')
+										.map(f => f.id);
+									const allFileIds = [...currentFileIds, data.id];
+									
+									// Validate total character count of all files
+									await validateFilesTotal(localStorage.token, allFileIds);
+								} catch (error) {
+									// Show error toast and don't add file to list
+									let errorMessage = typeof error === 'string' ? error : error?.detail || 'Error validating file';
+									
+									// Check if it's the cumulative character limit error and translate it
+									const cumulativeLimitMatch = errorMessage.match(/Combined files contain\s+([\d,]+)\s+characters.*maximum allowed is\s+([\d,]+)/);
+									if (cumulativeLimitMatch) {
+										const totalChars = cumulativeLimitMatch[1].replace(/,/g, '');
+										const maxChars = cumulativeLimitMatch[2].replace(/,/g, '');
+										errorMessage = $i18n.t('Total file content exceeds maximum character limit. Combined files contain {{totalChars}} characters, but maximum allowed is {{maxChars}} characters.', {
+											totalChars: parseInt(totalChars).toLocaleString(),
+											maxChars: parseInt(maxChars).toLocaleString()
+										});
+									}
+									
+									toast.error(errorMessage);
+									return;
+								}
+							}
+							
 							files = [
 								...files,
 								{
@@ -1140,7 +1283,15 @@
 															: 'outline-hidden focus:outline-hidden group-hover:visible invisible transition'}"
 														type="button"
 														aria-label={$i18n.t('Remove file')}
-														on:click={() => {
+														on:click={async () => {
+															// If file was already processed (has id), delete from backend to update accumulator
+															if (file.id) {
+																try {
+																	await deleteFileById(localStorage.token, file.id);
+																} catch (e) {
+																	console.error(`Error deleting file ${file.id}:`, e);
+																}
+															}
 															files.splice(fileIdx, 1);
 															files = files;
 														}}
@@ -1171,6 +1322,14 @@
 												small={true}
 												modal={['file', 'collection'].includes(file?.type)}
 												on:dismiss={async () => {
+													// If file was already processed (has id), delete from backend to update accumulator
+													if (file.id) {
+														try {
+															await deleteFileById(localStorage.token, file.id);
+														} catch (e) {
+															console.error(`Error deleting file ${file.id}:`, e);
+														}
+													}
 													// Remove from UI state
 													files.splice(fileIdx, 1);
 													files = files;

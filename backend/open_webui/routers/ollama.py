@@ -1309,6 +1309,12 @@ async def generate_chat_completion(
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 
+    # Reset character accumulator when message is sent (files are being used in chat)
+    if hasattr(request.app.state, "user_char_accumulator"):
+        if user.id in request.app.state.user_char_accumulator:
+            log.debug(f"Resetting character accumulator for user {user.id} (message sent)")
+            request.app.state.user_char_accumulator[user.id] = 0
+
     metadata = form_data.pop("metadata", None)
     try:
         form_data = GenerateChatCompletionForm(**form_data)

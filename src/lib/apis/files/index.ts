@@ -35,44 +35,41 @@ export const uploadFile = async (token: string, file: File, metadata?: object | 
 	if (res) {
 		const status = await getFileProcessStatus(token, res.id);
 
-		if (status && status.ok) {
+		if (status && status.ok && status.body) {
 			const reader = status.body
 				.pipeThrough(new TextDecoderStream())
 				.pipeThrough(splitStream('\n'))
 				.getReader();
 
+			// eslint-disable-next-line no-constant-condition
 			while (true) {
 				const { value, done } = await reader.read();
 				if (done) {
 					break;
 				}
 
-				try {
-					let lines = value.split('\n');
+			try {
+				const lines = value.split('\n');
 
-					for (const line of lines) {
-						if (line !== '') {
-							console.log(line);
-							if (line === 'data: [DONE]') {
-								console.log(line);
-							} else {
-								let data = JSON.parse(line.replace(/^data: /, ''));
-								console.log(data);
+			for (const line of lines) {
+				if (line !== '') {
+					if (line !== 'data: [DONE]') {
+						const data = JSON.parse(line.replace(/^data: /, ''));
 
-								if (data?.error) {
-									console.error(data.error);
-									res.error = data.error;
-								}
-
-								if (res?.data) {
-									res.data = data;
-								}
-							}
+						// Check for error in stream (either explicit error field or failed status)
+						if (data?.error) {
+							console.error('File upload error:', data.error);
+							res.error = data.error;
+						} else if (data?.status === 'failed' && !res.error) {
+							// If status is failed but no explicit error, use a default message
+							res.error = 'File processing failed';
 						}
 					}
-				} catch (error) {
-					console.log(error);
 				}
+			}
+			} catch (error) {
+				console.log(error);
+			}
 			}
 		}
 	}
@@ -278,6 +275,69 @@ export const deleteFileById = async (token: string, id: string) => {
 		})
 		.catch((err) => {
 			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const validateFilesTotal = async (token: string, fileIds: string[]) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/files/validate-total`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ file_ids: fileIds })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail || err.message || 'Error validating files';
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const validateAndAddFile = async (token: string, id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/files/${id}/validate-add`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail || err.message || 'Error validating file';
 			console.error(err);
 			return null;
 		});

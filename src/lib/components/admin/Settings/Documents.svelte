@@ -1389,29 +1389,52 @@
 						</div>
 					</div>
 
-					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Max Upload Count')}</div>
-						<div class="flex items-center relative">
-							<Tooltip
-								content={$i18n.t(
-									'The maximum number of files that can be used at once in chat. If the number of files exceeds this limit, the files will not be uploaded.'
-								)}
-								placement="top-start"
-							>
-								<input
-									class="flex-1 w-full text-sm bg-transparent outline-hidden"
-									type="number"
-									placeholder={$i18n.t('Leave empty for unlimited')}
-									bind:value={RAGConfig.FILE_MAX_COUNT}
-									autocomplete="off"
-									min="0"
-								/>
-							</Tooltip>
-						</div>
+				<div class="  mb-2.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">{$i18n.t('Max Upload Count')}</div>
+					<div class="flex items-center relative">
+						<Tooltip
+							content={$i18n.t(
+								'The maximum number of files that can be used at once in chat. If the number of files exceeds this limit, the files will not be uploaded.'
+							)}
+							placement="top-start"
+						>
+							<input
+								class="flex-1 w-full text-sm bg-transparent outline-hidden"
+								type="number"
+								placeholder={$i18n.t('Leave empty for unlimited')}
+								bind:value={RAGConfig.FILE_MAX_COUNT}
+								autocomplete="off"
+								min="0"
+							/>
+						</Tooltip>
 					</div>
+				</div>
 
-					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Image Compression Width')}</div>
+				<div class="  mb-2.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Max File Characters')}
+					</div>
+					<div class="flex items-center relative">
+						<Tooltip
+							content={$i18n.t(
+								'The maximum total number of characters allowed across all files in a chat session. The system validates the sum of all uploaded files, not individual files. If the combined content exceeds this limit, the last file that causes the overflow will be rejected. Leave empty or set to 0 for unlimited.'
+							)}
+							placement="top-start"
+						>
+							<input
+								class="flex-1 w-full text-sm bg-transparent outline-hidden"
+								type="number"
+								placeholder={$i18n.t('Leave empty for unlimited')}
+								bind:value={RAGConfig.FILE_MAX_CHARS}
+								autocomplete="off"
+								min="0"
+							/>
+						</Tooltip>
+					</div>
+				</div>
+
+				<div class="  mb-2.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">{$i18n.t('Image Compression Width')}</div>
 						<div class="flex items-center relative">
 							<Tooltip
 								content={$i18n.t(

@@ -1620,11 +1620,24 @@
 		const messages = createMessagesList(history, history.currentId);
 		const _files = JSON.parse(JSON.stringify(files));
 
-		chatFiles.push(
-			..._files.filter((item) =>
-				['doc', 'text', 'file', 'note', 'chat', 'folder', 'collection'].includes(item.type)
-			)
-		);
+		// Filter out files with errors or invalid status
+		const validFiles = _files.filter((item) => {
+			// Only include valid file types
+			if (!['doc', 'text', 'file', 'note', 'chat', 'folder', 'collection'].includes(item.type)) {
+				return false;
+			}
+			// Exclude files with errors
+			if (item.error) {
+				return false;
+			}
+			// Exclude files that failed to upload (status should be 'uploaded' for non-image files)
+			if (item.type !== 'image' && item.status !== 'uploaded' && item.status !== 'completed') {
+				return false;
+			}
+			return true;
+		});
+
+		chatFiles.push(...validFiles);
 		chatFiles = chatFiles.filter(
 			// Remove duplicates
 			(item, index, array) =>
