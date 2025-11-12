@@ -71,6 +71,7 @@ def get_loader(request, url: str):
             url,
             verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
             requests_per_second=request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
+            trust_env=request.app.state.config.WEB_SEARCH_TRUST_ENV,
         )
 
 
@@ -159,10 +160,18 @@ def query_doc_with_hybrid_search(
     hybrid_bm25_weight: float,
 ) -> dict:
     try:
+        # First check if collection_result has the required attributes
         if (
             not collection_result
             or not hasattr(collection_result, "documents")
-            or not collection_result.documents
+            or not hasattr(collection_result, "metadatas")
+        ):
+            log.warning(f"query_doc_with_hybrid_search:no_docs {collection_name}")
+            return {"documents": [], "metadatas": [], "distances": []}
+
+        # Now safely check the documents content after confirming attributes exist
+        if (
+            not collection_result.documents
             or len(collection_result.documents) == 0
             or not collection_result.documents[0]
         ):
@@ -507,11 +516,13 @@ def get_reranking_function(reranking_engine, reranking_model, reranking_function
     if reranking_function is None:
         return None
     if reranking_engine == "external":
-        return lambda sentences, user=None: reranking_function.predict(
-            sentences, user=user
+        return lambda query, documents, user=None: reranking_function.predict(
+            [(query, doc.page_content) for doc in documents], user=user
         )
     else:
-        return lambda sentences, user=None: reranking_function.predict(sentences)
+        return lambda query, documents, user=None: reranking_function.predict(
+            [(query, doc.page_content) for doc in documents]
+        )
 
 
 def get_sources_from_items(
@@ -1055,9 +1066,7 @@ class RerankCompressor(BaseDocumentCompressor):
 
         scores = None
         if reranking:
-            scores = self.reranking_function(
-                [(query, doc.page_content) for doc in documents]
-            )
+            scores = self.reranking_function(query, documents)
         else:
             from sentence_transformers import util
 

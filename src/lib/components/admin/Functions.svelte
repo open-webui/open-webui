@@ -158,6 +158,7 @@
 
 		if (res) {
 			toast.success($i18n.t('Function deleted successfully'));
+			functions = functions.filter((f) => f.id !== func.id);
 
 			_functions.set(await getFunctions(localStorage.token));
 			models.set(

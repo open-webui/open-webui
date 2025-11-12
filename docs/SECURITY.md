@@ -57,22 +57,28 @@ We appreciate the community's interest in identifying potential vulnerabilities.
 > [!NOTE]  
 > **Note**: If you believe you have found a security issue that
 >
-> 1. affects default configurations **or**
-> 2. represents a genuine bypass of intended security controls **or**
-> 3. works only with non-default configurations **but the configuration in question is likely to be used by production deployments** > **then we absolutely want to hear about it.** This policy is intended to filter configuration issues and deployment problems, not to discourage legitimate security research.
+> 1. affects default configurations, **or**
+> 2. represents a genuine bypass of intended security controls, **or**
+> 3. works only with non-default configurations, **but the configuration in question is likely to be used by production deployments**, **then we absolutely want to hear about it.** This policy is intended to filter configuration issues and deployment problems, not to discourage legitimate security research.
 
 8. **Threat Model Understanding Required**: Reports must demonstrate understanding of Open WebUI's self-hosted, authenticated, role-based access control architecture. Comparing Open WebUI to services with fundamentally different security models without acknowledging the architectural differences may result in report rejection.
 
 9. **CVSS Scoring Accuracy:** If you include a CVSS score with your report, it must accurately reflect the vulnerability according to CVSS methodology. Common errors include 1) rating PR:N (None) when authentication is required, 2) scoring hypothetical attack chains instead of the actual vulnerability, or 3) inflating severity without evidence. **We will adjust inaccurate CVSS scores.** Intentionally inflated scores may result in report rejection.
 
-> [!WARNING] > **Using CVE Precedents:** If you cite other CVEs to support your report, ensure they are **genuinely comparable** in vulnerability type, threat model, and attack vector. Citing CVEs from different product categories, different vulnerability classes or different deployment models will lead us to suspect the use of AI in your report.
+> [!WARNING]
+>
+> **Using CVE Precedents:** If you cite other CVEs to support your report, ensure they are **genuinely comparable** in vulnerability type, threat model, and attack vector. Citing CVEs from different product categories, different vulnerability classes or different deployment models will lead us to suspect the use of AI in your report.
 
-11. **Admin Actions Are Out of Scope:** Vulnerabilities that require an administrator to actively perform unsafe actions are **not considered valid vulnerabilities**. Admins have full system control and are expected to understand the security implications of their actions and configurations. This includes but is not limited to: adding malicious external servers (models, tools, webhooks), pasting untrusted code into Functions/Tools, or intentionally weakening security settings. **Reports requiring admin negligence or social engineering of admins may be rejected.**
-
-12. **AI report transparency:** Due to an extreme spike in AI-aided vulnerability reports **YOU MUST DISCLOSE if AI was used in any capacity** - whether for writing the report, generating the PoC, or identifying the vulnerability. If AI helped you in any way shape or form in the creation of the report, PoC or finding the vulnerability, you MUST disclose it.
+10. **Admin Actions Are Out of Scope:** Vulnerabilities that require an administrator to actively perform unsafe actions are **not considered valid vulnerabilities**. Admins have full system control and are expected to understand the security implications of their actions and configurations. This includes but is not limited to: adding malicious external servers (models, tools, webhooks), pasting untrusted code into Functions/Tools, or intentionally weakening security settings. **Reports requiring admin negligence or social engineering of admins may be rejected.**
 
 > [!NOTE]
-> AI-aided vulnerability reports **will not be rejected by us by default.** But:
+> Similar to rule "Default Configuration Testing": If you believe you have found a vulnerability that affects admins and is NOT caused by admin negligence or intentionally malicious actions,
+> **then we absolutely want to hear about it.** This policy is intended to filter social engineering attacks on admins, malicious plugins being deployed by admins and similar malicious actions, not to discourage legitimate security research.
+
+11. **AI report transparency:** Due to an extreme spike in AI-aided vulnerability reports **YOU MUST DISCLOSE if AI was used in any capacity** - whether for writing the report, generating the PoC, or identifying the vulnerability. If AI helped you in any way shape or form in the creation of the report, PoC or finding the vulnerability, you MUST disclose it.
+
+> [!NOTE]
+> AI-aided vulnerability reports **will not be rejected by us by default**. But:
 >
 > - If we suspect you used AI (but you did not disclose it to us), we will be asking tough follow-up questions to validate your understanding of the reported vulnerability and Open WebUI itself.
 > - If we suspect you used AI (but you did not disclose it to us) **and** your report ends up being invalid/not a vulnerability/not reproducible, then you **may be banned** from reporting future vulnerabilities.
@@ -94,7 +100,7 @@ We appreciate the community's interest in identifying potential vulnerabilities.
 If you want to report a vulnerability and can meet the outlined requirements, [open a vulnerability report here](https://github.com/open-webui/open-webui/security/advisories/new).
 If you feel like you are not able to follow ALL outlined requirements for vulnerability-specific reasons, still do report it, we will check every report either way.
 
-## Product Security And For Non-Vulnerability Security Concerns:
+## Product Security And For Non-Vulnerability Related Security Concerns:
 
 If your concern does not meet the vulnerability requirements outlined above, is not a vulnerability, **but is still related to security concerns**, then use the following channels instead:
 
@@ -121,4 +127,4 @@ For any other immediate concerns, please create an issue in our [issue tracker](
 
 ---
 
-_Last updated on **2025-10-17**._
+_Last updated on **2025-11-06**._

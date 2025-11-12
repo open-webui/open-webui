@@ -16,6 +16,8 @@ from typing import (
     Union,
     Literal,
 )
+
+from fastapi.concurrency import run_in_threadpool
 import aiohttp
 import certifi
 import validators
@@ -39,7 +41,6 @@ from open_webui.config import (
 )
 from open_webui.env import SRC_LOG_LEVELS
 
-from firecrawl import Firecrawl
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -142,13 +143,13 @@ class RateLimitMixin:
 
 
 class URLProcessingMixin:
-    def _verify_ssl_cert(self, url: str) -> bool:
+    async def _verify_ssl_cert(self, url: str) -> bool:
         """Verify SSL certificate for a URL."""
-        return verify_ssl_cert(url)
+        return await run_in_threadpool(verify_ssl_cert, url)
 
     async def _safe_process_url(self, url: str) -> bool:
         """Perform safety checks before processing a URL."""
-        if self.verify_ssl and not self._verify_ssl_cert(url):
+        if self.verify_ssl and not await self._verify_ssl_cert(url):
             raise ValueError(f"SSL certificate verification failed for {url}")
         await self._wait_for_rate_limit()
         return True
@@ -225,7 +226,9 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
             self.params,
         )
         try:
-            firecrawl = Firecrawl(api_key=self.api_key, api_url=self.api_url)
+            from firecrawl import FirecrawlApp
+
+            firecrawl = FirecrawlApp(api_key=self.api_key, api_url=self.api_url)
             result = firecrawl.batch_scrape(
                 self.web_paths,
                 formats=["markdown"],
@@ -264,7 +267,9 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
             self.params,
         )
         try:
-            firecrawl = Firecrawl(api_key=self.api_key, api_url=self.api_url)
+            from firecrawl import FirecrawlApp
+
+            firecrawl = FirecrawlApp(api_key=self.api_key, api_url=self.api_url)
             result = firecrawl.batch_scrape(
                 self.web_paths,
                 formats=["markdown"],

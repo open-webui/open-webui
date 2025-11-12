@@ -183,6 +183,7 @@
 		console.log('initChatList');
 		currentChatPage.set(1);
 		allChatsLoaded = false;
+		scrollPaginationEnabled.set(false);
 
 		initFolders();
 		await Promise.all([
@@ -367,10 +368,6 @@
 					if (navElement) {
 						navElement.style['-webkit-app-region'] = 'drag';
 					}
-				}
-
-				if (!$showSidebar && !value) {
-					showSidebar.set(true);
 				}
 			}),
 			showSidebar.subscribe(async (value) => {
@@ -751,7 +748,10 @@
 				</a>
 
 				<a href="/" class="flex flex-1 px-1.5" on:click={newChatHandler}>
-					<div class=" self-center font-medium text-gray-850 dark:text-white font-primary">
+					<div
+						id="sidebar-webui-name"
+						class=" self-center font-medium text-gray-850 dark:text-white font-primary"
+					>
 						{$WEBUI_NAME}
 					</div>
 				</a>

@@ -98,6 +98,12 @@ class FileForm(BaseModel):
     access_control: Optional[dict] = None
 
 
+class FileUpdateForm(BaseModel):
+    hash: Optional[str] = None
+    data: Optional[dict] = None
+    meta: Optional[dict] = None
+
+
 class FilesTable:
     def insert_new_file(self, user_id: str, form_data: FileForm) -> Optional[FileModel]:
         with get_db() as db:
@@ -203,6 +209,29 @@ class FilesTable:
                 FileModel.model_validate(file)
                 for file in db.query(File).filter_by(user_id=user_id).all()
             ]
+
+    def update_file_by_id(
+        self, id: str, form_data: FileUpdateForm
+    ) -> Optional[FileModel]:
+        with get_db() as db:
+            try:
+                file = db.query(File).filter_by(id=id).first()
+
+                if form_data.hash is not None:
+                    file.hash = form_data.hash
+
+                if form_data.data is not None:
+                    file.data = {**(file.data if file.data else {}), **form_data.data}
+
+                if form_data.meta is not None:
+                    file.meta = {**(file.meta if file.meta else {}), **form_data.meta}
+
+                file.updated_at = int(time.time())
+                db.commit()
+                return FileModel.model_validate(file)
+            except Exception as e:
+                log.exception(f"Error updating file completely by id: {e}")
+                return None
 
     def update_file_hash_by_id(self, id: str, hash: str) -> Optional[FileModel]:
         with get_db() as db:
