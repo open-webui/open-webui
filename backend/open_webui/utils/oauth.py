@@ -1224,8 +1224,15 @@ class OAuthManager:
         error_message = None
         try:
             client = self.get_client(provider)
+            token_params = {}
+            if (
+                client
+                and hasattr(client, "client_id")
+            ):
+                token_params["client_id"] = client.client_id
+
             try:
-                token = await client.authorize_access_token(request)
+                token = await client.authorize_access_token(request, **token_params)
             except Exception as e:
                 detailed_error = _build_oauth_callback_error_message(e)
                 log.warning(
