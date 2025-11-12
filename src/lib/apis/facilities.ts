@@ -91,8 +91,9 @@ export const getFacilitiesSections = async (
 export const downloadFacilitiesDocument = async (
 	token: string,
 	sections: Record<string, string>,
-	format: 'pdf' | 'word',
-	filename: string
+	format: 'pdf' | 'doc',
+	filename: string,
+	removeCitations: boolean = false
 ): Promise<void> => {
 	try {
 		const response = await fetch(`${WEBUI_API_BASE_URL}/facilities/download`, {
@@ -103,7 +104,9 @@ export const downloadFacilitiesDocument = async (
 			},
 			body: JSON.stringify({
 				sections: sections,
-				format: format
+				format: format,
+				filename: filename,
+				remove_citations: removeCitations
 			})
 		});
 
@@ -112,22 +115,19 @@ export const downloadFacilitiesDocument = async (
 			throw new Error(errorData.detail || 'Failed to download document');
 		}
 
-		const blob = await response.blob();
+	const blob = await response.blob();
 
-		const url = window.URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		a.href = url;
-		
-		// Add timestamp to filename
-		const now = new Date();
-		const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
-		const extension = format === 'pdf' ? 'pdf' : 'docx';
-		a.download = `${filename}_${timestamp}.${extension}`;
+	const url = window.URL.createObjectURL(blob);
+	const a = document.createElement('a');
+	a.href = url;
+	
+	const extension = format === 'pdf' ? 'pdf' : format === 'doc' ? 'docx' : 'pdf';
+	a.download = `${filename}.${extension}`;
 
-		document.body.appendChild(a);
-		a.click();
-		document.body.removeChild(a);
-		window.URL.revokeObjectURL(url);
+	document.body.appendChild(a);
+	a.click();
+	document.body.removeChild(a);
+	window.URL.revokeObjectURL(url);
 	} catch (error: any) {
 		console.error('Error downloading facilities document:', error);
 		throw error;
