@@ -1,10 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(tree:*)",
-      "Bash(node:*)",
-      "Bash(npm --version:*)",
-      "Bash(test:*)"
+      "Bash(tree:*)"
     ],
     "deny": [],
     "ask": []
