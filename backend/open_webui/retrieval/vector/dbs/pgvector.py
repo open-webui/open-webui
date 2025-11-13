@@ -191,10 +191,8 @@ class PgvectorClient(VectorDBBase):
             return None
 
     def _vector_index_configuration(self) -> Tuple[str, str]:
-        forced_method = (PGVECTOR_INDEX_METHOD or "").strip().lower()
-
-        if forced_method:
-            index_method = forced_method
+        if PGVECTOR_INDEX_METHOD:
+            index_method = PGVECTOR_INDEX_METHOD
             log.info(
                 "Using vector index method '%s' from PGVECTOR_INDEX_METHOD.",
                 index_method,
@@ -209,12 +207,11 @@ class PgvectorClient(VectorDBBase):
             index_method = "ivfflat"
 
         if index_method == "hnsw":
-            m = PGVECTOR_HNSW_M
-            ef_construction = PGVECTOR_HNSW_EF_CONSTRUCTION
-            index_options = f"WITH (m = {m}, ef_construction = {ef_construction})"
+            index_options = (
+                f"WITH (m = {PGVECTOR_HNSW_M}, ef_construction = {PGVECTOR_HNSW_EF_CONSTRUCTION})"
+            )
         else:
-            lists = PGVECTOR_IVFFLAT_LISTS
-            index_options = f"WITH (lists = {lists})"
+            index_options = f"WITH (lists = {PGVECTOR_IVFFLAT_LISTS})"
 
         return index_method, index_options
 
