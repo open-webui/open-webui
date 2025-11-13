@@ -1374,6 +1374,117 @@ def save_docs_to_vector_db(
             # Flatten results
             docs = [chunk for doc_results in doc_chunks for chunk in doc_results]
 
+            # Apply minimum chunk length merging
+            min_size = request.app.state.config.CHUNK_MIN_SIZE
+            min_tokens = request.app.state.config.CHUNK_MIN_TOKENS
+            max_size = request.app.state.config.CHUNK_SIZE
+            
+            if request.app.state.config.TEXT_SPLITTER == "token":
+                # Token mode: use min_tokens and tiktoken for measurement
+                if min_tokens > 0:
+                    tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
+                    encoding = tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
+                    
+                    merged_docs = []
+                    i = 0
+                    while i < len(docs):
+                        current_doc = docs[i]
+                        current_tokens = len(encoding.encode(current_doc.page_content))
+                        
+                        # If chunk meets minimum, keep it as is
+                        if current_tokens >= min_tokens:
+                            merged_docs.append(current_doc)
+                            i += 1
+                            continue
+                        
+                        # Merge with subsequent chunks
+                        combined_content = current_doc.page_content
+                        combined_headings = list(current_doc.metadata.get("headings", []))
+                        j = i + 1
+                        
+                        while j < len(docs):
+                            next_content = docs[j].page_content
+                            next_headings = docs[j].metadata.get("headings", [])
+                            
+                            # Check if adding next chunk would exceed max
+                            test_content = combined_content + "\n\n" + next_content
+                            test_tokens = len(encoding.encode(test_content))
+                            
+                            if test_tokens > max_size:
+                                # Stop merging, use what we have even if below minimum
+                                break
+                            
+                            # Add the chunk
+                            combined_content = test_content
+                            combined_headings.extend(next_headings)
+                            j += 1
+                            
+                            # Check if we've met the minimum
+                            if test_tokens >= min_tokens:
+                                break
+                        
+                        # Create merged document with first chunk's metadata
+                        merged_docs.append(
+                            Document(
+                                page_content=combined_content,
+                                metadata={**current_doc.metadata, "headings": combined_headings},
+                            )
+                        )
+                        i = j
+                    
+                    docs = merged_docs
+            else:
+                # Character mode: use min_size and len() for measurement
+                if min_size > 0:
+                    merged_docs = []
+                    i = 0
+                    while i < len(docs):
+                        current_doc = docs[i]
+                        current_length = len(current_doc.page_content)
+                        
+                        # If chunk meets minimum, keep it as is
+                        if current_length >= min_size:
+                            merged_docs.append(current_doc)
+                            i += 1
+                            continue
+                        
+                        # Merge with subsequent chunks
+                        combined_content = current_doc.page_content
+                        combined_headings = list(current_doc.metadata.get("headings", []))
+                        j = i + 1
+                        
+                        while j < len(docs):
+                            next_content = docs[j].page_content
+                            next_headings = docs[j].metadata.get("headings", [])
+                            
+                            # Check if adding next chunk would exceed max
+                            test_content = combined_content + "\n\n" + next_content
+                            test_length = len(test_content)
+                            
+                            if test_length > max_size:
+                                # Stop merging, use what we have even if below minimum
+                                break
+                            
+                            # Add the chunk
+                            combined_content = test_content
+                            combined_headings.extend(next_headings)
+                            j += 1
+                            
+                            # Check if we've met the minimum
+                            if test_length >= min_size:
+                                break
+                        
+                        # Create merged document with first chunk's metadata
+                        merged_docs.append(
+                            Document(
+                                page_content=combined_content,
+                                metadata={**current_doc.metadata, "headings": combined_headings},
+                            )
+                        )
+                        i = j
+                    
+                    docs = merged_docs
+
         # Stage 2: Apply character or token splitting
         if request.app.state.config.TEXT_SPLITTER == "token":
             log.info(f"Using token text splitter: {request.app.state.config.TIKTOKEN_ENCODING_NAME}")
