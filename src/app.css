@@ -778,3 +778,57 @@ body {
 	position: relative;
 	z-index: 0;
 }
+/* ========================================
+   Fix for #5975: Conversation bubble width jumping with YAML/code blocks
+   ======================================== */
+
+/* Ensure consistent bubble width in widescreen + chat bubble mode */
+.widescreen .message-content,
+.widescreen .chat-bubble {
+  max-width: min(100%, 1200px) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Prevent code blocks from causing layout shifts */
+.widescreen .message-content pre,
+.widescreen .message-content code {
+  contain: layout style paint;
+  max-width: 100%;
+  overflow-x: auto;
+  box-sizing: border-box;
+  /* GPU acceleration to prevent layout thrashing during scroll */
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Lock code block container dimensions */
+.widescreen .code-block-container,
+.widescreen .codeblock {
+  width: 100%;
+  contain: layout style paint;
+  overflow: hidden;
+}
+
+/* Prevent YAML highlighting from triggering reflows */
+.widescreen .hljs,
+.widescreen .language-yaml,
+.widescreen .language-yml {
+  display: block;
+  width: 100%;
+  min-height: 1em;
+}
+
+/* Chat bubble specific fixes */
+.widescreen.chat-bubble-mode .message {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Ensure message wrapper doesn't grow/shrink */
+.widescreen .message-wrapper {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}

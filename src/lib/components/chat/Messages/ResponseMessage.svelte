@@ -1491,4 +1491,43 @@
 		-ms-overflow-style: none; /* IE and Edge */
 		scrollbar-width: none; /* Firefox */
 	}
+	/* Fix for conversation bubble width jumping with code blocks in widescreen mode */
+	.chat-bubble-wrapper {
+	/* Ensure consistent width calculation */
+	width: 100%;
+	max-width: 100%;
+	box-sizing: border-box;
+	}
+
+	.chat-bubble-wrapper.widescreen-mode {
+	/* Lock the width when in widescreen mode */
+	max-width: var(--widescreen-max-width, 1200px);
+	margin: 0 auto;
+	}
+
+	.chat-bubble-wrapper pre,
+	.chat-bubble-wrapper code {
+	/* Prevent code blocks from forcing bubble resize */
+	max-width: 100%;
+	overflow-x: auto;
+	box-sizing: border-box;
+	/* Force GPU acceleration to prevent layout thrashing */
+	transform: translateZ(0);
+	will-change: transform;
+	}
+
+	.chat-bubble-wrapper .code-block-container {
+	/* Contain layout changes within code block */
+	contain: layout style paint;
+	width: 100%;
+	overflow: hidden;
+	}
+
+	/* Prevent layout shift during syntax highlighting */
+	.chat-bubble-wrapper .hljs {
+	display: block;
+	width: 100%;
+	min-height: 1em; /* Prevent collapse before highlighting */
+	}
+	
 </style>
