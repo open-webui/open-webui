@@ -212,6 +212,18 @@
 			await embeddingModelUpdateHandler();
 		}
 
+		if (RAGConfig.DOCLING_PARAMS) {
+			try {
+				JSON.parse(RAGConfig.DOCLING_PARAMS);
+			} catch (e) {
+				toast.error(
+					$i18n.t('Invalid JSON format in {{NAME}}', {
+						NAME: $i18n.t('Docling Parameters')
+					})
+				);
+				return;
+			}
+		}
 		if (RAGConfig.MINERU_PARAMS) {
 			try {
 				JSON.parse(RAGConfig.MINERU_PARAMS);
@@ -232,6 +244,10 @@
 			DOCLING_PICTURE_DESCRIPTION_API: JSON.parse(
 				RAGConfig.DOCLING_PICTURE_DESCRIPTION_API || '{}'
 			),
+			DOCLING_PARAMS:
+				typeof RAGConfig.DOCLING_PARAMS === 'string' && RAGConfig.DOCLING_PARAMS.trim() !== ''
+					? JSON.parse(RAGConfig.DOCLING_PARAMS)
+					: {},
 			MINERU_PARAMS:
 				typeof RAGConfig.MINERU_PARAMS === 'string' && RAGConfig.MINERU_PARAMS.trim() !== ''
 					? JSON.parse(RAGConfig.MINERU_PARAMS)
@@ -275,6 +291,10 @@
 			null,
 			2
 		);
+		config.DOCLING_PARAMS =
+			typeof config.DOCLING_PARAMS === 'object'
+				? JSON.stringify(config.DOCLING_PARAMS ?? {}, null, 2)
+				: config.DOCLING_PARAMS;
 
 		config.MINERU_PARAMS =
 			typeof config.MINERU_PARAMS === 'object'
