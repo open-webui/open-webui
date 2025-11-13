@@ -26,6 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 import tiktoken
+from concurrent.futures import ThreadPoolExecutor
 
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
@@ -1331,10 +1332,9 @@ def save_docs_to_vector_db(
                 log.info(f"Document with hash {metadata['hash']} already exists")
                 raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
-    if split:
         # Stage 1: Optional markdown header preprocessing
         if request.app.state.config.ENABLE_MARKDOWN_HEADER_SPLITTING:
-            log.info("Applying markdown header preprocessing")
+            log.info("Applying markdown header preprocessing (parallel)")
             headers_to_split_on = [
                 ("#", "Header 1"),
                 ("##", "Header 2"),
@@ -1349,9 +1349,10 @@ def save_docs_to_vector_db(
                 strip_headers=False,
             )
 
-            md_preprocessed_docs = []
-            for doc in docs:
+            def process_single_doc_markdown(doc):
+                """Process one document's markdown headers in parallel"""
                 md_header_splits = markdown_splitter.split_text(doc.page_content)
+                results = []
                 # Preserve original metadata and add headings
                 for split_chunk in md_header_splits:
                     headings_list = []
@@ -1359,13 +1360,19 @@ def save_docs_to_vector_db(
                         if header_meta_key_name in split_chunk.metadata:
                             headings_list.append(split_chunk.metadata[header_meta_key_name])
 
-                    md_preprocessed_docs.append(
+                    results.append(
                         Document(
                             page_content=split_chunk.page_content,
                             metadata={**doc.metadata, "headings": headings_list},
                         )
                     )
-            docs = md_preprocessed_docs
+                return results
+
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                doc_chunks = list(executor.map(process_single_doc_markdown, docs))
+            
+            # Flatten results
+            docs = [chunk for doc_results in doc_chunks for chunk in doc_results]
 
         # Stage 2: Apply character or token splitting
         if request.app.state.config.TEXT_SPLITTER == "token":
