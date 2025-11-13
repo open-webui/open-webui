@@ -999,7 +999,11 @@ def count_old_chats(
     return count
 
 
-def count_orphaned_records(form_data: PruneDataForm) -> dict:
+def count_orphaned_records(
+    form_data: PruneDataForm,
+    active_file_ids: Set[str],
+    active_user_ids: Set[str]
+) -> dict:
     """Count orphaned database records that would be deleted."""
     counts = {
         "chats": 0,
@@ -1014,12 +1018,6 @@ def count_orphaned_records(form_data: PruneDataForm) -> dict:
     }
 
     try:
-        # Get active user IDs
-        active_user_ids = {user.id for user in Users.get_users()["users"]}
-
-        # Get active file IDs for file orphan detection
-        active_file_ids = get_active_file_ids()
-
         # Count orphaned files
         for file_record in Files.get_files():
             should_delete = (
@@ -1415,10 +1413,11 @@ def cleanup_audio_cache(max_age_days: Optional[int] = 30) -> None:
                 if not file_path.is_file():
                     continue
 
-                file_mtime = file_path.stat().st_mtime
+                stat_info = file_path.stat()
+                file_mtime = stat_info.st_mtime
                 if file_mtime < cutoff_time:
                     try:
-                        file_size = file_path.stat().st_size
+                        file_size = stat_info.st_size
                         file_path.unlink()
                         deleted_count += 1
                         total_size_deleted += file_size
@@ -1466,7 +1465,7 @@ async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
                 if kb.user_id in active_user_ids
             }
 
-            orphaned_counts = count_orphaned_records(form_data)
+            orphaned_counts = count_orphaned_records(form_data, active_file_ids, active_user_ids)
 
             result = PrunePreviewResult(
                 inactive_users=count_inactive_users(
