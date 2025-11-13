@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { createEventDispatcher, getContext } from 'svelte';
+	import { createEventDispatcher, getContext, onMount } from 'svelte';
 	import { formatFileSize } from '$lib/utils';
+	import { getRAGConfig } from '$lib/apis/retrieval';
 
 	import FileItemModal from './FileItemModal.svelte';
 	import GarbageBin from '../icons/GarbageBin.svelte';
@@ -43,6 +44,22 @@
 			return str;
 		}
 	};
+
+	onMount(async () => {
+		if (!item.context) {
+			try {
+				const ragConfig = await getRAGConfig(localStorage.token);
+				// Use the backend default for full content
+				if (item.type === 'file') {
+					item.context = ragConfig.RAG_DOCUMENTS_DEFAULT_FULL_CONTENT ? 'full' : 'focus';
+				}
+			} catch (e) {
+				console.error('Failed to load backend default config', e);
+				// Fallback if needed
+				item.context = 'focus';
+			}
+		}
+	});
 </script>
 
 {#if item}

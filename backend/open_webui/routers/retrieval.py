@@ -428,6 +428,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "TOP_K": request.app.state.config.TOP_K,
         "BYPASS_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL,
         "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
+        "RAG_DOCUMENTS_DEFAULT_FULL_CONTENT": request.app.state.config.RAG_DOCUMENTS_DEFAULT_FULL_CONTENT,
         # Hybrid search settings
         "ENABLE_RAG_HYBRID_SEARCH": request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
         "TOP_K_RERANKER": request.app.state.config.TOP_K_RERANKER,
@@ -611,6 +612,7 @@ class ConfigForm(BaseModel):
     TOP_K: Optional[int] = None
     BYPASS_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
     RAG_FULL_CONTEXT: Optional[bool] = None
+    RAG_DOCUMENTS_DEFAULT_FULL_CONTENT: Optional[bool] = None
 
     # Hybrid search settings
     ENABLE_RAG_HYBRID_SEARCH: Optional[bool] = None
@@ -712,6 +714,11 @@ async def update_rag_config(
         form_data.RAG_FULL_CONTEXT
         if form_data.RAG_FULL_CONTEXT is not None
         else request.app.state.config.RAG_FULL_CONTEXT
+    )
+    request.app.state.config.RAG_DOCUMENTS_DEFAULT_FULL_CONTENT = (
+        form_data.RAG_DOCUMENTS_DEFAULT_FULL_CONTENT
+        if form_data.RAG_DOCUMENTS_DEFAULT_FULL_CONTENT is not None
+        else request.app.state.config.RAG_DOCUMENTS_DEFAULT_FULL_CONTENT
     )
 
     # Hybrid search settings
@@ -1159,6 +1166,7 @@ async def update_rag_config(
         "TOP_K": request.app.state.config.TOP_K,
         "BYPASS_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL,
         "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
+        "RAG_DOCUMENTS_DEFAULT_FULL_CONTENT": request.app.state.config.RAG_DOCUMENTS_DEFAULT_FULL_CONTENT,
         # Hybrid search settings
         "ENABLE_RAG_HYBRID_SEARCH": request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
         "TOP_K_RERANKER": request.app.state.config.TOP_K_RERANKER,

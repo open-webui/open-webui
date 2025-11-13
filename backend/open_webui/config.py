@@ -2520,6 +2520,12 @@ RAG_FULL_CONTEXT = PersistentConfig(
     os.getenv("RAG_FULL_CONTEXT", "False").lower() == "true",
 )
 
+RAG_DOCUMENTS_DEFAULT_FULL_CONTENT = PersistentConfig(
+    "RAG_DOCUMENTS_DEFAULT_FULL_CONTENT",
+    "rag.documents_default_full_content",
+    os.getenv("RAG_DOCUMENTS_DEFAULT_FULL_CONTENT", "False").lower() == "true",
+)
+
 RAG_FILE_MAX_COUNT = PersistentConfig(
     "RAG_FILE_MAX_COUNT",
     "rag.file.max_count",

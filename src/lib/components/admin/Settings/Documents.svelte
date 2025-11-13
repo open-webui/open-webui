@@ -1124,6 +1124,13 @@
 
 						{#if !RAGConfig.RAG_FULL_CONTEXT}
 							<div class="  mb-2.5 flex w-full justify-between">
+								<div class=" self-center text-xs font-medium">{$i18n.t('File uploads: full content by default')}</div>
+								<div class="flex items-center relative">
+									<Switch bind:state={RAGConfig.RAG_DOCUMENTS_DEFAULT_FULL_CONTENT} />
+								</div>
+							</div>
+
+							<div class="  mb-2.5 flex w-full justify-between">
 								<div class=" self-center text-xs font-medium">{$i18n.t('Hybrid Search')}</div>
 								<div class="flex items-center relative">
 									<Switch bind:state={RAGConfig.ENABLE_RAG_HYBRID_SEARCH} />

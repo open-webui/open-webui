@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, onMount, tick } from 'svelte';
+	import { getContext, tick } from 'svelte';
 	import { formatFileSize, getLineCount } from '$lib/utils';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { getKnowledgeById } from '$lib/apis/knowledge';
@@ -73,12 +73,7 @@
 		loadContent();
 	}
 
-	onMount(() => {
-		console.log(item);
-		if (item?.context === 'full') {
-			enableFullContent = true;
-		}
-	});
+	$: enableFullContent = item?.context === 'full';
 </script>
 
 <Modal bind:show size="lg">
@@ -180,7 +175,7 @@
 									<Switch
 										bind:state={enableFullContent}
 										on:change={(e) => {
-											item.context = e.detail ? 'full' : undefined;
+											item.context = e.detail ? 'full' : 'focus';
 										}}
 									/>
 								</div>
