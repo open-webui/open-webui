@@ -1341,7 +1341,7 @@ def save_docs_to_vector_db(
             log.info(
                 f"Using token text splitter: {request.app.state.config.TIKTOKEN_ENCODING_NAME}"
             )
-
+    
             tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
             text_splitter = TokenTextSplitter(
                 encoding_name=str(request.app.state.config.TIKTOKEN_ENCODING_NAME),
@@ -1351,8 +1351,10 @@ def save_docs_to_vector_db(
             )
             docs = text_splitter.split_documents(docs)
         elif request.app.state.config.TEXT_SPLITTER == "markdown_header":
-            log.info("Using markdown header text splitter")
-
+            log.info("Using markdown header text splitter (parallel)")
+    
+            from concurrent.futures import ThreadPoolExecutor
+    
             # Define headers to split on - covering most common markdown header levels
             headers_to_split_on = [
                 ("#", "Header 1"),
@@ -1362,14 +1364,14 @@ def save_docs_to_vector_db(
                 ("#####", "Header 5"),
                 ("######", "Header 6"),
             ]
-
+    
             markdown_splitter = MarkdownHeaderTextSplitter(
                 headers_to_split_on=headers_to_split_on,
                 strip_headers=False,  # Keep headers in content for context
             )
-
-            md_split_docs = []
-            for doc in docs:
+    
+            def process_single_doc_markdown(doc):
+                """Process one document's markdown headers in parallel"""
                 md_header_splits = markdown_splitter.split_text(doc.page_content)
                 text_splitter = RecursiveCharacterTextSplitter(
                     chunk_size=request.app.state.config.CHUNK_SIZE,
@@ -1377,7 +1379,8 @@ def save_docs_to_vector_db(
                     add_start_index=True,
                 )
                 md_header_splits = text_splitter.split_documents(md_header_splits)
-
+    
+                results = []
                 # Convert back to Document objects, preserving original metadata
                 for split_chunk in md_header_splits:
                     headings_list = []
@@ -1387,15 +1390,21 @@ def save_docs_to_vector_db(
                             headings_list.append(
                                 split_chunk.metadata[header_meta_key_name]
                             )
-
-                    md_split_docs.append(
+    
+                    results.append(
                         Document(
                             page_content=split_chunk.page_content,
                             metadata={**doc.metadata, "headings": headings_list},
                         )
                     )
-
-            docs = md_split_docs
+                return results
+    
+            # ✅ PARALLEL PROCESSING OF ALL DOCUMENTS
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                doc_chunks = list(executor.map(process_single_doc_markdown, docs))
+    
+            # Flatten results
+            docs = [chunk for doc_results in doc_chunks for chunk in doc_results]
         else:
             raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
 
