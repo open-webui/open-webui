@@ -27,6 +27,7 @@ from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 import tiktoken
 
+from concurrent.futures import ThreadPoolExecutor
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
 from langchain_text_splitters import MarkdownHeaderTextSplitter
@@ -1341,7 +1342,7 @@ def save_docs_to_vector_db(
             log.info(
                 f"Using token text splitter: {request.app.state.config.TIKTOKEN_ENCODING_NAME}"
             )
-    
+
             tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
             text_splitter = TokenTextSplitter(
                 encoding_name=str(request.app.state.config.TIKTOKEN_ENCODING_NAME),
@@ -1352,9 +1353,7 @@ def save_docs_to_vector_db(
             docs = text_splitter.split_documents(docs)
         elif request.app.state.config.TEXT_SPLITTER == "markdown_header":
             log.info("Using markdown header text splitter (parallel)")
-    
-            from concurrent.futures import ThreadPoolExecutor
-    
+
             # Define headers to split on - covering most common markdown header levels
             headers_to_split_on = [
                 ("#", "Header 1"),
@@ -1364,12 +1363,12 @@ def save_docs_to_vector_db(
                 ("#####", "Header 5"),
                 ("######", "Header 6"),
             ]
-    
+
             markdown_splitter = MarkdownHeaderTextSplitter(
                 headers_to_split_on=headers_to_split_on,
                 strip_headers=False,  # Keep headers in content for context
             )
-    
+
             def process_single_doc_markdown(doc):
                 """Process one document's markdown headers in parallel"""
                 md_header_splits = markdown_splitter.split_text(doc.page_content)
@@ -1390,7 +1389,7 @@ def save_docs_to_vector_db(
                             headings_list.append(
                                 split_chunk.metadata[header_meta_key_name]
                             )
-    
+
                     results.append(
                         Document(
                             page_content=split_chunk.page_content,
@@ -1399,7 +1398,6 @@ def save_docs_to_vector_db(
                     )
                 return results
     
-            # ✅ PARALLEL PROCESSING OF ALL DOCUMENTS
             with ThreadPoolExecutor(max_workers=8) as executor:
                 doc_chunks = list(executor.map(process_single_doc_markdown, docs))
     
