@@ -721,7 +721,9 @@ if OFFLINE_MODE:
 # AUDIT LOGGING
 ####################################
 # Where to store log file
-AUDIT_LOGS_FILE_PATH = f"{DATA_DIR}/audit.log"
+# Defaults to the DATA_DIR/audit.log. To set AUDIT_LOGS_FILE_PATH you need to
+# provide the whole path, like: /app/audit.log
+AUDIT_LOGS_FILE_PATH = os.getenv("AUDIT_LOGS_FILE_PATH", f"{DATA_DIR}/audit.log")
 # Maximum size of a file before rotating into a new log file
 AUDIT_LOG_FILE_ROTATION_SIZE = os.getenv("AUDIT_LOG_FILE_ROTATION_SIZE", "10MB")
 
