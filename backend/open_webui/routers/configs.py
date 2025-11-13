@@ -277,11 +277,14 @@ async def verify_tool_servers_config(
                                     user.id,
                                     request.cookies.get("oauth_session_id", None),
                                 )
+
+                                if oauth_token:
+                                    token = oauth_token.get("access_token", "")
                         except Exception as e:
                             pass
 
-                    if oauth_token:
-                        headers = {"Authorization": f"Bearer {oauth_token.get('access_token', '')}"}
+                    if token:
+                        headers = {"Authorization": f"Bearer {token}"}
 
                     await client.connect(form_data.url, headers=headers)
                     specs = await client.list_tool_specs()
@@ -307,13 +310,15 @@ async def verify_tool_servers_config(
             elif form_data.auth_type == "system_oauth":
                 try:
                     if request.cookies.get("oauth_session_id", None):
-                        oauth_token = await request.app.state.oauth_manager.get_oauth_token(
-                            user.id,
-                            request.cookies.get("oauth_session_id", None),
+                        oauth_token = (
+                            await request.app.state.oauth_manager.get_oauth_token(
+                                user.id,
+                                request.cookies.get("oauth_session_id", None),
+                            )
                         )
-                        
+
                         if oauth_token:
-                            token = f"{oauth_token.get('access_token', '')}"
+                            token = oauth_token.get("access_token", "")
 
                 except Exception as e:
                     pass
