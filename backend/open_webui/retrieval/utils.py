@@ -164,6 +164,7 @@ def query_doc_with_hybrid_search(
         if (
             not collection_result
             or not hasattr(collection_result, "documents")
+            or not hasattr(collection_result, "metadatas")
             or not collection_result.documents
             or len(collection_result.documents) == 0
             or not collection_result.documents[0]
