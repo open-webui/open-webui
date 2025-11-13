@@ -144,6 +144,7 @@ class ToolServerConnection(BaseModel):
     path: str
     type: Optional[str] = "openapi"  # openapi, mcp
     auth_type: Optional[str]
+    headers: Optional[dict]
     key: Optional[str]
     config: Optional[dict]
 
@@ -282,9 +283,13 @@ async def verify_tool_servers_config(
                                     token = oauth_token.get("access_token", "")
                         except Exception as e:
                             pass
-
                     if token:
                         headers = {"Authorization": f"Bearer {token}"}
+
+                    if form_data.headers:
+                        if headers is None:
+                            headers = {}
+                        headers.update(form_data.headers)
 
                     await client.connect(form_data.url, headers=headers)
                     specs = await client.list_tool_specs()
@@ -303,6 +308,7 @@ async def verify_tool_servers_config(
                         await client.disconnect()
         else:  # openapi
             token = None
+            headers = None
             if form_data.auth_type == "bearer":
                 token = form_data.key
             elif form_data.auth_type == "session":
@@ -323,8 +329,16 @@ async def verify_tool_servers_config(
                 except Exception as e:
                     pass
 
+            if token:
+                headers = {"Authorization": f"Bearer {token}"}
+
+            if form_data.headers:
+                if headers is None:
+                    headers = {}
+                headers.update(form_data.headers)
+
             url = get_tool_server_url(form_data.url, form_data.path)
-            return await get_tool_server_data(token, url)
+            return await get_tool_server_data(url, headers=headers)
     except HTTPException as e:
         raise e
     except Exception as e:

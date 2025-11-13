@@ -312,7 +312,11 @@ async def chat_completion_tools_handler(
             for message in recent_messages
         )
 
-        prompt = f"History:\n{chat_history}\nQuery: {user_message}" if chat_history else f"Query: {user_message}"
+        prompt = (
+            f"History:\n{chat_history}\nQuery: {user_message}"
+            if chat_history
+            else f"Query: {user_message}"
+        )
 
         return {
             "model": task_model_id,
@@ -1327,7 +1331,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         continue
 
                     auth_type = mcp_server_connection.get("auth_type", "")
-
                     headers = {}
                     if auth_type == "bearer":
                         headers["Authorization"] = (
@@ -1362,6 +1365,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         except Exception as e:
                             log.error(f"Error getting OAuth token: {e}")
                             oauth_token = None
+
+                    connection_headers = mcp_server_connection.get("headers", None)
+                    if connection_headers:
+                        for key, value in connection_headers.items():
+                            headers[key] = value
 
                     mcp_clients[server_id] = MCPClient()
                     await mcp_clients[server_id].connect(
