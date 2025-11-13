@@ -948,9 +948,16 @@ class PrunePreviewResult(BaseModel):
 
 # Counting helper functions for dry-run preview
 def count_inactive_users(
-    inactive_days: Optional[int], exempt_admin: bool, exempt_pending: bool
+    inactive_days: Optional[int], exempt_admin: bool, exempt_pending: bool, all_users=None
 ) -> int:
-    """Count users that would be deleted for inactivity."""
+    """Count users that would be deleted for inactivity.
+
+    Args:
+        inactive_days: Number of days of inactivity before deletion
+        exempt_admin: Whether to exempt admin users
+        exempt_pending: Whether to exempt pending users
+        all_users: Optional pre-fetched list of users to avoid duplicate queries
+    """
     if inactive_days is None:
         return 0
 
@@ -958,7 +965,8 @@ def count_inactive_users(
     count = 0
 
     try:
-        all_users = Users.get_users()["users"]
+        if all_users is None:
+            all_users = Users.get_users()["users"]
         for user in all_users:
             if exempt_admin and user.role == "admin":
                 continue
@@ -1139,9 +1147,12 @@ def count_audio_cache_files(max_age_days: Optional[int]) -> int:
     return count
 
 
-def get_active_file_ids() -> Set[str]:
+def get_active_file_ids(knowledge_bases=None) -> Set[str]:
     """
     Get all file IDs that are actively referenced by knowledge bases, chats, folders, and messages.
+
+    Args:
+        knowledge_bases: Optional pre-fetched list of knowledge bases to avoid duplicate queries
     """
     active_file_ids = set()
 
@@ -1151,7 +1162,8 @@ def get_active_file_ids() -> Set[str]:
         all_file_ids = {f.id for f in Files.get_files()}
         log.debug(f"Preloaded {len(all_file_ids)} file IDs for validation")
         # Scan knowledge bases for file references
-        knowledge_bases = Knowledges.get_knowledge_bases()
+        if knowledge_bases is None:
+            knowledge_bases = Knowledges.get_knowledge_bases()
         log.debug(f"Found {len(knowledge_bases)} knowledge bases")
 
         for kb in knowledge_bases:
@@ -1457,13 +1469,16 @@ async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
             log.info("Starting data pruning preview (dry run)")
 
             # Get counts for all enabled operations
-            active_file_ids = get_active_file_ids()
-            active_user_ids = {user.id for user in Users.get_users()["users"]}
+            # Fetch knowledge bases and users once to avoid duplicate queries
+            knowledge_bases = Knowledges.get_knowledge_bases()
+            all_users = Users.get_users()["users"]
+            active_user_ids = {user.id for user in all_users}
             active_kb_ids = {
                 kb.id
-                for kb in Knowledges.get_knowledge_bases()
+                for kb in knowledge_bases
                 if kb.user_id in active_user_ids
             }
+            active_file_ids = get_active_file_ids(knowledge_bases)
 
             orphaned_counts = count_orphaned_records(form_data, active_file_ids, active_user_ids)
 
@@ -1472,6 +1487,7 @@ async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
                     form_data.delete_inactive_users_days,
                     form_data.exempt_admin_users,
                     form_data.exempt_pending_users,
+                    all_users,
                 ),
                 old_chats=count_old_chats(
                     form_data.days,
@@ -1570,7 +1586,7 @@ async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
 
             log.info(f"Found {len(active_kb_ids)} active knowledge bases")
 
-            active_file_ids = get_active_file_ids()
+            active_file_ids = get_active_file_ids(knowledge_bases)
 
             # Stage 3: Delete orphaned database records
             log.info("Deleting orphaned database records")
