@@ -374,9 +374,10 @@ class OAuthClientManager:
             "name": client_id,
             "client_id": oauth_client_info.client_id,
             "client_secret": oauth_client_info.client_secret,
-            "client_kwargs": (
-                {"scope": oauth_client_info.scope} if oauth_client_info.scope else {}
-            ),
+            "client_kwargs": {
+                "scope": oauth_client_info.scope if oauth_client_info.scope else {},
+                "token_endpoint_auth_method": oauth_client_info.token_endpoint_auth_method if oauth_client_info.token_endpoint_auth_method else {}
+            },
             "server_metadata_url": (
                 oauth_client_info.issuer if oauth_client_info.issuer else None
             ),
