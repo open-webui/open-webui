@@ -200,6 +200,10 @@ COPY --chown=$UID:$GID --from=build /app/node_modules/katex /app/node_modules/ka
 # copy backend files
 COPY --chown=$UID:$GID ./backend .
 
+# FIX: Make the static directory group-writable.
+# This allows the random OpenShift user (which is part of GID 0) to write here.
+RUN chmod -R g+w /app/backend/open_webui/static
+
 EXPOSE 8080
 
 HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-8080}/health | jq -ne 'input.status == true' || exit 1
