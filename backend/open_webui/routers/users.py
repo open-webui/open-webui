@@ -18,6 +18,7 @@ from open_webui.env import SRC_LOG_LEVELS
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from open_webui.utils.auth import get_admin_user, get_password_hash, get_verified_user
+from open_webui.utils.super_admin import is_email_super_admin
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -37,6 +38,30 @@ async def get_users(
 ):
     return Users.get_users(skip, limit)
 
+
+############################
+# CheckIfSuperAdmin
+############################
+
+@router.get("/is-super-admin", response_model=bool)
+async def check_if_super_admin(
+    email: str, 
+    user=Depends(get_verified_user)
+):
+    
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email parameter is required",
+        )
+    user = Users.get_user_by_id(user.id)
+    if user:
+        return is_email_super_admin(email)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
 
 ############################
 # User Groups
@@ -169,15 +194,7 @@ async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
-
-    # Emails that get super-admin-like privileges for admin-to-admin changes.
-    allowed_emails = [
-        "sm11538@nyu.edu",
-        "ms15138@nyu.edu",
-        "mb484@nyu.edu",
-        "cg4532@nyu.edu"
-    ]
-
+    
     # Prevent users from changing their own role.
     if user.id == form_data.id:
         raise HTTPException(
@@ -188,7 +205,7 @@ async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin
     # If the target user is currently an admin,
     # only the super-admin or an allowed email can change that role.
     if target_user.role == "admin" and not (
-        user.id == Users.get_first_user().id or user.email in allowed_emails
+        user.id == Users.get_first_user().id or is_email_super_admin(user.email)
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -206,7 +223,7 @@ async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin
     is_normal_admin = (
         user.role == "admin"
         and user.id != Users.get_first_user().id
-        and user.email not in allowed_emails
+        and not is_email_super_admin(user.email)
     )
 
     # If the user is a normal admin, limit role changes to only "pending" -> "user".
@@ -435,16 +452,9 @@ async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
 @router.post("/{user_id}/co-admin/toggle", response_model=Optional[UserModel])
 async def toggle_co_admin_status(user_id: str, user=Depends(get_admin_user)):
     # Check if current user is super admin
-    super_admin_emails = [
-        "sm11538@nyu.edu",
-        "ms15138@nyu.edu", 
-        "mb484@nyu.edu",
-        "cg4532@nyu.edu"
-    ]
-    
     is_super_admin = (
         user.id == Users.get_first_user().id or 
-        user.email in super_admin_emails
+        is_email_super_admin(user.email)
     )
     
     if not is_super_admin:
@@ -468,7 +478,7 @@ async def toggle_co_admin_status(user_id: str, user=Depends(get_admin_user)):
         )
     
     # Prevent changing super admin co-admin status
-    if target_user.id == Users.get_first_user().id or target_user.email in super_admin_emails:
+    if target_user.id == Users.get_first_user().id or is_email_super_admin(target_user.email):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot change co-admin status of super admins",

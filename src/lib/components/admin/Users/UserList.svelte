@@ -12,7 +12,7 @@
 
 	import { toast } from 'svelte-sonner';
 
-	import { updateUserRole, getUsers, deleteUserById, toggleCoAdminStatus } from '$lib/apis/users';
+	import { updateUserRole, getUsers, deleteUserById, toggleCoAdminStatus, checkIfSuperAdmin } from '$lib/apis/users';
 
 	import Pagination from '$lib/components/common/Pagination.svelte';
 	import ChatBubbles from '$lib/components/icons/ChatBubbles.svelte';
@@ -31,22 +31,60 @@
 
 	const i18n = getContext('i18n');
 
-	const SUPER_ADMIN_EMAILS = [
-		'ms15138@nyu.edu',
-		'mb484@nyu.edu',
-		'sm11538@nyu.edu',
-		'cg4532@nyu.edu'
-	];
+	// Cache for super admin status - stores { email: boolean }
+	let superAdminCache = {};
+	
+	// Cache for current user's super admin status
+	let isCurrentUserSuperAdminCache = null;
 
-	// function to override the label if the user is truly "admin" + in SUPER_ADMIN_EMAILS
-	function getRoleLabel(user) {
-		if (user.role === 'admin' && SUPER_ADMIN_EMAILS.includes(user.email)) {
-			return 'super admin';
-		}
-		if (user.role === 'admin' && user.info?.is_co_admin) {
-			return 'co-admin';
+	// function to override the label if the user is truly "admin" + super admin
+	async function getRoleLabel(user) {
+		if (user.role === 'admin') {
+			// Check cache first
+			if (superAdminCache[user.email] === undefined) {
+				try {
+					const isSuperAdmin = await checkIfSuperAdmin(localStorage.token, user.email);
+					superAdminCache[user.email] = isSuperAdmin;
+				} catch (error) {
+					console.error('Error checking super admin status:', error);
+					superAdminCache[user.email] = false;
+				}
+			}
+
+			if (superAdminCache[user.email]) {
+				return 'super admin';
+			} else if (user.info?.is_co_admin) {
+				return 'co-admin';
+			}
 		}
 		return user.role;
+	}
+
+	// Helper function to check if current user is super admin
+	async function isCurrentUserSuperAdmin() {
+		if (isCurrentUserSuperAdminCache === null) {
+			try {
+				isCurrentUserSuperAdminCache = await checkIfSuperAdmin(localStorage.token, $user.email);
+			} catch (error) {
+				console.error('Error checking current user super admin status:', error);
+				isCurrentUserSuperAdminCache = false;
+			}
+		}
+		return isCurrentUserSuperAdminCache;
+	}
+
+	// Helper function to check if a specific user is super admin
+	async function isUserSuperAdmin(email) {
+		if (superAdminCache[email] === undefined) {
+			try {
+				const isSuperAdmin = await checkIfSuperAdmin(localStorage.token, email);
+				superAdminCache[email] = isSuperAdmin;
+			} catch (error) {
+				console.error('Error checking user super admin status:', error);
+				superAdminCache[email] = false;
+			}
+		}
+		return superAdminCache[email];
 	}
 
 	export let users = [];
@@ -83,11 +121,6 @@
 			users = await getUsers(localStorage.token);
 		}
 	};
-
-	// Helper function to check if current user is super admin
-	function isCurrentUserSuperAdmin() {
-		return SUPER_ADMIN_EMAILS.includes($user.email);
-	}
 
 	const deleteUserHandler = async (id) => {
 		const res = await deleteUserById(localStorage.token, id).catch((error) => {
@@ -365,13 +398,16 @@
 					<td class="px-3 py-1 min-w-[7rem] w-28">
 						<button
 							class=" translate-y-0.5"
-							on:click={() => {
-								// Skip super admins - they can't be changed
-								if (SUPER_ADMIN_EMAILS.includes(user.email)) {
+							on:click={async () => {
+								// Check if this user is a super admin - they can't be changed
+								const userIsSuperAdmin = await isUserSuperAdmin(user.email);
+								if (userIsSuperAdmin) {
 									return;
 								}
 
-								if (isCurrentUserSuperAdmin()) {
+								const currentUserIsSuperAdmin = await isCurrentUserSuperAdmin();
+
+								if (currentUserIsSuperAdmin) {
 									// Super admin gets full 4-state cycle: pending → user → admin → co-admin → pending
 									if (user.role === 'pending') {
 										updateRoleHandler(user.id, 'user');
@@ -397,18 +433,22 @@
 								}
 							}}
 						>
-							<Badge
-								type={getRoleLabel(user) === 'super admin'
-									? 'super'
-									: getRoleLabel(user) === 'co-admin'
-										? 'warning'
-										: user.role === 'admin'
-											? 'info'
-											: user.role === 'user'
-												? 'success'
-												: 'muted'}
-								content={$i18n.t(getRoleLabel(user))}
-							/>
+							{#await getRoleLabel(user)}
+								<Badge type="muted" content="..." />
+							{:then roleLabel}
+								<Badge
+									type={roleLabel === 'super admin'
+										? 'super'
+										: roleLabel === 'co-admin'
+											? 'warning'
+											: user.role === 'admin'
+												? 'info'
+												: user.role === 'user'
+													? 'success'
+													: 'muted'}
+									content={$i18n.t(roleLabel)}
+								/>
+							{/await}
 						</button>
 					</td>
 					<td class="px-3 py-1 font-medium text-gray-900 dark:text-white w-max">
