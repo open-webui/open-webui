@@ -243,6 +243,8 @@ async def get_status(request: Request):
         "status": True,
         "chunk_size": request.app.state.config.CHUNK_SIZE,
         "chunk_overlap": request.app.state.config.CHUNK_OVERLAP,
+        "chunk_min_size": request.app.state.config.CHUNK_MIN_SIZE,
+        "chunk_min_tokens": request.app.state.config.CHUNK_MIN_TOKENS,
         "template": request.app.state.config.RAG_TEMPLATE,
         "embedding_engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
         "embedding_model": request.app.state.config.RAG_EMBEDDING_MODEL,
@@ -483,6 +485,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "ENABLE_MARKDOWN_HEADER_SPLITTING": request.app.state.config.ENABLE_MARKDOWN_HEADER_SPLITTING,
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
         "CHUNK_OVERLAP": request.app.state.config.CHUNK_OVERLAP,
+        "CHUNK_MIN_SIZE": request.app.state.config.CHUNK_MIN_SIZE,
+        "CHUNK_MIN_TOKENS": request.app.state.config.CHUNK_MIN_TOKENS,
         # File upload settings
         "FILE_MAX_SIZE": request.app.state.config.FILE_MAX_SIZE,
         "FILE_MAX_COUNT": request.app.state.config.FILE_MAX_COUNT,
@@ -673,6 +677,8 @@ class ConfigForm(BaseModel):
     ENABLE_MARKDOWN_HEADER_SPLITTING: Optional[bool] = None
     CHUNK_SIZE: Optional[int] = None
     CHUNK_OVERLAP: Optional[int] = None
+    CHUNK_MIN_SIZE: Optional[int] = None
+    CHUNK_MIN_TOKENS: Optional[int] = None
 
     # File upload settings
     FILE_MAX_SIZE: Optional[int] = None
@@ -1020,6 +1026,16 @@ async def update_rag_config(
         if form_data.CHUNK_OVERLAP is not None
         else request.app.state.config.CHUNK_OVERLAP
     )
+    request.app.state.config.CHUNK_MIN_SIZE = (
+        form_data.CHUNK_MIN_SIZE
+        if form_data.CHUNK_MIN_SIZE is not None
+        else request.app.state.config.CHUNK_MIN_SIZE
+    )
+    request.app.state.config.CHUNK_MIN_TOKENS = (
+        form_data.CHUNK_MIN_TOKENS
+        if form_data.CHUNK_MIN_TOKENS is not None
+        else request.app.state.config.CHUNK_MIN_TOKENS
+    )
 
     # File upload settings
     request.app.state.config.FILE_MAX_SIZE = form_data.FILE_MAX_SIZE
@@ -1215,6 +1231,8 @@ async def update_rag_config(
         "ENABLE_MARKDOWN_HEADER_SPLITTING": request.app.state.config.ENABLE_MARKDOWN_HEADER_SPLITTING,
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
         "CHUNK_OVERLAP": request.app.state.config.CHUNK_OVERLAP,
+        "CHUNK_MIN_SIZE": request.app.state.config.CHUNK_MIN_SIZE,
+        "CHUNK_MIN_TOKENS": request.app.state.config.CHUNK_MIN_TOKENS,
         # File upload settings
         "FILE_MAX_SIZE": request.app.state.config.FILE_MAX_SIZE,
         "FILE_MAX_COUNT": request.app.state.config.FILE_MAX_COUNT,
