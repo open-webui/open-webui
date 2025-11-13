@@ -255,6 +255,17 @@ def get_discovery_urls(server_url) -> list[str]:
                 base_url, f"/.well-known/openid-configuration{parsed.path.rstrip('/')}"
             )
         )
+        urls.append(
+            urllib.parse.urljoin(
+                base_url,
+                f"{parsed.path.rstrip('/')}/.well-known/oauth-authorization-server",
+            )
+        )
+        urls.append(
+            urllib.parse.urljoin(
+                base_url, f"{parsed.path.rstrip('/')}/.well-known/openid-configuration"
+            )
+        )
 
     return urls
 
