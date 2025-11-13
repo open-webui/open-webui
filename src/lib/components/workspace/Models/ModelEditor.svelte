@@ -13,6 +13,7 @@
 	import { getTools } from '$lib/apis/tools';
 	import { getFunctions } from '$lib/apis/functions';
 	import { getKnowledgeBases } from '$lib/apis/knowledge';
+	import { checkIfSuperAdmin, getUsers } from '$lib/apis/users';
 	import AccessControl from '../common/AccessControl.svelte';
 	import { stringify } from 'postcss';
 	import { toast } from 'svelte-sonner';
@@ -30,6 +31,10 @@
 
 	let loading = false;
 	let success = false;
+
+	let isSuperAdmin = false;
+	let allUsers = [];
+	let selectedUserFilter = null; // null means show all, or select specific user email
 
 	let filesInputElement;
 	let inputFiles;
@@ -182,6 +187,21 @@
 		await tools.set(await getTools(localStorage.token));
 		await functions.set(await getFunctions(localStorage.token));
 		await knowledgeCollections.set(await getKnowledgeBases(localStorage.token));
+
+		// Check if user is super admin
+		if ($user?.email) {
+			try {
+				isSuperAdmin = await checkIfSuperAdmin(localStorage.token, $user.email);
+				
+				// If super admin, fetch all users for the filter
+				if (isSuperAdmin) {
+					allUsers = await getUsers(localStorage.token);
+				}
+			} catch (error) {
+				console.error('Error checking super admin status:', error);
+				isSuperAdmin = false;
+			}
+		}
 
 		// Scroll to top 'workspace-container' element
 		const workspaceContainer = document.getElementById('workspace-container');
@@ -469,36 +489,90 @@
 					</div>
 
 					{#if preset}
+						<!-- Super Admin: User Filter -->
+						{#if isSuperAdmin && !edit}
+							<div class="my-1">
+								<div class="flex items-center justify-between mb-1">
+									<div class="text-sm font-semibold">Filter Base Models by Admin User</div>
+									{#if selectedUserFilter}
+										<button
+											class="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 underline"
+											type="button"
+											on:click={() => {
+												selectedUserFilter = null;
+											}}
+										>
+											Clear Filter
+										</button>
+									{/if}
+								</div>
+								
+								<div>
+									<select
+										class="text-sm w-full bg-transparent outline-hidden"
+										bind:value={selectedUserFilter}
+									>
+									<option class=" text-gray-700" value={null}>Select model owner</option>
+										{#each allUsers.filter(u => u.role === 'admin') as user}
+											<option value={user.email} class="text-gray-900">
+												{user.name} ({user.email})
+											</option>
+										{/each}
+									</select>
+								</div>
+								
+								{#if selectedUserFilter}
+									<div class="text-xs text-gray-500 mt-1">
+										Filtering base models from: {selectedUserFilter}
+									</div>
+								{/if}
+							</div>
+						{/if}
+
 						<div class="my-1">
 							<div class=" text-sm font-semibold mb-1">{$i18n.t('Base Model (From)')}</div>
 
 							<div>
 								<select
 									class="text-sm w-full bg-transparent outline-hidden"
-									placeholder="Select a base model (e.g. llama3, gpt-4o)"
+									placeholder="Select a base model"
 									bind:value={info.base_model_id}
 									on:change={(e) => {
 										addUsage(e.target.value);
 									}}
 									required
 								>
-									<option value={null} class=" text-gray-900"
+									<option value={null} class=" text-gray-700"
 										>{$i18n.t('Select a base model')}</option
 									>
 									{#each $models.filter((m) => {
 										// Base filters
 										let baseFilter = (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena';
 										
-										// If super admin editing existing model, show only original creator's base models
-										if (edit && $user?.email && ['sm11538@nyu.edu', 'ms15138@nyu.edu', 'mb484@nyu.edu', 'cg4532@nyu.edu'].includes($user.email) && model?.created_by) {
-											return baseFilter && (m.created_by === model.created_by || !m.created_by);
+										// Additional filter: only show models created by admin users
+										const modelCreator = allUsers.find(u => u.email === m.created_by);
+										const isAdminCreated = modelCreator && (modelCreator.role === 'admin' || modelCreator.role === 'user');
+										
+										if (isSuperAdmin) {
+											// If user filter is selected, show only that admin user's base models
+											if (selectedUserFilter) {
+												return baseFilter && m.created_by === selectedUserFilter && isAdminCreated;
+											}
+											
+											// If editing existing model, show only original creator's base models (if admin)
+											if (edit && model?.created_by) {
+												return baseFilter && (m.created_by === model.created_by || !m.created_by) && (isAdminCreated || !m.created_by);
+											}
+											
+											// Show only admin-created base models
+											return baseFilter && (isAdminCreated || !m.created_by);
 										}
 										
 										return baseFilter;
 									}) as baseModel}
 										<option value={baseModel.id} class=" text-gray-900">
 											{baseModel.name}
-											{#if $user?.email && ['sm11538@nyu.edu', 'ms15138@nyu.edu', 'mb484@nyu.edu', 'cg4532@nyu.edu'].includes($user.email) && baseModel.created_by && baseModel.created_by !== $user.email}
+											{#if isSuperAdmin && baseModel.created_by && baseModel.created_by !== $user.email}
 												({baseModel.created_by})
 											{/if}
 										</option>
@@ -507,11 +581,15 @@
 							</div>
 							
 							<!-- Visual feedback for super admins -->
-							{#if $user?.email && ['sm11538@nyu.edu', 'ms15138@nyu.edu', 'mb484@nyu.edu', 'cg4532@nyu.edu'].includes($user.email) && info.base_model_id}
+							{#if isSuperAdmin && info.base_model_id}
 								{@const selectedModel = $models.find(m => m.id === info.base_model_id)}
 								{#if edit && model?.created_by}
 									<div class="text-xs text-gray-500 mt-1">
 										Showing base models from: {model.created_by}
+									</div>
+								{:else if selectedUserFilter}
+									<div class="text-xs text-gray-500 mt-1">
+										Model will be assigned to: {selectedUserFilter}
 									</div>
 								{:else if selectedModel?.created_by && selectedModel.created_by !== $user.email}
 									<div class="text-xs text-gray-500 mt-1">
