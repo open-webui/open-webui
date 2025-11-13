@@ -1,0 +1,137 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # 允许手动触发
+
+env:
+  IMAGE_NAME: open-webui-next
+  OUTPUT_DIR: /tmp/docker-images
+  KEEP_VERSIONS: 2
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: 设置环境变量
+        run: |
+          echo "IMAGE_TAG=${{ github.run_number }}" >> $GITHUB_ENV
+          echo "BUILD_NUMBER=${{ github.run_number }}" >> $GITHUB_ENV
+          echo "✓ 代码检出完成"
+          ls -la
+      
+      - name: 验证 Dockerfile
+        run: |
+          if [ ! -f "Dockerfile" ]; then
+            echo "❌ 找不到 Dockerfile"
+            exit 1
+          fi
+          echo "✓ Dockerfile 存在"
+          head -10 Dockerfile
+      
+      - name: 设置 Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: 构建 Docker 镜像
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            ${{ env.IMAGE_NAME }}:latest
+          build-args: |
+            USE_SLIM=true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      - name: 验证镜像构建
+        run: |
+          echo "✓ 镜像构建完成"
+          docker images | grep ${{ env.IMAGE_NAME }}
+      
+      - name: 创建输出目录
+        run: |
+          mkdir -p ${{ env.OUTPUT_DIR }}
+          echo "输出目录: ${{ env.OUTPUT_DIR }}"
+      
+      - name: 导出镜像
+        run: |
+          echo "导出镜像..."
+          docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} | gzip > ${{ env.OUTPUT_DIR }}/${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar.gz
+          docker save ${{ env.IMAGE_NAME }}:latest | gzip > ${{ env.OUTPUT_DIR }}/${{ env.IMAGE_NAME }}-latest.tar.gz
+          echo "✓ 镜像导出完成"
+          ls -lh ${{ env.OUTPUT_DIR }}/${{ env.IMAGE_NAME }}*.tar.gz
+      
+      - name: 上传镜像制品
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-images-${{ env.IMAGE_TAG }}
+          path: |
+            ${{ env.OUTPUT_DIR }}/${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar.gz
+            ${{ env.OUTPUT_DIR }}/${{ env.IMAGE_NAME }}-latest.tar.gz
+          retention-days: 30
+      
+      - name: 清理本地资源
+        if: always()
+        run: |
+          echo "========================================="
+          echo "当前构建: ${{ env.BUILD_NUMBER }}"
+          VERSION_TO_DELETE=$((BUILD_NUMBER - 2))
+          echo "准备清理版本: ${VERSION_TO_DELETE}"
+          echo "========================================="
+          
+          # 清理旧版本的 Docker 镜像
+          echo "清理 Docker 镜像..."
+          docker rmi ${{ env.IMAGE_NAME }}:${VERSION_TO_DELETE} 2>/dev/null || echo "镜像 ${VERSION_TO_DELETE} 不存在或已清理"
+          
+          # 清理旧版本的 tar.gz 文件
+          echo "清理导出文件..."
+          rm -f ${{ env.OUTPUT_DIR }}/${{ env.IMAGE_NAME }}-${VERSION_TO_DELETE}.tar.gz
+          
+          # 清理未使用的 Docker 资源
+          echo "清理未使用的 Docker 资源..."
+          docker image prune -f
+          
+          echo "✓ 清理完成"
+          echo ""
+          echo "剩余镜像:"
+          docker images | grep ${{ env.IMAGE_NAME }} || echo "无相关镜像"
+          echo ""
+          echo "剩余文件:"
+          ls -lh ${{ env.OUTPUT_DIR }}/${{ env.IMAGE_NAME }}*.tar.gz 2>/dev/null || echo "无相关文件"
+      
+      - name: 显示磁盘使用情况
+        if: always()
+        run: |
+          echo "最终磁盘使用情况:"
+          df -h ${{ env.OUTPUT_DIR }}
+      
+      - name: 构建摘要
+        if: success()
+        run: |
+          echo "=========================================" >> $GITHUB_STEP_SUMMARY
+          echo "✅ 构建成功!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**镜像信息:**" >> $GITHUB_STEP_SUMMARY
+          echo "- 镜像名称: \`${{ env.IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- 镜像标签: \`${{ env.IMAGE_TAG }}\`, \`latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- 构建编号: \`${{ github.run_number }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**导出文件:**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          ls -lh ${{ env.OUTPUT_DIR }}/${{ env.IMAGE_NAME }}*.tar.gz >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "=========================================" >> $GITHUB_STEP_SUMMARY
