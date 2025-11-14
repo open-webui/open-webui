@@ -179,4 +179,3 @@ export const downloadDatabase = async (token: string) => {
 		throw error;
 	}
 };
-
