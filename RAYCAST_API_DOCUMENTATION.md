@@ -310,9 +310,15 @@ Content-Type: application/json
 }
 ```
 
-**⚠️ IMPORTANT: The `models` field is REQUIRED for chat continuation in the web UI.**
+**⚠️ IMPORTANT: The `models` field is REQUIRED for proper chat functionality.**
 
 If you don't include `models`, the chat will show "undefined" as the model name and users won't be able to continue the conversation in the web interface.
+
+**✨ AUTOMATIC ENRICHMENT:** The backend automatically enriches your chat data:
+- **Auto-populates `model` field** on all assistant messages in the history using the first model from the `models` array
+- **Auto-generates title** from the first user message (first 50 chars + "...") if no title is provided or title is "New Chat"
+
+This means you don't need to manually set `model` on every message object - just provide the `models` array and the backend handles the rest!
 
 **Simplified Request (with models):**
 ```json
@@ -335,15 +341,18 @@ If you don't include `models`, the chat will show "undefined" as the model name 
 ```
 
 **Chat Object Structure:**
-- `title` (string): Chat title (first 50 chars of user's first message is common)
+- `title` (string, auto-generated if omitted): Chat title - defaults to first 50 chars of first user message
 - `models` (string[]): **REQUIRED** - Array of model IDs used in the chat (e.g., `["gpt-4"]`)
 - `messages` (array): Linear array of messages (fallback if history not provided)
+  - Each message: `{ role, content }` (no need to set `model` manually)
 - `history` (object, optional but recommended): Message tree structure for branching conversations
   - `messages` (object): Map of message ID to message object
-    - Each message has: `id`, `role`, `content`, `parentId`, `childrenIds`
+    - Each message: `{ id, role, content, parentId, childrenIds }` (no need to set `model` manually)
   - `currentId` (string): ID of the most recent message in the conversation
 - `params` (object, optional): Model parameters like `temperature`, `max_tokens`, etc.
 - `timestamp` (number, optional): Unix timestamp in milliseconds
+
+**Note:** You don't need to include `model` field in individual messages - the backend automatically populates it from the `models` array!
 
 **Response:**
 ```json

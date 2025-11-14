@@ -123,19 +123,66 @@ class ChatTitleIdResponse(BaseModel):
 
 
 class ChatTable:
+    def _enrich_chat_data(self, chat_data: dict) -> dict:
+        """
+        Enrich chat data with computed fields for better UX.
+        - Auto-generate title from first user message if not provided
+        - Populate model field on all messages in history
+        """
+        chat_data = chat_data.copy()
+
+        # Auto-generate title from first user message if no title provided
+        if not chat_data.get("title") or chat_data.get("title") == "New Chat":
+            # Try to get title from messages
+            messages = chat_data.get("messages", [])
+            if messages:
+                for msg in messages:
+                    if msg.get("role") == "user":
+                        content = msg.get("content", "")
+                        if content:
+                            # Take first 50 chars of first user message
+                            if len(content) > 50:
+                                chat_data["title"] = content[:50] + "..."
+                            else:
+                                chat_data["title"] = content
+                            break
+
+        # Populate model field on all messages if models array exists
+        models = chat_data.get("models", [])
+        if models and len(models) > 0:
+            default_model = models[0]  # Use first model as default
+
+            # Populate model in history messages
+            if "history" in chat_data and "messages" in chat_data["history"]:
+                for msg_id, msg in chat_data["history"]["messages"].items():
+                    if "model" not in msg or not msg["model"]:
+                        msg["model"] = default_model
+
+            # Populate model in messages array (fallback structure)
+            if "messages" in chat_data:
+                for msg in chat_data["messages"]:
+                    if msg.get("role") == "assistant" and ("model" not in msg or not msg["model"]):
+                        msg["model"] = default_model
+
+        return chat_data
+
     def insert_new_chat(self, user_id: str, form_data: ChatForm) -> Optional[ChatModel]:
         with get_db() as db:
             id = str(uuid.uuid4())
+
+            # Enrich chat data before storing
+            enriched_chat = self._enrich_chat_data(form_data.chat)
+
             chat = ChatModel(
                 **{
                     "id": id,
                     "user_id": user_id,
                     "title": (
-                        form_data.chat["title"]
-                        if "title" in form_data.chat
+                        enriched_chat["title"]
+                        if "title" in enriched_chat
                         else "New Chat"
                     ),
-                    "chat": form_data.chat,
+                    "chat": enriched_chat,
                     "folder_id": form_data.folder_id,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
@@ -189,8 +236,12 @@ class ChatTable:
         try:
             with get_db() as db:
                 chat_item = db.get(Chat, id)
-                chat_item.chat = chat
-                chat_item.title = chat["title"] if "title" in chat else "New Chat"
+
+                # Enrich chat data before updating
+                enriched_chat = self._enrich_chat_data(chat)
+
+                chat_item.chat = enriched_chat
+                chat_item.title = enriched_chat["title"] if "title" in enriched_chat else "New Chat"
                 chat_item.updated_at = int(time.time())
                 db.commit()
                 db.refresh(chat_item)
