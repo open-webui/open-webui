@@ -256,15 +256,16 @@ def get_scim_auth(
             )
 
         # Check if SCIM is enabled
-        scim_enabled = getattr(request.app.state, "SCIM_ENABLED", False)
+        enable_scim = getattr(request.app.state, "ENABLE_SCIM", False)
         log.info(
-            f"SCIM auth check - raw SCIM_ENABLED: {scim_enabled}, type: {type(scim_enabled)}"
+            f"SCIM auth check - raw ENABLE_SCIM: {enable_scim}, type: {type(enable_scim)}"
         )
+
         # Handle both PersistentConfig and direct value
-        if hasattr(scim_enabled, "value"):
-            scim_enabled = scim_enabled.value
-        log.info(f"SCIM enabled status after conversion: {scim_enabled}")
-        if not scim_enabled:
+        if hasattr(enable_scim, "value"):
+            enable_scim = enable_scim.value
+
+        if not enable_scim:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="SCIM is not enabled",

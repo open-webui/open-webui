@@ -493,7 +493,10 @@ OAUTH_SESSION_TOKEN_ENCRYPTION_KEY = os.environ.get(
 # SCIM Configuration
 ####################################
 
-SCIM_ENABLED = os.environ.get("SCIM_ENABLED", "False").lower() == "true"
+ENABLE_SCIM = (
+    os.environ.get("ENABLE_SCIM", os.environ.get("SCIM_ENABLED", "False")).lower()
+    == "true"
+)
 SCIM_TOKEN = os.environ.get("SCIM_TOKEN", "")
 
 ####################################
