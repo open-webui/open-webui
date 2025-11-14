@@ -233,24 +233,6 @@ def get_current_user(
                 status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
             )
 
-        if request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS:
-            allowed_paths = [
-                path.strip()
-                for path in str(
-                    request.app.state.config.API_KEY_ALLOWED_ENDPOINTS
-                ).split(",")
-            ]
-
-            # Check if the request path matches any allowed endpoint.
-            if not any(
-                request.url.path == allowed
-                or request.url.path.startswith(allowed + "/")
-                for allowed in allowed_paths
-            ):
-                raise HTTPException(
-                    status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
-                )
-
         user = get_current_user_by_api_key(token)
 
         # Add user info to current span
@@ -260,7 +242,6 @@ def get_current_user(
             current_span.set_attribute("client.user.email", user.email)
             current_span.set_attribute("client.user.role", user.role)
             current_span.set_attribute("client.auth.type", "api_key")
-
         return user
 
     # auth by jwt token
