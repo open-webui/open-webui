@@ -75,7 +75,6 @@ validators==0.35.0
 psutil
 sentencepiece
 soundfile==0.13.1
-azure-ai-documentintelligence==1.0.2
 
 pillow==11.3.0
 opencv-python-headless==4.11.0.86
@@ -85,13 +84,17 @@ rank-bm25==0.2.2
 onnxruntime==1.20.1
 faster-whisper==1.1.1
 
-
 black==25.9.0
 youtube-transcript-api==1.2.2
 pytube==15.0.0
 
 pydub
 ddgs==9.0.0
+
+azure-ai-documentintelligence==1.0.2
+azure-identity==1.25.0
+azure-storage-blob==12.24.1
+azure-search-documents==11.6.0
 
 ## Google Drive
 google-api-python-client
@@ -100,10 +103,6 @@ google-auth-oauthlib
 
 googleapis-common-protos==1.70.0
 google-cloud-storage==2.19.0
-
-azure-identity==1.25.0
-azure-storage-blob==12.24.1
-
 
 pymongo
 psycopg2-binary==2.9.10

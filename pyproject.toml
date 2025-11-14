@@ -86,7 +86,6 @@ dependencies = [
     "sentencepiece",
     "soundfile==0.13.1",
     "azure-ai-documentintelligence==1.0.2",
-    "azure-search-documents>=11.4.0",
 
     "pillow==11.3.0",
     "opencv-python-headless==4.11.0.86",
@@ -150,9 +149,10 @@ all = [
     "pymilvus==2.6.2",
     "pinecone==6.0.2",
     "oracledb==3.2.0",
-
     "colbert-ai==0.2.21",
+
     "firecrawl-py==4.5.0",
+    "azure-search-documents==11.6.0",
 ]
 
 [project.scripts]
