@@ -109,6 +109,7 @@ dependencies = [
     "pytest~=8.3.2",
     "pytest-docker~=3.1.1",
     "moto[s3]>=5.0.26",
+    "posthog==5.4.0",
 
     "googleapis-common-protos==1.63.2",
     "google-cloud-storage==2.19.0",
