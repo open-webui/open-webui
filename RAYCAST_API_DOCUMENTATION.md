@@ -655,56 +655,143 @@ data: [DONE]
 
 #### List Available Models
 
-Get all models available to the current user.
+Get all models available to the current user. **This is the same endpoint used by the frontend's model selector/picker.**
 
-**Endpoint:** `GET /api/v1/models/`
+**Endpoint:** `GET /api/v1/models/` or `GET /api/models` (both work identically)
 
 **Headers:**
 ```
 Authorization: {api_key}
 ```
 
-**Response:**
-```json
-[
-  {
-    "id": "gpt-3.5-turbo",
-    "name": "GPT-3.5 Turbo",
-    "object": "model",
-    "created": 1699999000,
-    "owned_by": "openai",
-    "info": {
-      "meta": {
-        "description": "Fast and efficient model",
-        "capabilities": {
-          "vision": false,
-          "usage": true
-        }
-      }
-    }
-  },
-  {
-    "id": "gpt-4",
-    "name": "GPT-4",
-    "object": "model",
-    "created": 1699999000,
-    "owned_by": "openai",
-    "info": {
-      "meta": {
-        "description": "Most capable model",
-        "capabilities": {
-          "vision": true,
-          "usage": true
-        }
-      }
-    }
-  }
-]
+**Query Parameters:**
+- `refresh` (optional): Set to `true` to force refresh models from providers (default: false)
+
+**Example Request:**
+```
+GET /api/v1/models/
+Authorization: sk-abc123...
 ```
 
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "gpt-3.5-turbo",
+      "name": "GPT-3.5 Turbo",
+      "object": "model",
+      "created": 1699999000,
+      "owned_by": "openai",
+      "tags": [
+        {
+          "name": "OpenAI"
+        },
+        {
+          "name": "Fast"
+        }
+      ],
+      "info": {
+        "meta": {
+          "description": "Fast and efficient model for most tasks",
+          "profile_image_url": "/static/favicon.png",
+          "capabilities": {
+            "vision": false,
+            "usage": true
+          },
+          "tags": [
+            {
+              "name": "OpenAI"
+            }
+          ]
+        },
+        "params": {}
+      }
+    },
+    {
+      "id": "gpt-4",
+      "name": "GPT-4",
+      "object": "model",
+      "created": 1699999000,
+      "owned_by": "openai",
+      "tags": [
+        {
+          "name": "OpenAI"
+        },
+        {
+          "name": "Advanced"
+        }
+      ],
+      "info": {
+        "meta": {
+          "description": "Most capable model for complex tasks",
+          "profile_image_url": "/static/favicon.png",
+          "capabilities": {
+            "vision": true,
+            "usage": true
+          },
+          "tags": [
+            {
+              "name": "OpenAI"
+            }
+          ]
+        },
+        "params": {}
+      }
+    },
+    {
+      "id": "llama3:latest",
+      "name": "Llama 3",
+      "object": "model",
+      "created": 1699999000,
+      "owned_by": "meta",
+      "tags": [
+        {
+          "name": "Local"
+        },
+        {
+          "name": "Open Source"
+        }
+      ],
+      "info": {
+        "meta": {
+          "description": "Meta's open source language model",
+          "capabilities": {
+            "vision": false,
+            "usage": true
+          }
+        }
+      }
+    }
+  ]
+}
+```
+
+**Response Structure:**
+- `data`: Array of model objects
+  - `id`: Unique model identifier (use this for API calls)
+  - `name`: Human-readable model name (display this in UI)
+  - `object`: Always "model"
+  - `created`: Unix timestamp when model was added
+  - `owned_by`: Model provider (e.g., "openai", "meta", "anthropic")
+  - `tags`: Array of tag objects with `name` property (for categorization/filtering)
+  - `info`: Additional model metadata
+    - `meta.description`: Model description
+    - `meta.profile_image_url`: Model icon/avatar
+    - `meta.capabilities`: Object describing model capabilities
+      - `vision`: Boolean - supports image input
+      - `usage`: Boolean - tracks token usage
+    - `meta.tags`: Tags defined in model metadata
+    - `params`: Model-specific parameters
+
 **Notes:**
-- Only returns models the user has access to
+- ✅ **This endpoint returns exactly what the frontend model picker uses**
+- Only returns models the user has access to (filtered by permissions)
 - Admin users with bypass enabled see all models
+- Filter pipelines are automatically excluded from results
+- Models are sorted according to `MODEL_ORDER_LIST` config if defined
+- Tags are combined from both model metadata and model-level tags
+- The `id` field is what you pass to `/api/v1/chat/completions` in the `model` parameter
 
 ---
 
@@ -782,6 +869,39 @@ interface User {
 }
 ```
 
+### Model Object
+
+```typescript
+interface Model {
+  id: string;                    // Model ID to use in API calls
+  name: string;                  // Display name
+  object: "model";
+  created: number;               // Unix timestamp
+  owned_by: string;              // Provider (e.g., "openai", "meta")
+  tags?: ModelTag[];             // Category tags
+  info?: {
+    meta?: {
+      description?: string;
+      profile_image_url?: string;
+      capabilities?: {
+        vision?: boolean;        // Supports image input
+        usage?: boolean;         // Tracks token usage
+      };
+      tags?: ModelTag[];
+    };
+    params?: Record<string, any>;
+  };
+}
+
+interface ModelTag {
+  name: string;
+}
+
+interface ModelsResponse {
+  data: Model[];
+}
+```
+
 ---
 
 ## Error Handling
@@ -850,7 +970,30 @@ const user = await response.json();
 console.log(`Connected as: ${user.name}`);
 ```
 
-#### 3. List Recent Chats
+#### 3. Get Available Models
+
+```javascript
+const response = await fetch('https://chat.example.com/api/v1/models/', {
+  headers: {
+    'Authorization': 'sk-abc123...'
+  }
+});
+
+const modelsData = await response.json();
+const models = modelsData.data;
+
+// Display models in Raycast dropdown/picker
+models.forEach(model => {
+  console.log(`${model.name} (${model.id})`);
+  // Example output: "GPT-4 (gpt-4)"
+  //                 "Llama 3 (llama3:latest)"
+});
+
+// Get the selected model ID for later use
+const selectedModelId = models[0].id; // e.g., "gpt-4"
+```
+
+#### 4. List Recent Chats
 
 ```javascript
 const response = await fetch('https://chat.example.com/api/v1/chats/list?page=1', {
@@ -863,7 +1006,7 @@ const chats = await response.json();
 // Display in Raycast list
 ```
 
-#### 4. Create New Chat
+#### 5. Create New Chat
 
 ```javascript
 const response = await fetch('https://chat.example.com/api/v1/chats/new', {
@@ -883,7 +1026,7 @@ const newChat = await response.json();
 const chatId = newChat.id;
 ```
 
-#### 5. Send Message to AI
+#### 6. Send Message to AI
 
 ```javascript
 const response = await fetch('https://chat.example.com/api/v1/chat/completions', {
@@ -893,7 +1036,7 @@ const response = await fetch('https://chat.example.com/api/v1/chat/completions',
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({
-    model: 'gpt-3.5-turbo',
+    model: selectedModelId, // Use the model ID from step 3
     messages: [
       {
         role: 'user',
@@ -909,7 +1052,7 @@ const completion = await response.json();
 const aiResponse = completion.choices[0].message.content;
 ```
 
-#### 6. Update Chat with Conversation
+#### 7. Update Chat with Conversation
 
 ```javascript
 const response = await fetch(`https://chat.example.com/api/v1/chats/${chatId}`, {
@@ -936,7 +1079,7 @@ const response = await fetch(`https://chat.example.com/api/v1/chats/${chatId}`, 
 });
 ```
 
-#### 7. Verify Sync
+#### 8. Verify Sync
 
 The chat is now visible in the web frontend! Open `https://chat.example.com` and the conversation will appear in the chat history.
 
