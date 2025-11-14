@@ -947,6 +947,18 @@ def apply_params_to_form_data(form_data, model):
     params = form_data.pop("params", {})
     custom_params = params.pop("custom_params", {})
 
+    # Convert frontend reasoning object to reasoning_effort parameter
+    # Frontend sends: reasoning: { effort: 'medium' }
+    # Backend needs: reasoning_effort: 'medium'
+    reasoning = form_data.pop("reasoning", None)
+    if reasoning and isinstance(reasoning, dict):
+        effort = reasoning.get("effort")
+        if effort:
+            # Only set reasoning_effort if not already explicitly set in params
+            # This allows saved chat params or API params to take precedence
+            if "reasoning_effort" not in params:
+                params["reasoning_effort"] = effort
+
     open_webui_params = {
         "stream_response": bool,
         "stream_delta_chunk_size": int,
@@ -1762,8 +1774,28 @@ async def process_chat_response(
                         )
 
                     choices = response_data.get("choices", [])
-                    if choices and choices[0].get("message", {}).get("content"):
-                        content = response_data["choices"][0]["message"]["content"]
+                    if choices and choices[0].get("message"):
+                        message = response_data["choices"][0]["message"]
+                        content = message.get("content", "")
+                        reasoning_content = (
+                            message.get("reasoning_content")
+                            or message.get("reasoning")
+                            or message.get("thinking")
+                        )
+
+                        # If reasoning content exists, format it as HTML details tag
+                        # to match the streaming behavior
+                        if reasoning_content:
+                            reasoning_display_content = "\n".join(
+                                (f"> {line}" if not line.startswith(">") else line)
+                                for line in reasoning_content.splitlines()
+                            )
+
+                            # Format as HTML details tag for frontend display
+                            reasoning_html = f'<details type="reasoning" done="true">\n<summary>Thought</summary>\n{reasoning_display_content}\n</details>\n'
+
+                            # Prepend reasoning before the main content
+                            content = f"{reasoning_html}{content}"
 
                         if content:
                             # Check for usage data in non-streaming response
@@ -1795,7 +1827,7 @@ async def process_chat_response(
                                 }
                             )
 
-                            # Save message in the database
+                            # Save message in the database with reasoning included
                             Chats.upsert_message_to_chat_by_id_and_message_id(
                                 metadata["chat_id"],
                                 metadata["message_id"],
