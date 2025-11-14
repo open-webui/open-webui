@@ -68,6 +68,46 @@ export const banners: Writable<Banner[]> = writable([]);
 
 export const settings: Writable<Settings> = writable({});
 
+const TEXT_SCALE_VALUES = [1, 1.1, 1.2, 1.3, 1.4, 1.5] as const;
+const TEXT_SCALE_MIN = TEXT_SCALE_VALUES[0];
+const TEXT_SCALE_MAX = TEXT_SCALE_VALUES[TEXT_SCALE_VALUES.length - 1];
+
+const resolveTextScale = (value: unknown) => {
+	const numeric = Number(value);
+
+	if (!Number.isFinite(numeric)) {
+		return 1;
+	}
+
+	if (numeric <= TEXT_SCALE_MIN) {
+		return TEXT_SCALE_MIN;
+	}
+
+	if (numeric >= TEXT_SCALE_MAX) {
+		return TEXT_SCALE_MAX;
+	}
+
+	let closest = TEXT_SCALE_VALUES[0];
+	let smallestDistance = Number.POSITIVE_INFINITY;
+
+	for (const scale of TEXT_SCALE_VALUES) {
+		const distance = Math.abs(scale - numeric);
+		if (distance < smallestDistance) {
+			closest = scale;
+			smallestDistance = distance;
+		}
+	}
+
+	return closest;
+};
+
+if (typeof window !== 'undefined') {
+	settings.subscribe(($settings) => {
+		const clampedScale = resolveTextScale($settings?.textScale ?? 1);
+		document.documentElement.style.setProperty('--app-text-scale', clampedScale.toString());
+	});
+}
+
 export const audioQueue = writable(null);
 
 export const showSidebar = writable(false);
@@ -161,6 +201,7 @@ type Settings = {
 	notifications?: any;
 	imageCompression?: boolean;
 	imageCompressionSize?: any;
+	textScale?: number;
 	widescreenMode?: null;
 	largeTextAsFile?: boolean;
 	promptAutocomplete?: boolean;
