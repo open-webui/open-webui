@@ -248,10 +248,10 @@ async def update_config(
     request.app.state.config.IMAGE_EDIT_SIZE = form_data.IMAGE_EDIT_SIZE
 
     request.app.state.config.IMAGES_EDIT_OPENAI_API_BASE_URL = (
-        form_data.IMAGES_OPENAI_API_BASE_URL
+        form_data.IMAGES_EDIT_OPENAI_API_BASE_URL
     )
     request.app.state.config.IMAGES_EDIT_OPENAI_API_KEY = (
-        form_data.IMAGES_OPENAI_API_KEY
+        form_data.IMAGES_EDIT_OPENAI_API_KEY
     )
     request.app.state.config.IMAGES_EDIT_OPENAI_API_VERSION = (
         form_data.IMAGES_EDIT_OPENAI_API_VERSION

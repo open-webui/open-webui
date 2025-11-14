@@ -330,6 +330,13 @@ async def get_oauth_client_info_with_dynamic_client_registration(
                     registration_response_json = (
                         await oauth_client_registration_response.json()
                     )
+
+                    # The mcp package requires optional unset values to be None. If an empty string is passed, it gets validated and fails.
+                    # This replaces all empty strings with None.
+                    registration_response_json = {
+                        k: (None if v == "" else v)
+                        for k, v in registration_response_json.items()
+                    }
                     oauth_client_info = OAuthClientInformationFull.model_validate(
                         {
                             **registration_response_json,
@@ -374,9 +381,20 @@ class OAuthClientManager:
             "name": client_id,
             "client_id": oauth_client_info.client_id,
             "client_secret": oauth_client_info.client_secret,
-            "client_kwargs": (
-                {"scope": oauth_client_info.scope} if oauth_client_info.scope else {}
-            ),
+            "client_kwargs": {
+                **(
+                    {"scope": oauth_client_info.scope}
+                    if oauth_client_info.scope
+                    else {}
+                ),
+                **(
+                    {
+                        "token_endpoint_auth_method": oauth_client_info.token_endpoint_auth_method
+                    }
+                    if oauth_client_info.token_endpoint_auth_method
+                    else {}
+                ),
+            },
             "server_metadata_url": (
                 oauth_client_info.issuer if oauth_client_info.issuer else None
             ),
@@ -690,16 +708,17 @@ class OAuthClientManager:
         error_message = None
         try:
             client_info = self.get_client_info(client_id)
-            token_params = {}
+
+            auth_params = {}
             if (
                 client_info
                 and hasattr(client_info, "client_id")
                 and hasattr(client_info, "client_secret")
             ):
-                token_params["client_id"] = client_info.client_id
-                token_params["client_secret"] = client_info.client_secret
+                auth_params["client_id"] = client_info.client_id
+                auth_params["client_secret"] = client_info.client_secret
 
-            token = await client.authorize_access_token(request, **token_params)
+            token = await client.authorize_access_token(request, **auth_params)
             if token:
                 try:
                     # Add timestamp for tracking
@@ -1224,8 +1243,16 @@ class OAuthManager:
         error_message = None
         try:
             client = self.get_client(provider)
+
+            auth_params = {}
+            if client:
+                if hasattr(client, "client_id"):
+                    auth_params["client_id"] = client.client_id
+                if hasattr(client, "client_secret"):
+                    auth_params["client_secret"] = client.client_secret
+
             try:
-                token = await client.authorize_access_token(request)
+                token = await client.authorize_access_token(request, **auth_params)
             except Exception as e:
                 detailed_error = _build_oauth_callback_error_message(e)
                 log.warning(

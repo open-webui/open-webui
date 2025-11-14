@@ -319,6 +319,7 @@ from open_webui.config import (
     PERPLEXITY_API_KEY,
     PERPLEXITY_MODEL,
     PERPLEXITY_SEARCH_CONTEXT_USAGE,
+    PERPLEXITY_SEARCH_API_URL,
     SOUGOU_API_SID,
     SOUGOU_API_SK,
     KAGI_SEARCH_API_KEY,
@@ -428,6 +429,7 @@ from open_webui.config import (
     TAGS_GENERATION_PROMPT_TEMPLATE,
     IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+    VOICE_MODE_PROMPT_TEMPLATE,
     QUERY_GENERATION_PROMPT_TEMPLATE,
     AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE,
     AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
@@ -459,7 +461,7 @@ from open_webui.env import (
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
     WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
     # SCIM
-    SCIM_ENABLED,
+    ENABLE_SCIM,
     SCIM_TOKEN,
     ENABLE_COMPRESSION_MIDDLEWARE,
     ENABLE_WEBSOCKET_SUPPORT,
@@ -715,7 +717,7 @@ app.state.config.ENABLE_DIRECT_CONNECTIONS = ENABLE_DIRECT_CONNECTIONS
 #
 ########################################
 
-app.state.SCIM_ENABLED = SCIM_ENABLED
+app.state.ENABLE_SCIM = ENABLE_SCIM
 app.state.SCIM_TOKEN = SCIM_TOKEN
 
 ########################################
@@ -958,6 +960,7 @@ app.state.config.EXA_API_KEY = EXA_API_KEY
 app.state.config.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY
 app.state.config.PERPLEXITY_MODEL = PERPLEXITY_MODEL
 app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE = PERPLEXITY_SEARCH_CONTEXT_USAGE
+app.state.config.PERPLEXITY_SEARCH_API_URL = PERPLEXITY_SEARCH_API_URL
 app.state.config.SOUGOU_API_SID = SOUGOU_API_SID
 app.state.config.SOUGOU_API_SK = SOUGOU_API_SK
 app.state.config.EXTERNAL_WEB_SEARCH_URL = EXTERNAL_WEB_SEARCH_URL
@@ -1206,6 +1209,7 @@ app.state.config.AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = (
 app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = (
     AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH
 )
+app.state.config.VOICE_MODE_PROMPT_TEMPLATE = VOICE_MODE_PROMPT_TEMPLATE
 
 
 ########################################
@@ -1215,6 +1219,10 @@ app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = (
 ########################################
 
 app.state.MODELS = {}
+
+# Add the middleware to the app
+if ENABLE_COMPRESSION_MIDDLEWARE:
+    app.add_middleware(CompressMiddleware)
 
 
 class RedirectMiddleware(BaseHTTPMiddleware):
@@ -1257,12 +1265,45 @@ class RedirectMiddleware(BaseHTTPMiddleware):
         return response
 
 
-# Add the middleware to the app
-if ENABLE_COMPRESSION_MIDDLEWARE:
-    app.add_middleware(CompressMiddleware)
-
 app.add_middleware(RedirectMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
+
+
+class APIKeyRestrictionMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        auth_header = request.headers.get("Authorization")
+
+        # Only apply restrictions if an sk- API key is used
+        if auth_header and auth_header.startswith("sk-"):
+            # Check if restrictions are enabled
+            if request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS:
+                allowed_paths = [
+                    path.strip()
+                    for path in str(
+                        request.app.state.config.API_KEY_ALLOWED_ENDPOINTS
+                    ).split(",")
+                    if path.strip()
+                ]
+
+                request_path = request.url.path
+
+                # Match exact path or prefix path
+                is_allowed = any(
+                    request_path == allowed or request_path.startswith(allowed + "/")
+                    for allowed in allowed_paths
+                )
+
+                if not is_allowed:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="API key not allowed to access this endpoint.",
+                    )
+
+        response = await call_next(request)
+        return response
+
+
+app.add_middleware(APIKeyRestrictionMiddleware)
 
 
 @app.middleware("http")
@@ -1355,7 +1396,7 @@ app.include_router(
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 
 # SCIM 2.0 API for identity management
-if SCIM_ENABLED:
+if ENABLE_SCIM:
     app.include_router(scim.router, prefix="/api/v1/scim/v2", tags=["scim"])
 
 

@@ -32,7 +32,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSpl
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 from langchain_core.documents import Document
 
-from open_webui.models.files import FileModel, Files
+from open_webui.models.files import FileModel, FileUpdateForm, Files
 from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
 
@@ -64,6 +64,7 @@ from open_webui.retrieval.web.serply import search_serply
 from open_webui.retrieval.web.serpstack import search_serpstack
 from open_webui.retrieval.web.tavily import search_tavily
 from open_webui.retrieval.web.bing import search_bing
+from open_webui.retrieval.web.azure import search_azure
 from open_webui.retrieval.web.exa import search_exa
 from open_webui.retrieval.web.perplexity import search_perplexity
 from open_webui.retrieval.web.sougou import search_sougou
@@ -528,6 +529,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "PERPLEXITY_API_KEY": request.app.state.config.PERPLEXITY_API_KEY,
             "PERPLEXITY_MODEL": request.app.state.config.PERPLEXITY_MODEL,
             "PERPLEXITY_SEARCH_CONTEXT_USAGE": request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
+            "PERPLEXITY_SEARCH_API_URL": request.app.state.config.PERPLEXITY_SEARCH_API_URL,
             "SOUGOU_API_SID": request.app.state.config.SOUGOU_API_SID,
             "SOUGOU_API_SK": request.app.state.config.SOUGOU_API_SK,
             "WEB_LOADER_ENGINE": request.app.state.config.WEB_LOADER_ENGINE,
@@ -585,6 +587,7 @@ class WebConfig(BaseModel):
     PERPLEXITY_API_KEY: Optional[str] = None
     PERPLEXITY_MODEL: Optional[str] = None
     PERPLEXITY_SEARCH_CONTEXT_USAGE: Optional[str] = None
+    PERPLEXITY_SEARCH_API_URL: Optional[str] = None
     SOUGOU_API_SID: Optional[str] = None
     SOUGOU_API_SK: Optional[str] = None
     WEB_LOADER_ENGINE: Optional[str] = None
@@ -1108,6 +1111,9 @@ async def update_rag_config(
         request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE = (
             form_data.web.PERPLEXITY_SEARCH_CONTEXT_USAGE
         )
+        request.app.state.config.PERPLEXITY_SEARCH_API_URL = (
+            form_data.web.PERPLEXITY_SEARCH_API_URL
+        )
         request.app.state.config.SOUGOU_API_SID = form_data.web.SOUGOU_API_SID
         request.app.state.config.SOUGOU_API_SK = form_data.web.SOUGOU_API_SK
 
@@ -1253,6 +1259,7 @@ async def update_rag_config(
             "PERPLEXITY_API_KEY": request.app.state.config.PERPLEXITY_API_KEY,
             "PERPLEXITY_MODEL": request.app.state.config.PERPLEXITY_MODEL,
             "PERPLEXITY_SEARCH_CONTEXT_USAGE": request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
+            "PERPLEXITY_SEARCH_API_URL": request.app.state.config.PERPLEXITY_SEARCH_API_URL,
             "SOUGOU_API_SID": request.app.state.config.SOUGOU_API_SID,
             "SOUGOU_API_SK": request.app.state.config.SOUGOU_API_SK,
             "WEB_LOADER_ENGINE": request.app.state.config.WEB_LOADER_ENGINE,
@@ -1811,7 +1818,9 @@ def process_web(
         )
 
 
-def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
+def search_web(
+    request: Request, engine: str, query: str, user=None
+) -> list[SearchResult]:
     """Search the web using a search engine and return the results as a list of SearchResult objects.
     Will look for a search engine API key in environment variables in the following order:
     - SEARXNG_QUERY_URL
@@ -1850,6 +1859,8 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                request.app.state.config.PERPLEXITY_SEARCH_API_URL,
+                user,
             )
         else:
             raise Exception("No PERPLEXITY_API_KEY found in environment variables")
@@ -2027,6 +2038,24 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
         )
+    elif engine == "azure":
+        if (
+            request.app.state.config.AZURE_AI_SEARCH_API_KEY
+            and request.app.state.config.AZURE_AI_SEARCH_ENDPOINT
+            and request.app.state.config.AZURE_AI_SEARCH_INDEX_NAME
+        ):
+            return search_azure(
+                request.app.state.config.AZURE_AI_SEARCH_API_KEY,
+                request.app.state.config.AZURE_AI_SEARCH_ENDPOINT,
+                request.app.state.config.AZURE_AI_SEARCH_INDEX_NAME,
+                query,
+                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception(
+                "AZURE_AI_SEARCH_API_KEY, AZURE_AI_SEARCH_ENDPOINT, and AZURE_AI_SEARCH_INDEX_NAME are required for Azure AI Search"
+            )
     elif engine == "exa":
         return search_exa(
             request.app.state.config.EXA_API_KEY,
@@ -2069,11 +2098,13 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
         )
     elif engine == "external":
         return search_external(
+            request,
             request.app.state.config.EXTERNAL_WEB_SEARCH_URL,
             request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY,
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            user=user,
         )
     else:
         raise Exception("No search engine API key found in environment variables")
@@ -2098,6 +2129,7 @@ async def process_web_search(
                 request,
                 request.app.state.config.WEB_SEARCH_ENGINE,
                 query,
+                user,
             )
             for query in form_data.queries
         ]
@@ -2447,16 +2479,19 @@ def process_files_batch(
     """
     Process a batch of files and save them to the vector database.
     """
-    results: List[BatchProcessFilesResult] = []
-    errors: List[BatchProcessFilesResult] = []
+
     collection_name = form_data.collection_name
+
+    file_results: List[BatchProcessFilesResult] = []
+    file_errors: List[BatchProcessFilesResult] = []
+    file_updates: List[FileUpdateForm] = []
 
     # Prepare all documents first
     all_docs: List[Document] = []
+
     for file in form_data.files:
         try:
             text_content = file.data.get("content", "")
-
             docs: List[Document] = [
                 Document(
                     page_content=text_content.replace("<br/>", "\n"),
@@ -2470,16 +2505,21 @@ def process_files_batch(
                 )
             ]
 
-            hash = calculate_sha256_string(text_content)
-            Files.update_file_hash_by_id(file.id, hash)
-            Files.update_file_data_by_id(file.id, {"content": text_content})
-
             all_docs.extend(docs)
-            results.append(BatchProcessFilesResult(file_id=file.id, status="prepared"))
+
+            file_updates.append(
+                FileUpdateForm(
+                    hash=calculate_sha256_string(text_content),
+                    data={"content": text_content},
+                )
+            )
+            file_results.append(
+                BatchProcessFilesResult(file_id=file.id, status="prepared")
+            )
 
         except Exception as e:
             log.error(f"process_files_batch: Error processing file {file.id}: {str(e)}")
-            errors.append(
+            file_errors.append(
                 BatchProcessFilesResult(file_id=file.id, status="failed", error=str(e))
             )
 
@@ -2495,20 +2535,18 @@ def process_files_batch(
             )
 
             # Update all files with collection name
-            for result in results:
-                Files.update_file_metadata_by_id(
-                    result.file_id, {"collection_name": collection_name}
-                )
-                result.status = "completed"
+            for file_update, file_result in zip(file_updates, file_results):
+                Files.update_file_by_id(id=file_result.file_id, form_data=file_update)
+                file_result.status = "completed"
 
         except Exception as e:
             log.error(
                 f"process_files_batch: Error saving documents to vector DB: {str(e)}"
             )
-            for result in results:
-                result.status = "failed"
-                errors.append(
-                    BatchProcessFilesResult(file_id=result.file_id, error=str(e))
+            for file_result in file_results:
+                file_result.status = "failed"
+                file_errors.append(
+                    BatchProcessFilesResult(file_id=file_result.file_id, error=str(e))
                 )
 
-    return BatchProcessFilesResponse(results=results, errors=errors)
+    return BatchProcessFilesResponse(results=file_results, errors=file_errors)

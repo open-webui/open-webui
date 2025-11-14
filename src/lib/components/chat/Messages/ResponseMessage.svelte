@@ -2,7 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, onDestroy } from 'svelte';
 	import { onMount, tick, getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType, t } from 'i18next';
@@ -152,6 +152,8 @@
 	export let topPadding = false;
 
 	let citationsElement: HTMLDivElement;
+
+	let contentContainerElement: HTMLDivElement;
 	let buttonsContainerElement: HTMLDivElement;
 	let showDeleteConfirm = false;
 
@@ -541,24 +543,70 @@
 		})();
 	}
 
+	const buttonsWheelHandler = (event: WheelEvent) => {
+		if (buttonsContainerElement) {
+			if (buttonsContainerElement.scrollWidth <= buttonsContainerElement.clientWidth) {
+				// If the container is not scrollable, horizontal scroll
+				return;
+			} else {
+				event.preventDefault();
+
+				if (event.deltaY !== 0) {
+					// Adjust horizontal scroll position based on vertical scroll
+					buttonsContainerElement.scrollLeft += event.deltaY;
+				}
+			}
+		}
+	};
+
+	const contentCopyHandler = (e) => {
+		if (contentContainerElement) {
+			e.preventDefault();
+			// Get the selected HTML
+			const selection = window.getSelection();
+			const range = selection.getRangeAt(0);
+			const tempDiv = document.createElement('div');
+
+			// Remove background, color, and font styles
+			tempDiv.appendChild(range.cloneContents());
+
+			tempDiv.querySelectorAll('table').forEach((table) => {
+				table.style.borderCollapse = 'collapse';
+				table.style.width = 'auto';
+				table.style.tableLayout = 'auto';
+			});
+
+			tempDiv.querySelectorAll('th').forEach((th) => {
+				th.style.whiteSpace = 'nowrap';
+				th.style.padding = '4px 8px';
+			});
+
+			// Put cleaned HTML + plain text into clipboard
+			e.clipboardData.setData('text/html', tempDiv.innerHTML);
+			e.clipboardData.setData('text/plain', selection.toString());
+		}
+	};
+
 	onMount(async () => {
 		// console.log('ResponseMessage mounted');
 
 		await tick();
 		if (buttonsContainerElement) {
-			buttonsContainerElement.addEventListener('wheel', function (event) {
-				if (buttonsContainerElement.scrollWidth <= buttonsContainerElement.clientWidth) {
-					// If the container is not scrollable, horizontal scroll
-					return;
-				} else {
-					event.preventDefault();
+			buttonsContainerElement.addEventListener('wheel', buttonsWheelHandler);
+		}
 
-					if (event.deltaY !== 0) {
-						// Adjust horizontal scroll position based on vertical scroll
-						buttonsContainerElement.scrollLeft += event.deltaY;
-					}
-				}
-			});
+		if (contentContainerElement) {
+			contentContainerElement.addEventListener('copy', contentCopyHandler);
+		}
+	});
+
+	onDestroy(() => {
+		if (buttonsContainerElement) {
+			buttonsContainerElement.removeEventListener('wheel', buttonsWheelHandler);
+		}
+
+		if (contentContainerElement) {
+			contentContainerElement.removeEventListener('copy', contentCopyHandler);
 		}
 	});
 </script>
@@ -719,72 +767,76 @@
 									</div>
 								</div>
 							</div>
-						{:else}
-							<div class="w-full flex flex-col relative" id="response-content-container">
-								{#if message.content === '' && !message.error && ((model?.info?.meta?.capabilities?.status_updates ?? true) ? (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 || (message?.statusHistory?.at(-1)?.hidden ?? false) : true)}
-									<Skeleton />
-								{:else if message.content && message.error !== true}
-									<!-- always show message contents even if there's an error -->
-									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
-									<ContentRenderer
-										id={`${chatId}-${message.id}`}
-										messageId={message.id}
-										{history}
-										{selectedModels}
-										content={message.content}
-										sources={message.sources}
-										floatingButtons={message?.done &&
-											!readOnly &&
-											($settings?.showFloatingActionButtons ?? true)}
-										save={!readOnly}
-										preview={!readOnly}
-										{editCodeBlock}
-										{topPadding}
-										done={($settings?.chatFadeStreamingText ?? true)
-											? (message?.done ?? false)
-											: true}
-										{model}
-										onTaskClick={async (e) => {
-											console.log(e);
-										}}
-										onSourceClick={async (id, idx) => {
-											console.log(id, idx);
-
-											if (citationsElement) {
-												citationsElement?.showSourceModal(idx - 1);
-											}
-										}}
-										onAddMessages={({ modelId, parentId, messages }) => {
-											addMessages({ modelId, parentId, messages });
-										}}
-										onSave={({ raw, oldContent, newContent }) => {
-											history.messages[message.id].content = history.messages[
-												message.id
-											].content.replace(raw, raw.replace(oldContent, newContent));
-
-											updateChat();
-										}}
-									/>
-								{/if}
-
-								{#if message?.error}
-									<Error content={message?.error?.content ?? message.content} />
-								{/if}
-
-								{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}
-									<Citations
-										bind:this={citationsElement}
-										id={message?.id}
-										sources={message?.sources ?? message?.citations}
-										{readOnly}
-									/>
-								{/if}
-
-								{#if message.code_executions}
-									<CodeExecutions codeExecutions={message.code_executions} />
-								{/if}
-							</div>
 						{/if}
+
+						<div
+							bind:this={contentContainerElement}
+							class="w-full flex flex-col relative {edit ? 'hidden' : ''}"
+							id="response-content-container"
+						>
+							{#if message.content === '' && !message.error && ((model?.info?.meta?.capabilities?.status_updates ?? true) ? (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 || (message?.statusHistory?.at(-1)?.hidden ?? false) : true)}
+								<Skeleton />
+							{:else if message.content && message.error !== true}
+								<!-- always show message contents even if there's an error -->
+								<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
+								<ContentRenderer
+									id={`${chatId}-${message.id}`}
+									messageId={message.id}
+									{history}
+									{selectedModels}
+									content={message.content}
+									sources={message.sources}
+									floatingButtons={message?.done &&
+										!readOnly &&
+										($settings?.showFloatingActionButtons ?? true)}
+									save={!readOnly}
+									preview={!readOnly}
+									{editCodeBlock}
+									{topPadding}
+									done={($settings?.chatFadeStreamingText ?? true)
+										? (message?.done ?? false)
+										: true}
+									{model}
+									onTaskClick={async (e) => {
+										console.log(e);
+									}}
+									onSourceClick={async (id, idx) => {
+										console.log(id, idx);
+
+										if (citationsElement) {
+											citationsElement?.showSourceModal(idx - 1);
+										}
+									}}
+									onAddMessages={({ modelId, parentId, messages }) => {
+										addMessages({ modelId, parentId, messages });
+									}}
+									onSave={({ raw, oldContent, newContent }) => {
+										history.messages[message.id].content = history.messages[
+											message.id
+										].content.replace(raw, raw.replace(oldContent, newContent));
+
+										updateChat();
+									}}
+								/>
+							{/if}
+
+							{#if message?.error}
+								<Error content={message?.error?.content ?? message.content} />
+							{/if}
+
+							{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}
+								<Citations
+									bind:this={citationsElement}
+									id={message?.id}
+									sources={message?.sources ?? message?.citations}
+									{readOnly}
+								/>
+							{/if}
+
+							{#if message.code_executions}
+								<CodeExecutions codeExecutions={message.code_executions} />
+							{/if}
+						</div>
 					</div>
 				</div>
 

@@ -155,7 +155,9 @@ async def get_tools(
                         auth_type = tool_server_connection.get("auth_type", "bearer")
 
                         cookies = {}
-                        headers = {}
+                        headers = {
+                            "Content-Type": "application/json",
+                        }
 
                         if auth_type == "bearer":
                             headers["Authorization"] = (
@@ -177,7 +179,10 @@ async def get_tools(
                                     f"Bearer {oauth_token.get('access_token', '')}"
                                 )
 
-                        headers["Content-Type"] = "application/json"
+                        connection_headers = tool_server_connection.get("headers", None)
+                        if connection_headers:
+                            for key, value in connection_headers.items():
+                                headers[key] = value
 
                         def make_tool_function(
                             function_name, tool_server_data, headers
@@ -561,20 +566,21 @@ async def get_tool_servers(request: Request):
     return tool_servers
 
 
-async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
-    headers = {
+async def get_tool_server_data(url: str, headers: Optional[dict]) -> Dict[str, Any]:
+    _headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
     }
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
+
+    if headers:
+        _headers.update(headers)
 
     error = None
     try:
         timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA)
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             async with session.get(
-                url, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
+                url, headers=_headers, ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
             ) as response:
                 if response.status != 200:
                     error_body = await response.json()
@@ -644,7 +650,10 @@ async def get_tool_servers_data(servers: List[Dict[str, Any]]) -> List[Dict[str,
                 openapi_path = server.get("path", "openapi.json")
                 spec_url = get_tool_server_url(server_url, openapi_path)
                 # Fetch from URL
-                task = get_tool_server_data(token, spec_url)
+                task = get_tool_server_data(
+                    spec_url,
+                    {"Authorization": f"Bearer {token}"} if token else None,
+                )
             elif spec_type == "json" and server.get("spec", ""):
                 # Use provided JSON spec
                 spec_json = None

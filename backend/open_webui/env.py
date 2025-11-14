@@ -493,7 +493,10 @@ OAUTH_SESSION_TOKEN_ENCRYPTION_KEY = os.environ.get(
 # SCIM Configuration
 ####################################
 
-SCIM_ENABLED = os.environ.get("SCIM_ENABLED", "False").lower() == "true"
+ENABLE_SCIM = (
+    os.environ.get("ENABLE_SCIM", os.environ.get("SCIM_ENABLED", "False")).lower()
+    == "true"
+)
 SCIM_TOKEN = os.environ.get("SCIM_TOKEN", "")
 
 ####################################
@@ -567,6 +570,21 @@ else:
         CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = int(CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES)
     except Exception:
         CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = 30
+
+
+CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE = os.environ.get(
+    "CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE", ""
+)
+
+if CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE == "":
+    CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE = None
+else:
+    try:
+        CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE = int(
+            CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
+        )
+    except Exception:
+        CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE = None
 
 
 ####################################
@@ -706,7 +724,9 @@ if OFFLINE_MODE:
 # AUDIT LOGGING
 ####################################
 # Where to store log file
-AUDIT_LOGS_FILE_PATH = f"{DATA_DIR}/audit.log"
+# Defaults to the DATA_DIR/audit.log. To set AUDIT_LOGS_FILE_PATH you need to
+# provide the whole path, like: /app/audit.log
+AUDIT_LOGS_FILE_PATH = os.getenv("AUDIT_LOGS_FILE_PATH", f"{DATA_DIR}/audit.log")
 # Maximum size of a file before rotating into a new log file
 AUDIT_LOG_FILE_ROTATION_SIZE = os.getenv("AUDIT_LOG_FILE_ROTATION_SIZE", "10MB")
 
