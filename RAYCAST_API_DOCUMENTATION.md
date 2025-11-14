@@ -744,10 +744,57 @@ data: {"id":"chatcmpl-uuid","object":"chat.completion.chunk","created":170000000
 data: [DONE]
 ```
 
+**Reasoning Content Handling:**
+
+For reasoning models (e.g., OpenAI o1, o3), the API automatically extracts and formats reasoning content from the model's response. This works for both streaming and non-streaming requests.
+
+**Reasoning in Response:**
+When a reasoning model generates reasoning content, it appears in the `message.content` field formatted as HTML:
+
+```html
+<details type="reasoning" done="true">
+<summary>Thought</summary>
+> The model's reasoning process...
+> Step-by-step thinking...
+</details>
+
+The actual answer to your question.
+```
+
+**Important Notes:**
+- ✅ Reasoning content is automatically extracted from both streaming and non-streaming responses
+- ✅ Reasoning is formatted as HTML `<details>` tags for proper display in the web UI
+- ✅ When you save this content to a chat (via `/api/chats/{id}`), the reasoning will be visible in the web interface
+- ✅ You don't need to do any special processing - just use `message.content` as-is
+
+**Example with Reasoning Model:**
+```javascript
+const response = await fetch('https://chat.example.com/api/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'sk-abc123...',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    model: 'o1-preview',  // Reasoning model
+    messages: [
+      { role: 'user', content: 'Solve this math problem: 2+2' }
+    ],
+    reasoning_effort: 'high',  // Optional: control reasoning depth
+    stream: false
+  })
+});
+
+const result = await response.json();
+// result.choices[0].message.content contains both reasoning AND answer:
+// "<details type=\"reasoning\">...</details>\n\nThe answer is 4."
+```
+
 **Notes:**
 - Streaming responses are recommended for better UX
 - The `chat_id` parameter automatically saves the conversation
 - If no `chat_id` is provided, you must manually save the conversation using the chat endpoints
+- Reasoning content works seamlessly across API and web UI
 
 ---
 
