@@ -2087,14 +2087,8 @@ PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(
 )
 
 PGVECTOR_USE_HALFVEC = (
-    os.getenv("PGVECTOR_USE_HALFVEC")
-    if "PGVECTOR_USE_HALFVEC" in os.environ
-    else None
+    os.getenv("PGVECTOR_USE_HALFVEC", "false").lower() == "true"
 )
-if PGVECTOR_USE_HALFVEC is None:
-    PGVECTOR_USE_HALFVEC = False
-else:
-    PGVECTOR_USE_HALFVEC = PGVECTOR_USE_HALFVEC.lower() == "true"
 
 if (
     PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH > 2000
