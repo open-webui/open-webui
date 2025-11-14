@@ -268,32 +268,94 @@ Authorization: {api_key}
 Content-Type: application/json
 ```
 
-**Request Body:**
+**Request Body (Recommended Structure):**
 ```json
 {
   "chat": {
-    "title": "New Chat Title",
-    "messages": []
+    "title": "My Chat Title",
+    "models": ["gpt-4"],
+    "messages": [
+      {
+        "role": "user",
+        "content": "Hello!"
+      },
+      {
+        "role": "assistant",
+        "content": "Hi there!"
+      }
+    ],
+    "history": {
+      "messages": {
+        "msg-uuid-1": {
+          "id": "msg-uuid-1",
+          "role": "user",
+          "content": "Hello!",
+          "parentId": null,
+          "childrenIds": ["msg-uuid-2"]
+        },
+        "msg-uuid-2": {
+          "id": "msg-uuid-2",
+          "role": "assistant",
+          "content": "Hi there!",
+          "parentId": "msg-uuid-1",
+          "childrenIds": []
+        }
+      },
+      "currentId": "msg-uuid-2"
+    },
+    "params": {},
+    "timestamp": 1700000000
   },
   "folder_id": null
 }
 ```
 
-**Minimal Request:**
+**⚠️ IMPORTANT: The `models` field is REQUIRED for chat continuation in the web UI.**
+
+If you don't include `models`, the chat will show "undefined" as the model name and users won't be able to continue the conversation in the web interface.
+
+**Simplified Request (with models):**
 ```json
 {
-  "chat": {}
+  "chat": {
+    "title": "Quick Chat",
+    "models": ["gpt-4"],
+    "messages": [
+      {
+        "role": "user",
+        "content": "Hello"
+      },
+      {
+        "role": "assistant",
+        "content": "Hi!"
+      }
+    ]
+  }
 }
 ```
+
+**Chat Object Structure:**
+- `title` (string): Chat title (first 50 chars of user's first message is common)
+- `models` (string[]): **REQUIRED** - Array of model IDs used in the chat (e.g., `["gpt-4"]`)
+- `messages` (array): Linear array of messages (fallback if history not provided)
+- `history` (object, optional but recommended): Message tree structure for branching conversations
+  - `messages` (object): Map of message ID to message object
+    - Each message has: `id`, `role`, `content`, `parentId`, `childrenIds`
+  - `currentId` (string): ID of the most recent message in the conversation
+- `params` (object, optional): Model parameters like `temperature`, `max_tokens`, etc.
+- `timestamp` (number, optional): Unix timestamp in milliseconds
 
 **Response:**
 ```json
 {
   "id": "new-chat-uuid",
   "user_id": "user-uuid",
-  "title": "New Chat",
+  "title": "My Chat Title",
   "chat": {
-    "title": "New Chat"
+    "title": "My Chat Title",
+    "models": ["gpt-4"],
+    "messages": [...],
+    "history": {...}
   },
   "created_at": 1700000000,
   "updated_at": 1700000000,
@@ -322,15 +384,40 @@ Content-Type: application/json
 {
   "chat": {
     "title": "Updated Title",
+    "models": ["gpt-4"],
     "messages": [
       {
         "role": "user",
+        "content": "First message"
+      },
+      {
+        "role": "assistant",
+        "content": "First response"
+      },
+      {
+        "role": "user",
         "content": "New message"
+      },
+      {
+        "role": "assistant",
+        "content": "New response"
       }
-    ]
+    ],
+    "history": {
+      "messages": {
+        "msg-1": {...},
+        "msg-2": {...},
+        "msg-3": {...},
+        "msg-4": {...}
+      },
+      "currentId": "msg-4"
+    },
+    "params": {}
   }
 }
 ```
+
+**⚠️ IMPORTANT:** Always include the `models` array when updating, even if it hasn't changed. The update replaces the entire `chat` object.
 
 **Response:**
 ```json
@@ -340,7 +427,9 @@ Content-Type: application/json
   "title": "Updated Title",
   "chat": {
     "title": "Updated Title",
-    "messages": [...]
+    "models": ["gpt-4"],
+    "messages": [...],
+    "history": {...}
   },
   "created_at": 1699999000,
   "updated_at": 1700000100,
@@ -352,7 +441,7 @@ Content-Type: application/json
 }
 ```
 
-**Note:** The update merges the new data with existing chat data.
+**Note:** The backend replaces the entire `chat` object with what you provide, so include all fields you want to preserve (especially `models`).
 
 #### Delete Chat
 
@@ -1019,7 +1108,10 @@ const response = await fetch('https://chat.example.com/api/v1/chats/new', {
   },
   body: JSON.stringify({
     chat: {
-      title: 'Quick Question from Raycast'
+      title: 'Quick Question from Raycast',
+      models: [selectedModelId],  // IMPORTANT: Include the model ID!
+      messages: [],
+      timestamp: Date.now()
     }
   })
 });
@@ -1066,6 +1158,7 @@ const response = await fetch(`https://chat.example.com/api/v1/chats/${chatId}`, 
   body: JSON.stringify({
     chat: {
       title: 'Weather Question',
+      models: [selectedModelId],  // IMPORTANT: Always include models!
       messages: [
         {
           role: 'user',
@@ -1075,7 +1168,8 @@ const response = await fetch(`https://chat.example.com/api/v1/chats/${chatId}`, 
           role: 'assistant',
           content: aiResponse
         }
-      ]
+      ],
+      timestamp: Date.now()
     }
   })
 });
