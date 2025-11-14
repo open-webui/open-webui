@@ -3,7 +3,8 @@ SUPER_ADMIN_EMAILS = [
         "ms15138@nyu.edu", 
         "mb484@nyu.edu",
         "cg4532@nyu.edu",
-        "ht2490@nyu.edu"
+        "ht2490@nyu.edu",
+        "ps5226@nyu.edu"
     ]
 
 def is_super_admin(user) -> bool:
