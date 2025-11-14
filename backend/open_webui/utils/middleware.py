@@ -1720,28 +1720,74 @@ async def process_chat_response(
 
     # Non-streaming response
     if not isinstance(response, StreamingResponse):
-        if event_emitter:
+        # First, extract and process reasoning content for ALL non-streaming responses
+        # This must happen before the event_emitter check to ensure API responses include reasoning
+        response_data = None
+        if isinstance(response, dict) or isinstance(response, JSONResponse):
+            if isinstance(response, list) and len(response) == 1:
+                # If the response is a single-item list, unwrap it #17213
+                response = response[0]
+
+            if isinstance(response, JSONResponse) and isinstance(
+                response.body, bytes
+            ):
+                try:
+                    response_data = json.loads(
+                        response.body.decode("utf-8", "replace")
+                    )
+                except json.JSONDecodeError:
+                    response_data = {
+                        "error": {"detail": "Invalid JSON response"}
+                    }
+            else:
+                response_data = response
+
+            # Process reasoning content for ALL responses (not just those with event_emitter)
+            if response_data and "choices" in response_data:
+                choices = response_data.get("choices", [])
+                if choices and choices[0].get("message"):
+                    message = response_data["choices"][0]["message"]
+                    content = message.get("content", "")
+                    reasoning_content = (
+                        message.get("reasoning_content")
+                        or message.get("reasoning")
+                        or message.get("thinking")
+                    )
+
+                    # If reasoning content exists, format it as HTML details tag
+                    if reasoning_content:
+                        reasoning_display_content = "\n".join(
+                            (f"> {line}" if not line.startswith(">") else line)
+                            for line in reasoning_content.splitlines()
+                        )
+
+                        # Format as HTML details tag for frontend display
+                        reasoning_html = f'<details type="reasoning" done="true">\n<summary>Thought</summary>\n{reasoning_display_content}\n</details>\n'
+
+                        # Prepend reasoning before the main content
+                        content = f"{reasoning_html}{content}"
+
+                        # Update response_data so reasoning is included in API response
+                        response_data["choices"][0]["message"]["content"] = content
+                        # Remove separate reasoning fields to avoid confusion
+                        response_data["choices"][0]["message"].pop("reasoning_content", None)
+                        response_data["choices"][0]["message"].pop("reasoning", None)
+                        response_data["choices"][0]["message"].pop("thinking", None)
+
+                    # Update response object with modified data
+                    if isinstance(response, dict):
+                        response = response_data
+                    elif isinstance(response, JSONResponse):
+                        response = JSONResponse(
+                            content=response_data,
+                            headers=response.headers,
+                            status_code=response.status_code,
+                        )
+
+        # Now handle event emitter logic (saving to database, etc.)
+        if event_emitter and response_data:
             try:
-                if isinstance(response, dict) or isinstance(response, JSONResponse):
-                    if isinstance(response, list) and len(response) == 1:
-                        # If the response is a single-item list, unwrap it #17213
-                        response = response[0]
-
-                    if isinstance(response, JSONResponse) and isinstance(
-                        response.body, bytes
-                    ):
-                        try:
-                            response_data = json.loads(
-                                response.body.decode("utf-8", "replace")
-                            )
-                        except json.JSONDecodeError:
-                            response_data = {
-                                "error": {"detail": "Invalid JSON response"}
-                            }
-                    else:
-                        response_data = response
-
-                    if "error" in response_data:
+                if "error" in response_data:
                         error = response_data.get("error")
 
                         if isinstance(error, dict):
@@ -1773,36 +1819,10 @@ async def process_chat_response(
                             },
                         )
 
+                    # Get content from message (reasoning already processed earlier)
                     choices = response_data.get("choices", [])
                     if choices and choices[0].get("message"):
-                        message = response_data["choices"][0]["message"]
-                        content = message.get("content", "")
-                        reasoning_content = (
-                            message.get("reasoning_content")
-                            or message.get("reasoning")
-                            or message.get("thinking")
-                        )
-
-                        # If reasoning content exists, format it as HTML details tag
-                        # to match the streaming behavior
-                        if reasoning_content:
-                            reasoning_display_content = "\n".join(
-                                (f"> {line}" if not line.startswith(">") else line)
-                                for line in reasoning_content.splitlines()
-                            )
-
-                            # Format as HTML details tag for frontend display
-                            reasoning_html = f'<details type="reasoning" done="true">\n<summary>Thought</summary>\n{reasoning_display_content}\n</details>\n'
-
-                            # Prepend reasoning before the main content
-                            content = f"{reasoning_html}{content}"
-
-                            # CRITICAL: Update response_data so reasoning is included in API response
-                            response_data["choices"][0]["message"]["content"] = content
-                            # Remove separate reasoning fields to avoid confusion
-                            response_data["choices"][0]["message"].pop("reasoning_content", None)
-                            response_data["choices"][0]["message"].pop("reasoning", None)
-                            response_data["choices"][0]["message"].pop("thinking", None)
+                        content = response_data["choices"][0]["message"].get("content", "")
 
                         if content:
                             # Check for usage data in non-streaming response
