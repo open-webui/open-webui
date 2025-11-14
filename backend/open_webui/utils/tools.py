@@ -244,9 +244,12 @@ async def get_tools(
                 valves = Tools.get_tool_valves_by_id(tool_id) or {}
                 module.valves = module.Valves(**valves)
             if hasattr(module, "UserValves"):
-                extra_params["__user__"]["valves"] = module.UserValves(  # type: ignore
-                    **Tools.get_user_valves_by_id_and_user_id(tool_id, user.id)
-                )
+                user_valves_data = Tools.get_user_valves_by_id_and_user_id(tool_id, user.id)
+                tool_valves = module.UserValves(**user_valves_data)
+                
+                tool_user = extra_params["__user__"].copy()
+                tool_user["valves"] = tool_valves
+                extra_params["__user__"] = tool_user
 
             for spec in tool.specs:
                 # TODO: Fix hack for OpenAI API
