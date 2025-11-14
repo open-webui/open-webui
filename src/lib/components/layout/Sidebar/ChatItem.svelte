@@ -401,7 +401,7 @@
 	{:else}
 		<a
 			id="sidebar-chat-item"
-			class="sidebar-chat-item w-full flex justify-between rounded-xl px-[0.6875rem] py-1.5 {id === $chatId
+			class="sidebar-chat-item w-full flex justify-between rounded-xl px-[0.6875rem] py-1.5 {id === $chatId || confirmEdit
 				? 'bg-gray-100 dark:bg-gray-900 selected'
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950 selected'

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { config, models, settings, user } from '$lib/stores';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { createEventDispatcher, onMount, onDestroy, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { updateUserInfo } from '$lib/apis/users';
@@ -10,6 +10,14 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import ManageFloatingActionButtonsModal from './Interface/ManageFloatingActionButtonsModal.svelte';
 	import ManageImageCompressionModal from './Interface/ManageImageCompressionModal.svelte';
+	import {
+		DEFAULT_TEXT_SCALE_INDEX,
+		TEXT_SCALE_MAX,
+		TEXT_SCALE_MIN,
+		TEXT_SCALE_VALUES,
+		findClosestTextScaleIndex,
+		getScaleFromIndex
+	} from '$lib/utils/text-scale';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -97,39 +105,8 @@
 	let showManageFloatingActionButtonsModal = false;
 	let showManageImageCompressionModal = false;
 
-	const TEXT_SCALE_VALUES = [1, 1.1, 1.2, 1.3, 1.4, 1.5] as const;
-	const TEXT_SCALE_MIN = TEXT_SCALE_VALUES[0];
-	const TEXT_SCALE_MAX = TEXT_SCALE_VALUES[TEXT_SCALE_VALUES.length - 1];
-	const DEFAULT_TEXT_SCALE_INDEX = TEXT_SCALE_VALUES.findIndex((scale) => scale === 1);
-
 	let textScaleIndex = DEFAULT_TEXT_SCALE_INDEX;
-
-	const getScaleFromIndex = (index: number) => {
-		if (!Number.isFinite(index)) {
-			return TEXT_SCALE_VALUES[DEFAULT_TEXT_SCALE_INDEX];
-		}
-
-		return TEXT_SCALE_VALUES[index] ?? TEXT_SCALE_VALUES[DEFAULT_TEXT_SCALE_INDEX];
-	};
-
-	const findClosestTextScaleIndex = (value: number) => {
-		if (!Number.isFinite(value)) {
-			return DEFAULT_TEXT_SCALE_INDEX;
-		}
-
-		let closestIndex = DEFAULT_TEXT_SCALE_INDEX;
-		let smallestDistance = Number.POSITIVE_INFINITY;
-
-		TEXT_SCALE_VALUES.forEach((scale, idx) => {
-			const distance = Math.abs(scale - value);
-			if (distance < smallestDistance) {
-				smallestDistance = distance;
-				closestIndex = idx;
-			}
-		});
-
-		return closestIndex;
-	};
+	let unsubscribeTextScale: (() => void) | undefined;
 
 	const persistTextScale = () => {
 		const scale = getScaleFromIndex(textScaleIndex);
@@ -167,10 +144,6 @@
 	$: textScaleDisplay = Number.isInteger(currentTextScale)
 		? `${currentTextScale.toFixed(0)}`
 		: `${currentTextScale.toFixed(1)}`;
-
-	$: if (typeof document !== 'undefined') {
-		document.documentElement.style.setProperty('--app-text-scale', currentTextScale.toString());
-	}
 
 	const toggleLandingPageMode = async () => {
 		landingPageMode = landingPageMode === '' ? 'chat' : '';
@@ -328,19 +301,19 @@
 		backgroundImageUrl = $settings?.backgroundImageUrl ?? null;
 		webSearch = $settings?.webSearch ?? null;
 
-		textScaleIndex = findClosestTextScaleIndex(Number($settings?.textScale ?? 1));
+		textScaleIndex = findClosestTextScaleIndex($settings?.textScale ?? 1);
 
-		const unsubscribeTextScale = settings.subscribe((uiSettings) => {
-			const nextScaleIndex = findClosestTextScaleIndex(Number(uiSettings?.textScale ?? 1));
+		unsubscribeTextScale = settings.subscribe((uiSettings) => {
+			const nextScaleIndex = findClosestTextScaleIndex(uiSettings?.textScale ?? 1);
 
 			if (nextScaleIndex !== textScaleIndex) {
 				textScaleIndex = nextScaleIndex;
 			}
 		});
+	});
 
-		return () => {
-			unsubscribeTextScale();
-		};
+	onDestroy(() => {
+		unsubscribeTextScale?.();
 	});
 </script>
 
