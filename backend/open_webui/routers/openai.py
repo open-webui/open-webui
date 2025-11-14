@@ -100,27 +100,6 @@ async def cleanup_response(
         await session.close()
 
 
-def openai_reasoning_model_handler(payload):
-    """
-    Handle reasoning model specific parameters
-    """
-    if "max_tokens" in payload:
-        # Convert "max_tokens" to "max_completion_tokens" for all reasoning models
-        payload["max_completion_tokens"] = payload["max_tokens"]
-        del payload["max_tokens"]
-
-    # Handle system role conversion based on model type
-    if payload["messages"][0]["role"] == "system":
-        model_lower = payload["model"].lower()
-        # Legacy models use "user" role instead of "system"
-        if model_lower.startswith("o1-mini") or model_lower.startswith("o1-preview"):
-            payload["messages"][0]["role"] = "user"
-        else:
-            payload["messages"][0]["role"] = "developer"
-
-    return payload
-
-
 async def get_headers_and_cookies(
     request: Request,
     url,
@@ -770,29 +749,11 @@ def get_azure_allowed_params(api_version: str) -> set[str]:
     return allowed_params
 
 
-def is_openai_reasoning_model(model: str) -> bool:
-    return model.lower().startswith(("o1", "o3", "o4", "gpt-5"))
-
-
 def convert_to_azure_payload(url, payload: dict, api_version: str):
     model = payload.get("model", "")
 
     # Filter allowed parameters based on Azure OpenAI API
     allowed_params = get_azure_allowed_params(api_version)
-
-    # Special handling for o-series models
-    if is_openai_reasoning_model(model):
-        # Convert max_tokens to max_completion_tokens for o-series models
-        if "max_tokens" in payload:
-            payload["max_completion_tokens"] = payload["max_tokens"]
-            del payload["max_tokens"]
-
-        # Remove temperature if not 1 for o-series models
-        if "temperature" in payload and payload["temperature"] != 1:
-            log.debug(
-                f"Removing temperature parameter for o-series model {model} as only default value (1) is supported"
-            )
-            del payload["temperature"]
 
     # Filter out unsupported parameters
     payload = {k: v for k, v in payload.items() if k in allowed_params}
@@ -885,18 +846,6 @@ async def generate_chat_completion(
 
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
-
-    # Check if model is a reasoning model that needs special handling
-    if is_openai_reasoning_model(payload["model"]):
-        payload = openai_reasoning_model_handler(payload)
-    elif "api.openai.com" not in url:
-        # Remove "max_completion_tokens" from the payload for backward compatibility
-        if "max_completion_tokens" in payload:
-            payload["max_tokens"] = payload["max_completion_tokens"]
-            del payload["max_completion_tokens"]
-
-    if "max_tokens" in payload and "max_completion_tokens" in payload:
-        del payload["max_tokens"]
 
     # Convert the modified body back to JSON
     if "logit_bias" in payload:
