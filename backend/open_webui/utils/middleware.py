@@ -1788,121 +1788,121 @@ async def process_chat_response(
         if event_emitter and response_data:
             try:
                 if "error" in response_data:
-                        error = response_data.get("error")
+                    error = response_data.get("error")
 
-                        if isinstance(error, dict):
-                            error = error.get("detail", error)
-                        else:
-                            error = str(error)
+                    if isinstance(error, dict):
+                        error = error.get("detail", error)
+                    else:
+                        error = str(error)
 
-                        Chats.upsert_message_to_chat_by_id_and_message_id(
-                            metadata["chat_id"],
-                            metadata["message_id"],
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata["chat_id"],
+                        metadata["message_id"],
+                        {
+                            "error": {"content": error},
+                        },
+                    )
+                    if isinstance(error, str) or isinstance(error, dict):
+                        await event_emitter(
                             {
-                                "error": {"content": error},
-                            },
-                        )
-                        if isinstance(error, str) or isinstance(error, dict):
-                            await event_emitter(
-                                {
-                                    "type": "chat:message:error",
-                                    "data": {"error": {"content": error}},
-                                }
-                            )
-
-                    if "selected_model_id" in response_data:
-                        Chats.upsert_message_to_chat_by_id_and_message_id(
-                            metadata["chat_id"],
-                            metadata["message_id"],
-                            {
-                                "selectedModelId": response_data["selected_model_id"],
-                            },
-                        )
-
-                    # Get content from message (reasoning already processed earlier)
-                    choices = response_data.get("choices", [])
-                    if choices and choices[0].get("message"):
-                        content = response_data["choices"][0]["message"].get("content", "")
-
-                        if content:
-                            # Check for usage data in non-streaming response
-                            usage = response_data.get("usage", {})
-
-                            await event_emitter(
-                                {
-                                    "type": "chat:completion",
-                                    "data": response_data,
-                                }
-                            )
-
-                            title = Chats.get_chat_title_by_id(metadata["chat_id"])
-
-                            # Include usage in the final completion event
-                            completion_data = {
-                                "done": True,
-                                "content": content,
-                                "title": title,
+                                "type": "chat:message:error",
+                                "data": {"error": {"content": error}},
                             }
-                            if usage:
-                                completion_data["usage"] = usage
-                                completion_data["selected_model_id"] = model_id
-
-                            await event_emitter(
-                                {
-                                    "type": "chat:completion",
-                                    "data": completion_data,
-                                }
-                            )
-
-                            # Save message in the database with reasoning included
-                            Chats.upsert_message_to_chat_by_id_and_message_id(
-                                metadata["chat_id"],
-                                metadata["message_id"],
-                                {
-                                    "role": "assistant",
-                                    "content": content,
-                                },
-                            )
-
-                            # Send a webhook notification if the user is not active
-                            if not get_active_status_by_user_id(user.id):
-                                webhook_url = Users.get_user_webhook_url_by_id(user.id)
-                                if webhook_url:
-                                    await post_webhook(
-                                        request.app.state.WEBUI_NAME,
-                                        webhook_url,
-                                        f"{title} - {request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}\n\n{content}",
-                                        {
-                                            "action": "chat",
-                                            "message": content,
-                                            "title": title,
-                                            "url": f"{request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}",
-                                        },
-                                    )
-
-                            await background_tasks_handler()
-
-                    if events and isinstance(events, list):
-                        extra_response = {}
-                        for event in events:
-                            if isinstance(event, dict):
-                                extra_response.update(event)
-                            else:
-                                extra_response[event] = True
-
-                        response_data = {
-                            **extra_response,
-                            **response_data,
-                        }
-
-                    if isinstance(response, dict):
-                        response = response_data
-                    if isinstance(response, JSONResponse):
-                        response = JSONResponse(
-                            content=response_data,
-                            headers=response.headers,
-                            status_code=response.status_code,
                         )
+
+                if "selected_model_id" in response_data:
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata["chat_id"],
+                        metadata["message_id"],
+                        {
+                            "selectedModelId": response_data["selected_model_id"],
+                        },
+                    )
+
+                # Get content from message (reasoning already processed earlier)
+                choices = response_data.get("choices", [])
+                if choices and choices[0].get("message"):
+                    content = response_data["choices"][0]["message"].get("content", "")
+
+                    if content:
+                        # Check for usage data in non-streaming response
+                        usage = response_data.get("usage", {})
+
+                        await event_emitter(
+                            {
+                                "type": "chat:completion",
+                                "data": response_data,
+                            }
+                        )
+
+                        title = Chats.get_chat_title_by_id(metadata["chat_id"])
+
+                        # Include usage in the final completion event
+                        completion_data = {
+                            "done": True,
+                            "content": content,
+                            "title": title,
+                        }
+                        if usage:
+                            completion_data["usage"] = usage
+                            completion_data["selected_model_id"] = model_id
+
+                        await event_emitter(
+                            {
+                                "type": "chat:completion",
+                                "data": completion_data,
+                            }
+                        )
+
+                        # Save message in the database with reasoning included
+                        Chats.upsert_message_to_chat_by_id_and_message_id(
+                            metadata["chat_id"],
+                            metadata["message_id"],
+                            {
+                                "role": "assistant",
+                                "content": content,
+                            },
+                        )
+
+                        # Send a webhook notification if the user is not active
+                        if not get_active_status_by_user_id(user.id):
+                            webhook_url = Users.get_user_webhook_url_by_id(user.id)
+                            if webhook_url:
+                                await post_webhook(
+                                    request.app.state.WEBUI_NAME,
+                                    webhook_url,
+                                    f"{title} - {request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}\n\n{content}",
+                                    {
+                                        "action": "chat",
+                                        "message": content,
+                                        "title": title,
+                                        "url": f"{request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}",
+                                    },
+                                )
+
+                        await background_tasks_handler()
+
+                if events and isinstance(events, list):
+                    extra_response = {}
+                    for event in events:
+                        if isinstance(event, dict):
+                            extra_response.update(event)
+                        else:
+                            extra_response[event] = True
+
+                    response_data = {
+                        **extra_response,
+                        **response_data,
+                    }
+
+                if isinstance(response, dict):
+                    response = response_data
+                if isinstance(response, JSONResponse):
+                    response = JSONResponse(
+                        content=response_data,
+                        headers=response.headers,
+                        status_code=response.status_code,
+                    )
 
             except Exception as e:
                 log.debug(f"Error occurred while processing request: {e}")
