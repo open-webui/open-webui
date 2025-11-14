@@ -2086,6 +2086,27 @@ PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(
     os.environ.get("PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH", "1536")
 )
 
+PGVECTOR_USE_HALFVEC = (
+    os.getenv("PGVECTOR_USE_HALFVEC")
+    if "PGVECTOR_USE_HALFVEC" in os.environ
+    else None
+)
+if PGVECTOR_USE_HALFVEC is None:
+    PGVECTOR_USE_HALFVEC = False
+else:
+    PGVECTOR_USE_HALFVEC = PGVECTOR_USE_HALFVEC.lower() == "true"
+
+if (
+    PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH > 2000
+    and not PGVECTOR_USE_HALFVEC
+):
+    raise ValueError(
+        "PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH is set to "
+        f"{PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH}, which exceeds the 2000 dimension limit of the "
+        "'vector' type. Set PGVECTOR_USE_HALFVEC=true to enable the 'halfvec' "
+        "type required for high-dimensional embeddings."
+    )
+
 PGVECTOR_CREATE_EXTENSION = (
     os.getenv("PGVECTOR_CREATE_EXTENSION", "true").lower() == "true"
 )
