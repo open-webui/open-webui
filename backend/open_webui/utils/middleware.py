@@ -1797,6 +1797,13 @@ async def process_chat_response(
                             # Prepend reasoning before the main content
                             content = f"{reasoning_html}{content}"
 
+                            # CRITICAL: Update response_data so reasoning is included in API response
+                            response_data["choices"][0]["message"]["content"] = content
+                            # Remove separate reasoning fields to avoid confusion
+                            response_data["choices"][0]["message"].pop("reasoning_content", None)
+                            response_data["choices"][0]["message"].pop("reasoning", None)
+                            response_data["choices"][0]["message"].pop("thinking", None)
+
                         if content:
                             # Check for usage data in non-streaming response
                             usage = response_data.get("usage", {})
