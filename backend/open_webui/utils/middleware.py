@@ -104,6 +104,7 @@ from open_webui.utils.mcp.client import MCPClient
 
 from open_webui.config import (
     CACHE_DIR,
+    DEFAULT_VOICE_MODE_PROMPT_TEMPLATE,
     DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
     DEFAULT_CODE_INTERPRETER_PROMPT,
     CODE_INTERPRETER_BLOCKED_MODULES,
@@ -1237,6 +1238,18 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     features = form_data.pop("features", None)
     if features:
+        if "voice" in features and features["voice"]:
+            if request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE != None:
+                if request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE != "":
+                    template = request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE
+                else:
+                    template = DEFAULT_VOICE_MODE_PROMPT_TEMPLATE
+
+                form_data["messages"] = add_or_update_system_message(
+                    template,
+                    form_data["messages"],
+                )
+
         if "memory" in features and features["memory"]:
             form_data = await chat_memory_handler(
                 request, form_data, extra_params, user
