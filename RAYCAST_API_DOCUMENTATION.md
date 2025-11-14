@@ -592,7 +592,8 @@ Content-Type: application/json
   "stream": true,
   "temperature": 0.7,
   "top_p": 0.9,
-  "max_tokens": 1000
+  "max_tokens": 1000,
+  "reasoning_effort": "medium"
 }
 ```
 
@@ -604,6 +605,7 @@ Content-Type: application/json
 - `temperature` (optional): Randomness (0-2, default: 0.7)
 - `top_p` (optional): Nucleus sampling (0-1)
 - `max_tokens` (optional): Maximum tokens to generate
+- `reasoning_effort` (optional): Control reasoning depth for reasoning models. Accepts: `"low"`, `"medium"`, or `"high"`. Only applicable to reasoning models that support this parameter (e.g., OpenAI o1 models). Default varies by model.
 
 **Response (Non-Streaming):**
 ```json

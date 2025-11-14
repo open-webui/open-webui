@@ -388,7 +388,7 @@
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
-				'Constrains effort on reasoning for reasoning models. Only applicable to reasoning models from specific providers that support reasoning effort.'
+				'Constrains effort on reasoning for reasoning models. "Low" uses minimal reasoning, "Medium" provides balanced performance, and "High" enables maximum reasoning depth. Only applicable to reasoning models from specific providers that support reasoning effort (e.g., OpenAI o1 models).'
 			)}
 			placement="top-start"
 			className="inline-tooltip"
@@ -416,13 +416,14 @@
 		{#if (params?.reasoning_effort ?? null) !== null}
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
-					<input
-						class="text-sm w-full bg-transparent outline-hidden outline-none"
-						type="text"
-						placeholder={$i18n.t('Enter reasoning effort')}
+					<select
+						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 						bind:value={params.reasoning_effort}
-						autocomplete="off"
-					/>
+					>
+						<option value="low">{$i18n.t('Low')}</option>
+						<option value="medium">{$i18n.t('Medium')}</option>
+						<option value="high">{$i18n.t('High')}</option>
+					</select>
 				</div>
 			</div>
 		{/if}
