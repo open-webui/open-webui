@@ -1041,6 +1041,13 @@
 			codeInterpreterEnabled = true;
 		}
 
+		if ($page.url.searchParams.get('reasoning')) {
+			const reasoningParam = $page.url.searchParams.get('reasoning')?.toLowerCase();
+			if (reasoningParam === 'high' || reasoningParam === 'medium' || reasoningParam === 'low') {
+				reasoning.effort = reasoningParam;
+			}
+		}
+
 		if ($page.url.searchParams.get('tools')) {
 			selectedToolIds = $page.url.searchParams
 				.get('tools')
