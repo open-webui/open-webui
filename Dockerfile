@@ -200,6 +200,11 @@ COPY --chown=$UID:$GID --from=build /app/node_modules/katex /app/node_modules/ka
 # copy backend files
 COPY --chown=$UID:$GID ./backend .
 
+# ADD THIS ONE LINE:
+# Give write permission to the 'root' group (GID 0) for the whole app.
+# This lets the random OpenShift user write to the 'static' folder AND the 'data' folder.
+RUN chmod -R g+w /app/backend
+
 EXPOSE 8080
 
 HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-8080}/health | jq -ne 'input.status == true' || exit 1

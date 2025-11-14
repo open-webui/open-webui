@@ -301,7 +301,7 @@
 				// Keep the overlay open - user must manually toggle off
 				// closeOverlay(); // Removed automatic closing
 				
-				toast.success(`Generated ${Object.keys(response.sections).length} sections for ${selectedSponsor}. Form remains open for additional generations.`);
+				toast.success(`Generated ${Object.keys(response.sections).length} sections for ${selectedSponsor}.`);
 			} else {
 				console.error('Facilities API failed:', response.error);
 				toast.error(response.error || 'Failed to generate facilities response');

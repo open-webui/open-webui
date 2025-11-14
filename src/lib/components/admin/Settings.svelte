@@ -26,7 +26,8 @@
 	'cg4532@nyu.edu',
 	'ms15138@nyu.edu',
 	'mb484@nyu.edu',
-	'sm11538@nyu.edu'
+	'sm11538@nyu.edu',
+	'ps5226@nyu.edu'
 	];
 
 	const canViewRestrictedTabs = () => SPECIAL_ADMIN_EMAILS.includes($user?.email);
