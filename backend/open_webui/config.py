@@ -2782,10 +2782,8 @@ ENABLE_RAG_LOCAL_WEB_FETCH = (
     os.getenv("ENABLE_RAG_LOCAL_WEB_FETCH", "False").lower() == "true"
 )
 
-RAG_WEB_FETCH_CUSTOM_BLOCKLIST = PersistentConfig(
-    "RAG_WEB_FETCH_CUSTOM_BLOCKLIST",
-    "rag.web_fetch_custom_blocklist",
-    os.getenv("RAG_WEB_FETCH_CUSTOM_BLOCKLIST", "").split(",") if os.getenv("RAG_WEB_FETCH_CUSTOM_BLOCKLIST", "") else [],
+RAG_WEB_FETCH_CUSTOM_BLOCKLIST = (
+    os.getenv("RAG_WEB_FETCH_CUSTOM_BLOCKLIST", "").split(",") if os.getenv("RAG_WEB_FETCH_CUSTOM_BLOCKLIST", "") else []
 )
 
 # Hardcoded Common Cloud Metadata URIs
