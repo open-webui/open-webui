@@ -38,6 +38,7 @@ from open_webui.config import (
     TAVILY_EXTRACT_DEPTH,
     EXTERNAL_WEB_LOADER_URL,
     EXTERNAL_WEB_LOADER_API_KEY,
+    WEB_FETCH_BLOCKLIST,
 )
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -48,11 +49,24 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 def validate_url(url: Union[str, Sequence[str]]):
     if isinstance(url, str):
+        # Basic URL format validation
         if isinstance(validators.url(url), validators.ValidationError):
             raise ValueError(ERROR_MESSAGES.INVALID_URL)
+
+        parsed_url = urllib.parse.urlparse(url)
+
+        # Protocol validation - only allow http/https
+        if parsed_url.scheme not in ["http", "https"]:
+            log.warning(f"Blocked non-HTTP(S) protocol: {parsed_url.scheme} in URL: {url}")
+            raise ValueError(ERROR_MESSAGES.INVALID_URL)
+
+        # Blocklist check
+        if is_blocked_url(url):
+            log.warning(f"URL blocked by blocklist: {url}")
+            raise ValueError(ERROR_MESSAGES.INVALID_URL)
+
         if not ENABLE_RAG_LOCAL_WEB_FETCH:
             # Local web fetch is disabled, filter out any URLs that resolve to private IP addresses
-            parsed_url = urllib.parse.urlparse(url)
             # Get IPv4 and IPv6 addresses
             ipv4_addresses, ipv6_addresses = resolve_hostname(parsed_url.hostname)
             # Check if any of the resolved addresses are private
@@ -91,6 +105,34 @@ def resolve_hostname(hostname):
     ipv6_addresses = [info[4][0] for info in addr_info if info[0] == socket.AF_INET6]
 
     return ipv4_addresses, ipv6_addresses
+
+
+def is_blocked_url(url: str) -> bool:
+    # Check if URL is in blocklist. Checks hostname against blocklist and DNS resolution check to prevent DNS rebinding attacks
+    if not WEB_FETCH_BLOCKLIST:
+        return False
+
+    parsed = urllib.parse.urlparse(url)
+    hostname = parsed.hostname
+
+    if not hostname:
+        return False
+
+    # Direct check
+    if hostname in WEB_FETCH_BLOCKLIST:
+        return True
+
+    # DNS resolution check - catches DNS rebinding attacks
+    try:
+        ipv4_addresses, ipv6_addresses = resolve_hostname(hostname)
+        for ip in ipv4_addresses + ipv6_addresses:
+            if ip in WEB_FETCH_BLOCKLIST:
+                return True
+    except Exception:
+        # If DNS resolution fails, we already checked hostname directly above
+        pass
+
+    return False
 
 
 def extract_metadata(soup, url):
