@@ -26,6 +26,7 @@
 	let direction: 'asc' | 'desc' = 'asc';
 	let selectAllState: 'checked' | 'unchecked' | 'indeterminate' = 'unchecked';
 
+
 	const getSelectAllState = (filteredUsers, userIds) => {
 		const filteredUserIds = filteredUsers.map((u) => u.id);
 		const selectedCount = filteredUserIds.filter((id) => userIds.includes(id)).length;
