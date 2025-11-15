@@ -233,9 +233,6 @@
 							{/if}
 						</div>
 					</th>
-					<th scope="col" class="px-2.5 py-2 text-right">
-						{$i18n.t('Status')}
-					</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -264,9 +261,9 @@
 								<div class="flex items-center">
 									<img
 										class="rounded-full w-6 h-6 object-cover mr-2.5 flex-shrink-0"
-										src={user?.profile_image_url?.startsWith(WEBUI_BASE_URL) ||
-										user?.profile_image_url?.startsWith('https://www.gravatar.com/avatar/') ||
-										user?.profile_image_url?.startsWith('data:')
+										src={user.profile_image_url.startsWith(WEBUI_BASE_URL) ||
+										user.profile_image_url.startsWith('https://www.gravatar.com/avatar/') ||
+										user.profile_image_url.startsWith('data:')
 											? user.profile_image_url
 											: `${WEBUI_BASE_URL}/user.png`}
 										alt="user"
@@ -277,21 +274,16 @@
 							</td>
 							<td class="px-3 py-1">{user.email}</td>
 							<td class="px-3 py-1">
-								{dayjs(user.last_active_at * 1000).fromNow()}
+								{user.last_active_at ? dayjs(user.last_active_at * 1000).fromNow() : 'Never'}
 							</td>
 							<td class="px-3 py-1">
-								{dayjs(user.created_at * 1000).format('LL')}
-							</td>
-							<td class="px-3 py-1 text-right">
-								{#if userIds.includes(user.id)}
-									<Badge type="success" content="member" />
-								{/if}
+								{user.created_at ? dayjs(user.created_at * 1000).format('LL') : '-'}
 							</td>
 						</tr>
 					{/each}
 				{:else}
 					<tr>
-						<td colspan="7" class="text-gray-500 text-xs text-center py-4">
+						<td colspan="6" class="text-gray-500 text-xs text-center py-4">
 							{$i18n.t('No users were found.')}
 						</td>
 					</tr>
