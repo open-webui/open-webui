@@ -684,6 +684,11 @@ def get_web_loader(
     # Check if the URLs are valid
     safe_urls = safe_validate_urls([urls] if isinstance(urls, str) else urls)
 
+    # If all URLs were filtered out (blocked or invalid), raise an error
+    if not safe_urls:
+        log.warning(f"All provided URLs were blocked or invalid: {urls}")
+        raise ValueError(ERROR_MESSAGES.INVALID_URL)
+
     web_loader_args = {
         "web_paths": safe_urls,
         "verify_ssl": verify_ssl,
