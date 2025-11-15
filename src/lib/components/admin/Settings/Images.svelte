@@ -1170,7 +1170,7 @@
 								</div>
 							</div>
 						{/if}
-					{:else if config?.IMAGE_GENERATION_ENGINE === 'gemini'}
+					{:else if config?.IMAGE_EDIT_ENGINE === 'gemini'}
 						<div class="mb-2.5">
 							<div class="flex w-full justify-between items-center">
 								<div class="text-xs pr-2 shrink-0">
