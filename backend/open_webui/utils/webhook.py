@@ -51,7 +51,7 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict) -> b
             payload = {**event_data}
 
         log.debug(f"payload: {payload}")
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(trust_env=True) as session:
             async with session.post(url, json=payload) as r:
                 r_text = await r.text()
                 r.raise_for_status()

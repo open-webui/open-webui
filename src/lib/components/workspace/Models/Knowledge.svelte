@@ -18,7 +18,7 @@
 	let loaded = false;
 
 	let filesInputElement = null;
-	let inputFiles = [];
+	let inputFiles = null;
 
 	const uploadFileHandler = async (file, fullContext: boolean = false) => {
 		if ($user?.role !== 'admin' && !($user?.permissions?.chat?.file_upload ?? true)) {

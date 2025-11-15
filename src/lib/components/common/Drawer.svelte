@@ -2,7 +2,6 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { fade, fly, slide } from 'svelte/transition';
-	import { isApp } from '$lib/stores';
 
 	export let show = false;
 	export let className = '';
@@ -54,26 +53,25 @@
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-
-<div
-	bind:this={modalElement}
-	class="modal fixed right-0 {$isApp
-		? ' ml-[4.5rem] max-w-[calc(100%-4.5rem)]'
-		: ''} left-0 bottom-0 bg-black/60 w-full h-screen max-h-[100dvh] flex justify-center z-999 overflow-hidden overscroll-contain"
-	in:fly={{ y: 100, duration: 100 }}
-	on:mousedown={() => {
-		show = false;
-	}}
->
+{#if show}
 	<div
-		class=" mt-auto w-full bg-gray-50 dark:bg-gray-900 dark:text-gray-100 {className} max-h-[100dvh] overflow-y-auto scrollbar-hidden"
-		on:mousedown={(e) => {
-			e.stopPropagation();
+		bind:this={modalElement}
+		class="modal fixed right-0 bottom-0 left-0 z-999 flex h-screen max-h-[100dvh] w-full justify-center overflow-hidden overscroll-contain bg-black/60"
+		in:fly={{ y: 100, duration: 100 }}
+		on:mousedown={() => {
+			show = false;
 		}}
 	>
-		<slot />
+		<div
+			class=" mt-auto w-full bg-gray-50 dark:bg-gray-900 dark:text-gray-100 {className} scrollbar-hidden max-h-[100dvh] overflow-y-auto"
+			on:mousedown={(e) => {
+				e.stopPropagation();
+			}}
+		>
+			<slot />
+		</div>
 	</div>
-</div>
+{/if}
 
 <style>
 	.modal-content {

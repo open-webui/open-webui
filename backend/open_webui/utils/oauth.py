@@ -1,4 +1,5 @@
 import base64
+import copy
 import hashlib
 import logging
 import mimetypes
@@ -41,6 +42,7 @@ from open_webui.config import (
     ENABLE_OAUTH_GROUP_MANAGEMENT,
     ENABLE_OAUTH_GROUP_CREATION,
     OAUTH_BLOCKED_GROUPS,
+    OAUTH_GROUPS_SEPARATOR,
     OAUTH_ROLES_CLAIM,
     OAUTH_SUB_CLAIM,
     OAUTH_GROUPS_CLAIM,
@@ -73,6 +75,8 @@ from mcp.shared.auth import (
     OAuthClientMetadata,
     OAuthMetadata,
 )
+
+from authlib.oauth2.rfc6749.errors import OAuth2Error
 
 
 class OAuthClientInformationFull(OAuthClientMetadata):
@@ -148,6 +152,37 @@ def decrypt_data(data: str):
     except Exception as e:
         log.error(f"Error decrypting data: {e}")
         raise
+
+
+def _build_oauth_callback_error_message(e: Exception) -> str:
+    """
+    Produce a user-facing callback error string with actionable context.
+    Keeps the message short and strips newlines for safe redirect usage.
+    """
+    if isinstance(e, OAuth2Error):
+        parts = [p for p in [e.error, e.description] if p]
+        detail = " - ".join(parts)
+    elif isinstance(e, HTTPException):
+        detail = e.detail if isinstance(e.detail, str) else str(e.detail)
+    elif isinstance(e, aiohttp.ClientResponseError):
+        detail = f"Upstream provider returned {e.status}: {e.message}"
+    elif isinstance(e, aiohttp.ClientError):
+        detail = str(e)
+    elif isinstance(e, KeyError):
+        missing = str(e).strip("'")
+        if missing.lower() == "state":
+            detail = "Missing state parameter in callback (session may have expired)"
+        else:
+            detail = f"Missing expected key '{missing}' in OAuth response"
+    else:
+        detail = str(e)
+
+    detail = detail.replace("\n", " ").strip()
+    if not detail:
+        detail = e.__class__.__name__
+
+    message = f"OAuth callback failed: {detail}"
+    return message[:197] + "..." if len(message) > 200 else message
 
 
 def is_in_blocked_groups(group_name: str, groups: list) -> bool:
@@ -251,7 +286,7 @@ async def get_oauth_client_info_with_dynamic_client_registration(
         # Attempt to fetch OAuth server metadata to get registration endpoint & scopes
         discovery_urls = get_discovery_urls(oauth_server_url)
         for url in discovery_urls:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(trust_env=True) as session:
                 async with session.get(
                     url, ssl=AIOHTTP_CLIENT_SESSION_SSL
                 ) as oauth_server_metadata_response:
@@ -287,7 +322,7 @@ async def get_oauth_client_info_with_dynamic_client_registration(
         )
 
         # Perform dynamic client registration and return client info
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(trust_env=True) as session:
             async with session.post(
                 registration_url, json=registration_data, ssl=AIOHTTP_CLIENT_SESSION_SSL
             ) as oauth_client_registration_response:
@@ -371,6 +406,82 @@ class OAuthClientManager:
         if client_id in self.clients:
             del self.clients[client_id]
             log.info(f"Removed OAuth client {client_id}")
+
+        if hasattr(self.oauth, "_clients"):
+            if client_id in self.oauth._clients:
+                self.oauth._clients.pop(client_id, None)
+
+        if hasattr(self.oauth, "_registry"):
+            if client_id in self.oauth._registry:
+                self.oauth._registry.pop(client_id, None)
+
+        return True
+
+    async def _preflight_authorization_url(
+        self, client, client_info: OAuthClientInformationFull
+    ) -> bool:
+        # TODO: Replace this logic with a more robust OAuth client registration validation
+        # Only perform preflight checks for Starlette OAuth clients
+        if not hasattr(client, "create_authorization_url"):
+            return True
+
+        redirect_uri = None
+        if client_info.redirect_uris:
+            redirect_uri = str(client_info.redirect_uris[0])
+
+        try:
+            auth_data = await client.create_authorization_url(redirect_uri=redirect_uri)
+            authorization_url = auth_data.get("url")
+
+            if not authorization_url:
+                return True
+        except Exception as e:
+            log.debug(
+                f"Skipping OAuth preflight for client {client_info.client_id}: {e}",
+            )
+            return True
+
+        try:
+            async with aiohttp.ClientSession(trust_env=True) as session:
+                async with session.get(
+                    authorization_url,
+                    allow_redirects=False,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                ) as resp:
+                    if resp.status < 400:
+                        return True
+                    response_text = await resp.text()
+
+                    error = None
+                    error_description = ""
+
+                    content_type = resp.headers.get("content-type", "")
+                    if "application/json" in content_type:
+                        try:
+                            payload = json.loads(response_text)
+                            error = payload.get("error")
+                            error_description = payload.get("error_description", "")
+                        except:
+                            pass
+                    else:
+                        error_description = response_text
+
+                    error_message = f"{error or ''} {error_description or ''}".lower()
+
+                    if any(
+                        keyword in error_message
+                        for keyword in ("invalid_client", "invalid client", "client id")
+                    ):
+                        log.warning(
+                            f"OAuth client preflight detected invalid registration for {client_info.client_id}: {error} {error_description}"
+                        )
+
+                        return False
+        except Exception as e:
+            log.debug(
+                f"Skipping OAuth preflight network check for client {client_info.client_id}: {e}"
+            )
+
         return True
 
     def get_client(self, client_id):
@@ -561,7 +672,6 @@ class OAuthClientManager:
         client = self.get_client(client_id)
         if client is None:
             raise HTTPException(404)
-
         client_info = self.get_client_info(client_id)
         if client_info is None:
             raise HTTPException(404)
@@ -569,7 +679,8 @@ class OAuthClientManager:
         redirect_uri = (
             client_info.redirect_uris[0] if client_info.redirect_uris else None
         )
-        return await client.authorize_redirect(request, str(redirect_uri))
+        redirect_uri_str = str(redirect_uri) if redirect_uri else None
+        return await client.authorize_redirect(request, redirect_uri_str)
 
     async def handle_callback(self, request, client_id: str, user_id: str, response):
         client = self.get_client(client_id)
@@ -621,8 +732,14 @@ class OAuthClientManager:
                 error_message = "Failed to obtain OAuth token"
                 log.warning(error_message)
         except Exception as e:
-            error_message = "OAuth callback error"
-            log.warning(f"OAuth callback error: {e}")
+            error_message = _build_oauth_callback_error_message(e)
+            log.warning(
+                "OAuth callback error for user_id=%s client_id=%s: %s",
+                user_id,
+                client_id,
+                error_message,
+                exc_info=True,
+            )
 
         redirect_url = (
             str(request.app.state.config.WEBUI_URL or request.base_url)
@@ -630,7 +747,9 @@ class OAuthClientManager:
 
         if error_message:
             log.debug(error_message)
-            redirect_url = f"{redirect_url}/?error={error_message}"
+            redirect_url = (
+                f"{redirect_url}/?error={urllib.parse.quote_plus(error_message)}"
+            )
             return RedirectResponse(url=redirect_url, headers=response.headers)
 
         response = RedirectResponse(url=redirect_url, headers=response.headers)
@@ -917,7 +1036,11 @@ class OAuthManager:
             if isinstance(claim_data, list):
                 user_oauth_groups = claim_data
             elif isinstance(claim_data, str):
-                user_oauth_groups = [claim_data]
+                # Split by the configured separator if present
+                if OAUTH_GROUPS_SEPARATOR in claim_data:
+                    user_oauth_groups = claim_data.split(OAUTH_GROUPS_SEPARATOR)
+                else:
+                    user_oauth_groups = [claim_data]
             else:
                 user_oauth_groups = []
 
@@ -1104,7 +1227,13 @@ class OAuthManager:
             try:
                 token = await client.authorize_access_token(request)
             except Exception as e:
-                log.warning(f"OAuth callback error: {e}")
+                detailed_error = _build_oauth_callback_error_message(e)
+                log.warning(
+                    "OAuth callback error during authorize_access_token for provider %s: %s",
+                    provider,
+                    detailed_error,
+                    exc_info=True,
+                )
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
             # Try to get userinfo from the token first, some providers include it there

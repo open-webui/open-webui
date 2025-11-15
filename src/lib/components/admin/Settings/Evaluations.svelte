@@ -104,7 +104,7 @@
 		{#if evaluationConfig !== null}
 			<div class="">
 				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -119,7 +119,7 @@
 
 				{#if evaluationConfig.ENABLE_EVALUATION_ARENA_MODELS}
 					<div class="mb-3">
-						<div class=" mb-2.5 text-base font-medium flex justify-between items-center">
+						<div class=" mt-0.5 mb-2.5 text-base font-medium flex justify-between items-center">
 							<div>
 								{$i18n.t('Manage')}
 							</div>

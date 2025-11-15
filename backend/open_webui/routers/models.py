@@ -35,12 +35,18 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def validate_model_id(model_id: str) -> bool:
+    return model_id and len(model_id) <= 256
+
+
 ###########################
 # GetModels
 ###########################
 
 
-@router.get("/", response_model=list[ModelUserResponse])
+@router.get(
+    "/list", response_model=list[ModelUserResponse]
+)  # do NOT use "/" as path, conflicts with main.py
 async def get_models(id: Optional[str] = None, user=Depends(get_verified_user)):
     if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
         return Models.get_models()
@@ -84,6 +90,12 @@ async def create_new_model(
             detail=ERROR_MESSAGES.MODEL_ID_TAKEN,
         )
 
+    if not validate_model_id(form_data.id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.MODEL_ID_TOO_LONG,
+        )
+
     else:
         model = Models.insert_new_model(form_data, user.id)
         if model:
@@ -124,7 +136,8 @@ async def import_models(
             for model_data in data:
                 # Here, you can add logic to validate model_data if needed
                 model_id = model_data.get("id")
-                if model_id:
+
+                if model_id and validate_model_id(model_id):
                     existing_model = Models.get_model_by_id(model_id)
                     if existing_model:
                         # Update existing model

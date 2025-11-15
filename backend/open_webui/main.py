@@ -146,9 +146,7 @@ from open_webui.config import (
     # Image
     AUTOMATIC1111_API_AUTH,
     AUTOMATIC1111_BASE_URL,
-    AUTOMATIC1111_CFG_SCALE,
-    AUTOMATIC1111_SAMPLER,
-    AUTOMATIC1111_SCHEDULER,
+    AUTOMATIC1111_PARAMS,
     COMFYUI_BASE_URL,
     COMFYUI_API_KEY,
     COMFYUI_WORKFLOW,
@@ -164,6 +162,19 @@ from open_webui.config import (
     IMAGES_OPENAI_API_KEY,
     IMAGES_GEMINI_API_BASE_URL,
     IMAGES_GEMINI_API_KEY,
+    IMAGES_GEMINI_ENDPOINT_METHOD,
+    IMAGE_EDIT_ENGINE,
+    IMAGE_EDIT_MODEL,
+    IMAGE_EDIT_SIZE,
+    IMAGES_EDIT_OPENAI_API_BASE_URL,
+    IMAGES_EDIT_OPENAI_API_KEY,
+    IMAGES_EDIT_OPENAI_API_VERSION,
+    IMAGES_EDIT_GEMINI_API_BASE_URL,
+    IMAGES_EDIT_GEMINI_API_KEY,
+    IMAGES_EDIT_COMFYUI_BASE_URL,
+    IMAGES_EDIT_COMFYUI_API_KEY,
+    IMAGES_EDIT_COMFYUI_WORKFLOW,
+    IMAGES_EDIT_COMFYUI_WORKFLOW_NODES,
     # Audio
     AUDIO_STT_ENGINE,
     AUDIO_STT_MODEL,
@@ -175,6 +186,9 @@ from open_webui.config import (
     AUDIO_STT_AZURE_LOCALES,
     AUDIO_STT_AZURE_BASE_URL,
     AUDIO_STT_AZURE_MAX_SPEAKERS,
+    AUDIO_STT_MISTRAL_API_KEY,
+    AUDIO_STT_MISTRAL_API_BASE_URL,
+    AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS,
     AUDIO_TTS_ENGINE,
     AUDIO_TTS_MODEL,
     AUDIO_TTS_VOICE,
@@ -243,6 +257,10 @@ from open_webui.config import (
     DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION,
     DATALAB_MARKER_FORMAT_LINES,
     DATALAB_MARKER_OUTPUT_FORMAT,
+    MINERU_API_MODE,
+    MINERU_API_URL,
+    MINERU_API_KEY,
+    MINERU_PARAMS,
     DATALAB_MARKER_USE_LLM,
     EXTERNAL_DOCUMENT_LOADER_URL,
     EXTERNAL_DOCUMENT_LOADER_API_KEY,
@@ -262,6 +280,7 @@ from open_webui.config import (
     DOCLING_PICTURE_DESCRIPTION_API,
     DOCUMENT_INTELLIGENCE_ENDPOINT,
     DOCUMENT_INTELLIGENCE_KEY,
+    MISTRAL_OCR_API_BASE_URL,
     MISTRAL_OCR_API_KEY,
     RAG_TEXT_SPLITTER,
     TIKTOKEN_ENCODING_NAME,
@@ -478,9 +497,11 @@ from open_webui.utils.auth import (
 )
 from open_webui.utils.plugin import install_tool_and_function_dependencies
 from open_webui.utils.oauth import (
+    get_oauth_client_info_with_dynamic_client_registration,
+    encrypt_data,
+    decrypt_data,
     OAuthManager,
     OAuthClientManager,
-    decrypt_data,
     OAuthClientInformationFull,
 )
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
@@ -852,7 +873,12 @@ app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL = DOCLING_PICTURE_DESCRIPTION
 app.state.config.DOCLING_PICTURE_DESCRIPTION_API = DOCLING_PICTURE_DESCRIPTION_API
 app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT
 app.state.config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY
+app.state.config.MISTRAL_OCR_API_BASE_URL = MISTRAL_OCR_API_BASE_URL
 app.state.config.MISTRAL_OCR_API_KEY = MISTRAL_OCR_API_KEY
+app.state.config.MINERU_API_MODE = MINERU_API_MODE
+app.state.config.MINERU_API_URL = MINERU_API_URL
+app.state.config.MINERU_API_KEY = MINERU_API_KEY
+app.state.config.MINERU_PARAMS = MINERU_PARAMS
 
 app.state.config.TEXT_SPLITTER = RAG_TEXT_SPLITTER
 app.state.config.TIKTOKEN_ENCODING_NAME = TIKTOKEN_ENCODING_NAME
@@ -1054,27 +1080,40 @@ app.state.config.IMAGE_GENERATION_ENGINE = IMAGE_GENERATION_ENGINE
 app.state.config.ENABLE_IMAGE_GENERATION = ENABLE_IMAGE_GENERATION
 app.state.config.ENABLE_IMAGE_PROMPT_GENERATION = ENABLE_IMAGE_PROMPT_GENERATION
 
+app.state.config.IMAGE_GENERATION_MODEL = IMAGE_GENERATION_MODEL
+app.state.config.IMAGE_SIZE = IMAGE_SIZE
+app.state.config.IMAGE_STEPS = IMAGE_STEPS
+
 app.state.config.IMAGES_OPENAI_API_BASE_URL = IMAGES_OPENAI_API_BASE_URL
 app.state.config.IMAGES_OPENAI_API_VERSION = IMAGES_OPENAI_API_VERSION
 app.state.config.IMAGES_OPENAI_API_KEY = IMAGES_OPENAI_API_KEY
 
 app.state.config.IMAGES_GEMINI_API_BASE_URL = IMAGES_GEMINI_API_BASE_URL
 app.state.config.IMAGES_GEMINI_API_KEY = IMAGES_GEMINI_API_KEY
-
-app.state.config.IMAGE_GENERATION_MODEL = IMAGE_GENERATION_MODEL
+app.state.config.IMAGES_GEMINI_ENDPOINT_METHOD = IMAGES_GEMINI_ENDPOINT_METHOD
 
 app.state.config.AUTOMATIC1111_BASE_URL = AUTOMATIC1111_BASE_URL
 app.state.config.AUTOMATIC1111_API_AUTH = AUTOMATIC1111_API_AUTH
-app.state.config.AUTOMATIC1111_CFG_SCALE = AUTOMATIC1111_CFG_SCALE
-app.state.config.AUTOMATIC1111_SAMPLER = AUTOMATIC1111_SAMPLER
-app.state.config.AUTOMATIC1111_SCHEDULER = AUTOMATIC1111_SCHEDULER
+app.state.config.AUTOMATIC1111_PARAMS = AUTOMATIC1111_PARAMS
+
 app.state.config.COMFYUI_BASE_URL = COMFYUI_BASE_URL
 app.state.config.COMFYUI_API_KEY = COMFYUI_API_KEY
 app.state.config.COMFYUI_WORKFLOW = COMFYUI_WORKFLOW
 app.state.config.COMFYUI_WORKFLOW_NODES = COMFYUI_WORKFLOW_NODES
 
-app.state.config.IMAGE_SIZE = IMAGE_SIZE
-app.state.config.IMAGE_STEPS = IMAGE_STEPS
+
+app.state.config.IMAGE_EDIT_ENGINE = IMAGE_EDIT_ENGINE
+app.state.config.IMAGE_EDIT_MODEL = IMAGE_EDIT_MODEL
+app.state.config.IMAGE_EDIT_SIZE = IMAGE_EDIT_SIZE
+app.state.config.IMAGES_EDIT_OPENAI_API_BASE_URL = IMAGES_EDIT_OPENAI_API_BASE_URL
+app.state.config.IMAGES_EDIT_OPENAI_API_KEY = IMAGES_EDIT_OPENAI_API_KEY
+app.state.config.IMAGES_EDIT_OPENAI_API_VERSION = IMAGES_EDIT_OPENAI_API_VERSION
+app.state.config.IMAGES_EDIT_GEMINI_API_BASE_URL = IMAGES_EDIT_GEMINI_API_BASE_URL
+app.state.config.IMAGES_EDIT_GEMINI_API_KEY = IMAGES_EDIT_GEMINI_API_KEY
+app.state.config.IMAGES_EDIT_COMFYUI_BASE_URL = IMAGES_EDIT_COMFYUI_BASE_URL
+app.state.config.IMAGES_EDIT_COMFYUI_API_KEY = IMAGES_EDIT_COMFYUI_API_KEY
+app.state.config.IMAGES_EDIT_COMFYUI_WORKFLOW = IMAGES_EDIT_COMFYUI_WORKFLOW
+app.state.config.IMAGES_EDIT_COMFYUI_WORKFLOW_NODES = IMAGES_EDIT_COMFYUI_WORKFLOW_NODES
 
 
 ########################################
@@ -1099,6 +1138,12 @@ app.state.config.AUDIO_STT_AZURE_REGION = AUDIO_STT_AZURE_REGION
 app.state.config.AUDIO_STT_AZURE_LOCALES = AUDIO_STT_AZURE_LOCALES
 app.state.config.AUDIO_STT_AZURE_BASE_URL = AUDIO_STT_AZURE_BASE_URL
 app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS = AUDIO_STT_AZURE_MAX_SPEAKERS
+
+app.state.config.AUDIO_STT_MISTRAL_API_KEY = AUDIO_STT_MISTRAL_API_KEY
+app.state.config.AUDIO_STT_MISTRAL_API_BASE_URL = AUDIO_STT_MISTRAL_API_BASE_URL
+app.state.config.AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS = (
+    AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS
+)
 
 app.state.config.TTS_ENGINE = AUDIO_TTS_ENGINE
 
@@ -1548,11 +1593,15 @@ async def chat_completion(
             log.info("Chat processing was cancelled")
             try:
                 event_emitter = get_event_emitter(metadata)
-                await event_emitter(
-                    {"type": "chat:tasks:cancel"},
+                await asyncio.shield(
+                    event_emitter(
+                        {"type": "chat:tasks:cancel"},
+                    )
                 )
             except Exception as e:
                 pass
+            finally:
+                raise  # re-raise to ensure proper task cancellation handling
         except Exception as e:
             log.debug(f"Error processing chat payload: {e}")
             if metadata.get("chat_id") and metadata.get("message_id"):
@@ -1583,7 +1632,7 @@ async def chat_completion(
         finally:
             try:
                 if mcp_clients := metadata.get("mcp_clients"):
-                    for client in mcp_clients.values():
+                    for client in reversed(mcp_clients.values()):
                         await client.disconnect()
             except Exception as e:
                 log.debug(f"Error cleaning up: {e}")
@@ -1929,6 +1978,7 @@ if len(app.state.config.TOOL_SERVER_CONNECTIONS) > 0:
         if tool_server_connection.get("type", "openapi") == "mcp":
             server_id = tool_server_connection.get("info", {}).get("id")
             auth_type = tool_server_connection.get("auth_type", "none")
+
             if server_id and auth_type == "oauth_2.1":
                 oauth_client_info = tool_server_connection.get("info", {}).get(
                     "oauth_client_info", ""
@@ -1974,6 +2024,64 @@ except Exception as e:
     )
 
 
+async def register_client(self, request, client_id: str) -> bool:
+    server_type, server_id = client_id.split(":", 1)
+
+    connection = None
+    connection_idx = None
+
+    for idx, conn in enumerate(request.app.state.config.TOOL_SERVER_CONNECTIONS or []):
+        if conn.get("type", "openapi") == server_type:
+            info = conn.get("info", {})
+            if info.get("id") == server_id:
+                connection = conn
+                connection_idx = idx
+                break
+
+    if connection is None or connection_idx is None:
+        log.warning(
+            f"Unable to locate MCP tool server configuration for client {client_id} during re-registration"
+        )
+        return False
+
+    server_url = connection.get("url")
+    oauth_server_key = (connection.get("config") or {}).get("oauth_server_key")
+
+    try:
+        oauth_client_info = (
+            await get_oauth_client_info_with_dynamic_client_registration(
+                request,
+                client_id,
+                server_url,
+                oauth_server_key,
+            )
+        )
+    except Exception as e:
+        log.error(f"Dynamic client re-registration failed for {client_id}: {e}")
+        return False
+
+    try:
+        request.app.state.config.TOOL_SERVER_CONNECTIONS[connection_idx] = {
+            **connection,
+            "info": {
+                **connection.get("info", {}),
+                "oauth_client_info": encrypt_data(
+                    oauth_client_info.model_dump(mode="json")
+                ),
+            },
+        }
+    except Exception as e:
+        log.error(
+            f"Failed to persist updated OAuth client info for tool server {client_id}: {e}"
+        )
+        return False
+
+    oauth_client_manager.remove_client(client_id)
+    oauth_client_manager.add_client(client_id, oauth_client_info)
+    log.info(f"Re-registered OAuth client {client_id} for tool server")
+    return True
+
+
 @app.get("/oauth/clients/{client_id}/authorize")
 async def oauth_client_authorize(
     client_id: str,
@@ -1981,6 +2089,41 @@ async def oauth_client_authorize(
     response: Response,
     user=Depends(get_verified_user),
 ):
+    # ensure_valid_client_registration
+    client = oauth_client_manager.get_client(client_id)
+    client_info = oauth_client_manager.get_client_info(client_id)
+    if client is None or client_info is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND)
+
+    if not await oauth_client_manager._preflight_authorization_url(client, client_info):
+        log.info(
+            "Detected invalid OAuth client %s; attempting re-registration",
+            client_id,
+        )
+
+        registered = await register_client(request, client_id)
+        if not registered:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to re-register OAuth client",
+            )
+
+        client = oauth_client_manager.get_client(client_id)
+        client_info = oauth_client_manager.get_client_info(client_id)
+        if client is None or client_info is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="OAuth client unavailable after re-registration",
+            )
+
+        if not await oauth_client_manager._preflight_authorization_url(
+            client, client_info
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="OAuth client registration is still invalid after re-registration",
+            )
+
     return await oauth_client_manager.handle_authorize(request, client_id=client_id)
 
 

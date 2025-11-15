@@ -9,12 +9,15 @@
 	export let show = false;
 	export let side = 'bottom';
 	export let align = 'start';
+	export let closeOnOutsideClick = true;
+
 	const dispatch = createEventDispatcher();
 </script>
 
 <DropdownMenu.Root
 	bind:open={show}
 	closeFocus={false}
+	{closeOnOutsideClick}
 	onOpenChange={(state) => {
 		dispatch('change', state);
 	}}

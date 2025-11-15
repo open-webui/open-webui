@@ -99,7 +99,7 @@
 		{#if show}
 			<div class="flex max-h-full min-h-full">
 				<div
-					class="w-full pt-2 bg-white dark:shadow-lg dark:bg-gray-850 z-40 pointer-events-auto overflow-y-auto scrollbar-hidden flex flex-col"
+					class="w-full pt-2 bg-white dark:shadow-lg dark:bg-gray-850 z-40 pointer-events-auto overflow-y-auto scrollbar-hidden flex flex-col px-2"
 				>
 					<slot />
 				</div>

@@ -4,6 +4,7 @@
 	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
 
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
+	import { fade } from 'svelte/transition';
 	const i18n: Writable<i18nType> = getContext('i18n');
 
 	import { goto } from '$app/navigation';
@@ -26,6 +27,7 @@
 		banners,
 		user,
 		socket,
+		audioQueue,
 		showControls,
 		showCallOverlay,
 		currentChatPage,
@@ -34,6 +36,7 @@
 		showOverview,
 		chatTitle,
 		showArtifacts,
+		artifactContents,
 		tools,
 		toolServers,
 		functions,
@@ -41,6 +44,7 @@
 		pinnedChats,
 		showEmbeds
 	} from '$lib/stores';
+
 	import {
 		convertMessagesToHistory,
 		copyToClipboard,
@@ -48,8 +52,10 @@
 		createMessagesList,
 		getPromptVariables,
 		processDetails,
-		removeAllDetails
+		removeAllDetails,
+		getCodeBlockContents
 	} from '$lib/utils';
+	import { AudioQueue } from '$lib/utils/audio';
 
 	import {
 		createNewChat,
@@ -75,8 +81,8 @@
 	import { getTools } from '$lib/apis/tools';
 	import { uploadFile } from '$lib/apis/files';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
-
-	import { fade } from 'svelte/transition';
+	import { getFunctions } from '$lib/apis/functions';
+	import { updateFolderById } from '$lib/apis/folders';
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
@@ -89,9 +95,7 @@
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
-	import { getFunctions } from '$lib/apis/functions';
 	import Image from '../common/Image.svelte';
-	import { updateFolderById } from '$lib/apis/folders';
 
 	export let chatIdProp = '';
 
@@ -192,6 +196,8 @@
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
 					}
 				} catch (e) {}
+			} else {
+				await setDefaults();
 			}
 
 			const chatInput = document.getElementById('chat-input');
@@ -527,17 +533,28 @@
 	let showControlsSubscribe = null;
 	let selectedFolderSubscribe = null;
 
+	const stopAudio = () => {
+		try {
+			speechSynthesis.cancel();
+			$audioQueue.stop();
+		} catch {}
+	};
+
 	onMount(async () => {
 		loading = true;
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('events', chatEventHandler);
 
+		audioQueue.set(new AudioQueue(document.getElementById('audioElement')));
+
 		pageSubscribe = page.subscribe(async (p) => {
 			if (p.url.pathname === '/') {
 				await tick();
 				initNewChat();
 			}
+
+			stopAudio();
 		});
 
 		const storageChatInput = sessionStorage.getItem(
@@ -619,6 +636,7 @@
 			chatIdUnsubscriber?.();
 			window.removeEventListener('message', onMessageHandler);
 			$socket?.off('events', chatEventHandler);
+			$audioQueue?.destroy();
 		} catch (e) {
 			console.error(e);
 		}
@@ -815,6 +833,63 @@
 			files = files.filter((f) => f.name !== url);
 			toast.error(`${e}`);
 		}
+	};
+
+	$: if (history) {
+		getContents();
+	} else {
+		artifactContents.set([]);
+	}
+
+	const getContents = () => {
+		const messages = history ? createMessagesList(history, history.currentId) : [];
+		let contents = [];
+		messages.forEach((message) => {
+			if (message?.role !== 'user' && message?.content) {
+				const {
+					codeBlocks: codeBlocks,
+					html: htmlContent,
+					css: cssContent,
+					js: jsContent
+				} = getCodeBlockContents(message.content);
+
+				if (htmlContent || cssContent || jsContent) {
+					const renderedContent = `
+                        <!DOCTYPE html>
+                        <html lang="en">
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+							<${''}style>
+								body {
+									background-color: white; /* Ensure the iframe has a white background */
+								}
+
+								${cssContent}
+							</${''}style>
+                        </head>
+                        <body>
+                            ${htmlContent}
+
+							<${''}script>
+                            	${jsContent}
+							</${''}script>
+                        </body>
+                        </html>
+                    `;
+					contents = [...contents, { type: 'iframe', content: renderedContent }];
+				} else {
+					// Check for SVG content
+					for (const block of codeBlocks) {
+						if (block.lang === 'svg' || (block.lang === 'xml' && block.code.includes('<svg'))) {
+							contents = [...contents, { type: 'svg', content: block.code }];
+						}
+					}
+				}
+			}
+		});
+
+		artifactContents.set(contents);
 	};
 
 	//////////////////////////
@@ -1080,7 +1155,7 @@
 			});
 		}
 	};
-	const chatCompletedHandler = async (chatId, modelId, responseMessageId, messages) => {
+	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
 		const res = await chatCompleted(localStorage.token, {
 			model: modelId,
 			messages: messages.map((m) => ({
@@ -1094,7 +1169,7 @@
 			})),
 			filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
 			model_item: $models.find((m) => m.id === modelId),
-			chat_id: chatId,
+			chat_id: _chatId,
 			session_id: $socket?.id,
 			id: responseMessageId
 		}).catch((error) => {
@@ -1122,9 +1197,9 @@
 
 		await tick();
 
-		if ($chatId == chatId) {
+		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
-				chat = await updateChatById(localStorage.token, chatId, {
+				chat = await updateChatById(localStorage.token, _chatId, {
 					models: selectedModels,
 					messages: messages,
 					history: history,
@@ -1140,7 +1215,7 @@
 		taskIds = null;
 	};
 
-	const chatActionHandler = async (chatId, actionId, modelId, responseMessageId, event = null) => {
+	const chatActionHandler = async (_chatId, actionId, modelId, responseMessageId, event = null) => {
 		const messages = createMessagesList(history, responseMessageId);
 
 		const res = await chatAction(localStorage.token, actionId, {
@@ -1155,7 +1230,7 @@
 			})),
 			...(event ? { event: event } : {}),
 			model_item: $models.find((m) => m.id === modelId),
-			chat_id: chatId,
+			chat_id: _chatId,
 			session_id: $socket?.id,
 			id: responseMessageId
 		}).catch((error) => {
@@ -1177,9 +1252,9 @@
 			}
 		}
 
-		if ($chatId == chatId) {
+		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
-				chat = await updateChatById(localStorage.token, chatId, {
+				chat = await updateChatById(localStorage.token, _chatId, {
 					models: selectedModels,
 					messages: messages,
 					history: history,
@@ -2288,7 +2363,7 @@
 	</title>
 </svelte:head>
 
-<audio id="audioElement" src="" style="display: none;" />
+<audio id="audioElement" src="" style="display: none;"></audio>
 
 <EventConfirmDialog
 	bind:show={showEventConfirmation}
@@ -2440,7 +2515,7 @@
 								</div>
 							</div>
 
-							<div class=" pb-2">
+							<div class=" pb-2 z-10">
 								<MessageInput
 									bind:this={messageInput}
 									{history}
@@ -2570,3 +2645,10 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	::-webkit-scrollbar {
+		height: 0.5rem;
+		width: 0.5rem;
+	}
+</style>

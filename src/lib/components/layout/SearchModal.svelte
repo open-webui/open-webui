@@ -24,7 +24,7 @@
 
 	let actions = [
 		{
-			label: 'Start a new conversation',
+			label: $i18n.t('Start a new conversation'),
 			onClick: async () => {
 				await goto(`/${query ? `?q=${query}` : ''}`);
 				show = false;
@@ -56,12 +56,7 @@
 	}
 
 	const loadChatPreview = async (selectedIdx) => {
-		if (
-			!chatList ||
-			chatList.length === 0 ||
-			selectedIdx === null ||
-			chatList[selectedIdx] === undefined
-		) {
+		if (!chatList || chatList.length === 0 || selectedIdx === null) {
 			selectedChat = null;
 			messages = null;
 			history = null;
@@ -70,8 +65,11 @@
 		}
 
 		const selectedChatIdx = selectedIdx - actions.length;
-		if (selectedChatIdx < 0) {
+		if (selectedChatIdx < 0 || selectedChatIdx >= chatList.length) {
 			selectedChat = null;
+			messages = null;
+			history = null;
+			selectedModels = [''];
 			return;
 		}
 
@@ -231,9 +229,9 @@
 			($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))
 				? [
 						{
-							label: 'Create a new note',
+							label: $i18n.t('Create a new note'),
 							onClick: async () => {
-								await goto(`/notes${query ? `?content=${query}` : ''}`);
+								await goto(`/notes?content=${query}`);
 								show = false;
 								onClose();
 							},

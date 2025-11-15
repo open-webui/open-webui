@@ -224,7 +224,7 @@
 							{$i18n.t('System Instructions')}
 						</div>
 
-						{#if !showSystem}
+						{#if !showSystem && system.trim()}
 							<div class=" flex-1 text-gray-500 line-clamp-1">
 								{system}
 							</div>

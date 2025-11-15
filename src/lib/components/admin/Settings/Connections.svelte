@@ -219,7 +219,7 @@
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
 		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && connectionsConfig !== null}
 			<div class="mb-3.5">
-				<div class=" mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
 
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 

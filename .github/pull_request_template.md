@@ -1,16 +1,18 @@
 # Pull Request Checklist
 
-### Note to first-time contributors: Please open a discussion post in [Discussions](https://github.com/open-webui/open-webui/discussions) and describe your changes before submitting a pull request.
+### Note to first-time contributors: Please open a discussion post in [Discussions](https://github.com/open-webui/open-webui/discussions) to discuss your idea/fix with the community before creating a pull request, and describe your changes before submitting a pull request.
+
+This is to ensure large feature PRs are discussed with the community first, before starting work on it. If the community does not want this feature or it is not relevant for Open WebUI as a project, it can be identified in the discussion before working on the feature and submitting the PR.
 
 **Before submitting, make sure you've checked the following:**
 
-- [ ] **Target branch:** Verify that the pull request targets the `dev` branch. Not targeting the `dev` branch may lead to immediate closure of the PR.
-- [ ] **Description:** Provide a concise description of the changes made in this pull request.
+- [ ] **Target branch:** Verify that the pull request targets the `dev` branch. **Not targeting the `dev` branch will lead to immediate closure of the PR.**
+- [ ] **Description:** Provide a concise description of the changes made in this pull request down below.
 - [ ] **Changelog:** Ensure a changelog entry following the format of [Keep a Changelog](https://keepachangelog.com/) is added at the bottom of the PR description.
 - [ ] **Documentation:** If necessary, update relevant documentation [Open WebUI Docs](https://github.com/open-webui/docs) like environment variables, the tutorials, or other documentation sources.
 - [ ] **Dependencies:** Are there any new dependencies? Have you updated the dependency versions in the documentation?
-- [ ] **Testing:** Perform manual tests to verify the implemented fix/feature works as intended AND does not break any other functionality. Take this as an opportunity to make screenshots of the feature/fix and include it in the PR description.
-- [ ] **Agentic AI Code:**: Confirm this Pull Request is **not written by any AI Agent** or has at least gone through additional human review **and** manual testing. If any AI Agent is the co-author of this PR, it may lead to immediate closure of the PR.
+- [ ] **Testing:** Perform manual tests to **verify the implemented fix/feature works as intended AND does not break any other functionality**. Take this as an opportunity to **make screenshots of the feature/fix and include it in the PR description**.
+- [ ] **Agentic AI Code:** Confirm this Pull Request is **not written by any AI Agent** or has at least **gone through additional human review AND manual testing**. If any AI Agent is the co-author of this PR, it may lead to immediate closure of the PR.
 - [ ] **Code review:** Have you performed a self-review of your code, addressing any coding standard issues and ensuring adherence to the project's coding standards?
 - [ ] **Title Prefix:** To clearly categorize this pull request, prefix the pull request title using one of the following:
   - **BREAKING CHANGE**: Significant changes that may affect compatibility
@@ -75,3 +77,6 @@
 ### Contributor License Agreement
 
 By submitting this pull request, I confirm that I have read and fully agree to the [Contributor License Agreement (CLA)](https://github.com/open-webui/open-webui/blob/main/CONTRIBUTOR_LICENSE_AGREEMENT), and I am providing my contributions under its terms.
+
+> [!NOTE]
+> Deleting the CLA section will lead to immediate closure of your PR and it will not be merged in.

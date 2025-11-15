@@ -38,6 +38,7 @@ class ERROR_MESSAGES(str, Enum):
     ID_TAKEN = "Uh-oh! This id is already registered. Please choose another id string."
     MODEL_ID_TAKEN = "Uh-oh! This model id is already registered. Please choose another model id string."
     NAME_TAG_TAKEN = "Uh-oh! This name tag is already registered. Please choose another name tag string."
+    MODEL_ID_TOO_LONG = "The model id is too long. Please make sure your model id is less than 256 characters long."
 
     INVALID_TOKEN = (
         "Your session has expired or the token is invalid. Please sign in again."

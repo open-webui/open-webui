@@ -4,7 +4,14 @@
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
-	import { artifactCode, chatId, settings, showArtifacts, showControls } from '$lib/stores';
+	import {
+		artifactCode,
+		chatId,
+		settings,
+		showArtifacts,
+		showControls,
+		artifactContents
+	} from '$lib/stores';
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
 
 	import XMark from '../icons/XMark.svelte';
@@ -15,8 +22,6 @@
 	import Download from '../icons/Download.svelte';
 
 	export let overlay = false;
-	export let history;
-	let messages = [];
 
 	let contents: Array<{ type: string; content: string }> = [];
 	let selectedContentIdx = 0;
@@ -24,121 +29,11 @@
 	let copied = false;
 	let iframeElement: HTMLIFrameElement;
 
-	$: if (history) {
-		messages = createMessagesList(history, history.currentId);
-		getContents();
-	} else {
-		messages = [];
-		getContents();
-	}
-
-	const getContents = () => {
-		contents = [];
-		messages.forEach((message) => {
-			if (message?.role !== 'user' && message?.content) {
-				const codeBlockContents = message.content.match(/```[\s\S]*?```/g);
-				let codeBlocks = [];
-
-				if (codeBlockContents) {
-					codeBlockContents.forEach((block) => {
-						const lang = block.split('\n')[0].replace('```', '').trim().toLowerCase();
-						const code = block.replace(/```[\s\S]*?\n/, '').replace(/```$/, '');
-						codeBlocks.push({ lang, code });
-					});
-				}
-
-				let htmlContent = '';
-				let cssContent = '';
-				let jsContent = '';
-
-				codeBlocks.forEach((block) => {
-					const { lang, code } = block;
-
-					if (lang === 'html') {
-						htmlContent += code + '\n';
-					} else if (lang === 'css') {
-						cssContent += code + '\n';
-					} else if (lang === 'javascript' || lang === 'js') {
-						jsContent += code + '\n';
-					}
-				});
-
-				const inlineHtml = message.content.match(/<html>[\s\S]*?<\/html>/gi);
-				const inlineCss = message.content.match(/<style>[\s\S]*?<\/style>/gi);
-				const inlineJs = message.content.match(/<script>[\s\S]*?<\/script>/gi);
-
-				if (inlineHtml) {
-					inlineHtml.forEach((block) => {
-						const content = block.replace(/<\/?html>/gi, ''); // Remove <html> tags
-						htmlContent += content + '\n';
-					});
-				}
-				if (inlineCss) {
-					inlineCss.forEach((block) => {
-						const content = block.replace(/<\/?style>/gi, ''); // Remove <style> tags
-						cssContent += content + '\n';
-					});
-				}
-				if (inlineJs) {
-					inlineJs.forEach((block) => {
-						const content = block.replace(/<\/?script>/gi, ''); // Remove <script> tags
-						jsContent += content + '\n';
-					});
-				}
-
-				if (htmlContent || cssContent || jsContent) {
-					const renderedContent = `
-                        <!DOCTYPE html>
-                        <html lang="en">
-                        <head>
-                            <meta charset="UTF-8">
-                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-							<${''}style>
-								body {
-									background-color: white; /* Ensure the iframe has a white background */
-								}
-
-								${cssContent}
-							</${''}style>
-                        </head>
-                        <body>
-                            ${htmlContent}
-
-							<${''}script>
-                            	${jsContent}
-							</${''}script>
-                        </body>
-                        </html>
-                    `;
-					contents = [...contents, { type: 'iframe', content: renderedContent }];
-				} else {
-					// Check for SVG content
-					for (const block of codeBlocks) {
-						if (block.lang === 'svg' || (block.lang === 'xml' && block.code.includes('<svg'))) {
-							contents = [...contents, { type: 'svg', content: block.code }];
-						}
-					}
-				}
-			}
-		});
-
-		if (contents.length === 0) {
-			showControls.set(false);
-			showArtifacts.set(false);
-		}
-
-		selectedContentIdx = contents ? contents.length - 1 : 0;
-	};
-
 	function navigateContent(direction: 'prev' | 'next') {
-		console.log(selectedContentIdx);
-
 		selectedContentIdx =
 			direction === 'prev'
 				? Math.max(selectedContentIdx - 1, 0)
 				: Math.min(selectedContentIdx + 1, contents.length - 1);
-
-		console.log(selectedContentIdx);
 	}
 
 	const iframeLoadHandler = () => {
@@ -200,6 +95,18 @@
 				const codeIdx = contents.findIndex((content) => content.content.includes(value));
 				selectedContentIdx = codeIdx !== -1 ? codeIdx : 0;
 			}
+		});
+
+		artifactContents.subscribe((value) => {
+			contents = value;
+			console.log('Artifact contents updated:', contents);
+
+			if (contents.length === 0) {
+				showControls.set(false);
+				showArtifacts.set(false);
+			}
+
+			selectedContentIdx = contents ? contents.length - 1 : 0;
 		});
 	});
 </script>

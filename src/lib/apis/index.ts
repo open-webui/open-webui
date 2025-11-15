@@ -494,7 +494,10 @@ export const executeToolServer = async (
 			headers
 		};
 
-		if (['post', 'put', 'patch'].includes(httpMethod.toLowerCase()) && operation.requestBody) {
+		if (
+			['post', 'put', 'patch', 'delete'].includes(httpMethod.toLowerCase()) &&
+			operation.requestBody
+		) {
 			requestOptions.body = JSON.stringify(bodyParams);
 		}
 
@@ -1396,6 +1399,33 @@ export const getChangelog = async () => {
 	}
 
 	return res;
+};
+
+export const getVersion = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/version`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res?.version ?? null;
 };
 
 export const getVersionUpdates = async (token: string) => {

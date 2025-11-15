@@ -5,6 +5,134 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.36] - 2025-11-07
+
+### Added
+
+- 🔐 OAuth group parsing now supports configurable separators via the "OAUTH_GROUPS_SEPARATOR" environment variable, enabling proper handling of semicolon-separated group claims from providers like CILogon. [#18987](https://github.com/open-webui/open-webui/pull/18987), [#18979](https://github.com/open-webui/open-webui/issues/18979)
+
+### Fixed
+
+- 🛠️ Tool calling functionality is restored by correcting asynchronous function handling in tool parameter updates. [#18981](https://github.com/open-webui/open-webui/issues/18981)
+- 🖼️ The ComfyUI image edit workflow editor modal now opens correctly when clicking the Edit button. [#18978](https://github.com/open-webui/open-webui/issues/18978)
+- 🔥 Firecrawl import errors are resolved by implementing lazy loading and using the correct class name. [#18973](https://github.com/open-webui/open-webui/issues/18973)
+- 🔌 Socket.IO CORS warning is resolved by properly configuring CORS origins for Socket.IO connections. [Commit](https://github.com/open-webui/open-webui/commit/639d26252e528c9c37a5f553b11eb94376d8792d)
+
+## [0.6.35] - 2025-11-06
+
+### Added
+
+- 🖼️ Image generation system received a comprehensive overhaul with major new capabilities including full image editing support allowing users to modify existing images using text prompts with OpenAI, Gemini, or ComfyUI engines, adding Gemini 2.5 Flash Image (Nano Banana) support, Qwen Image Edit integration, resolution of base64-encoded image display issues, streamlined AUTOMATIC1111 configuration by consolidating parameters into a flexible JSON parameters field, and enhanced UI with a code editor modal for ComfyUI workflow management. [#17434](https://github.com/open-webui/open-webui/pull/17434), [#16976](https://github.com/open-webui/open-webui/issues/16976), [Commit](https://github.com/open-webui/open-webui/commit/8e5690aab4f632a57027e2acf880b8f89a8717c0), [Commit](https://github.com/open-webui/open-webui/commit/72f8539fd2e679fec0762945f22f4b8a6920afa0), [Commit](https://github.com/open-webui/open-webui/commit/8d34fcb586eeee1fac6da2f991518b8a68b00b72), [Commit](https://github.com/open-webui/open-webui/commit/72900cd686de1fa6be84b5a8a2fc857cff7b91b8)
+- 🔒 CORS origin validation was added to WebSocket connections as a defense-in-depth security measure against cross-site WebSocket hijacking attacks. [#18411](https://github.com/open-webui/open-webui/pull/18411), [#18410](https://github.com/open-webui/open-webui/issues/18410)
+- 🔄 Automatic page refresh now occurs when a version update is detected via WebSocket connection, ensuring users always run the latest version without cache issues. [Commit](https://github.com/open-webui/open-webui/commit/989f192c92d2fe55daa31336e7971e21798b96ae)
+- 🐍 Experimental initial preparations for Python 3.13 compatibility by updating dependencies with security enhancements and cryptographic improvements. [#18430](https://github.com/open-webui/open-webui/pull/18430), [#18424](https://github.com/open-webui/open-webui/pull/18424)
+- ⚡ Image compression now preserves the original image format instead of converting to PNG, significantly reducing file sizes and improving chat loading performance. [#18506](https://github.com/open-webui/open-webui/pull/18506)
+- 🎤 Mistral Voxtral model support was added for text-to-speech, including voxtral-small and voxtral-mini models with both transcription and chat completion API support. [#18934](https://github.com/open-webui/open-webui/pull/18934)
+- 🔊 Text-to-speech now uses a global audio queue system to prevent overlapping playback, ensuring only one TTS instance plays at a time with proper stop/start controls and automatic cleanup when switching between messages. [#16152](https://github.com/open-webui/open-webui/pull/16152), [#18744](https://github.com/open-webui/open-webui/pull/18744), [#16150](https://github.com/open-webui/open-webui/issues/16150)
+- 🔊 ELEVENLABS_API_BASE_URL environment variable now allows configuration of custom ElevenLabs API endpoints, enabling support for EU residency API requirements. [#18402](https://github.com/open-webui/open-webui/issues/18402)
+- 🔐 OAUTH_ROLES_SEPARATOR environment variable now allows custom role separators for OAuth roles that contain commas, useful for roles specified in LDAP syntax. [#18572](https://github.com/open-webui/open-webui/pull/18572)
+- 📄 External document loaders can now optionally forward user information headers when ENABLE_FORWARD_USER_INFO_HEADERS is enabled, enabling cost tracking, audit logs, and usage analytics for external services. [#18731](https://github.com/open-webui/open-webui/pull/18731)
+- 📄 MISTRAL_OCR_API_BASE_URL environment variable now allows configuration of custom Mistral OCR API endpoints for flexible deployment options. [Commit](https://github.com/open-webui/open-webui/commit/415b93c7c35c2e2db4425e6da1b88b3750f496b0)
+- ⌨️ Keyboard shortcut hints are now displayed on sidebar buttons with a refactored shortcuts modal that accurately reflects all available hotkeys across different keyboard layouts. [#18473](https://github.com/open-webui/open-webui/pull/18473)
+- 🛠️ Tooltips now display tool descriptions when hovering over tool names on the model edit page, improving usability and providing immediate context. [#18707](https://github.com/open-webui/open-webui/pull/18707)
+- 📝 "Create a new note" from the search modal now immediately creates a new private note and opens it in the editor instead of navigating to the generic notes page. [#18255](https://github.com/open-webui/open-webui/pull/18255)
+- 🖨️ Code block output now preserves whitespace formatting with monospace font to accurately reflect terminal behavior. [#18352](https://github.com/open-webui/open-webui/pull/18352)
+- ✏️ Edit button is now available in the three-dot menu of models in the workspace section for quick access to model editing, with the menu reorganized for better user experience and Edit, Clone, Copy Link, and Share options logically grouped. [#18574](https://github.com/open-webui/open-webui/pull/18574)
+- 📌 Sidebar models section is now collapsible, allowing users to expand and collapse the pinned models list for better sidebar organization. [Commit](https://github.com/open-webui/open-webui/commit/82c08a3b5d189f81c96b6548cc872198771015b0)
+- 🌙 Dark mode styles for select elements were added using Tailwind CSS classes, improving consistency across the interface. [#18636](https://github.com/open-webui/open-webui/pull/18636)
+- 🔄 Various improvements were implemented across the frontend and backend to enhance performance, stability, and security.
+- 🌐 Translations for Portuguese (Brazil), Greek, German, Traditional Chinese, Simplified Chinese, Spanish, Georgian, Danish, and Estonian were enhanced and expanded.
+
+### Fixed
+
+- 🔒 Server-Sent Event (SSE) code injection vulnerability in Direct Connections is resolved by blocking event emission from untrusted external model servers; event emitters from direct connected model servers are no longer supported, preventing arbitrary JavaScript execution in user browsers. [Commit](https://github.com/open-webui/open-webui/commit/8af6a4cf21b756a66cd58378a01c60f74c39b7ca)
+- 🛡️ DOM XSS vulnerability in "Insert Prompt as Rich Text" is resolved by sanitizing HTML content with DOMPurify before rendering. [Commit](https://github.com/open-webui/open-webui/commit/eb9c4c0e358c274aea35f21c2856c0a20051e5f1)
+- ⚙️ MCP server cancellation scope corruption is prevented by reversing disconnection order to follow LIFO and properly handling exceptions, resolving 100% CPU usage when resuming chats with expired tokens or using multiple streamable MCP servers. [#18537](https://github.com/open-webui/open-webui/pull/18537)
+- 🔧 UI freeze when querying models with knowledge bases containing inconsistent distance metrics is resolved by properly initializing the distances array in citations. [#18585](https://github.com/open-webui/open-webui/pull/18585)
+- 🤖 Duplicate model IDs from multiple OpenAI endpoints are now automatically deduplicated server-side, preventing frontend crashes for users with unified gateway proxies that aggregate multiple providers. [Commit](https://github.com/open-webui/open-webui/commit/fdf7ca11d4f3cc8fe63e81c98dc0d1e48e52ba36)
+- 🔐 Login failures with passwords longer than 72 bytes are resolved by safely truncating oversized passwords for bcrypt compatibility. [#18157](https://github.com/open-webui/open-webui/issues/18157)
+- 🔐 OAuth 2.1 MCP tool connections now automatically re-register clients when stored client IDs become stale, preventing unauthorized_client errors after editing tool endpoints and providing detailed error messages for callback failures. [#18415](https://github.com/open-webui/open-webui/pull/18415), [#18309](https://github.com/open-webui/open-webui/issues/18309)
+- 🔓 OAuth 2.1 discovery, metadata fetching, and dynamic client registration now correctly use HTTP proxy environment variables when trust_env is enabled. [Commit](https://github.com/open-webui/open-webui/commit/bafeb76c411483bd6b135f0edbcdce048120f264)
+- 🔌 MCP server connection failures now display clear error messages in the chat interface instead of silently failing. [#18892](https://github.com/open-webui/open-webui/pull/18892), [#18889](https://github.com/open-webui/open-webui/issues/18889)
+- 💬 Chat titles are now properly generated even when title auto-generation is disabled in interface settings, fixing an issue where chats would remain labeled as "New chat". [#18761](https://github.com/open-webui/open-webui/pull/18761), [#18717](https://github.com/open-webui/open-webui/issues/18717), [#6478](https://github.com/open-webui/open-webui/issues/6478)
+- 🔍 Chat query errors are prevented by properly validating and handling the "order_by" parameter to ensure requested columns exist. [#18400](https://github.com/open-webui/open-webui/pull/18400), [#18452](https://github.com/open-webui/open-webui/pull/18452)
+- 🔧 Root-level max_tokens parameter is no longer dropped when proxying to Ollama, properly converting to num_predict to limit output token length as intended. [#18618](https://github.com/open-webui/open-webui/issues/18618)
+- 🔑 Self-hosted Marker instances can now be used without requiring an API key, while keeping it optional for datalab Marker service users. [#18617](https://github.com/open-webui/open-webui/issues/18617)
+- 🔧 OpenAPI specification endpoint conflict between "/api/v1/models" and "/api/v1/models/" is resolved by changing the models router endpoint to "/list", preventing duplicate operationId errors when generating TypeScript API clients. [#18758](https://github.com/open-webui/open-webui/issues/18758)
+- 🏷️ Model tags are now de-duplicated case-insensitively in both the model selector and workspace models page, preventing duplicate entries with different capitalization from appearing in filter dropdowns. [#18716](https://github.com/open-webui/open-webui/pull/18716), [#18711](https://github.com/open-webui/open-webui/issues/18711)
+- 📄 Docling RAG parameter configuration is now correctly saved in the admin UI by fixing the typo in the "DOCLING_PARAMS" parameter name. [#18390](https://github.com/open-webui/open-webui/pull/18390)
+- 📃 Tika document processing now automatically detects content types instead of relying on potentially incorrect browser-provided mime-types, improving file handling accuracy for formats like RTF. [#18765](https://github.com/open-webui/open-webui/pull/18765), [#18683](https://github.com/open-webui/open-webui/issues/18683)
+- 🖼️ Image and video uploads to knowledge bases now display proper error messages instead of showing an infinite spinner when the content extraction engine does not support these file types. [#18514](https://github.com/open-webui/open-webui/issues/18514)
+- 📝 Notes PDF export now properly detects and applies dark mode styling consistently across both the notes list and individual note pages, with a shared utility function to eliminate code duplication. [#18526](https://github.com/open-webui/open-webui/issues/18526)
+- 💭 Details tags for reasoning content are now correctly identified and rendered even when the same tag is present in user messages. [#18840](https://github.com/open-webui/open-webui/pull/18840), [#18294](https://github.com/open-webui/open-webui/issues/18294)
+- 📊 Mermaid and Vega rendering errors now display inline with the code instead of showing repetitive toast notifications, improving user experience when models generate invalid diagram syntax. [Commit](https://github.com/open-webui/open-webui/commit/fdc0f04a8b7dd0bc9f9dc0e7e30854f7a0eea3e9)
+- 📈 Mermaid diagram rendering errors no longer cause UI unavailability or display error messages below the input box. [#18493](https://github.com/open-webui/open-webui/pull/18493), [#18340](https://github.com/open-webui/open-webui/issues/18340)
+- 🔗 Web search SSL verification is now asynchronous, preventing the website from hanging during web search operations. [#18714](https://github.com/open-webui/open-webui/pull/18714), [#18699](https://github.com/open-webui/open-webui/issues/18699)
+- 🌍 Web search results now correctly use HTTP proxy environment variables when WEB_SEARCH_TRUST_ENV is enabled. [#18667](https://github.com/open-webui/open-webui/pull/18667), [#7008](https://github.com/open-webui/open-webui/discussions/7008)
+- 🔍 Google Programmable Search Engine now properly includes referer headers, enabling API keys with HTTP referrer restrictions configured in Google Cloud Console. [#18871](https://github.com/open-webui/open-webui/pull/18871), [#18870](https://github.com/open-webui/open-webui/issues/18870)
+- ⚡ YouTube video transcript fetching now works correctly when using a proxy connection. [#18419](https://github.com/open-webui/open-webui/pull/18419)
+- 🎙️ Speech-to-text transcription no longer deletes or replaces existing text in the prompt input field, properly preserving any previously entered content. [#18540](https://github.com/open-webui/open-webui/issues/18540)
+- 🎙️ The "Instant Auto-Send After Voice Transcription" setting now functions correctly and automatically sends transcribed text when enabled. [#18466](https://github.com/open-webui/open-webui/issues/18466)
+- ⚙️ Chat settings now load properly when reopening a tab or starting a new session by initializing defaults when sessionStorage is empty. [#18438](https://github.com/open-webui/open-webui/pull/18438)
+- 🔎 Folder tag search in the sidebar now correctly handles folder names with multiple spaces by replacing all spaces with underscores. [Commit](https://github.com/open-webui/open-webui/commit/a8fe979af68e47e4e4bb3eb76e48d93d60cd2a45)
+- 🛠️ Functions page now updates immediately after deleting a function, removing the need for a manual page reload. [#18912](https://github.com/open-webui/open-webui/pull/18912), [#18908](https://github.com/open-webui/open-webui/issues/18908)
+- 🛠️ Native tool calling now properly supports sequential tool calls with shared context, allowing tools to access images and data from previous tool executions in the same conversation. [#18664](https://github.com/open-webui/open-webui/pull/18664)
+- 🎯 Globally enabled actions in the model editor now correctly apply as global instead of being treated as disabled. [#18577](https://github.com/open-webui/open-webui/pull/18577)
+- 📋 Clipboard images pasted via the "{{CLIPBOARD}}" prompt variable are now correctly converted to base64 format before being sent to the backend, resolving base64 encoding errors. [#18432](https://github.com/open-webui/open-webui/pull/18432), [#18425](https://github.com/open-webui/open-webui/issues/18425)
+- 📋 File list is now cleared when switching to models that do not support file uploads, preventing files from being sent to incompatible models. [#18496](https://github.com/open-webui/open-webui/pull/18496)
+- 📂 Move menu no longer displays when folders are empty. [#18484](https://github.com/open-webui/open-webui/pull/18484)
+- 📁 Folder and channel creation now validates that names are not empty, preventing creation of folders or channels with no name and showing an error toast if attempted. [#18564](https://github.com/open-webui/open-webui/pull/18564)
+- 🖊️ Rich text input no longer removes text between equals signs when pasting code with comparison operators. [#18551](https://github.com/open-webui/open-webui/issues/18551)
+- ⌨️ Keyboard shortcuts now display the correct keys for international and non-QWERTY keyboard layouts by detecting the user's layout using the Keyboard API. [#18533](https://github.com/open-webui/open-webui/pull/18533)
+- 🌐 "Attach Webpage" button now displays with correct disabled styling when a model does not support file uploads. [#18483](https://github.com/open-webui/open-webui/pull/18483)
+- 🎚️ Divider no longer displays in the integrations menu when no integrations are enabled. [#18487](https://github.com/open-webui/open-webui/pull/18487)
+- 📱 Chat controls button is now properly hidden on mobile for users without admin or explicit chat control permissions. [#18641](https://github.com/open-webui/open-webui/pull/18641)
+- 📍 User menu, download submenu, and move submenu are now repositioned to prevent overlap with the Chat Controls sidebar when it is open. [Commit](https://github.com/open-webui/open-webui/commit/414ab51cb6df1ab0d6c85ac6c1f2c5c9a5f8e2aa)
+- 🎯 Artifacts button no longer appears in the chat menu when there are no artifacts to display. [Commit](https://github.com/open-webui/open-webui/commit/ed6449d35f84f68dc75ee5c6b3f4748a3fda0096)
+- 🎨 Artifacts view now automatically displays when opening an existing conversation containing artifacts, improving user experience. [#18215](https://github.com/open-webui/open-webui/pull/18215)
+- 🖌️ Formatting toolbar is no longer hidden under images or code blocks in chat and now displays correctly above all message content.
+- 🎨 Layout shift near system instructions is prevented by properly rendering the chat component when system prompts are empty. [#18594](https://github.com/open-webui/open-webui/pull/18594)
+- 📐 Modal layout shift caused by scrollbar appearance is prevented by adding a stable scrollbar gutter. [#18591](https://github.com/open-webui/open-webui/pull/18591)
+- ✨ Spacing between icon and label in the user menu dropdown items is now consistent. [#18595](https://github.com/open-webui/open-webui/pull/18595)
+- 💬 Duplicate prompt suggestions no longer cause the webpage to freeze or throw JavaScript errors by implementing proper key management with composite keys. [#18841](https://github.com/open-webui/open-webui/pull/18841), [#18566](https://github.com/open-webui/open-webui/issues/18566)
+- 🔍 Chat preview loading in the search modal now works correctly for all search results by fixing an index boundary check that previously caused out-of-bounds errors. [#18911](https://github.com/open-webui/open-webui/pull/18911)
+- ♿ Screen reader support was enhanced by wrapping messages in semantic elements with descriptive aria-labels, adding "Assistant is typing" and "Response complete" announcements for improved accessibility. [#18735](https://github.com/open-webui/open-webui/pull/18735)
+- 🔒 Incorrect await call in the OAuth 2.1 flow is removed, eliminating a logged exception during authentication. [#18236](https://github.com/open-webui/open-webui/pull/18236)
+- 🛡️ Duplicate crossorigin attribute in the manifest file was removed. [#18413](https://github.com/open-webui/open-webui/pull/18413)
+
+### Changed
+
+- 🔄 Firecrawl integration was refactored to use the official Firecrawl SDK instead of direct HTTP requests and langchain_community FireCrawlLoader, improving reliability and performance with batch scraping support and enhanced error handling. [#18635](https://github.com/open-webui/open-webui/pull/18635)
+- 📄 MinerU content extraction engine now only supports PDF files following the upstream removal of LibreOffice document conversion in version 2.0.0; users needing to process office documents should convert them to PDF format first. [#18448](https://github.com/open-webui/open-webui/issues/18448)
+
+## [0.6.34] - 2025-10-16
+
+### Added
+
+- 📄 MinerU is now supported as a document parser backend, with support for both local and managed API deployments. [#18306](https://github.com/open-webui/open-webui/pull/18306)
+- 🔒 JWT token expiration default is now set to 4 weeks instead of never expiring, with security warnings displayed in backend logs and admin UI when set to unlimited. [#18261](https://github.com/open-webui/open-webui/pull/18261), [#18262](https://github.com/open-webui/open-webui/pull/18262)
+- ⚡ Page loading performance is improved by preventing unnecessary API requests when sidebar folders are not expanded. [#18179](https://github.com/open-webui/open-webui/pull/18179), [#17476](https://github.com/open-webui/open-webui/issues/17476)
+- 📁 File hash values are now included in the knowledge endpoint response, enabling efficient file synchronization through hash comparison. [#18284](https://github.com/open-webui/open-webui/pull/18284), [#18283](https://github.com/open-webui/open-webui/issues/18283)
+- 🎨 Chat dialog scrollbar visibility is improved by increasing its width, making it easier to use for navigation. [#18369](https://github.com/open-webui/open-webui/pull/18369), [#11782](https://github.com/open-webui/open-webui/issues/11782)
+- 🔄 Various improvements were implemented across the frontend and backend to enhance performance, stability, and security.
+- 🌐 Translations for Catalan, Chinese, Czech, Finnish, German, Kabyle, Korean, Portuguese (Brazil), Spanish, Thai, and Turkish were enhanced and expanded.
+
+### Fixed
+
+- 📚 Focused retrieval mode now works correctly, preventing the system from forcing full context mode and loading all documents in a knowledge base regardless of settings. [#18133](https://github.com/open-webui/open-webui/issues/18133)
+- 🔧 Filter inlet functions now correctly execute on tool call continuations, ensuring parameter persistence throughout tool interactions. [#18222](https://github.com/open-webui/open-webui/issues/18222)
+- 🛠️ External tool servers now properly support DELETE requests with body data. [#18289](https://github.com/open-webui/open-webui/pull/18289), [#18287](https://github.com/open-webui/open-webui/issues/18287)
+- 🗄️ Oracle23ai vector database client now correctly handles variable initialization, resolving UnboundLocalError when retrieving items from collections. [#18356](https://github.com/open-webui/open-webui/issues/18356)
+- 🔧 Model auto-pull functionality now works correctly even when user settings remain unmodified. [#18324](https://github.com/open-webui/open-webui/pull/18324)
+- 🎨 Duplicate HTML content in artifacts is now prevented by improving code block detection logic. [#18195](https://github.com/open-webui/open-webui/pull/18195), [#6154](https://github.com/open-webui/open-webui/issues/6154)
+- 💬 Pinned chats now appear in the Reference Chats list and can be referenced in conversations. [#18288](https://github.com/open-webui/open-webui/issues/18288)
+- 📝 Misleading knowledge base warning text in documents settings is clarified to correctly instruct users about reindexing vectors. [#18263](https://github.com/open-webui/open-webui/pull/18263)
+- 🔔 Toast notifications can now be dismissed even when a modal is open. [#18260](https://github.com/open-webui/open-webui/pull/18260)
+- 🔘 The "Chats" button in the sidebar now correctly toggles chat list visibility without navigating away from the current page. [#18232](https://github.com/open-webui/open-webui/pull/18232)
+- 🎯 The Integrations menu no longer closes prematurely when clicking outside the Valves modal. [#18310](https://github.com/open-webui/open-webui/pull/18310)
+- 🛠️ Tool ID display issues where "undefined" was incorrectly shown in the interface are now resolved. [#18178](https://github.com/open-webui/open-webui/pull/18178)
+- 🛠️ Model management issues caused by excessively long model IDs are now prevented through validation that limits model IDs to 256 characters. [#18125](https://github.com/open-webui/open-webui/issues/18125)
+
 ## [0.6.33] - 2025-10-08
 
 ### Added

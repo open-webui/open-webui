@@ -166,13 +166,18 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                         action_ids = []
                         filter_ids = []
 
-                        if "info" in model and "meta" in model["info"]:
-                            action_ids.extend(
-                                model["info"]["meta"].get("actionIds", [])
-                            )
-                            filter_ids.extend(
-                                model["info"]["meta"].get("filterIds", [])
-                            )
+                        if "info" in model:
+                            if "meta" in model["info"]:
+                                action_ids.extend(
+                                    model["info"]["meta"].get("actionIds", [])
+                                )
+                                filter_ids.extend(
+                                    model["info"]["meta"].get("filterIds", [])
+                                )
+
+                            if "params" in model["info"]:
+                                # Remove params to avoid exposing sensitive info
+                                del model["info"]["params"]
 
                         model["action_ids"] = action_ids
                         model["filter_ids"] = filter_ids
@@ -182,21 +187,39 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         elif custom_model.is_active and (
             custom_model.id not in [model["id"] for model in models]
         ):
+            # Custom model based on a base model
             owned_by = "openai"
             pipe = None
 
+            for m in models:
+                if (
+                    custom_model.base_model_id == m["id"]
+                    or custom_model.base_model_id == m["id"].split(":")[0]
+                ):
+                    owned_by = m.get("owned_by", "unknown")
+                    if "pipe" in m:
+                        pipe = m["pipe"]
+                    break
+
+            model = {
+                "id": f"{custom_model.id}",
+                "name": custom_model.name,
+                "object": "model",
+                "created": custom_model.created_at,
+                "owned_by": owned_by,
+                "preset": True,
+                **({"pipe": pipe} if pipe is not None else {}),
+            }
+
+            info = custom_model.model_dump()
+            if "params" in info:
+                # Remove params to avoid exposing sensitive info
+                del info["params"]
+
+            model["info"] = info
+
             action_ids = []
             filter_ids = []
-
-            for model in models:
-                if (
-                    custom_model.base_model_id == model["id"]
-                    or custom_model.base_model_id == model["id"].split(":")[0]
-                ):
-                    owned_by = model.get("owned_by", "unknown owner")
-                    if "pipe" in model:
-                        pipe = model["pipe"]
-                    break
 
             if custom_model.meta:
                 meta = custom_model.meta.model_dump()
@@ -207,20 +230,10 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 if "filterIds" in meta:
                     filter_ids.extend(meta["filterIds"])
 
-            models.append(
-                {
-                    "id": f"{custom_model.id}",
-                    "name": custom_model.name,
-                    "object": "model",
-                    "created": custom_model.created_at,
-                    "owned_by": owned_by,
-                    "info": custom_model.model_dump(),
-                    "preset": True,
-                    **({"pipe": pipe} if pipe is not None else {}),
-                    "action_ids": action_ids,
-                    "filter_ids": filter_ids,
-                }
-            )
+            model["action_ids"] = action_ids
+            model["filter_ids"] = filter_ids
+
+            models.append(model)
 
     # Process action_ids to get the actions
     def get_action_items_from_module(function, module):

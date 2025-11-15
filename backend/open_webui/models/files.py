@@ -82,6 +82,7 @@ class FileModelResponse(BaseModel):
 
 class FileMetadataResponse(BaseModel):
     id: str
+    hash: Optional[str] = None
     meta: dict
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
@@ -147,6 +148,7 @@ class FilesTable:
                 file = db.get(File, id)
                 return FileMetadataResponse(
                     id=file.id,
+                    hash=file.hash,
                     meta=file.meta,
                     created_at=file.created_at,
                     updated_at=file.updated_at,
@@ -182,12 +184,13 @@ class FilesTable:
             return [
                 FileMetadataResponse(
                     id=file.id,
+                    hash=file.hash,
                     meta=file.meta,
                     created_at=file.created_at,
                     updated_at=file.updated_at,
                 )
                 for file in db.query(
-                    File.id, File.meta, File.created_at, File.updated_at
+                    File.id, File.hash, File.meta, File.created_at, File.updated_at
                 )
                 .filter(File.id.in_(ids))
                 .order_by(File.updated_at.desc())

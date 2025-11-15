@@ -22,6 +22,18 @@
 	export let selectedUser;
 	export let sessionUser;
 
+	$: if (show) {
+		init();
+	}
+
+	const init = () => {
+		if (selectedUser) {
+			_user = selectedUser;
+			_user.password = '';
+			loadUserGroups();
+		}
+	};
+
 	let _user = {
 		profile_image_url: '',
 		role: 'pending',
@@ -52,14 +64,6 @@
 			return null;
 		});
 	};
-
-	onMount(() => {
-		if (selectedUser) {
-			_user = selectedUser;
-			_user.password = '';
-			loadUserGroups();
-		}
-	});
 </script>
 
 <Modal size="sm" bind:show>

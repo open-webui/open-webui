@@ -63,6 +63,10 @@ export const uploadFile = async (token: string, file: File, metadata?: object | 
 									console.error(data.error);
 									res.error = data.error;
 								}
+
+								if (res?.data) {
+									res.data = data;
+								}
 							}
 						}
 					}

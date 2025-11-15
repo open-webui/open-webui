@@ -83,7 +83,7 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 						const sourceId = sourceIds[idx - 1];
 						return sourceId
 							? `<source_id data="${idx}" title="${encodeURIComponent(sourceId)}" />`
-							: match;
+							: `[${idx}]`;
 					})
 					.join('');
 
@@ -348,7 +348,8 @@ export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
 			context.drawImage(img, 0, 0, width, height);
 
 			// Get compressed image URL
-			const compressedUrl = canvas.toDataURL();
+			const mimeType = imageUrl.match(/^data:([^;]+);/)?.[1];
+			const compressedUrl = canvas.toDataURL(mimeType);
 			resolve(compressedUrl);
 		};
 		img.onerror = (error) => reject(error);
@@ -1593,13 +1594,17 @@ export const decodeString = (str: string) => {
 	}
 };
 
-export const renderMermaidDiagram = async (code: string) => {
+export const initMermaid = async () => {
 	const { default: mermaid } = await import('mermaid');
 	mermaid.initialize({
 		startOnLoad: false, // Should be false when using render API
 		theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
 		securityLevel: 'loose'
 	});
+	return mermaid;
+};
+
+export const renderMermaidDiagram = async (mermaid, code: string) => {
 	const parseResult = await mermaid.parse(code, { suppressErrors: false });
 	if (parseResult) {
 		const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
@@ -1619,4 +1624,64 @@ export const renderVegaVisualization = async (spec: string, i18n?: any) => {
 	const view = new vega.View(vega.parse(vegaSpec), { renderer: 'none' });
 	const svg = await view.toSVG();
 	return svg;
+};
+
+export const getCodeBlockContents = (content: string): object => {
+	const codeBlockContents = content.match(/```[\s\S]*?```/g);
+
+	let codeBlocks = [];
+
+	let htmlContent = '';
+	let cssContent = '';
+	let jsContent = '';
+
+	if (codeBlockContents) {
+		codeBlockContents.forEach((block) => {
+			const lang = block.split('\n')[0].replace('```', '').trim().toLowerCase();
+			const code = block.replace(/```[\s\S]*?\n/, '').replace(/```$/, '');
+			codeBlocks.push({ lang, code });
+		});
+
+		codeBlocks.forEach((block) => {
+			const { lang, code } = block;
+
+			if (lang === 'html') {
+				htmlContent += code + '\n';
+			} else if (lang === 'css') {
+				cssContent += code + '\n';
+			} else if (lang === 'javascript' || lang === 'js') {
+				jsContent += code + '\n';
+			}
+		});
+	} else {
+		const inlineHtml = content.match(/<html>[\s\S]*?<\/html>/gi);
+		const inlineCss = content.match(/<style>[\s\S]*?<\/style>/gi);
+		const inlineJs = content.match(/<script>[\s\S]*?<\/script>/gi);
+
+		if (inlineHtml) {
+			inlineHtml.forEach((block) => {
+				const content = block.replace(/<\/?html>/gi, ''); // Remove <html> tags
+				htmlContent += content + '\n';
+			});
+		}
+		if (inlineCss) {
+			inlineCss.forEach((block) => {
+				const content = block.replace(/<\/?style>/gi, ''); // Remove <style> tags
+				cssContent += content + '\n';
+			});
+		}
+		if (inlineJs) {
+			inlineJs.forEach((block) => {
+				const content = block.replace(/<\/?script>/gi, ''); // Remove <script> tags
+				jsContent += content + '\n';
+			});
+		}
+	}
+
+	return {
+		codeBlocks: codeBlocks,
+		html: htmlContent.trim(),
+		css: cssContent.trim(),
+		js: jsContent.trim()
+	};
 };
