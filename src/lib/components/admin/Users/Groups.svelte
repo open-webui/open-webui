@@ -25,7 +25,7 @@
 	import { createNewGroup, getGroups } from '$lib/apis/groups';
 	import {
 		getUserDefaultPermissions,
-		getAllUsers,
+		getUsers,
 		updateUserDefaultPermissions
 	} from '$lib/apis/users';
 
@@ -93,7 +93,7 @@
 			return;
 		}
 
-		const res = await getAllUsers(localStorage.token).catch((error) => {
+		const res = await getUsers(localStorage.token, '', 'created_at', 'desc', 1, 500).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
