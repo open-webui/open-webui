@@ -121,7 +121,7 @@
 	}}
 />
 
-<Modal size="md" bind:show>
+<Modal size="lg" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 mb-1.5">
 			<div class=" text-lg font-medium self-center font-primary">
@@ -226,7 +226,7 @@
 						</div>
 
 						<div
-							class="flex-1 mt-1 lg:mt-1 lg:h-[22rem] lg:max-h-[22rem] overflow-y-auto scrollbar-hidden"
+							class="flex-1 mt-1 lg:mt-1 lg:h-[28rem] lg:max-h-[28rem] overflow-y-auto scrollbar-hidden"
 						>
 							{#if selectedTab == 'general'}
 								<Display bind:name bind:description />
