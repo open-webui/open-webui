@@ -124,20 +124,24 @@
 			return null;
 		}
 
-		const res = await updateConfig(localStorage.token, config).catch((error) => {
+		const res = await updateConfig(localStorage.token, {
+			...config,
+			AUTOMATIC1111_PARAMS:
+				typeof config.AUTOMATIC1111_PARAMS === 'string' && config.AUTOMATIC1111_PARAMS.trim() !== ''
+					? JSON.parse(config.AUTOMATIC1111_PARAMS)
+					: {}
+		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
 
 		if (res) {
-			config = res;
-
-			if (config.ENABLE_IMAGE_GENERATION) {
+			if (res.ENABLE_IMAGE_GENERATION) {
 				backendConfig.set(await getBackendConfig());
 				getModels();
 			}
 
-			return config;
+			return res;
 		}
 
 		return null;
@@ -244,6 +248,11 @@
 					console.error(e);
 				}
 			}
+
+			config.AUTOMATIC1111_PARAMS =
+				typeof config.AUTOMATIC1111_PARAMS === 'object'
+					? JSON.stringify(config.AUTOMATIC1111_PARAMS ?? {}, null, 2)
+					: config.AUTOMATIC1111_PARAMS;
 
 			REQUIRED_EDIT_WORKFLOW_NODES = REQUIRED_EDIT_WORKFLOW_NODES.map((node) => {
 				const n =
