@@ -2,19 +2,28 @@
 	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
+	import dayjs from 'dayjs';
+	import relativeTime from 'dayjs/plugin/relativeTime';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
+	dayjs.extend(relativeTime);
+	dayjs.extend(localizedFormat);
+
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
+	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 
 	export let users = [];
 	export let userIds = [];
 
 	let filteredUsers = [];
 	let query = '';
-	let sortBy: 'members' | 'name' | 'role' | 'last_active' | 'created' = 'members';
+	let orderBy = 'name';
+	let direction: 'asc' | 'desc' = 'asc';
 	let selectAllState: 'checked' | 'unchecked' | 'indeterminate' = 'unchecked';
 
 	const getSelectAllState = (filteredUsers, userIds) => {
@@ -24,6 +33,27 @@
 		if (selectedCount === 0) return 'unchecked';
 		if (selectedCount === filteredUserIds.length) return 'checked';
 		return 'indeterminate';
+	};
+
+	const setSortKey = (key) => {
+		if (orderBy === key) {
+			direction = direction === 'asc' ? 'desc' : 'asc';
+		} else {
+			orderBy = key;
+			direction = 'asc';
+		}
+	};
+
+	const handleSelectAll = (e) => {
+		const newState = e.detail;
+		const filteredUserIds = filteredUsers.map((u) => u.id);
+
+		if (newState === 'checked') {
+			const combinedIds = [...new Set([...userIds, ...filteredUserIds])];
+			userIds = combinedIds;
+		} else {
+			userIds = userIds.filter((id) => !filteredUserIds.includes(id));
+		}
 	};
 
 	$: selectAllState = getSelectAllState(filteredUsers, userIds);
@@ -40,62 +70,35 @@
 			);
 		})
 		.sort((a, b) => {
-			switch (sortBy) {
-				case 'members':
-					const aUserIndex = userIds.indexOf(a.id);
-					const bUserIndex = userIds.indexOf(b.id);
-					if (aUserIndex !== -1 && bUserIndex === -1) return -1;
-					if (bUserIndex !== -1 && aUserIndex === -1) return 1;
-					if (aUserIndex !== -1 && bUserIndex !== -1) return aUserIndex - bUserIndex;
-					return a.name.localeCompare(b.name);
+			let compareResult = 0;
+
+			switch (orderBy) {
 				case 'name':
-					return a.name.localeCompare(b.name);
+					compareResult = a.name.localeCompare(b.name);
+					break;
+				case 'email':
+					compareResult = a.email.localeCompare(b.email);
+					break;
 				case 'role':
-					if (a.role === b.role) {
-						return a.name.localeCompare(b.name);
-					}
-					return a.role.localeCompare(b.role);
-				case 'last_active':
-					if (a.last_active_at === b.last_active_at) {
-						return a.name.localeCompare(b.name);
-					}
-					return (b.last_active_at || 0) - (a.last_active_at || 0);
-				case 'created':
-					if (a.created_at === b.created_at) {
-						return a.name.localeCompare(b.name);
-					}
-					return (b.created_at || 0) - (a.created_at || 0);
+					compareResult = a.role.localeCompare(b.role);
+					break;
+				case 'last_active_at':
+					compareResult = (a.last_active_at || 0) - (b.last_active_at || 0);
+					break;
+				case 'created_at':
+					compareResult = (a.created_at || 0) - (b.created_at || 0);
+					break;
 				default:
-					return a.name.localeCompare(b.name);
+					compareResult = a.name.localeCompare(b.name);
 			}
+
+			return direction === 'asc' ? compareResult : -compareResult;
 		});
 
-	const handleSelectAll = (e) => {
-		const newState = e.detail;
-		const filteredUserIds = filteredUsers.map((u) => u.id);
-
-		if (newState === 'checked') {
-			const combinedIds = [...new Set([...userIds, ...filteredUserIds])];
-			userIds = combinedIds;
-		} else {
-			userIds = userIds.filter((id) => !filteredUserIds.includes(id));
-		}
-	};
-
-	const addAllToGroup = () => {
-		const filteredUserIds = filteredUsers.map((u) => u.id);
-		const combinedIds = [...new Set([...userIds, ...filteredUserIds])];
-		userIds = combinedIds;
-	};
-
-	const removeAllFromGroup = () => {
-		const filteredUserIds = filteredUsers.map((u) => u.id);
-		userIds = userIds.filter((id) => !filteredUserIds.includes(id));
-	};
 </script>
 
 <div>
-	<div class="flex w-full gap-2 mb-3">
+	<div class="flex w-full mb-3">
 		<div class="flex flex-1">
 			<div class=" self-center mr-3">
 				<Search />
@@ -120,72 +123,191 @@
 		</div>
 	</div>
 
-	{#if filteredUsers.length > 0}
-		<div class="flex items-center justify-between mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
-			<div class="flex items-center gap-2">
-				<Checkbox state={selectAllState} on:change={handleSelectAll} />
-				<span class="text-xs text-gray-600 dark:text-gray-400">
-					{$i18n.t('Select All')} ({filteredUsers.length})
-				</span>
-			</div>
-			<div class="flex gap-1.5">
-				<button
-					on:click={addAllToGroup}
-					class="px-2.5 py-1 text-xs font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg transition"
-					title={$i18n.t('Add all filtered users to group')}
-				>
-					{$i18n.t('Add All')}
-				</button>
-				<button
-					on:click={removeAllFromGroup}
-					class="px-2.5 py-1 text-xs font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg transition"
-					title={$i18n.t('Remove all filtered users from group')}
-				>
-					{$i18n.t('Remove All')}
-				</button>
-			</div>
-		</div>
-	{/if}
+	<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
+		<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full">
+			<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
+				<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850">
+					<th scope="col" class="px-2.5 py-2">
+						<Checkbox state={selectAllState} on:change={handleSelectAll} />
+					</th>
+					<th
+						scope="col"
+						class="px-2.5 py-2 cursor-pointer select-none"
+						on:click={() => setSortKey('role')}
+					>
+						<div class="flex gap-1.5 items-center">
+							{$i18n.t('Role')}
 
-	<div class="mt-3 scrollbar-hidden">
-		<div class="flex flex-col gap-2.5">
-			{#if filteredUsers.length > 0}
-				{#each filteredUsers as user, userIdx (user.id)}
-					<div class="flex flex-row items-center gap-3 w-full text-sm">
-						<div class="flex items-center">
-							<Checkbox
-								state={userIds.includes(user.id) ? 'checked' : 'unchecked'}
-								on:change={(e) => {
-									if (e.detail === 'checked') {
-										userIds = [...userIds, user.id];
-									} else {
-										userIds = userIds.filter((id) => id !== user.id);
-									}
-								}}
-							/>
-						</div>
-
-						<div class="flex w-full items-center justify-between overflow-hidden">
-							<Tooltip content={user.email} placement="top-start">
-								<div class="flex flex-col">
-									<div class=" font-medium self-center truncate">{user.name}</div>
-									<div class="text-xs text-gray-500 dark:text-gray-400 truncate">
-										{user.role}
-									</div>
-								</div>
-							</Tooltip>
-
-							{#if userIds.includes(user.id)}
-								<Badge type="success" content="member" />
+							{#if orderBy === 'role'}
+								<span class="font-normal"
+									>{#if direction === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
 							{/if}
 						</div>
-					</div>
-				{/each}
-			{:else}
-				<div class="text-gray-500 text-xs text-center py-2 px-10">
-					{$i18n.t('No users were found.')}
-				</div>
-			{/if}
-		</div>
+					</th>
+					<th
+						scope="col"
+						class="px-2.5 py-2 cursor-pointer select-none"
+						on:click={() => setSortKey('name')}
+					>
+						<div class="flex gap-1.5 items-center">
+							{$i18n.t('Name')}
+
+							{#if orderBy === 'name'}
+								<span class="font-normal"
+									>{#if direction === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
+					</th>
+					<th
+						scope="col"
+						class="px-2.5 py-2 cursor-pointer select-none"
+						on:click={() => setSortKey('email')}
+					>
+						<div class="flex gap-1.5 items-center">
+							{$i18n.t('Email')}
+
+							{#if orderBy === 'email'}
+								<span class="font-normal"
+									>{#if direction === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
+					</th>
+					<th
+						scope="col"
+						class="px-2.5 py-2 cursor-pointer select-none"
+						on:click={() => setSortKey('last_active_at')}
+					>
+						<div class="flex gap-1.5 items-center">
+							{$i18n.t('Last Active')}
+
+							{#if orderBy === 'last_active_at'}
+								<span class="font-normal"
+									>{#if direction === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
+					</th>
+					<th
+						scope="col"
+						class="px-2.5 py-2 cursor-pointer select-none"
+						on:click={() => setSortKey('created_at')}
+					>
+						<div class="flex gap-1.5 items-center">
+							{$i18n.t('Created at')}
+							{#if orderBy === 'created_at'}
+								<span class="font-normal"
+									>{#if direction === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
+					</th>
+					<th scope="col" class="px-2.5 py-2 text-right">
+						{$i18n.t('Status')}
+					</th>
+				</tr>
+			</thead>
+			<tbody>
+				{#if filteredUsers.length > 0}
+					{#each filteredUsers as user (user.id)}
+						<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
+							<td class="px-3 py-1">
+								<Checkbox
+									state={userIds.includes(user.id) ? 'checked' : 'unchecked'}
+									on:change={(e) => {
+										if (e.detail === 'checked') {
+											userIds = [...userIds, user.id];
+										} else {
+											userIds = userIds.filter((id) => id !== user.id);
+										}
+									}}
+								/>
+							</td>
+							<td class="px-3 py-1 min-w-[7rem] w-28">
+								<Badge
+									type={user.role === 'admin' ? 'info' : user.role === 'user' ? 'success' : 'muted'}
+									content={$i18n.t(user.role)}
+								/>
+							</td>
+							<td class="px-3 py-1 font-medium text-gray-900 dark:text-white max-w-48">
+								<div class="flex items-center">
+									<img
+										class="rounded-full w-6 h-6 object-cover mr-2.5 flex-shrink-0"
+										src={user?.profile_image_url?.startsWith(WEBUI_BASE_URL) ||
+										user?.profile_image_url?.startsWith('https://www.gravatar.com/avatar/') ||
+										user?.profile_image_url?.startsWith('data:')
+											? user.profile_image_url
+											: `${WEBUI_BASE_URL}/user.png`}
+										alt="user"
+									/>
+
+									<div class="font-medium truncate">{user.name}</div>
+								</div>
+							</td>
+							<td class="px-3 py-1">{user.email}</td>
+							<td class="px-3 py-1">
+								{dayjs(user.last_active_at * 1000).fromNow()}
+							</td>
+							<td class="px-3 py-1">
+								{dayjs(user.created_at * 1000).format('LL')}
+							</td>
+							<td class="px-3 py-1 text-right">
+								{#if userIds.includes(user.id)}
+									<Badge type="success" content="member" />
+								{/if}
+							</td>
+						</tr>
+					{/each}
+				{:else}
+					<tr>
+						<td colspan="7" class="text-gray-500 text-xs text-center py-4">
+							{$i18n.t('No users were found.')}
+						</td>
+					</tr>
+				{/if}
+			</tbody>
+		</table>
 	</div>
 </div>
