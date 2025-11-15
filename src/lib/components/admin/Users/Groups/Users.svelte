@@ -110,18 +110,6 @@
 				placeholder={$i18n.t('Search')}
 			/>
 		</div>
-		<div class="flex items-center gap-2">
-			<select
-				bind:value={sortBy}
-				class="w-full text-xs bg-transparent dark:text-gray-100 outline-none rounded-lg px-2 py-1.5 border border-gray-200 dark:border-gray-700"
-			>
-				<option value="members">{$i18n.t('Members First')}</option>
-				<option value="name">{$i18n.t('Sort by Name')}</option>
-				<option value="role">{$i18n.t('Sort by Role')}</option>
-				<option value="last_active">{$i18n.t('Sort by Last Active')}</option>
-				<option value="created">{$i18n.t('Sort by Created Date')}</option>
-			</select>
-		</div>
 	</div>
 
 	<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
