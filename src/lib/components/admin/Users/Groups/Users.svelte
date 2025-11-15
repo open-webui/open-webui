@@ -44,8 +44,9 @@
 
 	const handleSelectAll = (e) => {
 		const filteredUserIds = filteredUsers.map((u) => u.id);
+		const allFilteredSelected = filteredUserIds.every((id) => userIds.includes(id));
 
-		if (selectAllState === 'checked') {
+		if (allFilteredSelected) {
 			userIds = userIds.filter((id) => !filteredUserIds.includes(id));
 		} else {
 			const combinedIds = [...new Set([...userIds, ...filteredUserIds])];
