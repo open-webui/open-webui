@@ -8,8 +8,6 @@
 	dayjs.extend(relativeTime);
 	dayjs.extend(localizedFormat);
 
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Plus from '$lib/components/icons/Plus.svelte';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
@@ -25,7 +23,6 @@
 	let orderBy = 'name';
 	let direction: 'asc' | 'desc' = 'asc';
 	let selectAllState: 'checked' | 'unchecked' | 'indeterminate' = 'unchecked';
-
 
 	const getSelectAllState = (filteredUsers, userIds) => {
 		const filteredUserIds = filteredUsers.map((u) => u.id);
