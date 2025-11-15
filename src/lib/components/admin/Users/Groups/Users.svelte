@@ -274,10 +274,10 @@
 							</td>
 							<td class="px-3 py-1">{user.email}</td>
 							<td class="px-3 py-1">
-								{user.last_active_at ? dayjs(user.last_active_at * 1000).fromNow() : 'Never'}
+								{dayjs(user.last_active_at * 1000).fromNow()}
 							</td>
 							<td class="px-3 py-1">
-								{user.created_at ? dayjs(user.created_at * 1000).format('LL') : '-'}
+								{dayjs(user.created_at * 1000).format('LL')}
 							</td>
 						</tr>
 					{/each}
