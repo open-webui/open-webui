@@ -11,7 +11,7 @@ from open_webui.models.files import FileMetadataResponse
 
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, JSON, func
+from sqlalchemy import BigInteger, Column, String, Text, JSON, func, text
 
 
 log = logging.getLogger(__name__)
@@ -141,17 +141,38 @@ class GroupTable:
 
     def get_groups_by_member_id(self, user_id: str) -> list[GroupModel]:
         with get_db() as db:
+            dialect = db.bind.dialect.name
+            
+            query = db.query(Group).filter(Group.user_ids.isnot(None))
+            
+            if dialect == "postgresql":
+                # PostgreSQL: use jsonb_array_elements_text for exact match
+                # CAST to jsonb ensures it works whether column is JSON or JSONB
+                # This matches the pattern from dev_api_improvements branch migrations
+                query = query.filter(
+                    text("""
+                        EXISTS (
+                            SELECT 1
+                            FROM jsonb_array_elements_text(CAST("group".user_ids AS jsonb)) AS elem
+                            WHERE elem = :user_id
+                        )
+                    """)
+                ).params(user_id=user_id)
+            else:
+                # SQLite: use json_each for exact match
+                query = query.filter(
+                    text("""
+                        EXISTS (
+                            SELECT 1
+                            FROM json_each("group".user_ids) AS elem
+                            WHERE elem.value = :user_id
+                        )
+                    """)
+                ).params(user_id=user_id)
+            
             return [
                 GroupModel.model_validate(group)
-                for group in db.query(Group)
-                .filter(
-                    func.json_array_length(Group.user_ids) > 0
-                )  # Ensure array exists
-                .filter(
-                    Group.user_ids.cast(String).like(f'%"{user_id}"%')
-                )  # String-based check
-                .order_by(Group.updated_at.desc())
-                .all()
+                for group in query.order_by(Group.updated_at.desc()).all()
             ]
 
     def get_group_by_id(self, id: str) -> Optional[GroupModel]:
