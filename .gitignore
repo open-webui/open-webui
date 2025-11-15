@@ -18,7 +18,7 @@ __pycache__/
 CLAUDE.md
 # C extensions
 *.so
-
+标注/
 # Pyodide distribution
 static/pyodide/*
 !static/pyodide/pyodide-lock.json
