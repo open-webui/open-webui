@@ -43,14 +43,13 @@
 	};
 
 	const handleSelectAll = (e) => {
-		const newState = e.detail;
 		const filteredUserIds = filteredUsers.map((u) => u.id);
 
-		if (newState === 'checked') {
+		if (selectAllState === 'checked') {
+			userIds = userIds.filter((id) => !filteredUserIds.includes(id));
+		} else {
 			const combinedIds = [...new Set([...userIds, ...filteredUserIds])];
 			userIds = combinedIds;
-		} else {
-			userIds = userIds.filter((id) => !filteredUserIds.includes(id));
 		}
 	};
 
