@@ -180,7 +180,7 @@ async def get_tools(
                                 )
 
                         connection_headers = tool_server_connection.get("headers", None)
-                        if connection_headers:
+                        if connection_headers and isinstance(connection_headers, dict):
                             for key, value in connection_headers.items():
                                 headers[key] = value
 
