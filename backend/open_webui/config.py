@@ -2840,6 +2840,7 @@ WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(
         # "wikipedia.com",
         # "wikimedia.org",
         # "wikidata.org",
+        # "!stackoverflow.com",
     ],
 )
 
