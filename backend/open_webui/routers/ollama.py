@@ -400,6 +400,9 @@ async def get_all_models(request: Request, user: UserModel = None):
                 for model in response.get("models", []):
                     if prefix_id:
                         model["model"] = f"{prefix_id}.{model['model']}"
+                        # Also apply prefix to name field if it exists
+                        if "name" in model:
+                            model["name"] = f"{prefix_id}.{model['name']}"
 
                     if tags:
                         model["tags"] = tags
@@ -559,6 +562,9 @@ async def get_ollama_loaded_models(request: Request, user=Depends(get_admin_user
                 for model in response.get("models", []):
                     if prefix_id:
                         model["model"] = f"{prefix_id}.{model['model']}"
+                        # Also apply prefix to name field if it exists
+                        if "name" in model:
+                            model["name"] = f"{prefix_id}.{model['name']}"
 
         models = {
             "models": merge_ollama_models_lists(

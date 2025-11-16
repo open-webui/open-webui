@@ -40,7 +40,7 @@ async def fetch_ollama_models(request: Request, user: UserModel = None):
     return [
         {
             "id": model["model"],
-            "name": model["name"],
+            "name": model.get("name", model["model"]),
             "object": "model",
             "created": int(time.time()),
             "owned_by": "ollama",
