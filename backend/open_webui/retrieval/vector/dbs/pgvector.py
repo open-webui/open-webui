@@ -234,15 +234,12 @@ class PgvectorClient(VectorDBBase):
 
         existing_method = self._extract_index_method(existing_index_def)
         if existing_method and existing_method != index_method:
-            log.info(
-                "Rebuilding vector index '%s' from %s to %s to support VECTOR_LENGTH=%s.",
-                index_name,
-                existing_method,
-                index_method,
-                VECTOR_LENGTH,
+            raise RuntimeError(
+                f"Existing pgvector index '{index_name}' uses method '{existing_method}' but configuration now "
+                f"requires '{index_method}'. Automatic rebuild is disabled to prevent long-running maintenance. "
+                "Drop the index manually (optionally after tuning maintenance_work_mem/max_parallel_maintenance_workers) "
+                "and recreate it with the new method before restarting Open WebUI."
             )
-            self.session.execute(text(f"DROP INDEX IF EXISTS {index_name}"))
-            existing_index_def = None
 
         if not existing_index_def:
             index_sql = (
