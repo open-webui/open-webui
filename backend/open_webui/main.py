@@ -1272,9 +1272,13 @@ app.add_middleware(SecurityHeadersMiddleware)
 class APIKeyRestrictionMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         auth_header = request.headers.get("Authorization")
+        token = None
+
+        if auth_header:
+            scheme, token = auth_header.split(" ")
 
         # Only apply restrictions if an sk- API key is used
-        if auth_header and auth_header.startswith("sk-"):
+        if token and token.startswith("sk-"):
             # Check if restrictions are enabled
             if request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS:
                 allowed_paths = [
@@ -1294,9 +1298,11 @@ class APIKeyRestrictionMiddleware(BaseHTTPMiddleware):
                 )
 
                 if not is_allowed:
-                    raise HTTPException(
+                    return JSONResponse(
                         status_code=status.HTTP_403_FORBIDDEN,
-                        detail="API key not allowed to access this endpoint.",
+                        content={
+                            "detail": "API key not allowed to access this endpoint."
+                        },
                     )
 
         response = await call_next(request)
