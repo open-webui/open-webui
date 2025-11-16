@@ -18,6 +18,8 @@
 	export let users = [];
 	export let userIds = [];
 
+	const COLUMN_COUNT = 6;
+
 	let filteredUsers = [];
 	let query = '';
 	let orderBy = 'name';
@@ -42,15 +44,31 @@
 		}
 	};
 
-	const handleSelectAll = (e) => {
+	const handleSelectAll = () => {
 		const filteredUserIds = filteredUsers.map((u) => u.id);
 		const allFilteredSelected = filteredUserIds.every((id) => userIds.includes(id));
 
-		if (allFilteredSelected) {
-			userIds = userIds.filter((id) => !filteredUserIds.includes(id));
-		} else {
-			const combinedIds = [...new Set([...userIds, ...filteredUserIds])];
-			userIds = combinedIds;
+		userIds = allFilteredSelected
+			? userIds.filter((id) => !filteredUserIds.includes(id))
+			: [...new Set([...userIds, ...filteredUserIds])];
+	};
+
+	const getProfileImageUrl = (profileUrl) => {
+		if (!profileUrl) return `${WEBUI_BASE_URL}/user.png`;
+		if (profileUrl.startsWith(WEBUI_BASE_URL)) return profileUrl;
+		if (profileUrl.startsWith('https://www.gravatar.com/avatar/')) return profileUrl;
+		if (profileUrl.startsWith('data:')) return profileUrl;
+		return `${WEBUI_BASE_URL}/user.png`;
+	};
+
+	const getBadgeType = (role) => {
+		switch (role) {
+			case 'admin':
+				return 'info';
+			case 'user':
+				return 'success';
+			default:
+				return 'muted';
 		}
 	};
 
@@ -71,9 +89,6 @@
 			let compareResult = 0;
 
 			switch (orderBy) {
-				case 'name':
-					compareResult = a.name.localeCompare(b.name);
-					break;
 				case 'email':
 					compareResult = a.email.localeCompare(b.email);
 					break;
@@ -92,8 +107,22 @@
 
 			return direction === 'asc' ? compareResult : -compareResult;
 		});
-
 </script>
+
+{#snippet sortHeader(key, label)}
+	<th scope="col" class="px-2.5 py-2 cursor-pointer select-none" on:click={() => setSortKey(key)}>
+		<div class="flex gap-1.5 items-center">
+			{$i18n.t(label)}
+			<span class:invisible={orderBy !== key} class="w-2">
+				{#if direction === 'asc'}
+					<ChevronUp className="size-2" />
+				{:else}
+					<ChevronDown className="size-2" />
+				{/if}
+			</span>
+		</div>
+	</th>
+{/snippet}
 
 <div>
 	<div class="flex w-full mb-3">
@@ -116,120 +145,11 @@
 					<th scope="col" class="px-2.5 py-2">
 						<Checkbox state={selectAllState} on:change={handleSelectAll} />
 					</th>
-					<th
-						scope="col"
-						class="px-2.5 py-2 cursor-pointer select-none"
-						on:click={() => setSortKey('role')}
-					>
-						<div class="flex gap-1.5 items-center">
-							{$i18n.t('Role')}
-
-							{#if orderBy === 'role'}
-								<span class="font-normal"
-									>{#if direction === 'asc'}
-										<ChevronUp className="size-2" />
-									{:else}
-										<ChevronDown className="size-2" />
-									{/if}
-								</span>
-							{:else}
-								<span class="invisible">
-									<ChevronUp className="size-2" />
-								</span>
-							{/if}
-						</div>
-					</th>
-					<th
-						scope="col"
-						class="px-2.5 py-2 cursor-pointer select-none"
-						on:click={() => setSortKey('name')}
-					>
-						<div class="flex gap-1.5 items-center">
-							{$i18n.t('Name')}
-
-							{#if orderBy === 'name'}
-								<span class="font-normal"
-									>{#if direction === 'asc'}
-										<ChevronUp className="size-2" />
-									{:else}
-										<ChevronDown className="size-2" />
-									{/if}
-								</span>
-							{:else}
-								<span class="invisible">
-									<ChevronUp className="size-2" />
-								</span>
-							{/if}
-						</div>
-					</th>
-					<th
-						scope="col"
-						class="px-2.5 py-2 cursor-pointer select-none"
-						on:click={() => setSortKey('email')}
-					>
-						<div class="flex gap-1.5 items-center">
-							{$i18n.t('Email')}
-
-							{#if orderBy === 'email'}
-								<span class="font-normal"
-									>{#if direction === 'asc'}
-										<ChevronUp className="size-2" />
-									{:else}
-										<ChevronDown className="size-2" />
-									{/if}
-								</span>
-							{:else}
-								<span class="invisible">
-									<ChevronUp className="size-2" />
-								</span>
-							{/if}
-						</div>
-					</th>
-					<th
-						scope="col"
-						class="px-2.5 py-2 cursor-pointer select-none"
-						on:click={() => setSortKey('last_active_at')}
-					>
-						<div class="flex gap-1.5 items-center">
-							{$i18n.t('Last Active')}
-
-							{#if orderBy === 'last_active_at'}
-								<span class="font-normal"
-									>{#if direction === 'asc'}
-										<ChevronUp className="size-2" />
-									{:else}
-										<ChevronDown className="size-2" />
-									{/if}
-								</span>
-							{:else}
-								<span class="invisible">
-									<ChevronUp className="size-2" />
-								</span>
-							{/if}
-						</div>
-					</th>
-					<th
-						scope="col"
-						class="px-2.5 py-2 cursor-pointer select-none"
-						on:click={() => setSortKey('created_at')}
-					>
-						<div class="flex gap-1.5 items-center">
-							{$i18n.t('Created at')}
-							{#if orderBy === 'created_at'}
-								<span class="font-normal"
-									>{#if direction === 'asc'}
-										<ChevronUp className="size-2" />
-									{:else}
-										<ChevronDown className="size-2" />
-									{/if}
-								</span>
-							{:else}
-								<span class="invisible">
-									<ChevronUp className="size-2" />
-								</span>
-							{/if}
-						</div>
-					</th>
+					{@render sortHeader('role', 'Role')}
+					{@render sortHeader('name', 'Name')}
+					{@render sortHeader('email', 'Email')}
+					{@render sortHeader('last_active_at', 'Last Active')}
+					{@render sortHeader('created_at', 'Created at')}
 				</tr>
 			</thead>
 			<tbody>
@@ -249,23 +169,15 @@
 								/>
 							</td>
 							<td class="px-3 py-1 min-w-[7rem] w-28">
-								<Badge
-									type={user.role === 'admin' ? 'info' : user.role === 'user' ? 'success' : 'muted'}
-									content={$i18n.t(user.role)}
-								/>
+								<Badge type={getBadgeType(user.role)} content={$i18n.t(user.role)} />
 							</td>
 							<td class="px-3 py-1 font-medium text-gray-900 dark:text-white max-w-48">
 								<div class="flex items-center">
 									<img
 										class="rounded-full w-6 h-6 object-cover mr-2.5 flex-shrink-0"
-										src={user?.profile_image_url?.startsWith(WEBUI_BASE_URL) ||
-										user?.profile_image_url?.startsWith('https://www.gravatar.com/avatar/') ||
-										user?.profile_image_url?.startsWith('data:')
-											? user.profile_image_url
-											: `${WEBUI_BASE_URL}/user.png`}
+										src={getProfileImageUrl(user?.profile_image_url)}
 										alt="user"
 									/>
-
 									<div class="font-medium truncate">{user.name}</div>
 								</div>
 							</td>
@@ -280,7 +192,7 @@
 					{/each}
 				{:else}
 					<tr>
-						<td colspan="6" class="text-gray-500 text-xs text-center py-4">
+						<td colspan={COLUMN_COUNT} class="text-gray-500 text-xs text-center py-4">
 							{$i18n.t('No users were found.')}
 						</td>
 					</tr>
