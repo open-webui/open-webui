@@ -2,17 +2,77 @@
 	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Plus from '$lib/components/icons/Plus.svelte';
+	import dayjs from 'dayjs';
+	import relativeTime from 'dayjs/plugin/relativeTime';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
+	dayjs.extend(relativeTime);
+	dayjs.extend(localizedFormat);
+
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
+	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 
 	export let users = [];
 	export let userIds = [];
 
+	const COLUMN_COUNT = 6;
+
 	let filteredUsers = [];
+	let query = '';
+	let orderBy = 'name';
+	let direction: 'asc' | 'desc' = 'asc';
+	let selectAllState: 'checked' | 'unchecked' | 'indeterminate' = 'unchecked';
+
+	const getSelectAllState = (filteredUsers, userIds) => {
+		const filteredUserIds = filteredUsers.map((u) => u.id);
+		const selectedCount = filteredUserIds.filter((id) => userIds.includes(id)).length;
+
+		if (selectedCount === 0) return 'unchecked';
+		if (selectedCount === filteredUserIds.length) return 'checked';
+		return 'indeterminate';
+	};
+
+	const setSortKey = (key) => {
+		if (orderBy === key) {
+			direction = direction === 'asc' ? 'desc' : 'asc';
+		} else {
+			orderBy = key;
+			direction = 'asc';
+		}
+	};
+
+	const handleSelectAll = () => {
+		const filteredUserIds = filteredUsers.map((u) => u.id);
+		const allFilteredSelected = filteredUserIds.every((id) => userIds.includes(id));
+
+		userIds = allFilteredSelected
+			? userIds.filter((id) => !filteredUserIds.includes(id))
+			: [...new Set([...userIds, ...filteredUserIds])];
+	};
+
+	const getProfileImageUrl = (profileUrl) => {
+		if (!profileUrl) return `${WEBUI_BASE_URL}/user.png`;
+		if (profileUrl.startsWith(WEBUI_BASE_URL)) return profileUrl;
+		if (profileUrl.startsWith('https://www.gravatar.com/avatar/')) return profileUrl;
+		if (profileUrl.startsWith('data:')) return profileUrl;
+		return `${WEBUI_BASE_URL}/user.png`;
+	};
+
+	const getBadgeType = (role) => {
+		switch (role) {
+			case 'admin':
+				return 'info';
+			case 'user':
+				return 'success';
+			default:
+				return 'muted';
+		}
+	};
+
+	$: selectAllState = getSelectAllState(filteredUsers, userIds);
 
 	$: filteredUsers = users
 		.filter((user) => {
@@ -26,25 +86,46 @@
 			);
 		})
 		.sort((a, b) => {
-			const aUserIndex = userIds.indexOf(a.id);
-			const bUserIndex = userIds.indexOf(b.id);
+			let compareResult = 0;
 
-			// Compare based on userIds or fall back to alphabetical order
-			if (aUserIndex !== -1 && bUserIndex === -1) return -1; // 'a' has valid userId -> prioritize
-			if (bUserIndex !== -1 && aUserIndex === -1) return 1; // 'b' has valid userId -> prioritize
+			switch (orderBy) {
+				case 'email':
+					compareResult = a.email.localeCompare(b.email);
+					break;
+				case 'role':
+					compareResult = a.role.localeCompare(b.role);
+					break;
+				case 'last_active_at':
+					compareResult = (a.last_active_at || 0) - (b.last_active_at || 0);
+					break;
+				case 'created_at':
+					compareResult = (a.created_at || 0) - (b.created_at || 0);
+					break;
+				default:
+					compareResult = a.name.localeCompare(b.name);
+			}
 
-			// Both a and b are either in the userIds array or not, so we'll sort them by their indices
-			if (aUserIndex !== -1 && bUserIndex !== -1) return aUserIndex - bUserIndex;
-
-			// If both are not in the userIds, fallback to alphabetical sorting by name
-			return a.name.localeCompare(b.name);
+			return direction === 'asc' ? compareResult : -compareResult;
 		});
-
-	let query = '';
 </script>
 
+{#snippet sortHeader(key, label)}
+	<th scope="col" class="px-2.5 py-2 cursor-pointer select-none" on:click={() => setSortKey(key)}>
+		<div class="flex gap-1.5 items-center">
+			{$i18n.t(label)}
+			<span class:invisible={orderBy !== key} class="w-2">
+				{#if direction === 'asc'}
+					<ChevronUp className="size-2" />
+				{:else}
+					<ChevronDown className="size-2" />
+				{/if}
+			</span>
+		</div>
+	</th>
+{/snippet}
+
 <div>
-	<div class="flex w-full">
+	<div class="flex w-full mb-3">
 		<div class="flex flex-1">
 			<div class=" self-center mr-3">
 				<Search />
@@ -57,42 +138,66 @@
 		</div>
 	</div>
 
-	<div class="mt-3 scrollbar-hidden">
-		<div class="flex flex-col gap-2.5">
-			{#if filteredUsers.length > 0}
-				{#each filteredUsers as user, userIdx (user.id)}
-					<div class="flex flex-row items-center gap-3 w-full text-sm">
-						<div class="flex items-center">
-							<Checkbox
-								state={userIds.includes(user.id) ? 'checked' : 'unchecked'}
-								on:change={(e) => {
-									if (e.detail === 'checked') {
-										userIds = [...userIds, user.id];
-									} else {
-										userIds = userIds.filter((id) => id !== user.id);
-									}
-								}}
-							/>
-						</div>
-
-						<div class="flex w-full items-center justify-between overflow-hidden">
-							<Tooltip content={user.email} placement="top-start">
-								<div class="flex">
-									<div class=" font-medium self-center truncate">{user.name}</div>
+	<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
+		<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full">
+			<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
+				<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850">
+					<th scope="col" class="px-2.5 py-2">
+						<Checkbox state={selectAllState} on:change={handleSelectAll} />
+					</th>
+					{@render sortHeader('role', 'Role')}
+					{@render sortHeader('name', 'Name')}
+					{@render sortHeader('email', 'Email')}
+					{@render sortHeader('last_active_at', 'Last Active')}
+					{@render sortHeader('created_at', 'Created at')}
+				</tr>
+			</thead>
+			<tbody>
+				{#if filteredUsers.length > 0}
+					{#each filteredUsers as user (user.id)}
+						<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
+							<td class="px-3 py-1">
+								<Checkbox
+									state={userIds.includes(user.id) ? 'checked' : 'unchecked'}
+									on:change={(e) => {
+										if (e.detail === 'checked') {
+											userIds = [...userIds, user.id];
+										} else {
+											userIds = userIds.filter((id) => id !== user.id);
+										}
+									}}
+								/>
+							</td>
+							<td class="px-3 py-1 min-w-[7rem] w-28">
+								<Badge type={getBadgeType(user.role)} content={$i18n.t(user.role)} />
+							</td>
+							<td class="px-3 py-1 font-medium text-gray-900 dark:text-white max-w-48">
+								<div class="flex items-center">
+									<img
+										class="rounded-full w-6 h-6 object-cover mr-2.5 flex-shrink-0"
+										src={getProfileImageUrl(user?.profile_image_url)}
+										alt="user"
+									/>
+									<div class="font-medium truncate">{user.name}</div>
 								</div>
-							</Tooltip>
-
-							{#if userIds.includes(user.id)}
-								<Badge type="success" content="member" />
-							{/if}
-						</div>
-					</div>
-				{/each}
-			{:else}
-				<div class="text-gray-500 text-xs text-center py-2 px-10">
-					{$i18n.t('No users were found.')}
-				</div>
-			{/if}
-		</div>
+							</td>
+							<td class="px-3 py-1">{user.email}</td>
+							<td class="px-3 py-1">
+								{dayjs(user.last_active_at * 1000).fromNow()}
+							</td>
+							<td class="px-3 py-1">
+								{dayjs(user.created_at * 1000).format('LL')}
+							</td>
+						</tr>
+					{/each}
+				{:else}
+					<tr>
+						<td colspan={COLUMN_COUNT} class="text-gray-500 text-xs text-center py-4">
+							{$i18n.t('No users were found.')}
+						</td>
+					</tr>
+				{/if}
+			</tbody>
+		</table>
 	</div>
 </div>
