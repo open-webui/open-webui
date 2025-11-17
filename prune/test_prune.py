@@ -431,6 +431,31 @@ class TestVectorDatabaseCleaners(unittest.TestCase):
 
         shutil.rmtree(cache_dir)
 
+    def test_get_vector_database_cleaner_milvus(self):
+        """Test factory returns Milvus cleaner."""
+        mock_client = Mock()
+        # Standard Milvus - no shared_collections attribute
+        cache_dir = Path(tempfile.mkdtemp())
+
+        from prune_core import MilvusDatabaseCleaner
+        cleaner = get_vector_database_cleaner("milvus", mock_client, cache_dir)
+        self.assertIsInstance(cleaner, MilvusDatabaseCleaner)
+
+        shutil.rmtree(cache_dir)
+
+    def test_get_vector_database_cleaner_milvus_multitenancy(self):
+        """Test factory returns Milvus multitenancy cleaner."""
+        mock_client = Mock()
+        # Multitenancy Milvus - has shared_collections attribute
+        mock_client.shared_collections = ['test_collection']
+        cache_dir = Path(tempfile.mkdtemp())
+
+        from prune_core import MilvusMultitenancyDatabaseCleaner
+        cleaner = get_vector_database_cleaner("milvus", mock_client, cache_dir)
+        self.assertIsInstance(cleaner, MilvusMultitenancyDatabaseCleaner)
+
+        shutil.rmtree(cache_dir)
+
 
 class TestChromaDatabaseCleaner(unittest.TestCase):
     """Test ChromaDatabaseCleaner implementation."""
@@ -599,6 +624,106 @@ class TestPGVectorDatabaseCleaner(unittest.TestCase):
 
         result = self.cleaner.delete_collection("test-collection")
         self.assertFalse(result)
+
+
+class TestMilvusDatabaseCleaner(unittest.TestCase):
+    """Test MilvusDatabaseCleaner implementation."""
+
+    def setUp(self):
+        """Set up test environment with mock Milvus."""
+        self.mock_client = Mock()
+        self.mock_client.collection_prefix = "open_webui"
+        self.mock_client.client = Mock()
+
+        from prune_core import MilvusDatabaseCleaner
+        self.cleaner = MilvusDatabaseCleaner(self.mock_client)
+
+    def test_init(self):
+        """Test Milvus cleaner initialization."""
+        self.assertEqual(self.cleaner.collection_prefix, "open_webui")
+
+    def test_build_expected_collections(self):
+        """Test building expected collections set."""
+        active_file_ids = {"file123", "file456"}
+        active_kb_ids = {"kb789"}
+
+        expected = self.cleaner._build_expected_collections(active_file_ids, active_kb_ids)
+
+        self.assertEqual(len(expected), 3)
+        self.assertIn("file-file123", expected)
+        self.assertIn("file-file456", expected)
+        self.assertIn("kb789", expected)
+
+    def test_count_orphaned_collections(self):
+        """Test counting orphaned Milvus collections."""
+        # Mock list_collections to return some collections
+        self.mock_client.client.list_collections.return_value = [
+            "open_webui_file_test123",  # Expected (would be file-test123)
+            "open_webui_kb_test456",    # Orphaned
+            "other_collection",         # Not our prefix
+        ]
+
+        active_file_ids = {"test123"}
+        active_kb_ids = set()
+
+        count = self.cleaner.count_orphaned_collections(active_file_ids, active_kb_ids)
+
+        # Should count kb_test456 as orphaned
+        self.assertGreaterEqual(count, 1)
+
+    def test_delete_collection(self):
+        """Test deleting a specific collection."""
+        self.mock_client.has_collection.return_value = True
+
+        result = self.cleaner.delete_collection("test-collection")
+        self.assertTrue(result)
+
+        # Verify client was called
+        self.mock_client.delete_collection.assert_called_once()
+
+
+class TestMilvusMultitenancyDatabaseCleaner(unittest.TestCase):
+    """Test MilvusMultitenancyDatabaseCleaner implementation."""
+
+    def setUp(self):
+        """Set up test environment with mock Milvus multitenancy."""
+        self.mock_client = Mock()
+        self.mock_client.collection_prefix = "open_webui"
+        self.mock_client.shared_collections = [
+            "open_webui_memories",
+            "open_webui_knowledge",
+            "open_webui_files",
+            "open_webui_web_search",
+            "open_webui_hash_based",
+        ]
+
+        from prune_core import MilvusMultitenancyDatabaseCleaner
+        self.cleaner = MilvusMultitenancyDatabaseCleaner(self.mock_client)
+
+    def test_init(self):
+        """Test Milvus multitenancy cleaner initialization."""
+        self.assertEqual(self.cleaner.collection_prefix, "open_webui")
+        self.assertEqual(len(self.cleaner.shared_collections), 5)
+
+    def test_build_expected_resource_ids(self):
+        """Test building expected resource IDs set."""
+        active_file_ids = {"file123", "file456"}
+        active_kb_ids = {"kb789"}
+
+        expected = self.cleaner._build_expected_resource_ids(active_file_ids, active_kb_ids)
+
+        self.assertEqual(len(expected), 3)
+        self.assertIn("file-file123", expected)
+        self.assertIn("file-file456", expected)
+        self.assertIn("kb789", expected)
+
+    def test_delete_collection(self):
+        """Test deleting a specific logical collection."""
+        result = self.cleaner.delete_collection("test-collection")
+        self.assertTrue(result)
+
+        # Verify client was called
+        self.mock_client.delete_collection.assert_called_once_with("test-collection")
 
 
 class TestEdgeCases(unittest.TestCase):

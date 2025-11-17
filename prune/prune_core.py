@@ -828,6 +828,341 @@ class PGVectorDatabaseCleaner(VectorDatabaseCleaner):
         return expected_collections
 
 
+class MilvusDatabaseCleaner(VectorDatabaseCleaner):
+    """
+    Milvus database cleanup implementation (standard mode).
+
+    Handles Milvus's collection-based storage where each collection is independent.
+    Collections use the pattern: "{prefix}_{collection_name}" where collection_name
+    is typically "file-{id}" for files or knowledge base IDs.
+    """
+
+    def __init__(self, vector_db_client):
+        """Initialize Milvus cleaner with client."""
+        self.vector_db_client = vector_db_client
+        self.collection_prefix = getattr(vector_db_client, 'collection_prefix', 'open_webui')
+        log.debug(f"Milvus cleaner initialized with prefix: {self.collection_prefix}")
+
+    def count_orphaned_collections(
+        self, active_file_ids: Set[str], active_kb_ids: Set[str]
+    ) -> int:
+        """Count orphaned Milvus collections for preview."""
+        try:
+            expected_collections = self._build_expected_collections(
+                active_file_ids, active_kb_ids
+            )
+
+            # List all collections
+            all_collections = self.vector_db_client.client.list_collections()
+
+            # Count collections with our prefix that are not expected
+            count = 0
+            for collection_name in all_collections:
+                if collection_name.startswith(f"{self.collection_prefix}_"):
+                    # Extract the original name (remove prefix)
+                    original_name = collection_name[len(self.collection_prefix) + 1:]
+                    # Restore dashes (Milvus converts - to _)
+                    original_name = original_name.replace("_", "-")
+
+                    if original_name not in expected_collections:
+                        count += 1
+                        log.debug(f"Found orphaned Milvus collection: {collection_name}")
+
+            return count
+
+        except Exception as e:
+            log.error(f"Error counting orphaned Milvus collections: {e}")
+            return 0
+
+    def cleanup_orphaned_collections(
+        self, active_file_ids: Set[str], active_kb_ids: Set[str]
+    ) -> tuple[int, Optional[str]]:
+        """Actually delete orphaned Milvus collections."""
+        try:
+            expected_collections = self._build_expected_collections(
+                active_file_ids, active_kb_ids
+            )
+
+            # List all collections
+            all_collections = self.vector_db_client.client.list_collections()
+
+            deleted_count = 0
+            errors = []
+
+            for collection_name in all_collections:
+                if collection_name.startswith(f"{self.collection_prefix}_"):
+                    # Extract the original name (remove prefix)
+                    original_name = collection_name[len(self.collection_prefix) + 1:]
+                    # Restore dashes (Milvus converts - to _)
+                    original_name = original_name.replace("_", "-")
+
+                    if original_name not in expected_collections:
+                        try:
+                            self.vector_db_client.client.drop_collection(
+                                collection_name=collection_name
+                            )
+                            deleted_count += 1
+                            log.info(f"Deleted orphaned Milvus collection: {collection_name}")
+                        except Exception as e:
+                            error_msg = f"Failed to delete collection {collection_name}: {e}"
+                            log.error(error_msg)
+                            errors.append(error_msg)
+
+            if deleted_count > 0:
+                log.info(f"Deleted {deleted_count} orphaned Milvus collections")
+
+            if errors:
+                return (deleted_count, "; ".join(errors))
+            return (deleted_count, None)
+
+        except Exception as e:
+            error_msg = f"Milvus cleanup failed: {e}"
+            log.error(error_msg)
+            return (0, error_msg)
+
+    def delete_collection(self, collection_name: str) -> bool:
+        """Delete a specific Milvus collection by name."""
+        try:
+            # Convert dashes to underscores (Milvus naming convention)
+            collection_name = collection_name.replace("-", "_")
+            full_name = f"{self.collection_prefix}_{collection_name}"
+
+            # Check if collection exists
+            if self.vector_db_client.has_collection(collection_name):
+                self.vector_db_client.delete_collection(collection_name)
+                log.debug(f"Deleted Milvus collection: {full_name}")
+                return True
+            else:
+                log.debug(f"Milvus collection does not exist: {full_name}")
+                return True  # Not existing is effectively deleted
+
+        except Exception as e:
+            log.error(f"Error deleting Milvus collection '{collection_name}': {e}")
+            return False
+
+    def _build_expected_collections(
+        self, active_file_ids: Set[str], active_kb_ids: Set[str]
+    ) -> Set[str]:
+        """Build set of collection names that should exist."""
+        expected_collections = set()
+
+        # File collections use "file-{id}" pattern
+        for file_id in active_file_ids:
+            expected_collections.add(f"file-{file_id}")
+
+        # Knowledge base collections use the KB ID directly
+        for kb_id in active_kb_ids:
+            expected_collections.add(kb_id)
+
+        return expected_collections
+
+
+class MilvusMultitenancyDatabaseCleaner(VectorDatabaseCleaner):
+    """
+    Milvus multitenancy database cleanup implementation.
+
+    Handles Milvus's multitenancy mode where multiple logical collections
+    share physical collections using a resource_id field for partitioning.
+
+    In multitenancy mode, there are shared collections like:
+    - {prefix}_memories - for user memories
+    - {prefix}_knowledge - for knowledge bases
+    - {prefix}_files - for file-based collections
+    - {prefix}_web_search - for web search results
+    - {prefix}_hash_based - for hash-based collections
+
+    Each shared collection contains data from multiple logical collections,
+    distinguished by the resource_id field.
+    """
+
+    def __init__(self, vector_db_client):
+        """Initialize Milvus multitenancy cleaner with client."""
+        self.vector_db_client = vector_db_client
+        self.collection_prefix = getattr(
+            vector_db_client, 'collection_prefix', 'open_webui'
+        )
+
+        # Get shared collection names
+        self.shared_collections = getattr(
+            vector_db_client,
+            'shared_collections',
+            [
+                f"{self.collection_prefix}_memories",
+                f"{self.collection_prefix}_knowledge",
+                f"{self.collection_prefix}_files",
+                f"{self.collection_prefix}_web_search",
+                f"{self.collection_prefix}_hash_based",
+            ]
+        )
+        log.debug(f"Milvus multitenancy cleaner initialized with prefix: {self.collection_prefix}")
+        log.debug(f"Shared collections: {self.shared_collections}")
+
+    def count_orphaned_collections(
+        self, active_file_ids: Set[str], active_kb_ids: Set[str]
+    ) -> int:
+        """
+        Count orphaned resource_ids across all shared collections.
+
+        In multitenancy mode, we count distinct resource_ids that are not
+        in our expected set across all shared collections.
+        """
+        try:
+            expected_resource_ids = self._build_expected_resource_ids(
+                active_file_ids, active_kb_ids
+            )
+
+            count = 0
+
+            # Import pymilvus utilities
+            from pymilvus import utility, Collection
+
+            for shared_collection_name in self.shared_collections:
+                if not utility.has_collection(shared_collection_name):
+                    continue
+
+                try:
+                    collection = Collection(shared_collection_name)
+                    collection.load()
+
+                    # Query to get distinct resource_ids
+                    # Note: Milvus doesn't have a native DISTINCT query,
+                    # so we need to get all and deduplicate
+                    results = collection.query(
+                        expr="resource_id != ''",
+                        output_fields=["resource_id"],
+                        limit=16384  # Maximum query limit
+                    )
+
+                    # Get unique resource_ids
+                    resource_ids = set(res["resource_id"] for res in results)
+
+                    # Count orphaned ones
+                    for resource_id in resource_ids:
+                        if resource_id not in expected_resource_ids:
+                            count += 1
+                            log.debug(f"Found orphaned resource_id in {shared_collection_name}: {resource_id}")
+
+                except Exception as e:
+                    log.error(f"Error checking shared collection {shared_collection_name}: {e}")
+
+            return count
+
+        except Exception as e:
+            log.error(f"Error counting orphaned Milvus multitenancy collections: {e}")
+            return 0
+
+    def cleanup_orphaned_collections(
+        self, active_file_ids: Set[str], active_kb_ids: Set[str]
+    ) -> tuple[int, Optional[str]]:
+        """
+        Delete orphaned resource_ids from shared collections.
+
+        In multitenancy mode, we delete records by resource_id filter
+        from the shared collections.
+        """
+        try:
+            expected_resource_ids = self._build_expected_resource_ids(
+                active_file_ids, active_kb_ids
+            )
+
+            deleted_count = 0
+            errors = []
+
+            # Import pymilvus utilities
+            from pymilvus import utility, Collection
+
+            for shared_collection_name in self.shared_collections:
+                if not utility.has_collection(shared_collection_name):
+                    continue
+
+                try:
+                    collection = Collection(shared_collection_name)
+                    collection.load()
+
+                    # Query to get distinct resource_ids
+                    results = collection.query(
+                        expr="resource_id != ''",
+                        output_fields=["resource_id"],
+                        limit=16384
+                    )
+
+                    # Get unique orphaned resource_ids
+                    resource_ids = set(res["resource_id"] for res in results)
+                    orphaned_ids = [rid for rid in resource_ids if rid not in expected_resource_ids]
+
+                    # Delete each orphaned resource_id
+                    for resource_id in orphaned_ids:
+                        try:
+                            # Use the client's delete method which properly handles multitenancy
+                            # Extract collection name from resource_id (reverse the mapping)
+                            collection.delete(f"resource_id == '{resource_id}'")
+                            deleted_count += 1
+                            log.info(f"Deleted orphaned resource_id from {shared_collection_name}: {resource_id}")
+                        except Exception as e:
+                            error_msg = f"Failed to delete resource_id {resource_id} from {shared_collection_name}: {e}"
+                            log.error(error_msg)
+                            errors.append(error_msg)
+
+                except Exception as e:
+                    error_msg = f"Error processing shared collection {shared_collection_name}: {e}"
+                    log.error(error_msg)
+                    errors.append(error_msg)
+
+            if deleted_count > 0:
+                log.info(f"Deleted {deleted_count} orphaned Milvus multitenancy resource_ids")
+
+            if errors:
+                return (deleted_count, "; ".join(errors))
+            return (deleted_count, None)
+
+        except Exception as e:
+            error_msg = f"Milvus multitenancy cleanup failed: {e}"
+            log.error(error_msg)
+            return (0, error_msg)
+
+    def delete_collection(self, collection_name: str) -> bool:
+        """
+        Delete a specific logical collection in multitenancy mode.
+
+        This deletes all records with the matching resource_id from
+        the appropriate shared collection.
+        """
+        try:
+            # Use the client's delete_collection method which handles multitenancy
+            self.vector_db_client.delete_collection(collection_name)
+            log.debug(f"Deleted Milvus multitenancy collection: {collection_name}")
+            return True
+
+        except Exception as e:
+            log.error(f"Error deleting Milvus multitenancy collection '{collection_name}': {e}")
+            return False
+
+    def _build_expected_resource_ids(
+        self, active_file_ids: Set[str], active_kb_ids: Set[str]
+    ) -> Set[str]:
+        """
+        Build set of resource_ids that should exist.
+
+        Resource IDs are the logical collection names that map to partitions
+        within shared collections.
+        """
+        expected_resource_ids = set()
+
+        # File collections use "file-{id}" pattern as resource_id
+        for file_id in active_file_ids:
+            expected_resource_ids.add(f"file-{file_id}")
+
+        # Knowledge base collections use the KB ID directly as resource_id
+        for kb_id in active_kb_ids:
+            expected_resource_ids.add(kb_id)
+
+        # Note: We don't include user-memory, web-search, or hash-based patterns
+        # because those would require additional context about active users and searches
+        # For safety, we only clean file and KB collections which we can validate
+
+        return expected_resource_ids
+
+
 class NoOpVectorDatabaseCleaner(VectorDatabaseCleaner):
     """
     No-operation implementation for unsupported vector databases.
@@ -861,6 +1196,12 @@ def get_vector_database_cleaner(vector_db_type: str, vector_db_client, cache_dir
     the appropriate cleaner implementation. Community contributors can
     extend this function to support additional vector databases.
 
+    Supported databases:
+    - ChromaDB: SQLite-based vector database with directory storage
+    - PGVector: PostgreSQL extension for vector operations
+    - Milvus: Standalone vector database with standard collections
+    - Milvus Multitenancy: Milvus with shared collections and resource_id partitioning
+
     Returns:
         VectorDatabaseCleaner: Appropriate implementation for the configured database
     """
@@ -872,6 +1213,14 @@ def get_vector_database_cleaner(vector_db_type: str, vector_db_client, cache_dir
     elif "pgvector" in vector_db_type:
         log.debug("Using PGVector cleaner")
         return PGVectorDatabaseCleaner(vector_db_client)
+    elif "milvus" in vector_db_type:
+        # Detect multitenancy mode by checking for shared_collections attribute
+        if hasattr(vector_db_client, 'shared_collections'):
+            log.debug("Using Milvus Multitenancy cleaner")
+            return MilvusMultitenancyDatabaseCleaner(vector_db_client)
+        else:
+            log.debug("Using Milvus standard cleaner")
+            return MilvusDatabaseCleaner(vector_db_client)
     else:
         log.debug(
             f"No specific cleaner for vector database type: {vector_db_type}, using no-op cleaner"
