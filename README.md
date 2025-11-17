@@ -27,7 +27,7 @@ For more information, be sure to check out our [Open WebUI Documentation](https:
 
 - 🚀 **Effortless Setup**: Install seamlessly using Docker or Kubernetes (kubectl, kustomize or helm) for a hassle-free experience with support for both `:ollama` and `:cuda` tagged images.
 
-- 🤝 **Ollama/OpenAI API Integration**: Effortlessly integrate OpenAI-compatible APIs for versatile conversations alongside Ollama models. Customize the OpenAI API URL to link with **LMStudio, GroqCloud, Mistral, OpenRouter, and more**.
+- 🤝 **Ollama/OpenAI API Integration**: Effortlessly integrate OpenAI-compatible APIs for versatile conversations alongside Ollama models. Customize the OpenAI API URL to link with **vLLM, LMStudio, GroqCloud, Mistral, OpenRouter, and more**.
 
 - 🛡️ **Granular Permissions and User Groups**: By allowing administrators to create detailed user roles and permissions, we ensure a secure user environment. This granularity not only enhances security but also allows for customized user experiences, fostering a sense of ownership and responsibility amongst users.
 
@@ -131,6 +131,96 @@ This will start the Open WebUI server, which you can access at [http://localhost
   ```bash
   docker run -d -p 3000:8080 -e OPENAI_API_KEY=your_secret_key -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
   ```
+
+### Using vLLM with Open WebUI 🚀
+
+Open WebUI fully supports [vLLM](https://github.com/vllm-project/vllm), a high-performance LLM inference engine. vLLM provides an OpenAI-compatible API, making it easy to integrate with Open WebUI.
+
+#### Prerequisites
+
+1. **Install vLLM**: Follow the [vLLM installation guide](https://docs.vllm.ai/en/latest/getting_started/installation.html) to set up vLLM on your system.
+
+2. **Start vLLM Server**: Launch vLLM with the OpenAI-compatible API server:
+
+   ```bash
+   python -m vllm.entrypoints.openai.api_server \
+       --model <your-model-name> \
+       --port 8000
+   ```
+
+   For GPU support, vLLM will automatically detect and use available GPUs. For more configuration options, see the [vLLM documentation](https://docs.vllm.ai/en/latest/serving/openai_compatible.html).
+
+#### Connecting Open WebUI to vLLM
+
+You can connect Open WebUI to vLLM in two ways:
+
+**Method 1: Using Environment Variables**
+
+Set the `OPENAI_API_BASE_URL` environment variable to point to your vLLM server:
+
+```bash
+docker run -d -p 3000:8080 \
+  -e OPENAI_API_BASE_URL=http://localhost:8000/v1 \
+  -v open-webui:/app/backend/data \
+  --name open-webui \
+  --restart always \
+  --add-host=host.docker.internal:host-gateway \
+  ghcr.io/open-webui/open-webui:main
+```
+
+If vLLM is running on a different machine, replace `localhost` with the appropriate IP address or hostname.
+
+**Method 2: Using Web UI Settings**
+
+1. Start Open WebUI and log in as an administrator.
+2. Navigate to **Settings** → **Connections**.
+3. Under **OpenAI API Configuration**, add a new connection:
+   - **API Base URL**: `http://localhost:8000/v1` (or your vLLM server address)
+   - **API Key**: Leave empty (vLLM doesn't require an API key by default, but you can configure one if needed)
+4. Click **Save** and verify the connection.
+
+#### vLLM Features Supported
+
+- ✅ Chat completions with streaming support
+- ✅ Model listing and selection
+- ✅ Function calling (tool use)
+- ✅ Multi-model support
+- ✅ GPU acceleration
+- ✅ Continuous batching for improved throughput
+
+#### Example: Running vLLM with Docker
+
+If you prefer to run vLLM in a Docker container:
+
+```bash
+# Run vLLM server
+docker run --gpus all \
+  -v ~/.cache/huggingface:/root/.cache/huggingface \
+  -p 8000:8000 \
+  --name vllm-server \
+  vllm/vllm-openai:latest \
+  --model <your-model-name>
+```
+
+Then connect Open WebUI to it:
+
+```bash
+docker run -d -p 3000:8080 \
+  -e OPENAI_API_BASE_URL=http://host.docker.internal:8000/v1 \
+  -v open-webui:/app/backend/data \
+  --name open-webui \
+  --restart always \
+  --add-host=host.docker.internal:host-gateway \
+  ghcr.io/open-webui/open-webui:main
+```
+
+#### Troubleshooting
+
+- **Connection Issues**: Ensure vLLM is running and accessible. Check firewall settings if connecting across networks.
+- **Model Not Found**: Verify the model name matches what vLLM has loaded. You can check available models by visiting `http://localhost:8000/v1/models`.
+- **GPU Not Detected**: Ensure your system has CUDA installed and GPUs are accessible. Check vLLM logs for GPU-related errors.
+
+For more information, visit the [vLLM documentation](https://docs.vllm.ai/) or join our [Discord community](https://discord.gg/5rJgQTnV4s).
 
 ### Installing Open WebUI with Bundled Ollama Support
 
