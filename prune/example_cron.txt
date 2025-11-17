@@ -1,0 +1,125 @@
+# Example Cron Job Configurations for Open WebUI Prune Script
+#
+# These examples show how to schedule automated pruning operations.
+# Edit your crontab with: crontab -e
+#
+# Cron format: minute hour day month weekday command
+#
+# IMPORTANT: Replace paths with your actual installation paths!
+
+# ============================================================================
+# Daily Preview (Monitoring)
+# ============================================================================
+# Run a dry-run preview every day at 1 AM to monitor what would be deleted
+# This helps you track database growth without making changes
+0 1 * * * /path/to/open-webui/prune/run_prune.sh --dry-run >> /var/log/openwebui-prune-preview.log 2>&1
+
+# ============================================================================
+# Weekly Cleanup
+# ============================================================================
+# Run cleanup every Sunday at 2 AM
+# - Delete chats older than 90 days
+# - Clean audio cache files older than 30 days
+# - Delete orphaned data (default settings)
+0 2 * * 0 /path/to/open-webui/prune/run_prune.sh --days 90 --audio-cache-max-age-days 30 --execute >> /var/log/openwebui-prune.log 2>&1
+
+# ============================================================================
+# Monthly Full Cleanup with VACUUM
+# ============================================================================
+# Run full cleanup on first Sunday of each month at 3 AM
+# - Delete chats older than 60 days
+# - Delete users inactive for 180+ days
+# - Clean audio cache
+# - Run VACUUM to reclaim disk space
+0 3 1-7 * 0 /path/to/open-webui/prune/run_prune.sh --days 60 --delete-inactive-users-days 180 --audio-cache-max-age-days 30 --run-vacuum --execute >> /var/log/openwebui-prune-monthly.log 2>&1
+
+# ============================================================================
+# Conservative Weekly Cleanup (Minimal Deletion)
+# ============================================================================
+# For instances where you want to keep more data
+# - Only delete chats older than 180 days (6 months)
+# - Exempt archived and folder-organized chats
+# - Clean old audio cache only
+0 2 * * 0 /path/to/open-webui/prune/run_prune.sh --days 180 --exempt-archived-chats --exempt-chats-in-folders --audio-cache-max-age-days 60 --execute >> /var/log/openwebui-prune.log 2>&1
+
+# ============================================================================
+# Aggressive Daily Cleanup (High-Traffic Instances)
+# ============================================================================
+# For very active instances that need frequent cleanup
+# - Delete chats older than 30 days
+# - Delete users inactive for 90+ days
+# - Run every day at 3 AM
+0 3 * * * /path/to/open-webui/prune/run_prune.sh --days 30 --delete-inactive-users-days 90 --audio-cache-max-age-days 14 --execute >> /var/log/openwebui-prune-daily.log 2>&1
+
+# ============================================================================
+# Orphaned Data Only (No Age-Based Deletion)
+# ============================================================================
+# Run weekly cleanup of orphaned data without deleting by age
+# Safe for instances where you want to keep all active data
+0 2 * * 0 /path/to/open-webui/prune/run_prune.sh --delete-orphaned-chats --delete-orphaned-knowledge-bases --audio-cache-max-age-days 30 --execute >> /var/log/openwebui-prune.log 2>&1
+
+# ============================================================================
+# Database Optimization Only (Monthly VACUUM)
+# ============================================================================
+# Run VACUUM on first of each month at 4 AM to reclaim space
+# Only runs optimization, no data deletion
+0 4 1 * * /path/to/open-webui/prune/run_prune.sh --run-vacuum --execute >> /var/log/openwebui-vacuum.log 2>&1
+
+# ============================================================================
+# Log Rotation Helper
+# ============================================================================
+# Clean up old prune logs (keep last 90 days)
+# Run on first of each month at 5 AM
+0 5 1 * * find /var/log -name "openwebui-prune*.log" -mtime +90 -delete
+
+# ============================================================================
+# NOTES FOR PRODUCTION USE:
+# ============================================================================
+#
+# 1. TEST FIRST: Always run with --dry-run on a staging environment first
+#
+# 2. BACKUP: Create database backups before enabling automated pruning:
+#    0 1 * * 0 /path/to/backup-script.sh
+#
+# 3. MONITORING: Set up log monitoring to catch errors:
+#    - Check logs regularly: tail -f /var/log/openwebui-prune.log
+#    - Set up alerts for script failures
+#
+# 4. TIMING: Schedule during low-usage hours:
+#    - Avoid peak usage times
+#    - Consider time zones of your users
+#    - VACUUM operations lock the database!
+#
+# 5. LOG MANAGEMENT:
+#    - Logs can grow large, rotate them regularly
+#    - Consider using logrotate for better log management
+#
+# 6. PERMISSIONS:
+#    - Ensure cron user has access to Open WebUI directories
+#    - Ensure cron user can read .env file
+#    - Ensure cron user can write to log directory
+#
+# 7. ENVIRONMENT VARIABLES:
+#    - Cron runs with minimal environment
+#    - Make sure run_prune.sh loads .env correctly
+#    - Test cron jobs manually first
+#
+# 8. ERROR HANDLING:
+#    - Monitor exit codes (0 = success, non-zero = failure)
+#    - Set up notifications for failures
+#    - Check logs after first automated run
+#
+# ============================================================================
+
+# Example logrotate configuration for prune logs:
+# Save this to /etc/logrotate.d/openwebui-prune
+#
+# /var/log/openwebui-prune*.log {
+#     weekly
+#     rotate 12
+#     compress
+#     delaycompress
+#     missingok
+#     notifempty
+#     create 0640 openwebui openwebui
+# }
