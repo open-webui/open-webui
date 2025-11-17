@@ -1370,6 +1370,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
                         def make_tool_function(client, function_name):
                             async def tool_function(**kwargs):
+                                if "__files__" in kwargs:
+                                    files_list = form_data.get("metadata", {}).get("files", kwargs.get("__files__", []))
+                                    kwargs["__files__"] = {file_item["id"]: file_item for file_item in files_list}
+                                    print(kwargs["__files__"])
                                 return await client.call_tool(
                                     function_name,
                                     function_args=kwargs,
