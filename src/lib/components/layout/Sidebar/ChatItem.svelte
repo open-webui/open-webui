@@ -348,7 +348,7 @@
 	{#if confirmEdit}
 		<div
 			id="sidebar-chat-item"
-			class="sidebar-chat-item w-full flex justify-between rounded-xl px-[0.6875rem] py-1.5 {id === $chatId ||
+			class=" w-full flex justify-between rounded-xl px-[11px] py-[6px] {id === $chatId ||
 			confirmEdit
 				? 'bg-gray-100 dark:bg-gray-900 selected'
 				: selected
@@ -401,7 +401,7 @@
 	{:else}
 		<a
 			id="sidebar-chat-item"
-			class="sidebar-chat-item w-full flex justify-between rounded-xl px-[0.6875rem] py-1.5 {id === $chatId || confirmEdit
+			class=" w-full flex justify-between rounded-xl px-[11px] py-[6px] {id === $chatId || confirmEdit
 				? 'bg-gray-100 dark:bg-gray-900 selected'
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950 selected'
@@ -435,7 +435,7 @@
 			draggable="false"
 		>
 			<div class=" flex self-center flex-1 w-full">
-				<div dir="auto" class="sidebar-chat-item__title text-left self-center overflow-hidden w-full truncate">
+				<div dir="auto" class=" text-left self-center overflow-hidden w-full h-[20px] truncate">
 					{title}
 				</div>
 			</div>
