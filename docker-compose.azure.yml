@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
+    container_name: open-webui-azure
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:3000:8080"
+    environment:
+      # Azure OpenAI Configuration
+      - OPENAI_API_BASE_URL=${AZURE_OPENAI_BASE_URL}
+      - OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+      
+      # Azure OpenAI for RAG/Embeddings
+      - RAG_AZURE_OPENAI_BASE_URL=${AZURE_OPENAI_BASE_URL}
+      - RAG_AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+      - RAG_AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION-2024-02-01}
+      
+      # Security
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+      - ENABLE_SIGNUP=${ENABLE_SIGNUP-false}
+      
+      # Performance & CORS
+      - CORS_ALLOW_ORIGIN=*
+      - FORWARDED_ALLOW_IPS=*
+      
+      # Privacy
+      - SCARF_NO_ANALYTICS=true
+      - DO_NOT_TRACK=true
+      - ANONYMIZED_TELEMETRY=false
+      
+      # Optional: Disable Ollama since we're using Azure
+      - ENABLE_OLLAMA_API=false
+      
+    volumes:
+      - open-webui-data:/app/backend/data
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  open-webui-data:
+    driver: local
