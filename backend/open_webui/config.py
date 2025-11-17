@@ -2840,6 +2840,7 @@ WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(
         # "wikipedia.com",
         # "wikimedia.org",
         # "wikidata.org",
+        # "!stackoverflow.com",
     ],
 )
 
@@ -3184,10 +3185,9 @@ try:
 except json.JSONDecodeError:
     automatic1111_params = {}
 
-
 AUTOMATIC1111_PARAMS = PersistentConfig(
     "AUTOMATIC1111_PARAMS",
-    "image_generation.automatic1111.api_auth",
+    "image_generation.automatic1111.api_params",
     automatic1111_params,
 )
 

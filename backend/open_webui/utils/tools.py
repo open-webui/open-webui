@@ -180,7 +180,7 @@ async def get_tools(
                                 )
 
                         connection_headers = tool_server_connection.get("headers", None)
-                        if connection_headers:
+                        if connection_headers and isinstance(connection_headers, dict):
                             for key, value in connection_headers.items():
                                 headers[key] = value
 
@@ -237,14 +237,16 @@ async def get_tools(
                 module, _ = load_tool_module_by_id(tool_id)
                 request.app.state.TOOLS[tool_id] = module
 
-            extra_params["__id__"] = tool_id
+            __user__ = {
+                **extra_params["__user__"],
+            }
 
             # Set valves for the tool
             if hasattr(module, "valves") and hasattr(module, "Valves"):
                 valves = Tools.get_tool_valves_by_id(tool_id) or {}
                 module.valves = module.Valves(**valves)
             if hasattr(module, "UserValves"):
-                extra_params["__user__"]["valves"] = module.UserValves(  # type: ignore
+                __user__["valves"] = module.UserValves(  # type: ignore
                     **Tools.get_user_valves_by_id_and_user_id(tool_id, user.id)
                 )
 
@@ -266,7 +268,12 @@ async def get_tools(
                 function_name = spec["name"]
                 tool_function = getattr(module, function_name)
                 callable = get_async_tool_function_and_apply_extra_params(
-                    tool_function, extra_params
+                    tool_function,
+                    {
+                        **extra_params,
+                        "__id__": tool_id,
+                        "__user__": __user__,
+                    },
                 )
 
                 # TODO: Support Pydantic models as parameters

@@ -144,7 +144,7 @@ class ToolServerConnection(BaseModel):
     path: str
     type: Optional[str] = "openapi"  # openapi, mcp
     auth_type: Optional[str]
-    headers: Optional[dict]
+    headers: Optional[dict | str] = None
     key: Optional[str]
     config: Optional[dict]
 
@@ -286,7 +286,7 @@ async def verify_tool_servers_config(
                     if token:
                         headers = {"Authorization": f"Bearer {token}"}
 
-                    if form_data.headers:
+                    if form_data.headers and isinstance(form_data.headers, dict):
                         if headers is None:
                             headers = {}
                         headers.update(form_data.headers)
@@ -332,7 +332,7 @@ async def verify_tool_servers_config(
             if token:
                 headers = {"Authorization": f"Bearer {token}"}
 
-            if form_data.headers:
+            if form_data.headers and isinstance(form_data.headers, dict):
                 if headers is None:
                     headers = {}
                 headers.update(form_data.headers)
