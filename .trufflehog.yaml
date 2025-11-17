@@ -9,12 +9,6 @@ exclude_paths:
   - "backend/data/cache/"
   - "src/lib/i18n/locales/"
 
-# 2. File patterns to exclude across ALL Git history
-# This specifically targets the noisy translation files.
-# Using 'exclude_files' helps skip history matches for these specific paths.
-exclude_files:
-  - "src/lib/i18n/locales/**/*.json"
-
 # 3. Regex patterns to ignore (match against the secret content itself)
 # This eliminates known test keys and the repeating placeholder URI.
 ignore_regex:
