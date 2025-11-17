@@ -113,8 +113,19 @@ async def create_new_model(
 
 
 @router.get("/export", response_model=list[ModelModel])
-async def export_models(user=Depends(get_admin_user)):
-    return Models.get_models()
+async def export_models(request: Request, user=Depends(get_verified_user)):
+    if user.role != "admin" and not has_permission(
+        user.id, "workspace.models_export", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
+        return Models.get_models()
+    else:
+        return Models.get_models_by_user_id(user.id)
 
 
 ############################
@@ -128,8 +139,17 @@ class ModelsImportForm(BaseModel):
 
 @router.post("/import", response_model=bool)
 async def import_models(
-    user: str = Depends(get_admin_user), form_data: ModelsImportForm = (...)
+    request: Request,
+    user=Depends(get_verified_user),
+    form_data: ModelsImportForm = (...),
 ):
+    if user.role != "admin" and not has_permission(
+        user.id, "workspace.models_import", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
     try:
         data = form_data.models
         if isinstance(data, list):
