@@ -75,7 +75,7 @@ def get_image_model(request):
         return (
             request.app.state.config.IMAGE_GENERATION_MODEL
             if request.app.state.config.IMAGE_GENERATION_MODEL
-            else "imagen-3.0-generate-002"
+            else "gemini-2.5-flash-image"
         )
     elif request.app.state.config.IMAGE_GENERATION_ENGINE == "comfyui":
         return (
@@ -383,6 +383,7 @@ def get_models(request: Request, user=Depends(get_verified_user)):
             ]
         elif request.app.state.config.IMAGE_GENERATION_ENGINE == "gemini":
             return [
+                {"id": "gemini-2.5-flash-image", "name": "Gemini 2.5 Flash Image 🎨 (Recommended)"},
                 {"id": "imagen-3.0-generate-002", "name": "imagen-3.0 generate-002"},
             ]
         elif request.app.state.config.IMAGE_GENERATION_ENGINE == "comfyui":
@@ -635,6 +636,7 @@ async def image_generations(
 
             r.raise_for_status()
             res = r.json()
+            # print(f"Gemini response: {json.dumps(res, indent=2)[:500]}")
 
             images = []
 
@@ -656,6 +658,7 @@ async def image_generations(
                                 request, image_data, content_type, data, user
                             )
                             images.append({"url": url})
+                            log.info("Successfully processed image from Gemini response")
 
             return images
 

@@ -3305,7 +3305,7 @@ AUTOMATIC1111_BASE_URL = PersistentConfig(
 )
 AUTOMATIC1111_API_AUTH = PersistentConfig(
     "AUTOMATIC1111_API_AUTH",
-    "image_generation.automatic1111.api_auth",
+    "image_generation.automatic1111.params",
     os.getenv("AUTOMATIC1111_API_AUTH", ""),
 )
 
