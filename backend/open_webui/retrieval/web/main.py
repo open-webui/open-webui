@@ -1,9 +1,24 @@
+import logging
+import socket
 import validators
 
 from typing import Optional
 from urllib.parse import urlparse
 
 from pydantic import BaseModel
+
+log = logging.getLogger(__name__)
+
+
+def resolve_hostname(hostname):
+    try:
+        addr_info = socket.getaddrinfo(hostname, None)
+        ipv4_addresses = [info[4][0] for info in addr_info if info[0] == socket.AF_INET]
+        ipv6_addresses = [info[4][0] for info in addr_info if info[0] == socket.AF_INET6]
+        return ipv4_addresses, ipv6_addresses
+    except Exception as e:
+        log.debug(f"Failed to resolve hostname {hostname}: {e}")
+        return [], []
 
 
 def get_filtered_results(results, filter_list):
@@ -24,13 +39,33 @@ def get_filtered_results(results, filter_list):
 
         domain = urlparse(url).netloc
 
-        # If allow list is non-empty, require domain to match one of them
+        if not domain:
+            continue
+
+        # Resolve hostname to IPs for comprehensive checking
+        ipv4_addresses, ipv6_addresses = resolve_hostname(domain)
+        resolved_ips = ipv4_addresses + ipv6_addresses
+
+        # Check all identifiers (hostname + resolved IPs)
+        identifiers = [domain] + resolved_ips
+
+        # If allow list is non-empty, require at least one identifier to match
         if allow_list:
-            if not any(domain.endswith(allowed) for allowed in allow_list):
+            allowed = any(
+                identifier == allowed_entry or identifier.endswith("." + allowed_entry)
+                for identifier in identifiers
+                for allowed_entry in allow_list
+            )
+            if not allowed:
                 continue
 
-        # Block list always removes matches
-        if any(domain.endswith(blocked) for blocked in block_list):
+        # Block list always blocks matching identifiers
+        blocked = any(
+            identifier == blocked_entry or identifier.endswith("." + blocked_entry)
+            for identifier in identifiers
+            for blocked_entry in block_list
+        )
+        if blocked:
             continue
 
         filtered_results.append(result)

@@ -26,6 +26,7 @@ from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
 from open_webui.retrieval.loaders.tavily import TavilyLoader
 from open_webui.retrieval.loaders.external_web import ExternalWebLoader
+from open_webui.retrieval.web.main import get_filtered_results
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.config import (
     ENABLE_RAG_LOCAL_WEB_FETCH,
@@ -60,10 +61,12 @@ def validate_url(url: Union[str, Sequence[str]]):
             log.warning(f"Blocked non-HTTP(S) protocol: {parsed_url.scheme} in URL: {url}")
             raise ValueError(ERROR_MESSAGES.INVALID_URL)
 
-        # Blocklist check
-        if is_blocked_url(url):
-            log.warning(f"URL blocked by filter list: {url}")
-            raise ValueError(ERROR_MESSAGES.INVALID_URL)
+        # Blocklist check using unified filtering logic
+        if WEB_FETCH_FILTER_LIST:
+            result = get_filtered_results([{"url": url}], WEB_FETCH_FILTER_LIST)
+            if len(result) == 0:
+                log.warning(f"URL blocked by filter list: {url}")
+                raise ValueError(ERROR_MESSAGES.INVALID_URL)
 
         if not ENABLE_RAG_LOCAL_WEB_FETCH:
             # Local web fetch is disabled, filter out any URLs that resolve to private IP addresses
@@ -105,54 +108,6 @@ def resolve_hostname(hostname):
     ipv6_addresses = [info[4][0] for info in addr_info if info[0] == socket.AF_INET6]
 
     return ipv4_addresses, ipv6_addresses
-
-
-def is_blocked_url(url: str) -> bool:
-    if not WEB_FETCH_FILTER_LIST:
-        return False
-
-    parsed = urllib.parse.urlparse(url)
-    hostname = parsed.hostname
-
-    if not hostname:
-        return False
-
-    # Separate allow and block lists based on "!" prefix
-    allow_list = [entry for entry in WEB_FETCH_FILTER_LIST if not entry.startswith("!")]
-    block_list = [entry[1:] for entry in WEB_FETCH_FILTER_LIST if entry.startswith("!")]
-
-    # Resolve hostname to IPs for comprehensive checking
-    resolved_ips = []
-    try:
-        ipv4_addresses, ipv6_addresses = resolve_hostname(hostname)
-        resolved_ips = ipv4_addresses + ipv6_addresses
-    except Exception:
-        # If DNS resolution fails, we'll just check the hostname
-        pass
-
-    # Check all identifiers (hostname + resolved IPs)
-    identifiers = [hostname] + resolved_ips
-
-    # If allow list is non-empty, require at least one identifier to match
-    if allow_list:
-        allowed = any(
-            identifier == allowed_entry or identifier.endswith("." + allowed_entry)
-            for identifier in identifiers
-            for allowed_entry in allow_list
-        )
-        if not allowed:
-            return True
-
-    # Block list always blocks matching identifiers
-    blocked = any(
-        identifier == blocked_entry or identifier.endswith("." + blocked_entry)
-        for identifier in identifiers
-        for blocked_entry in block_list
-    )
-    if blocked:
-        return True
-
-    return False
 
 
 def extract_metadata(soup, url):
