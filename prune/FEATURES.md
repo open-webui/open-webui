@@ -81,19 +81,59 @@ This document catalogs EVERY feature, class, function, and piece of logic from t
 - `_get_orphaned_collections()`: Query distinct collection names
 - `_build_expected_collections()`: Build expected set
 
-### 6. NoOpVectorDatabaseCleaner (Lines 861-884)
+### 6. MilvusDatabaseCleaner (Extended - Not in Original)
+**Purpose**: Milvus database cleanup implementation (standard mode)
+
+**Features**:
+- Handles collection-based storage
+- Each collection is independent
+- Collection naming pattern: `{prefix}_{collection_name}`
+- Converts dashes to underscores (Milvus naming convention)
+- Lists all collections via client.list_collections()
+- Deletes orphaned collections via client.drop_collection()
+
+**Methods**:
+- `__init__()`: Initialize with Milvus client
+- `count_orphaned_collections()`: Count orphaned collections
+- `cleanup_orphaned_collections()`: Delete orphaned collections
+- `delete_collection()`: Delete specific collection
+- `_build_expected_collections()`: Build set of expected collections
+
+### 7. MilvusMultitenancyDatabaseCleaner (Extended - Not in Original)
+**Purpose**: Milvus multitenancy database cleanup implementation
+
+**Features**:
+- Handles shared collections with resource_id partitioning
+- Uses 5 shared collections: memories, knowledge, files, web_search, hash_based
+- Multiple logical collections share physical collections
+- Distinguished by resource_id field
+- Queries each shared collection for distinct resource_ids
+- Deletes orphaned data by resource_id filter expressions
+- Safer for large deployments with many logical collections
+
+**Methods**:
+- `__init__()`: Initialize with Milvus client and shared_collections
+- `count_orphaned_collections()`: Count orphaned resource_ids
+- `cleanup_orphaned_collections()`: Delete orphaned data by resource_id
+- `delete_collection()`: Delete data for specific resource_id
+- `_build_expected_resource_ids()`: Build set of expected resource_ids
+
+### 8. NoOpVectorDatabaseCleaner (Lines 861-884)
 **Purpose**: No-operation implementation for unsupported databases
 
 **Methods**:
 - All methods return 0 or success without doing anything
 
-### 7. get_vector_database_cleaner() (Lines 886-910)
+### 9. get_vector_database_cleaner() (Lines 886-910)
 **Purpose**: Factory function to get appropriate cleaner
 
 **Logic**:
 - Detect VECTOR_DB type from environment
 - Return ChromaDatabaseCleaner for "chroma"
 - Return PGVectorDatabaseCleaner for "pgvector"
+- Return MilvusDatabaseCleaner for "milvus" (standard mode)
+- Return MilvusMultitenancyDatabaseCleaner for "milvus" (multitenancy mode)
+- Auto-detect multitenancy via hasattr(client, 'shared_collections')
 - Return NoOpVectorDatabaseCleaner for others
 
 ## Models
@@ -429,9 +469,10 @@ This document catalogs EVERY feature, class, function, and piece of logic from t
 
 ## Total Feature Count
 
-- **7 Classes**
-- **20 Functions**
-- **2 Models**
+**Original prune.py Features:**
+- **7 Classes** (original)
+- **20 Functions** (original)
+- **2 Models** (original)
 - **17 Configuration Options**
 - **14 Deletion Types**
 - **6 Execution Stages**
@@ -439,4 +480,9 @@ This document catalogs EVERY feature, class, function, and piece of logic from t
 - **Multiple Optimizations**
 - **Comprehensive Error Handling**
 
-This represents the COMPLETE functionality that must be replicated in the standalone script.
+**Extended Features (Standalone Script Additions):**
+- **+2 Vector DB Cleaner Classes** (MilvusDatabaseCleaner, MilvusMultitenancyDatabaseCleaner)
+- **Total Classes in Standalone Implementation: 9**
+- **Total Vector Database Implementations: 5** (Chroma, PGVector, Milvus, Milvus Multitenancy, NoOp)
+
+This represents the COMPLETE functionality from the original prune.py PLUS extended Milvus support.

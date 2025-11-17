@@ -18,7 +18,7 @@ The `standalone_prune.py` script allows you to:
 ✅ **Safe by Default** - Dry-run mode by default, requires explicit `--execute` flag for actual deletion
 ✅ **Complete Logic** - Uses the exact same code paths as the API router
 ✅ **Database Access** - Full access to SQLAlchemy models and database operations
-✅ **Vector Database Support** - Supports ChromaDB and PGVector cleanup
+✅ **Vector Database Support** - Supports ChromaDB, PGVector, Milvus, and Milvus Multitenancy cleanup with auto-detection
 ✅ **File System Operations** - Cleans up orphaned uploads and audio cache
 ✅ **Locking Mechanism** - Prevents concurrent prune operations
 ✅ **Detailed Logging** - Comprehensive logging of all operations
