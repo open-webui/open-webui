@@ -150,6 +150,12 @@ class WorkspacePermissions(BaseModel):
     knowledge: bool = False
     prompts: bool = False
     tools: bool = False
+    models_import: bool = False
+    models_export: bool = False
+    prompts_import: bool = False
+    prompts_export: bool = False
+    tools_import: bool = False
+    tools_export: bool = False
 
 
 class SharingPermissions(BaseModel):
