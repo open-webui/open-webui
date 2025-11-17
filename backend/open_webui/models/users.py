@@ -322,6 +322,13 @@ class UsersTable:
         except Exception:
             return None
 
+    def get_num_users_active_today(self) -> Optional[int]:
+        with get_db() as db:
+            current_timestamp = int(datetime.datetime.now().timestamp())
+            today_midnight_timestamp = current_timestamp - (current_timestamp % 86400)
+            query = db.query(User).filter(User.last_active_at > today_midnight_timestamp)
+            return query.count()
+
     def update_user_role_by_id(self, id: str, role: str) -> Optional[UserModel]:
         try:
             with get_db() as db:
