@@ -397,11 +397,11 @@
 				<div class="py-0.5">
 					<div class="flex w-full justify-between">
 						<label
-							id="text-size-label"
+							id="ui-scale-label"
 							class=" self-center text-xs"
-							for="text-size-slider"
+							for="ui-scale-slider"
 						>
-							{$i18n.t('Text Size')}
+							{$i18n.t('UI Scale')}
 						</label>
 
 						<div class="flex items-center gap-1 text-xs" aria-live="polite">
@@ -409,39 +409,41 @@
 						</div>
 					</div>
 
-					<div class="mt-2 flex items-center gap-2">
+					<div class="mt-2 flex items-center gap-2 pl-1 pr-1">
 						<button
 							type="button"
 							class="rounded-sm p-1 transition outline outline-1 outline-gray-200 hover:bg-gray-100 dark:outline-gray-700 dark:hover:bg-gray-800"
 							on:click={decreaseTextScale}
-							aria-labelledby="text-size-label"
-							aria-label={$i18n.t('Decrease Text Size')}
+							aria-labelledby="ui-scale-label"
+							aria-label={$i18n.t('Decrease UI Scale')}
 						>
 							<Minus className="h-3.5 w-3.5" />
 						</button>
 
-						<input
-							id="text-size-slider"
-							class="flex-1 accent-black dark:accent-white"
-							type="range"
-							min={0}
-							max={TEXT_SCALE_VALUES.length - 1}
-							step={1}
-							bind:value={textScaleIndex}
-							on:change={persistTextScale}
-							aria-labelledby="text-size-label"
-							aria-valuemin={TEXT_SCALE_MIN}
-							aria-valuemax={TEXT_SCALE_MAX}
-							aria-valuenow={currentTextScale}
-							aria-valuetext={`${textScaleDisplay}x`}
-						/>
+						<div class="flex-1">
+							<input
+								id="ui-scale-slider"
+								class="w-full accent-black dark:accent-white"
+								type="range"
+								min={0}
+								max={TEXT_SCALE_VALUES.length - 1}
+								step={1}
+								bind:value={textScaleIndex}
+								on:change={persistTextScale}
+								aria-labelledby="ui-scale-label"
+								aria-valuemin={TEXT_SCALE_MIN}
+								aria-valuemax={TEXT_SCALE_MAX}
+								aria-valuenow={currentTextScale}
+								aria-valuetext={`${textScaleDisplay}x`}
+							/>
+						</div>
 
 						<button
 							type="button"
 							class="rounded-sm p-1 transition outline outline-1 outline-gray-200 hover:bg-gray-100 dark:outline-gray-700 dark:hover:bg-gray-800"
 							on:click={increaseTextScale}
-							aria-labelledby="text-size-label"
-							aria-label={$i18n.t('Increase Text Size')}
+							aria-labelledby="ui-scale-label"
+							aria-label={$i18n.t('Increase UI Scale')}
 						>
 							<Plus className="h-3.5 w-3.5" />
 						</button>
