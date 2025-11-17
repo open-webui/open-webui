@@ -1,0 +1,32 @@
+# .trufflehog.yaml
+
+# 1. Directories to exclude from the scan (current working tree only)
+exclude_paths:
+  - ".svelte-kit/"
+  - "node_modules/"
+  - "qdrant_storage/"
+  - ".gitignore"
+  - "backend/data/cache/"
+  - "src/lib/i18n/locales/"
+
+# 2. File patterns to exclude across ALL Git history
+# This specifically targets the noisy translation files.
+# Using 'exclude_files' helps skip history matches for these specific paths.
+exclude_files:
+  - "src/lib/i18n/locales/**/*.json"
+
+# 3. Regex patterns to ignore (match against the secret content itself)
+# This eliminates known test keys and the repeating placeholder URI.
+ignore_regex:
+  - "FAKE_KEY_.*"
+  - "TEST_SECRET_.*"
+  # Ignores the persistent URI placeholder
+  - "user:password@host" 
+
+# 4. Result types to report (verified secrets and high-confidence unknowns)
+results:
+  - verified
+  - unknown
+
+# 5. Fail scan if secrets are found (causes exit code 183)
+fail: true
