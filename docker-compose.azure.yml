@@ -19,7 +19,7 @@ services:
       
       # Security
       - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
-      - ENABLE_SIGNUP=${ENABLE_SIGNUP-true}
+      - ENABLE_SIGNUP=${ENABLE_SIGNUP-false}
       
       # Performance & CORS
       - CORS_ALLOW_ORIGIN=*
