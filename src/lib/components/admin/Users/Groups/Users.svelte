@@ -8,42 +8,49 @@
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
+	import { getUsers } from '$lib/apis/users';
+	import { toast } from 'svelte-sonner';
+	import Pagination from '$lib/components/common/Pagination.svelte';
 
-	export let users = [];
-	export let userIds = [];
+	export let userCount = 0;
+	let userIds = [];
 
-	let filteredUsers = [];
-
-	$: filteredUsers = users
-		.filter((user) => {
-			if (query === '') {
-				return true;
-			}
-
-			return (
-				user.name.toLowerCase().includes(query.toLowerCase()) ||
-				user.email.toLowerCase().includes(query.toLowerCase())
-			);
-		})
-		.sort((a, b) => {
-			const aUserIndex = userIds.indexOf(a.id);
-			const bUserIndex = userIds.indexOf(b.id);
-
-			// Compare based on userIds or fall back to alphabetical order
-			if (aUserIndex !== -1 && bUserIndex === -1) return -1; // 'a' has valid userId -> prioritize
-			if (bUserIndex !== -1 && aUserIndex === -1) return 1; // 'b' has valid userId -> prioritize
-
-			// Both a and b are either in the userIds array or not, so we'll sort them by their indices
-			if (aUserIndex !== -1 && bUserIndex !== -1) return aUserIndex - bUserIndex;
-
-			// If both are not in the userIds, fallback to alphabetical sorting by name
-			return a.name.localeCompare(b.name);
-		});
+	let users = [];
+	let total = 0;
 
 	let query = '';
+	let page = 1;
+
+	const getUserList = async () => {
+		try {
+			const res = await getUsers(localStorage.token, query, null, null, page).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+
+			if (res) {
+				users = res.users;
+				total = res.total;
+			}
+		} catch (err) {
+			console.error(err);
+		}
+	};
+
+	$: if (page) {
+		getUserList();
+	}
+
+	$: if (query !== null) {
+		getUserList();
+	}
+
+	$: if (query) {
+		page = 1;
+	}
 </script>
 
-<div>
+<div class=" max-h-full">
 	<div class="flex w-full">
 		<div class="flex flex-1">
 			<div class=" self-center mr-3">
@@ -57,10 +64,10 @@
 		</div>
 	</div>
 
-	<div class="mt-3 scrollbar-hidden">
+	<div class="mt-3 overflow-y-auto">
 		<div class="flex flex-col gap-2.5">
-			{#if filteredUsers.length > 0}
-				{#each filteredUsers as user, userIdx (user.id)}
+			{#if users.length > 0}
+				{#each users as user, userIdx (user.id)}
 					<div class="flex flex-row items-center gap-3 w-full text-sm">
 						<div class="flex items-center">
 							<Checkbox
@@ -88,6 +95,14 @@
 						</div>
 					</div>
 				{/each}
+
+				{page}
+
+				{total}
+
+				{#if total > 30}
+					<Pagination bind:page count={total} perPage={30} />
+				{/if}
 			{:else}
 				<div class="text-gray-500 text-xs text-center py-2 px-10">
 					{$i18n.t('No users were found.')}
