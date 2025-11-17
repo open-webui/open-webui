@@ -238,23 +238,30 @@ def get_parsed_and_base_url(server_url) -> tuple[urllib.parse.ParseResult, str]:
 def get_discovery_urls(server_url) -> list[str]:
     parsed, base_url = get_parsed_and_base_url(server_url)
 
-    urls = [
-        urllib.parse.urljoin(base_url, "/.well-known/oauth-authorization-server"),
-        urllib.parse.urljoin(base_url, "/.well-known/openid-configuration"),
-    ]
+    urls = []
 
     if parsed.path and parsed.path != "/":
-        urls.append(
+        # Generate discovery URLs based on https://modelcontextprotocol.io/specification/draft/basic/authorization#authorization-server-metadata-discovery
+        tenant = parsed.path.rstrip('/')
+        urls.extend([
             urllib.parse.urljoin(
                 base_url,
-                f"/.well-known/oauth-authorization-server{parsed.path.rstrip('/')}",
-            )
-        )
-        urls.append(
+                f"/.well-known/oauth-authorization-server{tenant}",
+            ),
             urllib.parse.urljoin(
-                base_url, f"/.well-known/openid-configuration{parsed.path.rstrip('/')}"
+                base_url,
+                f"/.well-known/openid-configuration{tenant}"
+            ),
+            urllib.parse.urljoin(
+                base_url,
+                f"{tenant}/.well-known/openid-configuration"
             )
-        )
+        ])
+
+    urls.extend([
+        urllib.parse.urljoin(base_url, "/.well-known/oauth-authorization-server"),
+        urllib.parse.urljoin(base_url, "/.well-known/openid-configuration"),
+    ])
 
     return urls
 
