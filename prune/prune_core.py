@@ -217,7 +217,10 @@ class VectorDatabaseCleaner(ABC):
 
     @abstractmethod
     def count_orphaned_collections(
-        self, active_file_ids: Set[str], active_kb_ids: Set[str]
+        self,
+        active_file_ids: Set[str],
+        active_kb_ids: Set[str],
+        active_user_ids: Optional[Set[str]] = None
     ) -> int:
         """
         Count how many orphaned vector collections would be deleted.
@@ -225,6 +228,7 @@ class VectorDatabaseCleaner(ABC):
         Args:
             active_file_ids: Set of file IDs that are still referenced
             active_kb_ids: Set of knowledge base IDs that are still active
+            active_user_ids: Set of user IDs that are still active (optional, for multitenancy)
 
         Returns:
             Number of orphaned collections that would be deleted
@@ -233,7 +237,10 @@ class VectorDatabaseCleaner(ABC):
 
     @abstractmethod
     def cleanup_orphaned_collections(
-        self, active_file_ids: Set[str], active_kb_ids: Set[str]
+        self,
+        active_file_ids: Set[str],
+        active_kb_ids: Set[str],
+        active_user_ids: Optional[Set[str]] = None
     ) -> tuple[int, Optional[str]]:
         """
         Actually delete orphaned vector collections.
@@ -241,6 +248,7 @@ class VectorDatabaseCleaner(ABC):
         Args:
             active_file_ids: Set of file IDs that are still referenced
             active_kb_ids: Set of knowledge base IDs that are still active
+            active_user_ids: Set of user IDs that are still active (optional, for multitenancy)
 
         Returns:
             Tuple of (deleted_count, error_message)
@@ -281,7 +289,10 @@ class ChromaDatabaseCleaner(VectorDatabaseCleaner):
         self.chroma_db_path = self.vector_dir / "chroma.sqlite3"
 
     def count_orphaned_collections(
-        self, active_file_ids: Set[str], active_kb_ids: Set[str]
+        self,
+        active_file_ids: Set[str],
+        active_kb_ids: Set[str],
+        active_user_ids: Optional[Set[str]] = None
     ) -> int:
         """Count orphaned ChromaDB collections for preview."""
         if not self.chroma_db_path.exists():
@@ -312,7 +323,10 @@ class ChromaDatabaseCleaner(VectorDatabaseCleaner):
         return count
 
     def cleanup_orphaned_collections(
-        self, active_file_ids: Set[str], active_kb_ids: Set[str]
+        self,
+        active_file_ids: Set[str],
+        active_kb_ids: Set[str],
+        active_user_ids: Optional[Set[str]] = None
     ) -> tuple[int, Optional[str]]:
         """Actually delete orphaned ChromaDB collections and database records."""
         if not self.chroma_db_path.exists():
@@ -664,7 +678,10 @@ class PGVectorDatabaseCleaner(VectorDatabaseCleaner):
             self.session = None
 
     def count_orphaned_collections(
-        self, active_file_ids: Set[str], active_kb_ids: Set[str]
+        self,
+        active_file_ids: Set[str],
+        active_kb_ids: Set[str],
+        active_user_ids: Optional[Set[str]] = None
     ) -> int:
         """Count orphaned PGVector collections for preview."""
         if not self.session:
@@ -690,7 +707,10 @@ class PGVectorDatabaseCleaner(VectorDatabaseCleaner):
             return 0
 
     def cleanup_orphaned_collections(
-        self, active_file_ids: Set[str], active_kb_ids: Set[str]
+        self,
+        active_file_ids: Set[str],
+        active_kb_ids: Set[str],
+        active_user_ids: Optional[Set[str]] = None
     ) -> tuple[int, Optional[str]]:
         """
         Delete orphaned PGVector collections using the existing client's delete method.
@@ -844,7 +864,10 @@ class MilvusDatabaseCleaner(VectorDatabaseCleaner):
         log.debug(f"Milvus cleaner initialized with prefix: {self.collection_prefix}")
 
     def count_orphaned_collections(
-        self, active_file_ids: Set[str], active_kb_ids: Set[str]
+        self,
+        active_file_ids: Set[str],
+        active_kb_ids: Set[str],
+        active_user_ids: Optional[Set[str]] = None
     ) -> int:
         """Count orphaned Milvus collections for preview."""
         try:
@@ -875,7 +898,10 @@ class MilvusDatabaseCleaner(VectorDatabaseCleaner):
             return 0
 
     def cleanup_orphaned_collections(
-        self, active_file_ids: Set[str], active_kb_ids: Set[str]
+        self,
+        active_file_ids: Set[str],
+        active_kb_ids: Set[str],
+        active_user_ids: Optional[Set[str]] = None
     ) -> tuple[int, Optional[str]]:
         """Actually delete orphaned Milvus collections."""
         try:
@@ -998,7 +1024,10 @@ class MilvusMultitenancyDatabaseCleaner(VectorDatabaseCleaner):
         log.debug(f"Shared collections: {self.shared_collections}")
 
     def count_orphaned_collections(
-        self, active_file_ids: Set[str], active_kb_ids: Set[str]
+        self,
+        active_file_ids: Set[str],
+        active_kb_ids: Set[str],
+        active_user_ids: Optional[Set[str]] = None
     ) -> int:
         """
         Count orphaned resource_ids across all shared collections.
@@ -1008,7 +1037,7 @@ class MilvusMultitenancyDatabaseCleaner(VectorDatabaseCleaner):
         """
         try:
             expected_resource_ids = self._build_expected_resource_ids(
-                active_file_ids, active_kb_ids
+                active_file_ids, active_kb_ids, active_user_ids
             )
 
             count = 0
@@ -1052,7 +1081,10 @@ class MilvusMultitenancyDatabaseCleaner(VectorDatabaseCleaner):
             return 0
 
     def cleanup_orphaned_collections(
-        self, active_file_ids: Set[str], active_kb_ids: Set[str]
+        self,
+        active_file_ids: Set[str],
+        active_kb_ids: Set[str],
+        active_user_ids: Optional[Set[str]] = None
     ) -> tuple[int, Optional[str]]:
         """
         Delete orphaned resource_ids from shared collections.
@@ -1062,7 +1094,7 @@ class MilvusMultitenancyDatabaseCleaner(VectorDatabaseCleaner):
         """
         try:
             expected_resource_ids = self._build_expected_resource_ids(
-                active_file_ids, active_kb_ids
+                active_file_ids, active_kb_ids, active_user_ids
             )
 
             deleted_count = 0
@@ -1138,27 +1170,54 @@ class MilvusMultitenancyDatabaseCleaner(VectorDatabaseCleaner):
             return False
 
     def _build_expected_resource_ids(
-        self, active_file_ids: Set[str], active_kb_ids: Set[str]
+        self,
+        active_file_ids: Set[str],
+        active_kb_ids: Set[str],
+        active_user_ids: Optional[Set[str]] = None
     ) -> Set[str]:
         """
-        Build set of resource_ids that should exist.
+        Build set of resource_ids that should exist across all shared collections.
 
-        Resource IDs are the logical collection names that map to partitions
-        within shared collections.
+        This provides 100% coverage by identifying ALL resource_ids that should be preserved.
+        Any resource_id NOT in this set will be deleted as orphaned, which includes:
+        - Orphaned file collections (files deleted from DB)
+        - Orphaned knowledge bases (KBs deleted from DB)
+        - Orphaned user memories (users deleted from DB)
+        - Web-search collections (ephemeral cache, not tracked in DB)
+        - Hash-based collections (temporary content hashes, not tracked in DB)
+
+        This matches ChromaDB/PGVector behavior where ONLY DB-tracked items are preserved.
+
+        Args:
+            active_file_ids: Active file IDs from Files table
+            active_kb_ids: Active knowledge base IDs from Knowledges table
+            active_user_ids: Active user IDs from Users table (optional)
+
+        Returns:
+            Set of expected resource_ids across all 5 shared collections
         """
         expected_resource_ids = set()
 
-        # File collections use "file-{id}" pattern as resource_id
+        # FILE_COLLECTION: file-{id} pattern
         for file_id in active_file_ids:
             expected_resource_ids.add(f"file-{file_id}")
 
-        # Knowledge base collections use the KB ID directly as resource_id
+        # KNOWLEDGE_COLLECTION: KB ID directly (fallback for unrecognized patterns)
         for kb_id in active_kb_ids:
             expected_resource_ids.add(kb_id)
 
-        # Note: We don't include user-memory, web-search, or hash-based patterns
-        # because those would require additional context about active users and searches
-        # For safety, we only clean file and KB collections which we can validate
+        # MEMORY_COLLECTION: user-memory-{user_id} pattern
+        if active_user_ids is not None:
+            for user_id in active_user_ids:
+                expected_resource_ids.add(f"user-memory-{user_id}")
+
+        # WEB_SEARCH_COLLECTION: web-search-{hash} patterns
+        # These are NOT in expected set → will be deleted as orphaned ✓
+        # Rationale: Ephemeral caches, not tracked in DB, safe to clean
+
+        # HASH_BASED_COLLECTION: {63-char-hex} patterns
+        # These are NOT in expected set → will be deleted as orphaned ✓
+        # Rationale: Temporary content hashes, not tracked in DB, safe to clean
 
         return expected_resource_ids
 
@@ -1172,13 +1231,19 @@ class NoOpVectorDatabaseCleaner(VectorDatabaseCleaner):
     """
 
     def count_orphaned_collections(
-        self, active_file_ids: Set[str], active_kb_ids: Set[str]
+        self,
+        active_file_ids: Set[str],
+        active_kb_ids: Set[str],
+        active_user_ids: Optional[Set[str]] = None
     ) -> int:
         """No orphaned collections to count for unsupported databases."""
         return 0
 
     def cleanup_orphaned_collections(
-        self, active_file_ids: Set[str], active_kb_ids: Set[str]
+        self,
+        active_file_ids: Set[str],
+        active_kb_ids: Set[str],
+        active_user_ids: Optional[Set[str]] = None
     ) -> tuple[int, Optional[str]]:
         """No collections to cleanup for unsupported databases."""
         return (0, None)

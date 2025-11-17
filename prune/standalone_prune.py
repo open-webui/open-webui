@@ -457,7 +457,7 @@ def run_prune(form_data: PruneDataForm):
                 orphaned_folders=orphaned_counts["folders"],
                 orphaned_uploads=count_orphaned_uploads(active_file_ids),
                 orphaned_vector_collections=vector_cleaner.count_orphaned_collections(
-                    active_file_ids, active_kb_ids
+                    active_file_ids, active_kb_ids, active_user_ids
                 ),
                 audio_cache_files=count_audio_cache_files(
                     form_data.audio_cache_max_age_days
@@ -659,6 +659,7 @@ def run_prune(form_data: PruneDataForm):
 
         final_active_file_ids = get_active_file_ids()
         final_active_kb_ids = {kb.id for kb in Knowledges.get_knowledge_bases()}
+        final_active_user_ids = {user.id for user in Users.get_users()["users"]}
 
         cleanup_orphaned_uploads(final_active_file_ids)
 
@@ -670,7 +671,7 @@ def run_prune(form_data: PruneDataForm):
         # Use modular vector database cleanup
         warnings = []
         deleted_vector_count, vector_error = vector_cleaner.cleanup_orphaned_collections(
-            final_active_file_ids, final_active_kb_ids
+            final_active_file_ids, final_active_kb_ids, final_active_user_ids
         )
         if vector_error:
             warnings.append(f"Vector cleanup warning: {vector_error}")

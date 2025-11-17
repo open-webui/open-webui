@@ -110,13 +110,19 @@ This document catalogs EVERY feature, class, function, and piece of logic from t
 - Queries each shared collection for distinct resource_ids
 - Deletes orphaned data by resource_id filter expressions
 - Safer for large deployments with many logical collections
+- **100% COVERAGE**: Cleans ALL 5 shared collections comprehensively
+  - ✅ Files (file-{id}) - validated against Files table
+  - ✅ Knowledge bases ({kb_id}) - validated against Knowledges table
+  - ✅ User memories (user-memory-{user_id}) - validated against Users table
+  - ✅ Web searches (web-search-{hash}) - deleted as ephemeral cache (not tracked in DB)
+  - ✅ Hash-based ({63-char-hex}) - deleted as temporary content (not tracked in DB)
 
 **Methods**:
 - `__init__()`: Initialize with Milvus client and shared_collections
-- `count_orphaned_collections()`: Count orphaned resource_ids
-- `cleanup_orphaned_collections()`: Delete orphaned data by resource_id
+- `count_orphaned_collections()`: Count orphaned resource_ids across ALL 5 collections
+- `cleanup_orphaned_collections()`: Delete orphaned data by resource_id with 100% coverage
 - `delete_collection()`: Delete data for specific resource_id
-- `_build_expected_resource_ids()`: Build set of expected resource_ids
+- `_build_expected_resource_ids()`: Build set of expected resource_ids (files + KBs + user memories)
 
 ### 8. NoOpVectorDatabaseCleaner (Lines 861-884)
 **Purpose**: No-operation implementation for unsupported databases

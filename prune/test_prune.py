@@ -709,13 +709,23 @@ class TestMilvusMultitenancyDatabaseCleaner(unittest.TestCase):
         """Test building expected resource IDs set."""
         active_file_ids = {"file123", "file456"}
         active_kb_ids = {"kb789"}
+        active_user_ids = {"user1", "user2"}
 
+        # Without user IDs
         expected = self.cleaner._build_expected_resource_ids(active_file_ids, active_kb_ids)
-
         self.assertEqual(len(expected), 3)
         self.assertIn("file-file123", expected)
         self.assertIn("file-file456", expected)
         self.assertIn("kb789", expected)
+
+        # With user IDs
+        expected = self.cleaner._build_expected_resource_ids(active_file_ids, active_kb_ids, active_user_ids)
+        self.assertEqual(len(expected), 5)
+        self.assertIn("file-file123", expected)
+        self.assertIn("file-file456", expected)
+        self.assertIn("kb789", expected)
+        self.assertIn("user-memory-user1", expected)
+        self.assertIn("user-memory-user2", expected)
 
     def test_delete_collection(self):
         """Test deleting a specific logical collection."""

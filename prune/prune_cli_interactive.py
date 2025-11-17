@@ -489,7 +489,7 @@ class InteractivePruneUI:
                     orphaned_folders=orphaned_counts["folders"],
                     orphaned_uploads=count_orphaned_uploads(active_file_ids),
                     orphaned_vector_collections=self.vector_cleaner.count_orphaned_collections(
-                        active_file_ids, active_kb_ids
+                        active_file_ids, active_kb_ids, active_user_ids
                     ),
                     audio_cache_files=count_audio_cache_files(
                         self.form_data.audio_cache_max_age_days
@@ -680,12 +680,13 @@ class InteractivePruneUI:
             task = progress.add_task("Cleaning up orphaned uploads...", total=None)
             final_active_file_ids = get_active_file_ids()
             final_active_kb_ids = {kb.id for kb in Knowledges.get_knowledge_bases()}
+            final_active_user_ids = {user.id for user in Users.get_users()["users"]}
             cleanup_orphaned_uploads(final_active_file_ids)
             progress.update(task, completed=True)
 
             task = progress.add_task("Cleaning up vector collections...", total=None)
             deleted_vector, error = self.vector_cleaner.cleanup_orphaned_collections(
-                final_active_file_ids, final_active_kb_ids
+                final_active_file_ids, final_active_kb_ids, final_active_user_ids
             )
             progress.update(task, completed=True)
             console.print(f"[green]✓[/green] Deleted {deleted_vector} orphaned vector collections")
