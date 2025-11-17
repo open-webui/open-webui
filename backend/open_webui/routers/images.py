@@ -44,18 +44,23 @@ def set_image_model(request: Request, model: str):
     request.app.state.config.IMAGE_GENERATION_MODEL = model
     if request.app.state.config.IMAGE_GENERATION_ENGINE in ["", "automatic1111"]:
         api_auth = get_automatic1111_api_auth(request)
-        r = requests.get(
-            url=f"{request.app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/options",
-            headers={"authorization": api_auth},
-        )
-        options = r.json()
-        if model != options["sd_model_checkpoint"]:
-            options["sd_model_checkpoint"] = model
-            r = requests.post(
+
+        try:
+            r = requests.get(
                 url=f"{request.app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/options",
-                json=options,
                 headers={"authorization": api_auth},
             )
+            options = r.json()
+            if model != options["sd_model_checkpoint"]:
+                options["sd_model_checkpoint"] = model
+                r = requests.post(
+                    url=f"{request.app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/options",
+                    json=options,
+                    headers={"authorization": api_auth},
+                )
+        except Exception as e:
+            log.debug(f"{e}")
+
     return request.app.state.config.IMAGE_GENERATION_MODEL
 
 
@@ -108,7 +113,7 @@ class ImagesConfig(BaseModel):
     IMAGES_OPENAI_API_VERSION: str
 
     AUTOMATIC1111_BASE_URL: str
-    AUTOMATIC1111_API_AUTH: str
+    AUTOMATIC1111_API_AUTH: Optional[dict | str]
     AUTOMATIC1111_PARAMS: Optional[dict | str]
 
     COMFYUI_BASE_URL: str

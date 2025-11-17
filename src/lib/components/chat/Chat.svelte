@@ -126,7 +126,11 @@
 	let selectedModels = [''];
 	let atSelectedModel: Model | undefined;
 	let selectedModelIds = [];
-	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
+	$: if (atSelectedModel !== undefined) {
+		selectedModelIds = [atSelectedModel.id];
+	} else {
+		selectedModelIds = selectedModels;
+	}
 
 	let selectedToolIds = [];
 	let selectedFilterIds = [];
@@ -244,10 +248,8 @@
 	}
 
 	const onSelectedModelIdsChange = () => {
-		if (oldSelectedModelIds.filter((id) => id).length > 0) {
-			resetInput();
-		}
-		oldSelectedModelIds = selectedModelIds;
+		resetInput();
+		oldSelectedModelIds = JSON.parse(JSON.stringify(selectedModelIds));
 	};
 
 	const resetInput = () => {
@@ -257,7 +259,9 @@
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
 
-		setDefaults();
+		if (selectedModelIds.filter((id) => id).length > 0) {
+			setDefaults();
+		}
 	};
 
 	const setDefaults = async () => {
@@ -1098,7 +1102,7 @@
 					selectedModels = selectedModels.length > 0 ? [selectedModels[0]] : [''];
 				}
 
-				oldSelectedModelIds = selectedModels;
+				oldSelectedModelIds = JSON.parse(JSON.stringify(selectedModels));
 
 				history =
 					(chatContent?.history ?? undefined) !== undefined

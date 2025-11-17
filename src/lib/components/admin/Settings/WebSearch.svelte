@@ -684,7 +684,7 @@
 							<input
 								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 								placeholder={$i18n.t(
-									'Enter domains separated by commas (e.g., example.com,site.org)'
+									'Enter domains separated by commas (e.g., example.com,site.org,!excludedsite.com)'
 								)}
 								bind:value={webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST}
 							/>
