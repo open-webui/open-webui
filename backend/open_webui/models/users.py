@@ -274,6 +274,9 @@ class UsersTable:
             else:
                 query = query.order_by(User.created_at.desc())
 
+            # Count BEFORE pagination
+            total = query.count()
+
             if skip:
                 query = query.offset(skip)
             if limit:
@@ -282,7 +285,7 @@ class UsersTable:
             users = query.all()
             return {
                 "users": [UserModel.model_validate(user) for user in users],
-                "total": db.query(User).count(),
+                "total": total,
             }
 
     def get_users_by_user_ids(self, user_ids: list[str]) -> list[UserModel]:
