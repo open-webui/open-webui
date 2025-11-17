@@ -11,7 +11,13 @@
 			models: false,
 			knowledge: false,
 			prompts: false,
-			tools: false
+			tools: false,
+			models_import: false,
+			models_export: false,
+			prompts_import: false,
+			prompts_export: false,
+			tools_import: false,
+			tools_export: false
 		},
 		sharing: {
 			public_models: false,
@@ -97,6 +103,23 @@
 					</div>
 				</div>
 			{/if}
+
+			{#if permissions.workspace.models}
+				<div class="ml-4 flex flex-col gap-1 mt-1">
+					<div class="flex w-full justify-between my-1">
+						<div class="self-center text-xs">
+							{$i18n.t('Import Models')}
+						</div>
+						<Switch bind:state={permissions.workspace.models_import} />
+					</div>
+					<div class="flex w-full justify-between my-1">
+						<div class="self-center text-xs">
+							{$i18n.t('Export Models')}
+						</div>
+						<Switch bind:state={permissions.workspace.models_export} />
+					</div>
+				</div>
+			{/if}
 		</div>
 
 		<div class="flex flex-col w-full">
@@ -129,6 +152,23 @@
 					</div>
 				</div>
 			{/if}
+
+			{#if permissions.workspace.prompts}
+				<div class="ml-4 flex flex-col gap-1 mt-1">
+					<div class="flex w-full justify-between my-1">
+						<div class="self-center text-xs">
+							{$i18n.t('Import Prompts')}
+						</div>
+						<Switch bind:state={permissions.workspace.prompts_import} />
+					</div>
+					<div class="flex w-full justify-between my-1">
+						<div class="self-center text-xs">
+							{$i18n.t('Export Prompts')}
+						</div>
+						<Switch bind:state={permissions.workspace.prompts_export} />
+					</div>
+				</div>
+			{/if}
 		</div>
 
 		<div class="flex flex-col w-full">
@@ -148,6 +188,23 @@
 				<div>
 					<div class="text-xs text-gray-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
+					</div>
+				</div>
+			{/if}
+
+			{#if permissions.workspace.tools}
+				<div class="ml-4 flex flex-col gap-1 mt-1">
+					<div class="flex w-full justify-between my-1">
+						<div class="self-center text-xs">
+							{$i18n.t('Import Tools')}
+						</div>
+						<Switch bind:state={permissions.workspace.tools_import} />
+					</div>
+					<div class="flex w-full justify-between my-1">
+						<div class="self-center text-xs">
+							{$i18n.t('Export Tools')}
+						</div>
+						<Switch bind:state={permissions.workspace.tools_export} />
 					</div>
 				</div>
 			{/if}

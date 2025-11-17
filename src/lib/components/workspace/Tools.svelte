@@ -232,7 +232,7 @@
 			</div>
 
 			<div class="flex w-full justify-end gap-1.5">
-				{#if $user?.role === 'admin'}
+				{#if $user?.role === 'admin' || $user?.permissions?.workspace?.tools_import}
 					<button
 						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
 						on:click={() => {
@@ -243,29 +243,29 @@
 							{$i18n.t('Import')}
 						</div>
 					</button>
+				{/if}
 
-					{#if tools.length}
-						<button
-							class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
-							on:click={async () => {
-								const _tools = await exportTools(localStorage.token).catch((error) => {
-									toast.error(`${error}`);
-									return null;
+				{#if tools.length && ($user?.role === 'admin' || $user?.permissions?.workspace?.tools_export)}
+					<button
+						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+						on:click={async () => {
+							const _tools = await exportTools(localStorage.token).catch((error) => {
+								toast.error(`${error}`);
+								return null;
+							});
+
+							if (_tools) {
+								let blob = new Blob([JSON.stringify(_tools)], {
+									type: 'application/json'
 								});
-
-								if (_tools) {
-									let blob = new Blob([JSON.stringify(_tools)], {
-										type: 'application/json'
-									});
-									saveAs(blob, `tools-export-${Date.now()}.json`);
-								}
-							}}
-						>
-							<div class=" self-center font-medium line-clamp-1">
-								{$i18n.t('Export')}
-							</div>
-						</button>
-					{/if}
+								saveAs(blob, `tools-export-${Date.now()}.json`);
+							}
+						}}
+					>
+						<div class=" self-center font-medium line-clamp-1">
+							{$i18n.t('Export')}
+						</div>
+					</button>
 				{/if}
 
 				{#if $user?.role === 'admin'}
