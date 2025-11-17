@@ -15,7 +15,7 @@
 	export let users = [];
 	export let group = {
 		name: 'Admins',
-		user_ids: [1, 2, 3]
+		user_ids: []
 	};
 	export let defaultPermissions = {};
 
@@ -81,7 +81,7 @@
 	</div>
 
 	<div class="flex items-center gap-1.5 w-fit font-medium text-right justify-end">
-		{group.user_ids.length}
+		{Array.isArray(group.user_ids) ? group.user_ids.length : 0}
 
 		<div>
 			<User className="size-3.5" />

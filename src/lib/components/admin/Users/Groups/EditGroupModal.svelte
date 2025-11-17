@@ -84,7 +84,8 @@
 			name,
 			description,
 			permissions,
-			user_ids: userIds
+			// Ensure user_ids is always an array
+			user_ids: Array.isArray(userIds) ? userIds : []
 		};
 
 		await onSubmit(group);
@@ -99,7 +100,8 @@
 			description = group.description;
 			permissions = group?.permissions ?? {};
 
-			userIds = group?.user_ids ?? [];
+			// Defensive handling for user_ids - support null, undefined, or non-array values
+			userIds = Array.isArray(group?.user_ids) ? group.user_ids : [];
 		}
 	};
 

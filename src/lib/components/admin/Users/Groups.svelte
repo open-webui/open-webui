@@ -93,14 +93,16 @@
 			return;
 		}
 
-		const res = await getUsers(localStorage.token, '', 'created_at', 'desc', 1, 500).catch((error) => {
+		// Fetch all users for group management - no pagination limit needed
+		const res = await getAllUsers(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
 
 		if (res) {
-			users = res.users;
-			total = res.total;
+			// getAllUsers returns the users array directly
+			users = Array.isArray(res) ? res : [];
+			total = users.length;
 		}
 
 		defaultPermissions = await getUserDefaultPermissions(localStorage.token);
