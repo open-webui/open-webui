@@ -2782,23 +2782,22 @@ ENABLE_RAG_LOCAL_WEB_FETCH = (
     os.getenv("ENABLE_RAG_LOCAL_WEB_FETCH", "False").lower() == "true"
 )
 
-RAG_WEB_FETCH_CUSTOM_BLOCKLIST = (
-    os.getenv("RAG_WEB_FETCH_CUSTOM_BLOCKLIST", "").split(",") if os.getenv("RAG_WEB_FETCH_CUSTOM_BLOCKLIST", "") else []
-)
-
-# Hardcoded Common Cloud Metadata URIs
-RAG_WEB_FETCH_CLOUD_METADATA_BLOCKLIST = [
-    "169.254.169.254",
-    "fd00:ec2::254",
-    "metadata.google.internal",
-    "metadata.azure.com",
-    "100.100.100.200",  # Alibaba Cloud
+DEFAULT_WEB_FETCH_FILTER_LIST = [
+    "!169.254.169.254",
+    "!fd00:ec2::254",
+    "!metadata.google.internal",
+    "!metadata.azure.com",
+    "!100.100.100.200",
 ]
 
-WEB_FETCH_BLOCKLIST = list(set(
-    [url.strip() for url in (RAG_WEB_FETCH_CUSTOM_BLOCKLIST.value if hasattr(RAG_WEB_FETCH_CUSTOM_BLOCKLIST, 'value') else RAG_WEB_FETCH_CUSTOM_BLOCKLIST) if url and url.strip()]
-    + RAG_WEB_FETCH_CLOUD_METADATA_BLOCKLIST
-))
+_web_fetch_filter_env = os.getenv("WEB_FETCH_FILTER_LIST", "")
+_web_fetch_filter_custom = (
+    [item.strip() for item in _web_fetch_filter_env.split(",") if item.strip()]
+    if _web_fetch_filter_env
+    else []
+)
+
+WEB_FETCH_FILTER_LIST = list(set(_web_fetch_filter_custom + DEFAULT_WEB_FETCH_FILTER_LIST))
 
 YOUTUBE_LOADER_LANGUAGE = PersistentConfig(
     "YOUTUBE_LOADER_LANGUAGE",

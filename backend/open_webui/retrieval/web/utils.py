@@ -38,7 +38,7 @@ from open_webui.config import (
     TAVILY_EXTRACT_DEPTH,
     EXTERNAL_WEB_LOADER_URL,
     EXTERNAL_WEB_LOADER_API_KEY,
-    WEB_FETCH_BLOCKLIST,
+    WEB_FETCH_FILTER_LIST,
 )
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -62,7 +62,7 @@ def validate_url(url: Union[str, Sequence[str]]):
 
         # Blocklist check
         if is_blocked_url(url):
-            log.warning(f"URL blocked by blocklist: {url}")
+            log.warning(f"URL blocked by filter list: {url}")
             raise ValueError(ERROR_MESSAGES.INVALID_URL)
 
         if not ENABLE_RAG_LOCAL_WEB_FETCH:
@@ -108,8 +108,7 @@ def resolve_hostname(hostname):
 
 
 def is_blocked_url(url: str) -> bool:
-    # Check if URL is in blocklist. Checks hostname against blocklist and DNS resolution check to prevent DNS rebinding attacks
-    if not WEB_FETCH_BLOCKLIST:
+    if not WEB_FETCH_FILTER_LIST:
         return False
 
     parsed = urllib.parse.urlparse(url)
@@ -118,19 +117,40 @@ def is_blocked_url(url: str) -> bool:
     if not hostname:
         return False
 
-    # Direct check
-    if hostname in WEB_FETCH_BLOCKLIST:
-        return True
+    # Separate allow and block lists based on "!" prefix
+    allow_list = [entry for entry in WEB_FETCH_FILTER_LIST if not entry.startswith("!")]
+    block_list = [entry[1:] for entry in WEB_FETCH_FILTER_LIST if entry.startswith("!")]
 
-    # DNS resolution check - catches DNS rebinding attacks
+    # Resolve hostname to IPs for comprehensive checking
+    resolved_ips = []
     try:
         ipv4_addresses, ipv6_addresses = resolve_hostname(hostname)
-        for ip in ipv4_addresses + ipv6_addresses:
-            if ip in WEB_FETCH_BLOCKLIST:
-                return True
+        resolved_ips = ipv4_addresses + ipv6_addresses
     except Exception:
-        # If DNS resolution fails, we already checked hostname directly above
+        # If DNS resolution fails, we'll just check the hostname
         pass
+
+    # Check all identifiers (hostname + resolved IPs)
+    identifiers = [hostname] + resolved_ips
+
+    # If allow list is non-empty, require at least one identifier to match
+    if allow_list:
+        allowed = any(
+            identifier == allowed_entry or identifier.endswith("." + allowed_entry)
+            for identifier in identifiers
+            for allowed_entry in allow_list
+        )
+        if not allowed:
+            return True
+
+    # Block list always blocks matching identifiers
+    blocked = any(
+        identifier == blocked_entry or identifier.endswith("." + blocked_entry)
+        for identifier in identifiers
+        for blocked_entry in block_list
+    )
+    if blocked:
+        return True
 
     return False
 
