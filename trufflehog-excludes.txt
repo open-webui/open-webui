@@ -1,0 +1,5 @@
+\.svelte-kit/
+node_modules/
+qdrant_storage/
+\.gitignore
+backend/data/cache/
