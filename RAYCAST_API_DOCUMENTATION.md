@@ -268,32 +268,103 @@ Authorization: {api_key}
 Content-Type: application/json
 ```
 
-**Request Body:**
+**Request Body (Recommended Structure):**
 ```json
 {
   "chat": {
-    "title": "New Chat Title",
-    "messages": []
+    "title": "My Chat Title",
+    "models": ["gpt-4"],
+    "messages": [
+      {
+        "role": "user",
+        "content": "Hello!"
+      },
+      {
+        "role": "assistant",
+        "content": "Hi there!"
+      }
+    ],
+    "history": {
+      "messages": {
+        "msg-uuid-1": {
+          "id": "msg-uuid-1",
+          "role": "user",
+          "content": "Hello!",
+          "parentId": null,
+          "childrenIds": ["msg-uuid-2"]
+        },
+        "msg-uuid-2": {
+          "id": "msg-uuid-2",
+          "role": "assistant",
+          "content": "Hi there!",
+          "parentId": "msg-uuid-1",
+          "childrenIds": []
+        }
+      },
+      "currentId": "msg-uuid-2"
+    },
+    "params": {},
+    "timestamp": 1700000000
   },
   "folder_id": null
 }
 ```
 
-**Minimal Request:**
+**⚠️ IMPORTANT: The `models` field is REQUIRED for proper chat functionality.**
+
+If you don't include `models`, the chat will show "undefined" as the model name and users won't be able to continue the conversation in the web interface.
+
+**✨ AUTOMATIC ENRICHMENT:** The backend automatically enriches your chat data:
+- **Auto-populates `model` field** on all assistant messages in the history using the first model from the `models` array
+- **Auto-generates title** from the first user message (first 50 chars + "...") if no title is provided or title is "New Chat"
+
+This means you don't need to manually set `model` on every message object - just provide the `models` array and the backend handles the rest!
+
+**Simplified Request (with models):**
 ```json
 {
-  "chat": {}
+  "chat": {
+    "title": "Quick Chat",
+    "models": ["gpt-4"],
+    "messages": [
+      {
+        "role": "user",
+        "content": "Hello"
+      },
+      {
+        "role": "assistant",
+        "content": "Hi!"
+      }
+    ]
+  }
 }
 ```
+
+**Chat Object Structure:**
+- `title` (string, auto-generated if omitted): Chat title - defaults to first 50 chars of first user message
+- `models` (string[]): **REQUIRED** - Array of model IDs used in the chat (e.g., `["gpt-4"]`)
+- `messages` (array): Linear array of messages (fallback if history not provided)
+  - Each message: `{ role, content }` (no need to set `model` manually)
+- `history` (object, optional but recommended): Message tree structure for branching conversations
+  - `messages` (object): Map of message ID to message object
+    - Each message: `{ id, role, content, parentId, childrenIds }` (no need to set `model` manually)
+  - `currentId` (string): ID of the most recent message in the conversation
+- `params` (object, optional): Model parameters like `temperature`, `max_tokens`, etc.
+- `timestamp` (number, optional): Unix timestamp in milliseconds
+
+**Note:** You don't need to include `model` field in individual messages - the backend automatically populates it from the `models` array!
 
 **Response:**
 ```json
 {
   "id": "new-chat-uuid",
   "user_id": "user-uuid",
-  "title": "New Chat",
+  "title": "My Chat Title",
   "chat": {
-    "title": "New Chat"
+    "title": "My Chat Title",
+    "models": ["gpt-4"],
+    "messages": [...],
+    "history": {...}
   },
   "created_at": 1700000000,
   "updated_at": 1700000000,
@@ -322,15 +393,40 @@ Content-Type: application/json
 {
   "chat": {
     "title": "Updated Title",
+    "models": ["gpt-4"],
     "messages": [
       {
         "role": "user",
+        "content": "First message"
+      },
+      {
+        "role": "assistant",
+        "content": "First response"
+      },
+      {
+        "role": "user",
         "content": "New message"
+      },
+      {
+        "role": "assistant",
+        "content": "New response"
       }
-    ]
+    ],
+    "history": {
+      "messages": {
+        "msg-1": {...},
+        "msg-2": {...},
+        "msg-3": {...},
+        "msg-4": {...}
+      },
+      "currentId": "msg-4"
+    },
+    "params": {}
   }
 }
 ```
+
+**⚠️ IMPORTANT:** Always include the `models` array when updating, even if it hasn't changed. The update replaces the entire `chat` object.
 
 **Response:**
 ```json
@@ -340,7 +436,9 @@ Content-Type: application/json
   "title": "Updated Title",
   "chat": {
     "title": "Updated Title",
-    "messages": [...]
+    "models": ["gpt-4"],
+    "messages": [...],
+    "history": {...}
   },
   "created_at": 1699999000,
   "updated_at": 1700000100,
@@ -352,7 +450,7 @@ Content-Type: application/json
 }
 ```
 
-**Note:** The update merges the new data with existing chat data.
+**Note:** The backend replaces the entire `chat` object with what you provide, so include all fields you want to preserve (especially `models`).
 
 #### Delete Chat
 
@@ -646,10 +744,57 @@ data: {"id":"chatcmpl-uuid","object":"chat.completion.chunk","created":170000000
 data: [DONE]
 ```
 
+**Reasoning Content Handling:**
+
+For reasoning models (e.g., OpenAI o1, o3), the API automatically extracts and formats reasoning content from the model's response. This works for both streaming and non-streaming requests.
+
+**Reasoning in Response:**
+When a reasoning model generates reasoning content, it appears in the `message.content` field formatted as HTML:
+
+```html
+<details type="reasoning" done="true">
+<summary>Thought</summary>
+> The model's reasoning process...
+> Step-by-step thinking...
+</details>
+
+The actual answer to your question.
+```
+
+**Important Notes:**
+- ✅ Reasoning content is automatically extracted from both streaming and non-streaming responses
+- ✅ Reasoning is formatted as HTML `<details>` tags for proper display in the web UI
+- ✅ When you save this content to a chat (via `/api/chats/{id}`), the reasoning will be visible in the web interface
+- ✅ You don't need to do any special processing - just use `message.content` as-is
+
+**Example with Reasoning Model:**
+```javascript
+const response = await fetch('https://chat.example.com/api/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'sk-abc123...',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    model: 'o1-preview',  // Reasoning model
+    messages: [
+      { role: 'user', content: 'Solve this math problem: 2+2' }
+    ],
+    reasoning_effort: 'high',  // Optional: control reasoning depth
+    stream: false
+  })
+});
+
+const result = await response.json();
+// result.choices[0].message.content contains both reasoning AND answer:
+// "<details type=\"reasoning\">...</details>\n\nThe answer is 4."
+```
+
 **Notes:**
 - Streaming responses are recommended for better UX
 - The `chat_id` parameter automatically saves the conversation
 - If no `chat_id` is provided, you must manually save the conversation using the chat endpoints
+- Reasoning content works seamlessly across API and web UI
 
 ---
 
@@ -1019,7 +1164,10 @@ const response = await fetch('https://chat.example.com/api/v1/chats/new', {
   },
   body: JSON.stringify({
     chat: {
-      title: 'Quick Question from Raycast'
+      title: 'Quick Question from Raycast',
+      models: [selectedModelId],  // IMPORTANT: Include the model ID!
+      messages: [],
+      timestamp: Date.now()
     }
   })
 });
@@ -1066,6 +1214,7 @@ const response = await fetch(`https://chat.example.com/api/v1/chats/${chatId}`, 
   body: JSON.stringify({
     chat: {
       title: 'Weather Question',
+      models: [selectedModelId],  // IMPORTANT: Always include models!
       messages: [
         {
           role: 'user',
@@ -1075,7 +1224,8 @@ const response = await fetch(`https://chat.example.com/api/v1/chats/${chatId}`, 
           role: 'assistant',
           content: aiResponse
         }
-      ]
+      ],
+      timestamp: Date.now()
     }
   })
 });
