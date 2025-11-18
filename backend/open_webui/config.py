@@ -3097,20 +3097,6 @@ SERPAPI_ENGINE = PersistentConfig(
     os.getenv("SERPAPI_ENGINE", ""),
 )
 
-BING_SEARCH_V7_ENDPOINT = PersistentConfig(
-    "BING_SEARCH_V7_ENDPOINT",
-    "rag.web.search.bing_search_v7_endpoint",
-    os.environ.get(
-        "BING_SEARCH_V7_ENDPOINT", "https://api.bing.microsoft.com/v7.0/search"
-    ),
-)
-
-BING_SEARCH_V7_SUBSCRIPTION_KEY = PersistentConfig(
-    "BING_SEARCH_V7_SUBSCRIPTION_KEY",
-    "rag.web.search.bing_search_v7_subscription_key",
-    os.environ.get("BING_SEARCH_V7_SUBSCRIPTION_KEY", ""),
-)
-
 AZURE_AI_SEARCH_API_KEY = PersistentConfig(
     "AZURE_AI_SEARCH_API_KEY",
     "rag.web.search.azure_ai_search_api_key",

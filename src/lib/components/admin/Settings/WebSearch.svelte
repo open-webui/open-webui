@@ -30,7 +30,6 @@
 		'duckduckgo',
 		'tavily',
 		'jina',
-		'bing',
 		'exa',
 		'perplexity',
 		'sougou',
@@ -458,37 +457,6 @@
 									<SensitiveInput
 										placeholder={$i18n.t('Enter Jina API Key')}
 										bind:value={webConfig.JINA_API_KEY}
-									/>
-								</div>
-							</div>
-						{:else if webConfig.WEB_SEARCH_ENGINE === 'bing'}
-							<div class="mb-2.5 flex w-full flex-col">
-								<div>
-									<div class=" self-center text-xs font-medium mb-1">
-										{$i18n.t('Bing Search V7 Endpoint')}
-									</div>
-
-									<div class="flex w-full">
-										<div class="flex-1">
-											<input
-												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-												type="text"
-												placeholder={$i18n.t('Enter Bing Search V7 Endpoint')}
-												bind:value={webConfig.BING_SEARCH_V7_ENDPOINT}
-												autocomplete="off"
-											/>
-										</div>
-									</div>
-								</div>
-
-								<div class="mt-2">
-									<div class=" self-center text-xs font-medium mb-1">
-										{$i18n.t('Bing Search V7 Subscription Key')}
-									</div>
-
-									<SensitiveInput
-										placeholder={$i18n.t('Enter Bing Search V7 Subscription Key')}
-										bind:value={webConfig.BING_SEARCH_V7_SUBSCRIPTION_KEY}
 									/>
 								</div>
 							</div>

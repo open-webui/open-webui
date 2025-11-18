@@ -63,7 +63,6 @@ from open_webui.retrieval.web.serper import search_serper
 from open_webui.retrieval.web.serply import search_serply
 from open_webui.retrieval.web.serpstack import search_serpstack
 from open_webui.retrieval.web.tavily import search_tavily
-from open_webui.retrieval.web.bing import search_bing
 from open_webui.retrieval.web.azure import search_azure
 from open_webui.retrieval.web.exa import search_exa
 from open_webui.retrieval.web.perplexity import search_perplexity
@@ -523,8 +522,6 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "SERPAPI_API_KEY": request.app.state.config.SERPAPI_API_KEY,
             "SERPAPI_ENGINE": request.app.state.config.SERPAPI_ENGINE,
             "JINA_API_KEY": request.app.state.config.JINA_API_KEY,
-            "BING_SEARCH_V7_ENDPOINT": request.app.state.config.BING_SEARCH_V7_ENDPOINT,
-            "BING_SEARCH_V7_SUBSCRIPTION_KEY": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
             "EXA_API_KEY": request.app.state.config.EXA_API_KEY,
             "PERPLEXITY_API_KEY": request.app.state.config.PERPLEXITY_API_KEY,
             "PERPLEXITY_MODEL": request.app.state.config.PERPLEXITY_MODEL,
@@ -581,8 +578,6 @@ class WebConfig(BaseModel):
     SERPAPI_API_KEY: Optional[str] = None
     SERPAPI_ENGINE: Optional[str] = None
     JINA_API_KEY: Optional[str] = None
-    BING_SEARCH_V7_ENDPOINT: Optional[str] = None
-    BING_SEARCH_V7_SUBSCRIPTION_KEY: Optional[str] = None
     EXA_API_KEY: Optional[str] = None
     PERPLEXITY_API_KEY: Optional[str] = None
     PERPLEXITY_MODEL: Optional[str] = None
@@ -1099,12 +1094,6 @@ async def update_rag_config(
         request.app.state.config.SERPAPI_API_KEY = form_data.web.SERPAPI_API_KEY
         request.app.state.config.SERPAPI_ENGINE = form_data.web.SERPAPI_ENGINE
         request.app.state.config.JINA_API_KEY = form_data.web.JINA_API_KEY
-        request.app.state.config.BING_SEARCH_V7_ENDPOINT = (
-            form_data.web.BING_SEARCH_V7_ENDPOINT
-        )
-        request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = (
-            form_data.web.BING_SEARCH_V7_SUBSCRIPTION_KEY
-        )
         request.app.state.config.EXA_API_KEY = form_data.web.EXA_API_KEY
         request.app.state.config.PERPLEXITY_API_KEY = form_data.web.PERPLEXITY_API_KEY
         request.app.state.config.PERPLEXITY_MODEL = form_data.web.PERPLEXITY_MODEL
@@ -1253,8 +1242,6 @@ async def update_rag_config(
             "SERPAPI_API_KEY": request.app.state.config.SERPAPI_API_KEY,
             "SERPAPI_ENGINE": request.app.state.config.SERPAPI_ENGINE,
             "JINA_API_KEY": request.app.state.config.JINA_API_KEY,
-            "BING_SEARCH_V7_ENDPOINT": request.app.state.config.BING_SEARCH_V7_ENDPOINT,
-            "BING_SEARCH_V7_SUBSCRIPTION_KEY": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
             "EXA_API_KEY": request.app.state.config.EXA_API_KEY,
             "PERPLEXITY_API_KEY": request.app.state.config.PERPLEXITY_API_KEY,
             "PERPLEXITY_MODEL": request.app.state.config.PERPLEXITY_MODEL,
@@ -2028,15 +2015,6 @@ def search_web(
             request.app.state.config.JINA_API_KEY,
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-        )
-    elif engine == "bing":
-        return search_bing(
-            request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
-            request.app.state.config.BING_SEARCH_V7_ENDPOINT,
-            str(DEFAULT_LOCALE),
-            query,
-            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
         )
     elif engine == "azure":
         if (
