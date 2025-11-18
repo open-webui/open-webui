@@ -2767,6 +2767,11 @@ RAG_TEXT_SPLITTER = PersistentConfig(
     os.environ.get("RAG_TEXT_SPLITTER", ""),
 )
 
+ENABLE_MARKDOWN_HEADER_SPLITTING = PersistentConfig(
+    "ENABLE_MARKDOWN_HEADER_SPLITTING",
+    "rag.enable_markdown_header_splitting",
+    os.environ.get("ENABLE_MARKDOWN_HEADER_SPLITTING", "False").lower() == "true",
+)
 
 TIKTOKEN_CACHE_DIR = os.environ.get("TIKTOKEN_CACHE_DIR", f"{CACHE_DIR}/tiktoken")
 TIKTOKEN_ENCODING_NAME = PersistentConfig(
@@ -2783,6 +2788,18 @@ CHUNK_OVERLAP = PersistentConfig(
     "CHUNK_OVERLAP",
     "rag.chunk_overlap",
     int(os.environ.get("CHUNK_OVERLAP", "100")),
+)
+
+CHUNK_MIN_SIZE = PersistentConfig(
+    "CHUNK_MIN_SIZE",
+    "rag.chunk_min_size",
+    int(os.environ.get("CHUNK_MIN_SIZE", "0")),
+)
+
+CHUNK_MIN_TOKENS = PersistentConfig(
+    "CHUNK_MIN_TOKENS",
+    "rag.chunk_min_tokens",
+    int(os.environ.get("CHUNK_MIN_TOKENS", "0")),
 )
 
 DEFAULT_RAG_TEMPLATE = """### Task:
