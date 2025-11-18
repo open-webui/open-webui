@@ -8,7 +8,7 @@ from urllib.parse import quote
 
 from langchain_core.document_loaders import BaseLoader
 from langchain_core.documents import Document
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, EXTERNAL_DOCUMENT_LOADER_TIMEOUT
 from open_webui.config import PDF_EXTRACT_IMAGES_DIR
 
 log = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ class ExternalDocumentLoader(BaseLoader):
             url = url[:-1]
 
         try:
-            response = requests.put(f"{url}/process", data=data, headers=headers)
+            response = requests.put(f"{url}/process", data=data, headers=headers, timeout=EXTERNAL_DOCUMENT_LOADER_TIMEOUT)
         except Exception as e:
             log.error(f"Error connecting to endpoint: {e}")
             raise Exception(f"Error connecting to endpoint: {e}")
