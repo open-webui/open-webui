@@ -4,10 +4,10 @@ from open_webui.utils.misc import (
     add_or_update_system_message,
     replace_system_message_content,
 )
-
+from open_webui.utils.luxtronic import get_luxtronic_model_names    
 from typing import Callable, Optional
 import json
-
+from fastapi import HTTPException
 
 # inplace function: form_data is modified
 def apply_system_prompt_to_body(
@@ -275,6 +275,33 @@ def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
 
     return ollama_messages
 
+def convert_payload_openai_to_luxor(openai_payload: dict) -> dict:
+    """
+    Converts a payload formatted for OpenAI's API to be compatible with Luxor's API endpoint for chat completions.
+
+    Args:
+        openai_payload (dict): The payload originally designed for OpenAI API usage.
+
+    Returns:
+        dict: A modified payload compatible with the Luxor API.
+    """
+    luxor_payload = {}
+    question_type = openai_payload["model"].split(":")[1]
+
+    luxor_question_types = get_luxtronic_model_names()
+
+    if question_type not in luxor_question_types:                                                                                                                                                                                                      
+          raise HTTPException(                                                                                                                                                                                                                           
+              status_code=400,                                                                                                                                                                                                                           
+              detail=f"Unsupported Luxor question_type '{question_type}'. "                                                                                                                                                                             
+          )     
+
+    luxor_payload["question_type"] = question_type
+
+    messages = openai_payload.get(("messages"))
+    luxor_payload["user_question"] = messages[-1]["content"]
+
+    return luxor_payload   
 
 def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     """
