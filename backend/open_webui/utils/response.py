@@ -22,6 +22,61 @@ def convert_ollama_tool_call_to_openai(tool_calls: list) -> list:
         openai_tool_calls.append(openai_tool_call)
     return openai_tool_calls
 
+# TODO Flesh out?
+def convert_luxor_usage_to_openai(data: dict) -> dict:
+    return {
+        "response_token/s": (
+            round(
+                (
+                    (
+                        data.get("eval_count", 0)
+                        / ((data.get("eval_duration", 0) / 10_000_000))
+                    )
+                    * 100
+                ),
+                2,
+            )
+            if data.get("eval_duration", 0) > 0
+            else "N/A"
+        ),
+        "prompt_token/s": (
+            round(
+                (
+                    (
+                        data.get("prompt_eval_count", 0)
+                        / ((data.get("prompt_eval_duration", 0) / 10_000_000))
+                    )
+                    * 100
+                ),
+                2,
+            )
+            if data.get("prompt_eval_duration", 0) > 0
+            else "N/A"
+        ),
+        "total_duration": data.get("total_duration", 0),
+        "load_duration": data.get("load_duration", 0),
+        "prompt_eval_count": data.get("prompt_eval_count", 0),
+        "prompt_tokens": int(
+            data.get("prompt_eval_count", 0)
+        ),  # This is the OpenAI compatible key
+        "prompt_eval_duration": data.get("prompt_eval_duration", 0),
+        "eval_count": data.get("eval_count", 0),
+        "completion_tokens": int(
+            data.get("eval_count", 0)
+        ),  # This is the OpenAI compatible key
+        "eval_duration": data.get("eval_duration", 0),
+        "approximate_total": (lambda s: f"{s // 3600}h{(s % 3600) // 60}m{s % 60}s")(
+            (data.get("total_duration", 0) or 0) // 1_000_000_000
+        ),
+        "total_tokens": int(  # This is the OpenAI compatible key
+            data.get("prompt_eval_count", 0) + data.get("eval_count", 0)
+        ),
+        "completion_tokens_details": {  # This is the OpenAI compatible key
+            "reasoning_tokens": 0,
+            "accepted_prediction_tokens": 0,
+            "rejected_prediction_tokens": 0,
+        },
+    }
 
 def convert_ollama_usage_to_openai(data: dict) -> dict:
     return {
@@ -77,6 +132,42 @@ def convert_ollama_usage_to_openai(data: dict) -> dict:
             "rejected_prediction_tokens": 0,
         },
     }
+
+def _extract_luxor_payload(payload: dict) -> dict:
+    if not isinstance(payload, dict):
+        return {}
+
+    if isinstance(payload.get("data"), dict):
+        return payload["data"]
+
+    body = payload.get("body")
+    if isinstance(body, str):
+        try:
+            return json.loads(body)
+        except json.JSONDecodeError:
+            return {"txt_answer": body}
+    if isinstance(body, dict):
+        return body
+
+    return payload
+
+def convert_response_luxor_to_openai(luxor_response: dict)  -> dict:
+    data = _extract_luxor_payload(luxor_response)
+    model = "luxor"
+    message_content = (
+          data.get("txt_answer")
+          or data.get("answer")
+          or data.get("message")
+          or ""
+    )
+    reasoning_content = None
+    openai_tool_calls = None    
+    data = luxor_response
+    usage = convert_luxor_usage_to_openai(data)
+    response = openai_chat_completion_message_template(
+        model, message_content, reasoning_content, openai_tool_calls, usage
+    )
+    return response
 
 
 def convert_response_ollama_to_openai(ollama_response: dict) -> dict:
