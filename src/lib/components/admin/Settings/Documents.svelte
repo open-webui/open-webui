@@ -843,6 +843,7 @@
 								<SensitiveInput
 									placeholder={$i18n.t('Enter MinerU API Key')}
 									bind:value={RAGConfig.MINERU_API_KEY}
+									required={false}
 								/>
 							</div>
 
