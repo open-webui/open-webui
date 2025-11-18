@@ -91,7 +91,8 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     # deep copy the base models to avoid modifying the original list
     models = [model.copy() for model in base_models]
 
-    luxtronic_model_names = get_luxtronic_model_names();
+    luxtronic_model_names = get_luxtronic_model_names(user)
+
     
     for source in luxtronic_model_names:
         models.append(
@@ -343,7 +344,27 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     log.debug(f"get_all_models() returned {len(models)} models")
 
     request.app.state.MODELS = {model["id"]: model for model in models}
-    return models
+
+    if user and user.role != "admin":
+        allowed_lux_models = set(
+            get_luxtronic_model_names(user, restrict_to_user=True)
+        )
+        if allowed_lux_models:
+            tenant_filtered_models = [
+                model
+                for model in models
+                if model.get("owned_by") != "luxor"
+                or model["id"].split(":", 1)[1] in allowed_lux_models
+            ]
+        else:
+            tenant_filtered_models = [
+                model for model in models if model.get("owned_by") != "luxor"
+            ]
+    else:
+        tenant_filtered_models = models
+
+    log.debug(f"get_all_models() returned {len(tenant_filtered_models)} models")
+    return tenant_filtered_models
 
 
 def check_model_access(user, model):
