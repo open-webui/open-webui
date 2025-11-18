@@ -79,7 +79,7 @@
 		getTaskIdsByChatId
 	} from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
-	import { uploadFile } from '$lib/apis/files';
+	import { uploadFile, validateFilesTotal } from '$lib/apis/files';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { getFunctions } from '$lib/apis/functions';
 	import { updateFolderById } from '$lib/apis/folders';
@@ -1602,6 +1602,35 @@
 				})
 			);
 			return;
+		}
+
+		if (($config?.file?.max_chars ?? null) !== null && $config?.file?.max_chars > 0) {
+			try {
+				const currentFileIds = files
+					.filter(f => f.id && f.type !== 'image' && !f.error)
+					.map(f => f.id);
+				
+				const uniqueFileIds = [...new Set(currentFileIds)];
+
+				if (uniqueFileIds.length > 0) {
+					await validateFilesTotal(localStorage.token, uniqueFileIds, $chatId || undefined);
+				}
+			} catch (error) {
+				let errorMessage = typeof error === 'string' ? error : error?.detail || 'Error validating files';
+				
+				const cumulativeLimitMatch = errorMessage.match(/Combined files contain\s+([\d,]+)\s+characters.*maximum allowed is\s+([\d,]+)/);
+				if (cumulativeLimitMatch) {
+					const totalChars = cumulativeLimitMatch[1].replace(/,/g, '');
+					const maxChars = cumulativeLimitMatch[2].replace(/,/g, '');
+					errorMessage = $i18n.t('Total file content exceeds maximum character limit. Combined files contain {{totalChars}} characters, but maximum allowed is {{maxChars}} characters.', {
+						totalChars: parseInt(totalChars).toLocaleString(),
+						maxChars: parseInt(maxChars).toLocaleString()
+					});
+				}
+				
+				toast.error(errorMessage);
+				return;
+			}
 		}
 
 		if (history?.currentId) {

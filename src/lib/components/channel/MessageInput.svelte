@@ -497,25 +497,20 @@
 					errorMessage = $i18n.t('File processing timeout. The file encoding detection took too long. The file may still be usable.');
 				}
 				
-				// Show error toast with translated message
 				toast.error(errorMessage);
 				
-				if (isCharLimitError) {
-					files = files.filter((item) => item?.itemId !== tempItemId);
-					return null; // Don't proceed with this file
-				} else {
-					const fileIndex = files.findIndex((item) => item?.itemId === tempItemId);
-					if (fileIndex !== -1) {
-						files[fileIndex].status = 'uploaded';
-						files[fileIndex].file = uploadedFile;
-						files[fileIndex].id = uploadedFile.id;
-						files[fileIndex].collection_name =
-							uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
-						files[fileIndex].url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
-						files[fileIndex].error = uploadedFile.error; // Keep the error for display
-						// Trigger reactivity by reassigning
-						files = files;
+				const fileIndex = files.findIndex((item) => item?.itemId === tempItemId);
+				if (fileIndex !== -1) {
+					files[fileIndex].status = 'uploaded';
+					files[fileIndex].file = uploadedFile;
+					files[fileIndex].id = uploadedFile.id;
+					files[fileIndex].collection_name =
+						uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
+					files[fileIndex].url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+					if (!isCharLimitError) {
+						files[fileIndex].error = uploadedFile.error;
 					}
+					files = files;
 				}
 			} else {
 				// Update file item in place

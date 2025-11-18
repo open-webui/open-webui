@@ -286,7 +286,7 @@ export const deleteFileById = async (token: string, id: string) => {
 	return res;
 };
 
-export const validateFilesTotal = async (token: string, fileIds: string[]) => {
+export const validateFilesTotal = async (token: string, fileIds: string[], chatId?: string) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/files/validate-total`, {
@@ -296,7 +296,10 @@ export const validateFilesTotal = async (token: string, fileIds: string[]) => {
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({ file_ids: fileIds })
+		body: JSON.stringify({ 
+			file_ids: fileIds,
+			chat_id: chatId || null
+		})
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -307,7 +310,6 @@ export const validateFilesTotal = async (token: string, fileIds: string[]) => {
 		})
 		.catch((err) => {
 			error = err.detail || err.message || 'Error validating files';
-			console.error(err);
 			return null;
 		});
 
