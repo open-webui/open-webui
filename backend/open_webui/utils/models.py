@@ -21,7 +21,6 @@ from open_webui.utils.plugin import (
 from open_webui.utils.access_control import has_access
 from open_webui.utils.luxtronic import get_luxtronic_model_names                                                                                                                                                                                       
 
-
 from open_webui.config import (
     BYPASS_ADMIN_ACCESS_CONTROL,
     DEFAULT_ARENA_MODEL,
