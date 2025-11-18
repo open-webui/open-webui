@@ -13,7 +13,7 @@ from open_webui.models.users import Users, UserResponse
 
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, JSON
+from sqlalchemy import BigInteger, Column, String, Text, JSON, ForeignKey, UniqueConstraint, Index
 
 from open_webui.utils.access_control import has_access
 
@@ -58,6 +58,23 @@ class Knowledge(Base):
     updated_at = Column(BigInteger)
 
 
+class KnowledgeFile(Base):
+    __tablename__ = "knowledge_file"
+    __table_args__ = (
+        UniqueConstraint("knowledge_id", "file_id", name="uq_knowledge_file_knowledge_id_file_id"),
+        Index("idx_knowledge_file_knowledge_id", "knowledge_id"),
+        Index("idx_knowledge_file_file_id", "file_id"),
+    )
+
+    id = Column(Text, unique=True, primary_key=True)
+    knowledge_id = Column(Text, ForeignKey("knowledge.id", ondelete="CASCADE"), nullable=False)
+    file_id = Column(Text, nullable=False)
+    user_id = Column(Text, nullable=False)
+
+    created_at = Column(BigInteger, nullable=False)
+    updated_at = Column(BigInteger, nullable=False)
+
+
 class KnowledgeModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -98,6 +115,131 @@ class KnowledgeForm(BaseModel):
     description: str
     data: Optional[dict] = None
     access_control: Optional[dict] = None
+
+
+class KnowledgeFileModel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    knowledge_id: str
+    file_id: str
+    user_id: str
+    created_at: int
+    updated_at: int
+
+
+class KnowledgeFileForm(BaseModel):
+    knowledge_id: str
+    file_id: str
+
+
+class KnowledgeFileTable:
+    def insert_knowledge_file(
+        self, knowledge_id: str, file_id: str, user_id: str
+    ) -> Optional[KnowledgeFileModel]:
+        with get_db() as db:
+            try:
+                knowledge_file = KnowledgeFileModel(
+                    id=str(uuid.uuid4()),
+                    knowledge_id=knowledge_id,
+                    file_id=file_id,
+                    user_id=user_id,
+                    created_at=int(time.time()),
+                    updated_at=int(time.time()),
+                )
+
+                result = KnowledgeFile(**knowledge_file.model_dump())
+                db.add(result)
+                db.commit()
+                db.refresh(result)
+                return KnowledgeFileModel.model_validate(result) if result else None
+            except Exception as e:
+                # Check if it's a duplicate entry error
+                error_msg = str(e).lower()
+                if "unique constraint" in error_msg or "duplicate" in error_msg:
+                    log.warning(f"Duplicate file {file_id} in knowledge {knowledge_id}")
+                else:
+                    log.exception(e)
+                return None
+
+    def get_knowledge_files_by_knowledge_id(
+        self, knowledge_id: str, limit: Optional[int] = None, offset: Optional[int] = None
+    ) -> list[KnowledgeFileModel]:
+        with get_db() as db:
+            query = db.query(KnowledgeFile).filter_by(knowledge_id=knowledge_id)
+
+            if offset is not None:
+                query = query.offset(offset)
+            if limit is not None:
+                query = query.limit(limit)
+
+            return [
+                KnowledgeFileModel.model_validate(kf)
+                for kf in query.all()
+            ]
+
+    def get_knowledge_file_count_by_knowledge_id(self, knowledge_id: str) -> int:
+        with get_db() as db:
+            from sqlalchemy import func
+            return db.query(func.count(KnowledgeFile.id)).filter_by(knowledge_id=knowledge_id).scalar()
+
+    def get_file_ids_by_knowledge_id(
+        self, knowledge_id: str, limit: Optional[int] = None, offset: Optional[int] = None
+    ) -> list[str]:
+        knowledge_files = self.get_knowledge_files_by_knowledge_id(knowledge_id, limit, offset)
+        return [kf.file_id for kf in knowledge_files]
+
+    def get_file_ids_by_knowledge_ids(self, knowledge_ids: list[str]) -> dict[str, list[str]]:
+        """Bulk fetch file_ids for multiple knowledge bases to avoid N+1 queries"""
+        with get_db() as db:
+            if not knowledge_ids:
+                return {}
+
+            knowledge_files = db.query(KnowledgeFile).filter(
+                KnowledgeFile.knowledge_id.in_(knowledge_ids)
+            ).all()
+
+            # Group file_ids by knowledge_id
+            result = {kid: [] for kid in knowledge_ids}
+            for kf in knowledge_files:
+                result[kf.knowledge_id].append(kf.file_id)
+
+            return result
+
+    def delete_knowledge_file(self, knowledge_id: str, file_id: str) -> bool:
+        try:
+            with get_db() as db:
+                db.query(KnowledgeFile).filter_by(
+                    knowledge_id=knowledge_id, file_id=file_id
+                ).delete()
+                db.commit()
+                return True
+        except Exception as e:
+            log.exception(e)
+            return False
+
+    def delete_knowledge_files_by_knowledge_id(self, knowledge_id: str) -> bool:
+        try:
+            with get_db() as db:
+                db.query(KnowledgeFile).filter_by(knowledge_id=knowledge_id).delete()
+                db.commit()
+                return True
+        except Exception as e:
+            log.exception(e)
+            return False
+
+    def delete_knowledge_files_by_file_id(self, file_id: str) -> bool:
+        try:
+            with get_db() as db:
+                db.query(KnowledgeFile).filter_by(file_id=file_id).delete()
+                db.commit()
+                return True
+        except Exception as e:
+            log.exception(e)
+            return False
+
+
+KnowledgeFiles = KnowledgeFileTable()
 
 
 class KnowledgeTable:

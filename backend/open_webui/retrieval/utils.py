@@ -20,7 +20,7 @@ from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 
 from open_webui.models.users import UserModel
 from open_webui.models.files import Files
-from open_webui.models.knowledge import Knowledges
+from open_webui.models.knowledge import Knowledges, KnowledgeFiles
 
 from open_webui.models.chats import Chats
 from open_webui.models.notes import Notes
@@ -744,7 +744,7 @@ def get_sources_from_items(
                         or has_access(user.id, "read", knowledge_base.access_control)
                     ):
 
-                        file_ids = knowledge_base.data.get("file_ids", [])
+                        file_ids = KnowledgeFiles.get_file_ids_by_knowledge_id(knowledge_base.id)
 
                         documents = []
                         metadatas = []
