@@ -290,7 +290,7 @@ def merge_and_sort_query_results(query_results: list[dict], k: int) -> dict:
                     combined[doc_hash] = (distance, document, metadata)
                     continue  # if doc is new, no further comparison is needed
 
-                # if doc is alredy in, but new distance is better, update
+                # if doc is already in, but new distance is better, update
                 if distance > combined[doc_hash][0]:
                     combined[doc_hash] = (distance, document, metadata)
 
@@ -542,7 +542,7 @@ def get_sources_from_items(
 
         if item.get("type") == "text":
             # Raw Text
-            # Used during temporary chat file uploads or web page & youtube attachements
+            # Used during temporary chat file uploads or web page & youtube attachments
 
             if item.get("context") == "full":
                 if item.get("file"):
