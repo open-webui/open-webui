@@ -2345,8 +2345,8 @@ def query_collection_handler(
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 reranking_function=(
                     (
-                        lambda sentences: request.app.state.RERANKING_FUNCTION(
-                            sentences, user=user
+                        lambda query, documents: request.app.state.RERANKING_FUNCTION(
+                            query, documents, user=user
                         )
                     )
                     if request.app.state.RERANKING_FUNCTION
