@@ -108,8 +108,7 @@ def validate_url(url: Union[str, Sequence[str]]):
 
         # Blocklist check using unified filtering logic
         if WEB_FETCH_FILTER_LIST:
-            result = is_string_allowed(url, WEB_FETCH_FILTER_LIST)
-            if len(result) == 0:
+            if not is_string_allowed(url, WEB_FETCH_FILTER_LIST):
                 log.warning(f"URL blocked by filter list: {url}")
                 raise ValueError(ERROR_MESSAGES.INVALID_URL)
 
