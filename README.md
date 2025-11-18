@@ -1,9 +1,9 @@
 # Build And Deploy Image 
 ```bash
 docker build -t luxtronic-open-webui .        
-docker tag luxtronic-open-webui:latest 623065535582.dkr.ecr.us-east-2.amazonaws.com/luxtronic-open-webui:latest     
-aws ecr get-login-password --region us-east-2 --profile luxtronic-sso | docker login --username AWS --password-stdin 623065535582.dkr.ecr.us-east-2.amazonaws.com
-docker push 623065535582.dkr.ecr.us-east-2.amazonaws.com/luxtronic-open-webui:latest
+docker tag luxtronic-open-webui:latest <acct_id>.dkr.ecr.us-east-2.amazonaws.com/luxtronic-open-webui:latest     
+aws ecr get-login-password --region us-east-2 --profile luxtronic-sso | docker login --username AWS --password-stdin <acct_id>.dkr.ecr.us-east-2.amazonaws.com
+docker push <acct_id>.dkr.ecr.us-east-2.amazonaws.com/luxtronic-open-webui:latest
 ```
 
 # Migrations on EC2
@@ -17,7 +17,7 @@ docker run --rm \
 	-e DATABASE_TYPE='postgresql' \
 	-e DATABASE_USER='<db_user>' \
 	--entrypoint bash \
-	623065535582.dkr.ecr.us-east-2.amazonaws.com/luxtronic-open-webui:latest \
+	<acct_id>.dkr.ecr.us-east-2.amazonaws.com/luxtronic-open-webui:latest \
 	-lc "cd /app/backend/open_webui && alembic upgrade head"
   ```
 
@@ -62,7 +62,7 @@ docker run --rm \
 	-e DATABASE_USER='<db_user>' \
 	-e LUXTRONIC_TENANT_SEED="$LUXTRONIC_TENANT_SEED" \
 	--entrypoint python \
-	623065535582.dkr.ecr.us-east-2.amazonaws.com/luxtronic-open-webui:latest \
+	<acct_id>.dkr.ecr.us-east-2.amazonaws.com/luxtronic-open-webui:latest \
 	/app/backend/seed_luxtronic.py
   ```
 
