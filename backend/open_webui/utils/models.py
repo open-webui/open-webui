@@ -2,7 +2,7 @@ import time
 import logging
 import asyncio
 import sys
-
+import os
 from aiocache import cached
 from fastapi import Request
 
@@ -19,6 +19,7 @@ from open_webui.utils.plugin import (
     get_function_module_from_cache,
 )
 from open_webui.utils.access_control import has_access
+from open_webui.utils.luxtronic import get_luxtronic_model_names                                                                                                                                                                                       
 
 
 from open_webui.config import (
@@ -90,6 +91,26 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
     # deep copy the base models to avoid modifying the original list
     models = [model.copy() for model in base_models]
+
+    luxtronic_model_names = get_luxtronic_model_names();
+    
+    for source in luxtronic_model_names:
+        models.append(
+            {
+                "id": f"luxor:{source}",
+                "name": f"Luxor {source}",
+                "object": "model",
+                "created": int(time.time()),
+                "owned_by": "luxor",
+                "info": {
+                    "meta": {
+                        "description": "Luxor provider",
+                        "capabilities": {"vision": False, "web_search": False},
+                        "access_control": None,
+                    }
+                },
+            }
+        )
 
     # If there are no models, return an empty list
     if len(models) == 0:
