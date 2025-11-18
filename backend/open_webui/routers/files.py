@@ -732,23 +732,6 @@ async def delete_file_by_id(id: str, request: Request, user=Depends(get_verified
             try:
                 Storage.delete_file(file.path)
                 VECTOR_DB_CLIENT.delete(collection_name=f"file-{id}")
-                
-                # Subtract file's character count from accumulator when file is manually removed
-                if hasattr(request.app.state, "user_char_accumulator"):
-                    if user.id in request.app.state.user_char_accumulator:
-                        # Get character count of the removed file
-                        file_content = file.data.get("content", "") if file.data else ""
-                        file_char_count = len(file_content)
-                        
-                        # Subtract from accumulator (ensure it doesn't go negative)
-                        current_total = request.app.state.user_char_accumulator[user.id]
-                        new_total = max(0, current_total - file_char_count)
-                        request.app.state.user_char_accumulator[user.id] = new_total
-                        
-                        log.debug(
-                            f"Subtracting {file_char_count:,} chars from accumulator for user {user.id} "
-                            f"(file {id} removed): {current_total:,} -> {new_total:,} chars"
-                        )
             except Exception as e:
                 log.exception(e)
                 log.error("Error deleting files")
@@ -767,11 +750,6 @@ async def delete_file_by_id(id: str, request: Request, user=Depends(get_verified
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-
-
-############################
-# Validate and Add File to Accumulator
-############################
 
 
 class ValidateFilesForm(BaseModel):
@@ -847,69 +825,3 @@ async def validate_files_total(
         "max_chars": max_chars,
         "file_chars": file_chars
     }
-
-
-@router.post("/{id}/validate-add")
-async def validate_and_add_file_to_accumulator(
-    id: str, request: Request, user=Depends(get_verified_user)
-):
-    """
-    Validates if an already processed file can be added to the character accumulator.
-    If validation passes, adds the file's character count to the accumulator.
-    """
-    file = Files.get_file_by_id(id)
-
-    if not file:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    if not (
-        file.user_id == user.id
-        or user.role == "admin"
-        or has_access_to_file(id, "read", user)
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    file_content = file.data.get("content", "") if file.data else ""
-    char_count = len(file_content)
-
-    # Validate character limit if configured (FILE_MAX_CHARS > 0 means enabled)
-    if request.app.state.config.FILE_MAX_CHARS > 0:
-        max_chars = request.app.state.config.FILE_MAX_CHARS
-
-        if not hasattr(request.app.state, "user_char_accumulator"):
-            request.app.state.user_char_accumulator = {}
-        current_total = request.app.state.user_char_accumulator.get(user.id, 0)
-
-        total_chars = current_total + char_count
-
-        if total_chars > max_chars:
-            error_message = (
-                f"Total file content exceeds maximum character limit. "
-                f"Combined files contain {total_chars:,} characters, "
-                f"but maximum allowed is {max_chars:,} characters."
-            )
-
-            log.warning(
-                f"File {file.id} ({file.filename}) rejected when adding to accumulator: {error_message} "
-                f"(Current file: {char_count:,} chars, Accumulator: {current_total:,} chars)"
-            )
-
-            raise HTTPException(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail=ERROR_MESSAGES.DEFAULT(error_message),
-            )
-
-        # If validation passes, update accumulator with new total
-        request.app.state.user_char_accumulator[user.id] = total_chars
-        log.debug(
-            f"File {file.id} ({file.filename}) validated and added to accumulator for user {user.id}. "
-            f"Accumulator updated: {current_total:,} -> {total_chars:,} chars"
-        )
-
-    return {"message": "File validated and added to accumulator successfully", "char_count": char_count}

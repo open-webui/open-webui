@@ -320,37 +320,6 @@ export const validateFilesTotal = async (token: string, fileIds: string[], chatI
 	return res;
 };
 
-export const validateAndAddFile = async (token: string, id: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/${id}/validate-add`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail || err.message || 'Error validating file';
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
 export const deleteAllFiles = async (token: string) => {
 	let error = null;
 
