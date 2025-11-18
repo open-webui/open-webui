@@ -58,26 +58,43 @@ docker ps
 
 ### View logs
 ```bash
-docker-compose -f docker-compose.azure.yml logs -f
+docker compose -f docker-compose.azure.yml logs -f
 ```
 
 ### Stop the application
 ```bash
-docker-compose -f docker-compose.azure.yml down
+# Stop all services
+docker compose -f docker-compose.azure.yml --env-file azure.env down
+
+# Or stop specific service
+docker compose -f docker-compose.azure.yml --env-file azure.env stop open-webui
 ```
 
-### Restart the application
+### Start/Restart the application
 ```bash
-docker-compose -f docker-compose.azure.yml restart
+# Start all services
+docker compose -f docker-compose.azure.yml --env-file azure.env up -d
+
+# Or start specific service (recommended)
+docker compose -f docker-compose.azure.yml --env-file azure.env up -d open-webui
+```
+
+### Update configuration or restart
+```bash
+# Stop the specific service
+docker compose -f docker-compose.azure.yml --env-file azure.env stop open-webui
+
+# Start with updated configuration
+docker compose -f docker-compose.azure.yml --env-file azure.env up -d open-webui
 ```
 
 ### Update to latest version
 ```bash
 # Pull latest image
-docker-compose -f docker-compose.azure.yml pull
+docker compose -f docker-compose.azure.yml pull
 
 # Restart with new image
-docker-compose -f docker-compose.azure.yml up -d
+docker compose -f docker-compose.azure.yml --env-file azure.env up -d open-webui
 ```
 
 ### Backup data
