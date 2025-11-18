@@ -65,7 +65,9 @@
 		if (res) {
 			toast.success($i18n.t('Group created successfully'));
 			groups = await getGroups(localStorage.token);
+			return res; // Return the created group so the modal can set user IDs
 		}
+		return null;
 	};
 
 	const updateDefaultPermissionsHandler = async (group) => {
