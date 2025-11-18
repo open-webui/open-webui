@@ -42,6 +42,7 @@ class User(Base):
 
     api_key = Column(String, nullable=True, unique=True)
     oauth_sub = Column(Text, unique=True)
+    tenant_id = Column(String, nullable=True)
 
     last_active_at = Column(BigInteger)
 
@@ -68,6 +69,7 @@ class UserModel(BaseModel):
     bio: Optional[str] = None
     gender: Optional[str] = None
     date_of_birth: Optional[datetime.date] = None
+    tenant_id: Optional[str] = None
 
     info: Optional[dict] = None
     settings: Optional[UserSettings] = None
@@ -105,6 +107,7 @@ class UserInfoResponse(BaseModel):
     name: str
     email: str
     role: str
+    tenant_id: Optional[str] = None
 
 
 class UserIdNameResponse(BaseModel):
@@ -128,6 +131,7 @@ class UserResponse(BaseModel):
     email: str
     role: str
     profile_image_url: str
+    tenant_id: Optional[str] = None
 
 
 class UserNameResponse(BaseModel):
@@ -135,6 +139,7 @@ class UserNameResponse(BaseModel):
     name: str
     role: str
     profile_image_url: str
+    tenant_id: Optional[str] = None
 
 
 class UserRoleUpdateForm(BaseModel):
@@ -148,6 +153,7 @@ class UserUpdateForm(BaseModel):
     email: str
     profile_image_url: str
     password: Optional[str] = None
+    tenant_id: Optional[str] = None
 
 
 class UsersTable:
@@ -159,6 +165,7 @@ class UsersTable:
         profile_image_url: str = "/user.png",
         role: str = "pending",
         oauth_sub: Optional[str] = None,
+        tenant_id: Optional[str] = None,
     ) -> Optional[UserModel]:
         with get_db() as db:
             user = UserModel(
@@ -168,6 +175,7 @@ class UsersTable:
                     "email": email,
                     "role": role,
                     "profile_image_url": profile_image_url,
+                    "tenant_id": tenant_id,
                     "last_active_at": int(time.time()),
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
