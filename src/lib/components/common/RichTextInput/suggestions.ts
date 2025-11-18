@@ -1,11 +1,10 @@
-import { mount, unmount } from 'svelte';
-import { createClassComponent } from 'svelte/legacy';
+import type { ComponentType, SvelteComponent } from 'svelte';
 
 import tippy from 'tippy.js';
 
-export function getSuggestionRenderer(Component: any, ComponentProps = {}) {
+export function getSuggestionRenderer(Component: ComponentType, ComponentProps = {}) {
 	return function suggestionRenderer() {
-		let component = null;
+		let component: SvelteComponent | null = null;
 		let container: HTMLDivElement | null = null;
 
 		let popup: TippyInstance | null = null;
@@ -17,9 +16,7 @@ export function getSuggestionRenderer(Component: any, ComponentProps = {}) {
 				container.className = 'suggestion-list-container';
 				document.body.appendChild(container);
 
-				// mount Svelte component
-				component = createClassComponent({
-					component: Component,
+				component = new Component({
 					target: container,
 					props: {
 						char: props?.text,

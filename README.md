@@ -1,3 +1,86 @@
+# Previous Strategy 
+- Offload current Rag lambda Document search and Artifact Generation from EC2 to ECS Fargate
+- # AWS Resources
+- ECR Repositories
+- - [luxtronic-rag-artifact-builder-beta](https://us-east-2.console.aws.amazon.com/ecr/repositories/private/623065535582/luxtronic-rag-artifact-builder-beta?region=us-east-2)
+- - [luxtronic-rag-document-lookup-beta](https://us-east-2.console.aws.amazon.com/ecr/repositories/private/623065535582/luxtronic-rag-document-lookup-beta?region=us-east-2)
+- - [luxtronic-rag-master-lambda-beta](https://us-east-2.console.aws.amazon.com/ecr/repositories/private/623065535582/luxtronic-rag-master-lambda-beta?region=us-east-2)
+- - [luxtronic-rag-production-agent-beta](https://us-east-2.console.aws.amazon.com/ecr/repositories/private/623065535582/luxtronic-rag-production-agent-beta?region=us-east-2)
+- [Artifact Builder Task Definition](https://us-east-2.console.aws.amazon.com/ecs/v2/task-definitions/luxtronic-rag-artifact-builder-beta?region=us-east-2)
+- - Artifact Generation Pipeline
+- [Document Lookup Task Definition](https://us-east-2.console.aws.amazon.com/ecs/v2/task-definitions/luxtronic-rag-document-lookup-beta?status=ACTIVE&region=us-east-2)
+- - Semantic search worker that serves Slack/API lookups
+- [Elastic File System](https://us-east-2.console.aws.amazon.com/efs/home?region=us-east-2#/file-systems/fs-03a43e6e6134497f0?tabId=size)
+- - used by Document Lookup as artifact cache
+- [Cluster](https://us-east-2.console.aws.amazon.com/ecs/v2/clusters/luctronic-rag-beta/services?region=us-east-2)
+- - what we run the services/tasks on
+- [Document Lookup Service](https://us-east-2.console.aws.amazon.com/ecs/v2/clusters/luctronic-rag-beta/services?region=us-east-2)
+- - document lookup service that runs hot on the cluster... can be scaled to 0
+- [Rag Master Lambda](https://us-east-2.console.aws.amazon.com/lambda/home?region=us-east-2#/functions/luxtronic-rag-master-lambda-beta?tab=image)
+- - Slack orchestrator and query router
+- [Luxtronic API](https://us-east-2.console.aws.amazon.com/apigateway/main/apis/kra900vg2k/resources?api=kra900vg2k&region=us-east-2&url=https%3A%2F%2Fus-east-2.console.aws.amazon.com%2Fapigateway%2Fhome%3Fregion%3Dus-east-2%23%2Fapis%2Fkra900vg2k%2Fstages%2F*%2Fresources%2Flux-chat-beta%2Fmethods%2FPOST)
+
+- - /lux-chat-beta directs to rag master lambda as trigger
+- Created 2 load balancers and target groups as well as some segurity groups and subnets
+
+
+Findings/Challanges
+- Had to work through a lot of issues granting PowerUser the access it needed to deploy the aws resources
+- Also had some difficulty getting the running Fargate task access to our AWS Resources
+- Once I finally was able to get the Document Lookup to start Initialting, I found that the response time was unreasonably long
+- when run_task is called the image needs to build before execution begins
+- I was wating for minutes before getting any debugging back
+- Resolved this issue by standing up a constantly running service on the cluster assigned that fargate task
+- Continued working through permission issues... now dealing with issues unpacking previously embedded results
+
+The real issue
+- document lookup needs to always be hot because user is ecpecting a repsonse
+- while constantly running on a service fargate is 2X - 3X more expensive than simply running on EC2
+- in addition both ec2 and the service instances can effectivly be scaled to zero nilling out any benifit there
+
+If we wanted to keep a similar architecture, we could keep document lookup on ec2 and move embedding to a fargate run_task
+- works well with fargates fire and forget preference when using run_task
+- designed to run sporradic heavy workloads
+
+I got pointed in another direction by DaVinci this
+  
+
+# Use Agentset for Rag Doc Management
+- use [Agentset](https://agentset.ai/) to host are rag dog functionality 
+- Supports both on platform and via api document uploads
+-- We can seperate different tenentents into different namespaces.
+-- namespace id is a required parameter for both uploading documents and searching them
+-- when we spin up an Agentset client, we always pass that namespace id keeing it properly scoped.
+-- If we needed to access multiple 
+- Default Agentset api API rate limit is 60 requests per second, which i think is totally ok 
+- with some effort we could integrate potentially, integrate the knowledge feature into 
+- options for hosting
+-- lightsail
+-- App Runner
+-- t4g.small EC2 
+
+
+# Next Steps 
+- Punt on moving document lookup and artifact builging from ec2 to ecs
+- Lean into using agentset for rag doc management
+- tear down any NATs, Loadballancers, Services i created on aws to avoid costs
+- Host The Site Somewhere!
+
+
+# Open WebUI Resources 
+- [Database](https://us-east-2.console.aws.amazon.com/rds/home?region=us-east-2#database:id=open-web-ui-db;is-cluster=false)
+- [ECR Image](https://us-east-2.console.aws.amazon.com/ecr/repositories/private/623065535582/luxtronic-open-webui?region=us-east-2)\
+
+```bash
+docker build -t luxtronic-open-webui .        
+docker tag luxtronic-open-webui:latest 623065535582.dkr.ecr.us-east-2.amazonaws.com/luxtronic-open-webui:latest     
+aws ecr get-login-password --region us-east-2 --profile luxtronic-sso | docker login --username AWS --password-stdin 623065535582.dkr.ecr.us-east-2.amazonaws.com
+docker push 623065535582.dkr.ecr.us-east-2.amazonaws.com/luxtronic-open-webui:latest
+```
+
+
+# Old Notes
+
 # Open WebUI 👋
 
 ![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
