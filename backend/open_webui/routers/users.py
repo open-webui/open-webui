@@ -476,15 +476,17 @@ async def update_user_by_id(
             Auths.update_user_password_by_id(user_id, hashed)
 
         Auths.update_email_by_id(user_id, form_data.email.lower())
-        updated_user = Users.update_user_by_id(
-            user_id,
-            {
-                "role": form_data.role,
-                "name": form_data.name,
-                "email": form_data.email.lower(),
-                "profile_image_url": form_data.profile_image_url,
-            },
-        )
+        updated_payload = {
+            "role": form_data.role,
+            "name": form_data.name,
+            "email": form_data.email.lower(),
+            "profile_image_url": form_data.profile_image_url,
+        }
+
+        if form_data.tenant_id is not None:
+            updated_payload["tenant_id"] = form_data.tenant_id or None
+
+        updated_user = Users.update_user_by_id(user_id, updated_payload)
 
         if updated_user:
             return updated_user
