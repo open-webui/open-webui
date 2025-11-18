@@ -1,0 +1,65 @@
+services:
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: litellm-proxy
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./litellm_config.yaml:/app/config.yaml
+    command: ["--config", "/app/config.yaml", "--port", "4000", "--num_workers", "1"]
+    environment:
+      - AZURE_API_KEY=${AZURE_OPENAI_API_KEY}
+      - AZURE_API_BASE=${AZURE_OPENAI_BASE_URL}
+      - AZURE_API_VERSION=${AZURE_OPENAI_API_VERSION}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
+    container_name: open-webui-litellm
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:3000:8080"
+    depends_on:
+      - litellm
+    environment:
+      # Point to LiteLLM proxy
+      - OPENAI_API_BASE_URL=http://litellm:4000/v1
+      - OPENAI_API_KEY=sk-1234  # Dummy key for LiteLLM
+      
+      # Security
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+      - ENABLE_SIGNUP=${ENABLE_SIGNUP-true}
+      
+      # Enable user tracking headers for LiteLLM
+      - ENABLE_FORWARD_USER_INFO_HEADERS=true
+      
+      # Performance & CORS
+      - CORS_ALLOW_ORIGIN=*
+      - FORWARDED_ALLOW_IPS=*
+      
+      # Privacy
+      - SCARF_NO_ANALYTICS=true
+      - DO_NOT_TRACK=true
+      - ANONYMIZED_TELEMETRY=false
+      
+      # Disable Ollama since we're using LiteLLM
+      - ENABLE_OLLAMA_API=false
+      
+    volumes:
+      - open-webui-data:/app/backend/data
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  open-webui-data:
+    driver: local

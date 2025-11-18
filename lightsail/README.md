@@ -41,8 +41,20 @@ ENABLE_SIGNUP=false
 ```
 
 ### 4. Start the container
+
+#### Option A: Direct Azure OpenAI (recommended first try)
 ```bash
-docker-compose -f docker-compose.azure.yml --env-file azure.env up -d
+docker compose -f docker-compose.azure.yml --env-file azure.env up -d
+```
+
+#### Option B: Using LiteLLM Proxy (if direct connection doesn't work)
+```bash
+# Copy LiteLLM configuration files
+cp litellm_config.yaml ~/
+cp litellm.env ~/
+
+# Start with LiteLLM proxy
+docker compose -f docker-compose.litellm.yml --env-file litellm.env up -d
 ```
 
 ### 5. Access your application
