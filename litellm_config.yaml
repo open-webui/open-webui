@@ -1,18 +1,18 @@
 model_list:
-  - model_name: sf-ai
+  - model_name: gpt-4o
     litellm_params:
-      model: azure/sf-ai
+      model: azure/gpt-4o
       api_base: https://bio-sf-ai.openai.azure.com
-      api_version: "2023-07-01-preview"
+      api_version: "2025-01-01-preview"
       api_key: os.environ/AZURE_API_KEY
       
   # Add more models if needed
-  - model_name: gpt-4
-    litellm_params:
-      model: azure/sf-ai  # Map to your deployment
-      api_base: https://bio-sf-ai.openai.azure.com
-      api_version: "2023-07-01-preview"
-      api_key: os.environ/AZURE_API_KEY
+  # - model_name: gpt-4
+  #   litellm_params:
+  #     model: azure/sf-ai  # Map to your deployment
+  #     api_base: https://bio-sf-ai.openai.azure.com
+  #     api_version: "2023-07-01-preview"
+  #     api_key: os.environ/AZURE_API_KEY
 
 general_settings:
   master_key: sk-1234  # Simple key for Open WebUI to use

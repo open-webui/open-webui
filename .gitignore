@@ -316,4 +316,7 @@ cypress/screenshots
 # Azure
 azure.env
 
+# LiteLLM
+litellm.env
+
 
