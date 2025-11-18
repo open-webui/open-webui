@@ -219,7 +219,7 @@
 									<div class=" self-center mr-2">
 										<UserPlusSolid />
 									</div>
-									<div class=" self-center">{$i18n.t('Users')} ({userCount})</div>
+									<div class=" self-center">{$i18n.t('Users')}</div>
 								</button>
 							{/if}
 						</div>
@@ -232,7 +232,7 @@
 							{:else if selectedTab == 'permissions'}
 								<Permissions bind:permissions {defaultPermissions} />
 							{:else if selectedTab == 'users'}
-								<Users bind:userCount />
+								<Users bind:userCount groupId={group?.id} />
 							{/if}
 						</div>
 					</div>
