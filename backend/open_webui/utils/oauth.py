@@ -238,23 +238,30 @@ def get_parsed_and_base_url(server_url) -> tuple[urllib.parse.ParseResult, str]:
 def get_discovery_urls(server_url) -> list[str]:
     parsed, base_url = get_parsed_and_base_url(server_url)
 
-    urls = [
-        urllib.parse.urljoin(base_url, "/.well-known/oauth-authorization-server"),
-        urllib.parse.urljoin(base_url, "/.well-known/openid-configuration"),
-    ]
+    urls = []
 
     if parsed.path and parsed.path != "/":
-        urls.append(
+        # Generate discovery URLs based on https://modelcontextprotocol.io/specification/draft/basic/authorization#authorization-server-metadata-discovery
+        tenant = parsed.path.rstrip('/')
+        urls.extend([
             urllib.parse.urljoin(
                 base_url,
-                f"/.well-known/oauth-authorization-server{parsed.path.rstrip('/')}",
-            )
-        )
-        urls.append(
+                f"/.well-known/oauth-authorization-server{tenant}",
+            ),
             urllib.parse.urljoin(
-                base_url, f"/.well-known/openid-configuration{parsed.path.rstrip('/')}"
+                base_url,
+                f"/.well-known/openid-configuration{tenant}"
+            ),
+            urllib.parse.urljoin(
+                base_url,
+                f"{tenant}/.well-known/openid-configuration"
             )
-        )
+        ])
+
+    urls.extend([
+        urllib.parse.urljoin(base_url, "/.well-known/oauth-authorization-server"),
+        urllib.parse.urljoin(base_url, "/.well-known/openid-configuration"),
+    ])
 
     return urls
 
@@ -330,6 +337,13 @@ async def get_oauth_client_info_with_dynamic_client_registration(
                     registration_response_json = (
                         await oauth_client_registration_response.json()
                     )
+
+                    # The mcp package requires optional unset values to be None. If an empty string is passed, it gets validated and fails.
+                    # This replaces all empty strings with None.
+                    registration_response_json = {
+                        k: (None if v == "" else v)
+                        for k, v in registration_response_json.items()
+                    }
                     oauth_client_info = OAuthClientInformationFull.model_validate(
                         {
                             **registration_response_json,
@@ -374,9 +388,20 @@ class OAuthClientManager:
             "name": client_id,
             "client_id": oauth_client_info.client_id,
             "client_secret": oauth_client_info.client_secret,
-            "client_kwargs": (
-                {"scope": oauth_client_info.scope} if oauth_client_info.scope else {}
-            ),
+            "client_kwargs": {
+                **(
+                    {"scope": oauth_client_info.scope}
+                    if oauth_client_info.scope
+                    else {}
+                ),
+                **(
+                    {
+                        "token_endpoint_auth_method": oauth_client_info.token_endpoint_auth_method
+                    }
+                    if oauth_client_info.token_endpoint_auth_method
+                    else {}
+                ),
+            },
             "server_metadata_url": (
                 oauth_client_info.issuer if oauth_client_info.issuer else None
             ),
@@ -690,16 +715,17 @@ class OAuthClientManager:
         error_message = None
         try:
             client_info = self.get_client_info(client_id)
-            token_params = {}
+
+            auth_params = {}
             if (
                 client_info
                 and hasattr(client_info, "client_id")
                 and hasattr(client_info, "client_secret")
             ):
-                token_params["client_id"] = client_info.client_id
-                token_params["client_secret"] = client_info.client_secret
+                auth_params["client_id"] = client_info.client_id
+                auth_params["client_secret"] = client_info.client_secret
 
-            token = await client.authorize_access_token(request, **token_params)
+            token = await client.authorize_access_token(request, **auth_params)
             if token:
                 try:
                     # Add timestamp for tracking
@@ -1111,22 +1137,21 @@ class OAuthManager:
                     f"Removing user from group {group_model.name} as it is no longer in their oauth groups"
                 )
 
-                user_ids = group_model.user_ids
-                user_ids = [i for i in user_ids if i != user.id]
+                Groups.remove_users_from_group(group_model.id, [user.id])
 
                 # In case a group is created, but perms are never assigned to the group by hitting "save"
                 group_permissions = group_model.permissions
                 if not group_permissions:
                     group_permissions = default_permissions
 
-                update_form = GroupUpdateForm(
-                    name=group_model.name,
-                    description=group_model.description,
-                    permissions=group_permissions,
-                    user_ids=user_ids,
-                )
                 Groups.update_group_by_id(
-                    id=group_model.id, form_data=update_form, overwrite=False
+                    id=group_model.id,
+                    form_data=GroupUpdateForm(
+                        name=group_model.name,
+                        description=group_model.description,
+                        permissions=group_permissions,
+                    ),
+                    overwrite=False,
                 )
 
         # Add user to new groups
@@ -1142,22 +1167,21 @@ class OAuthManager:
                     f"Adding user to group {group_model.name} as it was found in their oauth groups"
                 )
 
-                user_ids = group_model.user_ids
-                user_ids.append(user.id)
+                Groups.add_users_to_group(group_model.id, [user.id])
 
                 # In case a group is created, but perms are never assigned to the group by hitting "save"
                 group_permissions = group_model.permissions
                 if not group_permissions:
                     group_permissions = default_permissions
 
-                update_form = GroupUpdateForm(
-                    name=group_model.name,
-                    description=group_model.description,
-                    permissions=group_permissions,
-                    user_ids=user_ids,
-                )
                 Groups.update_group_by_id(
-                    id=group_model.id, form_data=update_form, overwrite=False
+                    id=group_model.id,
+                    form_data=GroupUpdateForm(
+                        name=group_model.name,
+                        description=group_model.description,
+                        permissions=group_permissions,
+                    ),
+                    overwrite=False,
                 )
 
     async def _process_picture_url(
@@ -1224,8 +1248,16 @@ class OAuthManager:
         error_message = None
         try:
             client = self.get_client(provider)
+
+            auth_params = {}
+            if client:
+                if hasattr(client, "client_id"):
+                    auth_params["client_id"] = client.client_id
+                if hasattr(client, "client_secret"):
+                    auth_params["client_secret"] = client.client_secret
+
             try:
-                token = await client.authorize_access_token(request)
+                token = await client.authorize_access_token(request, **auth_params)
             except Exception as e:
                 detailed_error = _build_oauth_callback_error_message(e)
                 log.warning(

@@ -12,7 +12,6 @@
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
 	import GroupModal from './EditGroupModal.svelte';
 
-	export let users = [];
 	export let group = {
 		name: 'Admins',
 		user_ids: [1, 2, 3]
@@ -58,7 +57,6 @@
 <GroupModal
 	bind:show={showEdit}
 	edit
-	{users}
 	{group}
 	{defaultPermissions}
 	onSubmit={updateHandler}
@@ -81,7 +79,7 @@
 	</div>
 
 	<div class="flex items-center gap-1.5 w-fit font-medium text-right justify-end">
-		{group.user_ids.length}
+		{group?.member_count}
 
 		<div>
 			<User className="size-3.5" />

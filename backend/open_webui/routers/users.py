@@ -16,6 +16,7 @@ from open_webui.models.groups import Groups
 from open_webui.models.chats import Chats
 from open_webui.models.users import (
     UserModel,
+    UserGroupIdsModel,
     UserListResponse,
     UserInfoListResponse,
     UserIdNameListResponse,
@@ -91,7 +92,25 @@ async def get_users(
     if direction:
         filter["direction"] = direction
 
-    return Users.get_users(filter=filter, skip=skip, limit=limit)
+    result = Users.get_users(filter=filter, skip=skip, limit=limit)
+
+    users = result["users"]
+    total = result["total"]
+
+    return {
+        "users": [
+            UserGroupIdsModel(
+                **{
+                    **user.model_dump(),
+                    "group_ids": [
+                        group.id for group in Groups.get_groups_by_member_id(user.id)
+                    ],
+                }
+            )
+            for user in users
+        ],
+        "total": total,
+    }
 
 
 @router.get("/all", response_model=UserInfoListResponse)
@@ -150,6 +169,12 @@ class WorkspacePermissions(BaseModel):
     knowledge: bool = False
     prompts: bool = False
     tools: bool = False
+    models_import: bool = False
+    models_export: bool = False
+    prompts_import: bool = False
+    prompts_export: bool = False
+    tools_import: bool = False
+    tools_export: bool = False
 
 
 class SharingPermissions(BaseModel):

@@ -33,9 +33,6 @@
 
 	let loaded = false;
 
-	let users = [];
-	let total = 0;
-
 	let groups = [];
 	let filteredGroups;
 
@@ -91,16 +88,6 @@
 		if ($user?.role !== 'admin') {
 			await goto('/');
 			return;
-		}
-
-		const res = await getAllUsers(localStorage.token).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
-
-		if (res) {
-			users = res.users;
-			total = res.total;
 		}
 
 		defaultPermissions = await getUserDefaultPermissions(localStorage.token);
@@ -189,7 +176,7 @@
 
 				{#each filteredGroups as group}
 					<div class="my-2">
-						<GroupItem {group} {users} {setGroups} {defaultPermissions} />
+						<GroupItem {group} {setGroups} {defaultPermissions} />
 					</div>
 				{/each}
 			</div>

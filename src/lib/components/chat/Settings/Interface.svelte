@@ -998,6 +998,27 @@
 				</div>
 			</div>
 
+			{#if $config?.features?.enable_autocomplete_generation}
+				<div>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div id="prompt-autocompletion-label" class=" self-center text-xs">
+							{$i18n.t('Prompt Autocompletion')}
+						</div>
+
+						<div class="flex items-center gap-2 p-1">
+							<Switch
+								ariaLabelledbyId="prompt-autocompletion-label"
+								tooltip={true}
+								bind:state={promptAutocomplete}
+								on:change={() => {
+									saveSettings({ promptAutocomplete });
+								}}
+							/>
+						</div>
+					</div>
+				</div>
+			{/if}
+
 			{#if richTextInput}
 				<div>
 					<div class=" py-0.5 flex w-full justify-between">
@@ -1036,27 +1057,6 @@
 						</div>
 					</div>
 				</div>
-
-				{#if $config?.features?.enable_autocomplete_generation}
-					<div>
-						<div class=" py-0.5 flex w-full justify-between">
-							<div id="prompt-autocompletion-label" class=" self-center text-xs">
-								{$i18n.t('Prompt Autocompletion')}
-							</div>
-
-							<div class="flex items-center gap-2 p-1">
-								<Switch
-									ariaLabelledbyId="prompt-autocompletion-label"
-									tooltip={true}
-									bind:state={promptAutocomplete}
-									on:change={() => {
-										saveSettings({ promptAutocomplete });
-									}}
-								/>
-							</div>
-						</div>
-					</div>
-				{/if}
 			{/if}
 
 			<div>

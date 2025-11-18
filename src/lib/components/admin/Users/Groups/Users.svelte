@@ -2,50 +2,80 @@
 	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
+	import { getUsers } from '$lib/apis/users';
+	import { toast } from 'svelte-sonner';
+
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Plus from '$lib/components/icons/Plus.svelte';
-	import { WEBUI_BASE_URL } from '$lib/constants';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
+	import Pagination from '$lib/components/common/Pagination.svelte';
+	import { addUserToGroup, removeUserFromGroup } from '$lib/apis/groups';
 
-	export let users = [];
-	export let userIds = [];
+	export let groupId: string;
+	export let userCount = 0;
 
-	let filteredUsers = [];
-
-	$: filteredUsers = users
-		.filter((user) => {
-			if (query === '') {
-				return true;
-			}
-
-			return (
-				user.name.toLowerCase().includes(query.toLowerCase()) ||
-				user.email.toLowerCase().includes(query.toLowerCase())
-			);
-		})
-		.sort((a, b) => {
-			const aUserIndex = userIds.indexOf(a.id);
-			const bUserIndex = userIds.indexOf(b.id);
-
-			// Compare based on userIds or fall back to alphabetical order
-			if (aUserIndex !== -1 && bUserIndex === -1) return -1; // 'a' has valid userId -> prioritize
-			if (bUserIndex !== -1 && aUserIndex === -1) return 1; // 'b' has valid userId -> prioritize
-
-			// Both a and b are either in the userIds array or not, so we'll sort them by their indices
-			if (aUserIndex !== -1 && bUserIndex !== -1) return aUserIndex - bUserIndex;
-
-			// If both are not in the userIds, fallback to alphabetical sorting by name
-			return a.name.localeCompare(b.name);
-		});
+	let users = [];
+	let total = 0;
 
 	let query = '';
+	let page = 1;
+
+	const getUserList = async () => {
+		try {
+			const res = await getUsers(
+				localStorage.token,
+				query,
+				`group_id:${groupId}`,
+				null,
+				page
+			).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+
+			if (res) {
+				users = res.users;
+				total = res.total;
+			}
+		} catch (err) {
+			console.error(err);
+		}
+	};
+
+	const toggleMember = async (userId, state) => {
+		if (state === 'checked') {
+			await addUserToGroup(localStorage.token, groupId, [userId]).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+		} else {
+			await removeUserFromGroup(localStorage.token, groupId, [userId]).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+		}
+
+		page = 1;
+		getUserList();
+	};
+
+	$: if (page) {
+		getUserList();
+	}
+
+	$: if (query !== null) {
+		getUserList();
+	}
+
+	$: if (query) {
+		page = 1;
+	}
 </script>
 
-<div>
-	<div class="flex w-full">
-		<div class="flex flex-1">
+<div class=" max-h-full h-full w-full flex flex-col overflow-y-hidden">
+	<div class="w-full h-fit mb-1.5">
+		<div class="flex flex-1 h-fit">
 			<div class=" self-center mr-3">
 				<Search />
 			</div>
@@ -57,20 +87,16 @@
 		</div>
 	</div>
 
-	<div class="mt-3 scrollbar-hidden">
+	<div class="flex-1 overflow-y-auto scrollbar-hidden">
 		<div class="flex flex-col gap-2.5">
-			{#if filteredUsers.length > 0}
-				{#each filteredUsers as user, userIdx (user.id)}
+			{#if users.length > 0}
+				{#each users as user, userIdx (user.id)}
 					<div class="flex flex-row items-center gap-3 w-full text-sm">
 						<div class="flex items-center">
 							<Checkbox
-								state={userIds.includes(user.id) ? 'checked' : 'unchecked'}
+								state={(user?.group_ids ?? []).includes(groupId) ? 'checked' : 'unchecked'}
 								on:change={(e) => {
-									if (e.detail === 'checked') {
-										userIds = [...userIds, user.id];
-									} else {
-										userIds = userIds.filter((id) => id !== user.id);
-									}
+									toggleMember(user.id, e.detail);
 								}}
 							/>
 						</div>
@@ -82,7 +108,7 @@
 								</div>
 							</Tooltip>
 
-							{#if userIds.includes(user.id)}
+							{#if (user?.group_ids ?? []).includes(groupId)}
 								<Badge type="success" content="member" />
 							{/if}
 						</div>
@@ -95,4 +121,8 @@
 			{/if}
 		</div>
 	</div>
+
+	{#if total > 30}
+		<Pagination bind:page count={total} perPage={30} />
+	{/if}
 </div>

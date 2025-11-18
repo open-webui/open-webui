@@ -64,6 +64,7 @@ from open_webui.retrieval.web.serply import search_serply
 from open_webui.retrieval.web.serpstack import search_serpstack
 from open_webui.retrieval.web.tavily import search_tavily
 from open_webui.retrieval.web.bing import search_bing
+from open_webui.retrieval.web.azure import search_azure
 from open_webui.retrieval.web.exa import search_exa
 from open_webui.retrieval.web.perplexity import search_perplexity
 from open_webui.retrieval.web.sougou import search_sougou
@@ -529,6 +530,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "PERPLEXITY_API_KEY": request.app.state.config.PERPLEXITY_API_KEY,
             "PERPLEXITY_MODEL": request.app.state.config.PERPLEXITY_MODEL,
             "PERPLEXITY_SEARCH_CONTEXT_USAGE": request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
+            "PERPLEXITY_SEARCH_API_URL": request.app.state.config.PERPLEXITY_SEARCH_API_URL,
             "SOUGOU_API_SID": request.app.state.config.SOUGOU_API_SID,
             "SOUGOU_API_SK": request.app.state.config.SOUGOU_API_SK,
             "WEB_LOADER_ENGINE": request.app.state.config.WEB_LOADER_ENGINE,
@@ -586,6 +588,7 @@ class WebConfig(BaseModel):
     PERPLEXITY_API_KEY: Optional[str] = None
     PERPLEXITY_MODEL: Optional[str] = None
     PERPLEXITY_SEARCH_CONTEXT_USAGE: Optional[str] = None
+    PERPLEXITY_SEARCH_API_URL: Optional[str] = None
     SOUGOU_API_SID: Optional[str] = None
     SOUGOU_API_SK: Optional[str] = None
     WEB_LOADER_ENGINE: Optional[str] = None
@@ -1115,6 +1118,9 @@ async def update_rag_config(
         request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE = (
             form_data.web.PERPLEXITY_SEARCH_CONTEXT_USAGE
         )
+        request.app.state.config.PERPLEXITY_SEARCH_API_URL = (
+            form_data.web.PERPLEXITY_SEARCH_API_URL
+        )
         request.app.state.config.SOUGOU_API_SID = form_data.web.SOUGOU_API_SID
         request.app.state.config.SOUGOU_API_SK = form_data.web.SOUGOU_API_SK
 
@@ -1261,6 +1267,7 @@ async def update_rag_config(
             "PERPLEXITY_API_KEY": request.app.state.config.PERPLEXITY_API_KEY,
             "PERPLEXITY_MODEL": request.app.state.config.PERPLEXITY_MODEL,
             "PERPLEXITY_SEARCH_CONTEXT_USAGE": request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
+            "PERPLEXITY_SEARCH_API_URL": request.app.state.config.PERPLEXITY_SEARCH_API_URL,
             "SOUGOU_API_SID": request.app.state.config.SOUGOU_API_SID,
             "SOUGOU_API_SK": request.app.state.config.SOUGOU_API_SK,
             "WEB_LOADER_ENGINE": request.app.state.config.WEB_LOADER_ENGINE,
@@ -1917,6 +1924,8 @@ def search_web(
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                request.app.state.config.PERPLEXITY_SEARCH_API_URL,
+                user,
             )
         else:
             raise Exception("No PERPLEXITY_API_KEY found in environment variables")
@@ -2094,6 +2103,24 @@ def search_web(
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
         )
+    elif engine == "azure":
+        if (
+            request.app.state.config.AZURE_AI_SEARCH_API_KEY
+            and request.app.state.config.AZURE_AI_SEARCH_ENDPOINT
+            and request.app.state.config.AZURE_AI_SEARCH_INDEX_NAME
+        ):
+            return search_azure(
+                request.app.state.config.AZURE_AI_SEARCH_API_KEY,
+                request.app.state.config.AZURE_AI_SEARCH_ENDPOINT,
+                request.app.state.config.AZURE_AI_SEARCH_INDEX_NAME,
+                query,
+                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception(
+                "AZURE_AI_SEARCH_API_KEY, AZURE_AI_SEARCH_ENDPOINT, and AZURE_AI_SEARCH_INDEX_NAME are required for Azure AI Search"
+            )
     elif engine == "exa":
         return search_exa(
             request.app.state.config.EXA_API_KEY,

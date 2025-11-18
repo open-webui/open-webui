@@ -104,6 +104,7 @@ from open_webui.utils.mcp.client import MCPClient
 
 from open_webui.config import (
     CACHE_DIR,
+    DEFAULT_VOICE_MODE_PROMPT_TEMPLATE,
     DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
     DEFAULT_CODE_INTERPRETER_PROMPT,
     CODE_INTERPRETER_BLOCKED_MODULES,
@@ -312,7 +313,11 @@ async def chat_completion_tools_handler(
             for message in recent_messages
         )
 
-        prompt = f"History:\n{chat_history}\nQuery: {user_message}" if chat_history else f"Query: {user_message}"
+        prompt = (
+            f"History:\n{chat_history}\nQuery: {user_message}"
+            if chat_history
+            else f"Query: {user_message}"
+        )
 
         return {
             "model": task_model_id,
@@ -1233,6 +1238,18 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     features = form_data.pop("features", None)
     if features:
+        if "voice" in features and features["voice"]:
+            if request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE != None:
+                if request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE != "":
+                    template = request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE
+                else:
+                    template = DEFAULT_VOICE_MODE_PROMPT_TEMPLATE
+
+                form_data["messages"] = add_or_update_system_message(
+                    template,
+                    form_data["messages"],
+                )
+
         if "memory" in features and features["memory"]:
             form_data = await chat_memory_handler(
                 request, form_data, extra_params, user
@@ -1327,7 +1344,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         continue
 
                     auth_type = mcp_server_connection.get("auth_type", "")
-
                     headers = {}
                     if auth_type == "bearer":
                         headers["Authorization"] = (
@@ -1362,6 +1378,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         except Exception as e:
                             log.error(f"Error getting OAuth token: {e}")
                             oauth_token = None
+
+                    connection_headers = mcp_server_connection.get("headers", None)
+                    if connection_headers and isinstance(connection_headers, dict):
+                        for key, value in connection_headers.items():
+                            headers[key] = value
 
                     mcp_clients[server_id] = MCPClient()
                     await mcp_clients[server_id].connect(

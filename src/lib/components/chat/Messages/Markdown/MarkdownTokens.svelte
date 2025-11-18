@@ -8,7 +8,7 @@
 	const { saveAs } = fileSaver;
 
 	import { marked, type Token } from 'marked';
-	import { unescapeHtml } from '$lib/utils';
+	import { copyToClipboard, unescapeHtml } from '$lib/utils';
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { settings } from '$lib/stores';
@@ -23,6 +23,7 @@
 
 	import Source from './Source.svelte';
 	import HtmlToken from './HTMLToken.svelte';
+	import Clipboard from '$lib/components/icons/Clipboard.svelte';
 
 	export let id: string;
 	export let tokens: Token[];
@@ -182,7 +183,19 @@
 				</table>
 			</div>
 
-			<div class=" absolute top-1 right-1.5 z-20 invisible group-hover:visible">
+			<div class=" absolute top-1 right-1.5 z-20 invisible group-hover:visible flex gap-0.5">
+				<Tooltip content={$i18n.t('Copy')}>
+					<button
+						class="p-1 rounded-lg bg-transparent transition"
+						on:click={(e) => {
+							e.stopPropagation();
+							copyToClipboard(token.raw.trim());
+						}}
+					>
+						<Clipboard className=" size-3.5" strokeWidth="1.5" />
+					</button>
+				</Tooltip>
+
 				<Tooltip content={$i18n.t('Export to CSV')}>
 					<button
 						class="p-1 rounded-lg bg-transparent transition"

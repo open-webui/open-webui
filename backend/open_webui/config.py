@@ -1124,10 +1124,7 @@ ENABLE_LOGIN_FORM = PersistentConfig(
     os.environ.get("ENABLE_LOGIN_FORM", "True").lower() == "true",
 )
 
-ENABLE_PASSWORD_AUTH = (
-    os.environ.get("ENABLE_PASSWORD_AUTH", "True").lower()
-    == "true"
-)
+ENABLE_PASSWORD_AUTH = os.environ.get("ENABLE_PASSWORD_AUTH", "True").lower() == "true"
 
 DEFAULT_LOCALE = PersistentConfig(
     "DEFAULT_LOCALE",
@@ -1232,6 +1229,30 @@ USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS = (
 
 USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS = (
     os.environ.get("USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS", "False").lower() == "true"
+)
+
+USER_PERMISSIONS_WORKSPACE_MODELS_IMPORT = (
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_MODELS_IMPORT", "False").lower() == "true"
+)
+
+USER_PERMISSIONS_WORKSPACE_MODELS_EXPORT = (
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_MODELS_EXPORT", "False").lower() == "true"
+)
+
+USER_PERMISSIONS_WORKSPACE_PROMPTS_IMPORT = (
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_PROMPTS_IMPORT", "False").lower() == "true"
+)
+
+USER_PERMISSIONS_WORKSPACE_PROMPTS_EXPORT = (
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_PROMPTS_EXPORT", "False").lower() == "true"
+)
+
+USER_PERMISSIONS_WORKSPACE_TOOLS_IMPORT = (
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_TOOLS_IMPORT", "False").lower() == "true"
+)
+
+USER_PERMISSIONS_WORKSPACE_TOOLS_EXPORT = (
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_TOOLS_EXPORT", "False").lower() == "true"
 )
 
 USER_PERMISSIONS_WORKSPACE_MODELS_ALLOW_PUBLIC_SHARING = (
@@ -1377,6 +1398,12 @@ DEFAULT_USER_PERMISSIONS = {
         "knowledge": USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS,
         "prompts": USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS,
         "tools": USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS,
+        "models_import": USER_PERMISSIONS_WORKSPACE_MODELS_IMPORT,
+        "models_export": USER_PERMISSIONS_WORKSPACE_MODELS_EXPORT,
+        "prompts_import": USER_PERMISSIONS_WORKSPACE_PROMPTS_IMPORT,
+        "prompts_export": USER_PERMISSIONS_WORKSPACE_PROMPTS_EXPORT,
+        "tools_import": USER_PERMISSIONS_WORKSPACE_TOOLS_IMPORT,
+        "tools_export": USER_PERMISSIONS_WORKSPACE_TOOLS_EXPORT,
     },
     "sharing": {
         "public_models": USER_PERMISSIONS_WORKSPACE_MODELS_ALLOW_PUBLIC_SHARING,
@@ -1820,6 +1847,38 @@ Output:
 #### Output:
 """
 
+
+VOICE_MODE_PROMPT_TEMPLATE = PersistentConfig(
+    "VOICE_MODE_PROMPT_TEMPLATE",
+    "task.voice.prompt_template",
+    os.environ.get("VOICE_MODE_PROMPT_TEMPLATE", ""),
+)
+
+DEFAULT_VOICE_MODE_PROMPT_TEMPLATE = """You are a friendly, concise voice assistant.
+
+Everything you say will be spoken aloud.
+Keep responses short, clear, and natural.
+
+STYLE:
+- Use simple words and short sentences.
+- Sound warm and conversational.
+- Avoid long explanations, lists, or complex phrasing.
+
+BEHAVIOR:
+- Give the quickest helpful answer first.
+- Offer extra detail only if needed.
+- Ask for clarification only when necessary.
+
+VOICE OPTIMIZATION:
+- Break information into small, easy-to-hear chunks.
+- Avoid dense wording or anything that sounds like reading text.
+
+ERROR HANDLING:
+- If unsure, say so briefly and offer options.
+- If something is unsafe or impossible, decline kindly and suggest a safe alternative.
+
+Stay consistent, helpful, and easy to listen to."""
+
 TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
     "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE",
     "task.tools.prompt_template",
@@ -2090,6 +2149,21 @@ PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(
     os.environ.get("PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH", "1536")
 )
 
+PGVECTOR_USE_HALFVEC = (
+    os.getenv("PGVECTOR_USE_HALFVEC", "false").lower() == "true"
+)
+
+if (
+    PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH > 2000
+    and not PGVECTOR_USE_HALFVEC
+):
+    raise ValueError(
+        "PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH is set to "
+        f"{PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH}, which exceeds the 2000 dimension limit of the "
+        "'vector' type. Set PGVECTOR_USE_HALFVEC=true to enable the 'halfvec' "
+        "type required for high-dimensional embeddings."
+    )
+
 PGVECTOR_CREATE_EXTENSION = (
     os.getenv("PGVECTOR_CREATE_EXTENSION", "true").lower() == "true"
 )
@@ -2138,6 +2212,40 @@ else:
         PGVECTOR_POOL_RECYCLE = int(PGVECTOR_POOL_RECYCLE)
     except Exception:
         PGVECTOR_POOL_RECYCLE = 3600
+
+PGVECTOR_INDEX_METHOD = os.getenv("PGVECTOR_INDEX_METHOD", "").strip().lower()
+if PGVECTOR_INDEX_METHOD not in ("ivfflat", "hnsw", ""):
+    PGVECTOR_INDEX_METHOD = ""
+
+PGVECTOR_HNSW_M = os.environ.get("PGVECTOR_HNSW_M", 16)
+
+if PGVECTOR_HNSW_M == "":
+    PGVECTOR_HNSW_M = 16
+else:
+    try:
+        PGVECTOR_HNSW_M = int(PGVECTOR_HNSW_M)
+    except Exception:
+        PGVECTOR_HNSW_M = 16
+
+PGVECTOR_HNSW_EF_CONSTRUCTION = os.environ.get("PGVECTOR_HNSW_EF_CONSTRUCTION", 64)
+
+if PGVECTOR_HNSW_EF_CONSTRUCTION == "":
+    PGVECTOR_HNSW_EF_CONSTRUCTION = 64
+else:
+    try:
+        PGVECTOR_HNSW_EF_CONSTRUCTION = int(PGVECTOR_HNSW_EF_CONSTRUCTION)
+    except Exception:
+        PGVECTOR_HNSW_EF_CONSTRUCTION = 64
+
+PGVECTOR_IVFFLAT_LISTS = os.environ.get("PGVECTOR_IVFFLAT_LISTS", 100)
+
+if PGVECTOR_IVFFLAT_LISTS == "":
+    PGVECTOR_IVFFLAT_LISTS = 100
+else:
+    try:
+        PGVECTOR_IVFFLAT_LISTS = int(PGVECTOR_IVFFLAT_LISTS)
+    except Exception:
+        PGVECTOR_IVFFLAT_LISTS = 100
 
 # Pinecone
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY", None)
@@ -2759,6 +2867,26 @@ ENABLE_RAG_LOCAL_WEB_FETCH = (
     os.getenv("ENABLE_RAG_LOCAL_WEB_FETCH", "False").lower() == "true"
 )
 
+
+DEFAULT_WEB_FETCH_FILTER_LIST = [
+    "!169.254.169.254",
+    "!fd00:ec2::254",
+    "!metadata.google.internal",
+    "!metadata.azure.com",
+    "!100.100.100.200",
+]
+
+web_fetch_filter_list = os.getenv("WEB_FETCH_FILTER_LIST", "")
+if web_fetch_filter_list == "":
+    web_fetch_filter_list = []
+else:
+    web_fetch_filter_list = [
+        item.strip() for item in web_fetch_filter_list.split(",") if item.strip()
+    ]
+
+WEB_FETCH_FILTER_LIST = list(set(DEFAULT_WEB_FETCH_FILTER_LIST + web_fetch_filter_list))
+
+
 YOUTUBE_LOADER_LANGUAGE = PersistentConfig(
     "YOUTUBE_LOADER_LANGUAGE",
     "rag.youtube_loader_language",
@@ -2817,6 +2945,7 @@ WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(
         # "wikipedia.com",
         # "wikimedia.org",
         # "wikidata.org",
+        # "!stackoverflow.com",
     ],
 )
 
@@ -2988,6 +3117,24 @@ BING_SEARCH_V7_SUBSCRIPTION_KEY = PersistentConfig(
     os.environ.get("BING_SEARCH_V7_SUBSCRIPTION_KEY", ""),
 )
 
+AZURE_AI_SEARCH_API_KEY = PersistentConfig(
+    "AZURE_AI_SEARCH_API_KEY",
+    "rag.web.search.azure_ai_search_api_key",
+    os.environ.get("AZURE_AI_SEARCH_API_KEY", ""),
+)
+
+AZURE_AI_SEARCH_ENDPOINT = PersistentConfig(
+    "AZURE_AI_SEARCH_ENDPOINT",
+    "rag.web.search.azure_ai_search_endpoint",
+    os.environ.get("AZURE_AI_SEARCH_ENDPOINT", ""),
+)
+
+AZURE_AI_SEARCH_INDEX_NAME = PersistentConfig(
+    "AZURE_AI_SEARCH_INDEX_NAME",
+    "rag.web.search.azure_ai_search_index_name",
+    os.environ.get("AZURE_AI_SEARCH_INDEX_NAME", ""),
+)
+
 EXA_API_KEY = PersistentConfig(
     "EXA_API_KEY",
     "rag.web.search.exa_api_key",
@@ -3010,6 +3157,12 @@ PERPLEXITY_SEARCH_CONTEXT_USAGE = PersistentConfig(
     "PERPLEXITY_SEARCH_CONTEXT_USAGE",
     "rag.web.search.perplexity_search_context_usage",
     os.getenv("PERPLEXITY_SEARCH_CONTEXT_USAGE", "medium"),
+)
+
+PERPLEXITY_SEARCH_API_URL = PersistentConfig(
+    "PERPLEXITY_SEARCH_API_URL",
+    "rag.web.search.perplexity_search_api_url",
+    os.getenv("PERPLEXITY_SEARCH_API_URL", "https://api.perplexity.ai/search"),
 )
 
 SOUGOU_API_SID = PersistentConfig(
@@ -3137,10 +3290,9 @@ try:
 except json.JSONDecodeError:
     automatic1111_params = {}
 
-
 AUTOMATIC1111_PARAMS = PersistentConfig(
     "AUTOMATIC1111_PARAMS",
-    "image_generation.automatic1111.api_auth",
+    "image_generation.automatic1111.api_params",
     automatic1111_params,
 )
 

@@ -73,7 +73,8 @@ dependencies = [
     "pymdown-extensions==10.14.2",
     "docx2txt==0.8",
     "python-pptx==1.0.2",
-    "unstructured==0.18.15",
+    "unstructured==0.18.18",
+    "msoffcrypto-tool==5.4.2",
     "nltk==3.9.1",
     "Markdown==3.9",
     "pypandoc==1.15",
@@ -149,9 +150,10 @@ all = [
     "pymilvus==2.6.2",
     "pinecone==6.0.2",
     "oracledb==3.2.0",
-
     "colbert-ai==0.2.21",
+
     "firecrawl-py==4.5.0",
+    "azure-search-documents==11.6.0",
 ]
 
 [project.scripts]
