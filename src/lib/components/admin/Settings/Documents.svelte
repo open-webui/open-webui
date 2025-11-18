@@ -1152,6 +1152,21 @@
 							</div>
 
 							{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
+								<div class="mb-2.5 flex w-full justify-between">
+									<div class="self-center text-xs font-medium">
+										{$i18n.t('Enrich Hybrid Search Text')}
+									</div>
+									<div class="flex items-center relative">
+										<Tooltip
+											content={$i18n.t(
+												'Adds filenames, titles, sections, and snippets into the BM25 text to improve lexical recall.'
+											)}
+										>
+											<Switch bind:state={RAGConfig.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS} />
+										</Tooltip>
+									</div>
+								</div>
+
 								<div class="  mb-2.5 flex flex-col w-full justify-between">
 									<div class="flex w-full justify-between">
 										<div class=" self-center text-xs font-medium">

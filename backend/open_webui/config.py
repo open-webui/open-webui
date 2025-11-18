@@ -2622,6 +2622,13 @@ ENABLE_RAG_HYBRID_SEARCH = PersistentConfig(
     os.environ.get("ENABLE_RAG_HYBRID_SEARCH", "").lower() == "true",
 )
 
+ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS = PersistentConfig(
+    "ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS",
+    "rag.enable_hybrid_search_enriched_texts",
+    os.environ.get("ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS", "False").lower()
+    == "true",
+)
+
 RAG_FULL_CONTEXT = PersistentConfig(
     "RAG_FULL_CONTEXT",
     "rag.full_context",
