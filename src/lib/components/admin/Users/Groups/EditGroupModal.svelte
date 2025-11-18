@@ -12,6 +12,8 @@
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import { addUserToGroup, removeUserFromGroup } from '$lib/apis/groups';
+	import { getUsers } from '$lib/apis/users';
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
@@ -31,6 +33,9 @@
 	let showDeleteConfirmDialog = false;
 
 	let userCount = 0;
+	let users = [];
+	let userIds = [];
+	let initialUserIds = []; // Track initial state to calculate diff
 
 	export let name = '';
 	export let description = '';
@@ -88,35 +93,151 @@
 	const submitHandler = async () => {
 		loading = true;
 
-		const group = {
+		const groupData = {
 			name,
 			description,
 			permissions
 		};
 
-		await onSubmit(group);
+		try {
+			const result = await onSubmit(groupData);
 
-		loading = false;
-		show = false;
+			// If users tab is available, update user IDs using add/remove
+			if (tabs.includes('users')) {
+				const groupId = edit ? group?.id : result?.id;
+				if (groupId) {
+					await updateGroupUsers(groupId);
+				}
+			}
+
+			loading = false;
+			show = false;
+		} catch (error) {
+			toast.error(`Error saving group: ${error}`);
+			loading = false;
+			return;
+		}
 	};
 
-	const init = () => {
+	const saveUsersHandler = async () => {
+		loading = true;
+
+		try {
+			if (group?.id) {
+				await updateGroupUsers(group.id);
+				toast.success($i18n.t('Group users updated successfully'));
+			}
+
+			loading = false;
+			show = false;
+		} catch (error) {
+			toast.error(`Error updating group users: ${error}`);
+			loading = false;
+		}
+	};
+
+	const updateGroupUsers = async (groupId: string) => {
+		// Ensure arrays
+		const currentUserIds = Array.isArray(userIds) ? userIds : [];
+		const initial = Array.isArray(initialUserIds) ? initialUserIds : [];
+
+		// Calculate diff
+		const usersToAdd = currentUserIds.filter((id) => !initial.includes(id));
+		const usersToRemove = initial.filter((id) => !currentUserIds.includes(id));
+
+		// Add new users
+		if (usersToAdd.length > 0) {
+			await addUserToGroup(localStorage.token, groupId, usersToAdd);
+		}
+
+		// Remove users
+		if (usersToRemove.length > 0) {
+			await removeUserFromGroup(localStorage.token, groupId, usersToRemove);
+		}
+	};
+
+	const init = async () => {
 		if (group) {
 			name = group.name;
 			description = group.description;
 			permissions = group?.permissions ?? {};
-
 			userCount = group?.member_count ?? 0;
+
+			// Get user IDs from users list (each user has group_ids field)
+			if (edit && group?.id && tabs.includes('users')) {
+				userIds = users
+					.filter((user) => (user.group_ids || []).includes(group.id))
+					.map((user) => user.id);
+				initialUserIds = [...userIds]; // Store initial state
+			} else {
+				userIds = [];
+				initialUserIds = [];
+			}
 		}
 	};
 
+	const fetchUsers = async () => {
+		try {
+			// Fetch first page to get total count
+			const firstPage = await getUsers(localStorage.token, '', '', '', 1).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+
+			if (!firstPage || !firstPage.users) {
+				users = [];
+				return;
+			}
+
+			const total = firstPage.total;
+			const perPage = 30;
+			const totalPages = Math.ceil(total / perPage);
+			let allUsers = [...firstPage.users];
+
+			// If only one page, we're done
+			if (totalPages === 1) {
+				users = allUsers;
+				return;
+			}
+
+			// Fetch remaining pages in parallel batches of 5
+			const BATCH_SIZE = 5;
+
+			for (let i = 2; i <= totalPages; i += BATCH_SIZE) {
+				const batch = [];
+				const endPage = Math.min(i + BATCH_SIZE, totalPages + 1);
+
+				for (let page = i; page < endPage; page++) {
+					batch.push(getUsers(localStorage.token, '', '', '', page));
+				}
+
+				const results = await Promise.all(batch);
+				results.forEach((res) => {
+					if (res && res.users && Array.isArray(res.users)) {
+						allUsers = [...allUsers, ...res.users];
+					}
+				});
+			}
+
+			users = allUsers;
+		} catch (error) {
+			console.error('Error fetching users:', error);
+			users = [];
+		}
+	};
+
+	// Reactive statement to initialize when modal opens
 	$: if (show) {
-		init();
+		// Only init if users have been fetched (or allow empty for new groups)
+		if (users.length > 0 || !edit) {
+			init();
+		}
 	}
 
-	onMount(() => {
+	onMount(async () => {
 		selectedTab = tabs[0];
-		init();
+		await fetchUsers();
+		// init() will be called by reactive statement once modal opens
 	});
 </script>
 
@@ -246,7 +367,7 @@
 								{:else if selectedTab == 'permissions'}
 									<Permissions bind:permissions {defaultPermissions} />
 								{:else if selectedTab == 'users'}
-									<Users bind:userCount groupId={group?.id} />
+									<Users bind:userIds {users} />
 								{/if}
 							</div>
 
@@ -258,6 +379,25 @@
 											: ''}"
 										type="submit"
 										disabled={loading}
+									>
+										{$i18n.t('Save')}
+
+										{#if loading}
+											<div class="ml-2 self-center">
+												<Spinner />
+											</div>
+										{/if}
+									</button>
+								</div>
+							{:else if selectedTab === 'users'}
+								<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
+									<button
+										class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
+											? ' cursor-not-allowed'
+											: ''}"
+										type="button"
+										disabled={loading}
+										on:click={saveUsersHandler}
 									>
 										{$i18n.t('Save')}
 

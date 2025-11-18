@@ -31,7 +31,9 @@
 		if (res) {
 			toast.success($i18n.t('Group updated successfully'));
 			setGroups();
+			return res; // Return the updated group so the modal can set user IDs
 		}
+		return null;
 	};
 
 	const deleteHandler = async () => {
