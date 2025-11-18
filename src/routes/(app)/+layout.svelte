@@ -1,54 +1,46 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
-	import { onMount, tick, getContext } from 'svelte';
-	import { openDB, deleteDB } from 'idb';
 	import fileSaver from 'file-saver';
-	const { saveAs } = fileSaver;
+	import { deleteDB, openDB } from 'idb';
+	import { getContext, onMount, tick } from 'svelte';
+	import { toast } from 'svelte-sonner';
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { fade } from 'svelte/transition';
 
-	import { getKnowledgeBases } from '$lib/apis/knowledge';
-	import { getFunctions } from '$lib/apis/functions';
 	import { getModels, getToolServersData, getVersionUpdates } from '$lib/apis';
-	import { getAllTags } from '$lib/apis/chats';
-	import { getPrompts } from '$lib/apis/prompts';
-	import { getTools } from '$lib/apis/tools';
 	import { getBanners } from '$lib/apis/configs';
+	import { getTools } from '$lib/apis/tools';
 	import { getUserSettings } from '$lib/apis/users';
 
 	import { WEBUI_VERSION } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
 
 	import {
-		config,
-		user,
-		settings,
-		models,
-		prompts,
-		knowledge,
-		tools,
-		functions,
-		tags,
 		banners,
+		config,
+		models,
+		settings,
+		showChangelog,
+		showSearch,
 		showSettings,
 		showShortcuts,
-		showChangelog,
+		showSidebar,
 		temporaryChatEnabled,
+		tools,
 		toolServers,
-		showSearch,
-		showSidebar
+		user
 	} from '$lib/stores';
 
-	import Sidebar from '$lib/components/layout/Sidebar.svelte';
-	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
-	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
-	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
+	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
+	import Sidebar from '$lib/components/layout/Sidebar.svelte';
+	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
 	import { Shortcut, shortcuts } from '$lib/shortcuts';
 
+	const { saveAs } = fileSaver;
 	const i18n = getContext('i18n');
 
 	let loaded = false;
@@ -165,7 +157,7 @@
 		]);
 
 		// Helper function to check if the pressed keys match the shortcut definition
-		const isShortcutMatch = (event: KeyboardEvent, shortcut): boolean => {
+		const isShortcutMatch = (event: KeyboardEvent, shortcut?: { keys: string[] }): boolean => {
 			const keys = shortcut?.keys || [];
 
 			const normalized = keys.map((k) => k.toLowerCase());
@@ -180,7 +172,6 @@
 
 			// Check modifiers
 			if (needShift && !event.shiftKey) return false;
-
 			if (needCtrl && !(event.ctrlKey || event.metaKey)) return false;
 			if (!needCtrl && (event.ctrlKey || event.metaKey)) return false;
 			if (needAlt && !event.altKey) return false;
@@ -293,7 +284,7 @@
 	});
 
 	const checkForVersionUpdates = async () => {
-		version = await getVersionUpdates(localStorage.token).catch((error) => {
+		version = await getVersionUpdates(localStorage.token).catch(() => {
 			return {
 				current: WEBUI_VERSION,
 				latest: WEBUI_VERSION
@@ -399,13 +390,6 @@
 {/if}
 
 <style>
-	.loading {
-		display: inline-block;
-		clip-path: inset(0 1ch 0 0);
-		animation: l 1s steps(3) infinite;
-		letter-spacing: -0.5px;
-	}
-
 	@keyframes l {
 		to {
 			clip-path: inset(0 -1ch 0 0);
