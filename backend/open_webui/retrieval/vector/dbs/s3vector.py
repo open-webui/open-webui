@@ -126,8 +126,6 @@ class S3VectorClient(VectorDBBase):
                   indexName=collection_name
               )
               return True
-          except self.client.exceptions.ResourceNotFoundException:
-              return False
           except Exception as e:
               log.error(f"Error checking if index '{collection_name}' exists: {e}")
               return False
