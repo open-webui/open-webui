@@ -1661,62 +1661,6 @@ def process_file(
                     ]
                 text_content = " ".join([doc.page_content for doc in docs])
 
-            # Validate character limit if configured (FILE_MAX_CHARS > 0 means enabled)
-            if request.app.state.config.FILE_MAX_CHARS > 0:
-                char_count = len(text_content)
-                max_chars = request.app.state.config.FILE_MAX_CHARS
-                
-                # Get current accumulator for this user (default to 0 if not exists)
-                if not hasattr(request.app.state, "user_char_accumulator"):
-                    request.app.state.user_char_accumulator = {}
-                current_total = request.app.state.user_char_accumulator.get(user.id, 0)
-                
-                # Calculate total characters (accumulator + current file)
-                total_chars = current_total + char_count
-                
-                # Validate against total character limit
-                if total_chars > max_chars:
-                    error_message = (
-                        f"Total file content exceeds maximum character limit. "
-                        f"Combined files contain {total_chars:,} characters, "
-                        f"but maximum allowed is {max_chars:,} characters."
-                    )
-                    
-                    log.warning(
-                        f"File {file.id} ({file.filename}) rejected: {error_message} "
-                        f"(Current file: {char_count:,} chars, Accumulator: {current_total:,} chars)"
-                    )
-                    
-                    # Mark file as failed with error message
-                    Files.update_file_data_by_id(
-                        file.id,
-                        {
-                            "status": "failed",
-                            "error": error_message,
-                        },
-                    )
-                    
-                    # Delete from storage to free up disk space
-                    # Keep in database for audit trail
-                    try:
-                        if file.path:
-                            Storage.delete_file(file.path)
-                            log.info(f"Deleted file from storage: {file.path}")
-                    except Exception as e:
-                        log.error(f"Error deleting file from storage: {e}")
-                    
-                    # Return HTTP 413 Payload Too Large
-                    raise HTTPException(
-                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                        detail=ERROR_MESSAGES.DEFAULT(error_message),
-                    )
-                
-                # If validation passes, update accumulator with new total
-                request.app.state.user_char_accumulator[user.id] = total_chars
-                log.debug(
-                    f"File {file.id} processed successfully. "
-                    f"User {user.id} accumulator updated: {current_total:,} -> {total_chars:,} chars"
-                )
 
             log.debug(f"text_content: {text_content}")
             Files.update_file_data_by_id(
