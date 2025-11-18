@@ -12,7 +12,7 @@
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
-	import { getGroupUserIds, setGroupUserIds } from '$lib/apis/groups';
+	import { addUserToGroup, removeUserFromGroup } from '$lib/apis/groups';
 	import { getAllUsers } from '$lib/apis/users';
 
 	export let onSubmit: Function = () => {};
@@ -35,6 +35,7 @@
 	let userCount = 0;
 	let users = [];
 	let userIds = [];
+	let initialUserIds = []; // Track initial state to calculate diff
 
 	export let name = '';
 	export let description = '';
@@ -101,16 +102,11 @@
 		try {
 			const result = await onSubmit(groupData);
 
-			// If users tab is available, update user IDs
+			// If users tab is available, update user IDs using add/remove
 			if (tabs.includes('users')) {
-				// Ensure user_ids is always an array
-				const validUserIds = Array.isArray(userIds) ? userIds : [];
-
-				// For editing, use existing group ID; for new groups, use the returned group ID
 				const groupId = edit ? group?.id : result?.id;
-
 				if (groupId) {
-					await setGroupUserIds(localStorage.token, groupId, validUserIds);
+					await updateGroupUsers(groupId);
 				}
 			}
 
@@ -127,11 +123,8 @@
 		loading = true;
 
 		try {
-			// Ensure user_ids is always an array
-			const validUserIds = Array.isArray(userIds) ? userIds : [];
-
 			if (group?.id) {
-				await setGroupUserIds(localStorage.token, group.id, validUserIds);
+				await updateGroupUsers(group.id);
 				toast.success($i18n.t('Group users updated successfully'));
 			}
 
@@ -143,6 +136,26 @@
 		}
 	};
 
+	const updateGroupUsers = async (groupId: string) => {
+		// Ensure arrays
+		const currentUserIds = Array.isArray(userIds) ? userIds : [];
+		const initial = Array.isArray(initialUserIds) ? initialUserIds : [];
+
+		// Calculate diff
+		const usersToAdd = currentUserIds.filter((id) => !initial.includes(id));
+		const usersToRemove = initial.filter((id) => !currentUserIds.includes(id));
+
+		// Add new users
+		if (usersToAdd.length > 0) {
+			await addUserToGroup(localStorage.token, groupId, usersToAdd);
+		}
+
+		// Remove users
+		if (usersToRemove.length > 0) {
+			await removeUserFromGroup(localStorage.token, groupId, usersToRemove);
+		}
+	};
+
 	const init = async () => {
 		if (group) {
 			name = group.name;
@@ -150,18 +163,15 @@
 			permissions = group?.permissions ?? {};
 			userCount = group?.member_count ?? 0;
 
-			// Fetch user IDs for this group if editing
+			// Get user IDs from users list (each user has group_ids field)
 			if (edit && group?.id && tabs.includes('users')) {
-				try {
-					const fetchedUserIds = await getGroupUserIds(localStorage.token, group.id);
-					// Defensive handling for user_ids - support null, undefined, or non-array values
-					userIds = Array.isArray(fetchedUserIds) ? fetchedUserIds : [];
-				} catch (error) {
-					console.error('Error fetching group user IDs:', error);
-					userIds = [];
-				}
+				userIds = users
+					.filter((user) => (user.group_ids || []).includes(group.id))
+					.map((user) => user.id);
+				initialUserIds = [...userIds]; // Store initial state
 			} else {
 				userIds = [];
+				initialUserIds = [];
 			}
 		}
 	};
