@@ -353,13 +353,13 @@
 						</div>
 
 						{#if adminConfig?.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS}
-							<div class=" flex w-full flex-col pr-2">
+							<div class=" flex w-full flex-col pr-2 mb-2.5">
 								<div class=" text-xs font-medium">
 									{$i18n.t('Allowed Endpoints')}
 								</div>
 
 								<input
-									class="w-full mt-1 rounded-lg text-sm dark:text-gray-300 bg-transparent outline-hidden"
+									class="w-full mt-1 text-sm dark:text-gray-300 bg-transparent outline-hidden"
 									type="text"
 									placeholder={`e.g.) /api/v1/messages, /api/v1/channels`}
 									bind:value={adminConfig.API_KEY_ALLOWED_ENDPOINTS}
