@@ -1139,12 +1139,6 @@ DEFAULT_PINNED_MODELS = PersistentConfig(
     "DEFAULT_PINNED_MODELS", "ui.default_pinned_models", os.environ.get("DEFAULT_PINNED_MODELS", None)
 )
 
-MODEL_ORDER_LIST = PersistentConfig(
-    "MODEL_ORDER_LIST",
-    "ui.model_order_list",
-    [],
-)
-
 try:
     default_prompt_suggestions = json.loads(
         os.environ.get("DEFAULT_PROMPT_SUGGESTIONS", "[]")
@@ -1187,6 +1181,12 @@ DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
     "DEFAULT_PROMPT_SUGGESTIONS",
     "ui.prompt_suggestions",
     default_prompt_suggestions,
+)
+
+MODEL_ORDER_LIST = PersistentConfig(
+    "MODEL_ORDER_LIST",
+    "ui.model_order_list",
+    [],
 )
 
 DEFAULT_USER_ROLE = PersistentConfig(
