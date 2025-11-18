@@ -5,15 +5,12 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel
 
+from open_webui.retrieval.web.utils import is_string_allowed, resolve_hostname
+
 
 def get_filtered_results(results, filter_list):
     if not filter_list:
         return results
-
-    # Domains starting without "!" → allowed
-    allow_list = [d for d in filter_list if not d.startswith("!")]
-    # Domains starting with "!" → blocked
-    block_list = [d[1:] for d in filter_list if d.startswith("!")]
 
     filtered_results = []
 
@@ -23,17 +20,21 @@ def get_filtered_results(results, filter_list):
             continue
 
         domain = urlparse(url).netloc
-
-        # If allow list is non-empty, require domain to match one of them
-        if allow_list:
-            if not any(domain.endswith(allowed) for allowed in allow_list):
-                continue
-
-        # Block list always removes matches
-        if any(domain.endswith(blocked) for blocked in block_list):
+        if not domain:
             continue
 
-        filtered_results.append(result)
+        hostnames = [domain]
+
+        try:
+            ipv4_addresses, ipv6_addresses = resolve_hostname(domain)
+            hostnames.extend(ipv4_addresses)
+            hostnames.extend(ipv6_addresses)
+        except Exception:
+            pass
+
+        if any(is_string_allowed(hostname, filter_list) for hostname in hostnames):
+            filtered_results.append(result)
+            continue
 
     return filtered_results
 

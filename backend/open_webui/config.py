@@ -2861,6 +2861,26 @@ ENABLE_RAG_LOCAL_WEB_FETCH = (
     os.getenv("ENABLE_RAG_LOCAL_WEB_FETCH", "False").lower() == "true"
 )
 
+
+DEFAULT_WEB_FETCH_FILTER_LIST = [
+    "!169.254.169.254",
+    "!fd00:ec2::254",
+    "!metadata.google.internal",
+    "!metadata.azure.com",
+    "!100.100.100.200",
+]
+
+web_fetch_filter_list = os.getenv("WEB_FETCH_FILTER_LIST", "")
+if web_fetch_filter_list == "":
+    web_fetch_filter_list = []
+else:
+    web_fetch_filter_list = [
+        item.strip() for item in web_fetch_filter_list.split(",") if item.strip()
+    ]
+
+WEB_FETCH_FILTER_LIST = list(set(DEFAULT_WEB_FETCH_FILTER_LIST + web_fetch_filter_list))
+
+
 YOUTUBE_LOADER_LANGUAGE = PersistentConfig(
     "YOUTUBE_LOADER_LANGUAGE",
     "rag.youtube_loader_language",
