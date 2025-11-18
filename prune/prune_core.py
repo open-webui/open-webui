@@ -1058,19 +1058,37 @@ class MilvusMultitenancyDatabaseCleaner(VectorDatabaseCleaner):
                     collection = Collection(shared_collection_name)
                     collection.load()
 
-                    # Query to get distinct resource_ids
-                    # Note: Query all resource_ids without limit to ensure complete coverage
-                    results = collection.query(
-                        expr="resource_id != ''",
-                        output_fields=["resource_id"],
-                        limit=16384  # Milvus maximum query limit per batch
-                    )
+                    # Query ALL resource_ids with pagination (Milvus limit is 16384 per query)
+                    all_resource_ids = set()
+                    offset = 0
+                    batch_size = 16384
 
-                    # Get unique resource_ids
-                    resource_ids = set(res["resource_id"] for res in results)
+                    while True:
+                        results = collection.query(
+                            expr="resource_id != ''",
+                            output_fields=["resource_id"],
+                            limit=batch_size,
+                            offset=offset
+                        )
+
+                        if not results:
+                            break
+
+                        # Collect resource_ids from this batch
+                        batch_resource_ids = {res["resource_id"] for res in results}
+                        all_resource_ids.update(batch_resource_ids)
+
+                        # If we got fewer results than batch_size, we've reached the end
+                        if len(results) < batch_size:
+                            break
+
+                        offset += batch_size
+                        log.debug(f"Fetched {len(all_resource_ids)} resource_ids so far from {shared_collection_name} (offset: {offset})")
+
+                    log.info(f"Total resource_ids in {shared_collection_name}: {len(all_resource_ids)}")
 
                     # Count orphaned ones
-                    for resource_id in resource_ids:
+                    for resource_id in all_resource_ids:
                         if resource_id not in expected_resource_ids:
                             count += 1
                             log.debug(f"Found orphaned resource_id in {shared_collection_name}: {resource_id}")
@@ -1115,16 +1133,39 @@ class MilvusMultitenancyDatabaseCleaner(VectorDatabaseCleaner):
                     collection = Collection(shared_collection_name)
                     collection.load()
 
-                    # Query to get distinct resource_ids
-                    results = collection.query(
-                        expr="resource_id != ''",
-                        output_fields=["resource_id"],
-                        limit=16384  # Milvus maximum query limit per batch
-                    )
+                    # Query ALL resource_ids with pagination (Milvus limit is 16384 per query)
+                    all_resource_ids = set()
+                    offset = 0
+                    batch_size = 16384
+
+                    while True:
+                        results = collection.query(
+                            expr="resource_id != ''",
+                            output_fields=["resource_id"],
+                            limit=batch_size,
+                            offset=offset
+                        )
+
+                        if not results:
+                            break
+
+                        # Collect resource_ids from this batch
+                        batch_resource_ids = {res["resource_id"] for res in results}
+                        all_resource_ids.update(batch_resource_ids)
+
+                        # If we got fewer results than batch_size, we've reached the end
+                        if len(results) < batch_size:
+                            break
+
+                        offset += batch_size
+                        log.debug(f"Fetched {len(all_resource_ids)} resource_ids so far from {shared_collection_name} (offset: {offset})")
+
+                    log.info(f"Total resource_ids in {shared_collection_name}: {len(all_resource_ids)}")
 
                     # Get unique orphaned resource_ids
-                    resource_ids = set(res["resource_id"] for res in results)
-                    orphaned_ids = [rid for rid in resource_ids if rid not in expected_resource_ids]
+                    orphaned_ids = [rid for rid in all_resource_ids if rid not in expected_resource_ids]
+
+                    log.info(f"Found {len(orphaned_ids)} orphaned resource_ids in {shared_collection_name}")
 
                     # Delete each orphaned resource_id
                     for resource_id in orphaned_ids:
