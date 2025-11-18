@@ -1058,32 +1058,30 @@ class MilvusMultitenancyDatabaseCleaner(VectorDatabaseCleaner):
                     collection = Collection(shared_collection_name)
                     collection.load()
 
-                    # Query ALL resource_ids with pagination (Milvus limit is 16384 per query)
+                    # Query ALL resource_ids with pagination using query_iterator
+                    # (offset + limit must be < 16384, so iterator is the correct approach)
                     all_resource_ids = set()
-                    offset = 0
-                    batch_size = 16384
 
+                    iterator = collection.query_iterator(
+                        expr="",  # Empty expression to query all records
+                        output_fields=["resource_id"],
+                        batch_size=1000
+                    )
+
+                    batch_count = 0
                     while True:
-                        results = collection.query(
-                            expr="resource_id != ''",
-                            output_fields=["resource_id"],
-                            limit=batch_size,
-                            offset=offset
-                        )
-
+                        results = iterator.next()
                         if not results:
+                            iterator.close()
                             break
 
                         # Collect resource_ids from this batch
                         batch_resource_ids = {res["resource_id"] for res in results}
                         all_resource_ids.update(batch_resource_ids)
+                        batch_count += 1
 
-                        # If we got fewer results than batch_size, we've reached the end
-                        if len(results) < batch_size:
-                            break
-
-                        offset += batch_size
-                        log.debug(f"Fetched {len(all_resource_ids)} resource_ids so far from {shared_collection_name} (offset: {offset})")
+                        if batch_count % 10 == 0:
+                            log.debug(f"Fetched {len(all_resource_ids)} resource_ids so far from {shared_collection_name} ({batch_count} batches)")
 
                     log.info(f"Total resource_ids in {shared_collection_name}: {len(all_resource_ids)}")
 
@@ -1133,32 +1131,30 @@ class MilvusMultitenancyDatabaseCleaner(VectorDatabaseCleaner):
                     collection = Collection(shared_collection_name)
                     collection.load()
 
-                    # Query ALL resource_ids with pagination (Milvus limit is 16384 per query)
+                    # Query ALL resource_ids with pagination using query_iterator
+                    # (offset + limit must be < 16384, so iterator is the correct approach)
                     all_resource_ids = set()
-                    offset = 0
-                    batch_size = 16384
 
+                    iterator = collection.query_iterator(
+                        expr="",  # Empty expression to query all records
+                        output_fields=["resource_id"],
+                        batch_size=1000
+                    )
+
+                    batch_count = 0
                     while True:
-                        results = collection.query(
-                            expr="resource_id != ''",
-                            output_fields=["resource_id"],
-                            limit=batch_size,
-                            offset=offset
-                        )
-
+                        results = iterator.next()
                         if not results:
+                            iterator.close()
                             break
 
                         # Collect resource_ids from this batch
                         batch_resource_ids = {res["resource_id"] for res in results}
                         all_resource_ids.update(batch_resource_ids)
+                        batch_count += 1
 
-                        # If we got fewer results than batch_size, we've reached the end
-                        if len(results) < batch_size:
-                            break
-
-                        offset += batch_size
-                        log.debug(f"Fetched {len(all_resource_ids)} resource_ids so far from {shared_collection_name} (offset: {offset})")
+                        if batch_count % 10 == 0:
+                            log.debug(f"Fetched {len(all_resource_ids)} resource_ids so far from {shared_collection_name} ({batch_count} batches)")
 
                     log.info(f"Total resource_ids in {shared_collection_name}: {len(all_resource_ids)}")
 
