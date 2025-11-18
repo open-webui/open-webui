@@ -96,27 +96,26 @@
 				</div>
 				<Switch bind:state={permissions.workspace.models} />
 			</div>
-			{#if defaultPermissions?.workspace?.models && !permissions.workspace.models}
-				<div>
-					<div class="text-xs text-gray-500">
-						{$i18n.t('This is a default user permission and will remain enabled.')}
-					</div>
-				</div>
-			{/if}
 
 			{#if permissions.workspace.models}
-				<div class="ml-4 flex flex-col gap-1 mt-1">
-					<div class="flex w-full justify-between my-1">
+				<div class="ml-2 flex flex-col gap-2 pt-0.5 pb-1">
+					<div class="flex w-full justify-between">
 						<div class="self-center text-xs">
 							{$i18n.t('Import Models')}
 						</div>
 						<Switch bind:state={permissions.workspace.models_import} />
 					</div>
-					<div class="flex w-full justify-between my-1">
+					<div class="flex w-full justify-between">
 						<div class="self-center text-xs">
 							{$i18n.t('Export Models')}
 						</div>
 						<Switch bind:state={permissions.workspace.models_export} />
+					</div>
+				</div>
+			{:else if defaultPermissions?.workspace?.models}
+				<div class="pb-0.5">
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
 			{/if}
@@ -145,27 +144,26 @@
 				</div>
 				<Switch bind:state={permissions.workspace.prompts} />
 			</div>
-			{#if defaultPermissions?.workspace?.prompts && !permissions.workspace.prompts}
-				<div>
-					<div class="text-xs text-gray-500">
-						{$i18n.t('This is a default user permission and will remain enabled.')}
-					</div>
-				</div>
-			{/if}
 
 			{#if permissions.workspace.prompts}
-				<div class="ml-4 flex flex-col gap-1 mt-1">
-					<div class="flex w-full justify-between my-1">
+				<div class="ml-2 flex flex-col gap-2 pt-0.5 pb-1">
+					<div class="flex w-full justify-between">
 						<div class="self-center text-xs">
 							{$i18n.t('Import Prompts')}
 						</div>
 						<Switch bind:state={permissions.workspace.prompts_import} />
 					</div>
-					<div class="flex w-full justify-between my-1">
+					<div class="flex w-full justify-between">
 						<div class="self-center text-xs">
 							{$i18n.t('Export Prompts')}
 						</div>
 						<Switch bind:state={permissions.workspace.prompts_export} />
+					</div>
+				</div>
+			{:else if defaultPermissions?.workspace?.prompts}
+				<div class="pb-0.5">
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
 			{/if}
@@ -184,27 +182,26 @@
 				</div>
 				<Switch bind:state={permissions.workspace.tools} />
 			</Tooltip>
-			{#if defaultPermissions?.workspace?.tools && !permissions.workspace.tools}
-				<div>
-					<div class="text-xs text-gray-500">
-						{$i18n.t('This is a default user permission and will remain enabled.')}
-					</div>
-				</div>
-			{/if}
 
 			{#if permissions.workspace.tools}
-				<div class="ml-4 flex flex-col gap-1 mt-1">
-					<div class="flex w-full justify-between my-1">
+				<div class="ml-2 flex flex-col gap-2 pt-0.5 pb-1">
+					<div class="flex w-full justify-between">
 						<div class="self-center text-xs">
 							{$i18n.t('Import Tools')}
 						</div>
 						<Switch bind:state={permissions.workspace.tools_import} />
 					</div>
-					<div class="flex w-full justify-between my-1">
+					<div class="flex w-full justify-between">
 						<div class="self-center text-xs">
 							{$i18n.t('Export Tools')}
 						</div>
 						<Switch bind:state={permissions.workspace.tools_export} />
+					</div>
+				</div>
+			{:else if defaultPermissions?.workspace?.tools}
+				<div class="pb-0.5">
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
 			{/if}
