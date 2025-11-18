@@ -479,6 +479,7 @@ from open_webui.utils.models import (
     check_model_access,
     get_filtered_models,
 )
+from open_webui.utils.luxtronic import user_can_access_lux_model
 from open_webui.utils.chat import (
     generate_chat_completion as chat_completion_handler,
     chat_completed as chat_completed_handler,
@@ -1484,6 +1485,11 @@ async def chat_completion(
         if not model_item.get("direct", False):
             if model_id not in request.app.state.MODELS:
                 raise Exception("Model not found")
+
+            if not user_can_access_lux_model(user, model_id):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, detail="Model not found"
+                )
 
             model = request.app.state.MODELS[model_id]
             model_info = Models.get_model_by_id(model_id)

@@ -49,6 +49,7 @@ from open_webui.utils.plugin import (
     get_function_module_from_cache,
 )
 from open_webui.utils.models import get_all_models, check_model_access
+from open_webui.utils.luxtronic import user_can_access_lux_model
 from open_webui.utils.payload import (convert_payload_openai_to_ollama, convert_payload_openai_to_luxor)
 from open_webui.utils.response import (
     convert_response_luxor_to_openai,
@@ -198,6 +199,9 @@ async def generate_chat_completion(
 
     model_id = form_data["model"]
     if model_id not in models:
+        raise Exception("Model not found")
+
+    if not user_can_access_lux_model(user, model_id):
         raise Exception("Model not found")
 
     model = models[model_id]
