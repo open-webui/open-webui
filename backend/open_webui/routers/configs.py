@@ -229,7 +229,7 @@ async def verify_tool_servers_config(
                     log.debug(
                         f"Trying to fetch OAuth 2.1 discovery document from {discovery_url}"
                     )
-                    async with aiohttp.ClientSession() as session:
+                    async with aiohttp.ClientSession(trust_env=True) as session:
                         async with session.get(
                             discovery_url
                         ) as oauth_server_metadata_response:
