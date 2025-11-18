@@ -12,9 +12,9 @@
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ModelList from './ModelList.svelte';
+	import ModelListSelector from './ModelListSelector.svelte';
 	import { getModelsConfig, setModelsConfig } from '$lib/apis/configs';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import Minus from '$lib/components/icons/Minus.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
@@ -27,6 +27,8 @@
 
 	let selectedModelId = '';
 	let defaultModelIds = [];
+	let selectedPinnedModelId = '';
+	let defaultPinnedModelIds = [];
 	let modelIds = [];
 
 	let sortKey = '';
@@ -39,32 +41,29 @@
 		init();
 	}
 
-	$: if (selectedModelId) {
-		onModelSelect();
-	}
-
-	const onModelSelect = () => {
-		if (selectedModelId === '') {
-			return;
-		}
-
-		if (defaultModelIds.includes(selectedModelId)) {
-			selectedModelId = '';
-			return;
-		}
-
+	$: if (selectedModelId && !defaultModelIds.includes(selectedModelId)) {
 		defaultModelIds = [...defaultModelIds, selectedModelId];
 		selectedModelId = '';
-	};
+	} else if (selectedModelId) {
+		selectedModelId = '';
+	}
+
+	$: if (selectedPinnedModelId && !defaultPinnedModelIds.includes(selectedPinnedModelId)) {
+		defaultPinnedModelIds = [...defaultPinnedModelIds, selectedPinnedModelId];
+		selectedPinnedModelId = '';
+	} else if (selectedPinnedModelId) {
+		selectedPinnedModelId = '';
+	}
+
+	const parseModelIds = (configValue) =>
+		configValue ? configValue.split(',').filter((id) => id) : [];
 
 	const init = async () => {
 		config = await getModelsConfig(localStorage.token);
 
-		if (config?.DEFAULT_MODELS) {
-			defaultModelIds = (config?.DEFAULT_MODELS).split(',').filter((id) => id);
-		} else {
-			defaultModelIds = [];
-		}
+		defaultModelIds = parseModelIds(config?.DEFAULT_MODELS);
+		defaultPinnedModelIds = parseModelIds(config?.DEFAULT_PINNED_MODELS);
+
 		const modelOrderList = config.MODEL_ORDER_LIST || [];
 		const allModelIds = $models.map((model) => model.id);
 
@@ -86,6 +85,7 @@
 
 		const res = await setModelsConfig(localStorage.token, {
 			DEFAULT_MODELS: defaultModelIds.join(','),
+			DEFAULT_PINNED_MODELS: defaultPinnedModelIds.join(','),
 			MODEL_ORDER_LIST: modelIds
 		});
 
@@ -191,59 +191,19 @@
 
 						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 
-						<div>
-							<div class="flex flex-col w-full">
-								<div class="mb-1 flex justify-between">
-									<div class="text-xs text-gray-500">{$i18n.t('Default Models')}</div>
-								</div>
+						<ModelListSelector
+							title="Default Models"
+							bind:selectedModelIds={defaultModelIds}
+							bind:selectedId={selectedModelId}
+						/>
 
-								<div class="flex items-center -mr-1">
-									<select
-										class="w-full py-1 text-sm rounded-lg bg-transparent {selectedModelId
-											? ''
-											: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
-										bind:value={selectedModelId}
-									>
-										<option value="">{$i18n.t('Select a model')}</option>
-										{#each $models as model}
-											<option value={model.id} class="bg-gray-50 dark:bg-gray-700"
-												>{model.name}</option
-											>
-										{/each}
-									</select>
-								</div>
+						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 
-								<!-- <hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" /> -->
-
-								{#if defaultModelIds.length > 0}
-									<div class="flex flex-col">
-										{#each defaultModelIds as modelId, modelIdx}
-											<div class=" flex gap-2 w-full justify-between items-center">
-												<div class=" text-sm flex-1 py-1 rounded-lg">
-													{$models.find((model) => model.id === modelId)?.name}
-												</div>
-												<div class="shrink-0">
-													<button
-														type="button"
-														on:click={() => {
-															defaultModelIds = defaultModelIds.filter(
-																(_, idx) => idx !== modelIdx
-															);
-														}}
-													>
-														<Minus strokeWidth="2" className="size-3.5" />
-													</button>
-												</div>
-											</div>
-										{/each}
-									</div>
-								{:else}
-									<div class="text-gray-500 text-xs text-center py-2">
-										{$i18n.t('No models selected')}
-									</div>
-								{/if}
-							</div>
-						</div>
+						<ModelListSelector
+							title="Default Pinned Models"
+							bind:selectedModelIds={defaultPinnedModelIds}
+							bind:selectedId={selectedPinnedModelId}
+						/>
 
 						<div class="flex justify-between pt-3 text-sm font-medium gap-1.5">
 							<Tooltip content={$i18n.t('This will delete all models including custom models')}>
