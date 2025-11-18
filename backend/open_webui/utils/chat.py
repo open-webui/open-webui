@@ -36,6 +36,10 @@ from open_webui.routers.pipelines import (
     process_pipeline_outlet_filter,
 )
 
+from open_webui.routers.luxor import (
+    generate_chat_completion as generate_luxor_chat_completion,
+)
+
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 
@@ -45,8 +49,9 @@ from open_webui.utils.plugin import (
     get_function_module_from_cache,
 )
 from open_webui.utils.models import get_all_models, check_model_access
-from open_webui.utils.payload import convert_payload_openai_to_ollama
+from open_webui.utils.payload import (convert_payload_openai_to_ollama, convert_payload_openai_to_luxor)
 from open_webui.utils.response import (
+    convert_response_luxor_to_openai,
     convert_response_ollama_to_openai,
     convert_streaming_response_ollama_to_openai,
 )
@@ -54,6 +59,8 @@ from open_webui.utils.filter import (
     get_sorted_filter_ids,
     process_filter_functions,
 )
+
+
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL
 
@@ -260,6 +267,15 @@ async def generate_chat_completion(
             return await generate_function_chat_completion(
                 request, form_data, user=user, models=models
             )
+        
+        if model.get("owned_by") == "luxor":
+            form_data = convert_payload_openai_to_luxor(form_data)
+            response = await generate_luxor_chat_completion(
+                form_data=form_data
+            )
+
+            return convert_response_luxor_to_openai(response)
+
         if model.get("owned_by") == "ollama":
             # Using /ollama/api/chat endpoint
             form_data = convert_payload_openai_to_ollama(form_data)
