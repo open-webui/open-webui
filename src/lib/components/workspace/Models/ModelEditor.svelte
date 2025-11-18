@@ -22,6 +22,7 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import DefaultFiltersSelector from './DefaultFiltersSelector.svelte';
 	import DefaultFeatures from './DefaultFeatures.svelte';
+	import PromptSuggestionsModal from '$lib/components/admin/Settings/Interface/PromptSuggestionsModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -660,7 +661,7 @@
 									type="button"
 									on:click={() => {
 										if ((info?.meta?.suggestion_prompts ?? null) === null) {
-											info.meta.suggestion_prompts = [{ content: '' }];
+											info.meta.suggestion_prompts = [{ title: ['', ''], content: '' }];
 										} else {
 											info.meta.suggestion_prompts = null;
 										}
@@ -673,64 +674,10 @@
 									{/if}
 								</button>
 							</div>
-
-							{#if (info?.meta?.suggestion_prompts ?? null) !== null}
-								<button
-									class="p-1 px-2 text-xs flex rounded-sm transition"
-									type="button"
-									on:click={() => {
-										if (
-											info.meta.suggestion_prompts.length === 0 ||
-											info.meta.suggestion_prompts.at(-1).content !== ''
-										) {
-											info.meta.suggestion_prompts = [
-												...info.meta.suggestion_prompts,
-												{ content: '' }
-											];
-										}
-									}}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
-										/>
-									</svg>
-								</button>
-							{/if}
 						</div>
 
 						{#if info?.meta?.suggestion_prompts}
-							<div class="flex flex-col space-y-1 mt-1 mb-3">
-								{#if info.meta.suggestion_prompts.length > 0}
-									{#each info.meta.suggestion_prompts as prompt, promptIdx}
-										<div class=" flex rounded-lg">
-											<input
-												class=" text-sm w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850"
-												placeholder={$i18n.t('Write a prompt suggestion (e.g. Who are you?)')}
-												bind:value={prompt.content}
-											/>
-
-											<button
-												class="px-2"
-												type="button"
-												on:click={() => {
-													info.meta.suggestion_prompts.splice(promptIdx, 1);
-													info.meta.suggestion_prompts = info.meta.suggestion_prompts;
-												}}
-											>
-												<XMark className={'size-4'} />
-											</button>
-										</div>
-									{/each}
-								{:else}
-									<div class="text-xs text-center">{$i18n.t('No suggestion prompts')}</div>
-								{/if}
-							</div>
+							<PromptSuggestionsModal bind:suggestions={info.meta.suggestion_prompts} showWarning={false} />
 						{/if}
 					</div>
 
