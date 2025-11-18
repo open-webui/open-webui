@@ -1,7 +1,7 @@
 <script>
 	import Sortable from 'sortablejs';
 
-	import { onMount, tick } from 'svelte';
+	import { onMount } from 'svelte';
 
 	import { chatId, mobile, models, settings, showSidebar, config } from '$lib/stores';
 	import { WEBUI_BASE_URL } from '$lib/constants';
@@ -59,15 +59,9 @@
 	};
 
 	onMount(async () => {
-		await tick();
 		await initDefaultPinnedModels();
 		initPinnedModelsSortable();
 	});
-
-	// Re-run when config, models, or settings change
-	$: if ($config && $models && $models.length > 0 && $settings) {
-		initDefaultPinnedModels();
-	}
 </script>
 
 <div class="mt-0.5 pb-1.5" id="pinned-models-list">
