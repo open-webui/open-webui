@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 
 def get_fast_api_client():
-    from main import app
+    from open_webui.main import app
 
     with TestClient(app) as c:
         return c
@@ -136,7 +136,8 @@ class AbstractPostgresTest(AbstractIntegrationTest):
     @classmethod
     def teardown_class(cls) -> None:
         super().teardown_class()
-        cls.docker_client.containers.get(cls.DOCKER_CONTAINER_NAME).remove(force=True)
+        if getattr(cls, "docker_client", None):
+            cls.docker_client.containers.get(cls.DOCKER_CONTAINER_NAME).remove(force=True)
 
     def teardown_method(self):
         from open_webui.internal.db import Session
@@ -152,6 +153,7 @@ class AbstractPostgresTest(AbstractIntegrationTest):
             "document",
             "memory",
             "model",
+            "tenant",
             "prompt",
             "tag",
             '"user"',
