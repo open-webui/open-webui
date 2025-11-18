@@ -73,8 +73,8 @@
 	}
 </script>
 
-<div class=" max-h-full h-full w-full flex flex-col">
-	<div class="w-full h-fit">
+<div class=" max-h-full h-full w-full flex flex-col overflow-y-hidden">
+	<div class="w-full h-fit mb-1.5">
 		<div class="flex flex-1 h-fit">
 			<div class=" self-center mr-3">
 				<Search />
@@ -87,7 +87,7 @@
 		</div>
 	</div>
 
-	<div class="mt-3 overflow-y-auto flex-1">
+	<div class="flex-1 overflow-y-auto scrollbar-hidden">
 		<div class="flex flex-col gap-2.5">
 			{#if users.length > 0}
 				{#each users as user, userIdx (user.id)}

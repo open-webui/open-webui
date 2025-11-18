@@ -228,7 +228,14 @@
 							class="flex-1 mt-1 lg:mt-1 lg:h-[30rem] lg:max-h-[30rem] overflow-y-auto scrollbar-hidden"
 						>
 							{#if selectedTab == 'general'}
-								<Display bind:name bind:description />
+								<Display
+									bind:name
+									bind:description
+									{edit}
+									onDelete={() => {
+										showDeleteConfirmDialog = true;
+									}}
+								/>
 							{:else if selectedTab == 'permissions'}
 								<Permissions bind:permissions {defaultPermissions} />
 							{:else if selectedTab == 'users'}
@@ -286,37 +293,25 @@
 						{/if}
 					</div> -->
 
-					<div class="flex justify-between pt-3 text-sm font-medium gap-1.5">
-						{#if edit}
+					{#if ['general', 'permissions'].includes(selectedTab)}
+						<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-900 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
-								type="button"
-								on:click={() => {
-									showDeleteConfirmDialog = true;
-								}}
+								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
+									? ' cursor-not-allowed'
+									: ''}"
+								type="submit"
+								disabled={loading}
 							>
-								{$i18n.t('Delete')}
+								{$i18n.t('Save')}
+
+								{#if loading}
+									<div class="ml-2 self-center">
+										<Spinner />
+									</div>
+								{/if}
 							</button>
-						{:else}
-							<div></div>
-						{/if}
-
-						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
-								? ' cursor-not-allowed'
-								: ''}"
-							type="submit"
-							disabled={loading}
-						>
-							{$i18n.t('Save')}
-
-							{#if loading}
-								<div class="ml-2 self-center">
-									<Spinner />
-								</div>
-							{/if}
-						</button>
-					</div>
+						</div>
+					{/if}
 				</form>
 			</div>
 		</div>
