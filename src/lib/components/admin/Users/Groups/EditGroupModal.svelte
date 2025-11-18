@@ -13,7 +13,7 @@
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import { addUserToGroup, removeUserFromGroup } from '$lib/apis/groups';
-	import { getAllUsers } from '$lib/apis/users';
+	import { getUsers } from '$lib/apis/users';
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
@@ -178,29 +178,46 @@
 
 	const fetchUsers = async () => {
 		try {
-			const res = await getAllUsers(localStorage.token).catch((error) => {
-				toast.error(`${error}`);
-				return null;
-			});
+			let allUsers = [];
+			let page = 1;
+			let hasMore = true;
 
-			if (res) {
-				// getAllUsers returns {users: [], total: number}
-				users = Array.isArray(res?.users) ? res.users : [];
+			// Fetch all pages of users (30 per page)
+			while (hasMore) {
+				const res = await getUsers(localStorage.token, '', '', '', page).catch((error) => {
+					toast.error(`${error}`);
+					return null;
+				});
+
+				if (res && res.users && Array.isArray(res.users)) {
+					allUsers = [...allUsers, ...res.users];
+					// Check if there are more pages (30 users per page)
+					hasMore = res.users.length === 30;
+					page++;
+				} else {
+					hasMore = false;
+				}
 			}
+
+			users = allUsers;
 		} catch (error) {
 			console.error('Error fetching users:', error);
 			users = [];
 		}
 	};
 
+	// Reactive statement to initialize when modal opens
 	$: if (show) {
-		init();
+		// Only init if users have been fetched (or allow empty for new groups)
+		if (users.length > 0 || !edit) {
+			init();
+		}
 	}
 
 	onMount(async () => {
 		selectedTab = tabs[0];
 		await fetchUsers();
-		init();
+		// init() will be called by reactive statement once modal opens
 	});
 </script>
 
