@@ -34,6 +34,7 @@ from open_webui.models.files import (
     Files,
 )
 from open_webui.models.knowledge import Knowledges
+from open_webui.models.chats import Chats
 
 from open_webui.routers.knowledge import get_knowledge, get_knowledge_list
 from open_webui.routers.retrieval import ProcessFileForm, process_file
@@ -775,6 +776,7 @@ async def delete_file_by_id(id: str, request: Request, user=Depends(get_verified
 
 class ValidateFilesForm(BaseModel):
     file_ids: list[str]
+    chat_id: Optional[str] = None
 
 
 @router.post("/validate-total")
@@ -783,9 +785,8 @@ async def validate_files_total(
 ):
     """
     Validates if the total character count of a list of files exceeds the limit.
-    This endpoint considers ALL files in the list, not just the accumulator.
+    This endpoint validates files per chat (if chat_id is provided) or per user (if chat_id is None).
     """
-    # Validate character limit if configured (FILE_MAX_CHARS > 0 means enabled)
     if request.app.state.config.FILE_MAX_CHARS <= 0:
         return {"valid": True, "total_chars": 0, "max_chars": 0}
 
@@ -793,7 +794,15 @@ async def validate_files_total(
     total_chars = 0
     file_chars = {}
 
-    # Calculate total characters from all files in the list
+    chat_id = form_data.chat_id
+    if chat_id and not chat_id.startswith("local:"):
+        chat = Chats.get_chat_by_id_and_user_id(chat_id, user.id)
+        if not chat:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ERROR_MESSAGES.NOT_FOUND,
+            )
+
     for file_id in form_data.file_ids:
         if not file_id:
             continue
@@ -802,7 +811,6 @@ async def validate_files_total(
         if not file:
             continue
 
-        # Check access
         if not (
             file.user_id == user.id
             or user.role == "admin"
@@ -810,13 +818,11 @@ async def validate_files_total(
         ):
             continue
 
-        # Get file content and count characters
         file_content = file.data.get("content", "") if file.data else ""
         char_count = len(file_content)
         file_chars[file_id] = char_count
         total_chars += char_count
 
-    # Validate against total character limit
     if total_chars > max_chars:
         error_message = (
             f"Total file content exceeds maximum character limit. "
@@ -824,8 +830,9 @@ async def validate_files_total(
             f"but maximum allowed is {max_chars:,} characters."
         )
 
+        log_context = f"chat {chat_id}" if chat_id else f"user {user.id}"
         log.warning(
-            f"Files validation failed for user {user.id}: {error_message} "
+            f"Files validation failed for {log_context}: {error_message} "
             f"(Total: {total_chars:,} chars, Max: {max_chars:,} chars)"
         )
 
@@ -833,10 +840,6 @@ async def validate_files_total(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail=ERROR_MESSAGES.DEFAULT(error_message),
         )
-
-    log.debug(
-        f"Files validation passed for user {user.id}: {total_chars:,} chars (max: {max_chars:,} chars)"
-    )
 
     return {
         "valid": True,
