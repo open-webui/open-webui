@@ -78,6 +78,65 @@ aws ecr get-login-password --region us-east-2 --profile luxtronic-sso | docker l
 docker push 623065535582.dkr.ecr.us-east-2.amazonaws.com/luxtronic-open-webui:latest
 ```
 
+# Migrations on EC2
+```bash
+docker run --rm \
+	-e WEBUI_SECRET_KEY='<webui_secret>' \
+	-e DATABASE_HOST='<db_host>' \
+	-e DATABASE_NAME='<db_name>' \
+	-e DATABASE_PASSWORD='db_password' \
+	-e DATABASE_PORT='5432' \
+	-e DATABASE_TYPE='postgresql' \
+	-e DATABASE_USER='<db_user>' \
+	--entrypoint bash \
+	623065535582.dkr.ecr.us-east-2.amazonaws.com/luxtronic-open-webui:latest \
+	-lc "cd /app/backend/open_webui && alembic upgrade head"
+  ```
+
+  # Seeding in tenants and users
+  ## Sample json
+  ```bash
+  export LUXTRONIC_TENANT_SEED='[                                                                                                                                          
+    {                                                                                                                                                                      
+      "name": "Acme Widgets",                                                                                                                                              
+      "model_names": ["acme_doc", "acme_sales"],                                                                                                                           
+      "users": [                                                                                                                                                           
+        {"name": "Acme Admin", "email": "admin@acme.example", "password": "StrongPass1!", "role": "user"},                                                                
+        {"name": "Acme User",  "email": "user@acme.example",  "password": "StrongPass2!", "role": "user"}                                                                  
+      ]                                                                                                                                                                    
+    },                                                                                                                                                                     
+    {                                                                                                                                                                      
+      "name": "Globex Manufacturing",                                                                                                                                      
+      "model_names": ["globex_ops", "globex_support"],                                                                                                                     
+      "users": [                                                                                                                                                           
+        {"name": "Globex Manager", "email": "manager@globex.example", "password": "GlobexPass1!", "role": "user"}                                                         
+      ]                                                                                                                                                                    
+    },
+    {                                                                                                                                                                      
+      "name": "Initech",                                                                                                                                                   
+      "model_names": ["initech_q"],                                                                                                                                        
+      "users": [                                                                                                                                                           
+        {"name": "Initech Analyst", "email": "analyst@initech.example", "password": "TPSreport1!", "role": "user"}                                                         
+      ]                                                                                                                                                                    
+    }                                                                                                                                                                      
+  ]'      
+  ```
+
+  ## Seed Command
+  ```bash
+  docker run --rm \
+	-e WEBUI_SECRET_KEY='<web_ui_secret>' \
+	-e DATABASE_HOST='<db_host>' \
+	-e DATABASE_NAME='<db_name>' \
+	-e DATABASE_PASSWORD='<db_pw>' \
+	-e DATABASE_PORT='5432' \
+	-e DATABASE_TYPE='postgresql' \
+	-e DATABASE_USER='<db_user>' \
+	-e LUXTRONIC_TENANT_SEED="$LUXTRONIC_TENANT_SEED" \
+	--entrypoint python \
+	623065535582.dkr.ecr.us-east-2.amazonaws.com/luxtronic-open-webui:latest \
+	/app/backend/seed_luxtronic.py
+  ```
 
 # Old Notes
 
