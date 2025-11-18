@@ -12,6 +12,8 @@
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import { getGroupUserIds, setGroupUserIds } from '$lib/apis/groups';
+	import { getAllUsers } from '$lib/apis/users';
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
@@ -31,6 +33,8 @@
 	let showDeleteConfirmDialog = false;
 
 	let userCount = 0;
+	let users = [];
+	let userIds = [];
 
 	export let name = '';
 	export let description = '';
@@ -88,25 +92,94 @@
 	const submitHandler = async () => {
 		loading = true;
 
-		const group = {
+		const groupData = {
 			name,
 			description,
 			permissions
 		};
 
-		await onSubmit(group);
+		try {
+			const result = await onSubmit(groupData);
 
-		loading = false;
-		show = false;
+			// If users tab is available, update user IDs
+			if (tabs.includes('users')) {
+				// Ensure user_ids is always an array
+				const validUserIds = Array.isArray(userIds) ? userIds : [];
+
+				// For editing, use existing group ID; for new groups, use the returned group ID
+				const groupId = edit ? group?.id : result?.id;
+
+				if (groupId) {
+					await setGroupUserIds(localStorage.token, groupId, validUserIds);
+				}
+			}
+
+			loading = false;
+			show = false;
+		} catch (error) {
+			toast.error(`Error saving group: ${error}`);
+			loading = false;
+			return;
+		}
 	};
 
-	const init = () => {
+	const saveUsersHandler = async () => {
+		loading = true;
+
+		try {
+			// Ensure user_ids is always an array
+			const validUserIds = Array.isArray(userIds) ? userIds : [];
+
+			if (group?.id) {
+				await setGroupUserIds(localStorage.token, group.id, validUserIds);
+				toast.success($i18n.t('Group users updated successfully'));
+			}
+
+			loading = false;
+			show = false;
+		} catch (error) {
+			toast.error(`Error updating group users: ${error}`);
+			loading = false;
+		}
+	};
+
+	const init = async () => {
 		if (group) {
 			name = group.name;
 			description = group.description;
 			permissions = group?.permissions ?? {};
-
 			userCount = group?.member_count ?? 0;
+
+			// Fetch user IDs for this group if editing
+			if (edit && group?.id && tabs.includes('users')) {
+				try {
+					const fetchedUserIds = await getGroupUserIds(localStorage.token, group.id);
+					// Defensive handling for user_ids - support null, undefined, or non-array values
+					userIds = Array.isArray(fetchedUserIds) ? fetchedUserIds : [];
+				} catch (error) {
+					console.error('Error fetching group user IDs:', error);
+					userIds = [];
+				}
+			} else {
+				userIds = [];
+			}
+		}
+	};
+
+	const fetchUsers = async () => {
+		try {
+			const res = await getAllUsers(localStorage.token).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+
+			if (res) {
+				// getAllUsers returns {users: [], total: number}
+				users = Array.isArray(res?.users) ? res.users : [];
+			}
+		} catch (error) {
+			console.error('Error fetching users:', error);
+			users = [];
 		}
 	};
 
@@ -114,8 +187,9 @@
 		init();
 	}
 
-	onMount(() => {
+	onMount(async () => {
 		selectedTab = tabs[0];
+		await fetchUsers();
 		init();
 	});
 </script>
@@ -232,7 +306,7 @@
 							{/if}
 						</div>
 
-						<div class="flex-1 mt-1 lg:mt-1 lg:h-[30rem] lg:max-h-[30rem] flex flex-col">
+						<div class="flex-1 mt-1 lg:mt-1 lg:h-[28rem] lg:max-h-[28rem] flex flex-col">
 							<div class="w-full h-full overflow-y-auto scrollbar-hidden">
 								{#if selectedTab == 'general'}
 									<Display
@@ -246,7 +320,7 @@
 								{:else if selectedTab == 'permissions'}
 									<Permissions bind:permissions {defaultPermissions} />
 								{:else if selectedTab == 'users'}
-									<Users bind:userCount groupId={group?.id} />
+									<Users bind:userIds {users} />
 								{/if}
 							</div>
 
@@ -258,6 +332,25 @@
 											: ''}"
 										type="submit"
 										disabled={loading}
+									>
+										{$i18n.t('Save')}
+
+										{#if loading}
+											<div class="ml-2 self-center">
+												<Spinner />
+											</div>
+										{/if}
+									</button>
+								</div>
+							{:else if selectedTab === 'users'}
+								<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
+									<button
+										class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
+											? ' cursor-not-allowed'
+											: ''}"
+										type="button"
+										disabled={loading}
+										on:click={saveUsersHandler}
 									>
 										{$i18n.t('Save')}
 

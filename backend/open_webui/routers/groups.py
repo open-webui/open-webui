@@ -180,6 +180,61 @@ async def remove_users_from_group(
 
 
 ############################
+# GetGroupUserIds
+############################
+
+
+@router.get("/id/{id}/users", response_model=Optional[list[str]])
+async def get_group_user_ids(id: str, user=Depends(get_admin_user)):
+    try:
+        user_ids = Groups.get_group_user_ids_by_id(id)
+        if user_ids is None:
+            return []
+        return user_ids
+    except Exception as e:
+        log.exception(f"Error getting user IDs for group {id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
+
+
+############################
+# SetGroupUserIds
+############################
+
+
+@router.post("/id/{id}/users", response_model=Optional[GroupResponse])
+async def set_group_user_ids(
+    id: str, form_data: UserIdsForm, user=Depends(get_admin_user)
+):
+    try:
+        if form_data.user_ids:
+            form_data.user_ids = Users.get_valid_user_ids(form_data.user_ids)
+        else:
+            form_data.user_ids = []
+
+        Groups.set_group_user_ids_by_id(id, form_data.user_ids)
+        group = Groups.get_group_by_id(id)
+        if group:
+            return GroupResponse(
+                **group.model_dump(),
+                member_count=Groups.get_group_member_count_by_id(group.id),
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Error setting users for group"),
+            )
+    except Exception as e:
+        log.exception(f"Error setting users for group {id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
+
+
+############################
 # DeleteGroupById
 ############################
 
