@@ -15,11 +15,11 @@
 	import { getAllTags } from '$lib/apis/chats';
 	import { getPrompts } from '$lib/apis/prompts';
 	import { getTools } from '$lib/apis/tools';
-	import { getBanners } from '$lib/apis/configs';
+	import { getBanners, getInterfaceDefaults } from '$lib/apis/configs';
 	import { getUserSettings } from '$lib/apis/users';
 
 	import { WEBUI_VERSION } from '$lib/constants';
-	import { compareVersion } from '$lib/utils';
+	import { compareVersion, deepMerge } from '$lib/utils';
 
 	import {
 		config,
@@ -87,6 +87,15 @@
 	};
 
 	const setUserSettings = async (cb: () => Promise<void>) => {
+		// Load admin-configured interface defaults first
+		let adminDefaults = {};
+		try {
+			adminDefaults = await getInterfaceDefaults(localStorage.token);
+		} catch (error) {
+			console.log('No admin interface defaults configured or error loading them:', error);
+		}
+
+		// Load user settings
 		let userSettings = await getUserSettings(localStorage.token).catch((error) => {
 			console.error(error);
 			return null;
@@ -101,8 +110,12 @@
 			}
 		}
 
-		if (userSettings?.ui) {
-			settings.set(userSettings.ui);
+		// Implement fallback logic: User custom → Admin default → System default
+		// Deep merge admin defaults with user settings, where user settings take precedence
+		// This ensures users get new admin defaults for nested properties they haven't customized
+		if (userSettings?.ui || Object.keys(adminDefaults).length > 0) {
+			const mergedSettings = deepMerge(adminDefaults, userSettings?.ui || {});
+			settings.set(mergedSettings);
 		}
 
 		if (cb) {

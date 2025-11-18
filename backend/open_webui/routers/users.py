@@ -215,11 +215,16 @@ class FeaturesPermissions(BaseModel):
     notes: bool = True
 
 
+class UIPermissions(BaseModel):
+    interface_settings: bool = True
+
+
 class UserPermissions(BaseModel):
     workspace: WorkspacePermissions
     sharing: SharingPermissions
     chat: ChatPermissions
     features: FeaturesPermissions
+    ui: UIPermissions
 
 
 @router.get("/default/permissions", response_model=UserPermissions)
@@ -236,6 +241,9 @@ async def get_default_user_permissions(request: Request, user=Depends(get_admin_
         ),
         "features": FeaturesPermissions(
             **request.app.state.config.USER_PERMISSIONS.get("features", {})
+        ),
+        "ui": UIPermissions(
+            **request.app.state.config.USER_PERMISSIONS.get("ui", {})
         ),
     }
 
@@ -573,3 +581,53 @@ async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
 @router.get("/{user_id}/groups")
 async def get_user_groups_by_id(user_id: str, user=Depends(get_admin_user)):
     return Groups.get_groups_by_member_id(user_id)
+
+
+############################
+# ResetAllUsersInterfaceSettings
+############################
+
+
+@router.post("/reset-interface-settings", response_model=dict)
+async def reset_all_users_interface_settings(user=Depends(get_admin_user)):
+    """
+    Reset all users' interface settings to admin-configured defaults.
+    This is an irreversible operation that clears all custom user interface settings.
+    Admin only.
+    """
+    try:
+        from open_webui.internal.db import get_db
+        from open_webui.models.users import User
+
+        reset_count = 0
+
+        # Single transaction for all updates (optimized for performance)
+        with get_db() as db:
+            # Get all users with settings in one query
+            users = db.query(User).filter(User.settings.isnot(None)).all()
+
+            for user_obj in users:
+                if user_obj.settings and isinstance(user_obj.settings, dict):
+                    if "ui" in user_obj.settings:
+                        # Clear ui settings (will force fallback to admin defaults)
+                        user_obj.settings["ui"] = {}
+                        # Mark for update (SQLAlchemy tracks changes automatically)
+                        db.add(user_obj)
+                        reset_count += 1
+
+            # Single commit for all changes
+            db.commit()
+
+        log.info(f"Reset interface settings for {reset_count} users by admin {user.id}")
+
+        return {
+            "success": True,
+            "users_reset": reset_count,
+            "message": f"Successfully reset interface settings for {reset_count} users"
+        }
+    except Exception as e:
+        log.exception(f"Error resetting users' interface settings: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to reset users' interface settings"
+        )

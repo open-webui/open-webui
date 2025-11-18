@@ -53,6 +53,9 @@
 			image_generation: true,
 			code_interpreter: true,
 			notes: true
+		},
+		ui: {
+			interface_settings: true
 		}
 	};
 
@@ -71,7 +74,8 @@
 			workspace: { ...defaults.workspace, ...obj.workspace },
 			sharing: { ...defaults.sharing, ...obj.sharing },
 			chat: { ...defaults.chat, ...obj.chat },
-			features: { ...defaults.features, ...obj.features }
+			features: { ...defaults.features, ...obj.features },
+			ui: { ...defaults.ui, ...obj.ui }
 		};
 	}
 
@@ -688,6 +692,28 @@
 				<Switch bind:state={permissions.features.notes} />
 			</div>
 			{#if defaultPermissions?.features?.notes && !permissions.features.notes}
+				<div>
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
+					</div>
+				</div>
+			{/if}
+		</div>
+	</div>
+
+	<hr class=" border-gray-100 dark:border-gray-850" />
+
+	<div>
+		<div class=" mb-2 text-sm font-medium">{$i18n.t('UI Permissions')}</div>
+
+		<div class="flex flex-col w-full">
+			<div class="flex w-full justify-between my-1">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Interface Settings Access')}
+				</div>
+				<Switch bind:state={permissions.ui.interface_settings} />
+			</div>
+			{#if defaultPermissions?.ui?.interface_settings && !permissions.ui.interface_settings}
 				<div>
 					<div class="text-xs text-gray-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
