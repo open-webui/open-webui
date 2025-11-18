@@ -1137,22 +1137,21 @@ class OAuthManager:
                     f"Removing user from group {group_model.name} as it is no longer in their oauth groups"
                 )
 
-                user_ids = group_model.user_ids
-                user_ids = [i for i in user_ids if i != user.id]
+                Groups.remove_users_from_group(group_model.id, [user.id])
 
                 # In case a group is created, but perms are never assigned to the group by hitting "save"
                 group_permissions = group_model.permissions
                 if not group_permissions:
                     group_permissions = default_permissions
 
-                update_form = GroupUpdateForm(
-                    name=group_model.name,
-                    description=group_model.description,
-                    permissions=group_permissions,
-                    user_ids=user_ids,
-                )
                 Groups.update_group_by_id(
-                    id=group_model.id, form_data=update_form, overwrite=False
+                    id=group_model.id,
+                    form_data=GroupUpdateForm(
+                        name=group_model.name,
+                        description=group_model.description,
+                        permissions=group_permissions,
+                    ),
+                    overwrite=False,
                 )
 
         # Add user to new groups
@@ -1168,22 +1167,21 @@ class OAuthManager:
                     f"Adding user to group {group_model.name} as it was found in their oauth groups"
                 )
 
-                user_ids = group_model.user_ids
-                user_ids.append(user.id)
+                Groups.add_users_to_group(group_model.id, [user.id])
 
                 # In case a group is created, but perms are never assigned to the group by hitting "save"
                 group_permissions = group_model.permissions
                 if not group_permissions:
                     group_permissions = default_permissions
 
-                update_form = GroupUpdateForm(
-                    name=group_model.name,
-                    description=group_model.description,
-                    permissions=group_permissions,
-                    user_ids=user_ids,
-                )
                 Groups.update_group_by_id(
-                    id=group_model.id, form_data=update_form, overwrite=False
+                    id=group_model.id,
+                    form_data=GroupUpdateForm(
+                        name=group_model.name,
+                        description=group_model.description,
+                        permissions=group_permissions,
+                    ),
+                    overwrite=False,
                 )
 
     async def _process_picture_url(

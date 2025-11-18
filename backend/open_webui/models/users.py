@@ -6,7 +6,7 @@ from open_webui.internal.db import Base, JSONField, get_db
 
 from open_webui.env import DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL
 from open_webui.models.chats import Chats
-from open_webui.models.groups import Groups
+from open_webui.models.groups import Groups, GroupMember
 from open_webui.utils.misc import throttle
 
 
@@ -95,8 +95,12 @@ class UpdateProfileForm(BaseModel):
     date_of_birth: Optional[datetime.date] = None
 
 
+class UserGroupIdsModel(UserModel):
+    group_ids: list[str] = []
+
+
 class UserListResponse(BaseModel):
-    users: list[UserModel]
+    users: list[UserGroupIdsModel]
     total: int
 
 
@@ -222,7 +226,10 @@ class UsersTable:
         limit: Optional[int] = None,
     ) -> dict:
         with get_db() as db:
-            query = db.query(User)
+            # Join GroupMember so we can order by group_id when requested
+            query = db.query(User).outerjoin(
+                GroupMember, GroupMember.user_id == User.id
+            )
 
             if filter:
                 query_key = filter.get("query")
@@ -237,7 +244,16 @@ class UsersTable:
                 order_by = filter.get("order_by")
                 direction = filter.get("direction")
 
-                if order_by == "name":
+                if order_by and order_by.startswith("group_id:"):
+                    group_id = order_by.split(":", 1)[1]
+
+                    if direction == "asc":
+                        query = query.order_by((GroupMember.group_id == group_id).asc())
+                    else:
+                        query = query.order_by(
+                            (GroupMember.group_id == group_id).desc()
+                        )
+                elif order_by == "name":
                     if direction == "asc":
                         query = query.order_by(User.name.asc())
                     else:
