@@ -2299,6 +2299,7 @@ class QueryCollectionsForm(BaseModel):
     r: Optional[float] = None
     hybrid: Optional[bool] = None
     hybrid_bm25_weight: Optional[float] = None
+    enable_enriched_texts: Optional[bool] = None
 
 
 @router.post("/query/collection")
@@ -2339,7 +2340,11 @@ def query_collection_handler(
                     if form_data.hybrid_bm25_weight
                     else request.app.state.config.HYBRID_BM25_WEIGHT
                 ),
-                enable_enriched_texts=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS,
+                enable_enriched_texts=(
+                    form_data.enable_enriched_texts
+                    if form_data.enable_enriched_texts is not None
+                    else request.app.state.config.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS
+                ),
             )
         else:
             return query_collection(
