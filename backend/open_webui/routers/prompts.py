@@ -53,7 +53,9 @@ async def create_new_prompt(
             user.id, "workspace.prompts", request.app.state.config.USER_PERMISSIONS
         )
         or has_permission(
-            user.id, "workspace.prompts_import", request.app.state.config.USER_PERMISSIONS
+            user.id,
+            "workspace.prompts_import",
+            request.app.state.config.USER_PERMISSIONS,
         )
     ):
         raise HTTPException(

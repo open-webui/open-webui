@@ -209,9 +209,7 @@ class PgvectorClient(VectorDBBase):
             index_method = "ivfflat"
 
         if index_method == "hnsw":
-            index_options = (
-                f"WITH (m = {PGVECTOR_HNSW_M}, ef_construction = {PGVECTOR_HNSW_EF_CONSTRUCTION})"
-            )
+            index_options = f"WITH (m = {PGVECTOR_HNSW_M}, ef_construction = {PGVECTOR_HNSW_EF_CONSTRUCTION})"
         else:
             index_options = f"WITH (lists = {PGVECTOR_IVFFLAT_LISTS})"
 

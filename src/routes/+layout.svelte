@@ -47,10 +47,12 @@
 
 	import { WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
 	import { bestMatchingLanguage } from '$lib/utils';
+	import { setTextScale } from '$lib/utils/text-scale';
 
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import { getUserSettings } from '$lib/apis/users';
 
 	// handle frontend updates (https://svelte.dev/docs/kit/configuration#version)
 	beforeNavigate(({ willUnload, to }) => {
@@ -524,8 +526,10 @@
 			}
 		});
 
-		if (typeof window !== 'undefined' && window.applyTheme) {
-			window.applyTheme();
+		if (typeof window !== 'undefined') {
+			if (window.applyTheme) {
+				window.applyTheme();
+			}
 		}
 
 		if (window?.electronAPI) {
@@ -584,13 +588,21 @@
 		};
 		window.addEventListener('resize', onResize);
 
-		user.subscribe((value) => {
+		user.subscribe(async (value) => {
 			if (value) {
 				$socket?.off('events', chatEventHandler);
 				$socket?.off('events:channel', channelEventHandler);
 
 				$socket?.on('events', chatEventHandler);
 				$socket?.on('events:channel', channelEventHandler);
+
+				const userSettings = await getUserSettings(localStorage.token);
+				if (userSettings) {
+					settings.set(userSettings.ui);
+				} else {
+					settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
+				}
+				setTextScale($settings?.textScale ?? 1);
 
 				// Set up the token expiry check
 				if (tokenTimer) {

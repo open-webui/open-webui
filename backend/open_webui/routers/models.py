@@ -35,7 +35,7 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def validate_model_id(model_id: str) -> bool:
+def is_valid_model_id(model_id: str) -> bool:
     return model_id and len(model_id) <= 256
 
 
@@ -90,7 +90,7 @@ async def create_new_model(
             detail=ERROR_MESSAGES.MODEL_ID_TAKEN,
         )
 
-    if not validate_model_id(form_data.id):
+    if not is_valid_model_id(form_data.id):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.MODEL_ID_TOO_LONG,
@@ -157,7 +157,7 @@ async def import_models(
                 # Here, you can add logic to validate model_data if needed
                 model_id = model_data.get("id")
 
-                if model_id and validate_model_id(model_id):
+                if model_id and is_valid_model_id(model_id):
                     existing_model = Models.get_model_by_id(model_id)
                     if existing_model:
                         # Update existing model
@@ -201,6 +201,10 @@ async def sync_models(
 ###########################
 # GetModelById
 ###########################
+
+
+class ModelIdForm(BaseModel):
+    id: str
 
 
 # Note: We're not using the typical url path param here, but instead using a query parameter to allow '/' in the id
@@ -296,12 +300,10 @@ async def toggle_model_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.post("/model/update", response_model=Optional[ModelModel])
 async def update_model_by_id(
-    id: str,
     form_data: ModelForm,
     user=Depends(get_verified_user),
 ):
-    model = Models.get_model_by_id(id)
-
+    model = Models.get_model_by_id(form_data.id)
     if not model:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -327,9 +329,9 @@ async def update_model_by_id(
 ############################
 
 
-@router.delete("/model/delete", response_model=bool)
-async def delete_model_by_id(id: str, user=Depends(get_verified_user)):
-    model = Models.get_model_by_id(id)
+@router.post("/model/delete", response_model=bool)
+async def delete_model_by_id(form_data: ModelIdForm, user=Depends(get_verified_user)):
+    model = Models.get_model_by_id(form_data.id)
     if not model:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -346,7 +348,7 @@ async def delete_model_by_id(id: str, user=Depends(get_verified_user)):
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    result = Models.delete_model_by_id(id)
+    result = Models.delete_model_by_id(form_data.id)
     return result
 
 

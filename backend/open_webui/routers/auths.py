@@ -45,7 +45,9 @@ from pydantic import BaseModel
 
 from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.auth import (
+    verify_password,
     decode_token,
+    invalidate_token,
     create_api_key,
     create_token,
     get_admin_user,
@@ -55,7 +57,7 @@ from open_webui.utils.auth import (
     get_http_authorization_cred,
 )
 from open_webui.utils.webhook import post_webhook
-from open_webui.utils.access_control import get_permissions
+from open_webui.utils.access_control import get_permissions, has_permission
 
 from typing import Optional, List
 
@@ -174,7 +176,9 @@ async def update_password(
     if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
         raise HTTPException(400, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
     if session_user:
-        user = Auths.authenticate_user(session_user.email, form_data.password)
+        user = Auths.authenticate_user(
+            session_user.email, lambda pw: verify_password(form_data.password, pw)
+        )
 
         if user:
             hashed = get_password_hash(form_data.new_password)
@@ -513,7 +517,9 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
         admin_password = "admin"
 
         if Users.get_user_by_email(admin_email.lower()):
-            user = Auths.authenticate_user(admin_email.lower(), admin_password)
+            user = Auths.authenticate_user(
+                admin_email.lower(), lambda pw: verify_password(admin_password, pw)
+            )
         else:
             if Users.has_users():
                 raise HTTPException(400, detail=ERROR_MESSAGES.EXISTING_USERS)
@@ -524,7 +530,9 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
                 SignupForm(email=admin_email, password=admin_password, name="User"),
             )
 
-            user = Auths.authenticate_user(admin_email.lower(), admin_password)
+            user = Auths.authenticate_user(
+                admin_email.lower(), lambda pw: verify_password(admin_password, pw)
+            )
     else:
         password_bytes = form_data.password.encode("utf-8")
         if len(password_bytes) > 72:
@@ -535,7 +543,9 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             # decode safely — ignore incomplete UTF-8 sequences
             form_data.password = password_bytes.decode("utf-8", errors="ignore")
 
-        user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
+        user = Auths.authenticate_user(
+            form_data.email.lower(), lambda pw: verify_password(form_data.password, pw)
+        )
 
     if user:
 
@@ -702,6 +712,19 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 
 @router.get("/signout")
 async def signout(request: Request, response: Response):
+
+    # get auth token from headers or cookies
+    token = None
+    auth_header = request.headers.get("Authorization")
+    if auth_header:
+        auth_cred = get_http_authorization_cred(auth_header)
+        token = auth_cred.credentials
+    else:
+        token = request.cookies.get("token")
+
+    if token:
+        await invalidate_token(request, token)
+
     response.delete_cookie("token")
     response.delete_cookie("oui-session")
     response.delete_cookie("oauth_id_token")
@@ -853,9 +876,9 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
         "WEBUI_URL": request.app.state.config.WEBUI_URL,
         "ENABLE_SIGNUP": request.app.state.config.ENABLE_SIGNUP,
-        "ENABLE_API_KEY": request.app.state.config.ENABLE_API_KEY,
-        "ENABLE_API_KEY_ENDPOINT_RESTRICTIONS": request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS,
-        "API_KEY_ALLOWED_ENDPOINTS": request.app.state.config.API_KEY_ALLOWED_ENDPOINTS,
+        "ENABLE_API_KEYS": request.app.state.config.ENABLE_API_KEYS,
+        "ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS": request.app.state.config.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS,
+        "API_KEYS_ALLOWED_ENDPOINTS": request.app.state.config.API_KEYS_ALLOWED_ENDPOINTS,
         "DEFAULT_USER_ROLE": request.app.state.config.DEFAULT_USER_ROLE,
         "JWT_EXPIRES_IN": request.app.state.config.JWT_EXPIRES_IN,
         "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
@@ -873,9 +896,9 @@ class AdminConfig(BaseModel):
     SHOW_ADMIN_DETAILS: bool
     WEBUI_URL: str
     ENABLE_SIGNUP: bool
-    ENABLE_API_KEY: bool
-    ENABLE_API_KEY_ENDPOINT_RESTRICTIONS: bool
-    API_KEY_ALLOWED_ENDPOINTS: str
+    ENABLE_API_KEYS: bool
+    ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS: bool
+    API_KEYS_ALLOWED_ENDPOINTS: str
     DEFAULT_USER_ROLE: str
     JWT_EXPIRES_IN: str
     ENABLE_COMMUNITY_SHARING: bool
@@ -896,12 +919,12 @@ async def update_admin_config(
     request.app.state.config.WEBUI_URL = form_data.WEBUI_URL
     request.app.state.config.ENABLE_SIGNUP = form_data.ENABLE_SIGNUP
 
-    request.app.state.config.ENABLE_API_KEY = form_data.ENABLE_API_KEY
-    request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS = (
-        form_data.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS
+    request.app.state.config.ENABLE_API_KEYS = form_data.ENABLE_API_KEYS
+    request.app.state.config.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS = (
+        form_data.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS
     )
-    request.app.state.config.API_KEY_ALLOWED_ENDPOINTS = (
-        form_data.API_KEY_ALLOWED_ENDPOINTS
+    request.app.state.config.API_KEYS_ALLOWED_ENDPOINTS = (
+        form_data.API_KEYS_ALLOWED_ENDPOINTS
     )
 
     request.app.state.config.ENABLE_CHANNELS = form_data.ENABLE_CHANNELS
@@ -936,9 +959,9 @@ async def update_admin_config(
         "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
         "WEBUI_URL": request.app.state.config.WEBUI_URL,
         "ENABLE_SIGNUP": request.app.state.config.ENABLE_SIGNUP,
-        "ENABLE_API_KEY": request.app.state.config.ENABLE_API_KEY,
-        "ENABLE_API_KEY_ENDPOINT_RESTRICTIONS": request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS,
-        "API_KEY_ALLOWED_ENDPOINTS": request.app.state.config.API_KEY_ALLOWED_ENDPOINTS,
+        "ENABLE_API_KEYS": request.app.state.config.ENABLE_API_KEYS,
+        "ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS": request.app.state.config.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS,
+        "API_KEYS_ALLOWED_ENDPOINTS": request.app.state.config.API_KEYS_ALLOWED_ENDPOINTS,
         "DEFAULT_USER_ROLE": request.app.state.config.DEFAULT_USER_ROLE,
         "JWT_EXPIRES_IN": request.app.state.config.JWT_EXPIRES_IN,
         "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
@@ -1063,9 +1086,11 @@ async def update_ldap_config(
 # create api key
 @router.post("/api_key", response_model=ApiKey)
 async def generate_api_key(request: Request, user=Depends(get_current_user)):
-    if not request.app.state.config.ENABLE_API_KEY:
+    if not request.app.state.config.ENABLE_API_KEYS or not has_permission(
+        user.id, "features.api_keys", request.app.state.config.USER_PERMISSIONS
+    ):
         raise HTTPException(
-            status.HTTP_403_FORBIDDEN,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.API_KEY_CREATION_NOT_ALLOWED,
         )
 

@@ -287,24 +287,29 @@ class AppConfig:
 # WEBUI_AUTH (Required for security)
 ####################################
 
-ENABLE_API_KEY = PersistentConfig(
-    "ENABLE_API_KEY",
-    "auth.api_key.enable",
-    os.environ.get("ENABLE_API_KEY", "True").lower() == "true",
+ENABLE_API_KEYS = PersistentConfig(
+    "ENABLE_API_KEYS",
+    "auth.enable_api_keys",
+    os.environ.get("ENABLE_API_KEYS", "False").lower() == "true",
 )
 
-ENABLE_API_KEY_ENDPOINT_RESTRICTIONS = PersistentConfig(
-    "ENABLE_API_KEY_ENDPOINT_RESTRICTIONS",
+ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS = PersistentConfig(
+    "ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS",
     "auth.api_key.endpoint_restrictions",
-    os.environ.get("ENABLE_API_KEY_ENDPOINT_RESTRICTIONS", "False").lower() == "true",
+    os.environ.get(
+        "ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS",
+        os.environ.get("ENABLE_API_KEY_ENDPOINT_RESTRICTIONS", "False"),
+    ).lower()
+    == "true",
 )
 
-API_KEY_ALLOWED_ENDPOINTS = PersistentConfig(
-    "API_KEY_ALLOWED_ENDPOINTS",
+API_KEYS_ALLOWED_ENDPOINTS = PersistentConfig(
+    "API_KEYS_ALLOWED_ENDPOINTS",
     "auth.api_key.allowed_endpoints",
-    os.environ.get("API_KEY_ALLOWED_ENDPOINTS", ""),
+    os.environ.get(
+        "API_KEYS_ALLOWED_ENDPOINTS", os.environ.get("API_KEY_ALLOWED_ENDPOINTS", "")
+    ),
 )
-
 
 JWT_EXPIRES_IN = PersistentConfig(
     "JWT_EXPIRES_IN", "auth.jwt_expiry", os.environ.get("JWT_EXPIRES_IN", "4w")
@@ -1136,6 +1141,12 @@ DEFAULT_MODELS = PersistentConfig(
     "DEFAULT_MODELS", "ui.default_models", os.environ.get("DEFAULT_MODELS", None)
 )
 
+DEFAULT_PINNED_MODELS = PersistentConfig(
+    "DEFAULT_PINNED_MODELS",
+    "ui.default_pinned_models",
+    os.environ.get("DEFAULT_PINNED_MODELS", None),
+)
+
 try:
     default_prompt_suggestions = json.loads(
         os.environ.get("DEFAULT_PROMPT_SUGGESTIONS", "[]")
@@ -1232,19 +1243,23 @@ USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS = (
 )
 
 USER_PERMISSIONS_WORKSPACE_MODELS_IMPORT = (
-    os.environ.get("USER_PERMISSIONS_WORKSPACE_MODELS_IMPORT", "False").lower() == "true"
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_MODELS_IMPORT", "False").lower()
+    == "true"
 )
 
 USER_PERMISSIONS_WORKSPACE_MODELS_EXPORT = (
-    os.environ.get("USER_PERMISSIONS_WORKSPACE_MODELS_EXPORT", "False").lower() == "true"
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_MODELS_EXPORT", "False").lower()
+    == "true"
 )
 
 USER_PERMISSIONS_WORKSPACE_PROMPTS_IMPORT = (
-    os.environ.get("USER_PERMISSIONS_WORKSPACE_PROMPTS_IMPORT", "False").lower() == "true"
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_PROMPTS_IMPORT", "False").lower()
+    == "true"
 )
 
 USER_PERMISSIONS_WORKSPACE_PROMPTS_EXPORT = (
-    os.environ.get("USER_PERMISSIONS_WORKSPACE_PROMPTS_EXPORT", "False").lower() == "true"
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_PROMPTS_EXPORT", "False").lower()
+    == "true"
 )
 
 USER_PERMISSIONS_WORKSPACE_TOOLS_IMPORT = (
@@ -1391,6 +1406,10 @@ USER_PERMISSIONS_FEATURES_NOTES = (
     os.environ.get("USER_PERMISSIONS_FEATURES_NOTES", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_FEATURES_API_KEYS = (
+    os.environ.get("USER_PERMISSIONS_FEATURES_API_KEYS", "False").lower() == "true"
+)
+
 
 DEFAULT_USER_PERMISSIONS = {
     "workspace": {
@@ -1434,6 +1453,7 @@ DEFAULT_USER_PERMISSIONS = {
         "temporary_enforced": USER_PERMISSIONS_CHAT_TEMPORARY_ENFORCED,
     },
     "features": {
+        "api_keys": USER_PERMISSIONS_FEATURES_API_KEYS,
         "direct_tool_servers": USER_PERMISSIONS_FEATURES_DIRECT_TOOL_SERVERS,
         "web_search": USER_PERMISSIONS_FEATURES_WEB_SEARCH,
         "image_generation": USER_PERMISSIONS_FEATURES_IMAGE_GENERATION,
@@ -2149,14 +2169,9 @@ PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(
     os.environ.get("PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH", "1536")
 )
 
-PGVECTOR_USE_HALFVEC = (
-    os.getenv("PGVECTOR_USE_HALFVEC", "false").lower() == "true"
-)
+PGVECTOR_USE_HALFVEC = os.getenv("PGVECTOR_USE_HALFVEC", "false").lower() == "true"
 
-if (
-    PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH > 2000
-    and not PGVECTOR_USE_HALFVEC
-):
+if PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH > 2000 and not PGVECTOR_USE_HALFVEC:
     raise ValueError(
         "PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH is set to "
         f"{PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH}, which exceeds the 2000 dimension limit of the "
@@ -2620,6 +2635,13 @@ ENABLE_RAG_HYBRID_SEARCH = PersistentConfig(
     "ENABLE_RAG_HYBRID_SEARCH",
     "rag.enable_hybrid_search",
     os.environ.get("ENABLE_RAG_HYBRID_SEARCH", "").lower() == "true",
+)
+
+ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS = PersistentConfig(
+    "ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS",
+    "rag.enable_hybrid_search_enriched_texts",
+    os.environ.get("ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS", "False").lower()
+    == "true",
 )
 
 RAG_FULL_CONTEXT = PersistentConfig(
@@ -3447,6 +3469,18 @@ IMAGES_OPENAI_API_KEY = PersistentConfig(
     "image_generation.openai.api_key",
     os.getenv("IMAGES_OPENAI_API_KEY", OPENAI_API_KEY),
 )
+
+images_openai_params = os.getenv("IMAGES_OPENAI_PARAMS", "")
+try:
+    images_openai_params = json.loads(images_openai_params)
+except json.JSONDecodeError:
+    images_openai_params = {}
+
+
+IMAGES_OPENAI_API_PARAMS = PersistentConfig(
+    "IMAGES_OPENAI_API_PARAMS", "image_generation.openai.params", images_openai_params
+)
+
 
 IMAGES_GEMINI_API_BASE_URL = PersistentConfig(
     "IMAGES_GEMINI_API_BASE_URL",

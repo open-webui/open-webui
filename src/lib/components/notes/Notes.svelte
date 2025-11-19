@@ -101,30 +101,6 @@
 		});
 	};
 
-	const createNoteHandler = async (content?: string) => {
-		//  $i18n.t('New Note'),
-		const res = await createNewNote(localStorage.token, {
-			// YYYY-MM-DD
-			title: dayjs().format('YYYY-MM-DD'),
-			data: {
-				content: {
-					json: null,
-					html: content ?? '',
-					md: content ?? ''
-				}
-			},
-			meta: null,
-			access_control: {}
-		}).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
-
-		if (res) {
-			goto(`/notes/${res.id}`);
-		}
-	};
-
 	const downloadHandler = async (type) => {
 		if (type === 'txt') {
 			const blob = new Blob([selectedNote.data.content.md], { type: 'text/plain' });
@@ -241,12 +217,6 @@
 	});
 
 	onMount(async () => {
-		if ($page.url.searchParams.get('content') !== null) {
-			const content = $page.url.searchParams.get('content') ?? '';
-			createNoteHandler(content);
-			return;
-		}
-
 		await init();
 		loaded = true;
 

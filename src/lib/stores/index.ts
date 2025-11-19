@@ -161,6 +161,7 @@ type Settings = {
 	notifications?: any;
 	imageCompression?: boolean;
 	imageCompressionSize?: any;
+	textScale?: number;
 	widescreenMode?: null;
 	largeTextAsFile?: boolean;
 	promptAutocomplete?: boolean;
@@ -255,7 +256,7 @@ type Config = {
 	features: {
 		auth: boolean;
 		auth_trusted_header: boolean;
-		enable_api_key: boolean;
+		enable_api_keys: boolean;
 		enable_signup: boolean;
 		enable_login_form: boolean;
 		enable_web_search?: boolean;
