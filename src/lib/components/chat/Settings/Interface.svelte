@@ -345,8 +345,8 @@
 									textScale = 1;
 								} else {
 									textScale = null;
+									setTextScaleHandler(1);
 								}
-								setTextScaleHandler(1);
 							}}
 						>
 							{#if textScale === null}
