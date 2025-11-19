@@ -2,12 +2,14 @@
 	import { toast } from 'svelte-sonner';
 	import { getContext } from 'svelte';
 
-	import dayjs from 'dayjs';
+	// import dayjs from 'dayjs';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
+	import dayjs from '$lib/dayjs';
 
 	dayjs.extend(localizedFormat);
 
 	import { deleteChatById } from '$lib/apis/chats';
+	import { config } from '$lib/stores';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -35,6 +37,12 @@
 	export let chatList = null;
 	export let allChatsLoaded = false;
 	export let chatListLoading = false;
+
+	$: if ($config?.default_locale) {
+		console.log("sdfdsf")
+		console.log($config.default_locale)
+		dayjs.locale($config.default_locale);
+	}
 
 	let selectedChatId = null;
 	let selectedIdx = 0;
@@ -242,7 +250,7 @@
 
 									<div class="basis-2/5 flex items-center justify-end">
 										<div class="hidden sm:flex text-gray-500 dark:text-gray-400 text-xs">
-											{dayjs(chat?.updated_at * 1000).calendar()}
+											{dayjs(chat?.updated_at * 1000).format('L')}
 										</div>
 
 										<div class="flex justify-end pl-2.5 text-gray-600 dark:text-gray-300">
