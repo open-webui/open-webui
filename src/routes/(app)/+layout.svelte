@@ -120,7 +120,15 @@
 		// Deep merge admin defaults with user settings, where user settings take precedence
 		// This ensures users get new admin defaults for nested properties they haven't customized
 		if (userSettings?.ui || Object.keys(adminDefaults).length > 0) {
-			const mergedSettings = deepMerge(adminDefaults, userSettings?.ui || {});
+			// Filter out null values from user settings so they don't override admin defaults
+			// null means "no preference", not "explicitly want null"
+			const cleanedUserSettings = userSettings?.ui ?
+				Object.fromEntries(
+					Object.entries(userSettings.ui).filter(([_, value]) => value !== null)
+				) : {};
+
+			console.log('Cleaned user settings (nulls removed):', cleanedUserSettings);
+			const mergedSettings = deepMerge(adminDefaults, cleanedUserSettings);
 			console.log('Merged settings:', mergedSettings);
 			console.log('  - textScale in merged settings:', mergedSettings.textScale);
 			settings.set(mergedSettings);
