@@ -250,9 +250,8 @@
 	{#if selectedModelId === null}
 		<div class="flex flex-col gap-1 mt-1.5 mb-2">
 			<div class="flex justify-between items-center">
-				<div class="flex items-center md:self-center text-xl font-medium px-0.5">
+				<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2">
 					{$i18n.t('Models')}
-					<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
 					<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
 						>{filteredModels.length}</span
 					>
