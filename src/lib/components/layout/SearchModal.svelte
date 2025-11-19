@@ -17,6 +17,8 @@
 	import { goto } from '$app/navigation';
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import PageEdit from '../icons/PageEdit.svelte';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
+	dayjs.extend(localizedFormat);
 	dayjs.extend(calendar);
 
 	export let show = false;
