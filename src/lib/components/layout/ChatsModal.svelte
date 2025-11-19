@@ -34,7 +34,6 @@
 	export let allChatsLoaded = false;
 	export let chatListLoading = false;
 
-
 	let selectedChatId = null;
 	let selectedIdx = 0;
 	let showDeleteConfirmDialog = false;
@@ -241,7 +240,7 @@
 
 									<div class="basis-2/5 flex items-center justify-end">
 										<div class="hidden sm:flex text-gray-500 dark:text-gray-400 text-xs">
-											{dayjs(chat?.updated_at * 1000).format('L')}
+											{dayjs(chat?.updated_at * 1000).calendar()}
 										</div>
 
 										<div class="flex justify-end pl-2.5 text-gray-600 dark:text-gray-300">
