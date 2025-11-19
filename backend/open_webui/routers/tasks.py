@@ -201,20 +201,22 @@ async def generate_title(
     content = title_generation_template(template, form_data["messages"], user)
 
     max_tokens = (
-        models[task_model_id].get("info", {}).get("params", {}).get("max_tokens", 1000)
+        models[task_model_id].get("info", {}).get("params", {}).get("max_tokens")
     )
+
+    token_params = {}
+    if max_tokens is not None:
+        token_params = (
+            {"max_tokens": max_tokens}
+            if models[task_model_id].get("owned_by") == "ollama"
+            else {"max_completion_tokens": max_tokens}
+        )
 
     payload = {
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
         "stream": False,
-        **(
-            {"max_tokens": max_tokens}
-            if models[task_model_id].get("owned_by") == "ollama"
-            else {
-                "max_completion_tokens": max_tokens,
-            }
-        ),
+        **token_params,
         "metadata": {
             **(request.state.metadata if hasattr(request.state, "metadata") else {}),
             "task": str(TASKS.TITLE_GENERATION),
