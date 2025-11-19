@@ -9,6 +9,7 @@
 	import Spinner from '../common/Spinner.svelte';
 
 	import dayjs from '$lib/dayjs';
+	import calendar from 'dayjs/plugin/calendar';
 	import Loader from '../common/Loader.svelte';
 	import { createMessagesList } from '$lib/utils';
 	import { config, user } from '$lib/stores';
@@ -16,6 +17,7 @@
 	import { goto } from '$app/navigation';
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import PageEdit from '../icons/PageEdit.svelte';
+	dayjs.extend(calendar);
 
 	export let show = false;
 	export let onClose = () => {};
