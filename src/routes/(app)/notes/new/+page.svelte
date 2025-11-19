@@ -5,7 +5,7 @@
 	import { page } from '$app/stores';
 
 	import dayjs from '$lib/dayjs';
-	import { createNoteHandler } from '../utils';
+	import { createNoteHandler } from '$lib/components/notes/utils';
 
 	onMount(async () => {
 		const title = $page.url.searchParams.get('title') ?? dayjs().format('YYYY-MM-DD');

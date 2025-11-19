@@ -6,7 +6,7 @@
 	import { showSidebar } from '$lib/stores';
 
 	import dayjs from '$lib/dayjs';
-	import { createNoteHandler } from '../utils';
+	import { createNoteHandler } from '$lib/components/notes/utils';
 
 	import NoteEditor from '$lib/components/notes/NoteEditor.svelte';
 
