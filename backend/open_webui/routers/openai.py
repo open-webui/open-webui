@@ -763,6 +763,7 @@ def get_azure_allowed_params(api_version: str) -> set[str]:
         "response_format",
         "seed",
         "max_completion_tokens",
+        "reasoning_effort",
     }
 
     try:

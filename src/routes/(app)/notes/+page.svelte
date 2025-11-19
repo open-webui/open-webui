@@ -8,7 +8,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
-	import { createNoteHandler } from './utils';
+	import { createNoteHandler } from '$lib/components/notes/utils';
 
 	import UserMenu from '$lib/components/layout/Sidebar/UserMenu.svelte';
 	import Notes from '$lib/components/notes/Notes.svelte';

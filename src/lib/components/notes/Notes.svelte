@@ -36,7 +36,7 @@
 	import { createNewNote, deleteNoteById, getNotes } from '$lib/apis/notes';
 	import { capitalizeFirstLetter, copyToClipboard, getTimeRange } from '$lib/utils';
 
-	import { downloadPdf } from './utils';
+	import { downloadPdf, createNoteHandler } from './utils';
 
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -393,7 +393,11 @@
 						class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-white dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
 						type="button"
 						on:click={async () => {
-							createNoteHandler();
+							const res = await createNoteHandler(dayjs().format('YYYY-MM-DD'));
+
+							if (res) {
+								goto(`/notes/${res.id}`);
+							}
 						}}
 					>
 						<Plus className="size-4.5" strokeWidth="2.5" />
