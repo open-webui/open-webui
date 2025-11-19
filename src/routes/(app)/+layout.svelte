@@ -17,6 +17,7 @@
 	import { getTools } from '$lib/apis/tools';
 	import { getBanners, getInterfaceDefaults } from '$lib/apis/configs';
 	import { getUserSettings } from '$lib/apis/users';
+	import { setTextScale } from '$lib/utils/text-scale';
 
 	import { WEBUI_VERSION } from '$lib/constants';
 	import { compareVersion, deepMerge } from '$lib/utils';
@@ -157,6 +158,11 @@
 		const toolsData = await getTools(localStorage.token);
 		tools.set(toolsData);
 	};
+
+	// Apply textScale when settings change
+	$: if ($settings?.textScale !== undefined && $settings?.textScale !== null) {
+		setTextScale($settings.textScale);
+	}
 
 	onMount(async () => {
 		if ($user === undefined || $user === null) {
