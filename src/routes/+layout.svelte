@@ -53,8 +53,18 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	// handle frontend updates (https://svelte.dev/docs/kit/configuration#version)
-	beforeNavigate(({ willUnload, to }) => {
+	beforeNavigate(async ({ willUnload, to }) => {
 		if (updated.current && !willUnload && to?.url) {
+			// Unregister service workers to ensure fresh app version loads
+			if ('serviceWorker' in navigator) {
+				try {
+					const registrations = await navigator.serviceWorker.getRegistrations();
+					await Promise.all(registrations.map(r => r.unregister()));
+					console.log('Service workers unregistered for version update');
+				} catch (error) {
+					console.error('Error unregistering service workers:', error);
+				}
+			}
 			location.href = to.url.href;
 		}
 	});
@@ -91,6 +101,16 @@
 			const version = await getVersion(localStorage.token);
 			if (version !== null) {
 				if ($WEBUI_VERSION !== null && version !== $WEBUI_VERSION) {
+					// Unregister service workers to ensure fresh app version loads
+					if ('serviceWorker' in navigator) {
+						try {
+							const registrations = await navigator.serviceWorker.getRegistrations();
+							await Promise.all(registrations.map(r => r.unregister()));
+							console.log('Service workers unregistered for backend version update');
+						} catch (error) {
+							console.error('Error unregistering service workers:', error);
+						}
+					}
 					location.href = location.href;
 				} else {
 					WEBUI_VERSION.set(version);
