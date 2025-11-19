@@ -342,6 +342,7 @@
 								} else {
 									textScale = null;
 								}
+								setTextScale(1);
 							}}
 						>
 							{#if textScale === null}
