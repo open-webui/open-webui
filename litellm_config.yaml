@@ -5,6 +5,7 @@ model_list:
       api_base: https://bio-sf-ai.openai.azure.com
       api_version: "2025-01-01-preview"
       api_key: os.environ/AZURE_API_KEY
+      base_model: gpt-4o
       
   # Add more models if needed
   # - model_name: gpt-4
@@ -15,7 +16,7 @@ model_list:
   #     api_key: os.environ/AZURE_API_KEY
 
 general_settings:
-  master_key: sk-1234  # Simple key for Open WebUI to use
+  master_key: sk-1234  # Admin master key for management
   
 litellm_settings:
   drop_params: true
