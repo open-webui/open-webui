@@ -375,32 +375,13 @@
 			<h1 class=" mb-2 text-sm font-medium">{$i18n.t('UI')}</h1>
 
 			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div id="high-contrast-mode-label" class=" self-center text-xs">
-						{$i18n.t('High Contrast Mode')} ({$i18n.t('Beta')})
-					</div>
-
-					<div class="flex items-center gap-2 p-1">
-						<Switch
-							ariaLabelledbyId="high-contrast-mode-label"
-							tooltip={true}
-							bind:state={highContrastMode}
-							on:change={() => {
-								saveSettings({ highContrastMode });
-							}}
-						/>
-					</div>
-				</div>
-			</div>
-
-			<div>
 				<div class="py-0.5">
 					<div class="flex w-full justify-between">
 						<label id="ui-scale-label" class=" self-center text-xs" for="ui-scale-slider">
 							{$i18n.t('UI Scale')}
 						</label>
 
-						<div class="flex items-center gap-1 text-xs" aria-live="polite">
+						<div class="flex items-center gap-1 text-xs px-1" aria-live="polite">
 							<span>{textScaleDisplay}x</span>
 						</div>
 					</div>
@@ -408,7 +389,7 @@
 					<div class="mt-2 flex items-center gap-2 pl-1 pr-1">
 						<button
 							type="button"
-							class="rounded-sm p-1 transition outline outline-1 outline-gray-200 hover:bg-gray-100 dark:outline-gray-700 dark:hover:bg-gray-800"
+							class="rounded-lg p-1 transition outline-gray-200 hover:bg-gray-100 dark:outline-gray-700 dark:hover:bg-gray-800"
 							on:click={decreaseTextScale}
 							aria-labelledby="ui-scale-label"
 							aria-label={$i18n.t('Decrease UI Scale')}
@@ -416,10 +397,10 @@
 							<Minus className="h-3.5 w-3.5" />
 						</button>
 
-						<div class="flex-1">
+						<div class="flex-1 flex items-center">
 							<input
 								id="ui-scale-slider"
-								class="w-full accent-black dark:accent-white"
+								class="w-full"
 								type="range"
 								min={0}
 								max={TEXT_SCALE_VALUES.length - 1}
@@ -436,13 +417,32 @@
 
 						<button
 							type="button"
-							class="rounded-sm p-1 transition outline outline-1 outline-gray-200 hover:bg-gray-100 dark:outline-gray-700 dark:hover:bg-gray-800"
+							class="rounded-lg p-1 transition outline-gray-200 hover:bg-gray-100 dark:outline-gray-700 dark:hover:bg-gray-800"
 							on:click={increaseTextScale}
 							aria-labelledby="ui-scale-label"
 							aria-label={$i18n.t('Increase UI Scale')}
 						>
 							<Plus className="h-3.5 w-3.5" />
 						</button>
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="high-contrast-mode-label" class=" self-center text-xs">
+						{$i18n.t('High Contrast Mode')} ({$i18n.t('Beta')})
+					</div>
+
+					<div class="flex items-center gap-2 p-1">
+						<Switch
+							ariaLabelledbyId="high-contrast-mode-label"
+							tooltip={true}
+							bind:state={highContrastMode}
+							on:change={() => {
+								saveSettings({ highContrastMode });
+							}}
+						/>
 					</div>
 				</div>
 			</div>
