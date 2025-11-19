@@ -48,6 +48,7 @@
 			temporary_enforced: false
 		},
 		features: {
+			api_keys: false,
 			direct_tool_servers: false,
 			web_search: true,
 			image_generation: true,
@@ -612,6 +613,22 @@
 
 	<div>
 		<div class=" mb-2 text-sm font-medium">{$i18n.t('Features Permissions')}</div>
+
+		<div class="flex flex-col w-full">
+			<div class="flex w-full justify-between my-1">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('API Keys')}
+				</div>
+				<Switch bind:state={permissions.features.api_keys} />
+			</div>
+			{#if defaultPermissions?.features?.api_keys && !permissions.features.api_keys}
+				<div>
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
+					</div>
+				</div>
+			{/if}
+		</div>
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">

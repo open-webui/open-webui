@@ -77,6 +77,7 @@
 			temporary_enforced: false
 		},
 		features: {
+			api_keys: false,
 			direct_tool_servers: false,
 			web_search: true,
 			image_generation: true,
