@@ -599,6 +599,7 @@ async def reset_all_users_interface_settings(user=Depends(get_admin_user)):
     try:
         from open_webui.internal.db import get_db
         from open_webui.models.users import User
+        from sqlalchemy.orm.attributes import flag_modified
 
         reset_count = 0
 
@@ -612,7 +613,9 @@ async def reset_all_users_interface_settings(user=Depends(get_admin_user)):
                     if "ui" in user_obj.settings:
                         # Clear ui settings (will force fallback to admin defaults)
                         user_obj.settings["ui"] = {}
-                        # Mark for update (SQLAlchemy tracks changes automatically)
+                        # IMPORTANT: SQLAlchemy doesn't auto-detect changes to mutable JSON fields
+                        # We must explicitly mark the field as modified
+                        flag_modified(user_obj, "settings")
                         db.add(user_obj)
                         reset_count += 1
 
