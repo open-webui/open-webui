@@ -129,6 +129,11 @@
 			AUTOMATIC1111_PARAMS:
 				typeof config.AUTOMATIC1111_PARAMS === 'string' && config.AUTOMATIC1111_PARAMS.trim() !== ''
 					? JSON.parse(config.AUTOMATIC1111_PARAMS)
+					: {},
+			IMAGES_OPENAI_API_PARAMS:
+				typeof config.IMAGES_OPENAI_API_PARAMS === 'string' &&
+				config.IMAGES_OPENAI_API_PARAMS.trim() !== ''
+					? JSON.parse(config.IMAGES_OPENAI_API_PARAMS)
 					: {}
 		}).catch((error) => {
 			toast.error(`${error}`);
@@ -248,6 +253,11 @@
 					console.error(e);
 				}
 			}
+
+			config.IMAGES_OPENAI_API_PARAMS =
+				typeof config.IMAGES_OPENAI_API_PARAMS === 'object'
+					? JSON.stringify(config.IMAGES_OPENAI_API_PARAMS ?? {}, null, 2)
+					: config.IMAGES_OPENAI_API_PARAMS;
 
 			config.AUTOMATIC1111_PARAMS =
 				typeof config.AUTOMATIC1111_PARAMS === 'object'
@@ -462,6 +472,26 @@
 											bind:value={config.IMAGES_OPENAI_API_VERSION}
 										/>
 									</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="mb-2.5">
+							<div class="flex w-full justify-between items-center">
+								<div class="text-xs pr-2 shrink-0">
+									<div class="">
+										{$i18n.t('Additional Parameters')}
+									</div>
+								</div>
+							</div>
+							<div class="mt-1.5 flex w-full">
+								<div class="flex-1 mr-2">
+									<Textarea
+										className="rounded-lg w-full py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={config.IMAGES_OPENAI_API_PARAMS}
+										placeholder={$i18n.t('Enter additional parameters in JSON format')}
+										minSize={100}
+									/>
 								</div>
 							</div>
 						</div>

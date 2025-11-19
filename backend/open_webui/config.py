@@ -1232,19 +1232,23 @@ USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS = (
 )
 
 USER_PERMISSIONS_WORKSPACE_MODELS_IMPORT = (
-    os.environ.get("USER_PERMISSIONS_WORKSPACE_MODELS_IMPORT", "False").lower() == "true"
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_MODELS_IMPORT", "False").lower()
+    == "true"
 )
 
 USER_PERMISSIONS_WORKSPACE_MODELS_EXPORT = (
-    os.environ.get("USER_PERMISSIONS_WORKSPACE_MODELS_EXPORT", "False").lower() == "true"
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_MODELS_EXPORT", "False").lower()
+    == "true"
 )
 
 USER_PERMISSIONS_WORKSPACE_PROMPTS_IMPORT = (
-    os.environ.get("USER_PERMISSIONS_WORKSPACE_PROMPTS_IMPORT", "False").lower() == "true"
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_PROMPTS_IMPORT", "False").lower()
+    == "true"
 )
 
 USER_PERMISSIONS_WORKSPACE_PROMPTS_EXPORT = (
-    os.environ.get("USER_PERMISSIONS_WORKSPACE_PROMPTS_EXPORT", "False").lower() == "true"
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_PROMPTS_EXPORT", "False").lower()
+    == "true"
 )
 
 USER_PERMISSIONS_WORKSPACE_TOOLS_IMPORT = (
@@ -2149,14 +2153,9 @@ PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(
     os.environ.get("PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH", "1536")
 )
 
-PGVECTOR_USE_HALFVEC = (
-    os.getenv("PGVECTOR_USE_HALFVEC", "false").lower() == "true"
-)
+PGVECTOR_USE_HALFVEC = os.getenv("PGVECTOR_USE_HALFVEC", "false").lower() == "true"
 
-if (
-    PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH > 2000
-    and not PGVECTOR_USE_HALFVEC
-):
+if PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH > 2000 and not PGVECTOR_USE_HALFVEC:
     raise ValueError(
         "PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH is set to "
         f"{PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH}, which exceeds the 2000 dimension limit of the "
@@ -3448,6 +3447,18 @@ IMAGES_OPENAI_API_KEY = PersistentConfig(
     "image_generation.openai.api_key",
     os.getenv("IMAGES_OPENAI_API_KEY", OPENAI_API_KEY),
 )
+
+images_openai_params = os.getenv("IMAGES_OPENAI_PARAMS", "")
+try:
+    images_openai_params = json.loads(images_openai_params)
+except json.JSONDecodeError:
+    images_openai_params = {}
+
+
+IMAGES_OPENAI_API_PARAMS = PersistentConfig(
+    "IMAGES_OPENAI_API_PARAMS", "image_generation.openai.params", images_openai_params
+)
+
 
 IMAGES_GEMINI_API_BASE_URL = PersistentConfig(
     "IMAGES_GEMINI_API_BASE_URL",
