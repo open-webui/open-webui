@@ -18,14 +18,11 @@
 
 	// Custom saveSettings function that updates local adminDefaults instead of user settings
 	const saveAdminSettings = async (updates: object) => {
-		console.log('saveAdminSettings called with:', updates);
 		adminDefaults.update((current) => {
-			const updated = {
+			return {
 				...current,
 				...updates
 			};
-			console.log('adminDefaults updated to:', updated);
-			return updated;
 		});
 	};
 
@@ -46,7 +43,6 @@
 		saving = true;
 		try {
 			const currentDefaults = $adminDefaults;
-			console.log('Saving admin interface defaults:', currentDefaults);
 			await setInterfaceDefaults(localStorage.token, currentDefaults);
 			toast.success($i18n.t('Interface defaults saved successfully'));
 			show = false;

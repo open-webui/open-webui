@@ -190,11 +190,7 @@
 		console.log('setTextScaleHandler called with scale:', scale, 'initialSettings:', initialSettings);
 		textScale = scale;
 
-		// Only apply immediately if this is user settings, not admin defaults configuration
-		// initialSettings will be null for user settings, and an object for admin defaults
 		const isAdminMode = initialSettings !== null;
-		console.log('isAdminMode:', isAdminMode, 'will call setTextScale:', !isAdminMode);
-
 		if (!isAdminMode) {
 			setTextScale(textScale);
 		}
@@ -282,14 +278,10 @@
 
 		const newTextScale = settingsSource?.textScale ?? null;
 		if (newTextScale !== textScale) {
-			console.log('Reactive block updating textScale from', textScale, 'to', newTextScale, 'initialSettings:', initialSettings);
 			textScale = newTextScale;
 
-			// Only apply textScale when loaded if this is user settings, NOT admin defaults configuration
-			// In admin mode, initialSettings is an object; in user mode, it's null
 			const isAdminMode = initialSettings !== null;
 			if (!isAdminMode && textScale !== null) {
-				console.log('Applying textScale from reactive block:', textScale);
 				setTextScale(textScale);
 			}
 		}

@@ -88,17 +88,13 @@
 	};
 
 	const setUserSettings = async (cb: () => Promise<void>) => {
-		// Load admin-configured interface defaults first
 		let adminDefaults = {};
 		try {
 			adminDefaults = await getInterfaceDefaults(localStorage.token);
-			console.log('Loaded admin interface defaults:', adminDefaults);
-			console.log('  - textScale in admin defaults:', adminDefaults.textScale);
 		} catch (error) {
-			console.log('No admin interface defaults configured or error loading them:', error);
+			// Ignore
 		}
 
-		// Load user settings
 		let userSettings = await getUserSettings(localStorage.token).catch((error) => {
 			console.error(error);
 			return null;
@@ -113,24 +109,13 @@
 			}
 		}
 
-		console.log('User settings.ui:', userSettings?.ui);
-		console.log('  - textScale in user settings:', userSettings?.ui?.textScale);
-
-		// Implement fallback logic: User custom → Admin default → System default
-		// Deep merge admin defaults with user settings, where user settings take precedence
-		// This ensures users get new admin defaults for nested properties they haven't customized
 		if (userSettings?.ui || Object.keys(adminDefaults).length > 0) {
-			// Filter out null values from user settings so they don't override admin defaults
-			// null means "no preference", not "explicitly want null"
 			const cleanedUserSettings = userSettings?.ui ?
 				Object.fromEntries(
 					Object.entries(userSettings.ui).filter(([_, value]) => value !== null)
 				) : {};
 
-			console.log('Cleaned user settings (nulls removed):', cleanedUserSettings);
 			const mergedSettings = deepMerge(adminDefaults, cleanedUserSettings);
-			console.log('Merged settings:', mergedSettings);
-			console.log('  - textScale in merged settings:', mergedSettings.textScale);
 			settings.set(mergedSettings);
 		}
 
@@ -174,15 +159,14 @@
 		tools.set(toolsData);
 	};
 
-	// Track previous textScale to avoid unnecessary applications
 	let previousTextScale = null;
 
-	// Apply textScale when settings change
 	$: {
 		const currentTextScale = $settings?.textScale ?? null;
-		if (currentTextScale !== null && currentTextScale !== previousTextScale) {
-			previousTextScale = currentTextScale;
-			setTextScale(currentTextScale);
+		const scaleToApply = currentTextScale === null ? 1 : currentTextScale;
+		if (scaleToApply !== previousTextScale) {
+			previousTextScale = scaleToApply;
+			setTextScale(scaleToApply);
 		}
 	}
 
