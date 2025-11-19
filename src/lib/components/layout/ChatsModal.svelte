@@ -3,8 +3,8 @@
 	import { getContext } from 'svelte';
 
 	import dayjs from '$lib/dayjs';
-	import localizedFormat from 'dayjs/plugin/localizedFormat';	
-	
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
+
 	dayjs.extend(localizedFormat);
 
 	import { deleteChatById } from '$lib/apis/chats';
