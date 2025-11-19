@@ -1,3 +1,8 @@
+# AWS Resources
+- [EC2 t3.large Instance. 200 Gig Volume](https://us-east-2.console.aws.amazon.com/ec2/home?region=us-east-2#InstanceDetails:instanceId=i-0ebc7ff190114daeb)
+- [RDS PostgresSQL DB](https://us-east-2.console.aws.amazon.com/rds/home?region=us-east-2#database:id=open-web-ui-db;is-cluster=false)
+- [ECR Image](https://us-east-2.console.aws.amazon.com/ecr/repositories/private/623065535582/luxtronic-open-webui/_/details?region=us-east-2)
+
 # Build And Deploy Image 
 ```bash
 docker build -t luxtronic-open-webui .        
