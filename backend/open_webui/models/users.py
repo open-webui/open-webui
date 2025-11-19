@@ -293,9 +293,9 @@ class UsersTable:
             # Count BEFORE pagination
             total = query.count()
 
-            if skip:
+            if skip is not None:
                 query = query.offset(skip)
-            if limit:
+            if limit is not None:
                 query = query.limit(limit)
 
             users = query.all()

@@ -1685,3 +1685,42 @@ export const getCodeBlockContents = (content: string): object => {
 		js: jsContent.trim()
 	};
 };
+
+/**
+ * Deep merge two objects, with source properties taking precedence over target.
+ * Arrays are replaced, not merged.
+ * @param target - The target object (defaults)
+ * @param source - The source object (overrides)
+ * @returns A new object with deep-merged properties
+ */
+export const deepMerge = (target: any, source: any): any => {
+	// Handle null/undefined cases
+	if (!source) return target;
+	if (!target) return source;
+
+	const result = { ...target };
+
+	for (const key in source) {
+		if (Object.prototype.hasOwnProperty.call(source, key)) {
+			const sourceValue = source[key];
+			const targetValue = result[key];
+
+			// If both are objects (and not arrays), recursively merge
+			if (
+				sourceValue &&
+				typeof sourceValue === 'object' &&
+				!Array.isArray(sourceValue) &&
+				targetValue &&
+				typeof targetValue === 'object' &&
+				!Array.isArray(targetValue)
+			) {
+				result[key] = deepMerge(targetValue, sourceValue);
+			} else {
+				// Otherwise, source value takes precedence
+				result[key] = sourceValue;
+			}
+		}
+	}
+
+	return result;
+};
