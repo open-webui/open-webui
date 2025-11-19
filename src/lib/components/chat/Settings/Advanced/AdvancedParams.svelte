@@ -51,10 +51,26 @@
 	$: if (params) {
 		onChange(params);
 	}
+
+	let query = '';
+	
+	// Create a reactive function that will re-run when query changes
+	$: visible = (key: string) => {
+		if (!query) return true;
+		return $i18n.t(key).toLowerCase().includes(query.toLowerCase());
+	};
 </script>
 
 <div class=" space-y-1 text-xs pb-safe-bottom">
-	<div>
+	<div class="my-2">
+		<input
+			type="text"
+			class="text-xs w-full bg-transparent outline-hidden border border-gray-200 dark:border-gray-700 rounded px-2 py-1"
+			placeholder={$i18n.t('Search')}
+			bind:value={query}
+		/>
+	</div>
+	<div class:hidden={!visible('Stream Chat Response')}>
 		<Tooltip
 			content={$i18n.t(
 				'When enabled, the model will respond to each chat message in real-time, generating a response as soon as the user sends a message. This mode is useful for live chat applications, but may impact performance on slower hardware.'
@@ -91,7 +107,7 @@
 	</div>
 
 	{#if admin}
-		<div>
+		<div class:hidden={!visible('Stream Delta Chunk Size')}>
 			<Tooltip
 				content={$i18n.t(
 					'The stream delta chunk size for the model. Increasing the chunk size will make the model respond with larger pieces of text at once.'
@@ -147,7 +163,7 @@
 		</div>
 	{/if}
 
-	<div>
+	<div class:hidden={!visible('Function Calling')}>
 		<Tooltip
 			content={$i18n.t(
 				"Default mode works with a wider range of models by calling tools once before execution. Native mode leverages the model's built-in tool-calling capabilities, but requires the model to inherently support this feature."
@@ -176,7 +192,7 @@
 		</Tooltip>
 	</div>
 
-	<div class=" py-0.5 w-full justify-between">
+	<div class=" py-0.5 w-full justify-between" class:hidden={!visible('Reasoning Tags')}>
 		<Tooltip
 			content={$i18n.t(
 				'Enable, disable, or customize the reasoning tags used by the model. "Enabled" uses default tags, "Disabled" turns off reasoning tags, and "Custom" lets you specify your own start and end tags.'
@@ -241,7 +257,7 @@
 		{/if}
 	</div>
 
-	<div class=" py-0.5 w-full justify-between">
+	<div class=" py-0.5 w-full justify-between" class:hidden={!visible('Seed')}>
 		<Tooltip
 			content={$i18n.t(
 				'Sets the random number seed to use for generation. Setting this to a specific number will make the model generate the same text for the same prompt.'
@@ -286,7 +302,7 @@
 		{/if}
 	</div>
 
-	<div class=" py-0.5 w-full justify-between">
+	<div class=" py-0.5 w-full justify-between" class:hidden={!visible('Stop Sequence')}>
 		<Tooltip
 			content={$i18n.t(
 				'Sets the stop sequences to use. When this pattern is encountered, the LLM will stop generating text and return. Multiple stop patterns may be set by specifying multiple separate stop parameters in a modelfile.'
@@ -330,7 +346,7 @@
 		{/if}
 	</div>
 
-	<div class=" py-0.5 w-full justify-between">
+	<div class=" py-0.5 w-full justify-between" class:hidden={!visible('Temperature')}>
 		<Tooltip
 			content={$i18n.t(
 				'The temperature of the model. Increasing the temperature will make the model answer more creatively.'
@@ -385,7 +401,7 @@
 		{/if}
 	</div>
 
-	<div class=" py-0.5 w-full justify-between">
+	<div class=" py-0.5 w-full justify-between" class:hidden={!visible('Reasoning Effort')}>
 		<Tooltip
 			content={$i18n.t(
 				'Constrains effort on reasoning for reasoning models. Only applicable to reasoning models from specific providers that support reasoning effort.'
@@ -428,7 +444,7 @@
 		{/if}
 	</div>
 
-	<div class=" py-0.5 w-full justify-between">
+	<div class=" py-0.5 w-full justify-between" class:hidden={!visible('logit_bias')}>
 		<Tooltip
 			content={$i18n.t(
 				'Boosting or penalizing specific tokens for constrained responses. Bias values will be clamped between -100 and 100 (inclusive). (Default: none)'
@@ -473,7 +489,7 @@
 		{/if}
 	</div>
 
-	<div class=" py-0.5 w-full justify-between">
+	<div class=" py-0.5 w-full justify-between" class:hidden={!visible('max_tokens')}> 
 		<Tooltip
 			content={$i18n.t(
 				'This option sets the maximum number of tokens the model can generate in its response. Increasing this limit allows the model to provide longer answers, but it may also increase the likelihood of unhelpful or irrelevant content being generated.'
@@ -528,7 +544,7 @@
 		{/if}
 	</div>
 
-	<div class=" py-0.5 w-full justify-between">
+	<div class=" py-0.5 w-full justify-between" class:hidden={!visible('top_k')}> 
 		<Tooltip
 			content={$i18n.t(
 				'Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative.'
@@ -583,7 +599,7 @@
 		{/if}
 	</div>
 
-	<div class=" py-0.5 w-full justify-between">
+	<div class=" py-0.5 w-full justify-between" class:hidden={!visible('top_p')}> 
 		<Tooltip
 			content={$i18n.t(
 				'Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text.'
@@ -639,7 +655,7 @@
 		{/if}
 	</div>
 
-	<div class=" py-0.5 w-full justify-between">
+	<div class=" py-0.5 w-full justify-between" class:hidden={!visible('min_p')}> 
 		<Tooltip
 			content={$i18n.t(
 				'Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out.'
@@ -694,7 +710,7 @@
 		{/if}
 	</div>
 
-	<div class=" py-0.5 w-full justify-between">
+	<div class=" py-0.5 w-full justify-between" class:hidden={!visible('frequency_penalty')}> 
 		<Tooltip
 			content={$i18n.t(
 				'Sets a scaling bias against tokens to penalize repetitions, based on how many times they have appeared. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. At 0, it is disabled.'
@@ -750,7 +766,7 @@
 		{/if}
 	</div>
 
-	<div class=" py-0.5 w-full justify-between">
+	<div class=" py-0.5 w-full justify-between" class:hidden={!visible('presence_penalty')}> 
 		<Tooltip
 			content={$i18n.t(
 				'Sets a flat bias against tokens that have appeared at least once. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. At 0, it is disabled.'
@@ -806,7 +822,7 @@
 		{/if}
 	</div>
 
-	<div class=" py-0.5 w-full justify-between">
+	<div class=" py-0.5 w-full justify-between" class:hidden={!visible('mirostat')}> 
 		<Tooltip
 			content={$i18n.t('Enable Mirostat sampling for controlling perplexity.')}
 			placement="top-start"
@@ -859,7 +875,7 @@
 		{/if}
 	</div>
 
-	<div class=" py-0.5 w-full justify-between">
+	<div class=" py-0.5 w-full justify-between" class:hidden={!visible('mirostat_eta')}> 
 		<Tooltip
 			content={$i18n.t(
 				'Influences how quickly the algorithm responds to feedback from the generated text. A lower learning rate will result in slower adjustments, while a higher learning rate will make the algorithm more responsive.'
@@ -914,7 +930,7 @@
 		{/if}
 	</div>
 
-	<div class=" py-0.5 w-full justify-between">
+	<div class=" py-0.5 w-full justify-between" class:hidden={!visible('mirostat_tau')}> 
 		<Tooltip
 			content={$i18n.t(
 				'Controls the balance between coherence and diversity of the output. A lower value will result in more focused and coherent text.'
@@ -970,7 +986,7 @@
 		{/if}
 	</div>
 
-	<div class=" py-0.5 w-full justify-between">
+	<div class=" py-0.5 w-full justify-between" class:hidden={!visible('repeat_last_n')}> 
 		<Tooltip
 			content={$i18n.t('Sets how far back for the model to look back to prevent repetition.')}
 			placement="top-start"
@@ -1024,7 +1040,7 @@
 		{/if}
 	</div>
 
-	<div class=" py-0.5 w-full justify-between">
+	<div class=" py-0.5 w-full justify-between" class:hidden={!visible('tfs_z')}> 
 		<Tooltip
 			content={$i18n.t(
 				'Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting.'
@@ -1080,7 +1096,7 @@
 		{/if}
 	</div>
 
-	<div class=" py-0.5 w-full justify-between">
+	<div class=" py-0.5 w-full justify-between" class:hidden={!visible('repeat_penalty')}> 
 		<Tooltip
 			content={$i18n.t(
 				'Control the repetition of token sequences in the generated text. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 1.1) will be more lenient. At 1, it is disabled.'
@@ -1137,7 +1153,7 @@
 	</div>
 
 	{#if admin}
-		<div class=" py-0.5 w-full justify-between">
+		<div class=" py-0.5 w-full justify-between" class:hidden={!visible('use_mmap')}> 
 			<Tooltip
 				content={$i18n.t(
 					'Enable Memory Mapping (mmap) to load model data. This option allows the system to use disk storage as an extension of RAM by treating disk files as if they were in RAM. This can improve model performance by allowing for faster data access. However, it may not work correctly with all systems and can consume a significant amount of disk space.'
@@ -1177,7 +1193,7 @@
 			{/if}
 		</div>
 
-		<div class=" py-0.5 w-full justify-between">
+		<div class=" py-0.5 w-full justify-between" class:hidden={!visible("use_mlock")}> 
 			<Tooltip
 				content={$i18n.t(
 					"Enable Memory Locking (mlock) to prevent model data from being swapped out of RAM. This option locks the model's working set of pages into RAM, ensuring that they will not be swapped out to disk. This can help maintain performance by avoiding page faults and ensuring fast data access."
@@ -1220,7 +1236,7 @@
 		</div>
 	{/if}
 
-	<div class=" py-0.5 w-full justify-between">
+	<div class=" py-0.5 w-full justify-between" class:hidden={!visible('think Ollama')}> 
 		<Tooltip
 			content={$i18n.t(
 				'This option enables or disables the use of the reasoning feature in Ollama, which allows the model to think before generating a response. When enabled, the model can take a moment to process the conversation context and generate a more thoughtful response.'
@@ -1251,7 +1267,7 @@
 		</Tooltip>
 	</div>
 
-	<div class=" py-0.5 w-full justify-between">
+	<div class=" py-0.5 w-full justify-between" class:hidden={!visible('format Ollama')}>
 		<Tooltip
 			content={$i18n.t('The format to return a response in. Format can be json or a JSON schema.')}
 			placement="top-start"
@@ -1288,7 +1304,7 @@
 		{/if}
 	</div>
 
-	<div class=" py-0.5 w-full justify-between">
+	<div class=" py-0.5 w-full justify-between" class:hidden={!visible('num_keep Ollama')}>
 		<Tooltip
 			content={$i18n.t(
 				'This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the conversation context will be retained. Preserving context can help maintain the continuity of a conversation, but it may reduce the ability to respond to new topics.'
@@ -1343,7 +1359,7 @@
 		{/if}
 	</div>
 
-	<div class=" py-0.5 w-full justify-between">
+	<div class=" py-0.5 w-full justify-between" class:hidden={!visible('num_ctx Ollama')}>
 		<Tooltip
 			content={$i18n.t('Sets the size of the context window used to generate the next token.')}
 			placement="top-start"
@@ -1396,7 +1412,7 @@
 		{/if}
 	</div>
 
-	<div class=" py-0.5 w-full justify-between">
+	<div class=" py-0.5 w-full justify-between" class:hidden={!visible('num_batch Ollama')}>
 		<Tooltip
 			content={$i18n.t(
 				'The batch size determines how many text requests are processed together at once. A higher batch size can increase the performance and speed of the model, but it also requires more memory.'
@@ -1452,7 +1468,7 @@
 	</div>
 
 	{#if admin}
-		<div class=" py-0.5 w-full justify-between">
+		<div class=" py-0.5 w-full justify-between" class:hidden={!visible('num_thread Ollama')}>
 			<Tooltip
 				content={$i18n.t(
 					'Set the number of worker threads used for computation. This option controls how many threads are used to process incoming requests concurrently. Increasing this value can improve performance under high concurrency workloads but may also consume more CPU resources.'
@@ -1508,7 +1524,7 @@
 			{/if}
 		</div>
 
-		<div class=" py-0.5 w-full justify-between">
+		<div class=" py-0.5 w-full justify-between" class:hidden={!visible('num_gpu Ollama')}>
 			<Tooltip
 				content={$i18n.t(
 					'Set the number of layers, which will be off-loaded to GPU. Increasing this value can significantly improve performance for models that are optimized for GPU acceleration but may also consume more power and GPU resources.'
@@ -1564,7 +1580,7 @@
 			{/if}
 		</div>
 
-		<div class=" py-0.5 w-full justify-between">
+		<div class=" py-0.5 w-full justify-between" class:hidden={!visible('keep_alive Ollama')}>
 			<Tooltip
 				content={$i18n.t(
 					'This option controls how long the model will stay loaded into memory following the request (default: 5m)'
@@ -1607,7 +1623,7 @@
 		{#if custom && admin}
 			<div class="flex flex-col justify-center">
 				{#each Object.keys(params?.custom_params ?? {}) as key}
-					<div class=" py-0.5 w-full justify-between mb-1">
+					<div class=" py-0.5 w-full justify-between mb-1" class:hidden={!visible(key)}>
 						<div class="flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">
 								<input
