@@ -37,7 +37,7 @@ asgiref==3.8.1
 
 # AI libraries
 tiktoken
-mcp==1.14.1
+mcp==1.21.2
 
 openai
 anthropic
