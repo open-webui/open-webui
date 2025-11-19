@@ -5,7 +5,6 @@
 	import dayjs from '$lib/dayjs';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';	
 	dayjs.extend(localizedFormat);
-
 	import { deleteChatById } from '$lib/apis/chats';
 
 	import Modal from '$lib/components/common/Modal.svelte';
