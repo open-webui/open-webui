@@ -72,8 +72,6 @@
 	let shiftKey = false;
 
 	let selectedChatId = null;
-	let showPinnedChat = true;
-
 	let showCreateChannel = false;
 
 	// Pagination variables
@@ -354,7 +352,6 @@
 
 	let unsubscribers = [];
 	onMount(async () => {
-		showPinnedChat = localStorage?.showPinnedChat ? localStorage.showPinnedChat === 'true' : true;
 		await showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
 
 		unsubscribers = [
@@ -892,6 +889,7 @@
 
 				{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
 					<Folder
+						id="sidebar-models"
 						className="px-2 mt-0.5"
 						name={$i18n.t('Models')}
 						chevron={false}
@@ -903,6 +901,7 @@
 
 				{#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0)}
 					<Folder
+						id="sidebar-channels"
 						className="px-2 mt-0.5"
 						name={$i18n.t('Channels')}
 						chevron={false}
@@ -931,6 +930,7 @@
 
 				{#if folders}
 					<Folder
+						id="sidebar-folders"
 						className="px-2 mt-0.5"
 						name={$i18n.t('Folders')}
 						chevron={false}
@@ -982,6 +982,7 @@
 				{/if}
 
 				<Folder
+					id="sidebar-chats"
 					className="px-2 mt-0.5"
 					name={$i18n.t('Chats')}
 					chevron={false}
@@ -1051,12 +1052,8 @@
 						<div class="mb-1">
 							<div class="flex flex-col space-y-1 rounded-xl">
 								<Folder
+									id="sidebar-pinned-chats"
 									buttonClassName=" text-gray-500"
-									bind:open={showPinnedChat}
-									on:change={(e) => {
-										localStorage.setItem('showPinnedChat', e.detail);
-										console.log(e.detail);
-									}}
 									on:import={(e) => {
 										importChatHandler(e.detail, true);
 									}}
