@@ -271,6 +271,11 @@
 		backgroundImageUrl = settingsSource?.backgroundImageUrl ?? null;
 		webSearch = settingsSource?.webSearch ?? null;
 		textScale = settingsSource?.textScale ?? null;
+
+		// Apply textScale when loaded from settings
+		if (textScale !== null) {
+			setTextScale(textScale);
+		}
 	}
 </script>
 
