@@ -5,8 +5,6 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { updateUserInfo } from '$lib/apis/users';
 	import { getUserPosition } from '$lib/utils';
-	import Minus from '$lib/components/icons/Minus.svelte';
-	import Plus from '$lib/components/icons/Plus.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import ManageFloatingActionButtonsModal from './Interface/ManageFloatingActionButtonsModal.svelte';
 	import ManageImageCompressionModal from './Interface/ManageImageCompressionModal.svelte';
