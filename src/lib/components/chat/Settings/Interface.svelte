@@ -389,7 +389,7 @@
 							min="0.5"
 							max="1.5"
 							step="0.1"
-							bind:value={textScale}
+							value={textScale || 1}
 							on:input={(e) => {
 								setTextScaleHandler(parseFloat(e.target.value));
 							}}

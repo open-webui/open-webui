@@ -163,9 +163,16 @@
 		tools.set(toolsData);
 	};
 
+	// Track previous textScale to avoid unnecessary applications
+	let previousTextScale = null;
+
 	// Apply textScale when settings change
-	$: if ($settings?.textScale !== undefined && $settings?.textScale !== null) {
-		setTextScale($settings.textScale);
+	$: {
+		const currentTextScale = $settings?.textScale ?? null;
+		if (currentTextScale !== null && currentTextScale !== previousTextScale) {
+			previousTextScale = currentTextScale;
+			setTextScale(currentTextScale);
+		}
 	}
 
 	onMount(async () => {
