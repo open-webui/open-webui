@@ -261,8 +261,13 @@
 
 				let reader = new FileReader();
 				reader.onload = async (event) => {
-					let savedModels = JSON.parse(event.target.result);
-					console.log(savedModels);
+					try {
+						let savedModels = JSON.parse(event.target.result);
+						console.log(savedModels);
+					} catch (e) {
+						toast.error($i18n.t('Invalid JSON file'));
+						return;
+					}
 
 					for (const model of savedModels) {
 						if (model?.info ?? false) {
