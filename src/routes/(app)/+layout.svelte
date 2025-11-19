@@ -92,6 +92,7 @@
 		let adminDefaults = {};
 		try {
 			adminDefaults = await getInterfaceDefaults(localStorage.token);
+			console.log('Loaded admin interface defaults:', adminDefaults);
 		} catch (error) {
 			console.log('No admin interface defaults configured or error loading them:', error);
 		}
@@ -111,11 +112,14 @@
 			}
 		}
 
+		console.log('User settings.ui:', userSettings?.ui);
+
 		// Implement fallback logic: User custom → Admin default → System default
 		// Deep merge admin defaults with user settings, where user settings take precedence
 		// This ensures users get new admin defaults for nested properties they haven't customized
 		if (userSettings?.ui || Object.keys(adminDefaults).length > 0) {
 			const mergedSettings = deepMerge(adminDefaults, userSettings?.ui || {});
+			console.log('Merged settings:', mergedSettings);
 			settings.set(mergedSettings);
 		}
 

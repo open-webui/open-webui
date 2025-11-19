@@ -188,7 +188,11 @@
 
 	const setTextScaleHandler = (scale) => {
 		textScale = scale;
-		setTextScale(textScale);
+
+		// Only apply immediately if this is user settings, not admin defaults configuration
+		if (initialSettings === null) {
+			setTextScale(textScale);
+		}
 
 		if (textScale === 1) {
 			textScale = null;
