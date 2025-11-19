@@ -1,4 +1,8 @@
 import dayjs from 'dayjs';
+import { config } from '$lib/stores';
+
+import calendar from 'dayjs/plugin/calendar';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
 
 // Import all locales
 import 'dayjs/locale/af';
@@ -102,5 +106,38 @@ import 'dayjs/locale/yo';
 import 'dayjs/locale/zh';
 import 'dayjs/locale/zh-tw';
 import 'dayjs/locale/et';
+
+dayjs.extend(calendar);
+dayjs.extend(localizedFormat);
+
+const configureDayjs = (locale) => {
+  if (!locale) return;
+  
+  try {
+    dayjs.locale(locale);
+    console.log(`dayjs locale set to: ${locale}`);
+    
+    if (dayjs.Ls[locale]) {
+      dayjs.Ls[locale].calendar = {
+        sameDay: "[Today at] h:mm A",
+        nextDay: "[Tomorrow at] h:mm A",
+        nextWeek: "dddd [at] h:mm A",
+        lastDay: "[Yesterday at] h:mm A",
+        lastWeek: "[Last] dddd [at] h:mm A",
+        sameElse(date) {
+          return dayjs(date).format("L");
+        }
+      };
+    }
+  } catch (error) {
+    console.error(`Failed to configure dayjs locale: ${locale}`, error);
+  }
+};
+
+config.subscribe((configValue) => {
+  if (configValue?.default_locale) {
+    configureDayjs(configValue.default_locale);
+  }
+});
 
 export default dayjs;

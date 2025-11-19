@@ -9,7 +9,6 @@
 	import Spinner from '../common/Spinner.svelte';
 
 	import dayjs from '$lib/dayjs';
-	import calendar from 'dayjs/plugin/calendar';
 	import Loader from '../common/Loader.svelte';
 	import { createMessagesList } from '$lib/utils';
 	import { config, user } from '$lib/stores';
@@ -17,7 +16,6 @@
 	import { goto } from '$app/navigation';
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import PageEdit from '../icons/PageEdit.svelte';
-	dayjs.extend(calendar);
 
 	export let show = false;
 	export let onClose = () => {};
@@ -223,26 +221,6 @@
 	};
 
 	onMount(() => {
-		
-		console.log($config?.default_locale)
-		const locale = $config?.default_locale || 'en-gb';
-
-    dayjs.locale(locale);
-
-    // override whichever locale is actually active
-    if (dayjs.Ls[locale]) {
-		console.log("hellloooo")
-        dayjs.Ls[locale].calendar = {
-            sameDay: "[Today at] h:mm A",
-            nextDay: "[Tomorrow at] h:mm A",
-            nextWeek: "dddd [at] h:mm A",
-            lastDay: "[Yesterday at] h:mm A",
-            lastWeek: "[Last] dddd [at] h:mm A",
-            sameElse(date) {
-                return dayjs(date).format("L");
-            }
-        };
-    }
 		actions = [
 			...actions,
 			...(($config?.features?.enable_notes ?? false) &&

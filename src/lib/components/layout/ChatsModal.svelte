@@ -2,11 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import { getContext } from 'svelte';
 
-	// import dayjs from 'dayjs';
-	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import dayjs from '$lib/dayjs';
-
-	dayjs.extend(localizedFormat);
 
 	import { deleteChatById } from '$lib/apis/chats';
 	import { config } from '$lib/stores';
@@ -38,11 +34,6 @@
 	export let allChatsLoaded = false;
 	export let chatListLoading = false;
 
-	$: if ($config?.default_locale) {
-		console.log("sdfdsf")
-		console.log($config.default_locale)
-		dayjs.locale($config.default_locale);
-	}
 
 	let selectedChatId = null;
 	let selectedIdx = 0;
