@@ -742,6 +742,27 @@ def get_last_images(message_list):
     return images
 
 
+def extract_and_process_urls(delta_images, request, metadata, user) -> list[str]:
+    if not isinstance(delta_images, list):
+        return []
+
+    processed_urls = []
+    for img in delta_images:
+        if not isinstance(img, dict) or img.get("type") != "image_url":
+            continue
+
+        url = img.get("image_url", {}).get("url")
+        if not url:
+            continue
+
+        if url.startswith("data:image/png;base64"):
+            url = get_image_url_from_base64(request, url, metadata, user)
+
+        processed_urls.append(url)
+
+    return processed_urls
+
+
 async def chat_image_generation_handler(
     request: Request, form_data: dict, extra_params: dict, user
 ):
@@ -2580,6 +2601,25 @@ async def process_chat_response(
                                                         ][
                                                             "arguments"
                                                         ] += delta_arguments
+
+                                    processed_image_urls = extract_and_process_urls(
+                                        delta.get("images", []), request, metadata, user
+                                    )
+                                    if processed_image_urls:
+                                        await event_emitter(
+                                            {
+                                                "type": "files",
+                                                "data": {
+                                                    "files": [
+                                                        {
+                                                            "type": "image",
+                                                            "url": url,
+                                                        }
+                                                        for url in processed_image_urls
+                                                    ]
+                                                },
+                                            }
+                                        )
 
                                     value = delta.get("content")
 
