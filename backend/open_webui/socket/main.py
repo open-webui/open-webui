@@ -32,6 +32,11 @@ from open_webui.env import (
     WEBSOCKET_SENTINEL_PORT,
     WEBSOCKET_SENTINEL_HOSTS,
     REDIS_KEY_PREFIX,
+    WEBSOCKET_REDIS_OPTIONS,
+    WEBSOCKET_SERVER_PING_TIMEOUT,
+    WEBSOCKET_SERVER_PING_INTERVAL,
+    WEBSOCKET_SERVER_LOGGING,
+    WEBSOCKET_SERVER_ENGINEIO_LOGGING,
 )
 from open_webui.utils.auth import decode_token
 from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
@@ -61,10 +66,11 @@ if WEBSOCKET_MANAGER == "redis":
         mgr = socketio.AsyncRedisManager(
             get_sentinel_url_from_env(
                 WEBSOCKET_REDIS_URL, WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT
-            )
+            ),
+            redis_options=WEBSOCKET_REDIS_OPTIONS,
         )
     else:
-        mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL)
+        mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL, redis_options=WEBSOCKET_REDIS_OPTIONS)
     sio = socketio.AsyncServer(
         cors_allowed_origins=SOCKETIO_CORS_ORIGINS,
         async_mode="asgi",
@@ -72,6 +78,10 @@ if WEBSOCKET_MANAGER == "redis":
         allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
         always_connect=True,
         client_manager=mgr,
+        logger=WEBSOCKET_SERVER_LOGGING,
+        ping_interval=WEBSOCKET_SERVER_PING_INTERVAL,
+        ping_timeout=WEBSOCKET_SERVER_PING_TIMEOUT,
+        engineio_logger=WEBSOCKET_SERVER_ENGINEIO_LOGGING,        
     )
 else:
     sio = socketio.AsyncServer(
@@ -80,6 +90,10 @@ else:
         transports=(["websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
         allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
         always_connect=True,
+        logger=WEBSOCKET_SERVER_LOGGING,
+        ping_interval=WEBSOCKET_SERVER_PING_INTERVAL,
+        ping_timeout=WEBSOCKET_SERVER_PING_TIMEOUT,
+        engineio_logger=WEBSOCKET_SERVER_ENGINEIO_LOGGING,        
     )
 
 
