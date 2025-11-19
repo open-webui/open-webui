@@ -1059,14 +1059,6 @@
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
 
-		const userSettings = await getUserSettings(localStorage.token);
-
-		if (userSettings) {
-			settings.set(userSettings.ui);
-		} else {
-			settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
-		}
-
 		const chatInput = document.getElementById('chat-input');
 		setTimeout(() => chatInput?.focus(), 0);
 	};
@@ -1110,14 +1102,6 @@
 						: convertMessagesToHistory(chatContent.messages);
 
 				chatTitle.set(chatContent.title);
-
-				const userSettings = await getUserSettings(localStorage.token);
-
-				if (userSettings) {
-					await settings.set(userSettings.ui);
-				} else {
-					await settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
-				}
 
 				params = chatContent?.params ?? {};
 				chatFiles = chatContent?.files ?? [];

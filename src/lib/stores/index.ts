@@ -5,7 +5,6 @@ import type { Banner } from '$lib/types';
 import type { Socket } from 'socket.io-client';
 
 import emojiShortCodes from '$lib/emoji-shortcodes.json';
-import { resolveTextScale, setDocumentTextScale } from '$lib/utils/text-scale';
 
 // Backend
 export const WEBUI_NAME = writable(APP_NAME);
@@ -68,13 +67,6 @@ export const toolServers = writable([]);
 export const banners: Writable<Banner[]> = writable([]);
 
 export const settings: Writable<Settings> = writable({});
-
-if (typeof window !== 'undefined') {
-	settings.subscribe(($settings) => {
-		const clampedScale = resolveTextScale($settings?.textScale ?? 1);
-		setDocumentTextScale(clampedScale);
-	});
-}
 
 export const audioQueue = writable(null);
 

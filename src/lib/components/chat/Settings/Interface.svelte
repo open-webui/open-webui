@@ -5,19 +5,14 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { updateUserInfo } from '$lib/apis/users';
 	import { getUserPosition } from '$lib/utils';
+	import { setTextScale } from '$lib/utils/text-scale';
+
 	import Minus from '$lib/components/icons/Minus.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import ManageFloatingActionButtonsModal from './Interface/ManageFloatingActionButtonsModal.svelte';
 	import ManageImageCompressionModal from './Interface/ManageImageCompressionModal.svelte';
-	import {
-		DEFAULT_TEXT_SCALE_INDEX,
-		TEXT_SCALE_MAX,
-		TEXT_SCALE_MIN,
-		TEXT_SCALE_VALUES,
-		findClosestTextScaleIndex,
-		getScaleFromIndex
-	} from '$lib/utils/text-scale';
+
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -105,45 +100,7 @@
 	let showManageFloatingActionButtonsModal = false;
 	let showManageImageCompressionModal = false;
 
-	let textScaleIndex = DEFAULT_TEXT_SCALE_INDEX;
-	let unsubscribeTextScale: (() => void) | undefined;
-
-	const persistTextScale = () => {
-		const scale = getScaleFromIndex(textScaleIndex);
-
-		if ($settings?.textScale === scale) {
-			return;
-		}
-
-		saveSettings({ textScale: scale });
-	};
-
-	const decreaseTextScale = () => {
-		const previous = textScaleIndex;
-		textScaleIndex = Math.max(0, textScaleIndex - 1);
-
-		if (textScaleIndex === previous) {
-			return;
-		}
-
-		persistTextScale();
-	};
-
-	const increaseTextScale = () => {
-		const previous = textScaleIndex;
-		textScaleIndex = Math.min(TEXT_SCALE_VALUES.length - 1, textScaleIndex + 1);
-
-		if (textScaleIndex === previous) {
-			return;
-		}
-
-		persistTextScale();
-	};
-
-	$: currentTextScale = getScaleFromIndex(textScaleIndex);
-	$: textScaleDisplay = Number.isInteger(currentTextScale)
-		? `${currentTextScale.toFixed(0)}`
-		: `${currentTextScale.toFixed(1)}`;
+	let textScale = null;
 
 	const toggleLandingPageMode = async () => {
 		landingPageMode = landingPageMode === '' ? 'chat' : '';
@@ -227,6 +184,12 @@
 		saveSettings({ webSearch: webSearch });
 	};
 
+	const setTextScaleHandler = (scale) => {
+		textScale = scale;
+		setTextScale(textScale);
+		saveSettings({ textScale });
+	};
+
 	onMount(async () => {
 		titleAutoGenerate = $settings?.title?.auto ?? true;
 		autoTags = $settings?.autoTags ?? true;
@@ -301,19 +264,7 @@
 		backgroundImageUrl = $settings?.backgroundImageUrl ?? null;
 		webSearch = $settings?.webSearch ?? null;
 
-		textScaleIndex = findClosestTextScaleIndex($settings?.textScale ?? 1);
-
-		unsubscribeTextScale = settings.subscribe((uiSettings) => {
-			const nextScaleIndex = findClosestTextScaleIndex(uiSettings?.textScale ?? 1);
-
-			if (nextScaleIndex !== textScaleIndex) {
-				textScaleIndex = nextScaleIndex;
-			}
-		});
-	});
-
-	onDestroy(() => {
-		unsubscribeTextScale?.();
+		textScale = $settings?.textScale ?? null;
 	});
 </script>
 
@@ -382,7 +333,7 @@
 						</label>
 
 						<div class="flex items-center gap-1 text-xs px-1" aria-live="polite">
-							<span>{textScaleDisplay}x</span>
+							<span>{textScale}x</span>
 						</div>
 					</div>
 
@@ -390,7 +341,10 @@
 						<button
 							type="button"
 							class="rounded-lg p-1 transition outline-gray-200 hover:bg-gray-100 dark:outline-gray-700 dark:hover:bg-gray-800"
-							on:click={decreaseTextScale}
+							on:click={() => {
+								textScale = Math.max(1, textScale);
+								setTextScaleHandler(textScale);
+							}}
 							aria-labelledby="ui-scale-label"
 							aria-label={$i18n.t('Decrease UI Scale')}
 						>
@@ -402,23 +356,28 @@
 								id="ui-scale-slider"
 								class="w-full"
 								type="range"
-								min={0}
-								max={TEXT_SCALE_VALUES.length - 1}
-								step={1}
-								bind:value={textScaleIndex}
-								on:change={persistTextScale}
+								min="1"
+								max="1.5"
+								step={0.01}
+								bind:value={textScale}
+								on:change={() => {
+									setTextScaleHandler(textScale);
+								}}
 								aria-labelledby="ui-scale-label"
-								aria-valuemin={TEXT_SCALE_MIN}
-								aria-valuemax={TEXT_SCALE_MAX}
-								aria-valuenow={currentTextScale}
-								aria-valuetext={`${textScaleDisplay}x`}
+								aria-valuemin="1"
+								aria-valuemax="1.5"
+								aria-valuenow={textScale}
+								aria-valuetext={`${textScale}x`}
 							/>
 						</div>
 
 						<button
 							type="button"
 							class="rounded-lg p-1 transition outline-gray-200 hover:bg-gray-100 dark:outline-gray-700 dark:hover:bg-gray-800"
-							on:click={increaseTextScale}
+							on:click={() => {
+								textScale = Math.min(1.5, textScale);
+								setTextScaleHandler(textScale);
+							}}
 							aria-labelledby="ui-scale-label"
 							aria-label={$i18n.t('Increase UI Scale')}
 						>
