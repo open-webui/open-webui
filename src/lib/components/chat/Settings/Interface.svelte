@@ -5,7 +5,10 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { updateUserInfo } from '$lib/apis/users';
 	import { getUserPosition } from '$lib/utils';
+	import { setTextScale } from '$lib/utils/text-scale';
 	import Switch from '$lib/components/common/Switch.svelte';
+	import Minus from '$lib/components/icons/Minus.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
 	import ManageFloatingActionButtonsModal from './Interface/ManageFloatingActionButtonsModal.svelte';
 	import ManageImageCompressionModal from './Interface/ManageImageCompressionModal.svelte';
 	const dispatch = createEventDispatcher();
@@ -22,6 +25,7 @@
 	let backgroundImageUrl = null;
 	let inputFiles = null;
 	let filesInputElement;
+	let textScale = null;
 
 	// Addons
 	let titleAutoGenerate = true;
@@ -342,6 +346,71 @@
 								saveSettings({ highContrastMode });
 							}}
 						/>
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Text Scale')}
+					</div>
+				</div>
+
+				<div class="flex justify-between items-center text-xs">
+					<div class="flex items-center justify-between w-full gap-3">
+						<button
+							class="self-center p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+							on:click={() => {
+								if (textScale === null) {
+									textScale = 1;
+								}
+
+								setTextScaleHandler(Math.max(0.5, textScale - 0.1));
+							}}
+							type="button"
+							aria-label={$i18n.t('Decrease text scale')}
+						>
+							<Minus className="size-3" />
+						</button>
+
+						<input
+							class="w-full h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+							type="range"
+							min="0.5"
+							max="1.5"
+							step="0.1"
+							bind:value={textScale}
+							on:input={(e) => {
+								setTextScaleHandler(parseFloat(e.target.value));
+							}}
+							aria-label={$i18n.t('Text scale slider')}
+						/>
+
+						<button
+							class="self-center p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+							on:click={() => {
+								if (textScale === null) {
+									textScale = 1;
+								}
+
+								setTextScaleHandler(Math.min(1.5, textScale + 0.1));
+							}}
+							type="button"
+							aria-label={$i18n.t('Increase text scale')}
+						>
+							<Plus className="size-3" />
+						</button>
+
+						<button
+							class="p-1 px-3 text-xs flex rounded-sm transition"
+							on:click={() => {
+								setTextScaleHandler(1);
+							}}
+							type="button"
+						>
+							<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
+						</button>
 					</div>
 				</div>
 			</div>
