@@ -116,19 +116,18 @@ class S3VectorClient(VectorDBBase):
         return filtered_metadata
 
     def has_collection(self, collection_name: str) -> bool:
-          """
-          Check if a vector index exists using direct lookup.
-          This avoids pagination issues with list_indexes() and is significantly faster.
-          """
-          try:
-              self.client.get_index(
-                  vectorBucketName=self.bucket_name,
-                  indexName=collection_name
-              )
-              return True
-          except Exception as e:
-              log.error(f"Error checking if index '{collection_name}' exists: {e}")
-              return False
+        """
+        Check if a vector index exists using direct lookup.
+        This avoids pagination issues with list_indexes() and is significantly faster.
+        """
+        try:
+            self.client.get_index(
+                vectorBucketName=self.bucket_name, indexName=collection_name
+            )
+            return True
+        except Exception as e:
+            log.error(f"Error checking if index '{collection_name}' exists: {e}")
+            return False
 
     def delete_collection(self, collection_name: str) -> None:
         """

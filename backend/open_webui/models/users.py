@@ -345,7 +345,9 @@ class UsersTable:
         with get_db() as db:
             current_timestamp = int(datetime.datetime.now().timestamp())
             today_midnight_timestamp = current_timestamp - (current_timestamp % 86400)
-            query = db.query(User).filter(User.last_active_at > today_midnight_timestamp)
+            query = db.query(User).filter(
+                User.last_active_at > today_midnight_timestamp
+            )
             return query.count()
 
     def update_user_role_by_id(self, id: str, role: str) -> Optional[UserModel]:

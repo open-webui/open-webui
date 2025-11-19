@@ -396,11 +396,7 @@
 			<div>
 				<div class="py-0.5">
 					<div class="flex w-full justify-between">
-						<label
-							id="ui-scale-label"
-							class=" self-center text-xs"
-							for="ui-scale-slider"
-						>
+						<label id="ui-scale-label" class=" self-center text-xs" for="ui-scale-slider">
 							{$i18n.t('UI Scale')}
 						</label>
 

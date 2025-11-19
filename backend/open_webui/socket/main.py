@@ -70,7 +70,9 @@ if WEBSOCKET_MANAGER == "redis":
             redis_options=WEBSOCKET_REDIS_OPTIONS,
         )
     else:
-        mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL, redis_options=WEBSOCKET_REDIS_OPTIONS)
+        mgr = socketio.AsyncRedisManager(
+            WEBSOCKET_REDIS_URL, redis_options=WEBSOCKET_REDIS_OPTIONS
+        )
     sio = socketio.AsyncServer(
         cors_allowed_origins=SOCKETIO_CORS_ORIGINS,
         async_mode="asgi",
@@ -81,7 +83,7 @@ if WEBSOCKET_MANAGER == "redis":
         logger=WEBSOCKET_SERVER_LOGGING,
         ping_interval=WEBSOCKET_SERVER_PING_INTERVAL,
         ping_timeout=WEBSOCKET_SERVER_PING_TIMEOUT,
-        engineio_logger=WEBSOCKET_SERVER_ENGINEIO_LOGGING,        
+        engineio_logger=WEBSOCKET_SERVER_ENGINEIO_LOGGING,
     )
 else:
     sio = socketio.AsyncServer(
@@ -93,7 +95,7 @@ else:
         logger=WEBSOCKET_SERVER_LOGGING,
         ping_interval=WEBSOCKET_SERVER_PING_INTERVAL,
         ping_timeout=WEBSOCKET_SERVER_PING_TIMEOUT,
-        engineio_logger=WEBSOCKET_SERVER_ENGINEIO_LOGGING,        
+        engineio_logger=WEBSOCKET_SERVER_ENGINEIO_LOGGING,
     )
 
 
