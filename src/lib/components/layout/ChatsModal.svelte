@@ -3,9 +3,10 @@
 	import { getContext } from 'svelte';
 
 	import dayjs from '$lib/dayjs';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';	
+	dayjs.extend(localizedFormat);
 
 	import { deleteChatById } from '$lib/apis/chats';
-	import { config } from '$lib/stores';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
