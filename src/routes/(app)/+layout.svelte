@@ -93,6 +93,7 @@
 		try {
 			adminDefaults = await getInterfaceDefaults(localStorage.token);
 			console.log('Loaded admin interface defaults:', adminDefaults);
+			console.log('  - textScale in admin defaults:', adminDefaults.textScale);
 		} catch (error) {
 			console.log('No admin interface defaults configured or error loading them:', error);
 		}
@@ -113,6 +114,7 @@
 		}
 
 		console.log('User settings.ui:', userSettings?.ui);
+		console.log('  - textScale in user settings:', userSettings?.ui?.textScale);
 
 		// Implement fallback logic: User custom → Admin default → System default
 		// Deep merge admin defaults with user settings, where user settings take precedence
@@ -120,6 +122,7 @@
 		if (userSettings?.ui || Object.keys(adminDefaults).length > 0) {
 			const mergedSettings = deepMerge(adminDefaults, userSettings?.ui || {});
 			console.log('Merged settings:', mergedSettings);
+			console.log('  - textScale in merged settings:', mergedSettings.textScale);
 			settings.set(mergedSettings);
 		}
 
