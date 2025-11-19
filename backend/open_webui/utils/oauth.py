@@ -1023,6 +1023,10 @@ class OAuthManager:
                 for nested_claim in nested_claims:
                     claim_data = claim_data.get(nested_claim, {})
 
+                # Try flat claim structure as alternative
+                if not claim_data:
+                    claim_data = user_data.get(oauth_claim, {})
+
                 oauth_roles = []
 
                 if isinstance(claim_data, list):
