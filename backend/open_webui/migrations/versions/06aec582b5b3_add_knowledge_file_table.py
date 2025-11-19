@@ -24,7 +24,7 @@ def upgrade():
     knowledge_file_table = op.create_table(
         "knowledge_file",
         sa.Column("id", sa.Text(), primary_key=True),
-        sa.Column("knowledge_id", sa.Text(), nullable=False),
+        sa.Column("knowledge_id", sa.Text(), sa.ForeignKey("knowledge.id", ondelete="CASCADE"), nullable=False),
         sa.Column("file_id", sa.Text(), nullable=False),
         sa.Column("user_id", sa.Text(), nullable=False),
         sa.Column("created_at", sa.BigInteger(), nullable=False),
@@ -40,16 +40,6 @@ def upgrade():
         "uq_knowledge_file_knowledge_id_file_id",
         "knowledge_file",
         ["knowledge_id", "file_id"]
-    )
-
-    # Add foreign key with CASCADE delete
-    op.create_foreign_key(
-        "fk_knowledge_file_knowledge_id",
-        "knowledge_file",
-        "knowledge",
-        ["knowledge_id"],
-        ["id"],
-        ondelete="CASCADE"
     )
 
     print("Migrating data from knowledge.data.file_ids to knowledge_file table")
@@ -173,9 +163,6 @@ def downgrade():
         restored_count += 1
 
     print(f"Restored file_ids to {restored_count} knowledge entries ({len(knowledge_file_map)} with files, {restored_count - len(knowledge_file_map)} empty)")
-
-    # Drop foreign key constraint
-    op.drop_constraint("fk_knowledge_file_knowledge_id", "knowledge_file", type_="foreignkey")
 
     # Drop unique constraint
     op.drop_constraint("uq_knowledge_file_knowledge_id_file_id", "knowledge_file", type_="unique")
