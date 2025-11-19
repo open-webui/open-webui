@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { config, models, settings, user } from '$lib/stores';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { createEventDispatcher, onMount, onDestroy, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { updateUserInfo } from '$lib/apis/users';
@@ -10,6 +10,14 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import ManageFloatingActionButtonsModal from './Interface/ManageFloatingActionButtonsModal.svelte';
 	import ManageImageCompressionModal from './Interface/ManageImageCompressionModal.svelte';
+	import {
+		DEFAULT_TEXT_SCALE_INDEX,
+		TEXT_SCALE_MAX,
+		TEXT_SCALE_MIN,
+		TEXT_SCALE_VALUES,
+		findClosestTextScaleIndex,
+		getScaleFromIndex
+	} from '$lib/utils/text-scale';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -96,6 +104,46 @@
 
 	let showManageFloatingActionButtonsModal = false;
 	let showManageImageCompressionModal = false;
+
+	let textScaleIndex = DEFAULT_TEXT_SCALE_INDEX;
+	let unsubscribeTextScale: (() => void) | undefined;
+
+	const persistTextScale = () => {
+		const scale = getScaleFromIndex(textScaleIndex);
+
+		if ($settings?.textScale === scale) {
+			return;
+		}
+
+		saveSettings({ textScale: scale });
+	};
+
+	const decreaseTextScale = () => {
+		const previous = textScaleIndex;
+		textScaleIndex = Math.max(0, textScaleIndex - 1);
+
+		if (textScaleIndex === previous) {
+			return;
+		}
+
+		persistTextScale();
+	};
+
+	const increaseTextScale = () => {
+		const previous = textScaleIndex;
+		textScaleIndex = Math.min(TEXT_SCALE_VALUES.length - 1, textScaleIndex + 1);
+
+		if (textScaleIndex === previous) {
+			return;
+		}
+
+		persistTextScale();
+	};
+
+	$: currentTextScale = getScaleFromIndex(textScaleIndex);
+	$: textScaleDisplay = Number.isInteger(currentTextScale)
+		? `${currentTextScale.toFixed(0)}`
+		: `${currentTextScale.toFixed(1)}`;
 
 	const toggleLandingPageMode = async () => {
 		landingPageMode = landingPageMode === '' ? 'chat' : '';
@@ -252,6 +300,20 @@
 
 		backgroundImageUrl = $settings?.backgroundImageUrl ?? null;
 		webSearch = $settings?.webSearch ?? null;
+
+		textScaleIndex = findClosestTextScaleIndex($settings?.textScale ?? 1);
+
+		unsubscribeTextScale = settings.subscribe((uiSettings) => {
+			const nextScaleIndex = findClosestTextScaleIndex(uiSettings?.textScale ?? 1);
+
+			if (nextScaleIndex !== textScaleIndex) {
+				textScaleIndex = nextScaleIndex;
+			}
+		});
+	});
+
+	onDestroy(() => {
+		unsubscribeTextScale?.();
 	});
 </script>
 
@@ -327,6 +389,64 @@
 								saveSettings({ highContrastMode });
 							}}
 						/>
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<div class="py-0.5">
+					<div class="flex w-full justify-between">
+						<label
+							id="ui-scale-label"
+							class=" self-center text-xs"
+							for="ui-scale-slider"
+						>
+							{$i18n.t('UI Scale')}
+						</label>
+
+						<div class="flex items-center gap-1 text-xs" aria-live="polite">
+							<span>{textScaleDisplay}x</span>
+						</div>
+					</div>
+
+					<div class="mt-2 flex items-center gap-2 pl-1 pr-1">
+						<button
+							type="button"
+							class="rounded-sm p-1 transition outline outline-1 outline-gray-200 hover:bg-gray-100 dark:outline-gray-700 dark:hover:bg-gray-800"
+							on:click={decreaseTextScale}
+							aria-labelledby="ui-scale-label"
+							aria-label={$i18n.t('Decrease UI Scale')}
+						>
+							<Minus className="h-3.5 w-3.5" />
+						</button>
+
+						<div class="flex-1">
+							<input
+								id="ui-scale-slider"
+								class="w-full accent-black dark:accent-white"
+								type="range"
+								min={0}
+								max={TEXT_SCALE_VALUES.length - 1}
+								step={1}
+								bind:value={textScaleIndex}
+								on:change={persistTextScale}
+								aria-labelledby="ui-scale-label"
+								aria-valuemin={TEXT_SCALE_MIN}
+								aria-valuemax={TEXT_SCALE_MAX}
+								aria-valuenow={currentTextScale}
+								aria-valuetext={`${textScaleDisplay}x`}
+							/>
+						</div>
+
+						<button
+							type="button"
+							class="rounded-sm p-1 transition outline outline-1 outline-gray-200 hover:bg-gray-100 dark:outline-gray-700 dark:hover:bg-gray-800"
+							on:click={increaseTextScale}
+							aria-labelledby="ui-scale-label"
+							aria-label={$i18n.t('Increase UI Scale')}
+						>
+							<Plus className="h-3.5 w-3.5" />
+						</button>
 					</div>
 				</div>
 			</div>
