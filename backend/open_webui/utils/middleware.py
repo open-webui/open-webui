@@ -742,11 +742,11 @@ def get_last_images(message_list):
     return images
 
 
-def extract_and_process_urls(delta_images, request, metadata, user) -> list[str]:
+def get_image_urls(delta_images, request, metadata, user) -> list[str]:
     if not isinstance(delta_images, list):
         return []
 
-    processed_urls = []
+    image_urls = []
     for img in delta_images:
         if not isinstance(img, dict) or img.get("type") != "image_url":
             continue
@@ -758,9 +758,9 @@ def extract_and_process_urls(delta_images, request, metadata, user) -> list[str]
         if url.startswith("data:image/png;base64"):
             url = get_image_url_from_base64(request, url, metadata, user)
 
-        processed_urls.append(url)
+        image_urls.append(url)
 
-    return processed_urls
+    return image_urls
 
 
 async def chat_image_generation_handler(
@@ -2602,22 +2602,23 @@ async def process_chat_response(
                                                             "arguments"
                                                         ] += delta_arguments
 
-                                    processed_image_urls = extract_and_process_urls(
+                                    image_urls = get_image_urls(
                                         delta.get("images", []), request, metadata, user
                                     )
-                                    if processed_image_urls:
+                                    if image_urls:
+                                        message_files = Chats.add_message_files_by_id_and_message_id(
+                                            metadata["chat_id"],
+                                            metadata["message_id"],
+                                            [
+                                                {"type": "image", "url": url}
+                                                for url in image_urls
+                                            ],
+                                        )
+
                                         await event_emitter(
                                             {
                                                 "type": "files",
-                                                "data": {
-                                                    "files": [
-                                                        {
-                                                            "type": "image",
-                                                            "url": url,
-                                                        }
-                                                        for url in processed_image_urls
-                                                    ]
-                                                },
+                                                "data": {"files": message_files},
                                             }
                                         )
 

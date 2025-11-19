@@ -297,6 +297,27 @@ class ChatTable:
         chat["history"] = history
         return self.update_chat_by_id(id, chat)
 
+    def add_message_files_by_id_and_message_id(
+        self, id: str, message_id: str, files: list[dict]
+    ) -> list[dict]:
+        chat = self.get_chat_by_id(id)
+        if chat is None:
+            return None
+
+        chat = chat.chat
+        history = chat.get("history", {})
+
+        message_files = []
+
+        if message_id in history.get("messages", {}):
+            message_files = history["messages"][message_id].get("files", [])
+            message_files = message_files + files
+            history["messages"][message_id]["files"] = message_files
+
+        chat["history"] = history
+        self.update_chat_by_id(id, chat)
+        return message_files
+
     def insert_shared_chat_by_chat_id(self, chat_id: str) -> Optional[ChatModel]:
         with get_db() as db:
             # Get the existing chat to share
