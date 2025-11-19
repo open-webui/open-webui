@@ -326,18 +326,35 @@
 			<h1 class=" mb-2 text-sm font-medium">{$i18n.t('UI')}</h1>
 
 			<div>
-				<div class="py-0.5">
-					<div class="flex w-full justify-between">
-						<label id="ui-scale-label" class=" self-center text-xs" for="ui-scale-slider">
-							{$i18n.t('UI Scale')}
-						</label>
+				<div class="py-0.5 flex w-full justify-between">
+					<label id="ui-scale-label" class=" self-center text-xs" for="ui-scale-slider">
+						{$i18n.t('UI Scale')}
+					</label>
 
-						<div class="flex items-center gap-1 text-xs px-1" aria-live="polite">
-							<span>{textScale}x</span>
-						</div>
+					<div class="flex items-center gap-2 p-1">
+						<button
+							class="text-xs"
+							aria-live="polite"
+							type="button"
+							on:click={() => {
+								if (textScale === null) {
+									textScale = 1;
+								} else {
+									textScale = null;
+								}
+							}}
+						>
+							{#if textScale === null}
+								<span>{$i18n.t('Default')}</span>
+							{:else}
+								<span>{textScale}x</span>
+							{/if}
+						</button>
 					</div>
+				</div>
 
-					<div class="mt-2 flex items-center gap-2 pl-1 pr-1">
+				{#if textScale !== null}
+					<div class=" flex items-center gap-2 px-1 pb-1">
 						<button
 							type="button"
 							class="rounded-lg p-1 transition outline-gray-200 hover:bg-gray-100 dark:outline-gray-700 dark:hover:bg-gray-800"
@@ -384,7 +401,7 @@
 							<Plus className="h-3.5 w-3.5" />
 						</button>
 					</div>
-				</div>
+				{/if}
 			</div>
 
 			<div>
