@@ -46,6 +46,7 @@ from pydantic import BaseModel
 from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.auth import (
     decode_token,
+    invalidate_token,
     create_api_key,
     create_token,
     get_admin_user,
@@ -702,6 +703,19 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 
 @router.get("/signout")
 async def signout(request: Request, response: Response):
+
+    # get auth token from headers or cookies
+    token = None
+    auth_header = request.headers.get("Authorization")
+    if auth_header:
+        auth_cred = get_http_authorization_cred(auth_header)
+        token = auth_cred.credentials
+    else:
+        token = request.cookies.get("token")
+
+    if token:
+        await invalidate_token(request, token)
+
     response.delete_cookie("token")
     response.delete_cookie("oui-session")
     response.delete_cookie("oauth_id_token")
