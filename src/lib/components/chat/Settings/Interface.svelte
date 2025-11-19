@@ -187,6 +187,10 @@
 	const setTextScaleHandler = (scale) => {
 		textScale = scale;
 		setTextScale(textScale);
+
+		if (textScale === 1) {
+			textScale = null;
+		}
 		saveSettings({ textScale });
 	};
 
@@ -342,7 +346,7 @@
 								} else {
 									textScale = null;
 								}
-								setTextScale(1);
+								setTextScaleHandler(1);
 							}}
 						>
 							{#if textScale === null}
