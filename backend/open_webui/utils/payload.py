@@ -299,7 +299,7 @@ def convert_payload_openai_to_luxor(openai_payload: dict) -> dict:
     luxor_payload["question_type"] = question_type
 
     messages = openai_payload.get(("messages"))
-    luxor_payload["user_question"] = messages[-1]["content"]
+    luxor_payload["messages"] = messages
 
     return luxor_payload   
 
