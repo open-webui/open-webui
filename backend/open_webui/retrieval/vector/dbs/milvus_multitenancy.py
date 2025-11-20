@@ -63,8 +63,8 @@ class MilvusClient(VectorDBBase):
         """
         Maps the traditional collection name to multi-tenant collection and resource ID.
 
-        WARNING: This mapping relies on current Open WebUI naming conventions for
-        collection names. If Open WebUI changes how it generates collection names
+        WARNING: This mapping relies on current CyberLover naming conventions for
+        collection names. If CyberLover changes how it generates collection names
         (e.g., "user-memory-" prefix, "file-" prefix, web search patterns, or hash
         formats), this mapping will break and route data to incorrect collections.
         POTENTIALLY CAUSING HUGE DATA CORRUPTION, DATA CONSISTENCY ISSUES AND INCORRECT

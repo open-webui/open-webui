@@ -424,7 +424,7 @@
 			keywords: [
 				'about app',
 				'about me',
-				'about open webui',
+				'about CyberLover',
 				'about page',
 				'about us',
 				'aboutapp',

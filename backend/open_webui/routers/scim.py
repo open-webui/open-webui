@@ -1,5 +1,5 @@
 """
-Experimental SCIM 2.0 Implementation for Open WebUI
+Experimental SCIM 2.0 Implementation for CyberLover
 Provides System for Cross-domain Identity Management endpoints for users and groups
 
 NOTE: This is an experimental implementation and may not fully comply with SCIM 2.0 standards, and is subject to change.

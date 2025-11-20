@@ -17,7 +17,7 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 class S3VectorClient(VectorDBBase):
     """
-    AWS S3 Vector integration for Open WebUI Knowledge.
+    AWS S3 Vector integration for CyberLover Knowledge.
     """
 
     def __init__(self):
@@ -80,7 +80,7 @@ class S3VectorClient(VectorDBBase):
         if not isinstance(metadata, dict) or len(metadata) <= 10:
             return metadata
 
-        # Keep only the first 10 keys, prioritizing important ones based on actual Open WebUI metadata
+        # Keep only the first 10 keys, prioritizing important ones based on actual CyberLover metadata
         important_keys = [
             "text",  # The actual document content
             "file_id",  # File ID
@@ -570,7 +570,7 @@ class S3VectorClient(VectorDBBase):
             )
 
             # Return in GetResult format
-            # The Open WebUI GetResult expects lists of lists, so we wrap each list
+            # The CyberLover GetResult expects lists of lists, so we wrap each list
             if all_ids:
                 return GetResult(
                     ids=[all_ids], documents=[all_documents], metadatas=[all_metadatas]
