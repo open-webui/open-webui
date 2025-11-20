@@ -7,12 +7,14 @@
 	dayjs.extend(relativeTime);
 
 	import { tick, getContext, onMount, onDestroy } from 'svelte';
-	import { removeLastWordFromString, isValidHttpUrl } from '$lib/utils';
+	import { removeLastWordFromString, isValidHttpUrl, isYoutubeUrl } from '$lib/utils';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import DocumentPage from '$lib/components/icons/DocumentPage.svelte';
 	import Database from '$lib/components/icons/Database.svelte';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 	import Youtube from '$lib/components/icons/Youtube.svelte';
+	import { folders } from '$lib/stores';
+	import Folder from '$lib/components/icons/Folder.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -36,7 +38,7 @@
 				: items),
 
 			...(query.startsWith('http')
-				? query.startsWith('https://www.youtube.com') || query.startsWith('https://youtu.be')
+				? isYoutubeUrl(query)
 					? [{ type: 'youtube', name: query, description: query }]
 					: [
 							{
@@ -144,14 +146,25 @@
 					]
 				: [];
 
-		items = [...collections, ...collection_files, ...legacy_collections, ...legacy_documents].map(
-			(item) => {
-				return {
-					...item,
-					...(item?.legacy || item?.meta?.legacy || item?.meta?.document ? { legacy: true } : {})
-				};
-			}
-		);
+		let folder_items = $folders.map((folder) => ({
+			...folder,
+			type: 'folder',
+			description: $i18n.t('Folder'),
+			title: folder.name
+		}));
+
+		items = [
+			...folder_items,
+			...collections,
+			...collection_files,
+			...legacy_collections,
+			...legacy_documents
+		].map((item) => {
+			return {
+				...item,
+				...(item?.legacy || item?.meta?.legacy || item?.meta?.document ? { legacy: true } : {})
+			};
+		});
 
 		fuse = new Fuse(items, {
 			keys: ['name', 'description']
@@ -213,6 +226,8 @@
 					>
 						{#if item?.type === 'collection'}
 							<Database className="size-4" />
+						{:else if item?.type === 'folder'}
+							<Folder className="size-4" />
 						{:else}
 							<DocumentPage className="size-4" />
 						{/if}
@@ -228,7 +243,7 @@
 		{/if}
 	{/each}
 
-	{#if query.startsWith('https://www.youtube.com') || query.startsWith('https://youtu.be')}
+	{#if isYoutubeUrl(query)}
 		<button
 			class="px-2 py-1 rounded-xl w-full text-left bg-gray-50 dark:bg-gray-800 dark:text-gray-100 selected-command-option-button"
 			type="button"

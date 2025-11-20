@@ -120,17 +120,26 @@ def pop_system_message(messages: list[dict]) -> tuple[Optional[dict], list[dict]
     return get_system_message(messages), remove_system_message(messages)
 
 
-def prepend_to_first_user_message_content(
-    content: str, messages: list[dict]
-) -> list[dict]:
+def update_message_content(message: dict, content: str, append: bool = True) -> dict:
+    if isinstance(message["content"], list):
+        for item in message["content"]:
+            if item["type"] == "text":
+                if append:
+                    item["text"] = f"{item['text']}\n{content}"
+                else:
+                    item["text"] = f"{content}\n{item['text']}"
+    else:
+        if append:
+            message["content"] = f"{message['content']}\n{content}"
+        else:
+            message["content"] = f"{content}\n{message['content']}"
+    return message
+
+
+def replace_system_message_content(content: str, messages: list[dict]) -> dict:
     for message in messages:
-        if message["role"] == "user":
-            if isinstance(message["content"], list):
-                for item in message["content"]:
-                    if item["type"] == "text":
-                        item["text"] = f"{content}\n{item['text']}"
-            else:
-                message["content"] = f"{content}\n{message['content']}"
+        if message["role"] == "system":
+            message["content"] = content
             break
     return messages
 
@@ -148,10 +157,7 @@ def add_or_update_system_message(
     """
 
     if messages and messages[0].get("role") == "system":
-        if append:
-            messages[0]["content"] = f"{messages[0]['content']}\n{content}"
-        else:
-            messages[0]["content"] = f"{content}\n{messages[0]['content']}"
+        messages[0] = update_message_content(messages[0], content, append)
     else:
         # Insert at the beginning
         messages.insert(0, {"role": "system", "content": content})
@@ -159,7 +165,7 @@ def add_or_update_system_message(
     return messages
 
 
-def add_or_update_user_message(content: str, messages: list[dict]):
+def add_or_update_user_message(content: str, messages: list[dict], append: bool = True):
     """
     Adds a new user message at the end of the messages list
     or updates the existing user message at the end.
@@ -170,11 +176,21 @@ def add_or_update_user_message(content: str, messages: list[dict]):
     """
 
     if messages and messages[-1].get("role") == "user":
-        messages[-1]["content"] = f"{messages[-1]['content']}\n{content}"
+        messages[-1] = update_message_content(messages[-1], content, append)
     else:
         # Insert at the end
         messages.append({"role": "user", "content": content})
 
+    return messages
+
+
+def prepend_to_first_user_message_content(
+    content: str, messages: list[dict]
+) -> list[dict]:
+    for message in messages:
+        if message["role"] == "user":
+            message = update_message_content(message, content, append=False)
+            break
     return messages
 
 
@@ -383,17 +399,10 @@ def parse_ollama_modelfile(model_text):
         "top_k": int,
         "top_p": float,
         "num_keep": int,
-        "typical_p": float,
         "presence_penalty": float,
         "frequency_penalty": float,
-        "penalize_newline": bool,
-        "numa": bool,
         "num_batch": int,
         "num_gpu": int,
-        "main_gpu": int,
-        "low_vram": bool,
-        "f16_kv": bool,
-        "vocab_only": bool,
         "use_mmap": bool,
         "use_mlock": bool,
         "num_thread": int,
@@ -522,3 +531,11 @@ def throttle(interval: float = 10.0):
         return wrapper
 
     return decorator
+
+
+def extract_urls(text: str) -> list[str]:
+    # Regex pattern to match URLs
+    url_pattern = re.compile(
+        r"(https?://[^\s]+)", re.IGNORECASE
+    )  # Matches http and https URLs
+    return url_pattern.findall(text)

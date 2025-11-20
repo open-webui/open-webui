@@ -2,11 +2,12 @@ import logging
 import os
 import uuid
 import json
+import time
+import asyncio
 from fnmatch import fnmatch
 from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
-import asyncio
 
 from fastapi import (
     BackgroundTasks,
@@ -120,13 +121,15 @@ def process_uploaded_file(request, file, file_path, file_item, file_metadata, us
                 log.info(f"Process file result: {result}")
                 
                 # Wait a moment for database transaction to complete
-                import time
                 time.sleep(0.1)  # 100ms delay
                 
                 # Verify the file was updated properly by fetching it again
                 updated_file = Files.get_file_by_id(file_item.id)
                 log.info(f"File {file_item.id} after processing - image_refs: {updated_file.image_refs}")
-                
+            else:
+                raise Exception(
+                    f"File type {file.content_type} is not supported for processing"
+                )
         else:
             log.info(
                 f"File type {file.content_type} is not provided, but trying to process anyway"

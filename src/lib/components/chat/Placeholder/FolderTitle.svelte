@@ -11,7 +11,7 @@
 
 	import { selectedFolder } from '$lib/stores';
 
-	import { deleteFolderById, updateFolderById } from '$lib/apis/folders';
+	import { deleteFolderById, getFolderById, updateFolderById } from '$lib/apis/folders';
 	import { getChatsByFolderId } from '$lib/apis/chats';
 
 	import FolderModal from '$lib/components/layout/Sidebar/Folders/FolderModal.svelte';
@@ -61,8 +61,14 @@
 			}
 
 			toast.success($i18n.t('Folder updated successfully'));
-			selectedFolder.set(folder);
-			onUpdate(folder);
+
+			const _folder = await getFolderById(localStorage.token, folder.id).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+
+			await selectedFolder.set(_folder);
+			onUpdate(_folder);
 		}
 	};
 
@@ -80,8 +86,14 @@
 			folder.meta = { ...folder.meta, icon: iconName };
 
 			toast.success($i18n.t('Folder updated successfully'));
-			selectedFolder.set(folder);
-			onUpdate(folder);
+
+			const _folder = await getFolderById(localStorage.token, folder.id).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+
+			await selectedFolder.set(_folder);
+			onUpdate(_folder);
 		}
 	};
 
@@ -115,7 +127,12 @@
 </script>
 
 {#if folder}
-	<FolderModal bind:show={showFolderModal} edit={true} {folder} onSubmit={updateHandler} />
+	<FolderModal
+		bind:show={showFolderModal}
+		edit={true}
+		folderId={folder.id}
+		onSubmit={updateHandler}
+	/>
 
 	<DeleteConfirmDialog
 		bind:show={showDeleteConfirm}

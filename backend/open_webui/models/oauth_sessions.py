@@ -176,6 +176,26 @@ class OAuthSessionTable:
             log.error(f"Error getting OAuth session by ID: {e}")
             return None
 
+    def get_session_by_provider_and_user_id(
+        self, provider: str, user_id: str
+    ) -> Optional[OAuthSessionModel]:
+        """Get OAuth session by provider and user ID"""
+        try:
+            with get_db() as db:
+                session = (
+                    db.query(OAuthSession)
+                    .filter_by(provider=provider, user_id=user_id)
+                    .first()
+                )
+                if session:
+                    session.token = self._decrypt_token(session.token)
+                    return OAuthSessionModel.model_validate(session)
+
+                return None
+        except Exception as e:
+            log.error(f"Error getting OAuth session by provider and user ID: {e}")
+            return None
+
     def get_sessions_by_user_id(self, user_id: str) -> List[OAuthSessionModel]:
         """Get all OAuth sessions for a user"""
         try:
@@ -240,6 +260,17 @@ class OAuthSessionTable:
                 return True
         except Exception as e:
             log.error(f"Error deleting OAuth sessions by user ID: {e}")
+            return False
+
+    def delete_sessions_by_provider(self, provider: str) -> bool:
+        """Delete all OAuth sessions for a provider"""
+        try:
+            with get_db() as db:
+                db.query(OAuthSession).filter_by(provider=provider).delete()
+                db.commit()
+                return True
+        except Exception as e:
+            log.error(f"Error deleting OAuth sessions by provider {provider}: {e}")
             return False
 
 

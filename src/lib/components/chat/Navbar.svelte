@@ -37,6 +37,7 @@
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import ChatPlus from '../icons/ChatPlus.svelte';
 	import ChatCheck from '../icons/ChatCheck.svelte';
+	import Knobs from '../icons/Knobs.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -72,6 +73,7 @@
 <nav class="sticky top-0 z-30 w-full py-1 -mb-8 flex flex-col items-center drag-region">
 	<div class="flex items-center w-full pl-1.5 pr-1">
 		<div
+			id="navbar-bg-gradient-to-b"
 			class=" bg-linear-to-b via-40% to-97% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1]"
 		></div>
 
@@ -210,7 +212,7 @@
 								aria-label="Controls"
 							>
 								<div class=" m-auto self-center">
-									<AdjustmentsHorizontal className=" size-5" strokeWidth="1" />
+									<Knobs className=" size-5" strokeWidth="1" />
 								</div>
 							</button>
 						</Tooltip>
@@ -247,7 +249,7 @@
 		</div>
 	</div>
 
-	{#if $temporaryChatEnabled && $chatId === 'local'}
+	{#if $temporaryChatEnabled && ($chatId ?? '').startsWith('local:')}
 		<div class=" w-full z-30 text-center">
 			<div class="text-xs text-gray-500">{$i18n.t('Temporary Chat')}</div>
 		</div>
@@ -255,7 +257,7 @@
 
 	<div class="absolute top-[100%] left-0 right-0 h-fit">
 		{#if !history.currentId && !$chatId && ($banners.length > 0 || ($config?.license_metadata?.type ?? null) === 'trial' || (($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats))}
-			<div class=" w-full z-30 mt-4">
+			<div class=" w-full z-30">
 				<div class=" flex flex-col gap-1 w-full">
 					{#if ($config?.license_metadata?.type ?? null) === 'trial'}
 						<Banner

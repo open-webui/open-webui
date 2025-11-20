@@ -15,7 +15,15 @@
 	import { getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
 
-	import { config, models, settings, temporaryChatEnabled, TTSWorker, user } from '$lib/stores';
+	import {
+		audioQueue,
+		config,
+		models,
+		settings,
+		temporaryChatEnabled,
+		TTSWorker,
+		user
+	} from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -53,6 +61,7 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import RegenerateMenu from './ResponseMessage/RegenerateMenu.svelte';
 	import StatusHistory from './ResponseMessage/StatusHistory.svelte';
+	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
 
 	interface MessageType {
 		id: string;
@@ -155,7 +164,6 @@
 
 	let messageIndexEdit = false;
 
-	let audioParts: Record<number, HTMLAudioElement | null> = {};
 	let speaking = false;
 	let speakingIdx: number | undefined;
 
@@ -177,51 +185,25 @@
 		}
 	};
 
-	const playAudio = (idx: number) => {
-		return new Promise<void>((res) => {
-			speakingIdx = idx;
-			const audio = audioParts[idx];
+	const stopAudio = () => {
+		try {
+			speechSynthesis.cancel();
+			$audioQueue.stop();
+		} catch {}
 
-			if (!audio) {
-				return res();
-			}
-
-			audio.play();
-			audio.onended = async () => {
-				await new Promise((r) => setTimeout(r, 300));
-
-				if (Object.keys(audioParts).length - 1 === idx) {
-					speaking = false;
-				}
-
-				res();
-			};
-		});
-	};
-
-	const toggleSpeakMessage = async () => {
 		if (speaking) {
-			try {
-				speechSynthesis.cancel();
-
-				if (speakingIdx !== undefined && audioParts[speakingIdx]) {
-					audioParts[speakingIdx]!.pause();
-					audioParts[speakingIdx]!.currentTime = 0;
-				}
-			} catch {}
-
 			speaking = false;
 			speakingIdx = undefined;
-			return;
 		}
+	};
 
+	const speak = async () => {
 		if (!(message?.content ?? '').trim().length) {
 			toast.info($i18n.t('No content to speak'));
 			return;
 		}
 
 		speaking = true;
-
 		const content = removeAllDetails(message.content);
 
 		if ($config.audio.tts.engine === '') {
@@ -240,12 +222,12 @@
 
 					console.log(voice);
 
-					const speak = new SpeechSynthesisUtterance(content);
-					speak.rate = $settings.audio?.tts?.playbackRate ?? 1;
+					const speech = new SpeechSynthesisUtterance(content);
+					speech.rate = $settings.audio?.tts?.playbackRate ?? 1;
 
-					console.log(speak);
+					console.log(speech);
 
-					speak.onend = () => {
+					speech.onend = () => {
 						speaking = false;
 						if ($settings.conversationMode) {
 							document.getElementById('voice-input-button')?.click();
@@ -253,15 +235,21 @@
 					};
 
 					if (voice) {
-						speak.voice = voice;
+						speech.voice = voice;
 					}
 
-					speechSynthesis.speak(speak);
+					speechSynthesis.speak(speech);
 				}
 			}, 100);
 		} else {
-			loadingSpeech = true;
+			$audioQueue.setId(`${message.id}`);
+			$audioQueue.setPlaybackRate($settings.audio?.tts?.playbackRate ?? 1);
+			$audioQueue.onStopped = () => {
+				speaking = false;
+				speakingIdx = undefined;
+			};
 
+			loadingSpeech = true;
 			const messageContentParts: string[] = getMessageContentParts(
 				content,
 				$config?.audio?.tts?.split_on ?? 'punctuation'
@@ -277,17 +265,6 @@
 			}
 
 			console.debug('Prepared message content for TTS', messageContentParts);
-
-			audioParts = messageContentParts.reduce(
-				(acc, _sentence, idx) => {
-					acc[idx] = null;
-					return acc;
-				},
-				{} as typeof audioParts
-			);
-
-			let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
-
 			if ($settings.audio?.tts?.engine === 'browser-kokoro') {
 				if (!$TTSWorker) {
 					await TTSWorker.set(
@@ -314,12 +291,9 @@
 						});
 
 					if (blob) {
-						const audio = new Audio(blob);
-						audio.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
-
-						audioParts[idx] = audio;
+						const url = URL.createObjectURL(blob);
+						$audioQueue.enqueue(url);
 						loadingSpeech = false;
-						lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
 					}
 				}
 			} else {
@@ -340,13 +314,10 @@
 
 					if (res) {
 						const blob = await res.blob();
-						const blobUrl = URL.createObjectURL(blob);
-						const audio = new Audio(blobUrl);
-						audio.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
+						const url = URL.createObjectURL(blob);
 
-						audioParts[idx] = audio;
+						$audioQueue.enqueue(url);
 						loadingSpeech = false;
-						lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
 					}
 				}
 			}
@@ -575,8 +546,6 @@
 
 		await tick();
 		if (buttonsContainerElement) {
-			console.log(buttonsContainerElement);
-
 			buttonsContainerElement.addEventListener('wheel', function (event) {
 				if (buttonsContainerElement.scrollWidth <= buttonsContainerElement.clientWidth) {
 					// If the container is not scrollable, horizontal scroll
@@ -621,7 +590,7 @@
 		<div class="flex-auto w-0 pl-1 relative">
 			<Name>
 				<Tooltip content={model?.name ?? message.model} placement="top-start">
-					<span class="line-clamp-1 text-black dark:text-white">
+					<span id="response-message-model-name" class="line-clamp-1 text-black dark:text-white">
 						{model?.name ?? message.model}
 					</span>
 				</Tooltip>
@@ -649,10 +618,7 @@
 				<div class="chat-{message.role} w-full min-w-full markdown-prose">
 					<div>
 						{#if model?.info?.meta?.capabilities?.status_updates ?? true}
-							<StatusHistory
-								statusHistory={message?.statusHistory}
-								expand={message?.content === ''}
-							/>
+							<StatusHistory statusHistory={message?.statusHistory} />
 						{/if}
 
 						{#if message?.files && message.files?.filter((f) => f.type === 'image').length > 0}
@@ -671,6 +637,22 @@
 												small={true}
 											/>
 										{/if}
+									</div>
+								{/each}
+							</div>
+						{/if}
+
+						{#if message?.embeds && message.embeds.length > 0}
+							<div class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap">
+								{#each message.embeds as embed, idx}
+									<div class="my-2 w-full" id={`${message.id}-embeds-${idx}`}>
+										<FullHeightIframe
+											src={embed}
+											allowScripts={true}
+											allowForms={true}
+											allowSameOrigin={true}
+											allowPopups={true}
+										/>
 									</div>
 								{/each}
 							</div>
@@ -794,6 +776,7 @@
 										bind:this={citationsElement}
 										id={message?.id}
 										sources={message?.sources ?? message?.citations}
+										{readOnly}
 									/>
 								{/if}
 
@@ -979,7 +962,11 @@
 												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 											on:click={() => {
 												if (!loadingSpeech) {
-													toggleSpeakMessage();
+													if (speaking) {
+														stopAudio();
+													} else {
+														speak();
+													}
 												}
 											}}
 										>

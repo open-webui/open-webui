@@ -14,17 +14,20 @@
 	import Drawer from '../common/Drawer.svelte';
 	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
 	import Thread from './Thread.svelte';
+	import i18n from '$lib/i18n';
 
 	export let id = '';
 
 	let scrollEnd = true;
 	let messagesContainerElement = null;
+	let chatInputElement = null;
 
 	let top = false;
 
 	let channel = null;
 	let messages = null;
 
+	let replyToMessage = null;
 	let threadId = null;
 
 	let typingUsers = [];
@@ -140,20 +143,24 @@
 			return;
 		}
 
-		const res = await sendMessage(localStorage.token, id, { content: content, data: data }).catch(
-			(error) => {
-				toast.error(`${error}`);
-				return null;
-			}
-		);
+		const res = await sendMessage(localStorage.token, id, {
+			content: content,
+			data: data,
+			reply_to_id: replyToMessage?.id ?? null
+		}).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
 
 		if (res) {
 			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
 		}
+
+		replyToMessage = null;
 	};
 
 	const onChange = async () => {
-		$socket?.emit('channel-events', {
+		$socket?.emit('events:channel', {
 			channel_id: id,
 			message_id: null,
 			data: {
@@ -173,7 +180,7 @@
 			chatId.set('');
 		}
 
-		$socket?.on('channel-events', channelEventHandler);
+		$socket?.on('events:channel', channelEventHandler);
 
 		mediaQuery = window.matchMedia('(min-width: 1024px)');
 
@@ -190,7 +197,7 @@
 	});
 
 	onDestroy(() => {
-		$socket?.off('channel-events', channelEventHandler);
+		$socket?.off('events:channel', channelEventHandler);
 	});
 </script>
 
@@ -221,8 +228,14 @@
 						{#key id}
 							<Messages
 								{channel}
-								{messages}
 								{top}
+								{messages}
+								{replyToMessage}
+								onReply={async (message) => {
+									replyToMessage = message;
+									await tick();
+									chatInputElement?.focus();
+								}}
 								onThread={(id) => {
 									threadId = id;
 								}}
@@ -249,9 +262,15 @@
 			<div class=" pb-[1rem] px-2.5">
 				<MessageInput
 					id="root"
+					bind:chatInputElement
+					bind:replyToMessage
 					{typingUsers}
 					userSuggestions={true}
 					channelSuggestions={true}
+					disabled={!channel?.write_access}
+					placeholder={!channel?.write_access
+						? $i18n.t('You do not have permission to send messages in this channel.')
+						: $i18n.t('Type here...')}
 					{onChange}
 					onSubmit={submitHandler}
 					{scrollToBottom}

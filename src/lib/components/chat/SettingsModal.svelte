@@ -569,9 +569,9 @@
 	});
 </script>
 
-<Modal size="lg" bind:show>
+<Modal size="xl" bind:show>
 	<div class="text-gray-700 dark:text-gray-100 mx-1">
-		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
+		<div class=" flex justify-between dark:text-gray-300 px-4 md:px-4.5 pt-4.5 pb-0.5 md:pb-2.5">
 			<div class=" text-lg font-medium self-center">{$i18n.t('Settings')}</div>
 			<button
 				aria-label={$i18n.t('Close settings modal')}
@@ -584,13 +584,16 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-4 pt-1 pb-4 md:space-x-4">
+		<div class="flex flex-col md:flex-row w-full pt-1 pb-4">
 			<div
 				role="tablist"
 				id="settings-tabs-container"
-				class="tabs flex flex-row overflow-x-auto gap-2.5 md:gap-1 md:flex-col flex-1 md:flex-none md:w-40 md:min-h-[32rem] md:max-h-[32rem] dark:text-gray-200 text-sm text-left mb-1 md:mb-0 -translate-y-1"
+				class="tabs flex flex-row overflow-x-auto gap-2.5 mx-3 md:pr-4 md:gap-1 md:flex-col flex-1 md:flex-none md:w-50 md:min-h-[36rem] md:max-h-[36rem] dark:text-gray-200 text-sm text-left mb-1 md:mb-0 -translate-y-1"
 			>
-				<div class="hidden md:flex w-full rounded-xl -mb-1 px-[0.5px] gap-2" id="settings-search">
+				<div
+					class="hidden md:flex w-full rounded-full px-2.5 gap-2 bg-gray-100/80 dark:bg-gray-850/80 backdrop-blur-2xl my-1 mb-1.5"
+					id="settings-search"
+				>
 					<div class="self-center rounded-l-xl bg-transparent">
 						<Search
 							className="size-3.5"
@@ -599,7 +602,7 @@
 					</div>
 					<label class="sr-only" for="search-input-settings-modal">{$i18n.t('Search')}</label>
 					<input
-						class={`w-full py-1.5 text-sm bg-transparent dark:text-gray-300 outline-hidden
+						class={`w-full py-1 text-sm bg-transparent dark:text-gray-300 outline-hidden
 								${($settings?.highContrastMode ?? false) ? 'placeholder-gray-800' : ''}`}
 						bind:value={search}
 						id="search-input-settings-modal"
@@ -614,7 +617,7 @@
 								role="tab"
 								aria-controls="tab-general"
 								aria-selected={selectedTab === 'general'}
-								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
+								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
 								${
 									selectedTab === 'general'
 										? ($settings?.highContrastMode ?? false)
@@ -638,7 +641,7 @@
 								role="tab"
 								aria-controls="tab-interface"
 								aria-selected={selectedTab === 'interface'}
-								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
+								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
 								${
 									selectedTab === 'interface'
 										? ($settings?.highContrastMode ?? false)
@@ -663,7 +666,7 @@
 									role="tab"
 									aria-controls="tab-connections"
 									aria-selected={selectedTab === 'connections'}
-									class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
+									class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
 								${
 									selectedTab === 'connections'
 										? ($settings?.highContrastMode ?? false)
@@ -689,7 +692,7 @@
 									role="tab"
 									aria-controls="tab-tools"
 									aria-selected={selectedTab === 'tools'}
-									class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
+									class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
 								${
 									selectedTab === 'tools'
 										? ($settings?.highContrastMode ?? false)
@@ -714,7 +717,7 @@
 								role="tab"
 								aria-controls="tab-personalization"
 								aria-selected={selectedTab === 'personalization'}
-								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
+								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
 								${
 									selectedTab === 'personalization'
 										? ($settings?.highContrastMode ?? false)
@@ -738,7 +741,7 @@
 								role="tab"
 								aria-controls="tab-audio"
 								aria-selected={selectedTab === 'audio'}
-								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
+								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
 								${
 									selectedTab === 'audio'
 										? ($settings?.highContrastMode ?? false)
@@ -762,7 +765,7 @@
 								role="tab"
 								aria-controls="tab-data-controls"
 								aria-selected={selectedTab === 'data_controls'}
-								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
+								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
 								${
 									selectedTab === 'data_controls'
 										? ($settings?.highContrastMode ?? false)
@@ -786,7 +789,7 @@
 								role="tab"
 								aria-controls="tab-account"
 								aria-selected={selectedTab === 'account'}
-								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
+								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
 								${
 									selectedTab === 'account'
 										? ($settings?.highContrastMode ?? false)
@@ -810,7 +813,7 @@
 								role="tab"
 								aria-controls="tab-about"
 								aria-selected={selectedTab === 'about'}
-								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
+								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
 								${
 									selectedTab === 'about'
 										? ($settings?.highContrastMode ?? false)
@@ -839,7 +842,7 @@
 				{#if $user?.role === 'admin'}
 					<a
 						href="/admin/settings"
-						class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none md:mt-auto flex text-left transition {$settings?.highContrastMode
+						class="px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none md:mt-auto flex text-left transition {$settings?.highContrastMode
 							? 'hover:bg-gray-200 dark:hover:bg-gray-800'
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 						on:click={async (e) => {
@@ -855,7 +858,7 @@
 					</a>
 				{/if}
 			</div>
-			<div class="flex-1 md:min-h-[32rem] max-h-[32rem]">
+			<div class="flex-1 px-3.5 md:pl-0 md:pr-4.5 md:min-h-[36rem] max-h-[36rem]">
 				{#if selectedTab === 'general'}
 					<General
 						{getModels}

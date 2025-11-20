@@ -36,11 +36,13 @@
 
 	let updateModelId = null;
 	let updateProgress = null;
+	let updateModelsControllers = {};
+	let updateCancelled = false;
 	let showExperimentalOllama = false;
 
 	const MAX_PARALLEL_DOWNLOADS = 3;
 
-	let modelTransferring = false;
+	let modelLoading = false;
 	let modelTag = '';
 
 	let createModelLoading = false;
@@ -65,16 +67,30 @@
 	let deleteModelTag = '';
 
 	const updateModelsHandler = async () => {
+		updateCancelled = false;
+		toast.info('Checking for model updates...');
+
 		for (const model of ollamaModels) {
+			if (updateCancelled) {
+				break;
+			}
+
 			console.debug(model);
 
 			updateModelId = model.id;
 			const [res, controller] = await pullModel(localStorage.token, model.id, urlIdx).catch(
 				(error) => {
-					toast.error(`${error}`);
-					return null;
+					if (error.name !== 'AbortError') {
+						toast.error(`${error}`);
+					}
+					return [null, null];
 				}
 			);
+
+			updateModelsControllers = {
+				...updateModelsControllers,
+				[model.id]: controller
+			};
 
 			if (res) {
 				const reader = res.body
@@ -108,19 +124,28 @@
 										} else {
 											updateProgress = 100;
 										}
-									} else {
-										toast.success(data.status);
 									}
 								}
 							}
 						}
 					} catch (err) {
-						console.error(err);
+						if (err.name !== 'AbortError') {
+							console.error(err);
+						}
+						break;
 					}
 				}
 			}
+
+			delete updateModelsControllers[model.id];
+			updateModelsControllers = { ...updateModelsControllers };
 		}
 
+		if (updateCancelled) {
+			toast.info('Model update cancelled');
+		} else {
+			toast.success('All models are up to date');
+		}
 		updateModelId = null;
 		updateProgress = null;
 	};
@@ -143,10 +168,13 @@
 			return;
 		}
 
+		modelLoading = true;
 		const [res, controller] = await pullModel(localStorage.token, sanitizedModelTag, urlIdx).catch(
 			(error) => {
-				toast.error(`${error}`);
-				return null;
+				if (error.name !== 'AbortError') {
+					toast.error(`${error}`);
+				}
+				return [null, null];
 			}
 		);
 
@@ -202,8 +230,6 @@
 										}
 									});
 								} else {
-									toast.success(data.status);
-
 									MODEL_DOWNLOAD_POOL.set({
 										...$MODEL_DOWNLOAD_POOL,
 										[sanitizedModelTag]: {
@@ -216,19 +242,23 @@
 						}
 					}
 				} catch (err) {
-					console.error(err);
-					if (typeof err !== 'string') {
-						err = err.message;
-					}
+					if (err.name !== 'AbortError') {
+						console.error(err);
+						if (typeof err !== 'string') {
+							err = err.message;
+						}
 
-					toast.error(`${err}`);
-					// opts.callback({ success: false, error, modelName: opts.modelName });
+						toast.error(`${err}`);
+						// opts.callback({ success: false, error, modelName: opts.modelName });
+					} else {
+						break;
+					}
 				}
 			}
 
 			console.log($MODEL_DOWNLOAD_POOL[sanitizedModelTag]);
 
-			if ($MODEL_DOWNLOAD_POOL[sanitizedModelTag].done) {
+			if ($MODEL_DOWNLOAD_POOL[sanitizedModelTag]?.done) {
 				toast.success(
 					$i18n.t(`Model '{{modelName}}' has been successfully downloaded.`, {
 						modelName: sanitizedModelTag
@@ -253,11 +283,11 @@
 		}
 
 		modelTag = '';
-		modelTransferring = false;
+		modelLoading = false;
 	};
 
 	const uploadModelHandler = async () => {
-		modelTransferring = true;
+		modelLoading = true;
 
 		let uploaded = false;
 		let fileResponse = null;
@@ -396,7 +426,7 @@
 			modelUploadInputElement.value = '';
 		}
 		modelInputFile = null;
-		modelTransferring = false;
+		modelLoading = false;
 		uploadProgress = null;
 
 		models.set(
@@ -423,6 +453,14 @@
 				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 			)
 		);
+	};
+
+	const cancelUpdateModelHandler = async (model: string) => {
+		const controller = updateModelsControllers[model];
+		if (controller) {
+			controller.abort();
+			updateCancelled = true;
+		}
 	};
 
 	const cancelModelPullHandler = async (model: string) => {
@@ -605,59 +643,61 @@
 								bind:value={modelTag}
 							/>
 						</div>
-						<button
-							class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
-							on:click={() => {
-								pullModelHandler();
-							}}
-							disabled={modelTransferring}
-						>
-							{#if modelTransferring}
-								<div class="self-center">
-									<svg
-										class=" w-4 h-4"
-										viewBox="0 0 24 24"
-										fill="currentColor"
-										xmlns="http://www.w3.org/2000/svg"
-									>
-										<style>
-											.spinner_ajPY {
-												transform-origin: center;
-												animation: spinner_AtaB 0.75s infinite linear;
-											}
-
-											@keyframes spinner_AtaB {
-												100% {
-													transform: rotate(360deg);
+						<Tooltip content={$i18n.t('Pull Model')} placement="top">
+							<button
+								class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+								on:click={() => {
+									pullModelHandler();
+								}}
+								disabled={modelLoading || modelTag.trim() === ''}
+							>
+								{#if modelLoading}
+									<div class="self-center">
+										<svg
+											class=" w-4 h-4"
+											viewBox="0 0 24 24"
+											fill="currentColor"
+											xmlns="http://www.w3.org/2000/svg"
+										>
+											<style>
+												.spinner_ajPY {
+													transform-origin: center;
+													animation: spinner_AtaB 0.75s infinite linear;
 												}
-											}
-										</style>
+
+												@keyframes spinner_AtaB {
+													100% {
+														transform: rotate(360deg);
+													}
+												}
+											</style>
+											<path
+												d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+												opacity=".25"
+											/>
+											<path
+												d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+												class="spinner_ajPY"
+											/>
+										</svg>
+									</div>
+								{:else}
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 16 16"
+										fill="currentColor"
+										class="w-4 h-4"
+									>
 										<path
-											d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-											opacity=".25"
+											d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z"
 										/>
 										<path
-											d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-											class="spinner_ajPY"
+											d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
 										/>
 									</svg>
-								</div>
-							{:else}
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 16 16"
-									fill="currentColor"
-									class="w-4 h-4"
-								>
-									<path
-										d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z"
-									/>
-									<path
-										d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
-									/>
-								</svg>
-							{/if}
-						</button>
+								{/if}
+							</button>
+						</Tooltip>
 					</div>
 
 					<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
@@ -670,8 +710,35 @@
 					</div>
 
 					{#if updateModelId}
-						<div class="text-xs">
-							Updating "{updateModelId}" {updateProgress ? `(${updateProgress}%)` : ''}
+						<div class="text-xs flex justify-between items-center">
+							<div>Updating "{updateModelId}" {updateProgress ? `(${updateProgress}%)` : ''}</div>
+
+							<Tooltip content={$i18n.t('Cancel')}>
+								<button
+									class="text-gray-800 dark:text-gray-100"
+									on:click={() => {
+										cancelUpdateModelHandler(updateModelId);
+									}}
+								>
+									<svg
+										class="w-4 h-4 text-gray-800 dark:text-white"
+										aria-hidden="true"
+										xmlns="http://www.w3.org/2000/svg"
+										width="24"
+										height="24"
+										fill="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											stroke="currentColor"
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M6 18 17.94 6M18 18 6.06 6"
+										/>
+									</svg>
+								</button>
+							</Tooltip>
 						</div>
 					{/if}
 
@@ -754,25 +821,28 @@
 								{/each}
 							</select>
 						</div>
-						<button
-							class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
-							on:click={() => {
-								showModelDeleteConfirm = true;
-							}}
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 16 16"
-								fill="currentColor"
-								class="w-4 h-4"
+						<Tooltip content={$i18n.t('Delete Model')} placement="top">
+							<button
+								class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+								on:click={() => {
+									showModelDeleteConfirm = true;
+								}}
+								disabled={deleteModelTag === ''}
 							>
-								<path
-									fill-rule="evenodd"
-									d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z"
-									clip-rule="evenodd"
-								/>
-							</svg>
-						</button>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 16 16"
+									fill="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+							</button>
+						</Tooltip>
 					</div>
 				</div>
 
@@ -799,27 +869,31 @@
 						</div>
 
 						<div class="flex self-start">
-							<button
-								class="px-2.5 py-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition disabled:cursor-not-allowed"
-								on:click={() => {
-									createModelHandler();
-								}}
-								disabled={createModelLoading}
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 16 16"
-									fill="currentColor"
-									class="size-4"
+							<Tooltip content={$i18n.t('Create Model')} placement="top">
+								<button
+									class="px-2.5 py-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition disabled:cursor-not-allowed"
+									on:click={() => {
+										createModelHandler();
+									}}
+									disabled={createModelLoading ||
+										createModelName.trim() === '' ||
+										createModelObject.trim() === ''}
 								>
-									<path
-										d="M7.25 10.25a.75.75 0 0 0 1.5 0V4.56l2.22 2.22a.75.75 0 1 0 1.06-1.06l-3.5-3.5a.75.75 0 0 0-1.06 0l-3.5 3.5a.75.75 0 0 0 1.06 1.06l2.22-2.22v5.69Z"
-									/>
-									<path
-										d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
-									/>
-								</svg>
-							</button>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 16 16"
+										fill="currentColor"
+										class="size-4"
+									>
+										<path
+											d="M7.25 10.25a.75.75 0 0 0 1.5 0V4.56l2.22 2.22a.75.75 0 1 0 1.06-1.06l-3.5-3.5a.75.75 0 0 0-1.06 0l-3.5 3.5a.75.75 0 0 0 1.06 1.06l2.22-2.22v5.69Z"
+										/>
+										<path
+											d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
+										/>
+									</svg>
+								</button>
+							</Tooltip>
 						</div>
 					</div>
 
@@ -936,57 +1010,59 @@
 							</div>
 
 							{#if (modelUploadMode === 'file' && modelInputFile && modelInputFile.length > 0) || (modelUploadMode === 'url' && modelFileUrl !== '')}
-								<button
-									class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg disabled:cursor-not-allowed transition"
-									type="submit"
-									disabled={modelTransferring}
-								>
-									{#if modelTransferring}
-										<div class="self-center">
-											<svg
-												class=" w-4 h-4"
-												viewBox="0 0 24 24"
-												fill="currentColor"
-												xmlns="http://www.w3.org/2000/svg"
-											>
-												<style>
-													.spinner_ajPY {
-														transform-origin: center;
-														animation: spinner_AtaB 0.75s infinite linear;
-													}
-
-													@keyframes spinner_AtaB {
-														100% {
-															transform: rotate(360deg);
+								<Tooltip content={$i18n.t('Upload Model')} placement="top">
+									<button
+										class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg disabled:cursor-not-allowed transition"
+										type="submit"
+										disabled={modelLoading}
+									>
+										{#if modelLoading}
+											<div class="self-center">
+												<svg
+													class=" w-4 h-4"
+													viewBox="0 0 24 24"
+													fill="currentColor"
+													xmlns="http://www.w3.org/2000/svg"
+												>
+													<style>
+														.spinner_ajPY {
+															transform-origin: center;
+															animation: spinner_AtaB 0.75s infinite linear;
 														}
-													}
-												</style>
+
+														@keyframes spinner_AtaB {
+															100% {
+																transform: rotate(360deg);
+															}
+														}
+													</style>
+													<path
+														d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+														opacity=".25"
+													/>
+													<path
+														d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+														class="spinner_ajPY"
+													/>
+												</svg>
+											</div>
+										{:else}
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 16 16"
+												fill="currentColor"
+												class="w-4 h-4"
+											>
 												<path
-													d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-													opacity=".25"
+													d="M7.25 10.25a.75.75 0 0 0 1.5 0V4.56l2.22 2.22a.75.75 0 1 0 1.06-1.06l-3.5-3.5a.75.75 0 0 0-1.06 0l-3.5 3.5a.75.75 0 0 0 1.06 1.06l2.22-2.22v5.69Z"
 												/>
 												<path
-													d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-													class="spinner_ajPY"
+													d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
 												/>
 											</svg>
-										</div>
-									{:else}
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 16 16"
-											fill="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												d="M7.25 10.25a.75.75 0 0 0 1.5 0V4.56l2.22 2.22a.75.75 0 1 0 1.06-1.06l-3.5-3.5a.75.75 0 0 0-1.06 0l-3.5 3.5a.75.75 0 0 0 1.06 1.06l2.22-2.22v5.69Z"
-											/>
-											<path
-												d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
-											/>
-										</svg>
-									{/if}
-								</button>
+										{/if}
+									</button>
+								</Tooltip>
 							{/if}
 						</div>
 

@@ -6,7 +6,7 @@ import json
 import logging
 from typing import Optional
 
-from open_webui.retrieval.vector.utils import stringify_metadata
+from open_webui.retrieval.vector.utils import process_metadata
 from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
@@ -22,6 +22,8 @@ from open_webui.config import (
     MILVUS_HNSW_M,
     MILVUS_HNSW_EFCONSTRUCTION,
     MILVUS_IVF_FLAT_NLIST,
+    MILVUS_DISKANN_MAX_DEGREE,
+    MILVUS_DISKANN_SEARCH_LIST_SIZE,
 )
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -131,12 +133,18 @@ class MilvusClient(VectorDBBase):
         elif index_type == "IVF_FLAT":
             index_creation_params = {"nlist": MILVUS_IVF_FLAT_NLIST}
             log.info(f"IVF_FLAT params: {index_creation_params}")
+        elif index_type == "DISKANN":
+            index_creation_params = {
+                "max_degree": MILVUS_DISKANN_MAX_DEGREE,
+                "search_list_size": MILVUS_DISKANN_SEARCH_LIST_SIZE,
+            }
+            log.info(f"DISKANN params: {index_creation_params}")
         elif index_type in ["FLAT", "AUTOINDEX"]:
             log.info(f"Using {index_type} index with no specific build-time params.")
         else:
             log.warning(
                 f"Unsupported MILVUS_INDEX_TYPE: '{index_type}'. "
-                f"Supported types: HNSW, IVF_FLAT, FLAT, AUTOINDEX. "
+                f"Supported types: HNSW, IVF_FLAT, DISKANN, FLAT, AUTOINDEX. "
                 f"Milvus will use its default for the collection if this type is not directly supported for index creation."
             )
             # For unsupported types, pass the type directly to Milvus; it might handle it or use a default.
@@ -189,7 +197,7 @@ class MilvusClient(VectorDBBase):
         )
         return self._result_to_search_result(result)
 
-    def query(self, collection_name: str, filter: dict, limit: Optional[int] = None):
+    def query(self, collection_name: str, filter: dict, limit: int = -1):
         connections.connect(uri=MILVUS_URI, token=MILVUS_TOKEN, db_name=MILVUS_DB)
 
         # Construct the filter string for querying
@@ -222,7 +230,7 @@ class MilvusClient(VectorDBBase):
                     "data",
                     "metadata",
                 ],
-                limit=limit,  # Pass the limit directly; None means no limit.
+                limit=limit,  # Pass the limit directly; -1 means no limit.
             )
 
             while True:
@@ -249,7 +257,7 @@ class MilvusClient(VectorDBBase):
         )
         # Using query with a trivial filter to get all items.
         # This will use the paginated query logic.
-        return self.query(collection_name=collection_name, filter={}, limit=None)
+        return self.query(collection_name=collection_name, filter={}, limit=-1)
 
     def insert(self, collection_name: str, items: list[VectorItem]):
         # Insert the items into the collection, if the collection does not exist, it will be created.
@@ -281,7 +289,7 @@ class MilvusClient(VectorDBBase):
                     "id": item["id"],
                     "vector": item["vector"],
                     "data": {"text": item["text"]},
-                    "metadata": stringify_metadata(item["metadata"]),
+                    "metadata": process_metadata(item["metadata"]),
                 }
                 for item in items
             ],
@@ -317,7 +325,7 @@ class MilvusClient(VectorDBBase):
                     "id": item["id"],
                     "vector": item["vector"],
                     "data": {"text": item["text"]},
-                    "metadata": stringify_metadata(item["metadata"]),
+                    "metadata": process_metadata(item["metadata"]),
                 }
                 for item in items
             ],

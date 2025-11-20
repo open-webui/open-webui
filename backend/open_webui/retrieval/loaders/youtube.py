@@ -83,6 +83,7 @@ class YoutubeLoader:
                 TranscriptsDisabled,
                 YouTubeTranscriptApi,
             )
+            from youtube_transcript_api.proxies import GenericProxyConfig
         except ImportError:
             raise ImportError(
                 'Could not import "youtube_transcript_api" Python package. '
@@ -90,10 +91,9 @@ class YoutubeLoader:
             )
 
         if self.proxy_url:
-            youtube_proxies = {
-                "http": self.proxy_url,
-                "https": self.proxy_url,
-            }
+            youtube_proxies = GenericProxyConfig(
+                http_url=self.proxy_url, https_url=self.proxy_url
+            )
             log.debug(f"Using proxy URL: {self.proxy_url[:14]}...")
         else:
             youtube_proxies = None
@@ -157,3 +157,10 @@ class YoutubeLoader:
             f"No transcript found for any of the specified languages: {languages_tried}. Verify if the video has transcripts, add more languages if needed."
         )
         raise NoTranscriptFound(self.video_id, self.language, list(transcript_list))
+
+    async def aload(self) -> Generator[Document, None, None]:
+        """Asynchronously load YouTube transcripts into `Document` objects."""
+        import asyncio
+
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self.load)

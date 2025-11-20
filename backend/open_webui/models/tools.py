@@ -95,6 +95,8 @@ class ToolResponse(BaseModel):
 class ToolUserResponse(ToolResponse):
     user: Optional[UserResponse] = None
 
+    model_config = ConfigDict(extra="allow")
+
 
 class ToolForm(BaseModel):
     id: str

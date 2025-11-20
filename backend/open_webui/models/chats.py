@@ -366,6 +366,15 @@ class ChatTable:
         except Exception:
             return False
 
+    def unarchive_all_chats_by_user_id(self, user_id: str) -> bool:
+        try:
+            with get_db() as db:
+                db.query(Chat).filter_by(user_id=user_id).update({"archived": False})
+                db.commit()
+                return True
+        except Exception:
+            return False
+
     def update_chat_share_id_by_id(
         self, id: str, share_id: Optional[str]
     ) -> Optional[ChatModel]:
@@ -431,7 +440,10 @@ class ChatTable:
                 order_by = filter.get("order_by")
                 direction = filter.get("direction")
 
-                if order_by and direction and getattr(Chat, order_by):
+                if order_by and direction:
+                    if not getattr(Chat, order_by, None):
+                        raise ValueError("Invalid order_by field")
+
                     if direction.lower() == "asc":
                         query = query.order_by(getattr(Chat, order_by).asc())
                     elif direction.lower() == "desc":
@@ -492,12 +504,19 @@ class ChatTable:
         self,
         user_id: str,
         include_archived: bool = False,
+        include_folders: bool = False,
+        include_pinned: bool = False,
         skip: Optional[int] = None,
         limit: Optional[int] = None,
     ) -> list[ChatTitleIdResponse]:
         with get_db() as db:
-            query = db.query(Chat).filter_by(user_id=user_id).filter_by(folder_id=None)
-            query = query.filter(or_(Chat.pinned == False, Chat.pinned == None))
+            query = db.query(Chat).filter_by(user_id=user_id)
+
+            if not include_folders:
+                query = query.filter_by(folder_id=None)
+
+            if not include_pinned:
+                query = query.filter(or_(Chat.pinned == False, Chat.pinned == None))
 
             if not include_archived:
                 query = query.filter_by(archived=False)
@@ -746,15 +765,20 @@ class ChatTable:
                     )
 
             elif dialect_name == "postgresql":
-                # PostgreSQL relies on proper JSON query for search
+                # PostgreSQL doesn't allow null bytes in text. We filter those out by checking
+                # the JSON representation for \u0000 before attempting text extraction
                 postgres_content_sql = (
                     "EXISTS ("
                     "    SELECT 1 "
                     "    FROM json_array_elements(Chat.chat->'messages') AS message "
-                    "    WHERE LOWER(message->>'content') LIKE '%' || :content_key || '%'"
+                    "    WHERE message->'content' IS NOT NULL "
+                    "    AND (message->'content')::text NOT LIKE '%\\u0000%' "
+                    "    AND LOWER(message->>'content') LIKE '%' || :content_key || '%'"
                     ")"
                 )
                 postgres_content_clause = text(postgres_content_sql)
+                # Also filter out chats with null bytes in title
+                query = query.filter(text("Chat.title::text NOT LIKE '%\\x00%'"))
                 query = query.filter(
                     or_(
                         Chat.title.ilike(bindparam("title_key")),
@@ -805,7 +829,7 @@ class ChatTable:
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
     def get_chats_by_folder_id_and_user_id(
-        self, folder_id: str, user_id: str
+        self, folder_id: str, user_id: str, skip: int = 0, limit: int = 60
     ) -> list[ChatModel]:
         with get_db() as db:
             query = db.query(Chat).filter_by(folder_id=folder_id, user_id=user_id)
@@ -813,6 +837,11 @@ class ChatTable:
             query = query.filter_by(archived=False)
 
             query = query.order_by(Chat.updated_at.desc())
+
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
 
             all_chats = query.all()
             return [ChatModel.model_validate(chat) for chat in all_chats]
@@ -941,6 +970,16 @@ class ChatTable:
             # Debugging output for inspection
             log.info(f"Count of chats for tag '{tag_name}': {count}")
 
+            return count
+
+    def count_chats_by_folder_id_and_user_id(self, folder_id: str, user_id: str) -> int:
+        with get_db() as db:
+            query = db.query(Chat).filter_by(user_id=user_id)
+
+            query = query.filter_by(folder_id=folder_id)
+            count = query.count()
+
+            log.info(f"Count of chats for folder '{folder_id}': {count}")
             return count
 
     def delete_tag_by_id_and_user_id_and_tag_name(

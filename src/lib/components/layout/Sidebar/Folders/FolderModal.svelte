@@ -12,15 +12,16 @@
 
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
+	import { getFolderById } from '$lib/apis/folders';
 	const i18n = getContext('i18n');
 
 	export let show = false;
 	export let onSubmit: Function = (e) => {};
 
+	export let folderId = null;
 	export let edit = false;
 
-	export let folder = null;
-
+	let folder = null;
 	let name = '';
 	let meta = {
 		background_image_url: null
@@ -50,17 +51,24 @@
 		loading = false;
 	};
 
-	const init = () => {
-		name = folder.name;
-		meta = folder.meta || {
-			background_image_url: null
-		};
-		data = folder.data || {
-			system_prompt: '',
-			files: []
-		};
+	const init = async () => {
+		if (folderId) {
+			folder = await getFolderById(localStorage.token, folderId).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
 
-		console.log(folder);
+			name = folder.name;
+			meta = folder.meta || {
+				background_image_url: null
+			};
+			data = folder.data || {
+				system_prompt: '',
+				files: []
+			};
+		}
+
+		focusInput();
 	};
 
 	const focusInput = async () => {
@@ -73,10 +81,6 @@
 	};
 
 	$: if (show) {
-		focusInput();
-	}
-
-	$: if (folder) {
 		init();
 	}
 

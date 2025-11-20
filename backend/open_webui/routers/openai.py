@@ -121,7 +121,7 @@ def openai_reasoning_model_handler(payload):
     return payload
 
 
-def get_headers_and_cookies(
+async def get_headers_and_cookies(
     request: Request,
     url,
     key=None,
@@ -174,7 +174,7 @@ def get_headers_and_cookies(
         oauth_token = None
         try:
             if request.cookies.get("oauth_session_id", None):
-                oauth_token = request.app.state.oauth_manager.get_oauth_token(
+                oauth_token = await request.app.state.oauth_manager.get_oauth_token(
                     user.id,
                     request.cookies.get("oauth_session_id", None),
                 )
@@ -189,6 +189,9 @@ def get_headers_and_cookies(
 
     if token:
         headers["Authorization"] = f"Bearer {token}"
+
+    if config.get("headers") and isinstance(config.get("headers"), dict):
+        headers = {**headers, **config.get("headers")}
 
     return headers, cookies
 
@@ -305,7 +308,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             request.app.state.config.OPENAI_API_CONFIGS.get(url, {}),  # Legacy support
         )
 
-        headers, cookies = get_headers_and_cookies(
+        headers, cookies = await get_headers_and_cookies(
             request, url, key, api_config, user=user
         )
 
@@ -498,50 +501,55 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
             return response
         return None
 
-    def merge_models_lists(model_lists):
+    def is_supported_openai_models(model_id):
+        if any(
+            name in model_id
+            for name in [
+                "babbage",
+                "dall-e",
+                "davinci",
+                "embedding",
+                "tts",
+                "whisper",
+            ]
+        ):
+            return False
+        return True
+
+    def get_merged_models(model_lists):
         log.debug(f"merge_models_lists {model_lists}")
-        merged_list = []
+        models = {}
 
-        for idx, models in enumerate(model_lists):
-            if models is not None and "error" not in models:
+        for idx, model_list in enumerate(model_lists):
+            if model_list is not None and "error" not in model_list:
+                for model in model_list:
+                    model_id = model.get("id") or model.get("name")
 
-                merged_list.extend(
-                    [
-                        {
+                    if (
+                        "api.openai.com"
+                        in request.app.state.config.OPENAI_API_BASE_URLS[idx]
+                        and not is_supported_openai_models(model_id)
+                    ):
+                        # Skip unwanted OpenAI models
+                        continue
+
+                    if model_id and model_id not in models:
+                        models[model_id] = {
                             **model,
-                            "name": model.get("name", model["id"]),
+                            "name": model.get("name", model_id),
                             "owned_by": "openai",
                             "openai": model,
                             "connection_type": model.get("connection_type", "external"),
                             "urlIdx": idx,
                         }
-                        for model in models
-                        if (model.get("id") or model.get("name"))
-                        and (
-                            "api.openai.com"
-                            not in request.app.state.config.OPENAI_API_BASE_URLS[idx]
-                            or not any(
-                                name in model["id"]
-                                for name in [
-                                    "babbage",
-                                    "dall-e",
-                                    "davinci",
-                                    "embedding",
-                                    "tts",
-                                    "whisper",
-                                ]
-                            )
-                        )
-                    ]
-                )
 
-        return merged_list
+        return models
 
-    models = {"data": merge_models_lists(map(extract_data, responses))}
+    models = get_merged_models(map(extract_data, responses))
     log.debug(f"models: {models}")
 
-    request.app.state.OPENAI_MODELS = {model["id"]: model for model in models["data"]}
-    return models
+    request.app.state.OPENAI_MODELS = models
+    return {"data": list(models.values())}
 
 
 @router.get("/models")
@@ -570,7 +578,7 @@ async def get_models(
             timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
         ) as session:
             try:
-                headers, cookies = get_headers_and_cookies(
+                headers, cookies = await get_headers_and_cookies(
                     request, url, key, api_config, user=user
                 )
 
@@ -656,7 +664,7 @@ async def verify_connection(
         timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
     ) as session:
         try:
-            headers, cookies = get_headers_and_cookies(
+            headers, cookies = await get_headers_and_cookies(
                 request, url, key, api_config, user=user
             )
 
@@ -901,7 +909,7 @@ async def generate_chat_completion(
             convert_logit_bias_input_to_json(payload["logit_bias"])
         )
 
-    headers, cookies = get_headers_and_cookies(
+    headers, cookies = await get_headers_and_cookies(
         request, url, key, api_config, metadata, user=user
     )
 
@@ -1010,7 +1018,9 @@ async def embeddings(request: Request, form_data: dict, user):
     session = None
     streaming = False
 
-    headers, cookies = get_headers_and_cookies(request, url, key, api_config, user=user)
+    headers, cookies = await get_headers_and_cookies(
+        request, url, key, api_config, user=user
+    )
     try:
         session = aiohttp.ClientSession(trust_env=True)
         r = await session.request(
@@ -1080,7 +1090,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     streaming = False
 
     try:
-        headers, cookies = get_headers_and_cookies(
+        headers, cookies = await get_headers_and_cookies(
             request, url, key, api_config, user=user
         )
 

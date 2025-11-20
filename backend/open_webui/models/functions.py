@@ -3,7 +3,7 @@ import time
 from typing import Optional
 
 from open_webui.internal.db import Base, JSONField, get_db
-from open_webui.models.users import Users
+from open_webui.models.users import Users, UserModel
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, Index
@@ -74,6 +74,10 @@ class FunctionWithValvesModel(BaseModel):
 ####################
 # Forms
 ####################
+
+
+class FunctionUserResponse(FunctionModel):
+    user: Optional[UserModel] = None
 
 
 class FunctionResponse(BaseModel):
@@ -202,6 +206,28 @@ class FunctionsTable:
                 return [
                     FunctionModel.model_validate(function) for function in functions
                 ]
+
+    def get_function_list(self) -> list[FunctionUserResponse]:
+        with get_db() as db:
+            functions = db.query(Function).order_by(Function.updated_at.desc()).all()
+            user_ids = list(set(func.user_id for func in functions))
+
+            users = Users.get_users_by_user_ids(user_ids) if user_ids else []
+            users_dict = {user.id: user for user in users}
+
+            return [
+                FunctionUserResponse.model_validate(
+                    {
+                        **FunctionModel.model_validate(func).model_dump(),
+                        "user": (
+                            users_dict.get(func.user_id).model_dump()
+                            if func.user_id in users_dict
+                            else None
+                        ),
+                    }
+                )
+                for func in functions
+            ]
 
     def get_functions_by_type(
         self, type: str, active_only=False

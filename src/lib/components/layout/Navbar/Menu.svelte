@@ -18,7 +18,9 @@
 		theme,
 		user,
 		settings,
-		folders
+		folders,
+		showEmbeds,
+		artifactContents
 	} from '$lib/stores';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { getChatById } from '$lib/apis/chats';
@@ -231,7 +233,7 @@
 		if (chat.id) {
 			let chatObj = null;
 
-			if (chat.id === 'local' || $temporaryChatEnabled) {
+			if ((chat?.id ?? '').startsWith('local') || $temporaryChatEnabled) {
 				chatObj = chat;
 			} else {
 				chatObj = await getChatById(localStorage.token, chat.id);
@@ -311,7 +313,7 @@
 				<div class="flex items-center">{$i18n.t('Settings')}</div>
 			</DropdownMenu.Item> -->
 
-			{#if $mobile}
+			{#if $mobile && ($user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true))}
 				<DropdownMenu.Item
 					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
 					id="chat-controls-button"
@@ -319,6 +321,7 @@
 						await showControls.set(true);
 						await showOverview.set(false);
 						await showArtifacts.set(false);
+						await showEmbeds.set(false);
 					}}
 				>
 					<AdjustmentsHorizontal className=" size-4" strokeWidth="1.5" />
@@ -333,24 +336,28 @@
 					await showControls.set(true);
 					await showOverview.set(true);
 					await showArtifacts.set(false);
+					await showEmbeds.set(false);
 				}}
 			>
 				<Map className=" size-4" strokeWidth="1.5" />
 				<div class="flex items-center">{$i18n.t('Overview')}</div>
 			</DropdownMenu.Item>
 
-			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
-				id="chat-overview-button"
-				on:click={async () => {
-					await showControls.set(true);
-					await showArtifacts.set(true);
-					await showOverview.set(false);
-				}}
-			>
-				<Cube className=" size-4" strokeWidth="1.5" />
-				<div class="flex items-center">{$i18n.t('Artifacts')}</div>
-			</DropdownMenu.Item>
+			{#if ($artifactContents ?? []).length > 0}
+				<DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
+					id="chat-overview-button"
+					on:click={async () => {
+						await showControls.set(true);
+						await showArtifacts.set(true);
+						await showOverview.set(false);
+						await showEmbeds.set(false);
+					}}
+				>
+					<Cube className=" size-4" strokeWidth="1.5" />
+					<div class="flex items-center">{$i18n.t('Artifacts')}</div>
+				</DropdownMenu.Item>
+			{/if}
 
 			<hr class="border-gray-50 dark:border-gray-800 my-1" />
 
@@ -427,9 +434,9 @@
 				<div class="flex items-center">{$i18n.t('Copy')}</div>
 			</DropdownMenu.Item>
 
-			<hr class="border-gray-50 dark:border-gray-800 my-1" />
+			{#if !$temporaryChatEnabled && chat?.id}
+				<hr class="border-gray-50 dark:border-gray-800 my-1" />
 
-			{#if chat?.id}
 				<DropdownMenu.Sub>
 					<DropdownMenu.SubTrigger
 						class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
@@ -457,19 +464,17 @@
 						{/each}
 					</DropdownMenu.SubContent>
 				</DropdownMenu.Sub>
-			{/if}
 
-			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
-				on:click={() => {
-					archiveChatHandler();
-				}}
-			>
-				<ArchiveBox className="size-4" strokeWidth="1.5" />
-				<div class="flex items-center">{$i18n.t('Archive')}</div>
-			</DropdownMenu.Item>
+				<DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+					on:click={() => {
+						archiveChatHandler();
+					}}
+				>
+					<ArchiveBox className="size-4" strokeWidth="1.5" />
+					<div class="flex items-center">{$i18n.t('Archive')}</div>
+				</DropdownMenu.Item>
 
-			{#if !$temporaryChatEnabled}
 				<hr class="border-gray-50 dark:border-gray-800 my-1" />
 
 				<div class="flex p-1">

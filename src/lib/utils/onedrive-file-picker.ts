@@ -3,7 +3,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 class OneDriveConfig {
 	private static instance: OneDriveConfig;
-	private clientId: string = '';
+	private clientIdPersonal: string = '';
+	private clientIdBusiness: string = '';
 	private sharepointUrl: string = '';
 	private sharepointTenantId: string = '';
 	private msalInstance: PublicClientApplication | null = null;
@@ -31,12 +32,10 @@ class OneDriveConfig {
 	}
 
 	private async getCredentials(): Promise<void> {
-		const headers: HeadersInit = {
-			'Content-Type': 'application/json'
-		};
-
 		const response = await fetch('/api/config', {
-			headers,
+			headers: {
+				'Content-Type': 'application/json'
+			},
 			credentials: 'include'
 		});
 
@@ -46,17 +45,14 @@ class OneDriveConfig {
 
 		const config = await response.json();
 
-		const newClientId = config.onedrive?.client_id;
-		const newSharepointUrl = config.onedrive?.sharepoint_url;
-		const newSharepointTenantId = config.onedrive?.sharepoint_tenant_id;
+		this.clientIdPersonal = config.onedrive?.client_id_personal;
+		this.clientIdBusiness = config.onedrive?.client_id_business;
+		this.sharepointUrl = config.onedrive?.sharepoint_url;
+		this.sharepointTenantId = config.onedrive?.sharepoint_tenant_id;
 
-		if (!newClientId) {
-			throw new Error('OneDrive configuration is incomplete');
+		if (!this.clientIdPersonal && !this.clientIdBusiness) {
+			throw new Error('OneDrive personal or business client ID not configured');
 		}
-
-		this.clientId = newClientId;
-		this.sharepointUrl = newSharepointUrl;
-		this.sharepointTenantId = newSharepointTenantId;
 	}
 
 	public async getMsalInstance(
@@ -69,10 +65,20 @@ class OneDriveConfig {
 				this.currentAuthorityType === 'organizations'
 					? this.sharepointTenantId || 'common'
 					: 'consumers';
+
+			const clientId =
+				this.currentAuthorityType === 'organizations'
+					? this.clientIdBusiness
+					: this.clientIdPersonal;
+
+			if (!clientId) {
+				throw new Error('OneDrive client ID not configured');
+			}
+
 			const msalParams = {
 				auth: {
 					authority: `https://login.microsoftonline.com/${authorityEndpoint}`,
-					clientId: this.clientId
+					clientId: clientId
 				}
 			};
 
@@ -170,6 +176,9 @@ interface PickerParams {
 		origin: string;
 		channelId: string;
 	};
+	search: {
+		enabled: boolean;
+	};
 	typesAndSources: {
 		mode: string;
 		pivots: Record<string, boolean>;
@@ -198,11 +207,15 @@ function getPickerParams(): PickerParams {
 			origin: window?.location?.origin || '',
 			channelId
 		},
+		search: {
+			enabled: true
+		},
 		typesAndSources: {
 			mode: 'files',
 			pivots: {
 				oneDrive: true,
-				recent: true
+				recent: true,
+				myOrganization: config.getAuthorityType() === 'organizations'
 			}
 		}
 	};

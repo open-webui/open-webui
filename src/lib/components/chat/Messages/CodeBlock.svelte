@@ -1,16 +1,23 @@
 <script lang="ts">
 	import hljs from 'highlight.js';
-
+	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, tick, onDestroy } from 'svelte';
-	import { copyToClipboard, renderMermaidDiagram } from '$lib/utils';
+	import { config } from '$lib/stores';
+
+	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
+	import { executeCode } from '$lib/apis/utils';
+	import {
+		copyToClipboard,
+		initMermaid,
+		renderMermaidDiagram,
+		renderVegaVisualization
+	} from '$lib/utils';
 
 	import 'highlight.js/styles/github-dark.min.css';
 
-	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
+	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 	import SvgPanZoom from '$lib/components/common/SVGPanZoom.svelte';
-	import { config } from '$lib/stores';
-	import { executeCode } from '$lib/apis/utils';
-	import { toast } from 'svelte-sonner';
+
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronUpDown from '$lib/components/icons/ChevronUpDown.svelte';
 	import CommandLine from '$lib/components/icons/CommandLine.svelte';
@@ -52,7 +59,8 @@
 
 	let _token = null;
 
-	let mermaidHtml = null;
+	let renderHTML = null;
+	let renderError = null;
 
 	let highlightedCode = null;
 	let executing = false;
@@ -320,10 +328,37 @@
 		};
 	};
 
+	let mermaid = null;
+	const renderMermaid = async (code) => {
+		if (!mermaid) {
+			mermaid = await initMermaid();
+		}
+		return await renderMermaidDiagram(mermaid, code);
+	};
+
 	const render = async () => {
 		onUpdate(token);
 		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
-			mermaidHtml = await renderMermaidDiagram(code);
+			try {
+				renderHTML = await renderMermaid(code);
+			} catch (error) {
+				console.error('Failed to render mermaid diagram:', error);
+				const errorMsg = error instanceof Error ? error.message : String(error);
+				renderError = $i18n.t('Failed to render diagram') + `: ${errorMsg}`;
+				renderHTML = null;
+			}
+		} else if (
+			(lang === 'vega' || lang === 'vega-lite') &&
+			(token?.raw ?? '').slice(-4).includes('```')
+		) {
+			try {
+				renderHTML = await renderVegaVisualization(code);
+			} catch (error) {
+				console.error('Failed to render Vega visualization:', error);
+				const errorMsg = error instanceof Error ? error.message : String(error);
+				renderError = $i18n.t('Failed to render visualization') + `: ${errorMsg}`;
+				renderHTML = null;
+			}
 		}
 	};
 
@@ -385,15 +420,24 @@
 		class="relative {className} flex flex-col rounded-3xl border border-gray-100 dark:border-gray-850 my-0.5"
 		dir="ltr"
 	>
-		{#if lang === 'mermaid'}
-			{#if mermaidHtml}
+		{#if ['mermaid', 'vega', 'vega-lite'].includes(lang)}
+			{#if renderHTML}
 				<SvgPanZoom
 					className=" rounded-3xl max-h-fit overflow-hidden"
-					svg={mermaidHtml}
+					svg={renderHTML}
 					content={_token.text}
 				/>
 			{:else}
-				<pre class="mermaid">{code}</pre>
+				<div class="p-3">
+					{#if renderError}
+						<div
+							class="flex gap-2.5 border px-4 py-3 border-red-600/10 bg-red-600/10 rounded-2xl mb-2"
+						>
+							{renderError}
+						</div>
+					{/if}
+					<pre>{code}</pre>
+				</div>
 			{/if}
 		{:else}
 			<div
@@ -480,19 +524,17 @@
 
 				{#if !collapsed}
 					{#if edit}
-						{#await import('$lib/components/common/CodeEditor.svelte') then { default: CodeEditor }}
-							<CodeEditor
-								value={code}
-								{id}
-								{lang}
-								onSave={() => {
-									saveCode();
-								}}
-								onChange={(value) => {
-									_code = value;
-								}}
-							/>
-						{/await}
+						<CodeEditor
+							value={code}
+							{id}
+							{lang}
+							onSave={() => {
+								saveCode();
+							}}
+							onChange={(value) => {
+								_code = value;
+							}}
+						/>
 					{:else}
 						<pre
 							class=" hljs p-4 px-5 overflow-x-auto"
@@ -531,15 +573,15 @@
 					>
 						{#if executing}
 							<div class=" ">
-								<div class=" text-gray-500 text-xs mb-1">{$i18n.t('STDOUT/STDERR')}</div>
+								<div class=" text-gray-500 text-sm mb-1">{$i18n.t('STDOUT/STDERR')}</div>
 								<div class="text-sm">{$i18n.t('Running...')}</div>
 							</div>
 						{:else}
 							{#if stdout || stderr}
 								<div class=" ">
-									<div class=" text-gray-500 text-xs mb-1">{$i18n.t('STDOUT/STDERR')}</div>
+									<div class=" text-gray-500 text-sm mb-1">{$i18n.t('STDOUT/STDERR')}</div>
 									<div
-										class="text-sm {stdout?.split('\n')?.length > 100
+										class="text-sm font-mono whitespace-pre-wrap {stdout?.split('\n')?.length > 100
 											? `max-h-96`
 											: ''}  overflow-y-auto"
 									>
@@ -549,7 +591,7 @@
 							{/if}
 							{#if result || files}
 								<div class=" ">
-									<div class=" text-gray-500 text-xs mb-1">{$i18n.t('RESULT')}</div>
+									<div class=" text-gray-500 text-sm mb-1">{$i18n.t('RESULT')}</div>
 									{#if result}
 										<div class="text-sm">{`${JSON.stringify(result)}`}</div>
 									{/if}

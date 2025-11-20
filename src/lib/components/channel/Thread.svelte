@@ -10,6 +10,7 @@
 	import Messages from './Messages.svelte';
 	import { onDestroy, onMount, tick, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import Spinner from '../common/Spinner.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -21,10 +22,13 @@
 	let messages = null;
 	let top = false;
 
+	let messagesContainerElement = null;
+	let chatInputElement = null;
+
+	let replyToMessage = null;
+
 	let typingUsers = [];
 	let typingUsersTimeout = {};
-
-	let messagesContainerElement = null;
 
 	$: if (threadId) {
 		initHandler();
@@ -127,16 +131,19 @@
 
 		const res = await sendMessage(localStorage.token, channel.id, {
 			parent_id: threadId,
+			reply_to_id: replyToMessage?.id ?? null,
 			content: content,
 			data: data
 		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
+
+		replyToMessage = null;
 	};
 
 	const onChange = async () => {
-		$socket?.emit('channel-events', {
+		$socket?.emit('events:channel', {
 			channel_id: channel.id,
 			message_id: threadId,
 			data: {
@@ -149,11 +156,11 @@
 	};
 
 	onMount(() => {
-		$socket?.on('channel-events', channelEventHandler);
+		$socket?.on('events:channel', channelEventHandler);
 	});
 
 	onDestroy(() => {
-		$socket?.off('channel-events', channelEventHandler);
+		$socket?.off('events:channel', channelEventHandler);
 	});
 </script>
 
@@ -175,32 +182,51 @@
 		</div>
 
 		<div class=" max-h-full w-full overflow-y-auto" bind:this={messagesContainerElement}>
-			<Messages
-				id={threadId}
-				{channel}
-				{messages}
-				{top}
-				thread={true}
-				onLoad={async () => {
-					const newMessages = await getChannelThreadMessages(
-						localStorage.token,
-						channel.id,
-						threadId,
-						messages.length
-					);
+			{#if messages !== null}
+				<Messages
+					id={threadId}
+					{channel}
+					{top}
+					{messages}
+					{replyToMessage}
+					thread={true}
+					onReply={async (message) => {
+						replyToMessage = message;
 
-					messages = [...messages, ...newMessages];
+						await tick();
+						chatInputElement?.focus();
+					}}
+					onLoad={async () => {
+						const newMessages = await getChannelThreadMessages(
+							localStorage.token,
+							channel.id,
+							threadId,
+							messages.length
+						);
 
-					if (newMessages.length < 50) {
-						top = true;
-						return;
-					}
-				}}
-			/>
+						messages = [...messages, ...newMessages];
+
+						if (newMessages.length < 50) {
+							top = true;
+							return;
+						}
+					}}
+				/>
+			{:else}
+				<div class="w-full flex justify-center pt-5 pb-10">
+					<Spinner />
+				</div>
+			{/if}
 
 			<div class=" pb-[1rem] px-2.5 w-full">
 				<MessageInput
+					bind:replyToMessage
+					bind:chatInputElement
 					id={threadId}
+					disabled={!channel?.write_access}
+					placeholder={!channel?.write_access
+						? $i18n.t('You do not have permission to send messages in this thread.')
+						: $i18n.t('Reply to thread...')}
 					typingUsersClassName="from-gray-50 dark:from-gray-850"
 					{typingUsers}
 					userSuggestions={true}

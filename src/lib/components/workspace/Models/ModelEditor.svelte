@@ -526,7 +526,7 @@
 									<option value={null} class=" text-gray-900"
 										>{$i18n.t('Select a base model')}</option
 									>
-									{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena') as model}
+									{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena' && !(m?.direct ?? false)) as model}
 										<option value={model.id} class=" text-gray-900">{model.name}</option>
 									{/each}
 								</select>
@@ -587,7 +587,7 @@
 					</div>
 
 					<div class="my-2">
-						<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+						<div class="px-4 py-3 bg-gray-50 dark:bg-gray-950 rounded-3xl">
 							<AccessControl
 								bind:accessControl
 								accessRoles={['read', 'write']}
