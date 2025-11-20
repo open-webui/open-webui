@@ -59,7 +59,7 @@
 			if ('serviceWorker' in navigator) {
 				try {
 					const registrations = await navigator.serviceWorker.getRegistrations();
-					await Promise.all(registrations.map(r => r.unregister()));
+					await Promise.all(registrations.map((r) => r.unregister()));
 					console.log('Service workers unregistered for version update');
 				} catch (error) {
 					console.error('Error unregistering service workers:', error);
@@ -105,7 +105,7 @@
 					if ('serviceWorker' in navigator) {
 						try {
 							const registrations = await navigator.serviceWorker.getRegistrations();
-							await Promise.all(registrations.map(r => r.unregister()));
+							await Promise.all(registrations.map((r) => r.unregister()));
 							console.log('Service workers unregistered for backend version update');
 						} catch (error) {
 							console.error('Error unregistering service workers:', error);
