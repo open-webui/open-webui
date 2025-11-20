@@ -8,6 +8,8 @@ import shutil
 from uuid import uuid4
 from pathlib import Path
 from cryptography.hazmat.primitives import serialization
+import re
+
 
 import markdown
 from bs4 import BeautifulSoup
@@ -427,6 +429,17 @@ WEBUI_AUTH_TRUSTED_NAME_HEADER = os.environ.get("WEBUI_AUTH_TRUSTED_NAME_HEADER"
 WEBUI_AUTH_TRUSTED_GROUPS_HEADER = os.environ.get(
     "WEBUI_AUTH_TRUSTED_GROUPS_HEADER", None
 )
+
+
+ENABLE_PASSWORD_VALIDATION = (
+    os.environ.get("ENABLE_PASSWORD_VALIDATION", "False").lower() == "true"
+)
+PASSWORD_VALIDATION_REGEX_PATTERN = os.environ.get(
+    "PASSWORD_VALIDATION_REGEX_PATTERN",
+    "^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$",
+)
+
+PASSWORD_VALIDATION_REGEX_PATTERN = re.compile(PASSWORD_VALIDATION_REGEX_PATTERN)
 
 
 BYPASS_MODEL_ACCESS_CONTROL = (

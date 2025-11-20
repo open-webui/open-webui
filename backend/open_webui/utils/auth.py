@@ -28,8 +28,10 @@ from open_webui.models.users import Users
 from open_webui.constants import ERROR_MESSAGES
 
 from open_webui.env import (
+    ENABLE_PASSWORD_VALIDATION,
     OFFLINE_MODE,
     LICENSE_BLOB,
+    PASSWORD_VALIDATION_REGEX_PATTERN,
     REDIS_KEY_PREFIX,
     pk,
     WEBUI_SECRET_KEY,
@@ -160,6 +162,20 @@ bearer_security = HTTPBearer(auto_error=False)
 def get_password_hash(password: str) -> str:
     """Hash a password using bcrypt"""
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def validate_password(password: str) -> bool:
+    # The password passed to bcrypt must be 72 bytes or fewer. If it is longer, it will be truncated before hashing.
+    if len(password.encode("utf-8")) > 72:
+        raise Exception(
+            ERROR_MESSAGES.PASSWORD_TOO_LONG,
+        )
+
+    if ENABLE_PASSWORD_VALIDATION:
+        if not PASSWORD_VALIDATION_REGEX_PATTERN.match(password):
+            raise Exception(ERROR_MESSAGES.INVALID_PASSWORD())
+
+    return True
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
