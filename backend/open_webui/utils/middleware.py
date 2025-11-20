@@ -58,7 +58,7 @@ from open_webui.routers.memories import query_memory, QueryMemoryForm
 
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.files import (
-    get_audio_url_from_base64,
+    convert_markdown_base64_images,
     get_file_url_from_base64,
     get_image_url_from_base64,
 )
@@ -112,6 +112,7 @@ from open_webui.config import (
 from open_webui.env import (
     SRC_LOG_LEVELS,
     GLOBAL_LOG_LEVEL,
+    ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION,
     CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE,
     CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES,
     BYPASS_MODEL_ACCESS_CONTROL,
@@ -2678,6 +2679,11 @@ async def process_chat_response(
                                                     "type": "text",
                                                     "content": "",
                                                 }
+                                            )
+
+                                        if ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION:
+                                            value = convert_markdown_base64_images(
+                                                request, value, metadata, user
                                             )
 
                                         content = f"{content}{value}"
