@@ -394,6 +394,7 @@
 	"Default Models": "默认模型",
 	"Default permissions": "默认权限",
 	"Default permissions updated successfully": "默认权限更新成功",
+	"Default Pinned Models": "默认置顶模型",
 	"Default Prompt Suggestions": "默认提示词建议",
 	"Default to 389 or 636 if TLS is enabled": "启用 TLS 将默认使用 389 或 636 端口",
 	"Default to ALL": "默认为：ALL",

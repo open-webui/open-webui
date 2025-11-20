@@ -394,6 +394,7 @@
 	"Default Models": "預設模型",
 	"Default permissions": "預設權限",
 	"Default permissions updated successfully": "成功更新預設權限",
+	"Default Pinned Models": "預設置頂模型",
 	"Default Prompt Suggestions": "預設提示詞建議",
 	"Default to 389 or 636 if TLS is enabled": "如果啟用了 TLS 則預設為 389 或 636",
 	"Default to ALL": "預設到所有",
