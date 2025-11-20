@@ -546,14 +546,40 @@
 		e.preventDefault();
 		dragged = false;
 
+		const handleUploadingFileFolder = (items) => {
+			for(const item of items) {
+
+				if(item.isFile) {
+					item.file((file) => {
+						uploadFileHandler(file);
+					})
+					continue;
+				}
+				
+				// Not sure why you have to call webkitGetAsEntry and isDirectory seperate, but it won't work if you try item.webkitGetAsEntry().isDirectory
+				const wkentry = item.webkitGetAsEntry();
+				const isDirectory = wkentry.isDirectory;
+				if(isDirectory) {
+					// Read the directory
+					wkentry.createReader().readEntries((entries) => {
+						handleUploadingFileFolder(entries)
+					}, (error) => {
+						console.error('Error reading directory entries:', error);
+					});
+				} else {
+					toast.info($i18n.t('Uploading file...'));
+					uploadFileHandler(item.getAsFile());
+					toast.success($i18n.t('File uploaded!'));
+				}
+			}
+		}
+
 		if (e.dataTransfer?.types?.includes('Files')) {
 			if (e.dataTransfer?.files) {
-				const inputFiles = e.dataTransfer?.files;
+				const inputItems = e.dataTransfer?.items;
 
-				if (inputFiles && inputFiles.length > 0) {
-					for (const file of inputFiles) {
-						await uploadFileHandler(file);
-					}
+				if (inputItems && inputItems.length > 0) {
+					handleUploadingFileFolder(inputItems)
 				} else {
 					toast.error($i18n.t(`File not found.`));
 				}
