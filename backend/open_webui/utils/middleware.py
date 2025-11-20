@@ -995,12 +995,14 @@ async def chat_completion_files_handler(
                 request=request,
                 items=files,
                 queries=queries,
-                embedding_function=request.app.state.EMBEDDING_FUNCTION,
+                embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                    query, prefix=prefix, user=user
+                ),
                 k=request.app.state.config.TOP_K,
                 reranking_function=(
                     (
-                        lambda sentences: request.app.state.RERANKING_FUNCTION(
-                            sentences, user=user
+                        lambda query, documents: request.app.state.RERANKING_FUNCTION(
+                            query, documents, user=user
                         )
                     )
                     if request.app.state.RERANKING_FUNCTION
