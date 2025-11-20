@@ -127,8 +127,10 @@ async def process_filter_functions(
             raise e
 
     # Handle file cleanup for inlet
-    if skip_files and "files" in form_data.get("metadata", {}):
-        del form_data["files"]
-        del form_data["metadata"]["files"]
+    if skip_files:
+        if "files" in form_data.get("metadata", {}):
+            del form_data["metadata"]["files"]
+        if "files" in form_data:
+            del form_data["files"]
 
     return form_data, {}

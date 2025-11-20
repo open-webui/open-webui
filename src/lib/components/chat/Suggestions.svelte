@@ -4,6 +4,7 @@
 	import { onMount, getContext } from 'svelte';
 	import { settings, WEBUI_NAME } from '$lib/stores';
 	import { WEBUI_VERSION } from '$lib/constants';
+
 	const i18n = getContext('i18n');
 
 	export let suggestionPrompts = [];
@@ -14,7 +15,7 @@
 	let sortedPrompts = [];
 
 	const fuseOptions = {
-		keys: ['content', 'title'],
+		keys: ['translatedContent', 'title'],
 		threshold: 0.5
 	};
 
@@ -29,11 +30,11 @@
 	$: getFilteredPrompts(inputValue);
 
 	// Helper function to check if arrays are the same
-	// (based on unique IDs oder content)
+	// (based on unique IDs or content)
 	function arraysEqual(a, b) {
 		if (a.length !== b.length) return false;
 		for (let i = 0; i < a.length; i++) {
-			if ((a[i].id ?? a[i].content) !== (b[i].id ?? b[i].content)) {
+			if ((a[i].id ?? a[i].translatedContent ?? a[i].content) !== (b[i].id ?? b[i].translatedContent ?? b[i].content)) {
 				return false;
 			}
 		}
@@ -57,8 +58,33 @@
 		}
 	};
 
+	// Helper function to parse prompt content
+	function parsePromptContent(content) {
+		if (typeof content === 'string') {
+			try {
+				return JSON.parse(content);
+			} catch {
+				// If it's not valid JSON, treat it as a plain string
+				return { de: content };
+			}
+		}
+		return content || {};
+	}
+
+	// Helper function to get translated content
+	function getTranslatedContent(prompt, lang) {
+		const parsed = parsePromptContent(prompt.content);
+		return parsed[lang] || parsed['de'] || parsed[Object.keys(parsed)[0]] || '';
+	}
+
 	$: if (suggestionPrompts) {
-		sortedPrompts = [...(suggestionPrompts ?? [])].sort(() => Math.random() - 0.5);
+		// Parse all prompts and add translated content for filtering
+		sortedPrompts = [...(suggestionPrompts ?? [])]
+			.map(prompt => ({
+				...prompt,
+				translatedContent: getTranslatedContent(prompt, langCode)
+			}))
+			.sort(() => Math.random() - 0.5);
 		getFilteredPrompts(inputValue);
 	}
 
@@ -85,7 +111,7 @@
 <div class="h-40 w-full">
 	{#if filteredPrompts.length > 0}
 		<div role="list" class="max-h-40 overflow-auto scrollbar-none items-start {className}">
-			{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}
+			{#each filteredPrompts as prompt, idx (prompt.id || `${prompt.content}-${idx}`)}
 				<!-- svelte-ignore a11y-no-interactive-element-to-noninteractive-role -->
 				<button
 					role="listitem"
@@ -94,7 +120,7 @@
 				       dark:hover:bg-white/5 transition group"
 					style="animation-delay: {idx * 60}ms"
 					on:click={() =>
-						onSelect({ type: 'prompt', data: prompt.content[langCode] || prompt.content.de })}
+						onSelect({ type: 'prompt', data: prompt.translatedContent })}
 				>
 					<div class="flex flex-col text-left">
 						{#if prompt.title && prompt.title[0] !== ''}
@@ -110,7 +136,7 @@
 							<div
 								class="font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
 							>
-								{prompt.content[langCode] || prompt.content.de}
+								{prompt.translatedContent}
 							</div>
 							<div class="text-xs text-gray-600 dark:text-gray-400 font-normal line-clamp-1">
 								{$i18n.t('Prompt')}

@@ -130,6 +130,23 @@ export function getLangCode(language?: string, fallback: string = 'de'): string 
   return language?.split('-')[0] || fallback;
 }
 
+// Language family definitions for fallback translations
+const LANGUAGE_FAMILIES: Record<string, string[]> = {
+  en: ['en', 'en-US', 'en-GB'],
+  de: ['de', 'de-DE', 'de-CH'],
+  fr: ['fr', 'fr-CH', 'fr-CA', 'fr-FR'],
+  it: ['it', 'it-IT', 'it-CH']
+};
+
+// Default fallback order when user's language is not found
+const DEFAULT_FALLBACK = [
+  'de', 'de-DE', 'de-CH',
+  'en', 'en-US', 'en-GB',
+  'fr', 'fr-CH', 'fr-CA', 'fr-FR',
+  'it', 'it-IT', 'it-CH'
+];
+
+
 /**
  * Gets translated label from translation object or JSON string
  * @param label - Translation object or JSON string containing translations
@@ -137,29 +154,75 @@ export function getLangCode(language?: string, fallback: string = 'de'): string 
  * @returns Translated string or empty string if not found
  */
 export function getTranslatedLabel(
-  label: string | Translations | null | undefined, 
+  label: string | Translations | null | undefined,
   langCode: string
 ): string {
   if (!label) return '';
 
   try {
+    // If it's a plain string (not JSON), return it as-is
+    if (typeof label === 'string' && !label.trim().startsWith('{')) {
+      return label;
+    }
+
     // If it's already an object, use it directly
-    const translations: Translations = typeof label === 'object' ? label : JSON.parse(label);
-    
-    return (
-      translations[langCode] ||
-      translations.en ||
-      translations.de ||
-      translations.fr ||
-      translations.it ||
-      ''
-    );
+    const rawTranslations: Translations = typeof label === 'object' ? label : JSON.parse(label);
+
+    // Normalize translations object by trimming all keys and values
+    const translations: Translations = {};
+    for (const [key, value] of Object.entries(rawTranslations)) {
+      const trimmedKey = key.trim();
+      const trimmedValue = typeof value === 'string' ? value.trim() : value;
+      if (trimmedKey) {
+        translations[trimmedKey] = trimmedValue;
+      }
+    }
+
+    // Extract base language code (e.g., 'it' from 'it-CH', 'fr' from 'fr-CA')
+    // Also trim the langCode to handle any spaces
+    const cleanLangCode = langCode.trim();
+    const baseLangCode = cleanLangCode.split('-')[0];
+
+    // Build priority list for lookups
+    const priorityList: string[] = [];
+
+    // 1. Add exact match first
+    priorityList.push(cleanLangCode);
+
+    // 2. Add user's language family (if it exists)
+    const userFamily = LANGUAGE_FAMILIES[baseLangCode];
+    if (userFamily) {
+      // Add all variants from user's family, excluding the exact match already added
+      userFamily.forEach(variant => {
+        if (variant !== cleanLangCode && !priorityList.includes(variant)) {
+          priorityList.push(variant);
+        }
+      });
+    }
+
+    // 3. Add default fallback order, excluding already added languages
+    DEFAULT_FALLBACK.forEach(fallbackLang => {
+      if (!priorityList.includes(fallbackLang)) {
+        priorityList.push(fallbackLang);
+      }
+    });
+
+    // Try each language in priority order and return first non-empty translation
+    for (const lang of priorityList) {
+      const translation = translations[lang];
+      if (translation && translation.trim() !== '') {
+        return translation;
+      }
+    }
+
+    // If nothing found, return empty string
+    return '';
   } catch (error) {
     // Log parsing errors for debugging in development
     if (process.env.NODE_ENV === 'development') {
       console.warn('Failed to parse translation label:', label, error);
     }
-    
+
     // If parsing fails, return the original value if it's a string
     return typeof label === 'string' ? label : '';
   }

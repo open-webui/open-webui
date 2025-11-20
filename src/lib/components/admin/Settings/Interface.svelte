@@ -44,13 +44,20 @@
 		ENABLE_RETRIEVAL_QUERY_GENERATION: true,
 		QUERY_GENERATION_PROMPT_TEMPLATE: '',
 		TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: '',
-		TRANSLATION_LANGUAGES: []
+		TRANSLATION_LANGUAGES: [],
+		VOICE_MODE_PROMPT_TEMPLATE: ''
 	};
 
 	let promptSuggestions = [];
 	let banners: Banner[] = [];
 
 	const updateInterfaceHandler = async () => {
+		// Trim any spaces from translation languages before saving
+		if (taskConfig.TRANSLATION_LANGUAGES && Array.isArray(taskConfig.TRANSLATION_LANGUAGES)) {
+			taskConfig.TRANSLATION_LANGUAGES = taskConfig.TRANSLATION_LANGUAGES
+				.map((lang: string) => lang.trim())
+				.filter((lang: string) => lang !== '');
+		}
 		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
 
 		promptSuggestions = promptSuggestions.filter((p) => p.content !== '');
@@ -114,7 +121,7 @@
 	>
 		<div class="  overflow-y-scroll scrollbar-hidden h-full pr-1.5">
 			<div class="mb-3.5">
-				<div class=" mb-2.5 text-base font-medium">{$i18n.t('Tasks')}</div>
+				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Tasks')}</div>
 
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -232,6 +239,41 @@
 						>
 							<Textarea
 								bind:value={taskConfig.TITLE_GENERATION_PROMPT_TEMPLATE}
+								placeholder={$i18n.t(
+									'Leave empty to use the default prompt, or enter a custom prompt'
+								)}
+							/>
+						</Tooltip>
+					</div>
+				{/if}
+
+				<div class="mb-2.5 flex w-full items-center justify-between">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Voice Mode Custom Prompt')}
+					</div>
+
+					<Switch
+						state={taskConfig.VOICE_MODE_PROMPT_TEMPLATE != null}
+						on:change={(e) => {
+							if (e.detail) {
+								taskConfig.VOICE_MODE_PROMPT_TEMPLATE = '';
+							} else {
+								taskConfig.VOICE_MODE_PROMPT_TEMPLATE = null;
+							}
+						}}
+					/>
+				</div>
+
+				{#if taskConfig.VOICE_MODE_PROMPT_TEMPLATE != null}
+					<div class="mb-2.5">
+						<div class=" mb-1 text-xs font-medium">{$i18n.t('Voice Mode Prompt')}</div>
+
+						<Tooltip
+							content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+							placement="top-start"
+						>
+							<Textarea
+								bind:value={taskConfig.VOICE_MODE_PROMPT_TEMPLATE}
 								placeholder={$i18n.t(
 									'Leave empty to use the default prompt, or enter a custom prompt'
 								)}
@@ -387,7 +429,7 @@
 			</div>
 
 			<div class="mb-3.5">
-				<div class=" mb-2.5 text-base font-medium">{$i18n.t('UI')}</div>
+				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('UI')}</div>
 
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 

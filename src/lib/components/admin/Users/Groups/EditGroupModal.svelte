@@ -19,8 +19,8 @@
 	export let show = false;
 	export let edit = false;
 
-	export let users = [];
 	export let group = null;
+	export let defaultPermissions = {};
 
 	export let custom = true;
 
@@ -30,6 +30,8 @@
 	let loading = false;
 	let showDeleteConfirmDialog = false;
 
+	let userCount = 0;
+
 	export let name = '';
 	export let description = '';
 
@@ -38,13 +40,20 @@
 			models: false,
 			knowledge: false,
 			prompts: false,
-			tools: false
+			tools: false,
+			models_import: false,
+			models_export: false,
+			prompts_import: false,
+			prompts_export: false,
+			tools_import: false,
+			tools_export: false
 		},
 		sharing: {
 			public_models: false,
 			public_knowledge: false,
 			public_prompts: false,
-			public_tools: false
+			public_tools: false,
+			public_notes: false
 		},
 		chat: {
 			controls: true,
@@ -68,13 +77,14 @@
 			temporary_enforced: false
 		},
 		features: {
+			api_keys: false,
 			direct_tool_servers: false,
 			web_search: true,
 			image_generation: true,
-			code_interpreter: true
+			code_interpreter: true,
+			notes: true
 		}
 	};
-	export let userIds = [];
 
 	const submitHandler = async () => {
 		loading = true;
@@ -82,8 +92,7 @@
 		const group = {
 			name,
 			description,
-			permissions,
-			user_ids: userIds
+			permissions
 		};
 
 		await onSubmit(group);
@@ -98,7 +107,7 @@
 			description = group.description;
 			permissions = group?.permissions ?? {};
 
-			userIds = group?.user_ids ?? [];
+			userCount = group?.member_count ?? 0;
 		}
 	};
 
@@ -120,7 +129,7 @@
 	}}
 />
 
-<Modal size="md" bind:show>
+<Modal size="lg" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 mb-1.5">
 			<div class=" text-lg font-medium self-center font-primary">
@@ -219,20 +228,47 @@
 									<div class=" self-center mr-2">
 										<UserPlusSolid />
 									</div>
-									<div class=" self-center">{$i18n.t('Users')} ({userIds.length})</div>
+									<div class=" self-center">{$i18n.t('Users')}</div>
 								</button>
 							{/if}
 						</div>
 
-						<div
-							class="flex-1 mt-1 lg:mt-1 lg:h-[22rem] lg:max-h-[22rem] overflow-y-auto scrollbar-hidden"
-						>
-							{#if selectedTab == 'general'}
-								<Display bind:name bind:description />
-							{:else if selectedTab == 'permissions'}
-								<Permissions bind:permissions />
-							{:else if selectedTab == 'users'}
-								<Users bind:userIds {users} />
+						<div class="flex-1 mt-1 lg:mt-1 lg:h-[30rem] lg:max-h-[30rem] flex flex-col">
+							<div class="w-full h-full overflow-y-auto scrollbar-hidden">
+								{#if selectedTab == 'general'}
+									<Display
+										bind:name
+										bind:description
+										{edit}
+										onDelete={() => {
+											showDeleteConfirmDialog = true;
+										}}
+									/>
+								{:else if selectedTab == 'permissions'}
+									<Permissions bind:permissions {defaultPermissions} />
+								{:else if selectedTab == 'users'}
+									<Users bind:userCount groupId={group?.id} />
+								{/if}
+							</div>
+
+							{#if ['general', 'permissions'].includes(selectedTab)}
+								<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
+									<button
+										class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
+											? ' cursor-not-allowed'
+											: ''}"
+										type="submit"
+										disabled={loading}
+									>
+										{$i18n.t('Save')}
+
+										{#if loading}
+											<div class="ml-2 self-center">
+												<Spinner />
+											</div>
+										{/if}
+									</button>
+								</div>
 							{/if}
 						</div>
 					</div>
@@ -285,38 +321,6 @@
 							</button>
 						{/if}
 					</div> -->
-
-					<div class="flex justify-between pt-3 text-sm font-medium gap-1.5">
-						{#if edit}
-							<button
-								class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-900 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
-								type="button"
-								on:click={() => {
-									showDeleteConfirmDialog = true;
-								}}
-							>
-								{$i18n.t('Delete')}
-							</button>
-						{:else}
-							<div></div>
-						{/if}
-
-						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
-								? ' cursor-not-allowed'
-								: ''}"
-							type="submit"
-							disabled={loading}
-						>
-							{$i18n.t('Save')}
-
-							{#if loading}
-								<div class="ml-2 self-center">
-									<Spinner />
-								</div>
-							{/if}
-						</button>
-					</div>
 				</form>
 			</div>
 		</div>

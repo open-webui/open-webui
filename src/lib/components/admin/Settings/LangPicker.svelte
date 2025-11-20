@@ -45,7 +45,10 @@
     : allOptions.filter(o => !selected.includes(o.code)).slice(0, 10);
 
   function add(code: string) {
-    if (!selected.includes(code)) selected = [...selected, code];
+    const trimmedCode = code.trim();
+    if (trimmedCode && !selected.includes(trimmedCode)) {
+      selected = [...selected, trimmedCode];
+    }
     query = '';
     highlighted = 0;
     inputEl?.focus();

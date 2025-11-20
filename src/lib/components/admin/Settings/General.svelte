@@ -118,11 +118,11 @@
 		updateHandler();
 	}}
 >
-	<div class="mt-0.5 space-y-3 overflow-y-scroll scrollbar-hidden h-full">
+	<div class="space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		{#if adminConfig !== null}
 			<div class="">
 				<div class="mb-3.5">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -280,7 +280,7 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Authentication')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Authentication')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -338,31 +338,31 @@
 					</div>
 
 					<div class="mb-2.5 flex w-full justify-between pr-2">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Enable API Key')}</div>
+						<div class=" self-center text-xs font-medium">{$i18n.t('Enable API Keys')}</div>
 
-						<Switch bind:state={adminConfig.ENABLE_API_KEY} />
+						<Switch bind:state={adminConfig.ENABLE_API_KEYS} />
 					</div>
 
-					{#if adminConfig?.ENABLE_API_KEY}
+					{#if adminConfig?.ENABLE_API_KEYS}
 						<div class="mb-2.5 flex w-full justify-between pr-2">
 							<div class=" self-center text-xs font-medium">
 								{$i18n.t('API Key Endpoint Restrictions')}
 							</div>
 
-							<Switch bind:state={adminConfig.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS} />
+							<Switch bind:state={adminConfig.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS} />
 						</div>
 
-						{#if adminConfig?.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS}
-							<div class=" flex w-full flex-col pr-2">
+						{#if adminConfig?.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS}
+							<div class=" flex w-full flex-col pr-2 mb-2.5">
 								<div class=" text-xs font-medium">
 									{$i18n.t('Allowed Endpoints')}
 								</div>
 
 								<input
-									class="w-full mt-1 rounded-lg text-sm dark:text-gray-300 bg-transparent outline-hidden"
+									class="w-full mt-1 text-sm dark:text-gray-300 bg-transparent outline-hidden"
 									type="text"
 									placeholder={`e.g.) /api/v1/messages, /api/v1/channels`}
-									bind:value={adminConfig.API_KEY_ALLOWED_ENDPOINTS}
+									bind:value={adminConfig.API_KEYS_ALLOWED_ENDPOINTS}
 								/>
 
 								<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
@@ -399,6 +399,26 @@
 								>{$i18n.t("'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.")}</span
 							>
 						</div>
+
+						{#if adminConfig.JWT_EXPIRES_IN === '-1'}
+							<div class="mt-2 text-xs">
+								<div
+									class=" bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-lg px-3 py-2"
+								>
+									<div>
+										<span class=" font-medium">{$i18n.t('Warning')}:</span>
+										<span
+											><a
+												href="https://docs.openwebui.com/getting-started/env-configuration#jwt_expires_in"
+												target="_blank"
+												class=" underline"
+												>{$i18n.t('No expiration can pose security risks.')}
+											</a></span
+										>
+									</div>
+								</div>
+							</div>
+						{/if}
 					</div>
 
 					<div class=" space-y-3">
@@ -617,7 +637,7 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Features')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Features')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 

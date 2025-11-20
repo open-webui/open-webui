@@ -16,6 +16,7 @@
 	import HtmlToken from './HTMLToken.svelte';
 	import TextToken from './MarkdownInlineTokens/TextToken.svelte';
 	import CodespanToken from './MarkdownInlineTokens/CodespanToken.svelte';
+	import MentionToken from './MarkdownInlineTokens/MentionToken.svelte';
 
 	export let id: string;
 	export let done = true;
@@ -23,7 +24,7 @@
 	export let onSourceClick: Function = () => {};
 </script>
 
-{#each tokens as token}
+{#each tokens as token, tokenIdx (tokenIdx)}
 	{#if token.type === 'escape'}
 		{unescapeHtml(token.text)}
 	{:else if token.type === 'html'}
@@ -58,8 +59,15 @@
 			title={token.fileId}
 			width="100%"
 			frameborder="0"
-			onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
+			on:load={(e) => {
+				try {
+					e.currentTarget.style.height =
+						e.currentTarget.contentWindow.document.body.scrollHeight + 20 + 'px';
+				} catch {}
+			}}
 		></iframe>
+	{:else if token.type === 'mention'}
+		<MentionToken {token} />
 	{:else if token.type === 'text'}
 		<TextToken {token} {done} />
 	{/if}

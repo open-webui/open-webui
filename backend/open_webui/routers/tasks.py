@@ -33,6 +33,7 @@ from open_webui.config import (
     DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_EMOJI_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_MOA_GENERATION_PROMPT_TEMPLATE,
+    DEFAULT_VOICE_MODE_PROMPT_TEMPLATE,
 )
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -69,6 +70,7 @@ async def get_task_config(request: Request, user=Depends(get_verified_user)):
         "QUERY_GENERATION_PROMPT_TEMPLATE": request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE,
         "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE": request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
         "TRANSLATION_LANGUAGES": request.app.state.config.TRANSLATION_LANGUAGES,
+        "VOICE_MODE_PROMPT_TEMPLATE": request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE,
     }
 
 
@@ -89,6 +91,7 @@ class TaskConfigForm(BaseModel):
     QUERY_GENERATION_PROMPT_TEMPLATE: str
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: str
     TRANSLATION_LANGUAGES: Optional[List[str]] = []
+    VOICE_MODE_PROMPT_TEMPLATE: Optional[str]
 
 
 @router.post("/config/update")
@@ -142,6 +145,10 @@ async def update_task_config(
         form_data.TRANSLATION_LANGUAGES
     )
 
+    request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE = (
+        form_data.VOICE_MODE_PROMPT_TEMPLATE
+    )
+
     return {
         "TASK_MODEL": request.app.state.config.TASK_MODEL,
         "TASK_MODEL_EXTERNAL": request.app.state.config.TASK_MODEL_EXTERNAL,
@@ -159,6 +166,7 @@ async def update_task_config(
         "QUERY_GENERATION_PROMPT_TEMPLATE": request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE,
         "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE": request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
         "TRANSLATION_LANGUAGES": request.app.state.config.TRANSLATION_LANGUAGES,
+        "VOICE_MODE_PROMPT_TEMPLATE": request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE,
     }
 
 

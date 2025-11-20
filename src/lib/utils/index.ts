@@ -15,6 +15,8 @@ dayjs.extend(localizedFormat);
 
 import { TTS_RESPONSE_SPLIT } from '$lib/types';
 
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
+
 import { marked } from 'marked';
 import markedExtension from '$lib/utils/marked/extension';
 import markedKatexExtension from '$lib/utils/marked/katex-extension';
@@ -66,9 +68,26 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 		});
 
 		if (Array.isArray(sourceIds)) {
-			sourceIds.forEach((sourceId, idx) => {
-				const regex = new RegExp(`\\[${idx + 1}\\]`, 'g');
-				segment = segment.replace(regex, `<source_id data="${idx + 1}" title="${sourceId}" />`);
+			// Match both [1], [2], and [1,2,3] forms
+			const multiRefRegex = /\[([\d,\s]+)\]/g;
+			segment = segment.replace(multiRefRegex, (match, group) => {
+				// Extract numbers like 1,2,3
+				const indices = group
+					.split(',')
+					.map((n) => parseInt(n.trim(), 10))
+					.filter((n) => !isNaN(n));
+
+				// Replace each index with a <source_id> tag
+				const sources = indices
+					.map((idx) => {
+						const sourceId = sourceIds[idx - 1];
+						return sourceId
+							? `<source_id data="${idx}" title="${encodeURIComponent(sourceId)}" />`
+							: `[${idx}]`;
+					})
+					.join('');
+
+				return sources;
 			});
 		}
 
@@ -329,7 +348,8 @@ export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
 			context.drawImage(img, 0, 0, width, height);
 
 			// Get compressed image URL
-			const compressedUrl = canvas.toDataURL();
+			const mimeType = imageUrl.match(/^data:([^;]+);/)?.[1];
+			const compressedUrl = canvas.toDataURL(mimeType);
 			resolve(compressedUrl);
 		};
 		img.onerror = (error) => reject(error);
@@ -373,14 +393,13 @@ export const generateInitialsImage = (name) => {
 
 export const formatDate = (inputDate) => {
 	const date = dayjs(inputDate);
-	const now = dayjs();
 
 	if (date.isToday()) {
-		return `Today at ${date.format('LT')}`;
+		return `Today at {{LOCALIZED_TIME}}`;
 	} else if (date.isYesterday()) {
-		return `Yesterday at ${date.format('LT')}`;
+		return `Yesterday at {{LOCALIZED_TIME}}`;
 	} else {
-		return `${date.format('L')} at ${date.format('LT')}`;
+		return `{{LOCALIZED_DATE}} at {{LOCALIZED_TIME}}`;
 	}
 };
 
@@ -793,6 +812,15 @@ export const isValidHttpUrl = (string: string) => {
 	}
 
 	return url.protocol === 'http:' || url.protocol === 'https:';
+};
+
+export const isYoutubeUrl = (url: string) => {
+	return (
+		url.startsWith('https://www.youtube.com') ||
+		url.startsWith('https://youtu.be') ||
+		url.startsWith('https://youtube.com') ||
+		url.startsWith('https://m.youtube.com')
+	);
 };
 
 export const removeEmojis = (str: string) => {
@@ -1404,24 +1432,39 @@ export const parseVariableDefinition = (definition: string): Record<string, any>
 	// Parse type (explicit or implied)
 	const type = firstPart.startsWith('type=') ? firstPart.slice(5) : firstPart;
 
-	// Parse properties using reduce
-	const properties = propertyParts.reduce((props, part) => {
-		// Use splitProperties for the equals sign as well, in case there are nested quotes
-		const equalsParts = splitProperties(part, '=');
-		const [propertyName, ...valueParts] = equalsParts;
-		const propertyValue = valueParts.join('='); // Handle values with = signs
+	// Parse properties; support both key=value and bare flags (e.g., ":required")
+	const properties = propertyParts.reduce(
+		(props, part) => {
+			const trimmed = part.trim();
+			if (!trimmed) return props;
 
-		return propertyName && propertyValue
-			? {
-					...props,
-					[propertyName.trim()]: parseJsonValue(propertyValue.trim())
+			// Use splitProperties for the equals sign as well, in case there are nested quotes
+			const equalsParts = splitProperties(trimmed, '=');
+
+			if (equalsParts.length === 1) {
+				// It's a flag with no value, e.g. "required" -> true
+				const flagName = equalsParts[0].trim();
+				if (flagName.length > 0) {
+					return { ...props, [flagName]: true };
 				}
-			: props;
-	}, {});
+				return props;
+			}
+
+			const [propertyName, ...valueParts] = equalsParts;
+			const propertyValueRaw = valueParts.join('='); // Handle values with extra '='
+
+			if (!propertyName || propertyValueRaw == null) return props;
+
+			return {
+				...props,
+				[propertyName.trim()]: parseJsonValue(propertyValueRaw.trim())
+			};
+		},
+		{} as Record<string, any>
+	);
 
 	return { type, ...properties };
 };
-
 export const parseJsonValue = (value: string): any => {
 	// Remove surrounding quotes if present (for string values)
 	if (value.startsWith('"') && value.endsWith('"')) {
@@ -1440,7 +1483,18 @@ export const parseJsonValue = (value: string): any => {
 	return value;
 };
 
-export const extractContentFromFile = async (file, pdfjsLib = null) => {
+async function ensurePDFjsLoaded() {
+	if (!window.pdfjsLib) {
+		const pdfjs = await import('pdfjs-dist');
+		pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+		if (!window.pdfjsLib) {
+			throw new Error('pdfjsLib is required for PDF extraction');
+		}
+	}
+	return window.pdfjsLib;
+}
+
+export const extractContentFromFile = async (file: File) => {
 	// Known text file extensions for extra fallback
 	const textExtensions = [
 		'.txt',
@@ -1457,31 +1511,28 @@ export const extractContentFromFile = async (file, pdfjsLib = null) => {
 		'.rtf'
 	];
 
-	function getExtension(filename) {
+	function getExtension(filename: string) {
 		const dot = filename.lastIndexOf('.');
 		return dot === -1 ? '' : filename.substr(dot).toLowerCase();
 	}
 
 	// Uses pdfjs to extract text from PDF
-	async function extractPdfText(file) {
-		if (!pdfjsLib) {
-			throw new Error('pdfjsLib is required for PDF extraction');
-		}
-
+	async function extractPdfText(file: File) {
+		const pdfjsLib = await ensurePDFjsLoaded();
 		const arrayBuffer = await file.arrayBuffer();
 		const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 		let allText = '';
 		for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
 			const page = await pdf.getPage(pageNum);
 			const content = await page.getTextContent();
-			const strings = content.items.map((item) => item.str);
+			const strings = content.items.map((item: any) => item.str);
 			allText += strings.join(' ') + '\n';
 		}
 		return allText;
 	}
 
 	// Reads file as text using FileReader
-	function readAsText(file) {
+	function readAsText(file: File) {
 		return new Promise((resolve, reject) => {
 			const reader = new FileReader();
 			reader.onload = () => resolve(reader.result);
@@ -1511,12 +1562,6 @@ export const extractContentFromFile = async (file, pdfjsLib = null) => {
 	}
 };
 
-export const querystringValue = (key: string): string | null => {
-	const querystring = window.location.search;
-	const urlParams = new URLSearchParams(querystring);
-	return urlParams.get(key);
-};
-
 export const getAge = (birthDate) => {
 	const today = new Date();
 	const bDate = new Date(birthDate);
@@ -1527,4 +1572,116 @@ export const getAge = (birthDate) => {
 		age--;
 	}
 	return age.toString();
+};
+
+export const convertHeicToJpeg = async (file: File) => {
+	const { default: heic2any } = await import('heic2any');
+	try {
+		return await heic2any({ blob: file, toType: 'image/jpeg' });
+	} catch (err: any) {
+		if (err?.message?.includes('already browser readable')) {
+			return file;
+		}
+		throw err;
+	}
+};
+
+export const decodeString = (str: string) => {
+	try {
+		return decodeURIComponent(str);
+	} catch (e) {
+		return str;
+	}
+};
+
+export const initMermaid = async () => {
+	const { default: mermaid } = await import('mermaid');
+	mermaid.initialize({
+		startOnLoad: false, // Should be false when using render API
+		theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
+		securityLevel: 'loose'
+	});
+	return mermaid;
+};
+
+export const renderMermaidDiagram = async (mermaid, code: string) => {
+	const parseResult = await mermaid.parse(code, { suppressErrors: false });
+	if (parseResult) {
+		const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
+		return svg;
+	}
+	return '';
+};
+
+export const renderVegaVisualization = async (spec: string, i18n?: any) => {
+	const vega = await import('vega');
+	const parsedSpec = JSON.parse(spec);
+	let vegaSpec = parsedSpec;
+	if (parsedSpec.$schema && parsedSpec.$schema.includes('vega-lite')) {
+		const vegaLite = await import('vega-lite');
+		vegaSpec = vegaLite.compile(parsedSpec).spec;
+	}
+	const view = new vega.View(vega.parse(vegaSpec), { renderer: 'none' });
+	const svg = await view.toSVG();
+	return svg;
+};
+
+export const getCodeBlockContents = (content: string): object => {
+	const codeBlockContents = content.match(/```[\s\S]*?```/g);
+
+	let codeBlocks = [];
+
+	let htmlContent = '';
+	let cssContent = '';
+	let jsContent = '';
+
+	if (codeBlockContents) {
+		codeBlockContents.forEach((block) => {
+			const lang = block.split('\n')[0].replace('```', '').trim().toLowerCase();
+			const code = block.replace(/```[\s\S]*?\n/, '').replace(/```$/, '');
+			codeBlocks.push({ lang, code });
+		});
+
+		codeBlocks.forEach((block) => {
+			const { lang, code } = block;
+
+			if (lang === 'html') {
+				htmlContent += code + '\n';
+			} else if (lang === 'css') {
+				cssContent += code + '\n';
+			} else if (lang === 'javascript' || lang === 'js') {
+				jsContent += code + '\n';
+			}
+		});
+	} else {
+		const inlineHtml = content.match(/<html>[\s\S]*?<\/html>/gi);
+		const inlineCss = content.match(/<style>[\s\S]*?<\/style>/gi);
+		const inlineJs = content.match(/<script>[\s\S]*?<\/script>/gi);
+
+		if (inlineHtml) {
+			inlineHtml.forEach((block) => {
+				const content = block.replace(/<\/?html>/gi, ''); // Remove <html> tags
+				htmlContent += content + '\n';
+			});
+		}
+		if (inlineCss) {
+			inlineCss.forEach((block) => {
+				const content = block.replace(/<\/?style>/gi, ''); // Remove <style> tags
+				cssContent += content + '\n';
+			});
+		}
+		if (inlineJs) {
+			inlineJs.forEach((block) => {
+				const content = block.replace(/<\/?script>/gi, ''); // Remove <script> tags
+				jsContent += content + '\n';
+			});
+		}
+	}
+
+	return {
+		codeBlocks: codeBlocks,
+		html: htmlContent.trim(),
+		css: cssContent.trim(),
+		js: jsContent.trim()
+	};
 };

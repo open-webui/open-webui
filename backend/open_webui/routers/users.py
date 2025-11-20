@@ -10,12 +10,16 @@ from pydantic import BaseModel
 
 
 from open_webui.models.auths import Auths
+from open_webui.models.oauth_sessions import OAuthSessions
+
 from open_webui.models.groups import Groups
 from open_webui.models.chats import Chats
 from open_webui.models.users import (
     UserModel,
+    UserGroupIdsModel,
     UserListResponse,
     UserInfoListResponse,
+    UserIdNameListResponse,
     UserRoleUpdateForm,
     Users,
     UserSettings,
@@ -88,7 +92,25 @@ async def get_users(
     if direction:
         filter["direction"] = direction
 
-    return Users.get_users(filter=filter, skip=skip, limit=limit)
+    result = Users.get_users(filter=filter, skip=skip, limit=limit)
+
+    users = result["users"]
+    total = result["total"]
+
+    return {
+        "users": [
+            UserGroupIdsModel(
+                **{
+                    **user.model_dump(),
+                    "group_ids": [
+                        group.id for group in Groups.get_groups_by_member_id(user.id)
+                    ],
+                }
+            )
+            for user in users
+        ],
+        "total": total,
+    }
 
 
 @router.get("/all", response_model=UserInfoListResponse)
@@ -96,6 +118,23 @@ async def get_all_users(
     user=Depends(get_admin_user),
 ):
     return Users.get_users()
+
+
+@router.get("/search", response_model=UserIdNameListResponse)
+async def search_users(
+    query: Optional[str] = None,
+    user=Depends(get_verified_user),
+):
+    limit = PAGE_ITEM_COUNT
+
+    page = 1  # Always return the first page for search
+    skip = (page - 1) * limit
+
+    filter = {}
+    if query:
+        filter["query"] = query
+
+    return Users.get_users(filter=filter, skip=skip, limit=limit)
 
 
 ############################
@@ -130,6 +169,12 @@ class WorkspacePermissions(BaseModel):
     knowledge: bool = False
     prompts: bool = False
     tools: bool = False
+    models_import: bool = False
+    models_export: bool = False
+    prompts_import: bool = False
+    prompts_export: bool = False
+    tools_import: bool = False
+    tools_export: bool = False
 
 
 class SharingPermissions(BaseModel):
@@ -137,6 +182,7 @@ class SharingPermissions(BaseModel):
     public_knowledge: bool = True
     public_prompts: bool = True
     public_tools: bool = True
+    public_notes: bool = True
 
 
 class ChatPermissions(BaseModel):
@@ -162,6 +208,7 @@ class ChatPermissions(BaseModel):
 
 
 class FeaturesPermissions(BaseModel):
+    api_keys: bool = False
     direct_tool_servers: bool = False
     web_search: bool = True
     image_generation: bool = True
@@ -333,6 +380,18 @@ async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
                 "active": get_active_status_by_user_id(user_id),
             }
         )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
+
+
+@router.get("/{user_id}/oauth/sessions")
+async def get_user_oauth_sessions_by_id(user_id: str, user=Depends(get_admin_user)):
+    sessions = OAuthSessions.get_sessions_by_user_id(user_id)
+    if sessions and len(sessions) > 0:
+        return sessions
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

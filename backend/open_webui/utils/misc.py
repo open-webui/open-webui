@@ -8,10 +8,11 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Callable, Optional
 import json
+import aiohttp
 
 
 import collections.abc
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
@@ -26,7 +27,7 @@ def deep_update(d, u):
     return d
 
 
-def get_message_list(messages, message_id):
+def get_message_list(messages_map, message_id):
     """
     Reconstructs a list of messages in order up to the specified message_id.
 
@@ -36,11 +37,11 @@ def get_message_list(messages, message_id):
     """
 
     # Handle case where messages is None
-    if not messages:
+    if not messages_map:
         return []  # Return empty list instead of None to prevent iteration errors
 
     # Find the message by its id
-    current_message = messages.get(message_id)
+    current_message = messages_map.get(message_id)
 
     if not current_message:
         return []  # Return empty list instead of None to prevent iteration errors
@@ -53,7 +54,7 @@ def get_message_list(messages, message_id):
             0, current_message
         )  # Insert the message at the beginning of the list
         parent_id = current_message.get("parentId")  # Use .get() for safety
-        current_message = messages.get(parent_id) if parent_id else None
+        current_message = messages_map.get(parent_id) if parent_id else None
 
     return message_list
 
@@ -120,17 +121,26 @@ def pop_system_message(messages: list[dict]) -> tuple[Optional[dict], list[dict]
     return get_system_message(messages), remove_system_message(messages)
 
 
-def prepend_to_first_user_message_content(
-    content: str, messages: list[dict]
-) -> list[dict]:
+def update_message_content(message: dict, content: str, append: bool = True) -> dict:
+    if isinstance(message["content"], list):
+        for item in message["content"]:
+            if item["type"] == "text":
+                if append:
+                    item["text"] = f"{item['text']}\n{content}"
+                else:
+                    item["text"] = f"{content}\n{item['text']}"
+    else:
+        if append:
+            message["content"] = f"{message['content']}\n{content}"
+        else:
+            message["content"] = f"{content}\n{message['content']}"
+    return message
+
+
+def replace_system_message_content(content: str, messages: list[dict]) -> dict:
     for message in messages:
-        if message["role"] == "user":
-            if isinstance(message["content"], list):
-                for item in message["content"]:
-                    if item["type"] == "text":
-                        item["text"] = f"{content}\n{item['text']}"
-            else:
-                message["content"] = f"{content}\n{message['content']}"
+        if message["role"] == "system":
+            message["content"] = content
             break
     return messages
 
@@ -148,10 +158,7 @@ def add_or_update_system_message(
     """
 
     if messages and messages[0].get("role") == "system":
-        if append:
-            messages[0]["content"] = f"{messages[0]['content']}\n{content}"
-        else:
-            messages[0]["content"] = f"{content}\n{messages[0]['content']}"
+        messages[0] = update_message_content(messages[0], content, append)
     else:
         # Insert at the beginning
         messages.insert(0, {"role": "system", "content": content})
@@ -159,7 +166,7 @@ def add_or_update_system_message(
     return messages
 
 
-def add_or_update_user_message(content: str, messages: list[dict]):
+def add_or_update_user_message(content: str, messages: list[dict], append: bool = True):
     """
     Adds a new user message at the end of the messages list
     or updates the existing user message at the end.
@@ -170,11 +177,21 @@ def add_or_update_user_message(content: str, messages: list[dict]):
     """
 
     if messages and messages[-1].get("role") == "user":
-        messages[-1]["content"] = f"{messages[-1]['content']}\n{content}"
+        messages[-1] = update_message_content(messages[-1], content, append)
     else:
         # Insert at the end
         messages.append({"role": "user", "content": content})
 
+    return messages
+
+
+def prepend_to_first_user_message_content(
+    content: str, messages: list[dict]
+) -> list[dict]:
+    for message in messages:
+        if message["role"] == "user":
+            message = update_message_content(message, content, append=False)
+            break
     return messages
 
 
@@ -383,17 +400,10 @@ def parse_ollama_modelfile(model_text):
         "top_k": int,
         "top_p": float,
         "num_keep": int,
-        "typical_p": float,
         "presence_penalty": float,
         "frequency_penalty": float,
-        "penalize_newline": bool,
-        "numa": bool,
         "num_batch": int,
         "num_gpu": int,
-        "main_gpu": int,
-        "low_vram": bool,
-        "f16_kv": bool,
-        "vocab_only": bool,
         "use_mmap": bool,
         "use_mlock": bool,
         "num_thread": int,
@@ -522,3 +532,76 @@ def throttle(interval: float = 10.0):
         return wrapper
 
     return decorator
+
+
+def extract_urls(text: str) -> list[str]:
+    # Regex pattern to match URLs
+    url_pattern = re.compile(
+        r"(https?://[^\s]+)", re.IGNORECASE
+    )  # Matches http and https URLs
+    return url_pattern.findall(text)
+
+
+def stream_chunks_handler(stream: aiohttp.StreamReader):
+    """
+    Handle stream response chunks, supporting large data chunks that exceed the original 16kb limit.
+    When a single line exceeds max_buffer_size, returns an empty JSON string {} and skips subsequent data
+    until encountering normally sized data.
+
+    :param stream: The stream reader to handle.
+    :return: An async generator that yields the stream data.
+    """
+
+    max_buffer_size = CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
+    if max_buffer_size is None or max_buffer_size <= 0:
+        return stream
+
+    async def yield_safe_stream_chunks():
+        buffer = b""
+        skip_mode = False
+
+        async for data, _ in stream.iter_chunks():
+            if not data:
+                continue
+
+            # In skip_mode, if buffer already exceeds the limit, clear it (it's part of an oversized line)
+            if skip_mode and len(buffer) > max_buffer_size:
+                buffer = b""
+
+            lines = (buffer + data).split(b"\n")
+
+            # Process complete lines (except the last possibly incomplete fragment)
+            for i in range(len(lines) - 1):
+                line = lines[i]
+
+                if skip_mode:
+                    # Skip mode: check if current line is small enough to exit skip mode
+                    if len(line) <= max_buffer_size:
+                        skip_mode = False
+                        yield line
+                    else:
+                        yield b"data: {}"
+                else:
+                    # Normal mode: check if line exceeds limit
+                    if len(line) > max_buffer_size:
+                        skip_mode = True
+                        yield b"data: {}"
+                        log.info(f"Skip mode triggered, line size: {len(line)}")
+                    else:
+                        yield line
+
+            # Save the last incomplete fragment
+            buffer = lines[-1]
+
+            # Check if buffer exceeds limit
+            if not skip_mode and len(buffer) > max_buffer_size:
+                skip_mode = True
+                log.info(f"Skip mode triggered, buffer size: {len(buffer)}")
+                # Clear oversized buffer to prevent unlimited growth
+                buffer = b""
+
+        # Process remaining buffer data
+        if buffer and not skip_mode:
+            yield buffer
+
+    return yield_safe_stream_chunks()

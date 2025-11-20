@@ -212,6 +212,11 @@ ENABLE_FORWARD_USER_INFO_HEADERS = (
     os.environ.get("ENABLE_FORWARD_USER_INFO_HEADERS", "False").lower() == "true"
 )
 
+# Experimental feature, may be removed in future
+ENABLE_STAR_SESSIONS_MIDDLEWARE = (
+    os.environ.get("ENABLE_STAR_SESSIONS_MIDDLEWARE", "False").lower() == "true"
+)
+
 ####################################
 # WEBUI_BUILD_HASH
 ####################################
@@ -465,12 +470,33 @@ ENABLE_COMPRESSION_MIDDLEWARE = (
     os.environ.get("ENABLE_COMPRESSION_MIDDLEWARE", "True").lower() == "true"
 )
 
+####################################
+# OAUTH Configuration
+####################################
+ENABLE_OAUTH_EMAIL_FALLBACK = (
+    os.environ.get("ENABLE_OAUTH_EMAIL_FALLBACK", "False").lower() == "true"
+)
+
+ENABLE_OAUTH_ID_TOKEN_COOKIE = (
+    os.environ.get("ENABLE_OAUTH_ID_TOKEN_COOKIE", "True").lower() == "true"
+)
+
+OAUTH_CLIENT_INFO_ENCRYPTION_KEY = os.environ.get(
+    "OAUTH_CLIENT_INFO_ENCRYPTION_KEY", WEBUI_SECRET_KEY
+)
+
+OAUTH_SESSION_TOKEN_ENCRYPTION_KEY = os.environ.get(
+    "OAUTH_SESSION_TOKEN_ENCRYPTION_KEY", WEBUI_SECRET_KEY
+)
 
 ####################################
 # SCIM Configuration
 ####################################
 
-SCIM_ENABLED = os.environ.get("SCIM_ENABLED", "False").lower() == "true"
+ENABLE_SCIM = (
+    os.environ.get("ENABLE_SCIM", os.environ.get("SCIM_ENABLED", "False")).lower()
+    == "true"
+)
 SCIM_TOKEN = os.environ.get("SCIM_TOKEN", "")
 
 ####################################
@@ -518,6 +544,10 @@ else:
 # CHAT
 ####################################
 
+ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION = (
+    os.environ.get("REPLACE_IMAGE_URLS_IN_CHAT_RESPONSE", "False").lower() == "true"
+)
+
 CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = os.environ.get(
     "CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE", "1"
 )
@@ -534,16 +564,31 @@ else:
 
 
 CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = os.environ.get(
-    "CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES", "10"
+    "CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES", "30"
 )
 
 if CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES == "":
-    CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = 10
+    CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = 30
 else:
     try:
         CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = int(CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES)
     except Exception:
-        CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = 10
+        CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = 30
+
+
+CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE = os.environ.get(
+    "CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE", ""
+)
+
+if CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE == "":
+    CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE = None
+else:
+    try:
+        CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE = int(
+            CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
+        )
+    except Exception:
+        CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE = None
 
 
 ####################################
@@ -556,6 +601,17 @@ ENABLE_WEBSOCKET_SUPPORT = (
 
 
 WEBSOCKET_MANAGER = os.environ.get("WEBSOCKET_MANAGER", "")
+
+WEBSOCKET_REDIS_OPTIONS = os.environ.get("WEBSOCKET_REDIS_OPTIONS", "")
+if WEBSOCKET_REDIS_OPTIONS == "":
+    log.debug("No WEBSOCKET_REDIS_OPTIONS provided, defaulting to None")
+    WEBSOCKET_REDIS_OPTIONS = None
+else:
+    try:
+        WEBSOCKET_REDIS_OPTIONS = json.loads(WEBSOCKET_REDIS_OPTIONS)
+    except Exception:
+        log.warning("Invalid WEBSOCKET_REDIS_OPTIONS, defaulting to None")
+        WEBSOCKET_REDIS_OPTIONS = None
 
 WEBSOCKET_REDIS_URL = os.environ.get("WEBSOCKET_REDIS_URL", REDIS_URL)
 WEBSOCKET_REDIS_CLUSTER = (
@@ -571,6 +627,23 @@ except ValueError:
 
 WEBSOCKET_SENTINEL_HOSTS = os.environ.get("WEBSOCKET_SENTINEL_HOSTS", "")
 WEBSOCKET_SENTINEL_PORT = os.environ.get("WEBSOCKET_SENTINEL_PORT", "26379")
+WEBSOCKET_SERVER_LOGGING = (
+    os.environ.get("WEBSOCKET_SERVER_LOGGING", "False").lower() == "true"
+)
+WEBSOCKET_SERVER_ENGINEIO_LOGGING = (
+    os.environ.get("WEBSOCKET_SERVER_LOGGING", "False").lower() == "true"
+)
+WEBSOCKET_SERVER_PING_TIMEOUT = os.environ.get("WEBSOCKET_SERVER_PING_TIMEOUT", "20")
+try:
+    WEBSOCKET_SERVER_PING_TIMEOUT = int(WEBSOCKET_SERVER_PING_TIMEOUT)
+except ValueError:
+    WEBSOCKET_SERVER_PING_TIMEOUT = 20
+
+WEBSOCKET_SERVER_PING_INTERVAL = os.environ.get("WEBSOCKET_SERVER_PING_INTERVAL", "25")
+try:
+    WEBSOCKET_SERVER_PING_INTERVAL = int(WEBSOCKET_SERVER_PING_INTERVAL)
+except ValueError:
+    WEBSOCKET_SERVER_PING_INTERVAL = 25
 
 
 AIOHTTP_CLIENT_TIMEOUT = os.environ.get("AIOHTTP_CLIENT_TIMEOUT", "")
@@ -683,7 +756,9 @@ if OFFLINE_MODE:
 # AUDIT LOGGING
 ####################################
 # Where to store log file
-AUDIT_LOGS_FILE_PATH = f"{DATA_DIR}/audit.log"
+# Defaults to the DATA_DIR/audit.log. To set AUDIT_LOGS_FILE_PATH you need to
+# provide the whole path, like: /app/audit.log
+AUDIT_LOGS_FILE_PATH = os.getenv("AUDIT_LOGS_FILE_PATH", f"{DATA_DIR}/audit.log")
 # Maximum size of a file before rotating into a new log file
 AUDIT_LOG_FILE_ROTATION_SIZE = os.getenv("AUDIT_LOG_FILE_ROTATION_SIZE", "10MB")
 

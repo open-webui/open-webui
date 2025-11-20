@@ -166,6 +166,48 @@ def load_function_module_by_id(function_id: str, content: str | None = None):
         os.unlink(temp_file.name)
 
 
+def get_tool_module_from_cache(request, tool_id, load_from_db=True):
+    if load_from_db:
+        # Always load from the database by default
+        tool = Tools.get_tool_by_id(tool_id)
+        if not tool:
+            raise Exception(f"Tool not found: {tool_id}")
+        content = tool.content
+
+        new_content = replace_imports(content)
+        if new_content != content:
+            content = new_content
+            # Update the tool content in the database
+            Tools.update_tool_by_id(tool_id, {"content": content})
+
+        if (
+            hasattr(request.app.state, "TOOL_CONTENTS")
+            and tool_id in request.app.state.TOOL_CONTENTS
+        ) and (
+            hasattr(request.app.state, "TOOLS") and tool_id in request.app.state.TOOLS
+        ):
+            if request.app.state.TOOL_CONTENTS[tool_id] == content:
+                return request.app.state.TOOLS[tool_id], None
+
+        tool_module, frontmatter = load_tool_module_by_id(tool_id, content)
+    else:
+        if hasattr(request.app.state, "TOOLS") and tool_id in request.app.state.TOOLS:
+            return request.app.state.TOOLS[tool_id], None
+
+        tool_module, frontmatter = load_tool_module_by_id(tool_id)
+
+    if not hasattr(request.app.state, "TOOLS"):
+        request.app.state.TOOLS = {}
+
+    if not hasattr(request.app.state, "TOOL_CONTENTS"):
+        request.app.state.TOOL_CONTENTS = {}
+
+    request.app.state.TOOLS[tool_id] = tool_module
+    request.app.state.TOOL_CONTENTS[tool_id] = content
+
+    return tool_module, frontmatter
+
+
 def get_function_module_from_cache(request, function_id, load_from_db=True):
     if load_from_db:
         # Always load from the database by default

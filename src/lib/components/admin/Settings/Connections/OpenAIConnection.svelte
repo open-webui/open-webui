@@ -69,6 +69,7 @@
 					placeholder={$i18n.t('API Base URL')}
 					bind:value={url}
 					autocomplete="off"
+					readonly={true}
 				/>
 
 				{#if pipeline}
@@ -94,13 +95,6 @@
 					</div>
 				{/if}
 			</div>
-
-			<SensitiveInput
-				inputClassName=" outline-hidden bg-transparent w-full"
-				placeholder={$i18n.t('API Key')}
-				required={false}
-				bind:value={key}
-			/>
 		</div>
 	</Tooltip>
 

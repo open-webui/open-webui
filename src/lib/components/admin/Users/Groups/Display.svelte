@@ -8,6 +8,9 @@
 	export let name = '';
 	export let color = '';
 	export let description = '';
+
+	export let edit = false;
+	export let onDelete: Function = () => {};
 </script>
 
 <div class="flex gap-2">
@@ -59,3 +62,18 @@
 		/>
 	</div>
 </div>
+
+{#if edit}
+	<div class="flex flex-col w-full mt-2">
+		<div class=" mb-0.5 text-xs text-gray-500">{$i18n.t('Actions')}</div>
+
+		<div class="flex-1">
+			<button
+				class="text-xs bg-transparent hover:underline cursor-pointer"
+				on:click={() => onDelete()}
+			>
+				{$i18n.t('Delete')}
+			</button>
+		</div>
+	</div>
+{/if}

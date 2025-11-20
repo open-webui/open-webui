@@ -44,7 +44,7 @@
 
 	<DropdownMenu.Content
 		strategy="fixed"
-		class="w-full max-w-[180px] text-sm rounded-xl px-1 py-1.5 z-[9999999] bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+		class="w-full max-w-[180px] text-sm rounded-2xl p-1 z-[9999999] bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100  dark:border-gray-800"
 		sideOffset={-2}
 		side="bottom"
 		align="end"
@@ -53,7 +53,7 @@
 		<DropdownMenu.Item
 			type="button"
 			aria-pressed={($settings?.pinnedModels ?? []).includes(model?.id)}
-			class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2"
+			class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2"
 			on:click={(e) => {
 				e.stopPropagation();
 				e.preventDefault();
@@ -79,7 +79,7 @@
 
 		<DropdownMenu.Item
 			type="button"
-			class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2"
+			class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2"
 			on:click={(e) => {
 				e.stopPropagation();
 				e.preventDefault();

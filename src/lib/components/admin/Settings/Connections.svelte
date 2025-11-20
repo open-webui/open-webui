@@ -219,7 +219,7 @@
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
 		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && connectionsConfig !== null}
 			<div class="mb-3.5">
-				<div class=" mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
 
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -261,10 +261,10 @@
 								<div class="flex flex-col gap-1.5 mt-1.5">
 									{#each OPENAI_API_BASE_URLS as url, idx}
 										<OpenAIConnection
-											pipeline={pipelineUrls[url] ? true : false}
-											bind:url
+											bind:url={OPENAI_API_BASE_URLS[idx]}
 											bind:key={OPENAI_API_KEYS[idx]}
 											bind:config={OPENAI_API_CONFIGS[idx]}
+											pipeline={pipelineUrls[url] ? true : false}
 											onSubmit={() => {
 												updateOpenAIHandler();
 											}}
@@ -326,7 +326,7 @@
 								<div class="flex-1 flex flex-col gap-1.5 mt-1.5">
 									{#each OLLAMA_BASE_URLS as url, idx}
 										<OllamaConnection
-											bind:url
+											bind:url={OLLAMA_BASE_URLS[idx]}
 											bind:config={OLLAMA_API_CONFIGS[idx]}
 											{idx}
 											onSubmit={() => {
