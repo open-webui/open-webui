@@ -49,7 +49,7 @@
 	role="listitem"
 	class="flex flex-col justify-between px-5 mb-3 w-full {($settings?.widescreenMode ?? null)
 		? 'max-w-full'
-		: 'max-w-5xl'} mx-auto rounded-lg group"
+		: 'max-w-5xl'} mx-auto rounded-lg group {history.messages[messageId]?.compressed ? 'opacity-80' : ''}"
 >
 	{#if history.messages[messageId]}
 		{#if history.messages[messageId].role === 'user'}
@@ -69,6 +69,32 @@
 				{showNextMessage}
 				{editMessage}
 				{deleteMessage}
+				{readOnly}
+				{editCodeBlock}
+				{topPadding}
+			/>
+		{:else if history.messages[messageId].role === 'system' && history.messages[messageId]?.compressed}
+			<ResponseMessage
+				{chatId}
+				{history}
+				{messageId}
+				{selectedModels}
+				isLastMessage={messageId === history.currentId}
+				siblings={history.messages[history.messages[messageId].parentId]?.childrenIds ?? []}
+				{setInputText}
+				{gotoMessage}
+				{showPreviousMessage}
+				{showNextMessage}
+				{updateChat}
+				{editMessage}
+				{saveMessage}
+				{rateMessage}
+				{actionMessage}
+				{submitMessage}
+				{deleteMessage}
+				{continueResponse}
+				{regenerateResponse}
+				{addMessages}
 				{readOnly}
 				{editCodeBlock}
 				{topPadding}

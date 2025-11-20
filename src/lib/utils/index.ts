@@ -1200,6 +1200,69 @@ export const createMessagesList = (history, messageId) => {
 	}
 };
 
+export const compressMessagesInHistory = (history, messageIdsToCompress: string[], summary: string) => {
+	const newHistory = JSON.parse(JSON.stringify(history));
+
+	if (messageIdsToCompress.length === 0) {
+		return newHistory;
+	}
+
+	const sortedMessages = messageIdsToCompress
+		.map(id => newHistory.messages[id])
+		.filter(msg => msg !== undefined)
+		.sort((a, b) => a.timestamp - b.timestamp);
+
+	if (sortedMessages.length === 0) {
+		return newHistory;
+	}
+
+	const firstMessage = sortedMessages[0];
+	const lastMessage = sortedMessages[sortedMessages.length - 1];
+
+	const compressedMessageId = `compressed-${Date.now()}`;
+	const compressedMessage = {
+		id: compressedMessageId,
+		parentId: firstMessage.parentId,
+		childrenIds: lastMessage.childrenIds || [],
+		role: 'system',
+		content: `**[Compressed Summary]**\n\n${summary}`,
+		timestamp: firstMessage.timestamp,
+		done: true,
+		compressed: true,
+		originalMessageIds: messageIdsToCompress
+	};
+
+	newHistory.messages[compressedMessageId] = compressedMessage;
+
+	if (firstMessage.parentId && newHistory.messages[firstMessage.parentId]) {
+		const parentMessage = newHistory.messages[firstMessage.parentId];
+		parentMessage.childrenIds = parentMessage.childrenIds.filter(
+			id => !messageIdsToCompress.includes(id)
+		);
+		parentMessage.childrenIds.push(compressedMessageId);
+	}
+
+	for (const childId of compressedMessage.childrenIds) {
+		if (newHistory.messages[childId]) {
+			newHistory.messages[childId].parentId = compressedMessageId;
+		}
+	}
+
+	for (const msgId of messageIdsToCompress) {
+		delete newHistory.messages[msgId];
+	}
+
+	if (messageIdsToCompress.includes(newHistory.currentId)) {
+		let currentMessage = compressedMessage;
+		while (currentMessage.childrenIds && currentMessage.childrenIds.length > 0) {
+			currentMessage = newHistory.messages[currentMessage.childrenIds[0]];
+		}
+		newHistory.currentId = currentMessage.id;
+	}
+
+	return newHistory;
+};
+
 export const formatFileSize = (size) => {
 	if (size == null) return 'Unknown size';
 	if (typeof size !== 'number' || size < 0) return 'Invalid size';
