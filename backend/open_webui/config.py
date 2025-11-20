@@ -1203,6 +1203,12 @@ DEFAULT_USER_ROLE = PersistentConfig(
     os.getenv("DEFAULT_USER_ROLE", "pending"),
 )
 
+DEFAULT_GROUP_ID = PersistentConfig(
+    "DEFAULT_GROUP_ID",
+    "ui.default_group_id",
+    os.environ.get("DEFAULT_GROUP_ID", ""),
+)
+
 PENDING_USER_OVERLAY_TITLE = PersistentConfig(
     "PENDING_USER_OVERLAY_TITLE",
     "ui.pending_user_overlay_title",
