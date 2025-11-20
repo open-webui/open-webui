@@ -14,9 +14,8 @@
 	if (co_admin_emails !== undefined) {
 		console.log('Display.svelte co_admin_emails:', co_admin_emails);
 	} else {
-		console.log("co_admin_emails MISSING")
+		console.log('co_admin_emails MISSING');
 	}
-
 </script>
 
 <div class="flex gap-2">
@@ -68,6 +67,8 @@
 		/>
 	</div>
 
+
+
 	<div class=" mb-1 text-xs text-gray-600 dark:text-gray-500">{$i18n.t('Created by')}</div>
 
 	<div class="flex-1">
@@ -78,6 +79,26 @@
 			placeholder={$i18n.t('Created by')}
 		/>
 	</div>
+
+		{#if co_admin_emails !== undefined}
+		{#if co_admin_emails.length > 1}
+			<div class=" mb-1 mt-1 text-xs text-gray-600 dark:text-gray-500">{$i18n.t('Co-admins')}</div>
+		{:else}
+			<div class=" mb-1 mt-1 text-xs text-gray-600 dark:text-gray-500">{$i18n.t('Co-admin')}</div>
+		{/if}
+
+		<div class="mb-2 flex flex-wrap gap-1 text-xs">
+			{#if co_admin_emails.length > 0}
+				{#each co_admin_emails as email}
+					<div class="flex flex-wrap gap-1 text-xs">
+						{email}
+					</div>
+				{/each}
+			{:else}
+				<div class="text-gray-500 dark:text-gray-600">{$i18n.t('None')}</div>
+			{/if}
+		</div>
+	{/if}
 
 	<div class=" mb-1 text-xs text-gray-600 dark:text-gray-500">{$i18n.t('Created at')}</div>
 
@@ -100,21 +121,6 @@
 			placeholder={$i18n.t('Updated at')}
 		/>
 	</div>
-
-	{#if co_admin_emails !== undefined}
-		<div class=" mb-1 mt-2 text-xs text-gray-600 dark:text-gray-500">{$i18n.t('Co-admin')}</div>
-		<div class="flex flex-wrap gap-1 text-xs">
-			{#if co_admin_emails.length > 0}
-				{#each co_admin_emails as email}
-					<div class="px-0.5 py-0.5">
-						{email}
-					</div>
-				{/each}
-			{:else}
-				<div class="text-gray-500 dark:text-gray-600">{$i18n.t('None')}</div>
-			{/if}
-		</div>
-	{/if}
 </div>
 
 <!-- To add new properties:

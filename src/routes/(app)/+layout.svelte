@@ -7,6 +7,7 @@
 	import mermaid from 'mermaid';
 
 	import { goto } from '$app/navigation';
+	import { browser } from '$app/environment';
 	import { page } from '$app/stores';
 	import { fade } from 'svelte/transition';
 
@@ -37,6 +38,7 @@
 		showChangelog,
 		temporaryChatEnabled
 	} from '$lib/stores';
+	import { WEBUI_NAME } from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
@@ -51,8 +53,18 @@
 	let localDBChats = [];
 
 	let version;
+	let titleSuffix = '';
 
 	onMount(async () => {
+		// Determine title suffix based on hostname (client-only)
+		if (browser) {
+			const host = location.hostname.toLowerCase();
+			if (host.includes('opwn')) {
+				titleSuffix = ' Dev';
+			} else if (host === 'localhost' || host === '127.0.0.1') {
+				titleSuffix = ' Local';
+			}
+		}
 		if ($user === undefined) {
 			await goto('/auth');
 		} else if (['user', 'admin'].includes($user.role)) {
@@ -220,6 +232,10 @@
 		});
 	};
 </script>
+
+<svelte:head>
+	<title>{$WEBUI_NAME}{titleSuffix}</title>
+</svelte:head>
 
 <SettingsModal bind:show={$showSettings} />
 <ChangelogModal bind:show={$showChangelog} />
