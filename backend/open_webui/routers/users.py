@@ -183,10 +183,15 @@ class WorkspacePermissions(BaseModel):
 
 
 class SharingPermissions(BaseModel):
-    public_models: bool = True
-    public_knowledge: bool = True
-    public_prompts: bool = True
+    models: bool = False
+    public_models: bool = False
+    knowledge: bool = False
+    public_knowledge: bool = False
+    prompts: bool = False
+    public_prompts: bool = False
+    tools: bool = False
     public_tools: bool = True
+    notes: bool = False
     public_notes: bool = True
 
 

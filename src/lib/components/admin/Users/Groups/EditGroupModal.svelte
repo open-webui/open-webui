@@ -49,10 +49,15 @@
 			tools_export: false
 		},
 		sharing: {
+			models: false,
 			public_models: false,
+			knowledge: false,
 			public_knowledge: false,
+			prompts: false,
 			public_prompts: false,
+			tools: false,
 			public_tools: false,
+			notes: false,
 			public_notes: false
 		},
 		chat: {

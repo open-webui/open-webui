@@ -547,39 +547,41 @@
 		dragged = false;
 
 		const handleUploadingFileFolder = (items) => {
-			for(const item of items) {
-
-				if(item.isFile) {
+			for (const item of items) {
+				if (item.isFile) {
 					item.file((file) => {
 						uploadFileHandler(file);
-					})
+					});
 					continue;
 				}
-				
+
 				// Not sure why you have to call webkitGetAsEntry and isDirectory seperate, but it won't work if you try item.webkitGetAsEntry().isDirectory
 				const wkentry = item.webkitGetAsEntry();
 				const isDirectory = wkentry.isDirectory;
-				if(isDirectory) {
+				if (isDirectory) {
 					// Read the directory
-					wkentry.createReader().readEntries((entries) => {
-						handleUploadingFileFolder(entries)
-					}, (error) => {
-						console.error('Error reading directory entries:', error);
-					});
+					wkentry.createReader().readEntries(
+						(entries) => {
+							handleUploadingFileFolder(entries);
+						},
+						(error) => {
+							console.error('Error reading directory entries:', error);
+						}
+					);
 				} else {
 					toast.info($i18n.t('Uploading file...'));
 					uploadFileHandler(item.getAsFile());
 					toast.success($i18n.t('File uploaded!'));
 				}
 			}
-		}
+		};
 
 		if (e.dataTransfer?.types?.includes('Files')) {
 			if (e.dataTransfer?.files) {
 				const inputItems = e.dataTransfer?.items;
 
 				if (inputItems && inputItems.length > 0) {
-					handleUploadingFileFolder(inputItems)
+					handleUploadingFileFolder(inputItems);
 				} else {
 					toast.error($i18n.t(`File not found.`));
 				}
@@ -708,7 +710,8 @@
 		<AccessControlModal
 			bind:show={showAccessControlModal}
 			bind:accessControl={knowledge.access_control}
-			allowPublic={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}
+			share={$user?.permissions?.sharing?.knowledge || $user?.role === 'admin'}
+			sharePublic={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}
 			onChange={() => {
 				changeDebounceHandler();
 			}}
