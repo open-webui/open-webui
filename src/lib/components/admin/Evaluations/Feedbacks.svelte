@@ -10,7 +10,7 @@
 	import { onMount, getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { deleteFeedbackById, exportAllFeedbacks, getAllFeedbacks } from '$lib/apis/evaluations';
+	import { deleteFeedbackById, exportAllFeedbacks, getFeedbackItems } from '$lib/apis/evaluations';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
@@ -23,78 +23,24 @@
 
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { config } from '$lib/stores';
 
-	export let feedbacks = [];
-
 	let page = 1;
-	$: paginatedFeedbacks = sortedFeedbacks.slice((page - 1) * 10, page * 10);
+	let items = null;
+	let total = null;
 
 	let orderBy: string = 'updated_at';
 	let direction: 'asc' | 'desc' = 'desc';
 
-	type Feedback = {
-		id: string;
-		data: {
-			rating: number;
-			model_id: string;
-			sibling_model_ids: string[] | null;
-			reason: string;
-			comment: string;
-			tags: string[];
-		};
-		user: {
-			name: string;
-			profile_image_url: string;
-		};
-		updated_at: number;
-	};
-
-	type ModelStats = {
-		rating: number;
-		won: number;
-		lost: number;
-	};
-
-	function setSortKey(key: string) {
+	const setSortKey = (key) => {
 		if (orderBy === key) {
 			direction = direction === 'asc' ? 'desc' : 'asc';
 		} else {
 			orderBy = key;
-			if (key === 'user' || key === 'model_id') {
-				direction = 'asc';
-			} else {
-				direction = 'desc';
-			}
+			direction = 'asc';
 		}
-		page = 1;
-	}
-
-	$: sortedFeedbacks = [...feedbacks].sort((a, b) => {
-		let aVal, bVal;
-
-		switch (orderBy) {
-			case 'user':
-				aVal = a.user?.name || '';
-				bVal = b.user?.name || '';
-				return direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-			case 'model_id':
-				aVal = a.data.model_id || '';
-				bVal = b.data.model_id || '';
-				return direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-			case 'rating':
-				aVal = a.data.rating;
-				bVal = b.data.rating;
-				return direction === 'asc' ? aVal - bVal : bVal - aVal;
-			case 'updated_at':
-				aVal = a.updated_at;
-				bVal = b.updated_at;
-				return direction === 'asc' ? aVal - bVal : bVal - aVal;
-			default:
-				return 0;
-		}
-	});
+	};
 
 	let showFeedbackModal = false;
 	let selectedFeedback = null;
@@ -115,13 +61,41 @@
 	//
 	//////////////////////
 
+	const getFeedbacks = async () => {
+		try {
+			const res = await getFeedbackItems(localStorage.token, orderBy, direction, page).catch(
+				(error) => {
+					toast.error(`${error}`);
+					return null;
+				}
+			);
+
+			if (res) {
+				items = res.items;
+				total = res.total;
+			}
+		} catch (err) {
+			console.error(err);
+		}
+	};
+
+	$: if (page) {
+		getFeedbacks();
+	}
+
+	$: if (orderBy && direction) {
+		getFeedbacks();
+	}
+
 	const deleteFeedbackHandler = async (feedbackId: string) => {
 		const response = await deleteFeedbackById(localStorage.token, feedbackId).catch((err) => {
 			toast.error(err);
 			return null;
 		});
 		if (response) {
-			feedbacks = feedbacks.filter((f) => f.id !== feedbackId);
+			toast.success($i18n.t('Feedback deleted successfully'));
+			page = 1;
+			getFeedbacks();
 		}
 	};
 
@@ -175,10 +149,10 @@
 
 		<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
 
-		<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{feedbacks.length}</span>
+		<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{total}</span>
 	</div>
 
-	{#if feedbacks.length > 0}
+	{#if total > 0}
 		<div>
 			<Tooltip content={$i18n.t('Export')}>
 				<button
@@ -195,7 +169,7 @@
 </div>
 
 <div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
-	{#if (feedbacks ?? []).length === 0}
+	{#if (items ?? []).length === 0}
 		<div class="text-center text-xs text-gray-500 dark:text-gray-400 py-1">
 			{$i18n.t('No feedbacks found')}
 		</div>
@@ -299,7 +273,7 @@
 				</tr>
 			</thead>
 			<tbody class="">
-				{#each paginatedFeedbacks as feedback (feedback.id)}
+				{#each items as feedback (feedback.id)}
 					<tr
 						class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850/50 transition"
 						on:click={() => openFeedbackModal(feedback)}
@@ -309,7 +283,7 @@
 								<Tooltip content={feedback?.user?.name}>
 									<div class="shrink-0">
 										<img
-											src={feedback?.user?.profile_image_url ?? `${WEBUI_BASE_URL}/user.png`}
+											src={`${WEBUI_API_BASE_URL}/users/${feedback.user.id}/profile/image`}
 											alt={feedback?.user?.name}
 											class="size-5 rounded-full object-cover shrink-0"
 										/>
@@ -388,7 +362,7 @@
 	{/if}
 </div>
 
-{#if feedbacks.length > 0 && $config?.features?.enable_community_sharing}
+{#if total > 0 && $config?.features?.enable_community_sharing}
 	<div class=" flex flex-col justify-end w-full text-right gap-1">
 		<div class="line-clamp-1 text-gray-500 text-xs">
 			{$i18n.t('Help us create the best community leaderboard by sharing your feedback history!')}
@@ -419,6 +393,6 @@
 	</div>
 {/if}
 
-{#if feedbacks.length > 10}
-	<Pagination bind:page count={feedbacks.length} perPage={10} />
+{#if total > 30}
+	<Pagination bind:page count={total} perPage={30} />
 {/if}
