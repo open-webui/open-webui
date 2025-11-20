@@ -8,6 +8,7 @@
 	export let name = '';
 	export let color = '';
 	export let description = '';
+	export let config = {};
 
 	export let edit = false;
 	export let onDelete: Function = () => {};

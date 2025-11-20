@@ -5,7 +5,7 @@
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
-	import Display from './Display.svelte';
+	import General from './General.svelte';
 	import Permissions from './Permissions.svelte';
 	import Users from './Users.svelte';
 	import UserPlusSolid from '$lib/components/icons/UserPlusSolid.svelte';
@@ -34,6 +34,7 @@
 
 	export let name = '';
 	export let description = '';
+	export let config = {};
 
 	export let permissions = {
 		workspace: {
@@ -111,6 +112,7 @@
 			name = group.name;
 			description = group.description;
 			permissions = group?.permissions ?? {};
+			config = group?.data?.config ?? {};
 
 			userCount = group?.member_count ?? 0;
 		}
@@ -241,9 +243,10 @@
 						<div class="flex-1 mt-1 lg:mt-1 lg:h-[30rem] lg:max-h-[30rem] flex flex-col">
 							<div class="w-full h-full overflow-y-auto scrollbar-hidden">
 								{#if selectedTab == 'general'}
-									<Display
+									<General
 										bind:name
 										bind:description
+										bind:config
 										{edit}
 										onDelete={() => {
 											showDeleteConfirmDialog = true;
