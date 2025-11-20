@@ -135,6 +135,9 @@ else:
         PACKAGE_DATA = {"version": "0.0.0"}
 
 VERSION = PACKAGE_DATA["version"]
+
+
+DEPLOYMENT_ID = os.environ.get("DEPLOYMENT_ID", "")
 INSTANCE_ID = os.environ.get("INSTANCE_ID", str(uuid4()))
 
 

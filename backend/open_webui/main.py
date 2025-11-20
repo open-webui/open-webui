@@ -454,6 +454,7 @@ from open_webui.env import (
     SAFE_MODE,
     SRC_LOG_LEVELS,
     VERSION,
+    DEPLOYMENT_ID,
     INSTANCE_ID,
     WEBUI_BUILD_HASH,
     WEBUI_SECRET_KEY,
@@ -1983,6 +1984,7 @@ async def update_webhook_url(form_data: UrlForm, user=Depends(get_admin_user)):
 async def get_app_version():
     return {
         "version": VERSION,
+        "deployment_id": DEPLOYMENT_ID,
     }
 
 
