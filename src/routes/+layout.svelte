@@ -9,6 +9,20 @@
 	});
 
 	import { onMount, tick, setContext, onDestroy } from 'svelte';
+
+	const unregisterServiceWorkers = async () => {
+		if ('serviceWorker' in navigator) {
+			try {
+				const registrations = await navigator.serviceWorker.getRegistrations();
+				await Promise.all(registrations.map((r) => r.unregister()));
+				return true;
+			} catch (error) {
+				console.error('Error unregistering service workers:', error);
+				return false;
+			}
+		}
+		return false;
+	};
 	import {
 		config,
 		user,
@@ -56,14 +70,9 @@
 	beforeNavigate(async ({ willUnload, to }) => {
 		if (updated.current && !willUnload && to?.url) {
 			// Unregister service workers to ensure fresh app version loads
-			if ('serviceWorker' in navigator) {
-				try {
-					const registrations = await navigator.serviceWorker.getRegistrations();
-					await Promise.all(registrations.map(r => r.unregister()));
-					console.log('Service workers unregistered for version update');
-				} catch (error) {
-					console.error('Error unregistering service workers:', error);
-				}
+			const unregistered = await unregisterServiceWorkers();
+			if (unregistered) {
+				console.log('Service workers unregistered for version update');
 			}
 			location.href = to.url.href;
 		}
@@ -102,14 +111,9 @@
 			if (version !== null) {
 				if ($WEBUI_VERSION !== null && version !== $WEBUI_VERSION) {
 					// Unregister service workers to ensure fresh app version loads
-					if ('serviceWorker' in navigator) {
-						try {
-							const registrations = await navigator.serviceWorker.getRegistrations();
-							await Promise.all(registrations.map(r => r.unregister()));
-							console.log('Service workers unregistered for backend version update');
-						} catch (error) {
-							console.error('Error unregistering service workers:', error);
-						}
+					const unregistered = await unregisterServiceWorkers();
+					if (unregistered) {
+						console.log('Service workers unregistered for backend version update');
 					}
 					location.href = location.href;
 				} else {
