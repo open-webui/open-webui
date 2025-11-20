@@ -200,6 +200,10 @@ async def generate_title(
         f"generating chat title using model {task_model_id} for user {user.email} "
     )
 
+    if "luxor" in model_id:
+        form_data["task"] = "title"
+        return await generate_chat_completion(request, form_data=form_data, user=user)
+
     if request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE != "":
         template = request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE
     else:
@@ -282,26 +286,19 @@ async def generate_follow_ups(
     )
 
     log.debug(
-        f"generating chat title using model {task_model_id} for user {user.email} "
+        f"generating follow up using model {task_model_id} for user {user.email} "
     )
+  
+    if "luxor" in model_id:
+        form_data["task"] = "follow_up"
+        return await generate_chat_completion(request, form_data=form_data, user=user)
 
     if request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE != "":
         template = request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE
     else:
         template = DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE
-
     content = follow_up_generation_template(template, form_data["messages"], user)
-
-
-  
-    if "luxor" in model_id:
-        form_data["task"] = "follow_up"
-        log.info("FOLLOW UP BAIL OUT")
-        return await generate_chat_completion(request, form_data=form_data, user=user)
     
-    log.info("FOLLOW UP DID NOT BAIL OUT")
-
-
     payload = {
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
@@ -367,6 +364,10 @@ async def generate_chat_tags(
     log.debug(
         f"generating chat tags using model {task_model_id} for user {user.email} "
     )
+
+    if "luxor" in model_id:
+        form_data["task"] = "tags"
+        return await generate_chat_completion(request, form_data=form_data, user=user)
 
     if request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE != "":
         template = request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE
