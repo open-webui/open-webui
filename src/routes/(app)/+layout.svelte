@@ -15,11 +15,12 @@
 	import { getAllTags } from '$lib/apis/chats';
 	import { getPrompts } from '$lib/apis/prompts';
 	import { getTools } from '$lib/apis/tools';
-	import { getBanners } from '$lib/apis/configs';
+	import { getBanners, getInterfaceDefaults } from '$lib/apis/configs';
 	import { getUserSettings } from '$lib/apis/users';
+	import { setTextScale } from '$lib/utils/text-scale';
 
 	import { WEBUI_VERSION } from '$lib/constants';
-	import { compareVersion } from '$lib/utils';
+	import { compareVersion, deepMerge } from '$lib/utils';
 
 	import {
 		config,
@@ -87,6 +88,13 @@
 	};
 
 	const setUserSettings = async (cb: () => Promise<void>) => {
+		let adminDefaults = {};
+		try {
+			adminDefaults = await getInterfaceDefaults(localStorage.token);
+		} catch (error) {
+			// Ignore
+		}
+
 		let userSettings = await getUserSettings(localStorage.token).catch((error) => {
 			console.error(error);
 			return null;
@@ -101,8 +109,14 @@
 			}
 		}
 
-		if (userSettings?.ui) {
-			settings.set(userSettings.ui);
+		if (userSettings?.ui || Object.keys(adminDefaults).length > 0) {
+			const cleanedUserSettings = userSettings?.ui ?
+				Object.fromEntries(
+					Object.entries(userSettings.ui).filter(([_, value]) => value !== null)
+				) : {};
+
+			const mergedSettings = deepMerge(adminDefaults, cleanedUserSettings);
+			settings.set(mergedSettings);
 		}
 
 		if (cb) {
@@ -144,6 +158,17 @@
 		const toolsData = await getTools(localStorage.token);
 		tools.set(toolsData);
 	};
+
+	let previousTextScale = null;
+
+	$: {
+		const currentTextScale = $settings?.textScale ?? null;
+		const scaleToApply = currentTextScale === null ? 1 : currentTextScale;
+		if (scaleToApply !== previousTextScale) {
+			previousTextScale = scaleToApply;
+			setTextScale(scaleToApply);
+		}
+	}
 
 	onMount(async () => {
 		if ($user === undefined || $user === null) {

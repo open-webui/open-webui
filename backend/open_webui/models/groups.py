@@ -211,13 +211,15 @@ class GroupTable:
     ) -> Optional[GroupModel]:
         try:
             with get_db() as db:
+                update_data = form_data.model_dump(exclude_none=True)
                 db.query(Group).filter_by(id=id).update(
                     {
-                        **form_data.model_dump(exclude_none=True),
+                        **update_data,
                         "updated_at": int(time.time()),
                     }
                 )
                 db.commit()
+
                 return self.get_group_by_id(id=id)
         except Exception as e:
             log.exception(e)

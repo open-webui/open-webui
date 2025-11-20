@@ -15,12 +15,15 @@
 
 	import { getBaseModels } from '$lib/apis/models';
 	import { getBanners, setBanners } from '$lib/apis/configs';
+	import { resetAllUsersInterfaceSettings } from '$lib/apis/users';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Banners from './Interface/Banners.svelte';
+	import InterfaceDefaultsModal from './Interface/InterfaceDefaultsModal.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -48,6 +51,10 @@
 	let promptSuggestions = [];
 	let banners: Banner[] = [];
 
+	let showInterfaceDefaultsModal = false;
+	let showResetConfirmDialog = false;
+	let resettingUsers = false;
+
 	const updateInterfaceHandler = async () => {
 		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
 
@@ -60,6 +67,20 @@
 
 	const updateBanners = async () => {
 		_banners.set(await setBanners(localStorage.token, banners));
+	};
+
+	const handleResetAllUsers = async () => {
+		resettingUsers = true;
+		try {
+			const result = await resetAllUsersInterfaceSettings(localStorage.token);
+			toast.success($i18n.t(`Reset interface settings for ${result.users_reset} users`));
+			showResetConfirmDialog = false;
+		} catch (error) {
+			console.error('Error resetting users:', error);
+			toast.error($i18n.t('Failed to reset users\' interface settings'));
+		} finally {
+			resettingUsers = false;
+		}
 	};
 
 	let workspaceModels = null;
@@ -101,6 +122,27 @@
 		await init();
 	});
 </script>
+
+<InterfaceDefaultsModal bind:show={showInterfaceDefaultsModal} />
+
+<ConfirmDialog
+	bind:show={showResetConfirmDialog}
+	on:confirm={handleResetAllUsers}
+>
+	<div class="text-sm text-gray-500 dark:text-gray-300">
+		<div class="font-bold text-red-600 dark:text-red-500 mb-2">
+			{$i18n.t('Warning: This action is irreversible!')}
+		</div>
+		<div class="mb-2">
+			{$i18n.t(
+				'This will reset ALL users\' interface settings to the admin-configured defaults. Users who have customized their settings will lose their customizations.'
+			)}
+		</div>
+		<div>
+			{$i18n.t('Are you sure you want to continue?')}
+		</div>
+	</div>
+</ConfirmDialog>
 
 {#if models !== null && taskConfig}
 	<form
@@ -464,6 +506,111 @@
 
 					<Banners bind:banners />
 				</div>
+
+				<div class="mb-2.5">
+					<div class="flex flex-col space-y-2">
+						<button
+							class="flex items-center justify-between w-full px-4 py-2.5 text-sm bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 rounded-lg transition"
+							type="button"
+							on:click={() => {
+								showInterfaceDefaultsModal = true;
+							}}
+						>
+							<div class="flex items-center space-x-2">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M7.84 1.804A1 1 0 018.82 1h2.36a1 1 0 01.98.804l.331 1.652a6.993 6.993 0 011.929 1.115l1.598-.54a1 1 0 011.186.447l1.18 2.044a1 1 0 01-.205 1.251l-1.267 1.113a7.047 7.047 0 010 2.228l1.267 1.113a1 1 0 01.206 1.25l-1.18 2.045a1 1 0 01-1.187.447l-1.598-.54a6.993 6.993 0 01-1.929 1.115l-.33 1.652a1 1 0 01-.98.804H8.82a1 1 0 01-.98-.804l-.331-1.652a6.993 6.993 0 01-1.929-1.115l-1.598.54a1 1 0 01-1.186-.447l-1.18-2.044a1 1 0 01.205-1.251l1.267-1.114a7.05 7.05 0 010-2.227L1.821 7.773a1 1 0 01-.206-1.25l1.18-2.045a1 1 0 011.187-.447l1.598.54A6.993 6.993 0 017.51 3.456l.33-1.652zM10 13a3 3 0 100-6 3 3 0 000 6z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+								<span>{$i18n.t('Configure Global Interface Defaults')}</span>
+							</div>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								class="w-4 h-4"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						</button>
+
+						<div class="text-xs text-gray-500 dark:text-gray-400">
+							{$i18n.t(
+								'Set default interface settings that will be applied to all users who haven\'t customized their settings.'
+							)}
+						</div>
+					</div>
+				</div>
+
+				<hr class=" border-gray-100 dark:border-gray-850 my-3" />
+
+				<div class="mb-2.5">
+					<div class="flex flex-col space-y-2">
+						<div class="text-sm font-medium text-red-600 dark:text-red-500">
+							{$i18n.t('Danger Zone')}
+						</div>
+
+						<button
+							class="flex items-center justify-between w-full px-4 py-2.5 text-sm bg-red-50 hover:bg-red-100 dark:bg-red-950 dark:hover:bg-red-900 text-red-700 dark:text-red-300 rounded-lg transition border border-red-200 dark:border-red-800"
+							type="button"
+							on:click={() => {
+								showResetConfirmDialog = true;
+							}}
+							disabled={resettingUsers}
+						>
+							<div class="flex items-center space-x-2">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+								<span>
+									{resettingUsers
+										? $i18n.t('Resetting...')
+										: $i18n.t('Reset All Users to Defaults')}
+								</span>
+							</div>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								class="w-4 h-4"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						</button>
+
+						<div class="text-xs text-red-600 dark:text-red-400">
+							{$i18n.t(
+								'Warning: This will permanently delete all users\' custom interface settings and force them to use the admin-configured defaults. This action is irreversible.'
+							)}
+						</div>
+					</div>
+				</div>
+
+				<hr class=" border-gray-100 dark:border-gray-850 my-3" />
 
 				{#if $user?.role === 'admin'}
 					<div class=" space-y-3">

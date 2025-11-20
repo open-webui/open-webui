@@ -487,6 +487,15 @@
 				);
 			}
 
+			if (tab.id === 'interface') {
+				// Check if user has permission to access interface settings
+				// Admin always has access, for users check the ui.interface_settings permission (default: true)
+				return (
+					$user?.role === 'admin' ||
+					($user?.permissions?.ui?.interface_settings ?? true)
+				);
+			}
+
 			return true;
 		});
 	};
