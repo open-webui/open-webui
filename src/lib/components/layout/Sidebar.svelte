@@ -537,7 +537,7 @@
 
 {#if !$mobile && !$showSidebar}
 	<div
-		class=" py-2 px-1.5 flex flex-col justify-between text-black dark:text-white hover:bg-gray-50/30 dark:hover:bg-gray-950/30 h-full z-10 transition-all border-e-[0.5px] border-gray-50 dark:border-gray-850"
+		class=" pt-[7px] pb-2 px-1.5 flex flex-col justify-between text-black dark:text-white hover:bg-gray-50/30 dark:hover:bg-gray-950/30 h-full z-10 transition-all border-e-[0.5px] border-gray-50 dark:border-gray-850"
 		id="sidebar"
 	>
 		<button
@@ -571,7 +571,7 @@
 				</Tooltip>
 			</div>
 
-			<div>
+			<div class="-mt-[0.5px]">
 				<div class="">
 					<Tooltip content={$i18n.t('New Chat')} placement="right">
 						<a
@@ -594,7 +594,7 @@
 					</Tooltip>
 				</div>
 
-				<div class="">
+				<div>
 					<Tooltip content={$i18n.t('Search')} placement="right">
 						<button
 							class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
@@ -789,7 +789,7 @@
 				}}
 			>
 				<div class="pb-1.5">
-					<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
+					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 						<a
 							id="sidebar-new-chat-button"
 							class="group grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
@@ -810,7 +810,7 @@
 						</a>
 					</div>
 
-					<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
+					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 						<button
 							id="sidebar-search-button"
 							class="group grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
@@ -832,7 +832,7 @@
 					</div>
 
 					{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
-						<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
+						<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 							<a
 								id="sidebar-notes-button"
 								class="grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
@@ -853,7 +853,7 @@
 					{/if}
 
 					{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
-						<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
+						<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 							<a
 								id="sidebar-workspace-button"
 								class="grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
