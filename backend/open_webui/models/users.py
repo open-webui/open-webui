@@ -168,6 +168,7 @@ class UsersTable:
                     "email": email,
                     "role": role,
                     "profile_image_url": profile_image_url,
+                    "settings": {"ui": {"memory": True}},
                     "last_active_at": int(time.time()),
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),

@@ -713,6 +713,8 @@
 								</button>
 							{/if}
 						{:else if tabId === 'personalization'}
+							<!-- ai-friend 	屏蔽个性化选项 -->
+							{#if $user?.role === 'admin'}
 							<button
 								role="tab"
 								aria-controls="tab-personalization"
@@ -736,6 +738,7 @@
 								</div>
 								<div class=" self-center">{$i18n.t('Personalization')}</div>
 							</button>
+							{/if}
 						{:else if tabId === 'audio'}
 							<button
 								role="tab"
