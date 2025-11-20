@@ -2,6 +2,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 import logging
+from threading import Thread, Lock
 
 from open_webui.models.knowledge import (
     Knowledges,
@@ -355,6 +356,7 @@ async def update_knowledge_by_id(
 class KnowledgeFileIdForm(BaseModel):
     file_id: str
 
+addKnowledgeMutex = Lock()
 
 @router.post("/{id}/file/add", response_model=Optional[KnowledgeFilesResponse])
 def add_file_to_knowledge_by_id(
@@ -363,82 +365,83 @@ def add_file_to_knowledge_by_id(
     form_data: KnowledgeFileIdForm,
     user=Depends(get_verified_user),
 ):
-    knowledge = Knowledges.get_knowledge_by_id(id=id)
+    with addKnowledgeMutex:
+        knowledge = Knowledges.get_knowledge_by_id(id=id)
 
-    if not knowledge:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+        if not knowledge:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.NOT_FOUND,
+            )
 
-    if (
-        knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control)
-        and user.role != "admin"
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
+        if (
+            knowledge.user_id != user.id
+            and not has_access(user.id, "write", knowledge.access_control)
+            and user.role != "admin"
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
 
-    file = Files.get_file_by_id(form_data.file_id)
-    if not file:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-    if not file.data:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.FILE_NOT_PROCESSED,
-        )
+        file = Files.get_file_by_id(form_data.file_id)
+        if not file:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.NOT_FOUND,
+            )
+        if not file.data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.FILE_NOT_PROCESSED,
+            )
 
-    # Add content to the vector database
-    try:
-        process_file(
-            request,
-            ProcessFileForm(file_id=form_data.file_id, collection_name=id),
-            user=user,
-        )
-    except Exception as e:
-        log.debug(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        )
+        # Add content to the vector database
+        try:
+            process_file(
+                request,
+                ProcessFileForm(file_id=form_data.file_id, collection_name=id),
+                user=user,
+            )
+        except Exception as e:
+            log.debug(e)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            )
 
-    if knowledge:
-        data = knowledge.data or {}
-        file_ids = data.get("file_ids", [])
+        if knowledge:
+            data = knowledge.data or {}
+            file_ids = data.get("file_ids", [])
 
-        if form_data.file_id not in file_ids:
-            file_ids.append(form_data.file_id)
-            data["file_ids"] = file_ids
+            if form_data.file_id not in file_ids:
+                file_ids.append(form_data.file_id)
+                data["file_ids"] = file_ids
 
-            knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
+                knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
 
-            if knowledge:
-                files = Files.get_file_metadatas_by_ids(file_ids)
+                if knowledge:
+                    files = Files.get_file_metadatas_by_ids(file_ids)
 
-                return KnowledgeFilesResponse(
-                    **knowledge.model_dump(),
-                    files=files,
-                )
+                    return KnowledgeFilesResponse(
+                        **knowledge.model_dump(),
+                        files=files,
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=ERROR_MESSAGES.DEFAULT("knowledge"),
+                    )
             else:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.DEFAULT("knowledge"),
+                    detail=ERROR_MESSAGES.DEFAULT("file_id"),
                 )
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("file_id"),
+                detail=ERROR_MESSAGES.NOT_FOUND,
             )
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
 
 
 @router.post("/{id}/file/update", response_model=Optional[KnowledgeFilesResponse])
