@@ -9,7 +9,7 @@ import re
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator, List, Optional, Sequence, Union
+from typing import Iterator, List, Optional, Sequence, Union, Tuple
 
 from fastapi import (
     Depends,
@@ -1502,11 +1502,12 @@ def process_file(
 
     if file:
         try:
-
             collection_name = form_data.collection_name
 
             if collection_name is None:
                 collection_name = f"file-{file.id}"
+
+            image_refs = []
 
             if form_data.content:
                 # Update the content in the file
@@ -1533,8 +1534,8 @@ def process_file(
                         },
                     )
                 ]
-
                 text_content = form_data.content
+
             elif form_data.collection_name:
                 # Check if the file has already been processed and save the content
                 # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
@@ -1614,9 +1615,17 @@ def process_file(
                         MINERU_API_KEY=request.app.state.config.MINERU_API_KEY,
                         MINERU_PARAMS=request.app.state.config.MINERU_PARAMS,
                     )
-                    docs = loader.load(
+                    result = loader.load(
                         file.filename, file.meta.get("content_type"), file_path
                     )
+
+                    if isinstance(result, tuple) and len(result) == 2:
+                        docs, image_refs = result
+                        log.info(f"Loaded {len(docs)} docs and {len(image_refs)} images")
+                    else:
+                        docs = result
+                        image_refs = []
+                        log.warning(f"Loader returned non-tuple result, no image_refs available")
 
                     docs = [
                         Document(
@@ -1651,6 +1660,17 @@ def process_file(
                 file.id,
                 {"content": text_content},
             )
+
+            if image_refs:
+                log.info(f"Updating file {file.id} with {len(image_refs)} image_refs: {image_refs[:2] if len(image_refs) > 2 else image_refs}")
+                updated_file = Files.update_file_image_refs_by_id(file.id, image_refs)
+                if updated_file:
+                    log.info(f"Successfully updated file {file.id} with {len(image_refs)} image references")
+                else:
+                    log.warning(f"Failed to update file {file.id} with image references")
+            else:
+                log.info(f"No image_refs to update for file {file.id}")
+
             hash = calculate_sha256_string(text_content)
             Files.update_file_hash_by_id(file.id, hash)
 
@@ -1661,6 +1681,7 @@ def process_file(
                     "collection_name": None,
                     "filename": file.filename,
                     "content": text_content,
+                    "image_refs": image_refs,
                 }
             else:
                 try:
@@ -1696,6 +1717,7 @@ def process_file(
                             "collection_name": collection_name,
                             "filename": file.filename,
                             "content": text_content,
+                            "image_refs": image_refs,
                         }
                     else:
                         raise Exception("Error saving document to vector database")
@@ -2023,13 +2045,6 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
             request.app.state.config.BING_SEARCH_V7_ENDPOINT,
             str(DEFAULT_LOCALE),
-            query,
-            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
-        )
-    elif engine == "exa":
-        return search_exa(
-            request.app.state.config.EXA_API_KEY,
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,

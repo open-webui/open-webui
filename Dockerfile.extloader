@@ -1,0 +1,44 @@
+FROM python:3.11-slim as builder
+
+# Build stage for dependencies
+WORKDIR /app
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements-extloader.txt .
+RUN pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements-extloader.txt
+
+# Runtime stage
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /app/certs
+
+# Copy wheels and install
+COPY --from=builder /app/wheels /wheels
+COPY requirements-extloader.txt .
+RUN pip install --no-cache /wheels/*
+
+# Copy application
+COPY extloader.py .
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:8000/ || exit 1
+
+EXPOSE 8000
+
+# Non-root user for security
+RUN useradd --create-home --shell /bin/bash app \
+    && chown -R app:app /app
+USER app
+
+CMD ["uvicorn", "extloader:app", "--host", "0.0.0.0", "--port", "8000"]

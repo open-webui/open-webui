@@ -2,11 +2,12 @@ import logging
 import os
 import uuid
 import json
+import time
+import asyncio
 from fnmatch import fnmatch
 from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
-import asyncio
 
 from fastapi import (
     BackgroundTasks,
@@ -114,7 +115,17 @@ def process_uploaded_file(request, file, file_path, file_item, file_metadata, us
             elif (not file.content_type.startswith(("image/", "video/"))) or (
                 request.app.state.config.CONTENT_EXTRACTION_ENGINE == "external"
             ):
-                process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
+                result = process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
+                
+                # Log the result for debugging
+                log.info(f"Process file result: {result}")
+                
+                # Wait a moment for database transaction to complete
+                time.sleep(0.1)  # 100ms delay
+                
+                # Verify the file was updated properly by fetching it again
+                updated_file = Files.get_file_by_id(file_item.id)
+                log.info(f"File {file_item.id} after processing - image_refs: {updated_file.image_refs}")
             else:
                 raise Exception(
                     f"File type {file.content_type} is not supported for processing"
@@ -123,9 +134,51 @@ def process_uploaded_file(request, file, file_path, file_item, file_metadata, us
             log.info(
                 f"File type {file.content_type} is not provided, but trying to process anyway"
             )
-            process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
+            result = process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
+            
+            # Same verification for files without explicit content type
+            time.sleep(0.1)
+            updated_file = Files.get_file_by_id(file_item.id)
+            log.info(f"File {file_item.id} after processing - image_refs: {updated_file.image_refs}")
+
+        # Update status LAST, after everything else is complete
+        Files.update_file_data_by_id(
+            file_item.id,
+            {"status": "completed"},
+        )
+        try:
+            from open_webui.models.chats import Chats
+            import json
+            recent_chats = Chats.get_chat_list_by_user_id(user.id, skip=0, limit=10)
+            for chat in recent_chats:
+                chat_updated = False
+                chat_data = chat.chat
+                
+                if "history" in chat_data and "messages" in chat_data["history"]:
+                    for message_id, message in chat_data["history"]["messages"].items():
+                        if "files" in message:
+                            for file_ref in message["files"]:
+                                if isinstance(file_ref, dict) and file_ref.get("file", {}).get("id") == file_item.id:
+                                    # Update the file reference with fresh data
+                                    updated_file = Files.get_file_by_id(file_item.id)
+                                    if updated_file:
+                                        file_ref["file"] = updated_file.model_dump()
+                                        chat_updated = True
+                                        log.info(f"Updated file reference in chat {chat.id}, message {message_id}")
+                
+                if chat_updated:
+                    Chats.update_chat_by_id(chat.id, chat_data)
+                    log.info(f"Saved updated chat {chat.id} with fresh file data")
+        except Exception as e:
+            log.error(f"Error updating chat file references: {e}")
+            pass
+        
+        # Final verification
+        final_file = Files.get_file_by_id(file_item.id)
+        log.info(f"Final file state - ID: {file_item.id}, image_refs count: {len(final_file.image_refs) if final_file.image_refs else 0}")
+        
     except Exception as e:
-        log.error(f"Error processing file: {file_item.id}")
+        log.error(f"Error processing file: {file_item.id}: {e}")
         Files.update_file_data_by_id(
             file_item.id,
             {
@@ -413,6 +466,8 @@ async def get_file_process_status(
                 if file_item:
                     for _ in range(MAX_FILE_PROCESSING_DURATION):
                         file_item = Files.get_file_by_id(file_item.id)
+                        if not file_item:
+                            break
                         if file_item:
                             data = file_item.model_dump().get("data", {})
                             status = data.get("status")

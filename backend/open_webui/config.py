@@ -2579,6 +2579,9 @@ PDF_EXTRACT_IMAGES = PersistentConfig(
     os.environ.get("PDF_EXTRACT_IMAGES", "False").lower() == "true",
 )
 
+PDF_EXTRACT_IMAGES_DIR = DATA_DIR / "images"
+PDF_EXTRACT_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+
 RAG_EMBEDDING_MODEL = PersistentConfig(
     "RAG_EMBEDDING_MODEL",
     "rag.embedding_model",
@@ -3673,3 +3676,8 @@ LDAP_ATTRIBUTE_FOR_GROUPS = PersistentConfig(
     "ldap.server.attribute_for_groups",
     os.environ.get("LDAP_ATTRIBUTE_FOR_GROUPS", "memberOf"),
 )
+
+# File cleanup settings
+ENABLE_FILE_CLEANUP = os.environ.get("ENABLE_FILE_CLEANUP", "true").lower() == "true"
+FILE_CLEANUP_DELAY_MINUTES = int(os.environ.get("FILE_CLEANUP_DELAY_MINUTES", "0"))
+PRESERVE_SHARED_FILES = os.environ.get("PRESERVE_SHARED_FILES", "true").lower() == "true"

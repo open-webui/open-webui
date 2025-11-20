@@ -1016,35 +1016,96 @@ class ChatTable:
             return False
 
     def delete_chat_by_id(self, id: str) -> bool:
+        """Delete chat by ID with automatic file cleanup."""
+        from open_webui.utils.file_cleanup import file_cleanup_manager
+        
         try:
+            # First cleanup associated files
+            cleanup_results = file_cleanup_manager.cleanup_chat_files(id)
+            log.info(f"File cleanup results for chat {id}: {cleanup_results}")
+            
+            # Then delete the chat record
             with get_db() as db:
                 db.query(Chat).filter_by(id=id).delete()
                 db.commit()
-
-                return True and self.delete_shared_chat_by_chat_id(id)
-        except Exception:
+                
+                success = True and self.delete_shared_chat_by_chat_id(id)
+                
+                if success:
+                    log.info(f"Successfully deleted chat {id} with {cleanup_results['files_deleted']} files")
+                
+                return success
+                
+        except Exception as e:
+            log.error(f"Failed to delete chat {id}: {e}")
             return False
 
     def delete_chat_by_id_and_user_id(self, id: str, user_id: str) -> bool:
+        """Delete chat by ID and user ID with automatic file cleanup."""
+        from open_webui.utils.file_cleanup import file_cleanup_manager
+        
         try:
+            # Verify ownership before cleanup
+            chat = self.get_chat_by_id_and_user_id(id, user_id)
+            if not chat:
+                return False
+            
+            # Cleanup associated files
+            cleanup_results = file_cleanup_manager.cleanup_chat_files(id)
+            log.info(f"File cleanup results for chat {id}: {cleanup_results}")
+            
+            # Delete the chat record
             with get_db() as db:
                 db.query(Chat).filter_by(id=id, user_id=user_id).delete()
                 db.commit()
-
-                return True and self.delete_shared_chat_by_chat_id(id)
-        except Exception:
+                
+                success = True and self.delete_shared_chat_by_chat_id(id)
+                
+                if success:
+                    log.info(f"Successfully deleted chat {id} by user {user_id} with {cleanup_results['files_deleted']} files")
+                
+                return success
+                
+        except Exception as e:
+            log.error(f"Failed to delete chat {id} for user {user_id}: {e}")
             return False
 
     def delete_chats_by_user_id(self, user_id: str) -> bool:
+        """Delete all chats for a user with bulk file cleanup."""
+        from open_webui.utils.file_cleanup import file_cleanup_manager
+        
         try:
+            # Get all user chats for cleanup
+            user_chats = self.get_chat_list_by_user_id(user_id)
+            
+            total_cleanup_stats = {
+                'files_processed': 0,
+                'files_deleted': 0,
+                'images_cleaned': 0,
+                'errors': []
+            }
+            
+            # Cleanup files for each chat
+            for chat in user_chats:
+                cleanup_results = file_cleanup_manager.cleanup_chat_files(chat.id)
+                total_cleanup_stats['files_processed'] += cleanup_results['files_processed']
+                total_cleanup_stats['files_deleted'] += cleanup_results['files_deleted']
+                total_cleanup_stats['images_cleaned'] += cleanup_results['images_cleaned']
+                total_cleanup_stats['errors'].extend(cleanup_results['errors'])
+            
+            # Delete shared chats first
+            self.delete_shared_chats_by_user_id(user_id)
+            
+            # Delete all user chats
             with get_db() as db:
-                self.delete_shared_chats_by_user_id(user_id)
-
                 db.query(Chat).filter_by(user_id=user_id).delete()
                 db.commit()
-
-                return True
-        except Exception:
+            
+            log.info(f"Bulk delete for user {user_id}: {total_cleanup_stats}")
+            return True
+            
+        except Exception as e:
+            log.error(f"Failed to delete chats for user {user_id}: {e}")
             return False
 
     def delete_chats_by_user_id_and_folder_id(
@@ -1072,5 +1133,48 @@ class ChatTable:
         except Exception:
             return False
 
+    def get_chat_by_id_with_fresh_files(self, id: str) -> Optional[ChatModel]:
+        """Get chat by ID and ensure all file references have fresh data"""
+        chat = self.get_chat_by_id(id)
+        if not chat:
+            return None
+        
+        try:
+            from open_webui.models.files import Files
+            
+            chat_data = chat.chat
+            chat_updated = False
+            
+            # Refresh file data in messages
+            if "history" in chat_data and "messages" in chat_data["history"]:
+                for message_id, message in chat_data["history"]["messages"].items():
+                    if "files" in message:
+                        for file_ref in message["files"]:
+                            if isinstance(file_ref, dict) and "file" in file_ref:
+                                file_id = file_ref["file"].get("id")
+                                if file_id:
+                                    # Get fresh file data
+                                    fresh_file = Files.get_file_by_id(file_id)
+                                    if fresh_file:
+                                        old_image_refs = file_ref["file"].get("image_refs")
+                                        new_image_refs = fresh_file.image_refs
+                                        
+                                        # Update with fresh data
+                                        file_ref["file"] = fresh_file.model_dump()
+                                        
+                                        # Log if image_refs changed
+                                        if old_image_refs != new_image_refs:
+                                            log.info(f"Refreshed file {file_id} in chat {id}: image_refs updated from {old_image_refs} to {new_image_refs}")
+                                            chat_updated = True
+            
+            # Update the chat object with fresh data
+            if chat_updated:
+                chat.chat = chat_data
+                
+            return chat
+            
+        except Exception as e:
+            log.error(f"Error refreshing file data in chat {id}: {e}")
+            return chat
 
 Chats = ChatTable()

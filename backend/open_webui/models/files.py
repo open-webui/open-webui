@@ -26,6 +26,7 @@ class File(Base):
 
     data = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
+    image_refs = Column(JSON, nullable=True)
 
     access_control = Column(JSON, nullable=True)
 
@@ -45,6 +46,7 @@ class FileModel(BaseModel):
 
     data: Optional[dict] = None
     meta: Optional[dict] = None
+    image_refs: Optional[list[str]] = None
 
     access_control: Optional[dict] = None
 
@@ -234,6 +236,34 @@ class FilesTable:
                 db.commit()
                 return FileModel.model_validate(file)
             except Exception:
+                return None
+
+    def update_file_image_refs_by_id(
+        self, id: str, image_refs: list[str]
+    ) -> Optional[FileModel]:
+        with get_db() as db:
+            try:
+                file = db.query(File).filter_by(id=id).first()
+                if file:
+                    log.info(f"Before update - File {id} image_refs: {file.image_refs}")
+                    file.image_refs = image_refs
+                    file.updated_at = int(time.time())  # Update the timestamp
+                    db.commit()
+                    db.refresh(file)
+                    log.info(f"After update - File {id} image_refs: {file.image_refs}")
+                    
+                    # Verify the update was successful
+                    verification_file = db.query(File).filter_by(id=id).first()
+                    if verification_file and verification_file.image_refs:
+                        log.info(f"Database update verified - File {id} has {len(verification_file.image_refs)} image_refs")
+                        return FileModel.model_validate(verification_file)
+                    else:
+                        log.error(f"Database update failed - File {id} image_refs not found after commit")
+                        return None
+                return None
+            except Exception as e:
+                log.error(f"Error updating file image_refs: {e}")
+                db.rollback()  # Ensure rollback on error
                 return None
 
     def delete_file_by_id(self, id: str) -> bool:

@@ -13,6 +13,10 @@ import asyncio
 from fastapi import Request, status
 from starlette.responses import Response, StreamingResponse, JSONResponse
 
+from open_webui.models.files import Files
+from open_webui.env import DATA_DIR
+import os
+import base64
 
 from open_webui.models.users import UserModel
 
@@ -195,6 +199,127 @@ async def generate_chat_completion(
 
     model = models[model_id]
 
+    vision_capable = model.get('info', {}).get('meta', {}).get('capabilities', {}).get('vision', False)
+    log.info(f"Model vision capability: {vision_capable}")
+    # Extract documents from form_data (if present)
+    documents = form_data.get('documents', [])
+    # ALSO extract files from messages and metadata - THIS IS THE MISSING PIECE!
+    if not documents and vision_capable:
+        # Check if files are in metadata (they get moved there by middleware)
+        metadata_files = form_data.get('metadata', {}).get('files', [])
+        if metadata_files:
+            documents = metadata_files
+            log.info(f"Found {len(documents)} files in metadata")
+        
+        # Also check for files attached to individual messages
+        if not documents:
+            for message in form_data.get("messages", []):
+                if message.get("files"):
+                    documents.extend(message["files"])
+            if documents:
+                log.info(f"Found {len(documents)} files in message attachments")
+    
+    log.info(f"Documents to process: {len(documents)}")
+    
+    if vision_capable and documents:
+        log.info(f"Processing {len(documents)} documents for vision model")
+        last_user_message = None
+        for message in reversed(form_data["messages"]):
+            if message.get("role") == "user":
+                last_user_message = message
+                break
+
+        if last_user_message:
+            # Ensure content is in the correct OpenAI format
+            if isinstance(last_user_message.get("content"), str):
+                last_user_message["content"] = [
+                    {"type": "text", "text": last_user_message["content"]}
+                ]
+            elif not last_user_message.get("content"):
+                last_user_message["content"] = []
+
+            for doc in documents:
+                doc_id = doc.get("id")
+                if not doc_id:
+                    continue
+
+                file_model = Files.get_file_by_id(doc_id)
+                if not file_model:
+                    log.warning(f"File not found: {doc_id}")
+                    continue
+
+                log.info(f"Processing document {doc_id} with {len(file_model.image_refs) if file_model.image_refs else 0} images")
+
+                if file_model.image_refs:
+                    for i, image_ref in enumerate(file_model.image_refs):
+                        try:
+                            image_path = os.path.join(DATA_DIR, image_ref)
+                            log.info(f"Loading image {i+1}/{len(file_model.image_refs)}: {image_ref}")
+
+                            if os.path.exists(image_path):
+                                with open(image_path, "rb") as image_file:
+                                    image_data = image_file.read()
+                                    encoded_string = base64.b64encode(image_data).decode("utf-8")
+
+                                    # Determine MIME type for data URL
+                                    ext = os.path.splitext(image_path)[1].lower()
+                                    mime_type = {
+                                        '.png': 'image/png',
+                                        '.jpg': 'image/jpeg',
+                                        '.jpeg': 'image/jpeg',
+                                        '.gif': 'image/gif',
+                                        '.webp': 'image/webp'
+                                    }.get(ext, 'image/jpeg')
+
+                                    # CORRECT OpenAI Vision API format
+                                    image_content = {
+                                        "type": "image_url",
+                                        "image_url": {
+                                            "url": f"data:{mime_type};base64,{encoded_string}",
+                                            "detail": "high"  # Options: "low", "high", "auto"
+                                        }
+                                    }
+                                    
+                                    last_user_message["content"].append(image_content)
+                                    log.info(f"Successfully added image {i+1} to message content: {image_ref}")
+                                    
+                                    # Debug: Log the structure being added
+                                    log.debug(f"Image content structure: {{'type': 'image_url', 'image_url': {{'url': 'data:{mime_type};base64,[{len(encoded_string)} chars]', 'detail': 'high'}}}}")
+                            else:
+                                log.error(f"Image file not found: {image_path}")
+                        except Exception as e:
+                            log.error(f"Error processing image {image_ref}: {e}")
+                            import traceback
+                            log.error(f"Traceback: {traceback.format_exc()}")
+                else:
+                    log.warning(f"No images found in document {doc_id}")
+                    
+            # Log the final message content structure
+            log.info("=== FINAL MESSAGE CONTENT STRUCTURE ===")
+            log.info(f"Message role: {last_user_message.get('role')}")
+            log.info(f"Content type: {type(last_user_message.get('content'))}")
+            log.info(f"Content items: {len(last_user_message.get('content', []))}")
+            for i, item in enumerate(last_user_message.get("content", [])):
+                if item.get("type") == "text":
+                    log.info(f"  Item {i}: TEXT - '{item.get('text', '')[:50]}...'")
+                elif item.get("type") == "image_url":
+                    url = item.get("image_url", {}).get("url", "")
+                    detail = item.get("image_url", {}).get("detail", "not set")
+                    log.info(f"  Item {i}: IMAGE_URL - detail={detail}, url_length={len(url)}")
+                    
+                    # Check if the base64 format is correct
+                    if url.startswith("data:image/"):
+                        log.info(f"    ✓ Correct data URL format")
+                    else:
+                        log.error(f"    ✗ Incorrect data URL format: {url[:50]}...")
+                else:
+                    log.info(f"  Item {i}: UNKNOWN TYPE - {item}")
+            log.info("=== END MESSAGE STRUCTURE ===")
+        else:
+            log.warning("No user message found to attach images to")
+    else:
+        log.info("Model does not support vision or no documents provided")
+                        
     if getattr(request.state, "direct", False):
         return await generate_direct_chat_completion(
             request, form_data, user=user, models=models
