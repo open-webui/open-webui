@@ -20,6 +20,13 @@ from open_webui.utils.task import (
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.constants import TASKS
 
+from open_webui.routers.luxor import (
+    generate_chat_completion as generate_luxor_chat_completion,
+)
+
+from open_webui.utils.payload import (convert_payload_openai_to_ollama, convert_payload_openai_to_luxor)
+
+
 from open_webui.routers.pipelines import process_pipeline_inlet_filter
 
 from open_webui.utils.task import get_task_model_id
@@ -263,7 +270,8 @@ async def generate_follow_ups(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Model not found",
         )
-
+  
+    
     # Check if the user has a custom task model
     # If the user has a custom task model, use that model
     task_model_id = get_task_model_id(
@@ -283,6 +291,16 @@ async def generate_follow_ups(
         template = DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE
 
     content = follow_up_generation_template(template, form_data["messages"], user)
+
+
+  
+    if "luxor" in model_id:
+        form_data["task"] = "follow_up"
+        log.info("FOLLOW UP BAIL OUT")
+        return await generate_chat_completion(request, form_data=form_data, user=user)
+    
+    log.info("FOLLOW UP DID NOT BAIL OUT")
+
 
     payload = {
         "model": task_model_id,

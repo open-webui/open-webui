@@ -301,6 +301,9 @@ def convert_payload_openai_to_luxor(openai_payload: dict) -> dict:
     messages = openai_payload.get(("messages"))
     luxor_payload["messages"] = messages
 
+    if openai_payload.get("task"):
+        luxor_payload["task"] = openai_payload.get("task")
+
     return luxor_payload   
 
 def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
