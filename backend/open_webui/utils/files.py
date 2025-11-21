@@ -136,7 +136,9 @@ def upload_excel_file(request, file_path, metadata, user):
         )
 
         # Add sheet names to metadata if available
-        if sheet_names and metadata:
+        if metadata is None:
+            metadata = {}
+        if sheet_names:
             metadata["sheetNames"] = sheet_names
 
         # Upload the file

@@ -3006,6 +3006,9 @@ async def process_chat_response(
                         log.debug(f"Attempt count: {retries}")
 
                         output = ""
+                        # Initialize Excel artifacts list before try block
+                        excel_artifacts = []
+                        processed_excel_files = set()
                         try:
                             if content_blocks[-1]["attributes"].get("type") == "code":
                                 code = content_blocks[-1]["content"]
@@ -3075,9 +3078,7 @@ async def process_chat_response(
 
                                 log.debug(f"Code interpreter output: {output}")
 
-                                # Collect Excel file artifacts
-                                excel_artifacts = []
-
+                                # Collect Excel file artifacts (initialized before try block)
                                 if isinstance(output, dict):
                                     stdout = output.get("stdout", "")
 
@@ -3102,7 +3103,7 @@ async def process_chat_response(
                                                 xlsx_pattern = r'(/[^\s]+\.xlsx|[A-Za-z]:[^\s]+\.xlsx)'
                                                 matches = re.findall(xlsx_pattern, line)
                                                 for file_path in matches:
-                                                    if os.path.exists(file_path):
+                                                    if os.path.exists(file_path) and file_path not in processed_excel_files:
                                                         log.info(f"Detected Excel file in stdout: {file_path}")
                                                         excel_artifact = upload_excel_file(
                                                             request,
@@ -3112,6 +3113,7 @@ async def process_chat_response(
                                                         )
                                                         if excel_artifact:
                                                             excel_artifacts.append(excel_artifact)
+                                                            processed_excel_files.add(file_path)
                                                             # Don't modify the line to preserve user's message
 
                                         output["stdout"] = "\n".join(stdoutLines)
@@ -3137,7 +3139,7 @@ async def process_chat_response(
                                                 xlsx_pattern = r'(/[^\s]+\.xlsx|[A-Za-z]:[^\s]+\.xlsx)'
                                                 matches = re.findall(xlsx_pattern, line)
                                                 for file_path in matches:
-                                                    if os.path.exists(file_path):
+                                                    if os.path.exists(file_path) and file_path not in processed_excel_files:
                                                         log.info(f"Detected Excel file in result: {file_path}")
                                                         excel_artifact = upload_excel_file(
                                                             request,
@@ -3147,6 +3149,7 @@ async def process_chat_response(
                                                         )
                                                         if excel_artifact:
                                                             excel_artifacts.append(excel_artifact)
+                                                            processed_excel_files.add(file_path)
                                                             # Don't modify the line to preserve user's message
                                         output["result"] = "\n".join(resultLines)
                         except Exception as e:
