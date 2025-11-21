@@ -184,11 +184,12 @@ class Loader:
         raw_result = loader.load()
 
         # NEW: preserve image_refs if present
-        if isinstance(raw_result, tuple) and len(raw_result) == 2:
+        has_image_refs = isinstance(raw_result, tuple) and len(raw_result) == 2
+        if has_image_refs:
             docs, image_refs = raw_result
         else:
             docs = raw_result
-            image_refs = None
+            image_refs = []
 
         from collections.abc import Iterable
         from langchain_core.documents import Document as LCDocument
@@ -221,7 +222,7 @@ class Loader:
                 )
 
         # NEW: return tuple if we originally had image_refs
-        if image_refs is not None:
+        if has_image_refs:
             return flat_docs, image_refs
 
         return flat_docs
