@@ -1618,6 +1618,9 @@ def process_file(
                     result = loader.load(
                         file.filename, file.meta.get("content_type"), file_path
                     )
+                    log.info(f"process_file: loader.load returned type: {type(result)}")
+                    if isinstance(result, tuple):
+                        log.info(f"process_file: result tuple length: {len(result)}")
 
                     if isinstance(result, tuple) and len(result) == 2:
                         docs, image_refs = result

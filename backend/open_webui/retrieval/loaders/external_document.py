@@ -70,15 +70,23 @@ class ExternalDocumentLoader(BaseLoader):
             response_data = response.json()
             if not response_data:
                 raise Exception("Error loading document: No content returned")
+            log.info(f"ExternalDocumentLoader: Response received. Type: {type(response_data)}")
+            log.info(f"ExternalDocumentLoader: extract_images setting: {self.extract_images}")
             
             all_image_refs = []
 
             def process_doc_data(doc_data):
                 metadata = doc_data.get("metadata", {}) or {}
 
+                if "images" in doc_data:
+                    log.info(f"ExternalDocumentLoader: Found {len(doc_data.get('images', []))} images in doc_data payload")
+                else:
+                    log.info("ExternalDocumentLoader: No 'images' key in doc_data payload")
+
+
                 if self.extract_images and "images" in doc_data:
                     images_data = doc_data.get("images", [])
-                    for b64_image in images_data:
+                    for idx, b64_image in enumerate(images_data):
                         try:
                             img_format = "png"
                             if b64_image.startswith("data:image/jpeg;base64,"):
@@ -87,6 +95,8 @@ class ExternalDocumentLoader(BaseLoader):
                             elif b64_image.startswith("data:image/png;base64,"):
                                 img_format = "png"
                                 _, b64_image = b64_image.split(",", 1)
+                            else:
+                                log.warning(f"ExternalDocumentLoader: Image {idx} has unknown prefix: {b64_image[:30]}...")
 
                             image_data = base64.b64decode(b64_image)
                             image_filename = f"{uuid.uuid4()}.{img_format}"
