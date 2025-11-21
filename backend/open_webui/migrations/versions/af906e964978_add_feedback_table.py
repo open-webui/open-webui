@@ -21,10 +21,10 @@ def upgrade():
     op.create_table(
         "feedback",
         sa.Column(
-            "id", sa.Text(), primary_key=True
+            "id", sa.String(length=255), primary_key=True
         ),  # Unique identifier for each feedback (TEXT type)
         sa.Column(
-            "user_id", sa.Text(), nullable=True
+            "user_id", sa.String(length=255), nullable=True
         ),  # ID of the user providing the feedback (TEXT type)
         sa.Column(
             "version", sa.BigInteger(), default=0
