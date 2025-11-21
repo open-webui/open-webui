@@ -838,13 +838,13 @@ async def image_edits(
     except Exception as e:
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
 
-    def get_image_file_item(base64_string):
+    def get_image_file_item(base64_string, param_name="image"):
         data = base64_string
         header, encoded = data.split(",", 1)
         mime_type = header.split(";")[0].lstrip("data:")
         image_data = base64.b64decode(encoded)
         return (
-            "image",
+            param_name,
             (
                 f"{uuid.uuid4()}.png",
                 io.BytesIO(image_data),
@@ -879,7 +879,7 @@ async def image_edits(
                 files = [get_image_file_item(form_data.image)]
             elif isinstance(form_data.image, list):
                 for img in form_data.image:
-                    files.append(get_image_file_item(img))
+                    files.append(get_image_file_item(img, "image[]"))
 
             url_search_params = ""
             if request.app.state.config.IMAGES_EDIT_OPENAI_API_VERSION:
