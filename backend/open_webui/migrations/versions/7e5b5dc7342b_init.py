@@ -39,13 +39,13 @@ def upgrade() -> None:
     if "chat" not in existing_tables:
         op.create_table(
             "chat",
-            sa.Column("id", sa.String(), nullable=False),
-            sa.Column("user_id", sa.String(), nullable=True),
+            sa.Column("id", sa.String(length=255), nullable=False),
+            sa.Column("user_id", sa.String(length=255), nullable=True),
             sa.Column("title", sa.Text(), nullable=True),
             sa.Column("chat", sa.Text(), nullable=True),
             sa.Column("created_at", sa.BigInteger(), nullable=True),
             sa.Column("updated_at", sa.BigInteger(), nullable=True),
-            sa.Column("share_id", sa.Text(), nullable=True),
+            sa.Column("share_id", sa.String(length=255), nullable=True),
             sa.Column("archived", sa.Boolean(), nullable=True),
             sa.PrimaryKeyConstraint("id"),
             sa.UniqueConstraint("share_id"),
@@ -118,10 +118,10 @@ def upgrade() -> None:
     if "model" not in existing_tables:
         op.create_table(
             "model",
-            sa.Column("id", sa.Text(), nullable=False),
-            sa.Column("user_id", sa.Text(), nullable=True),
-            sa.Column("base_model_id", sa.Text(), nullable=True),
-            sa.Column("name", sa.Text(), nullable=True),
+            sa.Column("id", sa.String(length=255), nullable=False),
+            sa.Column("user_id", sa.String(length=255), nullable=True),
+            sa.Column("base_model_id", sa.String(length=255), nullable=True),
+            sa.Column("name", sa.String(length=255), nullable=True),
             sa.Column("params", JSONField(), nullable=True),
             sa.Column("meta", JSONField(), nullable=True),
             sa.Column("updated_at", sa.BigInteger(), nullable=True),
@@ -168,7 +168,7 @@ def upgrade() -> None:
     if "user" not in existing_tables:
         op.create_table(
             "user",
-            sa.Column("id", sa.String(), nullable=False),
+            sa.Column("id", sa.String(length=255), nullable=False),
             sa.Column("name", sa.String(), nullable=True),
             sa.Column("email", sa.String(), nullable=True),
             sa.Column("role", sa.String(), nullable=True),
@@ -179,7 +179,7 @@ def upgrade() -> None:
             sa.Column("api_key", sa.String(), nullable=True),
             sa.Column("settings", JSONField(), nullable=True),
             sa.Column("info", JSONField(), nullable=True),
-            sa.Column("oauth_sub", sa.Text(), nullable=True),
+            sa.Column("oauth_sub", sa.String(length=255), nullable=True),
             sa.PrimaryKeyConstraint("id"),
             sa.UniqueConstraint("api_key"),
             sa.UniqueConstraint("oauth_sub"),
