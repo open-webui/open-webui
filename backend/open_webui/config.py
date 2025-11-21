@@ -2003,11 +2003,12 @@ DEFAULT_CODE_INTERPRETER_PROMPT = """
          EXCEL_AVAILABLE = False
          print("⚠️  Excel generation not available in this environment (Pyodide). Displaying data as formatted table instead.")
      ```
-   - If `openpyxl` is available (Jupyter environment), create Excel files and return them as base64:
+   - If `openpyxl` is available (Jupyter environment), create Excel files and display them:
      ```python
      import openpyxl
      from openpyxl.utils import get_column_letter
      import base64
+     from IPython.display import display
 
      # Create workbook
      wb = openpyxl.Workbook()
@@ -2024,14 +2025,17 @@ DEFAULT_CODE_INTERPRETER_PROMPT = """
      output_path = "/tmp/report.xlsx"
      wb.save(output_path)
 
-     # IMPORTANT: Read and encode as base64 for display
+     # IMPORTANT: Read and encode as base64, then display using IPython
      with open(output_path, 'rb') as f:
          excel_data = f.read()
          excel_base64 = base64.b64encode(excel_data).decode('utf-8')
 
-     # Print base64 data with special marker (REQUIRED for display)
-     print(f"data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{excel_base64}")
-     print(f"Filename: {output_path.split('/')[-1]}")
+     # Display using Jupyter's display system (REQUIRED for artifacts)
+     filename = output_path.split('/')[-1]
+     display({
+         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': excel_base64,
+         'text/plain': filename
+     }, raw=True)
      ```
    - If `openpyxl` is NOT available (Pyodide environment), gracefully fall back to displaying data as nicely formatted tables in the chat using pandas DataFrames or simple print statements.
    - **Do not** print large tables directly in chat output when an Excel file would be more appropriate (if openpyxl is available). Examples of when to use Excel:
