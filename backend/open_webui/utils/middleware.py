@@ -3143,7 +3143,10 @@ async def process_chat_response(
 
                                     if isinstance(result, str):
                                         resultLines = result.split("\n")
-                                        for idx, line in enumerate(resultLines):
+                                        idx = 0
+                                        while idx < len(resultLines):
+                                            line = resultLines[idx]
+
                                             if "data:image/png;base64" in line:
                                                 image_url = get_image_url_from_base64(
                                                     request,
@@ -3154,14 +3157,16 @@ async def process_chat_response(
                                                 resultLines[idx] = (
                                                     f"![Output Image]({image_url})"
                                                 )
+                                                idx += 1
                                             elif "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64," in line:
                                                 # Detect base64 Excel data
                                                 log.info(f"Detected base64 Excel data in result")
-                                                # Try to get filename from next line
+                                                # Get filename from next line
                                                 filename = "output.xlsx"
                                                 if idx + 1 < len(resultLines) and "Filename:" in resultLines[idx + 1]:
                                                     filename = resultLines[idx + 1].split("Filename:", 1)[1].strip()
-                                                    resultLines[idx + 1] = ""  # Clear filename line
+                                                    # Remove filename line
+                                                    resultLines.pop(idx + 1)
 
                                                 excel_artifact = get_excel_artifact_from_base64(
                                                     request,
@@ -3172,8 +3177,9 @@ async def process_chat_response(
                                                 )
                                                 if excel_artifact:
                                                     excel_artifacts.append(excel_artifact)
-                                                    # Clear the base64 line (too long for display)
-                                                    resultLines[idx] = f"📊 Excel file created: {filename}"
+                                                    # Replace base64 line with user-friendly message
+                                                    resultLines[idx] = f"📊 Excel file: {filename}"
+                                                idx += 1
                                             elif '.xlsx' in line:
                                                 # Try to extract Excel file path from the line
                                                 # Look for patterns like /path/to/file.xlsx
@@ -3191,7 +3197,9 @@ async def process_chat_response(
                                                         if excel_artifact:
                                                             excel_artifacts.append(excel_artifact)
                                                             processed_excel_files.add(file_path)
-                                                            # Don't modify the line to preserve user's message
+                                                idx += 1
+                                            else:
+                                                idx += 1
                                         output["result"] = "\n".join(resultLines)
                         except Exception as e:
                             output = str(e)
