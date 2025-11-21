@@ -3110,11 +3110,16 @@ async def process_chat_response(
                                                     stdoutLines[idx + 1] = ""  # Clear filename line
 
                                                 log.info(f"Attempting to create Excel artifact with filename: {filename}")
+                                                # Create clean metadata dict for Excel file (avoid function serialization errors)
+                                                excel_metadata = {
+                                                    "name": filename,
+                                                    "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                                }
                                                 excel_artifact = get_excel_artifact_from_base64(
                                                     request,
                                                     line,
                                                     filename,
-                                                    metadata,
+                                                    excel_metadata,
                                                     user,
                                                 )
                                                 if excel_artifact:
@@ -3132,10 +3137,15 @@ async def process_chat_response(
                                                 for file_path in matches:
                                                     if os.path.exists(file_path) and file_path not in processed_excel_files:
                                                         log.info(f"Detected Excel file in stdout: {file_path}")
+                                                        # Create clean metadata dict for Excel file (avoid function serialization errors)
+                                                        excel_metadata = {
+                                                            "name": os.path.basename(file_path),
+                                                            "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                                        }
                                                         excel_artifact = upload_excel_file(
                                                             request,
                                                             file_path,
-                                                            metadata,
+                                                            excel_metadata,
                                                             user,
                                                         )
                                                         if excel_artifact:
@@ -3174,11 +3184,16 @@ async def process_chat_response(
                                                     # Remove filename line
                                                     resultLines.pop(idx + 1)
 
+                                                # Create clean metadata dict for Excel file (avoid function serialization errors)
+                                                excel_metadata = {
+                                                    "name": filename,
+                                                    "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                                }
                                                 excel_artifact = get_excel_artifact_from_base64(
                                                     request,
                                                     line,
                                                     filename,
-                                                    metadata,
+                                                    excel_metadata,
                                                     user,
                                                 )
                                                 if excel_artifact:
@@ -3194,10 +3209,15 @@ async def process_chat_response(
                                                 for file_path in matches:
                                                     if os.path.exists(file_path) and file_path not in processed_excel_files:
                                                         log.info(f"Detected Excel file in result: {file_path}")
+                                                        # Create clean metadata dict for Excel file (avoid function serialization errors)
+                                                        excel_metadata = {
+                                                            "name": os.path.basename(file_path),
+                                                            "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                                        }
                                                         excel_artifact = upload_excel_file(
                                                             request,
                                                             file_path,
-                                                            metadata,
+                                                            excel_metadata,
                                                             user,
                                                         )
                                                         if excel_artifact:
