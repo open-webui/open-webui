@@ -124,8 +124,9 @@ class ExternalDocumentLoader(BaseLoader):
             else:
                 raise Exception("Error loading document: Unable to parse content")
             
-            log.info(f"Returning {len(docs)} documents and {len(all_image_refs)} image refs")
-            return docs, all_image_refs
+            result = (docs, all_image_refs)
+            log.info(f"ExternalDocumentLoader.load: Returning tuple with {len(docs)} documents and {len(all_image_refs)} image refs, type={type(result)}")
+            return result
         
         else:
             raise Exception(

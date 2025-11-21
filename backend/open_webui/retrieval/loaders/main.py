@@ -181,15 +181,19 @@ class Loader:
         self, filename: str, file_content_type: str, file_path: str
     ) -> list[Document] | tuple[list[Document], list[str]]:
         loader = self._get_loader(filename, file_content_type, file_path)
+        log.info(f"Loader.load: engine='{self.engine}', loader_type={type(loader).__name__}")
         raw_result = loader.load()
+        log.info(f"Loader.load: raw_result type={type(raw_result)}, is_tuple={isinstance(raw_result, tuple)}")
 
         # NEW: preserve image_refs if present
         has_image_refs = isinstance(raw_result, tuple) and len(raw_result) == 2
         if has_image_refs:
             docs, image_refs = raw_result
+            log.info(f"Loader.load: Extracted tuple with {len(docs)} docs and {len(image_refs)} image_refs")
         else:
             docs = raw_result
             image_refs = []
+            log.info(f"Loader.load: Non-tuple result, raw_result type: {type(raw_result)}")
 
         from collections.abc import Iterable
         from langchain_core.documents import Document as LCDocument
@@ -223,8 +227,10 @@ class Loader:
 
         # NEW: return tuple if we originally had image_refs
         if has_image_refs:
+            log.info(f"Loader.load: Returning tuple with {len(flat_docs)} docs and {len(image_refs)} image_refs")
             return flat_docs, image_refs
 
+        log.info(f"Loader.load: Returning list with {len(flat_docs)} docs (no image_refs)")
         return flat_docs
 
     def _is_text_file(self, file_ext: str, file_content_type: str) -> bool:
@@ -236,14 +242,17 @@ class Loader:
         )
 
     def _get_loader(self, filename: str, file_content_type: str, file_path: str):
-        # ... existing _get_loader implementation remains unchanged ...
         file_ext = filename.split(".")[-1].lower()
+        # Normalize engine to lowercase for consistent matching
+        engine = (self.engine or "").strip().lower()
+        log.info(f"_get_loader: original_engine='{self.engine}', normalized_engine='{engine}', file_ext='{file_ext}', content_type='{file_content_type}'")
 
-        if self.engine == "youtube":
+        if engine == "youtube":
             loader = YoutubeLoader.from_youtube_url(
                 file_path, add_video_info=True, language="en"
             )
-        elif self.engine == "web":
+        elif engine == "web":
+            log.info(f"_get_loader: Using ExternalDocumentLoader with extract_images={self.kwargs.get('PDF_EXTRACT_IMAGES')}")
             loader = ExternalDocumentLoader(
                 url=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_URL"),
                 api_key=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_API_KEY"),
@@ -252,7 +261,7 @@ class Loader:
                 user=self.user,
                 extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES"),
             )
-        elif self.engine == "azure_document_intelligence":
+        elif engine == "azure_document_intelligence":
             credential = DefaultAzureCredential()
             loader = AzureAIDocumentIntelligenceLoader(
                 api_key=self.kwargs.get("AZURE_DOCUMENT_INTELLIGENCE_API_KEY"),
@@ -264,28 +273,28 @@ class Loader:
                 credential=credential,
                 content_type=file_content_type,
             )
-        elif self.engine == "tika":
+        elif engine == "tika":
             loader = TikaLoader(
                 url=self.kwargs.get("TIKA_URL"),
                 file_path=file_path,
                 mime_type=file_content_type,
                 extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES"),
             )
-        elif self.engine == "docling":
+        elif engine == "docling":
             loader = DoclingLoader(
                 url=self.kwargs.get("DOCLING_URL"),
                 file_path=file_path,
                 mime_type=file_content_type,
                 params=self.kwargs.get("DOCLING_PARAMS"),
             )
-        elif self.engine == "mistral":
+        elif engine == "mistral":
             loader = MistralLoader(
                 file_path=file_path,
                 MISTRAL_API_KEY=self.kwargs.get("MISTRAL_API_KEY"),
                 MISTRAL_MODEL=self.kwargs.get("MISTRAL_FILE_PROCESSOR_MODEL"),
                 params=self.kwargs.get("MISTRAL_FILE_PROCESSOR_PARAMS"),
             )
-        elif self.engine == "datalab_marker":
+        elif engine == "datalab_marker":
             loader = DatalabMarkerLoader(
                 file_path=file_path,
                 DATALAB_MARKER_API_KEY=self.kwargs.get("DATALAB_MARKER_API_KEY"),
@@ -294,7 +303,7 @@ class Loader:
                 ),
                 params=self.kwargs.get("DATALAB_MARKER_PARAMS"),
             )
-        elif self.engine == "mineru":
+        elif engine == "mineru":
             loader = MinerULoader(
                 file_path=file_path,
                 api_mode=self.kwargs.get("MINERU_API_MODE"),
@@ -304,6 +313,9 @@ class Loader:
                 MINERU_PARAMS=self.kwargs.get("MINERU_PARAMS"),
             )
         else:
+            # No specific engine matched - using file-type-specific loaders
+            # WARNING: These loaders do NOT return image_refs tuple
+            log.warning(f"_get_loader: No engine matched (engine='{engine}'), using file-type-specific loader for ext='{file_ext}'. Image extraction will NOT return image_refs.")
             if file_ext == "pdf":
                 loader = PyPDFLoader(
                     file_path, extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES")
