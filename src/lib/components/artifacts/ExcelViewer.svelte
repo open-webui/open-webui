@@ -65,6 +65,22 @@
 	// Column count for header
 	let colCount = 0;
 
+	// Column widths (for resizing)
+	let columnWidths: number[] = [];
+	const DEFAULT_COL_WIDTH = 120;
+	const MIN_COL_WIDTH = 50;
+
+	// Column resize state
+	let resizingCol: number | null = null;
+	let resizeStartX = 0;
+	let resizeStartWidth = 0;
+
+	// Range selection state
+	type CellPosition = { row: number; col: number };
+	let selectionStart: CellPosition | null = null;
+	let selectionEnd: CellPosition | null = null;
+	let isSelecting = false;
+
 	// Calculate visible rows based on scroll position
 	function updateVisibleRows() {
 		if (!rows.length || !containerHeight) return;
@@ -228,6 +244,10 @@
 			// Ensure all rows have the same length
 			const maxCols = Math.max(...rows.map((r) => r.length), 1);
 			colCount = maxCols;
+
+			// Initialize column widths
+			columnWidths = new Array(maxCols).fill(DEFAULT_COL_WIDTH);
+
 			rows = rows.map((row) => {
 				const paddedRow = [...row];
 				while (paddedRow.length < maxCols) {
@@ -488,6 +508,97 @@
 		editingCell = null;
 	}
 
+	// Column resizing functions
+	function startColumnResize(colIndex: number, e: MouseEvent) {
+		e.preventDefault();
+		e.stopPropagation();
+		resizingCol = colIndex;
+		resizeStartX = e.clientX;
+		resizeStartWidth = columnWidths[colIndex] || DEFAULT_COL_WIDTH;
+
+		window.addEventListener('mousemove', onColumnResize);
+		window.addEventListener('mouseup', stopColumnResize);
+	}
+
+	function onColumnResize(e: MouseEvent) {
+		if (resizingCol === null) return;
+
+		const delta = e.clientX - resizeStartX;
+		const newWidth = Math.max(MIN_COL_WIDTH, resizeStartWidth + delta);
+		columnWidths[resizingCol] = newWidth;
+		columnWidths = [...columnWidths]; // Trigger reactivity
+	}
+
+	function stopColumnResize() {
+		resizingCol = null;
+		window.removeEventListener('mousemove', onColumnResize);
+		window.removeEventListener('mouseup', stopColumnResize);
+	}
+
+	// Range selection functions
+	function startSelection(row: number, col: number, e: MouseEvent) {
+		// Only start selection on left click without modifiers
+		if (e.button !== 0) return;
+
+		selectionStart = { row, col };
+		selectionEnd = { row, col };
+		isSelecting = true;
+
+		window.addEventListener('mousemove', onSelectionMove);
+		window.addEventListener('mouseup', stopSelection);
+	}
+
+	function onSelectionMove(e: MouseEvent) {
+		if (!isSelecting) return;
+
+		// Find the cell under the cursor
+		const target = document.elementFromPoint(e.clientX, e.clientY);
+		if (!target) return;
+
+		const cellInput = target.closest('.excel-cell-input') as HTMLElement;
+		if (cellInput) {
+			const row = parseInt(cellInput.dataset.row || '0');
+			const col = parseInt(cellInput.dataset.col || '0');
+			if (!isNaN(row) && !isNaN(col)) {
+				selectionEnd = { row, col };
+			}
+		}
+	}
+
+	function stopSelection() {
+		isSelecting = false;
+		window.removeEventListener('mousemove', onSelectionMove);
+		window.removeEventListener('mouseup', stopSelection);
+	}
+
+	// Check if a cell is within the selection range
+	function isCellSelected(row: number, col: number): boolean {
+		if (!selectionStart || !selectionEnd) return false;
+
+		const minRow = Math.min(selectionStart.row, selectionEnd.row);
+		const maxRow = Math.max(selectionStart.row, selectionEnd.row);
+		const minCol = Math.min(selectionStart.col, selectionEnd.col);
+		const maxCol = Math.max(selectionStart.col, selectionEnd.col);
+
+		return row >= minRow && row <= maxRow && col >= minCol && col <= maxCol;
+	}
+
+	// Get selection bounds for display
+	function getSelectionBounds(): { rows: number; cols: number } | null {
+		if (!selectionStart || !selectionEnd) return null;
+
+		const rows = Math.abs(selectionEnd.row - selectionStart.row) + 1;
+		const cols = Math.abs(selectionEnd.col - selectionStart.col) + 1;
+
+		return rows > 1 || cols > 1 ? { rows, cols } : null;
+	}
+
+	// Clear selection
+	function clearSelection() {
+		selectionStart = null;
+		selectionEnd = null;
+	}
+
 	async function saveChanges() {
 		if (!changedCells.size || !file.fileId) {
 			saveMessage = 'No changes to save';
@@ -707,6 +818,26 @@
 				{undoStack.length > 0 ? `${undoStack.length} change${undoStack.length > 1 ? 's' : ''} to undo` : 'No changes'}
 			</span>
 		</div>
+
+		{#if getSelectionBounds()}
+			{@const bounds = getSelectionBounds()}
+			<div class="excel-toolbar-divider"></div>
+			<div class="excel-toolbar-group">
+				<span class="excel-toolbar-label excel-selection-info">
+					Selection: {bounds?.rows}×{bounds?.cols} cells
+				</span>
+				<button
+					class="excel-toolbar-button"
+					on:click={clearSelection}
+					title="Clear selection"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<line x1="18" y1="6" x2="6" y2="18"/>
+						<line x1="6" y1="6" x2="18" y2="18"/>
+					</svg>
+				</button>
+			</div>
+		{/if}
 	</div>
 
 	<!-- Formula Bar -->
@@ -759,7 +890,17 @@
 						<tr style="height: {ROW_HEIGHT}px;">
 							<th class="excel-row-header excel-corner-header">#</th>
 							{#each Array(colCount) as _, colIndex}
-								<th class="excel-col-header">{getColumnLetter(colIndex)}</th>
+								<th
+									class="excel-col-header"
+									style="width: {columnWidths[colIndex] || DEFAULT_COL_WIDTH}px; min-width: {columnWidths[colIndex] || DEFAULT_COL_WIDTH}px;"
+								>
+									{getColumnLetter(colIndex)}
+									<!-- svelte-ignore a11y_no_static_element_interactions -->
+									<div
+										class="excel-col-resize-handle"
+										on:mousedown={(e) => startColumnResize(colIndex, e)}
+									></div>
+								</th>
 							{/each}
 						</tr>
 					</thead>
@@ -768,16 +909,25 @@
 							<tr style="height: {ROW_HEIGHT}px;">
 								<td class="excel-row-header">{rowIndex + 1}</td>
 								{#each row as cell, colIndex}
-									<td class="excel-cell" class:excel-cell-formula={cellFormulas.has(`${rowIndex},${colIndex}`)}>
+									<td
+										class="excel-cell"
+										class:excel-cell-formula={cellFormulas.has(`${rowIndex},${colIndex}`)}
+										class:excel-cell-selected={isCellSelected(rowIndex, colIndex)}
+										style="width: {columnWidths[colIndex] || DEFAULT_COL_WIDTH}px;"
+									>
 										<input
 											type="text"
 											value={getCellDisplayValue(rowIndex, colIndex, editingCell === `${rowIndex},${colIndex}`)}
 											on:change={(e) => onCellChange(rowIndex, colIndex, e)}
 											on:focus={() => onCellFocus(rowIndex, colIndex)}
 											on:blur={onCellBlur}
+											on:mousedown={(e) => startSelection(rowIndex, colIndex, e)}
+											data-row={rowIndex}
+											data-col={colIndex}
 											class="excel-cell-input"
 											class:excel-cell-changed={changedCells.has(`${rowIndex},${colIndex}`)}
 											class:excel-cell-has-formula={cellFormulas.has(`${rowIndex},${colIndex}`)}
+											class:excel-cell-selected={isCellSelected(rowIndex, colIndex)}
 										/>
 									</td>
 								{/each}
@@ -1155,5 +1305,43 @@
 		font-size: 0.75rem;
 		color: var(--color-gray-500);
 		white-space: nowrap;
+	}
+
+	.excel-selection-info {
+		color: var(--color-blue-600);
+		font-weight: 500;
+	}
+
+	/* Column resize handle */
+	.excel-col-header {
+		position: relative;
+	}
+
+	.excel-col-resize-handle {
+		position: absolute;
+		right: 0;
+		top: 0;
+		bottom: 0;
+		width: 6px;
+		cursor: col-resize;
+		background: transparent;
+		transition: background 0.15s;
+	}
+
+	.excel-col-resize-handle:hover {
+		background: var(--color-blue-400);
+	}
+
+	/* Cell selection */
+	.excel-cell-selected {
+		background: var(--color-blue-100) !important;
+	}
+
+	.excel-cell-selected .excel-cell-input {
+		background: var(--color-blue-100);
+	}
+
+	.excel-cell-input.excel-cell-selected:not(:focus) {
+		background: var(--color-blue-100);
 	}
 </style>
