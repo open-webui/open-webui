@@ -38,6 +38,7 @@
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import Eye from '$lib/components/icons/Eye.svelte';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { goto } from '$app/navigation';
 
 	let shiftKey = false;
 
@@ -198,6 +199,16 @@
 		} else {
 			toast.error($i18n.t('Failed to copy link'));
 		}
+	};
+
+	const cloneHandler = async (model) => {
+		sessionStorage.model = JSON.stringify({
+			...model,
+			base_model_id: model.id,
+			id: `${model.id}-clone`,
+			name: `${model.name} (Clone)`
+		});
+		goto('/workspace/models/create');
 	};
 
 	const exportModelHandler = async (model) => {
@@ -418,6 +429,9 @@
 									}}
 									copyLinkHandler={() => {
 										copyLinkHandler(model);
+									}}
+									cloneHandler={() => {
+										cloneHandler(model);
 									}}
 									onClose={() => {}}
 								>
