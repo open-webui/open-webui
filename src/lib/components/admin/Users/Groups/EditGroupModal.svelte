@@ -34,7 +34,7 @@
 
 	export let name = '';
 	export let description = '';
-	export let config = {};
+	export let data = {};
 
 	export let permissions = {
 		workspace: {
@@ -98,6 +98,7 @@
 		const group = {
 			name,
 			description,
+			data,
 			permissions
 		};
 
@@ -112,7 +113,7 @@
 			name = group.name;
 			description = group.description;
 			permissions = group?.permissions ?? {};
-			config = group?.data?.config ?? {};
+			data = group?.data ?? {};
 
 			userCount = group?.member_count ?? 0;
 		}
@@ -246,7 +247,7 @@
 									<General
 										bind:name
 										bind:description
-										bind:config
+										bind:data
 										{edit}
 										onDelete={() => {
 											showDeleteConfirmDialog = true;

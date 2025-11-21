@@ -101,6 +101,7 @@ class GroupForm(BaseModel):
     name: str
     description: str
     permissions: Optional[dict] = None
+    data: Optional[dict] = None
 
 
 class UserIdsForm(BaseModel):
