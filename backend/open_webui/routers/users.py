@@ -36,7 +36,12 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS, STATIC_DIR
 
 
-from open_webui.utils.auth import get_admin_user, get_password_hash, get_verified_user
+from open_webui.utils.auth import (
+    get_admin_user,
+    get_password_hash,
+    get_verified_user,
+    validate_password,
+)
 from open_webui.utils.access_control import get_permissions, has_permission
 
 
@@ -178,10 +183,15 @@ class WorkspacePermissions(BaseModel):
 
 
 class SharingPermissions(BaseModel):
-    public_models: bool = True
-    public_knowledge: bool = True
-    public_prompts: bool = True
+    models: bool = False
+    public_models: bool = False
+    knowledge: bool = False
+    public_knowledge: bool = False
+    prompts: bool = False
+    public_prompts: bool = False
+    tools: bool = False
     public_tools: bool = True
+    notes: bool = False
     public_notes: bool = True
 
 
@@ -497,8 +507,12 @@ async def update_user_by_id(
                 )
 
         if form_data.password:
+            try:
+                validate_password(form_data.password)
+            except Exception as e:
+                raise HTTPException(400, detail=str(e))
+
             hashed = get_password_hash(form_data.password)
-            log.debug(f"hashed: {hashed}")
             Auths.update_user_password_by_id(user_id, hashed)
 
         Auths.update_email_by_id(user_id, form_data.email.lower())

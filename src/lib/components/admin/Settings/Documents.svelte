@@ -757,18 +757,18 @@
 								{/if}
 							{/if}
 
-							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
-									<Tooltip content={''} placement="top-start">
+							<div class="flex flex-col gap-2 mt-2">
+								<div class=" flex flex-col w-full justify-between">
+									<div class=" mb-1 text-xs font-medium">
 										{$i18n.t('Parameters')}
-									</Tooltip>
-								</div>
-								<div class="">
-									<Textarea
-										bind:value={RAGConfig.DOCLING_PARAMS}
-										placeholder={$i18n.t('Enter additional parameters in JSON format')}
-										minSize={100}
-									/>
+									</div>
+									<div class="flex w-full items-center relative">
+										<Textarea
+											bind:value={RAGConfig.DOCLING_PARAMS}
+											placeholder={$i18n.t('Enter additional parameters in JSON format')}
+											minSize={100}
+										/>
+									</div>
 								</div>
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'document_intelligence'}

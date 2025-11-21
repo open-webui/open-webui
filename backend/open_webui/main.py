@@ -164,6 +164,7 @@ from open_webui.config import (
     IMAGES_GEMINI_API_BASE_URL,
     IMAGES_GEMINI_API_KEY,
     IMAGES_GEMINI_ENDPOINT_METHOD,
+    ENABLE_IMAGE_EDIT,
     IMAGE_EDIT_ENGINE,
     IMAGE_EDIT_MODEL,
     IMAGE_EDIT_SIZE,
@@ -369,6 +370,7 @@ from open_webui.config import (
     BYPASS_ADMIN_ACCESS_CONTROL,
     USER_PERMISSIONS,
     DEFAULT_USER_ROLE,
+    DEFAULT_GROUP_ID,
     PENDING_USER_OVERLAY_CONTENT,
     PENDING_USER_OVERLAY_TITLE,
     DEFAULT_PROMPT_SUGGESTIONS,
@@ -455,6 +457,7 @@ from open_webui.env import (
     SAFE_MODE,
     SRC_LOG_LEVELS,
     VERSION,
+    DEPLOYMENT_ID,
     INSTANCE_ID,
     WEBUI_BUILD_HASH,
     WEBUI_SECRET_KEY,
@@ -762,6 +765,7 @@ app.state.config.MODEL_ORDER_LIST = MODEL_ORDER_LIST
 
 app.state.config.DEFAULT_PROMPT_SUGGESTIONS = DEFAULT_PROMPT_SUGGESTIONS
 app.state.config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
+app.state.config.DEFAULT_GROUP_ID = DEFAULT_GROUP_ID
 
 app.state.config.PENDING_USER_OVERLAY_CONTENT = PENDING_USER_OVERLAY_CONTENT
 app.state.config.PENDING_USER_OVERLAY_TITLE = PENDING_USER_OVERLAY_TITLE
@@ -1116,6 +1120,7 @@ app.state.config.COMFYUI_WORKFLOW = COMFYUI_WORKFLOW
 app.state.config.COMFYUI_WORKFLOW_NODES = COMFYUI_WORKFLOW_NODES
 
 
+app.state.config.ENABLE_IMAGE_EDIT = ENABLE_IMAGE_EDIT
 app.state.config.IMAGE_EDIT_ENGINE = IMAGE_EDIT_ENGINE
 app.state.config.IMAGE_EDIT_MODEL = IMAGE_EDIT_MODEL
 app.state.config.IMAGE_EDIT_SIZE = IMAGE_EDIT_SIZE
@@ -1450,6 +1455,10 @@ async def get_models(
         # Filter out filter pipelines
         if "pipeline" in model and model["pipeline"].get("type", None) == "filter":
             continue
+
+        # Remove profile image URL to reduce payload size
+        if model.get("info", {}).get("meta", {}).get("profile_image_url"):
+            model["info"]["meta"].pop("profile_image_url", None)
 
         try:
             model_tags = [
@@ -1986,6 +1995,7 @@ async def update_webhook_url(form_data: UrlForm, user=Depends(get_admin_user)):
 async def get_app_version():
     return {
         "version": VERSION,
+        "deployment_id": DEPLOYMENT_ID,
     }
 
 

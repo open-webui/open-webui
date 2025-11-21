@@ -17,6 +17,7 @@
 		theme,
 		WEBUI_NAME,
 		WEBUI_VERSION,
+		WEBUI_DEPLOYMENT_ID,
 		mobile,
 		socket,
 		chatId,
@@ -46,7 +47,7 @@
 	import { getAllTags, getChatList } from '$lib/apis/chats';
 	import { chatCompletion } from '$lib/apis/openai';
 
-	import { WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
 	import { bestMatchingLanguage } from '$lib/utils';
 	import { setTextScale } from '$lib/utils/text-scale';
 
@@ -54,10 +55,26 @@
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { getUserSettings } from '$lib/apis/users';
+	import dayjs from 'dayjs';
+
+	const unregisterServiceWorkers = async () => {
+		if ('serviceWorker' in navigator) {
+			try {
+				const registrations = await navigator.serviceWorker.getRegistrations();
+				await Promise.all(registrations.map((r) => r.unregister()));
+				return true;
+			} catch (error) {
+				console.error('Error unregistering service workers:', error);
+				return false;
+			}
+		}
+		return false;
+	};
 
 	// handle frontend updates (https://svelte.dev/docs/kit/configuration#version)
-	beforeNavigate(({ willUnload, to }) => {
+	beforeNavigate(async ({ willUnload, to }) => {
 		if (updated.current && !willUnload && to?.url) {
+			await unregisterServiceWorkers();
 			location.href = to.url.href;
 		}
 	});
@@ -91,13 +108,28 @@
 
 		_socket.on('connect', async () => {
 			console.log('connected', _socket.id);
-			const version = await getVersion(localStorage.token);
-			if (version !== null) {
-				if ($WEBUI_VERSION !== null && version !== $WEBUI_VERSION) {
+			const res = await getVersion(localStorage.token);
+
+			const deploymentId = res?.deployment_id ?? null;
+			const version = res?.version ?? null;
+
+			if (version !== null || deploymentId !== null) {
+				if (
+					($WEBUI_VERSION !== null && version !== $WEBUI_VERSION) ||
+					($WEBUI_DEPLOYMENT_ID !== null && deploymentId !== $WEBUI_DEPLOYMENT_ID)
+				) {
+					await unregisterServiceWorkers();
 					location.href = location.href;
-				} else {
-					WEBUI_VERSION.set(version);
+					return;
 				}
+			}
+
+			if (deploymentId !== null) {
+				WEBUI_DEPLOYMENT_ID.set(deploymentId);
+			}
+
+			if (version !== null) {
+				WEBUI_VERSION.set(version);
 			}
 
 			console.log('version', version);
@@ -457,7 +489,7 @@
 					if ($settings?.notificationEnabled ?? false) {
 						new Notification(`${data?.user?.name} (#${event?.channel?.name}) • Open WebUI`, {
 							body: data?.content,
-							icon: data?.user?.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`
+							icon: `${WEBUI_API_BASE_URL}/users/${data?.user?.id}/profile/image`
 						});
 					}
 				}
@@ -637,6 +669,7 @@
 				? backendConfig.default_locale
 				: bestMatchingLanguage(languages, browserLanguages, 'en-US');
 			changeLanguage(lang);
+			dayjs.locale(lang);
 		}
 
 		if (backendConfig) {

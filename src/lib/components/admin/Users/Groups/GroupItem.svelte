@@ -10,7 +10,7 @@
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import User from '$lib/components/icons/User.svelte';
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
-	import GroupModal from './EditGroupModal.svelte';
+	import EditGroupModal from './EditGroupModal.svelte';
 
 	export let group = {
 		name: 'Admins',
@@ -54,7 +54,7 @@
 	});
 </script>
 
-<GroupModal
+<EditGroupModal
 	bind:show={showEdit}
 	edit
 	{group}

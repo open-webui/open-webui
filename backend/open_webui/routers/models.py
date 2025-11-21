@@ -253,6 +253,7 @@ async def get_model_profile_image(id: str, user=Depends(get_verified_user)):
                     )
                 except Exception as e:
                     pass
+
         return FileResponse(f"{STATIC_DIR}/favicon.png")
     else:
         return FileResponse(f"{STATIC_DIR}/favicon.png")
@@ -320,7 +321,7 @@ async def update_model_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    model = Models.update_model_by_id(form_data.id, form_data)
+    model = Models.update_model_by_id(form_data.id, ModelForm(**form_data.model_dump()))
     return model
 
 

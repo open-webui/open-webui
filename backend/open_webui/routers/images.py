@@ -126,6 +126,7 @@ class ImagesConfig(BaseModel):
     IMAGES_GEMINI_API_KEY: str
     IMAGES_GEMINI_ENDPOINT_METHOD: str
 
+    ENABLE_IMAGE_EDIT: bool
     IMAGE_EDIT_ENGINE: str
     IMAGE_EDIT_MODEL: str
     IMAGE_EDIT_SIZE: Optional[str]
@@ -164,6 +165,7 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
         "IMAGES_GEMINI_API_BASE_URL": request.app.state.config.IMAGES_GEMINI_API_BASE_URL,
         "IMAGES_GEMINI_API_KEY": request.app.state.config.IMAGES_GEMINI_API_KEY,
         "IMAGES_GEMINI_ENDPOINT_METHOD": request.app.state.config.IMAGES_GEMINI_ENDPOINT_METHOD,
+        "ENABLE_IMAGE_EDIT": request.app.state.config.ENABLE_IMAGE_EDIT,
         "IMAGE_EDIT_ENGINE": request.app.state.config.IMAGE_EDIT_ENGINE,
         "IMAGE_EDIT_MODEL": request.app.state.config.IMAGE_EDIT_MODEL,
         "IMAGE_EDIT_SIZE": request.app.state.config.IMAGE_EDIT_SIZE,
@@ -253,6 +255,7 @@ async def update_config(
     )
 
     # Edit Image
+    request.app.state.config.ENABLE_IMAGE_EDIT = form_data.ENABLE_IMAGE_EDIT
     request.app.state.config.IMAGE_EDIT_ENGINE = form_data.IMAGE_EDIT_ENGINE
     request.app.state.config.IMAGE_EDIT_MODEL = form_data.IMAGE_EDIT_MODEL
     request.app.state.config.IMAGE_EDIT_SIZE = form_data.IMAGE_EDIT_SIZE
@@ -308,6 +311,7 @@ async def update_config(
         "IMAGES_GEMINI_API_BASE_URL": request.app.state.config.IMAGES_GEMINI_API_BASE_URL,
         "IMAGES_GEMINI_API_KEY": request.app.state.config.IMAGES_GEMINI_API_KEY,
         "IMAGES_GEMINI_ENDPOINT_METHOD": request.app.state.config.IMAGES_GEMINI_ENDPOINT_METHOD,
+        "ENABLE_IMAGE_EDIT": request.app.state.config.ENABLE_IMAGE_EDIT,
         "IMAGE_EDIT_ENGINE": request.app.state.config.IMAGE_EDIT_ENGINE,
         "IMAGE_EDIT_MODEL": request.app.state.config.IMAGE_EDIT_MODEL,
         "IMAGE_EDIT_SIZE": request.app.state.config.IMAGE_EDIT_SIZE,

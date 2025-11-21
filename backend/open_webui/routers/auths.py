@@ -45,6 +45,7 @@ from pydantic import BaseModel
 
 from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.auth import (
+    validate_password,
     verify_password,
     decode_token,
     invalidate_token,
@@ -181,10 +182,14 @@ async def update_password(
         )
 
         if user:
+            try:
+                validate_password(form_data.password)
+            except Exception as e:
+                raise HTTPException(400, detail=str(e))
             hashed = get_password_hash(form_data.new_password)
             return Auths.update_user_password_by_id(user.id, hashed)
         else:
-            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_PASSWORD)
+            raise HTTPException(400, detail=ERROR_MESSAGES.INCORRECT_PASSWORD)
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
@@ -627,16 +632,14 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
     try:
-        role = "admin" if not has_users else request.app.state.config.DEFAULT_USER_ROLE
-
-        # The password passed to bcrypt must be 72 bytes or fewer. If it is longer, it will be truncated before hashing.
-        if len(form_data.password.encode("utf-8")) > 72:
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.PASSWORD_TOO_LONG,
-            )
+        try:
+            validate_password(form_data.password)
+        except Exception as e:
+            raise HTTPException(400, detail=str(e))
 
         hashed = get_password_hash(form_data.password)
+
+        role = "admin" if not has_users else request.app.state.config.DEFAULT_USER_ROLE
         user = Auths.insert_new_auth(
             form_data.email.lower(),
             hashed,
@@ -691,7 +694,11 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             if not has_users:
                 # Disable signup after the first user is created
                 request.app.state.config.ENABLE_SIGNUP = False
-
+        
+            default_group_id = getattr(request.app.state.config, 'DEFAULT_GROUP_ID', "")
+            if default_group_id and default_group_id:
+                Groups.add_users_to_group(default_group_id, [user.id])
+        
             return {
                 "token": token,
                 "token_type": "Bearer",
@@ -805,6 +812,11 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
     try:
+        try:
+            validate_password(form_data.password)
+        except Exception as e:
+            raise HTTPException(400, detail=str(e))
+
         hashed = get_password_hash(form_data.password)
         user = Auths.insert_new_auth(
             form_data.email.lower(),
@@ -880,6 +892,7 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS": request.app.state.config.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS,
         "API_KEYS_ALLOWED_ENDPOINTS": request.app.state.config.API_KEYS_ALLOWED_ENDPOINTS,
         "DEFAULT_USER_ROLE": request.app.state.config.DEFAULT_USER_ROLE,
+        "DEFAULT_GROUP_ID": request.app.state.config.DEFAULT_GROUP_ID,
         "JWT_EXPIRES_IN": request.app.state.config.JWT_EXPIRES_IN,
         "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
@@ -900,6 +913,7 @@ class AdminConfig(BaseModel):
     ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS: bool
     API_KEYS_ALLOWED_ENDPOINTS: str
     DEFAULT_USER_ROLE: str
+    DEFAULT_GROUP_ID: str
     JWT_EXPIRES_IN: str
     ENABLE_COMMUNITY_SHARING: bool
     ENABLE_MESSAGE_RATING: bool
@@ -914,7 +928,7 @@ class AdminConfig(BaseModel):
 @router.post("/admin/config")
 async def update_admin_config(
     request: Request, form_data: AdminConfig, user=Depends(get_admin_user)
-):
+):    
     request.app.state.config.SHOW_ADMIN_DETAILS = form_data.SHOW_ADMIN_DETAILS
     request.app.state.config.WEBUI_URL = form_data.WEBUI_URL
     request.app.state.config.ENABLE_SIGNUP = form_data.ENABLE_SIGNUP
@@ -932,6 +946,8 @@ async def update_admin_config(
 
     if form_data.DEFAULT_USER_ROLE in ["pending", "user", "admin"]:
         request.app.state.config.DEFAULT_USER_ROLE = form_data.DEFAULT_USER_ROLE
+
+    request.app.state.config.DEFAULT_GROUP_ID = form_data.DEFAULT_GROUP_ID
 
     pattern = r"^(-1|0|(-?\d+(\.\d+)?)(ms|s|m|h|d|w))$"
 
@@ -963,6 +979,7 @@ async def update_admin_config(
         "ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS": request.app.state.config.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS,
         "API_KEYS_ALLOWED_ENDPOINTS": request.app.state.config.API_KEYS_ALLOWED_ENDPOINTS,
         "DEFAULT_USER_ROLE": request.app.state.config.DEFAULT_USER_ROLE,
+        "DEFAULT_GROUP_ID": request.app.state.config.DEFAULT_GROUP_ID,
         "JWT_EXPIRES_IN": request.app.state.config.JWT_EXPIRES_IN,
         "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,

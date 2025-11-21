@@ -14,6 +14,7 @@
 	import Notes from '$lib/components/notes/Notes.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Sidebar from '$lib/components/icons/Sidebar.svelte';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	let loaded = false;
 
@@ -95,7 +96,7 @@
 								>
 									<div class=" self-center">
 										<img
-											src={$user?.profile_image_url}
+											src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
 											class="size-6 object-cover rounded-full"
 											alt="User profile"
 											draggable="false"

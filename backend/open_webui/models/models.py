@@ -244,11 +244,9 @@ class ModelsTable:
         try:
             with get_db() as db:
                 # update only the fields that are present in the model
-                result = (
-                    db.query(Model)
-                    .filter_by(id=id)
-                    .update(model.model_dump(exclude={"id"}))
-                )
+                data = model.model_dump(exclude={"id"})
+                result = db.query(Model).filter_by(id=id).update(data)
+
                 db.commit()
 
                 model = db.get(Model, id)
