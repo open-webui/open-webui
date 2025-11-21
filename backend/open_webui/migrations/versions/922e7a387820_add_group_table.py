@@ -16,11 +16,15 @@ depends_on = None
 
 
 def upgrade():
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing_tables = set(inspector.get_table_names())
+
     op.create_table(
         "group",
-        sa.Column("id", sa.Text(), nullable=False, primary_key=True, unique=True),
-        sa.Column("user_id", sa.Text(), nullable=True),
-        sa.Column("name", sa.Text(), nullable=True),
+        sa.Column("id", sa.String(length=255), nullable=False, primary_key=True, unique=True),
+        sa.Column("user_id", sa.String(length=255), nullable=True),
+        sa.Column("name", sa.String(length=255), nullable=True),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("data", sa.JSON(), nullable=True),
         sa.Column("meta", sa.JSON(), nullable=True),
@@ -30,40 +34,50 @@ def upgrade():
         sa.Column("updated_at", sa.BigInteger(), nullable=True),
     )
 
+    def column_missing(table_name: str, column_name: str) -> bool:
+        if table_name not in existing_tables:
+            return False
+        return column_name not in {col["name"] for col in inspector.get_columns(table_name)}
+
     # Add 'access_control' column to 'model' table
-    op.add_column(
-        "model",
-        sa.Column("access_control", sa.JSON(), nullable=True),
-    )
+    if column_missing("model", "access_control"):
+        op.add_column(
+            "model",
+            sa.Column("access_control", sa.JSON(), nullable=True),
+        )
 
     # Add 'is_active' column to 'model' table
-    op.add_column(
-        "model",
-        sa.Column(
-            "is_active",
-            sa.Boolean(),
-            nullable=False,
-            server_default=sa.sql.expression.true(),
-        ),
-    )
+    if column_missing("model", "is_active"):
+        op.add_column(
+            "model",
+            sa.Column(
+                "is_active",
+                sa.Boolean(),
+                nullable=False,
+                server_default=sa.sql.expression.true(),
+            ),
+        )
 
     # Add 'access_control' column to 'knowledge' table
-    op.add_column(
-        "knowledge",
-        sa.Column("access_control", sa.JSON(), nullable=True),
-    )
+    if column_missing("knowledge", "access_control"):
+        op.add_column(
+            "knowledge",
+            sa.Column("access_control", sa.JSON(), nullable=True),
+        )
 
     # Add 'access_control' column to 'prompt' table
-    op.add_column(
-        "prompt",
-        sa.Column("access_control", sa.JSON(), nullable=True),
-    )
+    if column_missing("prompt", "access_control"):
+        op.add_column(
+            "prompt",
+            sa.Column("access_control", sa.JSON(), nullable=True),
+        )
 
     # Add 'access_control' column to 'tools' table
-    op.add_column(
-        "tool",
-        sa.Column("access_control", sa.JSON(), nullable=True),
-    )
+    if column_missing("tool", "access_control"):
+        op.add_column(
+            "tool",
+            sa.Column("access_control", sa.JSON(), nullable=True),
+        )
 
 
 def downgrade():
