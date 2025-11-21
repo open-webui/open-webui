@@ -1,5 +1,5 @@
 <script>
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, showSidebar } from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { onMount, getContext } from 'svelte';
@@ -362,11 +362,7 @@
 							<div class="flex items-center">
 								<img
 									class="rounded-full w-6 h-6 object-cover mr-2.5 flex-shrink-0"
-									src={user?.profile_image_url?.startsWith(WEBUI_BASE_URL) ||
-									user.profile_image_url.startsWith('https://www.gravatar.com/avatar/') ||
-									user.profile_image_url.startsWith('data:')
-										? user.profile_image_url
-										: `${WEBUI_BASE_URL}/user.png`}
+									src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
 									alt="user"
 								/>
 

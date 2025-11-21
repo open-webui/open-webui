@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { Handle, Position, type NodeProps } from '@xyflow/svelte';
 
 	import ProfileImage from '../Messages/ProfileImage.svelte';
@@ -21,7 +21,7 @@
 		{#if data.message.role === 'user'}
 			<div class="flex w-full">
 				<ProfileImage
-					src={data.user?.profile_image_url ?? `${WEBUI_BASE_URL}/user.png`}
+					src={`${WEBUI_API_BASE_URL}/users/${data.user.id}/profile/image`}
 					className={'size-5 -translate-y-[1px]'}
 				/>
 				<div class="ml-2">
@@ -41,7 +41,7 @@
 		{:else}
 			<div class="flex w-full">
 				<ProfileImage
-					src={data?.model?.info?.meta?.profile_image_url ?? ''}
+					src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${data.model.id}&lang=${$i18n.language}`}
 					className={'size-5 -translate-y-[1px]'}
 				/>
 

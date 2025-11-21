@@ -253,6 +253,7 @@ async def get_model_profile_image(id: str, user=Depends(get_verified_user)):
                     )
                 except Exception as e:
                     pass
+
         return FileResponse(f"{STATIC_DIR}/favicon.png")
     else:
         return FileResponse(f"{STATIC_DIR}/favicon.png")

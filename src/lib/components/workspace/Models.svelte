@@ -12,7 +12,7 @@
 	const i18n = getContext('i18n');
 
 	import { WEBUI_NAME, config, mobile, models as _models, settings, user } from '$lib/stores';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import {
 		createNewModel,
 		deleteModelById,
@@ -435,13 +435,12 @@
 							<div class="self-center pl-0.5">
 								<div class="flex bg-white rounded-2xl">
 									<div
-										class="{model.is_active ? '' : 'opacity-50 dark:opacity-50'} {model.meta
-											.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`
-											? 'bg-transparent'
-											: 'bg-white'} rounded-2xl"
+										class="{model.is_active
+											? ''
+											: 'opacity-50 dark:opacity-50'} bg-transparent rounded-2xl"
 									>
 										<img
-											src={model?.meta?.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`}
+											src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&lang=${$i18n.language}`}
 											alt="modelfile profile"
 											class=" rounded-2xl size-12 object-cover"
 										/>
