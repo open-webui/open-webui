@@ -7,11 +7,10 @@ from open_webui.socket.main import get_event_emitter
 from open_webui.models.chats import (
     ChatForm,
     ChatImportForm,
-    ChatBulkImportForm,
+    ChatsImportForm,
     ChatResponse,
     Chats,
     ChatTitleIdResponse,
-    ChatsImportForm,
 )
 from open_webui.models.tags import TagModel, Tags
 from open_webui.models.folders import Folders
