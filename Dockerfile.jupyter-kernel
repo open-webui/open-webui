@@ -5,6 +5,11 @@ FROM jupyter/minimal-notebook:latest
 ENV JUPYTER_TOKEN=""
 ENV JUPYTER_ENABLE_LAB="no"
 
+# Disable strict file permission checks for Azure App Service compatibility
+# Safe because this is internal-only, not exposed to the internet
+ENV JUPYTER_ALLOW_INSECURE_WRITES="1"
+ENV JUPYTER_PREFER_ENV_PATH="1"
+
 # Install kernel gateway and a basic data science stack
 # IMPORTANT: Added openpyxl for Excel file generation
 RUN pip install --no-cache-dir \
