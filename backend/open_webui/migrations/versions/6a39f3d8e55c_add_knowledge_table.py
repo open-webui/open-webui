@@ -23,9 +23,9 @@ def upgrade():
     print("Creating knowledge table")
     knowledge_table = op.create_table(
         "knowledge",
-        sa.Column("id", sa.Text(), primary_key=True),
-        sa.Column("user_id", sa.Text(), nullable=False),
-        sa.Column("name", sa.Text(), nullable=False),
+        sa.Column("id", sa.String(length=255), primary_key=True),
+        sa.Column("user_id", sa.String(length=255), nullable=False),
+        sa.Column("name", sa.String(length=255), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("data", sa.JSON(), nullable=True),
         sa.Column("meta", sa.JSON(), nullable=True),
