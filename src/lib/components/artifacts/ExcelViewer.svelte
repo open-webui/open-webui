@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import * as XLSX from 'xlsx';
 	import fileSaver from 'file-saver';
 	import type { ExcelArtifact } from '$lib/types';
@@ -7,6 +7,11 @@
 	const { saveAs } = fileSaver;
 
 	export let file: ExcelArtifact;
+
+	// Constants for virtual scrolling
+	const ROW_HEIGHT = 36; // pixels per row
+	const BUFFER_ROWS = 5; // extra rows to render above/below viewport
+	const COL_WIDTH = 120; // default column width
 
 	let sheetNames: string[] = [];
 	let activeSheet: string = '';
@@ -28,12 +33,74 @@
 	// Track if file might contain charts (show info message)
 	let hasChartWarning = false;
 
+	// Virtual scrolling state
+	let containerElement: HTMLDivElement;
+	let scrollTop = 0;
+	let containerHeight = 0;
+	let visibleStartIndex = 0;
+	let visibleEndIndex = 0;
+	let visibleRows: { index: number; data: any[] }[] = [];
+
+	// Column count for header
+	let colCount = 0;
+
+	// Calculate visible rows based on scroll position
+	function updateVisibleRows() {
+		if (!rows.length || !containerHeight) return;
+
+		const headerHeight = ROW_HEIGHT; // Account for header row
+		const availableHeight = containerHeight - headerHeight;
+
+		// Calculate visible range
+		visibleStartIndex = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER_ROWS);
+		const visibleCount = Math.ceil(availableHeight / ROW_HEIGHT) + BUFFER_ROWS * 2;
+		visibleEndIndex = Math.min(rows.length, visibleStartIndex + visibleCount);
+
+		// Build visible rows array with original indices
+		visibleRows = [];
+		for (let i = visibleStartIndex; i < visibleEndIndex; i++) {
+			visibleRows.push({ index: i, data: rows[i] });
+		}
+	}
+
+	// Handle scroll events
+	function onScroll(e: Event) {
+		const target = e.target as HTMLDivElement;
+		scrollTop = target.scrollTop;
+		updateVisibleRows();
+	}
+
+	// Observe container size changes
+	function setupResizeObserver() {
+		if (!containerElement) return;
+
+		const observer = new ResizeObserver((entries) => {
+			for (const entry of entries) {
+				containerHeight = entry.contentRect.height;
+				updateVisibleRows();
+			}
+		});
+
+		observer.observe(containerElement);
+		return () => observer.disconnect();
+	}
+
+	// Get Excel-style column letter (A, B, ... Z, AA, AB, etc.)
+	function getColumnLetter(colIndex: number): string {
+		let letter = '';
+		let temp = colIndex;
+		while (temp >= 0) {
+			letter = String.fromCharCode(65 + (temp % 26)) + letter;
+			temp = Math.floor(temp / 26) - 1;
+		}
+		return letter;
+	}
+
 	async function loadWorkbook() {
 		try {
 			loading = true;
 			error = null;
 
-			// Fetch the file
 			const resp = await fetch(file.url);
 			if (!resp.ok) {
 				throw new Error(`Failed to fetch file: ${resp.statusText}`);
@@ -44,12 +111,10 @@
 
 			sheetNames = workbook.SheetNames;
 
-			// Check for chart-related content (charts appear as separate sheets or have special properties)
-			// SheetJS community edition shows charts as data tables, so we warn users
+			// Check for chart-related content
 			hasChartWarning = false;
 			for (const name of sheetNames) {
 				const ws = workbook.Sheets[name];
-				// Check for chart sheets (type === 'chart') or sheets with chart names
 				if (
 					ws['!type'] === 'chart' ||
 					name.toLowerCase().includes('chart') ||
@@ -58,7 +123,6 @@
 					hasChartWarning = true;
 					break;
 				}
-				// Also check for embedded charts (not directly detectable, but check for drawing references)
 				if (ws['!drawings'] || ws['!charts']) {
 					hasChartWarning = true;
 					break;
@@ -74,6 +138,10 @@
 
 			loadSheet(activeSheet);
 			loading = false;
+
+			// Wait for DOM update then setup observers
+			await tick();
+			setupResizeObserver();
 		} catch (e) {
 			console.error('Error loading workbook:', e);
 			error = e instanceof Error ? e.message : 'Failed to load Excel file';
@@ -91,12 +159,10 @@
 				return;
 			}
 
-			// Get the range of the worksheet
 			const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
 			const numRows = range.e.r - range.s.r + 1;
 			const numCols = range.e.c - range.s.c + 1;
 
-			// Build rows array and capture cell data with formulas
 			cellData.clear();
 			rows = [];
 
@@ -107,14 +173,11 @@
 					const cell = ws[cellAddress];
 
 					if (cell) {
-						// Store both value and formula
 						const key = `${r},${c}`;
 						cellData.set(key, {
 							value: cell.v !== undefined ? cell.v : '',
 							formula: cell.f
 						});
-
-						// Display the calculated value
 						row.push(cell.v !== undefined ? cell.v : '');
 					} else {
 						row.push('');
@@ -123,8 +186,9 @@
 				rows.push(row);
 			}
 
-			// Ensure all rows have the same length (pad shorter rows if needed)
+			// Ensure all rows have the same length
 			const maxCols = Math.max(...rows.map((r) => r.length), 1);
+			colCount = maxCols;
 			rows = rows.map((row) => {
 				const paddedRow = [...row];
 				while (paddedRow.length < maxCols) {
@@ -133,9 +197,15 @@
 				return paddedRow;
 			});
 
-			// Clear changed cells when switching sheets
+			// Reset scroll and update visible rows
+			scrollTop = 0;
+			if (containerElement) {
+				containerElement.scrollTop = 0;
+			}
 			changedCells.clear();
 			saveMessage = '';
+
+			updateVisibleRows();
 		} catch (e) {
 			console.error('Error loading sheet:', e);
 			error = e instanceof Error ? e.message : 'Failed to load sheet';
@@ -150,7 +220,8 @@
 
 	function markCellChanged(r: number, c: number, value: any) {
 		const key = `${r},${c}`;
-		changedCells.set(key, { row: r + 1, col: c + 1, value }); // Excel is 1-based
+		changedCells.set(key, { row: r + 1, col: c + 1, value });
+		changedCells = changedCells; // Trigger reactivity
 		saveMessage = '';
 	}
 
@@ -171,10 +242,8 @@
 			saving = true;
 			saveMessage = '';
 
-			// Prepare changes with formula detection
 			const changes = Array.from(changedCells.values()).map((change) => {
 				const value = change.value;
-				// Check if the value looks like a formula
 				const isFormula = typeof value === 'string' && value.startsWith('=');
 				return {
 					row: change.row,
@@ -201,19 +270,15 @@
 
 			const result = await response.json();
 			changedCells.clear();
+			changedCells = changedCells;
 			saveMessage = result.message || 'Changes saved successfully';
 			saving = false;
 
-			// Force reload the workbook to reflect saved changes (with cache bypass)
 			setTimeout(async () => {
-				// Add cache-busting timestamp to force fresh fetch
 				const originalUrl = file.url;
 				const separator = file.url.includes('?') ? '&' : '?';
 				file.url = `${originalUrl}${separator}_t=${Date.now()}`;
-
 				await loadWorkbook();
-
-				// Restore original URL
 				file.url = originalUrl;
 			}, 300);
 		} catch (e) {
@@ -230,7 +295,6 @@
 		}
 
 		try {
-			// Apply any pending changes to the workbook before downloading
 			if (changedCells.size > 0 && activeSheet) {
 				const ws = workbook.Sheets[activeSheet];
 				if (ws) {
@@ -245,13 +309,11 @@
 				}
 			}
 
-			// Generate the Excel file
 			const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
 			const blob = new Blob([wbout], {
 				type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 			});
 
-			// Download with original filename or default
 			const filename = file.name || 'download.xlsx';
 			saveAs(blob, filename);
 		} catch (e) {
@@ -266,10 +328,18 @@
 		}
 	});
 
-	// Reload when file URL changes
 	$: if (file?.url) {
 		loadWorkbook();
 	}
+
+	// Reactive: update visible rows when rows change
+	$: if (rows.length) {
+		updateVisibleRows();
+	}
+
+	// Calculate total height for scroll area
+	$: totalHeight = rows.length * ROW_HEIGHT;
+	$: paddingTop = visibleStartIndex * ROW_HEIGHT;
 </script>
 
 <div class="excel-viewer">
@@ -287,6 +357,9 @@
 						<option value={name}>{name}</option>
 					{/each}
 				</select>
+			{/if}
+			{#if rows.length > 0}
+				<span class="excel-row-count">{rows.length.toLocaleString()} rows</span>
 			{/if}
 		</div>
 		<div class="excel-header-right">
@@ -341,35 +414,41 @@
 			{error}
 		</div>
 	{:else if rows.length > 0}
-		<div class="excel-grid-container">
-			<table class="excel-grid">
-				<thead>
-					<tr>
-						<th class="excel-row-header">#</th>
-						{#each rows[0] as _, colIndex}
-							<th class="excel-col-header">{String.fromCharCode(65 + colIndex)}</th>
-						{/each}
-					</tr>
-				</thead>
-				<tbody>
-					{#each rows as row, rowIndex}
-						<tr>
-							<td class="excel-row-header">{rowIndex + 1}</td>
-							{#each row as cell, colIndex}
-								<td class="excel-cell">
-									<input
-										type="text"
-										value={cell}
-										on:change={(e) => onCellChange(rowIndex, colIndex, e)}
-										class="excel-cell-input"
-										class:excel-cell-changed={changedCells.has(`${rowIndex},${colIndex}`)}
-									/>
-								</td>
+		<div
+			class="excel-grid-container"
+			bind:this={containerElement}
+			on:scroll={onScroll}
+		>
+			<div class="excel-virtual-scroll" style="height: {totalHeight + ROW_HEIGHT}px;">
+				<table class="excel-grid" style="transform: translateY({paddingTop}px);">
+					<thead>
+						<tr style="height: {ROW_HEIGHT}px;">
+							<th class="excel-row-header excel-corner-header">#</th>
+							{#each Array(colCount) as _, colIndex}
+								<th class="excel-col-header">{getColumnLetter(colIndex)}</th>
 							{/each}
 						</tr>
-					{/each}
-				</tbody>
-			</table>
+					</thead>
+					<tbody>
+						{#each visibleRows as { index: rowIndex, data: row } (rowIndex)}
+							<tr style="height: {ROW_HEIGHT}px;">
+								<td class="excel-row-header">{rowIndex + 1}</td>
+								{#each row as cell, colIndex}
+									<td class="excel-cell">
+										<input
+											type="text"
+											value={cell}
+											on:change={(e) => onCellChange(rowIndex, colIndex, e)}
+											class="excel-cell-input"
+											class:excel-cell-changed={changedCells.has(`${rowIndex},${colIndex}`)}
+										/>
+									</td>
+								{/each}
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
 		</div>
 	{:else}
 		<div class="excel-empty">No data to display</div>
@@ -417,6 +496,12 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	.excel-row-count {
+		font-size: 0.75rem;
+		color: var(--color-gray-500);
+		white-space: nowrap;
 	}
 
 	.excel-sheet-selector {
@@ -526,19 +611,34 @@
 		flex: 1;
 		overflow: auto;
 		background: white;
+		position: relative;
+	}
+
+	.excel-virtual-scroll {
+		position: relative;
+		width: fit-content;
+		min-width: 100%;
 	}
 
 	.excel-grid {
-		width: 100%;
+		width: fit-content;
+		min-width: 100%;
 		border-collapse: collapse;
 		font-size: 1rem;
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 		font-variant-numeric: tabular-nums;
+		position: sticky;
+		top: 0;
+	}
+
+	.excel-grid thead {
+		position: sticky;
+		top: 0;
+		z-index: 10;
 	}
 
 	.excel-row-header,
 	.excel-col-header {
-		position: sticky;
 		background: var(--color-gray-100);
 		color: var(--color-gray-800);
 		font-weight: 600;
@@ -547,16 +647,23 @@
 		border: 1px solid var(--color-gray-300);
 		min-width: 3rem;
 		font-size: 0.875rem;
+		white-space: nowrap;
+	}
+
+	.excel-corner-header {
+		position: sticky;
+		left: 0;
+		z-index: 11;
 	}
 
 	.excel-row-header {
+		position: sticky;
 		left: 0;
 		z-index: 2;
 	}
 
 	.excel-col-header {
-		top: 0;
-		z-index: 1;
+		min-width: 120px;
 	}
 
 	.excel-cell {
@@ -568,6 +675,7 @@
 	.excel-cell-input {
 		width: 100%;
 		min-width: 120px;
+		height: 100%;
 		padding: 0.5rem 0.75rem;
 		border: none;
 		background: transparent;
@@ -575,6 +683,7 @@
 		font-size: inherit;
 		color: #000;
 		line-height: 1.4;
+		box-sizing: border-box;
 	}
 
 	.excel-cell-input:focus {
