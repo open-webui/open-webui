@@ -5,7 +5,7 @@ from contextvars import ContextVar
 from open_webui.env import SRC_LOG_LEVELS
 from peewee import *
 from peewee import InterfaceError as PeeWeeInterfaceError
-from peewee import PostgresqlDatabase
+from peewee import PostgresqlDatabase, MySQLDatabase
 from playhouse.db_url import connect, parse
 from playhouse.shortcuts import ReconnectMixin
 
@@ -43,7 +43,17 @@ class ReconnectingPostgresqlDatabase(CustomReconnectMixin, PostgresqlDatabase):
     pass
 
 
+class ReconnectingMySQLDatabase(CustomReconnectMixin, MySQLDatabase):
+    pass
+
+
 def register_connection(db_url):
+    # Normalize DB URLs so Peewee understands the scheme names
+    if db_url.startswith("postgresql://"):
+        db_url = db_url.replace("postgresql://", "postgres://", 1)
+    if db_url.startswith("mysql+pymysql://"):
+        db_url = db_url.replace("mysql+pymysql://", "mysql://", 1)
+
     # Check if using SQLCipher protocol
     if db_url.startswith("sqlite+sqlcipher://"):
         database_password = os.environ.get("DATABASE_PASSWORD")
@@ -76,9 +86,20 @@ def register_connection(db_url):
 
             # Get the connection details
             connection = parse(db_url, unquote_user=True, unquote_password=True)
+            connection.pop("engine", None)
 
             # Use our custom database class that supports reconnection
             db = ReconnectingPostgresqlDatabase(**connection)
+            db.connect(reuse_if_open=True)
+        elif isinstance(db, MySQLDatabase):
+            db.autoconnect = True
+            db.reuse_if_open = True
+            log.info("Connected to MySQL database")
+
+            connection = parse(db_url, unquote_user=True, unquote_password=True)
+            connection.pop("engine", None)
+
+            db = ReconnectingMySQLDatabase(**connection)
             db.connect(reuse_if_open=True)
         elif isinstance(db, SqliteDatabase):
             # Enable autoconnect for SQLite databases, managed by Peewee
