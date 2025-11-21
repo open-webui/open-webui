@@ -140,6 +140,7 @@
 		"vega": "^6.2.0",
 		"vega-lite": "^6.4.1",
 		"vite-plugin-static-copy": "^2.2.0",
+		"xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
 		"y-prosemirror": "^1.3.7",
 		"yaml": "^2.7.1",
 		"yjs": "^13.6.27"

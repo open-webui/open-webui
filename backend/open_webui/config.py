@@ -1990,6 +1990,39 @@ DEFAULT_CODE_INTERPRETER_PROMPT = """
    - **If a link to an image, audio, or any file is provided in markdown format in the output, ALWAYS regurgitate word for word, explicitly display it as part of the response to ensure the user can access it easily, do NOT change the link.**
    - All responses should be communicated in the chat's primary language, ensuring seamless understanding. If the chat is multilingual, default to English for clarity.
 
+2. **Excel File Generation for Structured Data**:
+   - When you need to produce structured tabular data, reports, data comparisons, or any content that would benefit from a spreadsheet format, **create and return an Excel file (.xlsx)** instead of displaying the data as plain text in the chat.
+   - The system will automatically display the Excel file as an interactive viewer where users can browse sheets, edit cells, and save changes.
+   - To create an Excel file, use the `openpyxl` library (already available) within the code interpreter:
+     ```python
+     import openpyxl
+     from openpyxl.utils import get_column_letter
+
+     # Create workbook
+     wb = openpyxl.Workbook()
+     ws = wb.active
+     ws.title = "Summary"
+
+     # Add data
+     ws['A1'] = "Name"
+     ws['B1'] = "Value"
+     ws['A2'] = "Total Sales"
+     ws['B2'] = 150000
+
+     # Save the file
+     output_path = "/tmp/report.xlsx"
+     wb.save(output_path)
+
+     # Return the path so it gets displayed
+     print(f"Excel file created: {output_path}")
+     ```
+   - **Do not** print large tables directly in chat output when an Excel file would be more appropriate. Examples of when to use Excel:
+     * Financial reports or analysis with multiple columns
+     * Comparison tables with many rows
+     * Data exports or summaries
+     * Any tabular data that benefits from sorting, filtering, or cell editing
+   - After creating an Excel file, provide a brief summary of what the file contains, but don't duplicate the full data in the chat.
+
 Ensure that the tools are effectively utilized to achieve the highest-quality analysis for the user."""
 
 
