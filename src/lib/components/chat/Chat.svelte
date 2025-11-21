@@ -375,6 +375,14 @@
 					message.content = data.content;
 				} else if (type === 'chat:message:files' || type === 'files') {
 					message.files = data.files;
+
+					// Auto-open artifact panel for Excel files (like HTML artifacts)
+					if (data.files?.some((f) => f.type === 'excel') && !$mobile) {
+						showArtifacts.set(true);
+						showControls.set(true);
+						// Refresh artifact contents to include the new Excel file
+						getContents();
+					}
 				} else if (type === 'chat:message:embeds' || type === 'embeds') {
 					message.embeds = data.embeds;
 				} else if (type === 'chat:message:error') {
@@ -884,6 +892,24 @@
 						if (block.lang === 'svg' || (block.lang === 'xml' && block.code.includes('<svg'))) {
 							contents = [...contents, { type: 'svg', content: block.code }];
 						}
+					}
+				}
+			}
+
+			// Check for Excel file artifacts
+			if (message?.files) {
+				for (const file of message.files) {
+					if (file.type === 'excel') {
+						contents = [
+							...contents,
+							{
+								type: 'excel',
+								url: file.url,
+								name: file.name,
+								fileId: file.fileId,
+								meta: file.meta
+							}
+						];
 					}
 				}
 			}

@@ -20,6 +20,10 @@
 	import SvgPanZoom from '../common/SVGPanZoom.svelte';
 	import ArrowLeft from '../icons/ArrowLeft.svelte';
 	import Download from '../icons/Download.svelte';
+	import ExcelViewer from '../artifacts/ExcelViewer.svelte';
+	import fileSaver from 'file-saver';
+
+	const { saveAs } = fileSaver;
 
 	export let overlay = false;
 
@@ -77,16 +81,33 @@
 		}
 	};
 
-	const downloadArtifact = () => {
-		const blob = new Blob([contents[selectedContentIdx].content], { type: 'text/html' });
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = `artifact-${$chatId}-${selectedContentIdx}.html`;
-		document.body.appendChild(a);
-		a.click();
-		document.body.removeChild(a);
-		URL.revokeObjectURL(url);
+	const downloadArtifact = async () => {
+		const content = contents[selectedContentIdx];
+
+		if (content.type === 'excel') {
+			// For Excel artifacts, fetch the file and download
+			try {
+				const response = await fetch(content.url);
+				const blob = await response.blob();
+				saveAs(blob, content.name || `artifact-${$chatId}-${selectedContentIdx}.xlsx`);
+			} catch (e) {
+				console.error('Error downloading Excel file:', e);
+				toast.error('Failed to download Excel file');
+			}
+		} else {
+			// For HTML/SVG artifacts
+			const mimeType = content.type === 'svg' ? 'image/svg+xml' : 'text/html';
+			const extension = content.type === 'svg' ? 'svg' : 'html';
+			const blob = new Blob([content.content], { type: mimeType });
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `artifact-${$chatId}-${selectedContentIdx}.${extension}`;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+		}
 	};
 
 	onMount(() => {
@@ -248,6 +269,8 @@
 								className=" w-full h-full max-h-full overflow-hidden"
 								svg={contents[selectedContentIdx].content}
 							/>
+						{:else if contents[selectedContentIdx].type === 'excel'}
+							<ExcelViewer file={contents[selectedContentIdx]} />
 						{/if}
 					</div>
 				{:else}
