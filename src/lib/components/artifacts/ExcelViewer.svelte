@@ -1,12 +1,22 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	import * as XLSX from 'xlsx';
 	import fileSaver from 'file-saver';
+	import { HyperFormula } from 'hyperformula';
+	import { Chart, registerables } from 'chart.js';
 	import type { ExcelArtifact } from '$lib/types';
+
+	// Register all Chart.js components
+	Chart.register(...registerables);
 
 	const { saveAs } = fileSaver;
 
 	export let file: ExcelArtifact;
+
+	// Constants for virtual scrolling
+	const ROW_HEIGHT = 36; // pixels per row
+	const BUFFER_ROWS = 5; // extra rows to render above/below viewport
+	const COL_WIDTH = 120; // default column width
 
 	let sheetNames: string[] = [];
 	let activeSheet: string = '';
@@ -15,9 +25,13 @@
 	let loading = true;
 	let error: string | null = null;
 
+	// HyperFormula instance for formula calculation
+	let hfInstance: HyperFormula | null = null;
+	let hfSheetId: number | null = null;
+
 	// Track changed cells
 	type CellKey = string; // 'r,c'
-	const changedCells = new Map<CellKey, { row: number; col: number; value: any }>();
+	let changedCells = new Map<CellKey, { row: number; col: number; value: any; isFormula: boolean }>();
 
 	let saving = false;
 	let saveMessage = '';
@@ -25,15 +39,119 @@
 	// Store original cell data including formulas
 	let cellData: Map<string, { value: any; formula?: string }> = new Map();
 
+	// Store formulas separately for display in edit mode
+	let cellFormulas: Map<string, string> = new Map();
+
 	// Track if file might contain charts (show info message)
 	let hasChartWarning = false;
+
+	// Undo/Redo history stack
+	type HistoryEntry = {
+		row: number;
+		col: number;
+		oldValue: any;
+		newValue: any;
+		oldFormula?: string;
+		newFormula?: string;
+	};
+	let undoStack: HistoryEntry[] = [];
+	let redoStack: HistoryEntry[] = [];
+	const MAX_HISTORY = 100;
+
+	// Virtual scrolling state
+	let containerElement: HTMLDivElement;
+	let scrollTop = 0;
+	let containerHeight = 0;
+	let visibleStartIndex = 0;
+	let visibleEndIndex = 0;
+	let visibleRows: { index: number; data: any[] }[] = [];
+
+	// Column count for header
+	let colCount = 0;
+
+	// Column widths (for resizing)
+	let columnWidths: number[] = [];
+	const DEFAULT_COL_WIDTH = 120;
+	const MIN_COL_WIDTH = 50;
+
+	// Column resize state
+	let resizingCol: number | null = null;
+	let resizeStartX = 0;
+	let resizeStartWidth = 0;
+
+	// Range selection state
+	type CellPosition = { row: number; col: number };
+	let selectionStart: CellPosition | null = null;
+	let selectionEnd: CellPosition | null = null;
+	let isSelecting = false;
+
+	// Chart state
+	type ChartType = 'bar' | 'line' | 'pie' | 'doughnut';
+	let showChartModal = false;
+	let chartType: ChartType = 'bar';
+	let chartInstance: Chart | null = null;
+	let chartCanvasElement: HTMLCanvasElement;
+	let generatedCharts: { id: string; type: ChartType; data: any; title: string }[] = [];
+	let showChartPanel = false;
+	let selectedChartIndex = 0;
+
+	// Calculate visible rows based on scroll position
+	function updateVisibleRows() {
+		if (!rows.length || !containerHeight) return;
+
+		const headerHeight = ROW_HEIGHT; // Account for header row
+		const availableHeight = containerHeight - headerHeight;
+
+		// Calculate visible range
+		visibleStartIndex = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER_ROWS);
+		const visibleCount = Math.ceil(availableHeight / ROW_HEIGHT) + BUFFER_ROWS * 2;
+		visibleEndIndex = Math.min(rows.length, visibleStartIndex + visibleCount);
+
+		// Build visible rows array with original indices
+		visibleRows = [];
+		for (let i = visibleStartIndex; i < visibleEndIndex; i++) {
+			visibleRows.push({ index: i, data: rows[i] });
+		}
+	}
+
+	// Handle scroll events
+	function onScroll(e: Event) {
+		const target = e.target as HTMLDivElement;
+		scrollTop = target.scrollTop;
+		updateVisibleRows();
+	}
+
+	// Observe container size changes
+	function setupResizeObserver() {
+		if (!containerElement) return;
+
+		const observer = new ResizeObserver((entries) => {
+			for (const entry of entries) {
+				containerHeight = entry.contentRect.height;
+				updateVisibleRows();
+			}
+		});
+
+		observer.observe(containerElement);
+		return () => observer.disconnect();
+	}
+
+	// Get Excel-style column letter (A, B, ... Z, AA, AB, etc.)
+	function getColumnLetter(colIndex: number): string {
+		let letter = '';
+		let temp = colIndex;
+		while (temp >= 0) {
+			letter = String.fromCharCode(65 + (temp % 26)) + letter;
+			temp = Math.floor(temp / 26) - 1;
+		}
+		return letter;
+	}
 
 	async function loadWorkbook() {
 		try {
 			loading = true;
 			error = null;
 
-			// Fetch the file
 			const resp = await fetch(file.url);
 			if (!resp.ok) {
 				throw new Error(`Failed to fetch file: ${resp.statusText}`);
@@ -44,12 +162,10 @@
 
 			sheetNames = workbook.SheetNames;
 
-			// Check for chart-related content (charts appear as separate sheets or have special properties)
-			// SheetJS community edition shows charts as data tables, so we warn users
+			// Check for chart-related content
 			hasChartWarning = false;
 			for (const name of sheetNames) {
 				const ws = workbook.Sheets[name];
-				// Check for chart sheets (type === 'chart') or sheets with chart names
 				if (
 					ws['!type'] === 'chart' ||
 					name.toLowerCase().includes('chart') ||
@@ -58,7 +174,6 @@
 					hasChartWarning = true;
 					break;
 				}
-				// Also check for embedded charts (not directly detectable, but check for drawing references)
 				if (ws['!drawings'] || ws['!charts']) {
 					hasChartWarning = true;
 					break;
@@ -74,6 +189,10 @@
 
 			loadSheet(activeSheet);
 			loading = false;
+
+			// Wait for DOM update then setup observers
+			await tick();
+			setupResizeObserver();
 		} catch (e) {
 			console.error('Error loading workbook:', e);
 			error = e instanceof Error ? e.message : 'Failed to load Excel file';
@@ -91,40 +210,58 @@
 				return;
 			}
 
-			// Get the range of the worksheet
 			const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
 			const numRows = range.e.r - range.s.r + 1;
 			const numCols = range.e.c - range.s.c + 1;
 
-			// Build rows array and capture cell data with formulas
 			cellData.clear();
+			cellFormulas.clear();
 			rows = [];
+
+			// Build raw data for HyperFormula (with formulas as strings)
+			const hfData: (string | number | boolean | null)[][] = [];
 
 			for (let r = 0; r < numRows; r++) {
 				const row: any[] = [];
+				const hfRow: (string | number | boolean | null)[] = [];
+
 				for (let c = 0; c < numCols; c++) {
 					const cellAddress = XLSX.utils.encode_cell({ r: range.s.r + r, c: range.s.c + c });
 					const cell = ws[cellAddress];
 
 					if (cell) {
-						// Store both value and formula
 						const key = `${r},${c}`;
 						cellData.set(key, {
 							value: cell.v !== undefined ? cell.v : '',
 							formula: cell.f
 						});
 
-						// Display the calculated value
+						// Store formula for edit mode display
+						if (cell.f) {
+							cellFormulas.set(key, `=${cell.f}`);
+							// For HyperFormula, store the formula string
+							hfRow.push(`=${cell.f}`);
+						} else {
+							hfRow.push(cell.v !== undefined ? cell.v : null);
+						}
+
 						row.push(cell.v !== undefined ? cell.v : '');
 					} else {
 						row.push('');
+						hfRow.push(null);
 					}
 				}
 				rows.push(row);
+				hfData.push(hfRow);
 			}
 
-			// Ensure all rows have the same length (pad shorter rows if needed)
+			// Ensure all rows have the same length
 			const maxCols = Math.max(...rows.map((r) => r.length), 1);
+			colCount = maxCols;
+
+			// Initialize column widths
+			columnWidths = new Array(maxCols).fill(DEFAULT_COL_WIDTH);
+
 			rows = rows.map((row) => {
 				const paddedRow = [...row];
 				while (paddedRow.length < maxCols) {
@@ -133,13 +270,101 @@
 				return paddedRow;
 			});
 
-			// Clear changed cells when switching sheets
+			// Pad HyperFormula data as well
+			for (let i = 0; i < hfData.length; i++) {
+				while (hfData[i].length < maxCols) {
+					hfData[i].push(null);
+				}
+			}
+
+			// Initialize HyperFormula with the sheet data
+			initHyperFormula(hfData);
+
+			// Reset scroll and update visible rows
+			scrollTop = 0;
+			if (containerElement) {
+				containerElement.scrollTop = 0;
+			}
 			changedCells.clear();
 			saveMessage = '';
+
+			updateVisibleRows();
 		} catch (e) {
 			console.error('Error loading sheet:', e);
 			error = e instanceof Error ? e.message : 'Failed to load sheet';
 		}
+	}
+
+	// Initialize HyperFormula with sheet data
+	function initHyperFormula(data: (string | number | boolean | null)[][]) {
+		try {
+			// Destroy previous instance if exists
+			if (hfInstance) {
+				hfInstance.destroy();
+			}
+
+			// Create HyperFormula instance with config
+			hfInstance = HyperFormula.buildFromArray(data, {
+				licenseKey: 'gpl-v3', // GPL v3 license for open source use
+				precisionRounding: 10,
+				smartRounding: true
+			});
+
+			hfSheetId = hfInstance.getSheetId(hfInstance.getSheetName(0)!) ?? null;
+
+			console.log('HyperFormula initialized with', data.length, 'rows');
+		} catch (e) {
+			console.error('Error initializing HyperFormula:', e);
+			// Continue without HyperFormula - formulas won't calculate client-side
+			hfInstance = null;
+			hfSheetId = null;
+		}
+	}
+
+	// Get the calculated value from HyperFormula for a cell
+	function getCalculatedValue(row: number, col: number): any {
+		if (!hfInstance || hfSheetId === null) {
+			return rows[row]?.[col] ?? '';
+		}
+
+		try {
+			const value = hfInstance.getCellValue({ sheet: hfSheetId, row, col });
+			// Handle error values
+			if (value && typeof value === 'object' && 'type' in value) {
+				return '#ERROR';
+			}
+			return value ?? '';
+		} catch {
+			return rows[row]?.[col] ?? '';
+		}
+	}
+
+	// Update a cell in HyperFormula and recalculate
+	function updateHyperFormulaCell(row: number, col: number, value: string | number | boolean | null) {
+		if (!hfInstance || hfSheetId === null) return;
+
+		try {
+			hfInstance.setCellContents({ sheet: hfSheetId, row, col }, [[value]]);
+			// Trigger reactivity by updating rows
+			refreshCalculatedValues();
+		} catch (e) {
+			console.error('Error updating HyperFormula cell:', e);
+		}
+	}
+
+	// Refresh all calculated values from HyperFormula
+	function refreshCalculatedValues() {
+		if (!hfInstance || hfSheetId === null || !rows.length) return;
+
+		for (let r = 0; r < rows.length; r++) {
+			for (let c = 0; c < rows[r].length; c++) {
+				const calculatedValue = getCalculatedValue(r, c);
+				rows[r][c] = calculatedValue;
+			}
+		}
+		// Trigger Svelte reactivity
+		rows = [...rows];
+		updateVisibleRows();
 	}
 
 	function onSheetChange(e: Event) {
@@ -148,17 +373,394 @@
 		loadSheet(activeSheet);
 	}
 
-	function markCellChanged(r: number, c: number, value: any) {
+	function markCellChanged(r: number, c: number, value: any, isFormula: boolean = false) {
 		const key = `${r},${c}`;
-		changedCells.set(key, { row: r + 1, col: c + 1, value }); // Excel is 1-based
+		changedCells.set(key, { row: r + 1, col: c + 1, value, isFormula });
+		changedCells = changedCells; // Trigger reactivity
 		saveMessage = '';
 	}
 
 	function onCellChange(r: number, c: number, e: Event) {
 		const target = e.target as HTMLInputElement;
 		const value = target.value;
-		rows[r][c] = value;
-		markCellChanged(r, c, value);
+		const isFormula = typeof value === 'string' && value.startsWith('=');
+		const key = `${r},${c}`;
+
+		// Get old value for undo
+		const oldValue = rows[r]?.[c] ?? '';
+		const oldFormula = cellFormulas.get(key);
+
+		// Push to undo stack
+		undoStack.push({
+			row: r,
+			col: c,
+			oldValue,
+			newValue: value,
+			oldFormula,
+			newFormula: isFormula ? value : undefined
+		});
+
+		// Limit stack size
+		if (undoStack.length > MAX_HISTORY) {
+			undoStack.shift();
+		}
+
+		// Clear redo stack on new action
+		redoStack = [];
+
+		// Update HyperFormula cell
+		updateHyperFormulaCell(r, c, isFormula ? value : parseValue(value));
+
+		// Update formula tracking
+		if (isFormula) {
+			cellFormulas.set(key, value);
+		} else {
+			cellFormulas.delete(key);
+		}
+
+		markCellChanged(r, c, value, isFormula);
+	}
+
+	// Undo last change
+	function undo() {
+		if (undoStack.length === 0) return;
+
+		const entry = undoStack.pop()!;
+		const { row, col, oldValue, newValue, oldFormula, newFormula } = entry;
+		const key = `${row},${col}`;
+
+		// Push to redo stack
+		redoStack.push(entry);
+
+		// Restore old value
+		updateHyperFormulaCell(row, col, oldFormula ? oldFormula : parseValue(String(oldValue)));
+
+		// Update formula tracking
+		if (oldFormula) {
+			cellFormulas.set(key, oldFormula);
+		} else {
+			cellFormulas.delete(key);
+		}
+
+		// Update changed cells tracking
+		const isFormula = typeof oldValue === 'string' && String(oldValue).startsWith('=');
+		if (oldFormula || isFormula) {
+			markCellChanged(row, col, oldFormula || oldValue, true);
+		} else {
+			markCellChanged(row, col, oldValue, false);
+		}
+
+		// Trigger reactivity
+		undoStack = undoStack;
+		redoStack = redoStack;
+	}
+
+	// Redo last undone change
+	function redo() {
+		if (redoStack.length === 0) return;
+
+		const entry = redoStack.pop()!;
+		const { row, col, newValue, newFormula } = entry;
+		const key = `${row},${col}`;
+
+		// Push back to undo stack
+		undoStack.push(entry);
+
+		// Apply new value
+		const isFormula = newFormula !== undefined;
+		updateHyperFormulaCell(row, col, isFormula ? newFormula : parseValue(String(newValue)));
+
+		// Update formula tracking
+		if (isFormula && newFormula) {
+			cellFormulas.set(key, newFormula);
+		} else {
+			cellFormulas.delete(key);
+		}
+
+		markCellChanged(row, col, newValue, isFormula);
+
+		// Trigger reactivity
+		undoStack = undoStack;
+		redoStack = redoStack;
+	}
+
+	// Parse value to appropriate type for HyperFormula
+	function parseValue(value: string): string | number | boolean | null {
+		if (value === '' || value === null || value === undefined) return null;
+
+		// Try to parse as number
+		const num = Number(value);
+		if (!isNaN(num) && value.trim() !== '') return num;
+
+		// Boolean checks
+		const lower = value.toLowerCase();
+		if (lower === 'true') return true;
+		if (lower === 'false') return false;
+
+		return value;
+	}
+
+	// Get the display value for a cell (formula in edit mode, calculated value otherwise)
+	function getCellDisplayValue(r: number, c: number, isEditing: boolean = false): any {
+		const key = `${r},${c}`;
+		// If cell has a formula and we're editing, show the formula
+		if (isEditing && cellFormulas.has(key)) {
+			return cellFormulas.get(key);
+		}
+		// Otherwise show calculated value
+		return rows[r]?.[c] ?? '';
+	}
+
+	// Track which cell is being edited
+	let editingCell: string | null = null;
+
+	function onCellFocus(r: number, c: number) {
+		editingCell = `${r},${c}`;
+	}
+
+	function onCellBlur() {
+		editingCell = null;
+	}
+
+	// Column resizing functions
+	function startColumnResize(colIndex: number, e: MouseEvent) {
+		e.preventDefault();
+		e.stopPropagation();
+		resizingCol = colIndex;
+		resizeStartX = e.clientX;
+		resizeStartWidth = columnWidths[colIndex] || DEFAULT_COL_WIDTH;
+
+		window.addEventListener('mousemove', onColumnResize);
+		window.addEventListener('mouseup', stopColumnResize);
+	}
+
+	function onColumnResize(e: MouseEvent) {
+		if (resizingCol === null) return;
+
+		const delta = e.clientX - resizeStartX;
+		const newWidth = Math.max(MIN_COL_WIDTH, resizeStartWidth + delta);
+		columnWidths[resizingCol] = newWidth;
+		columnWidths = [...columnWidths]; // Trigger reactivity
+	}
+
+	function stopColumnResize() {
+		resizingCol = null;
+		window.removeEventListener('mousemove', onColumnResize);
+		window.removeEventListener('mouseup', stopColumnResize);
+	}
+
+	// Range selection functions
+	function startSelection(row: number, col: number, e: MouseEvent) {
+		// Only start selection on left click without modifiers
+		if (e.button !== 0) return;
+
+		selectionStart = { row, col };
+		selectionEnd = { row, col };
+		isSelecting = true;
+
+		window.addEventListener('mousemove', onSelectionMove);
+		window.addEventListener('mouseup', stopSelection);
+	}
+
+	function onSelectionMove(e: MouseEvent) {
+		if (!isSelecting) return;
+
+		// Find the cell under the cursor
+		const target = document.elementFromPoint(e.clientX, e.clientY);
+		if (!target) return;
+
+		const cellInput = target.closest('.excel-cell-input') as HTMLElement;
+		if (cellInput) {
+			const row = parseInt(cellInput.dataset.row || '0');
+			const col = parseInt(cellInput.dataset.col || '0');
+			if (!isNaN(row) && !isNaN(col)) {
+				selectionEnd = { row, col };
+			}
+		}
+	}
+
+	function stopSelection() {
+		isSelecting = false;
+		window.removeEventListener('mousemove', onSelectionMove);
+		window.removeEventListener('mouseup', stopSelection);
+	}
+
+	// Check if a cell is within the selection range
+	function isCellSelected(row: number, col: number): boolean {
+		if (!selectionStart || !selectionEnd) return false;
+
+		const minRow = Math.min(selectionStart.row, selectionEnd.row);
+		const maxRow = Math.max(selectionStart.row, selectionEnd.row);
+		const minCol = Math.min(selectionStart.col, selectionEnd.col);
+		const maxCol = Math.max(selectionStart.col, selectionEnd.col);
+
+		return row >= minRow && row <= maxRow && col >= minCol && col <= maxCol;
+	}
+
+	// Get selection bounds for display
+	function getSelectionBounds(): { rows: number; cols: number } | null {
+		if (!selectionStart || !selectionEnd) return null;
+
+		const rows = Math.abs(selectionEnd.row - selectionStart.row) + 1;
+		const cols = Math.abs(selectionEnd.col - selectionStart.col) + 1;
+
+		return rows > 1 || cols > 1 ? { rows, cols } : null;
+	}
+
+	// Clear selection
+	function clearSelection() {
+		selectionStart = null;
+		selectionEnd = null;
+	}
+
+	// Chart functions
+	function openChartModal() {
+		if (!selectionStart || !selectionEnd) {
+			saveMessage = 'Select a data range to create a chart';
+			return;
+		}
+		showChartModal = true;
+	}
+
+	function closeChartModal() {
+		showChartModal = false;
+	}
+
+	function getSelectedData(): { labels: string[]; datasets: { label: string; data: number[] }[] } | null {
+		if (!selectionStart || !selectionEnd) return null;
+
+		const minRow = Math.min(selectionStart.row, selectionEnd.row);
+		const maxRow = Math.max(selectionStart.row, selectionEnd.row);
+		const minCol = Math.min(selectionStart.col, selectionEnd.col);
+		const maxCol = Math.max(selectionStart.col, selectionEnd.col);
+
+		// First column as labels, remaining columns as datasets
+		const labels: string[] = [];
+		const datasets: { label: string; data: number[] }[] = [];
+
+		// Initialize datasets (one per column after the first)
+		for (let c = minCol + 1; c <= maxCol; c++) {
+			datasets.push({
+				label: rows[minRow]?.[c]?.toString() || getColumnLetter(c),
+				data: []
+			});
+		}
+
+		// Extract labels and data
+		for (let r = minRow + 1; r <= maxRow; r++) {
+			labels.push(rows[r]?.[minCol]?.toString() || `Row ${r + 1}`);
+
+			for (let c = minCol + 1; c <= maxCol; c++) {
+				const value = parseFloat(rows[r]?.[c]) || 0;
+				datasets[c - minCol - 1].data.push(value);
+			}
+		}
+
+		// If only one column selected, use row indices as labels and that column as data
+		if (minCol === maxCol) {
+			datasets.length = 0;
+			datasets.push({
+				label: rows[minRow]?.[minCol]?.toString() || 'Data',
+				data: []
+			});
+
+			for (let r = minRow + 1; r <= maxRow; r++) {
+				labels.push(`Row ${r + 1}`);
+				const value = parseFloat(rows[r]?.[minCol]) || 0;
+				datasets[0].data.push(value);
+			}
+		}
+
+		return { labels, datasets };
+	}
+
+	function createChart() {
+		const selectedData = getSelectedData();
+		if (!selectedData) {
+			saveMessage = 'No valid data selected';
+			return;
+		}
+
+		const colors = [
+			'rgba(59, 130, 246, 0.8)',  // blue
+			'rgba(16, 185, 129, 0.8)',  // green
+			'rgba(245, 158, 11, 0.8)',  // amber
+			'rgba(239, 68, 68, 0.8)',   // red
+			'rgba(139, 92, 246, 0.8)',  // purple
+			'rgba(236, 72, 153, 0.8)',  // pink
+		];
+
+		const chartData = {
+			labels: selectedData.labels,
+			datasets: selectedData.datasets.map((ds, i) => ({
+				...ds,
+				backgroundColor: colors[i % colors.length],
+				borderColor: colors[i % colors.length].replace('0.8', '1'),
+				borderWidth: 2
+			}))
+		};
+
+		const chartId = `chart-${Date.now()}`;
+		const title = `${chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart - ${activeSheet}`;
+
+		generatedCharts = [...generatedCharts, {
+			id: chartId,
+			type: chartType,
+			data: chartData,
+			title
+		}];
+
+		showChartPanel = true;
+		selectedChartIndex = generatedCharts.length - 1;
+		showChartModal = false;
+		clearSelection();
+
+		// Render chart after DOM update
+		tick().then(() => renderCurrentChart());
+	}
+
+	function renderCurrentChart() {
+		if (!chartCanvasElement || generatedCharts.length === 0) return;
+
+		// Destroy previous chart
+		if (chartInstance) {
+			chartInstance.destroy();
+		}
+
+		const currentChart = generatedCharts[selectedChartIndex];
+		if (!currentChart) return;
+
+		chartInstance = new Chart(chartCanvasElement, {
+			type: currentChart.type,
+			data: currentChart.data,
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				plugins: {
+					title: {
+						display: true,
+						text: currentChart.title
+					},
+					legend: {
+						position: 'bottom'
+					}
+				}
+			}
+		});
+	}
+
+	function deleteChart(index: number) {
+		generatedCharts = generatedCharts.filter((_, i) => i !== index);
+		if (generatedCharts.length === 0) {
+			showChartPanel = false;
+			if (chartInstance) {
+				chartInstance.destroy();
+				chartInstance = null;
+			}
+		} else {
+			selectedChartIndex = Math.min(selectedChartIndex, generatedCharts.length - 1);
+			tick().then(() => renderCurrentChart());
+		}
 	}
 
 	async function saveChanges() {
@@ -171,16 +773,12 @@
 			saving = true;
 			saveMessage = '';
 
-			// Prepare changes with formula detection
 			const changes = Array.from(changedCells.values()).map((change) => {
-				const value = change.value;
-				// Check if the value looks like a formula
-				const isFormula = typeof value === 'string' && value.startsWith('=');
 				return {
 					row: change.row,
 					col: change.col,
-					value: value,
-					isFormula: isFormula
+					value: change.value,
+					isFormula: change.isFormula
 				};
 			});
 
@@ -201,19 +799,15 @@
 
 			const result = await response.json();
 			changedCells.clear();
+			changedCells = changedCells;
 			saveMessage = result.message || 'Changes saved successfully';
 			saving = false;
 
-			// Force reload the workbook to reflect saved changes (with cache bypass)
 			setTimeout(async () => {
-				// Add cache-busting timestamp to force fresh fetch
 				const originalUrl = file.url;
 				const separator = file.url.includes('?') ? '&' : '?';
 				file.url = `${originalUrl}${separator}_t=${Date.now()}`;
-
 				await loadWorkbook();
-
-				// Restore original URL
 				file.url = originalUrl;
 			}, 300);
 		} catch (e) {
@@ -230,7 +824,6 @@
 		}
 
 		try {
-			// Apply any pending changes to the workbook before downloading
 			if (changedCells.size > 0 && activeSheet) {
 				const ws = workbook.Sheets[activeSheet];
 				if (ws) {
@@ -245,13 +838,11 @@
 				}
 			}
 
-			// Generate the Excel file
 			const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
 			const blob = new Blob([wbout], {
 				type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 			});
 
-			// Download with original filename or default
 			const filename = file.name || 'download.xlsx';
 			saveAs(blob, filename);
 		} catch (e) {
@@ -260,16 +851,54 @@
 		}
 	}
 
+	// Keyboard shortcut handler
+	function handleKeyDown(e: KeyboardEvent) {
+		if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+			e.preventDefault();
+			undo();
+		} else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+			e.preventDefault();
+			redo();
+		}
+	}
+
 	onMount(() => {
 		if (file?.url) {
 			loadWorkbook();
 		}
+
+		// Add keyboard listener
+		window.addEventListener('keydown', handleKeyDown);
 	});
 
-	// Reload when file URL changes
+	onDestroy(() => {
+		// Remove keyboard listener
+		window.removeEventListener('keydown', handleKeyDown);
+
+		// Clean up HyperFormula instance
+		if (hfInstance) {
+			try {
+				hfInstance.destroy();
+			} catch (e) {
+				// Ignore cleanup errors
+			}
+			hfInstance = null;
+			hfSheetId = null;
+		}
+	});
+
 	$: if (file?.url) {
 		loadWorkbook();
 	}
+
+	// Reactive: update visible rows when rows change
+	$: if (rows.length) {
+		updateVisibleRows();
+	}
+
+	// Calculate total height for scroll area
+	$: totalHeight = rows.length * ROW_HEIGHT;
+	$: paddingTop = visibleStartIndex * ROW_HEIGHT;
 </script>
 
 <div class="excel-viewer">
@@ -287,6 +916,9 @@
 						<option value={name}>{name}</option>
 					{/each}
 				</select>
+			{/if}
+			{#if rows.length > 0}
+				<span class="excel-row-count">{rows.length.toLocaleString()} rows</span>
 			{/if}
 		</div>
 		<div class="excel-header-right">
@@ -316,6 +948,106 @@
 		</div>
 	</div>
 
+	<!-- Toolbar -->
+	<div class="excel-toolbar">
+		<div class="excel-toolbar-group">
+			<button
+				class="excel-toolbar-button"
+				on:click={undo}
+				disabled={undoStack.length === 0}
+				title="Undo (Ctrl+Z)"
+			>
+				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M3 7v6h6"/>
+					<path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+				</svg>
+			</button>
+			<button
+				class="excel-toolbar-button"
+				on:click={redo}
+				disabled={redoStack.length === 0}
+				title="Redo (Ctrl+Y)"
+			>
+				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M21 7v6h-6"/>
+					<path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/>
+				</svg>
+			</button>
+		</div>
+
+		<div class="excel-toolbar-divider"></div>
+
+		<div class="excel-toolbar-group">
+			<span class="excel-toolbar-label">
+				{undoStack.length > 0 ? `${undoStack.length} change${undoStack.length > 1 ? 's' : ''} to undo` : 'No changes'}
+			</span>
+		</div>
+
+		{#if getSelectionBounds()}
+			{@const bounds = getSelectionBounds()}
+			<div class="excel-toolbar-divider"></div>
+			<div class="excel-toolbar-group">
+				<span class="excel-toolbar-label excel-selection-info">
+					Selection: {bounds?.rows}×{bounds?.cols} cells
+				</span>
+				<button
+					class="excel-toolbar-button"
+					on:click={clearSelection}
+					title="Clear selection"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<line x1="18" y1="6" x2="6" y2="18"/>
+						<line x1="6" y1="6" x2="18" y2="18"/>
+					</svg>
+				</button>
+				<button
+					class="excel-toolbar-button excel-chart-button"
+					on:click={openChartModal}
+					title="Create chart from selection"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<line x1="18" y1="20" x2="18" y2="10"/>
+						<line x1="12" y1="20" x2="12" y2="4"/>
+						<line x1="6" y1="20" x2="6" y2="14"/>
+					</svg>
+					Chart
+				</button>
+			</div>
+		{/if}
+
+		{#if generatedCharts.length > 0}
+			<div class="excel-toolbar-divider"></div>
+			<div class="excel-toolbar-group">
+				<button
+					class="excel-toolbar-button"
+					class:excel-toolbar-button-active={showChartPanel}
+					on:click={() => { showChartPanel = !showChartPanel; if (showChartPanel) tick().then(() => renderCurrentChart()); }}
+					title="Toggle charts panel"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<rect x="3" y="3" width="18" height="18" rx="2"/>
+						<line x1="9" y1="3" x2="9" y2="21"/>
+					</svg>
+					{generatedCharts.length} Chart{generatedCharts.length > 1 ? 's' : ''}
+				</button>
+			</div>
+		{/if}
+	</div>
+
+	<!-- Formula Bar -->
+	{#if editingCell}
+		{@const [r, c] = editingCell.split(',').map(Number)}
+		{@const formula = cellFormulas.get(editingCell)}
+		<div class="excel-formula-bar">
+			<span class="excel-formula-bar-label">
+				{getColumnLetter(c)}{r + 1}
+			</span>
+			<span class="excel-formula-bar-content">
+				{formula || rows[r]?.[c] || ''}
+			</span>
+		</div>
+	{/if}
+
 	{#if hasChartWarning}
 		<div class="excel-chart-notice">
 			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -341,40 +1073,153 @@
 			{error}
 		</div>
 	{:else if rows.length > 0}
-		<div class="excel-grid-container">
-			<table class="excel-grid">
-				<thead>
-					<tr>
-						<th class="excel-row-header">#</th>
-						{#each rows[0] as _, colIndex}
-							<th class="excel-col-header">{String.fromCharCode(65 + colIndex)}</th>
-						{/each}
-					</tr>
-				</thead>
-				<tbody>
-					{#each rows as row, rowIndex}
-						<tr>
-							<td class="excel-row-header">{rowIndex + 1}</td>
-							{#each row as cell, colIndex}
-								<td class="excel-cell">
-									<input
-										type="text"
-										value={cell}
-										on:change={(e) => onCellChange(rowIndex, colIndex, e)}
-										class="excel-cell-input"
-										class:excel-cell-changed={changedCells.has(`${rowIndex},${colIndex}`)}
-									/>
-								</td>
+		<div
+			class="excel-grid-container"
+			bind:this={containerElement}
+			on:scroll={onScroll}
+		>
+			<div class="excel-virtual-scroll" style="height: {totalHeight + ROW_HEIGHT}px;">
+				<table class="excel-grid" style="transform: translateY({paddingTop}px);">
+					<thead>
+						<tr style="height: {ROW_HEIGHT}px;">
+							<th class="excel-row-header excel-corner-header">#</th>
+							{#each Array(colCount) as _, colIndex}
+								<th
+									class="excel-col-header"
+									style="width: {columnWidths[colIndex] || DEFAULT_COL_WIDTH}px; min-width: {columnWidths[colIndex] || DEFAULT_COL_WIDTH}px;"
+								>
+									{getColumnLetter(colIndex)}
+									<!-- svelte-ignore a11y_no_static_element_interactions -->
+									<div
+										class="excel-col-resize-handle"
+										on:mousedown={(e) => startColumnResize(colIndex, e)}
+									></div>
+								</th>
 							{/each}
 						</tr>
-					{/each}
-				</tbody>
-			</table>
+					</thead>
+					<tbody>
+						{#each visibleRows as { index: rowIndex, data: row } (rowIndex)}
+							<tr style="height: {ROW_HEIGHT}px;">
+								<td class="excel-row-header">{rowIndex + 1}</td>
+								{#each row as cell, colIndex}
+									<td
+										class="excel-cell"
+										class:excel-cell-formula={cellFormulas.has(`${rowIndex},${colIndex}`)}
+										class:excel-cell-selected={isCellSelected(rowIndex, colIndex)}
+										style="width: {columnWidths[colIndex] || DEFAULT_COL_WIDTH}px;"
+									>
+										<input
+											type="text"
+											value={getCellDisplayValue(rowIndex, colIndex, editingCell === `${rowIndex},${colIndex}`)}
+											on:change={(e) => onCellChange(rowIndex, colIndex, e)}
+											on:focus={() => onCellFocus(rowIndex, colIndex)}
+											on:blur={onCellBlur}
+											on:mousedown={(e) => startSelection(rowIndex, colIndex, e)}
+											data-row={rowIndex}
+											data-col={colIndex}
+											class="excel-cell-input"
+											class:excel-cell-changed={changedCells.has(`${rowIndex},${colIndex}`)}
+											class:excel-cell-has-formula={cellFormulas.has(`${rowIndex},${colIndex}`)}
+											class:excel-cell-selected={isCellSelected(rowIndex, colIndex)}
+										/>
+									</td>
+								{/each}
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
 		</div>
 	{:else}
 		<div class="excel-empty">No data to display</div>
 	{/if}
+
+	<!-- Chart Panel -->
+	{#if showChartPanel && generatedCharts.length > 0}
+		<div class="excel-chart-panel">
+			<div class="excel-chart-panel-header">
+				<div class="excel-chart-tabs">
+					{#each generatedCharts as chart, i}
+						<div
+							class="excel-chart-tab"
+							class:excel-chart-tab-active={selectedChartIndex === i}
+						>
+							<button
+								class="excel-chart-tab-title"
+								on:click={() => { selectedChartIndex = i; tick().then(() => renderCurrentChart()); }}
+							>
+								{chart.title}
+							</button>
+							<button
+								class="excel-chart-tab-close"
+								on:click={() => deleteChart(i)}
+								title="Delete chart"
+							>×</button>
+						</div>
+					{/each}
+				</div>
+				<button
+					class="excel-chart-panel-close"
+					on:click={() => showChartPanel = false}
+					title="Close charts panel"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<line x1="18" y1="6" x2="6" y2="18"/>
+						<line x1="6" y1="6" x2="18" y2="18"/>
+					</svg>
+				</button>
+			</div>
+			<div class="excel-chart-canvas-container">
+				<canvas bind:this={chartCanvasElement}></canvas>
+			</div>
+		</div>
+	{/if}
 </div>
+
+<!-- Chart Creation Modal -->
+{#if showChartModal}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="excel-modal-overlay" on:click={closeChartModal}>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div class="excel-modal" on:click|stopPropagation>
+			<div class="excel-modal-header">
+				<h3>Create Chart</h3>
+				<button class="excel-modal-close" on:click={closeChartModal}>×</button>
+			</div>
+			<div class="excel-modal-body">
+				<p class="excel-modal-info">
+					{#if getSelectionBounds()}
+						{@const bounds = getSelectionBounds()}
+						Creating chart from {bounds?.rows}×{bounds?.cols} cells
+					{/if}
+				</p>
+
+				<div class="excel-modal-field">
+					<label for="chart-type">Chart Type</label>
+					<select id="chart-type" bind:value={chartType}>
+						<option value="bar">Bar Chart</option>
+						<option value="line">Line Chart</option>
+						<option value="pie">Pie Chart</option>
+						<option value="doughnut">Doughnut Chart</option>
+					</select>
+				</div>
+
+				<div class="excel-modal-hint">
+					<strong>Data format:</strong> First row = series labels, First column = category labels, remaining cells = numeric values.
+				</div>
+			</div>
+			<div class="excel-modal-footer">
+				<button class="excel-modal-button excel-modal-button-secondary" on:click={closeChartModal}>
+					Cancel
+				</button>
+				<button class="excel-modal-button excel-modal-button-primary" on:click={createChart}>
+					Create Chart
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	.excel-viewer {
@@ -417,6 +1262,12 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	.excel-row-count {
+		font-size: 0.75rem;
+		color: var(--color-gray-500);
+		white-space: nowrap;
 	}
 
 	.excel-sheet-selector {
@@ -526,19 +1377,34 @@
 		flex: 1;
 		overflow: auto;
 		background: white;
+		position: relative;
+	}
+
+	.excel-virtual-scroll {
+		position: relative;
+		width: fit-content;
+		min-width: 100%;
 	}
 
 	.excel-grid {
-		width: 100%;
+		width: fit-content;
+		min-width: 100%;
 		border-collapse: collapse;
 		font-size: 1rem;
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 		font-variant-numeric: tabular-nums;
+		position: sticky;
+		top: 0;
+	}
+
+	.excel-grid thead {
+		position: sticky;
+		top: 0;
+		z-index: 10;
 	}
 
 	.excel-row-header,
 	.excel-col-header {
-		position: sticky;
 		background: var(--color-gray-100);
 		color: var(--color-gray-800);
 		font-weight: 600;
@@ -547,16 +1413,23 @@
 		border: 1px solid var(--color-gray-300);
 		min-width: 3rem;
 		font-size: 0.875rem;
+		white-space: nowrap;
+	}
+
+	.excel-corner-header {
+		position: sticky;
+		left: 0;
+		z-index: 11;
 	}
 
 	.excel-row-header {
+		position: sticky;
 		left: 0;
 		z-index: 2;
 	}
 
 	.excel-col-header {
-		top: 0;
-		z-index: 1;
+		min-width: 120px;
 	}
 
 	.excel-cell {
@@ -568,6 +1441,7 @@
 	.excel-cell-input {
 		width: 100%;
 		min-width: 120px;
+		height: 100%;
 		padding: 0.5rem 0.75rem;
 		border: none;
 		background: transparent;
@@ -575,6 +1449,7 @@
 		font-size: inherit;
 		color: #000;
 		line-height: 1.4;
+		box-sizing: border-box;
 	}
 
 	.excel-cell-input:focus {
@@ -590,5 +1465,403 @@
 
 	.excel-cell-changed:focus {
 		background: var(--color-yellow-100);
+	}
+
+	/* Formula cell indicator */
+	.excel-cell-formula {
+		position: relative;
+	}
+
+	.excel-cell-formula::before {
+		content: '';
+		position: absolute;
+		top: 2px;
+		right: 2px;
+		width: 0;
+		height: 0;
+		border-left: 6px solid transparent;
+		border-top: 6px solid var(--color-green-500);
+		z-index: 1;
+		pointer-events: none;
+	}
+
+	.excel-cell-has-formula {
+		color: var(--color-green-700);
+	}
+
+	.excel-cell-has-formula:focus {
+		font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+	}
+
+	/* Formula bar */
+	.excel-formula-bar {
+		display: flex;
+		align-items: center;
+		padding: 0.5rem 1rem;
+		background: var(--color-gray-50);
+		border-bottom: 1px solid var(--color-gray-200);
+		gap: 0.75rem;
+		min-height: 2rem;
+	}
+
+	.excel-formula-bar-label {
+		font-weight: 600;
+		font-size: 0.875rem;
+		color: var(--color-gray-600);
+		background: white;
+		padding: 0.25rem 0.5rem;
+		border: 1px solid var(--color-gray-300);
+		border-radius: 0.25rem;
+		min-width: 3rem;
+		text-align: center;
+	}
+
+	.excel-formula-bar-content {
+		flex: 1;
+		font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+		font-size: 0.875rem;
+		color: #000;
+		padding: 0.25rem 0.5rem;
+		background: white;
+		border: 1px solid var(--color-gray-300);
+		border-radius: 0.25rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	/* Toolbar */
+	.excel-toolbar {
+		display: flex;
+		align-items: center;
+		padding: 0.375rem 0.75rem;
+		background: var(--color-gray-100);
+		border-bottom: 1px solid var(--color-gray-200);
+		gap: 0.5rem;
+	}
+
+	.excel-toolbar-group {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+	}
+
+	.excel-toolbar-button {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.375rem;
+		border: none;
+		border-radius: 0.25rem;
+		background: transparent;
+		color: var(--color-gray-600);
+		cursor: pointer;
+		transition: all 0.15s;
+	}
+
+	.excel-toolbar-button:hover:not(:disabled) {
+		background: var(--color-gray-200);
+		color: var(--color-gray-800);
+	}
+
+	.excel-toolbar-button:active:not(:disabled) {
+		background: var(--color-gray-300);
+	}
+
+	.excel-toolbar-button:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
+	}
+
+	.excel-toolbar-divider {
+		width: 1px;
+		height: 1.5rem;
+		background: var(--color-gray-300);
+		margin: 0 0.25rem;
+	}
+
+	.excel-toolbar-label {
+		font-size: 0.75rem;
+		color: var(--color-gray-500);
+		white-space: nowrap;
+	}
+
+	.excel-selection-info {
+		color: var(--color-blue-600);
+		font-weight: 500;
+	}
+
+	/* Column resize handle */
+	.excel-col-header {
+		position: relative;
+	}
+
+	.excel-col-resize-handle {
+		position: absolute;
+		right: 0;
+		top: 0;
+		bottom: 0;
+		width: 6px;
+		cursor: col-resize;
+		background: transparent;
+		transition: background 0.15s;
+	}
+
+	.excel-col-resize-handle:hover {
+		background: var(--color-blue-400);
+	}
+
+	/* Cell selection */
+	.excel-cell-selected {
+		background: var(--color-blue-100) !important;
+	}
+
+	.excel-cell-selected .excel-cell-input {
+		background: var(--color-blue-100);
+	}
+
+	.excel-cell-input.excel-cell-selected:not(:focus) {
+		background: var(--color-blue-100);
+	}
+
+	/* Chart button */
+	.excel-chart-button {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		padding: 0.375rem 0.5rem !important;
+		background: var(--color-blue-50) !important;
+		border: 1px solid var(--color-blue-300) !important;
+		color: var(--color-blue-700) !important;
+	}
+
+	.excel-chart-button:hover {
+		background: var(--color-blue-100) !important;
+	}
+
+	.excel-toolbar-button-active {
+		background: var(--color-blue-100) !important;
+		border: 1px solid var(--color-blue-400) !important;
+	}
+
+	/* Chart Panel */
+	.excel-chart-panel {
+		display: flex;
+		flex-direction: column;
+		height: 300px;
+		border-top: 2px solid var(--color-gray-300);
+		background: white;
+	}
+
+	.excel-chart-panel-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0.5rem;
+		background: var(--color-gray-100);
+		border-bottom: 1px solid var(--color-gray-200);
+	}
+
+	.excel-chart-tabs {
+		display: flex;
+		gap: 0.5rem;
+		overflow-x: auto;
+		flex: 1;
+	}
+
+	.excel-chart-tab {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		background: white;
+		border: 1px solid var(--color-gray-300);
+		border-radius: 0.25rem;
+		font-size: 0.75rem;
+		white-space: nowrap;
+		overflow: hidden;
+	}
+
+	.excel-chart-tab-active {
+		background: var(--color-blue-50);
+		border-color: var(--color-blue-400);
+	}
+
+	.excel-chart-tab-title {
+		flex: 1;
+		padding: 0.375rem 0.5rem;
+		background: none;
+		border: none;
+		font-size: inherit;
+		cursor: pointer;
+		color: inherit;
+	}
+
+	.excel-chart-tab-active .excel-chart-tab-title {
+		color: var(--color-blue-700);
+	}
+
+	.excel-chart-tab-title:hover {
+		background: var(--color-gray-50);
+	}
+
+	.excel-chart-tab-close {
+		background: none;
+		border: none;
+		padding: 0.375rem;
+		font-size: 1rem;
+		line-height: 1;
+		color: var(--color-gray-400);
+		cursor: pointer;
+	}
+
+	.excel-chart-tab-close:hover {
+		color: var(--color-red-500);
+		background: var(--color-red-50);
+	}
+
+	.excel-chart-panel-close {
+		background: none;
+		border: none;
+		padding: 0.25rem;
+		cursor: pointer;
+		color: var(--color-gray-500);
+	}
+
+	.excel-chart-panel-close:hover {
+		color: var(--color-gray-700);
+	}
+
+	.excel-chart-canvas-container {
+		flex: 1;
+		padding: 1rem;
+		min-height: 0;
+	}
+
+	.excel-chart-canvas-container canvas {
+		width: 100% !important;
+		height: 100% !important;
+	}
+
+	/* Chart Modal */
+	.excel-modal-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(0, 0, 0, 0.5);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 100;
+	}
+
+	.excel-modal {
+		background: white;
+		border-radius: 0.5rem;
+		box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+		width: 400px;
+		max-width: 90vw;
+	}
+
+	.excel-modal-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 1rem;
+		border-bottom: 1px solid var(--color-gray-200);
+	}
+
+	.excel-modal-header h3 {
+		margin: 0;
+		font-size: 1.125rem;
+		font-weight: 600;
+	}
+
+	.excel-modal-close {
+		background: none;
+		border: none;
+		font-size: 1.5rem;
+		cursor: pointer;
+		color: var(--color-gray-500);
+		line-height: 1;
+	}
+
+	.excel-modal-close:hover {
+		color: var(--color-gray-700);
+	}
+
+	.excel-modal-body {
+		padding: 1rem;
+	}
+
+	.excel-modal-info {
+		margin: 0 0 1rem;
+		color: var(--color-gray-600);
+		font-size: 0.875rem;
+	}
+
+	.excel-modal-field {
+		margin-bottom: 1rem;
+	}
+
+	.excel-modal-field label {
+		display: block;
+		margin-bottom: 0.375rem;
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--color-gray-700);
+	}
+
+	.excel-modal-field select {
+		width: 100%;
+		padding: 0.5rem;
+		border: 1px solid var(--color-gray-300);
+		border-radius: 0.25rem;
+		font-size: 0.875rem;
+	}
+
+	.excel-modal-hint {
+		padding: 0.75rem;
+		background: var(--color-blue-50);
+		border-radius: 0.25rem;
+		font-size: 0.75rem;
+		color: var(--color-blue-700);
+	}
+
+	.excel-modal-footer {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.5rem;
+		padding: 1rem;
+		border-top: 1px solid var(--color-gray-200);
+	}
+
+	.excel-modal-button {
+		padding: 0.5rem 1rem;
+		border-radius: 0.25rem;
+		font-size: 0.875rem;
+		font-weight: 500;
+		cursor: pointer;
+	}
+
+	.excel-modal-button-secondary {
+		background: white;
+		border: 1px solid var(--color-gray-300);
+		color: var(--color-gray-700);
+	}
+
+	.excel-modal-button-secondary:hover {
+		background: var(--color-gray-50);
+	}
+
+	.excel-modal-button-primary {
+		background: var(--color-blue-600);
+		border: 1px solid var(--color-blue-600);
+		color: white;
+	}
+
+	.excel-modal-button-primary:hover {
+		background: var(--color-blue-700);
 	}
 </style>
