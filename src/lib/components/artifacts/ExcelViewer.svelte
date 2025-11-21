@@ -3,7 +3,11 @@
 	import * as XLSX from 'xlsx';
 	import fileSaver from 'file-saver';
 	import { HyperFormula } from 'hyperformula';
+	import { Chart, registerables } from 'chart.js';
 	import type { ExcelArtifact } from '$lib/types';
+
+	// Register all Chart.js components
+	Chart.register(...registerables);
 
 	const { saveAs } = fileSaver;
 
@@ -80,6 +84,16 @@
 	let selectionStart: CellPosition | null = null;
 	let selectionEnd: CellPosition | null = null;
 	let isSelecting = false;
+
+	// Chart state
+	type ChartType = 'bar' | 'line' | 'pie' | 'doughnut';
+	let showChartModal = false;
+	let chartType: ChartType = 'bar';
+	let chartInstance: Chart | null = null;
+	let chartCanvasElement: HTMLCanvasElement;
+	let generatedCharts: { id: string; type: ChartType; data: any; title: string }[] = [];
+	let showChartPanel = false;
+	let selectedChartIndex = 0;
 
 	// Calculate visible rows based on scroll position
 	function updateVisibleRows() {
@@ -599,6 +613,156 @@
 		selectionEnd = null;
 	}
 
+	// Chart functions
+	function openChartModal() {
+		if (!selectionStart || !selectionEnd) {
+			saveMessage = 'Select a data range to create a chart';
+			return;
+		}
+		showChartModal = true;
+	}
+
+	function closeChartModal() {
+		showChartModal = false;
+	}
+
+	function getSelectedData(): { labels: string[]; datasets: { label: string; data: number[] }[] } | null {
+		if (!selectionStart || !selectionEnd) return null;
+
+		const minRow = Math.min(selectionStart.row, selectionEnd.row);
+		const maxRow = Math.max(selectionStart.row, selectionEnd.row);
+		const minCol = Math.min(selectionStart.col, selectionEnd.col);
+		const maxCol = Math.max(selectionStart.col, selectionEnd.col);
+
+		// First column as labels, remaining columns as datasets
+		const labels: string[] = [];
+		const datasets: { label: string; data: number[] }[] = [];
+
+		// Initialize datasets (one per column after the first)
+		for (let c = minCol + 1; c <= maxCol; c++) {
+			datasets.push({
+				label: rows[minRow]?.[c]?.toString() || getColumnLetter(c),
+				data: []
+			});
+		}
+
+		// Extract labels and data
+		for (let r = minRow + 1; r <= maxRow; r++) {
+			labels.push(rows[r]?.[minCol]?.toString() || `Row ${r + 1}`);
+
+			for (let c = minCol + 1; c <= maxCol; c++) {
+				const value = parseFloat(rows[r]?.[c]) || 0;
+				datasets[c - minCol - 1].data.push(value);
+			}
+		}
+
+		// If only one column selected, use row indices as labels and that column as data
+		if (minCol === maxCol) {
+			datasets.length = 0;
+			datasets.push({
+				label: rows[minRow]?.[minCol]?.toString() || 'Data',
+				data: []
+			});
+
+			for (let r = minRow + 1; r <= maxRow; r++) {
+				labels.push(`Row ${r + 1}`);
+				const value = parseFloat(rows[r]?.[minCol]) || 0;
+				datasets[0].data.push(value);
+			}
+		}
+
+		return { labels, datasets };
+	}
+
+	function createChart() {
+		const selectedData = getSelectedData();
+		if (!selectedData) {
+			saveMessage = 'No valid data selected';
+			return;
+		}
+
+		const colors = [
+			'rgba(59, 130, 246, 0.8)',  // blue
+			'rgba(16, 185, 129, 0.8)',  // green
+			'rgba(245, 158, 11, 0.8)',  // amber
+			'rgba(239, 68, 68, 0.8)',   // red
+			'rgba(139, 92, 246, 0.8)',  // purple
+			'rgba(236, 72, 153, 0.8)',  // pink
+		];
+
+		const chartData = {
+			labels: selectedData.labels,
+			datasets: selectedData.datasets.map((ds, i) => ({
+				...ds,
+				backgroundColor: colors[i % colors.length],
+				borderColor: colors[i % colors.length].replace('0.8', '1'),
+				borderWidth: 2
+			}))
+		};
+
+		const chartId = `chart-${Date.now()}`;
+		const title = `${chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart - ${activeSheet}`;
+
+		generatedCharts = [...generatedCharts, {
+			id: chartId,
+			type: chartType,
+			data: chartData,
+			title
+		}];
+
+		showChartPanel = true;
+		selectedChartIndex = generatedCharts.length - 1;
+		showChartModal = false;
+		clearSelection();
+
+		// Render chart after DOM update
+		tick().then(() => renderCurrentChart());
+	}
+
+	function renderCurrentChart() {
+		if (!chartCanvasElement || generatedCharts.length === 0) return;
+
+		// Destroy previous chart
+		if (chartInstance) {
+			chartInstance.destroy();
+		}
+
+		const currentChart = generatedCharts[selectedChartIndex];
+		if (!currentChart) return;
+
+		chartInstance = new Chart(chartCanvasElement, {
+			type: currentChart.type,
+			data: currentChart.data,
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				plugins: {
+					title: {
+						display: true,
+						text: currentChart.title
+					},
+					legend: {
+						position: 'bottom'
+					}
+				}
+			}
+		});
+	}
+
+	function deleteChart(index: number) {
+		generatedCharts = generatedCharts.filter((_, i) => i !== index);
+		if (generatedCharts.length === 0) {
+			showChartPanel = false;
+			if (chartInstance) {
+				chartInstance.destroy();
+				chartInstance = null;
+			}
+		} else {
+			selectedChartIndex = Math.min(selectedChartIndex, generatedCharts.length - 1);
+			tick().then(() => renderCurrentChart());
+		}
+	}
+
 	async function saveChanges() {
 		if (!changedCells.size || !file.fileId) {
 			saveMessage = 'No changes to save';
@@ -836,6 +1000,36 @@
 						<line x1="6" y1="6" x2="18" y2="18"/>
 					</svg>
 				</button>
+				<button
+					class="excel-toolbar-button excel-chart-button"
+					on:click={openChartModal}
+					title="Create chart from selection"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<line x1="18" y1="20" x2="18" y2="10"/>
+						<line x1="12" y1="20" x2="12" y2="4"/>
+						<line x1="6" y1="20" x2="6" y2="14"/>
+					</svg>
+					Chart
+				</button>
+			</div>
+		{/if}
+
+		{#if generatedCharts.length > 0}
+			<div class="excel-toolbar-divider"></div>
+			<div class="excel-toolbar-group">
+				<button
+					class="excel-toolbar-button"
+					class:excel-toolbar-button-active={showChartPanel}
+					on:click={() => { showChartPanel = !showChartPanel; if (showChartPanel) tick().then(() => renderCurrentChart()); }}
+					title="Toggle charts panel"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<rect x="3" y="3" width="18" height="18" rx="2"/>
+						<line x1="9" y1="3" x2="9" y2="21"/>
+					</svg>
+					{generatedCharts.length} Chart{generatedCharts.length > 1 ? 's' : ''}
+				</button>
 			</div>
 		{/if}
 	</div>
@@ -940,7 +1134,92 @@
 	{:else}
 		<div class="excel-empty">No data to display</div>
 	{/if}
+
+	<!-- Chart Panel -->
+	{#if showChartPanel && generatedCharts.length > 0}
+		<div class="excel-chart-panel">
+			<div class="excel-chart-panel-header">
+				<div class="excel-chart-tabs">
+					{#each generatedCharts as chart, i}
+						<div
+							class="excel-chart-tab"
+							class:excel-chart-tab-active={selectedChartIndex === i}
+						>
+							<button
+								class="excel-chart-tab-title"
+								on:click={() => { selectedChartIndex = i; tick().then(() => renderCurrentChart()); }}
+							>
+								{chart.title}
+							</button>
+							<button
+								class="excel-chart-tab-close"
+								on:click={() => deleteChart(i)}
+								title="Delete chart"
+							>×</button>
+						</div>
+					{/each}
+				</div>
+				<button
+					class="excel-chart-panel-close"
+					on:click={() => showChartPanel = false}
+					title="Close charts panel"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<line x1="18" y1="6" x2="6" y2="18"/>
+						<line x1="6" y1="6" x2="18" y2="18"/>
+					</svg>
+				</button>
+			</div>
+			<div class="excel-chart-canvas-container">
+				<canvas bind:this={chartCanvasElement}></canvas>
+			</div>
+		</div>
+	{/if}
 </div>
+
+<!-- Chart Creation Modal -->
+{#if showChartModal}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="excel-modal-overlay" on:click={closeChartModal}>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div class="excel-modal" on:click|stopPropagation>
+			<div class="excel-modal-header">
+				<h3>Create Chart</h3>
+				<button class="excel-modal-close" on:click={closeChartModal}>×</button>
+			</div>
+			<div class="excel-modal-body">
+				<p class="excel-modal-info">
+					{#if getSelectionBounds()}
+						{@const bounds = getSelectionBounds()}
+						Creating chart from {bounds?.rows}×{bounds?.cols} cells
+					{/if}
+				</p>
+
+				<div class="excel-modal-field">
+					<label for="chart-type">Chart Type</label>
+					<select id="chart-type" bind:value={chartType}>
+						<option value="bar">Bar Chart</option>
+						<option value="line">Line Chart</option>
+						<option value="pie">Pie Chart</option>
+						<option value="doughnut">Doughnut Chart</option>
+					</select>
+				</div>
+
+				<div class="excel-modal-hint">
+					<strong>Data format:</strong> First row = series labels, First column = category labels, remaining cells = numeric values.
+				</div>
+			</div>
+			<div class="excel-modal-footer">
+				<button class="excel-modal-button excel-modal-button-secondary" on:click={closeChartModal}>
+					Cancel
+				</button>
+				<button class="excel-modal-button excel-modal-button-primary" on:click={createChart}>
+					Create Chart
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	.excel-viewer {
@@ -1343,5 +1622,246 @@
 
 	.excel-cell-input.excel-cell-selected:not(:focus) {
 		background: var(--color-blue-100);
+	}
+
+	/* Chart button */
+	.excel-chart-button {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		padding: 0.375rem 0.5rem !important;
+		background: var(--color-blue-50) !important;
+		border: 1px solid var(--color-blue-300) !important;
+		color: var(--color-blue-700) !important;
+	}
+
+	.excel-chart-button:hover {
+		background: var(--color-blue-100) !important;
+	}
+
+	.excel-toolbar-button-active {
+		background: var(--color-blue-100) !important;
+		border: 1px solid var(--color-blue-400) !important;
+	}
+
+	/* Chart Panel */
+	.excel-chart-panel {
+		display: flex;
+		flex-direction: column;
+		height: 300px;
+		border-top: 2px solid var(--color-gray-300);
+		background: white;
+	}
+
+	.excel-chart-panel-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0.5rem;
+		background: var(--color-gray-100);
+		border-bottom: 1px solid var(--color-gray-200);
+	}
+
+	.excel-chart-tabs {
+		display: flex;
+		gap: 0.5rem;
+		overflow-x: auto;
+		flex: 1;
+	}
+
+	.excel-chart-tab {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		background: white;
+		border: 1px solid var(--color-gray-300);
+		border-radius: 0.25rem;
+		font-size: 0.75rem;
+		white-space: nowrap;
+		overflow: hidden;
+	}
+
+	.excel-chart-tab-active {
+		background: var(--color-blue-50);
+		border-color: var(--color-blue-400);
+	}
+
+	.excel-chart-tab-title {
+		flex: 1;
+		padding: 0.375rem 0.5rem;
+		background: none;
+		border: none;
+		font-size: inherit;
+		cursor: pointer;
+		color: inherit;
+	}
+
+	.excel-chart-tab-active .excel-chart-tab-title {
+		color: var(--color-blue-700);
+	}
+
+	.excel-chart-tab-title:hover {
+		background: var(--color-gray-50);
+	}
+
+	.excel-chart-tab-close {
+		background: none;
+		border: none;
+		padding: 0.375rem;
+		font-size: 1rem;
+		line-height: 1;
+		color: var(--color-gray-400);
+		cursor: pointer;
+	}
+
+	.excel-chart-tab-close:hover {
+		color: var(--color-red-500);
+		background: var(--color-red-50);
+	}
+
+	.excel-chart-panel-close {
+		background: none;
+		border: none;
+		padding: 0.25rem;
+		cursor: pointer;
+		color: var(--color-gray-500);
+	}
+
+	.excel-chart-panel-close:hover {
+		color: var(--color-gray-700);
+	}
+
+	.excel-chart-canvas-container {
+		flex: 1;
+		padding: 1rem;
+		min-height: 0;
+	}
+
+	.excel-chart-canvas-container canvas {
+		width: 100% !important;
+		height: 100% !important;
+	}
+
+	/* Chart Modal */
+	.excel-modal-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(0, 0, 0, 0.5);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 100;
+	}
+
+	.excel-modal {
+		background: white;
+		border-radius: 0.5rem;
+		box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+		width: 400px;
+		max-width: 90vw;
+	}
+
+	.excel-modal-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 1rem;
+		border-bottom: 1px solid var(--color-gray-200);
+	}
+
+	.excel-modal-header h3 {
+		margin: 0;
+		font-size: 1.125rem;
+		font-weight: 600;
+	}
+
+	.excel-modal-close {
+		background: none;
+		border: none;
+		font-size: 1.5rem;
+		cursor: pointer;
+		color: var(--color-gray-500);
+		line-height: 1;
+	}
+
+	.excel-modal-close:hover {
+		color: var(--color-gray-700);
+	}
+
+	.excel-modal-body {
+		padding: 1rem;
+	}
+
+	.excel-modal-info {
+		margin: 0 0 1rem;
+		color: var(--color-gray-600);
+		font-size: 0.875rem;
+	}
+
+	.excel-modal-field {
+		margin-bottom: 1rem;
+	}
+
+	.excel-modal-field label {
+		display: block;
+		margin-bottom: 0.375rem;
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--color-gray-700);
+	}
+
+	.excel-modal-field select {
+		width: 100%;
+		padding: 0.5rem;
+		border: 1px solid var(--color-gray-300);
+		border-radius: 0.25rem;
+		font-size: 0.875rem;
+	}
+
+	.excel-modal-hint {
+		padding: 0.75rem;
+		background: var(--color-blue-50);
+		border-radius: 0.25rem;
+		font-size: 0.75rem;
+		color: var(--color-blue-700);
+	}
+
+	.excel-modal-footer {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.5rem;
+		padding: 1rem;
+		border-top: 1px solid var(--color-gray-200);
+	}
+
+	.excel-modal-button {
+		padding: 0.5rem 1rem;
+		border-radius: 0.25rem;
+		font-size: 0.875rem;
+		font-weight: 500;
+		cursor: pointer;
+	}
+
+	.excel-modal-button-secondary {
+		background: white;
+		border: 1px solid var(--color-gray-300);
+		color: var(--color-gray-700);
+	}
+
+	.excel-modal-button-secondary:hover {
+		background: var(--color-gray-50);
+	}
+
+	.excel-modal-button-primary {
+		background: var(--color-blue-600);
+		border: 1px solid var(--color-blue-600);
+		color: white;
+	}
+
+	.excel-modal-button-primary:hover {
+		background: var(--color-blue-700);
 	}
 </style>
