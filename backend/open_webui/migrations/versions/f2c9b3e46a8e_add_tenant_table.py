@@ -23,8 +23,8 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     op.create_table(
         "tenant",
-        sa.Column("id", sa.String(), nullable=False),
-        sa.Column("name", sa.String(), nullable=False),
+        sa.Column("id", sa.String(length=255), nullable=False),
+        sa.Column("name", sa.String(length=255), nullable=False),
         sa.Column("model_names", JSONField(), nullable=False),
         sa.Column("created_at", sa.BigInteger(), nullable=True),
         sa.Column("updated_at", sa.BigInteger(), nullable=True),
@@ -32,9 +32,16 @@ def upgrade() -> None:
         sa.UniqueConstraint("name"),
     )
 
-    op.add_column("user", sa.Column("tenant_id", sa.String(), nullable=True))
+    op.add_column(
+        "user",
+        sa.Column("tenant_id", sa.String(length=255), nullable=True),
+    )
+    op.create_foreign_key(
+        "fk_user_tenant_id", "user", "tenant", ["tenant_id"], ["id"], ondelete="SET NULL"
+    )
 
 
 def downgrade() -> None:
+    op.drop_constraint("fk_user_tenant_id", "user", type_="foreignkey")
     op.drop_column("user", "tenant_id")
     op.drop_table("tenant")
