@@ -27,6 +27,7 @@ docker run --rm \
   ```
 
   # Seeding in tenants and users
+  Make sure you run initially first so you can set up main admin user... then you can seed in non admin users
   ## Sample json
   ```bash
   export LUXTRONIC_TENANT_SEED='[                                                                                                                                          
@@ -56,6 +57,7 @@ docker run --rm \
   ```
 
   ## Seed Command
+  ### EC2
   ```bash
   docker run --rm \
 	-e WEBUI_SECRET_KEY='<web_ui_secret>' \
@@ -69,6 +71,13 @@ docker run --rm \
 	--entrypoint python \
 	<acct_id>.dkr.ecr.us-east-2.amazonaws.com/luxtronic-open-webui:latest \
 	/app/backend/seed_luxtronic.py
+  ```
+
+  ### Local
+  ```bash
+  source backend/.venv/bin/activate  
+  export LUXTRONIC_TENANT_SEED='<your json seed>'
+  python backend/seed_luxtronic.py       
   ```
 
 # Old Notes

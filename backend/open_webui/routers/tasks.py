@@ -20,6 +20,13 @@ from open_webui.utils.task import (
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.constants import TASKS
 
+from open_webui.routers.luxor import (
+    generate_chat_completion as generate_luxor_chat_completion,
+)
+
+from open_webui.utils.payload import (convert_payload_openai_to_ollama, convert_payload_openai_to_luxor)
+
+
 from open_webui.routers.pipelines import process_pipeline_inlet_filter
 
 from open_webui.utils.task import get_task_model_id
@@ -193,6 +200,10 @@ async def generate_title(
         f"generating chat title using model {task_model_id} for user {user.email} "
     )
 
+    if "luxor" in model_id:
+        form_data["task"] = "title"
+        return await generate_chat_completion(request, form_data=form_data, user=user)
+
     if request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE != "":
         template = request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE
     else:
@@ -263,7 +274,8 @@ async def generate_follow_ups(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Model not found",
         )
-
+  
+    
     # Check if the user has a custom task model
     # If the user has a custom task model, use that model
     task_model_id = get_task_model_id(
@@ -274,16 +286,19 @@ async def generate_follow_ups(
     )
 
     log.debug(
-        f"generating chat title using model {task_model_id} for user {user.email} "
+        f"generating follow up using model {task_model_id} for user {user.email} "
     )
+  
+    if "luxor" in model_id:
+        form_data["task"] = "follow_up"
+        return await generate_chat_completion(request, form_data=form_data, user=user)
 
     if request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE != "":
         template = request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE
     else:
         template = DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE
-
     content = follow_up_generation_template(template, form_data["messages"], user)
-
+    
     payload = {
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
@@ -349,6 +364,10 @@ async def generate_chat_tags(
     log.debug(
         f"generating chat tags using model {task_model_id} for user {user.email} "
     )
+
+    if "luxor" in model_id:
+        form_data["task"] = "tags"
+        return await generate_chat_completion(request, form_data=form_data, user=user)
 
     if request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE != "":
         template = request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE

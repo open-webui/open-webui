@@ -18,7 +18,6 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 async def generate_chat_completion(form_data: dict):
     url = os.environ['LIVE_URL']
-    log.info(f"URL: {url}") 
     return await send_post_request(
         url=url,
         payload=json.dumps(form_data),
