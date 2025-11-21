@@ -62,6 +62,7 @@ from open_webui.utils.files import (
     get_file_url_from_base64,
     get_image_url_from_base64,
     upload_excel_file,
+    get_excel_artifact_from_base64,
 )
 
 
@@ -3097,6 +3098,26 @@ async def process_chat_response(
                                                     stdoutLines[idx] = (
                                                         f"![Output Image]({image_url})"
                                                     )
+                                            elif "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64," in line:
+                                                # Detect base64 Excel data
+                                                log.info(f"Detected base64 Excel data in stdout")
+                                                # Try to get filename from next line
+                                                filename = "output.xlsx"
+                                                if idx + 1 < len(stdoutLines) and "Filename:" in stdoutLines[idx + 1]:
+                                                    filename = stdoutLines[idx + 1].split("Filename:", 1)[1].strip()
+                                                    stdoutLines[idx + 1] = ""  # Clear filename line
+
+                                                excel_artifact = get_excel_artifact_from_base64(
+                                                    request,
+                                                    line,
+                                                    filename,
+                                                    metadata,
+                                                    user,
+                                                )
+                                                if excel_artifact:
+                                                    excel_artifacts.append(excel_artifact)
+                                                    # Clear the base64 line (too long for display)
+                                                    stdoutLines[idx] = f"📊 Excel file created: {filename}"
                                             elif '.xlsx' in line:
                                                 # Try to extract Excel file path from the line
                                                 # Look for patterns like /path/to/file.xlsx
@@ -3133,6 +3154,26 @@ async def process_chat_response(
                                                 resultLines[idx] = (
                                                     f"![Output Image]({image_url})"
                                                 )
+                                            elif "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64," in line:
+                                                # Detect base64 Excel data
+                                                log.info(f"Detected base64 Excel data in result")
+                                                # Try to get filename from next line
+                                                filename = "output.xlsx"
+                                                if idx + 1 < len(resultLines) and "Filename:" in resultLines[idx + 1]:
+                                                    filename = resultLines[idx + 1].split("Filename:", 1)[1].strip()
+                                                    resultLines[idx + 1] = ""  # Clear filename line
+
+                                                excel_artifact = get_excel_artifact_from_base64(
+                                                    request,
+                                                    line,
+                                                    filename,
+                                                    metadata,
+                                                    user,
+                                                )
+                                                if excel_artifact:
+                                                    excel_artifacts.append(excel_artifact)
+                                                    # Clear the base64 line (too long for display)
+                                                    resultLines[idx] = f"📊 Excel file created: {filename}"
                                             elif '.xlsx' in line:
                                                 # Try to extract Excel file path from the line
                                                 # Look for patterns like /path/to/file.xlsx

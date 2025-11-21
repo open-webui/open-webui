@@ -172,6 +172,83 @@ def upload_excel_file(request, file_path, metadata, user):
         return None
 
 
+def get_excel_artifact_from_base64(request, base64_excel_string, filename, metadata, user):
+    """
+    Convert base64 Excel data to file artifact dict.
+
+    Args:
+        request: FastAPI request object
+        base64_excel_string: Base64 encoded Excel data with data URI prefix
+        filename: Filename for the Excel file
+        metadata: Metadata dict for the file
+        user: User object
+
+    Returns:
+        Dict with file artifact structure or None if failed
+    """
+    if "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64," in base64_excel_string:
+        try:
+            # Extract base64 data
+            excel_data_base64 = base64_excel_string.split(",", 1)[1]
+            excel_data = base64.b64decode(excel_data_base64)
+
+            # Extract sheet names using openpyxl
+            sheet_names = []
+            try:
+                wb = openpyxl.load_workbook(io.BytesIO(excel_data), read_only=True)
+                sheet_names = wb.sheetnames
+                wb.close()
+            except Exception as e:
+                log.warning(f"Could not extract sheet names from base64 Excel data: {e}")
+
+            # Create UploadFile object
+            file = UploadFile(
+                file=io.BytesIO(excel_data),
+                filename=filename if filename else "output.xlsx",
+                headers={
+                    "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                },
+            )
+
+            # Add sheet names to metadata
+            if metadata is None:
+                metadata = {}
+            if sheet_names:
+                metadata["sheetNames"] = sheet_names
+
+            # Upload the file
+            file_item = upload_file_handler(
+                request,
+                file=file,
+                metadata=metadata,
+                process=False,
+                user=user,
+            )
+
+            # Build file artifact dict
+            url = request.app.url_path_for("get_file_content_by_id", id=file_item.id)
+
+            artifact = {
+                "type": "excel",
+                "url": url,
+                "name": filename if filename else "output.xlsx",
+                "fileId": str(file_item.id),
+                "meta": {
+                    "sheetNames": sheet_names,
+                    "activeSheet": sheet_names[0] if sheet_names else None,
+                },
+            }
+
+            log.info(f"Created Excel artifact from base64: {filename if filename else 'output.xlsx'} -> {file_item.id}")
+            return artifact
+
+        except Exception as e:
+            log.error(f"Error processing base64 Excel data: {e}")
+            return None
+
+    return None
+
+
 def get_file_url_from_base64(request, base64_file_string, metadata, user):
     if "data:image/png;base64" in base64_file_string:
         return get_image_url_from_base64(request, base64_file_string, metadata, user)
