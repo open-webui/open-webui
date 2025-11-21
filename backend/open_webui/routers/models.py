@@ -321,7 +321,7 @@ async def update_model_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    model = Models.update_model_by_id(id, form_data)
+    model = Models.update_model_by_id(form_data.id, ModelForm(**form_data.model_dump()))
     return model
 
 
