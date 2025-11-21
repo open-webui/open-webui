@@ -43,9 +43,12 @@ services:
     restart: unless-stopped
 
   jupyter-kernel:
-    build:
-      context: .
-      dockerfile: Dockerfile.jupyter-kernel
+    # Use pre-built image for production, or uncomment 'build' section for local development
+    image: ghcr.io/littelfuse-ssamuel/open-webui-jupyter-kernel:lf-latest
+    # Uncomment below for local development/testing:
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile.jupyter-kernel
     container_name: jupyter-kernel
     restart: unless-stopped
     environment:
