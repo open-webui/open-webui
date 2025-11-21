@@ -41,6 +41,19 @@
 	// Track if file might contain charts (show info message)
 	let hasChartWarning = false;
 
+	// Undo/Redo history stack
+	type HistoryEntry = {
+		row: number;
+		col: number;
+		oldValue: any;
+		newValue: any;
+		oldFormula?: string;
+		newFormula?: string;
+	};
+	let undoStack: HistoryEntry[] = [];
+	let redoStack: HistoryEntry[] = [];
+	const MAX_HISTORY = 100;
+
 	// Virtual scrolling state
 	let containerElement: HTMLDivElement;
 	let scrollTop = 0;
@@ -337,12 +350,34 @@
 		const target = e.target as HTMLInputElement;
 		const value = target.value;
 		const isFormula = typeof value === 'string' && value.startsWith('=');
+		const key = `${r},${c}`;
+
+		// Get old value for undo
+		const oldValue = rows[r]?.[c] ?? '';
+		const oldFormula = cellFormulas.get(key);
+
+		// Push to undo stack
+		undoStack.push({
+			row: r,
+			col: c,
+			oldValue,
+			newValue: value,
+			oldFormula,
+			newFormula: isFormula ? value : undefined
+		});
+
+		// Limit stack size
+		if (undoStack.length > MAX_HISTORY) {
+			undoStack.shift();
+		}
+
+		// Clear redo stack on new action
+		redoStack = [];
 
 		// Update HyperFormula cell
 		updateHyperFormulaCell(r, c, isFormula ? value : parseValue(value));
 
 		// Update formula tracking
-		const key = `${r},${c}`;
 		if (isFormula) {
 			cellFormulas.set(key, value);
 		} else {
@@ -350,6 +385,69 @@
 		}
 
 		markCellChanged(r, c, value, isFormula);
+	}
+
+	// Undo last change
+	function undo() {
+		if (undoStack.length === 0) return;
+
+		const entry = undoStack.pop()!;
+		const { row, col, oldValue, newValue, oldFormula, newFormula } = entry;
+		const key = `${row},${col}`;
+
+		// Push to redo stack
+		redoStack.push(entry);
+
+		// Restore old value
+		updateHyperFormulaCell(row, col, oldFormula ? oldFormula : parseValue(String(oldValue)));
+
+		// Update formula tracking
+		if (oldFormula) {
+			cellFormulas.set(key, oldFormula);
+		} else {
+			cellFormulas.delete(key);
+		}
+
+		// Update changed cells tracking
+		const isFormula = typeof oldValue === 'string' && String(oldValue).startsWith('=');
+		if (oldFormula || isFormula) {
+			markCellChanged(row, col, oldFormula || oldValue, true);
+		} else {
+			markCellChanged(row, col, oldValue, false);
+		}
+
+		// Trigger reactivity
+		undoStack = undoStack;
+		redoStack = redoStack;
+	}
+
+	// Redo last undone change
+	function redo() {
+		if (redoStack.length === 0) return;
+
+		const entry = redoStack.pop()!;
+		const { row, col, newValue, newFormula } = entry;
+		const key = `${row},${col}`;
+
+		// Push back to undo stack
+		undoStack.push(entry);
+
+		// Apply new value
+		const isFormula = newFormula !== undefined;
+		updateHyperFormulaCell(row, col, isFormula ? newFormula : parseValue(String(newValue)));
+
+		// Update formula tracking
+		if (isFormula && newFormula) {
+			cellFormulas.set(key, newFormula);
+		} else {
+			cellFormulas.delete(key);
+		}
+
+		markCellChanged(row, col, newValue, isFormula);
+
+		// Trigger reactivity
+		undoStack = undoStack;
+		redoStack = redoStack;
 	}
 
 	// Parse value to appropriate type for HyperFormula
@@ -478,13 +576,30 @@
 		}
 	}
 
+	// Keyboard shortcut handler
+	function handleKeyDown(e: KeyboardEvent) {
+		if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+			e.preventDefault();
+			undo();
+		} else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+			e.preventDefault();
+			redo();
+		}
+	}
+
 	onMount(() => {
 		if (file?.url) {
 			loadWorkbook();
 		}
+
+		// Add keyboard listener
+		window.addEventListener('keydown', handleKeyDown);
 	});
 
 	onDestroy(() => {
+		// Remove keyboard listener
+		window.removeEventListener('keydown', handleKeyDown);
+
 		// Clean up HyperFormula instance
 		if (hfInstance) {
 			try {
@@ -555,6 +670,42 @@
 			>
 				{saving ? 'Saving...' : 'Save'}
 			</button>
+		</div>
+	</div>
+
+	<!-- Toolbar -->
+	<div class="excel-toolbar">
+		<div class="excel-toolbar-group">
+			<button
+				class="excel-toolbar-button"
+				on:click={undo}
+				disabled={undoStack.length === 0}
+				title="Undo (Ctrl+Z)"
+			>
+				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M3 7v6h6"/>
+					<path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+				</svg>
+			</button>
+			<button
+				class="excel-toolbar-button"
+				on:click={redo}
+				disabled={redoStack.length === 0}
+				title="Redo (Ctrl+Y)"
+			>
+				<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M21 7v6h-6"/>
+					<path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/>
+				</svg>
+			</button>
+		</div>
+
+		<div class="excel-toolbar-divider"></div>
+
+		<div class="excel-toolbar-group">
+			<span class="excel-toolbar-label">
+				{undoStack.length > 0 ? `${undoStack.length} change${undoStack.length > 1 ? 's' : ''} to undo` : 'No changes'}
+			</span>
 		</div>
 	</div>
 
@@ -947,6 +1098,62 @@
 		border-radius: 0.25rem;
 		overflow: hidden;
 		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	/* Toolbar */
+	.excel-toolbar {
+		display: flex;
+		align-items: center;
+		padding: 0.375rem 0.75rem;
+		background: var(--color-gray-100);
+		border-bottom: 1px solid var(--color-gray-200);
+		gap: 0.5rem;
+	}
+
+	.excel-toolbar-group {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+	}
+
+	.excel-toolbar-button {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.375rem;
+		border: none;
+		border-radius: 0.25rem;
+		background: transparent;
+		color: var(--color-gray-600);
+		cursor: pointer;
+		transition: all 0.15s;
+	}
+
+	.excel-toolbar-button:hover:not(:disabled) {
+		background: var(--color-gray-200);
+		color: var(--color-gray-800);
+	}
+
+	.excel-toolbar-button:active:not(:disabled) {
+		background: var(--color-gray-300);
+	}
+
+	.excel-toolbar-button:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
+	}
+
+	.excel-toolbar-divider {
+		width: 1px;
+		height: 1.5rem;
+		background: var(--color-gray-300);
+		margin: 0 0.25rem;
+	}
+
+	.excel-toolbar-label {
+		font-size: 0.75rem;
+		color: var(--color-gray-500);
 		white-space: nowrap;
 	}
 </style>
