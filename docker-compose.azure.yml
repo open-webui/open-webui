@@ -56,6 +56,9 @@ services:
       # set a real token and secure access.
       - JUPYTER_TOKEN=
       - JUPYTER_ENABLE_LAB=no
+      # Disable strict file permission checks for Azure App Service compatibility
+      - JUPYTER_ALLOW_INSECURE_WRITES=1
+      - JUPYTER_PREFER_ENV_PATH=1
     expose:
       - "8888"
     # No 'ports' section: this keeps it internal to the Docker network
