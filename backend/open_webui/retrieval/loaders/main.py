@@ -244,9 +244,11 @@ class Loader:
             )
         elif self.engine == "web":
             loader = ExternalDocumentLoader(
-                url=self.kwargs.get("WEB_LOADER_URL"),
+                url=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_URL"),
+                api_key=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_API_KEY"),
                 file_path=file_path,
                 mime_type=file_content_type,
+                user=self.user,
                 extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES"),
             )
         elif self.engine == "azure_document_intelligence":
