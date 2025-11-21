@@ -1130,7 +1130,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             pass
 
     event_emitter = get_event_emitter(metadata)
-    event_call = get_event_call(metadata)
+    event_caller = get_event_call(metadata)
 
     oauth_token = None
     try:
@@ -1144,14 +1144,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     extra_params = {
         "__event_emitter__": event_emitter,
-        "__event_call__": event_call,
+        "__event_call__": event_caller,
         "__user__": user.model_dump() if isinstance(user, UserModel) else {},
         "__metadata__": metadata,
+        "__oauth_token__": oauth_token,
         "__request__": request,
         "__model__": model,
-        "__oauth_token__": oauth_token,
     }
-
     # Initialize events to store additional event to be sent to the client
     # Initialize contexts and citation
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
