@@ -179,15 +179,16 @@ class Loader:
 
     def load(
         self, filename: str, file_content_type: str, file_path: str
-    ) -> list[Document]:
+    ) -> list[Document] | tuple[list[Document], list[str]]:
         loader = self._get_loader(filename, file_content_type, file_path)
         raw_result = loader.load()
 
-        # If the underlying loader returns (docs, image_refs), discard image_refs here.
+        # NEW: preserve image_refs if present
         if isinstance(raw_result, tuple) and len(raw_result) == 2:
-            docs, _ = raw_result
+            docs, image_refs = raw_result
         else:
             docs = raw_result
+            image_refs = None
 
         from collections.abc import Iterable
         from langchain_core.documents import Document as LCDocument
@@ -218,6 +219,10 @@ class Loader:
                     type(item),
                     item,
                 )
+
+        # NEW: return tuple if we originally had image_refs
+        if image_refs is not None:
+            return flat_docs, image_refs
 
         return flat_docs
 
