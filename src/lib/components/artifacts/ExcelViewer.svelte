@@ -413,7 +413,7 @@
 
 	.excel-filename {
 		font-weight: 600;
-		color: var(--color-gray-900);
+		color: #000;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -573,7 +573,7 @@
 		background: transparent;
 		font-family: inherit;
 		font-size: inherit;
-		color: var(--color-gray-950);
+		color: #000;
 		line-height: 1.4;
 	}
 
