@@ -3539,6 +3539,11 @@ IMAGES_GEMINI_ENDPOINT_METHOD = PersistentConfig(
     os.getenv("IMAGES_GEMINI_ENDPOINT_METHOD", ""),
 )
 
+ENABLE_IMAGE_EDIT = PersistentConfig(
+    "ENABLE_IMAGE_EDIT",
+    "images.edit.enable",
+    os.environ.get("ENABLE_IMAGE_EDIT", "").lower() == "true",
+)
 
 IMAGE_EDIT_ENGINE = PersistentConfig(
     "IMAGE_EDIT_ENGINE",

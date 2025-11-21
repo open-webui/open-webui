@@ -791,42 +791,13 @@ async def chat_image_generation_handler(
     input_images = get_last_images(message_list)
 
     system_message_content = ""
-    if len(input_images) == 0:
-        # Create image(s)
-        if request.app.state.config.ENABLE_IMAGE_PROMPT_GENERATION:
-            try:
-                res = await generate_image_prompt(
-                    request,
-                    {
-                        "model": form_data["model"],
-                        "messages": form_data["messages"],
-                    },
-                    user,
-                )
 
-                response = res["choices"][0]["message"]["content"]
-
-                try:
-                    bracket_start = response.find("{")
-                    bracket_end = response.rfind("}") + 1
-
-                    if bracket_start == -1 or bracket_end == -1:
-                        raise Exception("No JSON object found in the response")
-
-                    response = response[bracket_start:bracket_end]
-                    response = json.loads(response)
-                    prompt = response.get("prompt", [])
-                except Exception as e:
-                    prompt = user_message
-
-            except Exception as e:
-                log.exception(e)
-                prompt = user_message
-
+    if len(input_images) > 0 and request.app.state.config.ENABLE_IMAGE_EDIT:
+        # Edit image(s)
         try:
-            images = await image_generations(
+            images = await image_edits(
                 request=request,
-                form_data=CreateImageForm(**{"prompt": prompt}),
+                form_data=EditImageForm(**{"prompt": prompt, "image": input_images}),
                 user=user,
             )
 
@@ -874,12 +845,43 @@ async def chat_image_generation_handler(
             )
 
             system_message_content = f"<context>Image generation was attempted but failed. The system is currently unable to generate the image. Tell the user that an error occurred: {error_message}</context>"
+
     else:
-        # Edit image(s)
+        # Create image(s)
+        if request.app.state.config.ENABLE_IMAGE_PROMPT_GENERATION:
+            try:
+                res = await generate_image_prompt(
+                    request,
+                    {
+                        "model": form_data["model"],
+                        "messages": form_data["messages"],
+                    },
+                    user,
+                )
+
+                response = res["choices"][0]["message"]["content"]
+
+                try:
+                    bracket_start = response.find("{")
+                    bracket_end = response.rfind("}") + 1
+
+                    if bracket_start == -1 or bracket_end == -1:
+                        raise Exception("No JSON object found in the response")
+
+                    response = response[bracket_start:bracket_end]
+                    response = json.loads(response)
+                    prompt = response.get("prompt", [])
+                except Exception as e:
+                    prompt = user_message
+
+            except Exception as e:
+                log.exception(e)
+                prompt = user_message
+
         try:
-            images = await image_edits(
+            images = await image_generations(
                 request=request,
-                form_data=EditImageForm(**{"prompt": prompt, "image": input_images}),
+                form_data=CreateImageForm(**{"prompt": prompt}),
                 user=user,
             )
 

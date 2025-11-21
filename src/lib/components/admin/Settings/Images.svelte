@@ -888,23 +888,15 @@
 						<div class="flex w-full justify-between items-center">
 							<div class="text-xs pr-2">
 								<div class="">
-									{$i18n.t('Image Edit Engine')}
+									{$i18n.t('Image Edit')}
 								</div>
 							</div>
 
-							<select
-								class=" dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-								bind:value={config.IMAGE_EDIT_ENGINE}
-								placeholder={$i18n.t('Select Engine')}
-							>
-								<option value="openai">{$i18n.t('Default (Open AI)')}</option>
-								<option value="comfyui">{$i18n.t('ComfyUI')}</option>
-								<option value="gemini">{$i18n.t('Gemini')}</option>
-							</select>
+							<Switch bind:state={config.ENABLE_IMAGE_EDIT} />
 						</div>
 					</div>
 
-					{#if config.ENABLE_IMAGE_GENERATION}
+					{#if config?.ENABLE_IMAGE_GENERATION && config?.ENABLE_IMAGE_EDIT}
 						<div class="mb-2.5">
 							<div class="flex w-full justify-between items-center">
 								<div class="text-xs pr-2">
@@ -948,6 +940,26 @@
 							</div>
 						</div>
 					{/if}
+
+					<div class="mb-2.5">
+						<div class="flex w-full justify-between items-center">
+							<div class="text-xs pr-2">
+								<div class="">
+									{$i18n.t('Image Edit Engine')}
+								</div>
+							</div>
+
+							<select
+								class=" dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+								bind:value={config.IMAGE_EDIT_ENGINE}
+								placeholder={$i18n.t('Select Engine')}
+							>
+								<option value="openai">{$i18n.t('Default (Open AI)')}</option>
+								<option value="comfyui">{$i18n.t('ComfyUI')}</option>
+								<option value="gemini">{$i18n.t('Gemini')}</option>
+							</select>
+						</div>
+					</div>
 
 					{#if config?.IMAGE_EDIT_ENGINE === 'openai'}
 						<div class="mb-2.5">
