@@ -157,7 +157,7 @@
 		{#if message?.reply_to_message?.user}
 			<div class="relative text-xs mb-1">
 				<div
-					class="absolute h-3 w-7 left-[18px] top-2 rounded-tl-lg border-t-2 border-l-2 border-gray-300 dark:border-gray-500 z-0"
+					class="absolute h-3 w-7 left-[18px] top-2 rounded-tl-lg border-t-[1.5px] border-l-[1.5px] border-gray-200 dark:border-gray-700 z-0"
 				></div>
 
 				<button
