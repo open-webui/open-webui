@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { onMount, tick } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	import * as XLSX from 'xlsx';
 	import fileSaver from 'file-saver';
+	import { HyperFormula } from 'hyperformula';
 	import type { ExcelArtifact } from '$lib/types';
 
 	const { saveAs } = fileSaver;
@@ -20,15 +21,22 @@
 	let loading = true;
 	let error: string | null = null;
 
+	// HyperFormula instance for formula calculation
+	let hfInstance: HyperFormula | null = null;
+	let hfSheetId: number | null = null;
+
 	// Track changed cells
 	type CellKey = string; // 'r,c'
-	const changedCells = new Map<CellKey, { row: number; col: number; value: any }>();
+	let changedCells = new Map<CellKey, { row: number; col: number; value: any; isFormula: boolean }>();
 
 	let saving = false;
 	let saveMessage = '';
 
 	// Store original cell data including formulas
 	let cellData: Map<string, { value: any; formula?: string }> = new Map();
+
+	// Store formulas separately for display in edit mode
+	let cellFormulas: Map<string, string> = new Map();
 
 	// Track if file might contain charts (show info message)
 	let hasChartWarning = false;
@@ -164,10 +172,16 @@
 			const numCols = range.e.c - range.s.c + 1;
 
 			cellData.clear();
+			cellFormulas.clear();
 			rows = [];
+
+			// Build raw data for HyperFormula (with formulas as strings)
+			const hfData: (string | number | boolean | null)[][] = [];
 
 			for (let r = 0; r < numRows; r++) {
 				const row: any[] = [];
+				const hfRow: (string | number | boolean | null)[] = [];
+
 				for (let c = 0; c < numCols; c++) {
 					const cellAddress = XLSX.utils.encode_cell({ r: range.s.r + r, c: range.s.c + c });
 					const cell = ws[cellAddress];
@@ -178,12 +192,24 @@
 							value: cell.v !== undefined ? cell.v : '',
 							formula: cell.f
 						});
+
+						// Store formula for edit mode display
+						if (cell.f) {
+							cellFormulas.set(key, `=${cell.f}`);
+							// For HyperFormula, store the formula string
+							hfRow.push(`=${cell.f}`);
+						} else {
+							hfRow.push(cell.v !== undefined ? cell.v : null);
+						}
+
 						row.push(cell.v !== undefined ? cell.v : '');
 					} else {
 						row.push('');
+						hfRow.push(null);
 					}
 				}
 				rows.push(row);
+				hfData.push(hfRow);
 			}
 
 			// Ensure all rows have the same length
@@ -196,6 +222,16 @@
 				}
 				return paddedRow;
 			});
+
+			// Pad HyperFormula data as well
+			for (let i = 0; i < hfData.length; i++) {
+				while (hfData[i].length < maxCols) {
+					hfData[i].push(null);
+				}
+			}
+
+			// Initialize HyperFormula with the sheet data
+			initHyperFormula(hfData);
 
 			// Reset scroll and update visible rows
 			scrollTop = 0;
@@ -212,15 +248,87 @@
 		}
 	}
 
+	// Initialize HyperFormula with sheet data
+	function initHyperFormula(data: (string | number | boolean | null)[][]) {
+		try {
+			// Destroy previous instance if exists
+			if (hfInstance) {
+				hfInstance.destroy();
+			}
+
+			// Create HyperFormula instance with config
+			hfInstance = HyperFormula.buildFromArray(data, {
+				licenseKey: 'gpl-v3', // GPL v3 license for open source use
+				precisionRounding: 10,
+				smartRounding: true
+			});
+
+			hfSheetId = hfInstance.getSheetId(hfInstance.getSheetName(0)!) ?? null;
+
+			console.log('HyperFormula initialized with', data.length, 'rows');
+		} catch (e) {
+			console.error('Error initializing HyperFormula:', e);
+			// Continue without HyperFormula - formulas won't calculate client-side
+			hfInstance = null;
+			hfSheetId = null;
+		}
+	}
+
+	// Get the calculated value from HyperFormula for a cell
+	function getCalculatedValue(row: number, col: number): any {
+		if (!hfInstance || hfSheetId === null) {
+			return rows[row]?.[col] ?? '';
+		}
+
+		try {
+			const value = hfInstance.getCellValue({ sheet: hfSheetId, row, col });
+			// Handle error values
+			if (value && typeof value === 'object' && 'type' in value) {
+				return '#ERROR';
+			}
+			return value ?? '';
+		} catch {
+			return rows[row]?.[col] ?? '';
+		}
+	}
+
+	// Update a cell in HyperFormula and recalculate
+	function updateHyperFormulaCell(row: number, col: number, value: string | number | boolean | null) {
+		if (!hfInstance || hfSheetId === null) return;
+
+		try {
+			hfInstance.setCellContents({ sheet: hfSheetId, row, col }, [[value]]);
+			// Trigger reactivity by updating rows
+			refreshCalculatedValues();
+		} catch (e) {
+			console.error('Error updating HyperFormula cell:', e);
+		}
+	}
+
+	// Refresh all calculated values from HyperFormula
+	function refreshCalculatedValues() {
+		if (!hfInstance || hfSheetId === null || !rows.length) return;
+
+		for (let r = 0; r < rows.length; r++) {
+			for (let c = 0; c < rows[r].length; c++) {
+				const calculatedValue = getCalculatedValue(r, c);
+				rows[r][c] = calculatedValue;
+			}
+		}
+		// Trigger Svelte reactivity
+		rows = [...rows];
+		updateVisibleRows();
+	}
+
 	function onSheetChange(e: Event) {
 		const target = e.target as HTMLSelectElement;
 		activeSheet = target.value;
 		loadSheet(activeSheet);
 	}
 
-	function markCellChanged(r: number, c: number, value: any) {
+	function markCellChanged(r: number, c: number, value: any, isFormula: boolean = false) {
 		const key = `${r},${c}`;
-		changedCells.set(key, { row: r + 1, col: c + 1, value });
+		changedCells.set(key, { row: r + 1, col: c + 1, value, isFormula });
 		changedCells = changedCells; // Trigger reactivity
 		saveMessage = '';
 	}
@@ -228,8 +336,58 @@
 	function onCellChange(r: number, c: number, e: Event) {
 		const target = e.target as HTMLInputElement;
 		const value = target.value;
-		rows[r][c] = value;
-		markCellChanged(r, c, value);
+		const isFormula = typeof value === 'string' && value.startsWith('=');
+
+		// Update HyperFormula cell
+		updateHyperFormulaCell(r, c, isFormula ? value : parseValue(value));
+
+		// Update formula tracking
+		const key = `${r},${c}`;
+		if (isFormula) {
+			cellFormulas.set(key, value);
+		} else {
+			cellFormulas.delete(key);
+		}
+
+		markCellChanged(r, c, value, isFormula);
+	}
+
+	// Parse value to appropriate type for HyperFormula
+	function parseValue(value: string): string | number | boolean | null {
+		if (value === '' || value === null || value === undefined) return null;
+
+		// Try to parse as number
+		const num = Number(value);
+		if (!isNaN(num) && value.trim() !== '') return num;
+
+		// Boolean checks
+		const lower = value.toLowerCase();
+		if (lower === 'true') return true;
+		if (lower === 'false') return false;
+
+		return value;
+	}
+
+	// Get the display value for a cell (formula in edit mode, calculated value otherwise)
+	function getCellDisplayValue(r: number, c: number, isEditing: boolean = false): any {
+		const key = `${r},${c}`;
+		// If cell has a formula and we're editing, show the formula
+		if (isEditing && cellFormulas.has(key)) {
+			return cellFormulas.get(key);
+		}
+		// Otherwise show calculated value
+		return rows[r]?.[c] ?? '';
+	}
+
+	// Track which cell is being edited
+	let editingCell: string | null = null;
+
+	function onCellFocus(r: number, c: number) {
+		editingCell = `${r},${c}`;
+	}
+
+	function onCellBlur() {
+		editingCell = null;
 	}
 
 	async function saveChanges() {
@@ -243,13 +401,11 @@
 			saveMessage = '';
 
 			const changes = Array.from(changedCells.values()).map((change) => {
-				const value = change.value;
-				const isFormula = typeof value === 'string' && value.startsWith('=');
 				return {
 					row: change.row,
 					col: change.col,
-					value: value,
-					isFormula: isFormula
+					value: change.value,
+					isFormula: change.isFormula
 				};
 			});
 
@@ -328,6 +484,19 @@
 		}
 	});
 
+	onDestroy(() => {
+		// Clean up HyperFormula instance
+		if (hfInstance) {
+			try {
+				hfInstance.destroy();
+			} catch (e) {
+				// Ignore cleanup errors
+			}
+			hfInstance = null;
+			hfSheetId = null;
+		}
+	});
+
 	$: if (file?.url) {
 		loadWorkbook();
 	}
@@ -389,6 +558,20 @@
 		</div>
 	</div>
 
+	<!-- Formula Bar -->
+	{#if editingCell}
+		{@const [r, c] = editingCell.split(',').map(Number)}
+		{@const formula = cellFormulas.get(editingCell)}
+		<div class="excel-formula-bar">
+			<span class="excel-formula-bar-label">
+				{getColumnLetter(c)}{r + 1}
+			</span>
+			<span class="excel-formula-bar-content">
+				{formula || rows[r]?.[c] || ''}
+			</span>
+		</div>
+	{/if}
+
 	{#if hasChartWarning}
 		<div class="excel-chart-notice">
 			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -434,13 +617,16 @@
 							<tr style="height: {ROW_HEIGHT}px;">
 								<td class="excel-row-header">{rowIndex + 1}</td>
 								{#each row as cell, colIndex}
-									<td class="excel-cell">
+									<td class="excel-cell" class:excel-cell-formula={cellFormulas.has(`${rowIndex},${colIndex}`)}>
 										<input
 											type="text"
-											value={cell}
+											value={getCellDisplayValue(rowIndex, colIndex, editingCell === `${rowIndex},${colIndex}`)}
 											on:change={(e) => onCellChange(rowIndex, colIndex, e)}
+											on:focus={() => onCellFocus(rowIndex, colIndex)}
+											on:blur={onCellBlur}
 											class="excel-cell-input"
 											class:excel-cell-changed={changedCells.has(`${rowIndex},${colIndex}`)}
+											class:excel-cell-has-formula={cellFormulas.has(`${rowIndex},${colIndex}`)}
 										/>
 									</td>
 								{/each}
@@ -699,5 +885,68 @@
 
 	.excel-cell-changed:focus {
 		background: var(--color-yellow-100);
+	}
+
+	/* Formula cell indicator */
+	.excel-cell-formula {
+		position: relative;
+	}
+
+	.excel-cell-formula::before {
+		content: '';
+		position: absolute;
+		top: 2px;
+		right: 2px;
+		width: 0;
+		height: 0;
+		border-left: 6px solid transparent;
+		border-top: 6px solid var(--color-green-500);
+		z-index: 1;
+		pointer-events: none;
+	}
+
+	.excel-cell-has-formula {
+		color: var(--color-green-700);
+	}
+
+	.excel-cell-has-formula:focus {
+		font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+	}
+
+	/* Formula bar */
+	.excel-formula-bar {
+		display: flex;
+		align-items: center;
+		padding: 0.5rem 1rem;
+		background: var(--color-gray-50);
+		border-bottom: 1px solid var(--color-gray-200);
+		gap: 0.75rem;
+		min-height: 2rem;
+	}
+
+	.excel-formula-bar-label {
+		font-weight: 600;
+		font-size: 0.875rem;
+		color: var(--color-gray-600);
+		background: white;
+		padding: 0.25rem 0.5rem;
+		border: 1px solid var(--color-gray-300);
+		border-radius: 0.25rem;
+		min-width: 3rem;
+		text-align: center;
+	}
+
+	.excel-formula-bar-content {
+		flex: 1;
+		font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+		font-size: 0.875rem;
+		color: #000;
+		padding: 0.25rem 0.5rem;
+		background: white;
+		border: 1px solid var(--color-gray-300);
+		border-radius: 0.25rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 </style>
