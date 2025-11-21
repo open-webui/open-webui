@@ -17,6 +17,7 @@ jobs:
     outputs:
       extloader: ${{ steps.changes.outputs.extloader }}
       open-webui: ${{ steps.changes.outputs.open-webui }}
+      jupyter-kernel: ${{ steps.changes.outputs.jupyter-kernel }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -42,6 +43,9 @@ jobs:
               - 'requirements.txt'
               - 'pyproject.toml'
               - '.github/workflows/**'
+              - 'docker-compose*.yml'
+            jupyter-kernel:
+              - 'Dockerfile.jupyter-kernel'
               - 'docker-compose*.yml'
 
   build-wheel:
@@ -204,10 +208,64 @@ jobs:
           BUILD_HASH=${{ github.sha }}
           BUILDKIT_INLINE_CACHE=1
 
+  build-jupyter-kernel:
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.jupyter-kernel == 'true' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/lf-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        driver-opts: |
+          image=moby/buildkit:v0.12.0
+          network=host
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository }}-jupyter-kernel
+        tags: |
+          type=ref,event=branch
+          type=ref,event=tag,prefix=lf-
+          type=semver,pattern={{version}},prefix=lf-v
+          type=raw,value=lf-latest,enable={{is_default_branch}}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: Dockerfile.jupyter-kernel
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: |
+          type=registry,ref=ghcr.io/${{ github.repository }}-jupyter-kernel:buildcache
+        cache-to: |
+          type=registry,ref=ghcr.io/${{ github.repository }}-jupyter-kernel:buildcache,mode=max
+        platforms: linux/amd64
+        build-args: |
+          BUILD_HASH=${{ github.sha }}
+          BUILDKIT_INLINE_CACHE=1
+
   create-release:
-    needs: [build-wheel, build-open-webui, build-extloader]
+    needs: [build-wheel, build-open-webui, build-extloader, build-jupyter-kernel]
     # Only run if at least one of the build jobs ran (using always() to check even if they were skipped)
-    if: always() && (needs.build-open-webui.result == 'success' || needs.build-extloader.result == 'success' || needs.build-open-webui.result == 'skipped' || needs.build-extloader.result == 'skipped') && startsWith(github.ref, 'refs/tags/lf-v')
+    if: always() && (needs.build-open-webui.result == 'success' || needs.build-extloader.result == 'success' || needs.build-jupyter-kernel.result == 'success' || needs.build-open-webui.result == 'skipped' || needs.build-extloader.result == 'skipped' || needs.build-jupyter-kernel.result == 'skipped') && startsWith(github.ref, 'refs/tags/lf-v')
     runs-on: ubuntu-latest
     
     steps:
@@ -226,15 +284,22 @@ jobs:
         name: "Littelfuse Open WebUI ${{ needs.build-wheel.outputs.version }}"
         body: |
           Custom Littelfuse build of Open WebUI version ${{ needs.build-wheel.outputs.version }}
-          
+
           ## Docker Images
           - `ghcr.io/${{ github.repository }}-lf:lf-${{ needs.build-wheel.outputs.version }}`
           - `ghcr.io/${{ github.repository }}-extloader:lf-${{ needs.build-wheel.outputs.version }}`
-          
+          - `ghcr.io/${{ github.repository }}-jupyter-kernel:lf-${{ needs.build-wheel.outputs.version }}`
+
           ## Installation
           Download the wheel file and install with:
           ```bash
           pip install open_webui_lf-${{ needs.build-wheel.outputs.version }}-py3-none-any.whl
+          ```
+
+          ## Deployment with Jupyter Kernel Gateway
+          For Excel artifact support, deploy with the Jupyter kernel sidecar using docker-compose:
+          ```bash
+          docker-compose -f docker-compose.azure.yml up -d
           ```
         draft: false
         prerelease: ${{ contains(needs.build-wheel.outputs.version, 'dev') || contains(needs.build-wheel.outputs.version, 'rc') }}

@@ -1990,6 +1990,61 @@ DEFAULT_CODE_INTERPRETER_PROMPT = """
    - **If a link to an image, audio, or any file is provided in markdown format in the output, ALWAYS regurgitate word for word, explicitly display it as part of the response to ensure the user can access it easily, do NOT change the link.**
    - All responses should be communicated in the chat's primary language, ensuring seamless understanding. If the chat is multilingual, default to English for clarity.
 
+2. **Excel File Generation for Structured Data**:
+   - When you need to produce structured tabular data, reports, data comparisons, or any content that would benefit from a spreadsheet format, you can **create and return an Excel file (.xlsx)** instead of displaying the data as plain text in the chat.
+   - The system will automatically display the Excel file as an interactive viewer where users can browse sheets, edit cells, and save changes.
+   - **IMPORTANT - Environment Check**: Excel file generation requires the `openpyxl` library, which is only available in **Jupyter** (server-based Python), NOT in Pyodide (browser-based Python). Before attempting to create an Excel file:
+     ```python
+     # First, check if openpyxl is available
+     try:
+         import openpyxl
+         EXCEL_AVAILABLE = True
+     except ImportError:
+         EXCEL_AVAILABLE = False
+         print("⚠️  Excel generation not available in this environment (Pyodide). Displaying data as formatted table instead.")
+     ```
+   - If `openpyxl` is available (Jupyter environment), create Excel files and display them:
+     ```python
+     import openpyxl
+     from openpyxl.utils import get_column_letter
+     import base64
+     from IPython.display import display
+
+     # Create workbook
+     wb = openpyxl.Workbook()
+     ws = wb.active
+     ws.title = "Summary"
+
+     # Add data
+     ws['A1'] = "Name"
+     ws['B1'] = "Value"
+     ws['A2'] = "Total Sales"
+     ws['B2'] = 150000
+
+     # Save to file
+     output_path = "/tmp/report.xlsx"
+     wb.save(output_path)
+
+     # IMPORTANT: Read and encode as base64, then display using IPython
+     with open(output_path, 'rb') as f:
+         excel_data = f.read()
+         excel_base64 = base64.b64encode(excel_data).decode('utf-8')
+
+     # Display using Jupyter's display system (REQUIRED for artifacts)
+     filename = output_path.split('/')[-1]
+     display({
+         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': excel_base64,
+         'text/plain': filename
+     }, raw=True)
+     ```
+   - If `openpyxl` is NOT available (Pyodide environment), gracefully fall back to displaying data as nicely formatted tables in the chat using pandas DataFrames or simple print statements.
+   - **Do not** print large tables directly in chat output when an Excel file would be more appropriate (if openpyxl is available). Examples of when to use Excel:
+     * Financial reports or analysis with multiple columns
+     * Comparison tables with many rows
+     * Data exports or summaries
+     * Any tabular data that benefits from sorting, filtering, or cell editing
+   - After creating an Excel file, provide a brief summary of what the file contains, but don't duplicate the full data in the chat.
+
 Ensure that the tools are effectively utilized to achieve the highest-quality analysis for the user."""
 
 

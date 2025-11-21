@@ -61,6 +61,8 @@ from open_webui.utils.files import (
     get_audio_url_from_base64,
     get_file_url_from_base64,
     get_image_url_from_base64,
+    upload_excel_file,
+    get_excel_artifact_from_base64,
 )
 
 
@@ -3005,6 +3007,9 @@ async def process_chat_response(
                         log.debug(f"Attempt count: {retries}")
 
                         output = ""
+                        # Initialize Excel artifacts list before try block
+                        excel_artifacts = []
+                        processed_excel_files = set()
                         try:
                             if content_blocks[-1]["attributes"].get("type") == "code":
                                 code = content_blocks[-1]["content"]
@@ -3074,6 +3079,7 @@ async def process_chat_response(
 
                                 log.debug(f"Code interpreter output: {output}")
 
+                                # Collect Excel file artifacts (initialized before try block)
                                 if isinstance(output, dict):
                                     stdout = output.get("stdout", "")
 
@@ -3092,6 +3098,60 @@ async def process_chat_response(
                                                     stdoutLines[idx] = (
                                                         f"![Output Image]({image_url})"
                                                     )
+                                            elif "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64," in line:
+                                                # Detect base64 Excel data in stdout
+                                                log.info(f"Detected base64 Excel data in stdout (line length: {len(line)})")
+
+                                                # Try to get filename from next line
+                                                filename = "quarterly_sales.xlsx"  # Default filename
+                                                if idx + 1 < len(stdoutLines) and "Filename:" in stdoutLines[idx + 1]:
+                                                    filename = stdoutLines[idx + 1].split("Filename:", 1)[1].strip()
+                                                    log.info(f"Found filename in next line: {filename}")
+                                                    stdoutLines[idx + 1] = ""  # Clear filename line
+
+                                                log.info(f"Attempting to create Excel artifact with filename: {filename}")
+                                                # Create clean metadata dict for Excel file (avoid function serialization errors)
+                                                excel_metadata = {
+                                                    "name": filename,
+                                                    "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                                }
+                                                excel_artifact = get_excel_artifact_from_base64(
+                                                    request,
+                                                    line,
+                                                    filename,
+                                                    excel_metadata,
+                                                    user,
+                                                )
+                                                if excel_artifact:
+                                                    excel_artifacts.append(excel_artifact)
+                                                    log.info(f"✅ Successfully created Excel artifact: {filename}, artifact count: {len(excel_artifacts)}")
+                                                    # Clear the base64 line (too long for display)
+                                                    stdoutLines[idx] = f"📊 Excel file: {filename}"
+                                                else:
+                                                    log.error(f"❌ Failed to create Excel artifact from base64 data")
+                                            elif '.xlsx' in line:
+                                                # Try to extract Excel file path from the line
+                                                # Look for patterns like /path/to/file.xlsx
+                                                xlsx_pattern = r'(/[^\s]+\.xlsx|[A-Za-z]:[^\s]+\.xlsx)'
+                                                matches = re.findall(xlsx_pattern, line)
+                                                for file_path in matches:
+                                                    if os.path.exists(file_path) and file_path not in processed_excel_files:
+                                                        log.info(f"Detected Excel file in stdout: {file_path}")
+                                                        # Create clean metadata dict for Excel file (avoid function serialization errors)
+                                                        excel_metadata = {
+                                                            "name": os.path.basename(file_path),
+                                                            "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                                        }
+                                                        excel_artifact = upload_excel_file(
+                                                            request,
+                                                            file_path,
+                                                            excel_metadata,
+                                                            user,
+                                                        )
+                                                        if excel_artifact:
+                                                            excel_artifacts.append(excel_artifact)
+                                                            processed_excel_files.add(file_path)
+                                                            # Don't modify the line to preserve user's message
 
                                         output["stdout"] = "\n".join(stdoutLines)
 
@@ -3099,7 +3159,10 @@ async def process_chat_response(
 
                                     if isinstance(result, str):
                                         resultLines = result.split("\n")
-                                        for idx, line in enumerate(resultLines):
+                                        idx = 0
+                                        while idx < len(resultLines):
+                                            line = resultLines[idx]
+
                                             if "data:image/png;base64" in line:
                                                 image_url = get_image_url_from_base64(
                                                     request,
@@ -3110,6 +3173,59 @@ async def process_chat_response(
                                                 resultLines[idx] = (
                                                     f"![Output Image]({image_url})"
                                                 )
+                                                idx += 1
+                                            elif "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64," in line:
+                                                # Detect base64 Excel data
+                                                log.info(f"Detected base64 Excel data in result")
+                                                # Get filename from next line
+                                                filename = "output.xlsx"
+                                                if idx + 1 < len(resultLines) and "Filename:" in resultLines[idx + 1]:
+                                                    filename = resultLines[idx + 1].split("Filename:", 1)[1].strip()
+                                                    # Remove filename line
+                                                    resultLines.pop(idx + 1)
+
+                                                # Create clean metadata dict for Excel file (avoid function serialization errors)
+                                                excel_metadata = {
+                                                    "name": filename,
+                                                    "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                                }
+                                                excel_artifact = get_excel_artifact_from_base64(
+                                                    request,
+                                                    line,
+                                                    filename,
+                                                    excel_metadata,
+                                                    user,
+                                                )
+                                                if excel_artifact:
+                                                    excel_artifacts.append(excel_artifact)
+                                                    # Replace base64 line with user-friendly message
+                                                    resultLines[idx] = f"📊 Excel file: {filename}"
+                                                idx += 1
+                                            elif '.xlsx' in line:
+                                                # Try to extract Excel file path from the line
+                                                # Look for patterns like /path/to/file.xlsx
+                                                xlsx_pattern = r'(/[^\s]+\.xlsx|[A-Za-z]:[^\s]+\.xlsx)'
+                                                matches = re.findall(xlsx_pattern, line)
+                                                for file_path in matches:
+                                                    if os.path.exists(file_path) and file_path not in processed_excel_files:
+                                                        log.info(f"Detected Excel file in result: {file_path}")
+                                                        # Create clean metadata dict for Excel file (avoid function serialization errors)
+                                                        excel_metadata = {
+                                                            "name": os.path.basename(file_path),
+                                                            "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                                        }
+                                                        excel_artifact = upload_excel_file(
+                                                            request,
+                                                            file_path,
+                                                            excel_metadata,
+                                                            user,
+                                                        )
+                                                        if excel_artifact:
+                                                            excel_artifacts.append(excel_artifact)
+                                                            processed_excel_files.add(file_path)
+                                                idx += 1
+                                            else:
+                                                idx += 1
                                         output["result"] = "\n".join(resultLines)
                         except Exception as e:
                             output = str(e)
@@ -3131,6 +3247,18 @@ async def process_chat_response(
                                 },
                             }
                         )
+
+                        # Emit Excel file artifacts if any were created
+                        if excel_artifacts:
+                            log.info(f"Emitting {len(excel_artifacts)} Excel file artifacts")
+                            await event_emitter(
+                                {
+                                    "type": "files",
+                                    "data": {
+                                        "files": excel_artifacts,
+                                    },
+                                }
+                            )
 
                         try:
                             new_form_data = {

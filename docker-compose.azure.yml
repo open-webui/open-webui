@@ -14,6 +14,10 @@ services:
       - EXTERNAL_DOCUMENT_LOADER_URL=http://extloader:8000
       - EXTERNAL_DOCUMENT_LOADER_API_KEY=${EXTERNAL_DOCUMENT_LOADER_API_KEY:-your-api-key-here}
 
+      # Code Interpreter Configuration - Jupyter Kernel Gateway
+      - CODE_INTERPRETER_ENGINE=jupyter
+      - CODE_INTERPRETER_JUPYTER_URL=http://jupyter-kernel:8888
+
       # SSL Configuration
       - SSL_CERT_FILE=${SSL_CERT_FILE:-}
       - REQUESTS_CA_BUNDLE=${REQUESTS_CA_BUNDLE:-}
@@ -22,7 +26,8 @@ services:
     depends_on:
       extloader:
         condition: service_started
-      
+      jupyter-kernel:
+        condition: service_started
 
   extloader:
     image: ghcr.io/littelfuse-ssamuel/open-webui-extloader:lf-latest
@@ -36,3 +41,24 @@ services:
       - DOCUMENT_INTELLIGENCE_ENDPOINT=${DOCUMENT_INTELLIGENCE_ENDPOINT}
       - DOCUMENT_INTELLIGENCE_KEY=${DOCUMENT_INTELLIGENCE_KEY}
     restart: unless-stopped
+
+  jupyter-kernel:
+    # Use pre-built image for production, or uncomment 'build' section for local development
+    image: ghcr.io/littelfuse-ssamuel/open-webui-jupyter-kernel:lf-latest
+    # Uncomment below for local development/testing:
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile.jupyter-kernel
+    container_name: jupyter-kernel
+    restart: unless-stopped
+    environment:
+      # No token for internal-only use; if you ever expose this,
+      # set a real token and secure access.
+      - JUPYTER_TOKEN=
+      - JUPYTER_ENABLE_LAB=no
+      # Disable strict file permission checks for Azure App Service compatibility
+      - JUPYTER_ALLOW_INSECURE_WRITES=1
+      - JUPYTER_PREFER_ENV_PATH=1
+    expose:
+      - "8888"
+    # No 'ports' section: this keeps it internal to the Docker network

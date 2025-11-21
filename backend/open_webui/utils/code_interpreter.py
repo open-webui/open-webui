@@ -184,6 +184,13 @@ class JupyterCodeExecuter:
                         data = message_data["content"]["data"]
                         if "image/png" in data:
                             result.append(f"data:image/png;base64,{data['image/png']}")
+                        elif "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" in data:
+                            # Handle Excel files
+                            excel_base64 = data["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]
+                            # Get filename from text/plain if available
+                            filename = data.get("text/plain", "output.xlsx").strip()
+                            result.append(f"data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{excel_base64}")
+                            result.append(f"Filename: {filename}")
                         elif "text/plain" in data:
                             result.append(data["text/plain"])
                     case "error":
