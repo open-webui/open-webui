@@ -1,0 +1,29 @@
+FROM jupyter/minimal-notebook:latest
+
+# Headless usage inside a private Docker network;
+# you should still protect the endpoint by keeping it internal.
+ENV JUPYTER_TOKEN=""
+ENV JUPYTER_ENABLE_LAB="no"
+
+# Install kernel gateway and a basic data science stack
+# IMPORTANT: Added openpyxl for Excel file generation
+RUN pip install --no-cache-dir \
+    jupyter_kernel_gateway \
+    ipykernel \
+    numpy \
+    pandas \
+    matplotlib \
+    scipy \
+    scikit-learn \
+    openpyxl==3.1.5
+
+# Expose kernel gateway port
+EXPOSE 8888
+
+# Start Jupyter Kernel Gateway in headless mode
+CMD ["sh", "-lc", "jupyter kernelgateway \
+  --KernelGatewayApp.ip=0.0.0.0 \
+  --KernelGatewayApp.port=8888 \
+  --KernelGatewayApp.allow_origin='*' \
+  --KernelGatewayApp.allow_headers='*' \
+  --KernelGatewayApp.allow_credentials=True"]
