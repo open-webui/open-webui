@@ -38,7 +38,7 @@
 		toggleChatPinnedStatusById,
 		getChatById,
 		updateChatFolderIdById,
-		importChat
+		importChats
 	} from '$lib/apis/chats';
 	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
@@ -227,15 +227,16 @@
 		for (const item of items) {
 			console.log(item);
 			if (item.chat) {
-				await importChat(
-					localStorage.token,
-					item.chat,
-					item?.meta ?? {},
-					pinned,
-					folderId,
-					item?.created_at ?? null,
-					item?.updated_at ?? null
-				);
+				await importChats(localStorage.token, [
+					{
+						chat: item.chat,
+						meta: item?.meta ?? {},
+						pinned: pinned,
+						folder_id: folderId,
+						created_at: item?.created_at ?? null,
+						updated_at: item?.updated_at ?? null
+					}
+				]);
 			}
 		}
 
@@ -999,15 +1000,16 @@
 								return null;
 							});
 							if (!chat && item) {
-								chat = await importChat(
-									localStorage.token,
-									item.chat,
-									item?.meta ?? {},
-									false,
-									null,
-									item?.created_at ?? null,
-									item?.updated_at ?? null
-								);
+								chat = await importChats(localStorage.token, [
+									{
+										chat: item.chat,
+										meta: item?.meta ?? {},
+										pinned: false,
+										folder_id: null,
+										created_at: item?.created_at ?? null,
+										updated_at: item?.updated_at ?? null
+									}
+								]);
 							}
 
 							if (chat) {
@@ -1064,15 +1066,16 @@
 												return null;
 											});
 											if (!chat && item) {
-												chat = await importChat(
-													localStorage.token,
-													item.chat,
-													item?.meta ?? {},
-													false,
-													null,
-													item?.created_at ?? null,
-													item?.updated_at ?? null
-												);
+												chat = await importChats(localStorage.token, [
+													{
+														chat: item.chat,
+														meta: item?.meta ?? {},
+														pinned: false,
+														folder_id: null,
+														created_at: item?.created_at ?? null,
+														updated_at: item?.updated_at ?? null
+													}
+												]);
 											}
 
 											if (chat) {

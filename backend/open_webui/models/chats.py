@@ -92,6 +92,10 @@ class ChatImportForm(ChatForm):
     updated_at: Optional[int] = None
 
 
+class ChatsImportForm(BaseModel):
+    chats: list[ChatImportForm]
+
+
 class ChatTitleMessagesForm(BaseModel):
     title: str
     messages: list[dict]
@@ -148,42 +152,44 @@ class ChatTable:
             db.refresh(result)
             return ChatModel.model_validate(result) if result else None
 
-    def import_chat(
+    def _chat_import_form_to_chat_model(
         self, user_id: str, form_data: ChatImportForm
-    ) -> Optional[ChatModel]:
-        with get_db() as db:
-            id = str(uuid.uuid4())
-            chat = ChatModel(
-                **{
-                    "id": id,
-                    "user_id": user_id,
-                    "title": (
-                        form_data.chat["title"]
-                        if "title" in form_data.chat
-                        else "New Chat"
-                    ),
-                    "chat": form_data.chat,
-                    "meta": form_data.meta,
-                    "pinned": form_data.pinned,
-                    "folder_id": form_data.folder_id,
-                    "created_at": (
-                        form_data.created_at
-                        if form_data.created_at
-                        else int(time.time())
-                    ),
-                    "updated_at": (
-                        form_data.updated_at
-                        if form_data.updated_at
-                        else int(time.time())
-                    ),
-                }
-            )
+    ) -> ChatModel:
+        id = str(uuid.uuid4())
+        chat = ChatModel(
+            **{
+                "id": id,
+                "user_id": user_id,
+                "title": (
+                    form_data.chat["title"] if "title" in form_data.chat else "New Chat"
+                ),
+                "chat": form_data.chat,
+                "meta": form_data.meta,
+                "pinned": form_data.pinned,
+                "folder_id": form_data.folder_id,
+                "created_at": (
+                    form_data.created_at if form_data.created_at else int(time.time())
+                ),
+                "updated_at": (
+                    form_data.updated_at if form_data.updated_at else int(time.time())
+                ),
+            }
+        )
+        return chat
 
-            result = Chat(**chat.model_dump())
-            db.add(result)
+    def import_chats(
+        self, user_id: str, chats: list[ChatImportForm]
+    ) -> list[ChatModel]:
+        with get_db() as db:
+            chats = []
+
+            for form_data in chats:
+                chat = self._chat_import_form_to_chat_model(user_id, form_data)
+                chats.append(Chat(**chat.model_dump()))
+
+            db.add_all(chats)
             db.commit()
-            db.refresh(result)
-            return ChatModel.model_validate(result) if result else None
+            return [ChatModel.model_validate(chat) for chat in chats]
 
     def update_chat_by_id(self, id: str, chat: dict) -> Optional[ChatModel]:
         try:
