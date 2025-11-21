@@ -186,11 +186,16 @@ def get_excel_artifact_from_base64(request, base64_excel_string, filename, metad
     Returns:
         Dict with file artifact structure or None if failed
     """
+    log.info(f"get_excel_artifact_from_base64 called with filename={filename}, string_length={len(base64_excel_string)}")
+
     if "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64," in base64_excel_string:
         try:
             # Extract base64 data
             excel_data_base64 = base64_excel_string.split(",", 1)[1]
+            log.info(f"Extracted base64 data, length={len(excel_data_base64)}")
+
             excel_data = base64.b64decode(excel_data_base64)
+            log.info(f"Decoded Excel data, byte length={len(excel_data)}")
 
             # Extract sheet names using openpyxl
             sheet_names = []
@@ -217,6 +222,7 @@ def get_excel_artifact_from_base64(request, base64_excel_string, filename, metad
                 metadata["sheetNames"] = sheet_names
 
             # Upload the file
+            log.info(f"Uploading Excel file to storage...")
             file_item = upload_file_handler(
                 request,
                 file=file,
@@ -224,6 +230,7 @@ def get_excel_artifact_from_base64(request, base64_excel_string, filename, metad
                 process=False,
                 user=user,
             )
+            log.info(f"File uploaded successfully, file_id={file_item.id}")
 
             # Build file artifact dict
             url = request.app.url_path_for("get_file_content_by_id", id=file_item.id)
@@ -239,13 +246,14 @@ def get_excel_artifact_from_base64(request, base64_excel_string, filename, metad
                 },
             }
 
-            log.info(f"Created Excel artifact from base64: {filename if filename else 'output.xlsx'} -> {file_item.id}")
+            log.info(f"✅ Successfully created Excel artifact from base64: {filename if filename else 'output.xlsx'} -> {file_item.id}, url={url}")
             return artifact
 
         except Exception as e:
-            log.error(f"Error processing base64 Excel data: {e}")
+            log.error(f"❌ Error processing base64 Excel data: {e}", exc_info=True)
             return None
 
+    log.warning(f"Base64 string does not contain Excel data URI prefix")
     return None
 
 
