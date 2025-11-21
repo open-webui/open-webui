@@ -39,10 +39,10 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
 
     @migrator.create_model
     class Tool(pw.Model):
-        id = pw.TextField(unique=True)
-        user_id = pw.TextField()
+        id = pw.CharField(max_length=255, unique=True)
+        user_id = pw.CharField(max_length=255)
 
-        name = pw.TextField()
+        name = pw.CharField(max_length=255)
         content = pw.TextField()
         specs = pw.TextField()
 
