@@ -25,6 +25,7 @@ class CellChange(BaseModel):
     row: int  # 1-based row number
     col: int  # 1-based column number
     value: Optional[str | int | float | bool] = None
+    isFormula: Optional[bool] = False  # Whether the value is a formula (starts with =)
 
 
 class ExcelUpdateRequest(BaseModel):
@@ -123,10 +124,28 @@ async def update_excel_file(
 
                 # Get the cell and set its value
                 cell = ws.cell(row=change.row, column=change.col)
-                cell.value = change.value
-                changes_applied += 1
 
-                log.debug(f"Updated cell {get_column_letter(change.col)}{change.row} = {change.value}")
+                # Handle formulas vs regular values
+                if change.isFormula and isinstance(change.value, str) and change.value.startswith('='):
+                    # Set as formula - openpyxl will evaluate it
+                    cell.value = change.value
+                    log.debug(f"Updated cell {get_column_letter(change.col)}{change.row} with formula: {change.value}")
+                else:
+                    # Set as regular value
+                    # Try to convert numeric strings to numbers for proper Excel formatting
+                    value = change.value
+                    if isinstance(value, str):
+                        try:
+                            if '.' in value:
+                                value = float(value)
+                            else:
+                                value = int(value)
+                        except ValueError:
+                            pass  # Keep as string
+                    cell.value = value
+                    log.debug(f"Updated cell {get_column_letter(change.col)}{change.row} = {value}")
+
+                changes_applied += 1
 
             except Exception as e:
                 log.error(f"Error updating cell at row={change.row}, col={change.col}: {e}")
