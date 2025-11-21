@@ -38,40 +38,76 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your migrations here."""
 
     # Adding fields created_at and updated_at to the 'user' table
-    cols = {c.name for c in database.get_columns("user")}
-    
-    if "created_at" not in cols:
-      migrator.add_fields("user", created_at=pw.BigIntegerField(null=True))
+    def add_columns_if_missing(db):
+        cols = {c.name for c in db.get_columns("user")}
+        to_add = {}
+        if "created_at" not in cols:
+            to_add["created_at"] = pw.BigIntegerField(null=True)
+        if "updated_at" not in cols:
+            to_add["updated_at"] = pw.BigIntegerField(null=True)
+        if "last_active_at" not in cols:
+            to_add["last_active_at"] = pw.BigIntegerField(null=True)
 
-    if "updated_at" not in cols:
-      migrator.add_fields("user", updated_at=pw.BigIntegerField(null=True))
+        if to_add:
+            db.execute_sql(
+                "ALTER TABLE `user` "
+                + ", ".join(
+                    f"ADD COLUMN `{name}` BIGINT NULL" for name in to_add.keys()
+                )
+            )
 
-    if "last_active_at" not in cols:
-      migrator.add_fields("user", last_active_at=pw.BigIntegerField(null=True))
+    migrator.run(add_columns_if_missing, database)
 
-    # Populate the new fields from an existing 'timestamp' field.
-    # Use the ORM wrapper so identifier quoting works on every backend.
-    User = migrator.orm["user"]
-    (
-        User.update(
-            created_at=User.timestamp,
-            updated_at=User.timestamp,
-            last_active_at=User.timestamp,
+    def backfill_user_timestamps(db):
+        class UserWithTimestamps(pw.Model):
+            timestamp = pw.BigIntegerField(null=True)
+            created_at = pw.BigIntegerField(null=True)
+            updated_at = pw.BigIntegerField(null=True)
+            last_active_at = pw.BigIntegerField(null=True)
+
+            class Meta:
+                table_name = "user"
+
+        UserWithTimestamps._meta.database = db
+
+        cols = {c.name for c in db.get_columns("user")}
+        timestamp_exists = "timestamp" in cols
+
+        timestamp_field = (
+            UserWithTimestamps.timestamp if timestamp_exists else pw.Value(0)
         )
-        .where(User.timestamp.is_null(False))
-        .execute()
-    )
+
+        query = UserWithTimestamps.update(
+            created_at=timestamp_field,
+            updated_at=timestamp_field,
+            last_active_at=timestamp_field,
+        )
+
+        if timestamp_exists:
+            query = query.where(UserWithTimestamps.timestamp.is_null(False))
+
+        query.execute()
+
+    # Queue the data migration so it runs after the schema changes above.
+    migrator.run(backfill_user_timestamps, database)
 
     # Now that the data has been copied, remove the original 'timestamp' field
-    migrator.remove_fields("user", "timestamp")
+    def drop_timestamp(db):
+        cols = {c.name for c in db.get_columns("user")}
+        if "timestamp" in cols:
+            db.execute_sql("ALTER TABLE `user` DROP COLUMN `timestamp`")
+
+    migrator.run(drop_timestamp, database)
 
     # Update the fields to be not null now that they are populated
-    migrator.change_fields(
-        "user",
-        created_at=pw.BigIntegerField(null=False),
-        updated_at=pw.BigIntegerField(null=False),
-        last_active_at=pw.BigIntegerField(null=False),
-    )
+    def enforce_not_null(db):
+        db.execute_sql("ALTER TABLE `user` MODIFY COLUMN `created_at` BIGINT NOT NULL")
+        db.execute_sql("ALTER TABLE `user` MODIFY COLUMN `updated_at` BIGINT NOT NULL")
+        db.execute_sql(
+            "ALTER TABLE `user` MODIFY COLUMN `last_active_at` BIGINT NOT NULL"
+        )
+
+    migrator.run(enforce_not_null, database)
 
 
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
@@ -80,12 +116,32 @@ def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
     # Recreate the timestamp field initially allowing null values for safe transition
     migrator.add_fields("user", timestamp=pw.BigIntegerField(null=True))
 
-    # Copy the earliest created_at date back into the new timestamp field.
-    User = migrator.orm["user"]
-    User.update(timestamp=User.created_at).execute()
+    def restore_timestamp(db):
+        class UserWithTimestamps(pw.Model):
+            timestamp = pw.BigIntegerField(null=True)
+            created_at = pw.BigIntegerField(null=True)
+
+            class Meta:
+                table_name = "user"
+
+        UserWithTimestamps._meta.database = db
+        UserWithTimestamps.update(
+            timestamp=UserWithTimestamps.created_at
+        ).execute()
+
+    migrator.run(restore_timestamp, database)
 
     # Remove the created_at and updated_at fields
-    migrator.remove_fields("user", "created_at", "updated_at", "last_active_at")
+    def drop_new_columns(db):
+        cols = {c.name for c in db.get_columns("user")}
+        for col in ("created_at", "updated_at", "last_active_at"):
+            if col in cols:
+                db.execute_sql(f"ALTER TABLE `user` DROP COLUMN `{col}`")
+
+    migrator.run(drop_new_columns, database)
 
     # Finally, alter the timestamp field to not allow nulls if that was the original setting
-    migrator.change_fields("user", timestamp=pw.BigIntegerField(null=False))
+    def enforce_timestamp_not_null(db):
+        db.execute_sql("ALTER TABLE `user` MODIFY COLUMN `timestamp` BIGINT NOT NULL")
+
+    migrator.run(enforce_timestamp_not_null, database)
