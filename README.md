@@ -1,8 +1,3 @@
-# AWS Resources
-- [EC2 t3.large Instance. 200 Gig Volume](https://us-east-2.console.aws.amazon.com/ec2/home?region=us-east-2#InstanceDetails:instanceId=i-0ebc7ff190114daeb)
-- [RDS PostgresSQL DB](https://us-east-2.console.aws.amazon.com/rds/home?region=us-east-2#database:id=open-web-ui-db;is-cluster=false)
-- [ECR Image](https://us-east-2.console.aws.amazon.com/ecr/repositories/private/623065535582/luxtronic-open-webui/_/details?region=us-east-2)
-
 # Build And Deploy Image 
 ```bash
 docker build -t luxtronic-open-webui .        
@@ -64,16 +59,14 @@ docker run --rm \
 	-e DATABASE_HOST='<db_host>' \
 	-e DATABASE_NAME='<db_name>' \
 	-e DATABASE_PASSWORD='<db_pw>' \
-	-e DATABASE_PORT='5432' \
-	-e DATABASE_TYPE='postgresql' \
+	-e DATABASE_PORT='3306' \
+	-e DATABASE_TYPE='mysql+pymysql' \
 	-e DATABASE_USER='<db_user>' \
 	-e LUXTRONIC_TENANT_SEED="$LUXTRONIC_TENANT_SEED" \
 	--entrypoint python \
 	<acct_id>.dkr.ecr.us-east-2.amazonaws.com/luxtronic-open-webui:latest \
 	/app/backend/seed_luxtronic.py
   ```
-
-  > When using MySQL, switch `DATABASE_TYPE` (and port) to the MySQL values as highlighted above so the seed command reaches the correct database.
 
   ### Local
   ```bash
