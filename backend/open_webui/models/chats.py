@@ -794,18 +794,19 @@ class ChatTable:
             elif dialect_name == "postgresql":
                 # PostgreSQL doesn't allow null bytes in text. We filter those out by checking
                 # the JSON representation for \u0000 before attempting text extraction
-                postgres_content_sql = (
-                    "EXISTS ("
-                    "    SELECT 1 "
-                    "    FROM json_array_elements(Chat.chat->'messages') AS message "
-                    "    WHERE message->'content' IS NOT NULL "
-                    "    AND (message->'content')::text NOT LIKE '%\\u0000%' "
-                    "    AND LOWER(message->>'content') LIKE '%' || :content_key || '%'"
-                    ")"
-                )
+                postgres_content_sql = """
+                    EXISTS (
+                        SELECT 1 
+                        FROM json_array_elements(Chat.chat->'messages') AS message 
+                        WHERE message->>'content' IS NOT NULL 
+                        AND LOWER(replace(message->>'content', E'\\x00', '')) LIKE '%' || :content_key || '%'
+                    )
+                    """
                 postgres_content_clause = text(postgres_content_sql)
                 # Also filter out chats with null bytes in title
-                query = query.filter(text("Chat.title::text NOT LIKE '%\\x00%'"))
+                query = query.filter(
+                    text("replace(Chat.title, E'\\x00', '') ILIKE :title_key")
+                )
                 query = query.filter(
                     or_(
                         Chat.title.ilike(bindparam("title_key")),
