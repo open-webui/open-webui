@@ -3006,6 +3006,9 @@ async def process_chat_response(
                         log.debug(f"Attempt count: {retries}")
 
                         output = ""
+                        # Initialize Excel artifacts list before try block
+                        excel_artifacts = []
+                        processed_excel_files = set()
                         try:
                             if content_blocks[-1]["attributes"].get("type") == "code":
                                 code = content_blocks[-1]["content"]
@@ -3075,10 +3078,7 @@ async def process_chat_response(
 
                                 log.debug(f"Code interpreter output: {output}")
 
-                                # Collect Excel file artifacts
-                                excel_artifacts = []
-                                processed_excel_files = set()  # Track processed files to avoid duplicates
-
+                                # Collect Excel file artifacts (initialized before try block)
                                 if isinstance(output, dict):
                                     stdout = output.get("stdout", "")
 
