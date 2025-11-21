@@ -56,6 +56,7 @@
 	import ContentRenderer from './ContentRenderer.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import FileItem from '$lib/components/common/FileItem.svelte';
+	import ExcelViewer from '$lib/components/artifacts/ExcelViewer.svelte';
 	import FollowUps from './ResponseMessage/FollowUps.svelte';
 	import { fade } from 'svelte/transition';
 	import { flyAndScale } from '$lib/utils/transitions';
@@ -637,6 +638,16 @@
 												small={true}
 											/>
 										{/if}
+									</div>
+								{/each}
+							</div>
+						{/if}
+
+						{#if message?.files && message.files?.filter((f) => f.type === 'excel').length > 0}
+							<div class="my-2 w-full">
+								{#each message.files.filter((f) => f.type === 'excel') as file}
+									<div class="mb-2" style="min-height: 400px; max-height: 600px;">
+										<ExcelViewer {file} />
 									</div>
 								{/each}
 							</div>
