@@ -18,15 +18,13 @@ docker run --rm \
 	-e DATABASE_HOST='<db_host>' \
 	-e DATABASE_NAME='<db_name>' \
 	-e DATABASE_PASSWORD='db_password' \
-	-e DATABASE_PORT='5432' \
-	-e DATABASE_TYPE='postgresql' \
+	-e DATABASE_PORT='3306' \
+	-e DATABASE_TYPE='mysql+pymysql' \
 	-e DATABASE_USER='<db_user>' \
 	--entrypoint bash \
 	<acct_id>.dkr.ecr.us-east-2.amazonaws.com/luxtronic-open-webui:latest \
 	-lc "cd /app/backend/open_webui && alembic upgrade head"
   ```
-
-  > To target MySQL instead, set `DATABASE_TYPE='mysql+pymysql'` (and typically `DATABASE_PORT='3306'`) with the matching credentials. The application now runs the legacy Peewee migrations and SQLAlchemy engine creation against the same MySQL database.
 
   # Seeding in tenants and users
   Make sure you run initially first so you can set up main admin user... then you can seed in non admin users
