@@ -66,11 +66,14 @@ from ssl import CERT_NONE, CERT_REQUIRED, PROTOCOL_TLS
 
 from ldap3 import Server, Connection, NONE, Tls
 from ldap3.utils.conv import escape_filter_chars
+from open_webui.utils.login_rate_limit import RateLimiter
 
 router = APIRouter()
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+login_limiter = RateLimiter(max_attempts=5, window_seconds=60)
 
 ############################
 # GetSessionUser
@@ -539,6 +542,12 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
                 admin_email.lower(), lambda pw: verify_password(admin_password, pw)
             )
     else:
+        if Users.get_user_by_email(form_data.email.lower()):
+            if not login_limiter.check(form_data.email.lower()):
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
+                )
         password_bytes = form_data.password.encode("utf-8")
         if len(password_bytes) > 72:
             # TODO: Implement other hashing algorithms that support longer passwords
@@ -553,6 +562,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
         )
 
     if user:
+        login_limiter.reset(form_data.email.lower())
 
         expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
         expires_at = None
