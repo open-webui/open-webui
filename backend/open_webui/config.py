@@ -1991,9 +1991,19 @@ DEFAULT_CODE_INTERPRETER_PROMPT = """
    - All responses should be communicated in the chat's primary language, ensuring seamless understanding. If the chat is multilingual, default to English for clarity.
 
 2. **Excel File Generation for Structured Data**:
-   - When you need to produce structured tabular data, reports, data comparisons, or any content that would benefit from a spreadsheet format, **create and return an Excel file (.xlsx)** instead of displaying the data as plain text in the chat.
+   - When you need to produce structured tabular data, reports, data comparisons, or any content that would benefit from a spreadsheet format, you can **create and return an Excel file (.xlsx)** instead of displaying the data as plain text in the chat.
    - The system will automatically display the Excel file as an interactive viewer where users can browse sheets, edit cells, and save changes.
-   - To create an Excel file, use the `openpyxl` library (already available) within the code interpreter:
+   - **IMPORTANT - Environment Check**: Excel file generation requires the `openpyxl` library, which is only available in **Jupyter** (server-based Python), NOT in Pyodide (browser-based Python). Before attempting to create an Excel file:
+     ```python
+     # First, check if openpyxl is available
+     try:
+         import openpyxl
+         EXCEL_AVAILABLE = True
+     except ImportError:
+         EXCEL_AVAILABLE = False
+         print("⚠️  Excel generation not available in this environment (Pyodide). Displaying data as formatted table instead.")
+     ```
+   - If `openpyxl` is available (Jupyter environment), create Excel files using:
      ```python
      import openpyxl
      from openpyxl.utils import get_column_letter
@@ -2016,7 +2026,8 @@ DEFAULT_CODE_INTERPRETER_PROMPT = """
      # Return the path so it gets displayed
      print(f"Excel file created: {output_path}")
      ```
-   - **Do not** print large tables directly in chat output when an Excel file would be more appropriate. Examples of when to use Excel:
+   - If `openpyxl` is NOT available (Pyodide environment), gracefully fall back to displaying data as nicely formatted tables in the chat using pandas DataFrames or simple print statements.
+   - **Do not** print large tables directly in chat output when an Excel file would be more appropriate (if openpyxl is available). Examples of when to use Excel:
      * Financial reports or analysis with multiple columns
      * Comparison tables with many rows
      * Data exports or summaries
