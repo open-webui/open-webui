@@ -61,6 +61,7 @@ from open_webui.utils.files import (
     get_audio_url_from_base64,
     get_file_url_from_base64,
     get_image_url_from_base64,
+    upload_excel_file,
 )
 
 
@@ -3074,6 +3075,9 @@ async def process_chat_response(
 
                                 log.debug(f"Code interpreter output: {output}")
 
+                                # Collect Excel file artifacts
+                                excel_artifacts = []
+
                                 if isinstance(output, dict):
                                     stdout = output.get("stdout", "")
 
@@ -3092,6 +3096,23 @@ async def process_chat_response(
                                                     stdoutLines[idx] = (
                                                         f"![Output Image]({image_url})"
                                                     )
+                                            elif '.xlsx' in line:
+                                                # Try to extract Excel file path from the line
+                                                # Look for patterns like /path/to/file.xlsx
+                                                xlsx_pattern = r'(/[^\s]+\.xlsx|[A-Za-z]:[^\s]+\.xlsx)'
+                                                matches = re.findall(xlsx_pattern, line)
+                                                for file_path in matches:
+                                                    if os.path.exists(file_path):
+                                                        log.info(f"Detected Excel file in stdout: {file_path}")
+                                                        excel_artifact = upload_excel_file(
+                                                            request,
+                                                            file_path,
+                                                            metadata,
+                                                            user,
+                                                        )
+                                                        if excel_artifact:
+                                                            excel_artifacts.append(excel_artifact)
+                                                            # Don't modify the line to preserve user's message
 
                                         output["stdout"] = "\n".join(stdoutLines)
 
@@ -3110,6 +3131,23 @@ async def process_chat_response(
                                                 resultLines[idx] = (
                                                     f"![Output Image]({image_url})"
                                                 )
+                                            elif '.xlsx' in line:
+                                                # Try to extract Excel file path from the line
+                                                # Look for patterns like /path/to/file.xlsx
+                                                xlsx_pattern = r'(/[^\s]+\.xlsx|[A-Za-z]:[^\s]+\.xlsx)'
+                                                matches = re.findall(xlsx_pattern, line)
+                                                for file_path in matches:
+                                                    if os.path.exists(file_path):
+                                                        log.info(f"Detected Excel file in result: {file_path}")
+                                                        excel_artifact = upload_excel_file(
+                                                            request,
+                                                            file_path,
+                                                            metadata,
+                                                            user,
+                                                        )
+                                                        if excel_artifact:
+                                                            excel_artifacts.append(excel_artifact)
+                                                            # Don't modify the line to preserve user's message
                                         output["result"] = "\n".join(resultLines)
                         except Exception as e:
                             output = str(e)
@@ -3131,6 +3169,18 @@ async def process_chat_response(
                                 },
                             }
                         )
+
+                        # Emit Excel file artifacts if any were created
+                        if excel_artifacts:
+                            log.info(f"Emitting {len(excel_artifacts)} Excel file artifacts")
+                            await event_emitter(
+                                {
+                                    "type": "files",
+                                    "data": {
+                                        "files": excel_artifacts,
+                                    },
+                                }
+                            )
 
                         try:
                             new_form_data = {
