@@ -45,9 +45,17 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
         last_active_at=pw.BigIntegerField(null=True),  # Allow null for transition
     )
 
-    # Populate the new fields from an existing 'timestamp' field
-    migrator.sql(
-        'UPDATE "user" SET created_at = timestamp, updated_at = timestamp, last_active_at = timestamp WHERE timestamp IS NOT NULL'
+    # Populate the new fields from an existing 'timestamp' field.
+    # Use the ORM wrapper so identifier quoting works on every backend.
+    User = migrator.orm["user"]
+    (
+        User.update(
+            created_at=User.timestamp,
+            updated_at=User.timestamp,
+            last_active_at=User.timestamp,
+        )
+        .where(User.timestamp.is_null(False))
+        .execute()
     )
 
     # Now that the data has been copied, remove the original 'timestamp' field
@@ -68,9 +76,9 @@ def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
     # Recreate the timestamp field initially allowing null values for safe transition
     migrator.add_fields("user", timestamp=pw.BigIntegerField(null=True))
 
-    # Copy the earliest created_at date back into the new timestamp field
-    # This assumes created_at was originally a copy of timestamp
-    migrator.sql('UPDATE "user" SET timestamp = created_at')
+    # Copy the earliest created_at date back into the new timestamp field.
+    User = migrator.orm["user"]
+    User.update(timestamp=User.created_at).execute()
 
     # Remove the created_at and updated_at fields
     migrator.remove_fields("user", "created_at", "updated_at", "last_active_at")
