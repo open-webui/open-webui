@@ -105,11 +105,14 @@
 	/>
 
 	<div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
-		<div class="flex md:self-center text-lg font-medium px-0.5">
-			{$i18n.t('Groups')}
-			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
+		<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2 shrink-0">
+			<div>
+				{$i18n.t('Groups')}
+			</div>
 
-			<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{groups.length}</span>
+			<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+				{groups.length}
+			</div>
 		</div>
 
 		<div class="flex gap-1">

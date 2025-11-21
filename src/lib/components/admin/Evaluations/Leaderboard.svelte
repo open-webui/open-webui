@@ -339,16 +339,14 @@
 <div
 	class="pt-0.5 pb-1 gap-1 flex flex-col md:flex-row justify-between sticky top-0 z-10 bg-white dark:bg-gray-900"
 >
-	<div class="flex md:self-center text-lg font-medium px-0.5 shrink-0 items-center">
-		<div class=" gap-1">
+	<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2 shrink-0">
+		<div>
 			{$i18n.t('Leaderboard')}
 		</div>
 
-		<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
-
-		<span class="text-lg font-medium text-gray-500 dark:text-gray-300 mr-1.5"
-			>{rankedModels.length}</span
-		>
+		<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+			{rankedModels.length}
+		</div>
 	</div>
 
 	<div class=" flex space-x-2">
