@@ -38,12 +38,16 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your migrations here."""
 
     # Adding fields created_at and updated_at to the 'user' table
-    migrator.add_fields(
-        "user",
-        created_at=pw.BigIntegerField(null=True),  # Allow null for transition
-        updated_at=pw.BigIntegerField(null=True),  # Allow null for transition
-        last_active_at=pw.BigIntegerField(null=True),  # Allow null for transition
-    )
+    cols = {c.name for c in database.get_columns("user")}
+    
+    if "created_at" not in cols:
+      migrator.add_fields("user", created_at=pw.BigIntegerField(null=True))
+
+    if "updated_at" not in cols:
+      migrator.add_fields("user", updated_at=pw.BigIntegerField(null=True))
+
+    if "last_active_at" not in cols:
+      migrator.add_fields("user", last_active_at=pw.BigIntegerField(null=True))
 
     # Populate the new fields from an existing 'timestamp' field.
     # Use the ORM wrapper so identifier quoting works on every backend.
