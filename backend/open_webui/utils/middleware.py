@@ -91,7 +91,11 @@ from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
     get_content_from_message,
 )
-from open_webui.utils.tools import get_tools, get_updated_tool_function
+from open_webui.utils.tools import (
+    get_tools,
+    get_updated_tool_function,
+    replace_placeholders_in_headers
+)
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.filter import (
     get_sorted_filter_ids,
@@ -1142,10 +1146,16 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     except Exception as e:
         log.error(f"Error getting OAuth token: {e}")
 
+    __user__ = user.model_dump() if isinstance(user, UserModel) else {}
+    if isinstance(user, UserModel) and user.settings:
+        user_settings = user.settings.model_dump() if user.settings else {}
+        if "tool_server_placeholders" in user_settings:
+            __user__["tool_server_placeholders"] = user_settings["tool_server_placeholders"]
+
     extra_params = {
         "__event_emitter__": event_emitter,
         "__event_call__": event_caller,
-        "__user__": user.model_dump() if isinstance(user, UserModel) else {},
+        "__user__": __user__,
         "__metadata__": metadata,
         "__oauth_token__": oauth_token,
         "__request__": request,
@@ -1404,6 +1414,16 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
                     connection_headers = mcp_server_connection.get("headers", None)
                     if connection_headers and isinstance(connection_headers, dict):
+                        user_placeholders = (
+                            extra_params.get("__user__", {})
+                            .get("tool_server_placeholders", {})
+                            .get(server_id, {})
+                        )
+
+                        connection_headers = replace_placeholders_in_headers(
+                            connection_headers, user_placeholders
+                        )
+
                         for key, value in connection_headers.items():
                             headers[key] = value
 
@@ -1981,10 +2001,16 @@ async def process_chat_response(
     except Exception as e:
         log.error(f"Error getting OAuth token: {e}")
 
+    __user__ = user.model_dump() if isinstance(user, UserModel) else {}
+    if isinstance(user, UserModel) and user.settings:
+        user_settings = user.settings.model_dump() if user.settings else {}
+        if "tool_server_placeholders" in user_settings:
+            __user__["tool_server_placeholders"] = user_settings["tool_server_placeholders"]
+
     extra_params = {
         "__event_emitter__": event_emitter,
         "__event_call__": event_caller,
-        "__user__": user.model_dump() if isinstance(user, UserModel) else {},
+        "__user__": __user__,
         "__metadata__": metadata,
         "__oauth_token__": oauth_token,
         "__request__": request,

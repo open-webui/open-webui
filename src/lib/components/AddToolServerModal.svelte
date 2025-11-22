@@ -46,6 +46,7 @@
 	let auth_type = 'bearer';
 	let key = '';
 	let headers = '';
+	let placeholders: string[] = [];
 
 	let accessControl = {};
 
@@ -196,6 +197,7 @@
 				if (data.auth_type) auth_type = data.auth_type;
 				if (data.headers) headers = JSON.stringify(data.headers, null, 2);
 				if (data.key) key = data.key;
+				if (data.placeholders) placeholders = data.placeholders;
 
 				if (data.info) {
 					id = data.info.id ?? '';
@@ -230,6 +232,7 @@
 				auth_type,
 				headers: headers ? JSON.parse(headers) : undefined,
 				key,
+				placeholders: placeholders.length > 0 ? placeholders : undefined,
 
 				info: {
 					id: id,
@@ -300,6 +303,7 @@
 			headers: headers ? JSON.parse(headers) : undefined,
 
 			key,
+			placeholders: placeholders.length > 0 ? placeholders : undefined,
 			config: {
 				enable: enable,
 
@@ -328,6 +332,7 @@
 
 		key = '';
 		auth_type = 'bearer';
+		placeholders = [];
 
 		id = '';
 		name = '';
@@ -351,6 +356,7 @@
 			headers = connection?.headers ? JSON.stringify(connection.headers, null, 2) : '';
 
 			key = connection?.key ?? '';
+			placeholders = connection?.placeholders ?? [];
 
 			id = connection.info?.id ?? '';
 			name = connection.info?.name ?? '';
@@ -718,6 +724,66 @@
 											/>
 										</Tooltip>
 									</div>
+								</div>
+							</div>
+
+							<div class="flex gap-2 mt-2">
+								<div class="flex flex-col w-full">
+									<div class="flex justify-between items-center mb-0.5">
+										<label
+											for="placeholders-input"
+											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										>
+											{$i18n.t('Placeholders')}
+											<span class="text-xs text-gray-200 dark:text-gray-800 ml-0.5">
+												{$i18n.t('Optional')}
+											</span>
+										</label>
+
+										<Tooltip content={$i18n.t('Add Placeholder')}>
+											<button
+												class="px-1"
+												on:click={() => {
+													placeholders = [...placeholders, ''];
+												}}
+												type="button"
+											>
+												<Plus />
+											</button>
+										</Tooltip>
+									</div>
+
+									<div class="text-xs text-gray-500 mb-2">
+										{$i18n.t(
+											'Define placeholder names that users will need to fill in. Use them in headers as {{PLACEHOLDER_NAME}}'
+										)}
+									</div>
+
+									{#if placeholders.length > 0}
+										<div class="flex flex-col gap-2">
+											{#each placeholders as placeholder, idx}
+												<div class="flex gap-2 items-center">
+													<input
+														class={`flex-1 text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+														type="text"
+														bind:value={placeholders[idx]}
+														placeholder={$i18n.t('e.g., API_KEY or USER_TOKEN')}
+														autocomplete="off"
+													/>
+													<button
+														class="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+														on:click={() => {
+															placeholders = placeholders.filter((_, i) => i !== idx);
+														}}
+														type="button"
+														aria-label={$i18n.t('Remove')}
+													>
+														<Minus />
+													</button>
+												</div>
+											{/each}
+										</div>
+									{/if}
 								</div>
 							</div>
 

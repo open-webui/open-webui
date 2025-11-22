@@ -50,6 +50,28 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 
+def replace_placeholders_in_headers(
+    headers: dict, placeholders: dict[str, str]
+) -> dict:
+    if not headers or not placeholders:
+        return headers
+
+    replaced_headers = {}
+    for key, value in headers.items():
+        if isinstance(value, str):
+            replaced_value = value
+            for placeholder_name, placeholder_value in placeholders.items():
+                placeholder_pattern = f"{{{{{placeholder_name}}}}}"
+                replaced_value = replaced_value.replace(
+                    placeholder_pattern, placeholder_value
+                )
+            replaced_headers[key] = replaced_value
+        else:
+            replaced_headers[key] = value
+
+    return replaced_headers
+
+
 def get_async_tool_function_and_apply_extra_params(
     function: Callable, extra_params: dict
 ) -> Callable[..., Awaitable]:
@@ -181,6 +203,17 @@ async def get_tools(
 
                         connection_headers = tool_server_connection.get("headers", None)
                         if connection_headers and isinstance(connection_headers, dict):
+                            user_placeholders = (
+                                extra_params.get("__user__", {})
+                                .get("tool_server_placeholders", {})
+                                .get(server_id, {})
+                            )
+
+                            # Replace placeholders in headers
+                            connection_headers = replace_placeholders_in_headers(
+                                connection_headers, user_placeholders
+                            )
+
                             for key, value in connection_headers.items():
                                 headers[key] = value
 

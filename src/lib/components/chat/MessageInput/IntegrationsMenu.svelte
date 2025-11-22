@@ -6,7 +6,7 @@
 
 	import { config, user, tools as _tools, mobile, settings, toolServers } from '$lib/stores';
 
-	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
+	import { getOAuthClientAuthorizationUrl, getToolServerConnections } from '$lib/apis/configs';
 	import { getTools } from '$lib/apis/tools';
 
 	import Knobs from '$lib/components/icons/Knobs.svelte';
@@ -21,6 +21,8 @@
 	import Terminal from '$lib/components/icons/Terminal.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
+	import PencilSolid from '$lib/components/icons/PencilSolid.svelte';
+	import PlaceholderConfigModal from './PlaceholderConfigModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -48,6 +50,10 @@
 	let tab = '';
 
 	let tools = null;
+	let toolServerPlaceholders = {};
+
+	let showPlaceholderModal = false;
+	let selectedServerForPlaceholder = null;
 
 	$: if (show) {
 		init();
@@ -86,6 +92,25 @@
 					};
 				}
 			}
+		}
+
+		try {
+			const res = await getToolServerConnections(localStorage.token);
+			const adminServers = res.TOOL_SERVER_CONNECTIONS || [];
+
+			toolServerPlaceholders = {};
+			for (const server of adminServers) {
+				if (server.placeholders && server.placeholders.length > 0) {
+					const serverId = server.info?.id || server.url;
+					toolServerPlaceholders[serverId] = {
+						name: server.info?.name || server.url,
+						placeholders: server.placeholders,
+						serverId: serverId
+					};
+				}
+			}
+		} catch (err) {
+			console.error('Failed to fetch admin tool servers:', err);
 		}
 
 		selectedToolIds = selectedToolIds.filter((id) => Object.keys(tools).includes(id));
@@ -392,6 +417,28 @@
 								</div>
 							{/if}
 
+							{#if Object.keys(toolServerPlaceholders).find((serverId) => toolId.includes(serverId))}
+								{@const serverData = toolServerPlaceholders[
+									Object.keys(toolServerPlaceholders).find((serverId) => toolId.includes(serverId))
+								]}
+								<div class=" shrink-0">
+									<Tooltip content={$i18n.t('Configure Placeholders')}>
+										<button
+											class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
+											type="button"
+											on:click={(e) => {
+												e.stopPropagation();
+												e.preventDefault();
+												selectedServerForPlaceholder = serverData;
+												showPlaceholderModal = true;
+											}}
+										>
+											<PencilSolid />
+										</button>
+									</Tooltip>
+								</div>
+							{/if}
+
 							<div class=" shrink-0">
 								<Switch state={tools[toolId].enabled} />
 							</div>
@@ -402,3 +449,10 @@
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>
+
+<PlaceholderConfigModal
+	bind:show={showPlaceholderModal}
+	serverName={selectedServerForPlaceholder?.name || ''}
+	serverId={selectedServerForPlaceholder?.serverId || ''}
+	placeholders={selectedServerForPlaceholder?.placeholders || []}
+/>
