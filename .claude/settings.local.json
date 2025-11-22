@@ -6,7 +6,12 @@
       "Bash(git rev-parse:*)",
       "Bash(chmod:*)",
       "Bash(test:*)",
-      "Bash(lsof:*)"
+      "Bash(lsof:*)",
+      "WebSearch",
+      "Bash(npm install:*)",
+      "Bash(ls:*)",
+      "Bash(npm run build:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

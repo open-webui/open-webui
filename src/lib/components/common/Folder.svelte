@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getContext, createEventDispatcher, onMount, onDestroy } from 'svelte';
+	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -9,6 +10,7 @@
 	import Collapsible from './Collapsible.svelte';
 	import Tooltip from './Tooltip.svelte';
 	import Plus from '../icons/Plus.svelte';
+	import { extractChatsFromFile } from '$lib/utils/chatImport';
 
 	export let open = true;
 
@@ -48,26 +50,29 @@
 					// If dropped items aren't files, reject them
 					if (item.kind === 'file') {
 						const file = item.getAsFile();
-						if (file && file.type === 'application/json') {
-							console.log('Dropped file is a JSON file!');
+						const isJSON = file && file.type === 'application/json';
+						const isZIP =
+							file &&
+							(file.type === 'application/zip' ||
+								file.type === 'application/x-zip-compressed' ||
+								file.name.endsWith('.zip'));
 
-							// Read the JSON file with FileReader
-							const reader = new FileReader();
-							reader.onload = async function (event) {
-								try {
-									const fileContent = JSON.parse(event.target.result);
-									console.log('Parsed JSON Content: ', fileContent);
+						if (file && (isJSON || isZIP)) {
+							console.log('Dropped file is a JSON or ZIP file!');
+
+							extractChatsFromFile(file)
+								.then((fileContent) => {
+									console.log('Parsed Content: ', fileContent);
 									open = true;
 									dispatch('import', fileContent);
-								} catch (error) {
-									console.error('Error parsing JSON file:', error);
-								}
-							};
-
-							// Start reading the file
-							reader.readAsText(file);
+								})
+								.catch((error) => {
+									console.error('Error processing file:', error);
+									toast.error($i18n.t(error.message));
+								});
 						} else {
-							console.error('Only JSON file types are supported.');
+							console.error('Only JSON and ZIP file types are supported.');
+							toast.error($i18n.t('Only JSON and ZIP file types are supported.'));
 						}
 					} else {
 						open = true;

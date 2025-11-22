@@ -63,6 +63,7 @@
 	import Note from '../icons/Note.svelte';
 	import { slide } from 'svelte/transition';
 	import { getImportOrigin, convertOpenAIChats } from '$lib/utils';
+	import { extractChatsFromFile } from '$lib/utils/chatImport';
 
 	const BREAKPOINT = 768;
 
@@ -358,22 +359,25 @@
 	$: if (importFiles) {
 		console.log(importFiles);
 
-		let reader = new FileReader();
-		reader.onload = (event) => {
-			let chats = JSON.parse(event.target.result);
-			console.log(chats);
-			if (getImportOrigin(chats) == 'openai') {
-				try {
-					chats = convertOpenAIChats(chats);
-				} catch (error) {
-					console.log('Unable to import chats:', error);
-				}
-			}
-			importChatsHandler(chats);
-		};
-
 		if (importFiles.length > 0) {
-			reader.readAsText(importFiles[0]);
+			extractChatsFromFile(importFiles[0])
+				.then((chats) => {
+					console.log(chats);
+					if (getImportOrigin(chats) == 'openai') {
+						try {
+							chats = convertOpenAIChats(chats);
+						} catch (error) {
+							console.log('Unable to import chats:', error);
+							toast.error($i18n.t('Failed to convert OpenAI chats'));
+							return;
+						}
+					}
+					importChatsHandler(chats);
+				})
+				.catch((error) => {
+					console.error('Import error:', error);
+					toast.error($i18n.t(error.message));
+				});
 		}
 	}
 
@@ -1264,7 +1268,7 @@
 					bind:this={chatImportInputElement}
 					bind:files={importFiles}
 					type="file"
-					accept=".json"
+					accept=".json,.zip"
 					hidden
 				/>
 

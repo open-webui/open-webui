@@ -2087,6 +2087,11 @@ async def healthcheck_with_db():
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
+@app.get("/favicon.png")
+async def get_favicon():
+    return FileResponse(os.path.join(STATIC_DIR, "favicon.png"))
+
+
 @app.get("/cache/{path:path}")
 async def serve_cache_file(
     path: str,
