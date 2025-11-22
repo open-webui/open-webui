@@ -664,9 +664,18 @@ def get_embedding_function(
     azure_api_version=None,
 ):
     if embedding_engine == "":
-        return lambda query, prefix=None, user=None: embedding_function.encode(
-            query, **({"prompt": prefix} if prefix else {})
-        ).tolist()
+        # Sentence transformers: CPU-bound sync operation
+        # Run in thread pool to prevent blocking async event loop
+        def sync_encode(query, prefix=None):
+            return embedding_function.encode(
+                query, **({"prompt": prefix} if prefix else {})
+            ).tolist()
+
+        async def async_wrapper(query, prefix=None, user=None):
+            # Run CPU-bound operation in thread pool
+            return await asyncio.to_thread(sync_encode, query, prefix)
+
+        return async_wrapper
     elif embedding_engine in ["ollama", "openai", "azure_openai"]:
         # Create async function based on engine
         if embedding_engine == "openai":
