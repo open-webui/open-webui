@@ -3910,3 +3910,9 @@ LDAP_ATTRIBUTE_FOR_GROUPS = PersistentConfig(
     "ldap.server.attribute_for_groups",
     os.environ.get("LDAP_ATTRIBUTE_FOR_GROUPS", "memberOf"),
 )
+
+LDAP_FILTER_MEMBEROF = PersistentConfig(
+    "LDAP_FILTER_MEMBEROF",
+    "ldap.group.filter_memberof",
+    os.environ.get("LDAP_FILTER_MEMBEROF", "False").lower() == "true",
+)

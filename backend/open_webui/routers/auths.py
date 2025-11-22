@@ -60,6 +60,7 @@ from open_webui.utils.auth import (
 )
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.access_control import get_permissions, has_permission
+from open_webui.utils.ldap_utils import parse_memberof_groups_from_filter
 
 from typing import Optional, List
 
@@ -265,6 +266,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
         )
         ENABLE_LDAP_GROUP_CREATION = request.app.state.config.ENABLE_LDAP_GROUP_CREATION
         LDAP_ATTRIBUTE_FOR_GROUPS = request.app.state.config.LDAP_ATTRIBUTE_FOR_GROUPS
+        LDAP_FILTER_MEMBEROF = request.app.state.config.LDAP_FILTER_MEMBEROF
 
         search_attributes = [
             f"{LDAP_ATTRIBUTE_FOR_USERNAME}",
@@ -362,6 +364,28 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                 log.info(
                     f"LDAP groups for user {username}: {user_groups} (total: {len(user_groups)})"
                 )
+
+                if LDAP_FILTER_MEMBEROF and user_groups:
+                    allowed_groups = parse_memberof_groups_from_filter(
+                        LDAP_SEARCH_FILTERS
+                    )
+                    if allowed_groups:
+                        original_count = len(user_groups)
+                        user_groups = [
+                            group
+                            for group in user_groups
+                            if group in allowed_groups
+                        ]
+                        log.info(
+                            f"LDAP_FILTER_MEMBEROF enabled. "
+                            f"Filtered groups from {original_count} to {len(user_groups)}. "
+                            f"Allowed: {allowed_groups}, Final: {user_groups}"
+                        )
+                    else:
+                        log.info(
+                            "LDAP_FILTER_MEMBEROF enabled but no memberOf "
+                            "filters found in LDAP_SEARCH_FILTERS"
+                        )
             else:
                 log.info(f"No groups found for user {username}")
         elif ENABLE_LDAP_GROUP_MANAGEMENT:
