@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { getContext, onMount } from 'svelte';
 
 	export let tools = [];
@@ -46,9 +47,11 @@
 							/>
 						</div>
 
-						<div class=" py-0.5 text-sm w-full capitalize font-medium">
-							{_tools[tool].name}
-						</div>
+						<Tooltip content={_tools[tool]?.meta?.description ?? _tools[tool].id}>
+							<div class=" py-0.5 text-sm w-full capitalize font-medium">
+								{_tools[tool].name}
+							</div>
+						</Tooltip>
 					</div>
 				{/each}
 			</div>

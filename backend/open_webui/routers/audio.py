@@ -4,6 +4,7 @@ import logging
 import os
 import uuid
 import html
+import base64
 from functools import lru_cache
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
@@ -39,13 +40,14 @@ from open_webui.config import (
     WHISPER_MODEL_DIR,
     CACHE_DIR,
     WHISPER_LANGUAGE,
+    ELEVENLABS_API_BASE_URL,
 )
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
+    ENV,
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
-    ENV,
     SRC_LOG_LEVELS,
     DEVICE_TYPE,
     ENABLE_FORWARD_USER_INFO_HEADERS,
@@ -178,6 +180,9 @@ class STTConfigForm(BaseModel):
     AZURE_LOCALES: str
     AZURE_BASE_URL: str
     AZURE_MAX_SPEAKERS: str
+    MISTRAL_API_KEY: str
+    MISTRAL_API_BASE_URL: str
+    MISTRAL_USE_CHAT_COMPLETIONS: bool
 
 
 class AudioConfigUpdateForm(BaseModel):
@@ -214,6 +219,9 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             "AZURE_LOCALES": request.app.state.config.AUDIO_STT_AZURE_LOCALES,
             "AZURE_BASE_URL": request.app.state.config.AUDIO_STT_AZURE_BASE_URL,
             "AZURE_MAX_SPEAKERS": request.app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS,
+            "MISTRAL_API_KEY": request.app.state.config.AUDIO_STT_MISTRAL_API_KEY,
+            "MISTRAL_API_BASE_URL": request.app.state.config.AUDIO_STT_MISTRAL_API_BASE_URL,
+            "MISTRAL_USE_CHAT_COMPLETIONS": request.app.state.config.AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS,
         },
     }
 
@@ -255,6 +263,13 @@ async def update_audio_config(
     request.app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS = (
         form_data.stt.AZURE_MAX_SPEAKERS
     )
+    request.app.state.config.AUDIO_STT_MISTRAL_API_KEY = form_data.stt.MISTRAL_API_KEY
+    request.app.state.config.AUDIO_STT_MISTRAL_API_BASE_URL = (
+        form_data.stt.MISTRAL_API_BASE_URL
+    )
+    request.app.state.config.AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS = (
+        form_data.stt.MISTRAL_USE_CHAT_COMPLETIONS
+    )
 
     if request.app.state.config.STT_ENGINE == "":
         request.app.state.faster_whisper_model = set_faster_whisper_model(
@@ -290,6 +305,9 @@ async def update_audio_config(
             "AZURE_LOCALES": request.app.state.config.AUDIO_STT_AZURE_LOCALES,
             "AZURE_BASE_URL": request.app.state.config.AUDIO_STT_AZURE_BASE_URL,
             "AZURE_MAX_SPEAKERS": request.app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS,
+            "MISTRAL_API_KEY": request.app.state.config.AUDIO_STT_MISTRAL_API_KEY,
+            "MISTRAL_API_BASE_URL": request.app.state.config.AUDIO_STT_MISTRAL_API_BASE_URL,
+            "MISTRAL_USE_CHAT_COMPLETIONS": request.app.state.config.AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS,
         },
     }
 
@@ -413,7 +431,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 timeout=timeout, trust_env=True
             ) as session:
                 async with session.post(
-                    f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
+                    f"{ELEVENLABS_API_BASE_URL}/v1/text-to-speech/{voice_id}",
                     json={
                         "text": payload["input"],
                         "model_id": request.app.state.config.TTS_MODEL,
@@ -828,6 +846,186 @@ def transcription_handler(request, file_path, metadata):
                 detail=detail if detail else "Open WebUI: Server Connection Error",
             )
 
+    elif request.app.state.config.STT_ENGINE == "mistral":
+        # Check file exists
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=400, detail="Audio file not found")
+
+        # Check file size
+        file_size = os.path.getsize(file_path)
+        if file_size > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File size exceeds limit of {MAX_FILE_SIZE_MB}MB",
+            )
+
+        api_key = request.app.state.config.AUDIO_STT_MISTRAL_API_KEY
+        api_base_url = (
+            request.app.state.config.AUDIO_STT_MISTRAL_API_BASE_URL
+            or "https://api.mistral.ai/v1"
+        )
+        use_chat_completions = (
+            request.app.state.config.AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS
+        )
+
+        if not api_key:
+            raise HTTPException(
+                status_code=400,
+                detail="Mistral API key is required for Mistral STT",
+            )
+
+        r = None
+        try:
+            # Use voxtral-mini-latest as the default model for transcription
+            model = request.app.state.config.STT_MODEL or "voxtral-mini-latest"
+
+            log.info(
+                f"Mistral STT - model: {model}, "
+                f"method: {'chat_completions' if use_chat_completions else 'transcriptions'}"
+            )
+
+            if use_chat_completions:
+                # Use chat completions API with audio input
+                # This method requires mp3 or wav format
+                audio_file_to_use = file_path
+
+                if is_audio_conversion_required(file_path):
+                    log.debug("Converting audio to mp3 for chat completions API")
+                    converted_path = convert_audio_to_mp3(file_path)
+                    if converted_path:
+                        audio_file_to_use = converted_path
+                    else:
+                        log.error("Audio conversion failed")
+                        raise HTTPException(
+                            status_code=500,
+                            detail="Audio conversion failed. Chat completions API requires mp3 or wav format.",
+                        )
+
+                # Read and encode audio file as base64
+                with open(audio_file_to_use, "rb") as audio_file:
+                    audio_base64 = base64.b64encode(audio_file.read()).decode("utf-8")
+
+                # Prepare chat completions request
+                url = f"{api_base_url}/chat/completions"
+
+                # Add language instruction if specified
+                language = metadata.get("language", None) if metadata else None
+                if language:
+                    text_instruction = f"Transcribe this audio exactly as spoken in {language}. Do not translate it."
+                else:
+                    text_instruction = "Transcribe this audio exactly as spoken in its original language. Do not translate it to another language."
+
+                payload = {
+                    "model": model,
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "input_audio",
+                                    "input_audio": audio_base64,
+                                },
+                                {"type": "text", "text": text_instruction},
+                            ],
+                        }
+                    ],
+                }
+
+                r = requests.post(
+                    url=url,
+                    json=payload,
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json",
+                    },
+                )
+
+                r.raise_for_status()
+                response = r.json()
+
+                # Extract transcript from chat completion response
+                transcript = (
+                    response.get("choices", [{}])[0]
+                    .get("message", {})
+                    .get("content", "")
+                    .strip()
+                )
+                if not transcript:
+                    raise ValueError("Empty transcript in response")
+
+                data = {"text": transcript}
+
+            else:
+                # Use dedicated transcriptions API
+                url = f"{api_base_url}/audio/transcriptions"
+
+                # Determine the MIME type
+                mime_type, _ = mimetypes.guess_type(file_path)
+                if not mime_type:
+                    mime_type = "audio/webm"
+
+                # Use context manager to ensure file is properly closed
+                with open(file_path, "rb") as audio_file:
+                    files = {"file": (filename, audio_file, mime_type)}
+                    data_form = {"model": model}
+
+                    # Add language if specified in metadata
+                    language = metadata.get("language", None) if metadata else None
+                    if language:
+                        data_form["language"] = language
+
+                    r = requests.post(
+                        url=url,
+                        files=files,
+                        data=data_form,
+                        headers={
+                            "Authorization": f"Bearer {api_key}",
+                        },
+                    )
+
+                r.raise_for_status()
+                response = r.json()
+
+                # Extract transcript from response
+                transcript = response.get("text", "").strip()
+                if not transcript:
+                    raise ValueError("Empty transcript in response")
+
+                data = {"text": transcript}
+
+            # Save transcript to json file (consistent with other providers)
+            transcript_file = f"{file_dir}/{id}.json"
+            with open(transcript_file, "w") as f:
+                json.dump(data, f)
+
+            log.debug(data)
+            return data
+
+        except ValueError as e:
+            log.exception("Error parsing Mistral response")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to parse Mistral response: {str(e)}",
+            )
+        except requests.exceptions.RequestException as e:
+            log.exception(e)
+            detail = None
+
+            try:
+                if r is not None and r.status_code != 200:
+                    res = r.json()
+                    if "error" in res:
+                        detail = f"External: {res['error'].get('message', '')}"
+                    else:
+                        detail = f"External: {r.text}"
+            except Exception:
+                detail = f"External: {e}"
+
+            raise HTTPException(
+                status_code=getattr(r, "status_code", 500) if r else 500,
+                detail=detail if detail else "Open WebUI: Server Connection Error",
+            )
+
 
 def transcribe(request: Request, file_path: str, metadata: Optional[dict] = None):
     log.info(f"transcribe: {file_path} {metadata}")
@@ -1037,7 +1235,7 @@ def get_available_models(request: Request) -> list[dict]:
     elif request.app.state.config.TTS_ENGINE == "elevenlabs":
         try:
             response = requests.get(
-                "https://api.elevenlabs.io/v1/models",
+                f"{ELEVENLABS_API_BASE_URL}/v1/models",
                 headers={
                     "xi-api-key": request.app.state.config.TTS_API_KEY,
                     "Content-Type": "application/json",
@@ -1141,7 +1339,7 @@ def get_elevenlabs_voices(api_key: str) -> dict:
     try:
         # TODO: Add retries
         response = requests.get(
-            "https://api.elevenlabs.io/v1/voices",
+            f"{ELEVENLABS_API_BASE_URL}/v1/voices",
             headers={
                 "xi-api-key": api_key,
                 "Content-Type": "application/json",

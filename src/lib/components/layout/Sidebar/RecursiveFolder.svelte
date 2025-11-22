@@ -470,7 +470,7 @@
 	>
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div class="w-full group">
-			<button
+			<div
 				id="folder-{folderId}-button"
 				class="relative w-full py-1 px-1.5 rounded-xl flex items-center gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition {$selectedFolder?.id ===
 				folderId
@@ -595,7 +595,7 @@
 						</div>
 					</FolderMenu>
 				</button>
-			</button>
+			</div>
 		</div>
 
 		<div slot="content" class="w-full">

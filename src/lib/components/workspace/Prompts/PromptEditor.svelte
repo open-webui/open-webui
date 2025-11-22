@@ -106,7 +106,7 @@
 				<div class="flex flex-col w-full">
 					<div class="flex items-center">
 						<input
-							class="text-2xl font-semibold w-full bg-transparent outline-hidden"
+							class="text-2xl font-medium w-full bg-transparent outline-hidden"
 							placeholder={$i18n.t('Title')}
 							bind:value={title}
 							required
@@ -153,7 +153,7 @@
 				<div>
 					<Textarea
 						className="text-sm w-full bg-transparent outline-hidden overflow-y-hidden resize-none"
-						placeholder={$i18n.t('Write a summary in 50 words that summarizes [topic or keyword].')}
+						placeholder={$i18n.t('Write a summary in 50 words that summarizes {{topic}}.')}
 						bind:value={content}
 						rows={6}
 						required
@@ -181,7 +181,7 @@
 
 		<div class="my-4 flex justify-end pb-20">
 			<button
-				class=" text-sm w-full lg:w-fit px-4 py-2 transition rounded-lg {loading
+				class=" text-sm w-full lg:w-fit px-4 py-2 transition rounded-xl {loading
 					? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'
 					: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
 				type="submit"

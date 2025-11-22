@@ -2,6 +2,7 @@
 	import { io } from 'socket.io-client';
 	import { spring } from 'svelte/motion';
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
+	import { Toaster, toast } from 'svelte-sonner';
 
 	let loadingProgress = spring(0, {
 		stiffness: 0.05
@@ -14,6 +15,7 @@
 		settings,
 		theme,
 		WEBUI_NAME,
+		WEBUI_VERSION,
 		mobile,
 		socket,
 		chatId,
@@ -29,26 +31,25 @@
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { Toaster, toast } from 'svelte-sonner';
+	import { beforeNavigate } from '$app/navigation';
+	import { updated } from '$app/state';
 
-	import { executeToolServer, getBackendConfig } from '$lib/apis';
-	import { getSessionUser, userSignOut } from '$lib/apis/auths';
+	import i18n, { initI18n, getLanguages, changeLanguage } from '$lib/i18n';
 
 	import '../tailwind.css';
 	import '../app.css';
-
 	import 'tippy.js/dist/tippy.css';
 
-	import { WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
-	import i18n, { initI18n, getLanguages, changeLanguage } from '$lib/i18n';
-	import { bestMatchingLanguage } from '$lib/utils';
+	import { executeToolServer, getBackendConfig, getVersion } from '$lib/apis';
+	import { getSessionUser, userSignOut } from '$lib/apis/auths';
 	import { getAllTags, getChatList } from '$lib/apis/chats';
-	import NotificationToast from '$lib/components/NotificationToast.svelte';
-	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
 	import { chatCompletion } from '$lib/apis/openai';
 
-	import { beforeNavigate } from '$app/navigation';
-	import { updated } from '$app/state';
+	import { WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
+	import { bestMatchingLanguage } from '$lib/utils';
+
+	import NotificationToast from '$lib/components/NotificationToast.svelte';
+	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	// handle frontend updates (https://svelte.dev/docs/kit/configuration#version)
@@ -79,15 +80,25 @@
 			transports: enableWebsocket ? ['websocket'] : ['polling', 'websocket'],
 			auth: { token: localStorage.token }
 		});
-
 		await socket.set(_socket);
 
 		_socket.on('connect_error', (err) => {
 			console.log('connect_error', err);
 		});
 
-		_socket.on('connect', () => {
+		_socket.on('connect', async () => {
 			console.log('connected', _socket.id);
+			const version = await getVersion(localStorage.token);
+			if (version !== null) {
+				if ($WEBUI_VERSION !== null && version !== $WEBUI_VERSION) {
+					location.href = location.href;
+				} else {
+					WEBUI_VERSION.set(version);
+				}
+			}
+
+			console.log('version', version);
+
 			if (localStorage.getItem('token')) {
 				// Emit user-join event with auth token
 				_socket.emit('user-join', { auth: { token: localStorage.token } });

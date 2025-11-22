@@ -112,19 +112,17 @@
 	}}
 />
 
-{#key selectedUser}
-	<EditUserModal
-		bind:show={showEditUserModal}
-		{selectedUser}
-		sessionUser={$user}
-		on:save={async () => {
-			getUserList();
-		}}
-	/>
-{/key}
-
 <AddUserModal
 	bind:show={showAddUserModal}
+	on:save={async () => {
+		getUserList();
+	}}
+/>
+
+<EditUserModal
+	bind:show={showEditUserModal}
+	{selectedUser}
+	sessionUser={$user}
 	on:save={async () => {
 		getUserList();
 	}}

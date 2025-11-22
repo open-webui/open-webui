@@ -16,7 +16,7 @@
 	import {
 		createNewModel,
 		deleteModelById,
-		getModels as getWorkspaceModels,
+		getModelItems as getWorkspaceModels,
 		toggleModelById,
 		updateModelById
 	} from '$lib/apis/models';
@@ -411,7 +411,9 @@
 		{#if (filteredModels ?? []).length !== 0}
 			<div class=" px-3 my-2 gap-1 lg:gap-2 grid lg:grid-cols-2" id="model-list">
 				{#each filteredModels as model (model.id)}
-					<button
+					<!-- svelte-ignore a11y_no_static_element_interactions -->
+					<!-- svelte-ignore a11y_click_events_have_key_events -->
+					<div
 						class="  flex cursor-pointer dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl w-full p-2.5"
 						id="model-item-{model.id}"
 						on:click={() => {
@@ -498,6 +500,11 @@
 																<ModelMenu
 																	user={$user}
 																	{model}
+																	editHandler={() => {
+																		goto(
+																			`/workspace/models/edit?id=${encodeURIComponent(model.id)}`
+																		);
+																	}}
 																	shareHandler={() => {
 																		shareModelHandler(model);
 																	}}
@@ -593,7 +600,7 @@
 								</div>
 							</div>
 						</div>
-					</button>
+					</div>
 				{/each}
 			</div>
 		{:else}
