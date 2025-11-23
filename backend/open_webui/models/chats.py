@@ -127,6 +127,43 @@ class ChatTitleIdResponse(BaseModel):
 
 
 class ChatTable:
+    def _clean_null_bytes(self, obj):
+        """
+        Recursively remove actual null bytes (\x00) and unicode escape \\u0000
+        from strings inside dict/list structures.
+        Safe for JSON objects.
+        """
+        if isinstance(obj, str):
+            return obj.replace("\x00", "").replace("\u0000", "")
+        elif isinstance(obj, dict):
+            return {k: self._clean_null_bytes(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._clean_null_bytes(v) for v in obj]
+        return obj
+
+    def _sanitize_chat_row(self, chat_item):
+        """
+        Clean a Chat SQLAlchemy model's title + chat JSON,
+        and return True if anything changed.
+        """
+        changed = False
+
+        # Clean title
+        if chat_item.title:
+            cleaned = self._clean_null_bytes(chat_item.title)
+            if cleaned != chat_item.title:
+                chat_item.title = cleaned
+                changed = True
+
+        # Clean JSON
+        if chat_item.chat:
+            cleaned = self._clean_null_bytes(chat_item.chat)
+            if cleaned != chat_item.chat:
+                chat_item.chat = cleaned
+                changed = True
+
+        return changed
+
     def insert_new_chat(self, user_id: str, form_data: ChatForm) -> Optional[ChatModel]:
         with get_db() as db:
             id = str(uuid.uuid4())
@@ -134,23 +171,23 @@ class ChatTable:
                 **{
                     "id": id,
                     "user_id": user_id,
-                    "title": (
+                    "title": self._clean_null_bytes(
                         form_data.chat["title"]
                         if "title" in form_data.chat
                         else "New Chat"
                     ),
-                    "chat": form_data.chat,
+                    "chat": self._clean_null_bytes(form_data.chat),
                     "folder_id": form_data.folder_id,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                 }
             )
 
-            result = Chat(**chat.model_dump())
-            db.add(result)
+            chat_item = Chat(**chat.model_dump())
+            db.add(chat_item)
             db.commit()
-            db.refresh(result)
-            return ChatModel.model_validate(result) if result else None
+            db.refresh(chat_item)
+            return ChatModel.model_validate(chat_item) if chat_item else None
 
     def _chat_import_form_to_chat_model(
         self, user_id: str, form_data: ChatImportForm
@@ -160,10 +197,10 @@ class ChatTable:
             **{
                 "id": id,
                 "user_id": user_id,
-                "title": (
+                "title": self._clean_null_bytes(
                     form_data.chat["title"] if "title" in form_data.chat else "New Chat"
                 ),
-                "chat": form_data.chat,
+                "chat": self._clean_null_bytes(form_data.chat),
                 "meta": form_data.meta,
                 "pinned": form_data.pinned,
                 "folder_id": form_data.folder_id,
@@ -195,9 +232,15 @@ class ChatTable:
         try:
             with get_db() as db:
                 chat_item = db.get(Chat, id)
-                chat_item.chat = chat
-                chat_item.title = chat["title"] if "title" in chat else "New Chat"
+                chat_item.chat = self._clean_null_bytes(chat)
+                chat_item.title = (
+                    self._clean_null_bytes(chat["title"])
+                    if "title" in chat
+                    else "New Chat"
+                )
+
                 chat_item.updated_at = int(time.time())
+
                 db.commit()
                 db.refresh(chat_item)
 
@@ -588,8 +631,15 @@ class ChatTable:
     def get_chat_by_id(self, id: str) -> Optional[ChatModel]:
         try:
             with get_db() as db:
-                chat = db.get(Chat, id)
-                return ChatModel.model_validate(chat)
+                chat_item = db.get(Chat, id)
+                if chat_item is None:
+                    return None
+
+                if self._sanitize_chat_row(chat_item):
+                    db.commit()
+                    db.refresh(chat_item)
+
+                return ChatModel.model_validate(chat_item)
         except Exception:
             return None
 
