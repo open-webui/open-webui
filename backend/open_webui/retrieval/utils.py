@@ -813,7 +813,7 @@ def get_embedding_function(
             azure_api_version=azure_api_version,
         )
 
-        async def async_embedding_function(query, prefix, user):
+        async def async_embedding_function(query, prefix=None, user=None):
             if isinstance(query, list):
                 # Create batches
                 batches = [
