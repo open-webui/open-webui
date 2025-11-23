@@ -2052,31 +2052,36 @@
 		].filter((message) => message);
 
 		messages = messages
-			.map((message, idx, arr) => ({
-				role: message.role,
-				...(message.files?.filter((file) => file.type === 'image').length > 0 &&
-				message.role === 'user' &&
-				(model?.info?.meta?.capabilities?.vision ?? true)
-					? {
-							content: [
-								{
-									type: 'text',
-									text: message?.merged?.content ?? message.content
-								},
-								...message.files
-									.filter((file) => file.type === 'image')
-									.map((file) => ({
-										type: 'image_url',
-										image_url: {
-											url: file.url
-										}
-									}))
-							]
-						}
-					: {
-							content: message?.merged?.content ?? message.content
-						})
-			}))
+			.map((message, idx, arr) => {
+				const hasImages = message.files?.some((file) => file.type === 'image');
+				const isUser = message.role === 'user';
+				const modelSupportsVision = model?.info?.meta?.capabilities?.vision ?? true;
+
+				if (hasImages && isUser && modelSupportsVision) {
+					return {
+						role: message.role,
+						content: [
+							{
+								type: 'text',
+								text: message?.merged?.content ?? message.content
+							},
+							...message.files
+								.filter((file) => file.type === 'image')
+								.map((file) => ({
+									type: 'image_url',
+									image_url: {
+										url: file.url
+									}
+								}))
+						]
+					};
+				}
+
+				return {
+					role: message.role,
+					content: message?.merged?.content ?? message.content
+				};
+			})
 			.filter((message) => message?.role === 'user' || message?.content?.trim());
 
 		const toolIds = [];
