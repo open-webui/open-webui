@@ -102,6 +102,7 @@
 	$: visionPreprocessorModels = $models.filter((m) => m.info?.meta?.capabilities?.vision ?? true);
 	let vision_preprocessor_model_id = '';
 	let vision_preprocessor_prompt = '';
+	let visionPlaceholder = `e.g. 'Extract all text via OCR and describe image relevant to user query: {query}'`;
 	let defaultFeatureIds = [];
 
 	let actionIds = [];
@@ -814,7 +815,7 @@
 								<label class="block text-xs font-semibold mb-1">Custom Prompt Template</label>
 								<Textarea
 									className="text-sm w-full bg-transparent outline-hidden resize-none"
-									placeholder="e.g. Perform OCR on image and describe relevant to user query: {query}"
+									placeholder={visionPlaceholder}
 									bind:value={vision_preprocessor_prompt}
 									rows={4}
 								/>
