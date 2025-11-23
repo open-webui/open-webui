@@ -68,6 +68,9 @@
 			description: string;
 			urls?: string[];
 			query?: string;
+			vision_prompt?: string;
+			vision_response?: string;
+			error?: string;
 		}[];
 		status?: {
 			done: boolean;

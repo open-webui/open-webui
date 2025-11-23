@@ -15,6 +15,7 @@
 	import Markdown from './Markdown.svelte';
 	import Image from '$lib/components/common/Image.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import StatusHistory from '../ResponseMessage/StatusHistory.svelte';
 
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
@@ -210,6 +211,10 @@
 						{/each}
 					</div>
 				{/if}
+
+				{#if message.statusHistory?.length > 0}
+					<StatusHistory statusHistory={message.statusHistory} expand={false} />
+				{/if>
 			{/if}
 
 			{#if edit === true}
