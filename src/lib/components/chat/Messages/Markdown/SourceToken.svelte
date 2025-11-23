@@ -8,6 +8,7 @@
 	export let onClick: Function = () => {};
 
 	let containerElement;
+	let openPreview = false;
 
 	// Helper function to return only the domain from a URL
 	function getDomain(url: string): string {
@@ -40,10 +41,13 @@
 {#if (token?.ids ?? []).length == 1}
 	<Source id={token.ids[0] - 1} title={sourceIds[token.ids[0] - 1]} {onClick} />
 {:else}
-	<LinkPreview.Root openDelay={0}>
+	<LinkPreview.Root openDelay={0} bind:open={openPreview}>
 		<LinkPreview.Trigger>
 			<button
 				class="text-[10px] w-fit translate-y-[2px] px-2 py-0.5 dark:bg-white/5 dark:text-white/80 dark:hover:text-white bg-gray-50 text-black/80 hover:text-black transition rounded-xl"
+				on:click={() => {
+					openPreview = !openPreview;
+				}}
 			>
 				<span class="line-clamp-1">
 					{getDisplayTitle(formattedTitle(decodeURIComponent(sourceIds[token.ids[0] - 1])))}
