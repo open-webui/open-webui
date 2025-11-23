@@ -1792,7 +1792,10 @@
 						message.files?.some((file) => file.type === 'image')
 					);
 
-					if (hasImages && !(model.info?.meta?.capabilities?.vision ?? true)) {
+					const hasNativeVision = model.info?.meta?.capabilities?.vision ?? true;
+					const hasPreprocessor = !!model.info?.meta?.vision_preprocessor_model_id;
+
+					if (hasImages && !hasNativeVision && !hasPreprocessor) {
 						toast.error(
 							$i18n.t('Model {{modelName}} is not vision capable', {
 								modelName: model.name ?? model.id
@@ -1802,6 +1805,75 @@
 
 					let responseMessageId =
 						responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`];
+
+					if (hasImages && !hasNativeVision && hasPreprocessor) {
+						const preprocessorId = model.info.meta.vision_preprocessor_model_id;
+						const preprocessorModel = $models.find((m) => m.id === preprocessorId);
+						if (!preprocessorModel) {
+							toast.error(`Vision preprocessor model not found: ${preprocessorId}`);
+						} else {
+							const userMessage = _history.messages[parentId];
+							const userContent = userMessage.content;
+							const userImages = userMessage.files?.filter((f) => f.type === 'image') || [];
+
+							const visionPrompt = (model.info.meta.vision_preprocessor_prompt || 'Perform OCR on this image and describe its contents in the context of the user query: {query}').replace('{query}', userContent);
+							const visionMessages = [
+								{ role: 'system', content: visionPrompt },
+								{
+									role: 'user',
+									content: [
+										{ type: 'text', text: userContent },
+										...userImages.map((f) => ({
+											type: 'image_url',
+											image_url: { url: f.url }
+										}))
+									]
+								}
+							];
+
+							try {
+								const visionRes = await generateOpenAIChatCompletion(
+									localStorage.token,
+									{
+										model: preprocessorModel.id,
+										messages: visionMessages,
+										stream: false,
+										params: { max_tokens: 2048 }
+									},
+									`${WEBUI_BASE_URL}/api`
+								);
+
+								const visionResponse = visionRes.choices[0].message.content;
+
+								// Create intermediate vision message
+								const visionMsgId = uuidv4();
+								const visionMsg = {
+									id: visionMsgId,
+									parentId: parentId,
+									role: 'assistant',
+									content: visionResponse,
+									vision_system_prompt: visionPrompt,
+									model: preprocessorModel.id,
+									modelName: preprocessorModel.name ?? preprocessorModel.id,
+									modelIdx: -1,
+									type: 'vision_preprocessor',
+									status: 'intermediate',
+									timestamp: Math.floor(Date.now() / 1000)
+								};
+								_history.messages[visionMsgId] = visionMsg;
+								userMessage.childrenIds.push(visionMsgId);
+
+								// Append to user content for main model
+								userMessage.content += `\n\n[Vision Analysis: ${visionResponse.slice(0, 500)}...]`;
+								userMessage.vision_processed = true;
+								_history.messages[parentId] = userMessage;
+							} catch (visionError) {
+								console.error('Vision preprocessing failed:', visionError);
+								toast.error('Vision preprocessing failed. Sending without analysis.');
+							}
+						}
+					}
+
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 
 					scrollToBottom();
@@ -1932,8 +2004,7 @@
 		messages = messages
 			.map((message, idx, arr) => ({
 				role: message.role,
-				...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
-				message.role === 'user'
+							...(message.files?.filter((file) => file.type === 'image').length > 0 && message.role === 'user' && !(message.vision_processed ?? false)
 					? {
 							content: [
 								{

@@ -484,6 +484,12 @@
 		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision ?? true
 	);
 
+	let effectiveVisionCapableModels = [];
+	$: effectiveVisionCapableModels = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter((modelId) => {
+		const model = $models.find((m) => m.id === modelId);
+		return (model?.info?.meta?.capabilities?.vision ?? true) || model?.info?.meta?.vision_preprocessor_model_id;
+	});
+
 	let fileUploadCapableModels = [];
 	$: fileUploadCapableModels = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter(
 		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.file_upload ?? true
@@ -731,7 +737,7 @@
 			}
 
 			if (file['type'].startsWith('image/')) {
-				if (visionCapableModels.length === 0) {
+				if (effectiveVisionCapableModels.length === 0) {
 					toast.error($i18n.t('Selected model(s) do not support image inputs'));
 					return;
 				}
@@ -1168,14 +1174,14 @@
 															alt=""
 															imageClassName=" size-10 rounded-xl object-cover"
 														/>
-														{#if atSelectedModel ? visionCapableModels.length === 0 : selectedModels.length !== visionCapableModels.length}
+														{#if atSelectedModel ? effectiveVisionCapableModels.length === 0 : selectedModels.length !== effectiveVisionCapableModels.length}
 															<Tooltip
 																className=" absolute top-1 left-1"
-																content={$i18n.t('{{ models }}', {
+																content={$i18n.t('Models without native vision (using preprocessor): {{ models }}', {
 																	models: [
 																		...(atSelectedModel ? [atSelectedModel] : selectedModels)
 																	]
-																		.filter((id) => !visionCapableModels.includes(id))
+																		.filter((id) => !effectiveVisionCapableModels.includes(id))
 																		.join(', ')
 																})}
 															>

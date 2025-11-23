@@ -98,6 +98,10 @@
 		status_updates: true,
 		usage: undefined
 	};
+	let visionPreprocessorModels = [];
+	$: visionPreprocessorModels = $models.filter((m) => m.info?.meta?.capabilities?.vision ?? true);
+	let vision_preprocessor_model_id = '';
+	let vision_preprocessor_prompt = '';
 	let defaultFeatureIds = [];
 
 	let actionIds = [];
@@ -147,6 +151,17 @@
 
 		info.access_control = accessControl;
 		info.meta.capabilities = capabilities;
+
+		if (vision_preprocessor_model_id) {
+			info.meta.vision_preprocessor_model_id = vision_preprocessor_model_id;
+		} else {
+			delete info.meta.vision_preprocessor_model_id;
+		}
+		if (vision_preprocessor_prompt?.trim()) {
+			info.meta.vision_preprocessor_prompt = vision_preprocessor_prompt.trim();
+		} else {
+			delete info.meta.vision_preprocessor_prompt;
+		}
 
 		if (enableDescription) {
 			info.meta.description = info.meta.description.trim() === '' ? null : info.meta.description;
@@ -284,6 +299,9 @@
 
 			capabilities = { ...capabilities, ...(model?.meta?.capabilities ?? {}) };
 			defaultFeatureIds = model?.meta?.defaultFeatureIds ?? [];
+			vision_preprocessor_model_id = model?.meta?.vision_preprocessor_model_id ?? '';
+			vision_preprocessor_prompt = model?.meta?.vision_preprocessor_prompt ?? 'Perform OCR on this image and describe its contents in the context of the user query: {query}';
+			capabilities = capabilities;
 
 			if ('access_control' in model) {
 				accessControl = model.access_control;
@@ -779,6 +797,30 @@
 					<div class="my-2">
 						<Capabilities bind:capabilities />
 					</div>
+
+					{#if !capabilities.vision}
+						<div class="my-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-950">
+							<h3 class="text-sm font-semibold mb-3">Vision Preprocessor (for image inputs)</h3>
+							<div class="mb-3">
+								<label class="block text-xs font-semibold mb-1">Preprocessor Model</label>
+								<select bind:value={vision_preprocessor_model_id} class="text-sm w-full bg-transparent outline-hidden border rounded px-3 py-2">
+									<option value="">Select a vision model</option>
+									{#each visionPreprocessorModels as m}
+										<option value={m.id}>{m.name}</option>
+									{/each}
+								</select>
+							</div>
+							<div>
+								<label class="block text-xs font-semibold mb-1">Custom Prompt Template</label>
+								<Textarea
+									className="text-sm w-full bg-transparent outline-hidden resize-none"
+									placeholder="e.g. 'Extract all text via OCR and describe image relevant to query: {query}'"
+									bind:value={vision_preprocessor_prompt}
+									rows={4}
+								/>
+							</div>
+						</div>
+					{/if}
 
 					{#if Object.keys(capabilities).filter((key) => capabilities[key]).length > 0}
 						{@const availableFeatures = Object.entries(capabilities)
