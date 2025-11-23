@@ -892,7 +892,7 @@ async def delete_model(
 
         r = requests.request(
             method="POST",
-            url=f"{url}/api/copy",
+            url=f"{url}/api/delete",
             headers=headers,
             data=form_data.model_dump_json(exclude_none=True).encode(),
         )
@@ -952,7 +952,7 @@ async def show_model_info(
 
         r = requests.request(
             method="POST",
-            url=f"{url}/api/copy",
+            url=f"{url}/api/show",
             headers=headers,
             data=form_data.model_dump_json(exclude_none=True).encode(),
         )
@@ -1038,7 +1038,7 @@ async def embed(
 
         r = requests.request(
             method="POST",
-            url=f"{url}/api/copy",
+            url=f"{url}/api/embed",
             headers=headers,
             data=form_data.model_dump_json(exclude_none=True).encode(),
         )
@@ -1120,7 +1120,7 @@ async def embeddings(
 
         r = requests.request(
             method="POST",
-            url=f"{url}/api/copy",
+            url=f"{url}/api/embeddings",
             headers=headers,
             data=form_data.model_dump_json(exclude_none=True).encode(),
         )
