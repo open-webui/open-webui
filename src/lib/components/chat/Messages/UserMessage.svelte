@@ -190,9 +190,6 @@
 		{/if}
 
 		<div class="chat-{message.role} w-full min-w-full markdown-prose">
-			{#if message.statusHistory?.length > 0}
-				<StatusHistory statusHistory={message.statusHistory} expand={false} />
-			{/if}
 			{#if edit !== true}
 				{#if message.files}
 					<div class="mb-1 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap">
