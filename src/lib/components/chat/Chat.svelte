@@ -2054,7 +2054,9 @@
 		messages = messages
 			.map((message, idx, arr) => ({
 				role: message.role,
-							...(message.files?.filter((file) => file.type === 'image').length > 0 && message.role === 'user' && !(message.vision_processed ?? false)
+				...(message.files?.filter((file) => file.type === 'image').length > 0 &&
+				message.role === 'user' &&
+				(model?.info?.meta?.capabilities?.vision ?? true)
 					? {
 							content: [
 								{
