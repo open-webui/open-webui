@@ -1726,6 +1726,20 @@
 		let _chatId = JSON.parse(JSON.stringify($chatId));
 		_history = JSON.parse(JSON.stringify(_history));
 
+		const syncHistorySnapshot = () => {
+			history = JSON.parse(JSON.stringify(_history));
+		};
+		syncHistorySnapshot();
+
+		const mirrorHistoryMessage = (messageId) => {
+			const nextMessage = _history.messages[messageId];
+			if (!nextMessage) {
+				return;
+			}
+			history.messages[messageId] = JSON.parse(JSON.stringify(nextMessage));
+			history = { ...history };
+		};
+
 		const responseMessageIds: Record<PropertyKey, string> = {};
 		// If modelId is provided, use it, else use selected model
 		let selectedModelIds = modelId
