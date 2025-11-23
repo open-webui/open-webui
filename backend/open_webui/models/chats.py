@@ -1142,6 +1142,20 @@ class ChatTable:
         except Exception:
             return False
 
+    def move_chats_by_user_id_and_folder_id(
+        self, user_id: str, folder_id: str, new_folder_id: Optional[str]
+    ) -> bool:
+        try:
+            with get_db() as db:
+                db.query(Chat).filter_by(user_id=user_id, folder_id=folder_id).update(
+                    {"folder_id": new_folder_id}
+                )
+                db.commit()
+
+                return True
+        except Exception:
+            return False
+
     def delete_shared_chats_by_user_id(self, user_id: str) -> bool:
         try:
             with get_db() as db:
