@@ -1839,7 +1839,10 @@
 							const userContent = userMessage.content;
 							const userImages = userMessage.files?.filter((f) => f.type === 'image') || [];
 
-							const visionPrompt = (model.info.meta.vision_preprocessor_prompt || 'Perform OCR on this image and describe its contents in the context of the user query: {query}').replace('{query}', userContent);
+							const visionPrompt = (
+								model.info.meta.vision_preprocessor_prompt ||
+								'Perform OCR on this image and describe its contents in the context of the user query: {query}'
+							).replace('{query}', userContent);
 							const visionMessages = [
 								{ role: 'system', content: visionPrompt },
 								{
@@ -1895,23 +1898,22 @@
 								// Append FULL analysis to user content
 								userMessage.content += `\n\n[Vision Analysis:\n${visionResponse}\n]`;
 								userMessage.vision_processed = true;
-// STRIP IMAGES FROM FILES (persistent fix)
-userMessage.files = userMessage.files?.filter((f) => f.type !== 'image') || [];
+								// STRIP IMAGES FROM FILES (persistent fix)
+								userMessage.files = userMessage.files?.filter((f) => f.type !== 'image') || [];
 
-_history.messages[parentId] = userMessage;
-history.messages[parentId] = userMessage;
-} catch (visionError) {
-console.error('Vision preprocessing failed:', visionError);
-toast.error('Vision preprocessing failed. Sending without analysis.');
-userMessage.statusHistory.push({
-	done: true,
-	action: '🖼️❌',
-	description: 'Vision preprocessing failed (text-only mode)'
-});
-userMessage.vision_processed = false; // Don't strip if failed
-_history.messages[parentId] = userMessage;
-history.messages[parentId] = userMessage;
-}
+								_history.messages[parentId] = userMessage;
+								history.messages[parentId] = userMessage;
+							} catch (visionError) {
+								console.error('Vision preprocessing failed:', visionError);
+								toast.error('Vision preprocessing failed. Sending without analysis.');
+								userMessage.statusHistory.push({
+									done: true,
+									action: '🖼️❌',
+									description: 'Vision preprocessing failed (text-only mode)'
+								});
+								userMessage.vision_processed = false; // Don't strip if failed
+								_history.messages[parentId] = userMessage;
+								history.messages[parentId] = userMessage;
 							}
 						}
 					}
