@@ -884,7 +884,7 @@
 	"Include `--api-auth` flag when running stable-diffusion-webui": "Incluir el señalizador `--api-auth` al ejecutar stable-diffusion-webui",
 	"Include `--api` flag when running stable-diffusion-webui": "Incluir el señalizador `--api` al ejecutar stable-diffusion-webui",
 	"Includes SharePoint": "Incluye SharePoint",
-	"Increase UI Scale": "Disminuir Escala de la IU",
+	"Increase UI Scale": "Aumentar Escala de la IU",
 	"Influences how quickly the algorithm responds to feedback from the generated text. A lower learning rate will result in slower adjustments, while a higher learning rate will make the algorithm more responsive.": "Influye en la rápidez de respuesta a la realimentación desde el texto generado. Una tasa de aprendizaje más baja resulta en un ajustado más lento, mientras que una tasa de aprendizaje más alta hará que el algoritmo sea más reactivo.",
 	"Info": "Información",
 	"Initials": "Iniciales",
