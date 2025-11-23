@@ -100,6 +100,7 @@
 		<div class="flex-1">
 			<button
 				class="text-xs bg-transparent hover:underline cursor-pointer"
+				type="button"
 				on:click={() => onDelete()}
 			>
 				{$i18n.t('Delete')}
