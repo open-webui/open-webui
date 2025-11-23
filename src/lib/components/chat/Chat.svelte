@@ -1827,93 +1827,99 @@
 							toast.error(`Vision preprocessor model not found: ${preprocessorId}`);
 						} else {
 							const userMessage = _history.messages[parentId];
-							userMessage.statusHistory = userMessage.statusHistory || [];
-							userMessage.statusHistory.push({
-								done: false,
-								action: '🖼️',
-								description: 'Preprocessing images with vision model...'
-							});
-							_history.messages[parentId] = userMessage;
-							history.messages[parentId] = userMessage;
-
-							const userContent = userMessage.content;
 							const userImages = userMessage.files?.filter((f) => f.type === 'image') || [];
 
-							const visionPrompt = (
-								model.info.meta.vision_preprocessor_prompt ||
-								'Perform OCR on this image and describe its contents in the context of the user query: {query}'
-							).replace('{query}', userContent);
-							const visionMessages = [
-								{ role: 'system', content: visionPrompt },
-								{
-									role: 'user',
-									content: [
-										{ type: 'text', text: userContent },
-										...userImages.map((f) => ({
-											type: 'image_url',
-											image_url: { url: f.url }
-										}))
-									]
-								}
-							];
-
-							try {
-								const visionRes = await generateOpenAIChatCompletion(
-									localStorage.token,
-									{
-										model: preprocessorModel.id,
-										messages: visionMessages,
-										stream: false,
-										params: { max_tokens: 2048 }
-									},
-									`${WEBUI_BASE_URL}/api`
-								);
-
-								const visionResponse = visionRes.choices[0].message.content;
-
+							if (userImages.length > 0) {
+								userMessage.statusHistory = userMessage.statusHistory || [];
 								userMessage.statusHistory.push({
-									done: true,
+									done: false,
 									action: '🖼️',
-									description: 'Vision analysis complete',
-									vision_prompt: visionPrompt,
-									vision_response: visionResponse
+									description: 'Preprocessing images with vision model...'
 								});
-
-								// Create intermediate vision message (optional, for UI)
-								const visionMsgId = uuidv4();
-								const visionMsg = {
-									id: visionMsgId,
-									parentId: parentId,
-									role: 'assistant',
-									content: visionResponse,
-									model: preprocessorModel.id,
-									modelName: preprocessorModel.name ?? preprocessorModel.id,
-									modelIdx: -1,
-									type: 'vision_preprocessor',
-									timestamp: Math.floor(Date.now() / 1000)
-								};
-								_history.messages[visionMsgId] = visionMsg;
-								userMessage.childrenIds.push(visionMsgId);
-
-								// Append FULL analysis to user content
-								userMessage.content += `\n\n[Vision Analysis:\n${visionResponse}\n]`;
-								userMessage.vision_processed = true;
-								// STRIP IMAGES FROM FILES (persistent fix)
-								userMessage.files = userMessage.files?.filter((f) => f.type !== 'image') || [];
-
 								_history.messages[parentId] = userMessage;
 								history.messages[parentId] = userMessage;
-							} catch (visionError) {
-								console.error('Vision preprocessing failed:', visionError);
-								toast.error('Vision preprocessing failed. Sending without analysis.');
-								userMessage.statusHistory.push({
-									done: true,
-									action: '🖼️❌',
-									description: 'Vision preprocessing failed (text-only mode)'
-								});
-								userMessage.vision_processed = false; // Don't strip if failed
-								_history.messages[parentId] = userMessage;
-								history.messages[parentId] = userMessage;
+								history = { ...history };
+
+								const userContent = userMessage.content;
+
+								const visionPrompt = (
+									model.info.meta.vision_preprocessor_prompt ||
+									'Perform OCR on this image and describe its contents in the context of the user query: {query}'
+								).replace('{query}', userContent);
+								const visionMessages = [
+									{ role: 'system', content: visionPrompt },
+									{
+										role: 'user',
+										content: [
+											{ type: 'text', text: userContent },
+											...userImages.map((f) => ({
+												type: 'image_url',
+												image_url: { url: f.url }
+											}))
+										]
+									}
+								];
+
+								try {
+									const visionRes = await generateOpenAIChatCompletion(
+										localStorage.token,
+										{
+											model: preprocessorModel.id,
+											messages: visionMessages,
+											stream: false,
+											params: { max_tokens: 2048 }
+										},
+										`${WEBUI_BASE_URL}/api`
+									);
+
+									const visionResponse = visionRes.choices[0].message.content;
+
+									userMessage.statusHistory.push({
+										done: true,
+										action: '🖼️',
+										description: 'Vision analysis complete',
+										vision_prompt: visionPrompt,
+										vision_response: visionResponse
+									});
+
+									// Create intermediate vision message (optional, for UI)
+									const visionMsgId = uuidv4();
+									const visionMsg = {
+										id: visionMsgId,
+										parentId: parentId,
+										role: 'assistant',
+										content: visionResponse,
+										model: preprocessorModel.id,
+										modelName: preprocessorModel.name ?? preprocessorModel.id,
+										modelIdx: -1,
+										type: 'vision_preprocessor',
+										timestamp: Math.floor(Date.now() / 1000)
+									};
+									_history.messages[visionMsgId] = visionMsg;
+									userMessage.childrenIds.push(visionMsgId);
+
+									// Append FULL analysis to user content
+									userMessage.content += `\n\n[Vision Analysis:\n${visionResponse}\n]`;
+									userMessage.vision_processed = true;
+
+									_history.messages[parentId] = userMessage;
+									history.messages[parentId] = userMessage;
+									history = { ...history };
+
+									await saveChatHandler(_chatId, _history);
+								} catch (visionError) {
+									console.error('Vision preprocessing failed:', visionError);
+									toast.error('Vision preprocessing failed. Sending without analysis.');
+									userMessage.statusHistory.push({
+										done: true,
+										action: '🖼️❌',
+										description: 'Vision preprocessing failed (text-only mode)'
+									});
+									userMessage.vision_processed = false; // Don't strip if failed
+									_history.messages[parentId] = userMessage;
+									history.messages[parentId] = userMessage;
+									history = { ...history };
+								}
 							}
 						}
 					}
