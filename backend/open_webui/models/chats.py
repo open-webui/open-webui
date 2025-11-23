@@ -26,7 +26,7 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 class Chat(Base):
     __tablename__ = "chat"
 
-    id = Column(String, primary_key=True)
+    id = Column(String, primary_key=True, unique=True)
     user_id = Column(String)
     title = Column(Text)
     chat = Column(JSON)
@@ -794,25 +794,30 @@ class ChatTable:
             elif dialect_name == "postgresql":
                 # PostgreSQL doesn't allow null bytes in text. We filter those out by checking
                 # the JSON representation for \u0000 before attempting text extraction
+
+                # Safety filter: JSON field must not contain \u0000
+                query = query.filter(text("Chat.chat::text NOT LIKE '%\\\\u0000%'"))
+
+                # Safety filter: title must not contain actual null bytes
+                query = query.filter(text("Chat.title::text NOT LIKE '%\\x00%'"))
+
                 postgres_content_sql = """
-                    EXISTS (
-                        SELECT 1 
-                        FROM json_array_elements(Chat.chat->'messages') AS message 
-                        WHERE message->>'content' IS NOT NULL 
-                        AND LOWER(replace(message->>'content', E'\\x00', '')) LIKE '%' || :content_key || '%'
-                    )
-                    """
-                postgres_content_clause = text(postgres_content_sql)
-                # Also filter out chats with null bytes in title
-                query = query.filter(
-                    text("replace(Chat.title, E'\\x00', '') ILIKE :title_key")
+                EXISTS (
+                    SELECT 1
+                    FROM json_array_elements(Chat.chat->'messages') AS message
+                    WHERE json_typeof(message->'content') = 'string'
+                    AND LOWER(message->>'content') LIKE '%' || :content_key || '%'
                 )
+                """
+
+                postgres_content_clause = text(postgres_content_sql)
+
                 query = query.filter(
                     or_(
                         Chat.title.ilike(bindparam("title_key")),
                         postgres_content_clause,
-                    ).params(title_key=f"%{search_text}%", content_key=search_text)
-                )
+                    )
+                ).params(title_key=f"%{search_text}%", content_key=search_text.lower())
 
                 # Check if there are any tags to filter, it should have all the tags
                 if "none" in tag_ids:

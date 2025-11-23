@@ -19,7 +19,7 @@ from sqlalchemy.sql import exists
 class Channel(Base):
     __tablename__ = "channel"
 
-    id = Column(Text, primary_key=True)
+    id = Column(Text, primary_key=True, unique=True)
     user_id = Column(Text)
     type = Column(Text, nullable=True)
 
