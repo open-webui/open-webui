@@ -1391,6 +1391,8 @@
 									</div>
 								</div>
 
+								<!-- ai-friend 	屏蔽语言更多/引用/对话/语音 -->
+								{#if false}
 								<div class=" flex justify-between mt-0.5 mb-2.5 mx-0.5 max-w-full" dir="ltr">
 									<div class="ml-1 self-end flex items-center flex-1 max-w-[80%]">
 										<InputMenu
@@ -1807,6 +1809,7 @@
 										{/if}
 									</div>
 								</div>
+								{/if}
 							</div>
 
 							{#if $config?.license_metadata?.input_footer}

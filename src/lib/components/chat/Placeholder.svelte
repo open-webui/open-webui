@@ -240,6 +240,8 @@
 		</div>
 	{:else}
 		<div class="mx-auto max-w-2xl font-primary mt-2" in:fade={{ duration: 200, delay: 200 }}>
+		<!-- ai-friend 	屏蔽建议 -->
+		{#if false} 
 			<div class="mx-5">
 				<Suggestions
 					suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
@@ -250,6 +252,7 @@
 					{onSelect}
 				/>
 			</div>
+		{/if}
 		</div>
 	{/if}
 </div>
