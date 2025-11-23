@@ -814,7 +814,7 @@
 								<label class="block text-xs font-semibold mb-1">Custom Prompt Template</label>
 								<Textarea
 									className="text-sm w-full bg-transparent outline-hidden resize-none"
-									placeholder="e.g. 'Extract all text via OCR and describe image relevant to query: {&#x27;query&#x27;}'"
+									placeholder="e.g. Perform OCR on image and describe relevant to user query: {query}"
 									bind:value={vision_preprocessor_prompt}
 									rows={4}
 								/>
