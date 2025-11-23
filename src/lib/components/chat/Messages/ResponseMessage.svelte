@@ -797,11 +797,11 @@
 									onTaskClick={async (e) => {
 										console.log(e);
 									}}
-									onSourceClick={async (id, idx) => {
-										console.log(id, idx);
+									onSourceClick={async (id) => {
+										console.log(id);
 
 										if (citationsElement) {
-											citationsElement?.showSourceModal(idx - 1);
+											citationsElement?.showSourceModal(id);
 										}
 									}}
 									onAddMessages={({ modelId, parentId, messages }) => {

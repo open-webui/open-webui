@@ -21,7 +21,6 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
 
-	import Source from './Source.svelte';
 	import HtmlToken from './HTMLToken.svelte';
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
 
@@ -29,6 +28,7 @@
 	export let tokens: Token[];
 	export let top = true;
 	export let attributes = {};
+	export let sourceIds = [];
 
 	export let done = true;
 
@@ -96,6 +96,7 @@
 				id={`${id}-${tokenIdx}-h`}
 				tokens={token.tokens}
 				{done}
+				{sourceIds}
 				{onSourceClick}
 			/>
 		</svelte:element>
@@ -147,6 +148,7 @@
 												id={`${id}-${tokenIdx}-header-${headerIdx}`}
 												tokens={header.tokens}
 												{done}
+												{sourceIds}
 												{onSourceClick}
 											/>
 										</div>
@@ -172,6 +174,7 @@
 												id={`${id}-${tokenIdx}-row-${rowIdx}-${cellIdx}`}
 												tokens={cell.tokens}
 												{done}
+												{sourceIds}
 												{onSourceClick}
 											/>
 										</div>
@@ -348,6 +351,7 @@
 				id={`${id}-${tokenIdx}-p`}
 				tokens={token.tokens ?? []}
 				{done}
+				{sourceIds}
 				{onSourceClick}
 			/>
 		</p>
@@ -359,6 +363,7 @@
 						id={`${id}-${tokenIdx}-t`}
 						tokens={token.tokens}
 						{done}
+						{sourceIds}
 						{onSourceClick}
 					/>
 				{:else}
@@ -370,6 +375,7 @@
 				id={`${id}-${tokenIdx}-p`}
 				tokens={token.tokens ?? []}
 				{done}
+				{sourceIds}
 				{onSourceClick}
 			/>
 		{:else}

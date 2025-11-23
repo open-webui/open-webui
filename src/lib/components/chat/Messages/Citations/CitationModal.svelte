@@ -169,7 +169,7 @@
 								></iframe>
 							{:else}
 								<pre class="text-sm dark:text-gray-400 whitespace-pre-line">
-                {document.document}
+                {document.document.trim()}
               </pre>
 							{/if}
 						</div>
