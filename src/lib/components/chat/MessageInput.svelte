@@ -58,6 +58,7 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import FileItem from '../common/FileItem.svelte';
 	import Image from '../common/Image.svelte';
+	import Switch from '../common/Switch.svelte';
 
 	import XMark from '../icons/XMark.svelte';
 	import Headphone from '../icons/Headphone.svelte';
@@ -108,6 +109,7 @@
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
+	export let memoryEnabled = false;
 
 	let showInputVariablesModal = false;
 	let inputVariablesModalCallback = (variableValues) => {};
@@ -138,7 +140,8 @@
 		selectedFilterIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
-		codeInterpreterEnabled
+		codeInterpreterEnabled,
+		memoryEnabled
 	});
 
 	const inputVariableHandler = async (text: string): Promise<string> => {
@@ -474,6 +477,9 @@
 			codeInterpreterCapableModels.length &&
 		$config?.features?.enable_code_interpreter &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
+
+	let showMemoryButton = false;
+	$: showMemoryButton = $settings?.memory !== undefined;
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
@@ -1330,6 +1336,7 @@
 																webSearchEnabled = false;
 																imageGenerationEnabled = false;
 																codeInterpreterEnabled = false;
+																memoryEnabled = false;
 															}
 														}}
 														on:paste={async (e) => {
@@ -1471,6 +1478,7 @@
 												bind:webSearchEnabled
 												bind:imageGenerationEnabled
 												bind:codeInterpreterEnabled
+												bind:memoryEnabled
 												closeOnOutsideClick={integrationsMenuCloseOnOutsideClick}
 												onShowValves={(e) => {
 													const { type, id } = e;
@@ -1493,6 +1501,23 @@
 													<Component className="size-4.5" strokeWidth="1.5" />
 												</div>
 											</IntegrationsMenu>
+										{/if}
+
+										{#if showMemoryButton}
+											<div
+												class="flex items-center gap-2 bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800 rounded-full px-2.5 py-1.5 transition"
+											>
+												<div class="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
+													<Sparkles className="size-4" strokeWidth="1.5" />
+													<span class="text-sm">{$i18n.t('Memory')}</span>
+												</div>
+												<Switch
+													bind:state={memoryEnabled}
+													on:change={async () => {
+														await tick();
+													}}
+												/>
+											</div>
 										{/if}
 
 										{#if selectedModelIds.length === 1 && $models.find((m) => m.id === selectedModelIds[0])?.has_user_valves}

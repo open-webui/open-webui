@@ -39,6 +39,7 @@
 	export let imageGenerationEnabled = false;
 	export let showCodeInterpreterButton = false;
 	export let codeInterpreterEnabled = false;
+	export let memoryEnabled = false;
 
 	export let onShowValves: Function;
 	export let onClose: Function;
