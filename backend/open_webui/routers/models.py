@@ -107,8 +107,9 @@ async def get_model_tags(user=Depends(get_verified_user)):
 
     tags_set = set()
     for model in models:
-        if model.meta and model.meta.get("tags"):
-            for tag in model.meta.get("tags"):
+        if model.meta:
+            meta = model.meta.model_dump()
+            for tag in meta.get("tags", []):
                 tags_set.add((tag.get("name")))
 
     tags = [tag for tag in tags_set]
