@@ -16,7 +16,6 @@ from urllib.parse import urlparse
 import aiohttp
 from aiocache import cached
 import requests
-from urllib.parse import quote
 
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.models.chats import Chats
@@ -891,7 +890,7 @@ async def delete_model(
             headers = include_user_info_headers(headers, user)
 
         r = requests.request(
-            method="POST",
+            method="DELETE",
             url=f"{url}/api/delete",
             headers=headers,
             data=form_data.model_dump_json(exclude_none=True).encode(),
