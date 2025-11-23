@@ -475,6 +475,7 @@ class ChatTable:
             with get_db() as db:
                 chat = db.get(Chat, id)
                 chat.archived = not chat.archived
+                chat.folder_id = None
                 chat.updated_at = int(time.time())
                 db.commit()
                 db.refresh(chat)
