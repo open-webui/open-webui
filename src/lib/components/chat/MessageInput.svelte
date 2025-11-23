@@ -1466,6 +1466,9 @@
 											class="flex self-center w-[1px] h-4 mx-1 bg-gray-200/50 dark:bg-gray-800/50"
 										/>
 
+
+										<!-- AI-Friend 屏蔽扩展菜单-->
+										{#if false}
 										{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || (toggleFilters && toggleFilters.length > 0)}
 											<IntegrationsMenu
 												selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
@@ -1501,6 +1504,7 @@
 													<Component className="size-4.5" strokeWidth="1.5" />
 												</div>
 											</IntegrationsMenu>
+										{/if}
 										{/if}
 
 										{#if showMemoryButton}
