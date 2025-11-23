@@ -9,7 +9,7 @@ from open_webui.models.models import (
     ModelForm,
     ModelModel,
     ModelResponse,
-    ModelUserResponse,
+    ModelListResponse,
     Models,
 )
 
@@ -44,14 +44,43 @@ def is_valid_model_id(model_id: str) -> bool:
 ###########################
 
 
+PAGE_ITEM_COUNT = 30
+
+
 @router.get(
-    "/list", response_model=list[ModelUserResponse]
+    "/list", response_model=ModelListResponse
 )  # do NOT use "/" as path, conflicts with main.py
-async def get_models(id: Optional[str] = None, user=Depends(get_verified_user)):
-    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
-        return Models.get_models()
-    else:
-        return Models.get_models_by_user_id(user.id)
+async def get_models(
+    query: Optional[str] = None,
+    view_option: Optional[str] = None,
+    tag: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
+    page: Optional[int] = 1,
+    user=Depends(get_verified_user),
+):
+
+    limit = PAGE_ITEM_COUNT
+
+    page = max(1, page)
+    skip = (page - 1) * limit
+
+    filter = {}
+    if query:
+        filter["query"] = query
+    if view_option:
+        filter["view_option"] = view_option
+    if tag:
+        filter["tag"] = tag
+    if order_by:
+        filter["order_by"] = order_by
+    if direction:
+        filter["direction"] = direction
+
+    if not user.role == "admin" or not BYPASS_ADMIN_ACCESS_CONTROL:
+        filter["user_id"] = user.id
+
+    return Models.search_models(user.id, filter=filter, skip=skip, limit=limit)
 
 
 ###########################
@@ -62,6 +91,29 @@ async def get_models(id: Optional[str] = None, user=Depends(get_verified_user)):
 @router.get("/base", response_model=list[ModelResponse])
 async def get_base_models(user=Depends(get_admin_user)):
     return Models.get_base_models()
+
+
+###########################
+# GetModelTags
+###########################
+
+
+@router.get("/tags", response_model=list[str])
+async def get_model_tags(user=Depends(get_verified_user)):
+    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
+        models = Models.get_models()
+    else:
+        models = Models.get_models_by_user_id(user.id)
+
+    tags_set = set()
+    for model in models:
+        if model.meta and model.meta.tags:
+            for tag in model.meta.tags:
+                tags_set.add((tag.get("name")))
+
+    tags = [tag for tag in tags_set]
+    tags.sort()
+    return tags
 
 
 ############################
