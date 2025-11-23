@@ -1886,8 +1886,8 @@
 									_history.messages[responseMessageId] = responseMessage;
 									history.messages[responseMessageId] = responseMessage;
 
-									// Append FULL analysis to user content
-									userMessage.content += `\n\n[Vision Analysis:\n${visionResponse}\n]`;
+									// Prepend FULL analysis to user content
+									userMessage.content = `[Vision Analysis:\n${visionResponse}\n]\n\n${userMessage.content}`;
 									userMessage.vision_processed = true;
 
 									_history.messages[parentId] = userMessage;
