@@ -757,19 +757,6 @@
 							</div>
 						{:else}
 							<div class="w-full flex flex-col relative" id="response-content-container">
-								{#if message.type === 'vision_preprocessor'}
-									<div class="mt-2 p-3 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg">
-										<details class="cursor-pointer">
-											<summary class="text-sm font-medium text-blue-600 hover:text-blue-500 mb-2">🖼️ Image Analysis Complete</summary>
-											<div class="mt-2 space-y-2 text-sm">
-												<div><strong>System Prompt:</strong></div>
-												<pre class="p-2 bg-white dark:bg-gray-800 rounded text-xs overflow-auto max-h-32 whitespace-pre-wrap">{message.vision_system_prompt || 'N/A'}</pre>
-												<div><strong>Vision Model Response:</strong></div>
-												<pre class="p-2 bg-white dark:bg-gray-800 rounded text-xs overflow-auto max-h-48 whitespace-pre-wrap">{message.content}</pre>
-											</div>
-										</details>
-									</div>
-								{/if}
 								{#if message.content === '' && !message.error && ((model?.info?.meta?.capabilities?.status_updates ?? true) ? (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 || (message?.statusHistory?.at(-1)?.hidden ?? false) : true)}
 									<Skeleton />
 								{:else if message.content && message.error !== true}

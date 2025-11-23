@@ -3,6 +3,7 @@
 	const i18n = getContext('i18n');
 	import WebSearchResults from '../WebSearchResults.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
+	import Collapsible from '$lib/components/common/Collapsible.svelte';
 	import { t } from 'i18next';
 
 	export let status = null;
@@ -124,31 +125,30 @@
 			</div>
 		{:else if status?.action === '🖼️'}
 			<div class="flex flex-col justify-center -space-y-0.5 w-full">
-				<div class="{(done || status?.done) === false ? 'shimmer' : ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap">
-					{status?.description}
-				</div>
 				{#if status?.done && (status.vision_prompt || status.vision_response)}
-					<div class="mt-2 p-3 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg">
-						<details class="cursor-pointer">
-							<summary class="text-sm font-medium text-blue-600 hover:text-blue-500 mb-2">Details</summary>
+					<Collapsible
+						title={status?.description}
+						open={false}
+						className="w-full"
+						buttonClassName="text-gray-500 dark:text-gray-500"
+					>
+						<div slot="content" class="mt-2 space-y-2 text-sm px-2">
 							{#if status.vision_prompt}
-								<div class="mt-2 space-y-2 text-sm">
-									<div><strong>System Prompt:</strong></div>
-									<pre class="p-2 bg-white dark:bg-gray-800 rounded text-xs overflow-auto max-h-32 whitespace-pre-wrap">{status.vision_prompt}</pre>
-								</div>
+								<div><strong>System Prompt:</strong></div>
+								<pre class="p-2 bg-gray-50 dark:bg-gray-850 rounded text-xs overflow-auto max-h-32 whitespace-pre-wrap">{status.vision_prompt}</pre>
 							{/if}
 							{#if status.vision_response}
-								<div class="mt-2 space-y-2 text-sm">
-									<div><strong>Vision Model Response:</strong></div>
-									<pre class="p-2 bg-white dark:bg-gray-800 rounded text-xs overflow-auto max-h-48 whitespace-pre-wrap">{status.vision_response}</pre>
-								</div>
+								<div><strong>Vision Model Response:</strong></div>
+								<pre class="p-2 bg-gray-50 dark:bg-gray-850 rounded text-xs overflow-auto max-h-48 whitespace-pre-wrap">{status.vision_response}</pre>
 							{/if}
 							{#if status.error}
-								<div class="mt-2 space-y-2 text-sm text-red-600">
-									<strong>Error:</strong> {status.error}
-								</div>
+								<div class="text-red-600"><strong>Error:</strong> {status.error}</div>
 							{/if}
-						</details>
+						</div>
+					</Collapsible>
+				{:else}
+					<div class="{(done || status?.done) === false ? 'shimmer' : ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap">
+						{status?.description}
 					</div>
 				{/if}
 			</div>
