@@ -306,9 +306,12 @@ async def get_model_profile_image(id: str, user=Depends(get_verified_user)):
                 except Exception as e:
                     pass
 
-        return FileResponse(f"{STATIC_DIR}/favicon.png")
+    image_path = f"{STATIC_DIR}/favicon.png"
+    if os.path.exists(image_path):
+        return FileResponse(image_path)
     else:
-        return FileResponse(f"{STATIC_DIR}/favicon.png")
+        # If the file is missing, return 404 so the browser handles it gracefully
+        raise HTTPException(status_code=404, detail="Profile image not found")
 
 
 ############################
