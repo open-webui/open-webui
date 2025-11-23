@@ -15,7 +15,6 @@
 	import Markdown from './Markdown.svelte';
 	import Image from '$lib/components/common/Image.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import StatusHistory from '../ResponseMessage/StatusHistory.svelte';
 
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
@@ -341,7 +340,7 @@
 						</div>
 					</div>
 				</div>
-			{:else if message.content !== ''}
+			{#if !edit && message.content !== ''}
 				<div class="w-full">
 					<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
 						<div
