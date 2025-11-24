@@ -847,19 +847,19 @@ async def generate_chat_completion(
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
 
-    # Prioritize frontend 'reasoning' object over model 'reasoning_effort' (OpenRouter prefers unified reasoning object)
-if "reasoning" in payload and isinstance(payload["reasoning"], dict):
-    payload.pop("reasoning_effort", None)
+        # Prioritize frontend 'reasoning' object over model 'reasoning_effort' (OpenRouter prefers unified reasoning object)
+    if "reasoning" in payload and isinstance(payload["reasoning"], dict):
+        payload.pop("reasoning_effort", None)
 
-# Convert the modified body back to JSON
-if "logit_bias" in payload:
-    payload["logit_bias"] = json.loads(
-        convert_logit_bias_input_to_json(payload["logit_bias"])
+    # Convert the modified body back to JSON
+    if "logit_bias" in payload:
+        payload["logit_bias"] = json.loads(
+            convert_logit_bias_input_to_json(payload["logit_bias"])
+        )
+
+    headers, cookies = await get_headers_and_cookies(
+        request, url, key, api_config, metadata, user=user
     )
-
-headers, cookies = await get_headers_and_cookies(
-    request, url, key, api_config, metadata, user=user
-)
 
     if api_config.get("azure", False):
         api_version = api_config.get("api_version", "2023-03-15-preview")
