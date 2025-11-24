@@ -291,7 +291,13 @@ class ModelsTable:
             models = []
             for model, user in items:
                 model_model = ModelModel.model_validate(model)
-                user_model = UserResponse(**UserModel.model_validate(user).model_dump())
+                # Handle case where user is None from LEFT OUTER JOIN
+                # (e.g., when user_id is NULL or references a deleted user)
+                user_model = (
+                    None
+                    if user is None
+                    else UserResponse(**UserModel.model_validate(user).model_dump())
+                )
                 models.append(
                     ModelUserResponse(**model_model.model_dump(), user=user_model)
                 )
