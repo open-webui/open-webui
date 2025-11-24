@@ -617,8 +617,8 @@
 						<div class=" self-center flex items-center justify-center size-9">
 							<img
 								crossorigin="anonymous"
-								src="{WEBUI_BASE_URL}/static/favicon.png"
-								class="sidebar-new-chat-icon size-6 rounded-full group-hover:hidden"
+								src="static/favicon.png"
+								class="sidebar-new-chat-icon size-6 rounded-full group-hover:hidden invert"
 								alt=""
 							/>
 
@@ -650,8 +650,31 @@
 						</a>
 					</Tooltip>
 				</div>
-
+				
 				<div class="">
+					<Tooltip content={$i18n.t('Memory')} placement="right">
+						<a
+							id="sidebar-memory-button"
+							class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+							href="/memories"
+							draggable="false"
+							on:click={async (e) => {
+								e.stopImmediatePropagation();
+								e.preventDefault();
+
+								goto('/memories');
+								itemClickHandler();
+							}}
+							aria-label={$i18n.t('Memory')}
+						>
+							<div class=" self-center flex items-center justify-center size-9">
+								<Sparkles strokeWidth="2" className="size-4.5" />
+							</div>
+						</a>
+					</Tooltip>
+				</div>
+
+				<!-- <div class="">
 					<Tooltip content={$i18n.t('Search')} placement="right">
 						<button
 							class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
@@ -669,9 +692,9 @@
 							</div>
 						</button>
 					</Tooltip>
-				</div>
+				</div> -->
 
-				{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
+				<!-- {#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
 					<div class="">
 						<Tooltip content={$i18n.t('Notes')} placement="right">
 							<a
@@ -693,9 +716,9 @@
 							</a>
 						</Tooltip>
 					</div>
-				{/if}
+				{/if} -->
 
-				{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
+				<!-- {#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
 					<div class="">
 						<Tooltip content={$i18n.t('Workspace')} placement="right">
 							<a
@@ -730,7 +753,7 @@
 							</a>
 						</Tooltip>
 					</div>
-				{/if}
+				{/if} -->
 			</div>
 		</button>
 
@@ -862,7 +885,7 @@
 						</a>
 					</div>
 
-					<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
+					<!-- <div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
 						<button
 							id="sidebar-search-button"
 							class="grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
@@ -880,7 +903,7 @@
 								<div class=" self-center text-sm font-primary">{$i18n.t('Search')}</div>
 							</div>
 						</button>
-					</div>
+					</div> -->
 
 					<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
 						<a
@@ -961,7 +984,7 @@
 					<PinnedModelList bind:selectedChatId {shiftKey} />
 				{/if}
 
-				{#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0)}
+				<!-- {#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0)}
 					<Folder
 						className="px-2 mt-0.5"
 						name={$i18n.t('Channels')}
@@ -987,9 +1010,9 @@
 							/>
 						{/each}
 					</Folder>
-				{/if}
+				{/if} -->
 
-				{#if folders}
+				<!-- {#if folders}
 					<Folder
 						className="px-2 mt-0.5"
 						name={$i18n.t('Folders')}
@@ -1039,7 +1062,7 @@
 							}}
 						/>
 					</Folder>
-				{/if}
+				{/if} -->
 
 				<Folder
 					className="px-2 mt-0.5"
