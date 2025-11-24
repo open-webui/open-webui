@@ -61,30 +61,31 @@
 	}
 
 	const importChatsHandler = async (_chats) => {
-		const chats = _chats.map((chat) => {
-			if (chat.chat) {
-				return {
-					chat: chat.chat,
-					meta: chat.meta ?? {},
-					pinned: false,
-					folder_id: chat?.folder_id ?? null,
-					created_at: chat?.created_at ?? null,
-					updated_at: chat?.updated_at ?? null
-				};
-			} else {
-				// Legacy format
-				return {
-					chat: chat,
-					meta: {},
-					pinned: false,
-					folder_id: null,
-					created_at: chat?.created_at ?? null,
-					updated_at: chat?.updated_at ?? null
-				};
-			}
-		});
-
-		const res = await importChats(localStorage.token, chats);
+		const res = await importChats(
+			localStorage.token,
+			_chats.map((chat) => {
+				if (chat.chat) {
+					return {
+						chat: chat.chat,
+						meta: chat.meta ?? {},
+						pinned: false,
+						folder_id: chat?.folder_id ?? null,
+						created_at: chat?.created_at ?? null,
+						updated_at: chat?.updated_at ?? null
+					};
+				} else {
+					// Legacy format
+					return {
+						chat: chat,
+						meta: {},
+						pinned: false,
+						folder_id: null,
+						created_at: chat?.created_at ?? null,
+						updated_at: chat?.updated_at ?? null
+					};
+				}
+			})
+		);
 		if (res) {
 			toast.success(`Successfully imported ${res.length} chats.`);
 		}
