@@ -234,7 +234,7 @@ def _build_luxor_sources(payload: dict) -> list:
         )
         metadata = {
             "source": groups[key]["id"],
-            "name": display_label,
+            "name": base_source,
         }
         if page_num is not None:
             metadata["page"] = page_num
@@ -254,7 +254,7 @@ def _build_luxor_sources(payload: dict) -> list:
             continue
 
         groups[key]["entries"].append(
-        {
+            {
                 "document": base_source,
                 "metadata": metadata,
                 "distance": None,

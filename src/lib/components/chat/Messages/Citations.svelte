@@ -121,13 +121,18 @@
 		showPercentage = shouldShowPercentage(citations);
 	}
 
-	const decodeString = (str: string) => {
-		try {
-			return decodeURIComponent(str);
-		} catch (e) {
-			return str;
-		}
-	};
+const decodeString = (str: string) => {
+	try {
+		return decodeURIComponent(str);
+	} catch (e) {
+		return str;
+	}
+};
+
+const stripPageInfo = (label: string) => {
+	if (typeof label !== 'string') return label;
+	return label.split('›')[0].trim();
+};
 </script>
 
 <CitationModal
@@ -188,7 +193,7 @@
 					<div
 						class="flex-1 truncate hover:text-black dark:text-white/60 dark:hover:text-white transition text-left"
 					>
-						{decodeString(citation.source.name)}
+						{stripPageInfo(decodeString(citation.source.name))}
 					</div>
 				</button>
 			{/each}
