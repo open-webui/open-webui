@@ -227,9 +227,7 @@ class UsersTable:
     ) -> dict:
         with get_db() as db:
             # Join GroupMember so we can order by group_id when requested
-            query = db.query(User).outerjoin(
-                GroupMember, GroupMember.user_id == User.id
-            )
+            query = db.query(User)
 
             if filter:
                 query_key = filter.get("query")
@@ -245,6 +243,7 @@ class UsersTable:
                 direction = filter.get("direction")
 
                 if order_by and order_by.startswith("group_id:"):
+                    query = query.outerjoin(GroupMember, GroupMember.user_id == User.id)
                     group_id = order_by.split(":", 1)[1]
 
                     if direction == "asc":
@@ -291,11 +290,13 @@ class UsersTable:
                 query = query.order_by(User.created_at.desc())
 
             # Count BEFORE pagination
+            query = query.distinct(User.id)
             total = query.count()
 
-            if skip:
+            # correct pagination logic
+            if skip is not None:
                 query = query.offset(skip)
-            if limit:
+            if limit is not None:
                 query = query.limit(limit)
 
             users = query.all()
