@@ -177,8 +177,6 @@ def _build_luxor_files(payload: dict) -> list:
 def _build_luxor_sources(payload: dict) -> list:
     citation_links = payload.get("citation_links") or []
 
-    log.info(f"RAW CITATION LINKS: {len(citation_links)}\n{citation_links}")
-
     if citation_links:
         entries = citation_links
     else:
@@ -202,10 +200,7 @@ def _build_luxor_sources(payload: dict) -> list:
         if not isinstance(entry, dict):
             continue
 
-        # log.info(f"ENTRY:\n{entry}")
-
         label = entry.get("label")
-        log.info(f"CITATION LABEL: {label}")
         url = entry.get("url")
 
         if not label and not url:
@@ -284,8 +279,6 @@ def _build_luxor_sources(payload: dict) -> list:
             }
         )
 
-    log.info(f"Sources: {len(grouped_sources)}\n{grouped_sources}")
-
     return grouped_sources
 
 
@@ -307,7 +300,7 @@ def convert_response_luxor_to_openai(luxor_response: dict)  -> dict:
     )
 
     files = _build_luxor_files(payload)
-    log.info(f"Files: {files}")
+
     if files:
         response["choices"][0]["message"]["files"] = files
         response["files"] = files
@@ -315,8 +308,6 @@ def convert_response_luxor_to_openai(luxor_response: dict)  -> dict:
     sources = _build_luxor_sources(payload)
     if sources:
         response["sources"] = sources
-
-    log.info(f"Final Response:\n{response}")
 
     return response
 
