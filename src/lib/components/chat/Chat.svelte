@@ -1402,7 +1402,7 @@
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
-		const { id, done, choices, content, sources, selected_model_id, error, usage } = data;
+		const { id, done, choices, content, sources, files, selected_model_id, error, usage } = data;
 
 		if (error) {
 			await handleOpenAIError(error, message);
@@ -1410,6 +1410,10 @@
 
 		if (sources && !message?.sources) {
 			message.sources = sources;
+		}
+
+		if (files && files.length > 0) {
+			message.files = files;
 		}
 
 		if (choices) {
