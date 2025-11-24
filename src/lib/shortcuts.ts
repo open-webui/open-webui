@@ -45,12 +45,12 @@ export const shortcuts: ShortcutRegistry = {
 	//Chat
 	[Shortcut.NEW_CHAT]: {
 		name: 'New Chat',
-		keys: ['mod', 'shift', 'KeyO'],
+		keys: ['mod', 'shift', 'O'],
 		category: 'Chat'
 	},
 	[Shortcut.NEW_TEMPORARY_CHAT]: {
 		name: 'New Temporary Chat',
-		keys: ['mod', 'shift', 'Quote'],
+		keys: ['mod', 'shift', `'`],
 		category: 'Chat'
 	},
 	[Shortcut.DELETE_CHAT]: {
@@ -62,22 +62,22 @@ export const shortcuts: ShortcutRegistry = {
 	//Global
 	[Shortcut.SEARCH]: {
 		name: 'Search',
-		keys: ['mod', 'KeyK'],
+		keys: ['mod', 'K'],
 		category: 'Global'
 	},
 	[Shortcut.OPEN_SETTINGS]: {
 		name: 'Open Settings',
-		keys: ['mod', 'Period'],
+		keys: ['mod', '.'],
 		category: 'Global'
 	},
 	[Shortcut.SHOW_SHORTCUTS]: {
 		name: 'Show Shortcuts',
-		keys: ['mod', 'Slash'],
+		keys: ['mod', '/'],
 		category: 'Global'
 	},
 	[Shortcut.TOGGLE_SIDEBAR]: {
 		name: 'Toggle Sidebar',
-		keys: ['mod', 'shift', 'KeyS'],
+		keys: ['mod', 'shift', 'S'],
 		category: 'Global'
 	},
 	[Shortcut.CLOSE_MODAL]: {
@@ -99,7 +99,7 @@ export const shortcuts: ShortcutRegistry = {
 	},
 	[Shortcut.PREVENT_FILE_CREATION]: {
 		name: 'Prevent File Creation',
-		keys: ['mod', 'shift', 'KeyV'],
+		keys: ['mod', 'shift', 'V'],
 		category: 'Input',
 		tooltip: 'Only active when "Paste Large Text as File" setting is toggled on.'
 	},
@@ -128,7 +128,7 @@ export const shortcuts: ShortcutRegistry = {
 	},
 	[Shortcut.REGENERATE_RESPONSE]: {
 		name: 'Regenerate Response',
-		keys: ['mod', 'KeyR'],
+		keys: ['mod', 'R'],
 		category: 'Message'
 	},
 	[Shortcut.STOP_GENERATING]: {
@@ -145,12 +145,12 @@ export const shortcuts: ShortcutRegistry = {
 	},
 	[Shortcut.COPY_LAST_RESPONSE]: {
 		name: 'Copy Last Response',
-		keys: ['mod', 'shift', 'KeyC'],
+		keys: ['mod', 'shift', 'C'],
 		category: 'Message'
 	},
 	[Shortcut.COPY_LAST_CODE_BLOCK]: {
 		name: 'Copy Last Code Block',
-		keys: ['mod', 'shift', 'Semicolon'],
+		keys: ['mod', 'shift', ';'],
 		category: 'Message'
 	}
 };

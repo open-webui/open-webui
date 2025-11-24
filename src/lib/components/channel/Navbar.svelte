@@ -11,6 +11,7 @@
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 
@@ -19,6 +20,7 @@
 
 <nav class="sticky top-0 z-30 w-full px-1.5 py-1.5 -mb-8 flex items-center drag-region">
 	<div
+		id="navbar-bg-gradient-to-b"
 		class=" bg-linear-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1]"
 	></div>
 
@@ -79,7 +81,7 @@
 						>
 							<div class=" self-center">
 								<img
-									src={$user?.profile_image_url}
+									src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
 									class="size-6 object-cover rounded-full"
 									alt="User profile"
 									draggable="false"

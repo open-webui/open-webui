@@ -37,9 +37,6 @@ dependencies = [
     "pycrdt==0.12.25",
     "redis",
 
-    "PyMySQL==1.1.1",
-    "boto3==1.40.5",
-
     "APScheduler==3.10.4",
     "RestrictedPython==8.0",
 
@@ -47,11 +44,11 @@ dependencies = [
     "asgiref==3.8.1",
 
     "tiktoken",
-    "mcp==1.14.1",
+    "mcp==1.21.2",
 
     "openai",
     "anthropic",
-    "google-genai==1.38.0",
+    "google-genai==1.52.0",
     "google-generativeai==0.8.5",
 
     "langchain==0.3.27",
@@ -60,6 +57,8 @@ dependencies = [
     "fake-useragent==2.2.0",
     "chromadb==1.0.20",
     "opensearch-py==2.8.0",
+    "PyMySQL==1.1.1",
+    "boto3==1.40.5",
     
     "transformers",
     "sentence-transformers==5.1.1",
@@ -73,7 +72,8 @@ dependencies = [
     "pymdown-extensions==10.14.2",
     "docx2txt==0.8",
     "python-pptx==1.0.2",
-    "unstructured==0.18.15",
+    "unstructured==0.18.18",
+    "msoffcrypto-tool==5.4.2",
     "nltk==3.9.1",
     "Markdown==3.9",
     "pypandoc==1.15",
@@ -146,12 +146,14 @@ all = [
     "elasticsearch==9.1.0",
 
     "qdrant-client==1.14.3",
+    "weaviate-client==4.17.0",
     "pymilvus==2.6.2",
     "pinecone==6.0.2",
     "oracledb==3.2.0",
-
     "colbert-ai==0.2.21",
+
     "firecrawl-py==4.5.0",
+    "azure-search-documents==11.6.0",
 ]
 
 [project.scripts]

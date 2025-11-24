@@ -21,13 +21,18 @@ from typing import Optional, Union, List, Dict
 
 from opentelemetry import trace
 
+
+from open_webui.utils.access_control import has_permission
 from open_webui.models.users import Users
 
 from open_webui.constants import ERROR_MESSAGES
 
 from open_webui.env import (
+    ENABLE_PASSWORD_VALIDATION,
     OFFLINE_MODE,
     LICENSE_BLOB,
+    PASSWORD_VALIDATION_REGEX_PATTERN,
+    REDIS_KEY_PREFIX,
     pk,
     WEBUI_SECRET_KEY,
     TRUSTED_SIGNATURE_KEY,
@@ -159,6 +164,20 @@ def get_password_hash(password: str) -> str:
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
+def validate_password(password: str) -> bool:
+    # The password passed to bcrypt must be 72 bytes or fewer. If it is longer, it will be truncated before hashing.
+    if len(password.encode("utf-8")) > 72:
+        raise Exception(
+            ERROR_MESSAGES.PASSWORD_TOO_LONG,
+        )
+
+    if ENABLE_PASSWORD_VALIDATION:
+        if not PASSWORD_VALIDATION_REGEX_PATTERN.match(password):
+            raise Exception(ERROR_MESSAGES.INVALID_PASSWORD())
+
+    return True
+
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash"""
     return (
@@ -178,6 +197,9 @@ def create_token(data: dict, expires_delta: Union[timedelta, None] = None) -> st
         expire = datetime.now(UTC) + expires_delta
         payload.update({"exp": expire})
 
+    jti = str(uuid.uuid4())
+    payload.update({"jti": jti})
+
     encoded_jwt = jwt.encode(payload, SESSION_SECRET, algorithm=ALGORITHM)
     return encoded_jwt
 
@@ -188,6 +210,43 @@ def decode_token(token: str) -> Optional[dict]:
         return decoded
     except Exception:
         return None
+
+
+async def is_valid_token(request, decoded) -> bool:
+    # Require Redis to check revoked tokens
+    if request.app.state.redis:
+        jti = decoded.get("jti")
+
+        if jti:
+            revoked = await request.app.state.redis.get(
+                f"{REDIS_KEY_PREFIX}:auth:token:{jti}:revoked"
+            )
+            if revoked:
+                return False
+
+    return True
+
+
+async def invalidate_token(request, token):
+    decoded = decode_token(token)
+
+    # Require Redis to store revoked tokens
+    if request.app.state.redis:
+        jti = decoded.get("jti")
+        exp = decoded.get("exp")
+
+        if jti:
+            ttl = exp - int(
+                datetime.now(UTC).timestamp()
+            )  # Calculate time-to-live for the token
+
+            if ttl > 0:
+                # Store the revoked token in Redis with an expiration time
+                await request.app.state.redis.set(
+                    f"{REDIS_KEY_PREFIX}:auth:token:{jti}:revoked",
+                    "1",
+                    ex=ttl,
+                )
 
 
 def extract_token_from_auth_header(auth_header: str):
@@ -209,7 +268,7 @@ def get_http_authorization_cred(auth_header: Optional[str]):
         return None
 
 
-def get_current_user(
+async def get_current_user(
     request: Request,
     response: Response,
     background_tasks: BackgroundTasks,
@@ -228,30 +287,7 @@ def get_current_user(
 
     # auth by api key
     if token.startswith("sk-"):
-        if not request.state.enable_api_key:
-            raise HTTPException(
-                status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
-            )
-
-        if request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS:
-            allowed_paths = [
-                path.strip()
-                for path in str(
-                    request.app.state.config.API_KEY_ALLOWED_ENDPOINTS
-                ).split(",")
-            ]
-
-            # Check if the request path matches any allowed endpoint.
-            if not any(
-                request.url.path == allowed
-                or request.url.path.startswith(allowed + "/")
-                for allowed in allowed_paths
-            ):
-                raise HTTPException(
-                    status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
-                )
-
-        user = get_current_user_by_api_key(token)
+        user = get_current_user_by_api_key(request, token)
 
         # Add user info to current span
         current_span = trace.get_current_span()
@@ -264,7 +300,6 @@ def get_current_user(
         return user
 
     # auth by jwt token
-
     try:
         try:
             data = decode_token(token)
@@ -275,6 +310,12 @@ def get_current_user(
             )
 
         if data is not None and "id" in data:
+            if data.get("jti") and not await is_valid_token(request, data):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token",
+                )
+
             user = Users.get_user_by_id(data["id"])
             if user is None:
                 raise HTTPException(
@@ -327,7 +368,7 @@ def get_current_user(
         raise e
 
 
-def get_current_user_by_api_key(api_key: str):
+def get_current_user_by_api_key(request, api_key: str):
     user = Users.get_user_by_api_key(api_key)
 
     if user is None:
@@ -335,16 +376,28 @@ def get_current_user_by_api_key(api_key: str):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.INVALID_TOKEN,
         )
-    else:
-        # Add user info to current span
-        current_span = trace.get_current_span()
-        if current_span:
-            current_span.set_attribute("client.user.id", user.id)
-            current_span.set_attribute("client.user.email", user.email)
-            current_span.set_attribute("client.user.role", user.role)
-            current_span.set_attribute("client.auth.type", "api_key")
 
-        Users.update_user_last_active_by_id(user.id)
+    if not request.state.enable_api_keys or (
+        user.role != "admin"
+        and not has_permission(
+            user.id,
+            "features.api_keys",
+            request.app.state.config.USER_PERMISSIONS,
+        )
+    ):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
+        )
+
+    # Add user info to current span
+    current_span = trace.get_current_span()
+    if current_span:
+        current_span.set_attribute("client.user.id", user.id)
+        current_span.set_attribute("client.user.email", user.email)
+        current_span.set_attribute("client.user.role", user.role)
+        current_span.set_attribute("client.auth.type", "api_key")
+
+    Users.update_user_last_active_by_id(user.id)
 
     return user
 

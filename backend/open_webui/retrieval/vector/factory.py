@@ -67,6 +67,10 @@ class Vector:
                 from open_webui.retrieval.vector.dbs.oracle23ai import Oracle23aiClient
 
                 return Oracle23aiClient()
+            case VectorType.WEAVIATE:
+                from open_webui.retrieval.vector.dbs.weaviate import WeaviateClient
+
+                return WeaviateClient()
             case _:
                 raise ValueError(f"Unsupported vector type: {vector_type}")
 

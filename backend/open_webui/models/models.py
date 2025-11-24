@@ -6,12 +6,12 @@ from open_webui.internal.db import Base, JSONField, get_db
 from open_webui.env import SRC_LOG_LEVELS
 
 from open_webui.models.groups import Groups
-from open_webui.models.users import Users, UserResponse
+from open_webui.models.users import User, UserModel, Users, UserResponse
 
 
 from pydantic import BaseModel, ConfigDict
 
-from sqlalchemy import or_, and_, func
+from sqlalchemy import String, cast, or_, and_, func
 from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
 
@@ -133,6 +133,11 @@ class ModelResponse(ModelModel):
     pass
 
 
+class ModelListResponse(BaseModel):
+    items: list[ModelUserResponse]
+    total: int
+
+
 class ModelForm(BaseModel):
     id: str
     base_model_id: Optional[str] = None
@@ -215,6 +220,84 @@ class ModelsTable:
             or has_access(user_id, permission, model.access_control, user_group_ids)
         ]
 
+    def search_models(
+        self, user_id: str, filter: dict = {}, skip: int = 0, limit: int = 30
+    ) -> ModelListResponse:
+        with get_db() as db:
+            # Join GroupMember so we can order by group_id when requested
+            query = db.query(Model, User).outerjoin(User, User.id == Model.user_id)
+            query = query.filter(Model.base_model_id != None)
+
+            if filter:
+                query_key = filter.get("query")
+                if query_key:
+                    query = query.filter(
+                        or_(
+                            Model.name.ilike(f"%{query_key}%"),
+                            Model.base_model_id.ilike(f"%{query_key}%"),
+                        )
+                    )
+
+                if filter.get("user_id"):
+                    query = query.filter(Model.user_id == filter.get("user_id"))
+
+                view_option = filter.get("view_option")
+
+                if view_option == "created":
+                    query = query.filter(Model.user_id == user_id)
+                elif view_option == "shared":
+                    query = query.filter(Model.user_id != user_id)
+
+                tag = filter.get("tag")
+                if tag:
+                    # TODO: This is a simple implementation and should be improved for performance
+                    like_pattern = f'%"{tag.lower()}"%'  # `"tag"` inside JSON array
+                    meta_text = func.lower(cast(Model.meta, String))
+
+                    query = query.filter(meta_text.like(like_pattern))
+
+                order_by = filter.get("order_by")
+                direction = filter.get("direction")
+
+                if order_by == "name":
+                    if direction == "asc":
+                        query = query.order_by(Model.name.asc())
+                    else:
+                        query = query.order_by(Model.name.desc())
+                elif order_by == "created_at":
+                    if direction == "asc":
+                        query = query.order_by(Model.created_at.asc())
+                    else:
+                        query = query.order_by(Model.created_at.desc())
+                elif order_by == "updated_at":
+                    if direction == "asc":
+                        query = query.order_by(Model.updated_at.asc())
+                    else:
+                        query = query.order_by(Model.updated_at.desc())
+
+            else:
+                query = query.order_by(Model.created_at.desc())
+
+            # Count BEFORE pagination
+            total = query.count()
+
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
+
+            items = query.all()
+
+            models = []
+            for model, user in items:
+                model_model = ModelModel.model_validate(model)
+                user_model = UserResponse(**UserModel.model_validate(user).model_dump())
+                models.append(
+                    ModelUserResponse(**model_model.model_dump(), user=user_model)
+                )
+
+            return ModelListResponse(items=models, total=total)
+
     def get_model_by_id(self, id: str) -> Optional[ModelModel]:
         try:
             with get_db() as db:
@@ -244,11 +327,9 @@ class ModelsTable:
         try:
             with get_db() as db:
                 # update only the fields that are present in the model
-                result = (
-                    db.query(Model)
-                    .filter_by(id=id)
-                    .update(model.model_dump(exclude={"id"}))
-                )
+                data = model.model_dump(exclude={"id"})
+                result = db.query(Model).filter_by(id=id).update(data)
+
                 db.commit()
 
                 model = db.get(Model, id)

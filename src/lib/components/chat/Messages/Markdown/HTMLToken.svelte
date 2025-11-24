@@ -3,13 +3,10 @@
 	import type { Token } from 'marked';
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
-	import Source from './Source.svelte';
 	import { settings } from '$lib/stores';
 
 	export let id: string;
 	export let token: Token;
-
-	export let onSourceClick: Function = () => {};
 
 	let html: string | null = null;
 
@@ -129,14 +126,9 @@
 				}}
 			></iframe>
 		{/if}
-	{:else if token.text.includes(`<source_id`)}
-		<Source {id} {token} onClick={onSourceClick} />
+	{:else if token.text.trim().match(/^<br\s*\/?>$/i)}
+		<br />
 	{:else}
-		{@const br = token.text.match(/<br\s*\/?>/)}
-		{#if br}
-			<br />
-		{:else}
-			{token.text}
-		{/if}
+		{token.text}
 	{/if}
 {/if}

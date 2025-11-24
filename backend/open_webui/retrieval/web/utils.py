@@ -16,12 +16,15 @@ from typing import (
     Union,
     Literal,
 )
+
+from fastapi.concurrency import run_in_threadpool
 import aiohttp
 import certifi
 import validators
 from langchain_community.document_loaders import PlaywrightURLLoader, WebBaseLoader
 from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
+
 from open_webui.retrieval.loaders.tavily import TavilyLoader
 from open_webui.retrieval.loaders.external_web import ExternalWebLoader
 from open_webui.constants import ERROR_MESSAGES
@@ -36,19 +39,79 @@ from open_webui.config import (
     TAVILY_EXTRACT_DEPTH,
     EXTERNAL_WEB_LOADER_URL,
     EXTERNAL_WEB_LOADER_API_KEY,
+    WEB_FETCH_FILTER_LIST,
 )
 from open_webui.env import SRC_LOG_LEVELS
 
-from firecrawl import Firecrawl
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
+
+
+def resolve_hostname(hostname):
+    # Get address information
+    addr_info = socket.getaddrinfo(hostname, None)
+
+    # Extract IP addresses from address information
+    ipv4_addresses = [info[4][0] for info in addr_info if info[0] == socket.AF_INET]
+    ipv6_addresses = [info[4][0] for info in addr_info if info[0] == socket.AF_INET6]
+
+    return ipv4_addresses, ipv6_addresses
+
+
+def get_allow_block_lists(filter_list):
+    allow_list = []
+    block_list = []
+
+    if filter_list:
+        for d in filter_list:
+            if d.startswith("!"):
+                # Domains starting with "!" → blocked
+                block_list.append(d[1:])
+            else:
+                # Domains starting without "!" → allowed
+                allow_list.append(d)
+
+    return allow_list, block_list
+
+
+def is_string_allowed(string: str, filter_list: Optional[list[str]] = None) -> bool:
+    if not filter_list:
+        return True
+
+    allow_list, block_list = get_allow_block_lists(filter_list)
+    # If allow list is non-empty, require domain to match one of them
+    if allow_list:
+        if not any(string.endswith(allowed) for allowed in allow_list):
+            return False
+
+    # Block list always removes matches
+    if any(string.endswith(blocked) for blocked in block_list):
+        return False
+
+    return True
 
 
 def validate_url(url: Union[str, Sequence[str]]):
     if isinstance(url, str):
         if isinstance(validators.url(url), validators.ValidationError):
             raise ValueError(ERROR_MESSAGES.INVALID_URL)
+
+        parsed_url = urllib.parse.urlparse(url)
+
+        # Protocol validation - only allow http/https
+        if parsed_url.scheme not in ["http", "https"]:
+            log.warning(
+                f"Blocked non-HTTP(S) protocol: {parsed_url.scheme} in URL: {url}"
+            )
+            raise ValueError(ERROR_MESSAGES.INVALID_URL)
+
+        # Blocklist check using unified filtering logic
+        if WEB_FETCH_FILTER_LIST:
+            if not is_string_allowed(url, WEB_FETCH_FILTER_LIST):
+                log.warning(f"URL blocked by filter list: {url}")
+                raise ValueError(ERROR_MESSAGES.INVALID_URL)
+
         if not ENABLE_RAG_LOCAL_WEB_FETCH:
             # Local web fetch is disabled, filter out any URLs that resolve to private IP addresses
             parsed_url = urllib.parse.urlparse(url)
@@ -79,17 +142,6 @@ def safe_validate_urls(url: Sequence[str]) -> Sequence[str]:
             log.debug(f"Invalid URL {u}: {str(e)}")
             continue
     return valid_urls
-
-
-def resolve_hostname(hostname):
-    # Get address information
-    addr_info = socket.getaddrinfo(hostname, None)
-
-    # Extract IP addresses from address information
-    ipv4_addresses = [info[4][0] for info in addr_info if info[0] == socket.AF_INET]
-    ipv6_addresses = [info[4][0] for info in addr_info if info[0] == socket.AF_INET6]
-
-    return ipv4_addresses, ipv6_addresses
 
 
 def extract_metadata(soup, url):
@@ -142,13 +194,13 @@ class RateLimitMixin:
 
 
 class URLProcessingMixin:
-    def _verify_ssl_cert(self, url: str) -> bool:
+    async def _verify_ssl_cert(self, url: str) -> bool:
         """Verify SSL certificate for a URL."""
-        return verify_ssl_cert(url)
+        return await run_in_threadpool(verify_ssl_cert, url)
 
     async def _safe_process_url(self, url: str) -> bool:
         """Perform safety checks before processing a URL."""
-        if self.verify_ssl and not self._verify_ssl_cert(url):
+        if self.verify_ssl and not await self._verify_ssl_cert(url):
             raise ValueError(f"SSL certificate verification failed for {url}")
         await self._wait_for_rate_limit()
         return True
@@ -225,7 +277,9 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
             self.params,
         )
         try:
-            firecrawl = Firecrawl(api_key=self.api_key, api_url=self.api_url)
+            from firecrawl import FirecrawlApp
+
+            firecrawl = FirecrawlApp(api_key=self.api_key, api_url=self.api_url)
             result = firecrawl.batch_scrape(
                 self.web_paths,
                 formats=["markdown"],
@@ -264,7 +318,9 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
             self.params,
         )
         try:
-            firecrawl = Firecrawl(api_key=self.api_key, api_url=self.api_url)
+            from firecrawl import FirecrawlApp
+
+            firecrawl = FirecrawlApp(api_key=self.api_key, api_url=self.api_url)
             result = firecrawl.batch_scrape(
                 self.web_paths,
                 formats=["markdown"],
@@ -636,6 +692,10 @@ def get_web_loader(
 ):
     # Check if the URLs are valid
     safe_urls = safe_validate_urls([urls] if isinstance(urls, str) else urls)
+
+    if not safe_urls:
+        log.warning(f"All provided URLs were blocked or invalid: {urls}")
+        raise ValueError(ERROR_MESSAGES.INVALID_URL)
 
     web_loader_args = {
         "web_paths": safe_urls,
