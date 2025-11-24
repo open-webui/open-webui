@@ -106,6 +106,7 @@ google-auth-oauthlib
 googleapis-common-protos==1.70.0
 google-cloud-storage==2.19.0
 
+## Databases
 pymongo
 psycopg2-binary==2.9.10
 pgvector==0.4.1

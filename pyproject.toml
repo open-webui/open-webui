@@ -37,9 +37,6 @@ dependencies = [
     "pycrdt==0.12.25",
     "redis",
 
-    "PyMySQL==1.1.1",
-    "boto3==1.40.5",
-
     "APScheduler==3.10.4",
     "RestrictedPython==8.0",
 
@@ -60,6 +57,8 @@ dependencies = [
     "fake-useragent==2.2.0",
     "chromadb==1.0.20",
     "opensearch-py==2.8.0",
+    "PyMySQL==1.1.1",
+    "boto3==1.40.5",
     
     "transformers",
     "sentence-transformers==5.1.1",
