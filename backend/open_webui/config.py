@@ -3041,14 +3041,14 @@ ENABLE_WEB_LOADER_SSL_VERIFICATION = PersistentConfig(
 
 WEB_LOADER_TIMEOUT = PersistentConfig(
     "WEB_LOADER_TIMEOUT",
-    "rag.web.loader.web_loader_timeout",
+    "rag.web.loader.timeout",
     int(os.getenv("WEB_LOADER_TIMEOUT", "10000")),
 )
 
 
 WEB_LOADER_RETRY_COUNT = PersistentConfig(
     "WEB_LOADER_RETRY_COUNT",
-    "rag.web.loader.web_loader_retry_count",
+    "rag.web.loader.retry_count",
     int(os.getenv("WEB_LOADER_RETRY_COUNT", "3")),
 )
 
