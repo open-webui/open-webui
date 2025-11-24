@@ -218,7 +218,7 @@ async def get_chat_list_by_folder_id(
     folder_id: str, page: Optional[int] = 1, user=Depends(get_verified_user)
 ):
     try:
-        limit = 60
+        limit = 10
         skip = (page - 1) * limit
 
         return [
