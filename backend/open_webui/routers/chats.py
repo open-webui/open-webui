@@ -147,7 +147,7 @@ async def create_new_chat(form_data: ChatForm, user=Depends(get_verified_user)):
 ############################
 
 
-@router.post("/import", response_model=Optional[ChatResponse])
+@router.post("/import", response_model=list[ChatResponse])
 async def import_chats(form_data: ChatsImportForm, user=Depends(get_verified_user)):
     try:
         chats = Chats.import_chats(user.id, form_data.chats)
