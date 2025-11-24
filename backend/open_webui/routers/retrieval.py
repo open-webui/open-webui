@@ -258,6 +258,7 @@ async def get_embedding_config(request: Request, user=Depends(get_admin_user)):
         "embedding_engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
         "embedding_model": request.app.state.config.RAG_EMBEDDING_MODEL,
         "embedding_batch_size": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+        "enable_async": request.app.state.config.ENABLE_ASYNC_RAG_EMBEDDING,
         "openai_config": {
             "url": request.app.state.config.RAG_OPENAI_API_BASE_URL,
             "key": request.app.state.config.RAG_OPENAI_API_KEY,
@@ -297,6 +298,7 @@ class EmbeddingModelUpdateForm(BaseModel):
     embedding_engine: str
     embedding_model: str
     embedding_batch_size: Optional[int] = 1
+    enable_async: Optional[bool] = True
 
 
 @router.post("/embedding/update")
@@ -357,6 +359,11 @@ async def update_embedding_config(
             request.app.state.config.RAG_EMBEDDING_BATCH_SIZE = (
                 form_data.embedding_batch_size
             )
+            
+            if form_data.enable_async is not None:
+                request.app.state.config.ENABLE_ASYNC_RAG_EMBEDDING = (
+                    form_data.enable_async
+                )
 
         request.app.state.ef = get_ef(
             request.app.state.config.RAG_EMBEDDING_ENGINE,
@@ -391,6 +398,7 @@ async def update_embedding_config(
                 if request.app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
                 else None
             ),
+            enable_async=request.app.state.config.ENABLE_ASYNC_RAG_EMBEDDING,
         )
 
         return {
@@ -398,6 +406,7 @@ async def update_embedding_config(
             "embedding_engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
             "embedding_model": request.app.state.config.RAG_EMBEDDING_MODEL,
             "embedding_batch_size": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+            "enable_async": request.app.state.config.ENABLE_ASYNC_RAG_EMBEDDING,
             "openai_config": {
                 "url": request.app.state.config.RAG_OPENAI_API_BASE_URL,
                 "key": request.app.state.config.RAG_OPENAI_API_KEY,
