@@ -173,14 +173,6 @@
 
 		if (
 			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker' &&
-			!RAGConfig.DATALAB_MARKER_API_KEY
-		) {
-			toast.error($i18n.t('Datalab Marker API Key required.'));
-			return;
-		}
-
-		if (
-			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker' &&
 			RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG &&
 			RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG.trim() !== ''
 		) {
@@ -220,6 +212,27 @@
 			await embeddingModelUpdateHandler();
 		}
 
+		if (RAGConfig.DOCLING_PARAMS) {
+			try {
+				JSON.parse(RAGConfig.DOCLING_PARAMS);
+			} catch (e) {
+				toast.error(
+					$i18n.t('Invalid JSON format in {{NAME}}', {
+						NAME: $i18n.t('Docling Parameters')
+					})
+				);
+				return;
+			}
+		}
+		if (RAGConfig.MINERU_PARAMS) {
+			try {
+				JSON.parse(RAGConfig.MINERU_PARAMS);
+			} catch (e) {
+				toast.error($i18n.t('Invalid JSON format in MinerU Parameters'));
+				return;
+			}
+		}
+
 		const res = await updateRAGConfig(localStorage.token, {
 			...RAGConfig,
 			ALLOWED_FILE_EXTENSIONS: RAGConfig.ALLOWED_FILE_EXTENSIONS.split(',')
@@ -228,7 +241,17 @@
 			DOCLING_PICTURE_DESCRIPTION_LOCAL: JSON.parse(
 				RAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL || '{}'
 			),
-			DOCLING_PICTURE_DESCRIPTION_API: JSON.parse(RAGConfig.DOCLING_PICTURE_DESCRIPTION_API || '{}')
+			DOCLING_PICTURE_DESCRIPTION_API: JSON.parse(
+				RAGConfig.DOCLING_PICTURE_DESCRIPTION_API || '{}'
+			),
+			DOCLING_PARAMS:
+				typeof RAGConfig.DOCLING_PARAMS === 'string' && RAGConfig.DOCLING_PARAMS.trim() !== ''
+					? JSON.parse(RAGConfig.DOCLING_PARAMS)
+					: {},
+			MINERU_PARAMS:
+				typeof RAGConfig.MINERU_PARAMS === 'string' && RAGConfig.MINERU_PARAMS.trim() !== ''
+					? JSON.parse(RAGConfig.MINERU_PARAMS)
+					: {}
 		});
 		dispatch('save');
 	};
@@ -268,6 +291,15 @@
 			null,
 			2
 		);
+		config.DOCLING_PARAMS =
+			typeof config.DOCLING_PARAMS === 'object'
+				? JSON.stringify(config.DOCLING_PARAMS ?? {}, null, 2)
+				: config.DOCLING_PARAMS;
+
+		config.MINERU_PARAMS =
+			typeof config.MINERU_PARAMS === 'object'
+				? JSON.stringify(config.MINERU_PARAMS ?? {}, null, 2)
+				: config.MINERU_PARAMS;
 
 		RAGConfig = config;
 	});
@@ -325,7 +357,7 @@
 		<div class=" space-y-2.5 overflow-y-scroll scrollbar-hidden h-full pr-1.5">
 			<div class="">
 				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -725,18 +757,18 @@
 								{/if}
 							{/if}
 
-							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
-									<Tooltip content={''} placement="top-start">
+							<div class="flex flex-col gap-2 mt-2">
+								<div class=" flex flex-col w-full justify-between">
+									<div class=" mb-1 text-xs font-medium">
 										{$i18n.t('Parameters')}
-									</Tooltip>
-								</div>
-								<div class="">
-									<Textarea
-										bind:value={RAGConfig.DOCLING_PARAMETERS}
-										placeholder={$i18n.t('Enter additional parameters in JSON format')}
-										minSize={100}
-									/>
+									</div>
+									<div class="flex w-full items-center relative">
+										<Textarea
+											bind:value={RAGConfig.DOCLING_PARAMS}
+											placeholder={$i18n.t('Enter additional parameters in JSON format')}
+											minSize={100}
+										/>
+									</div>
 								</div>
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'document_intelligence'}
@@ -754,6 +786,11 @@
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mistral_ocr'}
 							<div class="my-0.5 flex gap-2 pr-2">
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('Enter Mistral API Base URL')}
+									bind:value={RAGConfig.MISTRAL_OCR_API_BASE_URL}
+								/>
 								<SensitiveInput
 									placeholder={$i18n.t('Enter Mistral API Key')}
 									bind:value={RAGConfig.MISTRAL_OCR_API_KEY}
@@ -785,8 +822,8 @@
 											}
 										}}
 									>
-										<option value="local">{$i18n.t('Self-Hosted')}</option>
-										<option value="cloud">{$i18n.t('minerU managed (Cloud API)')}</option>
+										<option value="local">{$i18n.t('local')}</option>
+										<option value="cloud">{$i18n.t('cloud')}</option>
 									</select>
 								</div>
 							</div>
@@ -802,19 +839,17 @@
 								/>
 							</div>
 
-							<!-- API Key (Cloud only) -->
-							{#if RAGConfig.MINERU_API_MODE === 'cloud'}
-								<div class="flex w-full mt-2">
-									<SensitiveInput
-										placeholder={$i18n.t('Enter MinerU API Key')}
-										bind:value={RAGConfig.MINERU_API_KEY}
-									/>
-								</div>
-							{/if}
+							<div class="flex w-full mt-2">
+								<SensitiveInput
+									placeholder={$i18n.t('Enter MinerU API Key')}
+									bind:value={RAGConfig.MINERU_API_KEY}
+									required={false}
+								/>
+							</div>
 
 							<!-- Parameters -->
-							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
+							<div class="flex flex-col justify-between w-full mt-2">
+								<div class="text-xs font-medium">
 									<Tooltip
 										content={$i18n.t(
 											'Advanced parameters for MinerU parsing (enable_ocr, enable_formula, enable_table, language, model_version, page_ranges)'
@@ -824,22 +859,9 @@
 										{$i18n.t('Parameters')}
 									</Tooltip>
 								</div>
-								<div class="">
+								<div class="mt-1.5">
 									<Textarea
-										value={typeof RAGConfig.MINERU_PARAMS === 'object' &&
-										RAGConfig.MINERU_PARAMS !== null &&
-										Object.keys(RAGConfig.MINERU_PARAMS).length > 0
-											? JSON.stringify(RAGConfig.MINERU_PARAMS, null, 2)
-											: ''}
-										on:input={(e) => {
-											try {
-												const value = e.target.value.trim();
-												RAGConfig.MINERU_PARAMS = value ? JSON.parse(value) : {};
-											} catch (err) {
-												// Keep the string value if JSON is invalid (user is still typing)
-												RAGConfig.MINERU_PARAMS = e.target.value;
-											}
-										}}
+										bind:value={RAGConfig.MINERU_PARAMS}
 										placeholder={`{\n  "enable_ocr": false,\n  "enable_formula": true,\n  "enable_table": true,\n  "language": "en",\n  "model_version": "pipeline",\n  "page_ranges": ""\n}`}
 										minSize={100}
 									/>
@@ -925,7 +947,7 @@
 
 				{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
 					<div class="mb-3">
-						<div class=" mb-2.5 text-base font-medium">{$i18n.t('Embedding')}</div>
+						<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Embedding')}</div>
 
 						<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -1100,7 +1122,7 @@
 					</div>
 
 					<div class="mb-3">
-						<div class=" mb-2.5 text-base font-medium">{$i18n.t('Retrieval')}</div>
+						<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Retrieval')}</div>
 
 						<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -1130,6 +1152,21 @@
 							</div>
 
 							{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
+								<div class="mb-2.5 flex w-full justify-between">
+									<div class="self-center text-xs font-medium">
+										{$i18n.t('Enrich Hybrid Search Text')}
+									</div>
+									<div class="flex items-center relative">
+										<Tooltip
+											content={$i18n.t(
+												'Adds filenames, titles, sections, and snippets into the BM25 text to improve lexical recall.'
+											)}
+										>
+											<Switch bind:state={RAGConfig.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS} />
+										</Tooltip>
+									</div>
+								</div>
+
 								<div class="  mb-2.5 flex flex-col w-full justify-between">
 									<div class="flex w-full justify-between">
 										<div class=" self-center text-xs font-medium">
@@ -1343,7 +1380,7 @@
 				{/if}
 
 				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Files')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Files')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -1455,7 +1492,7 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Integration')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Integration')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -1475,7 +1512,7 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Danger Zone')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Danger Zone')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 

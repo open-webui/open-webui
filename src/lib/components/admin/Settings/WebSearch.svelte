@@ -95,7 +95,7 @@
 		{#if webConfig}
 			<div class="">
 				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -150,6 +150,26 @@
 								</div>
 							</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'perplexity_search'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Perplexity Search API URL')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="text"
+												placeholder={$i18n.t('Enter Perplexity Search API URL')}
+												bind:value={webConfig.PERPLEXITY_SEARCH_API_URL}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
+								</div>
+							</div>
+
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
 									<div class=" self-center text-xs font-medium mb-1">
@@ -664,7 +684,7 @@
 							<input
 								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 								placeholder={$i18n.t(
-									'Enter domains separated by commas (e.g., example.com,site.org)'
+									'Enter domains separated by commas (e.g., example.com,site.org,!excludedsite.com)'
 								)}
 								bind:value={webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST}
 							/>
@@ -724,7 +744,7 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Loader')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Loader')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 

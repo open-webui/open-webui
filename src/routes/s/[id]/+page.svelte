@@ -161,7 +161,7 @@
 						: 'max-w-5xl'} mx-auto"
 				>
 					<div class="px-3">
-						<div class=" text-2xl font-semibold line-clamp-1">
+						<div class=" text-2xl font-medium line-clamp-1">
 							{title}
 						</div>
 

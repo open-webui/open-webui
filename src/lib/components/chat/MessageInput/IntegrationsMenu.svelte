@@ -94,7 +94,6 @@
 
 <Dropdown
 	bind:show
-	{closeOnOutsideClick}
 	on:change={(e) => {
 		if (e.detail === false) {
 			onClose();
@@ -245,60 +244,28 @@
 						</Tooltip>
 					{/if}
 
-					{#if showImageGenerationButton}
-						<Tooltip content={$i18n.t('Generate an image')} placement="top-start">
-							<button
-								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
-								on:click={() => {
-									imageGenerationEnabled = !imageGenerationEnabled;
-								}}
-							>
-								<div class="flex-1 truncate">
-									<div class="flex flex-1 gap-2 items-center">
-										<div class="shrink-0">
-											<Photo className="size-4" strokeWidth="1.5" />
-										</div>
-
-										<div class=" truncate">{$i18n.t('Image')}</div>
-									</div>
-								</div>
-
-								<div class=" shrink-0">
-									<Switch
-										state={imageGenerationEnabled}
-										on:change={async (e) => {
-											const state = e.detail;
-											await tick();
-										}}
-									/>
-								</div>
-							</button>
-						</Tooltip>
-					{/if}
-
 					{#if false}
-					{#if showCodeInterpreterButton}
-						<Tooltip content={$i18n.t('Execute code for analysis')} placement="top-start">
-							<button
-								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
-								aria-pressed={codeInterpreterEnabled}
-								aria-label={codeInterpreterEnabled
-									? $i18n.t('Disable Code Interpreter')
-									: $i18n.t('Enable Code Interpreter')}
-								on:click={() => {
-									codeInterpreterEnabled = !codeInterpreterEnabled;
-								}}
-							>
-								<div class="flex-1 truncate">
-									<div class="flex flex-1 gap-2 items-center">
-										<div class="shrink-0">
-											<Terminal className="size-3.5" strokeWidth="1.75" />
+						{#if showImageGenerationButton}
+							<Tooltip content={$i18n.t('Generate an image')} placement="top-start">
+								<button
+									class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+									on:click={() => {
+										imageGenerationEnabled = !imageGenerationEnabled;
+									}}
+								>
+									<div class="flex-1 truncate">
+										<div class="flex flex-1 gap-2 items-center">
+											<div class="shrink-0">
+												<Photo className="size-4" strokeWidth="1.5" />
+											</div>
+
+											<div class=" truncate">{$i18n.t('Image')}</div>
 										</div>
 									</div>
 
 									<div class=" shrink-0">
 										<Switch
-											state={codeInterpreterEnabled}
+											state={imageGenerationEnabled}
 											on:change={async (e) => {
 												const state = e.detail;
 												await tick();
@@ -306,6 +273,39 @@
 										/>
 									</div>
 								</button>
+							</Tooltip>
+						{/if}
+
+						{#if showCodeInterpreterButton}
+							<Tooltip content={$i18n.t('Execute code for analysis')} placement="top-start">
+								<button
+									class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+									aria-pressed={codeInterpreterEnabled}
+									aria-label={codeInterpreterEnabled
+										? $i18n.t('Disable Code Interpreter')
+										: $i18n.t('Enable Code Interpreter')}
+									on:click={() => {
+										codeInterpreterEnabled = !codeInterpreterEnabled;
+									}}
+								>
+									<div class="flex-1 truncate">
+										<div class="flex flex-1 gap-2 items-center">
+											<div class="shrink-0">
+												<Terminal className="size-3.5" strokeWidth="1.75" />
+											</div>
+										</div>
+
+										<div class=" shrink-0">
+											<Switch
+												state={codeInterpreterEnabled}
+												on:change={async (e) => {
+													const state = e.detail;
+													await tick();
+												}}
+											/>
+										</div>
+									</div></button
+								>
 							</Tooltip>
 						{/if}
 					{/if}

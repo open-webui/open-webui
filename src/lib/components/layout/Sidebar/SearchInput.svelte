@@ -76,7 +76,7 @@
 				.filter((tag) => {
 					const tagName = lastWord.slice(4);
 					if (tagName) {
-						const tagId = tagName.replace(' ', '_').toLowerCase();
+						const tagId = tagName.replaceAll(' ', '_').toLowerCase();
 
 						if (tag.id !== tagId) {
 							return tag.id.startsWith(tagId);
@@ -99,8 +99,8 @@
 				.filter((folder) => {
 					const folderName = lastWord.slice(7);
 					if (folderName) {
-						const id = folder.name.replace(' ', '_').toLowerCase();
-						const folderId = folderName.replace(' ', '_').toLowerCase();
+						const id = folder.name.replaceAll(' ', '_').toLowerCase();
+						const folderId = folderName.replaceAll(' ', '_').toLowerCase();
 
 						if (id !== folderId) {
 							return id.startsWith(folderId);
@@ -113,7 +113,7 @@
 				})
 				.map((folder) => {
 					return {
-						id: folder.name.replace(' ', '_').toLowerCase(),
+						id: folder.name.replaceAll(' ', '_').toLowerCase(),
 						name: folder.name,
 						type: 'folder'
 					};

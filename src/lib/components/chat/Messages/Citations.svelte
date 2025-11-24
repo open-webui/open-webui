@@ -108,7 +108,7 @@
 						source: _source,
 						document: [document],
 						metadata: metadata ? [metadata] : [],
-						distances: distance !== undefined ? [distance] : undefined
+						distances: distance !== undefined ? [distance] : []
 					});
 				}
 			});

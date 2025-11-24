@@ -14,7 +14,7 @@ from sqlalchemy import BigInteger, Column, String, Text
 class Memory(Base):
     __tablename__ = "memory"
 
-    id = Column(String, primary_key=True)
+    id = Column(String, primary_key=True, unique=True)
     user_id = Column(String)
     content = Column(Text)
     updated_at = Column(BigInteger)

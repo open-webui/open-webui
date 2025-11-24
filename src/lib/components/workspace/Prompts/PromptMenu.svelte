@@ -2,7 +2,7 @@
 	import { DropdownMenu } from 'bits-ui';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { getContext } from 'svelte';
-	import { config } from '$lib/stores';
+	import { config, user } from '$lib/stores';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
@@ -68,16 +68,18 @@
 				<div class="flex items-center">{$i18n.t('Clone')}</div>
 			</DropdownMenu.Item>
 
-			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
-				on:click={() => {
-					exportHandler();
-				}}
-			>
-				<Download />
+			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts_export}
+				<DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+					on:click={() => {
+						exportHandler();
+					}}
+				>
+					<Download />
 
-				<div class="flex items-center">{$i18n.t('Export')}</div>
-			</DropdownMenu.Item>
+					<div class="flex items-center">{$i18n.t('Export')}</div>
+				</DropdownMenu.Item>
+			{/if}
 
 			<hr class="border-gray-50 dark:border-gray-850 my-1" />
 

@@ -2,6 +2,8 @@ import asyncio
 from typing import Optional
 from contextlib import AsyncExitStack
 
+import anyio
+
 from mcp import ClientSession
 from mcp.client.auth import OAuthClientProvider, TokenStorage
 from mcp.client.streamable_http import streamablehttp_client
@@ -11,26 +13,29 @@ from mcp.shared.auth import OAuthClientInformationFull, OAuthClientMetadata, OAu
 class MCPClient:
     def __init__(self):
         self.session: Optional[ClientSession] = None
-        self.exit_stack = AsyncExitStack()
+        self.exit_stack = None
 
     async def connect(self, url: str, headers: Optional[dict] = None):
-        try:
-            self._streams_context = streamablehttp_client(url, headers=headers)
+        async with AsyncExitStack() as exit_stack:
+            try:
+                self._streams_context = streamablehttp_client(url, headers=headers)
 
-            transport = await self.exit_stack.enter_async_context(self._streams_context)
-            read_stream, write_stream, _ = transport
+                transport = await exit_stack.enter_async_context(self._streams_context)
+                read_stream, write_stream, _ = transport
 
-            self._session_context = ClientSession(
-                read_stream, write_stream
-            )  # pylint: disable=W0201
+                self._session_context = ClientSession(
+                    read_stream, write_stream
+                )  # pylint: disable=W0201
 
-            self.session = await self.exit_stack.enter_async_context(
-                self._session_context
-            )
-            await self.session.initialize()
-        except Exception as e:
-            await self.disconnect()
-            raise e
+                self.session = await exit_stack.enter_async_context(
+                    self._session_context
+                )
+                with anyio.fail_after(10):
+                    await self.session.initialize()
+                self.exit_stack = exit_stack.pop_all()
+            except Exception as e:
+                await asyncio.shield(self.disconnect())
+                raise e
 
     async def list_tool_specs(self) -> Optional[dict]:
         if not self.session:

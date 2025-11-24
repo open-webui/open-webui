@@ -1,392 +1,129 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import Modal from '../common/Modal.svelte';
-
-	import Tooltip from '../common/Tooltip.svelte';
-	const i18n = getContext('i18n');
+	import { shortcuts } from '$lib/shortcuts';
+	import { settings } from '$lib/stores';
+	import ShortcutItem from './ShortcutItem.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
+	type CategorizedShortcuts = {
+		[category: string]: {
+			left: Shortcut[];
+			right: Shortcut[];
+		};
+	};
+
+	const i18n = getContext('i18n');
+
 	export let show = false;
+
+	let categorizedShortcuts: CategorizedShortcuts = {};
+	let isMac = false;
+
+	onMount(() => {
+		isMac = /Mac/i.test(navigator.userAgent);
+	});
+
+	$: {
+		const allShortcuts = Object.values(shortcuts).filter((shortcut) => {
+			if (!shortcut.setting) {
+				return true;
+			}
+			return $settings[shortcut.setting.id] === shortcut.setting.value;
+		});
+
+		categorizedShortcuts = allShortcuts.reduce((acc, shortcut) => {
+			const category = shortcut.category;
+			if (!acc[category]) {
+				acc[category] = [];
+			}
+			acc[category].push(shortcut);
+			return acc;
+		}, {});
+	}
 </script>
 
 <Modal bind:show>
-	<div class="text-gray-700 dark:text-gray-100">
-		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Keyboard shortcuts')}</div>
-			<button
-				class="self-center"
-				on:click={() => {
-					show = false;
-				}}
-			>
+	<div class="text-gray-700 dark:text-gray-100 px-5 py-4">
+		<div class="flex justify-between dark:text-gray-300 pb-2">
+			<div class="text-lg font-medium self-center">{$i18n.t('Keyboard Shortcuts')}</div>
+			<button class="self-center" on:click={() => (show = false)}>
 				<XMark className={'size-5'} />
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full p-5 md:space-x-4 dark:text-gray-200">
-			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
-				<div class="flex flex-col space-y-3 w-full self-start">
-					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">{$i18n.t('Open new chat')}</div>
-
-						<div class="flex space-x-1 text-xs">
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								Ctrl/⌘
-							</div>
-
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								Shift
-							</div>
-
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								O
-							</div>
-						</div>
-					</div>
-
-					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">{$i18n.t('Focus chat input')}</div>
-
-						<div class="flex space-x-1 text-xs">
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								Shift
-							</div>
-
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								Esc
-							</div>
-						</div>
-					</div>
-
-					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">
-							<Tooltip
-								content={$i18n.t(
-									'Only active when the chat input is in focus and an LLM is generating a response.'
-								)}
-							>
-								{$i18n.t('Stop Generating')}<span class="text-xs"> *</span>
-							</Tooltip>
-						</div>
-
-						<div class="flex space-x-1 text-xs">
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								Esc
-							</div>
-						</div>
-					</div>
-
-					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">{$i18n.t('Copy last code block')}</div>
-
-						<div class="flex space-x-1 text-xs">
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								Ctrl/⌘
-							</div>
-
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								Shift
-							</div>
-
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								;
-							</div>
-						</div>
-					</div>
-
-					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">{$i18n.t('Copy last response')}</div>
-
-						<div class="flex space-x-1 text-xs">
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								Ctrl/⌘
-							</div>
-
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								Shift
-							</div>
-
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								C
-							</div>
-						</div>
-					</div>
-
-					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">
-							<Tooltip
-								content={$i18n.t(
-									'Only active when "Paste Large Text as File" setting is toggled on.'
-								)}
-							>
-								{$i18n.t('Prevent file creation')}<span class="text-s"> *</span>
-							</Tooltip>
-						</div>
-
-						<div class="flex space-x-1 text-xs">
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								Ctrl/⌘
-							</div>
-
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								Shift
-							</div>
-
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								V
-							</div>
-						</div>
-					</div>
+		{#each Object.entries(categorizedShortcuts) as [category, items], categoryIndex}
+			{#if categoryIndex > 0}
+				<div class="py-3">
+					<div class="w-full border-t dark:border-gray-850 border-gray-50" />
 				</div>
+			{/if}
 
-				<div class="flex flex-col space-y-3 w-full self-start">
-					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">{$i18n.t('Generate prompt pair')}</div>
+			<div class="flex justify-between dark:text-gray-300 pb-2">
+				<div class="text-base self-center">{$i18n.t(category)}</div>
+			</div>
+			<div class="flex flex-col md:flex-row w-full md:space-x-2 dark:text-gray-200">
+				<div class="flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
+					<div class=" grid grid-cols-1 sm:grid-cols-2 gap-2 gap-x-4 w-full">
+						<!-- {$i18n.t('Chat')} -->
+						<!-- {$i18n.t('Global')} -->
+						<!-- {$i18n.t('Input')} -->
+						<!-- {$i18n.t('Message')} -->
 
-						<div class="flex space-x-1 text-xs">
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								Ctrl/⌘
+						<!-- {$i18n.t('New Chat')} -->
+						<!-- {$i18n.t('New Temporary Chat')} -->
+						<!-- {$i18n.t('Delete Chat')} -->
+						<!-- {$i18n.t('Search')} -->
+						<!-- {$i18n.t('Open Settings')} -->
+						<!-- {$i18n.t('Show Shortcuts')} -->
+						<!-- {$i18n.t('Toggle Sidebar')} -->
+						<!-- {$i18n.t('Close Modal')} -->
+						<!-- {$i18n.t('Focus Chat Input')} -->
+						<!-- {$i18n.t('Accept Autocomplete Generation\nJump to Prompt Variable')} -->
+						<!-- {$i18n.t('Prevent File Creation')} -->
+						<!-- {$i18n.t('Attach File From Knowledge')} -->
+						<!-- {$i18n.t('Add Custom Prompt')} -->
+						<!-- {$i18n.t('Talk to Model')} -->
+						<!-- {$i18n.t('Generate Message Pair')} -->
+						<!-- {$i18n.t('Regenerate Response')} -->
+						<!-- {$i18n.t('Stop Generating')} -->
+						<!-- {$i18n.t('Edit Last Message')} -->
+						<!-- {$i18n.t('Copy Last Response')} -->
+						<!-- {$i18n.t('Copy Last Code Block')} -->
+
+						<!-- {$i18n.t('Only active when "Paste Large Text as File" setting is toggled on.')} -->
+						<!-- {$i18n.t('Only active when the chat input is in focus.')} -->
+						<!-- {$i18n.t('Only active when the chat input is in focus and an LLM is generating a response.')} -->
+						<!-- {$i18n.t('Only can be triggered when the chat input is in focus.')} -->
+						{#each items as shortcut}
+							<div class="col-span-1 flex items-start">
+								<ShortcutItem {shortcut} {isMac} />
 							</div>
-
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								Shift
-							</div>
-
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								Enter
-							</div>
-						</div>
-					</div>
-
-					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">{$i18n.t('Toggle search')}</div>
-
-						<div class="flex space-x-1 text-xs">
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								Ctrl/⌘
-							</div>
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								K
-							</div>
-						</div>
-					</div>
-
-					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">{$i18n.t('Toggle settings')}</div>
-
-						<div class="flex space-x-1 text-xs">
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								Ctrl/⌘
-							</div>
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								.
-							</div>
-						</div>
-					</div>
-
-					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">{$i18n.t('Toggle sidebar')}</div>
-
-						<div class="flex space-x-1 text-xs">
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								Ctrl/⌘
-							</div>
-
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								Shift
-							</div>
-
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								S
-							</div>
-						</div>
-					</div>
-
-					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">{$i18n.t('Delete chat')}</div>
-
-						<div class="flex space-x-1 text-xs">
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								Ctrl/⌘
-							</div>
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								Shift
-							</div>
-
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								⌫/Delete
-							</div>
-						</div>
-					</div>
-
-					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">{$i18n.t('Show shortcuts')}</div>
-
-						<div class="flex space-x-1 text-xs">
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								Ctrl/⌘
-							</div>
-
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								/
-							</div>
-						</div>
+						{/each}
 					</div>
 				</div>
 			</div>
-		</div>
-
-		<div class="px-5 pb-4 text-xs text-gray-500 dark:text-gray-400">
-			{$i18n.t(
-				'Shortcuts with an asterisk (*) are situational and only active under specific conditions.'
-			)}
-		</div>
-		<div class=" flex justify-between dark:text-gray-300 px-5">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Input commands')}</div>
-		</div>
-
-		<div class="flex flex-col md:flex-row w-full p-5 md:space-x-4 dark:text-gray-200">
-			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
-				<div class="flex flex-col space-y-3 w-full self-start">
-					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">
-							{$i18n.t('Attach file from knowledge')}
-						</div>
-
-						<div class="flex space-x-1 text-xs">
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								#
-							</div>
-						</div>
-					</div>
-
-					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">
-							{$i18n.t('Add custom prompt')}
-						</div>
-
-						<div class="flex space-x-1 text-xs">
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								/
-							</div>
-						</div>
-					</div>
-
-					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">
-							{$i18n.t('Talk to model')}
-						</div>
-
-						<div class="flex space-x-1 text-xs">
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								@
-							</div>
-						</div>
-					</div>
-
-					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">
-							{$i18n.t('Accept autocomplete generation / Jump to prompt variable')}
-						</div>
-
-						<div class="flex space-x-1 text-xs">
-							<div
-								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-							>
-								TAB
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
+		{/each}
 	</div>
 </Modal>
 
 <style>
 	input::-webkit-outer-spin-button,
 	input::-webkit-inner-spin-button {
-		/* display: none; <- Crashes Chrome on hover */
 		-webkit-appearance: none;
-		margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
+		margin: 0;
 	}
 
 	.tabs::-webkit-scrollbar {
-		display: none; /* for Chrome, Safari and Opera */
+		display: none;
 	}
 
 	.tabs {
-		-ms-overflow-style: none; /* IE and Edge */
-		scrollbar-width: none; /* Firefox */
+		-ms-overflow-style: none;
+		scrollbar-width: none;
 	}
 
 	input[type='number'] {
-		-moz-appearance: textfield; /* Firefox */
+		-moz-appearance: textfield;
 	}
 </style>

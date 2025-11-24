@@ -101,5 +101,6 @@ import 'dayjs/locale/yo';
 import 'dayjs/locale/zh';
 import 'dayjs/locale/zh-tw';
 import 'dayjs/locale/et';
+import 'dayjs/locale/en-gb';
 
 export default dayjs;

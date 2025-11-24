@@ -1,4 +1,5 @@
 import logging
+import copy
 from fastapi import APIRouter, Depends, Request, HTTPException
 from pydantic import BaseModel, ConfigDict
 import aiohttp
@@ -15,6 +16,7 @@ from open_webui.utils.tools import (
     set_tool_servers,
 )
 from open_webui.utils.mcp.client import MCPClient
+from open_webui.models.oauth_sessions import OAuthSessions
 
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -142,6 +144,7 @@ class ToolServerConnection(BaseModel):
     path: str
     type: Optional[str] = "openapi"  # openapi, mcp
     auth_type: Optional[str]
+    headers: Optional[dict | str] = None
     key: Optional[str]
     config: Optional[dict]
 
@@ -165,6 +168,21 @@ async def set_tool_servers_config(
     form_data: ToolServersConfigForm,
     user=Depends(get_admin_user),
 ):
+    for connection in request.app.state.config.TOOL_SERVER_CONNECTIONS:
+        server_type = connection.get("type", "openapi")
+        auth_type = connection.get("auth_type", "none")
+
+        if auth_type == "oauth_2.1":
+            # Remove existing OAuth clients for tool servers
+            server_id = connection.get("info", {}).get("id")
+            client_key = f"{server_type}:{server_id}"
+
+            try:
+                request.app.state.oauth_client_manager.remove_client(client_key)
+            except:
+                pass
+
+    # Set new tool server connections
     request.app.state.config.TOOL_SERVER_CONNECTIONS = [
         connection.model_dump() for connection in form_data.TOOL_SERVER_CONNECTIONS
     ]
@@ -176,6 +194,7 @@ async def set_tool_servers_config(
         if server_type == "mcp":
             server_id = connection.get("info", {}).get("id")
             auth_type = connection.get("auth_type", "none")
+
             if auth_type == "oauth_2.1" and server_id:
                 try:
                     oauth_client_info = connection.get("info", {}).get(
@@ -211,7 +230,7 @@ async def verify_tool_servers_config(
                     log.debug(
                         f"Trying to fetch OAuth 2.1 discovery document from {discovery_url}"
                     )
-                    async with aiohttp.ClientSession() as session:
+                    async with aiohttp.ClientSession(trust_env=True) as session:
                         async with session.get(
                             discovery_url
                         ) as oauth_server_metadata_response:
@@ -252,17 +271,25 @@ async def verify_tool_servers_config(
                     elif form_data.auth_type == "session":
                         token = request.state.token.credentials
                     elif form_data.auth_type == "system_oauth":
+                        oauth_token = None
                         try:
                             if request.cookies.get("oauth_session_id", None):
-                                token = await request.app.state.oauth_manager.get_oauth_token(
+                                oauth_token = await request.app.state.oauth_manager.get_oauth_token(
                                     user.id,
                                     request.cookies.get("oauth_session_id", None),
                                 )
+
+                                if oauth_token:
+                                    token = oauth_token.get("access_token", "")
                         except Exception as e:
                             pass
-
                     if token:
                         headers = {"Authorization": f"Bearer {token}"}
+
+                    if form_data.headers and isinstance(form_data.headers, dict):
+                        if headers is None:
+                            headers = {}
+                        headers.update(form_data.headers)
 
                     await client.connect(form_data.url, headers=headers)
                     specs = await client.list_tool_specs()
@@ -281,6 +308,7 @@ async def verify_tool_servers_config(
                         await client.disconnect()
         else:  # openapi
             token = None
+            headers = None
             if form_data.auth_type == "bearer":
                 token = form_data.key
             elif form_data.auth_type == "session":
@@ -288,15 +316,29 @@ async def verify_tool_servers_config(
             elif form_data.auth_type == "system_oauth":
                 try:
                     if request.cookies.get("oauth_session_id", None):
-                        token = await request.app.state.oauth_manager.get_oauth_token(
-                            user.id,
-                            request.cookies.get("oauth_session_id", None),
+                        oauth_token = (
+                            await request.app.state.oauth_manager.get_oauth_token(
+                                user.id,
+                                request.cookies.get("oauth_session_id", None),
+                            )
                         )
+
+                        if oauth_token:
+                            token = oauth_token.get("access_token", "")
+
                 except Exception as e:
                     pass
 
+            if token:
+                headers = {"Authorization": f"Bearer {token}"}
+
+            if form_data.headers and isinstance(form_data.headers, dict):
+                if headers is None:
+                    headers = {}
+                headers.update(form_data.headers)
+
             url = get_tool_server_url(form_data.url, form_data.path)
-            return await get_tool_server_data(token, url)
+            return await get_tool_server_data(url, headers=headers)
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -421,6 +463,7 @@ async def set_code_execution_config(
 ############################
 class ModelsConfigForm(BaseModel):
     DEFAULT_MODELS: Optional[str]
+    DEFAULT_PINNED_MODELS: Optional[str]
     MODEL_ORDER_LIST: Optional[list[str]]
 
 
@@ -428,6 +471,7 @@ class ModelsConfigForm(BaseModel):
 async def get_models_config(request: Request, user=Depends(get_admin_user)):
     return {
         "DEFAULT_MODELS": request.app.state.config.DEFAULT_MODELS,
+        "DEFAULT_PINNED_MODELS": request.app.state.config.DEFAULT_PINNED_MODELS,
         "MODEL_ORDER_LIST": request.app.state.config.MODEL_ORDER_LIST,
     }
 
@@ -437,9 +481,11 @@ async def set_models_config(
     request: Request, form_data: ModelsConfigForm, user=Depends(get_admin_user)
 ):
     request.app.state.config.DEFAULT_MODELS = form_data.DEFAULT_MODELS
+    request.app.state.config.DEFAULT_PINNED_MODELS = form_data.DEFAULT_PINNED_MODELS
     request.app.state.config.MODEL_ORDER_LIST = form_data.MODEL_ORDER_LIST
     return {
         "DEFAULT_MODELS": request.app.state.config.DEFAULT_MODELS,
+        "DEFAULT_PINNED_MODELS": request.app.state.config.DEFAULT_PINNED_MODELS,
         "MODEL_ORDER_LIST": request.app.state.config.MODEL_ORDER_LIST,
     }
 

@@ -102,7 +102,7 @@ def process_uploaded_file(request, file, file_path, file_item, file_metadata, us
                 )
             ):
                 file_path = Storage.get_file(file_path)
-                result = transcribe(request, file_path, file_metadata)
+                result = transcribe(request, file_path, file_metadata, user)
 
                 process_file(
                     request,
@@ -115,6 +115,10 @@ def process_uploaded_file(request, file, file_path, file_item, file_metadata, us
                 request.app.state.config.CONTENT_EXTRACTION_ENGINE == "external"
             ):
                 process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
+            else:
+                raise Exception(
+                    f"File type {file.content_type} is not supported for processing"
+                )
         else:
             log.info(
                 f"File type {file.content_type} is not provided, but trying to process anyway"

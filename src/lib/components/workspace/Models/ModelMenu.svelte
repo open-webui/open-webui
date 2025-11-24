@@ -14,7 +14,7 @@
 	import Download from '$lib/components/icons/Download.svelte';
 	import ArrowUpCircle from '$lib/components/icons/ArrowUpCircle.svelte';
 
-	import { config } from '$lib/stores';
+	import { config, user as currentUser } from '$lib/stores';
 	import Link from '$lib/components/icons/Link.svelte';
 
 	const i18n = getContext('i18n');
@@ -22,6 +22,7 @@
 	export let user;
 	export let model;
 
+	export let editHandler: Function;
 	export let shareHandler: Function;
 	export let cloneHandler: Function;
 	export let exportHandler: Function;
@@ -61,6 +62,16 @@
 			align="start"
 			transition={flyAndScale}
 		>
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+				on:click={() => {
+					editHandler();
+				}}
+			>
+				<Pencil />
+				<div class="flex items-center">{$i18n.t('Edit')}</div>
+			</DropdownMenu.Item>
+
 			<DropdownMenu.Item
 				class="flex  gap-2  items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 				on:click={() => {
@@ -116,6 +127,19 @@
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 				on:click={() => {
+					cloneHandler();
+				}}
+			>
+				<DocumentDuplicate />
+
+				<div class="flex items-center">{$i18n.t('Clone')}</div>
+			</DropdownMenu.Item>
+
+			<hr class="border-gray-50 dark:border-gray-800 my-1" />
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+				on:click={() => {
 					copyLinkHandler();
 				}}
 			>
@@ -123,6 +147,19 @@
 
 				<div class="flex items-center">{$i18n.t('Copy Link')}</div>
 			</DropdownMenu.Item>
+
+			{#if $currentUser?.role === 'admin' || $currentUser?.permissions?.workspace?.models_export}
+				<DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+					on:click={() => {
+						exportHandler();
+					}}
+				>
+					<Download />
+
+					<div class="flex items-center">{$i18n.t('Export')}</div>
+				</DropdownMenu.Item>
+			{/if}
 
 			{#if $config?.features.enable_community_sharing}
 				<DropdownMenu.Item
@@ -135,28 +172,6 @@
 					<div class="flex items-center">{$i18n.t('Share')}</div>
 				</DropdownMenu.Item>
 			{/if}
-
-			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
-				on:click={() => {
-					cloneHandler();
-				}}
-			>
-				<DocumentDuplicate />
-
-				<div class="flex items-center">{$i18n.t('Clone')}</div>
-			</DropdownMenu.Item>
-
-			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
-				on:click={() => {
-					exportHandler();
-				}}
-			>
-				<Download />
-
-				<div class="flex items-center">{$i18n.t('Export')}</div>
-			</DropdownMenu.Item>
 
 			<hr class="border-gray-50 dark:border-gray-800 my-1" />
 

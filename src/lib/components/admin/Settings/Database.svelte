@@ -2,7 +2,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { downloadDatabase, downloadLiteLLMConfig } from '$lib/apis/utils';
+	import { downloadDatabase } from '$lib/apis/utils';
 	import { onMount, getContext } from 'svelte';
 	import { config, user } from '$lib/stores';
 	import { toast } from 'svelte-sonner';

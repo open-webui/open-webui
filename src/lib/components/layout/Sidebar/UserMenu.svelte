@@ -78,8 +78,8 @@
 		<DropdownMenu.Content
 			class="w-full {className}  rounded-2xl px-1 py-1  border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg text-sm"
 			sideOffset={4}
-			side="bottom"
-			align="start"
+			side="top"
+			align="end"
 			transition={(e) => fade(e, { duration: 100 })}
 		>
 			<DropdownMenu.Item
@@ -184,7 +184,7 @@
 					<DropdownMenu.Item
 						as="a"
 						target="_blank"
-						class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition"
+						class="flex gap-3 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition"
 						id="chat-share-button"
 						on:click={() => {
 							show = false;
@@ -199,7 +199,7 @@
 					<DropdownMenu.Item
 						as="a"
 						target="_blank"
-						class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition"
+						class="flex gap-3 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition"
 						id="chat-share-button"
 						on:click={() => {
 							show = false;
@@ -212,7 +212,7 @@
 				{/if}
 
 				<DropdownMenu.Item
-					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full  hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition cursor-pointer"
+					class="flex gap-3 items-center py-1.5 px-3 text-sm select-none w-full  hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition cursor-pointer"
 					id="chat-share-button"
 					on:click={async () => {
 						show = false;
