@@ -1855,13 +1855,21 @@ async def process_chat_response(
                         )
 
                         # Save message in the database with reasoning included
+                        update_data = {
+                            "role": "assistant",
+                            "content": content,
+                        }
+
+                        reasoning_details = response_data["choices"][0]["message"].get(
+                            "reasoning_details"
+                        )
+                        if reasoning_details:
+                            update_data["reasoning_details"] = reasoning_details
+
                         Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata["chat_id"],
                             metadata["message_id"],
-                            {
-                                "role": "assistant",
-                                "content": content,
-                            },
+                            update_data,
                         )
 
                         # Send a webhook notification if the user is not active
@@ -2118,13 +2126,16 @@ async def process_chat_response(
                 temp_blocks = []
                 for idx, block in enumerate(content_blocks):
                     if block["type"] == "tool_calls":
-                        messages.append(
-                            {
-                                "role": "assistant",
-                                "content": serialize_content_blocks(temp_blocks, raw),
-                                "tool_calls": block.get("content"),
-                            }
-                        )
+                        message = {
+                            "role": "assistant",
+                            "content": serialize_content_blocks(temp_blocks, raw),
+                            "tool_calls": block.get("content"),
+                        }
+
+                        if block.get("reasoning_details"):
+                            message["reasoning_details"] = block["reasoning_details"]
+
+                        messages.append(message)
 
                         results = block.get("results", [])
 
@@ -2402,6 +2413,7 @@ async def process_chat_response(
                     nonlocal chunk_count
 
                     response_tool_calls = []
+                    reasoning_details = []
 
                     delta_count = 0
                     delta_chunk_size = max(
@@ -2512,6 +2524,12 @@ async def process_chat_response(
 
                                     delta = choices[0].get("delta", {})
                                     delta_tool_calls = delta.get("tool_calls", None)
+                                    delta_reasoning_details = delta.get(
+                                        "reasoning_details", None
+                                    )
+
+                                    if delta_reasoning_details:
+                                        reasoning_details.extend(delta_reasoning_details)
 
                                     if delta_tool_calls:
                                         for delta_tool_call in delta_tool_calls:
@@ -2676,14 +2694,26 @@ async def process_chat_response(
 
                                         if ENABLE_REALTIME_CHAT_SAVE:
                                             # Save message in the database
+                                            update_data = {
+                                                "content": serialize_content_blocks(
+                                                    content_blocks
+                                                ),
+                                            }
+
+                                            # Check for reasoning_details in content_blocks
+                                            for block in content_blocks:
+                                                if block["type"] == "tool_calls" and block.get(
+                                                    "reasoning_details"
+                                                ):
+                                                    update_data["reasoning_details"] = block[
+                                                        "reasoning_details"
+                                                    ]
+                                                    break
+
                                             Chats.upsert_message_to_chat_by_id_and_message_id(
                                                 metadata["chat_id"],
                                                 metadata["message_id"],
-                                                {
-                                                    "content": serialize_content_blocks(
-                                                        content_blocks
-                                                    ),
-                                                },
+                                                update_data,
                                             )
                                         else:
                                             data = {
@@ -2741,7 +2771,12 @@ async def process_chat_response(
                                 )
 
                     if response_tool_calls:
-                        tool_calls.append(response_tool_calls)
+                        tool_calls.append(
+                            {
+                                "tool_calls": response_tool_calls,
+                                "reasoning_details": reasoning_details,
+                            }
+                        )
 
                     if response.background:
                         await response.background()
@@ -2757,12 +2792,22 @@ async def process_chat_response(
 
                     tool_call_retries += 1
 
-                    response_tool_calls = tool_calls.pop(0)
+                    tool_call_item = tool_calls.pop(0)
+                    if (
+                        isinstance(tool_call_item, dict)
+                        and "tool_calls" in tool_call_item
+                    ):
+                        response_tool_calls = tool_call_item["tool_calls"]
+                        reasoning_details = tool_call_item.get("reasoning_details")
+                    else:
+                        response_tool_calls = tool_call_item
+                        reasoning_details = None
 
                     content_blocks.append(
                         {
                             "type": "tool_calls",
                             "content": response_tool_calls,
+                            "reasoning_details": reasoning_details,
                         }
                     )
 
@@ -3136,12 +3181,20 @@ async def process_chat_response(
 
                 if not ENABLE_REALTIME_CHAT_SAVE:
                     # Save message in the database
+                    update_data = {
+                        "content": serialize_content_blocks(content_blocks),
+                    }
+
+                    # Check for reasoning_details in content_blocks
+                    for block in content_blocks:
+                        if block["type"] == "tool_calls" and block.get("reasoning_details"):
+                            update_data["reasoning_details"] = block["reasoning_details"]
+                            break
+
                     Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
-                        {
-                            "content": serialize_content_blocks(content_blocks),
-                        },
+                        update_data,
                     )
 
                 # Send a webhook notification if the user is not active
@@ -3174,12 +3227,20 @@ async def process_chat_response(
 
                 if not ENABLE_REALTIME_CHAT_SAVE:
                     # Save message in the database
+                    update_data = {
+                        "content": serialize_content_blocks(content_blocks),
+                    }
+
+                    # Check for reasoning_details in content_blocks
+                    for block in content_blocks:
+                        if block["type"] == "tool_calls" and block.get("reasoning_details"):
+                            update_data["reasoning_details"] = block["reasoning_details"]
+                            break
+
                     Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
-                        {
-                            "content": serialize_content_blocks(content_blocks),
-                        },
+                        update_data,
                     )
 
             if response.background is not None:
