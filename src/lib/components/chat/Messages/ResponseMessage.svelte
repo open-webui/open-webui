@@ -292,7 +292,7 @@
 							loadingSpeech = false;
 						});
 
-					if (url) {
+					if (url && speaking) {
 						$audioQueue.enqueue(url);
 						loadingSpeech = false;
 					}
@@ -313,7 +313,7 @@
 						loadingSpeech = false;
 					});
 
-					if (res) {
+					if (res && speaking) {
 						const blob = await res.blob();
 						const url = URL.createObjectURL(blob);
 
