@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.38] - 2025-11-24
+
+### Fixed
+
+- 🔍 Hybrid search now works reliably after recent changes.
+- 🛠️ Tool server saving now handles errors gracefully, preventing failed saves from impacting the UI.
+- 🔐 SSO/OIDC code fixed to improve login reliability and better handle edge cases.
+
 ## [0.6.37] - 2025-11-24
 
 ### Added
