@@ -215,12 +215,12 @@ class ChatTable:
         return chat
 
     def import_chats(
-        self, user_id: str, chats: list[ChatImportForm]
+        self, user_id: str, chat_import_forms: list[ChatImportForm]
     ) -> list[ChatModel]:
         with get_db() as db:
             chats = []
 
-            for form_data in chats:
+            for form_data in chat_import_forms:
                 chat = self._chat_import_form_to_chat_model(user_id, form_data)
                 chats.append(Chat(**chat.model_dump()))
 

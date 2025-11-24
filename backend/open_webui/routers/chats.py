@@ -151,7 +151,7 @@ async def create_new_chat(form_data: ChatForm, user=Depends(get_verified_user)):
 async def import_chats(form_data: ChatsImportForm, user=Depends(get_verified_user)):
     try:
         chats = Chats.import_chats(user.id, form_data.chats)
-        return [ChatResponse(**chat.model_dump()) for chat in chats]
+        return chats
     except Exception as e:
         log.exception(e)
         raise HTTPException(
