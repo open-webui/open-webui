@@ -1197,7 +1197,8 @@
 				info: m.info ? m.info : undefined,
 				timestamp: m.timestamp,
 				...(m.usage ? { usage: m.usage } : {}),
-				...(m.sources ? { sources: m.sources } : {})
+				...(m.sources ? { sources: m.sources } : {}),
+				...(m.reasoning_details ? { reasoning_details: m.reasoning_details } : {})
 			})),
 			filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
 			model_item: $models.find((m) => m.id === modelId),
@@ -1258,7 +1259,8 @@
 				content: m.content,
 				info: m.info ? m.info : undefined,
 				timestamp: m.timestamp,
-				...(m.sources ? { sources: m.sources } : {})
+				...(m.sources ? { sources: m.sources } : {}),
+				...(m.reasoning_details ? { reasoning_details: m.reasoning_details } : {})
 			})),
 			...(event ? { event: event } : {}),
 			model_item: $models.find((m) => m.id === modelId),
@@ -1456,8 +1458,34 @@
 			if (choices[0]?.message?.content) {
 				// Non-stream response
 				message.content += choices[0]?.message?.content;
+
+				if (choices[0]?.message?.reasoning_details) {
+					message.reasoning_details = choices[0].message.reasoning_details;
+				}
 			} else {
 				// Stream response
+				if (choices[0]?.delta?.reasoning_details) {
+					if (!message.reasoning_details) {
+						message.reasoning_details = [];
+					}
+
+					for (const detail of choices[0].delta.reasoning_details) {
+						const index = detail.index ?? 0;
+						let existing = message.reasoning_details.find((d) => d.index === index);
+
+						if (existing) {
+							if (detail.text) existing.text = (existing.text || '') + detail.text;
+							if (detail.type) existing.type = detail.type;
+							if (detail.id) existing.id = detail.id;
+							if (detail.summary) existing.summary = detail.summary;
+							if (detail.signature) existing.signature = detail.signature;
+							if (detail.data) existing.data = (existing.data || '') + detail.data;
+						} else {
+							message.reasoning_details.push({ ...detail });
+						}
+					}
+				}
+
 				let value = choices[0]?.delta?.content ?? '';
 				if (message.content == '' && value == '\n') {
 					console.log('Empty response');
@@ -2072,10 +2100,11 @@
 
 				return {
 					role: message.role,
-					content: message?.merged?.content ?? message.content
+					content: message?.merged?.content ?? message.content,
+					...(message.reasoning_details ? { reasoning_details: message.reasoning_details } : {})
 				};
 			})
-			.filter((message) => message?.role === 'user' || message?.content?.trim());
+			.filter((message) => message?.role === 'user' || message?.content?.trim() || message?.reasoning_details);
 
 		const toolIds = [];
 		const toolServerIds = [];
