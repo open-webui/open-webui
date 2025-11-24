@@ -73,12 +73,12 @@
 							/>
 						</div>
 
-						<hr class="border-gray-50 dark:border-gray-850 my-1" />
+						<hr class="border-gray-50 dark:border-gray-850 my-0.5" />
 
 						<textarea
 							class="px-3 py-1.5 text-xs w-full bg-transparent outline-hidden resize-none"
 							placeholder={$i18n.t('Prompt (e.g. Tell me a fun fact about the Roman Empire)')}
-							rows="3"
+							rows="4"
 							bind:value={prompt.content}
 						/>
 					</div>
