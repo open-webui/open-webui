@@ -1,10 +1,18 @@
+import logging
 import json
 from uuid import uuid4
 from open_webui.utils.misc import (
     openai_chat_chunk_message_template,
     openai_chat_completion_message_template,
 )
+from open_webui.env import (
+    SRC_LOG_LEVELS,
+    AIOHTTP_CLIENT_SESSION_SSL,
+    AIOHTTP_CLIENT_TIMEOUT,
+)
 
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 def convert_ollama_tool_call_to_openai(tool_calls: list) -> list:
     openai_tool_calls = []
@@ -151,22 +159,102 @@ def _extract_luxor_payload(payload: dict) -> dict:
 
     return payload
 
+
+def _build_luxor_files(payload: dict) -> list:
+    files = []
+    image_url = payload.get("image_url")
+    if isinstance(image_url, str) and image_url:
+        files.append(
+            {
+                "type": "image",
+                "url": image_url,
+            }
+        )
+    return files
+
+
+def _build_luxor_sources(payload: dict) -> list:
+    sources = []
+    citation_links = payload.get("citation_links") or []
+
+    log.info(f"RAW CITATION LINKS: {len(citation_links)}\n{citation_links}")
+
+    if citation_links:
+        entries = citation_links
+    else:
+        entries = []
+
+    for idx, entry in enumerate(entries, start=1):
+        if not isinstance(entry, dict):
+            continue
+
+        label = entry.get("label")
+        log.info(f"CITATION LABEL: {label}")
+        url = entry.get("url")
+
+        if not label and not url:
+            continue
+
+        metadata_source = url
+        display_name = label
+
+        metadata = {
+            "source": metadata_source,
+            "name": display_name,
+        }
+        if payload.get("page"):
+            metadata["page"] = payload.get("page")
+        if payload.get("source_file"):
+            metadata["file"] = payload.get("source_file")
+
+        sources.append(
+            {
+                "id": f"{metadata_source}",
+                "source": {
+                    "id": f"{metadata_source}",
+                    "name": display_name,
+                    **({"url": url} if url else {}),
+                },
+                "document": [label or display_name],
+                "metadata": [metadata],
+                "distances": [],
+            }
+        )
+
+    log.info(F"Sources: {len(sources)}\n{sources}")
+
+    return sources
+
+
 def convert_response_luxor_to_openai(luxor_response: dict)  -> dict:
-    data = _extract_luxor_payload(luxor_response)
+    payload = _extract_luxor_payload(luxor_response)
     model = "luxor"
     message_content = (
-          data.get("txt_answer")
-          or data.get("answer")
-          or data.get("message")
-          or ""
+        payload.get("txt_answer")
+        or payload.get("answer")
+        or payload.get("message")
+        or ""
     )
     reasoning_content = None
-    openai_tool_calls = None    
+    openai_tool_calls = None
     data = luxor_response
     usage = convert_luxor_usage_to_openai(data)
     response = openai_chat_completion_message_template(
         model, message_content, reasoning_content, openai_tool_calls, usage
     )
+
+    files = _build_luxor_files(payload)
+    log.info(f"Files: {files}")
+    if files:
+        response["choices"][0]["message"]["files"] = files
+        response["files"] = files
+
+    sources = _build_luxor_sources(payload)
+    if sources:
+        response["sources"] = sources
+
+    log.info(f"Final Response:\n{response}")
+
     return response
 
 
