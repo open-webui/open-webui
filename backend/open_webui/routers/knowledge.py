@@ -1,6 +1,7 @@
 from typing import List, Optional
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
+from fastapi.concurrency import run_in_threadpool
 import logging
 
 from open_webui.models.knowledge import (
@@ -223,7 +224,8 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
             failed_files = []
             for file in files:
                 try:
-                    process_file(
+                    await run_in_threadpool(
+                        process_file,
                         request,
                         ProcessFileForm(
                             file_id=file.id, collection_name=knowledge_base.id
