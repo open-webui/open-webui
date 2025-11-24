@@ -171,7 +171,7 @@
 							{$i18n.t('Add Memory')}
 						</div>
 					</button>
-					<button
+					<!-- <button
 						class="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition"
 						on:click={() => {
 							if ($memories.length > 0) {
@@ -198,7 +198,7 @@
 							</svg>
 							{$i18n.t('Clear memory')}
 						</div>
-					</button>
+					</button> -->
 				</div>
 			</div>
 
