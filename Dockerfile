@@ -199,6 +199,8 @@ COPY --chown=$UID:$GID --from=build /app/node_modules/katex /app/node_modules/ka
 
 # copy backend files
 COPY --chown=$UID:$GID ./backend .
+# ensure helper scripts are available in the final image (OpenShift deployment)
+COPY --chown=$UID:$GID ./backend/scripts ./scripts
 
 # ADD THIS ONE LINE:
 # Give write permission to the 'root' group (GID 0) for the whole app.
