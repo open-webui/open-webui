@@ -549,9 +549,7 @@ async def image_generations(
             if ENABLE_FORWARD_USER_INFO_HEADERS:
                 headers = include_user_info_headers(headers, user)
 
-            url = (
-                f"{request.app.state.config.IMAGES_OPENAI_API_BASE_URL}/images/generations",
-            )
+            url = f"{request.app.state.config.IMAGES_OPENAI_API_BASE_URL}/images/generations"
             if request.app.state.config.IMAGES_OPENAI_API_VERSION:
                 url = f"{url}?api-version={request.app.state.config.IMAGES_OPENAI_API_VERSION}"
 
