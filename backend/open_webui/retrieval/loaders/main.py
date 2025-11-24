@@ -199,7 +199,10 @@ class DoclingLoader:
 
                 if self.params.get("pipeline"):
                     params["pipeline"] = self.params.get("pipeline")
-
+                    if params["pipeline"] =="vlm" and self.params.get("vlm_pipeline_model_api"):
+                        params["vlm_pipeline_model_api"] = json.dumps(
+                                self.params.get("vlm_pipeline_model_api", {})
+                            )
             endpoint = f"{self.url}/v1/convert/file"
             r = requests.post(endpoint, files=files, data=params)
 
