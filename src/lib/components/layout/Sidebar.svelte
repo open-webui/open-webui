@@ -85,6 +85,10 @@
 
 	let newFolderId = null;
 
+	$: if ($selectedFolder) {
+		initFolders();
+	}
+
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
 			toast.error(`${error}`);

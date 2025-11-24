@@ -374,17 +374,6 @@
 				toast.error(`${error}`);
 				return [];
 			});
-
-			if ($selectedFolder?.id === folderId) {
-				const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
-					toast.error(`${error}`);
-					return null;
-				});
-
-				if (folder) {
-					await selectedFolder.set(folder);
-				}
-			}
 		} else {
 			chats = null;
 		}
