@@ -117,7 +117,7 @@
 		<slot />
 	</DropdownMenu.Trigger>
 	<DropdownMenu.Content
-		class="max-w-full w-80 bg-gray-50 dark:bg-gray-850 rounded-3xl z-9999 shadow-lg dark:text-white"
+		class="max-w-full w-80 border border-gray-100  dark:border-gray-800   bg-white dark:bg-gray-850  rounded-3xl z-9999 shadow-lg dark:text-white"
 		sideOffset={8}
 		{side}
 		{align}
