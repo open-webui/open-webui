@@ -41,6 +41,7 @@
 	let embeddingEngine = '';
 	let embeddingModel = '';
 	let embeddingBatchSize = 1;
+	let enableAsync = true;
 	let rerankingModel = '';
 
 	let OpenAIUrl = '';
@@ -105,6 +106,7 @@
 			embedding_engine: embeddingEngine,
 			embedding_model: embeddingModel,
 			embedding_batch_size: embeddingBatchSize,
+			enable_async: enableAsync,
 			ollama_config: {
 				key: OllamaKey,
 				url: OllamaUrl
@@ -263,6 +265,7 @@
 			embeddingEngine = embeddingConfig.embedding_engine;
 			embeddingModel = embeddingConfig.embedding_model;
 			embeddingBatchSize = embeddingConfig.embedding_batch_size ?? 1;
+			enableAsync = embeddingConfig.enable_async ?? true;
 
 			OpenAIKey = embeddingConfig.openai_config.key;
 			OpenAIUrl = embeddingConfig.openai_config.url;
@@ -1102,8 +1105,7 @@
 						</div>
 
 						{#if embeddingEngine === 'ollama' || embeddingEngine === 'openai' || embeddingEngine === 'azure_openai'}
-							<div class="  mb-2.5 flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">
+							<div class="flex w-full justify-between mb-2.5"> <div class="self-center text-xs font-medium">
 									{$i18n.t('Embedding Batch Size')}
 								</div>
 
@@ -1111,11 +1113,27 @@
 									<input
 										bind:value={embeddingBatchSize}
 										type="number"
-										class=" bg-transparent text-center w-14 outline-none"
+										class="bg-transparent text-center w-14 outline-none"
 										min="-2"
 										max="16000"
 										step="1"
 									/>
+								</div>
+							</div>
+
+							<div class="flex w-full justify-between mb-2.5">
+								<div class="self-center text-xs font-medium">
+									<Tooltip
+										content={$i18n.t(
+											'Enable concurrent batch processing for faster embedding generation. Disable if experiencing rate limits or timeouts.'
+										)}
+										placement="top-start"
+									>
+										{$i18n.t('Async / Parallel Processing')}
+									</Tooltip>
+								</div>
+								<div class="flex items-center relative">
+									<Switch bind:state={enableAsync} />
 								</div>
 							</div>
 						{/if}
