@@ -97,11 +97,14 @@ def upgrade():
                 update_stmt = update_stmt.values(id=new_tag_id)
                 conn.execute(update_stmt)
 
-    # Add columns `pinned` and `meta` to 'chat'
-    op.add_column("chat", sa.Column("pinned", sa.Boolean(), nullable=True))
-    op.add_column(
-        "chat", sa.Column("meta", sa.JSON(), nullable=False, server_default="{}")
-    )
+    chat_columns = [col["name"] for col in inspector.get_columns("chat")]
+
+    # Add columns `pinned` and `meta` to 'chat' if they are missing
+    if "pinned" not in chat_columns:
+        op.add_column("chat", sa.Column("pinned", sa.Boolean(), nullable=True))
+
+    if "meta" not in chat_columns:
+        op.add_column("chat", sa.Column("meta", sa.JSON(), nullable=True))
 
     chatidtag = table(
         "chatidtag", column("chat_id", sa.String()), column("tag_name", sa.String())

@@ -33,10 +33,15 @@ with suppress(ImportError):
 def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your migrations here."""
 
-    migrator.add_fields(
-        "user",
-        oauth_sub=pw.TextField(null=True, unique=True),
-    )
+    existing_columns = set()
+    if not fake:
+        existing_columns = {c.name for c in database.get_columns("user")}
+
+    if "oauth_sub" not in existing_columns:
+        migrator.add_fields(
+            "user",
+            oauth_sub=pw.CharField(max_length=255, null=True, unique=True),
+        )
 
 
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):

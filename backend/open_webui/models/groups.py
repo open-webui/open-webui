@@ -132,7 +132,7 @@ class GroupTable:
                 GroupModel.model_validate(group)
                 for group in db.query(Group)
                 .filter(
-                    func.json_array_length(Group.user_ids) > 0
+                    func.json_length(Group.user_ids) > 0
                 )  # Ensure array exists
                 .filter(
                     Group.user_ids.cast(String).like(f'%"{user_id}"%')

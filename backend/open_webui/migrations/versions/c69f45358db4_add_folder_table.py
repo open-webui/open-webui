@@ -18,10 +18,10 @@ depends_on = None
 def upgrade():
     op.create_table(
         "folder",
-        sa.Column("id", sa.Text(), nullable=False),
-        sa.Column("parent_id", sa.Text(), nullable=True),
-        sa.Column("user_id", sa.Text(), nullable=False),
-        sa.Column("name", sa.Text(), nullable=False),
+        sa.Column("id", sa.String(length=255), nullable=False),
+        sa.Column("parent_id", sa.String(length=255), nullable=True),
+        sa.Column("user_id", sa.String(length=255), nullable=False),
+        sa.Column("name", sa.String(length=255), nullable=False),
         sa.Column("items", sa.JSON(), nullable=True),
         sa.Column("meta", sa.JSON(), nullable=True),
         sa.Column("is_expanded", sa.Boolean(), default=False, nullable=False),
@@ -40,7 +40,7 @@ def upgrade():
 
     op.add_column(
         "chat",
-        sa.Column("folder_id", sa.Text(), nullable=True),
+        sa.Column("folder_id", sa.String(length=255), nullable=True),
     )
 
 

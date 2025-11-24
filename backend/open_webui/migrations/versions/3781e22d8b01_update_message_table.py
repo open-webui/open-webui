@@ -29,20 +29,20 @@ def upgrade():
     # Add 'parent_id' column to the 'message' table for threads
     op.add_column(
         "message",
-        sa.Column("parent_id", sa.Text(), nullable=True),
+        sa.Column("parent_id", sa.String(length=255), nullable=True),
     )
 
     op.create_table(
         "message_reaction",
         sa.Column(
-            "id", sa.Text(), nullable=False, primary_key=True, unique=True
+            "id", sa.String(length=255), nullable=False, primary_key=True, unique=True
         ),  # Unique reaction ID
-        sa.Column("user_id", sa.Text(), nullable=False),  # User who reacted
+        sa.Column("user_id", sa.String(length=255), nullable=False),  # User who reacted
         sa.Column(
-            "message_id", sa.Text(), nullable=False
+            "message_id", sa.String(length=255), nullable=False
         ),  # Message that was reacted to
         sa.Column(
-            "name", sa.Text(), nullable=False
+            "name", sa.String(length=255), nullable=False
         ),  # Reaction name (e.g. "thumbs_up")
         sa.Column(
             "created_at", sa.BigInteger(), nullable=True
@@ -52,10 +52,10 @@ def upgrade():
     op.create_table(
         "channel_member",
         sa.Column(
-            "id", sa.Text(), nullable=False, primary_key=True, unique=True
+            "id", sa.String(length=255), nullable=False, primary_key=True, unique=True
         ),  # Record ID for the membership row
-        sa.Column("channel_id", sa.Text(), nullable=False),  # Associated channel
-        sa.Column("user_id", sa.Text(), nullable=False),  # Associated user
+        sa.Column("channel_id", sa.String(length=255), nullable=False),  # Associated channel
+        sa.Column("user_id", sa.String(length=255), nullable=False),  # Associated user
         sa.Column(
             "created_at", sa.BigInteger(), nullable=True
         ),  # Timestamp of when the user joined the channel

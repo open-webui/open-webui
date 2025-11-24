@@ -90,15 +90,17 @@ def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
 
 
 def recreate_modelfile_table(migrator: Migrator, database: pw.Database):
-    query = """
-    CREATE TABLE IF NOT EXISTS modelfile (
-        user_id TEXT,
-        tag_name TEXT,
-        modelfile JSON,
-        timestamp BIGINT
-    )
-    """
-    migrator.sql(query)
+    # Rebuild the legacy modelfile table using Peewee so quoting stays portable.
+    @migrator.create_model
+    class Modelfile(pw.Model):
+        id = pw.AutoField()
+        user_id = pw.CharField(max_length=255)
+        tag_name = pw.CharField(max_length=255, unique=True)
+        modelfile = pw.TextField()
+        timestamp = pw.BigIntegerField()
+
+        class Meta:
+            table_name = "modelfile"
 
 
 def move_data_back_to_modelfile(migrator: Migrator, database: pw.Database):

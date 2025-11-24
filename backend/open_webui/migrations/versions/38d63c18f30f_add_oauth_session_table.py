@@ -23,9 +23,9 @@ def upgrade() -> None:
     # Create oauth_session table
     op.create_table(
         "oauth_session",
-        sa.Column("id", sa.Text(), nullable=False),
-        sa.Column("user_id", sa.Text(), nullable=False),
-        sa.Column("provider", sa.Text(), nullable=False),
+        sa.Column("id", sa.String(length=255), nullable=False),
+        sa.Column("user_id", sa.String(length=255), nullable=False),
+        sa.Column("provider", sa.String(length=255), nullable=False),
         sa.Column("token", sa.Text(), nullable=False),
         sa.Column("expires_at", sa.BigInteger(), nullable=False),
         sa.Column("created_at", sa.BigInteger(), nullable=False),
