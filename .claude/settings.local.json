@@ -2,9 +2,16 @@
   "permissions": {
     "allow": [
       "Bash(tree:*)",
-      "Bash(node:*)",
-      "Bash(npm --version:*)",
-      "Bash(test:*)"
+      "Bash(pip show:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(chmod:*)",
+      "Bash(test:*)",
+      "Bash(lsof:*)",
+      "WebSearch",
+      "Bash(npm install:*)",
+      "Bash(ls:*)",
+      "Bash(npm run build:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

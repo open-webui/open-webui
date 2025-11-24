@@ -20,6 +20,7 @@
 		getPinnedChatList
 	} from '$lib/apis/chats';
 	import { getImportOrigin, convertOpenAIChats } from '$lib/utils';
+	import { extractChatsFromFile } from '$lib/utils/chatImport';
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
@@ -41,22 +42,25 @@
 	$: if (importFiles) {
 		console.log(importFiles);
 
-		let reader = new FileReader();
-		reader.onload = (event) => {
-			let chats = JSON.parse(event.target.result);
-			console.log(chats);
-			if (getImportOrigin(chats) == 'openai') {
-				try {
-					chats = convertOpenAIChats(chats);
-				} catch (error) {
-					console.log('Unable to import chats:', error);
-				}
-			}
-			importChats(chats);
-		};
-
 		if (importFiles.length > 0) {
-			reader.readAsText(importFiles[0]);
+			extractChatsFromFile(importFiles[0])
+				.then((chats) => {
+					console.log(chats);
+					if (getImportOrigin(chats) == 'openai') {
+						try {
+							chats = convertOpenAIChats(chats);
+						} catch (error) {
+							console.log('Unable to import chats:', error);
+							toast.error($i18n.t('Failed to convert OpenAI chats'));
+							return;
+						}
+					}
+					importChats(chats);
+				})
+				.catch((error) => {
+					console.error('Import error:', error);
+					toast.error($i18n.t(error.message));
+				});
 		}
 	}
 
@@ -134,7 +138,7 @@
 				bind:this={chatImportInputElement}
 				bind:files={importFiles}
 				type="file"
-				accept=".json"
+				accept=".json,.zip"
 				hidden
 			/>
 			<button

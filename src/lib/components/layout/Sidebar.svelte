@@ -56,12 +56,15 @@
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Search from '../icons/Search.svelte';
+	import Sparkles from '../icons/Sparkles.svelte';
 	import SearchModal from './SearchModal.svelte';
 	import FolderModal from './Sidebar/Folders/FolderModal.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
 	import PinnedModelList from './Sidebar/PinnedModelList.svelte';
 	import Note from '../icons/Note.svelte';
 	import { slide } from 'svelte/transition';
+	import { getImportOrigin, convertOpenAIChats } from '$lib/utils';
+	import { extractChatsFromFile } from '$lib/utils/chatImport';
 
 	const BREAKPOINT = 768;
 
@@ -85,6 +88,10 @@
 	let folderRegistry = {};
 
 	let newFolderId = null;
+
+	// Import Chats state
+	let importFiles;
+	let chatImportInputElement: HTMLInputElement;
 
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
@@ -347,6 +354,58 @@
 	const onBlur = () => {
 		shiftKey = false;
 		selectedChatId = null;
+	};
+
+	// Import Chats handler
+	$: if (importFiles) {
+		console.log(importFiles);
+
+		if (importFiles.length > 0) {
+			extractChatsFromFile(importFiles[0])
+				.then((chats) => {
+					console.log(chats);
+					if (getImportOrigin(chats) == 'openai') {
+						try {
+							chats = convertOpenAIChats(chats);
+						} catch (error) {
+							console.log('Unable to import chats:', error);
+							toast.error($i18n.t('Failed to convert OpenAI chats'));
+							return;
+						}
+					}
+					importChatsHandler(chats);
+				})
+				.catch((error) => {
+					console.error('Import error:', error);
+					toast.error($i18n.t(error.message));
+				});
+		}
+	}
+
+	const importChatsHandler = async (_chats) => {
+		for (const chat of _chats) {
+			console.log(chat);
+
+			if (chat.chat) {
+				await importChat(
+					localStorage.token,
+					chat.chat,
+					chat.meta ?? {},
+					false,
+					null,
+					chat?.created_at ?? null,
+					chat?.updated_at ?? null
+				);
+			} else {
+				// Legacy format
+				await importChat(localStorage.token, chat, {}, false, null);
+			}
+		}
+
+		currentChatPage.set(1);
+		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		pinnedChats.set(await getPinnedChatList(localStorage.token));
+		scrollPaginationEnabled.set(true);
 	};
 
 	let unsubscribers = [];
@@ -823,6 +882,25 @@
 						</button>
 					</div>
 
+					<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
+						<a
+							id="sidebar-memory-button"
+							class="grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+							href="/memories"
+							on:click={itemClickHandler}
+							draggable="false"
+							aria-label={$i18n.t('Memory')}
+						>
+							<div class="self-center">
+								<Sparkles strokeWidth="2" className="size-4.5" />
+							</div>
+
+							<div class="flex self-center translate-y-[0.5px]">
+								<div class=" self-center text-sm font-primary">{$i18n.t('Memory')}</div>
+							</div>
+						</a>
+					</div>
+
 					{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
 						<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
 							<a
@@ -1199,10 +1277,52 @@
 				</Folder>
 			</div>
 
+			<!-- Separator -->
+			<hr class="border-gray-100 dark:border-gray-850 mx-1.5 my-1.5" />
+
 			<div class="px-1.5 pt-1.5 pb-2 sticky bottom-0 z-10 -mt-3 sidebar">
 				<div
 					class=" sidebar-bg-gradient-to-t bg-linear-to-t from-gray-50 dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10 -mt-6"
 				></div>
+
+				<!-- Import Chats Button -->
+				<input
+					id="sidebar-chat-import-input"
+					bind:this={chatImportInputElement}
+					bind:files={importFiles}
+					type="file"
+					accept=".json,.zip"
+					hidden
+				/>
+
+				<button
+					class="flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+					on:click={() => {
+						chatImportInputElement.click();
+					}}
+					draggable="false"
+					aria-label={$i18n.t('Import Chats')}
+				>
+					<div class="self-center">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="size-4.5"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</div>
+					<div class="flex self-center translate-y-[0.5px]">
+						<div class="self-center text-sm font-primary">{$i18n.t('Import Chats')}</div>
+					</div>
+				</button>
+
+
 				<div class="flex flex-col font-primary">
 					{#if $user !== undefined && $user !== null}
 						<UserMenu

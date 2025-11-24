@@ -60,6 +60,7 @@ export const prompts: Writable<null | Prompt[]> = writable(null);
 export const knowledge: Writable<null | Document[]> = writable(null);
 export const tools = writable(null);
 export const functions = writable(null);
+export const memories = writable([]);
 
 export const toolServers = writable([]);
 
@@ -73,6 +74,7 @@ export const showSettings = writable(false);
 export const showShortcuts = writable(false);
 export const showArchivedChats = writable(false);
 export const showChangelog = writable(false);
+export const showMemoryPanel = writable(false);
 
 export const showControls = writable(false);
 export const showEmbeds = writable(false);

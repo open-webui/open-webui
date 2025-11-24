@@ -241,8 +241,10 @@
 				<UpdatePassword />
 			</div>
 		{/if}
-
-		{#if ($config?.features?.enable_api_key ?? true) || $user?.role === 'admin'}
+		
+		<!-- ai-friend 	屏蔽api显示 -->
+		{#if $user?.role === 'admin'}
+		<!-- {#if ($config?.features?.enable_api_key ?? true) || $user?.role === 'admin'} -->
 			<div class="flex justify-between items-center text-sm mt-2">
 				<div class="  font-medium">{$i18n.t('API keys')}</div>
 				<button

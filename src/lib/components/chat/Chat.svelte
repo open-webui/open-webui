@@ -129,6 +129,7 @@
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
+	let memoryEnabled = true;
 
 	let showCommands = false;
 
@@ -166,6 +167,7 @@
 		selectedFilterIds = [];
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
+		memoryEnabled = true;
 
 		const storageChatInput = sessionStorage.getItem(
 			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
@@ -190,6 +192,7 @@
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
+						memoryEnabled = input.memoryEnabled;
 					}
 				} catch (e) {}
 			}
@@ -250,6 +253,7 @@
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
+		memoryEnabled = true;
 
 		setDefaults();
 	};
@@ -295,6 +299,10 @@
 
 				if (model.info?.meta?.capabilities?.['code_interpreter']) {
 					codeInterpreterEnabled = model.info.meta.defaultFeatureIds.includes('code_interpreter');
+				}
+
+				if (model.info?.meta?.capabilities?.['memory']) {
+					memoryEnabled = model.info.meta.defaultFeatureIds.includes('memory');
 				}
 			}
 		}
@@ -559,6 +567,7 @@
 			webSearchEnabled = false;
 			imageGenerationEnabled = false;
 			codeInterpreterEnabled = false;
+			memoryEnabled = true;
 
 			try {
 				const input = JSON.parse(storageChatInput);
@@ -571,6 +580,7 @@
 					webSearchEnabled = input.webSearchEnabled;
 					imageGenerationEnabled = input.imageGenerationEnabled;
 					codeInterpreterEnabled = input.codeInterpreterEnabled;
+					memoryEnabled = input.memoryEnabled;
 				}
 			} catch (e) {}
 		}
@@ -1749,6 +1759,11 @@
 			features = { ...features, memory: true };
 		}
 
+		// 如果用户手动切换了记忆开关,覆盖全局设置
+		if (memoryEnabled !== undefined && memoryEnabled !== ($settings?.memory ?? false)) {
+			features = { ...features, memory: memoryEnabled };
+		}
+
 		return features;
 	};
 
@@ -2454,6 +2469,7 @@
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
+									bind:memoryEnabled
 									bind:atSelectedModel
 									bind:showCommands
 									toolServers={$toolServers}
@@ -2506,6 +2522,7 @@
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
+									bind:memoryEnabled
 									bind:atSelectedModel
 									bind:showCommands
 									toolServers={$toolServers}

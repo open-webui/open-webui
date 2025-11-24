@@ -295,6 +295,8 @@
 		{/if}
 	</div>
 
+	<!-- ai-friend 暂时不支持option -->
+	{#if false}
 	{#if focused && (filteredOptions.length > 0 || filteredItems.length > 0)}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div
@@ -384,5 +386,6 @@
 				{/if}
 			</div>
 		</div>
+	{/if}
 	{/if}
 </div>

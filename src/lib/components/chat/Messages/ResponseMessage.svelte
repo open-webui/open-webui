@@ -1488,7 +1488,9 @@
 							}}
 						/>
 					{/if}
-
+					
+					<!-- AI friend 屏蔽提问提示 -->
+					{#if false}
 					{#if (isLastMessage || ($settings?.keepFollowUpPrompts ?? false)) && message.done && !readOnly && (message?.followUps ?? []).length > 0}
 						<div class="mt-2.5" in:fade={{ duration: 100 }}>
 							<FollowUps
@@ -1504,6 +1506,7 @@
 								}}
 							/>
 						</div>
+					{/if}
 					{/if}
 				{/if}
 			</div>
