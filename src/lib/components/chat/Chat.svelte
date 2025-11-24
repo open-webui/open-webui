@@ -1753,8 +1753,10 @@
 
 				if (model) {
 					// If there are image files, check if model is vision capable
-					const hasImages = createMessagesList(_history, parentId).some((message) =>
-						message.files?.some((file) => file.type === 'image')
+					const hasImages = createMessagesList(_history, parentId).some(
+						(message) =>
+							message.role === 'user' &&
+							message.files?.some((file) => file.type === 'image')
 					);
 
 					if (hasImages && !(model.info?.meta?.capabilities?.vision ?? true)) {
