@@ -620,6 +620,11 @@ OAUTH_UPDATE_PICTURE_ON_LOGIN = PersistentConfig(
     os.environ.get("OAUTH_UPDATE_PICTURE_ON_LOGIN", "False").lower() == "true",
 )
 
+OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID = (
+    os.environ.get("OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID", "False").lower()
+    == "true"
+)
+
 
 def load_oauth_providers():
     OAUTH_PROVIDERS.clear()
