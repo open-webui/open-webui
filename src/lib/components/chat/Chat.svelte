@@ -2078,6 +2078,19 @@
 				const isUser = message.role === 'user';
 				const modelSupportsVision = model?.info?.meta?.capabilities?.vision ?? true;
 
+				if (message.tool_calls && message.reasoning_details) {
+					const signatureDetail = message.reasoning_details.find(
+						(d) => d.type === 'reasoning.encrypted' && d.data
+					);
+
+					if (signatureDetail) {
+						message.tool_calls = message.tool_calls.map((tc) => ({
+							...tc,
+							extra_content: { google: { thought_signature: signatureDetail.data } }
+						}));
+					}
+				}
+
 				if (hasImages && isUser && modelSupportsVision) {
 					return {
 						role: message.role,

@@ -848,7 +848,7 @@ async def generate_chat_completion(
     key = request.app.state.config.OPENAI_API_KEYS[idx]
 
         # Prioritize frontend 'reasoning' object over model 'reasoning_effort' (OpenRouter prefers unified reasoning object)
-    if "reasoning" in payload and isinstance(payload["reasoning"], dict):
+    if "openrouter.ai" in url and "reasoning" in payload and isinstance(payload["reasoning"], dict):
         payload.pop("reasoning_effort", None)
 
     # Convert the modified body back to JSON
