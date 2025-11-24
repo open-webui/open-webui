@@ -782,6 +782,7 @@ def get_embedding_function(
     key,
     embedding_batch_size,
     azure_api_version=None,
+    enable_async=True,
 ) -> Awaitable:
     if embedding_engine == "":
         # Sentence transformers: CPU-bound sync operation
@@ -807,6 +808,7 @@ def get_embedding_function(
             key=key,
             user=user,
             azure_api_version=azure_api_version,
+            enable_async=enable_async,
         )
 
         async def async_embedding_function(query, prefix=None, user=None):
@@ -816,16 +818,27 @@ def get_embedding_function(
                     query[i : i + embedding_batch_size]
                     for i in range(0, len(query), embedding_batch_size)
                 ]
-                log.debug(
-                    f"generate_multiple_async: Processing {len(batches)} batches in parallel"
-                )
-
-                # Execute all batches in parallel
-                tasks = [
-                    embedding_function(batch, prefix=prefix, user=user)
-                    for batch in batches
-                ]
-                batch_results = await asyncio.gather(*tasks)
+                
+                if enable_async:
+                    log.debug(
+                        f"generate_multiple_async: Processing {len(batches)} batches in parallel"
+                    )
+                    # Execute all batches in parallel
+                    tasks = [
+                        embedding_function(batch, prefix=prefix, user=user)
+                        for batch in batches
+                    ]
+                    batch_results = await asyncio.gather(*tasks)
+                else:
+                    log.debug(
+                        f"generate_multiple_async: Processing {len(batches)} batches sequentially"
+                    )
+                    # Execute batches sequentially
+                    batch_results = []
+                    for batch in batches:
+                        batch_results.append(
+                            await embedding_function(batch, prefix=prefix, user=user)
+                        )
 
                 # Flatten results
                 embeddings = []
@@ -855,6 +868,7 @@ async def generate_embeddings(
     url = kwargs.get("url", "")
     key = kwargs.get("key", "")
     user = kwargs.get("user")
+    enable_async = kwargs.get("enable_async", True)
 
     if prefix is not None and RAG_EMBEDDING_PREFIX_FIELD_NAME is None:
         if isinstance(text, list):
@@ -863,33 +877,72 @@ async def generate_embeddings(
             text = f"{prefix}{text}"
 
     if engine == "ollama":
-        embeddings = await agenerate_ollama_batch_embeddings(
-            **{
-                "model": model,
-                "texts": text if isinstance(text, list) else [text],
-                "url": url,
-                "key": key,
-                "prefix": prefix,
-                "user": user,
-            }
-        )
+        if enable_async:
+            embeddings = await agenerate_ollama_batch_embeddings(
+                **{
+                    "model": model,
+                    "texts": text if isinstance(text, list) else [text],
+                    "url": url,
+                    "key": key,
+                    "prefix": prefix,
+                    "user": user,
+                }
+            )
+        else:
+            # Use sequential/sync function wrapped in to_thread
+            embeddings = await asyncio.to_thread(
+                generate_ollama_batch_embeddings,
+                **{
+                    "model": model,
+                    "texts": text if isinstance(text, list) else [text],
+                    "url": url,
+                    "key": key,
+                    "prefix": prefix,
+                    "user": user,
+                },
+            )
         return embeddings[0] if isinstance(text, str) else embeddings
     elif engine == "openai":
-        embeddings = await agenerate_openai_batch_embeddings(
-            model, text if isinstance(text, list) else [text], url, key, prefix, user
-        )
+        if enable_async:
+            embeddings = await agenerate_openai_batch_embeddings(
+                model, text if isinstance(text, list) else [text], url, key, prefix, user
+            )
+        else:
+            # Use sequential/sync function wrapped in to_thread
+            embeddings = await asyncio.to_thread(
+                generate_openai_batch_embeddings,
+                model,
+                text if isinstance(text, list) else [text],
+                url,
+                key,
+                prefix,
+                user,
+            )
         return embeddings[0] if isinstance(text, str) else embeddings
     elif engine == "azure_openai":
         azure_api_version = kwargs.get("azure_api_version", "")
-        embeddings = await agenerate_azure_openai_batch_embeddings(
-            model,
-            text if isinstance(text, list) else [text],
-            url,
-            key,
-            azure_api_version,
-            prefix,
-            user,
-        )
+        if enable_async:
+            embeddings = await agenerate_azure_openai_batch_embeddings(
+                model,
+                text if isinstance(text, list) else [text],
+                url,
+                key,
+                azure_api_version,
+                prefix,
+                user,
+            )
+        else:
+            # Use sequential/sync function wrapped in to_thread
+            embeddings = await asyncio.to_thread(
+                generate_azure_openai_batch_embeddings,
+                model,
+                text if isinstance(text, list) else [text],
+                url,
+                key,
+                azure_api_version,
+                prefix,
+                user,
+            )
         return embeddings[0] if isinstance(text, str) else embeddings
 
 
