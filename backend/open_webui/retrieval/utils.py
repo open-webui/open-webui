@@ -102,6 +102,7 @@ class VectorSearchRetriever(BaseRetriever):
         Returns:
             List of relevant documents.
         """
+        return []
 
     async def _aget_relevant_documents(
         self,
@@ -1261,6 +1262,7 @@ class RerankCompressor(BaseDocumentCompressor):
             The compressed documents.
 
         """
+        return []
 
     async def acompress_documents(
         self,
@@ -1272,9 +1274,7 @@ class RerankCompressor(BaseDocumentCompressor):
 
         scores = None
         if reranking:
-            scores = self.reranking_function(
-                [(query, doc.page_content) for doc in documents]
-            )
+            scores = self.reranking_function(query, documents)
         else:
             from sentence_transformers import util
 
