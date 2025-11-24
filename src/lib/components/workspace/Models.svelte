@@ -473,7 +473,7 @@
 										<div class="flex items-center justify-between w-full">
 											<Tooltip content={model.name} className=" w-fit" placement="top-start">
 												<a
-													class=" font-semibold line-clamp-1 hover:underline capitalize"
+													class=" font-medium line-clamp-1 hover:underline capitalize"
 													href={`/?models=${encodeURIComponent(model.id)}`}
 												>
 													{model.name}
@@ -655,7 +655,7 @@
 				target="_blank"
 			>
 				<div class=" self-center">
-					<div class=" font-semibold line-clamp-1">{$i18n.t('Discover a model')}</div>
+					<div class=" font-medium line-clamp-1">{$i18n.t('Discover a model')}</div>
 					<div class=" text-sm line-clamp-1">
 						{$i18n.t('Discover, download, and explore model presets')}
 					</div>
