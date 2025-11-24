@@ -82,11 +82,11 @@
 										: `#`}
 								target="_blank"
 							>
-								{decodeString(citation?.source?.name)}
+								{decodeString(document.document)}
 							</a>
 						</Tooltip>
 					{:else}
-						{decodeString(citation?.source?.name)}
+						{decodeString(document.document)}
 					{/if}
 				{:else}
 					{$i18n.t('Citation')}
@@ -119,60 +119,11 @@
 							</div>
 						{/if}
 
-						<div>
-							<div
-								class=" text-sm font-medium dark:text-gray-300 flex items-center gap-2 w-fit mb-1"
-							>
-								{$i18n.t('Content')}
-
-								{#if showRelevance && document.distance !== undefined}
-									<Tooltip
-										className="w-fit"
-										content={$i18n.t('Relevance')}
-										placement="top-start"
-										tippyOptions={{ duration: [500, 0] }}
-									>
-										<div class="text-sm my-1 dark:text-gray-400 flex items-center gap-2 w-fit">
-											{#if showPercentage}
-												{@const percentage = calculatePercentage(document.distance)}
-
-												{#if typeof percentage === 'number'}
-													<span
-														class={`px-1 rounded-sm font-medium ${getRelevanceColor(percentage)}`}
-													>
-														{percentage.toFixed(2)}%
-													</span>
-												{/if}
-											{:else if typeof document?.distance === 'number'}
-												<span class="text-gray-500 dark:text-gray-500">
-													({(document?.distance ?? 0).toFixed(4)})
-												</span>
-											{/if}
-										</div>
-									</Tooltip>
-								{/if}
-
-								{#if Number.isInteger(document?.metadata?.page)}
-									<span class="text-sm text-gray-500 dark:text-gray-400">
-										({$i18n.t('page')}
-										{document.metadata.page + 1})
-									</span>
-								{/if}
+						{#if document.metadata?.page !== undefined}
+							<div class="text-sm font-medium dark:text-gray-300 mb-1">
+								{$i18n.t('Page')} {document.metadata.page}
 							</div>
-
-							{#if document.metadata?.html}
-								<iframe
-									class="w-full border-0 h-auto rounded-none"
-									sandbox="allow-scripts allow-forms allow-same-origin"
-									srcdoc={document.document}
-									title={$i18n.t('Content')}
-								></iframe>
-							{:else}
-								<pre class="text-sm dark:text-gray-400 whitespace-pre-line">
-                {document.document}
-              </pre>
-							{/if}
-						</div>
+						{/if}
 					</div>
 				{/each}
 			</div>
