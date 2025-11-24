@@ -233,7 +233,7 @@
 						{/if}
 					</Tooltip>
 
-					<Tooltip content={item.description || decodeString(item?.name)} placement="top-start">
+					<Tooltip content={`${decodeString(item?.name)}`} placement="top-start">
 						<div class="line-clamp-1 flex-1">
 							{decodeString(item?.name)}
 						</div>

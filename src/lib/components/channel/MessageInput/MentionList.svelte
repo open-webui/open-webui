@@ -171,8 +171,7 @@
 							</div>
 						{:else if item.type === 'model'}
 							<img
-								src={item?.data?.info?.meta?.profile_image_url ??
-									`${WEBUI_BASE_URL}/static/favicon.png`}
+								src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${item.id}&lang=${$i18n.language}`}
 								alt={item?.data?.name ?? item.id}
 								class="rounded-full size-5 items-center mr-2"
 							/>

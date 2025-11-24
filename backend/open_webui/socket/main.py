@@ -32,6 +32,11 @@ from open_webui.env import (
     WEBSOCKET_SENTINEL_PORT,
     WEBSOCKET_SENTINEL_HOSTS,
     REDIS_KEY_PREFIX,
+    WEBSOCKET_REDIS_OPTIONS,
+    WEBSOCKET_SERVER_PING_TIMEOUT,
+    WEBSOCKET_SERVER_PING_INTERVAL,
+    WEBSOCKET_SERVER_LOGGING,
+    WEBSOCKET_SERVER_ENGINEIO_LOGGING,
 )
 from open_webui.utils.auth import decode_token
 from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
@@ -61,10 +66,13 @@ if WEBSOCKET_MANAGER == "redis":
         mgr = socketio.AsyncRedisManager(
             get_sentinel_url_from_env(
                 WEBSOCKET_REDIS_URL, WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT
-            )
+            ),
+            redis_options=WEBSOCKET_REDIS_OPTIONS,
         )
     else:
-        mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL)
+        mgr = socketio.AsyncRedisManager(
+            WEBSOCKET_REDIS_URL, redis_options=WEBSOCKET_REDIS_OPTIONS
+        )
     sio = socketio.AsyncServer(
         cors_allowed_origins=SOCKETIO_CORS_ORIGINS,
         async_mode="asgi",
@@ -72,6 +80,10 @@ if WEBSOCKET_MANAGER == "redis":
         allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
         always_connect=True,
         client_manager=mgr,
+        logger=WEBSOCKET_SERVER_LOGGING,
+        ping_interval=WEBSOCKET_SERVER_PING_INTERVAL,
+        ping_timeout=WEBSOCKET_SERVER_PING_TIMEOUT,
+        engineio_logger=WEBSOCKET_SERVER_ENGINEIO_LOGGING,
     )
 else:
     sio = socketio.AsyncServer(
@@ -80,6 +92,10 @@ else:
         transports=(["websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
         allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
         always_connect=True,
+        logger=WEBSOCKET_SERVER_LOGGING,
+        ping_interval=WEBSOCKET_SERVER_PING_INTERVAL,
+        ping_timeout=WEBSOCKET_SERVER_PING_TIMEOUT,
+        engineio_logger=WEBSOCKET_SERVER_ENGINEIO_LOGGING,
     )
 
 
@@ -282,6 +298,8 @@ async def connect(sid, environ, auth):
             else:
                 USER_POOL[user.id] = [sid]
 
+            await sio.enter_room(sid, f"user:{user.id}")
+
 
 @sio.on("user-join")
 async def user_join(sid, data):
@@ -304,6 +322,7 @@ async def user_join(sid, data):
     else:
         USER_POOL[user.id] = [sid]
 
+    await sio.enter_room(sid, f"user:{user.id}")
     # Join all the channels
     channels = Channels.get_channels_by_user_id(user.id)
     log.debug(f"{channels=}")
@@ -649,40 +668,24 @@ async def disconnect(sid):
 def get_event_emitter(request_info, update_db=True):
     async def __event_emitter__(event_data):
         user_id = request_info["user_id"]
+        chat_id = request_info["chat_id"]
+        message_id = request_info["message_id"]
 
-        session_ids = list(
-            set(
-                USER_POOL.get(user_id, [])
-                + (
-                    [request_info.get("session_id")]
-                    if request_info.get("session_id")
-                    else []
-                )
-            )
+        await sio.emit(
+            "events",
+            {
+                "chat_id": chat_id,
+                "message_id": message_id,
+                "data": event_data,
+            },
+            room=f"user:{user_id}",
         )
-
-        chat_id = request_info.get("chat_id", None)
-        message_id = request_info.get("message_id", None)
-
-        emit_tasks = [
-            sio.emit(
-                "events",
-                {
-                    "chat_id": chat_id,
-                    "message_id": message_id,
-                    "data": event_data,
-                },
-                to=session_id,
-            )
-            for session_id in session_ids
-        ]
-
-        await asyncio.gather(*emit_tasks)
         if (
             update_db
             and message_id
             and not request_info.get("chat_id", "").startswith("local:")
         ):
+
             if "type" in event_data and event_data["type"] == "status":
                 Chats.add_message_status_to_chat_by_id_and_message_id(
                     request_info["chat_id"],
@@ -772,7 +775,14 @@ def get_event_emitter(request_info, update_db=True):
                         },
                     )
 
-    return __event_emitter__
+    if (
+        "user_id" in request_info
+        and "chat_id" in request_info
+        and "message_id" in request_info
+    ):
+        return __event_emitter__
+    else:
+        return None
 
 
 def get_event_call(request_info):
@@ -788,7 +798,14 @@ def get_event_call(request_info):
         )
         return response
 
-    return __event_caller__
+    if (
+        "session_id" in request_info
+        and "chat_id" in request_info
+        and "message_id" in request_info
+    ):
+        return __event_caller__
+    else:
+        return None
 
 
 get_event_caller = get_event_call

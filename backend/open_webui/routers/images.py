@@ -44,18 +44,23 @@ def set_image_model(request: Request, model: str):
     request.app.state.config.IMAGE_GENERATION_MODEL = model
     if request.app.state.config.IMAGE_GENERATION_ENGINE in ["", "automatic1111"]:
         api_auth = get_automatic1111_api_auth(request)
-        r = requests.get(
-            url=f"{request.app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/options",
-            headers={"authorization": api_auth},
-        )
-        options = r.json()
-        if model != options["sd_model_checkpoint"]:
-            options["sd_model_checkpoint"] = model
-            r = requests.post(
+
+        try:
+            r = requests.get(
                 url=f"{request.app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/options",
-                json=options,
                 headers={"authorization": api_auth},
             )
+            options = r.json()
+            if model != options["sd_model_checkpoint"]:
+                options["sd_model_checkpoint"] = model
+                r = requests.post(
+                    url=f"{request.app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/options",
+                    json=options,
+                    headers={"authorization": api_auth},
+                )
+        except Exception as e:
+            log.debug(f"{e}")
+
     return request.app.state.config.IMAGE_GENERATION_MODEL
 
 
@@ -106,9 +111,10 @@ class ImagesConfig(BaseModel):
     IMAGES_OPENAI_API_BASE_URL: str
     IMAGES_OPENAI_API_KEY: str
     IMAGES_OPENAI_API_VERSION: str
+    IMAGES_OPENAI_API_PARAMS: Optional[dict | str]
 
     AUTOMATIC1111_BASE_URL: str
-    AUTOMATIC1111_API_AUTH: str
+    AUTOMATIC1111_API_AUTH: Optional[dict | str]
     AUTOMATIC1111_PARAMS: Optional[dict | str]
 
     COMFYUI_BASE_URL: str
@@ -120,6 +126,7 @@ class ImagesConfig(BaseModel):
     IMAGES_GEMINI_API_KEY: str
     IMAGES_GEMINI_ENDPOINT_METHOD: str
 
+    ENABLE_IMAGE_EDIT: bool
     IMAGE_EDIT_ENGINE: str
     IMAGE_EDIT_MODEL: str
     IMAGE_EDIT_SIZE: Optional[str]
@@ -147,6 +154,7 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
         "IMAGES_OPENAI_API_BASE_URL": request.app.state.config.IMAGES_OPENAI_API_BASE_URL,
         "IMAGES_OPENAI_API_KEY": request.app.state.config.IMAGES_OPENAI_API_KEY,
         "IMAGES_OPENAI_API_VERSION": request.app.state.config.IMAGES_OPENAI_API_VERSION,
+        "IMAGES_OPENAI_API_PARAMS": request.app.state.config.IMAGES_OPENAI_API_PARAMS,
         "AUTOMATIC1111_BASE_URL": request.app.state.config.AUTOMATIC1111_BASE_URL,
         "AUTOMATIC1111_API_AUTH": request.app.state.config.AUTOMATIC1111_API_AUTH,
         "AUTOMATIC1111_PARAMS": request.app.state.config.AUTOMATIC1111_PARAMS,
@@ -157,6 +165,7 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
         "IMAGES_GEMINI_API_BASE_URL": request.app.state.config.IMAGES_GEMINI_API_BASE_URL,
         "IMAGES_GEMINI_API_KEY": request.app.state.config.IMAGES_GEMINI_API_KEY,
         "IMAGES_GEMINI_ENDPOINT_METHOD": request.app.state.config.IMAGES_GEMINI_ENDPOINT_METHOD,
+        "ENABLE_IMAGE_EDIT": request.app.state.config.ENABLE_IMAGE_EDIT,
         "IMAGE_EDIT_ENGINE": request.app.state.config.IMAGE_EDIT_ENGINE,
         "IMAGE_EDIT_MODEL": request.app.state.config.IMAGE_EDIT_MODEL,
         "IMAGE_EDIT_SIZE": request.app.state.config.IMAGE_EDIT_SIZE,
@@ -224,6 +233,9 @@ async def update_config(
     request.app.state.config.IMAGES_OPENAI_API_VERSION = (
         form_data.IMAGES_OPENAI_API_VERSION
     )
+    request.app.state.config.IMAGES_OPENAI_API_PARAMS = (
+        form_data.IMAGES_OPENAI_API_PARAMS
+    )
 
     request.app.state.config.AUTOMATIC1111_BASE_URL = form_data.AUTOMATIC1111_BASE_URL
     request.app.state.config.AUTOMATIC1111_API_AUTH = form_data.AUTOMATIC1111_API_AUTH
@@ -243,15 +255,16 @@ async def update_config(
     )
 
     # Edit Image
+    request.app.state.config.ENABLE_IMAGE_EDIT = form_data.ENABLE_IMAGE_EDIT
     request.app.state.config.IMAGE_EDIT_ENGINE = form_data.IMAGE_EDIT_ENGINE
     request.app.state.config.IMAGE_EDIT_MODEL = form_data.IMAGE_EDIT_MODEL
     request.app.state.config.IMAGE_EDIT_SIZE = form_data.IMAGE_EDIT_SIZE
 
     request.app.state.config.IMAGES_EDIT_OPENAI_API_BASE_URL = (
-        form_data.IMAGES_OPENAI_API_BASE_URL
+        form_data.IMAGES_EDIT_OPENAI_API_BASE_URL
     )
     request.app.state.config.IMAGES_EDIT_OPENAI_API_KEY = (
-        form_data.IMAGES_OPENAI_API_KEY
+        form_data.IMAGES_EDIT_OPENAI_API_KEY
     )
     request.app.state.config.IMAGES_EDIT_OPENAI_API_VERSION = (
         form_data.IMAGES_EDIT_OPENAI_API_VERSION
@@ -287,6 +300,7 @@ async def update_config(
         "IMAGES_OPENAI_API_BASE_URL": request.app.state.config.IMAGES_OPENAI_API_BASE_URL,
         "IMAGES_OPENAI_API_KEY": request.app.state.config.IMAGES_OPENAI_API_KEY,
         "IMAGES_OPENAI_API_VERSION": request.app.state.config.IMAGES_OPENAI_API_VERSION,
+        "IMAGES_OPENAI_API_PARAMS": request.app.state.config.IMAGES_OPENAI_API_PARAMS,
         "AUTOMATIC1111_BASE_URL": request.app.state.config.AUTOMATIC1111_BASE_URL,
         "AUTOMATIC1111_API_AUTH": request.app.state.config.AUTOMATIC1111_API_AUTH,
         "AUTOMATIC1111_PARAMS": request.app.state.config.AUTOMATIC1111_PARAMS,
@@ -297,6 +311,7 @@ async def update_config(
         "IMAGES_GEMINI_API_BASE_URL": request.app.state.config.IMAGES_GEMINI_API_BASE_URL,
         "IMAGES_GEMINI_API_KEY": request.app.state.config.IMAGES_GEMINI_API_KEY,
         "IMAGES_GEMINI_ENDPOINT_METHOD": request.app.state.config.IMAGES_GEMINI_ENDPOINT_METHOD,
+        "ENABLE_IMAGE_EDIT": request.app.state.config.ENABLE_IMAGE_EDIT,
         "IMAGE_EDIT_ENGINE": request.app.state.config.IMAGE_EDIT_ENGINE,
         "IMAGE_EDIT_MODEL": request.app.state.config.IMAGE_EDIT_MODEL,
         "IMAGE_EDIT_SIZE": request.app.state.config.IMAGE_EDIT_SIZE,
@@ -534,6 +549,12 @@ async def image_generations(
             if ENABLE_FORWARD_USER_INFO_HEADERS:
                 headers = include_user_info_headers(headers, user)
 
+            url = (
+                f"{request.app.state.config.IMAGES_OPENAI_API_BASE_URL}/images/generations",
+            )
+            if request.app.state.config.IMAGES_OPENAI_API_VERSION:
+                url = f"{url}?api-version={request.app.state.config.IMAGES_OPENAI_API_VERSION}"
+
             data = {
                 "model": model,
                 "prompt": form_data.prompt,
@@ -548,18 +569,17 @@ async def image_generations(
                     if "gpt-image-1" in request.app.state.config.IMAGE_GENERATION_MODEL
                     else {"response_format": "b64_json"}
                 ),
+                **(
+                    {}
+                    if not request.app.state.config.IMAGES_OPENAI_API_PARAMS
+                    else request.app.state.config.IMAGES_OPENAI_API_PARAMS
+                ),
             }
-
-            api_version_query_param = ""
-            if request.app.state.config.IMAGES_OPENAI_API_VERSION:
-                api_version_query_param = (
-                    f"?api-version={request.app.state.config.IMAGES_OPENAI_API_VERSION}"
-                )
 
             # Use asyncio.to_thread for the requests.post call
             r = await asyncio.to_thread(
                 requests.post,
-                url=f"{request.app.state.config.IMAGES_OPENAI_API_BASE_URL}/images/generations{api_version_query_param}",
+                url=url,
                 json=data,
                 headers=headers,
             )
@@ -818,13 +838,13 @@ async def image_edits(
     except Exception as e:
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
 
-    def get_image_file_item(base64_string):
+    def get_image_file_item(base64_string, param_name="image"):
         data = base64_string
         header, encoded = data.split(",", 1)
         mime_type = header.split(";")[0].lstrip("data:")
         image_data = base64.b64decode(encoded)
         return (
-            "image",
+            param_name,
             (
                 f"{uuid.uuid4()}.png",
                 io.BytesIO(image_data),
@@ -859,7 +879,7 @@ async def image_edits(
                 files = [get_image_file_item(form_data.image)]
             elif isinstance(form_data.image, list):
                 for img in form_data.image:
-                    files.append(get_image_file_item(img))
+                    files.append(get_image_file_item(img, "image[]"))
 
             url_search_params = ""
             if request.app.state.config.IMAGES_EDIT_OPENAI_API_VERSION:

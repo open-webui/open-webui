@@ -58,7 +58,7 @@ from open_webui.routers.memories import query_memory, QueryMemoryForm
 
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.files import (
-    get_audio_url_from_base64,
+    convert_markdown_base64_images,
     get_file_url_from_base64,
     get_image_url_from_base64,
 )
@@ -104,6 +104,7 @@ from open_webui.utils.mcp.client import MCPClient
 
 from open_webui.config import (
     CACHE_DIR,
+    DEFAULT_VOICE_MODE_PROMPT_TEMPLATE,
     DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
     DEFAULT_CODE_INTERPRETER_PROMPT,
     CODE_INTERPRETER_BLOCKED_MODULES,
@@ -111,6 +112,7 @@ from open_webui.config import (
 from open_webui.env import (
     SRC_LOG_LEVELS,
     GLOBAL_LOG_LEVEL,
+    ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION,
     CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE,
     CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES,
     BYPASS_MODEL_ACCESS_CONTROL,
@@ -302,19 +304,27 @@ async def chat_completion_tools_handler(
     def get_tools_function_calling_payload(messages, task_model_id, content):
         user_message = get_last_user_message(messages)
 
+        if user_message and messages and messages[-1]["role"] == "user":
+            # Remove the last user message to avoid duplication
+            messages = messages[:-1]
+
         recent_messages = messages[-4:] if len(messages) > 4 else messages
         chat_history = "\n".join(
             f"{message['role'].upper()}: \"\"\"{get_content_from_message(message)}\"\"\""
             for message in recent_messages
         )
 
-        prompt = f"History:\n{chat_history}\nQuery: {user_message}"
+        prompt = (
+            f"History:\n{chat_history}\nQuery: {user_message}"
+            if chat_history
+            else f"Query: {user_message}"
+        )
 
         return {
             "model": task_model_id,
             "messages": [
                 {"role": "system", "content": content},
-                {"role": "user", "content": f"Query: {prompt}"},
+                {"role": "user", "content": prompt},
             ],
             "stream": False,
             "metadata": {"task": str(TASKS.FUNCTION_CALLING)},
@@ -733,6 +743,27 @@ def get_last_images(message_list):
     return images
 
 
+def get_image_urls(delta_images, request, metadata, user) -> list[str]:
+    if not isinstance(delta_images, list):
+        return []
+
+    image_urls = []
+    for img in delta_images:
+        if not isinstance(img, dict) or img.get("type") != "image_url":
+            continue
+
+        url = img.get("image_url", {}).get("url")
+        if not url:
+            continue
+
+        if url.startswith("data:image/png;base64"):
+            url = get_image_url_from_base64(request, url, metadata, user)
+
+        image_urls.append(url)
+
+    return image_urls
+
+
 async def chat_image_generation_handler(
     request: Request, form_data: dict, extra_params: dict, user
 ):
@@ -760,42 +791,13 @@ async def chat_image_generation_handler(
     input_images = get_last_images(message_list)
 
     system_message_content = ""
-    if len(input_images) == 0:
-        # Create image(s)
-        if request.app.state.config.ENABLE_IMAGE_PROMPT_GENERATION:
-            try:
-                res = await generate_image_prompt(
-                    request,
-                    {
-                        "model": form_data["model"],
-                        "messages": form_data["messages"],
-                    },
-                    user,
-                )
 
-                response = res["choices"][0]["message"]["content"]
-
-                try:
-                    bracket_start = response.find("{")
-                    bracket_end = response.rfind("}") + 1
-
-                    if bracket_start == -1 or bracket_end == -1:
-                        raise Exception("No JSON object found in the response")
-
-                    response = response[bracket_start:bracket_end]
-                    response = json.loads(response)
-                    prompt = response.get("prompt", [])
-                except Exception as e:
-                    prompt = user_message
-
-            except Exception as e:
-                log.exception(e)
-                prompt = user_message
-
+    if len(input_images) > 0 and request.app.state.config.ENABLE_IMAGE_EDIT:
+        # Edit image(s)
         try:
-            images = await image_generations(
+            images = await image_edits(
                 request=request,
-                form_data=CreateImageForm(**{"prompt": prompt}),
+                form_data=EditImageForm(**{"prompt": prompt, "image": input_images}),
                 user=user,
             )
 
@@ -843,12 +845,43 @@ async def chat_image_generation_handler(
             )
 
             system_message_content = f"<context>Image generation was attempted but failed. The system is currently unable to generate the image. Tell the user that an error occurred: {error_message}</context>"
+
     else:
-        # Edit image(s)
+        # Create image(s)
+        if request.app.state.config.ENABLE_IMAGE_PROMPT_GENERATION:
+            try:
+                res = await generate_image_prompt(
+                    request,
+                    {
+                        "model": form_data["model"],
+                        "messages": form_data["messages"],
+                    },
+                    user,
+                )
+
+                response = res["choices"][0]["message"]["content"]
+
+                try:
+                    bracket_start = response.find("{")
+                    bracket_end = response.rfind("}") + 1
+
+                    if bracket_start == -1 or bracket_end == -1:
+                        raise Exception("No JSON object found in the response")
+
+                    response = response[bracket_start:bracket_end]
+                    response = json.loads(response)
+                    prompt = response.get("prompt", [])
+                except Exception as e:
+                    prompt = user_message
+
+            except Exception as e:
+                log.exception(e)
+                prompt = user_message
+
         try:
-            images = await image_edits(
+            images = await image_generations(
                 request=request,
-                form_data=EditImageForm(**{"prompt": prompt, "image": input_images}),
+                form_data=CreateImageForm(**{"prompt": prompt}),
                 user=user,
             )
 
@@ -960,37 +993,32 @@ async def chat_completion_files_handler(
             queries = [get_last_user_message(body["messages"])]
 
         try:
-            # Offload get_sources_from_items to a separate thread
-            loop = asyncio.get_running_loop()
-            with ThreadPoolExecutor() as executor:
-                sources = await loop.run_in_executor(
-                    executor,
-                    lambda: get_sources_from_items(
-                        request=request,
-                        items=files,
-                        queries=queries,
-                        embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
-                            query, prefix=prefix, user=user
-                        ),
-                        k=request.app.state.config.TOP_K,
-                        reranking_function=(
-                            (
-                                lambda sentences: request.app.state.RERANKING_FUNCTION(
-                                    sentences, user=user
-                                )
-                            )
-                            if request.app.state.RERANKING_FUNCTION
-                            else None
-                        ),
-                        k_reranker=request.app.state.config.TOP_K_RERANKER,
-                        r=request.app.state.config.RELEVANCE_THRESHOLD,
-                        hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
-                        hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
-                        full_context=all_full_context
-                        or request.app.state.config.RAG_FULL_CONTEXT,
-                        user=user,
-                    ),
-                )
+            # Directly await async get_sources_from_items (no thread needed - fully async now)
+            sources = await get_sources_from_items(
+                request=request,
+                items=files,
+                queries=queries,
+                embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                    query, prefix=prefix, user=user
+                ),
+                k=request.app.state.config.TOP_K,
+                reranking_function=(
+                    (
+                        lambda query, documents: request.app.state.RERANKING_FUNCTION(
+                            query, documents, user=user
+                        )
+                    )
+                    if request.app.state.RERANKING_FUNCTION
+                    else None
+                ),
+                k_reranker=request.app.state.config.TOP_K_RERANKER,
+                r=request.app.state.config.RELEVANCE_THRESHOLD,
+                hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
+                hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+                full_context=all_full_context
+                or request.app.state.config.RAG_FULL_CONTEXT,
+                user=user,
+            )
         except Exception as e:
             log.exception(e)
 
@@ -1097,7 +1125,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             pass
 
     event_emitter = get_event_emitter(metadata)
-    event_call = get_event_call(metadata)
+    event_caller = get_event_call(metadata)
 
     oauth_token = None
     try:
@@ -1111,14 +1139,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     extra_params = {
         "__event_emitter__": event_emitter,
-        "__event_call__": event_call,
+        "__event_call__": event_caller,
         "__user__": user.model_dump() if isinstance(user, UserModel) else {},
         "__metadata__": metadata,
+        "__oauth_token__": oauth_token,
         "__request__": request,
         "__model__": model,
-        "__oauth_token__": oauth_token,
     }
-
     # Initialize events to store additional event to be sent to the client
     # Initialize contexts and citation
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
@@ -1229,6 +1256,18 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     features = form_data.pop("features", None)
     if features:
+        if "voice" in features and features["voice"]:
+            if request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE != None:
+                if request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE != "":
+                    template = request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE
+                else:
+                    template = DEFAULT_VOICE_MODE_PROMPT_TEMPLATE
+
+                form_data["messages"] = add_or_update_system_message(
+                    template,
+                    form_data["messages"],
+                )
+
         if "memory" in features and features["memory"]:
             form_data = await chat_memory_handler(
                 request, form_data, extra_params, user
@@ -1323,7 +1362,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         continue
 
                     auth_type = mcp_server_connection.get("auth_type", "")
-
                     headers = {}
                     if auth_type == "bearer":
                         headers["Authorization"] = (
@@ -1358,6 +1396,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         except Exception as e:
                             log.error(f"Error getting OAuth token: {e}")
                             oauth_token = None
+
+                    connection_headers = mcp_server_connection.get("headers", None)
+                    if connection_headers and isinstance(connection_headers, dict):
+                        for key, value in connection_headers.items():
+                            headers[key] = value
 
                     mcp_clients[server_id] = MCPClient()
                     await mcp_clients[server_id].connect(
@@ -2556,6 +2599,26 @@ async def process_chat_response(
                                                             "arguments"
                                                         ] += delta_arguments
 
+                                    image_urls = get_image_urls(
+                                        delta.get("images", []), request, metadata, user
+                                    )
+                                    if image_urls:
+                                        message_files = Chats.add_message_files_by_id_and_message_id(
+                                            metadata["chat_id"],
+                                            metadata["message_id"],
+                                            [
+                                                {"type": "image", "url": url}
+                                                for url in image_urls
+                                            ],
+                                        )
+
+                                        await event_emitter(
+                                            {
+                                                "type": "files",
+                                                "data": {"files": message_files},
+                                            }
+                                        )
+
                                     value = delta.get("content")
 
                                     reasoning_content = (
@@ -2612,6 +2675,11 @@ async def process_chat_response(
                                                     "type": "text",
                                                     "content": "",
                                                 }
+                                            )
+
+                                        if ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION:
+                                            value = convert_markdown_base64_images(
+                                                request, value, metadata, user
                                             )
 
                                         content = f"{content}{value}"

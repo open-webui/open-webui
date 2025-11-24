@@ -2,50 +2,93 @@
 	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
+	import dayjs from 'dayjs';
+	import relativeTime from 'dayjs/plugin/relativeTime';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
+	dayjs.extend(relativeTime);
+	dayjs.extend(localizedFormat);
+
+	import { getUsers } from '$lib/apis/users';
+	import { toast } from 'svelte-sonner';
+
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Plus from '$lib/components/icons/Plus.svelte';
-	import { WEBUI_BASE_URL } from '$lib/constants';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
+	import Pagination from '$lib/components/common/Pagination.svelte';
+	import { addUserToGroup, removeUserFromGroup } from '$lib/apis/groups';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-	export let users = [];
-	export let userIds = [];
+	export let groupId: string;
+	export let userCount = 0;
 
-	let filteredUsers = [];
-
-	$: filteredUsers = users
-		.filter((user) => {
-			if (query === '') {
-				return true;
-			}
-
-			return (
-				user.name.toLowerCase().includes(query.toLowerCase()) ||
-				user.email.toLowerCase().includes(query.toLowerCase())
-			);
-		})
-		.sort((a, b) => {
-			const aUserIndex = userIds.indexOf(a.id);
-			const bUserIndex = userIds.indexOf(b.id);
-
-			// Compare based on userIds or fall back to alphabetical order
-			if (aUserIndex !== -1 && bUserIndex === -1) return -1; // 'a' has valid userId -> prioritize
-			if (bUserIndex !== -1 && aUserIndex === -1) return 1; // 'b' has valid userId -> prioritize
-
-			// Both a and b are either in the userIds array or not, so we'll sort them by their indices
-			if (aUserIndex !== -1 && bUserIndex !== -1) return aUserIndex - bUserIndex;
-
-			// If both are not in the userIds, fallback to alphabetical sorting by name
-			return a.name.localeCompare(b.name);
-		});
+	let users = [];
+	let total = 0;
 
 	let query = '';
+	let orderBy = `group_id:${groupId}`; // default sort key
+	let direction = 'desc'; // default sort order
+
+	let page = 1;
+
+	const setSortKey = (key) => {
+		if (orderBy === key) {
+			direction = direction === 'asc' ? 'desc' : 'asc';
+		} else {
+			orderBy = key;
+			direction = 'asc';
+		}
+	};
+
+	const getUserList = async () => {
+		try {
+			const res = await getUsers(localStorage.token, query, orderBy, direction, page).catch(
+				(error) => {
+					toast.error(`${error}`);
+					return null;
+				}
+			);
+
+			if (res) {
+				users = res.users;
+				total = res.total;
+			}
+		} catch (err) {
+			console.error(err);
+		}
+	};
+
+	const toggleMember = async (userId, state) => {
+		if (state === 'checked') {
+			await addUserToGroup(localStorage.token, groupId, [userId]).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+		} else {
+			await removeUserFromGroup(localStorage.token, groupId, [userId]).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+		}
+
+		page = 1;
+		getUserList();
+	};
+
+	$: if (page !== null && query !== null && orderBy !== null && direction !== null) {
+		getUserList();
+	}
+
+	$: if (query) {
+		page = 1;
+	}
 </script>
 
-<div>
-	<div class="flex w-full">
-		<div class="flex flex-1">
+<div class=" max-h-full h-full w-full flex flex-col overflow-y-hidden">
+	<div class="w-full h-fit mb-1.5">
+		<div class="flex flex-1 h-fit">
 			<div class=" self-center mr-3">
 				<Search />
 			</div>
@@ -57,42 +100,163 @@
 		</div>
 	</div>
 
-	<div class="mt-3 scrollbar-hidden">
-		<div class="flex flex-col gap-2.5">
-			{#if filteredUsers.length > 0}
-				{#each filteredUsers as user, userIdx (user.id)}
-					<div class="flex flex-row items-center gap-3 w-full text-sm">
-						<div class="flex items-center">
-							<Checkbox
-								state={userIds.includes(user.id) ? 'checked' : 'unchecked'}
-								on:change={(e) => {
-									if (e.detail === 'checked') {
-										userIds = [...userIds, user.id];
-									} else {
-										userIds = userIds.filter((id) => id !== user.id);
-									}
-								}}
-							/>
-						</div>
+	{#if users.length > 0}
+		<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
+			<table
+				class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full"
+			>
+				<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
+					<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850">
+						<th
+							scope="col"
+							class="px-2.5 py-2 cursor-pointer text-left w-8"
+							on:click={() => setSortKey(`group_id:${groupId}`)}
+						>
+							<div class="flex gap-1.5 items-center">
+								{$i18n.t('MBR')}
 
-						<div class="flex w-full items-center justify-between overflow-hidden">
-							<Tooltip content={user.email} placement="top-start">
-								<div class="flex">
-									<div class=" font-medium self-center truncate">{user.name}</div>
+								{#if orderBy === `group_id:${groupId}`}
+									<span class="font-normal"
+										>{#if direction === 'asc'}
+											<ChevronUp className="size-2" />
+										{:else}
+											<ChevronDown className="size-2" />
+										{/if}
+									</span>
+								{:else}
+									<span class="invisible">
+										<ChevronUp className="size-2" />
+									</span>
+								{/if}
+							</div>
+						</th>
+
+						<th
+							scope="col"
+							class="px-2.5 py-2 cursor-pointer select-none"
+							on:click={() => setSortKey('role')}
+						>
+							<div class="flex gap-1.5 items-center">
+								{$i18n.t('Role')}
+
+								{#if orderBy === 'role'}
+									<span class="font-normal"
+										>{#if direction === 'asc'}
+											<ChevronUp className="size-2" />
+										{:else}
+											<ChevronDown className="size-2" />
+										{/if}
+									</span>
+								{:else}
+									<span class="invisible">
+										<ChevronUp className="size-2" />
+									</span>
+								{/if}
+							</div>
+						</th>
+						<th
+							scope="col"
+							class="px-2.5 py-2 cursor-pointer select-none"
+							on:click={() => setSortKey('name')}
+						>
+							<div class="flex gap-1.5 items-center">
+								{$i18n.t('Name')}
+
+								{#if orderBy === 'name'}
+									<span class="font-normal"
+										>{#if direction === 'asc'}
+											<ChevronUp className="size-2" />
+										{:else}
+											<ChevronDown className="size-2" />
+										{/if}
+									</span>
+								{:else}
+									<span class="invisible">
+										<ChevronUp className="size-2" />
+									</span>
+								{/if}
+							</div>
+						</th>
+
+						<th
+							scope="col"
+							class="px-2.5 py-2 cursor-pointer select-none"
+							on:click={() => setSortKey('last_active_at')}
+						>
+							<div class="flex gap-1.5 items-center">
+								{$i18n.t('Last Active')}
+
+								{#if orderBy === 'last_active_at'}
+									<span class="font-normal"
+										>{#if direction === 'asc'}
+											<ChevronUp className="size-2" />
+										{:else}
+											<ChevronDown className="size-2" />
+										{/if}
+									</span>
+								{:else}
+									<span class="invisible">
+										<ChevronUp className="size-2" />
+									</span>
+								{/if}
+							</div>
+						</th>
+					</tr>
+				</thead>
+				<tbody class="">
+					{#each users as user, userIdx}
+						<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
+							<td class=" px-3 py-1 w-8">
+								<div class="flex w-full justify-center">
+									<Checkbox
+										state={(user?.group_ids ?? []).includes(groupId) ? 'checked' : 'unchecked'}
+										on:change={(e) => {
+											toggleMember(user.id, e.detail);
+										}}
+									/>
 								</div>
-							</Tooltip>
+							</td>
+							<td class="px-3 py-1 min-w-[7rem] w-28">
+								<div class=" translate-y-0.5">
+									<Badge
+										type={user.role === 'admin'
+											? 'info'
+											: user.role === 'user'
+												? 'success'
+												: 'muted'}
+										content={$i18n.t(user.role)}
+									/>
+								</div>
+							</td>
+							<td class="px-3 py-1 font-medium text-gray-900 dark:text-white max-w-48">
+								<Tooltip content={user.email} placement="top-start">
+									<div class="flex items-center">
+										<img
+											class="rounded-full w-6 h-6 object-cover mr-2.5 flex-shrink-0"
+											src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
+											alt="user"
+										/>
 
-							{#if userIds.includes(user.id)}
-								<Badge type="success" content="member" />
-							{/if}
-						</div>
-					</div>
-				{/each}
-			{:else}
-				<div class="text-gray-500 text-xs text-center py-2 px-10">
-					{$i18n.t('No users were found.')}
-				</div>
-			{/if}
+										<div class="font-medium truncate">{user.name}</div>
+									</div>
+								</Tooltip>
+							</td>
+
+							<td class=" px-3 py-1">
+								{dayjs(user.last_active_at * 1000).fromNow()}
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
 		</div>
-	</div>
+	{:else}
+		<div class="text-gray-500 text-xs text-center py-2 px-10">
+			{$i18n.t('No users were found.')}
+		</div>
+	{/if}
+
+	{#if total > 30}
+		<Pagination bind:page count={total} perPage={30} />
+	{/if}
 </div>

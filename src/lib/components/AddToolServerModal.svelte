@@ -22,6 +22,7 @@
 	import AccessControl from './workspace/common/AccessControl.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import Textarea from './common/Textarea.svelte';
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
@@ -44,6 +45,7 @@
 
 	let auth_type = 'bearer';
 	let key = '';
+	let headers = '';
 
 	let accessControl = {};
 
@@ -110,6 +112,20 @@
 			}
 		}
 
+		if (headers) {
+			try {
+				let _headers = JSON.parse(headers);
+				if (typeof _headers !== 'object' || Array.isArray(_headers)) {
+					_headers = null;
+					throw new Error('Headers must be a valid JSON object');
+				}
+				headers = JSON.stringify(_headers, null, 2);
+			} catch (error) {
+				toast.error($i18n.t('Headers must be a valid JSON object'));
+				return;
+			}
+		}
+
 		if (direct) {
 			const res = await getToolServerData(
 				auth_type === 'bearer' ? key : localStorage.token,
@@ -128,6 +144,7 @@
 				path,
 				type,
 				auth_type,
+				headers: headers ? JSON.parse(headers) : undefined,
 				key,
 				config: {
 					enable: enable,
@@ -177,6 +194,7 @@
 				if (data.path) path = data.path;
 
 				if (data.auth_type) auth_type = data.auth_type;
+				if (data.headers) headers = JSON.stringify(data.headers, null, 2);
 				if (data.key) key = data.key;
 
 				if (data.info) {
@@ -210,6 +228,7 @@
 				path,
 
 				auth_type,
+				headers: headers ? JSON.parse(headers) : undefined,
 				key,
 
 				info: {
@@ -256,6 +275,19 @@
 			}
 		}
 
+		if (headers) {
+			try {
+				const _headers = JSON.parse(headers);
+				if (typeof _headers !== 'object' || Array.isArray(_headers)) {
+					throw new Error('Headers must be a valid JSON object');
+				}
+				headers = JSON.stringify(_headers, null, 2);
+			} catch (error) {
+				toast.error($i18n.t('Headers must be a valid JSON object'));
+				return;
+			}
+		}
+
 		const connection = {
 			type,
 			url,
@@ -265,9 +297,12 @@
 			path,
 
 			auth_type,
+			headers: headers ? JSON.parse(headers) : undefined,
+
 			key,
 			config: {
 				enable: enable,
+
 				access_control: accessControl
 			},
 			info: {
@@ -313,6 +348,8 @@
 			path = connection?.path ?? 'openapi.json';
 
 			auth_type = connection?.auth_type ?? 'bearer';
+			headers = connection?.headers ? JSON.stringify(connection.headers, null, 2) : '';
+
 			key = connection?.key ?? '';
 
 			id = connection.info?.id ?? '';
@@ -657,6 +694,33 @@
 						</div>
 
 						{#if !direct}
+							<div class="flex gap-2 mt-2">
+								<div class="flex flex-col w-full">
+									<label
+										for="headers-input"
+										class={`mb-0.5 text-xs text-gray-500
+								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
+										>{$i18n.t('Headers')}</label
+									>
+
+									<div class="flex-1">
+										<Tooltip
+											content={$i18n.t(
+												'Enter additional headers in JSON format (e.g. {"X-Custom-Header": "value"}'
+											)}
+										>
+											<Textarea
+												className="w-full text-sm outline-hidden"
+												bind:value={headers}
+												placeholder={$i18n.t('Enter additional headers in JSON format')}
+												required={false}
+												minSize={30}
+											/>
+										</Tooltip>
+									</div>
+								</div>
+							</div>
+
 							<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 
 							<div class="flex gap-2">

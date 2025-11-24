@@ -212,6 +212,18 @@
 			await embeddingModelUpdateHandler();
 		}
 
+		if (RAGConfig.DOCLING_PARAMS) {
+			try {
+				JSON.parse(RAGConfig.DOCLING_PARAMS);
+			} catch (e) {
+				toast.error(
+					$i18n.t('Invalid JSON format in {{NAME}}', {
+						NAME: $i18n.t('Docling Parameters')
+					})
+				);
+				return;
+			}
+		}
 		if (RAGConfig.MINERU_PARAMS) {
 			try {
 				JSON.parse(RAGConfig.MINERU_PARAMS);
@@ -232,6 +244,10 @@
 			DOCLING_PICTURE_DESCRIPTION_API: JSON.parse(
 				RAGConfig.DOCLING_PICTURE_DESCRIPTION_API || '{}'
 			),
+			DOCLING_PARAMS:
+				typeof RAGConfig.DOCLING_PARAMS === 'string' && RAGConfig.DOCLING_PARAMS.trim() !== ''
+					? JSON.parse(RAGConfig.DOCLING_PARAMS)
+					: {},
 			MINERU_PARAMS:
 				typeof RAGConfig.MINERU_PARAMS === 'string' && RAGConfig.MINERU_PARAMS.trim() !== ''
 					? JSON.parse(RAGConfig.MINERU_PARAMS)
@@ -275,6 +291,10 @@
 			null,
 			2
 		);
+		config.DOCLING_PARAMS =
+			typeof config.DOCLING_PARAMS === 'object'
+				? JSON.stringify(config.DOCLING_PARAMS ?? {}, null, 2)
+				: config.DOCLING_PARAMS;
 
 		config.MINERU_PARAMS =
 			typeof config.MINERU_PARAMS === 'object'
@@ -737,18 +757,18 @@
 								{/if}
 							{/if}
 
-							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
-									<Tooltip content={''} placement="top-start">
+							<div class="flex flex-col gap-2 mt-2">
+								<div class=" flex flex-col w-full justify-between">
+									<div class=" mb-1 text-xs font-medium">
 										{$i18n.t('Parameters')}
-									</Tooltip>
-								</div>
-								<div class="">
-									<Textarea
-										bind:value={RAGConfig.DOCLING_PARAMS}
-										placeholder={$i18n.t('Enter additional parameters in JSON format')}
-										minSize={100}
-									/>
+									</div>
+									<div class="flex w-full items-center relative">
+										<Textarea
+											bind:value={RAGConfig.DOCLING_PARAMS}
+											placeholder={$i18n.t('Enter additional parameters in JSON format')}
+											minSize={100}
+										/>
+									</div>
 								</div>
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'document_intelligence'}
@@ -823,6 +843,7 @@
 								<SensitiveInput
 									placeholder={$i18n.t('Enter MinerU API Key')}
 									bind:value={RAGConfig.MINERU_API_KEY}
+									required={false}
 								/>
 							</div>
 
@@ -1131,6 +1152,21 @@
 							</div>
 
 							{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
+								<div class="mb-2.5 flex w-full justify-between">
+									<div class="self-center text-xs font-medium">
+										{$i18n.t('Enrich Hybrid Search Text')}
+									</div>
+									<div class="flex items-center relative">
+										<Tooltip
+											content={$i18n.t(
+												'Adds filenames, titles, sections, and snippets into the BM25 text to improve lexical recall.'
+											)}
+										>
+											<Switch bind:state={RAGConfig.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS} />
+										</Tooltip>
+									</div>
+								</div>
+
 								<div class="  mb-2.5 flex flex-col w-full justify-between">
 									<div class="flex w-full justify-between">
 										<div class=" self-center text-xs font-medium">

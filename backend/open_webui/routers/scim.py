@@ -256,15 +256,16 @@ def get_scim_auth(
             )
 
         # Check if SCIM is enabled
-        scim_enabled = getattr(request.app.state, "SCIM_ENABLED", False)
+        enable_scim = getattr(request.app.state, "ENABLE_SCIM", False)
         log.info(
-            f"SCIM auth check - raw SCIM_ENABLED: {scim_enabled}, type: {type(scim_enabled)}"
+            f"SCIM auth check - raw ENABLE_SCIM: {enable_scim}, type: {type(enable_scim)}"
         )
+
         # Handle both PersistentConfig and direct value
-        if hasattr(scim_enabled, "value"):
-            scim_enabled = scim_enabled.value
-        log.info(f"SCIM enabled status after conversion: {scim_enabled}")
-        if not scim_enabled:
+        if hasattr(enable_scim, "value"):
+            enable_scim = enable_scim.value
+
+        if not enable_scim:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="SCIM is not enabled",
@@ -348,8 +349,10 @@ def user_to_scim(user: UserModel, request: Request) -> SCIMUser:
 
 def group_to_scim(group: GroupModel, request: Request) -> SCIMGroup:
     """Convert internal Group model to SCIM Group"""
+    member_ids = Groups.get_group_user_ids_by_id(group.id)
     members = []
-    for user_id in group.user_ids:
+
+    for user_id in member_ids:
         user = Users.get_user_by_id(user_id)
         if user:
             members.append(
@@ -795,9 +798,11 @@ async def create_group(
         update_form = GroupUpdateForm(
             name=new_group.name,
             description=new_group.description,
-            user_ids=member_ids,
         )
+
         Groups.update_group_by_id(new_group.id, update_form)
+        Groups.set_group_user_ids_by_id(new_group.id, member_ids)
+
         new_group = Groups.get_group_by_id(new_group.id)
 
     return group_to_scim(new_group, request)
@@ -829,7 +834,7 @@ async def update_group(
     # Handle members if provided
     if group_data.members is not None:
         member_ids = [member.value for member in group_data.members]
-        update_form.user_ids = member_ids
+        Groups.set_group_user_ids_by_id(group_id, member_ids)
 
     # Update group
     updated_group = Groups.update_group_by_id(group_id, update_form)
@@ -862,7 +867,6 @@ async def patch_group(
     update_form = GroupUpdateForm(
         name=group.name,
         description=group.description,
-        user_ids=group.user_ids.copy() if group.user_ids else [],
     )
 
     for operation in patch_data.Operations:
@@ -875,21 +879,22 @@ async def patch_group(
                 update_form.name = value
             elif path == "members":
                 # Replace all members
-                update_form.user_ids = [member["value"] for member in value]
+                Groups.set_group_user_ids_by_id(
+                    group_id, [member["value"] for member in value]
+                )
+
         elif op == "add":
             if path == "members":
                 # Add members
                 if isinstance(value, list):
                     for member in value:
                         if isinstance(member, dict) and "value" in member:
-                            if member["value"] not in update_form.user_ids:
-                                update_form.user_ids.append(member["value"])
+                            Groups.add_users_to_group(group_id, [member["value"]])
         elif op == "remove":
             if path and path.startswith("members[value eq"):
                 # Remove specific member
                 member_id = path.split('"')[1]
-                if member_id in update_form.user_ids:
-                    update_form.user_ids.remove(member_id)
+                Groups.remove_users_from_group(group_id, [member_id])
 
     # Update group
     updated_group = Groups.update_group_by_id(group_id, update_form)

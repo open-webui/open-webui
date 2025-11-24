@@ -8,7 +8,7 @@
 	const { saveAs } = fileSaver;
 
 	import { marked, type Token } from 'marked';
-	import { unescapeHtml } from '$lib/utils';
+	import { copyToClipboard, unescapeHtml } from '$lib/utils';
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { settings } from '$lib/stores';
@@ -21,13 +21,14 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
 
-	import Source from './Source.svelte';
 	import HtmlToken from './HTMLToken.svelte';
+	import Clipboard from '$lib/components/icons/Clipboard.svelte';
 
 	export let id: string;
 	export let tokens: Token[];
 	export let top = true;
 	export let attributes = {};
+	export let sourceIds = [];
 
 	export let done = true;
 
@@ -95,6 +96,7 @@
 				id={`${id}-${tokenIdx}-h`}
 				tokens={token.tokens}
 				{done}
+				{sourceIds}
 				{onSourceClick}
 			/>
 		</svelte:element>
@@ -146,6 +148,7 @@
 												id={`${id}-${tokenIdx}-header-${headerIdx}`}
 												tokens={header.tokens}
 												{done}
+												{sourceIds}
 												{onSourceClick}
 											/>
 										</div>
@@ -171,6 +174,7 @@
 												id={`${id}-${tokenIdx}-row-${rowIdx}-${cellIdx}`}
 												tokens={cell.tokens}
 												{done}
+												{sourceIds}
 												{onSourceClick}
 											/>
 										</div>
@@ -182,7 +186,19 @@
 				</table>
 			</div>
 
-			<div class=" absolute top-1 right-1.5 z-20 invisible group-hover:visible">
+			<div class=" absolute top-1 right-1.5 z-20 invisible group-hover:visible flex gap-0.5">
+				<Tooltip content={$i18n.t('Copy')}>
+					<button
+						class="p-1 rounded-lg bg-transparent transition"
+						on:click={(e) => {
+							e.stopPropagation();
+							copyToClipboard(token.raw.trim());
+						}}
+					>
+						<Clipboard className=" size-3.5" strokeWidth="1.5" />
+					</button>
+				</Tooltip>
+
 				<Tooltip content={$i18n.t('Export to CSV')}>
 					<button
 						class="p-1 rounded-lg bg-transparent transition"
@@ -335,6 +351,7 @@
 				id={`${id}-${tokenIdx}-p`}
 				tokens={token.tokens ?? []}
 				{done}
+				{sourceIds}
 				{onSourceClick}
 			/>
 		</p>
@@ -346,6 +363,7 @@
 						id={`${id}-${tokenIdx}-t`}
 						tokens={token.tokens}
 						{done}
+						{sourceIds}
 						{onSourceClick}
 					/>
 				{:else}
@@ -357,6 +375,7 @@
 				id={`${id}-${tokenIdx}-p`}
 				tokens={token.tokens ?? []}
 				{done}
+				{sourceIds}
 				{onSourceClick}
 			/>
 		{:else}
