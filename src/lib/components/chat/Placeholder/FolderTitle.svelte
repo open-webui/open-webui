@@ -183,7 +183,7 @@
 				</button>
 			</EmojiPicker>
 
-			<div class="text-3xl">
+			<div class="text-3xl line-clamp-1">
 				{folder.name}
 			</div>
 		</div>
