@@ -230,6 +230,7 @@ from open_webui.config import (
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     RAG_EMBEDDING_ENGINE,
     RAG_EMBEDDING_BATCH_SIZE,
+    ENABLE_ASYNC_RAG_EMBEDDING,
     RAG_TOP_K,
     RAG_TOP_K_RERANKER,
     RAG_RELEVANCE_THRESHOLD,
@@ -1048,6 +1049,7 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
         if app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
         else None
     ),
+    enable_async=app.state.config.ENABLE_ASYNC_RAG_EMBEDDING,
 )
 
 app.state.RERANKING_FUNCTION = get_reranking_function(
