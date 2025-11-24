@@ -152,26 +152,6 @@
 			return;
 		}
 		if (
-			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' &&
-			RAGConfig.DOCLING_DO_OCR &&
-			((RAGConfig.DOCLING_OCR_ENGINE === '' && RAGConfig.DOCLING_OCR_LANG !== '') ||
-				(RAGConfig.DOCLING_OCR_ENGINE !== '' && RAGConfig.DOCLING_OCR_LANG === ''))
-		) {
-			toast.error(
-				$i18n.t('Both Docling OCR Engine and Language(s) must be provided or both left empty.')
-			);
-			return;
-		}
-		if (
-			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' &&
-			RAGConfig.DOCLING_DO_OCR === false &&
-			RAGConfig.DOCLING_FORCE_OCR === true
-		) {
-			toast.error($i18n.t('In order to force OCR, performing OCR must be enabled.'));
-			return;
-		}
-
-		if (
 			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker' &&
 			RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG &&
 			RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG.trim() !== ''
@@ -238,12 +218,6 @@
 			ALLOWED_FILE_EXTENSIONS: RAGConfig.ALLOWED_FILE_EXTENSIONS.split(',')
 				.map((ext) => ext.trim())
 				.filter((ext) => ext !== ''),
-			DOCLING_PICTURE_DESCRIPTION_LOCAL: JSON.parse(
-				RAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL || '{}'
-			),
-			DOCLING_PICTURE_DESCRIPTION_API: JSON.parse(
-				RAGConfig.DOCLING_PICTURE_DESCRIPTION_API || '{}'
-			),
 			DOCLING_PARAMS:
 				typeof RAGConfig.DOCLING_PARAMS === 'string' && RAGConfig.DOCLING_PARAMS.trim() !== ''
 					? JSON.parse(RAGConfig.DOCLING_PARAMS)
@@ -281,16 +255,6 @@
 		const config = await getRAGConfig(localStorage.token);
 		config.ALLOWED_FILE_EXTENSIONS = (config?.ALLOWED_FILE_EXTENSIONS ?? []).join(', ');
 
-		config.DOCLING_PICTURE_DESCRIPTION_LOCAL = JSON.stringify(
-			config.DOCLING_PICTURE_DESCRIPTION_LOCAL ?? {},
-			null,
-			2
-		);
-		config.DOCLING_PICTURE_DESCRIPTION_API = JSON.stringify(
-			config.DOCLING_PICTURE_DESCRIPTION_API ?? {},
-			null,
-			2
-		);
 		config.DOCLING_PARAMS =
 			typeof config.DOCLING_PARAMS === 'object'
 				? JSON.stringify(config.DOCLING_PARAMS ?? {}, null, 2)
@@ -589,173 +553,18 @@
 								</div>
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling'}
-							<div class="flex w-full mt-1">
+							<div class="my-0.5 flex gap-2 pr-2">
 								<input
 									class="flex-1 w-full text-sm bg-transparent outline-hidden"
 									placeholder={$i18n.t('Enter Docling Server URL')}
 									bind:value={RAGConfig.DOCLING_SERVER_URL}
 								/>
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Docling API Key')}
+									bind:value={RAGConfig.DOCLING_API_KEY}
+									required={false}
+								/>
 							</div>
-
-							<div class="flex w-full mt-2">
-								<div class="flex-1 flex justify-between">
-									<div class=" self-center text-xs font-medium">
-										{$i18n.t('Perform OCR')}
-									</div>
-									<div class="flex items-center relative">
-										<Switch bind:state={RAGConfig.DOCLING_DO_OCR} />
-									</div>
-								</div>
-							</div>
-							{#if RAGConfig.DOCLING_DO_OCR}
-								<div class="flex w-full mt-2">
-									<input
-										class="flex-1 w-full text-sm bg-transparent outline-hidden"
-										placeholder={$i18n.t('Enter Docling OCR Engine')}
-										bind:value={RAGConfig.DOCLING_OCR_ENGINE}
-									/>
-									<input
-										class="flex-1 w-full text-sm bg-transparent outline-hidden"
-										placeholder={$i18n.t('Enter Docling OCR Language(s)')}
-										bind:value={RAGConfig.DOCLING_OCR_LANG}
-									/>
-								</div>
-							{/if}
-							<div class="flex w-full mt-2">
-								<div class="flex-1 flex justify-between">
-									<div class=" self-center text-xs font-medium">
-										{$i18n.t('Force OCR')}
-									</div>
-									<div class="flex items-center relative">
-										<Switch bind:state={RAGConfig.DOCLING_FORCE_OCR} />
-									</div>
-								</div>
-							</div>
-							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
-									<Tooltip content={''} placement="top-start">
-										{$i18n.t('PDF Backend')}
-									</Tooltip>
-								</div>
-								<div class="">
-									<select
-										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-										bind:value={RAGConfig.DOCLING_PDF_BACKEND}
-									>
-										<option value="pypdfium2">{$i18n.t('pypdfium2')}</option>
-										<option value="dlparse_v1">{$i18n.t('dlparse_v1')}</option>
-										<option value="dlparse_v2">{$i18n.t('dlparse_v2')}</option>
-										<option value="dlparse_v4">{$i18n.t('dlparse_v4')}</option>
-									</select>
-								</div>
-							</div>
-							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
-									<Tooltip content={''} placement="top-start">
-										{$i18n.t('Table Mode')}
-									</Tooltip>
-								</div>
-								<div class="">
-									<select
-										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-										bind:value={RAGConfig.DOCLING_TABLE_MODE}
-									>
-										<option value="fast">{$i18n.t('fast')}</option>
-										<option value="accurate">{$i18n.t('accurate')}</option>
-									</select>
-								</div>
-							</div>
-							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
-									<Tooltip content={''} placement="top-start">
-										{$i18n.t('Pipeline')}
-									</Tooltip>
-								</div>
-								<div class="">
-									<select
-										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-										bind:value={RAGConfig.DOCLING_PIPELINE}
-									>
-										<option value="standard">{$i18n.t('standard')}</option>
-										<option value="vlm">{$i18n.t('vlm')}</option>
-									</select>
-								</div>
-							</div>
-							<div class="flex w-full mt-2">
-								<div class="flex-1 flex justify-between">
-									<div class=" self-center text-xs font-medium">
-										{$i18n.t('Describe Pictures in Documents')}
-									</div>
-									<div class="flex items-center relative">
-										<Switch bind:state={RAGConfig.DOCLING_DO_PICTURE_DESCRIPTION} />
-									</div>
-								</div>
-							</div>
-							{#if RAGConfig.DOCLING_DO_PICTURE_DESCRIPTION}
-								<div class="flex justify-between w-full mt-2">
-									<div class="self-center text-xs font-medium">
-										<Tooltip content={''} placement="top-start">
-											{$i18n.t('Picture Description Mode')}
-										</Tooltip>
-									</div>
-									<div class="">
-										<select
-											class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-											bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE}
-										>
-											<option value="">{$i18n.t('Default')}</option>
-											<option value="local">{$i18n.t('Local')}</option>
-											<option value="api">{$i18n.t('API')}</option>
-										</select>
-									</div>
-								</div>
-
-								{#if RAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE === 'local'}
-									<div class="flex flex-col gap-2 mt-2">
-										<div class=" flex flex-col w-full justify-between">
-											<div class=" mb-1 text-xs font-medium">
-												{$i18n.t('Picture Description Local Config')}
-											</div>
-											<div class="flex w-full items-center relative">
-												<Tooltip
-													content={$i18n.t(
-														'Options for running a local vision-language model in the picture description. The parameters refer to a model hosted on Hugging Face. This parameter is mutually exclusive with picture_description_api.'
-													)}
-													placement="top-start"
-													className="w-full"
-												>
-													<Textarea
-														bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL}
-														placeholder={$i18n.t('Enter Config in JSON format')}
-													/>
-												</Tooltip>
-											</div>
-										</div>
-									</div>
-								{:else if RAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE === 'api'}
-									<div class="flex flex-col gap-2 mt-2">
-										<div class=" flex flex-col w-full justify-between">
-											<div class=" mb-1 text-xs font-medium">
-												{$i18n.t('Picture Description API Config')}
-											</div>
-											<div class="flex w-full items-center relative">
-												<Tooltip
-													content={$i18n.t(
-														'API details for using a vision-language model in the picture description. This parameter is mutually exclusive with picture_description_local.'
-													)}
-													placement="top-start"
-													className="w-full"
-												>
-													<Textarea
-														bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_API}
-														placeholder={$i18n.t('Enter Config in JSON format')}
-													/>
-												</Tooltip>
-											</div>
-										</div>
-									</div>
-								{/if}
-							{/if}
 
 							<div class="flex flex-col gap-2 mt-2">
 								<div class=" flex flex-col w-full justify-between">

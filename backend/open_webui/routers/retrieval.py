@@ -453,18 +453,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "EXTERNAL_DOCUMENT_LOADER_API_KEY": request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
         "TIKA_SERVER_URL": request.app.state.config.TIKA_SERVER_URL,
         "DOCLING_SERVER_URL": request.app.state.config.DOCLING_SERVER_URL,
+        "DOCLING_API_KEY": request.app.state.config.DOCLING_API_KEY,
         "DOCLING_PARAMS": request.app.state.config.DOCLING_PARAMS,
-        "DOCLING_DO_OCR": request.app.state.config.DOCLING_DO_OCR,
-        "DOCLING_FORCE_OCR": request.app.state.config.DOCLING_FORCE_OCR,
-        "DOCLING_OCR_ENGINE": request.app.state.config.DOCLING_OCR_ENGINE,
-        "DOCLING_OCR_LANG": request.app.state.config.DOCLING_OCR_LANG,
-        "DOCLING_PDF_BACKEND": request.app.state.config.DOCLING_PDF_BACKEND,
-        "DOCLING_TABLE_MODE": request.app.state.config.DOCLING_TABLE_MODE,
-        "DOCLING_PIPELINE": request.app.state.config.DOCLING_PIPELINE,
-        "DOCLING_DO_PICTURE_DESCRIPTION": request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
-        "DOCLING_PICTURE_DESCRIPTION_MODE": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE,
-        "DOCLING_PICTURE_DESCRIPTION_LOCAL": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL,
-        "DOCLING_PICTURE_DESCRIPTION_API": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API,
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
         "MISTRAL_OCR_API_BASE_URL": request.app.state.config.MISTRAL_OCR_API_BASE_URL,
@@ -642,18 +632,8 @@ class ConfigForm(BaseModel):
 
     TIKA_SERVER_URL: Optional[str] = None
     DOCLING_SERVER_URL: Optional[str] = None
+    DOCLING_API_KEY: Optional[str] = None
     DOCLING_PARAMS: Optional[dict] = None
-    DOCLING_DO_OCR: Optional[bool] = None
-    DOCLING_FORCE_OCR: Optional[bool] = None
-    DOCLING_OCR_ENGINE: Optional[str] = None
-    DOCLING_OCR_LANG: Optional[str] = None
-    DOCLING_PDF_BACKEND: Optional[str] = None
-    DOCLING_TABLE_MODE: Optional[str] = None
-    DOCLING_PIPELINE: Optional[str] = None
-    DOCLING_DO_PICTURE_DESCRIPTION: Optional[bool] = None
-    DOCLING_PICTURE_DESCRIPTION_MODE: Optional[str] = None
-    DOCLING_PICTURE_DESCRIPTION_LOCAL: Optional[dict] = None
-    DOCLING_PICTURE_DESCRIPTION_API: Optional[dict] = None
     DOCUMENT_INTELLIGENCE_ENDPOINT: Optional[str] = None
     DOCUMENT_INTELLIGENCE_KEY: Optional[str] = None
     MISTRAL_OCR_API_BASE_URL: Optional[str] = None
@@ -831,68 +811,16 @@ async def update_rag_config(
         if form_data.DOCLING_SERVER_URL is not None
         else request.app.state.config.DOCLING_SERVER_URL
     )
+    request.app.state.config.DOCLING_API_KEY = (
+        form_data.DOCLING_API_KEY
+        if form_data.DOCLING_API_KEY is not None
+        else request.app.state.config.DOCLING_API_KEY
+    )
     request.app.state.config.DOCLING_PARAMS = (
         form_data.DOCLING_PARAMS
         if form_data.DOCLING_PARAMS is not None
         else request.app.state.config.DOCLING_PARAMS
     )
-    request.app.state.config.DOCLING_DO_OCR = (
-        form_data.DOCLING_DO_OCR
-        if form_data.DOCLING_DO_OCR is not None
-        else request.app.state.config.DOCLING_DO_OCR
-    )
-    request.app.state.config.DOCLING_FORCE_OCR = (
-        form_data.DOCLING_FORCE_OCR
-        if form_data.DOCLING_FORCE_OCR is not None
-        else request.app.state.config.DOCLING_FORCE_OCR
-    )
-    request.app.state.config.DOCLING_OCR_ENGINE = (
-        form_data.DOCLING_OCR_ENGINE
-        if form_data.DOCLING_OCR_ENGINE is not None
-        else request.app.state.config.DOCLING_OCR_ENGINE
-    )
-    request.app.state.config.DOCLING_OCR_LANG = (
-        form_data.DOCLING_OCR_LANG
-        if form_data.DOCLING_OCR_LANG is not None
-        else request.app.state.config.DOCLING_OCR_LANG
-    )
-    request.app.state.config.DOCLING_PDF_BACKEND = (
-        form_data.DOCLING_PDF_BACKEND
-        if form_data.DOCLING_PDF_BACKEND is not None
-        else request.app.state.config.DOCLING_PDF_BACKEND
-    )
-    request.app.state.config.DOCLING_TABLE_MODE = (
-        form_data.DOCLING_TABLE_MODE
-        if form_data.DOCLING_TABLE_MODE is not None
-        else request.app.state.config.DOCLING_TABLE_MODE
-    )
-    request.app.state.config.DOCLING_PIPELINE = (
-        form_data.DOCLING_PIPELINE
-        if form_data.DOCLING_PIPELINE is not None
-        else request.app.state.config.DOCLING_PIPELINE
-    )
-    request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION = (
-        form_data.DOCLING_DO_PICTURE_DESCRIPTION
-        if form_data.DOCLING_DO_PICTURE_DESCRIPTION is not None
-        else request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION
-    )
-
-    request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE = (
-        form_data.DOCLING_PICTURE_DESCRIPTION_MODE
-        if form_data.DOCLING_PICTURE_DESCRIPTION_MODE is not None
-        else request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE
-    )
-    request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL = (
-        form_data.DOCLING_PICTURE_DESCRIPTION_LOCAL
-        if form_data.DOCLING_PICTURE_DESCRIPTION_LOCAL is not None
-        else request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL
-    )
-    request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API = (
-        form_data.DOCLING_PICTURE_DESCRIPTION_API
-        if form_data.DOCLING_PICTURE_DESCRIPTION_API is not None
-        else request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API
-    )
-
     request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = (
         form_data.DOCUMENT_INTELLIGENCE_ENDPOINT
         if form_data.DOCUMENT_INTELLIGENCE_ENDPOINT is not None
@@ -1189,18 +1117,8 @@ async def update_rag_config(
         "EXTERNAL_DOCUMENT_LOADER_API_KEY": request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
         "TIKA_SERVER_URL": request.app.state.config.TIKA_SERVER_URL,
         "DOCLING_SERVER_URL": request.app.state.config.DOCLING_SERVER_URL,
+        "DOCLING_API_KEY": request.app.state.config.DOCLING_API_KEY,
         "DOCLING_PARAMS": request.app.state.config.DOCLING_PARAMS,
-        "DOCLING_DO_OCR": request.app.state.config.DOCLING_DO_OCR,
-        "DOCLING_FORCE_OCR": request.app.state.config.DOCLING_FORCE_OCR,
-        "DOCLING_OCR_ENGINE": request.app.state.config.DOCLING_OCR_ENGINE,
-        "DOCLING_OCR_LANG": request.app.state.config.DOCLING_OCR_LANG,
-        "DOCLING_PDF_BACKEND": request.app.state.config.DOCLING_PDF_BACKEND,
-        "DOCLING_TABLE_MODE": request.app.state.config.DOCLING_TABLE_MODE,
-        "DOCLING_PIPELINE": request.app.state.config.DOCLING_PIPELINE,
-        "DOCLING_DO_PICTURE_DESCRIPTION": request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
-        "DOCLING_PICTURE_DESCRIPTION_MODE": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE,
-        "DOCLING_PICTURE_DESCRIPTION_LOCAL": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL,
-        "DOCLING_PICTURE_DESCRIPTION_API": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API,
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
         "MISTRAL_OCR_API_BASE_URL": request.app.state.config.MISTRAL_OCR_API_BASE_URL,
@@ -1607,20 +1525,8 @@ def process_file(
                         EXTERNAL_DOCUMENT_LOADER_API_KEY=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
                         TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
                         DOCLING_SERVER_URL=request.app.state.config.DOCLING_SERVER_URL,
-                        DOCLING_PARAMS={
-                            "do_ocr": request.app.state.config.DOCLING_DO_OCR,
-                            "force_ocr": request.app.state.config.DOCLING_FORCE_OCR,
-                            "ocr_engine": request.app.state.config.DOCLING_OCR_ENGINE,
-                            "ocr_lang": request.app.state.config.DOCLING_OCR_LANG,
-                            "pdf_backend": request.app.state.config.DOCLING_PDF_BACKEND,
-                            "table_mode": request.app.state.config.DOCLING_TABLE_MODE,
-                            "pipeline": request.app.state.config.DOCLING_PIPELINE,
-                            "do_picture_description": request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
-                            "picture_description_mode": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE,
-                            "picture_description_local": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL,
-                            "picture_description_api": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API,
-                            **request.app.state.config.DOCLING_PARAMS,
-                        },
+                        DOCLING_API_KEY=request.app.state.config.DOCLING_API_KEY,
+                        DOCLING_PARAMS=request.app.state.config.DOCLING_PARAMS,
                         PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
                         DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                         DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
