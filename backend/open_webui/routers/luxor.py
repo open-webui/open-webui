@@ -80,9 +80,9 @@ async def send_post_request(
                     body = {"txt_answer": body}
             elif not isinstance(body, dict):
                 body = {"txt_answer": str(body)}
+
             res["data"] = body 
             
-        log.info(f"RES: {res}")
         return res      
     except HTTPException as e:
         raise e  # Re-raise HTTPException to be handled by FastAPI
