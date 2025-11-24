@@ -38,6 +38,10 @@
 	import ChatPlus from '../icons/ChatPlus.svelte';
 	import ChatCheck from '../icons/ChatCheck.svelte';
 	import Knobs from '../icons/Knobs.svelte';
+	import Share from '$lib/components/icons/Share.svelte';
+
+	import { shareChatById } from '$lib/apis/chats';
+	import { copyToClipboard } from '$lib/utils';
 
 	const i18n = getContext('i18n');
 
@@ -179,6 +183,37 @@
 					{/if}
 
 					{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
+						<Tooltip content={$i18n.t('Share')}>
+							<button
+								class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+								on:click={async () => {
+									const chatId = chat.id;
+									const sharedChat = await shareChatById(localStorage.token, chatId);
+									const shareUrl = `${window.location.origin}/s/${sharedChat.id}`;
+
+									const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+									if (isSafari) {
+										const getUrlPromise = async () => {
+											return new Blob([shareUrl], { type: 'text/plain' });
+										};
+										navigator.clipboard.write([
+											new ClipboardItem({
+												'text/plain': getUrlPromise()
+											})
+										]);
+									} else {
+										copyToClipboard(shareUrl);
+									}
+									toast.success($i18n.t('Copied shared chat URL to clipboard!'));
+								}}
+								aria-label="Share"
+							>
+								<div class=" m-auto self-center">
+									<Share className=" size-4.5" strokeWidth="1.5" />
+								</div>
+							</button>
+						</Tooltip>
+
 						<Menu
 							{chat}
 							{shareEnabled}

@@ -365,3 +365,64 @@ def get_admin_user(user=Depends(get_current_user)):
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
     return user
+
+
+def get_optional_user(
+    request: Request,
+    auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
+):
+    try:
+        token = None
+
+        if auth_token is not None:
+            token = auth_token.credentials
+
+        if token is None and "token" in request.cookies:
+            token = request.cookies.get("token")
+
+        if token is None:
+            return None
+
+        # auth by api key
+        if token.startswith("sk-"):
+            if not request.state.enable_api_key:
+                return None
+
+            if request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS:
+                allowed_paths = [
+                    path.strip()
+                    for path in str(
+                        request.app.state.config.API_KEY_ALLOWED_ENDPOINTS
+                    ).split(",")
+                ]
+
+                # Check if the request path matches any allowed endpoint.
+                if not any(
+                    request.url.path == allowed
+                    or request.url.path.startswith(allowed + "/")
+                    for allowed in allowed_paths
+                ):
+                    return None
+
+            user = get_current_user_by_api_key(token)
+            return user
+
+        # auth by jwt token
+        data = decode_token(token)
+        
+        if data is not None and "id" in data:
+            user = Users.get_user_by_id(data["id"])
+            if user is None:
+                return None
+            else:
+                if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
+                    trusted_email = request.headers.get(
+                        WEBUI_AUTH_TRUSTED_EMAIL_HEADER, ""
+                    ).lower()
+                    if trusted_email and user.email != trusted_email:
+                        return None
+            return user
+        else:
+            return None
+    except Exception:
+        return None

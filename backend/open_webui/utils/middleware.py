@@ -2930,9 +2930,17 @@ async def process_chat_response(
                         if isinstance(res, StreamingResponse):
                             await stream_body_handler(res, new_form_data)
                         else:
+                            log.debug(f"generate_chat_completion returned non-streaming response: {res}")
+                            try:
+                                # Attempt to read the error response
+                                if hasattr(res, "body"):
+                                    error_content = res.body.decode("utf-8") if isinstance(res.body, bytes) else str(res.body)
+                                    log.error(f"Error response content: {error_content}")
+                            except Exception as read_err:
+                                log.error(f"Could not read error response: {read_err}")
                             break
                     except Exception as e:
-                        log.debug(e)
+                        log.exception(f"Error in tool loop: {e}")
                         break
 
                 if DETECT_CODE_INTERPRETER:
