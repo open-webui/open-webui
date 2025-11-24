@@ -258,7 +258,6 @@ class Loader:
         if (
             self.engine == "external"
             and self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_URL")
-            and self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_API_KEY")
         ):
             loader = ExternalDocumentLoader(
                 file_path=file_path,
@@ -266,6 +265,17 @@ class Loader:
                 api_key=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_API_KEY"),
                 mime_type=file_content_type,
                 user=self.user,
+                http_method=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_HTTP_METHOD", "PUT"),
+                endpoint=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_ENDPOINT", "/process"),
+                request_format=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_REQUEST_FORMAT", "binary"),
+                file_field_name=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_FILE_FIELD_NAME", "file"),
+                filename_field_name=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_FILENAME_FIELD_NAME"),
+                params=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_PARAMS", {}),
+                query_params=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_QUERY_PARAMS", {}),
+                custom_headers=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_HEADERS", {}),
+                response_content_path=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_RESPONSE_CONTENT_PATH", "page_content"),
+                response_metadata_path=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_RESPONSE_METADATA_PATH", "metadata"),
+                response_type=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_RESPONSE_TYPE", "object"),
             )
         elif self.engine == "tika" and self.kwargs.get("TIKA_SERVER_URL"):
             if self._is_text_file(file_ext, file_content_type):
