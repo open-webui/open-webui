@@ -1468,11 +1468,13 @@ def save_docs_to_vector_db(
         )
 
         # Run async embedding in sync context
-        embeddings = asyncio.run(embedding_function(
-            list(map(lambda x: x.replace("\n", " "), texts)),
-            prefix=RAG_EMBEDDING_CONTENT_PREFIX,
-            user=user,
-        ))
+        embeddings = asyncio.run(
+            embedding_function(
+                list(map(lambda x: x.replace("\n", " "), texts)),
+                prefix=RAG_EMBEDDING_CONTENT_PREFIX,
+                user=user,
+            )
+        )
         log.info(f"embeddings generated {len(embeddings)} for {len(texts)} items")
 
         items = [

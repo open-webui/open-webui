@@ -540,7 +540,7 @@ def generate_openai_batch_embeddings(
         }
         if ENABLE_FORWARD_USER_INFO_HEADERS and user:
             headers = include_user_info_headers(headers, user)
-        
+
         r = requests.post(
             f"{url}/embeddings",
             headers=headers,
@@ -621,7 +621,7 @@ def generate_azure_openai_batch_embeddings(
             }
             if ENABLE_FORWARD_USER_INFO_HEADERS and user:
                 headers = include_user_info_headers(headers, user)
-            
+
             r = requests.post(
                 url,
                 headers=headers,
@@ -704,7 +704,7 @@ def generate_ollama_batch_embeddings(
         }
         if ENABLE_FORWARD_USER_INFO_HEADERS and user:
             headers = include_user_info_headers(headers, user)
-        
+
         r = requests.post(
             f"{url}/api/embed",
             headers=headers,

@@ -1025,7 +1025,9 @@ def transcription_handler(request, file_path, metadata, user=None):
             )
 
 
-def transcribe(request: Request, file_path: str, metadata: Optional[dict] = None, user=None):
+def transcribe(
+    request: Request, file_path: str, metadata: Optional[dict] = None, user=None
+):
     log.info(f"transcribe: {file_path} {metadata}")
 
     if is_audio_conversion_required(file_path):
@@ -1052,7 +1054,9 @@ def transcribe(request: Request, file_path: str, metadata: Optional[dict] = None
         with ThreadPoolExecutor() as executor:
             # Submit tasks for each chunk_path
             futures = [
-                executor.submit(transcription_handler, request, chunk_path, metadata, user)
+                executor.submit(
+                    transcription_handler, request, chunk_path, metadata, user
+                )
                 for chunk_path in chunk_paths
             ]
             # Gather results as they complete

@@ -52,9 +52,7 @@ async def add_memory(
 ):
     memory = Memories.insert_new_memory(user.id, form_data.content)
 
-    vector = await request.app.state.EMBEDDING_FUNCTION(
-        memory.content, user=user
-    )
+    vector = await request.app.state.EMBEDDING_FUNCTION(memory.content, user=user)
 
     VECTOR_DB_CLIENT.upsert(
         collection_name=f"user-memory-{user.id}",
@@ -112,10 +110,12 @@ async def reset_memory_from_vector_db(
     memories = Memories.get_memories_by_user_id(user.id)
 
     # Generate vectors in parallel
-    vectors = await asyncio.gather(*[
-        request.app.state.EMBEDDING_FUNCTION(memory.content, user=user)
-        for memory in memories
-    ])
+    vectors = await asyncio.gather(
+        *[
+            request.app.state.EMBEDDING_FUNCTION(memory.content, user=user)
+            for memory in memories
+        ]
+    )
 
     VECTOR_DB_CLIENT.upsert(
         collection_name=f"user-memory-{user.id}",
@@ -174,9 +174,7 @@ async def update_memory_by_id(
         raise HTTPException(status_code=404, detail="Memory not found")
 
     if form_data.content is not None:
-        vector = await request.app.state.EMBEDDING_FUNCTION(
-            memory.content, user=user
-        )
+        vector = await request.app.state.EMBEDDING_FUNCTION(memory.content, user=user)
 
         VECTOR_DB_CLIENT.upsert(
             collection_name=f"user-memory-{user.id}",

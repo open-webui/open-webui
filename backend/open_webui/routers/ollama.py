@@ -53,7 +53,6 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access
 
 
-
 from open_webui.config import (
     UPLOAD_DIR,
 )
