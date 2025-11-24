@@ -1276,8 +1276,6 @@ class OAuthManager:
             if client:
                 if hasattr(client, "client_id"):
                     auth_params["client_id"] = client.client_id
-                if hasattr(client, "client_secret"):
-                    auth_params["client_secret"] = client.client_secret
 
             try:
                 token = await client.authorize_access_token(request, **auth_params)
