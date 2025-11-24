@@ -279,7 +279,7 @@
 				}
 
 				for (const [idx, sentence] of messageContentParts.entries()) {
-					const blob = await $TTSWorker
+					const url = await $TTSWorker
 						.generate({
 							text: sentence,
 							voice: $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice
@@ -292,8 +292,7 @@
 							loadingSpeech = false;
 						});
 
-					if (blob) {
-						const url = URL.createObjectURL(blob);
+					if (url) {
 						$audioQueue.enqueue(url);
 						loadingSpeech = false;
 					}
