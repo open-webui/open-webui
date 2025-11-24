@@ -1474,6 +1474,7 @@ def save_docs_to_vector_db(
                 if request.app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
                 else None
             ),
+            enable_async=request.app.state.config.ENABLE_ASYNC_RAG_EMBEDDING,
         )
 
         # Run async embedding in sync context
