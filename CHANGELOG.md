@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.39] - 2025-11-24
+
+### Changed
+
+- 🔧 Docling configuration has been consolidated from individual environment variables into a single "DOCLING_PARAMS" JSON configuration and now supports API key authentication via "DOCLING_API_KEY", requiring users to migrate existing Docling settings to the new format. [#16841](https://github.com/open-webui/open-webui/issues/16841), [#19427](https://github.com/open-webui/open-webui/pull/19427)
+
+### Added
+
+- 🌐 Localization improvements were made for German (de-DE) and Portuguese (Brazil) translations.
+
+### Fixed
+
+- 👥 Admin panel user list now displays the correct total user count and properly paginates 30 items per page after fixing database query issues with group member joins. [#19429](https://github.com/open-webui/open-webui/issues/19429)
+- 🔍 Knowledge base reindexing now works correctly after resolving async execution chain issues by implementing threadpool workers for embedding operations. [#19434](https://github.com/open-webui/open-webui/pull/19434)
+- 🖼️ OpenAI image generation now works correctly after fixing a connection adapter error caused by incorrect URL formatting. [#19435](https://github.com/open-webui/open-webui/pull/19435)
+
 ## [0.6.38] - 2025-11-24
 
 ### Fixed
