@@ -290,10 +290,15 @@ class ModelsTable:
 
             models = []
             for model, user in items:
-                model_model = ModelModel.model_validate(model)
-                user_model = UserResponse(**UserModel.model_validate(user).model_dump())
                 models.append(
-                    ModelUserResponse(**model_model.model_dump(), user=user_model)
+                    ModelUserResponse(
+                        **ModelModel.model_validate(model).model_dump(),
+                        user=(
+                            UserResponse(**UserModel.model_validate(user).model_dump())
+                            if user
+                            else None
+                        ),
+                    )
                 )
 
             return ModelListResponse(items=models, total=total)

@@ -24,6 +24,7 @@ from fastapi.responses import HTMLResponse
 from starlette.responses import Response, StreamingResponse, JSONResponse
 
 
+from open_webui.utils.misc import is_string_allowed
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.chats import Chats
 from open_webui.models.folders import Folders
@@ -1408,6 +1409,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         headers=headers if headers else None,
                     )
 
+                    function_name_filter_list = (
+                        mcp_server_connection.get("config", {})
+                        .get("function_name_filter_list", "")
+                        .split(",")
+                    )
+
                     tool_specs = await mcp_clients[server_id].list_tool_specs()
                     for tool_spec in tool_specs:
 
@@ -1419,6 +1426,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 )
 
                             return tool_function
+
+                        if function_name_filter_list:
+                            if not is_string_allowed(
+                                tool_spec["name"], function_name_filter_list
+                            ):
+                                # Skip this function
+                                continue
 
                         tool_function = make_tool_function(
                             mcp_clients[server_id], tool_spec["name"]
@@ -1460,6 +1474,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 "__files__": metadata.get("files", []),
             },
         )
+
         if mcp_tools_dict:
             tools_dict = {**tools_dict, **mcp_tools_dict}
 
