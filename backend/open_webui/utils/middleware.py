@@ -1409,11 +1409,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         headers=headers if headers else None,
                     )
 
-                    function_name_filter_list = (
-                        mcp_server_connection.get("config", {})
-                        .get("function_name_filter_list", "")
-                        .split(",")
-                    )
+                    function_name_filter_list = mcp_server_connection.get(
+                        "config", {}
+                    ).get("function_name_filter_list", "")
+
+                    if isinstance(function_name_filter_list, str):
+                        function_name_filter_list = function_name_filter_list.split(",")
 
                     tool_specs = await mcp_clients[server_id].list_tool_specs()
                     for tool_spec in tool_specs:
