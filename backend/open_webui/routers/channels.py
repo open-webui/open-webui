@@ -7,8 +7,17 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status, Backgrou
 from pydantic import BaseModel
 
 
-from open_webui.socket.main import sio, get_user_ids_from_room
-from open_webui.models.users import Users, UserNameResponse
+from open_webui.socket.main import (
+    sio,
+    get_user_ids_from_room,
+    get_active_status_by_user_id,
+)
+from open_webui.models.users import (
+    UserListResponse,
+    UserModelResponse,
+    Users,
+    UserNameResponse,
+)
 
 from open_webui.models.groups import Groups
 from open_webui.models.channels import (
@@ -38,7 +47,11 @@ from open_webui.utils.chat import generate_chat_completion
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_access, get_users_with_access
+from open_webui.utils.access_control import (
+    has_access,
+    get_users_with_access,
+    get_permitted_group_and_user_ids,
+)
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.channels import extract_mentions, replace_mentions
 
@@ -105,12 +118,71 @@ async def get_channel_by_id(id: str, user=Depends(get_verified_user)):
         user.id, type="write", access_control=channel.access_control, strict=False
     )
 
+    user_count = len(get_users_with_access("read", channel.access_control))
+
     return ChannelResponse(
         **{
             **channel.model_dump(),
             "write_access": write_access or user.role == "admin",
+            "user_count": user_count,
         }
     )
+
+
+PAGE_ITEM_COUNT = 30
+
+
+@router.get("/{id}/users", response_model=UserListResponse)
+async def get_channel_users_by_id(
+    id: str,
+    query: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
+    page: Optional[int] = 1,
+    user=Depends(get_verified_user),
+):
+
+    channel = Channels.get_channel_by_id(id)
+    if not channel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    limit = PAGE_ITEM_COUNT
+
+    page = max(1, page)
+    skip = (page - 1) * limit
+
+    filter = {
+        "roles": ["!pending"],
+    }
+
+    if query:
+        filter["query"] = query
+    if order_by:
+        filter["order_by"] = order_by
+    if direction:
+        filter["direction"] = direction
+
+    permitted_ids = get_permitted_group_and_user_ids("read", channel.access_control)
+    if permitted_ids:
+        filter["user_ids"] = permitted_ids.get("user_ids")
+        filter["group_ids"] = permitted_ids.get("group_ids")
+
+    result = Users.get_users(filter=filter, skip=skip, limit=limit)
+
+    users = result["users"]
+    total = result["total"]
+
+    return {
+        "users": [
+            UserModelResponse(
+                **user.model_dump(), is_active=get_active_status_by_user_id(user.id)
+            )
+            for user in users
+        ],
+        "total": total,
+    }
 
 
 ############################

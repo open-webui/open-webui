@@ -6,7 +6,7 @@ import io
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import Response, StreamingResponse, FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 from open_webui.models.auths import Auths
@@ -17,7 +17,7 @@ from open_webui.models.chats import Chats
 from open_webui.models.users import (
     UserModel,
     UserGroupIdsModel,
-    UserListResponse,
+    UserGroupIdsListResponse,
     UserInfoListResponse,
     UserIdNameListResponse,
     UserRoleUpdateForm,
@@ -76,7 +76,7 @@ async def get_active_users(
 PAGE_ITEM_COUNT = 30
 
 
-@router.get("/", response_model=UserListResponse)
+@router.get("/", response_model=UserGroupIdsListResponse)
 async def get_users(
     query: Optional[str] = None,
     order_by: Optional[str] = None,
@@ -363,6 +363,7 @@ class UserResponse(BaseModel):
     name: str
     profile_image_url: str
     active: Optional[bool] = None
+    model_config = ConfigDict(extra="allow")
 
 
 @router.get("/{user_id}", response_model=UserResponse)
@@ -385,6 +386,7 @@ async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
     if user:
         return UserResponse(
             **{
+                "id": user.id,
                 "name": user.name,
                 "profile_image_url": user.profile_image_url,
                 "active": get_active_status_by_user_id(user_id),

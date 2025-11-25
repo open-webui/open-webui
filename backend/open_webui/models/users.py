@@ -99,7 +99,16 @@ class UserGroupIdsModel(UserModel):
     group_ids: list[str] = []
 
 
+class UserModelResponse(UserModel):
+    model_config = ConfigDict(extra="allow")
+
+
 class UserListResponse(BaseModel):
+    users: list[UserModelResponse]
+    total: int
+
+
+class UserGroupIdsListResponse(BaseModel):
     users: list[UserGroupIdsModel]
     total: int
 
@@ -239,6 +248,37 @@ class UsersTable:
                         )
                     )
 
+                user_ids = filter.get("user_ids")
+                group_ids = filter.get("group_ids")
+
+                if isinstance(user_ids, list) and isinstance(group_ids, list):
+                    # If both are empty lists, return no users
+                    if not user_ids and not group_ids:
+                        return {"users": [], "total": 0}
+
+                if user_ids:
+                    query = query.filter(User.id.in_(user_ids))
+
+                if group_ids:
+                    query = query.filter(
+                        exists(
+                            select(GroupMember.id).where(
+                                GroupMember.user_id == User.id,
+                                GroupMember.group_id.in_(group_ids),
+                            )
+                        )
+                    )
+
+                roles = filter.get("roles")
+                if roles:
+                    include_roles = [role for role in roles if not role.startswith("!")]
+                    exclude_roles = [role[1:] for role in roles if role.startswith("!")]
+
+                    if include_roles:
+                        query = query.filter(User.role.in_(include_roles))
+                    if exclude_roles:
+                        query = query.filter(~User.role.in_(exclude_roles))
+
                 order_by = filter.get("order_by")
                 direction = filter.get("direction")
 
@@ -300,7 +340,6 @@ class UsersTable:
                 query = query.order_by(User.created_at.desc())
 
             # Count BEFORE pagination
-            query = query.distinct(User.id)
             total = query.count()
 
             # correct pagination logic

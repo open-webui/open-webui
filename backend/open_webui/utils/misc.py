@@ -35,10 +35,10 @@ def get_allow_block_lists(filter_list):
         for d in filter_list:
             if d.startswith("!"):
                 # Domains starting with "!" → blocked
-                block_list.append(d[1:])
+                block_list.append(d[1:].strip())
             else:
                 # Domains starting without "!" → allowed
-                allow_list.append(d)
+                allow_list.append(d.strip())
 
     return allow_list, block_list
 
@@ -54,6 +54,8 @@ def is_string_allowed(string: str, filter_list: Optional[list[str]] = None) -> b
         return True
 
     allow_list, block_list = get_allow_block_lists(filter_list)
+    print(string, allow_list, block_list)
+
     # If allow list is non-empty, require domain to match one of them
     if allow_list:
         if not any(string.endswith(allowed) for allowed in allow_list):
