@@ -385,7 +385,7 @@ class InteractivePruneUI:
 
         # User deletion
         console.print("\n[bold cyan]User Account Deletion:[/bold cyan]")
-        if self.form_data.delete_inactive_users_days:
+        if self.form_data.delete_inactive_users_days is not None:
             console.print(f"  [yellow]Enabled[/yellow] - Delete users inactive for {self.form_data.delete_inactive_users_days}+ days")
             console.print(f"    Exempt admins: {'Yes' if self.form_data.exempt_admin_users else 'No'}")
             console.print(f"    Exempt pending: {'Yes' if self.form_data.exempt_pending_users else 'No'}")
@@ -394,7 +394,7 @@ class InteractivePruneUI:
 
         # Chat deletion
         console.print("\n[bold cyan]Chat Deletion:[/bold cyan]")
-        if self.form_data.days:
+        if self.form_data.days is not None:
             console.print(f"  [yellow]Enabled[/yellow] - Delete chats older than {self.form_data.days} days")
             console.print(f"    Exempt archived: {'Yes' if self.form_data.exempt_archived_chats else 'No'}")
             console.print(f"    Exempt in folders: {'Yes' if self.form_data.exempt_chats_in_folders else 'No'}")
@@ -419,7 +419,7 @@ class InteractivePruneUI:
 
         # Audio cache
         console.print("\n[bold cyan]Audio Cache:[/bold cyan]")
-        if self.form_data.audio_cache_max_age_days:
+        if self.form_data.audio_cache_max_age_days is not None:
             console.print(f"  [yellow]Enabled[/yellow] - Delete files older than {self.form_data.audio_cache_max_age_days} days")
         else:
             console.print("  [dim]Disabled[/dim]")
@@ -601,7 +601,7 @@ class InteractivePruneUI:
 
         with Progress(console=console) as progress:
             # Stage 0: Inactive users
-            if self.form_data.delete_inactive_users_days:
+            if self.form_data.delete_inactive_users_days is not None:
                 task = progress.add_task("Deleting inactive users...", total=None)
                 deleted = delete_inactive_users(
                     self.form_data.delete_inactive_users_days,
@@ -612,7 +612,7 @@ class InteractivePruneUI:
                 console.print(f"[green]✓[/green] Deleted {deleted} inactive users")
 
             # Stage 1: Old chats
-            if self.form_data.days:
+            if self.form_data.days is not None:
                 task = progress.add_task("Deleting old chats...", total=None)
                 cutoff_time = int(time.time()) - (self.form_data.days * 86400)
                 deleted = 0
@@ -703,7 +703,7 @@ class InteractivePruneUI:
             console.print(f"[green]✓[/green] Deleted {deleted_vector} orphaned vector collections")
 
             # Audio cache
-            if self.form_data.audio_cache_max_age_days:
+            if self.form_data.audio_cache_max_age_days is not None:
                 task = progress.add_task("Cleaning audio cache...", total=None)
                 deleted_audio = cleanup_audio_cache(self.form_data.audio_cache_max_age_days)
                 progress.update(task, completed=True)
