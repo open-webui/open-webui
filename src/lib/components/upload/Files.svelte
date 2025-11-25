@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import { getPublicFiles, type PublicFile } from '$lib/apis/uploads';
+	import { getFiles, type StoredFile } from '$lib/apis/uploads';
 	import { toast } from 'svelte-sonner';
 
 	export let tenantId: string | null = null;
-	export let tenantBucket: string | null = null;
+	export let path: string | null = null;
 
-	let files: PublicFile[] = [];
+	let files: StoredFile[] = [];
 	let loading = false;
 	let error: string | null = null;
 	let lastParams = '';
@@ -18,24 +18,25 @@
 		const value = bytes / Math.pow(1024, exponent);
 		return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[exponent]}`;
 	};
+	const normalizePath = (value: string) => (value.endsWith('/') ? value : `${value}/`);
 
 	const displayName = (key: string) => {
-		if (!tenantBucket) return key;
-		const prefix = tenantBucket.endsWith('/') ? tenantBucket : `${tenantBucket}/`;
+		if (!path) return key;
+		const prefix = normalizePath(path);
 		return key.startsWith(prefix) ? key.slice(prefix.length) : key;
 	};
 
 	const loadFiles = async () => {
-		if (!browser || !tenantBucket || !localStorage.token) {
+		if (!browser || !path || !localStorage.token) {
 			files = [];
-			error = tenantBucket ? null : 'No tenant bucket selected.';
+			error = path ? null : 'No path selected.';
 			return;
 		}
 
 		loading = true;
 		error = null;
 		try {
-			files = await getPublicFiles(localStorage.token, tenantId ?? undefined);
+			files = await getFiles(localStorage.token, path, tenantId ?? undefined);
 		} catch (err) {
 			const message = typeof err === 'string' ? err : err?.detail ?? 'Failed to load files.';
 			error = message;
@@ -46,7 +47,7 @@
 		}
 	};
 
-	$: paramsKey = tenantBucket ? `${tenantId ?? 'self'}|${tenantBucket}` : '';
+	$: paramsKey = path ? `${tenantId ?? 'self'}|${path}` : '';
 	$: if (browser && paramsKey && paramsKey !== lastParams) {
 		lastParams = paramsKey;
 		loadFiles();
@@ -63,7 +64,7 @@
 	</div>
 {:else if files.length === 0}
 	<div class="rounded-2xl border border-gray-100 bg-white/70 p-5 text-sm text-gray-600 shadow-sm dark:border-gray-850 dark:bg-gray-900/70 dark:text-gray-300">
-		No files found in the public folder.
+		No files found for this path.
 	</div>
 {:else}
 	<div class="overflow-x-auto rounded-2xl border border-gray-100 bg-white/70 shadow-sm dark:border-gray-850 dark:bg-gray-900/70">

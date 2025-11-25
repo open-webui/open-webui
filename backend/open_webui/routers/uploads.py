@@ -195,9 +195,11 @@ async def upload_document(
     )
 
 
-@router.get("/public-files", response_model=List[PublicFile])
-def list_public_files(
-    tenant_id: Optional[str] = None, user=Depends(get_verified_user)
+@router.get("/files", response_model=List[PublicFile])
+def list_files(
+    path: Optional[str] = None,
+    tenant_id: Optional[str] = None,
+    user=Depends(get_verified_user),
 ):
     if STORAGE_PROVIDER != "s3":
         raise HTTPException(
@@ -234,24 +236,58 @@ def list_public_files(
             detail="Tenant does not have an S3 bucket configured.",
         )
 
-    prefix = (
-        f"{tenant.s3_bucket}/"
-        if not tenant.s3_bucket.endswith("/")
-        else tenant.s3_bucket
+    bucket_prefix = tenant.s3_bucket.rstrip("/")
+
+    if path:
+        normalized_path = path.rstrip("/")
+    else:
+        normalized_path = bucket_prefix
+
+    if not normalized_path.startswith(bucket_prefix):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid path for the selected tenant.",
+        )
+
+    normalized_path_with_slash = normalized_path + "/"
+    bucket_public_prefix = bucket_prefix + "/"
+
+    relative = (
+        normalized_path_with_slash[len(bucket_public_prefix) :]
+        if normalized_path_with_slash.startswith(bucket_public_prefix)
+        else ""
     )
-    private_prefix = posixpath.join(prefix.rstrip("/"), "users") + "/"
+
+    if relative.startswith("users/"):
+        remainder = relative[len("users/") :]
+        target_user_id = remainder.split("/", 1)[0] if remainder else ""
+        if not target_user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid private path.",
+            )
+        if user.role != "admin" and user.id != target_user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Cannot view other users' private files.",
+            )
+    else:
+        target_user_id = None
+
+    list_prefix = normalized_path_with_slash
+    private_prefix = bucket_public_prefix + "users/"
 
     s3_client = _get_s3_client()
     paginator = s3_client.get_paginator("list_objects_v2")
     files: List[PublicFile] = []
 
     try:
-        for page in paginator.paginate(Bucket=S3_BUCKET_NAME, Prefix=prefix):
+        for page in paginator.paginate(Bucket=S3_BUCKET_NAME, Prefix=list_prefix):
             for obj in page.get("Contents", []):
                 key = obj.get("Key")
                 if not key or key.endswith("/"):
                     continue
-                if key.startswith(private_prefix):
+                if relative == "" and key.startswith(private_prefix):
                     continue
 
                 url = s3_client.generate_presigned_url(

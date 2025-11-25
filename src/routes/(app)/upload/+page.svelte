@@ -10,7 +10,7 @@ import {
 	import { WEBUI_NAME, user } from '$lib/stores';
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
-	import PublicFiles from '$lib/components/upload/PublicFiles.svelte';
+import Files from '$lib/components/upload/Files.svelte';
 
 	const tabs = [
 		{ id: 'upload', label: 'Upload' },
@@ -126,6 +126,16 @@ $: selectedTenant =
 
 $: tenantBucket =
 	$user?.role === 'admin' ? selectedTenant?.s3_bucket ?? null : $user?.tenant_s3_bucket ?? null;
+
+const joinPath = (base: string, suffix: string) => {
+	const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base;
+	const normalizedSuffix = suffix.startsWith('/') ? suffix.slice(1) : suffix;
+	return `${normalizedBase}/${normalizedSuffix}`;
+};
+
+$: publicPath = tenantBucket ?? null;
+$: privatePath =
+	tenantBucket && $user?.id ? joinPath(tenantBucket, `/users/${$user.id}`) : null;
 	$: destinationPreview = tenantBucket
 		? `${tenantBucket}${visibility === 'private' ? `/users/${$user?.id}` : ''}/${
 				selectedFile?.name ?? 'your-file.ext'
@@ -350,9 +360,9 @@ $: tenantBucket =
 				{/if}
 			</div>
 		{:else if activeTab === 'public'}
-			{#if tenantBucket}
-				<PublicFiles
-					tenantBucket={tenantBucket}
+			{#if publicPath}
+				<Files
+					path={publicPath}
 					tenantId={$user?.role === 'admin'
 						? selectedTenantId ?? $user?.tenant_id ?? null
 						: $user?.tenant_id ?? null}
@@ -363,12 +373,18 @@ $: tenantBucket =
 				</div>
 			{/if}
 		{:else}
-			<div class="rounded-2xl border border-gray-100 bg-white/70 p-6 text-sm text-gray-600 shadow-sm dark:border-gray-850 dark:bg-gray-900/70 dark:text-gray-300">
-				<p class="font-medium text-gray-800 dark:text-gray-100">TODO: Private documents</p>
-				<p class="mt-1 text-gray-600 dark:text-gray-400">
-					This will eventually surface the contents of your `{tenantBucket}/users/{$user?.id}` folder.
-				</p>
-			</div>
+			{#if privatePath}
+				<Files
+					path={privatePath}
+					tenantId={$user?.role === 'admin'
+						? selectedTenantId ?? $user?.tenant_id ?? null
+						: $user?.tenant_id ?? null}
+				/>
+			{:else}
+				<div class="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 text-sm text-amber-900 shadow-sm dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
+					Select a tenant to view private files.
+				</div>
+			{/if}
 		{/if}
 	</div>
 </div>

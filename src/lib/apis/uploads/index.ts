@@ -19,7 +19,7 @@ export type UploadTenant = {
 	s3_bucket: string;
 };
 
-export type PublicFile = {
+export type StoredFile = {
 	key: string;
 	size: number;
 	last_modified: string;
@@ -93,18 +93,20 @@ export const uploadDocument = async (
 	return res;
 };
 
-export const getPublicFiles = async (
+export const getFiles = async (
 	token: string,
+	path: string,
 	tenantId?: string | null
-): Promise<PublicFile[]> => {
+): Promise<StoredFile[]> => {
 	let error: string | null = null;
 	const searchParams = new URLSearchParams();
+	searchParams.set('path', path);
 	if (tenantId) {
 		searchParams.set('tenant_id', tenantId);
 	}
 
 	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/uploads/public-files${searchParams.toString() ? `?${searchParams.toString()}` : ''}`,
+		`${WEBUI_API_BASE_URL}/uploads/files?${searchParams.toString()}`,
 		{
 			method: 'GET',
 			headers: {
