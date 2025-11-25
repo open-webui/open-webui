@@ -1447,6 +1447,14 @@ USER_PERMISSIONS_FEATURES_NOTES = (
     os.environ.get("USER_PERMISSIONS_FEATURES_NOTES", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_FEATURES_FOLDERS = (
+    os.environ.get("USER_PERMISSIONS_FEATURES_FOLDERS", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_FEATURES_INTERFACE_SETTINGS = (
+    os.environ.get("USER_PERMISSIONS_FEATURES_INTERFACE_SETTINGS", "True").lower() == "true"
+)
+
 USER_PERMISSIONS_FEATURES_API_KEYS = (
     os.environ.get("USER_PERMISSIONS_FEATURES_API_KEYS", "False").lower() == "true"
 )

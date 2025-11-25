@@ -637,11 +637,12 @@
 								<div class=" self-center">{$i18n.t('General')}</div>
 							</button>
 						{:else if tabId === 'interface'}
-							<button
-								role="tab"
-								aria-controls="tab-interface"
-								aria-selected={selectedTab === 'interface'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
+							{#if $user?.role === 'admin' || ($user?.permissions?.features?.interface_settings ?? true)}
+								<button
+									role="tab"
+									aria-controls="tab-interface"
+									aria-selected={selectedTab === 'interface'}
+									class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
 								${
 									selectedTab === 'interface'
 										? ($settings?.highContrastMode ?? false)
@@ -651,15 +652,16 @@
 											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
 											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
 								}`}
-								on:click={() => {
-									selectedTab = 'interface';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<AppNotification strokeWidth="2" />
-								</div>
-								<div class=" self-center">{$i18n.t('Interface')}</div>
-							</button>
+									on:click={() => {
+										selectedTab = 'interface';
+									}}
+								>
+									<div class=" self-center mr-2">
+										<AppNotification strokeWidth="2" />
+									</div>
+									<div class=" self-center">{$i18n.t('Interface')}</div>
+								</button>
+							{/if}
 						{:else if tabId === 'connections'}
 							{#if $user?.role === 'admin' || ($user?.role === 'user' && $config?.features?.enable_direct_connections)}
 								<button
