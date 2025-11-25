@@ -220,6 +220,34 @@ class ModelsTable:
             or has_access(user_id, permission, model.access_control, user_group_ids)
         ]
 
+    def _has_write_permission(self, query, filter: dict):
+        if filter.get("group_ids") or filter.get("user_id"):
+            conditions = []
+
+            # --- ANY group_ids match ("write".group_ids) ---
+            if filter.get("group_ids"):
+                group_ids = filter["group_ids"]
+                like_clauses = []
+
+                for gid in group_ids:
+                    like_clauses.append(
+                        cast(Model.access_control, String).like(
+                            f'%"write"%"group_ids"%"{gid}"%'
+                        )
+                    )
+
+                # ANY → OR
+                conditions.append(or_(*like_clauses))
+
+            # --- user_id match (owner) ---
+            if filter.get("user_id"):
+                conditions.append(Model.user_id == filter["user_id"])
+
+            # Apply OR across the two groups of conditions
+            query = query.filter(or_(*conditions))
+
+        return query
+
     def search_models(
         self, user_id: str, filter: dict = {}, skip: int = 0, limit: int = 30
     ) -> ModelListResponse:
@@ -238,11 +266,10 @@ class ModelsTable:
                         )
                     )
 
-                if filter.get("user_id"):
-                    query = query.filter(Model.user_id == filter.get("user_id"))
+                # Apply access control filtering
+                query = self._has_write_permission(query, filter)
 
                 view_option = filter.get("view_option")
-
                 if view_option == "created":
                     query = query.filter(Model.user_id == user_id)
                 elif view_option == "shared":
