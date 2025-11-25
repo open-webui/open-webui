@@ -13,6 +13,7 @@ class Tenant(Base):
 
     id = Column(String, primary_key=True)
     name = Column(String, unique=True, nullable=False)
+    s3_bucket = Column(String, unique=True, nullable=False)
     model_names = Column(JSONField, nullable=False)
 
     created_at = Column(BigInteger)
@@ -22,6 +23,7 @@ class Tenant(Base):
 class TenantModel(BaseModel):
     id: str
     name: str
+    s3_bucket: str
     model_names: List[str] = Field(default_factory=list)
     created_at: int
     updated_at: int
@@ -32,20 +34,30 @@ class TenantModel(BaseModel):
 class TenantForm(BaseModel):
     name: str
     model_names: List[str] = Field(default_factory=list)
+    s3_bucket: Optional[str] = None
 
 
 class TenantUpdateForm(BaseModel):
     name: Optional[str] = None
+    s3_bucket: Optional[str] = None
     model_names: Optional[List[str]] = None
 
 
 class TenantsTable:
+    @staticmethod
+    def _generate_bucket_name(name: str) -> str:
+        return name.replace("/", " ").replace(" ", "_").lower()
+
     def create_tenant(self, form_data: TenantForm) -> TenantModel:
         with get_db() as db:
+            bucket_name = form_data.s3_bucket or self._generate_bucket_name(
+                form_data.name
+            )
             tenant = TenantModel(
                 **{
                     "id": str(uuid.uuid4()),
                     "name": form_data.name,
+                    "s3_bucket": bucket_name,
                     "model_names": form_data.model_names,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
@@ -79,6 +91,8 @@ class TenantsTable:
             update_payload = {}
             if form_data.name is not None:
                 update_payload["name"] = form_data.name
+            if form_data.s3_bucket is not None:
+                update_payload["s3_bucket"] = form_data.s3_bucket
             if form_data.model_names is not None:
                 update_payload["model_names"] = form_data.model_names
             if not update_payload:
