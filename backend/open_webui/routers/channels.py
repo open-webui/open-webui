@@ -105,10 +105,13 @@ async def get_channel_by_id(id: str, user=Depends(get_verified_user)):
         user.id, type="write", access_control=channel.access_control, strict=False
     )
 
+    user_count = len(get_users_with_access("read", channel.access_control))
+
     return ChannelResponse(
         **{
             **channel.model_dump(),
             "write_access": write_access or user.role == "admin",
+            "user_count": user_count,
         }
     )
 

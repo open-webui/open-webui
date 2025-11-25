@@ -59,6 +59,7 @@ class ChannelModel(BaseModel):
 
 class ChannelResponse(ChannelModel):
     write_access: bool = False
+    user_count: Optional[int] = None
 
 
 class ChannelForm(BaseModel):
