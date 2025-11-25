@@ -1,0 +1,105 @@
+<script lang="ts">
+	import { browser } from '$app/environment';
+	import { getPublicFiles, type PublicFile } from '$lib/apis/uploads';
+	import { toast } from 'svelte-sonner';
+
+	export let tenantId: string | null = null;
+	export let tenantBucket: string | null = null;
+
+	let files: PublicFile[] = [];
+	let loading = false;
+	let error: string | null = null;
+	let lastParams = '';
+
+	const formatSize = (bytes: number) => {
+		if (!bytes) return '0 B';
+		const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+		const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+		const value = bytes / Math.pow(1024, exponent);
+		return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[exponent]}`;
+	};
+
+	const displayName = (key: string) => {
+		if (!tenantBucket) return key;
+		const prefix = tenantBucket.endsWith('/') ? tenantBucket : `${tenantBucket}/`;
+		return key.startsWith(prefix) ? key.slice(prefix.length) : key;
+	};
+
+	const loadFiles = async () => {
+		if (!browser || !tenantBucket || !localStorage.token) {
+			files = [];
+			error = tenantBucket ? null : 'No tenant bucket selected.';
+			return;
+		}
+
+		loading = true;
+		error = null;
+		try {
+			files = await getPublicFiles(localStorage.token, tenantId ?? undefined);
+		} catch (err) {
+			const message = typeof err === 'string' ? err : err?.detail ?? 'Failed to load files.';
+			error = message;
+			toast.error(message);
+			files = [];
+		} finally {
+			loading = false;
+		}
+	};
+
+	$: paramsKey = tenantBucket ? `${tenantId ?? 'self'}|${tenantBucket}` : '';
+	$: if (browser && paramsKey && paramsKey !== lastParams) {
+		lastParams = paramsKey;
+		loadFiles();
+	}
+</script>
+
+{#if loading}
+	<div class="rounded-2xl border border-gray-100 bg-white/60 p-5 text-sm shadow-sm dark:border-gray-850 dark:bg-gray-900/70">
+		Loading files…
+	</div>
+{:else if error}
+	<div class="rounded-2xl border border-red-200 bg-red-50/70 p-5 text-sm text-red-900 shadow-sm dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-100">
+		{error}
+	</div>
+{:else if files.length === 0}
+	<div class="rounded-2xl border border-gray-100 bg-white/70 p-5 text-sm text-gray-600 shadow-sm dark:border-gray-850 dark:bg-gray-900/70 dark:text-gray-300">
+		No files found in the public folder.
+	</div>
+{:else}
+	<div class="overflow-x-auto rounded-2xl border border-gray-100 bg-white/70 shadow-sm dark:border-gray-850 dark:bg-gray-900/70">
+		<table class="min-w-full divide-y divide-gray-200 dark:divide-gray-800 text-sm">
+			<thead class="bg-gray-50 dark:bg-gray-900/80 text-gray-600 dark:text-gray-300">
+				<tr>
+					<th class="px-4 py-3 text-left font-semibold">File</th>
+					<th class="px-4 py-3 text-left font-semibold">Size</th>
+					<th class="px-4 py-3 text-left font-semibold">Last Modified</th>
+					<th class="px-4 py-3 text-left font-semibold">Actions</th>
+				</tr>
+			</thead>
+			<tbody class="divide-y divide-gray-100 dark:divide-gray-850 text-gray-800 dark:text-gray-100">
+				{#each files as file}
+					<tr>
+						<td class="px-4 py-3 font-mono text-xs sm:text-sm break-all">
+							{displayName(file.key)}
+						</td>
+						<td class="px-4 py-3">{formatSize(file.size)}</td>
+						<td class="px-4 py-3">
+							{new Date(file.last_modified).toLocaleString()}
+						</td>
+						<td class="px-4 py-3">
+							<!-- TODO Downloading does not work locally.... might fix itself live?-->
+							<a
+								href={file.url}
+								target="_blank"
+								rel="noreferrer"
+								class="inline-flex w-28 items-center justify-center rounded-lg border border-blue-600 px-3 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50 dark:hover:bg-blue-950/30"
+							>
+								Download
+							</a>
+						</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	</div>
+{/if}

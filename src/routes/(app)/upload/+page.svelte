@@ -1,15 +1,16 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import {
-		getUploadTenants,
-		uploadDocument,
-		type UploadDocumentResponse,
-		type UploadTenant,
-		type UploadVisibility
-	} from '$lib/apis/uploads';
+import {
+	getUploadTenants,
+	uploadDocument,
+	type UploadDocumentResponse,
+	type UploadTenant,
+	type UploadVisibility
+} from '$lib/apis/uploads';
 	import { WEBUI_NAME, user } from '$lib/stores';
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
+	import PublicFiles from '$lib/components/upload/PublicFiles.svelte';
 
 	const tabs = [
 		{ id: 'upload', label: 'Upload' },
@@ -349,12 +350,18 @@ $: tenantBucket =
 				{/if}
 			</div>
 		{:else if activeTab === 'public'}
-			<div class="rounded-2xl border border-gray-100 bg-white/70 p-6 text-sm text-gray-600 shadow-sm dark:border-gray-850 dark:bg-gray-900/70 dark:text-gray-300">
-				<p class="font-medium text-gray-800 dark:text-gray-100">TODO: Public documents</p>
-				<p class="mt-1 text-gray-600 dark:text-gray-400">
-					A future update will list files stored in the tenant root for quick browsing.
-				</p>
-			</div>
+			{#if tenantBucket}
+				<PublicFiles
+					tenantBucket={tenantBucket}
+					tenantId={$user?.role === 'admin'
+						? selectedTenantId ?? $user?.tenant_id ?? null
+						: $user?.tenant_id ?? null}
+				/>
+			{:else}
+				<div class="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 text-sm text-amber-900 shadow-sm dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
+					Select a tenant to view its public files.
+				</div>
+			{/if}
 		{:else}
 			<div class="rounded-2xl border border-gray-100 bg-white/70 p-6 text-sm text-gray-600 shadow-sm dark:border-gray-850 dark:bg-gray-900/70 dark:text-gray-300">
 				<p class="font-medium text-gray-800 dark:text-gray-100">TODO: Private documents</p>

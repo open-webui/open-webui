@@ -19,6 +19,14 @@ export type UploadTenant = {
 	s3_bucket: string;
 };
 
+export type PublicFile = {
+	key: string;
+	size: number;
+	last_modified: string;
+	url: string;
+	tenant_id: string;
+};
+
 export const getUploadTenants = async (token: string): Promise<UploadTenant[]> => {
 	let error: string | null = null;
 
@@ -80,6 +88,43 @@ export const uploadDocument = async (
 
 	if (error || !res) {
 		throw error ?? 'Failed to upload document.';
+	}
+
+	return res;
+};
+
+export const getPublicFiles = async (
+	token: string,
+	tenantId?: string | null
+): Promise<PublicFile[]> => {
+	let error: string | null = null;
+	const searchParams = new URLSearchParams();
+	if (tenantId) {
+		searchParams.set('tenant_id', tenantId);
+	}
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/uploads/public-files${searchParams.toString() ? `?${searchParams.toString()}` : ''}`,
+		{
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`
+			}
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err?.detail ?? 'Failed to load files.';
+			return null;
+		});
+
+	if (error || !res) {
+		throw error ?? 'Failed to load files.';
 	}
 
 	return res;

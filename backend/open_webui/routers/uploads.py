@@ -3,7 +3,8 @@ import os
 import posixpath
 import re
 import uuid
-from typing import Literal, Optional
+from datetime import datetime
+from typing import Literal, Optional, List
 
 import boto3
 from botocore.config import Config
@@ -91,6 +92,14 @@ class TenantInfo(BaseModel):
     id: str
     name: str
     s3_bucket: str
+
+
+class PublicFile(BaseModel):
+    key: str
+    size: int
+    last_modified: datetime
+    url: str
+    tenant_id: str
 
 
 @router.get("/tenants", response_model=list[TenantInfo])
@@ -184,3 +193,87 @@ async def upload_document(
         tenant_prefix=tenant_prefix,
         tenant_id=tenant.id,
     )
+
+
+@router.get("/public-files", response_model=List[PublicFile])
+def list_public_files(
+    tenant_id: Optional[str] = None, user=Depends(get_verified_user)
+):
+    if STORAGE_PROVIDER != "s3":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="S3 storage provider is not configured on this deployment.",
+        )
+
+    if not S3_BUCKET_NAME:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="S3 bucket name is not configured.",
+        )
+
+    target_tenant_id = user.tenant_id
+
+    if tenant_id is not None:
+        if user.role != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only admins may view other tenants' files.",
+            )
+        target_tenant_id = tenant_id
+
+    if not target_tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with a tenant.",
+        )
+
+    tenant = Tenants.get_tenant_by_id(target_tenant_id)
+    if not tenant or not tenant.s3_bucket:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Tenant does not have an S3 bucket configured.",
+        )
+
+    prefix = (
+        f"{tenant.s3_bucket}/"
+        if not tenant.s3_bucket.endswith("/")
+        else tenant.s3_bucket
+    )
+    private_prefix = posixpath.join(prefix.rstrip("/"), "users") + "/"
+
+    s3_client = _get_s3_client()
+    paginator = s3_client.get_paginator("list_objects_v2")
+    files: List[PublicFile] = []
+
+    try:
+        for page in paginator.paginate(Bucket=S3_BUCKET_NAME, Prefix=prefix):
+            for obj in page.get("Contents", []):
+                key = obj.get("Key")
+                if not key or key.endswith("/"):
+                    continue
+                if key.startswith(private_prefix):
+                    continue
+
+                url = s3_client.generate_presigned_url(
+                    "get_object",
+                    Params={"Bucket": S3_BUCKET_NAME, "Key": key},
+                    ExpiresIn=3600,
+                )
+
+                files.append(
+                    PublicFile(
+                        key=key,
+                        size=obj.get("Size", 0),
+                        last_modified=obj.get("LastModified"),
+                        url=url,
+                        tenant_id=tenant.id,
+                    )
+                )
+    except ClientError as exc:
+        log.exception("Failed to list public files from S3: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list files from S3.",
+        )
+
+    return files
