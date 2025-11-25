@@ -31,7 +31,8 @@
 		removeFileFromKnowledgeById,
 		updateFileFromKnowledgeById,
 		updateKnowledgeById,
-		syncFileToKnowledgeById
+		syncFileToKnowledgeById,
+		syncFilesToKnowledgeByIdBatch
 	} from '$lib/apis/knowledge';
 	import { blobToFile } from '$lib/utils';
 
@@ -80,6 +81,7 @@
 	let inputFiles = null;
 	let syncMode = false;
 	let syncCollectedNames: Set<string> = new Set();
+	let syncCollectedIds: string[] = [];
 
 	let filteredItems = [];
 	$: if (knowledge && knowledge.files) {
@@ -210,7 +212,7 @@
 					knowledge.files = knowledge.files.filter((file) => file.id !== uploadedFile.id);
 				} else {
                     if (syncMode) {
-                        await syncFileHandler(uploadedFile.id);
+                        syncCollectedIds.push(uploadedFile.id);
                     } else {
                         await addFileHandler(uploadedFile.id);
                     }
@@ -399,10 +401,20 @@
 	const syncDirectoryHandler = async () => {
 		syncMode = true;
 		syncCollectedNames = new Set();
+		syncCollectedIds = [];
 		try {
 			await uploadDirectoryHandler();
 
-			// After uploading and per-file syncs, remove KB files that are not present in the directory
+			// After uploading, sync all new/updated files in one batch
+			const batchRes = await syncFilesToKnowledgeByIdBatch(localStorage.token, id, syncCollectedIds).catch((e) => {
+				toast.error(`${e}`);
+				return null;
+			});
+			if (batchRes) {
+				knowledge = batchRes;
+			}
+
+			// After batch sync, remove KB files that are not present in the directory
 			const dirNames = new Set(Array.from(syncCollectedNames));
 			const currentFiles = knowledge?.files ?? [];
 			const toRemove = currentFiles.filter((f) => !dirNames.has(f?.meta?.name ?? f?.filename));

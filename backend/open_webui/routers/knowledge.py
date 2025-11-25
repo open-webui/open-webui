@@ -18,6 +18,7 @@ from open_webui.routers.retrieval import (
     BatchProcessFilesForm,
 )
 from open_webui.storage.provider import Storage
+from open_webui.utils.knowledge_sync import sync_files_to_knowledge
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_verified_user
@@ -355,6 +356,9 @@ async def update_knowledge_by_id(
 class KnowledgeFileIdForm(BaseModel):
     file_id: str
 
+class KnowledgeFileIdsForm(BaseModel):
+    file_ids: List[str]
+
 
 @router.post("/{id}/file/add", response_model=Optional[KnowledgeFilesResponse])
 def add_file_to_knowledge_by_id(
@@ -614,6 +618,61 @@ def sync_file_to_knowledge_by_id(
                 detail=str(e),
             )
 
+
+@router.post("/{id}/file/sync/batch", response_model=Optional[KnowledgeFilesResponse])
+def sync_files_to_knowledge_batch(
+    request: Request,
+    id: str,
+    form_data: KnowledgeFileIdsForm,
+    user=Depends(get_verified_user),
+):
+    """
+    Batch sync multiple files into a knowledge base.
+    Performing a single atomic update of the knowledge.data.file_ids.
+    """
+    knowledge = Knowledges.get_knowledge_by_id(id=id)
+    if not knowledge:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if (
+        knowledge.user_id != user.id
+        and not has_access(user.id, "write", knowledge.access_control)
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    try:
+        updated_knowledge, files_meta, warnings = sync_files_to_knowledge(
+            request=request,
+            knowledge_id=id,
+            new_file_ids=form_data.file_ids,
+            user=user,
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+    if warnings:
+        return KnowledgeFilesResponse(
+            **updated_knowledge.model_dump(),
+            files=files_meta,
+            warnings=warnings,
+        )
+
+    return KnowledgeFilesResponse(
+        **updated_knowledge.model_dump(),
+        files=files_meta,
+    )
 
 @router.post("/{id}/file/update", response_model=Optional[KnowledgeFilesResponse])
 def update_file_from_knowledge_by_id(
