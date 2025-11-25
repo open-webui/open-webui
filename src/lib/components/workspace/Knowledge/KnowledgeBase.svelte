@@ -31,7 +31,6 @@
 		removeFileFromKnowledgeById,
 		updateFileFromKnowledgeById,
 		updateKnowledgeById,
-		syncFileToKnowledgeById,
 		syncFilesToKnowledgeByIdBatch
 	} from '$lib/apis/knowledge';
 	import { blobToFile } from '$lib/utils';
@@ -130,7 +129,6 @@
 	};
 
 	const uploadFileHandler = async (file) => {
-		console.log(file);
 		// When syncing a directory, remember each file's relative name used on upload.
 		if (syncMode) {
 			try {
@@ -164,10 +162,6 @@
 			($config?.file?.max_size ?? null) !== null &&
 			file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
 		) {
-			console.log('File exceeds max size limit:', {
-				fileSize: file.size,
-				maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
-			});
 			toast.error(
 				$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
 					maxSize: $config?.file?.max_size
@@ -196,7 +190,6 @@
 			});
 
 			if (uploadedFile) {
-				console.log(uploadedFile);
 				knowledge.files = knowledge.files.map((item) => {
 					if (item.itemId === tempItemId) {
 						item.id = uploadedFile.id;
@@ -314,8 +307,6 @@
 
 		if (totalFiles > 0) {
 			await processDirectory(dirHandle);
-		} else {
-			console.log('No files to upload.');
 		}
 	};
 
@@ -466,7 +457,7 @@
 	};
 
 	const syncFileHandler = async (fileId) => {
-		const updatedKnowledge = await syncFileToKnowledgeById(localStorage.token, id, fileId).catch(
+		const updatedKnowledge = await syncFilesToKnowledgeByIdBatch(localStorage.token, id, [fileId]).catch(
 			(e) => {
 				toast.error(`${e}`);
 				return null;
@@ -488,7 +479,6 @@
 			// Remove from knowledge base only
 			const updatedKnowledge = await removeFileFromKnowledgeById(localStorage.token, id, fileId);
 
-			console.log('Knowledge base updated:', updatedKnowledge);
 
 			if (updatedKnowledge) {
 				knowledge = updatedKnowledge;
@@ -502,7 +492,6 @@
 
 	const updateFileContentHandler = async () => {
 		if (isSaving) {
-			console.log('Save operation already in progress, skipping...');
 			return;
 		}
 		isSaving = true;
@@ -533,7 +522,6 @@
 	};
 
 	const changeDebounceHandler = () => {
-		console.log('debounce');
 		if (debounceTimeout) {
 			clearTimeout(debounceTimeout);
 		}
@@ -1010,7 +998,6 @@
 										selectedFileId = selectedFileId === e.detail ? null : e.detail;
 									}}
 									on:delete={(e) => {
-										console.log(e.detail);
 
 										selectedFileId = null;
 										deleteFileHandler(e.detail);
