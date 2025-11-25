@@ -932,7 +932,7 @@
 					</Folder>
 				{/if}
 
-				{#if folders}
+				{#if folders && ($user?.role === 'admin' || ($user?.permissions?.features?.folders ?? true))}
 					<Folder
 						id="sidebar-folders"
 						className="px-2 mt-0.5"
