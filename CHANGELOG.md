@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.40] - 2025-11-25
+
+### Fixed
+
+- 🗄️ A critical PostgreSQL user listing performance issue was resolved by removing a redundant count operation that caused severe database slowdowns and potential timeouts when viewing user lists in admin panels.
+
 ## [0.6.39] - 2025-11-25
 
 ### Added
