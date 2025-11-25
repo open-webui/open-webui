@@ -192,7 +192,7 @@
 						class="p-1 rounded-lg bg-transparent transition"
 						on:click={(e) => {
 							e.stopPropagation();
-							copyToClipboard(token.raw.trim());
+							copyToClipboard(token.raw.trim(), null, $settings?.copyFormatted ?? false);
 						}}
 					>
 						<Clipboard className=" size-3.5" strokeWidth="1.5" />
