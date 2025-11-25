@@ -124,7 +124,6 @@
 		const blob = new Blob([content], { type: 'text/plain' });
 		const file = blobToFile(blob, `${name}.txt`);
 
-		console.log(file);
 		return file;
 	};
 
@@ -408,20 +407,27 @@
 			const currentFiles = knowledge?.files ?? [];
 			const toRemove = currentFiles.filter((f) => !dirNames.has(f?.meta?.name ?? f?.filename));
 
-			for (const f of toRemove) {
-				// First remove from knowledge (and KB vectors) but keep file record
-				const updated = await removeFileFromKnowledgeById(localStorage.token, id, f.id, false).catch((e) => {
-					toast.error(`${e}`);
-					return null;
-				});
-				if (updated) {
-					knowledge = updated;
-				}
+			await Promise.all(
+				toRemove.map(async (f) => {
+					// First remove from knowledge (and KB vectors) but keep file record
+					await removeFileFromKnowledgeById(localStorage.token, id, f.id, false).catch((e) => {
+						toast.error(`${e}`);
+						return null;
+					});
+					// Then delete the actual file (removes per-file vectors and storage)
+					await deleteFileById(localStorage.token, f.id).catch((e) => {
+						console.error(e);
+					});
+				})
+			);
 
-				// Then delete the actual file (removes per-file vectors and storage)
-				await deleteFileById(localStorage.token, f.id).catch((e) => {
-					console.error(e);
-				});
+			// Refresh knowledge to ensure consistent state after concurrent operations
+			const refreshed = await getKnowledgeById(localStorage.token, id).catch((e) => {
+				toast.error(`${e}`);
+				return null;
+			});
+			if (refreshed) {
+				knowledge = refreshed;
 			}
 
 			toast.success($i18n.t('Directory sync completed.'));
@@ -466,7 +472,6 @@
 
 	const deleteFileHandler = async (fileId) => {
 		try {
-			console.log('Starting file deletion process for:', fileId);
 
 			// Remove from knowledge base only
 			const updatedKnowledge = await removeFileFromKnowledgeById(localStorage.token, id, fileId);
