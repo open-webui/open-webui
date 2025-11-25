@@ -1,18 +1,21 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-import {
-	getUploadTenants,
-	uploadDocument,
-	type UploadDocumentResponse,
-	type UploadTenant,
-	type UploadVisibility
-} from '$lib/apis/uploads';
-import { WEBUI_NAME, user, showArchivedChats } from '$lib/stores';
-import { onMount } from 'svelte';
-import { browser } from '$app/environment';
-import Files from '$lib/components/upload/Files.svelte';
-import UserMenu from '$lib/components/layout/Sidebar/UserMenu.svelte';
-
+	import {
+		getUploadTenants,
+		uploadDocument,
+		type UploadDocumentResponse,
+		type UploadTenant,
+		type UploadVisibility
+	} from '$lib/apis/uploads';
+	import { WEBUI_NAME, user, showArchivedChats, showSidebar, mobile } from '$lib/stores';
+	import { onMount } from 'svelte';
+	import { browser } from '$app/environment';
+	import Files from '$lib/components/upload/Files.svelte';
+	import UserMenu from '$lib/components/layout/Sidebar/UserMenu.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Sidebar from '$lib/components/icons/Sidebar.svelte';
+	import { getContext } from 'svelte';
+	const i18n = getContext('i18n');
 	const tabs = [
 		{ id: 'upload', label: 'Upload' },
 		{ id: 'public', label: 'Public' },
@@ -23,51 +26,51 @@ import UserMenu from '$lib/components/layout/Sidebar/UserMenu.svelte';
 	let visibility: UploadVisibility = 'public';
 	let selectedFile: File | null = null;
 	let isUploading = false;
-let uploadResult: UploadDocumentResponse | null = null;
-let fileInput: HTMLInputElement | null = null;
-let tenants: UploadTenant[] = [];
-let tenantsLoading = false;
-let selectedTenantId: string | null = null;
-let tenantsInitialized = false;
-let selectedTenant: UploadTenant | null = null;
+	let uploadResult: UploadDocumentResponse | null = null;
+	let fileInput: HTMLInputElement | null = null;
+	let tenants: UploadTenant[] = [];
+	let tenantsLoading = false;
+	let selectedTenantId: string | null = null;
+	let tenantsInitialized = false;
+	let selectedTenant: UploadTenant | null = null;
 
-const loadTenants = async () => {
-	if (
-		tenantsLoading ||
-		tenantsInitialized ||
-		!browser ||
-		!localStorage.token ||
-		$user?.role !== 'admin'
-	) {
-		return;
-	}
-	tenantsLoading = true;
-	try {
-		const list = await getUploadTenants(localStorage.token);
-		tenants = list;
-		const defaultId = $user?.tenant_id ?? list[0]?.id ?? null;
-		selectedTenantId = defaultId;
-	} catch (err) {
-		const message = typeof err === 'string' ? err : err?.detail ?? 'Failed to load tenants.';
-		toast.error(message);
-	} finally {
-		tenantsLoading = false;
-		tenantsInitialized = true;
-	}
-};
+	const loadTenants = async () => {
+		if (
+			tenantsLoading ||
+			tenantsInitialized ||
+			!browser ||
+			!localStorage.token ||
+			$user?.role !== 'admin'
+		) {
+			return;
+		}
+		tenantsLoading = true;
+		try {
+			const list = await getUploadTenants(localStorage.token);
+			tenants = list;
+			const defaultId = $user?.tenant_id ?? list[0]?.id ?? null;
+			selectedTenantId = defaultId;
+		} catch (err) {
+			const message = typeof err === 'string' ? err : (err?.detail ?? 'Failed to load tenants.');
+			toast.error(message);
+		} finally {
+			tenantsLoading = false;
+			tenantsInitialized = true;
+		}
+	};
 
-onMount(() => {
-	if (browser) {
+	onMount(() => {
+		if (browser) {
+			loadTenants();
+		}
+	});
+
+	$: if ($user?.role === 'admin' && browser && !tenantsInitialized) {
 		loadTenants();
 	}
-});
 
-$: if ($user?.role === 'admin' && browser && !tenantsInitialized) {
-	loadTenants();
-}
-
-const handleFileChange = (event: Event) => {
-	const target = event.target as HTMLInputElement;
+	const handleFileChange = (event: Event) => {
+		const target = event.target as HTMLInputElement;
 		selectedFile = target.files?.[0] ?? null;
 	};
 
@@ -100,12 +103,15 @@ const handleFileChange = (event: Event) => {
 		uploadResult = null;
 
 		const tenantOverride =
-			$user?.role === 'admin'
-				? selectedTenantId ?? $user?.tenant_id ?? undefined
-				: undefined;
+			$user?.role === 'admin' ? (selectedTenantId ?? $user?.tenant_id ?? undefined) : undefined;
 
 		try {
-			const result = await uploadDocument(localStorage.token, selectedFile, visibility, tenantOverride);
+			const result = await uploadDocument(
+				localStorage.token,
+				selectedFile,
+				visibility,
+				tenantOverride
+			);
 			uploadResult = result;
 			toast.success('Upload complete.');
 			selectedFile = null;
@@ -113,30 +119,31 @@ const handleFileChange = (event: Event) => {
 				fileInput.value = '';
 			}
 		} catch (err) {
-			const message = typeof err === 'string' ? err : err?.detail ?? 'Failed to upload file.';
+			const message = typeof err === 'string' ? err : (err?.detail ?? 'Failed to upload file.');
 			toast.error(message);
 		} finally {
 			isUploading = false;
 		}
 	};
 
-$: selectedTenant =
-	$user?.role === 'admin'
-		? tenants.find((t) => t.id === (selectedTenantId ?? $user?.tenant_id)) ?? null
-		: null;
+	$: selectedTenant =
+		$user?.role === 'admin'
+			? (tenants.find((t) => t.id === (selectedTenantId ?? $user?.tenant_id)) ?? null)
+			: null;
 
-$: tenantBucket =
-	$user?.role === 'admin' ? selectedTenant?.s3_bucket ?? null : $user?.tenant_s3_bucket ?? null;
+	$: tenantBucket =
+		$user?.role === 'admin'
+			? (selectedTenant?.s3_bucket ?? null)
+			: ($user?.tenant_s3_bucket ?? null);
 
-const joinPath = (base: string, suffix: string) => {
-	const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base;
-	const normalizedSuffix = suffix.startsWith('/') ? suffix.slice(1) : suffix;
-	return `${normalizedBase}/${normalizedSuffix}`;
-};
+	const joinPath = (base: string, suffix: string) => {
+		const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base;
+		const normalizedSuffix = suffix.startsWith('/') ? suffix.slice(1) : suffix;
+		return `${normalizedBase}/${normalizedSuffix}`;
+	};
 
-$: publicPath = tenantBucket ?? null;
-$: privatePath =
-	tenantBucket && $user?.id ? joinPath(tenantBucket, `/users/${$user.id}`) : null;
+	$: publicPath = tenantBucket ?? null;
+	$: privatePath = tenantBucket && $user?.id ? joinPath(tenantBucket, `/users/${$user.id}`) : null;
 	$: destinationPreview = tenantBucket
 		? `${tenantBucket}${visibility === 'private' ? `/users/${$user?.id}` : ''}/${
 				selectedFile?.name ?? 'your-file.ext'
@@ -148,45 +155,88 @@ $: privatePath =
 	<title>Uploads • {$WEBUI_NAME}</title>
 </svelte:head>
 
-<div class="w-full px-4 py-6 sm:px-6 lg:px-8">
-	<div class="mx-auto flex max-w-4xl flex-col gap-6">
+<div
+	class=" flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
+		? 'md:max-w-[calc(100%-260px)]'
+		: ''} max-w-full"
+>
+	<nav class="   px-2 pt-1.5 backdrop-blur-xl w-full drag-region">
+		<div class=" flex items-center">
+			{#if $mobile}
+				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
+					<Tooltip
+						content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+						interactive={true}
+					>
+						<button
+							id="sidebar-toggle-button"
+							class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+							on:click={() => {
+								showSidebar.set(!$showSidebar);
+							}}
+						>
+							<div class=" self-center p-1.5">
+								<Sidebar />
+							</div>
+						</button>
+					</Tooltip>
+				</div>
+			{/if}
+
+			<div class="ml-2 py-0.5 self-center flex items-center justify-between w-full">
+				<div class="">
+					<div
+						class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium bg-transparent py-1 touch-auto pointer-events-auto"
+					>
+						<a class="min-w-fit transition" href="/notes">
+							{$i18n.t('Uploads')}
+						</a>
+					</div>
+				</div>
+
+				<div class=" self-center flex items-center gap-1">
+					{#if $user !== undefined && $user !== null}
+						<UserMenu
+							className="max-w-[240px]"
+							role={$user?.role}
+							help={true}
+							on:show={(e) => {
+								if (e.detail === 'archived-chat') {
+									showArchivedChats.set(true);
+								}
+							}}
+						>
+							<button
+								class="select-none flex rounded-xl p-1.5 w-full hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+								aria-label="User Menu"
+							>
+								<div class=" self-center">
+									<img
+										src={$user?.profile_image_url}
+										class="size-6 object-cover rounded-full"
+										alt="User profile"
+										draggable="false"
+									/>
+								</div>
+							</button>
+						</UserMenu>
+					{/if}
+				</div>
+			</div>
+		</div>
+	</nav>
+	<div class="mx-auto w-full flex max-w-4xl flex-col gap-6">
 		<div class="flex flex-wrap items-start justify-between gap-4">
 			<div class="space-y-2">
-				<h1 class="text-3xl font-semibold text-gray-900 dark:text-gray-50">Uploads</h1>
 				<p class="text-sm text-gray-600 dark:text-gray-400">
 					Manage tenant documents in S3. Upload new files or inspect public/private folders.
 				</p>
 			</div>
-
-			{#if $user !== undefined && $user !== null}
-				<UserMenu
-					className="max-w-[240px]"
-					role={$user?.role}
-					help={true}
-					on:show={(e) => {
-						if (e.detail === 'archived-chat') {
-							showArchivedChats.set(true);
-						}
-					}}
-				>
-					<button
-						class="select-none flex rounded-full border border-gray-200 bg-white p-1.5 shadow-sm hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-850 transition"
-						aria-label="User Menu"
-					>
-						<div class="self-center">
-							<img
-								src={$user?.profile_image_url}
-								class="size-8 object-cover rounded-full"
-								alt="User profile"
-								draggable="false"
-							/>
-						</div>
-					</button>
-				</UserMenu>
-			{/if}
 		</div>
 
-		<div class="flex flex-wrap gap-2 rounded-2xl border border-gray-100 bg-white/70 p-2 shadow-sm dark:border-gray-850 dark:bg-gray-900/50">
+		<div
+			class="flex flex-wrap gap-2 rounded-2xl border border-gray-100 bg-white/70 p-2 shadow-sm dark:border-gray-850 dark:bg-gray-900/50"
+		>
 			{#each tabs as tab}
 				<button
 					class={`rounded-xl px-4 py-2 text-sm font-medium transition ${
@@ -205,7 +255,9 @@ $: privatePath =
 		</div>
 
 		{#if $user?.role === 'admin'}
-			<div class="rounded-2xl border border-gray-100 bg-white/70 p-5 shadow-sm dark:border-gray-850 dark:bg-gray-900/60">
+			<div
+				class="rounded-2xl border border-gray-100 bg-white/70 p-5 shadow-sm dark:border-gray-850 dark:bg-gray-900/60"
+			>
 				<div class="flex flex-col gap-2">
 					<label class="text-sm font-medium text-gray-900 dark:text-gray-100" for="tenant-select">
 						Target Tenant Bucket
@@ -245,16 +297,22 @@ $: privatePath =
 		{#if activeTab === 'upload'}
 			<div class="flex flex-col gap-6">
 				{#if !$user}
-					<div class="rounded-2xl border border-gray-100 bg-white/60 p-5 text-sm shadow-sm dark:border-gray-800 dark:bg-gray-900">
+					<div
+						class="rounded-2xl border border-gray-100 bg-white/60 p-5 text-sm shadow-sm dark:border-gray-800 dark:bg-gray-900"
+					>
 						Loading your profile…
 					</div>
 				{:else if !tenantBucket}
-					<div class="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
-						Your tenant does not have an S3 bucket configured yet. Please contact an administrator before
-						using this page.
+					<div
+						class="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100"
+					>
+						Your tenant does not have an S3 bucket configured yet. Please contact an administrator
+						before using this page.
 					</div>
 				{:else}
-					<div class="rounded-2xl border border-gray-100 bg-white/70 p-5 shadow-sm dark:border-gray-850 dark:bg-gray-900/80">
+					<div
+						class="rounded-2xl border border-gray-100 bg-white/70 p-5 shadow-sm dark:border-gray-850 dark:bg-gray-900/80"
+					>
 						<div class="space-y-3 text-sm text-gray-700 dark:text-gray-300">
 							<p>
 								Files are stored inside
@@ -286,7 +344,10 @@ $: privatePath =
 						</div>
 					</div>
 
-					<form class="space-y-5 rounded-2xl border border-gray-100 bg-white/80 p-5 shadow-sm dark:border-gray-850 dark:bg-gray-900/80" on:submit|preventDefault={handleSubmit}>
+					<form
+						class="space-y-5 rounded-2xl border border-gray-100 bg-white/80 p-5 shadow-sm dark:border-gray-850 dark:bg-gray-900/80"
+						on:submit|preventDefault={handleSubmit}
+					>
 						<div class="space-y-2">
 							<label class="text-sm font-medium text-gray-900 dark:text-gray-100">Visibility</label>
 							<select
@@ -309,15 +370,21 @@ $: privatePath =
 							/>
 							{#if selectedFile}
 								<p class="text-xs text-gray-500 dark:text-gray-400">
-									<span class="font-medium text-gray-700 dark:text-gray-200">{selectedFile.name}</span>
+									<span class="font-medium text-gray-700 dark:text-gray-200"
+										>{selectedFile.name}</span
+									>
 									• {formatBytes(selectedFile.size)}
 								</p>
 							{/if}
 						</div>
 
 						{#if destinationPreview}
-							<div class="rounded-xl bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:bg-gray-900 dark:text-gray-300">
-								<div class="text-[11px] uppercase tracking-wide text-gray-400">Destination Preview</div>
+							<div
+								class="rounded-xl bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:bg-gray-900 dark:text-gray-300"
+							>
+								<div class="text-[11px] uppercase tracking-wide text-gray-400">
+									Destination Preview
+								</div>
 								<code class="break-all">{destinationPreview}</code>
 							</div>
 						{/if}
@@ -352,17 +419,27 @@ $: privatePath =
 				{/if}
 
 				{#if uploadResult}
-					<div class="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-5 text-sm text-emerald-900 shadow-sm dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
-						<h2 class="text-lg font-semibold text-emerald-900 dark:text-emerald-100">Upload complete</h2>
+					<div
+						class="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-5 text-sm text-emerald-900 shadow-sm dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100"
+					>
+						<h2 class="text-lg font-semibold text-emerald-900 dark:text-emerald-100">
+							Upload complete
+						</h2>
 						<dl class="mt-3 space-y-2">
 							<div>
-								<dt class="text-xs uppercase tracking-wide text-emerald-700/80 dark:text-emerald-200/80">
+								<dt
+									class="text-xs uppercase tracking-wide text-emerald-700/80 dark:text-emerald-200/80"
+								>
 									S3 URL
 								</dt>
-								<dd class="font-mono text-sm text-emerald-900 dark:text-emerald-50 break-all">{uploadResult.url}</dd>
+								<dd class="font-mono text-sm text-emerald-900 dark:text-emerald-50 break-all">
+									{uploadResult.url}
+								</dd>
 							</div>
 							<div>
-								<dt class="text-xs uppercase tracking-wide text-emerald-700/80 dark:text-emerald-200/80">
+								<dt
+									class="text-xs uppercase tracking-wide text-emerald-700/80 dark:text-emerald-200/80"
+								>
 									Object Key
 								</dt>
 								<dd class="font-mono text-sm text-emerald-900 dark:text-emerald-50 break-all">
@@ -371,13 +448,17 @@ $: privatePath =
 							</div>
 							<div class="flex flex-wrap gap-4">
 								<div>
-									<dt class="text-xs uppercase tracking-wide text-emerald-700/80 dark:text-emerald-200/80">
+									<dt
+										class="text-xs uppercase tracking-wide text-emerald-700/80 dark:text-emerald-200/80"
+									>
 										Visibility
 									</dt>
 									<dd class="font-semibold capitalize">{uploadResult.visibility}</dd>
 								</div>
 								<div>
-									<dt class="text-xs uppercase tracking-wide text-emerald-700/80 dark:text-emerald-200/80">
+									<dt
+										class="text-xs uppercase tracking-wide text-emerald-700/80 dark:text-emerald-200/80"
+									>
 										Stored Name
 									</dt>
 									<dd class="font-mono text-sm text-emerald-900 dark:text-emerald-50">
@@ -394,27 +475,29 @@ $: privatePath =
 				<Files
 					path={publicPath}
 					tenantId={$user?.role === 'admin'
-						? selectedTenantId ?? $user?.tenant_id ?? null
-						: $user?.tenant_id ?? null}
+						? (selectedTenantId ?? $user?.tenant_id ?? null)
+						: ($user?.tenant_id ?? null)}
 				/>
 			{:else}
-				<div class="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 text-sm text-amber-900 shadow-sm dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
+				<div
+					class="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 text-sm text-amber-900 shadow-sm dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100"
+				>
 					Select a tenant to view its public files.
 				</div>
 			{/if}
+		{:else if privatePath}
+			<Files
+				path={privatePath}
+				tenantId={$user?.role === 'admin'
+					? (selectedTenantId ?? $user?.tenant_id ?? null)
+					: ($user?.tenant_id ?? null)}
+			/>
 		{:else}
-			{#if privatePath}
-				<Files
-					path={privatePath}
-					tenantId={$user?.role === 'admin'
-						? selectedTenantId ?? $user?.tenant_id ?? null
-						: $user?.tenant_id ?? null}
-				/>
-			{:else}
-				<div class="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 text-sm text-amber-900 shadow-sm dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
-					Select a tenant to view private files.
-				</div>
-			{/if}
+			<div
+				class="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 text-sm text-amber-900 shadow-sm dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100"
+			>
+				Select a tenant to view private files.
+			</div>
 		{/if}
 	</div>
 </div>
