@@ -67,6 +67,7 @@ dependencies = [
     "einops==0.8.1",
 
     "ftfy==6.2.3",
+    "chardet",
     "pypdf==6.0.0",
     "fpdf2==2.8.2",
     "pymdown-extensions==10.14.2",
