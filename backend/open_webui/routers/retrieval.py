@@ -1249,7 +1249,7 @@ def save_docs_to_vector_db(
 
         return ", ".join(docs_info)
 
-    log.info(
+    log.debug(
         f"save_docs_to_vector_db: document {_get_docs_info(docs)} {collection_name}"
     )
 
