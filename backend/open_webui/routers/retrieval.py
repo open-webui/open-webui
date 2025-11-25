@@ -1689,7 +1689,7 @@ async def process_text(
     log.debug(f"text_content: {text_content}")
 
     result = await run_in_threadpool(
-        save_docs_to_vector_db, request, docs, collection_name, user
+        save_docs_to_vector_db, request, docs, collection_name, user=user
     )
     if result:
         return {
@@ -1721,7 +1721,12 @@ async def process_web(
 
         if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             await run_in_threadpool(
-                save_docs_to_vector_db, request, docs, collection_name, True, user
+                save_docs_to_vector_db,
+                request,
+                docs,
+                collection_name,
+                overwrite=True,
+                user=user,
             )
         else:
             collection_name = None
@@ -2464,7 +2469,12 @@ async def process_files_batch(
     if all_docs:
         try:
             await run_in_threadpool(
-                save_docs_to_vector_db, request, all_docs, collection_name, True, user
+                save_docs_to_vector_db,
+                request,
+                all_docs,
+                collection_name,
+                add=True,
+                user=user,
             )
 
             # Update all files with collection name
