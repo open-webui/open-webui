@@ -34,6 +34,8 @@ from open_webui.env import (
     BYPASS_MODEL_ACCESS_CONTROL,
 )
 from open_webui.models.users import UserModel
+from open_webui.memory.cross_window_memory import last_process_payload
+from open_webui.utils.misc import extract_timestamped_messages
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
@@ -807,61 +809,123 @@ async def generate_chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
+    chatting_completion: bool = False
 ):
+    """
+    OpenAI 兼容的聊天完成端点 - 直接转发请求到 OpenAI API 或兼容服务
+
+    这是 OpenAI router 中的底层 API 调用函数，负责：
+    1. 应用模型配置（base_model_id, system prompt, 参数覆盖）
+    2. 验证用户权限（模型访问控制）
+    3. 处理 Azure OpenAI 特殊格式转换
+    4. 处理推理模型（reasoning model）特殊逻辑
+    5. 转发 HTTP 请求到上游 API（支持流式和非流式）
+
+    Args:
+        request: FastAPI Request 对象
+        form_data: OpenAI 格式的聊天请求
+            - model: 模型 ID
+            - messages: 消息列表
+            - stream: 是否流式响应
+            - temperature, max_tokens 等参数
+        user: 已验证的用户对象
+        bypass_filter: 是否绕过权限检查
+
+    Returns:
+        - 流式: StreamingResponse (SSE)
+        - 非流式: dict (OpenAI JSON 格式)
+
+    Raises:
+        HTTPException 403: 无权限访问模型
+        HTTPException 404: 模型不存在
+        HTTPException 500: 上游 API 连接失败
+    """
+
+    # print("user:", user)
+    # user: 
+    #     id='55f85fb0-4aca-48bc-aea1-afce50ac989e' 
+    #     name='gaofeng1' 
+    #     email='h.summit1628935449@gmail.com' 
+    #     username=None 
+    #     role='user' 
+    #     profile_image_url='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAEa0lEQVR4Xu2aW0hUQRzG/7vr7noLSZGgIIMsobAgjRKCrhSJD0EXgpSCopcK6qmCHgyC6Kmo6CGMiAgqeqgQ6SG7EYhoQQpdSCKppBARMXUv7m47C7vr2ZX2XHa378S3b8uZmfPN95tvzpw54xhvK48IfzAOOAgEhkVMCIFg8SAQMB4EQiBoDoDp4TOEQMAcAJPDhBAImANgcpgQAgFzAEwOE0IgYA6AyWFCCATMATA5TAiBgDkAJocJIRAwB8DkMCEEAuYAmBwmhEDAHACTw4QQCJgDYHKYEAIBcwBMDhNCIGAOgMlhQggEzAEwOUwIgVh3wF3TIq55a8VZvlwchRXiKJmvaTQyMSQR34iEfnVLcOC+hIffWL9pnlqwVUK8DRekoKoxDUAmr2Jg+q/K9GBHpqL//LotgDgr66Ro/TVxlFWbNyw0JcFPd8TfddJ8G3moCQ9ETU/ehvMirqI0O8Ij/RIeH5TQcG/imsNTJs6yJeKqXDVrkoLv26ChQANR01PhxutaGNGRPv2tUwJ9lzM+G9wrjolnaXNasvyvj0fTcjsP4934LaCBlOzq1prpHxV/z1nDZhY1dUQXAWsS7kTGBmTiQfK/cdtyVwMWiHqAu5cdSvY8mgx/12nDMOINlOzt10xhvqctkA95WCClzQMi3rkJIIF3FyXQe8700PTUnxHPyhOJ+qEfz2TqyW7T7eWqIiSQVPOyNcWolMTfT0JDL5kQvaMqdc5HXxnp7ZeecpAJSZ2uJh9vzbii0tNZO5SBAxJb6m5JLknVNsjE3Vo7eJkVjXBA1LuDd3VronPq5W/y4YasdNYOjcADmf7aLr7O/XbwMisa/ysgpQdHDJny+0aFofL5KEwg+XDZwD3ggait86n2Rl1dYkJ02WSsUGx3d90lU/tOakHwt1/Bwu2aPS1OWTrZlB74rtnhzZZxhZtvScGipoSKbLWrs1u6isFNWUp18Y4X4qxIvntY3ceKO0EgusZEeqHUnd5s7WURiEkgqlrq9om/p1WCfVcstChCIBbsm+17iO/5YUs7tARiAYiqmvbF0MJHqhjgmn05WSxY7KamOuRDPa5QnTYp3nZP86FKXdN7rEfVd1fvEffinWltqHa4yjIxlNTurxrdqYfhVFNqJzg0/FbCY58lEhhLtO6qrBfnnCrNSk1za3VQ4ssj8b06YkJRbqtAJ2RmUrx1p8S1YJNlN/Smy/KNTDZgCyDxvqm0uGuPat62dfU7mojQzy4JfrhpaVGg614WC9kKyMzEqGeDenl0qrO9qScao8eFYt/ORz/GDtFZXS5b9NhQdVsCMdRDmxUmEDBgBEIgYA6AyWFCCATMATA5TAiBgDkAJocJIRAwB8DkMCEEAuYAmBwmhEDAHACTw4QQCJgDYHKYEAIBcwBMDhNCIGAOgMlhQggEzAEwOUwIgYA5ACaHCSEQMAfA5DAhBALmAJgcJoRAwBwAk8OEEAiYA2BymBACAXMATA4TQiBgDoDJYUIIBMwBMDl/AP79PANEXNbbAAAAAElFTkSuQmCC' 
+    #     bio=None 
+    #     gender=None 
+    #     date_of_birth=None 
+    #     info=None 
+    #     settings=UserSettings(ui={'memory': True}) 
+    #     api_key=None 
+    #     oauth_sub=None 
+    #     last_active_at=1763997832 
+    #     updated_at=1763971141 
+    #     created_at=1763874812
+
+    # === 1. 权限检查配置 ===
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 
-    idx = 0
+    idx = 0  # 用于标识使用哪个 OPENAI_API_BASE_URL
 
+    # === 2. 准备 Payload 和提取元数据 ===
     payload = {**form_data}
-    metadata = payload.pop("metadata", None)
+    metadata = payload.pop("metadata", None)  # 移除内部元数据，不发送给上游 API
 
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
 
+    # === 3. 应用模型配置和权限检查 ===
     # Check model info and override the payload
     if model_info:
+        # 3.1 如果配置了 base_model_id，替换为底层模型 ID
+        # 例如：自定义模型 "my-gpt4" → 实际调用 "gpt-4-turbo"
         if model_info.base_model_id:
             payload["model"] = model_info.base_model_id
             model_id = model_info.base_model_id
 
+        # 3.2 应用模型参数（temperature, max_tokens 等）
         params = model_info.params.model_dump()
 
         if params:
-            system = params.pop("system", None)
+            system = params.pop("system", None)  # 提取 system prompt
 
+            # 应用模型参数到 payload（覆盖用户传入的参数）
             payload = apply_model_params_to_body_openai(params, payload)
+            # 注入或替换 system prompt
             payload = apply_system_prompt_to_body(system, payload, metadata, user)
 
+        # 3.3 权限检查：验证用户是否有权限访问该模型
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
             if not (
-                user.id == model_info.user_id
+                user.id == model_info.user_id  # 用户是模型创建者
                 or has_access(
                     user.id, type="read", access_control=model_info.access_control
-                )
+                )  # 或用户在访问控制列表中
             ):
                 raise HTTPException(
                     status_code=403,
                     detail="Model not found",
                 )
     elif not bypass_filter:
+        # 如果模型信息不存在且未绕过过滤器，只有管理员可访问
         if user.role != "admin":
             raise HTTPException(
                 status_code=403,
                 detail="Model not found",
             )
 
-    await get_all_models(request, user=user)
+    # === 4. 查找 OpenAI API 配置 ===
+    await get_all_models(request, user=user)  # 刷新模型列表
     model = request.app.state.OPENAI_MODELS.get(model_id)
     if model:
-        idx = model["urlIdx"]
+        idx = model["urlIdx"]  # 获取 API 基础 URL 索引
     else:
         raise HTTPException(
             status_code=404,
             detail="Model not found",
         )
 
+    # === 5. 获取 API 配置并处理 prefix_id ===
     # Get the API config for the model
     api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
         str(idx),
@@ -870,10 +934,13 @@ async def generate_chat_completion(
         ),  # Legacy support
     )
 
+    # 移除模型 ID 前缀（如果配置了 prefix_id）
+    # 例如：模型 ID "custom.gpt-4" → 发送给 API 的是 "gpt-4"
     prefix_id = api_config.get("prefix_id", None)
     if prefix_id:
         payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
 
+    # === 6. Pipeline 模式：注入用户信息 ===
     # Add user info to the payload if the model is a pipeline
     if "pipeline" in model and model.get("pipeline"):
         payload["user"] = {
@@ -886,32 +953,40 @@ async def generate_chat_completion(
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
 
+    # === 7. 推理模型特殊处理 ===
     # Check if model is a reasoning model that needs special handling
     if is_openai_reasoning_model(payload["model"]):
+        # 推理模型（如 o1）使用 max_completion_tokens 而非 max_tokens
         payload = openai_reasoning_model_handler(payload)
     elif "api.openai.com" not in url:
+        # 非 OpenAI 官方 API：向后兼容，将 max_completion_tokens 转为 max_tokens
         # Remove "max_completion_tokens" from the payload for backward compatibility
         if "max_completion_tokens" in payload:
             payload["max_tokens"] = payload["max_completion_tokens"]
             del payload["max_completion_tokens"]
 
+    # 避免同时存在 max_tokens 和 max_completion_tokens
     if "max_tokens" in payload and "max_completion_tokens" in payload:
         del payload["max_tokens"]
 
+    # === 8. 转换 logit_bias 格式 ===
     # Convert the modified body back to JSON
     if "logit_bias" in payload:
         payload["logit_bias"] = json.loads(
             convert_logit_bias_input_to_json(payload["logit_bias"])
         )
 
+    # === 9. 准备请求头和 Cookies ===
     headers, cookies = await get_headers_and_cookies(
         request, url, key, api_config, metadata, user=user
     )
 
+    # === 10. Azure OpenAI 特殊处理 ===
     if api_config.get("azure", False):
         api_version = api_config.get("api_version", "2023-03-15-preview")
         request_url, payload = convert_to_azure_payload(url, payload, api_version)
 
+        # 只有在非 Azure Entra ID 认证时才设置 api-key header
         # Only set api-key header if not using Azure Entra ID authentication
         auth_type = api_config.get("auth_type", "bearer")
         if auth_type not in ("azure_ad", "microsoft_entra_id"):
@@ -920,16 +995,34 @@ async def generate_chat_completion(
         headers["api-version"] = api_version
         request_url = f"{request_url}/chat/completions?api-version={api_version}"
     else:
+        # 标准 OpenAI 兼容 API
         request_url = f"{url}/chat/completions"
 
-    payload = json.dumps(payload)
+    if chatting_completion:
+        try:
+            # 可选钩子：在发送到上游前记录/审计 payload，需自行实现 last_process_payload
+            log.debug(
+                f"chatting_completion hook user={user.id} chat_id={metadata.get('chat_id')} model={payload.get('model')}"
+            )
 
+            last_process_payload(
+                user_id = user.id,
+                session_id = metadata.get("chat_id"),
+                messages = extract_timestamped_messages(payload.get("messages", [])),
+            )
+        except Exception as e:
+            log.debug(f"chatting_completion 钩子执行失败: {e}")
+
+    payload = json.dumps(payload)  # 序列化为 JSON 字符串
+
+    # === 11. 初始化请求状态变量 ===
     r = None
     session = None
     streaming = False
     response = None
 
     try:
+        # === 12. 发起 HTTP 请求到上游 API ===
         session = aiohttp.ClientSession(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
         )
@@ -943,8 +1036,10 @@ async def generate_chat_completion(
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
         )
 
+        # === 13. 处理响应 ===
         # Check if response is SSE
         if "text/event-stream" in r.headers.get("Content-Type", ""):
+            # 流式响应：直接转发 SSE 流
             streaming = True
             return StreamingResponse(
                 r.content,
@@ -955,19 +1050,22 @@ async def generate_chat_completion(
                 ),
             )
         else:
+            # 非流式响应：解析 JSON
             try:
                 response = await r.json()
             except Exception as e:
                 log.error(e)
-                response = await r.text()
+                response = await r.text()  # 如果 JSON 解析失败，返回纯文本
 
+            # 处理错误响应
             if r.status >= 400:
                 if isinstance(response, (dict, list)):
                     return JSONResponse(status_code=r.status, content=response)
                 else:
                     return PlainTextResponse(status_code=r.status, content=response)
 
-            return response
+            return response  # 成功响应
+
     except Exception as e:
         log.exception(e)
 
@@ -976,6 +1074,8 @@ async def generate_chat_completion(
             detail="CyberLover: Server Connection Error",
         )
     finally:
+        # === 14. 清理资源 ===
+        # 非流式响应需要手动关闭连接（流式响应在 BackgroundTask 中处理）
         if not streaming:
             await cleanup_response(r, session)
 

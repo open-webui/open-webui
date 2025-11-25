@@ -167,124 +167,182 @@ async def generate_chat_completion(
     form_data: dict,
     user: Any,
     bypass_filter: bool = False,
+    chatting_completion: bool = False
 ):
-    log.debug(f"generate_chat_completion: {form_data}")
-    if BYPASS_MODEL_ACCESS_CONTROL:
-        bypass_filter = True
+    """
+    聊天完成生成函数 - 根据模型类型分发到不同的底层 API 处理器
 
+    这是聊天完成的核心路由函数，负责：
+    1. 验证模型存在性和用户权限
+    2. 处理 Direct 模式（直连外部 API）
+    3. 处理 Arena 模式（随机选择模型进行对比）
+    4. 根据模型类型分发到对应处理器：
+       - Pipe: Pipeline 插件函数
+       - Ollama: Ollama 本地模型
+       - OpenAI: OpenAI 兼容 API (含 Claude, Gemini 等)
+
+    Args:
+        request: FastAPI Request 对象
+        form_data: OpenAI 格式的聊天请求数据
+        user: 用户对象
+        bypass_filter: 是否绕过权限和 Pipeline Filter 检查
+
+    Returns:
+        - 流式: StreamingResponse (SSE 格式)
+        - 非流式: dict (OpenAI 兼容格式)
+
+    Raises:
+        Exception: 模型不存在或无权限访问
+    """
+    log.debug(f"generate_chat_completion: {form_data}")
+
+    # === 1. 权限检查配置 ===
+    if BYPASS_MODEL_ACCESS_CONTROL:
+        bypass_filter = True  # 全局配置：绕过所有权限检查
+
+    # === 2. 合并元数据 ===
+    # 从 request.state.metadata 获取上游传递的元数据（chat_id, user_id 等）
     if hasattr(request.state, "metadata"):
         if "metadata" not in form_data:
             form_data["metadata"] = request.state.metadata
         else:
+            # 合并，request.state.metadata 优先级更高
             form_data["metadata"] = {
                 **form_data["metadata"],
                 **request.state.metadata,
             }
 
+    # === 3. 确定模型列表来源 ===
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
+        # Direct 模式：用户直接提供外部 API 配置（如 OpenAI API Key）
         models = {
             request.state.model["id"]: request.state.model,
         }
         log.debug(f"direct connection to model: {models}")
     else:
+        # 标准模式：使用平台内置模型列表
         models = request.app.state.MODELS
 
+    # === 4. 验证模型存在性 ===
     model_id = form_data["model"]
     if model_id not in models:
         raise Exception("Model not found")
 
     model = models[model_id]
 
+    # === 5. Direct 模式分支：直连外部 API ===
     if getattr(request.state, "direct", False):
         return await generate_direct_chat_completion(
             request, form_data, user=user, models=models
         )
     else:
-        # Check if user has access to the model
+        # === 6. 标准模式：检查用户权限 ===
         if not bypass_filter and user.role == "user":
             try:
-                check_model_access(user, model)
+                check_model_access(user, model)  # 验证 RBAC 权限
             except Exception as e:
                 raise e
 
-        if model.get("owned_by") == "arena":
-            model_ids = model.get("info", {}).get("meta", {}).get("model_ids")
-            filter_mode = model.get("info", {}).get("meta", {}).get("filter_mode")
-            if model_ids and filter_mode == "exclude":
-                model_ids = [
-                    model["id"]
-                    for model in list(request.app.state.MODELS.values())
-                    if model.get("owned_by") != "arena" and model["id"] not in model_ids
-                ]
+        # === 7. Arena 模式：随机选择模型进行盲测对比 ===
+        if False:
+            if model.get("owned_by") == "arena":
+                # 获取候选模型列表
+                model_ids = model.get("info", {}).get("meta", {}).get("model_ids")
+                filter_mode = model.get("info", {}).get("meta", {}).get("filter_mode")
 
-            selected_model_id = None
-            if isinstance(model_ids, list) and model_ids:
-                selected_model_id = random.choice(model_ids)
-            else:
-                model_ids = [
-                    model["id"]
-                    for model in list(request.app.state.MODELS.values())
-                    if model.get("owned_by") != "arena"
-                ]
-                selected_model_id = random.choice(model_ids)
+                # 如果是排除模式，反选模型列表
+                if model_ids and filter_mode == "exclude":
+                    model_ids = [
+                        model["id"]
+                        for model in list(request.app.state.MODELS.values())
+                        if model.get("owned_by") != "arena" and model["id"] not in model_ids
+                    ]
 
-            form_data["model"] = selected_model_id
+                # 随机选择一个模型
+                selected_model_id = None
+                if isinstance(model_ids, list) and model_ids:
+                    selected_model_id = random.choice(model_ids)
+                else:
+                    # 未指定则从所有非 Arena 模型中随机选择
+                    model_ids = [
+                        model["id"]
+                        for model in list(request.app.state.MODELS.values())
+                        if model.get("owned_by") != "arena"
+                    ]
+                    selected_model_id = random.choice(model_ids)
 
-            if form_data.get("stream") == True:
+                # 替换模型 ID
+                form_data["model"] = selected_model_id
 
-                async def stream_wrapper(stream):
-                    yield f"data: {json.dumps({'selected_model_id': selected_model_id})}\n\n"
-                    async for chunk in stream:
-                        yield chunk
+                # 流式响应：在首个 chunk 中注入 selected_model_id
+                if form_data.get("stream") == True:
 
-                response = await generate_chat_completion(
-                    request, form_data, user, bypass_filter=True
+                    async def stream_wrapper(stream):
+                        """在流式响应前添加选中的模型 ID"""
+                        yield f"data: {json.dumps({'selected_model_id': selected_model_id})}\n\n"
+                        async for chunk in stream:
+                            yield chunk
+
+                    # 递归调用自身，绕过 Arena 逻辑
+                    response = await generate_chat_completion(
+                        request, form_data, user, bypass_filter=True
+                    )
+                    return StreamingResponse(
+                        stream_wrapper(response.body_iterator),
+                        media_type="text/event-stream",
+                        background=response.background,
+                    )
+                else:
+                    # 非流式响应：直接在结果中添加 selected_model_id
+                    return {
+                        **(
+                            await generate_chat_completion(
+                                request, form_data, user, bypass_filter=True
+                            )
+                        ),
+                        "selected_model_id": selected_model_id,
+                    }
+
+        # === 8. Pipeline 模式：调用自定义 Python 函数 ===
+        if False:
+            if model.get("pipe"):
+                return await generate_function_chat_completion(
+                    request, form_data, user=user, models=models
                 )
-                return StreamingResponse(
-                    stream_wrapper(response.body_iterator),
-                    media_type="text/event-stream",
-                    background=response.background,
-                )
-            else:
-                return {
-                    **(
-                        await generate_chat_completion(
-                            request, form_data, user, bypass_filter=True
-                        )
-                    ),
-                    "selected_model_id": selected_model_id,
-                }
 
-        if model.get("pipe"):
-            # Below does not require bypass_filter because this is the only route the uses this function and it is already bypassing the filter
-            return await generate_function_chat_completion(
-                request, form_data, user=user, models=models
-            )
-        if model.get("owned_by") == "ollama":
-            # Using /ollama/api/chat endpoint
-            form_data = convert_payload_openai_to_ollama(form_data)
-            response = await generate_ollama_chat_completion(
-                request=request,
-                form_data=form_data,
-                user=user,
-                bypass_filter=bypass_filter,
-            )
-            if form_data.get("stream"):
-                response.headers["content-type"] = "text/event-stream"
-                return StreamingResponse(
-                    convert_streaming_response_ollama_to_openai(response),
-                    headers=dict(response.headers),
-                    background=response.background,
+        # === 9. Ollama 模式：调用本地 Ollama 服务 ===
+        if False:
+            if model.get("owned_by") == "ollama":
+                # 转换 OpenAI 格式 → Ollama 格式
+                form_data = convert_payload_openai_to_ollama(form_data)
+                response = await generate_ollama_chat_completion(
+                    request=request,
+                    form_data=form_data,
+                    user=user,
+                    bypass_filter=bypass_filter,
                 )
-            else:
-                return convert_response_ollama_to_openai(response)
-        else:
-            return await generate_openai_chat_completion(
-                request=request,
-                form_data=form_data,
-                user=user,
-                bypass_filter=bypass_filter,
-            )
+
+                # 流式响应：转换 Ollama SSE → OpenAI SSE
+                if form_data.get("stream"):
+                    response.headers["content-type"] = "text/event-stream"
+                    return StreamingResponse(
+                        convert_streaming_response_ollama_to_openai(response),
+                        headers=dict(response.headers),
+                        background=response.background,
+                    )
+                else:
+                    # 非流式响应：转换 Ollama JSON → OpenAI JSON
+                    return convert_response_ollama_to_openai(response)
+
+        # === 10. OpenAI 兼容模式：调用 OpenAI API 或兼容服务 ===
+        # >>>
+        return await generate_openai_chat_completion(
+            request=request,
+            form_data=form_data,
+            user=user,
+            bypass_filter=bypass_filter,
+            chatting_completion = chatting_completion
+        )
 
 
 chat_completion = generate_chat_completion

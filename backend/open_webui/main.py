@@ -469,6 +469,7 @@ from open_webui.utils.chat import (
     chat_completed as chat_completed_handler,
     chat_action as chat_action_handler,
 )
+from open_webui.utils.misc import get_message_list
 from open_webui.utils.embeddings import generate_embeddings
 from open_webui.utils.middleware import process_chat_payload, process_chat_response
 from open_webui.utils.access_control import has_access
@@ -1592,7 +1593,7 @@ async def chat_completion(
             )
 
             # 8.2 调用 LLM 完成对话 (核心)
-            response = await chat_completion_handler(request, form_data, user)
+            response = await chat_completion_handler(request, form_data, user, chatting_completion = True)
 
             # 8.3 更新数据库：保存模型 ID 到消息记录
             if metadata.get("chat_id") and metadata.get("message_id"):
@@ -1686,6 +1687,74 @@ async def chat_completion(
 # Alias for chat_completion (Legacy)
 generate_chat_completions = chat_completion
 generate_chat_completion = chat_completion
+
+
+@app.post("/api/chat/tutorial")
+async def chat_completion_tutorial(
+    request: Request, form_data: dict, user=Depends(get_verified_user)
+):
+    """
+    最小可正常工作的示例：复用核心聊天链路，支持直连/历史消息/流式返回。
+
+    - 入参与 /api/chat/completions 基本兼容，但不做额外后台任务。
+    - 若提供 chat_id/message_id，会读取历史消息并可触发 WS 事件；否则直接返回 SSE。
+    """
+    # 直连兼容
+    model_item = form_data.pop("model_item", {})
+    if model_item.get("direct"):
+        request.state.direct = True
+        request.state.model = model_item
+
+    # 确保模型可用
+    if not request.app.state.MODELS:
+        await get_all_models(request, user=user)
+
+    model_id = form_data.get("model") or next(iter(request.app.state.MODELS.keys()))
+    if model_id not in request.app.state.MODELS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Model not found"
+        )
+    model = request.app.state.MODELS[model_id]
+    if user.role == "user":
+        check_model_access(user, model)
+
+    # 取消息历史：优先用传入 messages，否则按 chat_id 取全量
+    messages = form_data.get("messages") or []
+    chat_id = form_data.get("chat_id")
+    message_id = form_data.get("id") or form_data.get("message_id")
+    if not messages and chat_id:
+        messages_map = Chats.get_messages_map_by_chat_id(chat_id)
+        if messages_map:
+            if message_id and message_id in messages_map:
+                messages = get_message_list(messages_map, message_id)
+            else:
+                messages = list(messages_map.values())
+
+    # 准备 metadata，便于复用后续事件/DB 逻辑
+    metadata = {
+        "user_id": user.id,
+        "chat_id": chat_id,
+        "message_id": message_id,
+        "session_id": form_data.get("session_id"),
+        "model": model,
+        "direct": model_item.get("direct", False),
+        "params": {},
+    }
+    request.state.metadata = metadata
+    form_data["metadata"] = metadata
+
+    # 核心链路：预处理 -> 调模型 -> 流式/非流式响应处理
+    form_data["model"] = model_id
+    form_data["messages"] = messages
+    form_data["stream"] = True  # 强制流式，便于示例
+
+    form_data, metadata, events = await process_chat_payload(
+        request, form_data, user, metadata, model
+    )
+    response = await chat_completion_handler(request, form_data, user)
+    return await process_chat_response(
+        request, response, form_data, user, metadata, model, events, tasks=None
+    )
 
 
 @app.post("/api/chat/completed")

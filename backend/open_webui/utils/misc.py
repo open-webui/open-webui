@@ -67,6 +67,45 @@ def get_messages_content(messages: list[dict]) -> str:
     )
 
 
+def extract_timestamped_messages(raw_msgs: list[dict]) -> list[dict]:
+    """
+    将消息列表转换为统一的字典结构，便于下游持久化/审计。
+
+    Args:
+        raw_msgs (list[dict]): OpenAI 格式的消息列表。
+
+    Returns:
+        list[dict]: 每条消息包含 role、content、timestamp 字段。
+    """
+    messages: list[dict] = []
+    for msg in raw_msgs:
+        if not isinstance(msg, dict):
+            continue
+        ts = (
+            msg.get("createdAt")
+            or msg.get("created_at")
+            or msg.get("timestamp")
+            or msg.get("updated_at")
+            or msg.get("updatedAt")
+            or 0
+        )
+        content = msg.get("content", "") or ""
+        if isinstance(content, list):
+            for item in content:
+                if item.get("type") == "text":
+                    content = item.get("text", "")
+                    break
+        messages.append(
+            {
+                "role": msg.get("role", "assistant"),
+                "content": str(content),
+                "timestamp": int(ts),
+            }
+        )
+
+    return messages
+
+
 def get_last_user_message_item(messages: list[dict]) -> Optional[dict]:
     for message in reversed(messages):
         if message["role"] == "user":
