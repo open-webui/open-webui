@@ -77,6 +77,14 @@ class InteractivePruneUI:
         self.form_data = PruneDataForm()
         self.vector_cleaner = None
 
+    def _get_all_folders_safe(self):
+        """
+        Safely get all folders using compatibility helper.
+        Handles API changes between Open WebUI versions.
+        """
+        from prune_operations import get_all_folders
+        return get_all_folders()
+
     def run(self):
         """Main entry point for interactive UI."""
         self.show_welcome()
@@ -650,7 +658,7 @@ class InteractivePruneUI:
                  lambda m: Models.delete_model_by_id(m.id), self.form_data.delete_orphaned_models),
                 ("notes", Notes.get_notes(), lambda n: n.user_id not in active_user_ids,
                  lambda n: Notes.delete_note_by_id(n.id), self.form_data.delete_orphaned_notes),
-                ("folders", Folders.get_all_folders(), lambda f: f.user_id not in active_user_ids,
+                ("folders", self._get_all_folders_safe(), lambda f: f.user_id not in active_user_ids,
                  lambda f: Folders.delete_folder_by_id_and_user_id(f.id, f.user_id),
                  self.form_data.delete_orphaned_folders),
             ]

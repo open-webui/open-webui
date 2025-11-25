@@ -113,7 +113,7 @@ if _import_strategy == "pip" or _import_strategy == "backend_path":
     from open_webui.models.knowledge import Knowledges
     from open_webui.models.functions import Functions
     from open_webui.models.tools import Tools
-    from open_webui.models.folders import Folder, Folders
+    from open_webui.models.folders import Folder, Folders, FolderModel
     from open_webui.internal.db import get_db
     from open_webui.config import CACHE_DIR
     from open_webui.env import SRC_LOG_LEVELS
@@ -136,7 +136,7 @@ elif _import_strategy == "git":
     from backend.open_webui.models.knowledge import Knowledges
     from backend.open_webui.models.functions import Functions
     from backend.open_webui.models.tools import Tools
-    from backend.open_webui.models.folders import Folder, Folders
+    from backend.open_webui.models.folders import Folder, Folders, FolderModel
     from backend.open_webui.internal.db import get_db
     from backend.open_webui.config import CACHE_DIR
     from backend.open_webui.env import SRC_LOG_LEVELS
@@ -163,6 +163,7 @@ __all__ = [
     'Tools',
     'Folder',
     'Folders',
+    'FolderModel',
     'get_db',
     'CACHE_DIR',
     'SRC_LOG_LEVELS',

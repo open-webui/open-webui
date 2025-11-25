@@ -28,6 +28,29 @@ from prune_models import PruneDataForm
 from prune_core import collect_file_ids_from_dict
 
 
+# API Compatibility Helpers
+def get_all_folders():
+    """
+    Get all folders from database.
+    Compatibility helper for newer Folders API that doesn't have get_all_folders().
+    """
+    try:
+        from prune_imports import Folder as FolderORM, FolderModel, get_db, Folders
+
+        # Try new API first - if get_all_folders exists, use it
+        if hasattr(Folders, 'get_all_folders'):
+            return Folders.get_all_folders()
+
+        # Otherwise query directly from database
+        with get_db() as db:
+            folders = db.query(FolderORM).all()
+            # Convert to FolderModel instances
+            return [FolderModel.model_validate(f) for f in folders]
+    except Exception as e:
+        log.error(f"Error getting all folders: {e}")
+        return []
+
+
 def count_inactive_users(
     inactive_days: Optional[int], exempt_admin: bool, exempt_pending: bool, all_users=None
 ) -> int:
@@ -153,7 +176,7 @@ def count_orphaned_records(
                     counts["notes"] += 1
 
         if form_data.delete_orphaned_folders:
-            for folder in Folders.get_all_folders():
+            for folder in get_all_folders():
                 if folder.user_id not in active_user_ids:
                     counts["folders"] += 1
 
@@ -278,7 +301,12 @@ def get_active_file_ids(knowledge_bases=None) -> Set[str]:
         chat_count = 0
         with get_db() as db:
             stmt = select(Chat.id, Chat.chat)
-            result = db.execution_options(stream_results=True).execute(stmt)
+            # SQLAlchemy 2.0+ compatibility: execution_options moved to statement
+            try:
+                result = db.execute(stmt.execution_options(stream_results=True))
+            except AttributeError:
+                # Fallback for older SQLAlchemy versions
+                result = db.execution_options(stream_results=True).execute(stmt)
 
             while True:
                 rows = result.fetchmany(1000)
@@ -305,7 +333,12 @@ def get_active_file_ids(knowledge_bases=None) -> Set[str]:
         try:
             with get_db() as db:
                 stmt = select(Folder.id, Folder.items, Folder.data)
-                result = db.execution_options(stream_results=True).execute(stmt)
+                # SQLAlchemy 2.0+ compatibility: execution_options moved to statement
+                try:
+                    result = db.execute(stmt.execution_options(stream_results=True))
+                except AttributeError:
+                    # Fallback for older SQLAlchemy versions
+                    result = db.execution_options(stream_results=True).execute(stmt)
 
                 while True:
                     rows = result.fetchmany(100)
@@ -337,7 +370,12 @@ def get_active_file_ids(knowledge_bases=None) -> Set[str]:
         try:
             with get_db() as db:
                 stmt = select(Message.id, Message.data).where(Message.data.isnot(None))
-                result = db.execution_options(stream_results=True).execute(stmt)
+                # SQLAlchemy 2.0+ compatibility: execution_options moved to statement
+                try:
+                    result = db.execute(stmt.execution_options(stream_results=True))
+                except AttributeError:
+                    # Fallback for older SQLAlchemy versions
+                    result = db.execution_options(stream_results=True).execute(stmt)
 
                 while True:
                     rows = result.fetchmany(1000)
