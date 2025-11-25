@@ -24,6 +24,7 @@ class TokenGroup(Base):
     limit = Column(BigInteger)  # Token limit for this group
     reset_time = Column(Text, default='00:00')  # Reset time in HH:MM format
     reset_timezone = Column(Text, default='UTC')  # Timezone for reset
+    window_duration = Column(BigInteger, nullable=True)  # Rolling window duration in seconds
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
 
@@ -61,6 +62,7 @@ class TokenGroups:
                     groups[group.name] = {
                         "models": group.models,
                         "limit": group.limit,
+                        "window_duration": group.window_duration,
                         "usage": usage_dict.get(group.name, {"in": 0, "out": 0, "total": 0})
                     }
                     
@@ -69,7 +71,7 @@ class TokenGroups:
             log.error(f"Error getting token groups: {e}")
             return {}
 
-    def create_token_group(self, name: str, models: List[str], limit: int, reset_time: str = '00:00', reset_timezone: str = 'UTC') -> bool:
+    def create_token_group(self, name: str, models: List[str], limit: int, reset_time: str = '00:00', reset_timezone: str = 'UTC', window_duration: int = None) -> bool:
         """Create a new token group"""
         try:
             with get_db() as db:
@@ -85,6 +87,7 @@ class TokenGroups:
                     limit=limit,
                     reset_time=reset_time,
                     reset_timezone=reset_timezone,
+                    window_duration=window_duration,
                     created_at=now,
                     updated_at=now
                 )
@@ -107,7 +110,7 @@ class TokenGroups:
             log.error(f"Error creating token group {name}: {e}")
             return False
 
-    def update_token_group(self, name: str, models: List[str] = None, limit: int = None) -> bool:
+    def update_token_group(self, name: str, models: List[str] = None, limit: int = None, window_duration: int = None) -> bool:
         """Update an existing token group"""
         try:
             with get_db() as db:
@@ -119,6 +122,8 @@ class TokenGroups:
                     group.models = models
                 if limit is not None:
                     group.limit = limit
+                if window_duration is not None:
+                    group.window_duration = window_duration
                 group.updated_at = int(time.time())
                 
                 db.commit()
@@ -173,7 +178,7 @@ class TokenGroups:
                 for group in groups:
                     if model_id in group.models:
                         # Get or create usage record
-                        usage = db.query(TokenUsage).filter_by(group_name=group.name).first()
+                            usage = db.query(TokenUsage).filter_by(group_name=group.name).first()
                         if not usage:
                             # First time usage - create with current date
                             usage = TokenUsage(
@@ -182,35 +187,67 @@ class TokenGroups:
                                 token_out=token_out,
                                 token_total=token_total,
                                 updated_at=int(time.time()),
-                                last_reset_date=current_date
+                                last_reset_date=current_date,
+                                last_reset_timestamp=int(time.time())
                             )
                             db.add(usage)
                         else:
                             # Refresh the object from database to get latest column values
                             db.refresh(usage)
                             
-                            # Check if daily reset is needed (handle missing attribute safely)
-                            last_reset = getattr(usage, 'last_reset_date', None)
-                            log.debug(f"🔄 RESET DEBUG: Group '{group.name}' last_reset='{last_reset}', current_date='{current_date}'")
-                            
-                            if last_reset != current_date:
-                                # Reset counters for new day (or first time with new column)
-                                usage.token_in = token_in  # Start fresh with current usage
-                                usage.token_out = token_out
-                                usage.token_total = token_total
-                                usage.last_reset_date = current_date
-                                usage.updated_at = int(time.time())
+                            if group.window_duration:
+                                # Rolling Window Reset Logic
+                                current_timestamp = int(time.time())
+                                last_reset_ts = usage.last_reset_timestamp
                                 
-                                reset_reason = "first run" if last_reset is None else "new day"
-                                log.info(f"🔄 DAILY RESET: Reset tokens for group '{group.name}' on {current_date} ({reset_reason})")
-                                log.debug(f"🔄 RESET DEBUG: Set last_reset_date to '{current_date}' for group '{group.name}'")
+                                if not last_reset_ts:
+                                    # First usage in this mode, start the window
+                                    usage.last_reset_timestamp = current_timestamp
+                                    usage.token_in += token_in
+                                    usage.token_out += token_out
+                                    usage.token_total += token_total
+                                    usage.updated_at = current_timestamp
+                                    log.debug(f"🔄 WINDOW START: Group '{group.name}' started new window at {current_timestamp}")
+                                elif current_timestamp > (last_reset_ts + group.window_duration):
+                                    # Window expired, reset
+                                    usage.token_in = token_in
+                                    usage.token_out = token_out
+                                    usage.token_total = token_total
+                                    usage.last_reset_timestamp = current_timestamp
+                                    usage.updated_at = current_timestamp
+                                    log.info(f"🔄 WINDOW RESET: Reset tokens for group '{group.name}' (window expired)")
+                                else:
+                                    # Within window, accumulate
+                                    usage.token_in += token_in
+                                    usage.token_out += token_out
+                                    usage.token_total += token_total
+                                    usage.updated_at = current_timestamp
+                                    log.debug(f"🔄 WINDOW UPDATE: Group '{group.name}' usage updated within window")
+                                
                             else:
-                                # Normal increment for same day
-                                usage.token_in += token_in
-                                usage.token_out += token_out
-                                usage.token_total += token_total
-                                usage.updated_at = int(time.time())
-                                log.debug(f"🔄 RESET DEBUG: Same day increment for group '{group.name}'")
+                                # Daily Reset Logic
+                                # Check if daily reset is needed (handle missing attribute safely)
+                                last_reset = getattr(usage, 'last_reset_date', None)
+                                log.debug(f"🔄 RESET DEBUG: Group '{group.name}' last_reset='{last_reset}', current_date='{current_date}'")
+                                
+                                if last_reset != current_date:
+                                    # Reset counters for new day (or first time with new column)
+                                    usage.token_in = token_in  # Start fresh with current usage
+                                    usage.token_out = token_out
+                                    usage.token_total = token_total
+                                    usage.last_reset_date = current_date
+                                    usage.updated_at = int(time.time())
+                                    
+                                    reset_reason = "first run" if last_reset is None else "new day"
+                                    log.info(f"🔄 DAILY RESET: Reset tokens for group '{group.name}' on {current_date} ({reset_reason})")
+                                    log.debug(f"🔄 RESET DEBUG: Set last_reset_date to '{current_date}' for group '{group.name}'")
+                                else:
+                                    # Normal increment for same day
+                                    usage.token_in += token_in
+                                    usage.token_out += token_out
+                                    usage.token_total += token_total
+                                    usage.updated_at = int(time.time())
+                                    log.debug(f"🔄 RESET DEBUG: Same day increment for group '{group.name}'")
                         
                         log.info(f"Updated usage for group {group.name}: +{token_in} IN, +{token_out} OUT, +{token_total} TOTAL")
                 

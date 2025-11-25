@@ -7,6 +7,7 @@ import logging
 import re
 
 from open_webui.utils.chat import generate_chat_completion
+from open_webui.socket.main import process_token_usage
 from open_webui.utils.task import (
     title_generation_template,
     follow_up_generation_template,
@@ -254,7 +255,10 @@ async def generate_title(
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        response = await generate_chat_completion(request, form_data=payload, user=user)
+        if isinstance(response, dict) and "usage" in response:
+            await process_token_usage(task_model_id, response["usage"])
+        return response
     except Exception as e:
         log.error("Exception occurred", exc_info=True)
         return JSONResponse(
@@ -327,7 +331,10 @@ async def generate_follow_ups(
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        response = await generate_chat_completion(request, form_data=payload, user=user)
+        if isinstance(response, dict) and "usage" in response:
+            await process_token_usage(task_model_id, response["usage"])
+        return response
     except Exception as e:
         log.error("Exception occurred", exc_info=True)
         return JSONResponse(
@@ -400,7 +407,10 @@ async def generate_chat_tags(
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        response = await generate_chat_completion(request, form_data=payload, user=user)
+        if isinstance(response, dict) and "usage" in response:
+            await process_token_usage(task_model_id, response["usage"])
+        return response
     except Exception as e:
         log.error(f"Error generating chat completion: {e}")
         return JSONResponse(
@@ -466,7 +476,10 @@ async def generate_image_prompt(
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        response = await generate_chat_completion(request, form_data=payload, user=user)
+        if isinstance(response, dict) and "usage" in response:
+            await process_token_usage(task_model_id, response["usage"])
+        return response
     except Exception as e:
         log.error("Exception occurred", exc_info=True)
         return JSONResponse(
@@ -551,7 +564,10 @@ async def generate_queries(
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        response = await generate_chat_completion(request, form_data=payload, user=user)
+        if isinstance(response, dict) and "usage" in response:
+            await process_token_usage(task_model_id, response["usage"])
+        return response
     except Exception as e:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -636,7 +652,10 @@ async def generate_autocompletion(
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        response = await generate_chat_completion(request, form_data=payload, user=user)
+        if isinstance(response, dict) and "usage" in response:
+            await process_token_usage(task_model_id, response["usage"])
+        return response
     except Exception as e:
         log.error(f"Error generating chat completion: {e}")
         return JSONResponse(
@@ -705,7 +724,10 @@ async def generate_emoji(
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        response = await generate_chat_completion(request, form_data=payload, user=user)
+        if isinstance(response, dict) and "usage" in response:
+            await process_token_usage(task_model_id, response["usage"])
+        return response
     except Exception as e:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -760,7 +782,10 @@ async def generate_moa_response(
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        response = await generate_chat_completion(request, form_data=payload, user=user)
+        if isinstance(response, dict) and "usage" in response:
+            await process_token_usage(model_id, response["usage"])
+        return response
     except Exception as e:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -857,6 +857,13 @@ async def generate_chat_completion(
             convert_logit_bias_input_to_json(payload["logit_bias"])
         )
 
+    # Ensure usage is returned when streaming
+    if payload.get("stream", False):
+        if "stream_options" not in payload:
+            payload["stream_options"] = {"include_usage": True}
+        elif isinstance(payload["stream_options"], dict):
+            payload["stream_options"]["include_usage"] = True
+
     headers, cookies = await get_headers_and_cookies(
         request, url, key, api_config, metadata, user=user
     )
