@@ -161,9 +161,9 @@
 								</button>
 							</Tooltip>
 						{/if}
-					{/if}
+					{/if} -->
 
-					{#if $mobile && !$temporaryChatEnabled && chat && chat.id}
+					<!-- {#if $mobile && !$temporaryChatEnabled && chat && chat.id}
 						<Tooltip content={$i18n.t('New Chat')}>
 							<button
 								class=" flex {$showSidebar
@@ -179,9 +179,9 @@
 								</div>
 							</button>
 						</Tooltip>
-					{/if}
+					{/if} -->
 
-					{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
+					<!-- {#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
 						<Menu
 							{chat}
 							{shareEnabled}
@@ -202,7 +202,7 @@
 								</div>
 							</button>
 						</Menu>
-					{/if}
+					{/if} -->
 
 					<!-- ai-friend 	屏蔽对话高级设置 -->
 				{#if false}
@@ -223,7 +223,7 @@
 					{/if}
 				{/if}
 
-					{#if $user !== undefined && $user !== null}
+					<!-- {#if $user !== undefined && $user !== null}
 						<UserMenu
 							className="max-w-[240px]"
 							role={$user?.role}
@@ -248,7 +248,7 @@
 								</div>
 							</div>
 						</UserMenu>
-					{/if}
+					{/if} -->
 				</div>
 			</div>
 		</div>

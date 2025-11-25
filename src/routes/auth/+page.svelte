@@ -12,11 +12,13 @@
 	import { ldapUserSignIn, getSessionUser, userSignIn, userSignUp } from '$lib/apis/auths';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { agreementContent as defaultAgreementContent, privacyContent as defaultPrivacyContent } from '$lib/constants/legal';
 	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
 
 	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import Modal from '$lib/components/common/Modal.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import { redirect } from '@sveltejs/kit';
@@ -35,6 +37,12 @@
 	let confirmPassword = '';
 
 	let ldapUsername = '';
+	let agreeToTerms = false;
+	let showAgreementModal = false;
+	let agreementContent = defaultAgreementContent;
+	let agreeToPrivacy = false;
+	let showPrivacyModal = false;
+	let privacyContent = defaultPrivacyContent;
 
 	const setSessionUser = async (sessionUser, redirectPath: string | null = null) => {
 		if (sessionUser) {
@@ -95,8 +103,16 @@
 		if (mode === 'ldap') {
 			await ldapSignInHandler();
 		} else if (mode === 'signin') {
+			if (!agreeToTerms) {
+				toast.error('如果要登陆，请先同意用户协议');
+				return;
+			}
 			await signInHandler();
 		} else {
+			if (!agreeToPrivacy) {
+				toast.error('如果要注册，请先同意隐私协议');
+				return;
+			}
 			await signUpHandler();
 		}
 	};
@@ -229,7 +245,7 @@
 									<img
 										id="logo"
 										crossorigin="anonymous"
-										src="{WEBUI_BASE_URL}/static/favicon.png"
+										src="static/favicon.png"
 										class="size-24 rounded-full"
 										alt=""
 									/>
@@ -334,6 +350,29 @@
 											/>
 										</div>
 
+										{#if mode === 'signin'}
+											<div class="mt-3 flex items-start text-sm text-left text-gray-700 dark:text-gray-300 gap-2">
+												<input
+													id="agree-terms"
+													type="checkbox"
+													class="mt-0.5 rounded border-gray-300 bg-transparent text-gray-800 dark:text-gray-100 focus:ring-0"
+													bind:checked={agreeToTerms}
+												/>
+												<label for="agree-terms" class="leading-tight">
+													<span>我已阅读并同意</span>
+													<button
+														type="button"
+														class="ml-1 underline font-medium"
+														on:click={() => {
+															showAgreementModal = true;
+														}}
+													>
+														用户协议
+													</button>
+												</label>
+											</div>
+										{/if}
+
 										{#if mode === 'signup' && $config?.features?.enable_signup_password_confirmation}
 											<div class="mt-2">
 												<label
@@ -351,6 +390,29 @@
 													name="confirm-password"
 													required
 												/>
+											</div>
+										{/if}
+
+										{#if mode === 'signup'}
+											<div class="mt-3 flex items-start text-sm text-left text-gray-700 dark:text-gray-300 gap-2">
+												<input
+													id="agree-privacy"
+													type="checkbox"
+													class="mt-0.5 rounded border-gray-300 bg-transparent text-gray-800 dark:text-gray-100 focus:ring-0"
+													bind:checked={agreeToPrivacy}
+												/>
+												<label for="agree-privacy" class="leading-tight">
+													<span>我已阅读并同意</span>
+													<button
+														type="button"
+														class="ml-1 underline font-medium"
+														on:click={() => {
+															showPrivacyModal = true;
+														}}
+													>
+														隐私协议
+													</button>
+												</label>
 											</div>
 										{/if}
 									</div>
@@ -575,7 +637,7 @@
 						<img
 							id="logo"
 							crossorigin="anonymous"
-							src="{WEBUI_BASE_URL}/static/favicon.png"
+							src="static/favicon.png"
 							class=" w-6 rounded-full"
 							alt=""
 						/>
@@ -585,3 +647,52 @@
 		{/if}
 	{/if}
 </div>
+
+
+<Modal bind:show={showAgreementModal} size="lg">
+	<div class="p-8 space-y-5 max-w-4xl">
+		<!-- <div class="space-y-1">
+			<div class="text-xl font-semibold text-gray-900 dark:text-white">用户协议</div>
+			<div class="text-sm text-gray-500 dark:text-gray-400">
+				以下为占位说明，请替换为正式的服务条款与隐私政策。
+			</div>
+		</div> -->
+
+		<div class="text-sm text-gray-800 dark:text-gray-100 leading-relaxed space-y-3 max-h-[60vh] overflow-y-auto pr-1 marked">
+			{@html DOMPurify.sanitize(marked.parse(agreementContent || '这里是用户协议占位内容。请根据实际需求替换为正式的使用条款文本。'))}
+		</div>
+
+		<div class="flex justify-end gap-2">
+			<button
+				type="button"
+				class="px-4 py-2 text-sm rounded-full border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				on:click={() => {
+					showAgreementModal = false;
+				}}
+			>
+				关闭
+			</button>
+		</div>
+	</div>
+</Modal>
+
+<Modal bind:show={showPrivacyModal} size="lg">
+	<div class="p-8 space-y-5 max-w-4xl">
+
+		<div class="text-sm text-gray-800 dark:text-gray-100 leading-relaxed space-y-3 max-h-[60vh] overflow-y-auto pr-1 marked">
+			{@html DOMPurify.sanitize(marked.parse(privacyContent || '这里是隐私协议占位内容。请根据实际需求替换为正式的隐私政策文本。'))}
+		</div>
+
+		<div class="flex justify-end gap-2">
+			<button
+				type="button"
+				class="px-4 py-2 text-sm rounded-full border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				on:click={() => {
+					showPrivacyModal = false;
+				}}
+			>
+				关闭
+			</button>
+		</div>
+	</div>
+</Modal>
