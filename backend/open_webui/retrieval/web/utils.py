@@ -549,7 +549,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
 class SafeWebBaseLoader(WebBaseLoader):
     """WebBaseLoader with enhanced error handling for URLs."""
 
-    def __init__(self, trust_env: bool = False, *args, **kwargs):
+    def __init__(self, trust_env: bool = False, user_agent: str | None = None, *args, **kwargs):
         """Initialize SafeWebBaseLoader
         Args:
             trust_env (bool, optional): set to True if using proxy to make web requests, for example
@@ -557,11 +557,14 @@ class SafeWebBaseLoader(WebBaseLoader):
         """
         super().__init__(*args, **kwargs)
         self.trust_env = trust_env
+        self.user_agent = user_agent
 
     async def _fetch(
         self, url: str, retries: int = 3, cooldown: int = 2, backoff: float = 1.5
     ) -> str:
         async with aiohttp.ClientSession(trust_env=self.trust_env) as session:
+            if self.user_agent:
+                session.headers.update({"User-Agent": self.user_agent})
             for i in range(retries):
                 try:
                     kwargs: Dict = dict(
@@ -655,6 +658,7 @@ def get_web_loader(
     urls: Union[str, Sequence[str]],
     verify_ssl: bool = True,
     requests_per_second: int = 2,
+    user_agent: Optional[str] = None,
     trust_env: bool = False,
 ):
     # Check if the URLs are valid
@@ -668,6 +672,7 @@ def get_web_loader(
         "web_paths": safe_urls,
         "verify_ssl": verify_ssl,
         "requests_per_second": requests_per_second,
+        "user_agent": user_agent,
         "continue_on_failure": True,
         "trust_env": trust_env,
     }

@@ -74,6 +74,7 @@ def get_loader(request, url: str):
             url,
             verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
             requests_per_second=request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
+            user_agent=request.app.state.config.WEB_LOADER_USER_AGENT,
             trust_env=request.app.state.config.WEB_SEARCH_TRUST_ENV,
         )
 

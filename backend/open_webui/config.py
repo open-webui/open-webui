@@ -2959,6 +2959,12 @@ WEB_LOADER_ENGINE = PersistentConfig(
     os.environ.get("WEB_LOADER_ENGINE", ""),
 )
 
+WEB_LOADER_ENGINE_USER_AGENT = PersistentConfig(
+    "WEB_LOADER_ENGINE_USER_AGENT",
+    "rag.web.loader.engine.user_agent",
+    os.environ.get("WEB_LOADER_ENGINE_USER_AGENT", None)
+)
+
 
 WEB_LOADER_CONCURRENT_REQUESTS = PersistentConfig(
     "WEB_LOADER_CONCURRENT_REQUESTS",
