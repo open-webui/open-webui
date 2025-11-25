@@ -1073,6 +1073,7 @@
 	"Select a function": "",
 	"Select a group": "",
 	"Select a model": "",
+	"Select a model, currently \"{{model}}\"": "",
 	"Select a pipeline": "",
 	"Select a pipeline url": "",
 	"Select a tool": "",

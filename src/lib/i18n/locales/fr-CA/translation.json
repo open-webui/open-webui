@@ -1073,6 +1073,7 @@
 	"Select a function": "Sélectionnez une fonction",
 	"Select a group": "Sélectionnez un groupe",
 	"Select a model": "Sélectionnez un modèle",
+	"Select a model, currently \"{{model}}\"": "Sélectionnez un modèle, actuellement \"{{model}}\"",
 	"Select a pipeline": "Sélectionnez un pipeline",
 	"Select a pipeline url": "Sélectionnez l'URL du pipeline",
 	"Select a tool": "Sélectionnez un outil",
