@@ -1,10 +1,19 @@
+import logging
 import json
+import re
 from uuid import uuid4
 from open_webui.utils.misc import (
     openai_chat_chunk_message_template,
     openai_chat_completion_message_template,
 )
+from open_webui.env import (
+    SRC_LOG_LEVELS,
+    AIOHTTP_CLIENT_SESSION_SSL,
+    AIOHTTP_CLIENT_TIMEOUT,
+)
 
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 def convert_ollama_tool_call_to_openai(tool_calls: list) -> list:
     openai_tool_calls = []
@@ -151,22 +160,155 @@ def _extract_luxor_payload(payload: dict) -> dict:
 
     return payload
 
+
+def _build_luxor_files(payload: dict) -> list:
+    files = []
+    image_url = payload.get("image_url")
+    if isinstance(image_url, str) and image_url:
+        files.append(
+            {
+                "type": "image",
+                "url": image_url,
+            }
+        )
+    return files
+
+
+def _build_luxor_sources(payload: dict) -> list:
+    citation_links = payload.get("citation_links") or []
+
+    if citation_links:
+        entries = citation_links
+    else:
+        entries = []
+
+    def extract_page(label: str):
+        if not isinstance(label, str):
+            return None
+        match = re.search(r"p\.(\d+)", label)
+        if match:
+            return int(match.group(1))
+        match = re.search(r"Page\s+(\d+)", label, re.IGNORECASE)
+        if match:
+            return int(match.group(1))
+        return None
+
+    groups = {}
+    group_order = []
+
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+
+        label = entry.get("label")
+        url = entry.get("url")
+
+        if not label and not url:
+            continue
+
+        key = url or label or f"source-{len(group_order)+1}"
+
+        if key not in groups:
+            metadata_source = f"luxor-source-{len(group_order)+1}"
+            display_name = label or url or f"Source {len(group_order)+1}"
+            groups[key] = {
+                "id": metadata_source,
+                "source": {
+                    "id": metadata_source,
+                    "name": display_name,
+                    **({"url": url} if url else {}),
+                },
+                "entries": [],
+            }
+            group_order.append(key)
+
+        page_num = extract_page(label)
+        display_label = label or url or f"Source {len(group_order)+1}"
+        base_source = (
+            display_label.split("›")[0].strip() if isinstance(display_label, str) else display_label
+        )
+        metadata = {
+            "source": groups[key]["id"],
+            "name": base_source,
+        }
+        if page_num is not None:
+            metadata["page"] = page_num
+        elif payload.get("page"):
+            try:
+                metadata["page"] = int(payload.get("page"))
+            except (TypeError, ValueError):
+                metadata["page"] = payload.get("page")
+        if payload.get("source_file"):
+            metadata["file"] = payload.get("source_file")
+
+        entry_key = (metadata["name"], metadata.get("page"))
+        if any(
+            existing.get("name") == entry_key[0] and existing.get("page") == entry_key[1]
+            for existing in (e["metadata"] for e in groups[key]["entries"])
+        ):
+            continue
+
+        groups[key]["entries"].append(
+            {
+                "document": base_source,
+                "metadata": metadata,
+                "distance": None,
+            }
+        )
+
+    grouped_sources = []
+    for key in group_order:
+        group = groups[key]
+        def entry_sort_key(entry):
+            page_value = entry["metadata"].get("page")
+            try:
+                return int(page_value)
+            except (TypeError, ValueError):
+                return float("inf")
+
+        sorted_entries = sorted(group["entries"], key=entry_sort_key)
+        grouped_sources.append(
+            {
+                "id": group["id"],
+                "source": group["source"],
+                "document": [entry["document"] for entry in sorted_entries],
+                "metadata": [entry["metadata"] for entry in sorted_entries],
+                "distances": [
+                    entry["distance"] for entry in sorted_entries if entry.get("distance") is not None
+                ],
+            }
+        )
+
+    return grouped_sources
+
+
 def convert_response_luxor_to_openai(luxor_response: dict)  -> dict:
-    data = _extract_luxor_payload(luxor_response)
+    payload = _extract_luxor_payload(luxor_response)
     model = "luxor"
     message_content = (
-          data.get("txt_answer")
-          or data.get("answer")
-          or data.get("message")
-          or ""
+        payload.get("txt_answer")
+        or payload.get("answer")
+        or payload.get("message")
+        or ""
     )
     reasoning_content = None
-    openai_tool_calls = None    
+    openai_tool_calls = None
     data = luxor_response
     usage = convert_luxor_usage_to_openai(data)
     response = openai_chat_completion_message_template(
         model, message_content, reasoning_content, openai_tool_calls, usage
     )
+
+    files = _build_luxor_files(payload)
+
+    if files:
+        response["choices"][0]["message"]["files"] = files
+        response["files"] = files
+
+    sources = _build_luxor_sources(payload)
+    if sources:
+        response["sources"] = sources
+
     return response
 
 

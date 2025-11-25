@@ -626,7 +626,12 @@
 								{#each message.files as file}
 									<div>
 										{#if file.type === 'image'}
-											<Image src={file.url} alt={message.content} />
+											<Image
+												src={file.url}
+												alt={message.content}
+												className="w-full flex justify-center"
+												imageClassName="rounded-lg max-w-[50%] mx-auto"
+											/>
 										{:else}
 											<FileItem
 												item={file}
