@@ -177,6 +177,23 @@ class GroupTable:
 
             return [m[0] for m in members]
 
+    def get_group_user_ids_by_ids(self, group_ids: list[str]) -> dict[str, list[str]]:
+        with get_db() as db:
+            members = (
+                db.query(GroupMember.group_id, GroupMember.user_id)
+                .filter(GroupMember.group_id.in_(group_ids))
+                .all()
+            )
+
+            group_user_ids: dict[str, list[str]] = {
+                group_id: [] for group_id in group_ids
+            }
+
+            for group_id, user_id in members:
+                group_user_ids[group_id].append(user_id)
+
+            return group_user_ids
+
     def set_group_user_ids_by_id(self, group_id: str, user_ids: list[str]) -> None:
         with get_db() as db:
             # Delete existing members

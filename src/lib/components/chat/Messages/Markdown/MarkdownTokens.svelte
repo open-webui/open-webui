@@ -112,7 +112,7 @@
 				{save}
 				{preview}
 				edit={editCodeBlock}
-				stickyButtonsClassName={topPadding ? 'top-7' : 'top-0'}
+				stickyButtonsClassName={topPadding ? 'top-10' : 'top-0'}
 				onSave={(value) => {
 					onSave({
 						raw: token.raw,
@@ -192,7 +192,7 @@
 						class="p-1 rounded-lg bg-transparent transition"
 						on:click={(e) => {
 							e.stopPropagation();
-							copyToClipboard(token.raw.trim());
+							copyToClipboard(token.raw.trim(), null, $settings?.copyFormatted ?? false);
 						}}
 					>
 						<Clipboard className=" size-3.5" strokeWidth="1.5" />
@@ -224,6 +224,7 @@
 					{done}
 					{editCodeBlock}
 					{onTaskClick}
+					{sourceIds}
 					{onSourceClick}
 				/>
 			</blockquote>
@@ -258,6 +259,7 @@
 							{done}
 							{editCodeBlock}
 							{onTaskClick}
+							{sourceIds}
 							{onSourceClick}
 						/>
 					</li>
@@ -292,6 +294,7 @@
 									{done}
 									{editCodeBlock}
 									{onTaskClick}
+									{sourceIds}
 									{onSourceClick}
 								/>
 							</div>
@@ -303,6 +306,7 @@
 								{done}
 								{editCodeBlock}
 								{onTaskClick}
+								{sourceIds}
 								{onSourceClick}
 							/>
 						{/if}
@@ -326,6 +330,7 @@
 					{done}
 					{editCodeBlock}
 					{onTaskClick}
+					{sourceIds}
 					{onSourceClick}
 				/>
 			</div>

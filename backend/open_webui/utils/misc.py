@@ -27,6 +27,47 @@ def deep_update(d, u):
     return d
 
 
+def get_allow_block_lists(filter_list):
+    allow_list = []
+    block_list = []
+
+    if filter_list:
+        for d in filter_list:
+            if d.startswith("!"):
+                # Domains starting with "!" → blocked
+                block_list.append(d[1:].strip())
+            else:
+                # Domains starting without "!" → allowed
+                allow_list.append(d.strip())
+
+    return allow_list, block_list
+
+
+def is_string_allowed(string: str, filter_list: Optional[list[str]] = None) -> bool:
+    """
+    Checks if a string is allowed based on the provided filter list.
+    :param string: The string to check (e.g., domain or hostname).
+    :param filter_list: List of allowed/blocked strings. Strings starting with "!" are blocked.
+    :return: True if the string is allowed, False otherwise.
+    """
+    if not filter_list:
+        return True
+
+    allow_list, block_list = get_allow_block_lists(filter_list)
+    print(string, allow_list, block_list)
+
+    # If allow list is non-empty, require domain to match one of them
+    if allow_list:
+        if not any(string.endswith(allowed) for allowed in allow_list):
+            return False
+
+    # Block list always removes matches
+    if any(string.endswith(blocked) for blocked in block_list):
+        return False
+
+    return True
+
+
 def get_message_list(messages_map, message_id):
     """
     Reconstructs a list of messages in order up to the specified message_id.

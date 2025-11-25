@@ -48,3 +48,4 @@ fake-useragent==2.2.0
 chromadb==1.1.0
 black==25.9.0
 pydub
+chardet==5.2.0
