@@ -1319,7 +1319,7 @@
 				/>
 
 				<button
-					class="flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+					class="flex w-full items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100/50 dark:hover:bg-gray-900 transition outline-none"
 					on:click={() => {
 						chatImportInputElement.click();
 					}}
