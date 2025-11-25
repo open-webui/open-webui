@@ -37,7 +37,7 @@ except ImportError:
 
 try:
     from prune_models import PruneDataForm, PrunePreviewResult
-    from prune_core import PruneLock, get_vector_database_cleaner
+    from prune_core import PruneLock, get_vector_database_cleaner, ChromaDatabaseCleaner, PGVectorDatabaseCleaner
     from prune_operations import (
         count_inactive_users,
         count_old_chats,
@@ -50,19 +50,11 @@ try:
         delete_inactive_users,
         cleanup_audio_cache,
     )
-    from backend.open_webui.models.users import Users
-    from backend.open_webui.models.chats import Chats
-    from backend.open_webui.models.files import Files
-    from backend.open_webui.models.notes import Notes
-    from backend.open_webui.models.prompts import Prompts
-    from backend.open_webui.models.models import Models
-    from backend.open_webui.models.knowledge import Knowledges
-    from backend.open_webui.models.functions import Functions
-    from backend.open_webui.models.tools import Tools
-    from backend.open_webui.models.folders import Folders
-    from backend.open_webui.internal.db import get_db
-    from backend.open_webui.config import CACHE_DIR
-    from backend.open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT, VECTOR_DB
+    # Import Open WebUI modules using compatibility layer (handles pip/docker/git installs)
+    from prune_imports import (
+        Users, Chats, Files, Notes, Prompts, Models, Knowledges, Functions,
+        Tools, Folders, get_db, CACHE_DIR, VECTOR_DB_CLIENT, VECTOR_DB
+    )
     import time
     import sqlite3
     from sqlalchemy import text
@@ -71,10 +63,8 @@ except ImportError as e:
     print("\nMake sure:")
     print("  1. You're running from the Open WebUI directory")
     print("  2. Open WebUI dependencies are installed")
-    print("  3. PYTHONPATH is set correctly")
+    print("  3. For git install: backend/requirements.txt must be installed")
     sys.exit(1)
-
-from prune_core import ChromaDatabaseCleaner, PGVectorDatabaseCleaner
 
 console = Console()
 log = logging.getLogger(__name__)

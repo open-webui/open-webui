@@ -5,8 +5,6 @@ This module contains all the helper functions from backend/open_webui/routers/pr
 that perform the actual pruning operations, counting, and cleanup.
 """
 
-import sys
-import os
 import logging
 import time
 from pathlib import Path
@@ -15,25 +13,12 @@ from sqlalchemy import select, text
 
 log = logging.getLogger(__name__)
 
-# Add parent directory to path to import Open WebUI modules
-SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SCRIPT_DIR.parent
-sys.path.insert(0, str(REPO_ROOT))
-
+# Import Open WebUI modules using compatibility layer (handles pip/docker/git installs)
 try:
-    from backend.open_webui.models.users import Users
-    from backend.open_webui.models.chats import Chat, Chats
-    from backend.open_webui.models.messages import Message
-    from backend.open_webui.models.files import Files
-    from backend.open_webui.models.notes import Notes
-    from backend.open_webui.models.prompts import Prompts
-    from backend.open_webui.models.models import Models
-    from backend.open_webui.models.knowledge import Knowledges
-    from backend.open_webui.models.functions import Functions
-    from backend.open_webui.models.tools import Tools
-    from backend.open_webui.models.folders import Folder, Folders
-    from backend.open_webui.internal.db import get_db
-    from backend.open_webui.config import CACHE_DIR
+    from prune_imports import (
+        Users, Chat, Chats, Message, Files, Notes, Prompts, Models,
+        Knowledges, Functions, Tools, Folder, Folders, get_db, CACHE_DIR
+    )
 except ImportError as e:
     log.error(f"Failed to import Open WebUI modules: {e}")
     log.error("This module requires Open WebUI backend modules to be importable")
