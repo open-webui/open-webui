@@ -88,7 +88,7 @@ export const getModelItems = async (
 
 export const getModelTags = async (token: string = '') => {
 	let error = null;
-
+	const lang = get(config)?.default_locale || 'en';
 	const res = await fetch(`${WEBUI_API_BASE_URL}/models/tags`, {
 		method: 'GET',
 		headers: {

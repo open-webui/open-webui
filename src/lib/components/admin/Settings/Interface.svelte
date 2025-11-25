@@ -487,15 +487,16 @@
 							<div class=" self-center text-xs">
 								{$i18n.t('Default Prompt Suggestions')}
 							</div>
-					<PromptSuggestions bind:promptSuggestions />
-
-					{#if promptSuggestions.length > 0}
-						<div class="text-xs text-left w-full mt-2">
-							{$i18n.t('Adjusting these settings will apply changes universally to all users.')}
 						</div>
-					{/if}
+						<PromptSuggestions bind:promptSuggestions />
+
+						{#if promptSuggestions.length > 0}
+							<div class="text-xs text-left w-full mt-2">
+								{$i18n.t('Adjusting these settings will apply changes universally to all users.')}
+							</div>
+						{/if}
+					</div>
 				{/if}
-			</div>
 		</div>
 
 		<div class="flex justify-end text-sm font-medium">
