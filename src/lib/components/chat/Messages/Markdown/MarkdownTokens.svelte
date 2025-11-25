@@ -224,6 +224,7 @@
 					{done}
 					{editCodeBlock}
 					{onTaskClick}
+					{sourceIds}
 					{onSourceClick}
 				/>
 			</blockquote>
@@ -258,6 +259,7 @@
 							{done}
 							{editCodeBlock}
 							{onTaskClick}
+							{sourceIds}
 							{onSourceClick}
 						/>
 					</li>
@@ -292,6 +294,7 @@
 									{done}
 									{editCodeBlock}
 									{onTaskClick}
+									{sourceIds}
 									{onSourceClick}
 								/>
 							</div>
@@ -303,6 +306,7 @@
 								{done}
 								{editCodeBlock}
 								{onTaskClick}
+								{sourceIds}
 								{onSourceClick}
 							/>
 						{/if}
@@ -326,6 +330,7 @@
 					{done}
 					{editCodeBlock}
 					{onTaskClick}
+					{sourceIds}
 					{onSourceClick}
 				/>
 			</div>
