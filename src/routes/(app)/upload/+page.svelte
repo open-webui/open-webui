@@ -7,10 +7,11 @@ import {
 	type UploadTenant,
 	type UploadVisibility
 } from '$lib/apis/uploads';
-	import { WEBUI_NAME, user } from '$lib/stores';
-	import { onMount } from 'svelte';
-	import { browser } from '$app/environment';
+import { WEBUI_NAME, user, showArchivedChats } from '$lib/stores';
+import { onMount } from 'svelte';
+import { browser } from '$app/environment';
 import Files from '$lib/components/upload/Files.svelte';
+import UserMenu from '$lib/components/layout/Sidebar/UserMenu.svelte';
 
 	const tabs = [
 		{ id: 'upload', label: 'Upload' },
@@ -149,11 +150,40 @@ $: privatePath =
 
 <div class="w-full px-4 py-6 sm:px-6 lg:px-8">
 	<div class="mx-auto flex max-w-4xl flex-col gap-6">
-		<div class="space-y-2">
-			<h1 class="text-3xl font-semibold text-gray-900 dark:text-gray-50">Uploads</h1>
-			<p class="text-sm text-gray-600 dark:text-gray-400">
-				Manage tenant documents in S3. Upload new files or inspect public/private folders.
-			</p>
+		<div class="flex flex-wrap items-start justify-between gap-4">
+			<div class="space-y-2">
+				<h1 class="text-3xl font-semibold text-gray-900 dark:text-gray-50">Uploads</h1>
+				<p class="text-sm text-gray-600 dark:text-gray-400">
+					Manage tenant documents in S3. Upload new files or inspect public/private folders.
+				</p>
+			</div>
+
+			{#if $user !== undefined && $user !== null}
+				<UserMenu
+					className="max-w-[240px]"
+					role={$user?.role}
+					help={true}
+					on:show={(e) => {
+						if (e.detail === 'archived-chat') {
+							showArchivedChats.set(true);
+						}
+					}}
+				>
+					<button
+						class="select-none flex rounded-full border border-gray-200 bg-white p-1.5 shadow-sm hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-850 transition"
+						aria-label="User Menu"
+					>
+						<div class="self-center">
+							<img
+								src={$user?.profile_image_url}
+								class="size-8 object-cover rounded-full"
+								alt="User profile"
+								draggable="false"
+							/>
+						</div>
+					</button>
+				</UserMenu>
+			{/if}
 		</div>
 
 		<div class="flex flex-wrap gap-2 rounded-2xl border border-gray-100 bg-white/70 p-2 shadow-sm dark:border-gray-850 dark:bg-gray-900/50">
