@@ -23,7 +23,7 @@ from open_webui.config import (
 )
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.tenants import Tenants
-from open_webui.utils.auth import get_verified_user
+from open_webui.utils.auth import get_verified_user, get_admin_user
 
 router = APIRouter()
 
@@ -84,12 +84,26 @@ class UploadResponse(BaseModel):
     original_filename: str
     stored_filename: str
     tenant_prefix: str
+    tenant_id: str
+
+
+class TenantInfo(BaseModel):
+    id: str
+    name: str
+    s3_bucket: str
+
+
+@router.get("/tenants", response_model=list[TenantInfo])
+def list_tenants(admin=Depends(get_admin_user)):
+    tenants = Tenants.get_tenants()
+    return [TenantInfo(**tenant.model_dump()) for tenant in tenants]
 
 
 @router.post("/", response_model=UploadResponse)
 async def upload_document(
     file: UploadFile = File(...),
     visibility: str = Form("public"),
+    tenant_id: Optional[str] = Form(None),
     user=Depends(get_verified_user),
 ):
     if STORAGE_PROVIDER != "s3":
@@ -104,13 +118,23 @@ async def upload_document(
             detail="S3 bucket name is not configured.",
         )
 
-    if not user.tenant_id:
+    target_tenant_id = user.tenant_id
+
+    if tenant_id is not None:
+        if user.role != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only admins may override the target tenant.",
+            )
+        target_tenant_id = tenant_id
+
+    if not target_tenant_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="User is not associated with a tenant.",
         )
 
-    tenant = Tenants.get_tenant_by_id(user.tenant_id)
+    tenant = Tenants.get_tenant_by_id(target_tenant_id)
     if not tenant or not tenant.s3_bucket:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -158,4 +182,5 @@ async def upload_document(
         original_filename=safe_name,
         stored_filename=stored_filename,
         tenant_prefix=tenant_prefix,
+        tenant_id=tenant.id,
     )

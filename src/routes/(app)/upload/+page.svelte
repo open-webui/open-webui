@@ -1,7 +1,15 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { uploadDocument, type UploadDocumentResponse, type UploadVisibility } from '$lib/apis/uploads';
+	import {
+		getUploadTenants,
+		uploadDocument,
+		type UploadDocumentResponse,
+		type UploadTenant,
+		type UploadVisibility
+	} from '$lib/apis/uploads';
 	import { WEBUI_NAME, user } from '$lib/stores';
+	import { onMount } from 'svelte';
+	import { browser } from '$app/environment';
 
 	const tabs = [
 		{ id: 'upload', label: 'Upload' },
@@ -13,11 +21,51 @@
 	let visibility: UploadVisibility = 'public';
 	let selectedFile: File | null = null;
 	let isUploading = false;
-	let uploadResult: UploadDocumentResponse | null = null;
-	let fileInput: HTMLInputElement | null = null;
+let uploadResult: UploadDocumentResponse | null = null;
+let fileInput: HTMLInputElement | null = null;
+let tenants: UploadTenant[] = [];
+let tenantsLoading = false;
+let selectedTenantId: string | null = null;
+let tenantsInitialized = false;
+let selectedTenant: UploadTenant | null = null;
 
-	const handleFileChange = (event: Event) => {
-		const target = event.target as HTMLInputElement;
+const loadTenants = async () => {
+	if (
+		tenantsLoading ||
+		tenantsInitialized ||
+		!browser ||
+		!localStorage.token ||
+		$user?.role !== 'admin'
+	) {
+		return;
+	}
+	tenantsLoading = true;
+	try {
+		const list = await getUploadTenants(localStorage.token);
+		tenants = list;
+		const defaultId = $user?.tenant_id ?? list[0]?.id ?? null;
+		selectedTenantId = defaultId;
+	} catch (err) {
+		const message = typeof err === 'string' ? err : err?.detail ?? 'Failed to load tenants.';
+		toast.error(message);
+	} finally {
+		tenantsLoading = false;
+		tenantsInitialized = true;
+	}
+};
+
+onMount(() => {
+	if (browser) {
+		loadTenants();
+	}
+});
+
+$: if ($user?.role === 'admin' && browser && !tenantsInitialized) {
+	loadTenants();
+}
+
+const handleFileChange = (event: Event) => {
+	const target = event.target as HTMLInputElement;
 		selectedFile = target.files?.[0] ?? null;
 	};
 
@@ -36,7 +84,7 @@
 			return;
 		}
 
-		if (!$user?.tenant_s3_bucket) {
+		if (!tenantBucket) {
 			toast.error('Your tenant does not have an S3 bucket configured.');
 			return;
 		}
@@ -49,8 +97,13 @@
 		isUploading = true;
 		uploadResult = null;
 
+		const tenantOverride =
+			$user?.role === 'admin'
+				? selectedTenantId ?? $user?.tenant_id ?? undefined
+				: undefined;
+
 		try {
-			const result = await uploadDocument(localStorage.token, selectedFile, visibility);
+			const result = await uploadDocument(localStorage.token, selectedFile, visibility, tenantOverride);
 			uploadResult = result;
 			toast.success('Upload complete.');
 			selectedFile = null;
@@ -65,7 +118,13 @@
 		}
 	};
 
-	$: tenantBucket = $user?.tenant_s3_bucket ?? null;
+$: selectedTenant =
+	$user?.role === 'admin'
+		? tenants.find((t) => t.id === (selectedTenantId ?? $user?.tenant_id)) ?? null
+		: null;
+
+$: tenantBucket =
+	$user?.role === 'admin' ? selectedTenant?.s3_bucket ?? null : $user?.tenant_s3_bucket ?? null;
 	$: destinationPreview = tenantBucket
 		? `${tenantBucket}${visibility === 'private' ? `/users/${$user?.id}` : ''}/${
 				selectedFile?.name ?? 'your-file.ext'
@@ -103,6 +162,44 @@
 				</button>
 			{/each}
 		</div>
+
+		{#if $user?.role === 'admin'}
+			<div class="rounded-2xl border border-gray-100 bg-white/70 p-5 shadow-sm dark:border-gray-850 dark:bg-gray-900/60">
+				<div class="flex flex-col gap-2">
+					<label class="text-sm font-medium text-gray-900 dark:text-gray-100" for="tenant-select">
+						Target Tenant Bucket
+					</label>
+					{#if tenantsLoading}
+						<p class="text-sm text-gray-600 dark:text-gray-400">Loading tenant list…</p>
+					{:else if tenants.length === 0}
+						<p class="text-sm text-gray-600 dark:text-gray-400">
+							No tenants available. Create one before uploading.
+						</p>
+					{:else}
+						<select
+							id="tenant-select"
+							class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-800 dark:bg-gray-900 dark:text-gray-50"
+							bind:value={selectedTenantId}
+						>
+							{#each tenants as tenant}
+								<option value={tenant.id}>
+									{tenant.name} ({tenant.s3_bucket})
+								</option>
+							{/each}
+						</select>
+						{#if selectedTenant}
+							<p class="text-xs text-gray-500 dark:text-gray-400">
+								Uploads will be written to
+								<code class="rounded bg-gray-100 px-1 py-0.5 text-[11px] dark:bg-gray-850">
+									{selectedTenant.s3_bucket}
+								</code>
+								for this tenant.
+							</p>
+						{/if}
+					{/if}
+				</div>
+			</div>
+		{/if}
 
 		{#if activeTab === 'upload'}
 			<div class="flex flex-col gap-6">
