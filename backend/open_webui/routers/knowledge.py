@@ -358,6 +358,7 @@ async def update_knowledge_by_id(
 class KnowledgeFileIdForm(BaseModel):
     file_id: str
 
+
 class KnowledgeFileIdsForm(BaseModel):
     file_ids: List[str]
 
@@ -445,9 +446,6 @@ def add_file_to_knowledge_by_id(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-
-
-
 
 
 @router.post("/{id}/file/sync/batch", response_model=Optional[KnowledgeFilesResponse])

@@ -168,12 +168,8 @@ def sync_files_to_knowledge(
             except Exception as ve:
                 log.debug(ve)
             try:
-                if VECTOR_DB_CLIENT.has_collection(
-                    collection_name=f"file-{old_id}"
-                ):
-                    VECTOR_DB_CLIENT.delete_collection(
-                        collection_name=f"file-{old_id}"
-                    )
+                if VECTOR_DB_CLIENT.has_collection(collection_name=f"file-{old_id}"):
+                    VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{old_id}")
             except Exception as ce:
                 log.debug(ce)
 
