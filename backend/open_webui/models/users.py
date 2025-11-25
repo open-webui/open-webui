@@ -99,7 +99,16 @@ class UserGroupIdsModel(UserModel):
     group_ids: list[str] = []
 
 
+class UserModelResponse(UserModel):
+    model_config = ConfigDict(extra="allow")
+
+
 class UserListResponse(BaseModel):
+    users: list[UserModelResponse]
+    total: int
+
+
+class UserGroupIdsListResponse(BaseModel):
     users: list[UserGroupIdsModel]
     total: int
 
@@ -238,6 +247,31 @@ class UsersTable:
                             User.email.ilike(f"%{query_key}%"),
                         )
                     )
+
+                user_ids = filter.get("user_ids")
+                if user_ids:
+                    query = query.filter(User.id.in_(user_ids))
+
+                group_ids = filter.get("group_ids")
+                if group_ids:
+                    query = query.filter(
+                        exists(
+                            select(GroupMember.id).where(
+                                GroupMember.user_id == User.id,
+                                GroupMember.group_id.in_(group_ids),
+                            )
+                        )
+                    )
+
+                roles = filter.get("roles")
+                if roles:
+                    include_roles = [role for role in roles if not role.startswith("!")]
+                    exclude_roles = [role[1:] for role in roles if role.startswith("!")]
+
+                    if include_roles:
+                        query = query.filter(User.role.in_(include_roles))
+                    if exclude_roles:
+                        query = query.filter(~User.role.in_(exclude_roles))
 
                 order_by = filter.get("order_by")
                 direction = filter.get("direction")

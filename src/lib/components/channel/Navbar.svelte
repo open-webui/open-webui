@@ -16,12 +16,16 @@
 	import Hashtag from '../icons/Hashtag.svelte';
 	import Lock from '../icons/Lock.svelte';
 	import UserAlt from '../icons/UserAlt.svelte';
+	import ChannelInfoModal from './ChannelInfoModal.svelte';
 
 	const i18n = getContext('i18n');
+
+	let showChannelInfoModal = false;
 
 	export let channel;
 </script>
 
+<ChannelInfoModal bind:show={showChannelInfoModal} {channel} />
 <nav class="sticky top-0 z-30 w-full px-1.5 py-1 -mb-8 flex items-center drag-region">
 	<div
 		id="navbar-bg-gradient-to-b"
@@ -85,6 +89,10 @@
 						<button
 							class=" flex cursor-pointer py-1 px-1.5 border dark:border-gray-850 border-gray-50 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 							aria-label="User Count"
+							type="button"
+							on:click={() => {
+								showChannelInfoModal = true;
+							}}
 						>
 							<div class=" flex items-center gap-0.5 m-auto self-center">
 								<UserAlt className=" size-4" strokeWidth="1.5" />
