@@ -518,13 +518,16 @@ def delete_inactive_users(
     return deleted_count
 
 
-def cleanup_audio_cache(max_age_days: Optional[int] = 30) -> None:
+def cleanup_audio_cache(max_age_days: Optional[int] = 30) -> int:
     """
     Clean up audio cache files older than specified days.
+
+    Returns:
+        Number of files deleted
     """
     if max_age_days is None:
         log.info("Skipping audio cache cleanup (max_age_days is None)")
-        return
+        return 0
 
     cutoff_time = time.time() - (max_age_days * 86400)
     deleted_count = 0
@@ -552,14 +555,12 @@ def cleanup_audio_cache(max_age_days: Optional[int] = 30) -> None:
                         file_path.unlink()
                         deleted_count += 1
                         total_size_deleted += file_size
+                        log.debug(f"Deleted audio cache file: {file_path} ({file_size} bytes)")
                     except Exception as e:
                         log.error(f"Failed to delete audio file {file_path}: {e}")
 
         except Exception as e:
             log.error(f"Error cleaning audio directory {audio_dir}: {e}")
 
-    if deleted_count > 0:
-        size_mb = total_size_deleted / (1024 * 1024)
-        log.info(
-            f"Deleted {deleted_count} audio cache files ({size_mb:.1f} MB), older than {max_age_days} days"
-        )
+    log.info(f"Audio cache cleanup: deleted {deleted_count} files, freed {total_size_deleted} bytes")
+    return deleted_count

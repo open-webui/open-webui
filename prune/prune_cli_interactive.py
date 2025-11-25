@@ -586,6 +586,11 @@ class InteractivePruneUI:
 
     def execute_prune_stages(self):
         """Execute all prune stages with progress display."""
+        # Debug logging for form_data values
+        log.debug(f"Execution - form_data.days: {self.form_data.days}")
+        log.debug(f"Execution - form_data.audio_cache_max_age_days: {self.form_data.audio_cache_max_age_days}")
+        log.debug(f"Execution - form_data.delete_inactive_users_days: {self.form_data.delete_inactive_users_days}")
+
         with Progress(console=console) as progress:
             # Stage 0: Inactive users
             if self.form_data.delete_inactive_users_days:
@@ -692,8 +697,9 @@ class InteractivePruneUI:
             # Audio cache
             if self.form_data.audio_cache_max_age_days:
                 task = progress.add_task("Cleaning audio cache...", total=None)
-                cleanup_audio_cache(self.form_data.audio_cache_max_age_days)
+                deleted_audio = cleanup_audio_cache(self.form_data.audio_cache_max_age_days)
                 progress.update(task, completed=True)
+                console.print(f"[green]✓[/green] Deleted {deleted_audio} audio cache files")
 
             # VACUUM
             if self.form_data.run_vacuum:
