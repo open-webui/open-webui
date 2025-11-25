@@ -161,7 +161,7 @@
 								</button>
 							</Tooltip>
 						{/if}
-					{/if} -->
+					{/if}
 
 					<!-- {#if $mobile && !$temporaryChatEnabled && chat && chat.id}
 						<Tooltip content={$i18n.t('New Chat')}>
