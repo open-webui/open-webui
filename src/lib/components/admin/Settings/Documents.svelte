@@ -135,11 +135,6 @@
 
 		if (res) {
 			console.debug('embeddingModelUpdateHandler:', res);
-			if (res.status === true) {
-				toast.success($i18n.t('Embedding model set to "{{embedding_model}}"', res), {
-					duration: 1000 * 10
-				});
-			}
 		}
 	};
 
@@ -1355,6 +1350,7 @@
 						<div class="flex items-center relative">
 							<button
 								class="text-xs"
+								type="button"
 								on:click={() => {
 									showResetUploadDirConfirm = true;
 								}}
@@ -1371,6 +1367,7 @@
 						<div class="flex items-center relative">
 							<button
 								class="text-xs"
+								type="button"
 								on:click={() => {
 									showResetConfirm = true;
 								}}
@@ -1386,6 +1383,7 @@
 						<div class="flex items-center relative">
 							<button
 								class="text-xs"
+								type="button"
 								on:click={() => {
 									showReindexConfirm = true;
 								}}
