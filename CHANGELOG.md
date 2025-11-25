@@ -23,7 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📝 Inline citations now render correctly within markdown lists and nested elements instead of displaying as "undefined" values. [#19452](https://github.com/open-webui/open-webui/issues/19452)
 - 👥 Group member selection now works correctly without randomly selecting other users or causing the user list to jump around. [#19426](https://github.com/open-webui/open-webui/issues/19426)
 - 👥 Admin panel user list now displays the correct total user count and properly paginates 30 items per page after fixing database query issues with group member joins. [#19429](https://github.com/open-webui/open-webui/issues/19429)
-- 🔍 Knowledge base reindexing now works correctly after resolving async execution chain issues by implementing threadpool workers for embedding operations. [#
+- 🔍 Knowledge base reindexing now works correctly after resolving async execution chain issues by implementing threadpool workers for embedding operations. [#19434](https://github.com/open-webui/open-webui/pull/19434)
+- 🖼️ OpenAI image generation now works correctly after fixing a connection adapter error caused by incorrect URL formatting. [#19435](https://github.com/open-webui/open-webui/pull/19435)
 
 ## [0.6.38] - 2025-11-24
 
