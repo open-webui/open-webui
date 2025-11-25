@@ -150,10 +150,14 @@ async def get_tools(
                     )
 
                     specs = tool_server_data.get("specs", [])
+                    # Handle both list and string types (empty field may be stored as [])
+                    filter_list_value = tool_server_connection.get("config", {}).get(
+                        "function_name_filter_list", ""
+                    )
                     function_name_filter_list = (
-                        tool_server_connection.get("config", {})
-                        .get("function_name_filter_list", "")
-                        .split(",")
+                        filter_list_value
+                        if isinstance(filter_list_value, list)
+                        else [x.strip() for x in filter_list_value.split(",") if x.strip()]
                     )
 
                     for spec in specs:
