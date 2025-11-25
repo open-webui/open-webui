@@ -19,7 +19,7 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 class Auth(Base):
     __tablename__ = "auth"
 
-    id = Column(String, primary_key=True)
+    id = Column(String, primary_key=True, unique=True)
     email = Column(String)
     password = Column(Text)
     active = Column(Boolean)

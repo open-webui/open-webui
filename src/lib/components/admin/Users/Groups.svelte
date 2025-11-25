@@ -169,7 +169,7 @@
 			</div>
 		{:else}
 			<div>
-				<div class=" flex items-center gap-3 justify-between text-xs uppercase px-1 font-semibold">
+				<div class=" flex items-center gap-3 justify-between text-xs uppercase px-1 font-medium">
 					<div class="w-full basis-3/5">{$i18n.t('Group')}</div>
 
 					<div class="w-full basis-2/5 text-right">{$i18n.t('Users')}</div>

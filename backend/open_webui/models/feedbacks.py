@@ -21,7 +21,7 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 class Feedback(Base):
     __tablename__ = "feedback"
-    id = Column(Text, primary_key=True)
+    id = Column(Text, primary_key=True, unique=True)
     user_id = Column(Text)
     version = Column(BigInteger, default=0)
     type = Column(Text)

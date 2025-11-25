@@ -11,8 +11,8 @@ from open_webui.utils.misc import throttle
 
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, Date
-from sqlalchemy import or_
+from sqlalchemy import BigInteger, Column, String, Text, Date, exists, select
+from sqlalchemy import or_, case
 
 import datetime
 
@@ -227,9 +227,7 @@ class UsersTable:
     ) -> dict:
         with get_db() as db:
             # Join GroupMember so we can order by group_id when requested
-            query = db.query(User).outerjoin(
-                GroupMember, GroupMember.user_id == User.id
-            )
+            query = db.query(User)
 
             if filter:
                 query_key = filter.get("query")
@@ -247,17 +245,28 @@ class UsersTable:
                 if order_by and order_by.startswith("group_id:"):
                     group_id = order_by.split(":", 1)[1]
 
-                    if direction == "asc":
-                        query = query.order_by((GroupMember.group_id == group_id).asc())
-                    else:
-                        query = query.order_by(
-                            (GroupMember.group_id == group_id).desc()
+                    # Subquery that checks if the user belongs to the group
+                    membership_exists = exists(
+                        select(GroupMember.id).where(
+                            GroupMember.user_id == User.id,
+                            GroupMember.group_id == group_id,
                         )
+                    )
+
+                    # CASE: user in group → 1, user not in group → 0
+                    group_sort = case((membership_exists, 1), else_=0)
+
+                    if direction == "asc":
+                        query = query.order_by(group_sort.asc(), User.name.asc())
+                    else:
+                        query = query.order_by(group_sort.desc(), User.name.asc())
+
                 elif order_by == "name":
                     if direction == "asc":
                         query = query.order_by(User.name.asc())
                     else:
                         query = query.order_by(User.name.desc())
+
                 elif order_by == "email":
                     if direction == "asc":
                         query = query.order_by(User.email.asc())
@@ -291,11 +300,13 @@ class UsersTable:
                 query = query.order_by(User.created_at.desc())
 
             # Count BEFORE pagination
+            query = query.distinct(User.id)
             total = query.count()
 
-            if skip:
+            # correct pagination logic
+            if skip is not None:
                 query = query.offset(skip)
-            if limit:
+            if limit is not None:
                 query = query.limit(limit)
 
             users = query.all()

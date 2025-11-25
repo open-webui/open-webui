@@ -24,6 +24,7 @@ from fastapi.responses import HTMLResponse
 from starlette.responses import Response, StreamingResponse, JSONResponse
 
 
+from open_webui.utils.misc import is_string_allowed
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.chats import Chats
 from open_webui.models.folders import Folders
@@ -993,37 +994,32 @@ async def chat_completion_files_handler(
             queries = [get_last_user_message(body["messages"])]
 
         try:
-            # Offload get_sources_from_items to a separate thread
-            loop = asyncio.get_running_loop()
-            with ThreadPoolExecutor() as executor:
-                sources = await loop.run_in_executor(
-                    executor,
-                    lambda: get_sources_from_items(
-                        request=request,
-                        items=files,
-                        queries=queries,
-                        embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
-                            query, prefix=prefix, user=user
-                        ),
-                        k=request.app.state.config.TOP_K,
-                        reranking_function=(
-                            (
-                                lambda query, documents: request.app.state.RERANKING_FUNCTION(
-                                    query, documents, user=user
-                                )
-                            )
-                            if request.app.state.RERANKING_FUNCTION
-                            else None
-                        ),
-                        k_reranker=request.app.state.config.TOP_K_RERANKER,
-                        r=request.app.state.config.RELEVANCE_THRESHOLD,
-                        hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
-                        hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
-                        full_context=all_full_context
-                        or request.app.state.config.RAG_FULL_CONTEXT,
-                        user=user,
-                    ),
-                )
+            # Directly await async get_sources_from_items (no thread needed - fully async now)
+            sources = await get_sources_from_items(
+                request=request,
+                items=files,
+                queries=queries,
+                embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                    query, prefix=prefix, user=user
+                ),
+                k=request.app.state.config.TOP_K,
+                reranking_function=(
+                    (
+                        lambda query, documents: request.app.state.RERANKING_FUNCTION(
+                            query, documents, user=user
+                        )
+                    )
+                    if request.app.state.RERANKING_FUNCTION
+                    else None
+                ),
+                k_reranker=request.app.state.config.TOP_K_RERANKER,
+                r=request.app.state.config.RELEVANCE_THRESHOLD,
+                hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
+                hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+                full_context=all_full_context
+                or request.app.state.config.RAG_FULL_CONTEXT,
+                user=user,
+            )
         except Exception as e:
             log.exception(e)
 
@@ -1130,7 +1126,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             pass
 
     event_emitter = get_event_emitter(metadata)
-    event_call = get_event_call(metadata)
+    event_caller = get_event_call(metadata)
 
     oauth_token = None
     try:
@@ -1144,14 +1140,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     extra_params = {
         "__event_emitter__": event_emitter,
-        "__event_call__": event_call,
+        "__event_call__": event_caller,
         "__user__": user.model_dump() if isinstance(user, UserModel) else {},
         "__metadata__": metadata,
+        "__oauth_token__": oauth_token,
         "__request__": request,
         "__model__": model,
-        "__oauth_token__": oauth_token,
     }
-
     # Initialize events to store additional event to be sent to the client
     # Initialize contexts and citation
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
@@ -1414,6 +1409,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         headers=headers if headers else None,
                     )
 
+                    function_name_filter_list = mcp_server_connection.get(
+                        "function_name_filter_list", None
+                    )
                     tool_specs = await mcp_clients[server_id].list_tool_specs()
                     for tool_spec in tool_specs:
 
@@ -1425,6 +1423,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 )
 
                             return tool_function
+
+                        if function_name_filter_list and isinstance(
+                            function_name_filter_list, list
+                        ):
+                            if not is_string_allowed(
+                                tool_spec["name"], function_name_filter_list
+                            ):
+                                # Skip this function
+                                continue
 
                         tool_function = make_tool_function(
                             mcp_clients[server_id], tool_spec["name"]
@@ -1466,6 +1473,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 "__files__": metadata.get("files", []),
             },
         )
+
         if mcp_tools_dict:
             tools_dict = {**tools_dict, **mcp_tools_dict}
 

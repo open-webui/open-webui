@@ -620,6 +620,11 @@ OAUTH_UPDATE_PICTURE_ON_LOGIN = PersistentConfig(
     os.environ.get("OAUTH_UPDATE_PICTURE_ON_LOGIN", "False").lower() == "true",
 )
 
+OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID = (
+    os.environ.get("OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID", "False").lower()
+    == "true"
+)
+
 
 def load_oauth_providers():
     OAUTH_PROVIDERS.clear()
@@ -2539,6 +2544,12 @@ DOCLING_SERVER_URL = PersistentConfig(
     os.getenv("DOCLING_SERVER_URL", "http://docling:5001"),
 )
 
+DOCLING_API_KEY = PersistentConfig(
+    "DOCLING_API_KEY",
+    "rag.docling_api_key",
+    os.getenv("DOCLING_API_KEY", ""),
+)
+
 docling_params = os.getenv("DOCLING_PARAMS", "")
 try:
     docling_params = json.loads(docling_params)
@@ -2550,88 +2561,6 @@ DOCLING_PARAMS = PersistentConfig(
     "rag.docling_params",
     docling_params,
 )
-
-DOCLING_DO_OCR = PersistentConfig(
-    "DOCLING_DO_OCR",
-    "rag.docling_do_ocr",
-    os.getenv("DOCLING_DO_OCR", "True").lower() == "true",
-)
-
-DOCLING_FORCE_OCR = PersistentConfig(
-    "DOCLING_FORCE_OCR",
-    "rag.docling_force_ocr",
-    os.getenv("DOCLING_FORCE_OCR", "False").lower() == "true",
-)
-
-DOCLING_OCR_ENGINE = PersistentConfig(
-    "DOCLING_OCR_ENGINE",
-    "rag.docling_ocr_engine",
-    os.getenv("DOCLING_OCR_ENGINE", "tesseract"),
-)
-
-DOCLING_OCR_LANG = PersistentConfig(
-    "DOCLING_OCR_LANG",
-    "rag.docling_ocr_lang",
-    os.getenv("DOCLING_OCR_LANG", "eng,fra,deu,spa"),
-)
-
-DOCLING_PDF_BACKEND = PersistentConfig(
-    "DOCLING_PDF_BACKEND",
-    "rag.docling_pdf_backend",
-    os.getenv("DOCLING_PDF_BACKEND", "dlparse_v4"),
-)
-
-DOCLING_TABLE_MODE = PersistentConfig(
-    "DOCLING_TABLE_MODE",
-    "rag.docling_table_mode",
-    os.getenv("DOCLING_TABLE_MODE", "accurate"),
-)
-
-DOCLING_PIPELINE = PersistentConfig(
-    "DOCLING_PIPELINE",
-    "rag.docling_pipeline",
-    os.getenv("DOCLING_PIPELINE", "standard"),
-)
-
-DOCLING_DO_PICTURE_DESCRIPTION = PersistentConfig(
-    "DOCLING_DO_PICTURE_DESCRIPTION",
-    "rag.docling_do_picture_description",
-    os.getenv("DOCLING_DO_PICTURE_DESCRIPTION", "False").lower() == "true",
-)
-
-DOCLING_PICTURE_DESCRIPTION_MODE = PersistentConfig(
-    "DOCLING_PICTURE_DESCRIPTION_MODE",
-    "rag.docling_picture_description_mode",
-    os.getenv("DOCLING_PICTURE_DESCRIPTION_MODE", ""),
-)
-
-
-docling_picture_description_local = os.getenv("DOCLING_PICTURE_DESCRIPTION_LOCAL", "")
-try:
-    docling_picture_description_local = json.loads(docling_picture_description_local)
-except json.JSONDecodeError:
-    docling_picture_description_local = {}
-
-
-DOCLING_PICTURE_DESCRIPTION_LOCAL = PersistentConfig(
-    "DOCLING_PICTURE_DESCRIPTION_LOCAL",
-    "rag.docling_picture_description_local",
-    docling_picture_description_local,
-)
-
-docling_picture_description_api = os.getenv("DOCLING_PICTURE_DESCRIPTION_API", "")
-try:
-    docling_picture_description_api = json.loads(docling_picture_description_api)
-except json.JSONDecodeError:
-    docling_picture_description_api = {}
-
-
-DOCLING_PICTURE_DESCRIPTION_API = PersistentConfig(
-    "DOCLING_PICTURE_DESCRIPTION_API",
-    "rag.docling_picture_description_api",
-    docling_picture_description_api,
-)
-
 
 DOCUMENT_INTELLIGENCE_ENDPOINT = PersistentConfig(
     "DOCUMENT_INTELLIGENCE_ENDPOINT",
@@ -2788,6 +2717,12 @@ RAG_EMBEDDING_BATCH_SIZE = PersistentConfig(
         os.environ.get("RAG_EMBEDDING_BATCH_SIZE")
         or os.environ.get("RAG_EMBEDDING_OPENAI_BATCH_SIZE", "1")
     ),
+)
+
+ENABLE_ASYNC_EMBEDDING = PersistentConfig(
+    "ENABLE_ASYNC_EMBEDDING",
+    "rag.enable_async_embedding",
+    os.environ.get("ENABLE_ASYNC_EMBEDDING", "True").lower() == "true",
 )
 
 RAG_EMBEDDING_QUERY_PREFIX = os.environ.get("RAG_EMBEDDING_QUERY_PREFIX", None)

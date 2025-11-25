@@ -241,13 +241,14 @@ class SearchForm(BaseModel):
 async def get_status(request: Request):
     return {
         "status": True,
-        "chunk_size": request.app.state.config.CHUNK_SIZE,
-        "chunk_overlap": request.app.state.config.CHUNK_OVERLAP,
-        "template": request.app.state.config.RAG_TEMPLATE,
-        "embedding_engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
-        "embedding_model": request.app.state.config.RAG_EMBEDDING_MODEL,
-        "reranking_model": request.app.state.config.RAG_RERANKING_MODEL,
-        "embedding_batch_size": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+        "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
+        "CHUNK_OVERLAP": request.app.state.config.CHUNK_OVERLAP,
+        "RAG_TEMPLATE": request.app.state.config.RAG_TEMPLATE,
+        "RAG_EMBEDDING_ENGINE": request.app.state.config.RAG_EMBEDDING_ENGINE,
+        "RAG_EMBEDDING_MODEL": request.app.state.config.RAG_EMBEDDING_MODEL,
+        "RAG_RERANKING_MODEL": request.app.state.config.RAG_RERANKING_MODEL,
+        "RAG_EMBEDDING_BATCH_SIZE": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+        "ENABLE_ASYNC_EMBEDDING": request.app.state.config.ENABLE_ASYNC_EMBEDDING,
     }
 
 
@@ -255,9 +256,10 @@ async def get_status(request: Request):
 async def get_embedding_config(request: Request, user=Depends(get_admin_user)):
     return {
         "status": True,
-        "embedding_engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
-        "embedding_model": request.app.state.config.RAG_EMBEDDING_MODEL,
-        "embedding_batch_size": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+        "RAG_EMBEDDING_ENGINE": request.app.state.config.RAG_EMBEDDING_ENGINE,
+        "RAG_EMBEDDING_MODEL": request.app.state.config.RAG_EMBEDDING_MODEL,
+        "RAG_EMBEDDING_BATCH_SIZE": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+        "ENABLE_ASYNC_EMBEDDING": request.app.state.config.ENABLE_ASYNC_EMBEDDING,
         "openai_config": {
             "url": request.app.state.config.RAG_OPENAI_API_BASE_URL,
             "key": request.app.state.config.RAG_OPENAI_API_KEY,
@@ -294,18 +296,13 @@ class EmbeddingModelUpdateForm(BaseModel):
     openai_config: Optional[OpenAIConfigForm] = None
     ollama_config: Optional[OllamaConfigForm] = None
     azure_openai_config: Optional[AzureOpenAIConfigForm] = None
-    embedding_engine: str
-    embedding_model: str
-    embedding_batch_size: Optional[int] = 1
+    RAG_EMBEDDING_ENGINE: str
+    RAG_EMBEDDING_MODEL: str
+    RAG_EMBEDDING_BATCH_SIZE: Optional[int] = 1
+    ENABLE_ASYNC_EMBEDDING: Optional[bool] = True
 
 
-@router.post("/embedding/update")
-async def update_embedding_config(
-    request: Request, form_data: EmbeddingModelUpdateForm, user=Depends(get_admin_user)
-):
-    log.info(
-        f"Updating embedding model: {request.app.state.config.RAG_EMBEDDING_MODEL} to {form_data.embedding_model}"
-    )
+def unload_embedding_model(request: Request):
     if request.app.state.config.RAG_EMBEDDING_ENGINE == "":
         # unloads current internal embedding model and clears VRAM cache
         request.app.state.ef = None
@@ -318,9 +315,25 @@ async def update_embedding_config(
 
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
+
+
+@router.post("/embedding/update")
+async def update_embedding_config(
+    request: Request, form_data: EmbeddingModelUpdateForm, user=Depends(get_admin_user)
+):
+    log.info(
+        f"Updating embedding model: {request.app.state.config.RAG_EMBEDDING_MODEL} to {form_data.RAG_EMBEDDING_MODEL}"
+    )
+    unload_embedding_model(request)
     try:
-        request.app.state.config.RAG_EMBEDDING_ENGINE = form_data.embedding_engine
-        request.app.state.config.RAG_EMBEDDING_MODEL = form_data.embedding_model
+        request.app.state.config.RAG_EMBEDDING_ENGINE = form_data.RAG_EMBEDDING_ENGINE
+        request.app.state.config.RAG_EMBEDDING_MODEL = form_data.RAG_EMBEDDING_MODEL
+        request.app.state.config.RAG_EMBEDDING_BATCH_SIZE = (
+            form_data.RAG_EMBEDDING_BATCH_SIZE
+        )
+        request.app.state.config.ENABLE_ASYNC_EMBEDDING = (
+            form_data.ENABLE_ASYNC_EMBEDDING
+        )
 
         if request.app.state.config.RAG_EMBEDDING_ENGINE in [
             "ollama",
@@ -353,10 +366,6 @@ async def update_embedding_config(
                 request.app.state.config.RAG_AZURE_OPENAI_API_VERSION = (
                     form_data.azure_openai_config.version
                 )
-
-            request.app.state.config.RAG_EMBEDDING_BATCH_SIZE = (
-                form_data.embedding_batch_size
-            )
 
         request.app.state.ef = get_ef(
             request.app.state.config.RAG_EMBEDDING_ENGINE,
@@ -391,13 +400,15 @@ async def update_embedding_config(
                 if request.app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
                 else None
             ),
+            enable_async=request.app.state.config.ENABLE_ASYNC_EMBEDDING,
         )
 
         return {
             "status": True,
-            "embedding_engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
-            "embedding_model": request.app.state.config.RAG_EMBEDDING_MODEL,
-            "embedding_batch_size": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+            "RAG_EMBEDDING_ENGINE": request.app.state.config.RAG_EMBEDDING_ENGINE,
+            "RAG_EMBEDDING_MODEL": request.app.state.config.RAG_EMBEDDING_MODEL,
+            "RAG_EMBEDDING_BATCH_SIZE": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+            "ENABLE_ASYNC_EMBEDDING": request.app.state.config.ENABLE_ASYNC_EMBEDDING,
             "openai_config": {
                 "url": request.app.state.config.RAG_OPENAI_API_BASE_URL,
                 "key": request.app.state.config.RAG_OPENAI_API_KEY,
@@ -453,18 +464,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "EXTERNAL_DOCUMENT_LOADER_API_KEY": request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
         "TIKA_SERVER_URL": request.app.state.config.TIKA_SERVER_URL,
         "DOCLING_SERVER_URL": request.app.state.config.DOCLING_SERVER_URL,
+        "DOCLING_API_KEY": request.app.state.config.DOCLING_API_KEY,
         "DOCLING_PARAMS": request.app.state.config.DOCLING_PARAMS,
-        "DOCLING_DO_OCR": request.app.state.config.DOCLING_DO_OCR,
-        "DOCLING_FORCE_OCR": request.app.state.config.DOCLING_FORCE_OCR,
-        "DOCLING_OCR_ENGINE": request.app.state.config.DOCLING_OCR_ENGINE,
-        "DOCLING_OCR_LANG": request.app.state.config.DOCLING_OCR_LANG,
-        "DOCLING_PDF_BACKEND": request.app.state.config.DOCLING_PDF_BACKEND,
-        "DOCLING_TABLE_MODE": request.app.state.config.DOCLING_TABLE_MODE,
-        "DOCLING_PIPELINE": request.app.state.config.DOCLING_PIPELINE,
-        "DOCLING_DO_PICTURE_DESCRIPTION": request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
-        "DOCLING_PICTURE_DESCRIPTION_MODE": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE,
-        "DOCLING_PICTURE_DESCRIPTION_LOCAL": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL,
-        "DOCLING_PICTURE_DESCRIPTION_API": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API,
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
         "MISTRAL_OCR_API_BASE_URL": request.app.state.config.MISTRAL_OCR_API_BASE_URL,
@@ -642,18 +643,8 @@ class ConfigForm(BaseModel):
 
     TIKA_SERVER_URL: Optional[str] = None
     DOCLING_SERVER_URL: Optional[str] = None
+    DOCLING_API_KEY: Optional[str] = None
     DOCLING_PARAMS: Optional[dict] = None
-    DOCLING_DO_OCR: Optional[bool] = None
-    DOCLING_FORCE_OCR: Optional[bool] = None
-    DOCLING_OCR_ENGINE: Optional[str] = None
-    DOCLING_OCR_LANG: Optional[str] = None
-    DOCLING_PDF_BACKEND: Optional[str] = None
-    DOCLING_TABLE_MODE: Optional[str] = None
-    DOCLING_PIPELINE: Optional[str] = None
-    DOCLING_DO_PICTURE_DESCRIPTION: Optional[bool] = None
-    DOCLING_PICTURE_DESCRIPTION_MODE: Optional[str] = None
-    DOCLING_PICTURE_DESCRIPTION_LOCAL: Optional[dict] = None
-    DOCLING_PICTURE_DESCRIPTION_API: Optional[dict] = None
     DOCUMENT_INTELLIGENCE_ENDPOINT: Optional[str] = None
     DOCUMENT_INTELLIGENCE_KEY: Optional[str] = None
     MISTRAL_OCR_API_BASE_URL: Optional[str] = None
@@ -831,68 +822,16 @@ async def update_rag_config(
         if form_data.DOCLING_SERVER_URL is not None
         else request.app.state.config.DOCLING_SERVER_URL
     )
+    request.app.state.config.DOCLING_API_KEY = (
+        form_data.DOCLING_API_KEY
+        if form_data.DOCLING_API_KEY is not None
+        else request.app.state.config.DOCLING_API_KEY
+    )
     request.app.state.config.DOCLING_PARAMS = (
         form_data.DOCLING_PARAMS
         if form_data.DOCLING_PARAMS is not None
         else request.app.state.config.DOCLING_PARAMS
     )
-    request.app.state.config.DOCLING_DO_OCR = (
-        form_data.DOCLING_DO_OCR
-        if form_data.DOCLING_DO_OCR is not None
-        else request.app.state.config.DOCLING_DO_OCR
-    )
-    request.app.state.config.DOCLING_FORCE_OCR = (
-        form_data.DOCLING_FORCE_OCR
-        if form_data.DOCLING_FORCE_OCR is not None
-        else request.app.state.config.DOCLING_FORCE_OCR
-    )
-    request.app.state.config.DOCLING_OCR_ENGINE = (
-        form_data.DOCLING_OCR_ENGINE
-        if form_data.DOCLING_OCR_ENGINE is not None
-        else request.app.state.config.DOCLING_OCR_ENGINE
-    )
-    request.app.state.config.DOCLING_OCR_LANG = (
-        form_data.DOCLING_OCR_LANG
-        if form_data.DOCLING_OCR_LANG is not None
-        else request.app.state.config.DOCLING_OCR_LANG
-    )
-    request.app.state.config.DOCLING_PDF_BACKEND = (
-        form_data.DOCLING_PDF_BACKEND
-        if form_data.DOCLING_PDF_BACKEND is not None
-        else request.app.state.config.DOCLING_PDF_BACKEND
-    )
-    request.app.state.config.DOCLING_TABLE_MODE = (
-        form_data.DOCLING_TABLE_MODE
-        if form_data.DOCLING_TABLE_MODE is not None
-        else request.app.state.config.DOCLING_TABLE_MODE
-    )
-    request.app.state.config.DOCLING_PIPELINE = (
-        form_data.DOCLING_PIPELINE
-        if form_data.DOCLING_PIPELINE is not None
-        else request.app.state.config.DOCLING_PIPELINE
-    )
-    request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION = (
-        form_data.DOCLING_DO_PICTURE_DESCRIPTION
-        if form_data.DOCLING_DO_PICTURE_DESCRIPTION is not None
-        else request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION
-    )
-
-    request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE = (
-        form_data.DOCLING_PICTURE_DESCRIPTION_MODE
-        if form_data.DOCLING_PICTURE_DESCRIPTION_MODE is not None
-        else request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE
-    )
-    request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL = (
-        form_data.DOCLING_PICTURE_DESCRIPTION_LOCAL
-        if form_data.DOCLING_PICTURE_DESCRIPTION_LOCAL is not None
-        else request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL
-    )
-    request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API = (
-        form_data.DOCLING_PICTURE_DESCRIPTION_API
-        if form_data.DOCLING_PICTURE_DESCRIPTION_API is not None
-        else request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API
-    )
-
     request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = (
         form_data.DOCUMENT_INTELLIGENCE_ENDPOINT
         if form_data.DOCUMENT_INTELLIGENCE_ENDPOINT is not None
@@ -1189,18 +1128,8 @@ async def update_rag_config(
         "EXTERNAL_DOCUMENT_LOADER_API_KEY": request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
         "TIKA_SERVER_URL": request.app.state.config.TIKA_SERVER_URL,
         "DOCLING_SERVER_URL": request.app.state.config.DOCLING_SERVER_URL,
+        "DOCLING_API_KEY": request.app.state.config.DOCLING_API_KEY,
         "DOCLING_PARAMS": request.app.state.config.DOCLING_PARAMS,
-        "DOCLING_DO_OCR": request.app.state.config.DOCLING_DO_OCR,
-        "DOCLING_FORCE_OCR": request.app.state.config.DOCLING_FORCE_OCR,
-        "DOCLING_OCR_ENGINE": request.app.state.config.DOCLING_OCR_ENGINE,
-        "DOCLING_OCR_LANG": request.app.state.config.DOCLING_OCR_LANG,
-        "DOCLING_PDF_BACKEND": request.app.state.config.DOCLING_PDF_BACKEND,
-        "DOCLING_TABLE_MODE": request.app.state.config.DOCLING_TABLE_MODE,
-        "DOCLING_PIPELINE": request.app.state.config.DOCLING_PIPELINE,
-        "DOCLING_DO_PICTURE_DESCRIPTION": request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
-        "DOCLING_PICTURE_DESCRIPTION_MODE": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE,
-        "DOCLING_PICTURE_DESCRIPTION_LOCAL": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL,
-        "DOCLING_PICTURE_DESCRIPTION_API": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API,
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
         "MISTRAL_OCR_API_BASE_URL": request.app.state.config.MISTRAL_OCR_API_BASE_URL,
@@ -1467,10 +1396,13 @@ def save_docs_to_vector_db(
             ),
         )
 
-        embeddings = embedding_function(
-            list(map(lambda x: x.replace("\n", " "), texts)),
-            prefix=RAG_EMBEDDING_CONTENT_PREFIX,
-            user=user,
+        # Run async embedding in sync context
+        embeddings = asyncio.run(
+            embedding_function(
+                list(map(lambda x: x.replace("\n", " "), texts)),
+                prefix=RAG_EMBEDDING_CONTENT_PREFIX,
+                user=user,
+            )
         )
         log.info(f"embeddings generated {len(embeddings)} for {len(texts)} items")
 
@@ -1604,20 +1536,8 @@ def process_file(
                         EXTERNAL_DOCUMENT_LOADER_API_KEY=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
                         TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
                         DOCLING_SERVER_URL=request.app.state.config.DOCLING_SERVER_URL,
-                        DOCLING_PARAMS={
-                            "do_ocr": request.app.state.config.DOCLING_DO_OCR,
-                            "force_ocr": request.app.state.config.DOCLING_FORCE_OCR,
-                            "ocr_engine": request.app.state.config.DOCLING_OCR_ENGINE,
-                            "ocr_lang": request.app.state.config.DOCLING_OCR_LANG,
-                            "pdf_backend": request.app.state.config.DOCLING_PDF_BACKEND,
-                            "table_mode": request.app.state.config.DOCLING_TABLE_MODE,
-                            "pipeline": request.app.state.config.DOCLING_PIPELINE,
-                            "do_picture_description": request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
-                            "picture_description_mode": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE,
-                            "picture_description_local": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL,
-                            "picture_description_api": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API,
-                            **request.app.state.config.DOCLING_PARAMS,
-                        },
+                        DOCLING_API_KEY=request.app.state.config.DOCLING_API_KEY,
+                        DOCLING_PARAMS=request.app.state.config.DOCLING_PARAMS,
                         PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
                         DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                         DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
@@ -2262,7 +2182,7 @@ class QueryDocForm(BaseModel):
 
 
 @router.post("/query/doc")
-def query_doc_handler(
+async def query_doc_handler(
     request: Request,
     form_data: QueryDocForm,
     user=Depends(get_verified_user),
@@ -2275,7 +2195,7 @@ def query_doc_handler(
             collection_results[form_data.collection_name] = VECTOR_DB_CLIENT.get(
                 collection_name=form_data.collection_name
             )
-            return query_doc_with_hybrid_search(
+            return await query_doc_with_hybrid_search(
                 collection_name=form_data.collection_name,
                 collection_result=collection_results[form_data.collection_name],
                 query=form_data.query,
@@ -2285,8 +2205,8 @@ def query_doc_handler(
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 reranking_function=(
                     (
-                        lambda sentences: request.app.state.RERANKING_FUNCTION(
-                            sentences, user=user
+                        lambda query, documents: request.app.state.RERANKING_FUNCTION(
+                            query, documents, user=user
                         )
                     )
                     if request.app.state.RERANKING_FUNCTION
@@ -2307,11 +2227,12 @@ def query_doc_handler(
                 user=user,
             )
         else:
+            query_embedding = await request.app.state.EMBEDDING_FUNCTION(
+                form_data.query, prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user
+            )
             return query_doc(
                 collection_name=form_data.collection_name,
-                query_embedding=request.app.state.EMBEDDING_FUNCTION(
-                    form_data.query, prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user
-                ),
+                query_embedding=query_embedding,
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 user=user,
             )
@@ -2335,7 +2256,7 @@ class QueryCollectionsForm(BaseModel):
 
 
 @router.post("/query/collection")
-def query_collection_handler(
+async def query_collection_handler(
     request: Request,
     form_data: QueryCollectionsForm,
     user=Depends(get_verified_user),
@@ -2344,7 +2265,7 @@ def query_collection_handler(
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and (
             form_data.hybrid is None or form_data.hybrid
         ):
-            return query_collection_with_hybrid_search(
+            return await query_collection_with_hybrid_search(
                 collection_names=form_data.collection_names,
                 queries=[form_data.query],
                 embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
@@ -2379,7 +2300,7 @@ def query_collection_handler(
                 ),
             )
         else:
-            return query_collection(
+            return await query_collection(
                 collection_names=form_data.collection_names,
                 queries=[form_data.query],
                 embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
@@ -2461,7 +2382,7 @@ if ENV == "dev":
     @router.get("/ef/{text}")
     async def get_embeddings(request: Request, text: Optional[str] = "Hello World!"):
         return {
-            "result": request.app.state.EMBEDDING_FUNCTION(
+            "result": await request.app.state.EMBEDDING_FUNCTION(
                 text, prefix=RAG_EMBEDDING_QUERY_PREFIX
             )
         }

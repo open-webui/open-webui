@@ -279,7 +279,7 @@
 				}
 
 				for (const [idx, sentence] of messageContentParts.entries()) {
-					const blob = await $TTSWorker
+					const url = await $TTSWorker
 						.generate({
 							text: sentence,
 							voice: $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice
@@ -292,8 +292,7 @@
 							loadingSpeech = false;
 						});
 
-					if (blob) {
-						const url = URL.createObjectURL(blob);
+					if (url && speaking) {
 						$audioQueue.enqueue(url);
 						loadingSpeech = false;
 					}
@@ -314,7 +313,7 @@
 						loadingSpeech = false;
 					});
 
-					if (res) {
+					if (res && speaking) {
 						const blob = await res.blob();
 						const url = URL.createObjectURL(blob);
 
@@ -627,7 +626,7 @@
 	>
 		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 hidden @lg:flex mt-1 `}>
 			<ProfileImage
-				src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&lang=${$i18n.language}`}
+				src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model?.id}&lang=${$i18n.language}`}
 				className={'size-8 assistant-message-profile-image'}
 			/>
 		</div>
@@ -797,11 +796,11 @@
 									onTaskClick={async (e) => {
 										console.log(e);
 									}}
-									onSourceClick={async (id, idx) => {
-										console.log(id, idx);
+									onSourceClick={async (id) => {
+										console.log(id);
 
 										if (citationsElement) {
-											citationsElement?.showSourceModal(idx - 1);
+											citationsElement?.showSourceModal(id);
 										}
 									}}
 									onAddMessages={({ modelId, parentId, messages }) => {

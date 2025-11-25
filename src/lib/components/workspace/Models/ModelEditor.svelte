@@ -23,6 +23,7 @@
 	import PencilSolid from '$lib/components/icons/PencilSolid.svelte';
 	import DefaultFiltersSelector from './DefaultFiltersSelector.svelte';
 	import DefaultFeatures from './DefaultFeatures.svelte';
+	import PromptSuggestions from './PromptSuggestions.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -637,7 +638,7 @@
 						<div class="flex-1">
 							<div class="flex items-center">
 								<input
-									class="text-3xl font-semibold w-full bg-transparent outline-hidden"
+									class="text-3xl font-medium w-full bg-transparent outline-hidden"
 									placeholder={$i18n.t('Model Name')}
 									bind:value={titleTranslations[langCode]}
 									required
@@ -668,7 +669,7 @@
 
 					{#if preset}
 						<div class="my-1">
-							<div class=" text-sm font-semibold mb-1">{$i18n.t('Base Model (From)')}</div>
+							<div class=" text-sm font-medium mb-1">{$i18n.t('Base Model (From)')}</div>
 
 							<div>
 								<select
@@ -693,7 +694,7 @@
 
 					<div class="my-1">
 						<div class="mb-1 flex w-full justify-between items-center">
-							<div class=" self-center text-sm font-semibold">{$i18n.t('Description')}</div>
+							<div class=" self-center text-sm font-medium">{$i18n.t('Description')}</div>
 
 							<button
 								class="p-1 text-xs flex rounded-sm transition"
@@ -758,12 +759,12 @@
 
 					<div class="my-2">
 						<div class="flex w-full justify-between">
-							<div class=" self-center text-sm font-semibold">{$i18n.t('Model Params')}</div>
+							<div class=" self-center text-sm font-medium">{$i18n.t('Model Params')}</div>
 						</div>
 
 						<div class="mt-2">
 							<div class="my-1">
-								<div class=" text-xs font-semibold mb-2">{$i18n.t('System Prompt')}</div>
+								<div class=" text-xs font-medium mb-2">{$i18n.t('System Prompt')}</div>
 								<div>
 									<Textarea
 										className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
@@ -777,7 +778,7 @@
 							</div>
 
 							<div class="flex w-full justify-between">
-								<div class=" self-center text-xs font-semibold">
+								<div class=" self-center text-xs font-medium">
 									{$i18n.t('Advanced Params')}
 								</div>
 
@@ -804,13 +805,13 @@
 						</div>
 					</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-1" />
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 					<div class="my-2">
 						<div class="flex w-full justify-between items-center">
 							<div class="flex w-full justify-between items-center">
-								<div class=" self-center text-sm font-semibold">
-									{$i18n.t('Prompt suggestions')}
+								<div class=" self-center text-sm font-medium">
+									{$i18n.t('Prompts')}
 								</div>
 
 								<button
@@ -818,7 +819,7 @@
 									type="button"
 									on:click={() => {
 										if ((info?.meta?.suggestion_prompts ?? null) === null) {
-											info.meta.suggestion_prompts = [{ content: JSON.stringify(createEmptyTranslations()) }];
+											info.meta.suggestion_prompts = [{ content: JSON.stringify(createEmptyTranslations()), title: ['', ''] }];
 										} else {
 											info.meta.suggestion_prompts = null;
 										}
@@ -836,6 +837,7 @@
 								<button
 									class="p-1 px-2 text-xs flex rounded-sm transition"
 									type="button"
+									aria-label={$i18n.t('Add prompt suggestion')}
 									on:click={() => {
 										if (
 											info.meta.suggestion_prompts.length === 0 ||
@@ -843,7 +845,7 @@
 										) {
 											info.meta.suggestion_prompts = [
 												...info.meta.suggestion_prompts,
-												{ content: JSON.stringify(createEmptyTranslations()) }
+												{ content: JSON.stringify(createEmptyTranslations()), title: ['', ''] }
 											];
 										}
 									}}
@@ -971,7 +973,7 @@
 
 					<div class="my-2 text-gray-300 dark:text-gray-700">
 						<div class="flex w-full justify-between mb-2">
-							<div class=" self-center text-sm font-semibold">{$i18n.t('JSON Preview')}</div>
+							<div class=" self-center text-sm font-medium">{$i18n.t('JSON Preview')}</div>
 
 							<button
 								class="p-1 px-3 text-xs flex rounded-sm transition"

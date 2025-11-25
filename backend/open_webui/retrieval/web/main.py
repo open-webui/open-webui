@@ -5,7 +5,8 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel
 
-from open_webui.retrieval.web.utils import is_string_allowed, resolve_hostname
+from open_webui.retrieval.web.utils import resolve_hostname
+from open_webui.utils.misc import is_string_allowed
 
 
 def get_filtered_results(results, filter_list):

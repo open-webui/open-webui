@@ -4,6 +4,7 @@ import time
 import datetime
 import logging
 from aiohttp import ClientSession
+import urllib
 
 from open_webui.models.auths import (
     AddUserForm,
@@ -499,6 +500,10 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 
         if WEBUI_AUTH_TRUSTED_NAME_HEADER:
             name = request.headers.get(WEBUI_AUTH_TRUSTED_NAME_HEADER, email)
+            try:
+                name = urllib.parse.unquote(name, encoding="utf-8")
+            except Exception as e:
+                pass
 
         if not Users.get_user_by_email(email.lower()):
             await signup(
@@ -694,11 +699,11 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             if not has_users:
                 # Disable signup after the first user is created
                 request.app.state.config.ENABLE_SIGNUP = False
-        
-            default_group_id = getattr(request.app.state.config, 'DEFAULT_GROUP_ID', "")
+
+            default_group_id = getattr(request.app.state.config, "DEFAULT_GROUP_ID", "")
             if default_group_id and default_group_id:
                 Groups.add_users_to_group(default_group_id, [user.id])
-        
+
             return {
                 "token": token,
                 "token_type": "Bearer",
@@ -928,7 +933,7 @@ class AdminConfig(BaseModel):
 @router.post("/admin/config")
 async def update_admin_config(
     request: Request, form_data: AdminConfig, user=Depends(get_admin_user)
-):    
+):
     request.app.state.config.SHOW_ADMIN_DETAILS = form_data.SHOW_ADMIN_DETAILS
     request.app.state.config.WEBUI_URL = form_data.WEBUI_URL
     request.app.state.config.ENABLE_SIGNUP = form_data.ENABLE_SIGNUP

@@ -63,7 +63,7 @@
 
 <div class=" rounded-lg flex flex-col gap-2">
 	<div class="">
-		<div class=" text-sm font-semibold mb-1.5">{$i18n.t('Visibility')}</div>
+		<div class=" text-sm font-medium mb-1.5">{$i18n.t('Visibility')}</div>
 
 		<div class="flex gap-2.5 items-center mb-1">
 			<div>
@@ -150,7 +150,7 @@
 			<div>
 				<div class="">
 					<div class="flex justify-between mb-1.5">
-						<div class="text-sm font-semibold">
+						<div class="text-sm font-medium">
 							{$i18n.t('Groups')}
 						</div>
 					</div>

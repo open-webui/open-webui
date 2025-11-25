@@ -530,7 +530,7 @@
 							{model.rating}
 						</td>
 
-						<td class=" px-3 py-1.5 text-right font-semibold text-green-500">
+						<td class=" px-3 py-1.5 text-right font-medium text-green-500">
 							<div class=" w-10">
 								{#if model.stats.won === '-'}
 									-
@@ -543,7 +543,7 @@
 							</div>
 						</td>
 
-						<td class="px-3 py-1.5 text-right font-semibold text-red-500">
+						<td class="px-3 py-1.5 text-right font-medium text-red-500">
 							<div class=" w-10">
 								{#if model.stats.lost === '-'}
 									-

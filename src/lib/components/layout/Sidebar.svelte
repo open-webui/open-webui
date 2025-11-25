@@ -38,7 +38,7 @@
 		toggleChatPinnedStatusById,
 		getChatById,
 		updateChatFolderIdById,
-		importChat
+		importChats
 	} from '$lib/apis/chats';
 	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
@@ -84,6 +84,10 @@
 	let folderRegistry = {};
 
 	let newFolderId = null;
+
+	$: if ($selectedFolder) {
+		initFolders();
+	}
 
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
@@ -227,15 +231,16 @@
 		for (const item of items) {
 			console.log(item);
 			if (item.chat) {
-				await importChat(
-					localStorage.token,
-					item.chat,
-					item?.meta ?? {},
-					pinned,
-					folderId,
-					item?.created_at ?? null,
-					item?.updated_at ?? null
-				);
+				await importChats(localStorage.token, [
+					{
+						chat: item.chat,
+						meta: item?.meta ?? {},
+						pinned: pinned,
+						folder_id: folderId,
+						created_at: item?.created_at ?? null,
+						updated_at: item?.updated_at ?? null
+					}
+				]);
 			}
 		}
 
@@ -713,7 +718,7 @@
 		bind:this={navElement}
 		id="sidebar"
 		class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
-			? 'bg-gray-50/70 dark:bg-gray-950/70 z-50'
+			? `${$mobile ? 'bg-gray-50 dark:bg-gray-950' : 'bg-gray-50/70 dark:bg-gray-950/70'} z-50`
 			: ' bg-transparent z-0 '} {$isApp
 			? `ml-[4.5rem] md:ml-0 `
 			: ' transition-all duration-300 '} shrink-0 text-gray-900 dark:text-gray-200 text-sm fixed top-0 left-0 overflow-x-hidden
@@ -999,15 +1004,16 @@
 								return null;
 							});
 							if (!chat && item) {
-								chat = await importChat(
-									localStorage.token,
-									item.chat,
-									item?.meta ?? {},
-									false,
-									null,
-									item?.created_at ?? null,
-									item?.updated_at ?? null
-								);
+								chat = await importChats(localStorage.token, [
+									{
+										chat: item.chat,
+										meta: item?.meta ?? {},
+										pinned: false,
+										folder_id: null,
+										created_at: item?.created_at ?? null,
+										updated_at: item?.updated_at ?? null
+									}
+								]);
 							}
 
 							if (chat) {
@@ -1064,15 +1070,16 @@
 												return null;
 											});
 											if (!chat && item) {
-												chat = await importChat(
-													localStorage.token,
-													item.chat,
-													item?.meta ?? {},
-													false,
-													null,
-													item?.created_at ?? null,
-													item?.updated_at ?? null
-												);
+												chat = await importChats(localStorage.token, [
+													{
+														chat: item.chat,
+														meta: item?.meta ?? {},
+														pinned: false,
+														folder_id: null,
+														created_at: item?.created_at ?? null,
+														updated_at: item?.updated_at ?? null
+													}
+												]);
 											}
 
 											if (chat) {

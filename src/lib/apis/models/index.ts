@@ -2,7 +2,7 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { models, config, type Model } from '$lib/stores';
 import { get } from 'svelte/store';
 export const getModels = async (token: string = ''): Promise<Model[] | null> => {
-  const lang = get(config)?.default_locale || 'de';
+  const lang = get(config)?.default_locale || 'en';
   try {
     const res = await fetch(`${WEBUI_API_BASE_URL}/models/`, {
       method: 'GET',
@@ -26,11 +26,70 @@ export const getModels = async (token: string = ''): Promise<Model[] | null> => 
   }
 };
 
-export const getModelItems = async (token: string = '') => {
-	const lang = get(config)?.default_locale || 'de';
+export const getModelItems = async (
+	token: string = '',
+	query,
+	viewOption,
+	selectedTag,
+	orderBy,
+	direction,
+	page
+) => {
+	const lang = get(config)?.default_locale || 'en';
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/models/list`, {
+	const searchParams = new URLSearchParams();
+	if (query) {
+		searchParams.append('query', query);
+	}
+	if (viewOption) {
+		searchParams.append('view_option', viewOption);
+	}
+	if (selectedTag) {
+		searchParams.append('tag', selectedTag);
+	}
+	if (orderBy) {
+		searchParams.append('order_by', orderBy);
+	}
+	if (direction) {
+		searchParams.append('direction', direction);
+	}
+	if (page) {
+		searchParams.append('page', page.toString());
+	}
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/list?${searchParams.toString()}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getModelTags = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/tags`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',

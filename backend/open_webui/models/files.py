@@ -17,7 +17,7 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 class File(Base):
     __tablename__ = "file"
-    id = Column(String, primary_key=True)
+    id = Column(String, primary_key=True, unique=True)
     user_id = Column(String)
     hash = Column(Text, nullable=True)
 

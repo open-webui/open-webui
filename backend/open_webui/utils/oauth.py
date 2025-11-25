@@ -53,6 +53,7 @@ from open_webui.config import (
     OAUTH_ADMIN_ROLES,
     OAUTH_ALLOWED_DOMAINS,
     OAUTH_UPDATE_PICTURE_ON_LOGIN,
+    OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID,
     WEBHOOK_URL,
     JWT_EXPIRES_IN,
     AppConfig,
@@ -1273,11 +1274,13 @@ class OAuthManager:
             client = self.get_client(provider)
 
             auth_params = {}
+
             if client:
-                if hasattr(client, "client_id"):
+                if (
+                    hasattr(client, "client_id")
+                    and OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID
+                ):
                     auth_params["client_id"] = client.client_id
-                if hasattr(client, "client_secret"):
-                    auth_params["client_secret"] = client.client_secret
 
             try:
                 token = await client.authorize_access_token(request, **auth_params)

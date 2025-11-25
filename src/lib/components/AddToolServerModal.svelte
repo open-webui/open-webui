@@ -47,6 +47,7 @@
 	let key = '';
 	let headers = '';
 
+	let functionNameFilterList = [];
 	let accessControl = {};
 
 	let id = '';
@@ -284,6 +285,7 @@
 				headers = JSON.stringify(_headers, null, 2);
 			} catch (error) {
 				toast.error($i18n.t('Headers must be a valid JSON object'));
+				loading = false;
 				return;
 			}
 		}
@@ -302,7 +304,7 @@
 			key,
 			config: {
 				enable: enable,
-
+				function_name_filter_list: functionNameFilterList,
 				access_control: accessControl
 			},
 			info: {
@@ -332,9 +334,11 @@
 		id = '';
 		name = '';
 		description = '';
+
 		oauthClientInfo = null;
 
 		enable = true;
+		functionNameFilterList = [];
 		accessControl = null;
 	};
 
@@ -358,6 +362,7 @@
 			oauthClientInfo = connection.info?.oauth_client_info ?? null;
 
 			enable = connection.config?.enable ?? true;
+			functionNameFilterList = connection.config?.function_name_filter_list ?? [];
 			accessControl = connection.config?.access_control ?? null;
 		}
 	};
@@ -787,6 +792,25 @@
 										type="text"
 										bind:value={description}
 										placeholder={$i18n.t('Enter description')}
+										autocomplete="off"
+									/>
+								</div>
+							</div>
+
+							<div class="flex flex-col w-full mt-2">
+								<label
+									for="function-name-filter-list"
+									class={`mb-1 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100 placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 text-gray-500'}`}
+									>{$i18n.t('Function Name Filter List')}</label
+								>
+
+								<div class="flex-1">
+									<input
+										id="function-name-filter-list"
+										class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+										type="text"
+										bind:value={functionNameFilterList}
+										placeholder={$i18n.t('Enter function name filter list (e.g. func1, !func2)')}
 										autocomplete="off"
 									/>
 								</div>
