@@ -111,7 +111,7 @@
 				</div>
 
 				<div class="self-center flex items-center gap-1">
-					{#if $user !== undefined && $user !== null}
+					<!-- {#if $user !== undefined && $user !== null}
 						<UserMenu
 							className="max-w-[240px]"
 							role={$user?.role}
@@ -136,7 +136,7 @@
 								</div>
 							</button>
 						</UserMenu>
-					{/if}
+					{/if} -->
 				</div>
 			</div>
 		</div>
