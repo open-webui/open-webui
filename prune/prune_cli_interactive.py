@@ -593,10 +593,11 @@ class InteractivePruneUI:
 
     def execute_prune_stages(self):
         """Execute all prune stages with progress display."""
-        # Debug logging for form_data values
-        log.debug(f"Execution - form_data.days: {self.form_data.days}")
-        log.debug(f"Execution - form_data.audio_cache_max_age_days: {self.form_data.audio_cache_max_age_days}")
-        log.debug(f"Execution - form_data.delete_inactive_users_days: {self.form_data.delete_inactive_users_days}")
+        # Debug output visible to user (not just logs)
+        console.print(f"[dim]DEBUG EXECUTION - days: {self.form_data.days}[/dim]")
+        console.print(f"[dim]DEBUG EXECUTION - audio_cache_max_age_days: {self.form_data.audio_cache_max_age_days}[/dim]")
+        console.print(f"[dim]DEBUG EXECUTION - delete_inactive_users_days: {self.form_data.delete_inactive_users_days}[/dim]")
+        console.print()
 
         with Progress(console=console) as progress:
             # Stage 0: Inactive users
