@@ -503,6 +503,7 @@ def sync_files_to_knowledge_batch(
         files=files_meta,
     )
 
+
 @router.post("/{id}/file/update", response_model=Optional[KnowledgeFilesResponse])
 def update_file_from_knowledge_by_id(
     request: Request,
