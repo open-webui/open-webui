@@ -2,9 +2,28 @@
 
 This directory contains a standalone command-line script that replicates the full logic and configurability of the Open WebUI prune API router, but runs independently without requiring the web server to be running.
 
+## 🚀 Quick Start (TL;DR)
+
+**Interactive Mode (Easiest - Recommended for first time users):**
+```bash
+cd /path/to/open-webui        # Go to your Open WebUI installation directory
+source .venv/bin/activate      # Activate your Python environment (if using venv)
+python prune/prune.py          # Launch interactive mode - NO ARGUMENTS!
+```
+
+**Command Line Mode:**
+```bash
+cd /path/to/open-webui        # Go to your Open WebUI installation directory
+source .venv/bin/activate      # Activate your Python environment (if using venv)
+python prune/prune.py --help  # Show all options
+python prune/prune.py --days 90 --execute  # Delete chats older than 90 days
+```
+
+**That's it!** The script will automatically find your database and vector database configuration.
+
 ## Purpose
 
-The `standalone_prune.py` script allows you to:
+The prune script allows you to:
 
 - Run data pruning operations via command line or cron jobs
 - Clean up orphaned data, old chats, inactive users
@@ -15,7 +34,7 @@ The `standalone_prune.py` script allows you to:
 ## Features
 
 ✅ **Fully Configurable** - All options from the web UI prune dialog are available via command-line flags
-✅ **Safe by Default** - Dry-run mode by default, requires explicit `--execute` flag for actual deletion
+✅ **Safe by Default** - Interactive mode for easy use, dry-run mode for command-line
 ✅ **Complete Logic** - Uses the exact same code paths as the API router
 ✅ **Database Access** - Full access to SQLAlchemy models and database operations
 ✅ **Vector Database Support** - Supports ChromaDB, PGVector, Milvus, and Milvus Multitenancy cleanup with auto-detection
@@ -30,7 +49,7 @@ The `standalone_prune.py` script allows you to:
 The script requires access to the same environment as Open WebUI:
 
 1. **Python Environment**: Same Python version and dependencies as Open WebUI backend
-2. **Database Access**: Must have `DATABASE_URL` environment variable set
+2. **Database Access**: Must have `DATABASE_URL` environment variable set (or .env file)
 3. **File System Access**: Must be able to read/write to Open WebUI data directories
 4. **Module Imports**: Must be able to import from `backend.open_webui` modules
 
@@ -53,13 +72,12 @@ cd /path/to/open-webui
 # Make sure you have the same environment as Open WebUI
 source .venv/bin/activate  # If using virtual environment
 
-# Export same environment variables as Open WebUI uses
-export DATABASE_URL="..."
-export VECTOR_DB="chromadb"  # or pgvector
-# ... other environment variables
+# Interactive mode (recommended for first use)
+python prune/prune.py
 
-# Run the script
-python prune/standalone_prune.py --help
+# OR command-line mode with options
+python prune/prune.py --help
+python prune/prune.py --days 90 --execute
 ```
 
 ### Method 2: Set PYTHONPATH
@@ -69,7 +87,7 @@ export PYTHONPATH="/path/to/open-webui:$PYTHONPATH"
 export DATABASE_URL="..."
 # ... other environment variables
 
-python /path/to/open-webui/prune/standalone_prune.py --help
+python /path/to/open-webui/prune/prune.py
 ```
 
 ### Method 3: Create a Wrapper Script
@@ -87,7 +105,7 @@ if [ -f .env ]; then
 fi
 
 # Run the prune script with arguments
-python prune/standalone_prune.py "$@"
+python prune/prune.py "$@"
 ```
 
 Make it executable:
@@ -97,7 +115,8 @@ chmod +x run_prune.sh
 
 Now you can run:
 ```bash
-./run_prune.sh --dry-run
+./run_prune.sh          # Interactive mode
+./run_prune.sh --help   # Show options
 ./run_prune.sh --days 60 --execute
 ```
 
