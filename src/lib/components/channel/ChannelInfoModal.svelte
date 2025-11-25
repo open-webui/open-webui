@@ -70,7 +70,7 @@
 							submitHandler();
 						}}
 					>
-						<div class="flex flex-col lg:flex-row w-full h-full pb-2 lg:space-x-4">
+						<div class="flex flex-col w-full h-full pb-2">
 							<UserList {channel} />
 						</div>
 					</form>

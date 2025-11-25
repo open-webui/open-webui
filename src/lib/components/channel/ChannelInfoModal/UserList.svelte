@@ -88,7 +88,7 @@
 	}
 </script>
 
-<div class="flex flex-col">
+<div class="flex flex-col justify-center">
 	{#if users === null || total === null}
 		<div class="my-10">
 			<Spinner className="size-5" />
