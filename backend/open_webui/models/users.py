@@ -340,7 +340,6 @@ class UsersTable:
                 query = query.order_by(User.created_at.desc())
 
             # Count BEFORE pagination
-            query = query.distinct(User.id)
             total = query.count()
 
             # correct pagination logic
