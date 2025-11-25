@@ -213,7 +213,7 @@
 />
 
 <div class="w-full h-screen max-h-[100dvh] text-white relative" id="auth-page">
-	<div class="w-full h-full absolute top-0 left-0 bg-white dark:bg-black"></div>
+	<div class="w-full h-full absolute top-0 left-0 bg-white dark:bg-black pointer-events-none"></div>
 
 	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region" />
 
@@ -351,25 +351,54 @@
 										</div>
 
 										{#if mode === 'signin'}
-											<div class="mt-3 flex items-start text-sm text-left text-gray-700 dark:text-gray-300 gap-2">
-												<input
+											<div class="mt-3 flex flex-wrap items-center text-sm text-left text-gray-700 dark:text-gray-300 gap-2">
+												<button
+													type="button"
 													id="agree-terms"
-													type="checkbox"
-													class="mt-0.5 rounded border-gray-300 bg-transparent text-gray-800 dark:text-gray-100 focus:ring-0"
-													bind:checked={agreeToTerms}
-												/>
-												<label for="agree-terms" class="leading-tight">
-													<span>我已阅读并同意</span>
-													<button
-														type="button"
-														class="ml-1 underline font-medium"
-														on:click={() => {
-															showAgreementModal = true;
-														}}
-													>
-														用户协议
-													</button>
+													class="size-4 shrink-0 rounded border transition-all {agreeToTerms
+														? 'bg-blue-600 border-blue-600'
+														: 'border-gray-300 bg-transparent dark:bg-gray-800 dark:border-gray-600'
+													} flex items-center justify-center cursor-pointer"
+													on:click={() => {
+														agreeToTerms = !agreeToTerms;
+													}}
+													role="checkbox"
+													aria-checked={agreeToTerms}
+													aria-labelledby="agree-terms-label"
+												>
+													{#if agreeToTerms}
+														<svg
+															viewBox="0 0 16 16"
+															fill="none"
+															stroke="white"
+															stroke-width="3"
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															class="w-3 h-3"
+														>
+															<path d="M4 8l3 3l5-5"/>
+														</svg>
+													{/if}
+												</button>
+												<label
+													id="agree-terms-label"
+													for="agree-terms"
+													class="inline-block cursor-pointer select-none"
+													on:click={() => {
+														agreeToTerms = !agreeToTerms;
+													}}
+												>
+													我已阅读并同意
 												</label>
+												<button
+													type="button"
+													class="underline font-medium hover:text-gray-900 dark:hover:text-gray-100"
+													on:click={() => {
+														showAgreementModal = true;
+													}}
+												>
+													用户协议
+												</button>
 											</div>
 										{/if}
 
