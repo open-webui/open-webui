@@ -2713,6 +2713,12 @@ RAG_EMBEDDING_BATCH_SIZE = PersistentConfig(
     ),
 )
 
+ENABLE_ASYNC_EMBEDDING = PersistentConfig(
+    "ENABLE_ASYNC_EMBEDDING",
+    "rag.enable_async_embedding",
+    os.environ.get("ENABLE_ASYNC_EMBEDDING", "True").lower() == "true",
+)
+
 RAG_EMBEDDING_QUERY_PREFIX = os.environ.get("RAG_EMBEDDING_QUERY_PREFIX", None)
 
 RAG_EMBEDDING_CONTENT_PREFIX = os.environ.get("RAG_EMBEDDING_CONTENT_PREFIX", None)

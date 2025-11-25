@@ -41,6 +41,8 @@
 	let embeddingEngine = '';
 	let embeddingModel = '';
 	let embeddingBatchSize = 1;
+	let ENABLE_ASYNC_EMBEDDING = true;
+
 	let rerankingModel = '';
 
 	let OpenAIUrl = '';
@@ -105,6 +107,7 @@
 			embedding_engine: embeddingEngine,
 			embedding_model: embeddingModel,
 			embedding_batch_size: embeddingBatchSize,
+			ENABLE_ASYNC_EMBEDDING: ENABLE_ASYNC_EMBEDDING,
 			ollama_config: {
 				key: OllamaKey,
 				url: OllamaUrl
@@ -237,6 +240,7 @@
 			embeddingEngine = embeddingConfig.embedding_engine;
 			embeddingModel = embeddingConfig.embedding_model;
 			embeddingBatchSize = embeddingConfig.embedding_batch_size ?? 1;
+			ENABLE_ASYNC_EMBEDDING = embeddingConfig.ENABLE_ASYNC_EMBEDDING ?? true;
 
 			OpenAIKey = embeddingConfig.openai_config.key;
 			OpenAIUrl = embeddingConfig.openai_config.url;
@@ -925,6 +929,22 @@
 										max="16000"
 										step="1"
 									/>
+								</div>
+							</div>
+
+							<div class="  mb-2.5 flex w-full justify-between">
+								<div class="self-center text-xs font-medium">
+									<Tooltip
+										content={$i18n.t(
+											'Runs embedding tasks concurrently to speed up processing. Turn off if rate limits become an issue.'
+										)}
+										placement="top-start"
+									>
+										{$i18n.t('Async Embedding Processing')}
+									</Tooltip>
+								</div>
+								<div class="flex items-center relative">
+									<Switch bind:state={ENABLE_ASYNC_EMBEDDING} />
 								</div>
 							</div>
 						{/if}
