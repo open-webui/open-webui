@@ -110,8 +110,10 @@
 				<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
 					<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
 
-					<!-- {#if $user?.role === 'user' ? ($user?.permissions?.chat?.temporary ?? true) && !($user?.permissions?.chat?.temporary_enforced ?? false) : true}
+					<!-- ai-friend 	屏蔽临时聊天 -->
+					{#if $user?.role === 'user' ? ($user?.permissions?.chat?.temporary ?? true) && !($user?.permissions?.chat?.temporary_enforced ?? false) : true}
 						{#if !chat?.id}
+						{#if false}
 							<Tooltip content={$i18n.t(`Temporary Chat`)}>
 								<button
 									class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
@@ -143,6 +145,7 @@
 									</div>
 								</button>
 							</Tooltip>
+						{/if}
 						{:else if $temporaryChatEnabled}
 							<Tooltip content={$i18n.t(`Save Chat`)}>
 								<button
@@ -201,7 +204,9 @@
 						</Menu>
 					{/if} -->
 
-					<!-- {#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
+					<!-- ai-friend 	屏蔽对话高级设置 -->
+				{#if false}
+					{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
 						<Tooltip content={$i18n.t('Controls')}>
 							<button
 								class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
@@ -215,7 +220,8 @@
 								</div>
 							</button>
 						</Tooltip>
-					{/if} -->
+					{/if}
+				{/if}
 
 					<!-- {#if $user !== undefined && $user !== null}
 						<UserMenu
