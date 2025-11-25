@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- 💬 Channel navigation now displays the total number of users with access to the channel. [Commit](https://github.com/open-webui/open-webui/commit/3b5710d0cd445cf86423187f5ee7c40472a0df0b)
 - 🔌 Tool servers and MCP connections now support function name filtering, allowing administrators to selectively enable or block specific functions using allow/block lists. [Commit](https://github.com/open-webui/open-webui/commit/743199f2d097ae1458381bce450d9025a0ab3f3d)
 - ⚡ A toggle to disable parallel embedding processing was added via "ENABLE_ASYNC_EMBEDDING", allowing sequential processing for rate-limited or resource-constrained local embedding setups. [#19444](https://github.com/open-webui/open-webui/pull/19444)
 - 🔄 Various improvements were implemented across the frontend and backend to enhance performance, stability, and security.
