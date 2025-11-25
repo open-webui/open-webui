@@ -166,10 +166,8 @@ async def get_channel_users_by_id(
 
     permitted_ids = get_permitted_group_and_user_ids("read", channel.access_control)
     if permitted_ids:
-        if permitted_ids.get("user_ids"):
-            filter["user_ids"] = permitted_ids.get("user_ids")
-        if permitted_ids.get("group_ids"):
-            filter["group_ids"] = permitted_ids.get("group_ids")
+        filter["user_ids"] = permitted_ids.get("user_ids")
+        filter["group_ids"] = permitted_ids.get("group_ids")
 
     result = Users.get_users(filter=filter, skip=skip, limit=limit)
 

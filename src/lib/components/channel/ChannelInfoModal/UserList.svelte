@@ -93,7 +93,7 @@
 		<div class="my-10">
 			<Spinner className="size-5" />
 		</div>
-	{:else}
+	{:else if users.length > 0}
 		<div class="flex gap-1">
 			<div class=" flex w-full space-x-2">
 				<div class="flex flex-1">
@@ -119,7 +119,6 @@
 				</div>
 			</div>
 		</div>
-
 		<div class="scrollbar-hidden relative whitespace-nowrap w-full max-w-full">
 			<div class=" text-sm text-left text-gray-500 dark:text-gray-400 w-full max-w-full">
 				<div
@@ -226,5 +225,9 @@
 		{#if total > 30}
 			<Pagination bind:page count={total} perPage={30} />
 		{/if}
+	{:else}
+		<div class="text-gray-500 text-xs text-center py-5 px-10">
+			{$i18n.t('No users were found.')}
+		</div>
 	{/if}
 </div>

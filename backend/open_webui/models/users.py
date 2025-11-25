@@ -249,10 +249,16 @@ class UsersTable:
                     )
 
                 user_ids = filter.get("user_ids")
+                group_ids = filter.get("group_ids")
+
+                if isinstance(user_ids, list) and isinstance(group_ids, list):
+                    # If both are empty lists, return no users
+                    if not user_ids and not group_ids:
+                        return {"users": [], "total": 0}
+
                 if user_ids:
                     query = query.filter(User.id.in_(user_ids))
 
-                group_ids = filter.get("group_ids")
                 if group_ids:
                     query = query.filter(
                         exists(
