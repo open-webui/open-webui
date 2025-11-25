@@ -31,11 +31,32 @@ router = APIRouter()
 
 
 @router.get("/", response_model=list[GroupResponse])
-async def get_groups(user=Depends(get_verified_user)):
+async def get_groups(share: Optional[bool] = None, user=Depends(get_verified_user)):
     if user.role == "admin":
-        return Groups.get_groups()
+        groups = Groups.get_groups()
     else:
-        return Groups.get_groups_by_member_id(user.id)
+        groups = Groups.get_groups_by_member_id(user.id)
+
+    group_list = []
+
+    for group in groups:
+        if share is not None:
+            # Check if the group has data and a config with share key
+            if (
+                group.data
+                and "share" in group.data.get("config", {})
+                and group.data["config"]["share"] != share
+            ):
+                continue
+
+        group_list.append(
+            GroupResponse(
+                **group.model_dump(),
+                member_count=Groups.get_group_member_count_by_id(group.id),
+            )
+        )
+
+    return group_list
 
 
 ############################
@@ -48,7 +69,10 @@ async def create_new_group(form_data: GroupForm, user=Depends(get_admin_user)):
     try:
         group = Groups.insert_new_group(user.id, form_data)
         if group:
-            return group
+            return GroupResponse(
+                **group.model_dump(),
+                member_count=Groups.get_group_member_count_by_id(group.id),
+            )
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -71,7 +95,10 @@ async def create_new_group(form_data: GroupForm, user=Depends(get_admin_user)):
 async def get_group_by_id(id: str, user=Depends(get_admin_user)):
     group = Groups.get_group_by_id(id)
     if group:
-        return group
+        return GroupResponse(
+            **group.model_dump(),
+            member_count=Groups.get_group_member_count_by_id(group.id),
+        )
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -89,12 +116,12 @@ async def update_group_by_id(
     id: str, form_data: GroupUpdateForm, user=Depends(get_admin_user)
 ):
     try:
-        if form_data.user_ids:
-            form_data.user_ids = Users.get_valid_user_ids(form_data.user_ids)
-
         group = Groups.update_group_by_id(id, form_data)
         if group:
-            return group
+            return GroupResponse(
+                **group.model_dump(),
+                member_count=Groups.get_group_member_count_by_id(group.id),
+            )
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -123,7 +150,10 @@ async def add_user_to_group(
 
         group = Groups.add_users_to_group(id, form_data.user_ids)
         if group:
-            return group
+            return GroupResponse(
+                **group.model_dump(),
+                member_count=Groups.get_group_member_count_by_id(group.id),
+            )
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -144,7 +174,10 @@ async def remove_users_from_group(
     try:
         group = Groups.remove_users_from_group(id, form_data.user_ids)
         if group:
-            return group
+            return GroupResponse(
+                **group.model_dump(),
+                member_count=Groups.get_group_member_count_by_id(group.id),
+            )
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

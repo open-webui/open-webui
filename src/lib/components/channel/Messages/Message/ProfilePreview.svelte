@@ -7,6 +7,10 @@
 	import UserStatusLinkPreview from './UserStatusLinkPreview.svelte';
 
 	export let user = null;
+
+	export let align = 'center';
+	export let side = 'right';
+	export let sideOffset = 8;
 </script>
 
 <LinkPreview.Root openDelay={0} closeDelay={0}>
@@ -14,5 +18,5 @@
 		<slot />
 	</LinkPreview.Trigger>
 
-	<UserStatusLinkPreview id={user?.id} side="right" align="center" sideOffset={8} />
+	<UserStatusLinkPreview id={user?.id} {side} {align} {sideOffset} />
 </LinkPreview.Root>

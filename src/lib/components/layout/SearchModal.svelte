@@ -9,6 +9,7 @@
 	import Spinner from '../common/Spinner.svelte';
 
 	import dayjs from '$lib/dayjs';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import calendar from 'dayjs/plugin/calendar';
 	import Loader from '../common/Loader.svelte';
 	import { createMessagesList } from '$lib/utils';
@@ -18,6 +19,7 @@
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import PageEdit from '../icons/PageEdit.svelte';
 	dayjs.extend(calendar);
+	dayjs.extend(localizedFormat);
 
 	export let show = false;
 	export let onClose = () => {};
@@ -387,7 +389,16 @@
 							</div>
 
 							<div class=" pl-3 shrink-0 text-gray-500 dark:text-gray-400 text-xs">
-								{dayjs(chat?.updated_at * 1000).calendar()}
+								{$i18n.t(
+									dayjs(chat?.updated_at * 1000).calendar(null, {
+										sameDay: '[Today]',
+										nextDay: '[Tomorrow]',
+										nextWeek: 'dddd',
+										lastDay: '[Yesterday]',
+										lastWeek: '[Last] dddd',
+										sameElse: 'L' // use localized format, otherwise dayjs.calendar() defaults to DD/MM/YYYY
+									})
+								)}
 							</div>
 						</a>
 					{/each}

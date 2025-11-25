@@ -1,3 +1,8 @@
+import DOMPurify from 'dompurify';
+import { toast } from 'svelte-sonner';
+
+import { createNewNote } from '$lib/apis/notes';
+
 export const downloadPdf = async (note) => {
 	const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
 		import('jspdf'),
@@ -9,7 +14,7 @@ export const downloadPdf = async (note) => {
 	const virtualHeight = 1400; // Fixed height (adjust as needed)
 
 	// STEP 1. Get a DOM node to render
-	const html = note.data?.content?.html ?? '';
+	const html = DOMPurify.sanitize(note.data?.content?.html ?? '');
 	const isDarkMode = document.documentElement.classList.contains('dark');
 
 	let node;
@@ -100,4 +105,28 @@ export const downloadPdf = async (note) => {
 	}
 
 	pdf.save(`${note.title}.pdf`);
+};
+
+export const createNoteHandler = async (title: string, content?: string) => {
+	//  $i18n.t('New Note'),
+	const res = await createNewNote(localStorage.token, {
+		// YYYY-MM-DD
+		title: title,
+		data: {
+			content: {
+				json: null,
+				html: content ?? '',
+				md: content ?? ''
+			}
+		},
+		meta: null,
+		access_control: {}
+	}).catch((error) => {
+		toast.error(`${error}`);
+		return null;
+	});
+
+	if (res) {
+		return res;
+	}
 };
