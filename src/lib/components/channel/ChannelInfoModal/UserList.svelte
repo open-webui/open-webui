@@ -93,7 +93,7 @@
 		<div class="my-10">
 			<Spinner className="size-5" />
 		</div>
-	{:else if users.length > 0}
+	{:else}
 		<div class="flex gap-1">
 			<div class=" flex w-full space-x-2">
 				<div class="flex flex-1">
@@ -119,115 +119,118 @@
 				</div>
 			</div>
 		</div>
-		<div class="scrollbar-hidden relative whitespace-nowrap w-full max-w-full">
-			<div class=" text-sm text-left text-gray-500 dark:text-gray-400 w-full max-w-full">
-				<div
-					class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200 w-full mb-0.5"
-				>
+
+		{#if users.length > 0}
+			<div class="scrollbar-hidden relative whitespace-nowrap w-full max-w-full">
+				<div class=" text-sm text-left text-gray-500 dark:text-gray-400 w-full max-w-full">
 					<div
-						class=" border-b-[1.5px] border-gray-50 dark:border-gray-850 flex items-center justify-between"
+						class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200 w-full mb-0.5"
 					>
-						<button
-							class="px-2.5 py-2 cursor-pointer select-none"
-							on:click={() => setSortKey('name')}
+						<div
+							class=" border-b-[1.5px] border-gray-50 dark:border-gray-850 flex items-center justify-between"
 						>
-							<div class="flex gap-1.5 items-center">
-								{$i18n.t('Name')}
+							<button
+								class="px-2.5 py-2 cursor-pointer select-none"
+								on:click={() => setSortKey('name')}
+							>
+								<div class="flex gap-1.5 items-center">
+									{$i18n.t('Name')}
 
-								{#if orderBy === 'name'}
-									<span class="font-normal"
-										>{#if direction === 'asc'}
+									{#if orderBy === 'name'}
+										<span class="font-normal"
+											>{#if direction === 'asc'}
+												<ChevronUp className="size-2" />
+											{:else}
+												<ChevronDown className="size-2" />
+											{/if}
+										</span>
+									{:else}
+										<span class="invisible">
 											<ChevronUp className="size-2" />
-										{:else}
-											<ChevronDown className="size-2" />
-										{/if}
-									</span>
-								{:else}
-									<span class="invisible">
-										<ChevronUp className="size-2" />
-									</span>
-								{/if}
-							</div>
-						</button>
-
-						<button
-							class="px-2.5 py-2 cursor-pointer select-none"
-							on:click={() => setSortKey('role')}
-						>
-							<div class="flex gap-1.5 items-center">
-								{$i18n.t('Role')}
-
-								{#if orderBy === 'role'}
-									<span class="font-normal"
-										>{#if direction === 'asc'}
-											<ChevronUp className="size-2" />
-										{:else}
-											<ChevronDown className="size-2" />
-										{/if}
-									</span>
-								{:else}
-									<span class="invisible">
-										<ChevronUp className="size-2" />
-									</span>
-								{/if}
-							</div>
-						</button>
-					</div>
-				</div>
-				<div class="w-full">
-					{#each users as user, userIdx}
-						<div class=" dark:border-gray-850 text-xs flex items-center justify-between">
-							<div class="px-3 py-1.5 font-medium text-gray-900 dark:text-white flex-1">
-								<div class="flex items-center gap-2">
-									<ProfilePreview {user} side="right" align="center" sideOffset={6}>
-										<img
-											class="rounded-2xl w-6 h-6 object-cover flex-shrink-0"
-											src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
-											alt="user"
-										/>
-									</ProfilePreview>
-									<Tooltip content={user.email} placement="top-start">
-										<div class="font-medium truncate">{user.name}</div>
-									</Tooltip>
-
-									{#if user?.is_active}
-										<div>
-											<span class="relative flex size-1.5">
-												<span
-													class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
-												></span>
-												<span class="relative inline-flex size-1.5 rounded-full bg-green-500"
-												></span>
-											</span>
-										</div>
+										</span>
 									{/if}
 								</div>
-							</div>
+							</button>
 
-							<div class="px-3 py-1">
-								<div class=" translate-y-0.5">
-									<Badge
-										type={user.role === 'admin'
-											? 'info'
-											: user.role === 'user'
-												? 'success'
-												: 'muted'}
-										content={$i18n.t(user.role)}
-									/>
+							<button
+								class="px-2.5 py-2 cursor-pointer select-none"
+								on:click={() => setSortKey('role')}
+							>
+								<div class="flex gap-1.5 items-center">
+									{$i18n.t('Role')}
+
+									{#if orderBy === 'role'}
+										<span class="font-normal"
+											>{#if direction === 'asc'}
+												<ChevronUp className="size-2" />
+											{:else}
+												<ChevronDown className="size-2" />
+											{/if}
+										</span>
+									{:else}
+										<span class="invisible">
+											<ChevronUp className="size-2" />
+										</span>
+									{/if}
+								</div>
+							</button>
+						</div>
+					</div>
+					<div class="w-full">
+						{#each users as user, userIdx}
+							<div class=" dark:border-gray-850 text-xs flex items-center justify-between">
+								<div class="px-3 py-1.5 font-medium text-gray-900 dark:text-white flex-1">
+									<div class="flex items-center gap-2">
+										<ProfilePreview {user} side="right" align="center" sideOffset={6}>
+											<img
+												class="rounded-2xl w-6 h-6 object-cover flex-shrink-0"
+												src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
+												alt="user"
+											/>
+										</ProfilePreview>
+										<Tooltip content={user.email} placement="top-start">
+											<div class="font-medium truncate">{user.name}</div>
+										</Tooltip>
+
+										{#if user?.is_active}
+											<div>
+												<span class="relative flex size-1.5">
+													<span
+														class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
+													></span>
+													<span class="relative inline-flex size-1.5 rounded-full bg-green-500"
+													></span>
+												</span>
+											</div>
+										{/if}
+									</div>
+								</div>
+
+								<div class="px-3 py-1">
+									<div class=" translate-y-0.5">
+										<Badge
+											type={user.role === 'admin'
+												? 'info'
+												: user.role === 'user'
+													? 'success'
+													: 'muted'}
+											content={$i18n.t(user.role)}
+										/>
+									</div>
 								</div>
 							</div>
-						</div>
-					{/each}
+						{/each}
+					</div>
 				</div>
 			</div>
-		</div>
 
-		{#if total > 30}
-			<Pagination bind:page count={total} perPage={30} />
+			{#if total > 30}
+				<Pagination bind:page count={total} perPage={30} />
+			{/if}
+		{:else}
+			<div class="text-gray-500 text-xs text-center py-5 px-10">
+				{$i18n.t('No users were found.')}
+			</div>
 		{/if}
-	{:else}
-		<div class="text-gray-500 text-xs text-center py-5 px-10">
-			{$i18n.t('No users were found.')}
-		</div>
 	{/if}
 </div>
