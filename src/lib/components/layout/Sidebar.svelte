@@ -54,13 +54,14 @@
 	import { getChannels, createNewChannel } from '$lib/apis/channels';
 	import ChannelModal from './Sidebar/ChannelModal.svelte';
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
-	import PencilSquare from '../icons/PencilSquare.svelte';
-	import Search from '../icons/Search.svelte';
-	import SearchModal from './SearchModal.svelte';
-	import FolderModal from './Sidebar/Folders/FolderModal.svelte';
-	import Sidebar from '../icons/Sidebar.svelte';
-	import PinnedModelList from './Sidebar/PinnedModelList.svelte';
-	import Note from '../icons/Note.svelte';
+import PencilSquare from '../icons/PencilSquare.svelte';
+import Search from '../icons/Search.svelte';
+import SearchModal from './SearchModal.svelte';
+import FolderModal from './Sidebar/Folders/FolderModal.svelte';
+import Sidebar from '../icons/Sidebar.svelte';
+import PinnedModelList from './Sidebar/PinnedModelList.svelte';
+import Note from '../icons/Note.svelte';
+import CloudArrowUp from '../icons/CloudArrowUp.svelte';
 	import { slide } from 'svelte/transition';
 	import HotkeyHint from '../common/HotkeyHint.svelte';
 
@@ -617,6 +618,28 @@
 					</Tooltip>
 				</div>
 
+				<div class="">
+					<Tooltip content={$i18n.t('Uploads')} placement="right">
+						<a
+							class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+							href="/upload"
+							on:click={async (e) => {
+								e.stopImmediatePropagation();
+								e.preventDefault();
+
+								goto('/upload');
+								itemClickHandler();
+							}}
+							draggable="false"
+							aria-label={$i18n.t('Uploads')}
+						>
+							<div class=" self-center flex items-center justify-center size-9">
+								<CloudArrowUp className="size-4.5" />
+							</div>
+						</a>
+					</Tooltip>
+				</div>
+
 				{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
 					<div class="">
 						<Tooltip content={$i18n.t('Notes')} placement="right">
@@ -832,6 +855,25 @@
 							</div>
 							<HotkeyHint name="search" className=" group-hover:visible invisible" />
 						</button>
+					</div>
+
+					<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
+						<a
+							id="sidebar-uploads-button"
+							class="grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							href="/upload"
+							on:click={itemClickHandler}
+							draggable="false"
+							aria-label={$i18n.t('Uploads')}
+						>
+							<div class="self-center">
+								<CloudArrowUp className="size-4.5" strokeWidth="2" />
+							</div>
+
+							<div class="flex self-center translate-y-[0.5px]">
+								<div class=" self-center text-sm font-primary">{$i18n.t('Uploads')}</div>
+							</div>
+						</a>
 					</div>
 
 					{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}

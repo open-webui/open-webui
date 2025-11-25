@@ -1366,6 +1366,10 @@ USER_PERMISSIONS_FEATURES_NOTES = (
     os.environ.get("USER_PERMISSIONS_FEATURES_NOTES", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_FEATURES_UPLOADS = (
+    os.environ.get("USER_PERMISSIONS_FEATURES_UPLOADS", "True").lower() == "true"
+)
+
 
 DEFAULT_USER_PERMISSIONS = {
     "workspace": {
@@ -1408,6 +1412,7 @@ DEFAULT_USER_PERMISSIONS = {
         "image_generation": USER_PERMISSIONS_FEATURES_IMAGE_GENERATION,
         "code_interpreter": USER_PERMISSIONS_FEATURES_CODE_INTERPRETER,
         "notes": USER_PERMISSIONS_FEATURES_NOTES,
+        "uploads": USER_PERMISSIONS_FEATURES_UPLOADS,
     },
 }
 
@@ -1427,6 +1432,12 @@ ENABLE_NOTES = PersistentConfig(
     "ENABLE_NOTES",
     "notes.enable",
     os.environ.get("ENABLE_NOTES", "True").lower() == "true",
+)
+
+ENABLE_UPLOADS = PersistentConfig(
+    "ENABLE_UPLOADS",
+    "uploads.enable",
+    os.environ.get("ENABLE_UPLOADS", "True").lower() == "true",
 )
 
 ENABLE_EVALUATION_ARENA_MODELS = PersistentConfig(

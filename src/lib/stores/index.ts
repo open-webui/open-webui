@@ -292,4 +292,9 @@ export type SessionUser = {
 	name: string;
 	role: string;
 	profile_image_url: string;
+	token?: string;
+	token_type?: string;
+	expires_at?: number;
+	tenant_id?: string | null;
+	tenant_s3_bucket?: string | null;
 };
