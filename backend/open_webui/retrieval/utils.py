@@ -782,6 +782,7 @@ def get_embedding_function(
     key,
     embedding_batch_size,
     azure_api_version=None,
+    enable_async=True,
 ) -> Awaitable:
     if embedding_engine == "":
         # Sentence transformers: CPU-bound sync operation
@@ -816,16 +817,26 @@ def get_embedding_function(
                     query[i : i + embedding_batch_size]
                     for i in range(0, len(query), embedding_batch_size)
                 ]
-                log.debug(
-                    f"generate_multiple_async: Processing {len(batches)} batches in parallel"
-                )
 
-                # Execute all batches in parallel
-                tasks = [
-                    embedding_function(batch, prefix=prefix, user=user)
-                    for batch in batches
-                ]
-                batch_results = await asyncio.gather(*tasks)
+                if enable_async:
+                    log.debug(
+                        f"generate_multiple_async: Processing {len(batches)} batches in parallel"
+                    )
+                    # Execute all batches in parallel
+                    tasks = [
+                        embedding_function(batch, prefix=prefix, user=user)
+                        for batch in batches
+                    ]
+                    batch_results = await asyncio.gather(*tasks)
+                else:
+                    log.debug(
+                        f"generate_multiple_async: Processing {len(batches)} batches sequentially"
+                    )
+                    batch_results = []
+                    for batch in batches:
+                        batch_results.append(
+                            await embedding_function(batch, prefix=prefix, user=user)
+                        )
 
                 # Flatten results
                 embeddings = []

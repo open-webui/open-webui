@@ -561,7 +561,8 @@ else:
 ####################################
 
 ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION = (
-    os.environ.get("REPLACE_IMAGE_URLS_IN_CHAT_RESPONSE", "False").lower() == "true"
+    os.environ.get("ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION", "False").lower()
+    == "true"
 )
 
 CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = os.environ.get(

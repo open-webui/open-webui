@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.40] - 2025-11-25
+
+### Fixed
+
+- 🗄️ A critical PostgreSQL user listing performance issue was resolved by removing a redundant count operation that caused severe database slowdowns and potential timeouts when viewing user lists in admin panels.
+
+## [0.6.39] - 2025-11-25
+
+### Added
+
+- 💬 A user list modal was added to channels, displaying all users with access and featuring search, sorting, and pagination capabilities. [Commit](https://github.com/open-webui/open-webui/commit/c0e120353824be00a2ef63cbde8be5d625bd6fd0)
+- 💬 Channel navigation now displays the total number of users with access to the channel. [Commit](https://github.com/open-webui/open-webui/commit/3b5710d0cd445cf86423187f5ee7c40472a0df0b)
+- 🔌 Tool servers and MCP connections now support function name filtering, allowing administrators to selectively enable or block specific functions using allow/block lists. [Commit](https://github.com/open-webui/open-webui/commit/743199f2d097ae1458381bce450d9025a0ab3f3d)
+- ⚡ A toggle to disable parallel embedding processing was added via "ENABLE_ASYNC_EMBEDDING", allowing sequential processing for rate-limited or resource-constrained local embedding setups. [#19444](https://github.com/open-webui/open-webui/pull/19444)
+- 🔄 Various improvements were implemented across the frontend and backend to enhance performance, stability, and security.
+- 🌐 Localization improvements were made for German (de-DE) and Portuguese (Brazil) translations.
+
+### Fixed
+
+- 📝 Inline citations now render correctly within markdown lists and nested elements instead of displaying as "undefined" values. [#19452](https://github.com/open-webui/open-webui/issues/19452)
+- 👥 Group member selection now works correctly without randomly selecting other users or causing the user list to jump around. [#19426](https://github.com/open-webui/open-webui/issues/19426)
+- 👥 Admin panel user list now displays the correct total user count and properly paginates 30 items per page after fixing database query issues with group member joins. [#19429](https://github.com/open-webui/open-webui/issues/19429)
+- 🔍 Knowledge base reindexing now works correctly after resolving async execution chain issues by implementing threadpool workers for embedding operations. [#19434](https://github.com/open-webui/open-webui/pull/19434)
+- 🖼️ OpenAI image generation now works correctly after fixing a connection adapter error caused by incorrect URL formatting. [#19435](https://github.com/open-webui/open-webui/pull/19435)
+
+### Changed
+
+- 🔧 BREAKING: Docling configuration has been consolidated from individual environment variables into a single "DOCLING_PARAMS" JSON configuration and now supports API key authentication via "DOCLING_API_KEY", requiring users to migrate existing Docling settings to the new format. [#16841](https://github.com/open-webui/open-webui/issues/16841), [#19427](https://github.com/open-webui/open-webui/pull/19427)
+- 🔧 The environment variable "REPLACE_IMAGE_URLS_IN_CHAT_RESPONSE" has been renamed to "ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION" for naming consistency.
+
 ## [0.6.38] - 2025-11-24
 
 ### Fixed
