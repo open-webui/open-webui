@@ -18,6 +18,7 @@ from open_webui.models.auths import (
     UserResponse,
 )
 from open_webui.models.users import Users, UpdateProfileForm
+from open_webui.models.tenants import Tenants
 from open_webui.models.groups import Groups
 from open_webui.models.oauth_sessions import OAuthSessions
 
@@ -72,6 +73,8 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 class SessionUserResponse(Token, UserResponse):
     expires_at: Optional[int] = None
     permissions: Optional[dict] = None
+    tenant_id: Optional[str] = None
+    tenant_s3_bucket: Optional[str] = None
 
 
 class SessionUserInfoResponse(SessionUserResponse):
@@ -119,6 +122,11 @@ async def get_session_user(
         user.id, request.app.state.config.USER_PERMISSIONS
     )
 
+    tenant_bucket = None
+    if user.tenant_id:
+        tenant = Tenants.get_tenant_by_id(user.tenant_id)
+        tenant_bucket = tenant.s3_bucket if tenant else None
+
     return {
         "token": token,
         "token_type": "Bearer",
@@ -132,6 +140,8 @@ async def get_session_user(
         "gender": user.gender,
         "date_of_birth": user.date_of_birth,
         "permissions": user_permissions,
+        "tenant_id": user.tenant_id,
+        "tenant_s3_bucket": tenant_bucket,
     }
 
 
