@@ -437,6 +437,13 @@ class InteractivePruneUI:
     def run_preview(self):
         """Run preview and show results."""
         console.clear()
+
+        # Debug: Show actual form_data values
+        console.print(f"[dim]DEBUG - form_data.days: {self.form_data.days}[/dim]")
+        console.print(f"[dim]DEBUG - form_data.audio_cache_max_age_days: {self.form_data.audio_cache_max_age_days}[/dim]")
+        console.print(f"[dim]DEBUG - form_data.delete_inactive_users_days: {self.form_data.delete_inactive_users_days}[/dim]")
+        console.print()
+
         console.print(Panel.fit(
             "[bold yellow]Preview Mode[/bold yellow]\n"
             "Calculating what would be deleted...",

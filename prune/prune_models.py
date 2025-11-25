@@ -29,7 +29,7 @@ class PruneDataForm(BaseModel):
     delete_orphaned_models: bool = True
     delete_orphaned_notes: bool = True
     delete_orphaned_folders: bool = True
-    audio_cache_max_age_days: Optional[int] = 30
+    audio_cache_max_age_days: Optional[int] = None  # Changed from 30 to None - must be explicitly enabled
     delete_inactive_users_days: Optional[int] = None
     exempt_admin_users: bool = True
     exempt_pending_users: bool = True
