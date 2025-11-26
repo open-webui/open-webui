@@ -5,17 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.41] - 2025-11-25
+## [0.6.41] - 2025-11-26
 
 ### Added
 
 - 🔄 Various improvements were implemented across the frontend and backend to enhance performance, stability, and security.
-- 🌐 Translations for Catalan were enhanced and expanded.
+- 🌐 Translations for German and Catalan were enhanced and expanded.
 
 ### Fixed
 
 - 👥 Model list filtering in workspaces was corrected to properly include models shared with user groups, ensuring members can view models they have write access to through group permissions. [#19461](https://github.com/open-webui/open-webui/issues/19461), [Commit](https://github.com/open-webui/open-webui/commit/69722ba973768a5f689f2e2351bf583a8db9bba8)
 - 👥 User profile image display in preview contexts was fixed by resolving a Pydantic validation error that prevented proper rendering. [Commit](https://github.com/open-webui/open-webui/commit/c7eb7136893b0ddfdc5d55ffc7a05bd84a00f5d6)
+- 🗄️ Redis TLS connection failures were resolved by updating the python-socketio dependency to version 5.15.0, restoring support for the "rediss://" URL schema. [#19480](https://github.com/open-webui/open-webui/issues/19480), [#19488](https://github.com/open-webui/open-webui/pull/19488)
+- 🛠️ MCP tool server configuration was corrected to properly handle the "Function Name Filter List" as both string and list types, preventing AttributeError when the field is empty and ensuring backward compatibility. [#19486](https://github.com/open-webui/open-webui/issues/19486), [Commit](https://github.com/open-webui/open-webui/commit/c5b73d71843edc024325d4a6e625ec939a747279), [Commit](https://github.com/open-webui/open-webui/commit/477097c2e42985c14892301d0127314629d07df1)
+- 📁 Vector database document saving was fixed by correcting async threadpool parameter passing, ensuring proper execution of web page attachment processing and batch file uploads. [Commit](https://github.com/open-webui/open-webui/commit/4370dee79e19d77062c03fba81780cb3b779fca3)
 
 ## [0.6.40] - 2025-11-25
 
