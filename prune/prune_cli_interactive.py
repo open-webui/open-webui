@@ -437,13 +437,6 @@ class InteractivePruneUI:
     def run_preview(self):
         """Run preview and show results."""
         console.clear()
-
-        # Debug: Show actual form_data values
-        console.print(f"[dim]DEBUG - form_data.days: {self.form_data.days}[/dim]")
-        console.print(f"[dim]DEBUG - form_data.audio_cache_max_age_days: {self.form_data.audio_cache_max_age_days}[/dim]")
-        console.print(f"[dim]DEBUG - form_data.delete_inactive_users_days: {self.form_data.delete_inactive_users_days}[/dim]")
-        console.print()
-
         console.print(Panel.fit(
             "[bold yellow]Preview Mode[/bold yellow]\n"
             "Calculating what would be deleted...",
@@ -593,12 +586,6 @@ class InteractivePruneUI:
 
     def execute_prune_stages(self):
         """Execute all prune stages with progress display."""
-        # Debug output visible to user (not just logs)
-        console.print(f"[dim]DEBUG EXECUTION - days: {self.form_data.days}[/dim]")
-        console.print(f"[dim]DEBUG EXECUTION - audio_cache_max_age_days: {self.form_data.audio_cache_max_age_days}[/dim]")
-        console.print(f"[dim]DEBUG EXECUTION - delete_inactive_users_days: {self.form_data.delete_inactive_users_days}[/dim]")
-        console.print()
-
         with Progress(console=console) as progress:
             # Stage 0: Inactive users
             if self.form_data.delete_inactive_users_days is not None:
@@ -718,9 +705,16 @@ class InteractivePruneUI:
                     console.print("[green]✓[/green] Vacuumed main database")
 
                     if isinstance(self.vector_cleaner, ChromaDatabaseCleaner):
+                        # Log size before VACUUM
+                        size_before_mb = self.vector_cleaner.chroma_db_path.stat().st_size / (1024 * 1024)
+
                         with sqlite3.connect(str(self.vector_cleaner.chroma_db_path)) as conn:
                             conn.execute("VACUUM")
-                        console.print("[green]✓[/green] Vacuumed ChromaDB")
+
+                        # Log size after VACUUM
+                        size_after_mb = self.vector_cleaner.chroma_db_path.stat().st_size / (1024 * 1024)
+                        freed_mb = size_before_mb - size_after_mb
+                        console.print(f"[green]✓[/green] Vacuumed ChromaDB ({size_before_mb:.1f}MB → {size_after_mb:.1f}MB, freed {freed_mb:.1f}MB)")
                     elif isinstance(self.vector_cleaner, PGVectorDatabaseCleaner) and self.vector_cleaner.session:
                         self.vector_cleaner.session.execute(text("VACUUM ANALYZE"))
                         self.vector_cleaner.session.commit()

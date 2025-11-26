@@ -362,23 +362,23 @@ class ChromaDatabaseCleaner(VectorDatabaseCleaner):
                     try:
                         shutil.rmtree(collection_dir)
                         deleted_count += 1
-                        log.debug(f"Deleted orphaned ChromaDB directory: {dir_uuid}")
+                        log.info(f"Deleted orphaned ChromaDB directory (no mapping): {dir_uuid}")
                     except Exception as e:
-                        log.error(
-                            f"Failed to delete orphaned directory {dir_uuid}: {e}"
-                        )
+                        error_msg = f"Failed to delete orphaned directory {dir_uuid}: {e}"
+                        log.error(error_msg)
+                        errors.append(error_msg)
 
                 elif collection_name not in expected_collections:
                     try:
                         shutil.rmtree(collection_dir)
                         deleted_count += 1
-                        log.debug(
-                            f"Deleted orphaned ChromaDB collection: {collection_name}"
-                        )
+                        log.info(f"Deleted orphaned ChromaDB collection directory: {collection_name} ({dir_uuid})")
                     except Exception as e:
-                        log.error(
-                            f"Failed to delete collection directory {dir_uuid}: {e}"
-                        )
+                        error_msg = f"Failed to delete collection directory {dir_uuid}: {e}"
+                        log.error(error_msg)
+                        errors.append(error_msg)
+                else:
+                    log.debug(f"Keeping expected collection: {collection_name} ({dir_uuid})")
 
         except Exception as e:
             error_msg = f"ChromaDB directory cleanup failed: {e}"
@@ -559,6 +559,10 @@ class ChromaDatabaseCleaner(VectorDatabaseCleaner):
                     f"{collection_meta_deleted} collection metadata, {segment_meta_deleted} segment metadata, "
                     f"{seq_id_deleted} sequence IDs"
                 )
+
+                # Log database size before VACUUM for diagnostic purposes
+                db_size_mb = self.chroma_db_path.stat().st_size / (1024 * 1024)
+                log.info(f"ChromaDB size after cleanup, before VACUUM: {db_size_mb:.1f}MB (VACUUM needed to reclaim space)")
 
         except Exception as e:
             log.error(f"Error cleaning orphaned ChromaDB database records: {e}")
