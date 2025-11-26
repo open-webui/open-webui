@@ -932,7 +932,7 @@
 					</Folder>
 				{/if}
 
-				{#if folders}
+				{#if $config?.features?.enable_folders && folders}
 					<Folder
 						id="sidebar-folders"
 						className="px-2 mt-0.5"

@@ -353,6 +353,7 @@ from open_webui.config import (
     ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS,
     API_KEYS_ALLOWED_ENDPOINTS,
     ENABLE_CHANNELS,
+    ENABLE_FOLDERS,
     ENABLE_NOTES,
     ENABLE_COMMUNITY_SHARING,
     ENABLE_MESSAGE_RATING,
@@ -768,6 +769,7 @@ app.state.config.BANNERS = WEBUI_BANNERS
 
 
 app.state.config.ENABLE_CHANNELS = ENABLE_CHANNELS
+app.state.config.ENABLE_FOLDERS = ENABLE_FOLDERS
 app.state.config.ENABLE_NOTES = ENABLE_NOTES
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
 app.state.config.ENABLE_MESSAGE_RATING = ENABLE_MESSAGE_RATING
@@ -1843,6 +1845,7 @@ async def get_app_config(request: Request):
                 {
                     "enable_direct_connections": app.state.config.ENABLE_DIRECT_CONNECTIONS,
                     "enable_channels": app.state.config.ENABLE_CHANNELS,
+                    "enable_folders": app.state.config.ENABLE_FOLDERS,
                     "enable_notes": app.state.config.ENABLE_NOTES,
                     "enable_web_search": app.state.config.ENABLE_WEB_SEARCH,
                     "enable_code_execution": app.state.config.ENABLE_CODE_EXECUTION,

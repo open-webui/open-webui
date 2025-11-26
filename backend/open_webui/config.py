@@ -1520,6 +1520,12 @@ ENABLE_CHANNELS = PersistentConfig(
     os.environ.get("ENABLE_CHANNELS", "False").lower() == "true",
 )
 
+ENABLE_FOLDERS = PersistentConfig(
+    "ENABLE_FOLDERS",
+    "folders.enable",
+    os.environ.get("ENABLE_FOLDERS", "True").lower() == "true",
+)
+
 ENABLE_NOTES = PersistentConfig(
     "ENABLE_NOTES",
     "notes.enable",
