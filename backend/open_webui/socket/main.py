@@ -37,6 +37,9 @@ from open_webui.env import (
     WEBSOCKET_SERVER_PING_INTERVAL,
     WEBSOCKET_SERVER_LOGGING,
     WEBSOCKET_SERVER_ENGINEIO_LOGGING,
+    REDIS_TTL_SESSION_POOL,
+    REDIS_TTL_USER_POOL,
+    REDIS_TTL_USAGE_POOL
 )
 from open_webui.utils.auth import decode_token
 from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
@@ -123,18 +126,21 @@ if WEBSOCKET_MANAGER == "redis":
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=redis_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
+        ttl=REDIS_TTL_SESSION_POOL,
     )
     USER_POOL = RedisDict(
         f"{REDIS_KEY_PREFIX}:user_pool",
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=redis_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
+        ttl=REDIS_TTL_USER_POOL,
     )
     USAGE_POOL = RedisDict(
         f"{REDIS_KEY_PREFIX}:usage_pool",
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=redis_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
+        ttl=REDIS_TTL_USAGE_POOL,
     )
 
     clean_up_lock = RedisLock(
@@ -265,6 +271,12 @@ def get_active_status_by_user_id(user_id):
         return True
     return False
 
+def refresh_user_pool(user_id: str, sid: str):
+    if user_id in USER_POOL:
+        if sid not in USER_POOL[user_id]:
+            USER_POOL[user_id] = USER_POOL[user_id] + [sid]
+    else:
+        USER_POOL[user_id] = [sid]
 
 @sio.on("usage")
 async def usage(sid, data):
@@ -293,10 +305,7 @@ async def connect(sid, environ, auth):
             SESSION_POOL[sid] = user.model_dump(
                 exclude=["date_of_birth", "bio", "gender"]
             )
-            if user.id in USER_POOL:
-                USER_POOL[user.id] = USER_POOL[user.id] + [sid]
-            else:
-                USER_POOL[user.id] = [sid]
+            refresh_user_pool(user_id=user.id, sid=sid)
 
             await sio.enter_room(sid, f"user:{user.id}")
 
@@ -317,10 +326,7 @@ async def user_join(sid, data):
         return
 
     SESSION_POOL[sid] = user.model_dump(exclude=["date_of_birth", "bio", "gender"])
-    if user.id in USER_POOL:
-        USER_POOL[user.id] = USER_POOL[user.id] + [sid]
-    else:
-        USER_POOL[user.id] = [sid]
+    refresh_user_pool(user_id=user.id, sid=sid)
 
     await sio.enter_room(sid, f"user:{user.id}")
     # Join all the channels
@@ -797,7 +803,13 @@ def get_event_call(request_info):
             to=request_info["session_id"],
         )
         return response
-
+    
+    if (
+        "session_id" in request_info
+        and "user_id" in request_info
+    ):
+        refresh_user_pool(request_info['user_id'], request_info['session_id'])
+    
     if (
         "session_id" in request_info
         and "chat_id" in request_info

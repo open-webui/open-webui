@@ -47,7 +47,7 @@ class RedisLock:
 
 
 class RedisDict:
-    def __init__(self, name, redis_url, redis_sentinels=[], redis_cluster=False):
+    def __init__(self, name, redis_url, redis_sentinels=[], redis_cluster=False, ttl: int | None = None):
         self.name = name
         self.redis = get_redis_connection(
             redis_url,
@@ -55,15 +55,20 @@ class RedisDict:
             redis_cluster=redis_cluster,
             decode_responses=True,
         )
+        self.ttl = ttl #Note: Only available for Redis Version >= 7.4.0.
 
     def __setitem__(self, key, value):
         serialized_value = json.dumps(value)
         self.redis.hset(self.name, key, serialized_value)
+        if self.ttl is not None:
+            self.redis.hexpire(self.name, self.ttl, key)
 
     def __getitem__(self, key):
         value = self.redis.hget(self.name, key)
         if value is None:
             raise KeyError(key)
+        if self.ttl is not None:
+            self.redis.hexpire(self.name, self.ttl, key)
         return json.loads(value)
 
     def __delitem__(self, key):
