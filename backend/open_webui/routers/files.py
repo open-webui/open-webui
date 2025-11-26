@@ -73,6 +73,15 @@ def has_access_to_file(
             user.id, access_type
         )
         for knowledge_base in knowledge_bases:
+            if (
+                f"file-{file_id}" == knowledge_base_id
+                and file_id in knowledge_base.data["file_ids"]
+            ):
+                log.debug(
+                    f"Access to file {file_id} exists via file_ids of knowledge base {knowledge_base.id}"
+                )
+                has_access = True
+                break
             if knowledge_base.id == knowledge_base_id:
                 has_access = True
                 break
