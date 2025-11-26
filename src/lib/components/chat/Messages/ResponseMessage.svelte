@@ -952,38 +952,101 @@
 														d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
 													/>
 												</svg>
-											</button>
-										</Tooltip>
-									{/if}
-								{/if}
+														</button>
+													</Tooltip>
+												{/if}
 
-								<Tooltip content={$i18n.t('Copy')} placement="bottom">
-									<button
-										aria-label={$i18n.t('Copy')}
-										class="{isLastMessage || ($settings?.highContrastMode ?? false)
-											? 'visible'
-											: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition copy-response-button"
-										on:click={() => {
-											copyToClipboard(message.content);
-										}}
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											aria-hidden="true"
-											viewBox="0 0 24 24"
-											stroke-width="2.3"
-											stroke="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"
-											/>
-										</svg>
-									</button>
-								</Tooltip>
+														<!-- Translation Menu -->
+														<TranslationMenu
+															bind:show={showTranslationMenu}
+															on:select={(e) => {
+																handleTranslate(e.detail);
+															}}
+															{loadingTranslation}
+															{isTranslated}
+															on:restore={restoreOriginal}
+															on:copy={copyTranslation}
+														/>
+
+														<Tooltip content={$i18n.t('Copy')} placement="bottom">
+												<button
+													aria-label={$i18n.t('Copy')}
+													class="{isLastMessage || ($settings?.highContrastMode ?? false)
+														? 'visible'
+														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition copy-response-button"
+													on:click={() => {
+														copyToClipboard(message.content);
+													}}
+												>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														fill="none"
+														aria-hidden="true"
+														viewBox="0 0 24 24"
+														stroke-width="2.3"
+														stroke="currentColor"
+														class="w-4 h-4"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"
+														/>
+													</svg>
+												</button>
+											</Tooltip>
+
+											<!-- Translation Button -->
+											<Tooltip content={$i18n.t('Translate')} placement="bottom">
+												<button
+													class="{isTranslated
+														? 'bg-gray-100 dark:bg-gray-700'
+														: ''} p-1.5 rounded-lg transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 {isLastMessage || ($settings?.highContrastMode ?? false)
+														? 'visible'
+														: 'invisible group-hover:visible'}"
+													on:click={() => {
+														if (isTranslated) {
+															restoreOriginal();
+														} else {
+															showTranslationMenu = true;
+														}
+													}}
+												>
+													{#if loadingTranslation}
+														<svg
+															class="animate-spin w-4 h-4 text-gray-600 dark:text-gray-300"
+															viewBox="0 0 24 24"
+															fill="none"
+															stroke="currentColor"
+														>
+															<circle
+																cx="12"
+																cy="12"
+																r="10"
+																stroke-width="2"
+																stroke-dasharray="32"
+																stroke-dashoffset="16"
+															/>
+														</svg>
+													{:else if isTranslated}
+														<svg
+															class="w-4 h-4 text-green-600 dark:text-green-400"
+															viewBox="0 0 24 24"
+															fill="none"
+															stroke="currentColor"
+														>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																stroke-width="2"
+																d="M5 13l4 4L19 7"
+															/>
+														</svg>
+													{:else}
+														<TranslateIcon className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+													{/if}
+												</button>
+											</Tooltip>
 
 								{#if $user?.role === 'admin' || ($user?.permissions?.chat?.tts ?? true)}
 									<Tooltip content={$i18n.t('Read Aloud')} placement="bottom">
@@ -1471,12 +1534,7 @@
 												</button>
 											</Tooltip>
 										{/each}
-									{/if}
-								{/if}
-							{/if}
-						{/if}
-					</div>
-
+{/if}
 					{#if message.done && showRateComment}
 						<RateComment
 							bind:message
@@ -1521,3 +1579,7 @@
 		scrollbar-width: none; /* Firefox */
 	}
 </style>
+
+import { translateMessageWithModel } from '$lib/apis/translate';
+import TranslationMenu from './TranslationMenu.svelte';
+import TranslateIcon from '$lib/components/icons/Translate.svelte';
