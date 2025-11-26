@@ -1301,6 +1301,404 @@ class MilvusMultitenancyDatabaseCleaner(VectorDatabaseCleaner):
         return expected_resource_ids
 
 
+class QdrantDatabaseCleaner(VectorDatabaseCleaner):
+    """
+    Qdrant vector database cleaner for standard (non-multitenancy) mode.
+
+    In standard mode, each file/KB gets its own collection with naming:
+    - {prefix}_file-{file_id}
+    - {prefix}_{kb_id}
+
+    Collections are deleted entirely when orphaned.
+    """
+
+    def __init__(self, vector_db_client):
+        self.vector_db_client = vector_db_client
+        self.client = vector_db_client.client
+        self.collection_prefix = vector_db_client.collection_prefix
+
+    def count_orphaned_collections(
+        self,
+        active_file_ids: Set[str],
+        active_kb_ids: Set[str],
+        active_user_ids: Optional[Set[str]] = None
+    ) -> int:
+        """Count orphaned Qdrant collections."""
+        try:
+            expected_collections = self._build_expected_collections(
+                active_file_ids, active_kb_ids
+            )
+
+            # Get all collections with our prefix
+            all_collections = self.client.get_collections().collections
+            count = 0
+
+            for collection in all_collections:
+                collection_name = collection.name
+                if collection_name.startswith(f"{self.collection_prefix}_"):
+                    # Remove prefix to get original name
+                    original_name = collection_name[len(self.collection_prefix) + 1:]
+
+                    if original_name not in expected_collections:
+                        count += 1
+
+        except Exception as e:
+            log.error(f"Error counting orphaned Qdrant collections: {e}")
+            return 0
+
+        return count
+
+    def cleanup_orphaned_collections(
+        self,
+        active_file_ids: Set[str],
+        active_kb_ids: Set[str],
+        active_user_ids: Optional[Set[str]] = None
+    ) -> tuple[int, Optional[str]]:
+        """Delete orphaned Qdrant collections."""
+        try:
+            expected_collections = self._build_expected_collections(
+                active_file_ids, active_kb_ids
+            )
+
+            # Get all collections with our prefix
+            all_collections = self.client.get_collections().collections
+            deleted_count = 0
+            errors = []
+
+            for collection in all_collections:
+                collection_name = collection.name
+                if collection_name.startswith(f"{self.collection_prefix}_"):
+                    # Remove prefix to get original name
+                    original_name = collection_name[len(self.collection_prefix) + 1:]
+
+                    if original_name not in expected_collections:
+                        try:
+                            self.client.delete_collection(collection_name=collection_name)
+                            deleted_count += 1
+                            log.info(f"Deleted orphaned Qdrant collection: {original_name}")
+                        except Exception as e:
+                            error_msg = f"Failed to delete Qdrant collection {collection_name}: {e}"
+                            log.error(error_msg)
+                            errors.append(error_msg)
+
+        except Exception as e:
+            error_msg = f"Qdrant cleanup failed: {e}"
+            log.error(error_msg)
+            return (0, error_msg)
+
+        if errors:
+            return (deleted_count, "; ".join(errors))
+        return (deleted_count, None)
+
+    def delete_collection(self, collection_name: str) -> bool:
+        """Delete a specific Qdrant collection by name."""
+        try:
+            full_name = f"{self.collection_prefix}_{collection_name}"
+            if self.client.collection_exists(collection_name=full_name):
+                self.client.delete_collection(collection_name=full_name)
+                log.debug(f"Deleted Qdrant collection: {collection_name}")
+            return True
+        except Exception as e:
+            log.error(f"Error deleting Qdrant collection {collection_name}: {e}")
+            return False
+
+    def _build_expected_collections(
+        self, active_file_ids: Set[str], active_kb_ids: Set[str]
+    ) -> Set[str]:
+        """Build set of expected collection names (without prefix)."""
+        expected_collections = set()
+
+        # File collections use file-{id} pattern
+        for file_id in active_file_ids:
+            expected_collections.add(f"file-{file_id}")
+
+        # Knowledge base collections use the KB ID directly
+        for kb_id in active_kb_ids:
+            expected_collections.add(kb_id)
+
+        return expected_collections
+
+
+class QdrantMultitenancyDatabaseCleaner(VectorDatabaseCleaner):
+    """
+    Qdrant multitenancy vector database cleaner.
+
+    In multitenancy mode, there are 5 shared collections:
+    - {prefix}_memories - for user-memory-{user_id}
+    - {prefix}_files - for file-{file_id}
+    - {prefix}_knowledge - for {kb_id} (default)
+    - {prefix}_web-search - for web-search-{hash} (ephemeral)
+    - {prefix}_hash-based - for {63-char-hex} (temporary)
+
+    Each collection stores points with a tenant_id field. Cleanup deletes
+    orphaned tenant_ids (not entire collections).
+
+    Uses scroll() with pagination to handle unlimited tenant IDs without
+    exceeding memory limits.
+    """
+
+    def __init__(self, vector_db_client):
+        self.vector_db_client = vector_db_client
+        self.client = vector_db_client.client
+        self.collection_prefix = vector_db_client.collection_prefix
+
+        # Shared collection names
+        self.shared_collections = [
+            f"{self.collection_prefix}_memories",
+            f"{self.collection_prefix}_files",
+            f"{self.collection_prefix}_knowledge",
+            f"{self.collection_prefix}_web-search",
+            f"{self.collection_prefix}_hash-based",
+        ]
+
+    def count_orphaned_collections(
+        self,
+        active_file_ids: Set[str],
+        active_kb_ids: Set[str],
+        active_user_ids: Optional[Set[str]] = None
+    ) -> int:
+        """
+        Count orphaned tenant_ids across all shared collections.
+
+        Uses Qdrant's scroll() API with pagination for memory efficiency.
+        """
+        try:
+            from qdrant_client.models import models
+
+            expected_tenant_ids = self._build_expected_tenant_ids(
+                active_file_ids, active_kb_ids, active_user_ids or set()
+            )
+
+            orphaned_count = 0
+
+            for collection_name in self.shared_collections:
+                if not self.client.collection_exists(collection_name=collection_name):
+                    continue
+
+                try:
+                    # Get all unique tenant_ids in this collection using scroll
+                    # Qdrant doesn't have a direct "get unique values" API, so we scroll through points
+                    all_tenant_ids = set()
+                    offset = None
+
+                    while True:
+                        # Scroll through points in batches
+                        scroll_result = self.client.scroll(
+                            collection_name=collection_name,
+                            limit=1000,  # Batch size
+                            offset=offset,
+                            with_payload=True,
+                            with_vectors=False,  # Don't need vectors, save bandwidth
+                        )
+
+                        points, next_offset = scroll_result
+
+                        if not points:
+                            break
+
+                        # Extract unique tenant_ids from this batch
+                        for point in points:
+                            if 'tenant_id' in point.payload:
+                                all_tenant_ids.add(point.payload['tenant_id'])
+
+                        # Check if there are more results
+                        if next_offset is None:
+                            break
+
+                        offset = next_offset
+
+                    log.debug(f"Found {len(all_tenant_ids)} tenant_ids in {collection_name}")
+
+                    # Count orphaned tenant_ids
+                    for tenant_id in all_tenant_ids:
+                        if tenant_id not in expected_tenant_ids:
+                            orphaned_count += 1
+
+                except Exception as e:
+                    log.error(f"Error scanning Qdrant collection {collection_name}: {e}")
+
+        except Exception as e:
+            log.error(f"Error counting orphaned Qdrant multitenancy tenant_ids: {e}")
+            return 0
+
+        return orphaned_count
+
+    def cleanup_orphaned_collections(
+        self,
+        active_file_ids: Set[str],
+        active_kb_ids: Set[str],
+        active_user_ids: Optional[Set[str]] = None
+    ) -> tuple[int, Optional[str]]:
+        """
+        Delete orphaned tenant_ids from shared collections.
+
+        Uses scroll() for memory-safe iteration and batched deletions.
+        """
+        try:
+            from qdrant_client.models import models
+
+            expected_tenant_ids = self._build_expected_tenant_ids(
+                active_file_ids, active_kb_ids, active_user_ids or set()
+            )
+
+            deleted_count = 0
+            errors = []
+
+            for collection_name in self.shared_collections:
+                if not self.client.collection_exists(collection_name=collection_name):
+                    continue
+
+                try:
+                    # Get all unique tenant_ids using scroll (memory-safe)
+                    all_tenant_ids = set()
+                    offset = None
+
+                    while True:
+                        scroll_result = self.client.scroll(
+                            collection_name=collection_name,
+                            limit=1000,  # Batch size
+                            offset=offset,
+                            with_payload=True,
+                            with_vectors=False,
+                        )
+
+                        points, next_offset = scroll_result
+
+                        if not points:
+                            break
+
+                        # Extract unique tenant_ids
+                        for point in points:
+                            if 'tenant_id' in point.payload:
+                                all_tenant_ids.add(point.payload['tenant_id'])
+
+                        if next_offset is None:
+                            break
+
+                        offset = next_offset
+
+                    log.info(f"Total tenant_ids in {collection_name}: {len(all_tenant_ids)}")
+
+                    # Delete orphaned tenant_ids
+                    orphaned_tenant_ids = [
+                        tid for tid in all_tenant_ids if tid not in expected_tenant_ids
+                    ]
+
+                    log.info(f"Found {len(orphaned_tenant_ids)} orphaned tenant_ids in {collection_name}")
+
+                    for tenant_id in orphaned_tenant_ids:
+                        try:
+                            # Delete all points with this tenant_id
+                            self.client.delete(
+                                collection_name=collection_name,
+                                points_selector=models.FilterSelector(
+                                    filter=models.Filter(
+                                        must=[
+                                            models.FieldCondition(
+                                                key="tenant_id",
+                                                match=models.MatchValue(value=tenant_id)
+                                            )
+                                        ]
+                                    )
+                                ),
+                            )
+                            deleted_count += 1
+                            log.debug(f"Deleted orphaned tenant_id from {collection_name}: {tenant_id}")
+                        except Exception as e:
+                            error_msg = f"Failed to delete tenant_id {tenant_id} from {collection_name}: {e}"
+                            log.error(error_msg)
+                            errors.append(error_msg)
+
+                except Exception as e:
+                    error_msg = f"Error processing Qdrant collection {collection_name}: {e}"
+                    log.error(error_msg)
+                    errors.append(error_msg)
+
+        except Exception as e:
+            error_msg = f"Qdrant multitenancy cleanup failed: {e}"
+            log.error(error_msg)
+            return (0, error_msg)
+
+        if errors:
+            return (deleted_count, "; ".join(errors))
+        return (deleted_count, None)
+
+    def delete_collection(self, collection_name: str) -> bool:
+        """Delete a specific tenant_id from the appropriate shared collection."""
+        try:
+            from qdrant_client.models import models
+
+            # Determine which shared collection and tenant_id
+            tenant_id = collection_name
+
+            # Map collection name to shared collection (same logic as backend)
+            if collection_name.startswith("user-memory-"):
+                mt_collection = f"{self.collection_prefix}_memories"
+            elif collection_name.startswith("file-"):
+                mt_collection = f"{self.collection_prefix}_files"
+            elif collection_name.startswith("web-search-"):
+                mt_collection = f"{self.collection_prefix}_web-search"
+            elif len(collection_name) == 63 and all(c in "0123456789abcdef" for c in collection_name):
+                mt_collection = f"{self.collection_prefix}_hash-based"
+            else:
+                mt_collection = f"{self.collection_prefix}_knowledge"
+
+            if not self.client.collection_exists(collection_name=mt_collection):
+                return True
+
+            # Delete all points with this tenant_id
+            self.client.delete(
+                collection_name=mt_collection,
+                points_selector=models.FilterSelector(
+                    filter=models.Filter(
+                        must=[
+                            models.FieldCondition(
+                                key="tenant_id",
+                                match=models.MatchValue(value=tenant_id)
+                            )
+                        ]
+                    )
+                ),
+            )
+            log.debug(f"Deleted Qdrant tenant_id: {tenant_id} from {mt_collection}")
+            return True
+        except Exception as e:
+            log.error(f"Error deleting Qdrant tenant_id {collection_name}: {e}")
+            return False
+
+    def _build_expected_tenant_ids(
+        self, active_file_ids: Set[str], active_kb_ids: Set[str], active_user_ids: Set[str]
+    ) -> Set[str]:
+        """
+        Build set of expected tenant_ids.
+
+        Tenant IDs are the same as collection names in the mapping:
+        - file-{file_id} for files
+        - {kb_id} for knowledge bases
+        - user-memory-{user_id} for memories
+        - web-search-{hash} (ephemeral - always orphaned)
+        - {63-char-hex} (temporary - always orphaned)
+        """
+        expected_tenant_ids = set()
+
+        # File tenant_ids: file-{id}
+        for file_id in active_file_ids:
+            expected_tenant_ids.add(f"file-{file_id}")
+
+        # Knowledge base tenant_ids: {kb_id}
+        for kb_id in active_kb_ids:
+            expected_tenant_ids.add(kb_id)
+
+        # User memory tenant_ids: user-memory-{user_id}
+        for user_id in active_user_ids:
+            expected_tenant_ids.add(f"user-memory-{user_id}")
+
+        # Note: web-search-* and hash-based are ephemeral/temporary
+        # They are NOT added to expected set, so they will be cleaned up
+
+        return expected_tenant_ids
+
+
 class NoOpVectorDatabaseCleaner(VectorDatabaseCleaner):
     """
     No-operation implementation for unsupported vector databases.
@@ -1345,6 +1743,8 @@ def get_vector_database_cleaner(vector_db_type: str, vector_db_client, cache_dir
     - PGVector: PostgreSQL extension for vector operations
     - Milvus: Standalone vector database with standard collections
     - Milvus Multitenancy: Milvus with shared collections and resource_id partitioning
+    - Qdrant: Standalone vector database with standard collections
+    - Qdrant Multitenancy: Qdrant with shared collections and tenant_id filtering
 
     Returns:
         VectorDatabaseCleaner: Appropriate implementation for the configured database
@@ -1365,6 +1765,14 @@ def get_vector_database_cleaner(vector_db_type: str, vector_db_client, cache_dir
         else:
             log.debug("Using Milvus standard cleaner")
             return MilvusDatabaseCleaner(vector_db_client)
+    elif "qdrant" in vector_db_type:
+        # Detect multitenancy mode by checking for shared_collections attribute
+        if hasattr(vector_db_client, 'shared_collections'):
+            log.debug("Using Qdrant Multitenancy cleaner")
+            return QdrantMultitenancyDatabaseCleaner(vector_db_client)
+        else:
+            log.debug("Using Qdrant standard cleaner")
+            return QdrantDatabaseCleaner(vector_db_client)
     else:
         log.debug(
             f"No specific cleaner for vector database type: {vector_db_type}, using no-op cleaner"
