@@ -111,8 +111,8 @@ def check_for_prompt(shell, timeout=10):
                     or LINUX_LOGGED_IN_PROMPT in read_next_line
                     or QEMU_LOGGED_IN_PROMPT in read_next_line
                     or SYSTEMD_LOGGED_IN_PROMPT in read_next_line
-                    or LINUXB_LOGGED_IN_PROMPT in read_next_line.strip
-                    or SYSTEMDB_LOGGED_IN_PROMPT in read_next_line.strip
+                    or LINUXB_LOGGED_IN_PROMPT in read_next_line
+                    or SYSTEMDB_LOGGED_IN_PROMPT in read_next_line
                     or "imx8mpevk" in read_next_line
                 ):
                     return True
