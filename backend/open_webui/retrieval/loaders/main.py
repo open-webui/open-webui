@@ -297,16 +297,19 @@ class Loader:
                         log.error("Invalid DOCLING_PARAMS format, expected JSON object")
                         params = {}
 
+                params_dumped = {}
                 for k, v in params.items():
                     if isinstance(v, dict):
-                        params[k] = json.dumps(v)
+                        params_dumped[k] = json.dumps(v, ensure_ascii=False)
+                    else:
+                        params_dumped[k] = params[k]
 
                 loader = DoclingLoader(
                     url=self.kwargs.get("DOCLING_SERVER_URL"),
                     api_key=self.kwargs.get("DOCLING_API_KEY", None),
                     file_path=file_path,
                     mime_type=file_content_type,
-                    params=params,
+                    params=params_dumped,
                 )
         elif (
             self.engine == "document_intelligence"
