@@ -16,8 +16,8 @@
 		deleteAllChats,
 		getAllChats,
 		getChatList,
-		importChat,
-		getPinnedChatList
+		getPinnedChatList,
+		importChats
 	} from '$lib/apis/chats';
 	import { getImportOrigin, convertOpenAIChats } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
@@ -52,7 +52,7 @@
 					console.log('Unable to import chats:', error);
 				}
 			}
-			importChats(chats);
+			importChatsHandler(chats);
 		};
 
 		if (importFiles.length > 0) {
@@ -60,24 +60,34 @@
 		}
 	}
 
-	const importChats = async (_chats) => {
-		for (const chat of _chats) {
-			console.log(chat);
-
-			if (chat.chat) {
-				await importChat(
-					localStorage.token,
-					chat.chat,
-					chat.meta ?? {},
-					false,
-					null,
-					chat?.created_at ?? null,
-					chat?.updated_at ?? null
-				);
-			} else {
-				// Legacy format
-				await importChat(localStorage.token, chat, {}, false, null);
-			}
+	const importChatsHandler = async (_chats) => {
+		const res = await importChats(
+			localStorage.token,
+			_chats.map((chat) => {
+				if (chat.chat) {
+					return {
+						chat: chat.chat,
+						meta: chat.meta ?? {},
+						pinned: false,
+						folder_id: chat?.folder_id ?? null,
+						created_at: chat?.created_at ?? null,
+						updated_at: chat?.updated_at ?? null
+					};
+				} else {
+					// Legacy format
+					return {
+						chat: chat,
+						meta: {},
+						pinned: false,
+						folder_id: null,
+						created_at: chat?.created_at ?? null,
+						updated_at: chat?.updated_at ?? null
+					};
+				}
+			})
+		);
+		if (res) {
+			toast.success(`Successfully imported ${res.length} chats.`);
 		}
 
 		currentChatPage.set(1);

@@ -24,7 +24,7 @@
 
 <div>
 	<div class="flex w-full justify-between mb-1">
-		<div class=" self-center text-sm font-semibold">{$i18n.t('Default Filters')}</div>
+		<div class=" self-center text-sm font-medium">{$i18n.t('Default Filters')}</div>
 	</div>
 
 	<div class="flex flex-col">

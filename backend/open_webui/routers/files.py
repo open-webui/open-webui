@@ -102,7 +102,7 @@ def process_uploaded_file(request, file, file_path, file_item, file_metadata, us
                 )
             ):
                 file_path = Storage.get_file(file_path)
-                result = transcribe(request, file_path, file_metadata)
+                result = transcribe(request, file_path, file_metadata, user)
 
                 process_file(
                     request,

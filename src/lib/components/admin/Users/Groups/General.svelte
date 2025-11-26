@@ -2,12 +2,17 @@
 	import { getContext } from 'svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let name = '';
 	export let color = '';
 	export let description = '';
+	export let data = {};
+
+	export let edit = false;
+	export let onDelete: Function = () => {};
 </script>
 
 <div class="flex gap-2">
@@ -59,3 +64,47 @@
 		/>
 	</div>
 </div>
+
+<hr class="border-gray-50 dark:border-gray-850 my-1" />
+
+<div class="flex flex-col w-full mt-2">
+	<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Setting')}</div>
+
+	<div>
+		<div class=" flex w-full justify-between">
+			<div class=" self-center text-xs">
+				{$i18n.t('Allow Group Sharing')}
+			</div>
+
+			<div class="flex items-center gap-2 p-1">
+				<Switch
+					tooltip={true}
+					state={data?.config?.share ?? true}
+					on:change={(e) => {
+						if (data?.config?.share) {
+							data.config.share = e.detail;
+						} else {
+							data.config = { ...(data?.config ?? {}), share: e.detail };
+						}
+					}}
+				/>
+			</div>
+		</div>
+	</div>
+</div>
+
+{#if edit}
+	<div class="flex flex-col w-full mt-2">
+		<div class=" mb-0.5 text-xs text-gray-500">{$i18n.t('Actions')}</div>
+
+		<div class="flex-1">
+			<button
+				class="text-xs bg-transparent hover:underline cursor-pointer"
+				type="button"
+				on:click={() => onDelete()}
+			>
+				{$i18n.t('Delete')}
+			</button>
+		</div>
+	</div>
+{/if}

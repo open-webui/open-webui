@@ -258,7 +258,10 @@ async def update_folder_is_expanded_by_id(
 
 @router.delete("/{id}")
 async def delete_folder_by_id(
-    request: Request, id: str, user=Depends(get_verified_user)
+    request: Request,
+    id: str,
+    delete_contents: Optional[bool] = True,
+    user=Depends(get_verified_user),
 ):
     if Chats.count_chats_by_folder_id_and_user_id(id, user.id):
         chat_delete_permission = has_permission(
@@ -277,8 +280,14 @@ async def delete_folder_by_id(
         if folder:
             try:
                 folder_ids = Folders.delete_folder_by_id_and_user_id(id, user.id)
+
                 for folder_id in folder_ids:
-                    Chats.delete_chats_by_user_id_and_folder_id(user.id, folder_id)
+                    if delete_contents:
+                        Chats.delete_chats_by_user_id_and_folder_id(user.id, folder_id)
+                    else:
+                        Chats.move_chats_by_user_id_and_folder_id(
+                            user.id, folder_id, None
+                        )
 
                 return True
             except Exception as e:

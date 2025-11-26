@@ -174,72 +174,72 @@
 			</span> -->
 		</div>
 	</body>
-</html>
 
-<style type="text/css" nonce="">
-	html {
-		overflow-y: hidden !important;
-		overscroll-behavior-y: none;
-	}
+	<style type="text/css" nonce="">
+		html {
+			overflow-y: hidden !important;
+			overscroll-behavior-y: none;
+		}
 
-	#splash-screen {
-		background: #fff;
-	}
+		#splash-screen {
+			background: #fff;
+		}
 
-	html.dark #splash-screen {
-		background: #000;
-	}
+		html.dark #splash-screen {
+			background: #000;
+		}
 
-	html.her #splash-screen {
-		background: #983724;
-	}
+		html.her #splash-screen {
+			background: #983724;
+		}
 
-	#logo-her {
-		display: none;
-	}
-
-	#progress-background {
-		display: none;
-	}
-
-	#progress-bar {
-		display: none;
-	}
-
-	html.her #logo {
-		display: none;
-	}
-
-	html.her #logo-her {
-		display: block;
-		filter: invert(1);
-	}
-
-	html.her #progress-background {
-		display: block;
-	}
-
-	html.her #progress-bar {
-		display: block;
-	}
-
-	@media (max-width: 24rem) {
-		html.her #progress-background {
+		#logo-her {
 			display: none;
+		}
+
+		#progress-background {
+			display: none;
+		}
+
+		#progress-bar {
+			display: none;
+		}
+
+		html.her #logo {
+			display: none;
+		}
+
+		html.her #logo-her {
+			display: block;
+			filter: invert(1);
+		}
+
+		html.her #progress-background {
+			display: block;
 		}
 
 		html.her #progress-bar {
-			display: none;
+			display: block;
 		}
-	}
 
-	@keyframes pulse {
-		50% {
-			opacity: 0.65;
+		@media (max-width: 24rem) {
+			html.her #progress-background {
+				display: none;
+			}
+
+			html.her #progress-bar {
+				display: none;
+			}
 		}
-	}
 
-	.animate-pulse-fast {
-		animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-	}
-</style>
+		@keyframes pulse {
+			50% {
+				opacity: 0.65;
+			}
+		}
+
+		.animate-pulse-fast {
+			animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+		}
+	</style>
+</html>

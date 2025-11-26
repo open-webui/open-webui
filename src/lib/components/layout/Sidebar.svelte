@@ -38,10 +38,10 @@
 		toggleChatPinnedStatusById,
 		getChatById,
 		updateChatFolderIdById,
-		importChat
+		importChats
 	} from '$lib/apis/chats';
 	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 	import ArchivedChatsModal from './ArchivedChatsModal.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
@@ -72,8 +72,6 @@
 	let shiftKey = false;
 
 	let selectedChatId = null;
-	let showPinnedChat = true;
-
 	let showCreateChannel = false;
 
 	// Pagination variables
@@ -86,6 +84,10 @@
 	let folderRegistry = {};
 
 	let newFolderId = null;
+
+	$: if ($selectedFolder) {
+		initFolders();
+	}
 
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
@@ -229,15 +231,16 @@
 		for (const item of items) {
 			console.log(item);
 			if (item.chat) {
-				await importChat(
-					localStorage.token,
-					item.chat,
-					item?.meta ?? {},
-					pinned,
-					folderId,
-					item?.created_at ?? null,
-					item?.updated_at ?? null
-				);
+				await importChats(localStorage.token, [
+					{
+						chat: item.chat,
+						meta: item?.meta ?? {},
+						pinned: pinned,
+						folder_id: folderId,
+						created_at: item?.created_at ?? null,
+						updated_at: item?.updated_at ?? null
+					}
+				]);
 			}
 		}
 
@@ -354,7 +357,6 @@
 
 	let unsubscribers = [];
 	onMount(async () => {
-		showPinnedChat = localStorage?.showPinnedChat ? localStorage.showPinnedChat === 'true' : true;
 		await showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
 
 		unsubscribers = [
@@ -540,7 +542,7 @@
 
 {#if !$mobile && !$showSidebar}
 	<div
-		class=" py-2 px-1.5 flex flex-col justify-between text-black dark:text-white hover:bg-gray-50/50 dark:hover:bg-gray-950/50 h-full border-e border-gray-50 dark:border-gray-850 z-10 transition-all"
+		class=" pt-[7px] pb-2 px-1.5 flex flex-col justify-between text-black dark:text-white hover:bg-gray-50/30 dark:hover:bg-gray-950/30 h-full z-10 transition-all border-e-[0.5px] border-gray-50 dark:border-gray-850"
 		id="sidebar"
 	>
 		<button
@@ -562,7 +564,6 @@
 					>
 						<div class=" self-center flex items-center justify-center size-9">
 							<img
-								crossorigin="anonymous"
 								src="{WEBUI_BASE_URL}/static/favicon.png"
 								class="sidebar-new-chat-icon size-6 rounded-full group-hover:hidden"
 								alt=""
@@ -574,7 +575,7 @@
 				</Tooltip>
 			</div>
 
-			<div>
+			<div class="-mt-[0.5px]">
 				<div class="">
 					<Tooltip content={$i18n.t('New Chat')} placement="right">
 						<a
@@ -597,7 +598,7 @@
 					</Tooltip>
 				</div>
 
-				<div class="">
+				<div>
 					<Tooltip content={$i18n.t('Search')} placement="right">
 						<button
 							class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
@@ -697,7 +698,7 @@
 							>
 								<div class=" self-center flex items-center justify-center size-9">
 									<img
-										src={$user?.profile_image_url}
+										src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
 										class=" size-6 object-cover rounded-full"
 										alt={$i18n.t('Open User Profile Menu')}
 										aria-label={$i18n.t('Open User Profile Menu')}
@@ -717,7 +718,7 @@
 		bind:this={navElement}
 		id="sidebar"
 		class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
-			? 'bg-gray-50 dark:bg-gray-950 z-50'
+			? `${$mobile ? 'bg-gray-50 dark:bg-gray-950' : 'bg-gray-50/70 dark:bg-gray-950/70'} z-50`
 			: ' bg-transparent z-0 '} {$isApp
 			? `ml-[4.5rem] md:ml-0 `
 			: ' transition-all duration-300 '} shrink-0 text-gray-900 dark:text-gray-200 text-sm fixed top-0 left-0 overflow-x-hidden
@@ -792,7 +793,7 @@
 				}}
 			>
 				<div class="pb-1.5">
-					<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
+					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 						<a
 							id="sidebar-new-chat-button"
 							class="group grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
@@ -813,7 +814,7 @@
 						</a>
 					</div>
 
-					<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
+					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 						<button
 							id="sidebar-search-button"
 							class="group grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
@@ -835,7 +836,7 @@
 					</div>
 
 					{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
-						<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
+						<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 							<a
 								id="sidebar-notes-button"
 								class="grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
@@ -856,7 +857,7 @@
 					{/if}
 
 					{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
-						<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
+						<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 							<a
 								id="sidebar-workspace-button"
 								class="grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
@@ -890,8 +891,9 @@
 					{/if}
 				</div>
 
-				{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
+				{#if ($models ?? []).length > 0 && (($settings?.pinnedModels ?? []).length > 0 || $config?.default_pinned_models)}
 					<Folder
+						id="sidebar-models"
 						className="px-2 mt-0.5"
 						name={$i18n.t('Models')}
 						chevron={false}
@@ -903,6 +905,7 @@
 
 				{#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0)}
 					<Folder
+						id="sidebar-channels"
 						className="px-2 mt-0.5"
 						name={$i18n.t('Channels')}
 						chevron={false}
@@ -931,6 +934,7 @@
 
 				{#if folders}
 					<Folder
+						id="sidebar-folders"
 						className="px-2 mt-0.5"
 						name={$i18n.t('Folders')}
 						chevron={false}
@@ -982,6 +986,7 @@
 				{/if}
 
 				<Folder
+					id="sidebar-chats"
 					className="px-2 mt-0.5"
 					name={$i18n.t('Chats')}
 					chevron={false}
@@ -999,15 +1004,16 @@
 								return null;
 							});
 							if (!chat && item) {
-								chat = await importChat(
-									localStorage.token,
-									item.chat,
-									item?.meta ?? {},
-									false,
-									null,
-									item?.created_at ?? null,
-									item?.updated_at ?? null
-								);
+								chat = await importChats(localStorage.token, [
+									{
+										chat: item.chat,
+										meta: item?.meta ?? {},
+										pinned: false,
+										folder_id: null,
+										created_at: item?.created_at ?? null,
+										updated_at: item?.updated_at ?? null
+									}
+								]);
 							}
 
 							if (chat) {
@@ -1051,12 +1057,8 @@
 						<div class="mb-1">
 							<div class="flex flex-col space-y-1 rounded-xl">
 								<Folder
+									id="sidebar-pinned-chats"
 									buttonClassName=" text-gray-500"
-									bind:open={showPinnedChat}
-									on:change={(e) => {
-										localStorage.setItem('showPinnedChat', e.detail);
-										console.log(e.detail);
-									}}
 									on:import={(e) => {
 										importChatHandler(e.detail, true);
 									}}
@@ -1068,15 +1070,16 @@
 												return null;
 											});
 											if (!chat && item) {
-												chat = await importChat(
-													localStorage.token,
-													item.chat,
-													item?.meta ?? {},
-													false,
-													null,
-													item?.created_at ?? null,
-													item?.updated_at ?? null
-												);
+												chat = await importChats(localStorage.token, [
+													{
+														chat: item.chat,
+														meta: item?.meta ?? {},
+														pinned: false,
+														folder_id: null,
+														created_at: item?.created_at ?? null,
+														updated_at: item?.updated_at ?? null
+													}
+												]);
 											}
 
 											if (chat) {
@@ -1236,7 +1239,7 @@
 							>
 								<div class=" self-center mr-3">
 									<img
-										src={$user?.profile_image_url}
+										src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
 										class=" size-6 object-cover rounded-full"
 										alt={$i18n.t('Open User Profile Menu')}
 										aria-label={$i18n.t('Open User Profile Menu')}

@@ -48,8 +48,15 @@ async def get_prompt_list(user=Depends(get_verified_user)):
 async def create_new_prompt(
     request: Request, form_data: PromptForm, user=Depends(get_verified_user)
 ):
-    if user.role != "admin" and not has_permission(
-        user.id, "workspace.prompts", request.app.state.config.USER_PERMISSIONS
+    if user.role != "admin" and not (
+        has_permission(
+            user.id, "workspace.prompts", request.app.state.config.USER_PERMISSIONS
+        )
+        or has_permission(
+            user.id,
+            "workspace.prompts_import",
+            request.app.state.config.USER_PERMISSIONS,
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

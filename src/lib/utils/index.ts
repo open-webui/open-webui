@@ -32,7 +32,7 @@ function escapeRegExp(string: string): string {
 	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-export const replaceTokens = (content, sourceIds, char, user) => {
+export const replaceTokens = (content, char, user) => {
 	const tokens = [
 		{ regex: /{{char}}/gi, replacement: char },
 		{ regex: /{{user}}/gi, replacement: user },
@@ -66,30 +66,6 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 				segment = segment.replace(regex, replacement);
 			}
 		});
-
-		if (Array.isArray(sourceIds)) {
-			// Match both [1], [2], and [1,2,3] forms
-			const multiRefRegex = /\[([\d,\s]+)\]/g;
-			segment = segment.replace(multiRefRegex, (match, group) => {
-				// Extract numbers like 1,2,3
-				const indices = group
-					.split(',')
-					.map((n) => parseInt(n.trim(), 10))
-					.filter((n) => !isNaN(n));
-
-				// Replace each index with a <source_id> tag
-				const sources = indices
-					.map((idx) => {
-						const sourceId = sourceIds[idx - 1];
-						return sourceId
-							? `<source_id data="${idx}" title="${encodeURIComponent(sourceId)}" />`
-							: `[${idx}]`;
-					})
-					.join('');
-
-				return sources;
-			});
-		}
 
 		return segment;
 	});

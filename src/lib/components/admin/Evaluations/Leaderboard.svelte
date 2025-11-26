@@ -10,7 +10,7 @@
 
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 
@@ -339,16 +339,14 @@
 <div
 	class="pt-0.5 pb-1 gap-1 flex flex-col md:flex-row justify-between sticky top-0 z-10 bg-white dark:bg-gray-900"
 >
-	<div class="flex md:self-center text-lg font-medium px-0.5 shrink-0 items-center">
-		<div class=" gap-1">
+	<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2 shrink-0">
+		<div>
 			{$i18n.t('Leaderboard')}
 		</div>
 
-		<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
-
-		<span class="text-lg font-medium text-gray-500 dark:text-gray-300 mr-1.5"
-			>{rankedModels.length}</span
-		>
+		<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+			{rankedModels.length}
+		</div>
 	</div>
 
 	<div class=" flex space-x-2">
@@ -517,7 +515,7 @@
 							<div class="flex items-center gap-2">
 								<div class="shrink-0">
 									<img
-										src={model?.info?.meta?.profile_image_url ?? `${WEBUI_BASE_URL}/favicon.png`}
+										src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}`}
 										alt={model.name}
 										class="size-5 rounded-full object-cover shrink-0"
 									/>
@@ -532,7 +530,7 @@
 							{model.rating}
 						</td>
 
-						<td class=" px-3 py-1.5 text-right font-semibold text-green-500">
+						<td class=" px-3 py-1.5 text-right font-medium text-green-500">
 							<div class=" w-10">
 								{#if model.stats.won === '-'}
 									-
@@ -545,7 +543,7 @@
 							</div>
 						</td>
 
-						<td class="px-3 py-1.5 text-right font-semibold text-red-500">
+						<td class="px-3 py-1.5 text-right font-medium text-red-500">
 							<div class=" w-10">
 								{#if model.stats.lost === '-'}
 									-

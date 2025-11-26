@@ -45,7 +45,7 @@ class ERROR_MESSAGES(str, Enum):
     )
     INVALID_CRED = "The email or password provided is incorrect. Please check for typos and try logging in again."
     INVALID_EMAIL_FORMAT = "The email format you entered is invalid. Please double-check and make sure you're using a valid email address (e.g., yourname@example.com)."
-    INVALID_PASSWORD = (
+    INCORRECT_PASSWORD = (
         "The password provided is incorrect. Please check for typos and try again."
     )
     INVALID_TRUSTED_HEADER = "Your provider has not provided a trusted header. Please contact your administrator for assistance."
@@ -104,6 +104,10 @@ class ERROR_MESSAGES(str, Enum):
         "Duplicate content detected. Please provide unique content to proceed."
     )
     FILE_NOT_PROCESSED = "Extracted content is not available for this file. Please ensure that the file is processed before proceeding."
+
+    INVALID_PASSWORD = lambda err="": (
+        err if err else "The password does not meet the required validation criteria."
+    )
 
 
 class TASKS(str, Enum):

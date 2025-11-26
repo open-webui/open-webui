@@ -27,7 +27,7 @@
 
 {#if user}
 	<LinkPreview.Content
-		class="w-full max-w-[260px] rounded-2xl border border-gray-100  dark:border-gray-800 z-999 bg-white dark:bg-gray-850 dark:text-white shadow-lg transition"
+		class="w-full max-w-[260px] rounded-2xl border border-gray-100  dark:border-gray-800 z-[99999] bg-white dark:bg-gray-850 dark:text-white shadow-lg transition"
 		{side}
 		{align}
 		{sideOffset}

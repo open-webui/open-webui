@@ -16,8 +16,8 @@ from urllib.parse import urlparse
 import aiohttp
 from aiocache import cached
 import requests
-from urllib.parse import quote
 
+from open_webui.utils.headers import include_user_info_headers
 from open_webui.models.chats import Chats
 from open_webui.models.users import UserModel
 
@@ -82,22 +82,17 @@ async def send_get_request(url, key=None, user: UserModel = None):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
     try:
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+            headers = {
+                "Content-Type": "application/json",
+                **({"Authorization": f"Bearer {key}"} if key else {}),
+            }
+
+            if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+                headers = include_user_info_headers(headers, user)
+
             async with session.get(
                 url,
-                headers={
-                    "Content-Type": "application/json",
-                    **({"Authorization": f"Bearer {key}"} if key else {}),
-                    **(
-                        {
-                            "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
-                            "X-OpenWebUI-User-Id": user.id,
-                            "X-OpenWebUI-User-Email": user.email,
-                            "X-OpenWebUI-User-Role": user.role,
-                        }
-                        if ENABLE_FORWARD_USER_INFO_HEADERS and user
-                        else {}
-                    ),
-                },
+                headers=headers,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as response:
                 return await response.json()
@@ -133,28 +128,20 @@ async def send_post_request(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
         )
 
+        headers = {
+            "Content-Type": "application/json",
+            **({"Authorization": f"Bearer {key}"} if key else {}),
+        }
+
+        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+            headers = include_user_info_headers(headers, user)
+            if metadata and metadata.get("chat_id"):
+                headers["X-OpenWebUI-Chat-Id"] = metadata.get("chat_id")
+
         r = await session.post(
             url,
             data=payload,
-            headers={
-                "Content-Type": "application/json",
-                **({"Authorization": f"Bearer {key}"} if key else {}),
-                **(
-                    {
-                        "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
-                        **(
-                            {"X-OpenWebUI-Chat-Id": metadata.get("chat_id")}
-                            if metadata and metadata.get("chat_id")
-                            else {}
-                        ),
-                    }
-                    if ENABLE_FORWARD_USER_INFO_HEADERS and user
-                    else {}
-                ),
-            },
+            headers=headers,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
         )
 
@@ -246,21 +233,16 @@ async def verify_connection(
         timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
     ) as session:
         try:
+            headers = {
+                **({"Authorization": f"Bearer {key}"} if key else {}),
+            }
+
+            if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+                headers = include_user_info_headers(headers, user)
+
             async with session.get(
                 f"{url}/api/version",
-                headers={
-                    **({"Authorization": f"Bearer {key}"} if key else {}),
-                    **(
-                        {
-                            "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
-                            "X-OpenWebUI-User-Id": user.id,
-                            "X-OpenWebUI-User-Email": user.email,
-                            "X-OpenWebUI-User-Role": user.role,
-                        }
-                        if ENABLE_FORWARD_USER_INFO_HEADERS and user
-                        else {}
-                    ),
-                },
+                headers=headers,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
                 if r.status != 200:
@@ -469,22 +451,17 @@ async def get_ollama_tags(
 
         r = None
         try:
+            headers = {
+                **({"Authorization": f"Bearer {key}"} if key else {}),
+            }
+
+            if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+                headers = include_user_info_headers(headers, user)
+
             r = requests.request(
                 method="GET",
                 url=f"{url}/api/tags",
-                headers={
-                    **({"Authorization": f"Bearer {key}"} if key else {}),
-                    **(
-                        {
-                            "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
-                            "X-OpenWebUI-User-Id": user.id,
-                            "X-OpenWebUI-User-Email": user.email,
-                            "X-OpenWebUI-User-Role": user.role,
-                        }
-                        if ENABLE_FORWARD_USER_INFO_HEADERS and user
-                        else {}
-                    ),
-                },
+                headers=headers,
             )
             r.raise_for_status()
 
@@ -838,23 +815,18 @@ async def copy_model(
     key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
 
     try:
+        headers = {
+            "Content-Type": "application/json",
+            **({"Authorization": f"Bearer {key}"} if key else {}),
+        }
+
+        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+            headers = include_user_info_headers(headers, user)
+
         r = requests.request(
             method="POST",
             url=f"{url}/api/copy",
-            headers={
-                "Content-Type": "application/json",
-                **({"Authorization": f"Bearer {key}"} if key else {}),
-                **(
-                    {
-                        "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
-                    }
-                    if ENABLE_FORWARD_USER_INFO_HEADERS and user
-                    else {}
-                ),
-            },
+            headers=headers,
             data=form_data.model_dump_json(exclude_none=True).encode(),
         )
         r.raise_for_status()
@@ -908,24 +880,19 @@ async def delete_model(
     key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
 
     try:
+        headers = {
+            "Content-Type": "application/json",
+            **({"Authorization": f"Bearer {key}"} if key else {}),
+        }
+
+        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+            headers = include_user_info_headers(headers, user)
+
         r = requests.request(
             method="DELETE",
             url=f"{url}/api/delete",
-            data=json.dumps(form_data).encode(),
-            headers={
-                "Content-Type": "application/json",
-                **({"Authorization": f"Bearer {key}"} if key else {}),
-                **(
-                    {
-                        "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
-                    }
-                    if ENABLE_FORWARD_USER_INFO_HEADERS and user
-                    else {}
-                ),
-            },
+            headers=headers,
+            data=form_data.model_dump_json(exclude_none=True).encode(),
         )
         r.raise_for_status()
 
@@ -973,24 +940,19 @@ async def show_model_info(
     key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
 
     try:
+        headers = {
+            "Content-Type": "application/json",
+            **({"Authorization": f"Bearer {key}"} if key else {}),
+        }
+
+        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+            headers = include_user_info_headers(headers, user)
+
         r = requests.request(
             method="POST",
             url=f"{url}/api/show",
-            headers={
-                "Content-Type": "application/json",
-                **({"Authorization": f"Bearer {key}"} if key else {}),
-                **(
-                    {
-                        "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
-                    }
-                    if ENABLE_FORWARD_USER_INFO_HEADERS and user
-                    else {}
-                ),
-            },
-            data=json.dumps(form_data).encode(),
+            headers=headers,
+            data=form_data.model_dump_json(exclude_none=True).encode(),
         )
         r.raise_for_status()
 
@@ -1064,23 +1026,18 @@ async def embed(
         form_data.model = form_data.model.replace(f"{prefix_id}.", "")
 
     try:
+        headers = {
+            "Content-Type": "application/json",
+            **({"Authorization": f"Bearer {key}"} if key else {}),
+        }
+
+        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+            headers = include_user_info_headers(headers, user)
+
         r = requests.request(
             method="POST",
             url=f"{url}/api/embed",
-            headers={
-                "Content-Type": "application/json",
-                **({"Authorization": f"Bearer {key}"} if key else {}),
-                **(
-                    {
-                        "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
-                    }
-                    if ENABLE_FORWARD_USER_INFO_HEADERS and user
-                    else {}
-                ),
-            },
+            headers=headers,
             data=form_data.model_dump_json(exclude_none=True).encode(),
         )
         r.raise_for_status()
@@ -1151,23 +1108,18 @@ async def embeddings(
         form_data.model = form_data.model.replace(f"{prefix_id}.", "")
 
     try:
+        headers = {
+            "Content-Type": "application/json",
+            **({"Authorization": f"Bearer {key}"} if key else {}),
+        }
+
+        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+            headers = include_user_info_headers(headers, user)
+
         r = requests.request(
             method="POST",
             url=f"{url}/api/embeddings",
-            headers={
-                "Content-Type": "application/json",
-                **({"Authorization": f"Bearer {key}"} if key else {}),
-                **(
-                    {
-                        "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
-                    }
-                    if ENABLE_FORWARD_USER_INFO_HEADERS and user
-                    else {}
-                ),
-            },
+            headers=headers,
             data=form_data.model_dump_json(exclude_none=True).encode(),
         )
         r.raise_for_status()

@@ -83,7 +83,8 @@
 	bind:show={showAccessControlModal}
 	bind:accessControl
 	accessRoles={['read', 'write']}
-	allowPublic={$user?.permissions?.sharing?.public_prompts || $user?.role === 'admin'}
+	share={$user?.permissions?.sharing?.prompts || $user?.role === 'admin'}
+	sharePublic={$user?.permissions?.sharing?.public_prompts || $user?.role === 'admin'}
 />
 
 <div class="w-full max-h-full flex justify-center">
@@ -146,7 +147,7 @@
 
 		<div class="my-2">
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-sm font-semibold">{$i18n.t('Prompt Content')}</div>
+				<div class=" self-center text-sm font-medium">{$i18n.t('Prompt Content')}</div>
 			</div>
 
 			<div class="mt-2">

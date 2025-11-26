@@ -20,7 +20,7 @@ from sqlalchemy.sql import exists
 
 class MessageReaction(Base):
     __tablename__ = "message_reaction"
-    id = Column(Text, primary_key=True)
+    id = Column(Text, primary_key=True, unique=True)
     user_id = Column(Text)
     message_id = Column(Text)
     name = Column(Text)

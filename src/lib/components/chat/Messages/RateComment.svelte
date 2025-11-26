@@ -2,7 +2,7 @@
 	import { toast } from 'svelte-sonner';
 
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
-	import { config, models } from '$lib/stores';
+	import { config, models, tags as _tags } from '$lib/stores';
 	import Tags from '$lib/components/common/Tags.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
@@ -225,6 +225,7 @@
 		<div class="flex items-end group">
 			<Tags
 				{tags}
+				suggestionTags={$_tags ?? []}
 				on:delete={(e) => {
 					tags = tags.filter(
 						(tag) =>

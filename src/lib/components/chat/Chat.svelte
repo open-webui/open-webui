@@ -126,7 +126,11 @@
 	let selectedModels = [''];
 	let atSelectedModel: Model | undefined;
 	let selectedModelIds = [];
-	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
+	$: if (atSelectedModel !== undefined) {
+		selectedModelIds = [atSelectedModel.id];
+	} else {
+		selectedModelIds = selectedModels;
+	}
 
 	let selectedToolIds = [];
 	let selectedFilterIds = [];
@@ -244,10 +248,8 @@
 	}
 
 	const onSelectedModelIdsChange = () => {
-		if (oldSelectedModelIds.filter((id) => id).length > 0) {
-			resetInput();
-		}
-		oldSelectedModelIds = selectedModelIds;
+		resetInput();
+		oldSelectedModelIds = JSON.parse(JSON.stringify(selectedModelIds));
 	};
 
 	const resetInput = () => {
@@ -257,7 +259,9 @@
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
 
-		setDefaults();
+		if (selectedModelIds.filter((id) => id).length > 0) {
+			setDefaults();
+		}
 	};
 
 	const setDefaults = async () => {
@@ -1055,14 +1059,6 @@
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
 
-		const userSettings = await getUserSettings(localStorage.token);
-
-		if (userSettings) {
-			settings.set(userSettings.ui);
-		} else {
-			settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
-		}
-
 		const chatInput = document.getElementById('chat-input');
 		setTimeout(() => chatInput?.focus(), 0);
 	};
@@ -1098,7 +1094,7 @@
 					selectedModels = selectedModels.length > 0 ? [selectedModels[0]] : [''];
 				}
 
-				oldSelectedModelIds = selectedModels;
+				oldSelectedModelIds = JSON.parse(JSON.stringify(selectedModels));
 
 				history =
 					(chatContent?.history ?? undefined) !== undefined
@@ -1106,14 +1102,6 @@
 						: convertMessagesToHistory(chatContent.messages);
 
 				chatTitle.set(chatContent.title);
-
-				const userSettings = await getUserSettings(localStorage.token);
-
-				if (userSettings) {
-					await settings.set(userSettings.ui);
-				} else {
-					await settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
-				}
 
 				params = chatContent?.params ?? {};
 				chatFiles = chatContent?.files ?? [];
@@ -1792,6 +1780,7 @@
 
 		if ($config?.features)
 			features = {
+				voice: $showCallOverlay,
 				image_generation:
 					$config?.features?.enable_image_generation &&
 					($user?.role === 'admin' || $user?.permissions?.features?.image_generation)
@@ -2394,9 +2383,7 @@
 		<div in:fade={{ duration: 50 }} class="w-full h-full flex flex-col">
 			{#if $selectedFolder && $selectedFolder?.meta?.background_image_url}
 				<div
-					class="absolute {$showSidebar
-						? 'md:max-w-[calc(100%-260px)] md:translate-x-[260px]'
-						: ''} top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
+					class="absolute top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
 					style="background-image: url({$selectedFolder?.meta?.background_image_url})  "
 				/>
 
@@ -2405,9 +2392,7 @@
 				/>
 			{:else if $settings?.backgroundImageUrl ?? $config?.license_metadata?.background_image_url ?? null}
 				<div
-					class="absolute {$showSidebar
-						? 'md:max-w-[calc(100%-260px)] md:translate-x-[260px]'
-						: ''} top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
+					class="absolute top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
 					style="background-image: url({$settings?.backgroundImageUrl ??
 						$config?.license_metadata?.background_image_url})  "
 				/>

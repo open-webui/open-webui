@@ -23,7 +23,7 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 class Folder(Base):
     __tablename__ = "folder"
-    id = Column(Text, primary_key=True)
+    id = Column(Text, primary_key=True, unique=True)
     parent_id = Column(Text, nullable=True)
     user_id = Column(Text)
     name = Column(Text)

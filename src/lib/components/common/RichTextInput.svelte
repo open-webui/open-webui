@@ -725,7 +725,7 @@
 							})
 						]
 					: []),
-				...(richText && autocomplete
+				...(autocomplete
 					? [
 							AIAutocompletion.configure({
 								generateCompletion: async (text) => {

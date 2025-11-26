@@ -25,7 +25,7 @@
 {#if filters.length > 0}
 	<div>
 		<div class="flex w-full justify-between mb-1">
-			<div class=" self-center text-sm font-semibold">{$i18n.t('Filters')}</div>
+			<div class=" self-center text-sm font-medium">{$i18n.t('Filters')}</div>
 		</div>
 
 		<!-- TODO: Filer order matters -->

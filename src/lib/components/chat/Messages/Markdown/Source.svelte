@@ -1,22 +1,9 @@
 <script lang="ts">
 	export let id;
-	export let token;
+
+	export let title: string = 'N/A';
+
 	export let onClick: Function = () => {};
-
-	let attributes: Record<string, string | undefined> = {};
-
-	function extractAttributes(input: string): Record<string, string> {
-		const regex = /(\w+)="([^"]*)"/g;
-		let match;
-		let attrs: Record<string, string> = {};
-
-		// Loop through all matches and populate the attributes object
-		while ((match = regex.exec(input)) !== null) {
-			attrs[match[1]] = match[2];
-		}
-
-		return attrs;
-	}
 
 	// Helper function to return only the domain from a URL
 	function getDomain(url: string): string {
@@ -44,23 +31,17 @@
 		}
 		return title;
 	};
-
-	$: attributes = extractAttributes(token.text);
 </script>
 
-{#if attributes.title !== 'N/A'}
+{#if title !== 'N/A'}
 	<button
-		class="text-xs font-medium w-fit translate-y-[2px] px-2 py-0.5 dark:bg-white/5 dark:text-white/60 dark:hover:text-white bg-gray-50 text-black/60 hover:text-black transition rounded-lg"
+		class="text-[10px] w-fit translate-y-[2px] px-2 py-0.5 dark:bg-white/5 dark:text-white/80 dark:hover:text-white bg-gray-50 text-black/80 hover:text-black transition rounded-xl"
 		on:click={() => {
-			onClick(id, attributes.data);
+			onClick(id);
 		}}
 	>
 		<span class="line-clamp-1">
-			{getDisplayTitle(
-				decodeURIComponent(attributes.title)
-					? formattedTitle(decodeURIComponent(attributes.title))
-					: ''
-			)}
+			{getDisplayTitle(formattedTitle(decodeURIComponent(title)))}
 		</span>
 	</button>
 {/if}

@@ -272,14 +272,6 @@
 										}}
 									>
 										<div class="flex items-center gap-1.5">
-											<!-- <ProfileImage
-												src={model?.info?.meta?.profile_image_url ??
-													($i18n.language === 'dg-DG'
-														? `${WEBUI_BASE_URL}/doge.png`
-														: `${WEBUI_BASE_URL}/favicon.png`)}
-												className={'size-5 assistant-message-profile-image'}
-											/> -->
-
 											<div class="-translate-y-[1px]">
 												{model ? `${model.name}` : history.messages[_messageId]?.model}
 											</div>

@@ -36,7 +36,7 @@
 	import { createNewNote, deleteNoteById, getNotes } from '$lib/apis/notes';
 	import { capitalizeFirstLetter, copyToClipboard, getTimeRange } from '$lib/utils';
 
-	import { downloadPdf } from './utils';
+	import { downloadPdf, createNoteHandler } from './utils';
 
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -99,30 +99,6 @@
 		fuse = new Fuse(noteItems, {
 			keys: ['title']
 		});
-	};
-
-	const createNoteHandler = async (content?: string) => {
-		//  $i18n.t('New Note'),
-		const res = await createNewNote(localStorage.token, {
-			// YYYY-MM-DD
-			title: dayjs().format('YYYY-MM-DD'),
-			data: {
-				content: {
-					json: null,
-					html: content ?? '',
-					md: content ?? ''
-				}
-			},
-			meta: null,
-			access_control: {}
-		}).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
-
-		if (res) {
-			goto(`/notes/${res.id}`);
-		}
 	};
 
 	const downloadHandler = async (type) => {
@@ -241,12 +217,6 @@
 	});
 
 	onMount(async () => {
-		if ($page.url.searchParams.get('content') !== null) {
-			const content = $page.url.searchParams.get('content') ?? '';
-			createNoteHandler(content);
-			return;
-		}
-
 		await init();
 		loaded = true;
 
@@ -423,7 +393,11 @@
 						class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-white dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
 						type="button"
 						on:click={async () => {
-							createNoteHandler();
+							const res = await createNoteHandler(dayjs().format('YYYY-MM-DD'));
+
+							if (res) {
+								goto(`/notes/${res.id}`);
+							}
 						}}
 					>
 						<Plus className="size-4.5" strokeWidth="2.5" />

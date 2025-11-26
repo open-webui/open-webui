@@ -1,15 +1,18 @@
 <script lang="ts">
 	import { config, models, settings, user } from '$lib/stores';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { createEventDispatcher, onMount, onDestroy, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { updateUserInfo } from '$lib/apis/users';
 	import { getUserPosition } from '$lib/utils';
+	import { setTextScale } from '$lib/utils/text-scale';
+
 	import Minus from '$lib/components/icons/Minus.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import ManageFloatingActionButtonsModal from './Interface/ManageFloatingActionButtonsModal.svelte';
 	import ManageImageCompressionModal from './Interface/ManageImageCompressionModal.svelte';
+
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -97,6 +100,8 @@
 	let showManageFloatingActionButtonsModal = false;
 	let showManageImageCompressionModal = false;
 
+	let textScale = null;
+
 	const toggleLandingPageMode = async () => {
 		landingPageMode = landingPageMode === '' ? 'chat' : '';
 		saveSettings({ landingPageMode: landingPageMode });
@@ -179,6 +184,16 @@
 		saveSettings({ webSearch: webSearch });
 	};
 
+	const setTextScaleHandler = (scale) => {
+		textScale = scale;
+		setTextScale(textScale);
+
+		if (textScale === 1) {
+			textScale = null;
+		}
+		saveSettings({ textScale });
+	};
+
 	onMount(async () => {
 		titleAutoGenerate = $settings?.title?.auto ?? true;
 		autoTags = $settings?.autoTags ?? true;
@@ -252,6 +267,8 @@
 
 		backgroundImageUrl = $settings?.backgroundImageUrl ?? null;
 		webSearch = $settings?.webSearch ?? null;
+
+		textScale = $settings?.textScale ?? null;
 	});
 </script>
 
@@ -311,6 +328,86 @@
 	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] md:max-h-full">
 		<div>
 			<h1 class=" mb-2 text-sm font-medium">{$i18n.t('UI')}</h1>
+
+			<div>
+				<div class="py-0.5 flex w-full justify-between">
+					<label id="ui-scale-label" class=" self-center text-xs" for="ui-scale-slider">
+						{$i18n.t('UI Scale')}
+					</label>
+
+					<div class="flex items-center gap-2 p-1">
+						<button
+							class="text-xs"
+							aria-live="polite"
+							type="button"
+							on:click={() => {
+								if (textScale === null) {
+									textScale = 1;
+								} else {
+									textScale = null;
+									setTextScaleHandler(1);
+								}
+							}}
+						>
+							{#if textScale === null}
+								<span>{$i18n.t('Default')}</span>
+							{:else}
+								<span>{textScale}x</span>
+							{/if}
+						</button>
+					</div>
+				</div>
+
+				{#if textScale !== null}
+					<div class=" flex items-center gap-2 px-1 pb-1">
+						<button
+							type="button"
+							class="rounded-lg p-1 transition outline-gray-200 hover:bg-gray-100 dark:outline-gray-700 dark:hover:bg-gray-800"
+							on:click={() => {
+								textScale = Math.max(1, textScale);
+								setTextScaleHandler(textScale);
+							}}
+							aria-labelledby="ui-scale-label"
+							aria-label={$i18n.t('Decrease UI Scale')}
+						>
+							<Minus className="h-3.5 w-3.5" />
+						</button>
+
+						<div class="flex-1 flex items-center">
+							<input
+								id="ui-scale-slider"
+								class="w-full"
+								type="range"
+								min="1"
+								max="1.5"
+								step={0.01}
+								bind:value={textScale}
+								on:change={() => {
+									setTextScaleHandler(textScale);
+								}}
+								aria-labelledby="ui-scale-label"
+								aria-valuemin="1"
+								aria-valuemax="1.5"
+								aria-valuenow={textScale}
+								aria-valuetext={`${textScale}x`}
+							/>
+						</div>
+
+						<button
+							type="button"
+							class="rounded-lg p-1 transition outline-gray-200 hover:bg-gray-100 dark:outline-gray-700 dark:hover:bg-gray-800"
+							on:click={() => {
+								textScale = Math.min(1.5, textScale);
+								setTextScaleHandler(textScale);
+							}}
+							aria-labelledby="ui-scale-label"
+							aria-label={$i18n.t('Increase UI Scale')}
+						>
+							<Plus className="h-3.5 w-3.5" />
+						</button>
+					</div>
+				{/if}
+			</div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
@@ -998,6 +1095,27 @@
 				</div>
 			</div>
 
+			{#if $config?.features?.enable_autocomplete_generation}
+				<div>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div id="prompt-autocompletion-label" class=" self-center text-xs">
+							{$i18n.t('Prompt Autocompletion')}
+						</div>
+
+						<div class="flex items-center gap-2 p-1">
+							<Switch
+								ariaLabelledbyId="prompt-autocompletion-label"
+								tooltip={true}
+								bind:state={promptAutocomplete}
+								on:change={() => {
+									saveSettings({ promptAutocomplete });
+								}}
+							/>
+						</div>
+					</div>
+				</div>
+			{/if}
+
 			{#if richTextInput}
 				<div>
 					<div class=" py-0.5 flex w-full justify-between">
@@ -1036,27 +1154,6 @@
 						</div>
 					</div>
 				</div>
-
-				{#if $config?.features?.enable_autocomplete_generation}
-					<div>
-						<div class=" py-0.5 flex w-full justify-between">
-							<div id="prompt-autocompletion-label" class=" self-center text-xs">
-								{$i18n.t('Prompt Autocompletion')}
-							</div>
-
-							<div class="flex items-center gap-2 p-1">
-								<Switch
-									ariaLabelledbyId="prompt-autocompletion-label"
-									tooltip={true}
-									bind:state={promptAutocomplete}
-									on:change={() => {
-										saveSettings({ promptAutocomplete });
-									}}
-								/>
-							</div>
-						</div>
-					</div>
-				{/if}
 			{/if}
 
 			<div>

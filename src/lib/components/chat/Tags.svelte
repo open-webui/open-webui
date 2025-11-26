@@ -73,6 +73,7 @@
 
 <Tags
 	{tags}
+	suggestionTags={$_tags ?? []}
 	on:delete={(e) => {
 		deleteTag(e.detail);
 	}}

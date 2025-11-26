@@ -4,8 +4,10 @@
 
 	import dayjs from 'dayjs';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
+	import calendar from 'dayjs/plugin/calendar';
 
 	dayjs.extend(localizedFormat);
+	dayjs.extend(calendar);
 
 	import { deleteChatById } from '$lib/apis/chats';
 
@@ -242,7 +244,16 @@
 
 									<div class="basis-2/5 flex items-center justify-end">
 										<div class="hidden sm:flex text-gray-500 dark:text-gray-400 text-xs">
-											{dayjs(chat?.updated_at * 1000).calendar()}
+											{$i18n.t(
+												dayjs(chat?.updated_at * 1000).calendar(null, {
+													sameDay: '[Today]',
+													nextDay: '[Tomorrow]',
+													nextWeek: 'dddd',
+													lastDay: '[Yesterday]',
+													lastWeek: '[Last] dddd',
+													sameElse: 'L' // use localized format, otherwise dayjs.calendar() defaults to DD/MM/YYYY
+												})
+											)}
 										</div>
 
 										<div class="flex justify-end pl-2.5 text-gray-600 dark:text-gray-300">

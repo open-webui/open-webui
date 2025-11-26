@@ -93,6 +93,45 @@ export const getAllFeedbacks = async (token: string = '') => {
 	return res;
 };
 
+export const getFeedbackItems = async (token: string = '', orderBy, direction, page) => {
+	let error = null;
+
+	const searchParams = new URLSearchParams();
+	if (orderBy) searchParams.append('order_by', orderBy);
+	if (direction) searchParams.append('direction', direction);
+	if (page) searchParams.append('page', page.toString());
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/evaluations/feedbacks/list?${searchParams.toString()}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const exportAllFeedbacks = async (token: string = '') => {
 	let error = null;
 

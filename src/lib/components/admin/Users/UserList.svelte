@@ -1,5 +1,5 @@
 <script>
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, showSidebar } from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { onMount, getContext } from 'svelte';
@@ -154,27 +154,28 @@
 	<div
 		class="pt-0.5 pb-1 gap-1 flex flex-col md:flex-row justify-between sticky top-0 z-10 bg-white dark:bg-gray-900"
 	>
-		<div class="flex md:self-center text-lg font-medium px-0.5">
+		<div class="flex md:self-center text-lg font-medium px-0.5 gap-2">
 			<div class="flex-shrink-0">
 				{$i18n.t('Users')}
 			</div>
-			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
 
-			{#if ($config?.license_metadata?.seats ?? null) !== null}
-				{#if total > $config?.license_metadata?.seats}
-					<span class="text-lg font-medium text-red-500"
-						>{total} of {$config?.license_metadata?.seats}
-						<span class="text-sm font-normal">{$i18n.t('available users')}</span></span
-					>
+			<div>
+				{#if ($config?.license_metadata?.seats ?? null) !== null}
+					{#if total > $config?.license_metadata?.seats}
+						<span class="text-lg font-medium text-red-500"
+							>{total} of {$config?.license_metadata?.seats}
+							<span class="text-sm font-normal">{$i18n.t('available users')}</span></span
+						>
+					{:else}
+						<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
+							>{total} of {$config?.license_metadata?.seats}
+							<span class="text-sm font-normal">{$i18n.t('available users')}</span></span
+						>
+					{/if}
 				{:else}
-					<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
-						>{total} of {$config?.license_metadata?.seats}
-						<span class="text-sm font-normal">{$i18n.t('available users')}</span></span
-					>
+					<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{total}</span>
 				{/if}
-			{:else}
-				<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{total}</span>
-			{/if}
+			</div>
 		</div>
 
 		<div class="flex gap-1">
@@ -361,11 +362,7 @@
 							<div class="flex items-center">
 								<img
 									class="rounded-full w-6 h-6 object-cover mr-2.5 flex-shrink-0"
-									src={user?.profile_image_url?.startsWith(WEBUI_BASE_URL) ||
-									user.profile_image_url.startsWith('https://www.gravatar.com/avatar/') ||
-									user.profile_image_url.startsWith('data:')
-										? user.profile_image_url
-										: `${WEBUI_BASE_URL}/user.png`}
+									src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
 									alt="user"
 								/>
 

@@ -7,6 +7,8 @@
 	const i18n = getContext('i18n');
 
 	export let label = '';
+	export let suggestionTags = [];
+
 	let showTagInput = false;
 	let tagName = '';
 
@@ -37,11 +39,13 @@
 					}
 				}}
 			/>
-			<datalist id="tagOptions">
-				{#each $tags as tag}
-					<option value={tag.name} />
-				{/each}
-			</datalist>
+			{#if suggestionTags.length > 0}
+				<datalist id="tagOptions">
+					{#each suggestionTags as tag}
+						<option value={tag.name} />
+					{/each}
+				</datalist>
+			{/if}
 
 			<button type="button" aria-label={$i18n.t('Save Tag')} on:click={addTagHandler}>
 				<svg

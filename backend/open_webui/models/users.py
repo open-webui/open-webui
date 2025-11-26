@@ -6,13 +6,13 @@ from open_webui.internal.db import Base, JSONField, get_db
 
 from open_webui.env import DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL
 from open_webui.models.chats import Chats
-from open_webui.models.groups import Groups
+from open_webui.models.groups import Groups, GroupMember
 from open_webui.utils.misc import throttle
 
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, Date
-from sqlalchemy import or_
+from sqlalchemy import BigInteger, Column, String, Text, Date, exists, select
+from sqlalchemy import or_, case
 
 import datetime
 
@@ -95,8 +95,21 @@ class UpdateProfileForm(BaseModel):
     date_of_birth: Optional[datetime.date] = None
 
 
+class UserGroupIdsModel(UserModel):
+    group_ids: list[str] = []
+
+
+class UserModelResponse(UserModel):
+    model_config = ConfigDict(extra="allow")
+
+
 class UserListResponse(BaseModel):
-    users: list[UserModel]
+    users: list[UserModelResponse]
+    total: int
+
+
+class UserGroupIdsListResponse(BaseModel):
+    users: list[UserGroupIdsModel]
     total: int
 
 
@@ -222,6 +235,7 @@ class UsersTable:
         limit: Optional[int] = None,
     ) -> dict:
         with get_db() as db:
+            # Join GroupMember so we can order by group_id when requested
             query = db.query(User)
 
             if filter:
@@ -234,14 +248,65 @@ class UsersTable:
                         )
                     )
 
+                user_ids = filter.get("user_ids")
+                group_ids = filter.get("group_ids")
+
+                if isinstance(user_ids, list) and isinstance(group_ids, list):
+                    # If both are empty lists, return no users
+                    if not user_ids and not group_ids:
+                        return {"users": [], "total": 0}
+
+                if user_ids:
+                    query = query.filter(User.id.in_(user_ids))
+
+                if group_ids:
+                    query = query.filter(
+                        exists(
+                            select(GroupMember.id).where(
+                                GroupMember.user_id == User.id,
+                                GroupMember.group_id.in_(group_ids),
+                            )
+                        )
+                    )
+
+                roles = filter.get("roles")
+                if roles:
+                    include_roles = [role for role in roles if not role.startswith("!")]
+                    exclude_roles = [role[1:] for role in roles if role.startswith("!")]
+
+                    if include_roles:
+                        query = query.filter(User.role.in_(include_roles))
+                    if exclude_roles:
+                        query = query.filter(~User.role.in_(exclude_roles))
+
                 order_by = filter.get("order_by")
                 direction = filter.get("direction")
 
-                if order_by == "name":
+                if order_by and order_by.startswith("group_id:"):
+                    group_id = order_by.split(":", 1)[1]
+
+                    # Subquery that checks if the user belongs to the group
+                    membership_exists = exists(
+                        select(GroupMember.id).where(
+                            GroupMember.user_id == User.id,
+                            GroupMember.group_id == group_id,
+                        )
+                    )
+
+                    # CASE: user in group → 1, user not in group → 0
+                    group_sort = case((membership_exists, 1), else_=0)
+
+                    if direction == "asc":
+                        query = query.order_by(group_sort.asc(), User.name.asc())
+                    else:
+                        query = query.order_by(group_sort.desc(), User.name.asc())
+
+                elif order_by == "name":
                     if direction == "asc":
                         query = query.order_by(User.name.asc())
                     else:
                         query = query.order_by(User.name.desc())
+
                 elif order_by == "email":
                     if direction == "asc":
                         query = query.order_by(User.email.asc())
@@ -274,15 +339,19 @@ class UsersTable:
             else:
                 query = query.order_by(User.created_at.desc())
 
-            if skip:
+            # Count BEFORE pagination
+            total = query.count()
+
+            # correct pagination logic
+            if skip is not None:
                 query = query.offset(skip)
-            if limit:
+            if limit is not None:
                 query = query.limit(limit)
 
             users = query.all()
             return {
                 "users": [UserModel.model_validate(user) for user in users],
-                "total": db.query(User).count(),
+                "total": total,
             }
 
     def get_users_by_user_ids(self, user_ids: list[str]) -> list[UserModel]:
@@ -321,6 +390,15 @@ class UsersTable:
                     )
         except Exception:
             return None
+
+    def get_num_users_active_today(self) -> Optional[int]:
+        with get_db() as db:
+            current_timestamp = int(datetime.datetime.now().timestamp())
+            today_midnight_timestamp = current_timestamp - (current_timestamp % 86400)
+            query = db.query(User).filter(
+                User.last_active_at > today_midnight_timestamp
+            )
+            return query.count()
 
     def update_user_role_by_id(self, id: str, role: str) -> Optional[UserModel]:
         try:
