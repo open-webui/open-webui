@@ -124,13 +124,57 @@ This document catalogs EVERY feature, class, function, and piece of logic from t
 - `delete_collection()`: Delete data for specific resource_id
 - `_build_expected_resource_ids()`: Build set of expected resource_ids (files + KBs + user memories)
 
-### 8. NoOpVectorDatabaseCleaner (Lines 861-884)
+### 8. QdrantDatabaseCleaner (Extended - Not in Original)
+**Purpose**: Qdrant database cleanup implementation (standard mode)
+
+**Features**:
+- Handles collection-based storage
+- Each file/KB gets own collection
+- Collection naming pattern: `{prefix}_file-{file_id}` or `{prefix}_{kb_id}`
+- Lists all collections via client.get_collections().collections
+- Deletes orphaned collections via client.delete_collection()
+- Memory-safe scroll pagination (batch size: 1000)
+
+**Methods**:
+- `__init__()`: Initialize with Qdrant client and collection_prefix
+- `count_orphaned_collections()`: Count orphaned collections
+- `cleanup_orphaned_collections()`: Delete orphaned collections
+- `delete_collection()`: Delete specific collection
+- `_build_expected_collections()`: Build set of expected collections
+
+### 9. QdrantMultitenancyDatabaseCleaner (Extended - Not in Original)
+**Purpose**: Qdrant multitenancy database cleanup implementation
+
+**Features**:
+- Handles shared collections with tenant_id filtering
+- Uses 5 shared collections: memories, files, knowledge, web_search, hash_based
+- Multiple logical collections share physical collections
+- Distinguished by tenant_id field
+- Uses scroll() API for memory-safe pagination
+- Deletes orphaned data by tenant_id filter (preserves collections)
+- Returns (points, next_offset) tuple for iteration
+- **100% COVERAGE**: Cleans ALL 5 shared collections comprehensively
+  - ✅ Files (file-{id}) - validated against Files table
+  - ✅ Knowledge bases ({kb_id}) - validated against Knowledges table
+  - ✅ User memories (user-memory-{user_id}) - validated against Users table
+  - ✅ Web searches (web-search-{hash}) - deleted as ephemeral cache (not tracked in DB)
+  - ✅ Hash-based ({63-char-hex}) - deleted as temporary content (not tracked in DB)
+
+**Methods**:
+- `__init__()`: Initialize with Qdrant client and shared_collections
+- `count_orphaned_collections()`: Count orphaned tenant_ids across ALL 5 collections using scroll
+- `cleanup_orphaned_collections()`: Delete orphaned data by tenant_id with 100% coverage
+- `delete_collection()`: Map collection to shared collection and delete by tenant_id filter
+- `_build_expected_tenant_ids()`: Build set of expected tenant_ids (files + KBs + user memories)
+- `_map_to_shared_collection()`: Map collection name to appropriate shared collection
+
+### 10. NoOpVectorDatabaseCleaner (Lines 861-884)
 **Purpose**: No-operation implementation for unsupported databases
 
 **Methods**:
 - All methods return 0 or success without doing anything
 
-### 9. get_vector_database_cleaner() (Lines 886-910)
+### 11. get_vector_database_cleaner() (Lines 886-910)
 **Purpose**: Factory function to get appropriate cleaner
 
 **Logic**:
@@ -139,6 +183,8 @@ This document catalogs EVERY feature, class, function, and piece of logic from t
 - Return PGVectorDatabaseCleaner for "pgvector"
 - Return MilvusDatabaseCleaner for "milvus" (standard mode)
 - Return MilvusMultitenancyDatabaseCleaner for "milvus" (multitenancy mode)
+- Return QdrantDatabaseCleaner for "qdrant" (standard mode)
+- Return QdrantMultitenancyDatabaseCleaner for "qdrant" (multitenancy mode)
 - Auto-detect multitenancy via hasattr(client, 'shared_collections')
 - Return NoOpVectorDatabaseCleaner for others
 
@@ -487,8 +533,8 @@ This document catalogs EVERY feature, class, function, and piece of logic from t
 - **Comprehensive Error Handling**
 
 **Extended Features (Standalone Script Additions):**
-- **+2 Vector DB Cleaner Classes** (MilvusDatabaseCleaner, MilvusMultitenancyDatabaseCleaner)
-- **Total Classes in Standalone Implementation: 9**
-- **Total Vector Database Implementations: 5** (Chroma, PGVector, Milvus, Milvus Multitenancy, NoOp)
+- **+4 Vector DB Cleaner Classes** (MilvusDatabaseCleaner, MilvusMultitenancyDatabaseCleaner, QdrantDatabaseCleaner, QdrantMultitenancyDatabaseCleaner)
+- **Total Classes in Standalone Implementation: 11**
+- **Total Vector Database Implementations: 7** (Chroma, PGVector, Milvus, Milvus Multitenancy, Qdrant, Qdrant Multitenancy, NoOp)
 
-This represents the COMPLETE functionality from the original prune.py PLUS extended Milvus support.
+This represents the COMPLETE functionality from the original prune.py PLUS extended Milvus and Qdrant support with full multitenancy coverage.

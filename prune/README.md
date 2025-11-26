@@ -37,7 +37,7 @@ The prune script allows you to:
 ✅ **Safe by Default** - Interactive mode for easy use, dry-run mode for command-line
 ✅ **Complete Logic** - Uses the exact same code paths as the API router
 ✅ **Database Access** - Full access to SQLAlchemy models and database operations
-✅ **Vector Database Support** - Supports ChromaDB, PGVector, Milvus, and Milvus Multitenancy cleanup with auto-detection
+✅ **Vector Database Support** - Supports ChromaDB, PGVector, Milvus (standard & multitenancy), and Qdrant (standard & multitenancy) with auto-detection
 ✅ **File System Operations** - Cleans up orphaned uploads and audio cache
 ✅ **Locking Mechanism** - Prevents concurrent prune operations
 ✅ **Detailed Logging** - Comprehensive logging of all operations
