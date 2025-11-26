@@ -11,12 +11,14 @@
 	import User from '$lib/components/icons/User.svelte';
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
 	import EditGroupModal from './EditGroupModal.svelte';
+	import Badge from '$lib/components/common/Badge.svelte';
 
 	export let group = {
 		name: 'Admins',
 		user_ids: [1, 2, 3]
 	};
 	export let defaultPermissions = {};
+	export let isAdmin = false;
 
 	export let setGroups = () => {};
 
@@ -59,6 +61,7 @@
 	edit
 	{group}
 	{defaultPermissions}
+	{isAdmin}
 	onSubmit={updateHandler}
 	onDelete={deleteHandler}
 />
@@ -76,6 +79,9 @@
 		<div class="line-clamp-1">
 			{group.name}
 		</div>
+		{#if !isAdmin && group.manager_ids && group.manager_ids.length > 0}
+			<Badge type="info" content={$i18n.t('Manager')} />
+		{/if}
 	</div>
 
 	<div class="flex items-center gap-1.5 w-fit font-medium text-right justify-end">

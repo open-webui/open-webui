@@ -8,6 +8,7 @@
 	import General from './General.svelte';
 	import Permissions from './Permissions.svelte';
 	import Users from './Users.svelte';
+	import Managers from './Managers.svelte';
 	import UserPlusSolid from '$lib/components/icons/UserPlusSolid.svelte';
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -18,13 +19,27 @@
 
 	export let show = false;
 	export let edit = false;
+	export let isAdmin = true;
 
 	export let group = null;
 	export let defaultPermissions = {};
 
 	export let custom = true;
 
-	export let tabs = ['general', 'permissions', 'users'];
+	// Dynamically build tabs based on isAdmin
+	export let tabs: string[] = [];
+	$: {
+		if (custom) {
+			if (isAdmin) {
+				tabs = ['general', 'permissions', 'managers', 'users'];
+			} else {
+				// Non-admin managers can only see general and users tabs
+				tabs = ['general', 'users'];
+			}
+		} else {
+			tabs = ['permissions'];
+		}
+	}
 
 	let selectedTab = 'general';
 	let loading = false;
@@ -95,14 +110,14 @@
 	const submitHandler = async () => {
 		loading = true;
 
-		const group = {
+		const groupData = {
 			name,
 			description,
 			data,
 			permissions
 		};
 
-		await onSubmit(group);
+		await onSubmit(groupData);
 
 		loading = false;
 		show = false;
@@ -121,10 +136,12 @@
 
 	$: if (show) {
 		init();
+		// Reset to first available tab
+		selectedTab = tabs[0] || 'general';
 	}
 
 	onMount(() => {
-		selectedTab = tabs[0];
+		selectedTab = tabs[0] || 'general';
 		init();
 	});
 </script>
@@ -222,6 +239,33 @@
 								</button>
 							{/if}
 
+							{#if tabs.includes('managers')}
+								<button
+									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+									'managers'
+										? ''
+										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									on:click={() => {
+										selectedTab = 'managers';
+									}}
+									type="button"
+								>
+									<div class=" self-center mr-2">
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 16 16"
+											fill="currentColor"
+											class="w-4 h-4"
+										>
+											<path
+												d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM12.735 14c.618 0 1.093-.561.872-1.139a6.002 6.002 0 0 0-11.215 0c-.22.578.254 1.139.872 1.139h9.47Z"
+											/>
+										</svg>
+									</div>
+									<div class=" self-center">{$i18n.t('Managers')}</div>
+								</button>
+							{/if}
+
 							{#if tabs.includes('users')}
 								<button
 									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
@@ -249,12 +293,15 @@
 										bind:description
 										bind:data
 										{edit}
+										{isAdmin}
 										onDelete={() => {
 											showDeleteConfirmDialog = true;
 										}}
 									/>
 								{:else if selectedTab == 'permissions'}
 									<Permissions bind:permissions {defaultPermissions} />
+								{:else if selectedTab == 'managers'}
+									<Managers groupId={group?.id} />
 								{:else if selectedTab == 'users'}
 									<Users bind:userCount groupId={group?.id} />
 								{/if}
@@ -281,55 +328,6 @@
 							{/if}
 						</div>
 					</div>
-
-					<!-- <div
-						class=" tabs flex flex-row overflow-x-auto gap-2.5 text-sm font-medium border-b border-b-gray-800 scrollbar-hidden"
-					>
-						{#if tabs.includes('display')}
-							<button
-								class="px-0.5 pb-1.5 min-w-fit flex text-right transition border-b-2 {selectedTab ===
-								'display'
-									? ' dark:border-white'
-									: 'border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-								on:click={() => {
-									selectedTab = 'display';
-								}}
-								type="button"
-							>
-								{$i18n.t('Display')}
-							</button>
-						{/if}
-
-						{#if tabs.includes('permissions')}
-							<button
-								class="px-0.5 pb-1.5 min-w-fit flex text-right transition border-b-2 {selectedTab ===
-								'permissions'
-									? '  dark:border-white'
-									: 'border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-								on:click={() => {
-									selectedTab = 'permissions';
-								}}
-								type="button"
-							>
-								{$i18n.t('Permissions')}
-							</button>
-						{/if}
-
-						{#if tabs.includes('users')}
-							<button
-								class="px-0.5 pb-1.5 min-w-fit flex text-right transition border-b-2 {selectedTab ===
-								'users'
-									? ' dark:border-white'
-									: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-								on:click={() => {
-									selectedTab = 'users';
-								}}
-								type="button"
-							>
-								{$i18n.t('Users')} ({userIds.length})
-							</button>
-						{/if}
-					</div> -->
 				</form>
 			</div>
 		</div>

@@ -22,7 +22,7 @@
 	import EditGroupModal from './Groups/EditGroupModal.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import GroupItem from './Groups/GroupItem.svelte';
-	import { createNewGroup, getGroups } from '$lib/apis/groups';
+	import { createNewGroup, getGroups, getManagedGroups } from '$lib/apis/groups';
 	import {
 		getUserDefaultPermissions,
 		getAllUsers,
@@ -34,13 +34,14 @@
 	let loaded = false;
 
 	let groups = [];
+	let managedGroupIds = new Set();
 	let filteredGroups;
 
-	$: filteredGroups = groups.filter((user) => {
+	$: filteredGroups = groups.filter((group) => {
 		if (search === '') {
 			return true;
 		} else {
-			let name = user.name.toLowerCase();
+			let name = group.name.toLowerCase();
 			const query = search.toLowerCase();
 			return name.includes(query);
 		}
@@ -52,8 +53,17 @@
 	let showAddGroupModal = false;
 	let showDefaultPermissionsModal = false;
 
+	// Check if user is admin
+	$: isAdmin = $user?.role === 'admin';
+
 	const setGroups = async () => {
-		groups = await getGroups(localStorage.token);
+		if (isAdmin) {
+			// Admins see all groups
+			groups = await getGroups(localStorage.token);
+		} else {
+			// Managers only see their managed groups
+			groups = await getManagedGroups(localStorage.token);
+		}
 	};
 
 	const addGroupHandler = async (group) => {
@@ -64,7 +74,7 @@
 
 		if (res) {
 			toast.success($i18n.t('Group created successfully'));
-			groups = await getGroups(localStorage.token);
+			await setGroups();
 		}
 	};
 
@@ -85,24 +95,36 @@
 	};
 
 	onMount(async () => {
-		if ($user?.role !== 'admin') {
-			await goto('/');
-			return;
+		// Allow access if user is admin OR has managed groups
+		if ($user?.role === 'admin') {
+			defaultPermissions = await getUserDefaultPermissions(localStorage.token);
+			await setGroups();
+			loaded = true;
+		} else {
+			// Check if user manages any groups
+			const managed = await getManagedGroups(localStorage.token).catch(() => []);
+			if (managed && managed.length > 0) {
+				managedGroupIds = new Set(managed.map((g) => g.id));
+				groups = managed;
+				loaded = true;
+			} else {
+				// No admin access and no managed groups
+				await goto('/');
+				return;
+			}
 		}
-
-		defaultPermissions = await getUserDefaultPermissions(localStorage.token);
-		await setGroups();
-		loaded = true;
 	});
 </script>
 
 {#if loaded}
-	<EditGroupModal
-		bind:show={showAddGroupModal}
-		edit={false}
-		permissions={defaultPermissions}
-		onSubmit={addGroupHandler}
-	/>
+	{#if isAdmin}
+		<EditGroupModal
+			bind:show={showAddGroupModal}
+			edit={false}
+			permissions={defaultPermissions}
+			onSubmit={addGroupHandler}
+		/>
+	{/if}
 
 	<div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
 		<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2 shrink-0">
@@ -128,18 +150,20 @@
 					/>
 				</div>
 
-				<div>
-					<Tooltip content={$i18n.t('Create Group')}>
-						<button
-							class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
-							on:click={() => {
-								showAddGroupModal = !showAddGroupModal;
-							}}
-						>
-							<Plus className="size-3.5" />
-						</button>
-					</Tooltip>
-				</div>
+				{#if isAdmin}
+					<div>
+						<Tooltip content={$i18n.t('Create Group')}>
+							<button
+								class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
+								on:click={() => {
+									showAddGroupModal = !showAddGroupModal;
+								}}
+							>
+								<Plus className="size-3.5" />
+							</button>
+						</Tooltip>
+					</div>
+				{/if}
 			</div>
 		</div>
 	</div>
@@ -155,17 +179,19 @@
 					{$i18n.t('Use groups to group your users and assign permissions.')}
 				</div>
 
-				<div class="mt-3">
-					<button
-						class=" px-4 py-1.5 text-sm rounded-full bg-black hover:bg-gray-800 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition font-medium flex items-center space-x-1"
-						aria-label={$i18n.t('Create Group')}
-						on:click={() => {
-							showAddGroupModal = true;
-						}}
-					>
-						{$i18n.t('Create Group')}
-					</button>
-				</div>
+				{#if isAdmin}
+					<div class="mt-3">
+						<button
+							class=" px-4 py-1.5 text-sm rounded-full bg-black hover:bg-gray-800 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition font-medium flex items-center space-x-1"
+							aria-label={$i18n.t('Create Group')}
+							on:click={() => {
+								showAddGroupModal = true;
+							}}
+						>
+							{$i18n.t('Create Group')}
+						</button>
+					</div>
+				{/if}
 			</div>
 		{:else}
 			<div>
@@ -179,45 +205,47 @@
 
 				{#each filteredGroups as group}
 					<div class="my-2">
-						<GroupItem {group} {setGroups} {defaultPermissions} />
+						<GroupItem {group} {setGroups} {defaultPermissions} {isAdmin} />
 					</div>
 				{/each}
 			</div>
 		{/if}
 
-		<hr class="mb-2 border-gray-100 dark:border-gray-850" />
+		{#if isAdmin}
+			<hr class="mb-2 border-gray-100 dark:border-gray-850" />
 
-		<EditGroupModal
-			bind:show={showDefaultPermissionsModal}
-			tabs={['permissions']}
-			bind:permissions={defaultPermissions}
-			custom={false}
-			onSubmit={updateDefaultPermissionsHandler}
-		/>
+			<EditGroupModal
+				bind:show={showDefaultPermissionsModal}
+				tabs={['permissions']}
+				bind:permissions={defaultPermissions}
+				custom={false}
+				onSubmit={updateDefaultPermissionsHandler}
+			/>
 
-		<button
-			class="flex items-center justify-between rounded-lg w-full transition pt-1"
-			on:click={() => {
-				showDefaultPermissionsModal = true;
-			}}
-		>
-			<div class="flex items-center gap-2.5">
-				<div class="p-1.5 bg-black/5 dark:bg-white/10 rounded-full">
-					<UsersSolid className="size-4" />
-				</div>
+			<button
+				class="flex items-center justify-between rounded-lg w-full transition pt-1"
+				on:click={() => {
+					showDefaultPermissionsModal = true;
+				}}
+			>
+				<div class="flex items-center gap-2.5">
+					<div class="p-1.5 bg-black/5 dark:bg-white/10 rounded-full">
+						<UsersSolid className="size-4" />
+					</div>
 
-				<div class="text-left">
-					<div class=" text-sm font-medium">{$i18n.t('Default permissions')}</div>
+					<div class="text-left">
+						<div class=" text-sm font-medium">{$i18n.t('Default permissions')}</div>
 
-					<div class="flex text-xs mt-0.5">
-						{$i18n.t('applies to all users with the "user" role')}
+						<div class="flex text-xs mt-0.5">
+							{$i18n.t('applies to all users with the "user" role')}
+						</div>
 					</div>
 				</div>
-			</div>
 
-			<div>
-				<ChevronRight strokeWidth="2.5" />
-			</div>
-		</button>
+				<div>
+					<ChevronRight strokeWidth="2.5" />
+				</div>
+			</button>
+		{/if}
 	</div>
 {/if}

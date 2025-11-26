@@ -69,12 +69,14 @@ class GroupMember(Base):
     user_id = Column(Text, nullable=False)
     created_at = Column(BigInteger, nullable=True)
     updated_at = Column(BigInteger, nullable=True)
+    role = Column(Text, nullable=False, default="member")
 
 
 class GroupMemberModel(BaseModel):
     id: str
     group_id: str
     user_id: str
+    role: str = "member"  # "member" or "manager"
     created_at: Optional[int] = None  # timestamp in epoch
     updated_at: Optional[int] = None  # timestamp in epoch
 
@@ -93,6 +95,7 @@ class GroupResponse(BaseModel):
     data: Optional[dict] = None
     meta: Optional[dict] = None
     member_count: Optional[int] = None
+    manager_ids: Optional[list[str]] = None
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
 
@@ -439,6 +442,107 @@ class GroupTable:
                 # Update group timestamp
                 group.updated_at = int(time.time())
 
+                db.commit()
+                db.refresh(group)
+                return GroupModel.model_validate(group)
+
+        except Exception as e:
+            log.exception(e)
+            return None
+
+    def is_group_manager(self, user_id: str, group_id: str) -> bool:
+        """Check if a user is a manager of a specific group."""
+        with get_db() as db:
+            member = (
+                db.query(GroupMember)
+                .filter(
+                    GroupMember.group_id == group_id,
+                    GroupMember.user_id == user_id,
+                    GroupMember.role == "manager",
+                )
+                .first()
+            )
+            return member is not None
+
+    def get_group_manager_ids_by_id(self, group_id: str) -> list[str]:
+        """Get all manager user IDs for a specific group."""
+        with get_db() as db:
+            managers = (
+                db.query(GroupMember.user_id)
+                .filter(
+                    GroupMember.group_id == group_id,
+                    GroupMember.role == "manager",
+                )
+                .all()
+            )
+            return [m[0] for m in managers]
+
+    def get_groups_by_manager_id(self, user_id: str) -> list[GroupModel]:
+        """Get all groups where the user is a manager."""
+        with get_db() as db:
+            return [
+                GroupModel.model_validate(group)
+                for group in db.query(Group)
+                .join(GroupMember, GroupMember.group_id == Group.id)
+                .filter(
+                    GroupMember.user_id == user_id,
+                    GroupMember.role == "manager",
+                )
+                .order_by(Group.updated_at.desc())
+                .all()
+            ]
+
+    def set_group_managers_by_id(
+        self, group_id: str, manager_ids: list[str]
+    ) -> Optional[GroupModel]:
+        """
+        Set the managers for a group. Manager IDs must be existing group members.
+        If a manager_id is not already a member, they will be added as a manager.
+        """
+        try:
+            with get_db() as db:
+                group = db.query(Group).filter_by(id=group_id).first()
+                if not group:
+                    return None
+
+                now = int(time.time())
+
+                # Get current members
+                current_members = {
+                    m.user_id: m
+                    for m in db.query(GroupMember)
+                    .filter(GroupMember.group_id == group_id)
+                    .all()
+                }
+
+                # Reset all current managers to members
+                db.query(GroupMember).filter(
+                    GroupMember.group_id == group_id,
+                    GroupMember.role == "manager",
+                ).update({"role": "member", "updated_at": now})
+
+                # Set new managers (add them if not already members)
+                for manager_id in manager_ids:
+                    if manager_id in current_members:
+                        # Update existing member to manager
+                        db.query(GroupMember).filter(
+                            GroupMember.group_id == group_id,
+                            GroupMember.user_id == manager_id,
+                        ).update({"role": "manager", "updated_at": now})
+                    else:
+                        # Add as new manager
+                        db.add(
+                            GroupMember(
+                                id=str(uuid.uuid4()),
+                                group_id=group_id,
+                                user_id=manager_id,
+                                role="manager",
+                                created_at=now,
+                                updated_at=now,
+                            )
+                        )
+
+                group.updated_at = now
                 db.commit()
                 db.refresh(group)
                 return GroupModel.model_validate(group)
