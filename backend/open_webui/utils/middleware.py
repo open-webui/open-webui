@@ -32,6 +32,7 @@ from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
     get_active_status_by_user_id,
+    process_token_usage,
 )
 from open_webui.routers.tasks import (
     generate_queries,
@@ -2500,6 +2501,7 @@ async def process_chat_response(
                                     usage.update(data.get("timings", {}))  # llama.cpp
                                     if usage:
                                         response_usage = usage  # Store for final completion event
+                                        await process_token_usage(model_id, usage)
                                         await event_emitter(
                                             {
                                                 "type": "chat:completion",

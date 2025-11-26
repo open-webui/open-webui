@@ -49,7 +49,14 @@ from open_webui.utils.misc import (
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access
-
+from open_webui.socket.main import process_token_usage
+from open_webui.models.chats import Chats
+from open_webui.constants import TASKS
+from open_webui.utils.task import title_generation_template, tags_generation_template
+from open_webui.config import (
+    DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE,
+    DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE,
+)
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])
@@ -762,6 +769,95 @@ def convert_to_azure_payload(url, payload: dict, api_version: str):
     return url, payload
 
 
+async def trigger_title_generation(request, user, model_id, messages, chat_id):
+    try:
+        chat = Chats.get_chat_by_id(chat_id)
+        if not chat:
+            return
+
+        # If title is already set (not "New Chat"), probably skip?
+        # But let's just try to generate if it's short history?
+        # Simplest: Only if title is "New Chat"
+        # If title is not default "New Chat", skip generation
+        if chat.title and chat.title != "New Chat":
+            return
+
+        template = DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE
+        # Title generation
+        if request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE:
+            template = request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE
+
+        content = title_generation_template(template, messages, user)
+
+        payload = {
+            "model": model_id,
+            "messages": [{"role": "user", "content": content}],
+            "stream": False,
+            "metadata": {"task": str(TASKS.TITLE_GENERATION), "chat_id": chat_id},
+        }
+
+        response = await generate_chat_completion(
+            request, payload, user, bypass_filter=True
+        )
+
+        title = ""
+        if isinstance(response, dict) and "choices" in response:
+            title = response["choices"][0]["message"]["content"]
+
+        if title:
+            # Clean up title similar to frontend logic
+            title = title.strip().replace('"', "")
+            # Update DB
+            Chats.update_chat_by_id(chat.id, {"title": title})
+
+        # Tags generation (server-side parity with frontend)
+        try:
+            # Tags template
+            tags_template = (
+                request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE
+                if request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE
+                else DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE
+            )
+
+            tags_content = tags_generation_template(tags_template, messages, user)
+
+            tags_payload = {
+                "model": model_id,
+                "messages": [{"role": "user", "content": tags_content}],
+                "stream": False,
+                "metadata": {"task": str(TASKS.TAGS_GENERATION), "chat_id": chat_id},
+            }
+
+            tags_response = await generate_chat_completion(
+                request, tags_payload, user, bypass_filter=True
+            )
+
+            tags_string = ""
+            if isinstance(tags_response, dict) and "choices" in tags_response:
+                if len(tags_response.get("choices", [])) >= 1:
+                    resp_msg = tags_response["choices"][0].get("message", {})
+                    tags_string = resp_msg.get("content") or resp_msg.get("reasoning_content", "")
+
+            if tags_string:
+                # Extract JSON object from the model output (frontend does the same)
+                start = tags_string.find("{")
+                end = tags_string.rfind("}")
+                if start != -1 and end != -1 and end > start:
+                    json_part = tags_string[start : end + 1]
+                    try:
+                        tags_json = json.loads(json_part)
+                        tags = tags_json.get("tags", [])
+                        if tags:
+                            Chats.update_chat_tags_by_id(chat_id, tags, user)
+                    except Exception:
+                        log.debug("Could not parse tags response")
+        except Exception as e:
+            log.error(f"Error generating tags: {e}")
+
+    except Exception as e:
+        log.error(f"Error generating title: {e}")
+
+
 @router.post("/chat/completions")
 async def generate_chat_completion(
     request: Request,
@@ -864,6 +960,23 @@ async def generate_chat_completion(
         elif isinstance(payload["stream_options"], dict):
             payload["stream_options"]["include_usage"] = True
 
+    # Background Tasks: Title Generation
+    task_type = None
+    chat_id = None
+    if metadata:
+        task_type = metadata.get("task")
+        chat_id = metadata.get("chat_id")
+
+    if not chat_id and "chat_id" in payload:
+        chat_id = payload["chat_id"]
+
+    if chat_id and task_type is None:
+        asyncio.create_task(
+            trigger_title_generation(
+                request, user, model_id, payload["messages"], chat_id
+            )
+        )
+
     headers, cookies = await get_headers_and_cookies(
         request, url, key, api_config, metadata, user=user
     )
@@ -921,8 +1034,31 @@ async def generate_chat_completion(
                     return PlainTextResponse(status_code=r.status, content=error_data)
 
             streaming = True
+
+            async def stream_wrapper(stream):
+                async for chunk in stream:
+                    yield chunk
+                    try:
+                        # Attempt to extract usage from the chunk
+                        decoded = chunk.decode("utf-8", errors="ignore")
+                        if '"usage"' in decoded:
+                            for line in decoded.split("\n"):
+                                if line.startswith("data: "):
+                                    try:
+                                        # Skip "data: [DONE]"
+                                        if line.strip() == "data: [DONE]":
+                                            continue
+                                        
+                                        data = json.loads(line[6:])
+                                        if "usage" in data:
+                                            await process_token_usage(model_id, data["usage"])
+                                    except Exception:
+                                        pass
+                    except Exception:
+                        pass
+
             return StreamingResponse(
-                r.content,
+                stream_wrapper(r.content),
                 status_code=r.status,
                 headers=dict(r.headers),
                 background=BackgroundTask(
@@ -941,6 +1077,9 @@ async def generate_chat_completion(
                     return JSONResponse(status_code=r.status, content=response)
                 else:
                     return PlainTextResponse(status_code=r.status, content=response)
+
+            if isinstance(response, dict) and "usage" in response:
+                await process_token_usage(model_id, response["usage"])
 
             return response
     except Exception as e:
@@ -1040,6 +1179,9 @@ async def embeddings(request: Request, form_data: dict, user):
                         status_code=r.status, content=response_data
                     )
 
+            if isinstance(response_data, dict) and "usage" in response_data:
+                await process_token_usage(model_id, response_data["usage"])
+
             return response_data
     except Exception as e:
         log.exception(e)
@@ -1059,6 +1201,22 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     """
 
     body = await request.body()
+
+    model_id = None
+    try:
+        body_json = json.loads(body)
+        model_id = body_json.get("model")
+
+        # Ensure usage is returned when streaming
+        if body_json.get("stream", False):
+            if "stream_options" not in body_json:
+                body_json["stream_options"] = {"include_usage": True}
+                body = json.dumps(body_json).encode()
+            elif isinstance(body_json["stream_options"], dict):
+                body_json["stream_options"]["include_usage"] = True
+                body = json.dumps(body_json).encode()
+    except Exception:
+        pass
 
     idx = 0
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
@@ -1125,14 +1283,51 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
                     return PlainTextResponse(status_code=r.status, content=error_data)
 
             streaming = True
-            return StreamingResponse(
-                r.content,
-                status_code=r.status,
-                headers=dict(r.headers),
-                background=BackgroundTask(
-                    cleanup_response, response=r, session=session
-                ),
-            )
+
+            # Only wrap if we have a model_id to attribute to
+            if model_id:
+
+                async def stream_wrapper(stream):
+                    async for chunk in stream:
+                        yield chunk
+                        try:
+                            # Attempt to extract usage from the chunk
+                            decoded = chunk.decode("utf-8", errors="ignore")
+                            if '"usage"' in decoded:
+                                for line in decoded.split("\n"):
+                                    if line.startswith("data: "):
+                                        try:
+                                            # Skip "data: [DONE]"
+                                            if line.strip() == "data: [DONE]":
+                                                continue
+
+                                            data = json.loads(line[6:])
+                                            if "usage" in data:
+                                                await process_token_usage(
+                                                    model_id, data["usage"]
+                                                )
+                                        except Exception:
+                                            pass
+                        except Exception:
+                            pass
+
+                return StreamingResponse(
+                    stream_wrapper(r.content),
+                    status_code=r.status,
+                    headers=dict(r.headers),
+                    background=BackgroundTask(
+                        cleanup_response, response=r, session=session
+                    ),
+                )
+            else:
+                return StreamingResponse(
+                    r.content,
+                    status_code=r.status,
+                    headers=dict(r.headers),
+                    background=BackgroundTask(
+                        cleanup_response, response=r, session=session
+                    ),
+                )
         else:
             try:
                 response_data = await r.json()
@@ -1147,9 +1342,12 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
                         status_code=r.status, content=response_data
                     )
 
-            return response_data
+            if model_id and isinstance(response_data, dict) and "usage" in response_data:
+                await process_token_usage(model_id, response_data["usage"])
 
+            return response_data
     except Exception as e:
+
         log.exception(e)
         raise HTTPException(
             status_code=r.status if r else 500,
