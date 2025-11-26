@@ -39,7 +39,7 @@ from open_webui.env import (
     WEBSOCKET_SERVER_ENGINEIO_LOGGING,
     REDIS_TTL_SESSION_POOL,
     REDIS_TTL_USER_POOL,
-    REDIS_TTL_USAGE_POOL
+    REDIS_TTL_USAGE_POOL,
 )
 from open_webui.utils.auth import decode_token
 from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
@@ -271,12 +271,14 @@ def get_active_status_by_user_id(user_id):
         return True
     return False
 
+
 def refresh_user_pool(user_id: str, sid: str):
     if user_id in USER_POOL:
         if sid not in USER_POOL[user_id]:
             USER_POOL[user_id] = USER_POOL[user_id] + [sid]
     else:
         USER_POOL[user_id] = [sid]
+
 
 @sio.on("usage")
 async def usage(sid, data):
@@ -803,13 +805,10 @@ def get_event_call(request_info):
             to=request_info["session_id"],
         )
         return response
-    
-    if (
-        "session_id" in request_info
-        and "user_id" in request_info
-    ):
-        refresh_user_pool(request_info['user_id'], request_info['session_id'])
-    
+
+    if "session_id" in request_info and "user_id" in request_info:
+        refresh_user_pool(request_info["user_id"], request_info["session_id"])
+
     if (
         "session_id" in request_info
         and "chat_id" in request_info

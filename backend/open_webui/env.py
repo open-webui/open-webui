@@ -386,12 +386,14 @@ REDIS_KEY_PREFIX = os.environ.get("REDIS_KEY_PREFIX", "open-webui")
 REDIS_SENTINEL_HOSTS = os.environ.get("REDIS_SENTINEL_HOSTS", "")
 REDIS_SENTINEL_PORT = os.environ.get("REDIS_SENTINEL_PORT", "26379")
 
+
 def _get_redis_ttl(env_path: str):
     try:
         ttl = os.environ.get(env_path, None)
         return int(ttl) if ttl else ttl
     except Exception:
         return None
+
 
 REDIS_TTL_SESSION_POOL = _get_redis_ttl("REDIS_TTL_SESSION_POOL")
 REDIS_TTL_USER_POOL = _get_redis_ttl("REDIS_TTL_USER_POOL")
