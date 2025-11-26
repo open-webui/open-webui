@@ -60,7 +60,7 @@ dependencies = [
     "PyMySQL==1.1.1",
     "boto3==1.40.5",
     
-    "transformers=4.57.3",
+    "transformers==4.57.3",
     "sentence-transformers==5.1.2",
     "accelerate",
     "pyarrow==20.0.0",
