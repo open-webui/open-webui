@@ -930,3 +930,63 @@ async def delete_all_tags_by_id(id: str, user=Depends(get_verified_user)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
         )
+
+
+############################
+# TranslateMessage
+############################
+
+class TranslateMessageRequest(BaseModel):
+    message: str
+    target_language: str
+    model: str
+
+
+@router.post("/translate")
+async def translate_message(
+    request: Request,
+    form_data: TranslateMessageRequest,
+    user=Depends(get_verified_user),
+):
+    try:
+        # Check if the model exists
+        from open_webui.models.models import Models
+        model = Models.get_model_by_id(form_data.model)
+        if not model:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.MODEL_NOT_FOUND
+            )
+
+        # Check if user has permission to use the model
+        from open_webui.utils.auth import check_model_permission
+        if not check_model_permission(user.id, form_data.model):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.MODEL_ACCESS_DENIED
+            )
+
+        # Build the translation prompt
+        prompt = f"""Translate the following text to {form_data.target_language}:
+
+{form_data.message}"""
+
+        # Generate the translation using the model
+        from open_webui.utils.chat import chat_completion
+        response = await chat_completion(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            user=user,
+            request=request
+        )
+
+        # Extract the translation from the response
+        if isinstance(response, dict) and response.get("choices"):
+            translation = response["choices"][0]["message"]["content"].strip()
+        else:
+            translation = str(response)
+
+        return {"translation": translation}
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
