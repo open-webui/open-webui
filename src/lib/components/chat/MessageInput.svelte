@@ -110,6 +110,7 @@
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
 	export let memoryEnabled = false;
+	export let memoryLocked = false;
 
 	let showInputVariablesModal = false;
 	let inputVariablesModalCallback = (variableValues) => {};
@@ -1510,20 +1511,32 @@
 										{/if}
 
 										{#if showMemoryButton}
-											<div
-												class="flex items-center gap-2 bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800 rounded-full px-2.5 py-1.5 transition"
+											<Tooltip
+												content={
+													memoryLocked
+														? $i18n.t('对话进行中无法切换记忆')
+														: $i18n.t('记忆开关')
+												}
+												placement="top"
 											>
-												<div class="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
-													<Sparkles className="size-4" strokeWidth="1.5" />
-													<span class="text-sm">{$i18n.t('Memory')}</span>
+												<div
+													class="flex items-center gap-2 bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800 rounded-full px-2.5 py-1.5 transition {memoryLocked ? 'opacity-60 cursor-not-allowed' : ''}"
+												>
+													<div class="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
+														<Sparkles className="size-4" strokeWidth="1.5" />
+														<span class="text-sm">{$i18n.t('Memory')}</span>
+													</div>
+													<div class={memoryLocked ? 'pointer-events-none' : ''}>
+														<Switch
+															bind:state={memoryEnabled}
+															on:change={async () => {
+																if (memoryLocked) return;
+																await tick();
+															}}
+														/>
+													</div>
 												</div>
-												<Switch
-													bind:state={memoryEnabled}
-													on:change={async () => {
-														await tick();
-													}}
-												/>
-											</div>
+											</Tooltip>
 										{/if}
 
 										{#if selectedModelIds.length === 1 && $models.find((m) => m.id === selectedModelIds[0])?.has_user_valves}

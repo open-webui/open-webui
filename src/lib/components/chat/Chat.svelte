@@ -126,10 +126,11 @@
 
 	let selectedToolIds = [];
 	let selectedFilterIds = [];
-	let imageGenerationEnabled = false;
-	let webSearchEnabled = false;
-	let codeInterpreterEnabled = false;
-	let memoryEnabled = true;
+let imageGenerationEnabled = false;
+let webSearchEnabled = false;
+let codeInterpreterEnabled = false;
+let memoryEnabled = true;
+let memoryLocked = false;
 
 	let showCommands = false;
 
@@ -159,15 +160,16 @@
 	const navigateHandler = async () => {
 		loading = true;
 
-		prompt = '';
-		messageInput?.setText('');
+	prompt = '';
+	messageInput?.setText('');
 
-		files = [];
-		selectedToolIds = [];
-		selectedFilterIds = [];
-		webSearchEnabled = false;
-		imageGenerationEnabled = false;
-		memoryEnabled = true;
+	files = [];
+	selectedToolIds = [];
+	selectedFilterIds = [];
+	webSearchEnabled = false;
+	imageGenerationEnabled = false;
+	memoryEnabled = true;
+	memoryLocked = false;
 
 		const storageChatInput = sessionStorage.getItem(
 			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
@@ -192,7 +194,9 @@
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
-						memoryEnabled = input.memoryEnabled;
+						if (!memoryLocked) {
+							memoryEnabled = input.memoryEnabled;
+						}
 					}
 				} catch (e) {}
 			}
@@ -1052,6 +1056,9 @@
 
 				params = chatContent?.params ?? {};
 				chatFiles = chatContent?.files ?? [];
+				if (chatContent?.memory_enabled !== undefined) {
+					memoryEnabled = chatContent.memory_enabled;
+				}
 
 				autoScroll = true;
 				await tick();
@@ -1063,6 +1070,8 @@
 						}
 					}
 				}
+
+				memoryLocked = Object.keys(history?.messages ?? {}).length > 0;
 
 				const taskRes = await getTaskIdsByChatId(localStorage.token, $chatId).catch((error) => {
 					return null;
@@ -1493,26 +1502,80 @@
 	// Chat functions
 	//////////////////////////
 
+	/**
+	 * 提交用户消息 - 前端聊天流程的核心入口函数
+	 *
+	 * 这是用户发送消息时调用的主函数，负责：
+	 * 1. 校验用户输入（prompt、模型选择、文件状态）
+	 * 2. 创建用户消息对象并更新本地聊天历史
+	 * 3. 处理文件附件（图片、文档等）
+	 * 4. 调用 sendMessage 发起 API 请求
+	 * 
+	 *   1. 模型验证 (1511-1520)
+			- 检查选中模型是否仍然存在
+			- 过滤掉已删除的模型，避免请求失败
+		2. 输入验证 (1522-1558)
+			- 检查是否输入了内容或上传了文件
+			- 检查是否选择了模型
+			- 检查文件上传状态（非图片文件需等待上传完成）
+			- 检查文件数量限制（防止请求过大）
+		3. 聊天状态检查 (1560-1576)
+			- 检查上一条消息是否已完成（防止重复提交）
+			- 检查上一条消息是否有错误
+		4. 清空输入框 (1578-1580)
+			- 清空输入框内容
+			- 重置 prompt 变量
+		5. 处理文件附件 (1582-1603)
+			- 深拷贝文件列表
+			- 将文档类文件添加到聊天上下文（用于 RAG 检索）
+			- 去重防止重复添加
+			- 清空当前输入的文件列表
+		6. 创建用户消息对象 (1605-1616)
+			- 生成唯一消息 ID (UUID)
+			- 构造消息对象：id、parentId、childrenIds、role、content、files、timestamp、models
+		7. 更新本地聊天历史 (1618-1629)
+			- 将用户消息添加到 history.messages
+			- 设置 history.currentId 为当前消息 ID
+			- 更新父消息的 childrenIds（构建消息树，支持对话分支）
+		8. UI 操作 (1631-1637)
+			- 重新聚焦输入框
+			- 保存选中的模型到 sessionStorage（用于页面刷新恢复）
+		9. 发送消息到后端 (1639-1641)
+			- 调用 sendMessage(history, userMessageId, { newChat: true })
+			- newChat: true 表示如果是新对话的第一条消息，需先创建聊天记录
+	 *
+	 * @param userPrompt - 用户输入的文本内容
+	 * @param _raw - 是否使用原始格式（当前未使用）
+	 */
 	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
 		console.log('submitPrompt', userPrompt, $chatId);
 
+		// === 1. 模型验证：确保选中的模型仍然存在 ===
+		// 过滤掉已被删除或不可用的模型，避免发送请求时出错
 		const _selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
 
+		// 如果模型列表发生变化，同步更新
 		if (JSON.stringify(selectedModels) !== JSON.stringify(_selectedModels)) {
 			selectedModels = _selectedModels;
 		}
 
+		// === 2. 输入验证 ===
+		// 2.1 检查是否输入了内容或上传了文件
 		if (userPrompt === '' && files.length === 0) {
 			toast.error($i18n.t('Please enter a prompt'));
 			return;
 		}
+
+		// 2.2 检查是否选择了模型
 		if (selectedModels.includes('')) {
 			toast.error($i18n.t('Model not selected'));
 			return;
 		}
 
+		// 2.3 检查文件上传状态（非图片文件需要等待上传完成）
+		// 图片文件可以立即发送，因为支持本地 base64 编码
 		if (
 			files.length > 0 &&
 			files.filter((file) => file.type !== 'image' && file.status === 'uploading').length > 0
@@ -1523,6 +1586,7 @@
 			return;
 		}
 
+		// 2.4 检查文件数量限制（防止用户上传过多文件导致请求过大）
 		if (
 			($config?.file?.max_count ?? null) !== null &&
 			files.length + chatFiles.length > $config?.file?.max_count
@@ -1535,13 +1599,17 @@
 			return;
 		}
 
+		// === 3. 检查当前聊天状态 ===
 		if (history?.currentId) {
 			const lastMessage = history.messages[history.currentId];
+
+			// 3.1 如果上一条消息还没完成（正在生成中），禁止提交新消息
 			if (lastMessage.done != true) {
 				// Response not done
 				return;
 			}
 
+			// 3.2 如果上一条消息有错误且没有内容，提示用户
 			if (lastMessage.error && !lastMessage.content) {
 				// Error in response
 				toast.error($i18n.t(`Oops! There was an error in the previous response.`));
@@ -1549,57 +1617,126 @@
 			}
 		}
 
+		// === 4. 清空输入框 ===
 		messageInput?.setText('');
 		prompt = '';
 
+		// === 5. 处理文件附件 ===
 		const messages = createMessagesList(history, history.currentId);
-		const _files = JSON.parse(JSON.stringify(files));
+		const _files = JSON.parse(JSON.stringify(files)); // 深拷贝文件列表
 
+		// 5.1 将当前消息的文档类文件添加到聊天上下文文件列表
+		// 这些文件将在整个对话中保持可用（用于 RAG 检索等）
 		chatFiles.push(
 			..._files.filter((item) =>
 				['doc', 'text', 'file', 'note', 'chat', 'folder', 'collection'].includes(item.type)
 			)
 		);
+
+		// 5.2 去重：防止同一文件被多次添加到上下文
 		chatFiles = chatFiles.filter(
 			// Remove duplicates
 			(item, index, array) =>
 				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
 		);
 
+		// 5.3 清空当前输入的文件列表（已保存到 _files 和 chatFiles）
 		files = [];
 		messageInput?.setText('');
 
-		// Create user message
-		let userMessageId = uuidv4();
+		// === 6. 创建用户消息对象 ===
+		let userMessageId = uuidv4(); // 生成唯一消息 ID
 		let userMessage = {
 			id: userMessageId,
-			parentId: messages.length !== 0 ? messages.at(-1).id : null,
-			childrenIds: [],
+			parentId: messages.length !== 0 ? messages.at(-1).id : null, // 链接到父消息（上一条消息）
+			childrenIds: [], // 初始化子消息列表（用于分支对话）
 			role: 'user',
 			content: userPrompt,
-			files: _files.length > 0 ? _files : undefined,
-			timestamp: Math.floor(Date.now() / 1000), // Unix epoch
-			models: selectedModels
+			files: _files.length > 0 ? _files : undefined, // 附加文件（图片、文档等）
+			timestamp: Math.floor(Date.now() / 1000), // Unix 时间戳
+			models: selectedModels // 记录使用的模型（用于多模型对话）
 		};
 
-		// Add message to history and Set currentId to messageId
+		console.debug('[chat] send user message', {
+			chatId: $chatId,
+			messageId: userMessageId,
+			contentPreview: userPrompt.slice(0, 200),
+			files: _files?.map((f) => f.name ?? f.id) ?? []
+		});
+
+		// 锁定记忆开关：首条用户消息创建后不再允许切换
+		memoryLocked = true;
+
+		// === 7. 更新本地聊天历史 ===
+		// 7.1 将用户消息添加到历史记录
 		history.messages[userMessageId] = userMessage;
+
+		// 7.2 设置当前消息 ID（用于定位当前对话位置）
 		history.currentId = userMessageId;
 
-		// Append messageId to childrenIds of parent message
+		// 7.3 更新父消息的子消息列表（构建消息树结构）
+		// 这种树状结构支持对话分支（用户可以回到之前的消息重新生成响应）
 		if (messages.length !== 0) {
 			history.messages[messages.at(-1).id].childrenIds.push(userMessageId);
 		}
 
-		// focus on chat input
+		// === 8. UI 操作 ===
+		// 重新聚焦输入框，方便用户继续输入
 		const chatInput = document.getElementById('chat-input');
 		chatInput?.focus();
 
+		// 保存当前选中的模型到 sessionStorage（用于刷新页面后恢复）
 		saveSessionSelectedModels();
 
+		// === 9. 发送消息到后端 ===
+		// newChat: true 表示如果是新对话的第一条消息，需要先创建聊天记录
 		await sendMessage(history, userMessageId, { newChat: true });
 	};
 
+	/**
+	 * 发送消息到后端 - 创建响应消息并调用 API
+	 *
+	 * 这是聊天消息发送的核心函数，负责：
+	 * 1. 为每个选中的模型创建空的响应消息占位符
+	 * 2. 如果是新对话的第一条消息，先创建聊天记录
+	 * 3. 并发向所有选中的模型发送请求（支持多模型对话）
+	 * 4. 更新聊天列表
+	 * 
+	 *   1. UI 自动滚动 (1708-1711)
+			- 如果启用了自动滚动，滚动到底部
+		 2. 深拷贝数据 (1713-1715)
+		 	- 深拷贝 chatId 和 history，避免状态污染
+		 3. 确定模型列表 (1717-1724)
+		 	- 优先级：指定的 modelId > atSelectedModel（@ 选择的模型）> selectedModels（全局选择）
+		 4. 创建响应消息占位符 (1726-1765)
+		 	- 为每个选中的模型创建空的响应消息对象
+		 	- 初始 content 为空，后续通过 WebSocket 流式填充
+		 	- 将响应消息添加到 history.messages
+		 	- 更新父消息的 childrenIds（构建消息树）
+		 	- 记录 responseMessageId（key 格式：modelId-modelIdx）
+		 5. 创建聊天记录 (1767-1771)
+		 	- 如果是新对话的第一条消息（newChat=true 且 parentId=null）
+		 	- 调用 initChatHandler 创建聊天记录并获取 chatId
+		 6. 保存聊天历史 (1775-1778)
+		 	- 调用 saveChatHandler 将消息树保存到数据库
+		 7. 并发发送请求 (1780-1832)
+		 	- 使用 Promise.all 并行向所有选中的模型发送请求
+		 	- 对每个模型：
+		 		- 7.1 检查模型视觉能力（如果消息包含图片）
+		 	- 7.2 获取响应消息 ID
+		 	- 7.3 启动聊天事件发射器（定时发送心跳，用于统计模型使用）
+		 	- 7.4 调用 sendMessageSocket 发送 API 请求
+		 	- 7.5 清理事件发射器
+		 8. 更新聊天列表 (1834-1836)
+		 	- 刷新侧边栏聊天列表
+			
+	 * @param _history - 聊天历史对象（消息树）
+	 * @param parentId - 父消息 ID（用户消息 ID）
+	 * @param messages - 可选的自定义消息列表（用于重新生成等场景）
+	 * @param modelId - 可选的指定模型 ID（用于单模型重新生成）
+	 * @param modelIdx - 可选的模型索引（用于多模型对话中的特定模型）
+	 * @param newChat - 是否是新对话的第一条消息
+	 */
 	const sendMessage = async (
 		_history,
 		parentId: string,
@@ -1615,44 +1752,50 @@
 			newChat?: boolean;
 		} = {}
 	) => {
+		// === 1. UI 自动滚动 ===
 		if (autoScroll) {
 			scrollToBottom();
 		}
 
+		// === 2. 深拷贝数据，避免状态污染 ===
 		let _chatId = JSON.parse(JSON.stringify($chatId));
 		_history = JSON.parse(JSON.stringify(_history));
 
+		// === 3. 确定要使用的模型列表 ===
 		const responseMessageIds: Record<PropertyKey, string> = {};
-		// If modelId is provided, use it, else use selected model
+		// 优先级：指定的 modelId > atSelectedModel（@ 选择的模型）> selectedModels（全局选择）
 		let selectedModelIds = modelId
 			? [modelId]
 			: atSelectedModel !== undefined
 				? [atSelectedModel.id]
 				: selectedModels;
 
-		// Create response messages for each selected model
+		// === 4. 为每个选中的模型创建响应消息占位符 ===
+		// 这样 UI 可以立即显示"正在输入..."状态
 		for (const [_modelIdx, modelId] of selectedModelIds.entries()) {
 			const model = $models.filter((m) => m.id === modelId).at(0);
 
 			if (model) {
+				// 4.1 生成响应消息 ID 和空消息对象
 				let responseMessageId = uuidv4();
 				let responseMessage = {
 					parentId: parentId,
 					id: responseMessageId,
 					childrenIds: [],
 					role: 'assistant',
-					content: '',
+					content: '', // 初始为空，后续通过 WebSocket 流式填充
 					model: model.id,
 					modelName: model.name ?? model.id,
-					modelIdx: modelIdx ? modelIdx : _modelIdx,
+					modelIdx: modelIdx ? modelIdx : _modelIdx, // 多模型对话时，区分不同模型的响应
 					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 				};
 
-				// Add message to history and Set currentId to messageId
+				// 4.2 将响应消息添加到历史记录
 				history.messages[responseMessageId] = responseMessage;
 				history.currentId = responseMessageId;
 
-				// Append messageId to childrenIds of parent message
+				// 4.3 更新父消息（用户消息）的子消息列表
+				// 构建消息树：user message -> [assistant message 1, assistant message 2, ...]
 				if (parentId !== null && history.messages[parentId]) {
 					// Add null check before accessing childrenIds
 					history.messages[parentId].childrenIds = [
@@ -1661,33 +1804,40 @@
 					];
 				}
 
+				// 4.4 记录响应消息 ID，用于后续查找
+				// key 格式：modelId-modelIdx，例如 "gpt-4-0"
 				responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`] = responseMessageId;
 			}
 		}
 		history = history;
 
-		// Create new chat if newChat is true and first user message
+		// === 5. 如果是新对话的第一条消息，先创建聊天记录 ===
+		// 检查条件：newChat=true 且当前消息没有父消息（说明是第一条用户消息）
 		if (newChat && _history.messages[_history.currentId].parentId === null) {
 			_chatId = await initChatHandler(_history);
 		}
 
 		await tick();
 
+		// === 6. 保存聊天历史到数据库 ===
 		_history = JSON.parse(JSON.stringify(history));
 		// Save chat after all messages have been created
 		await saveChatHandler(_chatId, _history);
 
+		// === 7. 并发向所有选中的模型发送请求 ===
+		// 使用 Promise.all 实现并行请求，提升多模型对话的性能
 		await Promise.all(
 			selectedModelIds.map(async (modelId, _modelIdx) => {
 				console.log('modelId', modelId);
 				const model = $models.filter((m) => m.id === modelId).at(0);
 
 				if (model) {
-					// If there are image files, check if model is vision capable
+					// 7.1 检查模型视觉能力（如果消息包含图片）
 					const hasImages = createMessagesList(_history, parentId).some((message) =>
 						message.files?.some((file) => file.type === 'image')
 					);
 
+					// 如果消息包含图片，但模型不支持视觉，提示错误
 					if (hasImages && !(model.info?.meta?.capabilities?.vision ?? true)) {
 						toast.error(
 							$i18n.t('Model {{modelName}} is not vision capable', {
@@ -1696,21 +1846,31 @@
 						);
 					}
 
+					// 7.2 获取响应消息 ID
 					let responseMessageId =
 						responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`];
+
+					// 7.3 启动聊天事件发射器（定时向后端发送心跳，用于统计模型使用情况）
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 
 					scrollToBottom();
+
+					// 7.4 发送 API 请求（核心函数）
+					// sendMessageSocket 负责：
+					// - 构造请求 payload（messages、files、tools、features 等）
+					// - 调用 generateOpenAIChatCompletion API
+					// - 处理流式响应（通过 WebSocket 实时更新消息内容）
 					await sendMessageSocket(
 						model,
 						messages && messages.length > 0
-							? messages
-							: createMessagesList(_history, responseMessageId),
+							? messages // 使用自定义消息列表（例如重新生成时追加 follow-up）
+							: createMessagesList(_history, responseMessageId), // 使用完整历史记录
 						_history,
 						responseMessageId,
 						_chatId
 					);
 
+					// 7.5 清理事件发射器
 					if (chatEventEmitter) clearInterval(chatEventEmitter);
 				} else {
 					toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
@@ -1718,6 +1878,7 @@
 			})
 		);
 
+		// === 8. 更新聊天列表（刷新侧边栏）===
 		currentChatPage.set(1);
 		chats.set(await getChatList(localStorage.token, $currentChatPage));
 	};
@@ -2204,6 +2365,7 @@
 					params: params,
 					history: history,
 					messages: createMessagesList(history, history.currentId),
+					memory_enabled: memoryEnabled,
 					tags: [],
 					timestamp: Date.now()
 				},
@@ -2238,7 +2400,8 @@
 					history: history,
 					messages: createMessagesList(history, history.currentId),
 					params: params,
-					files: chatFiles
+					files: chatFiles,
+					memory_enabled: memoryEnabled
 				});
 				currentChatPage.set(1);
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
@@ -2470,6 +2633,7 @@
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
 									bind:memoryEnabled
+									{memoryLocked}
 									bind:atSelectedModel
 									bind:showCommands
 									toolServers={$toolServers}
@@ -2523,6 +2687,7 @@
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
 									bind:memoryEnabled
+									{memoryLocked}
 									bind:atSelectedModel
 									bind:showCommands
 									toolServers={$toolServers}
