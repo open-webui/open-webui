@@ -61,6 +61,7 @@ from open_webui.utils import logger
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
 from open_webui.utils.logger import start_logger
 from open_webui.socket.main import (
+    MODELS,
     app as socket_app,
     periodic_usage_pool_cleanup,
     get_event_emitter,
@@ -1217,7 +1218,7 @@ app.state.config.VOICE_MODE_PROMPT_TEMPLATE = VOICE_MODE_PROMPT_TEMPLATE
 #
 ########################################
 
-app.state.MODELS = {}
+app.state.MODELS = MODELS
 
 # Add the middleware to the app
 if ENABLE_COMPRESSION_MIDDLEWARE:
