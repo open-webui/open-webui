@@ -173,12 +173,6 @@
 									{/if}
 								</div>
 							</button>
-
-							<button type="button" class="px-2.5 py-2 cursor-pointer select-none">
-								<div class="flex gap-1.5 items-center">
-									{$i18n.t('MBR')}
-								</div>
-							</button>
 						</div>
 					</div>
 					<div class="w-full">

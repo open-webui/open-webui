@@ -225,7 +225,24 @@
 </script>
 
 <svelte:head>
-	<title>#{channel?.name ?? 'Channel'} • Open WebUI</title>
+	{#if channel?.type === 'dm'}
+		<title
+			>{channel?.name.trim() ||
+				channel?.users.reduce((a, e, i, arr) => {
+					if (e.id === $user?.id) {
+						return a;
+					}
+
+					if (a) {
+						return `${a}, ${e.name}`;
+					} else {
+						return e.name;
+					}
+				}, '')} • Open WebUI</title
+		>
+	{:else}
+		<title>#{channel?.name ?? 'Channel'} • Open WebUI</title>
+	{/if}
 </svelte:head>
 
 <div
