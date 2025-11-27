@@ -113,22 +113,24 @@ class ChannelResponse(ChannelModel):
 
 
 class ChannelForm(BaseModel):
+    type: Optional[str] = None
     name: str
     description: Optional[str] = None
     data: Optional[dict] = None
     meta: Optional[dict] = None
     access_control: Optional[dict] = None
+    user_ids: Optional[list[str]] = None
 
 
 class ChannelTable:
     def insert_new_channel(
-        self, type: Optional[str], form_data: ChannelForm, user_id: str
+        self, form_data: ChannelForm, user_id: str
     ) -> Optional[ChannelModel]:
         with get_db() as db:
             channel = ChannelModel(
                 **{
                     **form_data.model_dump(),
-                    "type": type,
+                    "type": form_data.type if form_data.type else None,
                     "name": form_data.name.lower(),
                     "id": str(uuid.uuid4()),
                     "user_id": user_id,
@@ -136,8 +138,33 @@ class ChannelTable:
                     "updated_at": int(time.time_ns()),
                 }
             )
-
             new_channel = Channel(**channel.model_dump())
+
+            if form_data.type == "dm":
+                # For direct message channels, automatically add the specified users as members
+                user_ids = form_data.user_ids or []
+                if user_id not in user_ids:
+                    user_ids.append(user_id)  # Ensure the creator is also a member
+
+                for uid in user_ids:
+                    channel_member = ChannelMemberModel(
+                        **{
+                            "id": str(uuid.uuid4()),
+                            "channel_id": channel.id,
+                            "user_id": uid,
+                            "status": "joined",
+                            "is_active": True,
+                            "is_channel_muted": False,
+                            "is_channel_pinned": False,
+                            "joined_at": int(time.time_ns()),
+                            "left_at": None,
+                            "last_read_at": int(time.time_ns()),
+                            "created_at": int(time.time_ns()),
+                            "updated_at": int(time.time_ns()),
+                        }
+                    )
+                    new_membership = ChannelMember(**channel_member.model_dump())
+                    db.add(new_membership)
 
             db.add(new_channel)
             db.commit()
@@ -152,12 +179,41 @@ class ChannelTable:
         self, user_id: str, permission: str = "read"
     ) -> list[ChannelModel]:
         channels = self.get_channels()
-        return [
-            channel
-            for channel in channels
-            if channel.user_id == user_id
-            or has_access(user_id, permission, channel.access_control)
-        ]
+
+        channel_list = []
+        for channel in channels:
+            if channel.type == "dm":
+                membership = self.get_member_by_channel_and_user_id(channel.id, user_id)
+                if membership and membership.is_active:
+                    channel_list.append(channel)
+            else:
+                if channel.user_id == user_id or has_access(
+                    user_id, permission, channel.access_control
+                ):
+                    channel_list.append(channel)
+
+        return channel_list
+
+    def get_dm_channel_by_user_ids(self, user_ids: list[str]) -> Optional[ChannelModel]:
+        with get_db() as db:
+            subquery = (
+                db.query(ChannelMember.channel_id)
+                .filter(ChannelMember.user_id.in_(user_ids))
+                .group_by(ChannelMember.channel_id)
+                .having(func.count(ChannelMember.user_id) == len(user_ids))
+                .subquery()
+            )
+
+            channel = (
+                db.query(Channel)
+                .filter(
+                    Channel.id.in_(subquery),
+                    Channel.type == "dm",
+                )
+                .first()
+            )
+
+            return ChannelModel.model_validate(channel) if channel else None
 
     def join_channel(
         self, channel_id: str, user_id: str
@@ -233,6 +289,18 @@ class ChannelTable:
             )
             return ChannelMemberModel.model_validate(membership) if membership else None
 
+    def get_members_by_channel_id(self, channel_id: str) -> list[ChannelMemberModel]:
+        with get_db() as db:
+            memberships = (
+                db.query(ChannelMember)
+                .filter(ChannelMember.channel_id == channel_id)
+                .all()
+            )
+            return [
+                ChannelMemberModel.model_validate(membership)
+                for membership in memberships
+            ]
+
     def pin_channel(self, channel_id: str, user_id: str, is_pinned: bool) -> bool:
         with get_db() as db:
             membership = (
@@ -271,6 +339,27 @@ class ChannelTable:
             db.commit()
             return True
 
+    def update_member_active_status(
+        self, channel_id: str, user_id: str, is_active: bool
+    ) -> bool:
+        with get_db() as db:
+            membership = (
+                db.query(ChannelMember)
+                .filter(
+                    ChannelMember.channel_id == channel_id,
+                    ChannelMember.user_id == user_id,
+                )
+                .first()
+            )
+            if not membership:
+                return False
+
+            membership.is_active = is_active
+            membership.updated_at = int(time.time_ns())
+
+            db.commit()
+            return True
+
     def is_user_channel_member(self, channel_id: str, user_id: str) -> bool:
         with get_db() as db:
             membership = (
@@ -278,7 +367,6 @@ class ChannelTable:
                 .filter(
                     ChannelMember.channel_id == channel_id,
                     ChannelMember.user_id == user_id,
-                    ChannelMember.is_active == True,
                 )
                 .first()
             )

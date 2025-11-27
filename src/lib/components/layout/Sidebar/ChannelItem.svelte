@@ -5,12 +5,15 @@
 
 	import { page } from '$app/stores';
 	import { channels, mobile, showSidebar, user } from '$lib/stores';
-	import { updateChannelById } from '$lib/apis/channels';
+	import { updateChannelById, updateChannelMemberActiveStatusById } from '$lib/apis/channels';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import ChannelModal from './ChannelModal.svelte';
 	import Lock from '$lib/components/icons/Lock.svelte';
 	import Hashtag from '$lib/components/icons/Hashtag.svelte';
+	import Users from '$lib/components/icons/Users.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 
 	export let onUpdate: Function = () => {};
 
@@ -49,7 +52,7 @@
 	class=" w-full {className} rounded-xl flex relative group hover:bg-gray-100 dark:hover:bg-gray-900 {$page
 		.url.pathname === `/channels/${channel.id}`
 		? 'bg-gray-100 dark:bg-gray-900 selected'
-		: ''} px-2.5 py-1 {channel?.unread_count > 0
+		: ''} {channel?.type === 'dm' ? 'px-1 py-[3px]' : 'p-1'}  {channel?.unread_count > 0
 		? 'font-medium dark:text-white text-black'
 		: ' dark:text-gray-400 text-gray-600'} cursor-pointer select-none"
 >
@@ -76,17 +79,45 @@
 		}}
 		draggable="false"
 	>
-		<div class="flex items-center gap-1 shrink-0">
-			<div class=" size-4 justify-center flex items-center">
-				{#if channel?.access_control === null}
-					<Hashtag className="size-3" strokeWidth="2.5" />
+		<div class="flex items-center gap-1">
+			<div>
+				{#if channel?.type === 'dm'}
+					{#if channel?.users}
+						<div class="flex ml-[1px] mr-0.5">
+							{#each channel.users.filter((u) => u.id !== $user?.id).slice(0, 2) as u, index}
+								<img
+									src={`${WEBUI_API_BASE_URL}/users/${u.id}/profile/image`}
+									alt={u.name}
+									class=" size-5.5 rounded-full border-2 border-white dark:border-gray-900 {index ===
+									1
+										? '-ml-2.5'
+										: ''}"
+								/>
+							{/each}
+						</div>
+					{:else}
+						<Users className="size-4 ml-1 mr-0.5" strokeWidth="2" />
+					{/if}
 				{:else}
-					<Lock className="size-[15px]" strokeWidth="2" />
+					<div class=" size-4 justify-center flex items-center ml-1">
+						{#if channel?.access_control === null}
+							<Hashtag className="size-3.5" strokeWidth="2.5" />
+						{:else}
+							<Lock className="size-[15px]" strokeWidth="2" />
+						{/if}
+					</div>
 				{/if}
 			</div>
 
-			<div class=" text-left self-center overflow-hidden w-full line-clamp-1 flex-1">
-				{channel.name}
+			<div class=" text-left self-center overflow-hidden w-full line-clamp-1 flex-1 pr-1">
+				{#if channel?.name}
+					{channel.name}
+				{:else}
+					{channel?.users
+						?.filter((u) => u.id !== $user?.id)
+						.map((u) => u.name)
+						.join(', ')}
+				{/if}
 			</div>
 		</div>
 
@@ -101,20 +132,51 @@
 					}).format(channel.unread_count)}
 				</div>
 			{/if}
-
-			{#if $user?.role === 'admin'}
-				<div
-					class="right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
-					on:click={(e) => {
-						e.stopPropagation();
-						showEditChannelModal = true;
-					}}
-				>
-					<button class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto" on:click={(e) => {}}>
-						<Cog6 className="size-3.5" />
-					</button>
-				</div>
-			{/if}
 		</div>
 	</a>
+
+	{#if channel?.type === 'dm'}
+		<div
+			class="ml-0.5 mr-1 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
+		>
+			<button
+				type="button"
+				class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
+				on:click={async (e) => {
+					e.stopImmediatePropagation();
+					e.stopPropagation();
+
+					channels.update((chs) =>
+						chs.filter((ch) => {
+							return ch.id !== channel.id;
+						})
+					);
+
+					await updateChannelMemberActiveStatusById(localStorage.token, channel.id, false).catch(
+						(error) => {
+							toast.error(`${error}`);
+						}
+					);
+				}}
+			>
+				<XMark className="size-3.5" />
+			</button>
+		</div>
+	{:else if $user?.role === 'admin'}
+		<div
+			class="ml-0.5 mr-1 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
+		>
+			<button
+				type="button"
+				class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
+				on:click={(e) => {
+					e.stopImmediatePropagation();
+					e.stopPropagation();
+					showEditChannelModal = true;
+				}}
+			>
+				<Cog6 className="size-3.5" />
+			</button>
+		</div>
+	{/if}
 </div>

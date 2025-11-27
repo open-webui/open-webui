@@ -181,7 +181,11 @@
 	};
 
 	const initChannels = async () => {
-		await channels.set(await getChannels(localStorage.token));
+		await channels.set(
+			(await getChannels(localStorage.token)).sort((a, b) =>
+				a.type === b.type ? 0 : a.type === 'dm' ? 1 : -1
+			)
+		);
 	};
 
 	const initChatList = async () => {
@@ -482,16 +486,26 @@
 
 <ChannelModal
 	bind:show={showCreateChannel}
-	onSubmit={async ({ name, access_control }) => {
+	onSubmit={async ({ type, name, access_control, user_ids }) => {
 		name = name?.trim();
-		if (!name) {
-			toast.error($i18n.t('Channel name cannot be empty.'));
-			return;
+
+		if (type === 'dm') {
+			if (!user_ids || user_ids.length === 0) {
+				toast.error($i18n.t('Please select at least one user for Direct Message channel.'));
+				return;
+			}
+		} else {
+			if (!name) {
+				toast.error($i18n.t('Channel name cannot be empty.'));
+				return;
+			}
 		}
 
 		const res = await createNewChannel(localStorage.token, {
+			type: type,
 			name: name,
-			access_control: access_control
+			access_control: access_control,
+			user_ids: user_ids
 		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -501,6 +515,8 @@
 			$socket.emit('join-channels', { auth: { token: $user?.token } });
 			await initChannels();
 			showCreateChannel = false;
+
+			goto(`/channels/${res.id}`);
 		}
 	}}
 />
@@ -925,13 +941,18 @@
 							: null}
 						onAddLabel={$i18n.t('Create Channel')}
 					>
-						{#each $channels as channel}
+						{#each $channels as channel, channelIdx (`${channel?.id}`)}
 							<ChannelItem
 								{channel}
 								onUpdate={async () => {
 									await initChannels();
 								}}
 							/>
+
+							{#if channelIdx < $channels.length - 1 && channel.type !== $channels[channelIdx + 1]?.type}<hr
+									class=" border-gray-100 dark:border-gray-800/10 my-1.5 w-full"
+								/>
+							{/if}
 						{/each}
 					</Folder>
 				{/if}
