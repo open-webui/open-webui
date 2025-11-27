@@ -178,7 +178,7 @@ class TokenGroups:
                 for group in groups:
                     if model_id in group.models:
                         # Get or create usage record
-                            usage = db.query(TokenUsage).filter_by(group_name=group.name).first()
+                        usage = db.query(TokenUsage).filter_by(group_name=group.name).first()
                         if not usage:
                             # First time usage - create with current date
                             usage = TokenUsage(
