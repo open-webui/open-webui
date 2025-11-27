@@ -103,6 +103,32 @@
 					const isDarkMode = document.documentElement.classList.contains('dark');
 					const virtualWidth = 800; // px, fixed width for cloned element
 
+
+					// Render mermaid before cloning
+					const mermaidBlocks = containerElement.querySelectorAll('pre code.language-mermaid');
+					if (mermaidBlocks.length > 0) {
+						const mermaid = (await import('mermaid')).default;
+						mermaid.initialize({ startOnLoad: false, theme: isDarkMode ? 'dark' : 'default' });
+
+						for (const block of mermaidBlocks) {
+							const { svg } = await mermaid.render(
+								`mermaid-${Math.random().toString(36).slice(2)}`,
+								block.innerText
+							);
+							const wrapper = document.createElement('div');
+							wrapper.innerHTML = svg;
+							block.parentElement.replaceWith(wrapper);
+						}
+
+						await new Promise((r) => setTimeout(r, 50));
+					}
+
+					//Hide chat action buttons
+					const actions = containerElement.querySelectorAll(
+						'.message-actions, button.copy-btn, .audio-play-btn'
+					);
+					actions.forEach((el) => (el.style.display = 'none'));
+
 					// Clone and style
 					const clonedElement = containerElement.cloneNode(true);
 					clonedElement.classList.add('text-black');
