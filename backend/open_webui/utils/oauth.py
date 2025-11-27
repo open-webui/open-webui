@@ -1408,6 +1408,9 @@ class OAuthManager:
                 determined_role = self.get_user_role(user, user_data)
                 if user.role != determined_role:
                     Users.update_user_role_by_id(user.id, determined_role)
+                    # Update the user object in memory as well,
+                    # to avoid problems with the ENABLE_OAUTH_GROUP_MANAGEMENT check below
+                    user.role = determined_role
                 # Update profile picture if enabled and different from current
                 if auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN:
                     picture_claim = auth_manager_config.OAUTH_PICTURE_CLAIM
