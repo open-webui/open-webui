@@ -16,9 +16,8 @@ from open_webui.models.auths import (
     SigninResponse,
     SignupForm,
     UpdatePasswordForm,
-    UserResponse,
 )
-from open_webui.models.users import Users, UpdateProfileForm
+from open_webui.models.users import UserProfileImageResponse, Users, UpdateProfileForm
 from open_webui.models.groups import Groups
 from open_webui.models.oauth_sessions import OAuthSessions
 
@@ -78,7 +77,7 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 ############################
 
 
-class SessionUserResponse(Token, UserResponse):
+class SessionUserResponse(Token, UserProfileImageResponse):
     expires_at: Optional[int] = None
     permissions: Optional[dict] = None
 
@@ -149,7 +148,7 @@ async def get_session_user(
 ############################
 
 
-@router.post("/update/profile", response_model=UserResponse)
+@router.post("/update/profile", response_model=UserProfileImageResponse)
 async def update_profile(
     form_data: UpdateProfileForm, session_user=Depends(get_verified_user)
 ):

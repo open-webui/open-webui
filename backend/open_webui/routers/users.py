@@ -359,14 +359,14 @@ async def update_user_info_by_session_user(
 ############################
 
 
-class UserResponse(BaseModel):
+class UserActiveResponse(BaseModel):
     name: str
-    profile_image_url: str
+    profile_image_url: Optional[str] = None
     active: Optional[bool] = None
     model_config = ConfigDict(extra="allow")
 
 
-@router.get("/{user_id}", response_model=UserResponse)
+@router.get("/{user_id}", response_model=UserActiveResponse)
 async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
     # Check if user_id is a shared chat
     # If it is, get the user_id from the chat
@@ -384,11 +384,10 @@ async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
     user = Users.get_user_by_id(user_id)
 
     if user:
-        return UserResponse(
+        return UserActiveResponse(
             **{
                 "id": user.id,
                 "name": user.name,
-                "profile_image_url": user.profile_image_url,
                 "active": get_active_status_by_user_id(user_id),
             }
         )
