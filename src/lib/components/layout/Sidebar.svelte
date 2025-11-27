@@ -953,7 +953,7 @@
 							/>
 
 							{#if channelIdx < $channels.length - 1 && channel.type !== $channels[channelIdx + 1]?.type}<hr
-									class=" border-gray-100 dark:border-gray-800/10 my-1.5 w-full"
+									class=" border-gray-100/40 dark:border-gray-800/10 my-1.5 w-full"
 								/>
 							{/if}
 						{/each}
