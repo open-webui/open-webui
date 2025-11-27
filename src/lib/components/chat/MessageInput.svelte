@@ -143,7 +143,8 @@
 		const newModelId = selectedModelIds[0];
 		if (newModelId !== currentTrackedModel) {
 			const isFirstTimeSettingModel = !currentTrackedModel;
-			const shouldLoadStoredPreference = !isFirstTimeSettingModel || !userModifiedEffortForCurrentModel;
+			const shouldLoadStoredPreference =
+				!isFirstTimeSettingModel || !userModifiedEffortForCurrentModel;
 
 			currentTrackedModel = newModelId;
 			userModifiedEffortForCurrentModel = false;
@@ -164,7 +165,8 @@
 		reasoningEffort = newEffort;
 		userModifiedEffortForCurrentModel = true;
 
-		const modelToUse = currentTrackedModel || (selectedModelIds.length > 0 ? selectedModelIds[0] : null);
+		const modelToUse =
+			currentTrackedModel || (selectedModelIds.length > 0 ? selectedModelIds[0] : null);
 
 		if (modelToUse) {
 			reasoningEffortByModel[modelToUse] = newEffort;
@@ -485,9 +487,14 @@
 	);
 
 	let effectiveVisionCapableModels = [];
-	$: effectiveVisionCapableModels = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter((modelId) => {
+	$: effectiveVisionCapableModels = (
+		atSelectedModel?.id ? [atSelectedModel.id] : selectedModels
+	).filter((modelId) => {
 		const model = $models.find((m) => m.id === modelId);
-		return (model?.info?.meta?.capabilities?.vision ?? true) || model?.info?.meta?.vision_preprocessor_model_id;
+		return (
+			(model?.info?.meta?.capabilities?.vision ?? true) ||
+			model?.info?.meta?.vision_preprocessor_model_id
+		);
 	});
 
 	let fileUploadCapableModels = [];
@@ -1177,13 +1184,16 @@
 														{#if atSelectedModel ? effectiveVisionCapableModels.length === 0 : selectedModels.length !== effectiveVisionCapableModels.length}
 															<Tooltip
 																className=" absolute top-1 left-1"
-																content={$i18n.t('Models without native vision (using preprocessor): {{ models }}', {
-																	models: [
-																		...(atSelectedModel ? [atSelectedModel] : selectedModels)
-																	]
-																		.filter((id) => !effectiveVisionCapableModels.includes(id))
-																		.join(', ')
-																})}
+																content={$i18n.t(
+																	'Models without native vision (using preprocessor): {{ models }}',
+																	{
+																		models: [
+																			...(atSelectedModel ? [atSelectedModel] : selectedModels)
+																		]
+																			.filter((id) => !effectiveVisionCapableModels.includes(id))
+																			.join(', ')
+																	}
+																)}
 															>
 																<svg
 																	xmlns="http://www.w3.org/2000/svg"
@@ -1332,18 +1342,6 @@
 															if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
 																e.preventDefault();
 																createMessagePair(prompt);
-															}
-
-															// Check if Ctrl + R is pressed
-															if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
-																e.preventDefault();
-																console.log('regenerate');
-
-																const regenerateButton = [
-																	...document.getElementsByClassName('regenerate-response-button')
-																]?.at(-1);
-
-																regenerateButton?.click();
 															}
 
 															if (prompt === '' && e.key == 'ArrowUp') {
