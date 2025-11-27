@@ -208,20 +208,21 @@ def rag_template(template: str, context: str, query: str):
     if "[query]" in context:
         query_placeholder = "{{QUERY" + str(uuid.uuid4()) + "}}"
         template = template.replace("[query]", query_placeholder)
-        query_placeholders.append(query_placeholder)
+        query_placeholders.append((query_placeholder, "[query]"))
 
     if "{{QUERY}}" in context:
         query_placeholder = "{{QUERY" + str(uuid.uuid4()) + "}}"
         template = template.replace("{{QUERY}}", query_placeholder)
-        query_placeholders.append(query_placeholder)
+        query_placeholders.append((query_placeholder, "{{QUERY}}"))
 
     template = template.replace("[context]", context)
     template = template.replace("{{CONTEXT}}", context)
+
     template = template.replace("[query]", query)
     template = template.replace("{{QUERY}}", query)
 
-    for query_placeholder in query_placeholders:
-        template = template.replace(query_placeholder, query)
+    for query_placeholder, original_placeholder in query_placeholders:
+        template = template.replace(query_placeholder, original_placeholder)
 
     return template
 

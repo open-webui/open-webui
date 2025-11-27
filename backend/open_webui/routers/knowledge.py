@@ -1,6 +1,7 @@
 from typing import List, Optional
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
+from fastapi.concurrency import run_in_threadpool
 import logging
 
 from open_webui.models.knowledge import (
@@ -223,7 +224,8 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
             failed_files = []
             for file in files:
                 try:
-                    process_file(
+                    await run_in_threadpool(
+                        process_file,
                         request,
                         ProcessFileForm(
                             file_id=file.id, collection_name=knowledge_base.id
@@ -706,7 +708,7 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 
 
 @router.post("/{id}/files/batch/add", response_model=Optional[KnowledgeFilesResponse])
-def add_files_to_knowledge_batch(
+async def add_files_to_knowledge_batch(
     request: Request,
     id: str,
     form_data: list[KnowledgeFileIdForm],
@@ -746,7 +748,7 @@ def add_files_to_knowledge_batch(
 
     # Process files
     try:
-        result = process_files_batch(
+        result = await process_files_batch(
             request=request,
             form_data=BatchProcessFilesForm(files=files, collection_name=id),
             user=user,

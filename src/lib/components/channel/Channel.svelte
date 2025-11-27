@@ -5,7 +5,7 @@
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 
-	import { chatId, showSidebar, socket, user } from '$lib/stores';
+	import { chatId, channelId as _channelId, showSidebar, socket, user } from '$lib/stores';
 	import { getChannelById, getChannelMessages, sendMessage } from '$lib/apis/channels';
 
 	import Messages from './Messages.svelte';
@@ -17,6 +17,8 @@
 	import i18n from '$lib/i18n';
 
 	export let id = '';
+
+	let currentId = null;
 
 	let scrollEnd = true;
 	let messagesContainerElement = null;
@@ -43,7 +45,25 @@
 		}
 	};
 
+	const updateLastReadAt = async (channelId) => {
+		$socket?.emit('events:channel', {
+			channel_id: channelId,
+			message_id: null,
+			data: {
+				type: 'last_read_at'
+			}
+		});
+	};
+
 	const initHandler = async () => {
+		if (currentId) {
+			updateLastReadAt(currentId);
+		}
+
+		currentId = id;
+		updateLastReadAt(id);
+		_channelId.set(id);
+
 		top = false;
 		messages = null;
 		channel = null;
@@ -170,6 +190,8 @@
 				}
 			}
 		});
+
+		updateLastReadAt(id);
 	};
 
 	let mediaQuery;
@@ -197,12 +219,32 @@
 	});
 
 	onDestroy(() => {
+		// last read at
+		updateLastReadAt(id);
+		_channelId.set(null);
 		$socket?.off('events:channel', channelEventHandler);
 	});
 </script>
 
 <svelte:head>
-	<title>#{channel?.name ?? 'Channel'} • Open WebUI</title>
+	{#if channel?.type === 'dm'}
+		<title
+			>{channel?.name.trim() ||
+				channel?.users.reduce((a, e, i, arr) => {
+					if (e.id === $user?.id) {
+						return a;
+					}
+
+					if (a) {
+						return `${a}, ${e.name}`;
+					} else {
+						return e.name;
+					}
+				}, '')} • Open WebUI</title
+		>
+	{:else}
+		<title>#{channel?.name ?? 'Channel'} • Open WebUI</title>
+	{/if}
 </svelte:head>
 
 <div

@@ -6,12 +6,14 @@ import sys
 from aiocache import cached
 from fastapi import Request
 
+from open_webui.socket.utils import RedisDict
 from open_webui.routers import openai, ollama
 from open_webui.functions import get_function_models
 
 
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
+from open_webui.models.groups import Groups
 
 
 from open_webui.utils.plugin import (
@@ -322,7 +324,12 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
     log.debug(f"get_all_models() returned {len(models)} models")
 
-    request.app.state.MODELS = {model["id"]: model for model in models}
+    models_dict = {model["id"]: model for model in models}
+    if isinstance(request.app.state.MODELS, RedisDict):
+        request.app.state.MODELS.set(models_dict)
+    else:
+        request.app.state.MODELS = models_dict
+
     return models
 
 
@@ -356,6 +363,7 @@ def get_filtered_models(models, user):
         or (user.role == "admin" and not BYPASS_ADMIN_ACCESS_CONTROL)
     ) and not BYPASS_MODEL_ACCESS_CONTROL:
         filtered_models = []
+        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
         for model in models:
             if model.get("arena"):
                 if has_access(
@@ -364,6 +372,7 @@ def get_filtered_models(models, user):
                     access_control=model.get("info", {})
                     .get("meta", {})
                     .get("access_control", {}),
+                    user_group_ids=user_group_ids,
                 ):
                     filtered_models.append(model)
                 continue
@@ -377,6 +386,7 @@ def get_filtered_models(models, user):
                         user.id,
                         type="read",
                         access_control=model_info.access_control,
+                        user_group_ids=user_group_ids,
                     )
                 ):
                     filtered_models.append(model)

@@ -6,12 +6,12 @@ from open_webui.internal.db import Base, JSONField, get_db
 from open_webui.env import SRC_LOG_LEVELS
 
 from open_webui.models.groups import Groups
-from open_webui.models.users import Users, UserResponse
+from open_webui.models.users import User, UserModel, Users, UserResponse
 
 
 from pydantic import BaseModel, ConfigDict
 
-from sqlalchemy import or_, and_, func
+from sqlalchemy import String, cast, or_, and_, func
 from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
 
@@ -133,6 +133,11 @@ class ModelResponse(ModelModel):
     pass
 
 
+class ModelListResponse(BaseModel):
+    items: list[ModelUserResponse]
+    total: int
+
+
 class ModelForm(BaseModel):
     id: str
     base_model_id: Optional[str] = None
@@ -215,6 +220,116 @@ class ModelsTable:
             or has_access(user_id, permission, model.access_control, user_group_ids)
         ]
 
+    def _has_write_permission(self, query, filter: dict):
+        if filter.get("group_ids") or filter.get("user_id"):
+            conditions = []
+
+            # --- ANY group_ids match ("write".group_ids) ---
+            if filter.get("group_ids"):
+                group_ids = filter["group_ids"]
+                like_clauses = []
+
+                for gid in group_ids:
+                    like_clauses.append(
+                        cast(Model.access_control, String).like(
+                            f'%"write"%"group_ids"%"{gid}"%'
+                        )
+                    )
+
+                # ANY → OR
+                conditions.append(or_(*like_clauses))
+
+            # --- user_id match (owner) ---
+            if filter.get("user_id"):
+                conditions.append(Model.user_id == filter["user_id"])
+
+            # Apply OR across the two groups of conditions
+            query = query.filter(or_(*conditions))
+
+        return query
+
+    def search_models(
+        self, user_id: str, filter: dict = {}, skip: int = 0, limit: int = 30
+    ) -> ModelListResponse:
+        with get_db() as db:
+            # Join GroupMember so we can order by group_id when requested
+            query = db.query(Model, User).outerjoin(User, User.id == Model.user_id)
+            query = query.filter(Model.base_model_id != None)
+
+            if filter:
+                query_key = filter.get("query")
+                if query_key:
+                    query = query.filter(
+                        or_(
+                            Model.name.ilike(f"%{query_key}%"),
+                            Model.base_model_id.ilike(f"%{query_key}%"),
+                        )
+                    )
+
+                # Apply access control filtering
+                query = self._has_write_permission(query, filter)
+
+                view_option = filter.get("view_option")
+                if view_option == "created":
+                    query = query.filter(Model.user_id == user_id)
+                elif view_option == "shared":
+                    query = query.filter(Model.user_id != user_id)
+
+                tag = filter.get("tag")
+                if tag:
+                    # TODO: This is a simple implementation and should be improved for performance
+                    like_pattern = f'%"{tag.lower()}"%'  # `"tag"` inside JSON array
+                    meta_text = func.lower(cast(Model.meta, String))
+
+                    query = query.filter(meta_text.like(like_pattern))
+
+                order_by = filter.get("order_by")
+                direction = filter.get("direction")
+
+                if order_by == "name":
+                    if direction == "asc":
+                        query = query.order_by(Model.name.asc())
+                    else:
+                        query = query.order_by(Model.name.desc())
+                elif order_by == "created_at":
+                    if direction == "asc":
+                        query = query.order_by(Model.created_at.asc())
+                    else:
+                        query = query.order_by(Model.created_at.desc())
+                elif order_by == "updated_at":
+                    if direction == "asc":
+                        query = query.order_by(Model.updated_at.asc())
+                    else:
+                        query = query.order_by(Model.updated_at.desc())
+
+            else:
+                query = query.order_by(Model.created_at.desc())
+
+            # Count BEFORE pagination
+            total = query.count()
+
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
+
+            items = query.all()
+
+            models = []
+            for model, user in items:
+                models.append(
+                    ModelUserResponse(
+                        **ModelModel.model_validate(model).model_dump(),
+                        user=(
+                            UserResponse(**UserModel.model_validate(user).model_dump())
+                            if user
+                            else None
+                        ),
+                    )
+                )
+
+            return ModelListResponse(items=models, total=total)
+
     def get_model_by_id(self, id: str) -> Optional[ModelModel]:
         try:
             with get_db() as db:
@@ -244,11 +359,9 @@ class ModelsTable:
         try:
             with get_db() as db:
                 # update only the fields that are present in the model
-                result = (
-                    db.query(Model)
-                    .filter_by(id=id)
-                    .update(model.model_dump(exclude={"id"}))
-                )
+                data = model.model_dump(exclude={"id"})
+                result = db.query(Model).filter_by(id=id).update(data)
+
                 db.commit()
 
                 model = db.get(Model, id)

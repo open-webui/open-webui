@@ -3,11 +3,10 @@ import uuid
 from typing import Optional
 
 from open_webui.internal.db import Base, get_db
-from open_webui.models.users import UserModel, Users
+from open_webui.models.users import UserModel, UserProfileImageResponse, Users
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel
 from sqlalchemy import Boolean, Column, String, Text
-from open_webui.utils.auth import verify_password
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -20,7 +19,7 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 class Auth(Base):
     __tablename__ = "auth"
 
-    id = Column(String, primary_key=True)
+    id = Column(String, primary_key=True, unique=True)
     email = Column(String)
     password = Column(Text)
     active = Column(Boolean)
@@ -47,15 +46,7 @@ class ApiKey(BaseModel):
     api_key: Optional[str] = None
 
 
-class UserResponse(BaseModel):
-    id: str
-    email: str
-    name: str
-    role: str
-    profile_image_url: str
-
-
-class SigninResponse(Token, UserResponse):
+class SigninResponse(Token, UserProfileImageResponse):
     pass
 
 
@@ -122,7 +113,9 @@ class AuthsTable:
             else:
                 return None
 
-    def authenticate_user(self, email: str, password: str) -> Optional[UserModel]:
+    def authenticate_user(
+        self, email: str, verify_password: callable
+    ) -> Optional[UserModel]:
         log.info(f"authenticate_user: {email}")
 
         user = Users.get_user_by_email(email)
@@ -133,7 +126,7 @@ class AuthsTable:
             with get_db() as db:
                 auth = db.query(Auth).filter_by(id=user.id, active=True).first()
                 if auth:
-                    if verify_password(password, auth.password):
+                    if verify_password(auth.password):
                         return user
                     else:
                         return None

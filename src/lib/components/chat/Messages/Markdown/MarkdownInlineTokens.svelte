@@ -17,10 +17,12 @@
 	import TextToken from './MarkdownInlineTokens/TextToken.svelte';
 	import CodespanToken from './MarkdownInlineTokens/CodespanToken.svelte';
 	import MentionToken from './MarkdownInlineTokens/MentionToken.svelte';
+	import SourceToken from './SourceToken.svelte';
 
 	export let id: string;
 	export let done = true;
 	export let tokens: Token[];
+	export let sourceIds = [];
 	export let onSourceClick: Function = () => {};
 </script>
 
@@ -68,6 +70,17 @@
 		></iframe>
 	{:else if token.type === 'mention'}
 		<MentionToken {token} />
+	{:else if token.type === 'footnote'}
+		{@html DOMPurify.sanitize(
+			`<sup class="footnote-ref footnote-ref-text">${token.escapedText}</sup>`
+		) || ''}
+	{:else if token.type === 'citation'}
+		<SourceToken {id} {token} {sourceIds} onClick={onSourceClick} />
+		<!-- {#if token.ids && token.ids.length > 0}
+			{#each token.ids as sourceId}
+				<Source id={sourceId - 1} title={sourceIds[sourceId - 1]} onClick={onSourceClick} />
+			{/each}
+		{/if} -->
 	{:else if token.type === 'text'}
 		<TextToken {token} {done} />
 	{/if}
