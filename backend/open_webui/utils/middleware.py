@@ -1088,23 +1088,24 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # === 8. Folder "Project" 处理 - 注入文件夹的 System Prompt 和文件 ===
     # Check if the request has chat_id and is inside of a folder
     chat_id = metadata.get("chat_id", None)
-    if chat_id and user:
-        chat = Chats.get_chat_by_id_and_user_id(chat_id, user.id)
-        if chat and chat.folder_id:
-            folder = Folders.get_folder_by_id_and_user_id(chat.folder_id, user.id)
+    if False:
+        if chat_id and user:
+            chat = Chats.get_chat_by_id_and_user_id(chat_id, user.id)
+            if chat and chat.folder_id:
+                folder = Folders.get_folder_by_id_and_user_id(chat.folder_id, user.id)
 
-            if folder and folder.data:
-                # 注入文件夹的 system prompt
-                if "system_prompt" in folder.data:
-                    form_data = apply_system_prompt_to_body(
-                        folder.data["system_prompt"], form_data, metadata, user
-                    )
-                # 注入文件夹关联的文件
-                if "files" in folder.data:
-                    form_data["files"] = [
-                        *folder.data["files"],
-                        *form_data.get("files", []),
-                    ]
+                if folder and folder.data:
+                    # 注入文件夹的 system prompt
+                    if "system_prompt" in folder.data:
+                        form_data = apply_system_prompt_to_body(
+                            folder.data["system_prompt"], form_data, metadata, user
+                        )
+                    # 注入文件夹关联的文件
+                    if "files" in folder.data:
+                        form_data["files"] = [
+                            *folder.data["files"],
+                            *form_data.get("files", []),
+                        ]
 
     # === 9. Model "Knowledge" 处理 - 注入模型绑定的知识库 ===
     user_message = get_last_user_message(form_data["messages"])
