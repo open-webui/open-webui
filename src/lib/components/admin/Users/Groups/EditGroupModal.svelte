@@ -84,11 +84,12 @@
 		},
 		features: {
 			api_keys: false,
+			folders: true,
+			notes: true,
 			direct_tool_servers: false,
 			web_search: true,
 			image_generation: true,
-			code_interpreter: true,
-			notes: true
+			code_interpreter: true
 		}
 	};
 
