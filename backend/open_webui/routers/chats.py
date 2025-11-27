@@ -66,6 +66,16 @@ def get_session_user_chat_list(
 
 
 ############################
+# GetChatCount
+############################
+
+
+@router.get("/count", response_model=int)
+def get_session_user_chat_count(user=Depends(get_verified_user)):
+    return Chats.count_chats_by_user_id(user.id)
+
+
+############################
 # DeleteAllChats
 ############################
 

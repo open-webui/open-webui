@@ -1025,6 +1025,11 @@ class ChatTable:
             log.info(f"Count of chats for folder '{folder_id}': {count}")
             return count
 
+    def count_chats_by_user_id(self, user_id: str) -> int:
+        with get_db() as db:
+            count = db.query(Chat).filter_by(user_id=user_id, archived=False).count()
+            return count
+
     def delete_tag_by_id_and_user_id_and_tag_name(
         self, id: str, user_id: str, tag_name: str
     ) -> bool:

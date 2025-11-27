@@ -5,7 +5,7 @@
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import SearchInput from './Sidebar/SearchInput.svelte';
-	import { getChatById, getChatList, getChatListBySearchText } from '$lib/apis/chats';
+	import { getChatById, getChatCount, getChatList, getChatListBySearchText } from '$lib/apis/chats';
 	import Spinner from '../common/Spinner.svelte';
 
 	import dayjs from '$lib/dayjs';
@@ -50,6 +50,8 @@
 	let selectedModels = [''];
 	let history = null;
 	let messages = null;
+
+	let chatCount: number | null = null;
 
 	$: if (!chatListLoading && chatList) {
 		loadChatPreview(selectedIdx);
@@ -171,7 +173,12 @@
 
 	$: if (show) {
 		searchHandler();
+		loadChatCount();
 	}
+
+	const loadChatCount = async () => {
+		chatCount = await getChatCount(localStorage.token).catch(() => null);
+	};
 
 	const onKeyDown = (e) => {
 		const searchOptions = document.getElementById('search-options-container');
@@ -292,6 +299,12 @@
 		</div>
 
 		<!-- <hr class="border-gray-50 dark:border-gray-850 my-1" /> -->
+
+		{#if chatCount !== null}
+			<div class="px-6 pb-2 text-xs text-gray-400 dark:text-gray-500">
+				{$i18n.t('You have {{count}} chats', { count: chatCount.toLocaleString() })}
+			</div>
+		{/if}
 
 		<div class="flex px-4 pb-1">
 			<div
