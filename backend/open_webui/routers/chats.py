@@ -456,12 +456,69 @@ async def get_chat_by_id(id: str, user=Depends(get_verified_user)):
 async def update_chat_by_id(
     id: str, form_data: ChatForm, user=Depends(get_verified_user)
 ):
+    """
+    更新聊天记录 - 保存聊天历史、消息、模型配置等
+
+    这是聊天数据持久化的核心接口，负责：
+    1. 验证用户是否有权限更新该聊天（仅聊天所有者可更新）
+    2. 合并现有聊天数据和前端提交的新数据
+    3. 更新数据库中的聊天记录
+    4. 返回更新后的聊天对象
+
+    前端调用场景：
+    - 前端接口封装：src/lib/apis/chats/index.ts:updateChatById（POST /api/chats/{id}）。
+    - 后端路由：backend/open_webui/routers/chats.py:update_chat_by_id（处理上述请求；内部调用 Chats.update_chat_by_id）
+    - 模型类内部：backend/open_webui/models/chats.py 里有多处自用 update_chat_by_id（如 update_chat_folder_by_id、archive 等），但对外暴露的唯一入口仍是上面的路由
+
+    请求格式：
+    POST /api/chats/{id}
+    Body: {
+        "chat": {
+            "title": "聊天标题",
+            "models": ["gpt-4"],
+            "history": { "messages": {...}, "currentId": "..." },
+            "messages": [...],
+            "params": {...},
+            "files": [...],
+            "memory_enabled": true,
+            "tags": ["工作", "技术"]
+        }
+    }
+
+    安全策略：
+    - 仅允许聊天所有者更新（user.id 必须匹配 chat.user_id）
+    - 通过 get_chat_by_id_and_user_id 确保权限隔离
+    - 非所有者访问返回 401 Unauthorized
+
+    Args:
+        id: 聊天记录 ID
+        form_data: 聊天表单数据（ChatForm），包含 chat 字段
+        user: 当前登录用户（通过 JWT token 验证）
+
+    Returns:
+        ChatResponse: 更新后的聊天对象，包含完整的聊天数据
+
+    Raises:
+        HTTPException(401): 用户无权访问该聊天或聊天不存在
+    """
+    # === 1. 权限验证：检查聊天是否存在且属于当前用户 ===
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
+
     if chat:
+        # === 2. 合并数据：将前端提交的数据合并到现有聊天数据中 ===
+        # 使用字典解包实现浅合并：现有数据作为基础，新数据覆盖同名字段
+        # 例如：现有 {"title": "旧标题", "models": ["gpt-3.5"]}
+        #      新数据 {"title": "新标题", "history": {...}}
+        #      结果：{"title": "新标题", "models": ["gpt-3.5"], "history": {...}}
         updated_chat = {**chat.chat, **form_data.chat}
+
+        # === 3. 持久化：更新数据库中的聊天记录 ===
         chat = Chats.update_chat_by_id(id, updated_chat)
+
+        # === 4. 返回更新后的聊天对象 ===
         return ChatResponse(**chat.model_dump())
     else:
+        # === 5. 权限拒绝：聊天不存在或不属于当前用户 ===
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
