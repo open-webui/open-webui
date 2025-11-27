@@ -79,11 +79,7 @@
 		}
 	};
 
-	$: if (page) {
-		getUserList();
-	}
-
-	$: if (query !== null && orderBy && direction) {
+	$: if (page !== null && query !== null && orderBy !== null && direction !== null) {
 		getUserList();
 	}
 </script>
