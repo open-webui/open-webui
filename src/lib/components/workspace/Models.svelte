@@ -214,8 +214,6 @@
 		viewOption = localStorage.workspaceViewOption ?? '';
 		page = 1;
 
-		await getModelList();
-
 		let groups = await getGroups(localStorage.token);
 		groupIds = groups.map((group) => group.id);
 

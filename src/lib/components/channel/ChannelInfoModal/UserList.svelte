@@ -11,7 +11,7 @@
 	dayjs.extend(localizedFormat);
 
 	import { toast } from 'svelte-sonner';
-	import { getChannelUsersById } from '$lib/apis/channels';
+	import { getChannelMembersById } from '$lib/apis/channels';
 
 	import Pagination from '$lib/components/common/Pagination.svelte';
 	import ChatBubbles from '$lib/components/icons/ChatBubbles.svelte';
@@ -37,6 +37,8 @@
 	const i18n = getContext('i18n');
 
 	export let channel = null;
+	export let search = true;
+	export let sort = true;
 
 	let page = 1;
 
@@ -48,6 +50,10 @@
 	let direction = 'asc'; // default sort order
 
 	const setSortKey = (key) => {
+		if (!sort) {
+			return;
+		}
+
 		if (orderBy === key) {
 			direction = direction === 'asc' ? 'desc' : 'asc';
 		} else {
@@ -58,7 +64,7 @@
 
 	const getUserList = async () => {
 		try {
-			const res = await getChannelUsersById(
+			const res = await getChannelMembersById(
 				localStorage.token,
 				channel.id,
 				query,
@@ -79,11 +85,7 @@
 		}
 	};
 
-	$: if (page) {
-		getUserList();
-	}
-
-	$: if (query !== null && orderBy && direction) {
+	$: if (page !== null && query !== null && orderBy !== null && direction !== null) {
 		getUserList();
 	}
 </script>
@@ -94,31 +96,33 @@
 			<Spinner className="size-5" />
 		</div>
 	{:else}
-		<div class="flex gap-1">
-			<div class=" flex w-full space-x-2">
-				<div class="flex flex-1">
-					<div class=" self-center ml-1 mr-3">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-								clip-rule="evenodd"
-							/>
-						</svg>
+		{#if search}
+			<div class="flex gap-1 px-0.5">
+				<div class=" flex w-full space-x-2">
+					<div class="flex flex-1">
+						<div class=" self-center ml-1 mr-3">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								class="w-4 h-4"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						</div>
+						<input
+							class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
+							bind:value={query}
+							placeholder={$i18n.t('Search')}
+						/>
 					</div>
-					<input
-						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
-						bind:value={query}
-						placeholder={$i18n.t('Search')}
-					/>
 				</div>
 			</div>
-		</div>
+		{/if}
 
 		{#if users.length > 0}
 			<div class="scrollbar-hidden relative whitespace-nowrap w-full max-w-full">
@@ -127,9 +131,10 @@
 						class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200 w-full mb-0.5"
 					>
 						<div
-							class=" border-b-[1.5px] border-gray-50 dark:border-gray-850 flex items-center justify-between"
+							class=" border-b-[1.5px] border-gray-50/50 dark:border-gray-800/10 flex items-center justify-between"
 						>
 							<button
+								type="button"
 								class="px-2.5 py-2 cursor-pointer select-none"
 								on:click={() => setSortKey('name')}
 							>
@@ -153,6 +158,7 @@
 							</button>
 
 							<button
+								type="button"
 								class="px-2.5 py-2 cursor-pointer select-none"
 								on:click={() => setSortKey('role')}
 							>

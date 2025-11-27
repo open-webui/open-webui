@@ -17,6 +17,7 @@
 	import Lock from '../icons/Lock.svelte';
 	import UserAlt from '../icons/UserAlt.svelte';
 	import ChannelInfoModal from './ChannelInfoModal.svelte';
+	import Users from '../icons/Users.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -60,24 +61,50 @@
 			{/if}
 
 			<div
-				class="flex-1 overflow-hidden max-w-full py-0.5
+				class="flex-1 overflow-hidden max-w-full py-0.5 flex items-center
 			{$showSidebar ? 'ml-1' : ''}
 			"
 			>
 				{#if channel}
 					<div class="flex items-center gap-0.5 shrink-0">
-						<div class=" size-4 justify-center flex items-center">
-							{#if channel?.access_control === null}
-								<Hashtag className="size-3" strokeWidth="2.5" />
+						{#if channel?.type === 'dm'}
+							{#if channel?.users}
+								<div class="flex mr-1.5">
+									{#each channel.users.filter((u) => u.id !== $user?.id).slice(0, 2) as u, index}
+										<img
+											src={`${WEBUI_API_BASE_URL}/users/${u.id}/profile/image`}
+											alt={u.name}
+											class=" size-6.5 rounded-full border-2 border-white dark:border-gray-900 {index ===
+											1
+												? '-ml-3'
+												: ''}"
+										/>
+									{/each}
+								</div>
 							{:else}
-								<Lock className="size-5" strokeWidth="2" />
+								<Users className="size-4 ml-1 mr-0.5" strokeWidth="2" />
 							{/if}
-						</div>
+						{:else}
+							<div class=" size-4.5 justify-center flex items-center">
+								{#if channel?.access_control === null}
+									<Hashtag className="size-3.5" strokeWidth="2.5" />
+								{:else}
+									<Lock className="size-5" strokeWidth="2" />
+								{/if}
+							</div>
+						{/if}
 
 						<div
 							class=" text-left self-center overflow-hidden w-full line-clamp-1 capitalize flex-1"
 						>
-							{channel.name}
+							{#if channel?.name}
+								{channel.name}
+							{:else}
+								{channel?.users
+									?.filter((u) => u.id !== $user?.id)
+									.map((u) => u.name)
+									.join(', ')}
+							{/if}
 						</div>
 					</div>
 				{/if}

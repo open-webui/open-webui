@@ -36,19 +36,27 @@
 			<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 mb-1.5">
 				<div class="self-center text-base">
 					<div class="flex items-center gap-0.5 shrink-0">
-						<div class=" size-4 justify-center flex items-center">
-							{#if channel?.access_control === null}
-								<Hashtag className="size-3.5" strokeWidth="2.5" />
-							{:else}
-								<Lock className="size-5.5" strokeWidth="2" />
-							{/if}
-						</div>
+						{#if channel?.type === 'dm'}
+							<div
+								class=" text-left self-center overflow-hidden w-full line-clamp-1 capitalize flex-1"
+							>
+								{$i18n.t('Direct Message')}
+							</div>
+						{:else}
+							<div class=" size-4 justify-center flex items-center">
+								{#if channel?.access_control === null}
+									<Hashtag className="size-3.5" strokeWidth="2.5" />
+								{:else}
+									<Lock className="size-5.5" strokeWidth="2" />
+								{/if}
+							</div>
 
-						<div
-							class=" text-left self-center overflow-hidden w-full line-clamp-1 capitalize flex-1"
-						>
-							{channel.name}
-						</div>
+							<div
+								class=" text-left self-center overflow-hidden w-full line-clamp-1 capitalize flex-1"
+							>
+								{channel.name}
+							</div>
+						{/if}
 					</div>
 				</div>
 				<button
@@ -71,7 +79,7 @@
 						}}
 					>
 						<div class="flex flex-col w-full h-full pb-2">
-							<UserList {channel} />
+							<UserList {channel} search={channel?.type !== 'dm'} sort={channel?.type !== 'dm'} />
 						</div>
 					</form>
 				</div>

@@ -28,7 +28,9 @@
 		isApp,
 		appInfo,
 		toolServers,
-		playingNotificationSound
+		playingNotificationSound,
+		channels,
+		channelId
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -55,6 +57,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { getUserSettings } from '$lib/apis/users';
 	import dayjs from 'dayjs';
+	import { getChannels } from '$lib/apis/channels';
 
 	const unregisterServiceWorkers = async () => {
 		if ('serviceWorker' in navigator) {
@@ -483,10 +486,37 @@
 			const type = event?.data?.type ?? null;
 			const data = event?.data?.data ?? null;
 
+			if ($channels) {
+				if ($channels.find((ch) => ch.id === event.channel_id) && $channelId !== event.channel_id) {
+					channels.set(
+						$channels.map((ch) => {
+							if (ch.id === event.channel_id) {
+								if (type === 'message') {
+									return {
+										...ch,
+										unread_count: (ch.unread_count ?? 0) + 1,
+										last_message_at: event.created_at
+									};
+								}
+							}
+							return ch;
+						})
+					);
+				} else {
+					await channels.set(
+						(await getChannels(localStorage.token)).sort((a, b) =>
+							a.type === b.type ? 0 : a.type === 'dm' ? 1 : -1
+						)
+					);
+				}
+			}
+
 			if (type === 'message') {
+				const title = `${data?.user?.name}${event?.channel?.type !== 'dm' ? ` (#${event?.channel?.name})` : ''}`;
+
 				if ($isLastActiveTab) {
 					if ($settings?.notificationEnabled ?? false) {
-						new Notification(`${data?.user?.name} (#${event?.channel?.name}) • Open WebUI`, {
+						new Notification(`${title} • Open WebUI`, {
 							body: data?.content,
 							icon: `${WEBUI_API_BASE_URL}/users/${data?.user?.id}/profile/image`
 						});
@@ -499,7 +529,7 @@
 							goto(`/channels/${event.channel_id}`);
 						},
 						content: data?.content,
-						title: `#${event?.channel?.name}`
+						title: `${title}`
 					},
 					duration: 15000,
 					unstyled: true

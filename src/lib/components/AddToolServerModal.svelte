@@ -47,7 +47,7 @@
 	let key = '';
 	let headers = '';
 
-	let functionNameFilterList = [];
+	let functionNameFilterList = '';
 	let accessControl = {};
 
 	let id = '';
@@ -338,7 +338,7 @@
 		oauthClientInfo = null;
 
 		enable = true;
-		functionNameFilterList = [];
+		functionNameFilterList = '';
 		accessControl = null;
 	};
 
@@ -362,7 +362,7 @@
 			oauthClientInfo = connection.info?.oauth_client_info ?? null;
 
 			enable = connection.config?.enable ?? true;
-			functionNameFilterList = connection.config?.function_name_filter_list ?? [];
+			functionNameFilterList = connection.config?.function_name_filter_list ?? '';
 			accessControl = connection.config?.access_control ?? null;
 		}
 	};

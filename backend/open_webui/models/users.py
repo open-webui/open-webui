@@ -135,18 +135,18 @@ class UserIdNameListResponse(BaseModel):
     total: int
 
 
-class UserResponse(BaseModel):
-    id: str
-    name: str
-    email: str
-    role: str
-    profile_image_url: str
-
-
 class UserNameResponse(BaseModel):
     id: str
     name: str
     role: str
+
+
+class UserResponse(UserNameResponse):
+    email: str
+
+
+class UserProfileImageResponse(UserNameResponse):
+    email: str
     profile_image_url: str
 
 

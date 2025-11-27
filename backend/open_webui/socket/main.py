@@ -118,6 +118,14 @@ if WEBSOCKET_MANAGER == "redis":
     redis_sentinels = get_sentinels_from_env(
         WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT
     )
+
+    MODELS = RedisDict(
+        f"{REDIS_KEY_PREFIX}:models",
+        redis_url=WEBSOCKET_REDIS_URL,
+        redis_sentinels=redis_sentinels,
+        redis_cluster=WEBSOCKET_REDIS_CLUSTER,
+    )
+
     SESSION_POOL = RedisDict(
         f"{REDIS_KEY_PREFIX}:session_pool",
         redis_url=WEBSOCKET_REDIS_URL,
@@ -148,6 +156,8 @@ if WEBSOCKET_MANAGER == "redis":
     renew_func = clean_up_lock.renew_lock
     release_func = clean_up_lock.release_lock
 else:
+    MODELS = {}
+
     SESSION_POOL = {}
     USER_POOL = {}
     USAGE_POOL = {}
@@ -398,6 +408,11 @@ async def channel_events(sid, data):
     event_data = data["data"]
     event_type = event_data["type"]
 
+    user = SESSION_POOL.get(sid)
+
+    if not user:
+        return
+
     if event_type == "typing":
         await sio.emit(
             "events:channel",
@@ -405,10 +420,12 @@ async def channel_events(sid, data):
                 "channel_id": data["channel_id"],
                 "message_id": data.get("message_id", None),
                 "data": event_data,
-                "user": UserNameResponse(**SESSION_POOL[sid]).model_dump(),
+                "user": UserNameResponse(**user).model_dump(),
             },
             room=room,
         )
+    elif event_type == "last_read_at":
+        Channels.update_member_last_read_at(data["channel_id"], user["id"])
 
 
 @sio.on("ydoc:document:join")

@@ -17,6 +17,7 @@
 	import Loader from '../common/Loader.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import { addReaction, deleteMessage, removeReaction, updateMessage } from '$lib/apis/channels';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 
@@ -68,7 +69,31 @@
 			<div class="px-5 max-w-full mx-auto">
 				{#if channel}
 					<div class="flex flex-col gap-1.5 pb-5 pt-10">
-						<div class="text-2xl font-medium capitalize">{channel.name}</div>
+						{#if channel?.type === 'dm'}
+							<div class="flex ml-[1px] mr-0.5">
+								{#each channel.users.filter((u) => u.id !== $user?.id).slice(0, 2) as u, index}
+									<img
+										src={`${WEBUI_API_BASE_URL}/users/${u.id}/profile/image`}
+										alt={u.name}
+										class=" size-7.5 rounded-full border-2 border-white dark:border-gray-900 {index ===
+										1
+											? '-ml-2.5'
+											: ''}"
+									/>
+								{/each}
+							</div>
+						{/if}
+
+						<div class="text-2xl font-medium capitalize">
+							{#if channel?.name}
+								{channel.name}
+							{:else}
+								{channel?.users
+									?.filter((u) => u.id !== $user?.id)
+									.map((u) => u.name)
+									.join(', ')}
+							{/if}
+						</div>
 
 						<div class=" text-gray-500">
 							{$i18n.t(

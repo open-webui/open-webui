@@ -1,10 +1,12 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 type ChannelForm = {
+	type?: string;
 	name: string;
 	data?: object;
 	meta?: object;
 	access_control?: object;
+	user_ids?: string[];
 };
 
 export const createNewChannel = async (token: string = '', channel: ChannelForm) => {
@@ -101,7 +103,7 @@ export const getChannelById = async (token: string = '', channel_id: string) => 
 	return res;
 };
 
-export const getChannelUsersById = async (
+export const getChannelMembersById = async (
 	token: string,
 	channel_id: string,
 	query?: string,
@@ -129,7 +131,7 @@ export const getChannelUsersById = async (
 	}
 
 	res = await fetch(
-		`${WEBUI_API_BASE_URL}/channels/${channel_id}/users?${searchParams.toString()}`,
+		`${WEBUI_API_BASE_URL}/channels/${channel_id}/members?${searchParams.toString()}`,
 		{
 			method: 'GET',
 			headers: {
@@ -145,6 +147,42 @@ export const getChannelUsersById = async (
 		.catch((err) => {
 			console.error(err);
 			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const updateChannelMemberActiveStatusById = async (
+	token: string = '',
+	channel_id: string,
+	is_active: boolean
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/members/active`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ is_active })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
 			return null;
 		});
 
