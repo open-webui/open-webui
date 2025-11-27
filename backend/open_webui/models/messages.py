@@ -6,6 +6,7 @@ from typing import Optional
 from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
 from open_webui.models.users import Users, UserNameResponse
+from open_webui.models.channels import Channels, ChannelMember
 
 
 from pydantic import BaseModel, ConfigDict
@@ -47,6 +48,11 @@ class Message(Base):
     reply_to_id = Column(Text, nullable=True)
     parent_id = Column(Text, nullable=True)
 
+    # Pins
+    is_pinned = Column(Boolean, nullable=False, default=False)
+    pinned_at = Column(BigInteger, nullable=True)
+    pinned_by = Column(Text, nullable=True)
+
     content = Column(Text)
     data = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
@@ -65,12 +71,17 @@ class MessageModel(BaseModel):
     reply_to_id: Optional[str] = None
     parent_id: Optional[str] = None
 
+    # Pins
+    is_pinned: bool = False
+    pinned_by: Optional[str] = None
+    pinned_at: Optional[int] = None  # timestamp in epoch (time_ns)
+
     content: str
     data: Optional[dict] = None
     meta: Optional[dict] = None
 
-    created_at: int  # timestamp in epoch
-    updated_at: int  # timestamp in epoch
+    created_at: int  # timestamp in epoch (time_ns)
+    updated_at: int  # timestamp in epoch (time_ns)
 
 
 ####################
@@ -111,9 +122,11 @@ class MessageTable:
         self, form_data: MessageForm, channel_id: str, user_id: str
     ) -> Optional[MessageModel]:
         with get_db() as db:
-            id = str(uuid.uuid4())
+            channel_member = Channels.join_channel(channel_id, user_id)
 
+            id = str(uuid.uuid4())
             ts = int(time.time_ns())
+
             message = MessageModel(
                 **{
                     "id": id,
@@ -121,6 +134,9 @@ class MessageTable:
                     "channel_id": channel_id,
                     "reply_to_id": form_data.reply_to_id,
                     "parent_id": form_data.parent_id,
+                    "is_pinned": False,
+                    "pinned_at": None,
+                    "pinned_by": None,
                     "content": form_data.content,
                     "data": form_data.data,
                     "meta": form_data.meta,
@@ -128,8 +144,8 @@ class MessageTable:
                     "updated_at": ts,
                 }
             )
-
             result = Message(**message.model_dump())
+
             db.add(result)
             db.commit()
             db.refresh(result)
@@ -280,6 +296,16 @@ class MessageTable:
                 )
             return messages
 
+    def get_last_message_by_channel_id(self, channel_id: str) -> Optional[MessageModel]:
+        with get_db() as db:
+            message = (
+                db.query(Message)
+                .filter_by(channel_id=channel_id)
+                .order_by(Message.created_at.desc())
+                .first()
+            )
+            return MessageModel.model_validate(message) if message else None
+
     def update_message_by_id(
         self, id: str, form_data: MessageForm
     ) -> Optional[MessageModel]:
@@ -298,6 +324,32 @@ class MessageTable:
             db.commit()
             db.refresh(message)
             return MessageModel.model_validate(message) if message else None
+
+    def update_message_pin_by_id(
+        self, id: str, is_pinned: bool, pinned_by: Optional[str] = None
+    ) -> Optional[MessageModel]:
+        with get_db() as db:
+            message = db.get(Message, id)
+            message.is_pinned = is_pinned
+            message.pinned_at = int(time.time_ns()) if is_pinned else None
+            message.pinned_by = pinned_by if is_pinned else None
+            message.updated_at = int(time.time_ns())
+            db.commit()
+            db.refresh(message)
+            return MessageModel.model_validate(message) if message else None
+
+    def get_unread_message_count(
+        self, channel_id: str, user_id: str, last_read_at: Optional[int] = None
+    ) -> int:
+        with get_db() as db:
+            query = db.query(Message).filter(
+                Message.channel_id == channel_id,
+                Message.parent_id == None,  # only count top-level messages
+                Message.created_at > (last_read_at if last_read_at else 0),
+            )
+            if user_id:
+                query = query.filter(Message.user_id != user_id)
+            return query.count()
 
     def add_reaction_to_message(
         self, id: str, user_id: str, name: str

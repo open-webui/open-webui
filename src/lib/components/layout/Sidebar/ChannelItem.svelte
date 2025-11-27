@@ -4,7 +4,7 @@
 	const i18n = getContext('i18n');
 
 	import { page } from '$app/stores';
-	import { mobile, showSidebar, user } from '$lib/stores';
+	import { channels, mobile, showSidebar, user } from '$lib/stores';
 	import { updateChannelById } from '$lib/apis/channels';
 
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
@@ -49,13 +49,27 @@
 	class=" w-full {className} rounded-xl flex relative group hover:bg-gray-100 dark:hover:bg-gray-900 {$page
 		.url.pathname === `/channels/${channel.id}`
 		? 'bg-gray-100 dark:bg-gray-900 selected'
-		: ''} px-2.5 py-1"
+		: ''} px-2.5 py-1 {channel?.unread_count > 0
+		? 'font-medium dark:text-white text-black'
+		: ' dark:text-gray-400 text-gray-600'} cursor-pointer select-none"
 >
 	<a
 		class=" w-full flex justify-between"
 		href="/channels/{channel.id}"
 		on:click={() => {
 			console.log(channel);
+
+			if ($channels) {
+				channels.set(
+					$channels.map((ch) => {
+						if (ch.id === channel.id) {
+							ch.unread_count = 0;
+						}
+						return ch;
+					})
+				);
+			}
+
 			if ($mobile) {
 				showSidebar.set(false);
 			}
@@ -75,19 +89,32 @@
 				{channel.name}
 			</div>
 		</div>
-	</a>
 
-	{#if $user?.role === 'admin'}
-		<div
-			class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
-			on:click={(e) => {
-				e.stopPropagation();
-				showEditChannelModal = true;
-			}}
-		>
-			<button class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto" on:click={(e) => {}}>
-				<Cog6 className="size-3.5" />
-			</button>
+		<div class="flex items-center">
+			{#if channel?.unread_count > 0}
+				<div
+					class="text-xs py-[1px] px-2 rounded-xl bg-gray-100 text-black dark:bg-gray-800 dark:text-white font-medium"
+				>
+					{new Intl.NumberFormat($i18n.locale, {
+						notation: 'compact',
+						compactDisplay: 'short'
+					}).format(channel.unread_count)}
+				</div>
+			{/if}
+
+			{#if $user?.role === 'admin'}
+				<div
+					class="right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
+					on:click={(e) => {
+						e.stopPropagation();
+						showEditChannelModal = true;
+					}}
+				>
+					<button class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto" on:click={(e) => {}}>
+						<Cog6 className="size-3.5" />
+					</button>
+				</div>
+			{/if}
 		</div>
-	{/if}
+	</a>
 </div>

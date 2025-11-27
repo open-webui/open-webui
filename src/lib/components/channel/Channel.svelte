@@ -18,6 +18,8 @@
 
 	export let id = '';
 
+	let currentId = null;
+
 	let scrollEnd = true;
 	let messagesContainerElement = null;
 	let chatInputElement = null;
@@ -43,7 +45,24 @@
 		}
 	};
 
+	const updateLastReadAt = async (channelId) => {
+		$socket?.emit('events:channel', {
+			channel_id: channelId,
+			message_id: null,
+			data: {
+				type: 'last_read_at'
+			}
+		});
+	};
+
 	const initHandler = async () => {
+		if (currentId) {
+			updateLastReadAt(currentId);
+		}
+
+		currentId = id;
+		updateLastReadAt(id);
+
 		top = false;
 		messages = null;
 		channel = null;
@@ -170,6 +189,8 @@
 				}
 			}
 		});
+
+		updateLastReadAt(id);
 	};
 
 	let mediaQuery;
@@ -197,6 +218,8 @@
 	});
 
 	onDestroy(() => {
+		// last read at
+		updateLastReadAt(id);
 		$socket?.off('events:channel', channelEventHandler);
 	});
 </script>

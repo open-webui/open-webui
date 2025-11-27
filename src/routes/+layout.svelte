@@ -28,7 +28,8 @@
 		isApp,
 		appInfo,
 		toolServers,
-		playingNotificationSound
+		playingNotificationSound,
+		channels
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -482,6 +483,23 @@
 			await tick();
 			const type = event?.data?.type ?? null;
 			const data = event?.data?.data ?? null;
+
+			if ($channels) {
+				channels.set(
+					$channels.map((ch) => {
+						if (ch.id === event.channel_id) {
+							if (type === 'message') {
+								return {
+									...ch,
+									unread_count: (ch.unread_count ?? 0) + 1,
+									last_message_at: event.created_at
+								};
+							}
+						}
+						return ch;
+					})
+				);
+			}
 
 			if (type === 'message') {
 				if ($isLastActiveTab) {

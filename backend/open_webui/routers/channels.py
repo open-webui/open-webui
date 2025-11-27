@@ -65,9 +65,35 @@ router = APIRouter()
 ############################
 
 
-@router.get("/", response_model=list[ChannelModel])
+class ChannelListItemResponse(ChannelModel):
+    last_message_at: Optional[int] = None  # timestamp in epoch (time_ns)
+    unread_count: int = 0
+
+
+@router.get("/", response_model=list[ChannelListItemResponse])
 async def get_channels(user=Depends(get_verified_user)):
-    return Channels.get_channels_by_user_id(user.id)
+
+    channels = Channels.get_channels_by_user_id(user.id)
+
+    channel_list = []
+    for channel in channels:
+        last_message = Messages.get_last_message_by_channel_id(channel.id)
+        last_message_at = last_message.created_at if last_message else None
+
+        channel_member = Channels.get_member_by_channel_and_user_id(channel.id, user.id)
+        unread_count = Messages.get_unread_message_count(
+            channel.id, user.id, channel_member.last_read_at if channel_member else None
+        )
+
+        channel_list.append(
+            ChannelListItemResponse(
+                **channel.model_dump(),
+                last_message_at=last_message_at,
+                unread_count=unread_count,
+            )
+        )
+
+    return channel_list
 
 
 @router.get("/list", response_model=list[ChannelModel])
@@ -259,6 +285,10 @@ async def get_channel_messages(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
 
+    channel_member = Channels.join_channel(
+        id, user.id
+    )  # Ensure user is a member of the channel
+
     message_list = Messages.get_messages_by_channel_id(id, skip, limit)
     users = {}
 
@@ -297,7 +327,9 @@ async def send_notification(name, webui_url, channel, message, active_user_ids):
     users = get_users_with_access("read", channel.access_control)
 
     for user in users:
-        if user.id not in active_user_ids:
+        if (user.id not in active_user_ids) and Channels.is_user_channel_member(
+            channel.id, user.id
+        ):
             if user.settings:
                 webhook_url = user.settings.ui.get("notifications", {}).get(
                     "webhook_url", None
