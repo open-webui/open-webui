@@ -1,5 +1,3 @@
-import katex from 'katex';
-
 const DELIMITER_LIST = [
 	{ left: '$$', right: '$$', display: true },
 	{ left: '$', right: '$', display: false },
@@ -23,8 +21,8 @@ const ALLOWED_SURROUNDING_CHARS =
 // const inlineRule = /^(\${1,2})(?!\$)((?:\\.|[^\\\n])*?(?:\\.|[^\\\n\$]))\1(?=[\s?!\.,:？！。，：]|$)/;
 // const blockRule = /^(\${1,2})\n((?:\\[^]|[^\\])+?)\n\1(?:\n|$)/;
 
-let inlinePatterns = [];
-let blockPatterns = [];
+const inlinePatterns = [];
+const blockPatterns = [];
 
 function escapeRegex(string) {
 	return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
@@ -69,7 +67,7 @@ export default function (options = {}) {
 }
 
 function katexStart(src, displayMode: boolean) {
-	let ruleReg = displayMode ? blockRule : inlineRule;
+	const ruleReg = displayMode ? blockRule : inlineRule;
 
 	let indexSrc = src;
 
@@ -78,7 +76,7 @@ function katexStart(src, displayMode: boolean) {
 		let startIndex = -1;
 		let startDelimiter = '';
 		let endDelimiter = '';
-		for (let delimiter of DELIMITER_LIST) {
+		for (const delimiter of DELIMITER_LIST) {
 			if (delimiter.display !== displayMode) {
 				continue;
 			}
@@ -115,8 +113,8 @@ function katexStart(src, displayMode: boolean) {
 }
 
 function katexTokenizer(src, tokens, displayMode: boolean) {
-	let ruleReg = displayMode ? blockRule : inlineRule;
-	let type = displayMode ? 'blockKatex' : 'inlineKatex';
+	const ruleReg = displayMode ? blockRule : inlineRule;
+	const type = displayMode ? 'blockKatex' : 'inlineKatex';
 
 	const match = src.match(ruleReg);
 

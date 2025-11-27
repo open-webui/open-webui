@@ -6,15 +6,19 @@
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import Spinner from './Spinner.svelte';
 	import Tooltip from './Tooltip.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
+	import { settings } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
 	export let className = 'w-60';
-	export let colorClassName = 'bg-white dark:bg-gray-850 border border-gray-50 dark:border-white/5';
+	export let colorClassName =
+		'bg-white dark:bg-gray-850 border border-gray-50 dark:border-gray-800';
 	export let url: string | null = null;
 
 	export let dismissible = false;
+	export let modal = false;
 	export let loading = false;
 
 	export let item = null;
@@ -25,8 +29,11 @@
 	export let type: string;
 	export let size: number;
 
-	import { deleteFileById } from '$lib/apis/files';
-
+	import DocumentPage from '../icons/DocumentPage.svelte';
+	import Database from '../icons/Database.svelte';
+	import PageEdit from '../icons/PageEdit.svelte';
+	import ChatBubble from '../icons/ChatBubble.svelte';
+	import Folder from '../icons/Folder.svelte';
 	let showModal = false;
 
 	const decodeString = (str: string) => {
@@ -44,11 +51,11 @@
 
 <button
 	class="relative group p-1.5 {className} flex items-center gap-1 {colorClassName} {small
-		? 'rounded-xl'
+		? 'rounded-xl p-2'
 		: 'rounded-2xl'} text-left"
 	type="button"
 	on:click={async () => {
-		if (item?.file?.data?.content) {
+		if (item?.file?.data?.content || item?.type === 'file' || modal) {
 			showModal = !showModal;
 		} else {
 			if (url) {
@@ -64,13 +71,16 @@
 	}}
 >
 	{#if !small}
-		<div class="p-3 bg-black/20 dark:bg-white/10 text-white rounded-xl">
+		<div
+			class="size-10 shrink-0 flex justify-center items-center bg-black/20 dark:bg-white/10 text-white rounded-xl"
+		>
 			{#if !loading}
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 24 24"
 					fill="currentColor"
-					class=" size-5"
+					aria-hidden="true"
+					class=" size-4.5"
 				>
 					<path
 						fill-rule="evenodd"
@@ -85,6 +95,37 @@
 				<Spinner />
 			{/if}
 		</div>
+	{:else}
+		<div class="pl-1.5">
+			{#if !loading}
+				<Tooltip
+					content={type === 'collection'
+						? $i18n.t('Collection')
+						: type === 'note'
+							? $i18n.t('Note')
+							: type === 'chat'
+								? $i18n.t('Chat')
+								: type === 'file'
+									? $i18n.t('File')
+									: $i18n.t('Document')}
+					placement="top"
+				>
+					{#if type === 'collection'}
+						<Database />
+					{:else if type === 'note'}
+						<PageEdit />
+					{:else if type === 'chat'}
+						<ChatBubble />
+					{:else if type === 'folder'}
+						<Folder />
+					{:else}
+						<DocumentPage />
+					{/if}
+				</Tooltip>
+			{:else}
+				<Spinner />
+			{/if}
+		</div>
 	{/if}
 
 	{#if !small}
@@ -93,9 +134,15 @@
 				{decodeString(name)}
 			</div>
 
-			<div class=" flex justify-between text-gray-500 text-xs line-clamp-1">
+			<div
+				class=" flex justify-between text-xs line-clamp-1 {($settings?.highContrastMode ?? false)
+					? 'text-gray-800 dark:text-gray-100'
+					: 'text-gray-500'}"
+			>
 				{#if type === 'file'}
 					{$i18n.t('File')}
+				{:else if type === 'note'}
+					{$i18n.t('Note')}
 				{:else if type === 'doc'}
 					{$i18n.t('Document')}
 				{:else if type === 'collection'}
@@ -110,15 +157,14 @@
 		</div>
 	{:else}
 		<Tooltip content={decodeString(name)} className="flex flex-col w-full" placement="top-start">
-			<div class="flex flex-col justify-center -space-y-0.5 px-2.5 w-full">
+			<div class="flex flex-col justify-center -space-y-0.5 px-1 w-full">
 				<div class=" dark:text-gray-100 text-sm flex justify-between items-center">
-					{#if loading}
-						<div class=" shrink-0 mr-2">
-							<Spinner className="size-4" />
-						</div>
+					<div class="font-medium line-clamp-1 flex-1 pr-1">{decodeString(name)}</div>
+					{#if size}
+						<div class="text-gray-500 text-xs capitalize shrink-0">{formatFileSize(size)}</div>
+					{:else}
+						<div class="text-gray-500 text-xs capitalize shrink-0">{type}</div>
 					{/if}
-					<div class="font-medium line-clamp-1 flex-1">{decodeString(name)}</div>
-					<div class="text-gray-500 text-xs capitalize shrink-0">{formatFileSize(size)}</div>
 				</div>
 			</div>
 		</Tooltip>
@@ -127,22 +173,17 @@
 	{#if dismissible}
 		<div class=" absolute -top-1 -right-1">
 			<button
-				class=" bg-white text-black border border-gray-50 rounded-full group-hover:visible invisible transition"
+				aria-label={$i18n.t('Remove File')}
+				class=" bg-white text-black border border-gray-50 rounded-full {($settings?.highContrastMode ??
+				false)
+					? ''
+					: 'outline-hidden focus:outline-hidden group-hover:visible invisible transition'}"
 				type="button"
 				on:click|stopPropagation={() => {
 					dispatch('dismiss');
 				}}
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="w-4 h-4"
-				>
-					<path
-						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-					/>
-				</svg>
+				<XMark className={'size-4'} />
 			</button>
 
 			<!-- <button

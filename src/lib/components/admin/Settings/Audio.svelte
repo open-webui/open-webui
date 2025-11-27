@@ -12,12 +12,14 @@
 	} from '$lib/apis/audio';
 	import { config, settings } from '$lib/stores';
 
+	import Spinner from '$lib/components/common/Spinner.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
 	import { TTS_RESPONSE_SPLIT } from '$lib/types';
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
+	import Textarea from '$lib/components/common/Textarea.svelte';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
@@ -30,6 +32,7 @@
 	let TTS_ENGINE = '';
 	let TTS_MODEL = '';
 	let TTS_VOICE = '';
+	let TTS_OPENAI_PARAMS = '';
 	let TTS_SPLIT_ON: TTS_RESPONSE_SPLIT = TTS_RESPONSE_SPLIT.PUNCTUATION;
 	let TTS_AZURE_SPEECH_REGION = '';
 	let TTS_AZURE_SPEECH_BASE_URL = '';
@@ -47,6 +50,9 @@
 	let STT_AZURE_BASE_URL = '';
 	let STT_AZURE_MAX_SPEAKERS = '';
 	let STT_DEEPGRAM_API_KEY = '';
+	let STT_MISTRAL_API_KEY = '';
+	let STT_MISTRAL_API_BASE_URL = '';
+	let STT_MISTRAL_USE_CHAT_COMPLETIONS = false;
 
 	let STT_WHISPER_MODEL_LOADING = false;
 
@@ -97,18 +103,28 @@
 	};
 
 	const updateConfigHandler = async () => {
+		let openaiParams = {};
+		try {
+			openaiParams = TTS_OPENAI_PARAMS ? JSON.parse(TTS_OPENAI_PARAMS) : {};
+			TTS_OPENAI_PARAMS = JSON.stringify(openaiParams, null, 2);
+		} catch (e) {
+			toast.error($i18n.t('Invalid JSON format for Parameters'));
+			return;
+		}
+
 		const res = await updateAudioConfig(localStorage.token, {
 			tts: {
 				OPENAI_API_BASE_URL: TTS_OPENAI_API_BASE_URL,
 				OPENAI_API_KEY: TTS_OPENAI_API_KEY,
+				OPENAI_PARAMS: openaiParams,
 				API_KEY: TTS_API_KEY,
 				ENGINE: TTS_ENGINE,
 				MODEL: TTS_MODEL,
 				VOICE: TTS_VOICE,
-				SPLIT_ON: TTS_SPLIT_ON,
 				AZURE_SPEECH_REGION: TTS_AZURE_SPEECH_REGION,
 				AZURE_SPEECH_BASE_URL: TTS_AZURE_SPEECH_BASE_URL,
-				AZURE_SPEECH_OUTPUT_FORMAT: TTS_AZURE_SPEECH_OUTPUT_FORMAT
+				AZURE_SPEECH_OUTPUT_FORMAT: TTS_AZURE_SPEECH_OUTPUT_FORMAT,
+				SPLIT_ON: TTS_SPLIT_ON
 			},
 			stt: {
 				OPENAI_API_BASE_URL: STT_OPENAI_API_BASE_URL,
@@ -122,7 +138,10 @@
 				AZURE_REGION: STT_AZURE_REGION,
 				AZURE_LOCALES: STT_AZURE_LOCALES,
 				AZURE_BASE_URL: STT_AZURE_BASE_URL,
-				AZURE_MAX_SPEAKERS: STT_AZURE_MAX_SPEAKERS
+				AZURE_MAX_SPEAKERS: STT_AZURE_MAX_SPEAKERS,
+				MISTRAL_API_KEY: STT_MISTRAL_API_KEY,
+				MISTRAL_API_BASE_URL: STT_MISTRAL_API_BASE_URL,
+				MISTRAL_USE_CHAT_COMPLETIONS: STT_MISTRAL_USE_CHAT_COMPLETIONS
 			}
 		});
 
@@ -145,6 +164,7 @@
 			console.log(res);
 			TTS_OPENAI_API_BASE_URL = res.tts.OPENAI_API_BASE_URL;
 			TTS_OPENAI_API_KEY = res.tts.OPENAI_API_KEY;
+			TTS_OPENAI_PARAMS = JSON.stringify(res?.tts?.OPENAI_PARAMS ?? '', null, 2);
 			TTS_API_KEY = res.tts.API_KEY;
 
 			TTS_ENGINE = res.tts.ENGINE;
@@ -170,6 +190,9 @@
 			STT_AZURE_BASE_URL = res.stt.AZURE_BASE_URL;
 			STT_AZURE_MAX_SPEAKERS = res.stt.AZURE_MAX_SPEAKERS;
 			STT_DEEPGRAM_API_KEY = res.stt.DEEPGRAM_API_KEY;
+			STT_MISTRAL_API_KEY = res.stt.MISTRAL_API_KEY;
+			STT_MISTRAL_API_BASE_URL = res.stt.MISTRAL_API_BASE_URL;
+			STT_MISTRAL_USE_CHAT_COMPLETIONS = res.stt.MISTRAL_USE_CHAT_COMPLETIONS;
 		}
 
 		await getVoices();
@@ -187,7 +210,7 @@
 	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		<div class="flex flex-col gap-3">
 			<div>
-				<div class=" mb-2.5 text-base font-medium">{$i18n.t('Speech-to-Text')}</div>
+				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Speech-to-Text')}</div>
 
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -199,7 +222,9 @@
 								<input
 									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 									bind:value={STT_SUPPORTED_CONTENT_TYPES}
-									placeholder={$i18n.t('e.g., audio/wav,audio/mpeg (leave blank for defaults)')}
+									placeholder={$i18n.t(
+										'e.g., audio/wav,audio/mpeg,video/* (leave blank for defaults)'
+									)}
 								/>
 							</div>
 						</div>
@@ -212,13 +237,14 @@
 						<select
 							class="dark:bg-gray-900 cursor-pointer w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 							bind:value={STT_ENGINE}
-							placeholder="Select an engine"
+							placeholder={$i18n.t('Select an engine')}
 						>
 							<option value="">{$i18n.t('Whisper (Local)')}</option>
-							<option value="openai">OpenAI</option>
+							<option value="openai">{$i18n.t('OpenAI')}</option>
 							<option value="web">{$i18n.t('Web API')}</option>
-							<option value="deepgram">Deepgram</option>
-							<option value="azure">Azure AI Speech</option>
+							<option value="deepgram">{$i18n.t('Deepgram')}</option>
+							<option value="azure">{$i18n.t('Azure AI Speech')}</option>
+							<option value="mistral">{$i18n.t('MistralAI')}</option>
 						</select>
 					</div>
 				</div>
@@ -247,7 +273,7 @@
 									list="model-list"
 									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 									bind:value={STT_MODEL}
-									placeholder="Select a model"
+									placeholder={$i18n.t('Select a model')}
 								/>
 
 								<datalist id="model-list">
@@ -272,7 +298,7 @@
 								<input
 									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 									bind:value={STT_MODEL}
-									placeholder="Select a model (optional)"
+									placeholder={$i18n.t('Select a model (optional)')}
 								/>
 							</div>
 						</div>
@@ -351,6 +377,67 @@
 							</div>
 						</div>
 					</div>
+				{:else if STT_ENGINE === 'mistral'}
+					<div>
+						<div class="mt-1 flex gap-2 mb-1">
+							<input
+								class="flex-1 w-full bg-transparent outline-hidden"
+								placeholder={$i18n.t('API Base URL')}
+								bind:value={STT_MISTRAL_API_BASE_URL}
+								required
+							/>
+
+							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={STT_MISTRAL_API_KEY} />
+						</div>
+					</div>
+
+					<hr class="border-gray-100 dark:border-gray-850 my-2" />
+
+					<div>
+						<div class=" mb-1.5 text-xs font-medium">{$i18n.t('STT Model')}</div>
+						<div class="flex w-full">
+							<div class="flex-1">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									bind:value={STT_MODEL}
+									placeholder="voxtral-mini-latest"
+								/>
+							</div>
+						</div>
+						<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t('Leave empty to use the default model (voxtral-mini-latest).')}
+							<a
+								class=" hover:underline dark:text-gray-200 text-gray-800"
+								href="https://docs.mistral.ai/capabilities/audio_transcription"
+								target="_blank"
+							>
+								{$i18n.t('Learn more about Voxtral transcription.')}
+							</a>
+						</div>
+					</div>
+
+					<hr class="border-gray-100 dark:border-gray-850 my-2" />
+
+					<div>
+						<div class="flex items-center justify-between mb-2">
+							<div class="text-xs font-medium">{$i18n.t('Use Chat Completions API')}</div>
+							<label class="relative inline-flex items-center cursor-pointer">
+								<input
+									type="checkbox"
+									bind:checked={STT_MISTRAL_USE_CHAT_COMPLETIONS}
+									class="sr-only peer"
+								/>
+								<div
+									class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"
+								></div>
+							</label>
+						</div>
+						<div class="text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t(
+								'Use /v1/chat/completions endpoint instead of /v1/audio/transcriptions for potentially better accuracy.'
+							)}
+						</div>
+					</div>
 				{:else if STT_ENGINE === ''}
 					<div>
 						<div class=" mb-1.5 text-xs font-medium">{$i18n.t('STT Model')}</div>
@@ -373,33 +460,7 @@
 							>
 								{#if STT_WHISPER_MODEL_LOADING}
 									<div class="self-center">
-										<svg
-											class=" w-4 h-4"
-											viewBox="0 0 24 24"
-											fill="currentColor"
-											xmlns="http://www.w3.org/2000/svg"
-										>
-											<style>
-												.spinner_ajPY {
-													transform-origin: center;
-													animation: spinner_AtaB 0.75s infinite linear;
-												}
-
-												@keyframes spinner_AtaB {
-													100% {
-														transform: rotate(360deg);
-													}
-												}
-											</style>
-											<path
-												d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-												opacity=".25"
-											/>
-											<path
-												d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-												class="spinner_ajPY"
-											/>
-										</svg>
+										<Spinner />
 									</div>
 								{:else}
 									<svg
@@ -437,7 +498,7 @@
 			</div>
 
 			<div>
-				<div class=" mb-2.5 text-base font-medium">{$i18n.t('Text-to-Speech')}</div>
+				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Text-to-Speech')}</div>
 
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -447,7 +508,7 @@
 						<select
 							class=" dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 							bind:value={TTS_ENGINE}
-							placeholder="Select a mode"
+							placeholder={$i18n.t('Select a mode')}
 							on:change={async (e) => {
 								await updateConfigHandler();
 								await getVoices();
@@ -487,12 +548,7 @@
 				{:else if TTS_ENGINE === 'elevenlabs'}
 					<div>
 						<div class="mt-1 flex gap-2 mb-1">
-							<input
-								class="flex-1 w-full rounded-lg py-2 pl-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-								placeholder={$i18n.t('API Key')}
-								bind:value={TTS_API_KEY}
-								required
-							/>
+							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_API_KEY} required />
 						</div>
 					</div>
 				{:else if TTS_ENGINE === 'azure'}
@@ -562,7 +618,7 @@
 										list="model-list"
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 										bind:value={TTS_MODEL}
-										placeholder="CMU ARCTIC speaker embedding name"
+										placeholder={$i18n.t('CMU ARCTIC speaker embedding name')}
 									/>
 
 									<datalist id="model-list">
@@ -604,7 +660,7 @@
 											list="voice-list"
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_VOICE}
-											placeholder="Select a voice"
+											placeholder={$i18n.t('Select a voice')}
 										/>
 
 										<datalist id="voice-list">
@@ -623,7 +679,7 @@
 											list="tts-model-list"
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_MODEL}
-											placeholder="Select a model"
+											placeholder={$i18n.t('Select a model')}
 										/>
 
 										<datalist id="tts-model-list">
@@ -631,6 +687,22 @@
 												<option value={model.id} class="bg-gray-50 dark:bg-gray-700" />
 											{/each}
 										</datalist>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+							<div class="w-full">
+								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('Additional Parameters')}</div>
+								<div class="flex w-full">
+									<div class="flex-1">
+										<Textarea
+											className="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+											bind:value={TTS_OPENAI_PARAMS}
+											placeholder={$i18n.t('Enter additional parameters in JSON format')}
+											minSize={100}
+										/>
 									</div>
 								</div>
 							</div>
@@ -645,7 +717,7 @@
 											list="voice-list"
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_VOICE}
-											placeholder="Select a voice"
+											placeholder={$i18n.t('Select a voice')}
 										/>
 
 										<datalist id="voice-list">
@@ -664,7 +736,7 @@
 											list="tts-model-list"
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_MODEL}
-											placeholder="Select a model"
+											placeholder={$i18n.t('Select a model')}
 										/>
 
 										<datalist id="tts-model-list">
@@ -686,7 +758,7 @@
 											list="voice-list"
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_VOICE}
-											placeholder="Select a voice"
+											placeholder={$i18n.t('Select a voice')}
 										/>
 
 										<datalist id="voice-list">
@@ -713,7 +785,7 @@
 											list="tts-model-list"
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_AZURE_SPEECH_OUTPUT_FORMAT}
-											placeholder="Select a output format"
+											placeholder={$i18n.t('Select an output format')}
 										/>
 									</div>
 								</div>
@@ -727,7 +799,7 @@
 					<div class="flex items-center relative">
 						<select
 							class="dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
-							aria-label="Select how to split message text for TTS requests"
+							aria-label={$i18n.t('Select how to split message text for TTS requests')}
 							bind:value={TTS_SPLIT_ON}
 						>
 							{#each Object.values(TTS_RESPONSE_SPLIT) as split}

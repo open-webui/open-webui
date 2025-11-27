@@ -7,6 +7,7 @@
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	dayjs.extend(relativeTime);
 
+	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -40,11 +41,9 @@
 
 	export let id = '';
 	export let value = '';
-	export let placeholder = 'Select a model';
+	export let placeholder = $i18n.t('Select a model');
 	export let searchEnabled = true;
 	export let searchPlaceholder = $i18n.t('Search a model');
-
-	export let showTemporaryChatControl = false;
 
 	export let items: {
 		label: string;
@@ -91,6 +90,26 @@
 		}
 	);
 
+	const updateFuse = () => {
+		if (fuse) {
+			fuse.setCollection(
+				items.map((item) => {
+					const _item = {
+						...item,
+						modelName: item.model?.name,
+						tags: (item.model?.tags ?? []).map((tag) => tag.name).join(' '),
+						desc: item.model?.info?.meta?.description
+					};
+					return _item;
+				})
+			);
+		}
+	};
+
+	$: if (items) {
+		updateFuse();
+	}
+
 	$: filteredItems = (
 		searchValue
 			? fuse
@@ -102,7 +121,10 @@
 						if (selectedTag === '') {
 							return true;
 						}
-						return (item.model?.tags ?? []).map((tag) => tag.name).includes(selectedTag);
+
+						return (item.model?.tags ?? [])
+							.map((tag) => tag.name.toLowerCase())
+							.includes(selectedTag.toLowerCase());
 					})
 					.filter((item) => {
 						if (selectedConnectionType === '') {
@@ -120,7 +142,9 @@
 						if (selectedTag === '') {
 							return true;
 						}
-						return (item.model?.tags ?? []).map((tag) => tag.name).includes(selectedTag);
+						return (item.model?.tags ?? [])
+							.map((tag) => tag.name.toLowerCase())
+							.includes(selectedTag.toLowerCase());
 					})
 					.filter((item) => {
 						if (selectedConnectionType === '') {
@@ -287,19 +311,24 @@
 		}
 	};
 
-	onMount(async () => {
+	const setOllamaVersion = async () => {
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
+	};
 
+	onMount(async () => {
 		if (items) {
 			tags = items
 				.filter((item) => !(item.model?.info?.meta?.hidden ?? false))
 				.flatMap((item) => item.model?.tags ?? [])
-				.map((tag) => tag.name);
-
+				.map((tag) => tag.name.toLowerCase());
 			// Remove duplicates and sort
 			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
 		}
 	});
+
+	$: if (show) {
+		setOllamaVersion();
+	}
 
 	const cancelModelPullHandler = async (model: string) => {
 		const { reader, abortController } = $MODEL_DOWNLOAD_POOL[model];
@@ -313,7 +342,7 @@
 				...$MODEL_DOWNLOAD_POOL
 			});
 			await deleteModel(localStorage.token, model);
-			toast.success(`${model} download has been canceled`);
+			toast.success($i18n.t('{{model}} download has been canceled', { model: model }));
 		}
 	};
 
@@ -345,12 +374,17 @@
 	closeFocus={false}
 >
 	<DropdownMenu.Trigger
-		class="relative w-full font-primary"
+		class="relative w-full {($settings?.highContrastMode ?? false)
+			? ''
+			: 'outline-hidden focus:outline-hidden'}"
 		aria-label={placeholder}
 		id="model-selector-{id}-button"
 	>
-		<button
-			class="flex w-full text-left px-0.5 outline-hidden bg-transparent truncate {triggerClassName} justify-between font-medium placeholder-gray-400 focus:outline-hidden"
+		<div
+			class="flex w-full text-left px-0.5 bg-transparent truncate {triggerClassName} justify-between {($settings?.highContrastMode ??
+			false)
+				? 'dark:placeholder-gray-100 placeholder-gray-800'
+				: 'placeholder-gray-400'}"
 			on:mouseenter={async () => {
 				models.set(
 					await getModels(
@@ -359,7 +393,6 @@
 					)
 				);
 			}}
-			type="button"
 		>
 			{#if selectedModel}
 				{selectedModel.label}
@@ -367,20 +400,21 @@
 				{placeholder}
 			{/if}
 			<ChevronDown className=" self-center ml-2 size-3" strokeWidth="2.5" />
-		</button>
+		</div>
 	</DropdownMenu.Trigger>
 
 	<DropdownMenu.Content
 		class=" z-40 {$mobile
 			? `w-full`
-			: `${className}`} max-w-[calc(100vw-1rem)] justify-start rounded-xl  bg-white dark:bg-gray-850 dark:text-white shadow-lg  outline-hidden"
+			: `${className}`} max-w-[calc(100vw-1rem)] justify-start rounded-2xl  bg-white dark:bg-gray-850 dark:text-white shadow-lg  outline-hidden"
 		transition={flyAndScale}
 		side={$mobile ? 'bottom' : 'bottom-start'}
-		sideOffset={3}
+		sideOffset={2}
+		alignOffset={-1}
 	>
 		<slot>
 			{#if searchEnabled}
-				<div class="flex items-center gap-2.5 px-5 mt-3.5 mb-1.5">
+				<div class="flex items-center gap-2.5 px-4.5 mt-3.5 mb-1.5">
 					<Search className="size-4" strokeWidth="2.5" />
 
 					<input
@@ -389,14 +423,17 @@
 						class="w-full text-sm bg-transparent outline-hidden"
 						placeholder={searchPlaceholder}
 						autocomplete="off"
+						aria-label={$i18n.t('Search In Models')}
 						on:keydown={(e) => {
 							if (e.code === 'Enter' && filteredItems.length > 0) {
 								value = filteredItems[selectedModelIdx].value;
 								show = false;
 								return; // dont need to scroll on selection
 							} else if (e.code === 'ArrowDown') {
+								e.stopPropagation();
 								selectedModelIdx = Math.min(selectedModelIdx + 1, filteredItems.length - 1);
 							} else if (e.code === 'ArrowUp') {
+								e.stopPropagation();
 								selectedModelIdx = Math.max(selectedModelIdx - 1, 0);
 							} else {
 								// if the user types something, reset to the top selection.
@@ -410,10 +447,10 @@
 				</div>
 			{/if}
 
-			<div class="px-3">
+			<div class="px-2">
 				{#if tags && items.filter((item) => !(item.model?.info?.meta?.hidden ?? false)).length > 0}
 					<div
-						class=" flex w-full bg-white dark:bg-gray-850 overflow-x-auto scrollbar-none"
+						class=" flex w-full bg-white dark:bg-gray-850 overflow-x-auto scrollbar-none font-[450] mb-0.5"
 						on:wheel={(e) => {
 							if (e.deltaY !== 0) {
 								e.preventDefault();
@@ -422,15 +459,16 @@
 						}}
 					>
 						<div
-							class="flex gap-1 w-fit text-center text-sm font-medium rounded-full bg-transparent px-1.5 pb-0.5"
+							class="flex gap-1 w-fit text-center text-sm rounded-full bg-transparent px-1.5 whitespace-nowrap"
 							bind:this={tagsContainerElement}
 						>
 							{#if items.find((item) => item.model?.connection_type === 'local') || items.find((item) => item.model?.connection_type === 'external') || items.find((item) => item.model?.direct) || tags.length > 0}
 								<button
-									class="min-w-fit outline-none p-1.5 {selectedTag === '' &&
+									class="min-w-fit outline-none px-1.5 py-0.5 {selectedTag === '' &&
 									selectedConnectionType === ''
 										? ''
 										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									aria-pressed={selectedTag === '' && selectedConnectionType === ''}
 									on:click={() => {
 										selectedConnectionType = '';
 										selectedTag = '';
@@ -442,9 +480,10 @@
 
 							{#if items.find((item) => item.model?.connection_type === 'local')}
 								<button
-									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'local'
+									class="min-w-fit outline-none px-1.5 py-0.5 {selectedConnectionType === 'local'
 										? ''
 										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									aria-pressed={selectedConnectionType === 'local'}
 									on:click={() => {
 										selectedTag = '';
 										selectedConnectionType = 'local';
@@ -456,9 +495,10 @@
 
 							{#if items.find((item) => item.model?.connection_type === 'external')}
 								<button
-									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'external'
+									class="min-w-fit outline-none px-1.5 py-0.5 {selectedConnectionType === 'external'
 										? ''
 										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									aria-pressed={selectedConnectionType === 'external'}
 									on:click={() => {
 										selectedTag = '';
 										selectedConnectionType = 'external';
@@ -470,9 +510,10 @@
 
 							{#if items.find((item) => item.model?.direct)}
 								<button
-									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'direct'
+									class="min-w-fit outline-none px-1.5 py-0.5 {selectedConnectionType === 'direct'
 										? ''
 										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									aria-pressed={selectedConnectionType === 'direct'}
 									on:click={() => {
 										selectedTag = '';
 										selectedConnectionType = 'direct';
@@ -483,24 +524,27 @@
 							{/if}
 
 							{#each tags as tag}
-								<button
-									class="min-w-fit outline-none p-1.5 {selectedTag === tag
-										? ''
-										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-									on:click={() => {
-										selectedConnectionType = '';
-										selectedTag = tag;
-									}}
-								>
-									{tag}
-								</button>
+								<Tooltip content={tag}>
+									<button
+										class="min-w-fit outline-none px-1.5 py-0.5 {selectedTag === tag
+											? ''
+											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+										aria-pressed={selectedTag === tag}
+										on:click={() => {
+											selectedConnectionType = '';
+											selectedTag = tag;
+										}}
+									>
+										{tag.length > 16 ? `${tag.slice(0, 16)}...` : tag}
+									</button>
+								</Tooltip>
 							{/each}
 						</div>
 					</div>
 				{/if}
 			</div>
 
-			<div class="px-3 max-h-64 overflow-y-auto group relative">
+			<div class="px-2.5 max-h-64 overflow-y-auto group relative">
 				{#each filteredItems as item, index}
 					<ModelItem
 						{selectedModelIdx}
@@ -532,7 +576,7 @@
 						placement="top-start"
 					>
 						<button
-							class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-highlighted:bg-muted"
+							class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl cursor-pointer data-highlighted:bg-muted"
 							on:click={() => {
 								pullModelHandler();
 							}}
@@ -546,33 +590,11 @@
 
 				{#each Object.keys($MODEL_DOWNLOAD_POOL) as model}
 					<div
-						class="flex w-full justify-between font-medium select-none rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 rounded-lg cursor-pointer data-highlighted:bg-muted"
+						class="flex w-full justify-between font-medium select-none rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 rounded-xl cursor-pointer data-highlighted:bg-muted"
 					>
 						<div class="flex">
-							<div class="-ml-2 mr-2.5 translate-y-0.5">
-								<svg
-									class="size-4"
-									viewBox="0 0 24 24"
-									fill="currentColor"
-									xmlns="http://www.w3.org/2000/svg"
-									><style>
-										.spinner_ajPY {
-											transform-origin: center;
-											animation: spinner_AtaB 0.75s infinite linear;
-										}
-										@keyframes spinner_AtaB {
-											100% {
-												transform: rotate(360deg);
-											}
-										}
-									</style><path
-										d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-										opacity=".25"
-									/><path
-										d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-										class="spinner_ajPY"
-									/></svg
-								>
+							<div class="mr-2.5 translate-y-0.5">
+								<Spinner />
 							</div>
 
 							<div class="flex flex-col self-start">
@@ -628,42 +650,7 @@
 				{/each}
 			</div>
 
-			{#if showTemporaryChatControl}
-				<div class="flex items-center mx-2 mt-1 mb-2">
-					<button
-						class="flex justify-between w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 px-3 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-highlighted:bg-muted"
-						on:click={async () => {
-							temporaryChatEnabled.set(!$temporaryChatEnabled);
-							await goto('/');
-							const newChatButton = document.getElementById('new-chat-button');
-							setTimeout(() => {
-								newChatButton?.click();
-							}, 0);
-
-							// add 'temporary-chat=true' to the URL
-							if ($temporaryChatEnabled) {
-								history.replaceState(null, '', '?temporary-chat=true');
-							} else {
-								history.replaceState(null, '', location.pathname);
-							}
-
-							show = false;
-						}}
-					>
-						<div class="flex gap-2.5 items-center">
-							<ChatBubbleOval className="size-4" strokeWidth="2.5" />
-
-							{$i18n.t(`Temporary Chat`)}
-						</div>
-
-						<div>
-							<Switch state={$temporaryChatEnabled} />
-						</div>
-					</button>
-				</div>
-			{:else}
-				<div class="mb-3"></div>
-			{/if}
+			<div class="mb-2.5"></div>
 
 			<div class="hidden w-[42rem]" />
 			<div class="hidden w-[32rem]" />

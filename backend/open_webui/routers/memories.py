@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 import logging
+import asyncio
 from typing import Optional
 
 from open_webui.models.memories import Memories, MemoryModel
@@ -17,7 +18,7 @@ router = APIRouter()
 
 @router.get("/ef")
 async def get_embeddings(request: Request):
-    return {"result": request.app.state.EMBEDDING_FUNCTION("hello world")}
+    return {"result": await request.app.state.EMBEDDING_FUNCTION("hello world")}
 
 
 ############################
@@ -51,15 +52,15 @@ async def add_memory(
 ):
     memory = Memories.insert_new_memory(user.id, form_data.content)
 
+    vector = await request.app.state.EMBEDDING_FUNCTION(memory.content, user=user)
+
     VECTOR_DB_CLIENT.upsert(
         collection_name=f"user-memory-{user.id}",
         items=[
             {
                 "id": memory.id,
                 "text": memory.content,
-                "vector": request.app.state.EMBEDDING_FUNCTION(
-                    memory.content, user=user
-                ),
+                "vector": vector,
                 "metadata": {"created_at": memory.created_at},
             }
         ],
@@ -82,9 +83,15 @@ class QueryMemoryForm(BaseModel):
 async def query_memory(
     request: Request, form_data: QueryMemoryForm, user=Depends(get_verified_user)
 ):
+    memories = Memories.get_memories_by_user_id(user.id)
+    if not memories:
+        raise HTTPException(status_code=404, detail="No memories found for user")
+
+    vector = await request.app.state.EMBEDDING_FUNCTION(form_data.content, user=user)
+
     results = VECTOR_DB_CLIENT.search(
         collection_name=f"user-memory-{user.id}",
-        vectors=[request.app.state.EMBEDDING_FUNCTION(form_data.content, user=user)],
+        vectors=[vector],
         limit=form_data.k,
     )
 
@@ -101,21 +108,28 @@ async def reset_memory_from_vector_db(
     VECTOR_DB_CLIENT.delete_collection(f"user-memory-{user.id}")
 
     memories = Memories.get_memories_by_user_id(user.id)
+
+    # Generate vectors in parallel
+    vectors = await asyncio.gather(
+        *[
+            request.app.state.EMBEDDING_FUNCTION(memory.content, user=user)
+            for memory in memories
+        ]
+    )
+
     VECTOR_DB_CLIENT.upsert(
         collection_name=f"user-memory-{user.id}",
         items=[
             {
                 "id": memory.id,
                 "text": memory.content,
-                "vector": request.app.state.EMBEDDING_FUNCTION(
-                    memory.content, user=user
-                ),
+                "vector": vectors[idx],
                 "metadata": {
                     "created_at": memory.created_at,
                     "updated_at": memory.updated_at,
                 },
             }
-            for memory in memories
+            for idx, memory in enumerate(memories)
         ],
     )
 
@@ -160,15 +174,15 @@ async def update_memory_by_id(
         raise HTTPException(status_code=404, detail="Memory not found")
 
     if form_data.content is not None:
+        vector = await request.app.state.EMBEDDING_FUNCTION(memory.content, user=user)
+
         VECTOR_DB_CLIENT.upsert(
             collection_name=f"user-memory-{user.id}",
             items=[
                 {
                     "id": memory.id,
                     "text": memory.content,
-                    "vector": request.app.state.EMBEDDING_FUNCTION(
-                        memory.content, user=user
-                    ),
+                    "vector": vector,
                     "metadata": {
                         "created_at": memory.created_at,
                         "updated_at": memory.updated_at,

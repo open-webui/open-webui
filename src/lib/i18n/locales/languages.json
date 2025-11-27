@@ -24,6 +24,10 @@
 		"title": "Bengali (বাংলা)"
 	},
 	{
+		"code": "bs-BA",
+		"title": "Bosanski Latinica"
+	},
+	{
 		"code": "bo-TB",
 		"title": "Tibetan (བོད)"
 	},
@@ -116,6 +120,10 @@
 		"title": "Japanese (日本語)"
 	},
 	{
+		"code": "kab-DZ",
+		"title": "Kabyle (Taqbaylit)"
+	},
+	{
 		"code": "ko-KR",
 		"title": "Korean (한국어)"
 	},
@@ -194,6 +202,10 @@
 	{
 		"code": "ur-PK",
 		"title": "Urdu (اردو)"
+	},
+	{
+		"code": "ug-CN",
+		"title": "Uyghur (ئۇيغۇرچە)"
 	},
 	{
 		"code": "uz-Cyrl-UZ",

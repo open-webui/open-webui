@@ -1,9 +1,4 @@
 <script lang="ts">
-	import * as ort from 'onnxruntime-web';
-	import { env, AutoModel, AutoTokenizer } from '@huggingface/transformers';
-
-	env.backends.onnx.wasm.wasmPaths = '/wasm/';
-
 	import { onMount, getContext } from 'svelte';
 	import { models } from '$lib/stores';
 
@@ -11,10 +6,11 @@
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import MagnifyingGlass from '$lib/components/icons/MagnifyingGlass.svelte';
+	import Search from '$lib/components/icons/Search.svelte';
 
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 
@@ -77,7 +73,7 @@
 	let showLeaderboardModal = false;
 	let selectedModel = null;
 
-	const openFeedbackModal = (model) => {
+	const openLeaderboardModelModal = (model) => {
 		showLeaderboardModal = true;
 		selectedModel = model;
 	};
@@ -114,7 +110,7 @@
 				if (a.rating === '-' && b.rating !== '-') return 1;
 				if (b.rating === '-' && a.rating !== '-') return -1;
 				if (a.rating !== '-' && b.rating !== '-') return b.rating - a.rating;
-				return a.name.localeCompare(b.name);
+				return (a?.name ?? a?.id ?? '').localeCompare(b?.name ?? b?.id ?? '');
 			});
 
 		loadingLeaderboard = false;
@@ -150,6 +146,8 @@
 		}
 
 		feedbacks.forEach((feedback) => {
+			if (!feedback?.data?.model_id || !feedback?.data?.rating) return;
+
 			const modelA = feedback.data.model_id;
 			const statsA = getOrDefaultStats(modelA);
 			let outcome: number;
@@ -234,6 +232,11 @@
 	//////////////////////
 
 	const loadEmbeddingModel = async () => {
+		const { env, AutoModel, AutoTokenizer } = await import('@huggingface/transformers');
+		if (env.backends.onnx.wasm) {
+			env.backends.onnx.wasm.wasmPaths = '/wasm/';
+		}
+
 		// Check if the tokenizer and model are already loaded and stored in the window object
 		if (!window.tokenizer) {
 			window.tokenizer = await AutoTokenizer.from_pretrained(EMBEDDING_MODEL);
@@ -333,24 +336,24 @@
 	onClose={closeLeaderboardModal}
 />
 
-<div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
-	<div class="flex md:self-center text-lg font-medium px-0.5 shrink-0 items-center">
-		<div class=" gap-1">
+<div
+	class="pt-0.5 pb-1 gap-1 flex flex-col md:flex-row justify-between sticky top-0 z-10 bg-white dark:bg-gray-900"
+>
+	<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2 shrink-0">
+		<div>
 			{$i18n.t('Leaderboard')}
 		</div>
 
-		<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
-
-		<span class="text-lg font-medium text-gray-500 dark:text-gray-300 mr-1.5"
-			>{rankedModels.length}</span
-		>
+		<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+			{rankedModels.length}
+		</div>
 	</div>
 
 	<div class=" flex space-x-2">
 		<Tooltip content={$i18n.t('Re-rank models by topic similarity')}>
 			<div class="flex flex-1">
 				<div class=" self-center ml-1 mr-3">
-					<MagnifyingGlass className="size-3" />
+					<Search className="size-3" />
 				</div>
 				<input
 					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
@@ -365,13 +368,11 @@
 	</div>
 </div>
 
-<div
-	class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded-sm pt-0.5"
->
+<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded-sm">
 	{#if loadingLeaderboard}
 		<div class=" absolute top-0 bottom-0 left-0 right-0 flex">
 			<div class="m-auto">
-				<Spinner />
+				<Spinner className="size-5" />
 			</div>
 		</div>
 	{/if}
@@ -381,17 +382,15 @@
 		</div>
 	{:else}
 		<table
-			class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full rounded {loadingLeaderboard
+			class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full {loadingLeaderboard
 				? 'opacity-20'
 				: ''}"
 		>
-			<thead
-				class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5"
-			>
-				<tr class="">
+			<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
+				<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850">
 					<th
 						scope="col"
-						class="px-3 py-1.5 cursor-pointer select-none w-3"
+						class="px-2.5 py-2 cursor-pointer select-none w-3"
 						on:click={() => setSortKey('rating')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -413,7 +412,7 @@
 					</th>
 					<th
 						scope="col"
-						class="px-3 py-1.5 cursor-pointer select-none"
+						class="px-2.5 py-2 cursor-pointer select-none"
 						on:click={() => setSortKey('name')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -435,7 +434,7 @@
 					</th>
 					<th
 						scope="col"
-						class="px-3 py-1.5 text-right cursor-pointer select-none w-fit"
+						class="px-2.5 py-2 text-right cursor-pointer select-none w-fit"
 						on:click={() => setSortKey('rating')}
 					>
 						<div class="flex gap-1.5 items-center justify-end">
@@ -457,7 +456,7 @@
 					</th>
 					<th
 						scope="col"
-						class="px-3 py-1.5 text-right cursor-pointer select-none w-5"
+						class="px-2.5 py-2 text-right cursor-pointer select-none w-5"
 						on:click={() => setSortKey('won')}
 					>
 						<div class="flex gap-1.5 items-center justify-end">
@@ -479,7 +478,7 @@
 					</th>
 					<th
 						scope="col"
-						class="px-3 py-1.5 text-right cursor-pointer select-none w-5"
+						class="px-2.5 py-2 text-right cursor-pointer select-none w-5"
 						on:click={() => setSortKey('lost')}
 					>
 						<div class="flex gap-1.5 items-center justify-end">
@@ -504,8 +503,8 @@
 			<tbody class="">
 				{#each sortedModels as model, modelIdx (model.id)}
 					<tr
-						class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs group cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-						on:click={() => openFeedbackModal(model)}
+						class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs group cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850/50 transition"
+						on:click={() => openLeaderboardModelModal(model)}
 					>
 						<td class="px-3 py-1.5 text-left font-medium text-gray-900 dark:text-white w-fit">
 							<div class=" line-clamp-1">
@@ -516,7 +515,7 @@
 							<div class="flex items-center gap-2">
 								<div class="shrink-0">
 									<img
-										src={model?.info?.meta?.profile_image_url ?? '/favicon.png'}
+										src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}`}
 										alt={model.name}
 										class="size-5 rounded-full object-cover shrink-0"
 									/>
@@ -531,7 +530,7 @@
 							{model.rating}
 						</td>
 
-						<td class=" px-3 py-1.5 text-right font-semibold text-green-500">
+						<td class=" px-3 py-1.5 text-right font-medium text-green-500">
 							<div class=" w-10">
 								{#if model.stats.won === '-'}
 									-
@@ -544,7 +543,7 @@
 							</div>
 						</td>
 
-						<td class="px-3 py-1.5 text-right font-semibold text-red-500">
+						<td class="px-3 py-1.5 text-right font-medium text-red-500">
 							<div class=" w-10">
 								{#if model.stats.lost === '-'}
 									-

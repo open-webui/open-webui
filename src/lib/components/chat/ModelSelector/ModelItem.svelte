@@ -5,6 +5,7 @@
 	import dayjs from '$lib/dayjs';
 
 	import { mobile, settings, user } from '$lib/stores';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { copyToClipboard, sanitizeResponseContent } from '$lib/utils';
@@ -13,6 +14,8 @@
 	import ModelItemMenu from './ModelItemMenu.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import { toast } from 'svelte-sonner';
+	import Tag from '$lib/components/icons/Tag.svelte';
+	import Label from '$lib/components/icons/Label.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -41,8 +44,9 @@
 </script>
 
 <button
-	aria-label="model-item"
-	class="flex group/item w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-highlighted:bg-muted {index ===
+	aria-roledescription="model-item"
+	aria-label={item.label}
+	class="flex group/item w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl cursor-pointer data-highlighted:bg-muted {index ===
 	selectedModelIdx
 		? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
 		: ''}"
@@ -53,27 +57,27 @@
 	}}
 >
 	<div class="flex flex-col flex-1 gap-1.5">
-		{#if (item?.model?.tags ?? []).length > 0}
+		<!-- {#if (item?.model?.tags ?? []).length > 0}
 			<div
 				class="flex gap-0.5 self-center items-start h-full w-full translate-y-[0.5px] overflow-x-auto scrollbar-none"
 			>
 				{#each item.model?.tags.sort((a, b) => a.name.localeCompare(b.name)) as tag}
 					<Tooltip content={tag.name} className="flex-shrink-0">
 						<div
-							class=" text-xs font-bold px-1 rounded-sm uppercase bg-gray-500/20 text-gray-700 dark:text-gray-200"
+							class=" text-xs font-semibold px-1 rounded-sm uppercase bg-gray-500/20 text-gray-700 dark:text-gray-200"
 						>
 							{tag.name}
 						</div>
 					</Tooltip>
 				{/each}
 			</div>
-		{/if}
+		{/if} -->
 
 		<div class="flex items-center gap-2">
 			<div class="flex items-center min-w-fit">
 				<Tooltip content={$user?.role === 'admin' ? (item?.value ?? '') : ''} placement="top-start">
 					<img
-						src={item.model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
+						src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${item.model.id}&lang=${$i18n.language}`}
 						alt="Model"
 						class="rounded-full size-5 flex items-center"
 					/>
@@ -132,6 +136,26 @@
 				{/if}
 
 				<!-- {JSON.stringify(item.info)} -->
+
+				{#if (item?.model?.tags ?? []).length > 0}
+					{#key item.model.id}
+						<Tooltip elementId="tags-{item.model.id}">
+							<div slot="tooltip" id="tags-{item.model.id}">
+								{#each item.model?.tags.sort((a, b) => a.name.localeCompare(b.name)) as tag}
+									<Tooltip content={tag.name} className="flex-shrink-0">
+										<div class=" text-xs font-medium rounded-sm uppercase text-white">
+											{tag.name}
+										</div>
+									</Tooltip>
+								{/each}
+							</div>
+
+							<div class="translate-y-[1px]">
+								<Tag />
+							</div>
+						</Tooltip>
+					{/key}
+				{/if}
 
 				{#if item.model?.direct}
 					<Tooltip content={`${$i18n.t('Direct')}`}>
@@ -230,6 +254,7 @@
 			}}
 		>
 			<button
+				aria-label={`${$i18n.t('More Options')}`}
 				class="flex"
 				on:click={(e) => {
 					e.preventDefault();

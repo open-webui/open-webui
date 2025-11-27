@@ -13,6 +13,8 @@
 	import GlobeAltSolid from '$lib/components/icons/GlobeAltSolid.svelte';
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
 	import CameraSolid from '$lib/components/icons/CameraSolid.svelte';
+	import Camera from '$lib/components/icons/Camera.svelte';
+	import Clip from '$lib/components/icons/Clip.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -44,33 +46,31 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[200px] rounded-xl px-1 py-1  border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
-			sideOffset={15}
-			alignOffset={-8}
-			side="top"
+			class="w-full max-w-[200px] rounded-2xl px-1 py-1  border border-gray-100  dark:border-gray-800 z-999 bg-white dark:bg-gray-850 dark:text-white shadow-lg transition"
+			sideOffset={4}
+			alignOffset={-6}
+			side="bottom"
 			align="start"
 			transition={flyAndScale}
 		>
-			{#if !$mobile}
-				<DropdownMenu.Item
-					class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl"
-					on:click={() => {
-						screenCaptureHandler();
-					}}
-				>
-					<CameraSolid />
-					<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
-				</DropdownMenu.Item>
-			{/if}
-
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl"
 				on:click={() => {
 					uploadFilesHandler();
 				}}
 			>
-				<DocumentArrowUpSolid />
+				<Clip />
 				<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
+			</DropdownMenu.Item>
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50  rounded-xl"
+				on:click={() => {
+					screenCaptureHandler();
+				}}
+			>
+				<Camera />
+				<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
 			</DropdownMenu.Item>
 		</DropdownMenu.Content>
 	</div>

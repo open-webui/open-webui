@@ -1,6 +1,10 @@
 from open_webui.retrieval.vector.main import VectorDBBase
 from open_webui.retrieval.vector.type import VectorType
-from open_webui.config import VECTOR_DB, ENABLE_QDRANT_MULTITENANCY_MODE
+from open_webui.config import (
+    VECTOR_DB,
+    ENABLE_QDRANT_MULTITENANCY_MODE,
+    ENABLE_MILVUS_MULTITENANCY_MODE,
+)
 
 
 class Vector:
@@ -12,9 +16,16 @@ class Vector:
         """
         match vector_type:
             case VectorType.MILVUS:
-                from open_webui.retrieval.vector.dbs.milvus import MilvusClient
+                if ENABLE_MILVUS_MULTITENANCY_MODE:
+                    from open_webui.retrieval.vector.dbs.milvus_multitenancy import (
+                        MilvusClient,
+                    )
 
-                return MilvusClient()
+                    return MilvusClient()
+                else:
+                    from open_webui.retrieval.vector.dbs.milvus import MilvusClient
+
+                    return MilvusClient()
             case VectorType.QDRANT:
                 if ENABLE_QDRANT_MULTITENANCY_MODE:
                     from open_webui.retrieval.vector.dbs.qdrant_multitenancy import (
@@ -30,6 +41,10 @@ class Vector:
                 from open_webui.retrieval.vector.dbs.pinecone import PineconeClient
 
                 return PineconeClient()
+            case VectorType.S3VECTOR:
+                from open_webui.retrieval.vector.dbs.s3vector import S3VectorClient
+
+                return S3VectorClient()
             case VectorType.OPENSEARCH:
                 from open_webui.retrieval.vector.dbs.opensearch import OpenSearchClient
 
@@ -48,6 +63,14 @@ class Vector:
                 from open_webui.retrieval.vector.dbs.chroma import ChromaClient
 
                 return ChromaClient()
+            case VectorType.ORACLE23AI:
+                from open_webui.retrieval.vector.dbs.oracle23ai import Oracle23aiClient
+
+                return Oracle23aiClient()
+            case VectorType.WEAVIATE:
+                from open_webui.retrieval.vector.dbs.weaviate import WeaviateClient
+
+                return WeaviateClient()
             case _:
                 raise ValueError(f"Unsupported vector type: {vector_type}")
 

@@ -49,6 +49,9 @@
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
+	import Search from '$lib/components/icons/Search.svelte';
+	import Textarea from '$lib/components/common/Textarea.svelte';
+	import FilesOverlay from '$lib/components/chat/MessageInput/FilesOverlay.svelte';
 
 	let largeScreen = true;
 
@@ -113,6 +116,7 @@
 	let debounceTimeout = null;
 	let mediaQuery;
 	let dragged = false;
+	let isSaving = false;
 
 	const createFileFromText = (name, content) => {
 		const blob = new Blob([content], { type: 'text/plain' });
@@ -189,7 +193,14 @@
 					delete item.itemId;
 					return item;
 				});
-				await addFileHandler(uploadedFile.id);
+
+				if (uploadedFile.error) {
+					console.warn('File upload warning:', uploadedFile.error);
+					toast.warning(uploadedFile.error);
+					knowledge.files = knowledge.files.filter((file) => file.id !== uploadedFile.id);
+				} else {
+					await addFileHandler(uploadedFile.id);
+				}
 			} else {
 				toast.error($i18n.t('Failed to upload file.'));
 			}
@@ -229,7 +240,13 @@
 		// Function to update the UI with the progress
 		const updateProgress = () => {
 			const percentage = (uploadedFiles / totalFiles) * 100;
-			toast.info(`Upload Progress: ${uploadedFiles}/${totalFiles} (${percentage.toFixed(2)}%)`);
+			toast.info(
+				$i18n.t('Upload Progress: {{uploadedFiles}}/{{totalFiles}} ({{percentage}}%)', {
+					uploadedFiles: uploadedFiles,
+					totalFiles: totalFiles,
+					percentage: percentage.toFixed(2)
+				})
+			);
 		};
 
 		// Recursive function to count all files excluding hidden ones
@@ -313,7 +330,11 @@
 					const updateProgress = () => {
 						const percentage = (uploadedFiles / totalFiles) * 100;
 						toast.info(
-							`Upload Progress: ${uploadedFiles}/${totalFiles} (${percentage.toFixed(2)}%)`
+							$i18n.t('Upload Progress: {{uploadedFiles}}/{{totalFiles}} ({{percentage}}%)', {
+								uploadedFiles: uploadedFiles,
+								totalFiles: totalFiles,
+								percentage: percentage.toFixed(2)
+							})
 						);
 					};
 
@@ -353,9 +374,9 @@
 	// Error handler
 	const handleUploadError = (error) => {
 		if (error.name === 'AbortError') {
-			toast.info('Directory selection was cancelled');
+			toast.info($i18n.t('Directory selection was cancelled'));
 		} else {
-			toast.error('Error accessing directory');
+			toast.error($i18n.t('Error accessing directory'));
 			console.error('Directory access error:', error);
 		}
 	};
@@ -416,27 +437,34 @@
 	};
 
 	const updateFileContentHandler = async () => {
-		const fileId = selectedFile.id;
-		const content = selectedFileContent;
-
-		// Clear the cache for this file since we're updating it
-		fileContentCache.delete(fileId);
-
-		const res = updateFileDataContentById(localStorage.token, fileId, content).catch((e) => {
-			toast.error(`${e}`);
-		});
-
-		const updatedKnowledge = await updateFileFromKnowledgeById(
-			localStorage.token,
-			id,
-			fileId
-		).catch((e) => {
-			toast.error(`${e}`);
-		});
-
-		if (res && updatedKnowledge) {
-			knowledge = updatedKnowledge;
-			toast.success($i18n.t('File content updated successfully.'));
+		if (isSaving) {
+			console.log('Save operation already in progress, skipping...');
+			return;
+		}
+		isSaving = true;
+		try {
+			const fileId = selectedFile.id;
+			const content = selectedFileContent;
+			// Clear the cache for this file since we're updating it
+			fileContentCache.delete(fileId);
+			const res = await updateFileDataContentById(localStorage.token, fileId, content).catch(
+				(e) => {
+					toast.error(`${e}`);
+				}
+			);
+			const updatedKnowledge = await updateFileFromKnowledgeById(
+				localStorage.token,
+				id,
+				fileId
+			).catch((e) => {
+				toast.error(`${e}`);
+			});
+			if (res && updatedKnowledge) {
+				knowledge = updatedKnowledge;
+				toast.success($i18n.t('File content updated successfully.'));
+			}
+		} finally {
+			isSaving = false;
 		}
 	};
 
@@ -518,14 +546,42 @@
 		e.preventDefault();
 		dragged = false;
 
+		const handleUploadingFileFolder = (items) => {
+			for (const item of items) {
+				if (item.isFile) {
+					item.file((file) => {
+						uploadFileHandler(file);
+					});
+					continue;
+				}
+
+				// Not sure why you have to call webkitGetAsEntry and isDirectory seperate, but it won't work if you try item.webkitGetAsEntry().isDirectory
+				const wkentry = item.webkitGetAsEntry();
+				const isDirectory = wkentry.isDirectory;
+				if (isDirectory) {
+					// Read the directory
+					wkentry.createReader().readEntries(
+						(entries) => {
+							handleUploadingFileFolder(entries);
+						},
+						(error) => {
+							console.error('Error reading directory entries:', error);
+						}
+					);
+				} else {
+					toast.info($i18n.t('Uploading file...'));
+					uploadFileHandler(item.getAsFile());
+					toast.success($i18n.t('File uploaded!'));
+				}
+			}
+		};
+
 		if (e.dataTransfer?.types?.includes('Files')) {
 			if (e.dataTransfer?.files) {
-				const inputFiles = e.dataTransfer?.files;
+				const inputItems = e.dataTransfer?.items;
 
-				if (inputFiles && inputFiles.length > 0) {
-					for (const file of inputFiles) {
-						await uploadFileHandler(file);
-					}
+				if (inputItems && inputItems.length > 0) {
+					handleUploadingFileFolder(inputItems);
 				} else {
 					toast.error($i18n.t(`File not found.`));
 				}
@@ -606,29 +662,7 @@
 	};
 </script>
 
-{#if dragged}
-	<div
-		class="fixed {$showSidebar
-			? 'left-0 md:left-[260px] md:w-[calc(100%-260px)]'
-			: 'left-0'}  w-full h-full flex z-50 touch-none pointer-events-none"
-		id="dropzone"
-		role="region"
-		aria-label="Drag and Drop Container"
-	>
-		<div class="absolute w-full h-full backdrop-blur-sm bg-gray-800/40 flex justify-center">
-			<div class="m-auto pt-64 flex flex-col justify-center">
-				<div class="max-w-md">
-					<AddFilesPlaceholder>
-						<div class=" mt-2 text-center text-sm dark:text-gray-200 w-full">
-							Drop any files here to add to my documents
-						</div>
-					</AddFilesPlaceholder>
-				</div>
-			</div>
-		</div>
-	</div>
-{/if}
-
+<FilesOverlay show={dragged} />
 <SyncConfirmDialog
 	bind:show={showSyncConfirmModal}
 	message={$i18n.t(
@@ -671,12 +705,13 @@
 	}}
 />
 
-<div class="flex flex-col w-full translate-y-1" id="collection-container">
+<div class="flex flex-col w-full h-full translate-y-1" id="collection-container">
 	{#if id && knowledge}
 		<AccessControlModal
 			bind:show={showAccessControlModal}
 			bind:accessControl={knowledge.access_control}
-			allowPublic={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}
+			share={$user?.permissions?.sharing?.knowledge || $user?.role === 'admin'}
+			sharePu={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}
 			onChange={() => {
 				changeDebounceHandler();
 			}}
@@ -689,9 +724,9 @@
 						<div class="w-full">
 							<input
 								type="text"
-								class="text-left w-full font-semibold text-2xl font-primary bg-transparent outline-hidden"
+								class="text-left w-full font-medium text-2xl font-primary bg-transparent outline-hidden"
 								bind:value={knowledge.name}
-								placeholder="Knowledge Name"
+								placeholder={$i18n.t('Knowledge Name')}
 								on:input={() => {
 									changeDebounceHandler();
 								}}
@@ -720,7 +755,7 @@
 							type="text"
 							class="text-left text-xs w-full text-gray-500 bg-transparent outline-hidden"
 							bind:value={knowledge.description}
-							placeholder="Knowledge Description"
+							placeholder={$i18n.t('Knowledge Description')}
 							on:input={() => {
 								changeDebounceHandler();
 							}}
@@ -734,7 +769,7 @@
 			{#if largeScreen}
 				<div class="flex-1 flex justify-start w-full h-full max-h-full">
 					{#if selectedFile}
-						<div class=" flex flex-col w-full h-full max-h-full">
+						<div class=" flex flex-col w-full">
 							<div class="shrink-0 mb-2 flex items-center">
 								{#if !showSidepanel}
 									<div class="-translate-x-2">
@@ -761,12 +796,18 @@
 
 								<div>
 									<button
-										class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+										class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+										disabled={isSaving}
 										on:click={() => {
 											updateFileContentHandler();
 										}}
 									>
 										{$i18n.t('Save')}
+										{#if isSaving}
+											<div class="ml-2 self-center">
+												<Spinner />
+											</div>
+										{/if}
 									</button>
 								</div>
 							</div>
@@ -775,11 +816,10 @@
 								class=" flex-1 w-full h-full max-h-full text-sm bg-transparent outline-hidden overflow-y-auto scrollbar-hidden"
 							>
 								{#key selectedFile.id}
-									<RichTextInput
-										className="input-prose-sm"
+									<textarea
+										class="w-full h-full outline-none resize-none"
 										bind:value={selectedFileContent}
 										placeholder={$i18n.t('Add content here')}
-										preserveBreaks={false}
 									/>
 								{/key}
 							</div>
@@ -819,12 +859,18 @@
 
 								<div>
 									<button
-										class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+										class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+										disabled={isSaving}
 										on:click={() => {
 											updateFileContentHandler();
 										}}
 									>
 										{$i18n.t('Save')}
+										{#if isSaving}
+											<div class="ml-2 self-center">
+												<Spinner />
+											</div>
+										{/if}
 									</button>
 								</div>
 							</div>
@@ -833,11 +879,10 @@
 								class=" flex-1 w-full h-full max-h-full py-2.5 px-3.5 rounded-lg text-sm bg-transparent overflow-y-auto scrollbar-hidden"
 							>
 								{#key selectedFile.id}
-									<RichTextInput
-										className="input-prose-sm"
+									<textarea
+										class="w-full h-full outline-none resize-none"
 										bind:value={selectedFileContent}
 										placeholder={$i18n.t('Add content here')}
-										preserveBreaks={false}
 									/>
 								{/key}
 							</div>
@@ -861,23 +906,12 @@
 						<div class=" px-3">
 							<div class="flex mb-0.5">
 								<div class=" self-center ml-1 mr-3">
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											fill-rule="evenodd"
-											d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-											clip-rule="evenodd"
-										/>
-									</svg>
+									<Search />
 								</div>
 								<input
 									class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 									bind:value={query}
-									placeholder={$i18n.t('Search Collection')}
+									placeholder={`${$i18n.t('Search Collection')}${(knowledge?.files ?? []).length ? ` (${(knowledge?.files ?? []).length})` : ''}`}
 									on:focus={() => {
 										selectedFileId = null;
 									}}
@@ -931,6 +965,6 @@
 			</div>
 		</div>
 	{:else}
-		<Spinner />
+		<Spinner className="size-5" />
 	{/if}
 </div>

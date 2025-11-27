@@ -8,6 +8,7 @@ from open_webui.internal.db import Base, get_db
 from open_webui.env import SRC_LOG_LEVELS
 
 from open_webui.models.files import FileMetadataResponse
+from open_webui.models.groups import Groups
 from open_webui.models.users import Users, UserResponse
 
 
@@ -128,11 +129,18 @@ class KnowledgeTable:
 
     def get_knowledge_bases(self) -> list[KnowledgeUserModel]:
         with get_db() as db:
-            knowledge_bases = []
-            for knowledge in (
+            all_knowledge = (
                 db.query(Knowledge).order_by(Knowledge.updated_at.desc()).all()
-            ):
-                user = Users.get_user_by_id(knowledge.user_id)
+            )
+
+            user_ids = list(set(knowledge.user_id for knowledge in all_knowledge))
+
+            users = Users.get_users_by_user_ids(user_ids) if user_ids else []
+            users_dict = {user.id: user for user in users}
+
+            knowledge_bases = []
+            for knowledge in all_knowledge:
+                user = users_dict.get(knowledge.user_id)
                 knowledge_bases.append(
                     KnowledgeUserModel.model_validate(
                         {
@@ -143,15 +151,27 @@ class KnowledgeTable:
                 )
             return knowledge_bases
 
+    def check_access_by_user_id(self, id, user_id, permission="write") -> bool:
+        knowledge = self.get_knowledge_by_id(id)
+        if not knowledge:
+            return False
+        if knowledge.user_id == user_id:
+            return True
+        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user_id)}
+        return has_access(user_id, permission, knowledge.access_control, user_group_ids)
+
     def get_knowledge_bases_by_user_id(
         self, user_id: str, permission: str = "write"
     ) -> list[KnowledgeUserModel]:
         knowledge_bases = self.get_knowledge_bases()
+        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user_id)}
         return [
             knowledge_base
             for knowledge_base in knowledge_bases
             if knowledge_base.user_id == user_id
-            or has_access(user_id, permission, knowledge_base.access_control)
+            or has_access(
+                user_id, permission, knowledge_base.access_control, user_group_ids
+            )
         ]
 
     def get_knowledge_by_id(self, id: str) -> Optional[KnowledgeModel]:

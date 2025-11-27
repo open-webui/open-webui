@@ -80,6 +80,7 @@ async def generate_direct_chat_completion(
     event_caller = get_event_call(metadata)
 
     channel = f"{user_id}:{session_id}:{request_id}"
+    logging.info(f"WebSocket channel: {channel}")
 
     if form_data.get("stream"):
         q = asyncio.Queue()
@@ -121,7 +122,10 @@ async def generate_direct_chat_completion(
 
                             yield f"data: {json.dumps(data)}\n\n"
                         elif isinstance(data, str):
-                            yield data
+                            if "data:" in data:
+                                yield f"{data}\n\n"
+                            else:
+                                yield f"data: {data}\n\n"
                 except Exception as e:
                     log.debug(f"Error in event generator: {e}")
                     pass
@@ -419,7 +423,7 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
                     params[key] = value
 
             if "__user__" in sig.parameters:
-                __user__ = (user.model_dump() if isinstance(user, UserModel) else {},)
+                __user__ = user.model_dump() if isinstance(user, UserModel) else {}
 
                 try:
                     if hasattr(function_module, "UserValves"):

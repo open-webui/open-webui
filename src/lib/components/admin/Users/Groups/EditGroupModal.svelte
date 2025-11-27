@@ -3,13 +3,15 @@
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
+	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
-	import Display from './Display.svelte';
+	import General from './General.svelte';
 	import Permissions from './Permissions.svelte';
 	import Users from './Users.svelte';
 	import UserPlusSolid from '$lib/components/icons/UserPlusSolid.svelte';
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
@@ -17,8 +19,8 @@
 	export let show = false;
 	export let edit = false;
 
-	export let users = [];
 	export let group = null;
+	export let defaultPermissions = {};
 
 	export let custom = true;
 
@@ -28,37 +30,67 @@
 	let loading = false;
 	let showDeleteConfirmDialog = false;
 
+	let userCount = 0;
+
 	export let name = '';
 	export let description = '';
+	export let data = {};
 
 	export let permissions = {
 		workspace: {
 			models: false,
 			knowledge: false,
 			prompts: false,
-			tools: false
+			tools: false,
+			models_import: false,
+			models_export: false,
+			prompts_import: false,
+			prompts_export: false,
+			tools_import: false,
+			tools_export: false
 		},
 		sharing: {
+			models: false,
 			public_models: false,
+			knowledge: false,
 			public_knowledge: false,
+			prompts: false,
 			public_prompts: false,
-			public_tools: false
+			tools: false,
+			public_tools: false,
+			notes: false,
+			public_notes: false
 		},
 		chat: {
 			controls: true,
+			valves: true,
+			system_prompt: true,
+			params: true,
 			file_upload: true,
 			delete: true,
+			delete_message: true,
+			continue_response: true,
+			regenerate_response: true,
+			rate_response: true,
 			edit: true,
-			temporary: true
+			share: true,
+			export: true,
+			stt: true,
+			tts: true,
+			call: true,
+			multiple_models: true,
+			temporary: true,
+			temporary_enforced: false
 		},
 		features: {
+			api_keys: false,
 			direct_tool_servers: false,
 			web_search: true,
 			image_generation: true,
-			code_interpreter: true
+			code_interpreter: true,
+			notes: true
 		}
 	};
-	export let userIds = [];
 
 	const submitHandler = async () => {
 		loading = true;
@@ -66,8 +98,8 @@
 		const group = {
 			name,
 			description,
-			permissions,
-			user_ids: userIds
+			data,
+			permissions
 		};
 
 		await onSubmit(group);
@@ -81,8 +113,9 @@
 			name = group.name;
 			description = group.description;
 			permissions = group?.permissions ?? {};
+			data = group?.data ?? {};
 
-			userIds = group?.user_ids ?? [];
+			userCount = group?.member_count ?? 0;
 		}
 	};
 
@@ -104,7 +137,7 @@
 	}}
 />
 
-<Modal size="md" bind:show>
+<Modal size="lg" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 mb-1.5">
 			<div class=" text-lg font-medium self-center font-primary">
@@ -124,16 +157,7 @@
 					show = false;
 				}}
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="w-5 h-5"
-				>
-					<path
-						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-					/>
-				</svg>
+				<XMark className={'size-5'} />
 			</button>
 		</div>
 
@@ -212,20 +236,48 @@
 									<div class=" self-center mr-2">
 										<UserPlusSolid />
 									</div>
-									<div class=" self-center">{$i18n.t('Users')} ({userIds.length})</div>
+									<div class=" self-center">{$i18n.t('Users')}</div>
 								</button>
 							{/if}
 						</div>
 
-						<div
-							class="flex-1 mt-1 lg:mt-1 lg:h-[22rem] lg:max-h-[22rem] overflow-y-auto scrollbar-hidden"
-						>
-							{#if selectedTab == 'general'}
-								<Display bind:name bind:description />
-							{:else if selectedTab == 'permissions'}
-								<Permissions bind:permissions />
-							{:else if selectedTab == 'users'}
-								<Users bind:userIds {users} />
+						<div class="flex-1 mt-1 lg:mt-1 lg:h-[30rem] lg:max-h-[30rem] flex flex-col">
+							<div class="w-full h-full overflow-y-auto scrollbar-hidden">
+								{#if selectedTab == 'general'}
+									<General
+										bind:name
+										bind:description
+										bind:data
+										{edit}
+										onDelete={() => {
+											showDeleteConfirmDialog = true;
+										}}
+									/>
+								{:else if selectedTab == 'permissions'}
+									<Permissions bind:permissions {defaultPermissions} />
+								{:else if selectedTab == 'users'}
+									<Users bind:userCount groupId={group?.id} />
+								{/if}
+							</div>
+
+							{#if ['general', 'permissions'].includes(selectedTab)}
+								<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
+									<button
+										class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
+											? ' cursor-not-allowed'
+											: ''}"
+										type="submit"
+										disabled={loading}
+									>
+										{$i18n.t('Save')}
+
+										{#if loading}
+											<div class="ml-2 self-center">
+												<Spinner />
+											</div>
+										{/if}
+									</button>
+								</div>
 							{/if}
 						</div>
 					</div>
@@ -278,60 +330,6 @@
 							</button>
 						{/if}
 					</div> -->
-
-					<div class="flex justify-between pt-3 text-sm font-medium gap-1.5">
-						{#if edit}
-							<button
-								class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-900 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
-								type="button"
-								on:click={() => {
-									showDeleteConfirmDialog = true;
-								}}
-							>
-								{$i18n.t('Delete')}
-							</button>
-						{:else}
-							<div></div>
-						{/if}
-
-						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
-								? ' cursor-not-allowed'
-								: ''}"
-							type="submit"
-							disabled={loading}
-						>
-							{$i18n.t('Save')}
-
-							{#if loading}
-								<div class="ml-2 self-center">
-									<svg
-										class=" w-4 h-4"
-										viewBox="0 0 24 24"
-										fill="currentColor"
-										xmlns="http://www.w3.org/2000/svg"
-										><style>
-											.spinner_ajPY {
-												transform-origin: center;
-												animation: spinner_AtaB 0.75s infinite linear;
-											}
-											@keyframes spinner_AtaB {
-												100% {
-													transform: rotate(360deg);
-												}
-											}
-										</style><path
-											d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-											opacity=".25"
-										/><path
-											d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-											class="spinner_ajPY"
-										/></svg
-									>
-								</div>
-							{/if}
-						</button>
-					</div>
 				</form>
 			</div>
 		</div>

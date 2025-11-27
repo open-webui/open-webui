@@ -6,18 +6,17 @@ from open_webui.utils.misc import (
 )
 
 
-def convert_ollama_tool_call_to_openai(tool_calls: dict) -> dict:
+def convert_ollama_tool_call_to_openai(tool_calls: list) -> list:
     openai_tool_calls = []
     for tool_call in tool_calls:
+        function = tool_call.get("function", {})
         openai_tool_call = {
-            "index": tool_call.get("index", 0),
+            "index": tool_call.get("index", function.get("index", 0)),
             "id": tool_call.get("id", f"call_{str(uuid4())}"),
             "type": "function",
             "function": {
-                "name": tool_call.get("function", {}).get("name", ""),
-                "arguments": json.dumps(
-                    tool_call.get("function", {}).get("arguments", {})
-                ),
+                "name": function.get("name", ""),
+                "arguments": json.dumps(function.get("arguments", {})),
             },
         }
         openai_tool_calls.append(openai_tool_call)

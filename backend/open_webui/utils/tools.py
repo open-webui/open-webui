@@ -5,6 +5,7 @@ import inspect
 import aiohttp
 import asyncio
 import yaml
+import json
 
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
@@ -33,11 +34,13 @@ from langchain_core.utils.function_calling import (
 )
 
 
+from open_webui.utils.misc import is_string_allowed
 from open_webui.models.tools import Tools
 from open_webui.models.users import UserModel
 from open_webui.utils.plugin import load_tool_module_by_id
 from open_webui.env import (
     SRC_LOG_LEVELS,
+    AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA,
     AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
 )
@@ -55,19 +58,55 @@ def get_async_tool_function_and_apply_extra_params(
     extra_params = {k: v for k, v in extra_params.items() if k in sig.parameters}
     partial_func = partial(function, **extra_params)
 
+    # Remove the 'frozen' keyword arguments from the signature
+    # python-genai uses the signature to infer the tool properties for native function calling
+    parameters = []
+    for name, parameter in sig.parameters.items():
+        # Exclude keyword arguments that are frozen
+        if name in extra_params:
+            continue
+        # Keep remaining parameters
+        parameters.append(parameter)
+
+    new_sig = inspect.Signature(
+        parameters=parameters, return_annotation=sig.return_annotation
+    )
+
     if inspect.iscoroutinefunction(function):
-        update_wrapper(partial_func, function)
-        return partial_func
+        # wrap the functools.partial as python-genai has trouble with it
+        # https://github.com/googleapis/python-genai/issues/907
+        async def new_function(*args, **kwargs):
+            return await partial_func(*args, **kwargs)
+
     else:
-        # Make it a coroutine function
+        # Make it a coroutine function when it is not already
         async def new_function(*args, **kwargs):
             return partial_func(*args, **kwargs)
 
-        update_wrapper(new_function, function)
-        return new_function
+    update_wrapper(new_function, function)
+    new_function.__signature__ = new_sig
+
+    new_function.__function__ = function  # type: ignore
+    new_function.__extra_params__ = extra_params  # type: ignore
+
+    return new_function
 
 
-def get_tools(
+def get_updated_tool_function(function: Callable, extra_params: dict):
+    # Get the original function and merge updated params
+    __function__ = getattr(function, "__function__", None)
+    __extra_params__ = getattr(function, "__extra_params__", None)
+
+    if __function__ is not None and __extra_params__ is not None:
+        return get_async_tool_function_and_apply_extra_params(
+            __function__,
+            {**__extra_params__, **extra_params},
+        )
+
+    return function
+
+
+async def get_tools(
     request: Request, tool_ids: list[str], user: UserModel, extra_params: dict
 ) -> dict[str, dict]:
     tools_dict = {}
@@ -75,68 +114,134 @@ def get_tools(
     for tool_id in tool_ids:
         tool = Tools.get_tool_by_id(tool_id)
         if tool is None:
+
             if tool_id.startswith("server:"):
-                server_idx = int(tool_id.split(":")[1])
-                tool_server_connection = (
-                    request.app.state.config.TOOL_SERVER_CONNECTIONS[server_idx]
-                )
-                tool_server_data = None
-                for server in request.app.state.TOOL_SERVERS:
-                    if server["idx"] == server_idx:
-                        tool_server_data = server
-                        break
-                assert tool_server_data is not None
-                specs = tool_server_data.get("specs", [])
+                splits = tool_id.split(":")
 
-                for spec in specs:
-                    function_name = spec["name"]
+                if len(splits) == 2:
+                    type = "openapi"
+                    server_id = splits[1]
+                elif len(splits) == 3:
+                    type = splits[1]
+                    server_id = splits[2]
 
-                    auth_type = tool_server_connection.get("auth_type", "bearer")
-                    token = None
+                server_id_splits = server_id.split("|")
+                if len(server_id_splits) == 2:
+                    server_id = server_id_splits[0]
+                    function_names = server_id_splits[1].split(",")
 
-                    if auth_type == "bearer":
-                        token = tool_server_connection.get("key", "")
-                    elif auth_type == "session":
-                        token = request.state.token.credentials
+                if type == "openapi":
 
-                    def make_tool_function(function_name, token, tool_server_data):
-                        async def tool_function(**kwargs):
-                            print(
-                                f"Executing tool function {function_name} with params: {kwargs}"
-                            )
-                            return await execute_tool_server(
-                                token=token,
-                                url=tool_server_data["url"],
-                                name=function_name,
-                                params=kwargs,
-                                server_data=tool_server_data,
-                            )
+                    tool_server_data = None
+                    for server in await get_tool_servers(request):
+                        if server["id"] == server_id:
+                            tool_server_data = server
+                            break
 
-                        return tool_function
+                    if tool_server_data is None:
+                        log.warning(f"Tool server data not found for {server_id}")
+                        continue
 
-                    tool_function = make_tool_function(
-                        function_name, token, tool_server_data
+                    tool_server_idx = tool_server_data.get("idx", 0)
+                    tool_server_connection = (
+                        request.app.state.config.TOOL_SERVER_CONNECTIONS[
+                            tool_server_idx
+                        ]
                     )
 
-                    callable = get_async_tool_function_and_apply_extra_params(
-                        tool_function,
-                        {},
+                    specs = tool_server_data.get("specs", [])
+                    function_name_filter_list = (
+                        tool_server_connection.get("config", {})
+                        .get("function_name_filter_list", "")
+                        .split(",")
                     )
 
-                    tool_dict = {
-                        "tool_id": tool_id,
-                        "callable": callable,
-                        "spec": spec,
-                    }
+                    for spec in specs:
+                        function_name = spec["name"]
+                        if function_name_filter_list:
+                            if not is_string_allowed(
+                                function_name, function_name_filter_list
+                            ):
+                                # Skip this function
+                                continue
 
-                    # TODO: if collision, prepend toolkit name
-                    if function_name in tools_dict:
-                        log.warning(
-                            f"Tool {function_name} already exists in another tools!"
+                        auth_type = tool_server_connection.get("auth_type", "bearer")
+
+                        cookies = {}
+                        headers = {
+                            "Content-Type": "application/json",
+                        }
+
+                        if auth_type == "bearer":
+                            headers["Authorization"] = (
+                                f"Bearer {tool_server_connection.get('key', '')}"
+                            )
+                        elif auth_type == "none":
+                            # No authentication
+                            pass
+                        elif auth_type == "session":
+                            cookies = request.cookies
+                            headers["Authorization"] = (
+                                f"Bearer {request.state.token.credentials}"
+                            )
+                        elif auth_type == "system_oauth":
+                            cookies = request.cookies
+                            oauth_token = extra_params.get("__oauth_token__", None)
+                            if oauth_token:
+                                headers["Authorization"] = (
+                                    f"Bearer {oauth_token.get('access_token', '')}"
+                                )
+
+                        connection_headers = tool_server_connection.get("headers", None)
+                        if connection_headers and isinstance(connection_headers, dict):
+                            for key, value in connection_headers.items():
+                                headers[key] = value
+
+                        def make_tool_function(
+                            function_name, tool_server_data, headers
+                        ):
+                            async def tool_function(**kwargs):
+                                return await execute_tool_server(
+                                    url=tool_server_data["url"],
+                                    headers=headers,
+                                    cookies=cookies,
+                                    name=function_name,
+                                    params=kwargs,
+                                    server_data=tool_server_data,
+                                )
+
+                            return tool_function
+
+                        tool_function = make_tool_function(
+                            function_name, tool_server_data, headers
                         )
-                        log.warning(f"Discarding {tool_id}.{function_name}")
-                    else:
+
+                        callable = get_async_tool_function_and_apply_extra_params(
+                            tool_function,
+                            {},
+                        )
+
+                        tool_dict = {
+                            "tool_id": tool_id,
+                            "callable": callable,
+                            "spec": spec,
+                            # Misc info
+                            "type": "external",
+                        }
+
+                        # Handle function name collisions
+                        while function_name in tools_dict:
+                            log.warning(
+                                f"Tool {function_name} already exists in another tools!"
+                            )
+                            # Prepend server ID to function name
+                            function_name = f"{server_id}_{function_name}"
+
                         tools_dict[function_name] = tool_dict
+
+                else:
+                    continue
+
             else:
                 continue
         else:
@@ -145,14 +250,16 @@ def get_tools(
                 module, _ = load_tool_module_by_id(tool_id)
                 request.app.state.TOOLS[tool_id] = module
 
-            extra_params["__id__"] = tool_id
+            __user__ = {
+                **extra_params["__user__"],
+            }
 
             # Set valves for the tool
             if hasattr(module, "valves") and hasattr(module, "Valves"):
                 valves = Tools.get_tool_valves_by_id(tool_id) or {}
                 module.valves = module.Valves(**valves)
             if hasattr(module, "UserValves"):
-                extra_params["__user__"]["valves"] = module.UserValves(  # type: ignore
+                __user__["valves"] = module.UserValves(  # type: ignore
                     **Tools.get_user_valves_by_id_and_user_id(tool_id, user.id)
                 )
 
@@ -174,7 +281,12 @@ def get_tools(
                 function_name = spec["name"]
                 tool_function = getattr(module, function_name)
                 callable = get_async_tool_function_and_apply_extra_params(
-                    tool_function, extra_params
+                    tool_function,
+                    {
+                        **extra_params,
+                        "__id__": tool_id,
+                        "__user__": __user__,
+                    },
                 )
 
                 # TODO: Support Pydantic models as parameters
@@ -196,14 +308,15 @@ def get_tools(
                     },
                 }
 
-                # TODO: if collision, prepend toolkit name
-                if function_name in tools_dict:
+                # Handle function name collisions
+                while function_name in tools_dict:
                     log.warning(
                         f"Tool {function_name} already exists in another tools!"
                     )
-                    log.warning(f"Discarding {tool_id}.{function_name}")
-                else:
-                    tools_dict[function_name] = tool_dict
+                    # Prepend tool ID to function name
+                    function_name = f"{tool_id}_{function_name}"
+
+                tools_dict[function_name] = tool_dict
 
     return tools_dict
 
@@ -286,15 +399,15 @@ def convert_function_to_pydantic_model(func: Callable) -> type[BaseModel]:
 
     field_defs = {}
     for name, param in parameters.items():
-
         type_hint = type_hints.get(name, Any)
         default_value = param.default if param.default is not param.empty else ...
 
         param_description = function_param_descriptions.get(name, None)
 
         if param_description:
-            field_defs[name] = type_hint, Field(
-                default_value, description=param_description
+            field_defs[name] = (
+                type_hint,
+                Field(default_value, description=param_description),
             )
         else:
             field_defs[name] = type_hint, default_value
@@ -380,7 +493,6 @@ def convert_openapi_to_tool_payload(openapi_spec):
         for method, operation in methods.items():
             if operation.get("operationId"):
                 tool = {
-                    "type": "function",
                     "name": operation.get("operationId"),
                     "description": operation.get(
                         "description",
@@ -402,10 +514,16 @@ def convert_openapi_to_tool_payload(openapi_spec):
                         description += (
                             f". Possible values: {', '.join(param_schema.get('enum'))}"
                         )
-                    tool["parameters"]["properties"][param_name] = {
+                    param_property = {
                         "type": param_schema.get("type"),
                         "description": description,
                     }
+
+                    # Include items property for array types (required by OpenAI)
+                    if param_schema.get("type") == "array" and "items" in param_schema:
+                        param_property["items"] = param_schema["items"]
+
+                    tool["parameters"]["properties"][param_name] = param_property
                     if param.get("required"):
                         tool["parameters"]["required"].append(param_name)
 
@@ -440,31 +558,71 @@ def convert_openapi_to_tool_payload(openapi_spec):
     return tool_payload
 
 
-async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
-    headers = {
+async def set_tool_servers(request: Request):
+    request.app.state.TOOL_SERVERS = await get_tool_servers_data(
+        request.app.state.config.TOOL_SERVER_CONNECTIONS
+    )
+
+    if request.app.state.redis is not None:
+        await request.app.state.redis.set(
+            "tool_servers", json.dumps(request.app.state.TOOL_SERVERS)
+        )
+
+    return request.app.state.TOOL_SERVERS
+
+
+async def get_tool_servers(request: Request):
+    tool_servers = []
+    if request.app.state.redis is not None:
+        try:
+            tool_servers = json.loads(await request.app.state.redis.get("tool_servers"))
+            request.app.state.TOOL_SERVERS = tool_servers
+        except Exception as e:
+            log.error(f"Error fetching tool_servers from Redis: {e}")
+
+    if not tool_servers:
+        tool_servers = await set_tool_servers(request)
+
+    return tool_servers
+
+
+async def get_tool_server_data(url: str, headers: Optional[dict]) -> Dict[str, Any]:
+    _headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
     }
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
+
+    if headers:
+        _headers.update(headers)
 
     error = None
     try:
         timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA)
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             async with session.get(
-                url, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
+                url, headers=_headers, ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
             ) as response:
                 if response.status != 200:
                     error_body = await response.json()
                     raise Exception(error_body)
+
+                text_content = None
 
                 # Check if URL ends with .yaml or .yml to determine format
                 if url.lower().endswith((".yaml", ".yml")):
                     text_content = await response.text()
                     res = yaml.safe_load(text_content)
                 else:
-                    res = await response.json()
+                    text_content = await response.text()
+
+                try:
+                    res = json.loads(text_content)
+                except json.JSONDecodeError:
+                    try:
+                        res = yaml.safe_load(text_content)
+                    except Exception as e:
+                        raise e
+
     except Exception as err:
         log.exception(f"Could not fetch tool server spec from {url}")
         if isinstance(err, dict) and "detail" in err:
@@ -473,35 +631,20 @@ async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
             error = str(err)
         raise Exception(error)
 
-    data = {
-        "openapi": res,
-        "info": res.get("info", {}),
-        "specs": convert_openapi_to_tool_payload(res),
-    }
-
-    log.info(f"Fetched data: {data}")
-    return data
+    log.debug(f"Fetched data: {res}")
+    return res
 
 
-async def get_tool_servers_data(
-    servers: List[Dict[str, Any]], session_token: Optional[str] = None
-) -> List[Dict[str, Any]]:
+async def get_tool_servers_data(servers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     # Prepare list of enabled servers along with their original index
+
+    tasks = []
     server_entries = []
     for idx, server in enumerate(servers):
-        if server.get("config", {}).get("enable"):
-            # Path (to OpenAPI spec URL) can be either a full URL or a path to append to the base URL
-            openapi_path = server.get("path", "openapi.json")
-            if "://" in openapi_path:
-                # If it contains "://", it's a full URL
-                full_url = openapi_path
-            else:
-                if not openapi_path.startswith("/"):
-                    # Ensure the path starts with a slash
-                    openapi_path = f"/{openapi_path}"
-
-                full_url = f"{server.get('url')}{openapi_path}"
-
+        if (
+            server.get("config", {}).get("enable")
+            and server.get("type", "openapi") == "openapi"
+        ):
             info = server.get("info", {})
 
             auth_type = server.get("auth_type", "bearer")
@@ -509,28 +652,66 @@ async def get_tool_servers_data(
 
             if auth_type == "bearer":
                 token = server.get("key", "")
-            elif auth_type == "session":
-                token = session_token
-            server_entries.append((idx, server, full_url, info, token))
+            elif auth_type == "none":
+                # No authentication
+                pass
 
-    # Create async tasks to fetch data
-    tasks = [
-        get_tool_server_data(token, url) for (_, _, url, _, token) in server_entries
-    ]
+            id = info.get("id")
+            if not id:
+                id = str(idx)
+
+            server_url = server.get("url")
+            spec_type = server.get("spec_type", "url")
+
+            # Create async tasks to fetch data
+            task = None
+            if spec_type == "url":
+                # Path (to OpenAPI spec URL) can be either a full URL or a path to append to the base URL
+                openapi_path = server.get("path", "openapi.json")
+                spec_url = get_tool_server_url(server_url, openapi_path)
+                # Fetch from URL
+                task = get_tool_server_data(
+                    spec_url,
+                    {"Authorization": f"Bearer {token}"} if token else None,
+                )
+            elif spec_type == "json" and server.get("spec", ""):
+                # Use provided JSON spec
+                spec_json = None
+                try:
+                    spec_json = json.loads(server.get("spec", ""))
+                except Exception as e:
+                    log.error(f"Error parsing JSON spec for tool server {id}: {e}")
+
+                if spec_json:
+                    task = asyncio.sleep(
+                        0,
+                        result=spec_json,
+                    )
+
+            if task:
+                tasks.append(task)
+                server_entries.append((id, idx, server, server_url, info, token))
 
     # Execute tasks concurrently
     responses = await asyncio.gather(*tasks, return_exceptions=True)
 
     # Build final results with index and server metadata
     results = []
-    for (idx, server, url, info, _), response in zip(server_entries, responses):
+    for (id, idx, server, url, info, _), response in zip(server_entries, responses):
         if isinstance(response, Exception):
             log.error(f"Failed to connect to {url} OpenAPI tool server")
             continue
 
-        openapi_data = response.get("openapi", {})
+        response = {
+            "openapi": response,
+            "info": response.get("info", {}),
+            "specs": convert_openapi_to_tool_payload(response),
+        }
 
+        openapi_data = response.get("openapi", {})
         if info and isinstance(openapi_data, dict):
+            openapi_data["info"] = openapi_data.get("info", {})
+
             if "name" in info:
                 openapi_data["info"]["title"] = info.get("name", "Tool Server")
 
@@ -539,6 +720,7 @@ async def get_tool_servers_data(
 
         results.append(
             {
+                "id": str(id),
                 "idx": idx,
                 "url": server.get("url"),
                 "openapi": openapi_data,
@@ -551,8 +733,13 @@ async def get_tool_servers_data(
 
 
 async def execute_tool_server(
-    token: str, url: str, name: str, params: Dict[str, Any], server_data: Dict[str, Any]
-) -> Any:
+    url: str,
+    headers: Dict[str, str],
+    cookies: Dict[str, str],
+    name: str,
+    params: Dict[str, Any],
+    server_data: Dict[str, Any],
+) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
     error = None
     try:
         openapi = server_data.get("openapi", {})
@@ -607,42 +794,66 @@ async def execute_tool_server(
         if operation.get("requestBody", {}).get("content"):
             if params:
                 body_params = params
-            else:
-                raise Exception(
-                    f"Request body expected for operation '{name}' but none found."
-                )
 
-        headers = {"Content-Type": "application/json"}
-
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
-
-        async with aiohttp.ClientSession(trust_env=True) as session:
+        async with aiohttp.ClientSession(
+            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+        ) as session:
             request_method = getattr(session, http_method.lower())
 
-            if http_method in ["post", "put", "patch"]:
+            if http_method in ["post", "put", "patch", "delete"]:
                 async with request_method(
                     final_url,
                     json=body_params,
                     headers=headers,
+                    cookies=cookies,
                     ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
+                    allow_redirects=False,
                 ) as response:
                     if response.status >= 400:
                         text = await response.text()
                         raise Exception(f"HTTP error {response.status}: {text}")
-                    return await response.json()
+
+                    try:
+                        response_data = await response.json()
+                    except Exception:
+                        response_data = await response.text()
+
+                    response_headers = response.headers
+                    return (response_data, response_headers)
             else:
                 async with request_method(
                     final_url,
                     headers=headers,
+                    cookies=cookies,
                     ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
+                    allow_redirects=False,
                 ) as response:
                     if response.status >= 400:
                         text = await response.text()
                         raise Exception(f"HTTP error {response.status}: {text}")
-                    return await response.json()
+
+                    try:
+                        response_data = await response.json()
+                    except Exception:
+                        response_data = await response.text()
+
+                    response_headers = response.headers
+                    return (response_data, response_headers)
 
     except Exception as err:
         error = str(err)
         log.exception(f"API Request Error: {error}")
-        return {"error": error}
+        return ({"error": error}, None)
+
+
+def get_tool_server_url(url: Optional[str], path: str) -> str:
+    """
+    Build the full URL for a tool server, given a base url and a path.
+    """
+    if "://" in path:
+        # If it contains "://", it's a full URL
+        return path
+    if not path.startswith("/"):
+        # Ensure the path starts with a slash
+        path = f"/{path}"
+    return f"{url}{path}"

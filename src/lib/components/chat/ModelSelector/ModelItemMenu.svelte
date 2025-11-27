@@ -32,22 +32,28 @@
 	typeahead={false}
 >
 	<DropdownMenu.Trigger>
-		<Tooltip content={$i18n.t('More')} className=" group-hover/item:opacity-100  opacity-0">
+		<Tooltip
+			content={$i18n.t('More')}
+			className={($settings?.highContrastMode ?? false)
+				? ''
+				: 'group-hover/item:opacity-100 opacity-0'}
+		>
 			<slot />
 		</Tooltip>
 	</DropdownMenu.Trigger>
 
 	<DropdownMenu.Content
 		strategy="fixed"
-		class="w-full max-w-[180px] text-sm rounded-xl px-1 py-1.5 z-[9999999] bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+		class="w-full max-w-[180px] text-sm rounded-2xl p-1 z-[9999999] bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100  dark:border-gray-800"
 		sideOffset={-2}
 		side="bottom"
 		align="end"
 		transition={flyAndScale}
 	>
-		<button
+		<DropdownMenu.Item
 			type="button"
-			class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2"
+			aria-pressed={($settings?.pinnedModels ?? []).includes(model?.id)}
+			class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2"
 			on:click={(e) => {
 				e.stopPropagation();
 				e.preventDefault();
@@ -69,11 +75,11 @@
 					{$i18n.t('Keep in Sidebar')}
 				{/if}
 			</div>
-		</button>
+		</DropdownMenu.Item>
 
-		<button
+		<DropdownMenu.Item
 			type="button"
-			class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2"
+			class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2"
 			on:click={(e) => {
 				e.stopPropagation();
 				e.preventDefault();
@@ -85,6 +91,6 @@
 			<Link />
 
 			<div class="flex items-center">{$i18n.t('Copy Link')}</div>
-		</button>
+		</DropdownMenu.Item>
 	</DropdownMenu.Content>
 </DropdownMenu.Root>

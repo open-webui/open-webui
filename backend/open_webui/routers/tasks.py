@@ -33,6 +33,7 @@ from open_webui.config import (
     DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_EMOJI_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_MOA_GENERATION_PROMPT_TEMPLATE,
+    DEFAULT_VOICE_MODE_PROMPT_TEMPLATE,
 )
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -68,6 +69,7 @@ async def get_task_config(request: Request, user=Depends(get_verified_user)):
         "ENABLE_RETRIEVAL_QUERY_GENERATION": request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION,
         "QUERY_GENERATION_PROMPT_TEMPLATE": request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE,
         "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE": request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+        "VOICE_MODE_PROMPT_TEMPLATE": request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE,
     }
 
 
@@ -87,6 +89,7 @@ class TaskConfigForm(BaseModel):
     ENABLE_RETRIEVAL_QUERY_GENERATION: bool
     QUERY_GENERATION_PROMPT_TEMPLATE: str
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: str
+    VOICE_MODE_PROMPT_TEMPLATE: Optional[str]
 
 
 @router.post("/config/update")
@@ -136,6 +139,10 @@ async def update_task_config(
         form_data.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
     )
 
+    request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE = (
+        form_data.VOICE_MODE_PROMPT_TEMPLATE
+    )
+
     return {
         "TASK_MODEL": request.app.state.config.TASK_MODEL,
         "TASK_MODEL_EXTERNAL": request.app.state.config.TASK_MODEL_EXTERNAL,
@@ -152,6 +159,7 @@ async def update_task_config(
         "ENABLE_RETRIEVAL_QUERY_GENERATION": request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION,
         "QUERY_GENERATION_PROMPT_TEMPLATE": request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE,
         "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE": request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+        "VOICE_MODE_PROMPT_TEMPLATE": request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE,
     }
 
 
@@ -198,14 +206,7 @@ async def generate_title(
     else:
         template = DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE
 
-    content = title_generation_template(
-        template,
-        form_data["messages"],
-        {
-            "name": user.name,
-            "location": user.info.get("location") if user.info else None,
-        },
-    )
+    content = title_generation_template(template, form_data["messages"], user)
 
     max_tokens = (
         models[task_model_id].get("info", {}).get("params", {}).get("max_tokens", 1000)
@@ -289,14 +290,7 @@ async def generate_follow_ups(
     else:
         template = DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE
 
-    content = follow_up_generation_template(
-        template,
-        form_data["messages"],
-        {
-            "name": user.name,
-            "location": user.info.get("location") if user.info else None,
-        },
-    )
+    content = follow_up_generation_template(template, form_data["messages"], user)
 
     payload = {
         "model": task_model_id,
@@ -369,9 +363,7 @@ async def generate_chat_tags(
     else:
         template = DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE
 
-    content = tags_generation_template(
-        template, form_data["messages"], {"name": user.name}
-    )
+    content = tags_generation_template(template, form_data["messages"], user)
 
     payload = {
         "model": task_model_id,
@@ -437,13 +429,7 @@ async def generate_image_prompt(
     else:
         template = DEFAULT_IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE
 
-    content = image_prompt_generation_template(
-        template,
-        form_data["messages"],
-        user={
-            "name": user.name,
-        },
-    )
+    content = image_prompt_generation_template(template, form_data["messages"], user)
 
     payload = {
         "model": task_model_id,
@@ -492,6 +478,10 @@ async def generate_queries(
                 detail=f"Query generation is disabled",
             )
 
+    if getattr(request.state, "cached_queries", None):
+        log.info(f"Reusing cached queries: {request.state.cached_queries}")
+        return request.state.cached_queries
+
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
         models = {
             request.state.model["id"]: request.state.model,
@@ -524,9 +514,7 @@ async def generate_queries(
     else:
         template = DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE
 
-    content = query_generation_template(
-        template, form_data["messages"], {"name": user.name}
-    )
+    content = query_generation_template(template, form_data["messages"], user)
 
     payload = {
         "model": task_model_id,
@@ -611,9 +599,7 @@ async def generate_autocompletion(
     else:
         template = DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE
 
-    content = autocomplete_generation_template(
-        template, prompt, messages, type, {"name": user.name}
-    )
+    content = autocomplete_generation_template(template, prompt, messages, type, user)
 
     payload = {
         "model": task_model_id,
@@ -675,14 +661,7 @@ async def generate_emoji(
 
     template = DEFAULT_EMOJI_GENERATION_PROMPT_TEMPLATE
 
-    content = emoji_generation_template(
-        template,
-        form_data["prompt"],
-        {
-            "name": user.name,
-            "location": user.info.get("location") if user.info else None,
-        },
-    )
+    content = emoji_generation_template(template, form_data["prompt"], user)
 
     payload = {
         "model": task_model_id,
@@ -695,11 +674,11 @@ async def generate_emoji(
                 "max_completion_tokens": 4,
             }
         ),
-        "chat_id": form_data.get("chat_id", None),
         "metadata": {
             **(request.state.metadata if hasattr(request.state, "metadata") else {}),
             "task": str(TASKS.EMOJI_GENERATION),
             "task_body": form_data,
+            "chat_id": form_data.get("chat_id", None),
         },
     }
 

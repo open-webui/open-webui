@@ -1,9 +1,14 @@
 <script lang="ts">
-	export let className: string = 'size-5';
+	export let className: string = 'size-4';
 </script>
 
 <div class="flex justify-center text-center">
-	<svg class={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"
+	<svg
+		aria-hidden="true"
+		class={className}
+		viewBox="0 0 24 24"
+		fill="currentColor"
+		xmlns="http://www.w3.org/2000/svg"
 		><style>
 			.spinner_ajPY {
 				transform-origin: center;

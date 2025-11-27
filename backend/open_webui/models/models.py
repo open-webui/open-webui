@@ -5,12 +5,13 @@ from typing import Optional
 from open_webui.internal.db import Base, JSONField, get_db
 from open_webui.env import SRC_LOG_LEVELS
 
-from open_webui.models.users import Users, UserResponse
+from open_webui.models.groups import Groups
+from open_webui.models.users import User, UserModel, Users, UserResponse
 
 
 from pydantic import BaseModel, ConfigDict
 
-from sqlalchemy import or_, and_, func
+from sqlalchemy import String, cast, or_, and_, func
 from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
 
@@ -132,6 +133,11 @@ class ModelResponse(ModelModel):
     pass
 
 
+class ModelListResponse(BaseModel):
+    items: list[ModelUserResponse]
+    total: int
+
+
 class ModelForm(BaseModel):
     id: str
     base_model_id: Optional[str] = None
@@ -175,9 +181,16 @@ class ModelsTable:
 
     def get_models(self) -> list[ModelUserResponse]:
         with get_db() as db:
+            all_models = db.query(Model).filter(Model.base_model_id != None).all()
+
+            user_ids = list(set(model.user_id for model in all_models))
+
+            users = Users.get_users_by_user_ids(user_ids) if user_ids else []
+            users_dict = {user.id: user for user in users}
+
             models = []
-            for model in db.query(Model).filter(Model.base_model_id != None).all():
-                user = Users.get_user_by_id(model.user_id)
+            for model in all_models:
+                user = users_dict.get(model.user_id)
                 models.append(
                     ModelUserResponse.model_validate(
                         {
@@ -199,12 +212,96 @@ class ModelsTable:
         self, user_id: str, permission: str = "write"
     ) -> list[ModelUserResponse]:
         models = self.get_models()
+        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user_id)}
         return [
             model
             for model in models
             if model.user_id == user_id
-            or has_access(user_id, permission, model.access_control)
+            or has_access(user_id, permission, model.access_control, user_group_ids)
         ]
+
+    def search_models(
+        self, user_id: str, filter: dict = {}, skip: int = 0, limit: int = 30
+    ) -> ModelListResponse:
+        with get_db() as db:
+            # Join GroupMember so we can order by group_id when requested
+            query = db.query(Model, User).outerjoin(User, User.id == Model.user_id)
+            query = query.filter(Model.base_model_id != None)
+
+            if filter:
+                query_key = filter.get("query")
+                if query_key:
+                    query = query.filter(
+                        or_(
+                            Model.name.ilike(f"%{query_key}%"),
+                            Model.base_model_id.ilike(f"%{query_key}%"),
+                        )
+                    )
+
+                if filter.get("user_id"):
+                    query = query.filter(Model.user_id == filter.get("user_id"))
+
+                view_option = filter.get("view_option")
+
+                if view_option == "created":
+                    query = query.filter(Model.user_id == user_id)
+                elif view_option == "shared":
+                    query = query.filter(Model.user_id != user_id)
+
+                tag = filter.get("tag")
+                if tag:
+                    # TODO: This is a simple implementation and should be improved for performance
+                    like_pattern = f'%"{tag.lower()}"%'  # `"tag"` inside JSON array
+                    meta_text = func.lower(cast(Model.meta, String))
+
+                    query = query.filter(meta_text.like(like_pattern))
+
+                order_by = filter.get("order_by")
+                direction = filter.get("direction")
+
+                if order_by == "name":
+                    if direction == "asc":
+                        query = query.order_by(Model.name.asc())
+                    else:
+                        query = query.order_by(Model.name.desc())
+                elif order_by == "created_at":
+                    if direction == "asc":
+                        query = query.order_by(Model.created_at.asc())
+                    else:
+                        query = query.order_by(Model.created_at.desc())
+                elif order_by == "updated_at":
+                    if direction == "asc":
+                        query = query.order_by(Model.updated_at.asc())
+                    else:
+                        query = query.order_by(Model.updated_at.desc())
+
+            else:
+                query = query.order_by(Model.created_at.desc())
+
+            # Count BEFORE pagination
+            total = query.count()
+
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
+
+            items = query.all()
+
+            models = []
+            for model, user in items:
+                models.append(
+                    ModelUserResponse(
+                        **ModelModel.model_validate(model).model_dump(),
+                        user=(
+                            UserResponse(**UserModel.model_validate(user).model_dump())
+                            if user
+                            else None
+                        ),
+                    )
+                )
+
+            return ModelListResponse(items=models, total=total)
 
     def get_model_by_id(self, id: str) -> Optional[ModelModel]:
         try:
@@ -235,11 +332,9 @@ class ModelsTable:
         try:
             with get_db() as db:
                 # update only the fields that are present in the model
-                result = (
-                    db.query(Model)
-                    .filter_by(id=id)
-                    .update(model.model_dump(exclude={"id"}))
-                )
+                data = model.model_dump(exclude={"id"})
+                result = db.query(Model).filter_by(id=id).update(data)
+
                 db.commit()
 
                 model = db.get(Model, id)
@@ -268,6 +363,50 @@ class ModelsTable:
                 return True
         except Exception:
             return False
+
+    def sync_models(self, user_id: str, models: list[ModelModel]) -> list[ModelModel]:
+        try:
+            with get_db() as db:
+                # Get existing models
+                existing_models = db.query(Model).all()
+                existing_ids = {model.id for model in existing_models}
+
+                # Prepare a set of new model IDs
+                new_model_ids = {model.id for model in models}
+
+                # Update or insert models
+                for model in models:
+                    if model.id in existing_ids:
+                        db.query(Model).filter_by(id=model.id).update(
+                            {
+                                **model.model_dump(),
+                                "user_id": user_id,
+                                "updated_at": int(time.time()),
+                            }
+                        )
+                    else:
+                        new_model = Model(
+                            **{
+                                **model.model_dump(),
+                                "user_id": user_id,
+                                "updated_at": int(time.time()),
+                            }
+                        )
+                        db.add(new_model)
+
+                # Remove models that are no longer present
+                for model in existing_models:
+                    if model.id not in new_model_ids:
+                        db.delete(model)
+
+                db.commit()
+
+                return [
+                    ModelModel.model_validate(model) for model in db.query(Model).all()
+                ]
+        except Exception as e:
+            log.exception(f"Error syncing models for user {user_id}: {e}")
+            return []
 
 
 Models = ModelsTable()

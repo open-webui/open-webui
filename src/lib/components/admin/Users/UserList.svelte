@@ -1,5 +1,5 @@
 <script>
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, showSidebar } from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { onMount, getContext } from 'svelte';
@@ -112,19 +112,17 @@
 	}}
 />
 
-{#key selectedUser}
-	<EditUserModal
-		bind:show={showEditUserModal}
-		{selectedUser}
-		sessionUser={$user}
-		on:save={async () => {
-			getUserList();
-		}}
-	/>
-{/key}
-
 <AddUserModal
 	bind:show={showAddUserModal}
+	on:save={async () => {
+		getUserList();
+	}}
+/>
+
+<EditUserModal
+	bind:show={showEditUserModal}
+	{selectedUser}
+	sessionUser={$user}
 	on:save={async () => {
 		getUserList();
 	}}
@@ -142,8 +140,7 @@
 				type: 'error',
 				title: 'License Error',
 				content:
-					'Exceeded the number of seats in your license. Please contact support to increase the number of seats.',
-				dismissable: true
+					'Exceeded the number of seats in your license. Please contact support to increase the number of seats.'
 			}}
 		/>
 	</div>
@@ -151,31 +148,34 @@
 
 {#if users === null || total === null}
 	<div class="my-10">
-		<Spinner />
+		<Spinner className="size-5" />
 	</div>
 {:else}
-	<div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
-		<div class="flex md:self-center text-lg font-medium px-0.5">
+	<div
+		class="pt-0.5 pb-1 gap-1 flex flex-col md:flex-row justify-between sticky top-0 z-10 bg-white dark:bg-gray-900"
+	>
+		<div class="flex md:self-center text-lg font-medium px-0.5 gap-2">
 			<div class="flex-shrink-0">
 				{$i18n.t('Users')}
 			</div>
-			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
 
-			{#if ($config?.license_metadata?.seats ?? null) !== null}
-				{#if total > $config?.license_metadata?.seats}
-					<span class="text-lg font-medium text-red-500"
-						>{total} of {$config?.license_metadata?.seats}
-						<span class="text-sm font-normal">available users</span></span
-					>
+			<div>
+				{#if ($config?.license_metadata?.seats ?? null) !== null}
+					{#if total > $config?.license_metadata?.seats}
+						<span class="text-lg font-medium text-red-500"
+							>{total} of {$config?.license_metadata?.seats}
+							<span class="text-sm font-normal">{$i18n.t('available users')}</span></span
+						>
+					{:else}
+						<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
+							>{total} of {$config?.license_metadata?.seats}
+							<span class="text-sm font-normal">{$i18n.t('available users')}</span></span
+						>
+					{/if}
 				{:else}
-					<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
-						>{total} of {$config?.license_metadata?.seats}
-						<span class="text-sm font-normal">available users</span></span
-					>
+					<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{total}</span>
 				{/if}
-			{:else}
-				<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{total}</span>
-			{/if}
+			</div>
 		</div>
 
 		<div class="flex gap-1">
@@ -218,19 +218,13 @@
 		</div>
 	</div>
 
-	<div
-		class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded-sm pt-0.5"
-	>
-		<table
-			class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full rounded-sm"
-		>
-			<thead
-				class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5"
-			>
-				<tr class="">
+	<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
+		<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full">
+			<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
+				<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850">
 					<th
 						scope="col"
-						class="px-3 py-1.5 cursor-pointer select-none"
+						class="px-2.5 py-2 cursor-pointer select-none"
 						on:click={() => setSortKey('role')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -253,7 +247,7 @@
 					</th>
 					<th
 						scope="col"
-						class="px-3 py-1.5 cursor-pointer select-none"
+						class="px-2.5 py-2 cursor-pointer select-none"
 						on:click={() => setSortKey('name')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -276,7 +270,7 @@
 					</th>
 					<th
 						scope="col"
-						class="px-3 py-1.5 cursor-pointer select-none"
+						class="px-2.5 py-2 cursor-pointer select-none"
 						on:click={() => setSortKey('email')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -300,7 +294,7 @@
 
 					<th
 						scope="col"
-						class="px-3 py-1.5 cursor-pointer select-none"
+						class="px-2.5 py-2 cursor-pointer select-none"
 						on:click={() => setSortKey('last_active_at')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -323,7 +317,7 @@
 					</th>
 					<th
 						scope="col"
-						class="px-3 py-1.5 cursor-pointer select-none"
+						class="px-2.5 py-2 cursor-pointer select-none"
 						on:click={() => setSortKey('created_at')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -344,31 +338,7 @@
 						</div>
 					</th>
 
-					<th
-						scope="col"
-						class="px-3 py-1.5 cursor-pointer select-none"
-						on:click={() => setSortKey('oauth_sub')}
-					>
-						<div class="flex gap-1.5 items-center">
-							{$i18n.t('OAuth ID')}
-
-							{#if orderBy === 'oauth_sub'}
-								<span class="font-normal"
-									>{#if direction === 'asc'}
-										<ChevronUp className="size-2" />
-									{:else}
-										<ChevronDown className="size-2" />
-									{/if}
-								</span>
-							{:else}
-								<span class="invisible">
-									<ChevronUp className="size-2" />
-								</span>
-							{/if}
-						</div>
-					</th>
-
-					<th scope="col" class="px-3 py-2 text-right" />
+					<th scope="col" class="px-2.5 py-2 text-right" />
 				</tr>
 			</thead>
 			<tbody class="">
@@ -388,19 +358,15 @@
 								/>
 							</button>
 						</td>
-						<td class="px-3 py-1 font-medium text-gray-900 dark:text-white w-max">
-							<div class="flex flex-row w-max">
+						<td class="px-3 py-1 font-medium text-gray-900 dark:text-white max-w-48">
+							<div class="flex items-center">
 								<img
-									class=" rounded-full w-6 h-6 object-cover mr-2.5"
-									src={user.profile_image_url.startsWith(WEBUI_BASE_URL) ||
-									user.profile_image_url.startsWith('https://www.gravatar.com/avatar/') ||
-									user.profile_image_url.startsWith('data:')
-										? user.profile_image_url
-										: `/user.png`}
+									class="rounded-full w-6 h-6 object-cover mr-2.5 flex-shrink-0"
+									src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
 									alt="user"
 								/>
 
-								<div class=" font-medium self-center">{user.name}</div>
+								<div class="font-medium truncate">{user.name}</div>
 							</div>
 						</td>
 						<td class=" px-3 py-1"> {user.email} </td>
@@ -412,8 +378,6 @@
 						<td class=" px-3 py-1">
 							{dayjs(user.created_at * 1000).format('LL')}
 						</td>
-
-						<td class=" px-3 py-1"> {user.oauth_sub ?? ''} </td>
 
 						<td class="px-3 py-1 text-right">
 							<div class="flex justify-end w-full">
@@ -494,7 +458,9 @@
 		ⓘ {$i18n.t("Click on the user role button to change a user's role.")}
 	</div>
 
-	<Pagination bind:page count={total} perPage={30} />
+	{#if total > 30}
+		<Pagination bind:page count={total} perPage={30} />
+	{/if}
 {/if}
 
 {#if !$config?.license_metadata}
@@ -505,11 +471,11 @@
 > [!NOTE]
 > # **Hey there! 👋**
 >
-> It looks like you have over 50 users — that usually falls under organizational usage.
+> It looks like you have over 50 users, that usually falls under organizational usage.
 > 
-> Open WebUI is proudly open source and completely free, with no hidden limits — and we'd love to keep it that way. 🌱  
+> Open WebUI is completely free to use as-is, with no restrictions or hidden limits, and we'd love to keep it that way. 🌱  
 >
-> By supporting the project through sponsorship or an enterprise license, you’re not only helping us stay independent, you’re also helping us ship new features faster, improve stability, and grow the project for the long haul. With an *enterprise license*, you also get additional perks like dedicated support, customization options, and more — all at a fraction of what it would cost to build and maintain internally.  
+> By supporting the project through sponsorship or an enterprise license, you’re not only helping us stay independent, you’re also helping us ship new features faster, improve stability, and grow the project for the long haul. With an *enterprise license*, you also get additional perks like dedicated support, customization options, and more, all at a fraction of what it would cost to build and maintain internally.  
 > 
 > Your support helps us stay independent and continue building great tools for everyone. 💛
 > 

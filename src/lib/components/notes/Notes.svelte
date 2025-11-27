@@ -1,10 +1,11 @@
 <script lang="ts">
+	import { marked } from 'marked';
+
 	import { toast } from 'svelte-sonner';
 	import fileSaver from 'file-saver';
-	const { saveAs } = fileSaver;
+	import Fuse from 'fuse.js';
 
-	import jsPDF from 'jspdf';
-	import html2canvas from 'html2canvas-pro';
+	const { saveAs } = fileSaver;
 
 	import dayjs from '$lib/dayjs';
 	import duration from 'dayjs/plugin/duration';
@@ -27,12 +28,15 @@
 	// Assuming $i18n.languages is an array of language codes
 	$: loadLocale($i18n.languages);
 
+	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { onMount, getContext, onDestroy } from 'svelte';
 	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
 
 	import { createNewNote, deleteNoteById, getNotes } from '$lib/apis/notes';
-	import { capitalizeFirstLetter } from '$lib/utils';
+	import { capitalizeFirstLetter, copyToClipboard, getTimeRange } from '$lib/utils';
+
+	import { downloadPdf, createNoteHandler } from './utils';
 
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -43,7 +47,7 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import NoteMenu from './Notes/NoteMenu.svelte';
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
-	import { marked } from 'marked';
+	import XMark from '../icons/XMark.svelte';
 
 	const i18n = getContext('i18n');
 	let loaded = false;
@@ -51,109 +55,65 @@
 	let importFiles = '';
 	let query = '';
 
-	let notes = [];
+	let noteItems = [];
+	let fuse = null;
+
 	let selectedNote = null;
+	let notes = {};
+	$: if (fuse) {
+		notes = groupNotes(
+			query
+				? fuse.search(query).map((e) => {
+						return e.item;
+					})
+				: noteItems
+		);
+	}
 
 	let showDeleteConfirm = false;
 
-	const init = async () => {
-		notes = await getNotes(localStorage.token);
+	const groupNotes = (res) => {
+		console.log(res);
+		if (!Array.isArray(res)) {
+			return {}; // or throw new Error("Notes response is not an array")
+		}
+
+		// Build the grouped object
+		const grouped: Record<string, any[]> = {};
+		for (const note of res) {
+			const timeRange = getTimeRange(note.updated_at / 1000000000);
+			if (!grouped[timeRange]) {
+				grouped[timeRange] = [];
+			}
+			grouped[timeRange].push({
+				...note,
+				timeRange
+			});
+		}
+		return grouped;
 	};
 
-	const createNoteHandler = async () => {
-		const res = await createNewNote(localStorage.token, {
-			title: $i18n.t('New Note'),
-			data: {
-				content: {
-					json: null,
-					html: '',
-					md: ''
-				}
-			},
-			meta: null,
-			access_control: null
-		}).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
+	const init = async () => {
+		noteItems = await getNotes(localStorage.token, true);
 
-		if (res) {
-			goto(`/notes/${res.id}`);
-		}
+		fuse = new Fuse(noteItems, {
+			keys: ['title']
+		});
 	};
 
 	const downloadHandler = async (type) => {
-		console.log('downloadHandler', type);
-		console.log('selectedNote', selectedNote);
-		if (type === 'md') {
+		if (type === 'txt') {
+			const blob = new Blob([selectedNote.data.content.md], { type: 'text/plain' });
+			saveAs(blob, `${selectedNote.title}.txt`);
+		} else if (type === 'md') {
 			const blob = new Blob([selectedNote.data.content.md], { type: 'text/markdown' });
 			saveAs(blob, `${selectedNote.title}.md`);
 		} else if (type === 'pdf') {
-			await downloadPdf(selectedNote);
-		}
-	};
-
-	const downloadPdf = async (note) => {
-		try {
-			// Define a fixed virtual screen size
-			const virtualWidth = 1024; // Fixed width (adjust as needed)
-			const virtualHeight = 1400; // Fixed height (adjust as needed)
-
-			// STEP 1. Get a DOM node to render
-			const html = note.data?.content?.html ?? '';
-			let node;
-			if (html instanceof HTMLElement) {
-				node = html;
-			} else {
-				// If it's HTML string, render to a temporary hidden element
-				node = document.createElement('div');
-				node.innerHTML = html;
-				document.body.appendChild(node);
+			try {
+				await downloadPdf(selectedNote);
+			} catch (error) {
+				toast.error(`${error}`);
 			}
-
-			// Render to canvas with predefined width
-			const canvas = await html2canvas(node, {
-				useCORS: true,
-				scale: 2, // Keep at 1x to avoid unexpected enlargements
-				width: virtualWidth, // Set fixed virtual screen width
-				windowWidth: virtualWidth, // Ensure consistent rendering
-				windowHeight: virtualHeight
-			});
-
-			// Remove hidden node if needed
-			if (!(html instanceof HTMLElement)) {
-				document.body.removeChild(node);
-			}
-
-			const imgData = canvas.toDataURL('image/png');
-
-			// A4 page settings
-			const pdf = new jsPDF('p', 'mm', 'a4');
-			const imgWidth = 210; // A4 width in mm
-			const pageHeight = 297; // A4 height in mm
-
-			// Maintain aspect ratio
-			const imgHeight = (canvas.height * imgWidth) / canvas.width;
-			let heightLeft = imgHeight;
-			let position = 0;
-
-			pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-			heightLeft -= pageHeight;
-
-			// Handle additional pages
-			while (heightLeft > 0) {
-				position -= pageHeight;
-				pdf.addPage();
-
-				pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-				heightLeft -= pageHeight;
-			}
-
-			pdf.save(`${note.title}.pdf`);
-		} catch (error) {
-			console.error('Error generating PDF', error);
-
-			toast.error(`${error}`);
 		}
 	};
 
@@ -198,7 +158,7 @@
 						}
 					},
 					meta: null,
-					access_control: null
+					access_control: {}
 				}).catch((error) => {
 					toast.error(`${error}`);
 					return null;
@@ -286,10 +246,38 @@
 				showDeleteConfirm = false;
 			}}
 		>
-			<div class=" text-sm text-gray-500">
+			<div class=" text-sm text-gray-500 truncate">
 				{$i18n.t('This will delete')} <span class="  font-semibold">{selectedNote.title}</span>.
 			</div>
 		</DeleteConfirmDialog>
+
+		<div class="flex flex-col gap-1 px-3.5">
+			<div class=" flex flex-1 items-center w-full space-x-2">
+				<div class="flex flex-1 items-center">
+					<div class=" self-center ml-1 mr-3">
+						<Search className="size-3.5" />
+					</div>
+					<input
+						class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
+						bind:value={query}
+						placeholder={$i18n.t('Search Notes')}
+					/>
+
+					{#if query}
+						<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
+							<button
+								class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								on:click={() => {
+									query = '';
+								}}
+							>
+								<XMark className="size-3" strokeWidth="2" />
+							</button>
+						</div>
+					{/if}
+				</div>
+			</div>
+		</div>
 
 		<div class="px-4.5 @container h-full pt-2">
 			{#if Object.keys(notes).length > 0}
@@ -300,11 +288,11 @@
 						</div>
 
 						<div
-							class="mb-5 gap-2.5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+							class="mb-5 gap-2.5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
 						>
 							{#each notes[timeRange] as note, idx (note.id)}
 								<div
-									class=" flex space-x-4 cursor-pointer w-full px-4.5 py-4 bg-gray-50 dark:bg-gray-850 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
+									class=" flex space-x-4 cursor-pointer w-full px-4.5 py-4 border border-gray-50 dark:border-gray-850 bg-transparent dark:hover:bg-gray-850 hover:bg-white rounded-2xl transition"
 								>
 									<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
 										<a
@@ -322,6 +310,16 @@
 
 																downloadHandler(type);
 															}}
+															onCopyLink={async () => {
+																const baseUrl = window.location.origin;
+																const res = await copyToClipboard(`${baseUrl}/notes/${note.id}`);
+
+																if (res) {
+																	toast.success($i18n.t('Copied link to clipboard'));
+																} else {
+																	toast.error($i18n.t('Failed to copy link'));
+																}
+															}}
 															onDelete={() => {
 																selectedNote = note;
 																showDeleteConfirm = true;
@@ -338,7 +336,7 @@
 												</div>
 
 												<div
-													class=" text-xs text-gray-500 dark:text-gray-500 mb-3 line-clamp-5 min-h-18"
+													class=" text-xs text-gray-500 dark:text-gray-500 mb-3 line-clamp-3 min-h-10"
 												>
 													{#if note.data?.content?.md}
 														{note.data?.content?.md}
@@ -395,7 +393,11 @@
 						class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-white dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
 						type="button"
 						on:click={async () => {
-							createNoteHandler();
+							const res = await createNoteHandler(dayjs().format('YYYY-MM-DD'));
+
+							if (res) {
+								goto(`/notes/${res.id}`);
+							}
 						}}
 					>
 						<Plus className="size-4.5" strokeWidth="2.5" />
@@ -462,7 +464,7 @@
 	{/if} -->
 	{:else}
 		<div class="w-full h-full flex justify-center items-center">
-			<Spinner />
+			<Spinner className="size-5" />
 		</div>
 	{/if}
 </div>

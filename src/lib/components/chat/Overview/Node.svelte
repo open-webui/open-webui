@@ -1,10 +1,13 @@
 <script lang="ts">
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { Handle, Position, type NodeProps } from '@xyflow/svelte';
+	import { getContext } from 'svelte';
 
 	import ProfileImage from '../Messages/ProfileImage.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Heart from '$lib/components/icons/Heart.svelte';
+
+	const i18n = getContext('i18n');
 
 	type $$Props = NodeProps;
 	export let data: $$Props['data'];
@@ -21,7 +24,7 @@
 		{#if data.message.role === 'user'}
 			<div class="flex w-full">
 				<ProfileImage
-					src={data.user?.profile_image_url ?? '/user.png'}
+					src={`${WEBUI_API_BASE_URL}/users/${data.user.id}/profile/image`}
 					className={'size-5 -translate-y-[1px]'}
 				/>
 				<div class="ml-2">
@@ -41,7 +44,7 @@
 		{:else}
 			<div class="flex w-full">
 				<ProfileImage
-					src={data?.model?.info?.meta?.profile_image_url ?? ''}
+					src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${data.model.id}&lang=${$i18n.language}`}
 					className={'size-5 -translate-y-[1px]'}
 				/>
 

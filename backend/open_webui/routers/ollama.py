@@ -16,8 +16,8 @@ from urllib.parse import urlparse
 import aiohttp
 from aiocache import cached
 import requests
-from urllib.parse import quote
 
+from open_webui.utils.headers import include_user_info_headers
 from open_webui.models.chats import Chats
 from open_webui.models.users import UserModel
 
@@ -47,7 +47,7 @@ from open_webui.utils.misc import (
 from open_webui.utils.payload import (
     apply_model_params_to_body_ollama,
     apply_model_params_to_body_openai,
-    apply_model_system_prompt_to_body,
+    apply_system_prompt_to_body,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access
@@ -59,6 +59,7 @@ from open_webui.config import (
 from open_webui.env import (
     ENV,
     SRC_LOG_LEVELS,
+    MODELS_CACHE_TTL,
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
@@ -81,22 +82,17 @@ async def send_get_request(url, key=None, user: UserModel = None):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
     try:
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+            headers = {
+                "Content-Type": "application/json",
+                **({"Authorization": f"Bearer {key}"} if key else {}),
+            }
+
+            if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+                headers = include_user_info_headers(headers, user)
+
             async with session.get(
                 url,
-                headers={
-                    "Content-Type": "application/json",
-                    **({"Authorization": f"Bearer {key}"} if key else {}),
-                    **(
-                        {
-                            "X-OpenWebUI-User-Name": quote(user.name),
-                            "X-OpenWebUI-User-Id": quote(user.id),
-                            "X-OpenWebUI-User-Email": quote(user.email),
-                            "X-OpenWebUI-User-Role": quote(user.role),
-                        }
-                        if ENABLE_FORWARD_USER_INFO_HEADERS and user
-                        else {}
-                    ),
-                },
+                headers=headers,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as response:
                 return await response.json()
@@ -123,6 +119,7 @@ async def send_post_request(
     key: Optional[str] = None,
     content_type: Optional[str] = None,
     user: UserModel = None,
+    metadata: Optional[dict] = None,
 ):
 
     r = None
@@ -131,23 +128,20 @@ async def send_post_request(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
         )
 
+        headers = {
+            "Content-Type": "application/json",
+            **({"Authorization": f"Bearer {key}"} if key else {}),
+        }
+
+        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+            headers = include_user_info_headers(headers, user)
+            if metadata and metadata.get("chat_id"):
+                headers["X-OpenWebUI-Chat-Id"] = metadata.get("chat_id")
+
         r = await session.post(
             url,
             data=payload,
-            headers={
-                "Content-Type": "application/json",
-                **({"Authorization": f"Bearer {key}"} if key else {}),
-                **(
-                    {
-                        "X-OpenWebUI-User-Name": quote(user.name),
-                        "X-OpenWebUI-User-Id": quote(user.id),
-                        "X-OpenWebUI-User-Email": quote(user.email),
-                        "X-OpenWebUI-User-Role": quote(user.role),
-                    }
-                    if ENABLE_FORWARD_USER_INFO_HEADERS and user
-                    else {}
-                ),
-            },
+            headers=headers,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
         )
 
@@ -183,7 +177,6 @@ async def send_post_request(
             )
         else:
             res = await r.json()
-            await cleanup_response(r, session)
             return res
 
     except HTTPException as e:
@@ -195,6 +188,9 @@ async def send_post_request(
             status_code=r.status if r else 500,
             detail=detail if e else "Open WebUI: Server Connection Error",
         )
+    finally:
+        if not stream:
+            await cleanup_response(r, session)
 
 
 def get_api_key(idx, url, configs):
@@ -237,21 +233,16 @@ async def verify_connection(
         timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
     ) as session:
         try:
+            headers = {
+                **({"Authorization": f"Bearer {key}"} if key else {}),
+            }
+
+            if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+                headers = include_user_info_headers(headers, user)
+
             async with session.get(
                 f"{url}/api/version",
-                headers={
-                    **({"Authorization": f"Bearer {key}"} if key else {}),
-                    **(
-                        {
-                            "X-OpenWebUI-User-Name": quote(user.name),
-                            "X-OpenWebUI-User-Id": quote(user.id),
-                            "X-OpenWebUI-User-Email": quote(user.email),
-                            "X-OpenWebUI-User-Role": quote(user.role),
-                        }
-                        if ENABLE_FORWARD_USER_INFO_HEADERS and user
-                        else {}
-                    ),
-                },
+                headers=headers,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
                 if r.status != 200:
@@ -320,17 +311,21 @@ def merge_ollama_models_lists(model_lists):
     for idx, model_list in enumerate(model_lists):
         if model_list is not None:
             for model in model_list:
-                id = model["model"]
-                if id not in merged_models:
-                    model["urls"] = [idx]
-                    merged_models[id] = model
-                else:
-                    merged_models[id]["urls"].append(idx)
+                id = model.get("model")
+                if id is not None:
+                    if id not in merged_models:
+                        model["urls"] = [idx]
+                        merged_models[id] = model
+                    else:
+                        merged_models[id]["urls"].append(idx)
 
     return list(merged_models.values())
 
 
-@cached(ttl=1)
+@cached(
+    ttl=MODELS_CACHE_TTL,
+    key=lambda _, user: f"ollama_all_models_{user.id}" if user else "ollama_all_models",
+)
 async def get_all_models(request: Request, user: UserModel = None):
     log.info("get_all_models()")
     if request.app.state.config.ENABLE_OLLAMA_API:
@@ -406,15 +401,15 @@ async def get_all_models(request: Request, user: UserModel = None):
         try:
             loaded_models = await get_ollama_loaded_models(request, user=user)
             expires_map = {
-                m["name"]: m["expires_at"]
+                m["model"]: m["expires_at"]
                 for m in loaded_models["models"]
                 if "expires_at" in m
             }
 
             for m in models["models"]:
-                if m["name"] in expires_map:
+                if m["model"] in expires_map:
                     # Parse ISO8601 datetime with offset, get unix timestamp as int
-                    dt = datetime.fromisoformat(expires_map[m["name"]])
+                    dt = datetime.fromisoformat(expires_map[m["model"]])
                     m["expires_at"] = int(dt.timestamp())
         except Exception as e:
             log.debug(f"Failed to get loaded models: {e}")
@@ -456,22 +451,17 @@ async def get_ollama_tags(
 
         r = None
         try:
+            headers = {
+                **({"Authorization": f"Bearer {key}"} if key else {}),
+            }
+
+            if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+                headers = include_user_info_headers(headers, user)
+
             r = requests.request(
                 method="GET",
                 url=f"{url}/api/tags",
-                headers={
-                    **({"Authorization": f"Bearer {key}"} if key else {}),
-                    **(
-                        {
-                            "X-OpenWebUI-User-Name": quote(user.name),
-                            "X-OpenWebUI-User-Id": quote(user.id),
-                            "X-OpenWebUI-User-Email": quote(user.email),
-                            "X-OpenWebUI-User-Role": quote(user.role),
-                        }
-                        if ENABLE_FORWARD_USER_INFO_HEADERS and user
-                        else {}
-                    ),
-                },
+                headers=headers,
             )
             r.raise_for_status()
 
@@ -635,7 +625,10 @@ async def get_ollama_versions(request: Request, url_idx: Optional[int] = None):
 
 
 class ModelNameForm(BaseModel):
-    name: str
+    model: Optional[str] = None
+    model_config = ConfigDict(
+        extra="allow",
+    )
 
 
 @router.post("/api/unload")
@@ -644,10 +637,12 @@ async def unload_model(
     form_data: ModelNameForm,
     user=Depends(get_admin_user),
 ):
-    model_name = form_data.name
+    form_data = form_data.model_dump(exclude_none=True)
+    model_name = form_data.get("model", form_data.get("name"))
+
     if not model_name:
         raise HTTPException(
-            status_code=400, detail="Missing 'name' of model to unload."
+            status_code=400, detail="Missing name of the model to unload."
         )
 
     # Refresh/load models if needed, get mapping from name to URLs
@@ -710,11 +705,14 @@ async def pull_model(
     url_idx: int = 0,
     user=Depends(get_admin_user),
 ):
+    form_data = form_data.model_dump(exclude_none=True)
+    form_data["model"] = form_data.get("model", form_data.get("name"))
+
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
 
     # Admin should be able to pull models from any source
-    payload = {**form_data.model_dump(exclude_none=True), "insecure": True}
+    payload = {**form_data, "insecure": True}
 
     return await send_post_request(
         url=f"{url}/api/pull",
@@ -725,7 +723,7 @@ async def pull_model(
 
 
 class PushModelForm(BaseModel):
-    name: str
+    model: str
     insecure: Optional[bool] = None
     stream: Optional[bool] = None
 
@@ -742,12 +740,12 @@ async def push_model(
         await get_all_models(request, user=user)
         models = request.app.state.OLLAMA_MODELS
 
-        if form_data.name in models:
-            url_idx = models[form_data.name]["urls"][0]
+        if form_data.model in models:
+            url_idx = models[form_data.model]["urls"][0]
         else:
             raise HTTPException(
                 status_code=400,
-                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.name),
+                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model),
             )
 
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
@@ -817,23 +815,18 @@ async def copy_model(
     key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
 
     try:
+        headers = {
+            "Content-Type": "application/json",
+            **({"Authorization": f"Bearer {key}"} if key else {}),
+        }
+
+        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+            headers = include_user_info_headers(headers, user)
+
         r = requests.request(
             method="POST",
             url=f"{url}/api/copy",
-            headers={
-                "Content-Type": "application/json",
-                **({"Authorization": f"Bearer {key}"} if key else {}),
-                **(
-                    {
-                        "X-OpenWebUI-User-Name": quote(user.name),
-                        "X-OpenWebUI-User-Id": quote(user.id),
-                        "X-OpenWebUI-User-Email": quote(user.email),
-                        "X-OpenWebUI-User-Role": quote(user.role),
-                    }
-                    if ENABLE_FORWARD_USER_INFO_HEADERS and user
-                    else {}
-                ),
-            },
+            headers=headers,
             data=form_data.model_dump_json(exclude_none=True).encode(),
         )
         r.raise_for_status()
@@ -866,40 +859,40 @@ async def delete_model(
     url_idx: Optional[int] = None,
     user=Depends(get_admin_user),
 ):
+    form_data = form_data.model_dump(exclude_none=True)
+    form_data["model"] = form_data.get("model", form_data.get("name"))
+
+    model = form_data.get("model")
+
     if url_idx is None:
         await get_all_models(request, user=user)
         models = request.app.state.OLLAMA_MODELS
 
-        if form_data.name in models:
-            url_idx = models[form_data.name]["urls"][0]
+        if model in models:
+            url_idx = models[model]["urls"][0]
         else:
             raise HTTPException(
                 status_code=400,
-                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.name),
+                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(model),
             )
 
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
     key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
 
     try:
+        headers = {
+            "Content-Type": "application/json",
+            **({"Authorization": f"Bearer {key}"} if key else {}),
+        }
+
+        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+            headers = include_user_info_headers(headers, user)
+
         r = requests.request(
             method="DELETE",
             url=f"{url}/api/delete",
+            headers=headers,
             data=form_data.model_dump_json(exclude_none=True).encode(),
-            headers={
-                "Content-Type": "application/json",
-                **({"Authorization": f"Bearer {key}"} if key else {}),
-                **(
-                    {
-                        "X-OpenWebUI-User-Name": quote(user.name),
-                        "X-OpenWebUI-User-Id": quote(user.id),
-                        "X-OpenWebUI-User-Email": quote(user.email),
-                        "X-OpenWebUI-User-Role": quote(user.role),
-                    }
-                    if ENABLE_FORWARD_USER_INFO_HEADERS and user
-                    else {}
-                ),
-            },
         )
         r.raise_for_status()
 
@@ -927,38 +920,38 @@ async def delete_model(
 async def show_model_info(
     request: Request, form_data: ModelNameForm, user=Depends(get_verified_user)
 ):
+    form_data = form_data.model_dump(exclude_none=True)
+    form_data["model"] = form_data.get("model", form_data.get("name"))
+
     await get_all_models(request, user=user)
     models = request.app.state.OLLAMA_MODELS
 
-    if form_data.name not in models:
+    model = form_data.get("model")
+
+    if model not in models:
         raise HTTPException(
             status_code=400,
-            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.name),
+            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(model),
         )
 
-    url_idx = random.choice(models[form_data.name]["urls"])
+    url_idx = random.choice(models[model]["urls"])
 
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
     key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
 
     try:
+        headers = {
+            "Content-Type": "application/json",
+            **({"Authorization": f"Bearer {key}"} if key else {}),
+        }
+
+        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+            headers = include_user_info_headers(headers, user)
+
         r = requests.request(
             method="POST",
             url=f"{url}/api/show",
-            headers={
-                "Content-Type": "application/json",
-                **({"Authorization": f"Bearer {key}"} if key else {}),
-                **(
-                    {
-                        "X-OpenWebUI-User-Name": quote(user.name),
-                        "X-OpenWebUI-User-Id": quote(user.id),
-                        "X-OpenWebUI-User-Email": quote(user.email),
-                        "X-OpenWebUI-User-Role": quote(user.role),
-                    }
-                    if ENABLE_FORWARD_USER_INFO_HEADERS and user
-                    else {}
-                ),
-            },
+            headers=headers,
             data=form_data.model_dump_json(exclude_none=True).encode(),
         )
         r.raise_for_status()
@@ -988,6 +981,10 @@ class GenerateEmbedForm(BaseModel):
     truncate: Optional[bool] = None
     options: Optional[dict] = None
     keep_alive: Optional[Union[int, str]] = None
+
+    model_config = ConfigDict(
+        extra="allow",
+    )
 
 
 @router.post("/api/embed")
@@ -1029,23 +1026,18 @@ async def embed(
         form_data.model = form_data.model.replace(f"{prefix_id}.", "")
 
     try:
+        headers = {
+            "Content-Type": "application/json",
+            **({"Authorization": f"Bearer {key}"} if key else {}),
+        }
+
+        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+            headers = include_user_info_headers(headers, user)
+
         r = requests.request(
             method="POST",
             url=f"{url}/api/embed",
-            headers={
-                "Content-Type": "application/json",
-                **({"Authorization": f"Bearer {key}"} if key else {}),
-                **(
-                    {
-                        "X-OpenWebUI-User-Name": quote(user.name),
-                        "X-OpenWebUI-User-Id": quote(user.id),
-                        "X-OpenWebUI-User-Email": quote(user.email),
-                        "X-OpenWebUI-User-Role": quote(user.role),
-                    }
-                    if ENABLE_FORWARD_USER_INFO_HEADERS and user
-                    else {}
-                ),
-            },
+            headers=headers,
             data=form_data.model_dump_json(exclude_none=True).encode(),
         )
         r.raise_for_status()
@@ -1116,23 +1108,18 @@ async def embeddings(
         form_data.model = form_data.model.replace(f"{prefix_id}.", "")
 
     try:
+        headers = {
+            "Content-Type": "application/json",
+            **({"Authorization": f"Bearer {key}"} if key else {}),
+        }
+
+        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+            headers = include_user_info_headers(headers, user)
+
         r = requests.request(
             method="POST",
             url=f"{url}/api/embeddings",
-            headers={
-                "Content-Type": "application/json",
-                **({"Authorization": f"Bearer {key}"} if key else {}),
-                **(
-                    {
-                        "X-OpenWebUI-User-Name": quote(user.name),
-                        "X-OpenWebUI-User-Id": quote(user.id),
-                        "X-OpenWebUI-User-Email": quote(user.email),
-                        "X-OpenWebUI-User-Role": quote(user.role),
-                    }
-                    if ENABLE_FORWARD_USER_INFO_HEADERS and user
-                    else {}
-                ),
-            },
+            headers=headers,
             data=form_data.model_dump_json(exclude_none=True).encode(),
         )
         r.raise_for_status()
@@ -1303,7 +1290,7 @@ async def generate_chat_completion(
             system = params.pop("system", None)
 
             payload = apply_model_params_to_body_ollama(params, payload)
-            payload = apply_model_system_prompt_to_body(system, payload, metadata, user)
+            payload = apply_system_prompt_to_body(system, payload, metadata, user)
 
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
@@ -1344,6 +1331,7 @@ async def generate_chat_completion(
         key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
         content_type="application/x-ndjson",
         user=user,
+        metadata=metadata,
     )
 
 
@@ -1382,6 +1370,8 @@ async def generate_openai_completion(
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
+    metadata = form_data.pop("metadata", None)
+
     try:
         form_data = OpenAICompletionForm(**form_data)
     except Exception as e:
@@ -1447,6 +1437,7 @@ async def generate_openai_completion(
         stream=payload.get("stream", False),
         key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
         user=user,
+        metadata=metadata,
     )
 
 
@@ -1488,7 +1479,7 @@ async def generate_openai_chat_completion(
             system = params.pop("system", None)
 
             payload = apply_model_params_to_body_openai(params, payload)
-            payload = apply_model_system_prompt_to_body(system, payload, metadata, user)
+            payload = apply_system_prompt_to_body(system, payload, metadata, user)
 
         # Check if user has access to the model
         if user.role == "user":
@@ -1528,6 +1519,7 @@ async def generate_openai_chat_completion(
         stream=payload.get("stream", False),
         key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
         user=user,
+        metadata=metadata,
     )
 
 
@@ -1658,25 +1650,27 @@ async def download_file_stream(
                     yield f'data: {{"progress": {progress}, "completed": {current_size}, "total": {total_size}}}\n\n'
 
                 if done:
-                    file.seek(0)
-                    chunk_size = 1024 * 1024 * 2
-                    hashed = calculate_sha256(file, chunk_size)
-                    file.seek(0)
+                    file.close()
 
-                    url = f"{ollama_url}/api/blobs/sha256:{hashed}"
-                    response = requests.post(url, data=file)
+                    with open(file_path, "rb") as file:
+                        chunk_size = 1024 * 1024 * 2
+                        hashed = calculate_sha256(file, chunk_size)
 
-                    if response.ok:
-                        res = {
-                            "done": done,
-                            "blob": f"sha256:{hashed}",
-                            "name": file_name,
-                        }
-                        os.remove(file_path)
+                        url = f"{ollama_url}/api/blobs/sha256:{hashed}"
+                        with requests.Session() as session:
+                            response = session.post(url, data=file, timeout=30)
 
-                        yield f"data: {json.dumps(res)}\n\n"
-                    else:
-                        raise "Ollama: Could not create blob, Please try again."
+                            if response.ok:
+                                res = {
+                                    "done": done,
+                                    "blob": f"sha256:{hashed}",
+                                    "name": file_name,
+                                }
+                                os.remove(file_path)
+
+                                yield f"data: {json.dumps(res)}\n\n"
+                            else:
+                                raise "Ollama: Could not create blob, Please try again."
 
 
 # url = "https://huggingface.co/TheBloke/stablelm-zephyr-3b-GGUF/resolve/main/stablelm-zephyr-3b.Q2_K.gguf"

@@ -1,6 +1,12 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-export const createNewFolder = async (token: string, name: string) => {
+type FolderForm = {
+	name?: string;
+	data?: Record<string, any>;
+	meta?: Record<string, any>;
+};
+
+export const createNewFolder = async (token: string, folderForm: FolderForm) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/`, {
@@ -10,9 +16,7 @@ export const createNewFolder = async (token: string, name: string) => {
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
-			name: name
-		})
+		body: JSON.stringify(folderForm)
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -92,7 +96,7 @@ export const getFolderById = async (token: string, id: string) => {
 	return res;
 };
 
-export const updateFolderNameById = async (token: string, id: string, name: string) => {
+export const updateFolderById = async (token: string, id: string, folderForm: FolderForm) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}/update`, {
@@ -102,9 +106,7 @@ export const updateFolderNameById = async (token: string, id: string, name: stri
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
-			name: name
-		})
+		body: JSON.stringify(folderForm)
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -237,10 +239,13 @@ export const updateFolderItemsById = async (token: string, id: string, items: Fo
 	return res;
 };
 
-export const deleteFolderById = async (token: string, id: string) => {
+export const deleteFolderById = async (token: string, id: string, deleteContents: boolean) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}`, {
+	const searchParams = new URLSearchParams();
+	searchParams.append('delete_contents', deleteContents ? 'true' : 'false');
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}?${searchParams.toString()}`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',

@@ -11,7 +11,6 @@
 	import { getChatByShareId, cloneSharedChatById } from '$lib/apis/chats';
 
 	import Messages from '$lib/components/chat/Messages.svelte';
-	import Navbar from '$lib/components/layout/Navbar.svelte';
 
 	import { getUserById, getUserSettings } from '$lib/apis/users';
 	import { getModels } from '$lib/apis';
@@ -116,8 +115,8 @@
 				autoScroll = true;
 				await tick();
 
-				if (messages.length > 0) {
-					history.messages[messages.at(-1).id].done = true;
+				if (messages.length > 0 && messages.at(-1)?.id && messages.at(-1)?.id in history.messages) {
+					history.messages[messages.at(-1)?.id].done = true;
 				}
 				await tick();
 
@@ -162,7 +161,7 @@
 						: 'max-w-5xl'} mx-auto"
 				>
 					<div class="px-3">
-						<div class=" text-2xl font-semibold line-clamp-1">
+						<div class=" text-2xl font-medium line-clamp-1">
 							{title}
 						</div>
 
@@ -187,7 +186,7 @@
 							bind:messages
 							bind:autoScroll
 							bottomPadding={files.length > 0}
-							sendPrompt={() => {}}
+							sendMessage={() => {}}
 							continueResponse={() => {}}
 							regenerateResponse={() => {}}
 						/>
@@ -200,7 +199,7 @@
 			>
 				<div class="pb-5">
 					<button
-						class="px-4 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 						on:click={cloneSharedChat}
 					>
 						{$i18n.t('Clone Chat')}

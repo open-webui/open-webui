@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
-	import { createEventDispatcher, getContext, onMount } from 'svelte';
+	import { createEventDispatcher, getContext, onMount, tick } from 'svelte';
 
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { goto } from '$app/navigation';
@@ -9,7 +9,7 @@
 	import { getUsage } from '$lib/apis';
 	import { userSignOut } from '$lib/apis/auths';
 
-	import { showSettings, mobile, showSidebar, user } from '$lib/stores';
+	import { showSettings, mobile, showSidebar, showShortcuts, user } from '$lib/stores';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
@@ -28,8 +28,6 @@
 	export let role = '';
 	export let help = false;
 	export let className = 'max-w-[240px]';
-
-	let showShortcuts = false;
 
 	const dispatch = createEventDispatcher();
 
@@ -51,7 +49,7 @@
 	}
 </script>
 
-<ShortcutsModal bind:show={showShortcuts} />
+<ShortcutsModal bind:show={$showShortcuts} />
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <DropdownMenu.Root
@@ -66,19 +64,21 @@
 
 	<slot name="content">
 		<DropdownMenu.Content
-			class="w-full {className} text-sm rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg font-primary"
+			class="w-full {className}  rounded-2xl px-1 py-1  border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg text-sm"
 			sideOffset={4}
-			side="bottom"
-			align="start"
+			side="top"
+			align="end"
 			transition={(e) => fade(e, { duration: 100 })}
 		>
-			<button
-				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+			<DropdownMenu.Item
+				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
 				on:click={async () => {
-					await showSettings.set(true);
 					show = false;
 
+					await showSettings.set(true);
+
 					if ($mobile) {
+						await tick();
 						showSidebar.set(false);
 					}
 				}}
@@ -87,15 +87,18 @@
 					<Settings className="w-5 h-5" strokeWidth="1.5" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Settings')}</div>
-			</button>
+			</DropdownMenu.Item>
 
-			<button
-				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-				on:click={() => {
-					dispatch('show', 'archived-chat');
+			<DropdownMenu.Item
+				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
+				on:click={async () => {
 					show = false;
 
+					dispatch('show', 'archived-chat');
+
 					if ($mobile) {
+						await tick();
+
 						showSidebar.set(false);
 					}
 				}}
@@ -104,81 +107,92 @@
 					<ArchiveBox className="size-5" strokeWidth="1.5" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Archived Chats')}</div>
-			</button>
+			</DropdownMenu.Item>
 
 			{#if role === 'admin'}
-				<a
+				<DropdownMenu.Item
+					as="a"
 					href="/playground"
-					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
-					on:click={() => {
+					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
+					on:click={async () => {
 						show = false;
 						if ($mobile) {
+							await tick();
 							showSidebar.set(false);
 						}
 					}}
-					rel="noopener noreferrer"
-					draggable="false"
 				>
 					<div class=" self-center mr-3">
 						<Code className="size-5" strokeWidth="1.5" />
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Playground')}</div>
-				</a>
-
-				<a
+				</DropdownMenu.Item>
+				<DropdownMenu.Item
+					as="a"
 					href="/admin"
-					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
-					on:click={() => {
+					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
+					on:click={async () => {
 						show = false;
 						if ($mobile) {
+							await tick();
 							showSidebar.set(false);
 						}
 					}}
-					rel="noopener noreferrer"
-					draggable="false"
 				>
 					<div class=" self-center mr-3">
 						<UserGroup className="w-5 h-5" strokeWidth="1.5" />
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
-				</a>
+				</DropdownMenu.Item>
 			{/if}
 
 			{#if help}
-				<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
+				<hr class=" border-gray-50 dark:border-gray-800 my-1 p-0" />
 
 				<!-- {$i18n.t('Help')} -->
-				<DropdownMenu.Item
-					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
-					id="chat-share-button"
-					on:click={() => {
-						window.open('https://docs.openwebui.com', '_blank');
-						show = false;
-					}}
-				>
-					<QuestionMarkCircle className="size-5" />
-					<div class="flex items-center">{$i18n.t('Documentation')}</div>
-				</DropdownMenu.Item>
 
-				<!-- Releases -->
-				<DropdownMenu.Item
-					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
-					id="menu-item-releases"
-					on:click={() => {
-						window.open('https://github.com/open-webui/open-webui/releases', '_blank');
-						show = false;
-					}}
-				>
-					<Map className="size-5" />
-					<div class="flex items-center">{$i18n.t('Releases')}</div>
-				</DropdownMenu.Item>
+				{#if $user?.role === 'admin'}
+					<DropdownMenu.Item
+						as="a"
+						target="_blank"
+						class="flex gap-3 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition"
+						id="chat-share-button"
+						on:click={() => {
+							show = false;
+						}}
+						href="https://docs.openwebui.com"
+					>
+						<QuestionMarkCircle className="size-5" />
+						<div class="flex items-center">{$i18n.t('Documentation')}</div>
+					</DropdownMenu.Item>
+
+					<!-- Releases -->
+					<DropdownMenu.Item
+						as="a"
+						target="_blank"
+						class="flex gap-3 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition"
+						id="chat-share-button"
+						on:click={() => {
+							show = false;
+						}}
+						href="https://github.com/open-webui/open-webui/releases"
+					>
+						<Map className="size-5" />
+						<div class="flex items-center">{$i18n.t('Releases')}</div>
+					</DropdownMenu.Item>
+				{/if}
 
 				<DropdownMenu.Item
-					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition"
+					class="flex gap-3 items-center py-1.5 px-3 text-sm select-none w-full  hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition cursor-pointer"
 					id="chat-share-button"
-					on:click={() => {
-						showShortcuts = !showShortcuts;
+					on:click={async () => {
 						show = false;
+						showShortcuts.set(!$showShortcuts);
+
+						if ($mobile) {
+							await tick();
+							showSidebar.set(false);
+						}
 					}}
 				>
 					<Keyboard className="size-5" />
@@ -186,10 +200,10 @@
 				</DropdownMenu.Item>
 			{/if}
 
-			<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
+			<hr class=" border-gray-50 dark:border-gray-800 my-1 p-0" />
 
-			<button
-				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+			<DropdownMenu.Item
+				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={async () => {
 					const res = await userSignOut();
 					user.set(null);
@@ -203,11 +217,11 @@
 					<SignOut className="w-5 h-5" strokeWidth="1.5" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Sign Out')}</div>
-			</button>
+			</DropdownMenu.Item>
 
 			{#if usage}
 				{#if usage?.user_ids?.length > 0}
-					<hr class=" border-gray-100 dark:border-gray-800 my-1 p-0" />
+					<hr class=" border-gray-50 dark:border-gray-800 my-1 p-0" />
 
 					<Tooltip
 						content={usage?.model_ids && usage?.model_ids.length > 0
@@ -215,7 +229,7 @@
 							: ''}
 					>
 						<div
-							class="flex rounded-md py-1 px-3 text-xs gap-2.5 items-center"
+							class="flex rounded-xl py-1 px-3 text-xs gap-2.5 items-center"
 							on:mouseenter={() => {
 								getUsageInfo();
 							}}
