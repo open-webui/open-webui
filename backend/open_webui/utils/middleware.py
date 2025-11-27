@@ -54,7 +54,8 @@ from open_webui.routers.pipelines import (
     process_pipeline_inlet_filter,
     process_pipeline_outlet_filter,
 )
-from open_webui.routers.memories import query_memory, QueryMemoryForm
+from open_webui.models.memories import Memories
+from open_webui.memory.mem0 import mem0_search
 
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.files import (
@@ -517,37 +518,44 @@ async def chat_completion_tools_handler(
 
 
 async def chat_memory_handler(
-    request: Request, form_data: dict, extra_params: dict, user
+    request: Request, form_data: dict, extra_params: dict, user, metadata
 ):
-    try:
-        results = await query_memory(
-            request,
-            QueryMemoryForm(
-                **{
-                    "content": get_last_user_message(form_data["messages"]) or "",
-                    "k": 3,
-                }
-            ),
-            user,
-        )
-    except Exception as e:
-        log.debug(e)
-        results = None
+    """
+    聊天记忆处理器 - 注入用户手动保存的记忆 + Mem0 检索结果到当前对话上下文
+
+    新增行为：
+    1. memory 特性开启时，直接注入用户所有记忆条目（不再做 RAG Top-K）
+    2. 预留 Mem0 检索：使用最后一条用户消息查询 Mem0，返回的条目也一并注入
+    3. 上下文注入方式保持不变：统一写入 System Message
+    """
+    user_message = get_last_user_message(form_data.get("messages", [])) or ""
+
+    # === 1. 获取用户全部记忆（不再截断 Top-K） ===
+    memories = Memories.get_memories_by_user_id(user.id) or []
+
+    # === 2. 预留的 Mem0 检索结果 ===
+    mem0_results = await mem0_search(user.id, metadata.get("chat_id"), user_message)
+
+    # === 3. 格式化记忆条目 ===
+    entries = []
+
+    # 3.1 用户记忆库全量
+    for mem in memories:
+        created_at_date = time.strftime("%Y-%m-%d", time.localtime(mem.created_at)) if mem.created_at else "Unknown Date"
+        entries.append(f"[{created_at_date}] {mem.content}")
+
+    # 3.2 Mem0 检索结果
+    for item in mem0_results:
+        entries.append(f"[Mem0] {item}")
+
+    if not entries:
+        return form_data
 
     user_context = ""
-    if results and hasattr(results, "documents"):
-        if results.documents and len(results.documents) > 0:
-            for doc_idx, doc in enumerate(results.documents[0]):
-                created_at_date = "Unknown Date"
+    for idx, entry in enumerate(entries):
+        user_context += f"{idx + 1}. {entry}\n"
 
-                if results.metadatas[0][doc_idx].get("created_at"):
-                    created_at_timestamp = results.metadatas[0][doc_idx]["created_at"]
-                    created_at_date = time.strftime(
-                        "%Y-%m-%d", time.localtime(created_at_timestamp)
-                    )
-
-                user_context += f"{doc_idx + 1}. [{created_at_date}] {doc}\n"
-
+    # === 4. 将记忆注入到系统消息中 ===
     form_data["messages"] = add_or_update_system_message(
         f"User Context:\n{user_context}\n", form_data["messages"], append=True
     )
@@ -1189,7 +1197,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         # 12.1 记忆功能 - 注入历史对话记忆
         if "memory" in features and features["memory"]:
             form_data = await chat_memory_handler(
-                request, form_data, extra_params, user
+                request, form_data, extra_params, user, metadata
             )
 
         # 12.2 网页搜索功能 - 执行网络搜索

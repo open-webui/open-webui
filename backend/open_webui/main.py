@@ -1588,6 +1588,7 @@ async def chat_completion(
         """处理完整的聊天流程：Payload 处理 → LLM 调用 → 响应处理"""
         try:
             # 8.1 Payload 预处理：执行 Pipeline Filters、工具注入、RAG 检索等
+            # remark：并不涉及消息的持久化，只涉及发送给 LLM 前，上下文的封装
             form_data, metadata, events = await process_chat_payload(
                 request, form_data, user, metadata, model
             )

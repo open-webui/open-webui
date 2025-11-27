@@ -19,6 +19,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
+from open_webui.memory.mem0 import mem0_delete
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -654,6 +655,9 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified
     # === 管理员分支 ===
     if user.role == "admin":
         chat = Chats.get_chat_by_id(id)
+        
+        # 清理该聊天的 Mem0 记忆条目
+        await mem0_delete(chat.user_id, id)
 
         # 清理孤立标签（仅被该聊天使用的标签）
         for tag in chat.meta.get("tags", []):
@@ -675,6 +679,9 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified
             )
 
         chat = Chats.get_chat_by_id(id)
+
+        # 清理该聊天的 Mem0 记忆条目
+        await mem0_delete(user.id, id)
 
         # 清理孤立标签
         for tag in chat.meta.get("tags", []):
