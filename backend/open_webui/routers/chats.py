@@ -631,18 +631,41 @@ async def send_chat_message_event_by_id(
 ############################
 
 
+
 @router.delete("/{id}", response_model=bool)
 async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified_user)):
+    """
+    删除聊天记录 - 支持管理员和用户删除，自动清理关联资源
+
+    功能：
+    1. 权限验证（管理员可删除任意聊天，普通用户仅限自己的）
+    2. 清理 Mem0 记忆条目（删除该聊天窗口的所有记忆）
+    3. 清理孤立标签（仅被该聊天使用的标签）
+    4. 删除聊天记录
+
+    Args:
+        request: FastAPI 请求对象
+        id: 聊天记录 ID
+        user: 当前用户
+
+    Returns:
+        bool: 删除成功返回 True
+    """
+    # === 管理员分支 ===
     if user.role == "admin":
         chat = Chats.get_chat_by_id(id)
+
+        # 清理孤立标签（仅被该聊天使用的标签）
         for tag in chat.meta.get("tags", []):
             if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 1:
                 Tags.delete_tag_by_name_and_user_id(tag, user.id)
 
         result = Chats.delete_chat_by_id(id)
-
         return result
+
+    # === 普通用户分支 ===
     else:
+        # 权限检查
         if not has_permission(
             user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS
         ):
@@ -652,12 +675,16 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified
             )
 
         chat = Chats.get_chat_by_id(id)
+
+        # 清理孤立标签
         for tag in chat.meta.get("tags", []):
             if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 1:
                 Tags.delete_tag_by_name_and_user_id(tag, user.id)
 
+        # 删除聊天（带用户 ID 校验）
         result = Chats.delete_chat_by_id_and_user_id(id, user.id)
         return result
+
 
 
 ############################
