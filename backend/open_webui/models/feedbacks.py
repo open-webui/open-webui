@@ -4,7 +4,7 @@ import uuid
 from typing import Optional
 
 from open_webui.internal.db import Base, get_db
-from open_webui.models.chats import Chats
+from open_webui.models.users import User
 
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
@@ -21,7 +21,7 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 class Feedback(Base):
     __tablename__ = "feedback"
-    id = Column(Text, primary_key=True)
+    id = Column(Text, primary_key=True, unique=True)
     user_id = Column(Text)
     version = Column(BigInteger, default=0)
     type = Column(Text)
@@ -92,6 +92,28 @@ class FeedbackForm(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
+class UserResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    role: str = "pending"
+
+    last_active_at: int  # timestamp in epoch
+    updated_at: int  # timestamp in epoch
+    created_at: int  # timestamp in epoch
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class FeedbackUserResponse(FeedbackResponse):
+    user: Optional[UserResponse] = None
+
+
+class FeedbackListResponse(BaseModel):
+    items: list[FeedbackUserResponse]
+    total: int
+
+
 class FeedbackTable:
     def insert_new_feedback(
         self, user_id: str, form_data: FeedbackForm
@@ -142,6 +164,70 @@ class FeedbackTable:
                 return FeedbackModel.model_validate(feedback)
         except Exception:
             return None
+
+    def get_feedback_items(
+        self, filter: dict = {}, skip: int = 0, limit: int = 30
+    ) -> FeedbackListResponse:
+        with get_db() as db:
+            query = db.query(Feedback, User).join(User, Feedback.user_id == User.id)
+
+            if filter:
+                order_by = filter.get("order_by")
+                direction = filter.get("direction")
+
+                if order_by == "username":
+                    if direction == "asc":
+                        query = query.order_by(User.name.asc())
+                    else:
+                        query = query.order_by(User.name.desc())
+                elif order_by == "model_id":
+                    # it's stored in feedback.data['model_id']
+                    if direction == "asc":
+                        query = query.order_by(
+                            Feedback.data["model_id"].as_string().asc()
+                        )
+                    else:
+                        query = query.order_by(
+                            Feedback.data["model_id"].as_string().desc()
+                        )
+                elif order_by == "rating":
+                    # it's stored in feedback.data['rating']
+                    if direction == "asc":
+                        query = query.order_by(
+                            Feedback.data["rating"].as_string().asc()
+                        )
+                    else:
+                        query = query.order_by(
+                            Feedback.data["rating"].as_string().desc()
+                        )
+                elif order_by == "updated_at":
+                    if direction == "asc":
+                        query = query.order_by(Feedback.updated_at.asc())
+                    else:
+                        query = query.order_by(Feedback.updated_at.desc())
+
+            else:
+                query = query.order_by(Feedback.created_at.desc())
+
+            # Count BEFORE pagination
+            total = query.count()
+
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
+
+            items = query.all()
+
+            feedbacks = []
+            for feedback, user in items:
+                feedback_model = FeedbackModel.model_validate(feedback)
+                user_model = UserResponse.model_validate(user)
+                feedbacks.append(
+                    FeedbackUserResponse(**feedback_model.model_dump(), user=user_model)
+                )
+
+            return FeedbackListResponse(items=feedbacks, total=total)
 
     def get_all_feedbacks(self) -> list[FeedbackModel]:
         with get_db() as db:

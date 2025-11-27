@@ -4,7 +4,7 @@ pydantic==2.11.9
 python-multipart==0.0.20
 itsdangerous==2.2.0
 
-python-socketio==5.13.0
+python-socketio==5.14.0
 python-jose==3.5.0
 cryptography
 bcrypt==5.0.0
@@ -37,11 +37,11 @@ asgiref==3.8.1
 
 # AI libraries
 tiktoken
-mcp==1.14.1
+mcp==1.21.2
 
 openai
 anthropic
-google-genai==1.38.0
+google-genai==1.52.0
 google-generativeai==0.8.5
 
 langchain==0.3.27
@@ -49,6 +49,7 @@ langchain-community==0.3.29
 
 fake-useragent==2.2.0
 chromadb==1.1.0
+weaviate-client==4.17.0
 opensearch-py==2.8.0
 
 transformers
@@ -58,12 +59,14 @@ pyarrow==20.0.0 # fix: pin pyarrow version to 20 for rpi compatibility #15897
 einops==0.8.1 
 
 ftfy==6.2.3
+chardet==5.2.0
 pypdf==6.0.0
 fpdf2==2.8.2
 pymdown-extensions==10.14.2
 docx2txt==0.8
 python-pptx==1.0.2
-unstructured==0.18.15
+unstructured==0.18.18
+msoffcrypto-tool==5.4.2
 nltk==3.9.1
 Markdown==3.9
 pypandoc==1.15
@@ -75,7 +78,6 @@ validators==0.35.0
 psutil
 sentencepiece
 soundfile==0.13.1
-azure-ai-documentintelligence==1.0.2
 
 pillow==11.3.0
 opencv-python-headless==4.11.0.86
@@ -85,13 +87,17 @@ rank-bm25==0.2.2
 onnxruntime==1.20.1
 faster-whisper==1.1.1
 
-
 black==25.9.0
 youtube-transcript-api==1.2.2
 pytube==15.0.0
 
 pydub
 ddgs==9.0.0
+
+azure-ai-documentintelligence==1.0.2
+azure-identity==1.25.0
+azure-storage-blob==12.24.1
+azure-search-documents==11.6.0
 
 ## Google Drive
 google-api-python-client
@@ -101,10 +107,7 @@ google-auth-oauthlib
 googleapis-common-protos==1.70.0
 google-cloud-storage==2.19.0
 
-azure-identity==1.25.0
-azure-storage-blob==12.24.1
-
-
+## Databases
 pymongo
 psycopg2-binary==2.9.10
 pgvector==0.4.1

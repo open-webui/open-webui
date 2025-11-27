@@ -26,6 +26,7 @@
 	export let dragAndDrop = true;
 
 	let folderElement;
+	let loaded = false;
 
 	let draggedOver = false;
 
@@ -103,6 +104,13 @@
 	};
 
 	onMount(() => {
+		const state = localStorage.getItem(`${id}-folder-state`);
+		if (state !== null) {
+			open = state === 'true';
+		}
+
+		loaded = true;
+
 		if (!dragAndDrop) {
 			return;
 		}
@@ -122,70 +130,73 @@
 </script>
 
 <div bind:this={folderElement} class="relative {className}">
-	{#if draggedOver}
-		<div
-			class="absolute top-0 left-0 w-full h-full rounded-xs bg-gray-100/50 dark:bg-gray-700/20 bg-opacity-50 dark:bg-opacity-10 z-50 pointer-events-none touch-none"
-		></div>
-	{/if}
-
-	{#if collapsible}
-		<Collapsible
-			bind:open
-			className="w-full "
-			buttonClassName="w-full"
-			onChange={(state) => {
-				dispatch('change', state);
-			}}
-		>
-			<!-- svelte-ignore a11y-no-static-element-interactions -->
+	{#if loaded}
+		{#if draggedOver}
 			<div
-				id="sidebar-folder-button"
-				class=" w-full group rounded-xl relative flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-900 transition {buttonClassName}"
+				class="absolute top-0 left-0 w-full h-full rounded-xs bg-gray-100/50 dark:bg-gray-700/20 bg-opacity-50 dark:bg-opacity-10 z-50 pointer-events-none touch-none"
+			></div>
+		{/if}
+
+		{#if collapsible}
+			<Collapsible
+				bind:open
+				className="w-full "
+				buttonClassName="w-full"
+				onChange={(state) => {
+					dispatch('change', state);
+					localStorage.setItem(`${id}-folder-state`, `${state}`);
+				}}
 			>
-				<button class="w-full py-1.5 pl-2 flex items-center gap-1.5 text-xs font-medium">
-					{#if chevron}
-						<div class=" p-[1px]">
-							{#if open}
-								<ChevronDown className=" size-3" strokeWidth="2" />
-							{:else}
-								<ChevronRight className=" size-3" strokeWidth="2" />
-							{/if}
+				<!-- svelte-ignore a11y-no-static-element-interactions -->
+				<div
+					id="sidebar-folder-button"
+					class=" w-full group rounded-xl relative flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-900 transition {buttonClassName}"
+				>
+					<button class="w-full py-1.5 pl-2 flex items-center gap-1.5 text-xs font-medium">
+						{#if chevron}
+							<div class=" p-[1px]">
+								{#if open}
+									<ChevronDown className=" size-3" strokeWidth="2" />
+								{:else}
+									<ChevronRight className=" size-3" strokeWidth="2" />
+								{/if}
+							</div>
+						{/if}
+
+						<div class="translate-y-[0.5px] {chevron ? '' : 'pl-0.5'}">
+							{name}
 						</div>
-					{/if}
-
-					<div class="translate-y-[0.5px] {chevron ? '' : 'pl-0.5'}">
-						{name}
-					</div>
-				</button>
-
-				{#if onAdd}
-					<button
-						class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
-						on:pointerup={(e) => {
-							e.stopPropagation();
-						}}
-						on:click={(e) => {
-							e.stopPropagation();
-							onAdd();
-						}}
-					>
-						<Tooltip content={onAddLabel}>
-							<button
-								class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
-								on:click={(e) => {}}
-							>
-								<Plus className=" size-3" strokeWidth="2.5" />
-							</button>
-						</Tooltip>
 					</button>
-				{/if}
-			</div>
 
-			<div slot="content" class="w-full">
-				<slot></slot>
-			</div>
-		</Collapsible>
-	{:else}
-		<slot></slot>
+					{#if onAdd}
+						<button
+							class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
+							on:pointerup={(e) => {
+								e.stopPropagation();
+							}}
+							on:click={(e) => {
+								e.stopPropagation();
+								onAdd();
+							}}
+						>
+							<Tooltip content={onAddLabel}>
+								<button
+									class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
+									on:click={(e) => {}}
+								>
+									<Plus className=" size-3" strokeWidth="2.5" />
+								</button>
+							</Tooltip>
+						</button>
+					{/if}
+				</div>
+
+				<div slot="content" class="w-full">
+					<slot></slot>
+				</div>
+			</Collapsible>
+		{:else}
+			<slot></slot>
+		{/if}
 	{/if}
 </div>

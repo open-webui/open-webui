@@ -168,9 +168,9 @@
 									title={$i18n.t('Content')}
 								></iframe>
 							{:else}
-								<pre class="text-sm dark:text-gray-400 whitespace-pre-line">
-                {document.document}
-              </pre>
+								<pre class="text-sm dark:text-gray-400 whitespace-pre-line">{document.document
+										.trim()
+										.replace(/\n\n+/g, '\n\n')}</pre>
 							{/if}
 						</div>
 					</div>

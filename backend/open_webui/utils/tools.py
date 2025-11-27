@@ -34,6 +34,7 @@ from langchain_core.utils.function_calling import (
 )
 
 
+from open_webui.utils.misc import is_string_allowed
 from open_webui.models.tools import Tools
 from open_webui.models.users import UserModel
 from open_webui.utils.plugin import load_tool_module_by_id
@@ -149,13 +150,27 @@ async def get_tools(
                     )
 
                     specs = tool_server_data.get("specs", [])
+                    function_name_filter_list = (
+                        tool_server_connection.get("config", {})
+                        .get("function_name_filter_list", "")
+                        .split(",")
+                    )
+
                     for spec in specs:
                         function_name = spec["name"]
+                        if function_name_filter_list:
+                            if not is_string_allowed(
+                                function_name, function_name_filter_list
+                            ):
+                                # Skip this function
+                                continue
 
                         auth_type = tool_server_connection.get("auth_type", "bearer")
 
                         cookies = {}
-                        headers = {}
+                        headers = {
+                            "Content-Type": "application/json",
+                        }
 
                         if auth_type == "bearer":
                             headers["Authorization"] = (
@@ -177,7 +192,10 @@ async def get_tools(
                                     f"Bearer {oauth_token.get('access_token', '')}"
                                 )
 
-                        headers["Content-Type"] = "application/json"
+                        connection_headers = tool_server_connection.get("headers", None)
+                        if connection_headers and isinstance(connection_headers, dict):
+                            for key, value in connection_headers.items():
+                                headers[key] = value
 
                         def make_tool_function(
                             function_name, tool_server_data, headers
@@ -232,14 +250,16 @@ async def get_tools(
                 module, _ = load_tool_module_by_id(tool_id)
                 request.app.state.TOOLS[tool_id] = module
 
-            extra_params["__id__"] = tool_id
+            __user__ = {
+                **extra_params["__user__"],
+            }
 
             # Set valves for the tool
             if hasattr(module, "valves") and hasattr(module, "Valves"):
                 valves = Tools.get_tool_valves_by_id(tool_id) or {}
                 module.valves = module.Valves(**valves)
             if hasattr(module, "UserValves"):
-                extra_params["__user__"]["valves"] = module.UserValves(  # type: ignore
+                __user__["valves"] = module.UserValves(  # type: ignore
                     **Tools.get_user_valves_by_id_and_user_id(tool_id, user.id)
                 )
 
@@ -261,7 +281,12 @@ async def get_tools(
                 function_name = spec["name"]
                 tool_function = getattr(module, function_name)
                 callable = get_async_tool_function_and_apply_extra_params(
-                    tool_function, extra_params
+                    tool_function,
+                    {
+                        **extra_params,
+                        "__id__": tool_id,
+                        "__user__": __user__,
+                    },
                 )
 
                 # TODO: Support Pydantic models as parameters
@@ -561,20 +586,21 @@ async def get_tool_servers(request: Request):
     return tool_servers
 
 
-async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
-    headers = {
+async def get_tool_server_data(url: str, headers: Optional[dict]) -> Dict[str, Any]:
+    _headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
     }
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
+
+    if headers:
+        _headers.update(headers)
 
     error = None
     try:
         timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA)
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             async with session.get(
-                url, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
+                url, headers=_headers, ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
             ) as response:
                 if response.status != 200:
                     error_body = await response.json()
@@ -644,7 +670,10 @@ async def get_tool_servers_data(servers: List[Dict[str, Any]]) -> List[Dict[str,
                 openapi_path = server.get("path", "openapi.json")
                 spec_url = get_tool_server_url(server_url, openapi_path)
                 # Fetch from URL
-                task = get_tool_server_data(token, spec_url)
+                task = get_tool_server_data(
+                    spec_url,
+                    {"Authorization": f"Bearer {token}"} if token else None,
+                )
             elif spec_type == "json" and server.get("spec", ""):
                 # Use provided JSON spec
                 spec_json = None

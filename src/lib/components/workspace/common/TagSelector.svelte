@@ -27,10 +27,15 @@
 		class="relative w-full flex items-center gap-0.5 px-2.5 py-1.5 rounded-xl "
 		aria-label={placeholder}
 	>
-		<Select.Value
-			class="inline-flex h-input px-0.5 w-full outline-hidden bg-transparent truncate  placeholder-gray-400  focus:outline-hidden capitalize"
-			{placeholder}
-		/>
+		<div
+			class="inline-flex h-input px-0.5 w-full outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden capitalize"
+		>
+			{#if value}
+				{value}
+			{:else}
+				{placeholder}
+			{/if}
+		</div>
 
 		{#if value}
 			<button
