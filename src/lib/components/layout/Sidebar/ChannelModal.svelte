@@ -118,19 +118,21 @@
 						submitHandler();
 					}}
 				>
-					<div class="flex flex-col w-full mt-2">
-						<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Channel Type')}</div>
+					{#if !edit}
+						<div class="flex flex-col w-full mt-2">
+							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Channel Type')}</div>
 
-						<div class="flex-1">
-							<select
-								class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
-								bind:value={type}
-							>
-								<option value="">{$i18n.t('Channel')}</option>
-								<option value="dm">{$i18n.t('Direct Message')}</option>
-							</select>
+							<div class="flex-1">
+								<select
+									class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+									bind:value={type}
+								>
+									<option value="">{$i18n.t('Channel')}</option>
+									<option value="dm">{$i18n.t('Direct Message')}</option>
+								</select>
+							</div>
 						</div>
-					</div>
+					{/if}
 
 					<div class="flex flex-col w-full mt-2">
 						<div class=" mb-1 text-xs text-gray-500">
@@ -152,7 +154,7 @@
 						</div>
 					</div>
 
-					<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
+					<hr class=" border-gray-100/40 dark:border-gray-700/10 my-2.5 w-full" />
 
 					<div class="-mx-2">
 						{#if type === 'dm'}
