@@ -63,6 +63,7 @@
 	import Note from '../icons/Note.svelte';
 	import { slide } from 'svelte/transition';
 	import HotkeyHint from '../common/HotkeyHint.svelte';
+	import { key } from 'vega';
 
 	const BREAKPOINT = 768;
 
@@ -90,8 +91,11 @@
 	}
 
 	const initFolders = async () => {
+		if ($config?.features?.enable_folders === false) {
+			return;
+		}
+
 		const folderList = await getFolders(localStorage.token).catch((error) => {
-			toast.error(`${error}`);
 			return [];
 		});
 		_folders.set(folderList.sort((a, b) => b.updated_at - a.updated_at));
@@ -932,7 +936,7 @@
 					</Folder>
 				{/if}
 
-				{#if folders}
+				{#if $config?.features?.enable_folders && ($user?.role === 'admin' || ($user?.permissions?.features?.folders ?? true)) && Object.keys(folders).length > 0}
 					<Folder
 						id="sidebar-folders"
 						className="px-2 mt-0.5"

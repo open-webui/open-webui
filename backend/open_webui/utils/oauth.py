@@ -43,6 +43,7 @@ from open_webui.config import (
     ENABLE_OAUTH_GROUP_CREATION,
     OAUTH_BLOCKED_GROUPS,
     OAUTH_GROUPS_SEPARATOR,
+    OAUTH_ROLES_SEPARATOR,
     OAUTH_ROLES_CLAIM,
     OAUTH_SUB_CLAIM,
     OAUTH_GROUPS_CLAIM,
@@ -1032,7 +1033,13 @@ class OAuthManager:
 
                 if isinstance(claim_data, list):
                     oauth_roles = claim_data
-                if isinstance(claim_data, str) or isinstance(claim_data, int):
+                elif isinstance(claim_data, str):
+                    # Split by the configured separator if present
+                    if OAUTH_ROLES_SEPARATOR and OAUTH_ROLES_SEPARATOR in claim_data:
+                        oauth_roles = claim_data.split(OAUTH_ROLES_SEPARATOR)
+                    else:
+                        oauth_roles = [claim_data]
+                elif isinstance(claim_data, int):
                     oauth_roles = [str(claim_data)]
 
             log.debug(f"Oauth Roles claim: {oauth_claim}")
@@ -1401,6 +1408,9 @@ class OAuthManager:
                 determined_role = self.get_user_role(user, user_data)
                 if user.role != determined_role:
                     Users.update_user_role_by_id(user.id, determined_role)
+                    # Update the user object in memory as well,
+                    # to avoid problems with the ENABLE_OAUTH_GROUP_MANAGEMENT check below
+                    user.role = determined_role
                 # Update profile picture if enabled and different from current
                 if auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN:
                     picture_claim = auth_manager_config.OAUTH_PICTURE_CLAIM

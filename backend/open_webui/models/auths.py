@@ -3,7 +3,7 @@ import uuid
 from typing import Optional
 
 from open_webui.internal.db import Base, get_db
-from open_webui.models.users import UserModel, Users
+from open_webui.models.users import UserModel, UserProfileImageResponse, Users
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel
 from sqlalchemy import Boolean, Column, String, Text
@@ -46,15 +46,7 @@ class ApiKey(BaseModel):
     api_key: Optional[str] = None
 
 
-class UserResponse(BaseModel):
-    id: str
-    email: str
-    name: str
-    role: str
-    profile_image_url: str
-
-
-class SigninResponse(Token, UserResponse):
+class SigninResponse(Token, UserProfileImageResponse):
     pass
 
 

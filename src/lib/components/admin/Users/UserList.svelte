@@ -96,11 +96,7 @@
 		}
 	};
 
-	$: if (page) {
-		getUserList();
-	}
-
-	$: if (query !== null && orderBy && direction) {
+	$: if (query !== null && page !== null && orderBy !== null && direction !== null) {
 		getUserList();
 	}
 </script>
