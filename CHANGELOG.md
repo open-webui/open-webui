@@ -5,11 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.41] - 2025-11-26
+## [0.6.41] - 2025-11-27
 
 ### Added
 
 - 🛡️ Administrators can now globally disable the folders feature and control user-level folder permissions through the admin panel, enabling minimalist interface configurations for deployments that don't require workspace organization features. [#19529](https://github.com/open-webui/open-webui/pull/19529), [#19210](https://github.com/open-webui/open-webui/discussions/19210), [#18459](https://github.com/open-webui/open-webui/discussions/18459), [#18299](https://github.com/open-webui/open-webui/discussions/18299)
+- 💬 Channels now display unread message counts and track user read status, allowing users to easily identify which channels have new activity and automatically marking messages as read when viewed. [Commit](https://github.com/open-webui/open-webui/commit/64b4d5d9c280b926746584aaf92b447d09deb386)
+- 👥 A group export API endpoint was added, enabling administrators to export complete group data including member lists for backup and migration purposes. [Commit](https://github.com/open-webui/open-webui/commit/09b6ea38c579659f8ca43ae5ea3746df3ac561ad)
 - 🔐 OAuth role claim parsing now respects the "OAUTH_ROLES_SEPARATOR" configuration, enabling proper parsing of roles returned as comma-separated strings and providing consistent behavior with group claim handling. [#19514](https://github.com/open-webui/open-webui/pull/19514)
 - 🔄 Various improvements were implemented across the frontend and backend to enhance performance, stability, and security.
 - 🌐 Translations for German, Catalan, Simplified Chinese, and Traditional Chinese were enhanced and expanded.
@@ -25,10 +27,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 💬 Chat history infinite loading was prevented by enhancing message data structure to properly track parent message relationships, resolving issues where missing parentId fields caused perpetual loading states. [#19225](https://github.com/open-webui/open-webui/issues/19225), [Commit](https://github.com/open-webui/open-webui/commit/ff4b1b9862d15adfa15eac17d2ce066c3d8ae38f)
 - 🔐 OAuth group assignment now updates correctly on first login when users transition from admin to user role, ensuring group memberships reflect immediately when group management is enabled. [#19475](https://github.com/open-webui/open-webui/issues/19475), [#19476](https://github.com/open-webui/open-webui/pull/19476)
 - 📚 Knowledge base file tooltips now properly display the parent collection name when referencing files with the hash symbol, preventing confusion between identically-named files in different collections. [#19491](https://github.com/open-webui/open-webui/issues/19491), [Commit](https://github.com/open-webui/open-webui/commit/3fe5a47b0ff84ac97f8e4ff56a19fa2ec065bf66)
+- 📚 Knowledge API batch file addition endpoint was corrected to properly handle async operations, resolving 500 Internal Server Error responses when adding multiple files simultaneously. [#19538](https://github.com/open-webui/open-webui/issues/19538), [Commit](https://github.com/open-webui/open-webui/commit/28659f60d94feb4f6a99bb1a5b54d7f45e5ea10f)
 - ⚡ API response payload sizes were dramatically reduced by removing base64-encoded profile images from most endpoints, eliminating multi-megabyte responses caused by high-resolution avatars and enabling better browser caching. [#19519](https://github.com/open-webui/open-webui/issues/19519), [Commit](https://github.com/open-webui/open-webui/commit/384753c4c17f62a68d38af4bbcf55a21ee08e0f2)
 - ⚡ Redundant API calls on the admin user overview page were eliminated by consolidating reactive statements, reducing four duplicate requests to a single efficient call and significantly improving page load performance. [#19509](https://github.com/open-webui/open-webui/issues/19509), [Commit](https://github.com/open-webui/open-webui/commit/9f89cc5e9f7e1c6c9e2bc91177e08df7c79f66f9)
 - ⚡ Duplicate API calls on the workspace models page were eliminated by removing redundant model list fetching, reducing two identical requests to a single call and improving page responsiveness. [#19517](https://github.com/open-webui/open-webui/issues/19517), [Commit](https://github.com/open-webui/open-webui/commit/d1bbf6be7a4d1d53fa8ad46ca4f62fc4b2e6a8cb)
 - 🎨 The model valves button was corrected to prevent unintended form submission by adding explicit button type attribute, ensuring it no longer triggers message sending when the input area contains text. [#19534](https://github.com/open-webui/open-webui/pull/19534)
+
+### Changed
+
+- ⚠️ **IMPORTANT for Multi-Instance Deployments** — This release includes database schema changes (new columns added to "channel_member" and "message" tables for unread message tracking and pinning functionality); multi-worker, multi-server, or load-balanced deployments must update all instances simultaneously rather than performing rolling updates, as running mixed versions will cause application failures due to schema incompatibility between old and new instances. [Commit](https://github.com/open-webui/open-webui/commit/64b4d5d9c280b926746584aaf92b447d09deb386)
+- 💬 Channel creation is now restricted to administrators only, with the channel add button hidden for regular users to maintain organizational control over communication channels. [Commit](https://github.com/open-webui/open-webui/commit/421aba7cd7cd708168b1f2565026c74525a67905)
 
 ## [0.6.40] - 2025-11-25
 
