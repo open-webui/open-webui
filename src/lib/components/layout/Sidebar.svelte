@@ -914,15 +914,15 @@
 						name={$i18n.t('Channels')}
 						chevron={false}
 						dragAndDrop={false}
-						onAdd={async () => {
-							if ($user?.role === 'admin') {
-								await tick();
+						onAdd={$user?.role === 'admin'
+							? async () => {
+									await tick();
 
-								setTimeout(() => {
-									showCreateChannel = true;
-								}, 0);
-							}
-						}}
+									setTimeout(() => {
+										showCreateChannel = true;
+									}, 0);
+								}
+							: null}
 						onAddLabel={$i18n.t('Create Channel')}
 					>
 						{#each $channels as channel}
