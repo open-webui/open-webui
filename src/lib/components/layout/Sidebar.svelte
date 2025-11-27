@@ -733,6 +733,9 @@
 	</div>
 {/if}
 
+<!-- {$i18n.t('New Folder')} -->
+<!-- {$i18n.t('Pinned')} -->
+
 {#if $showSidebar}
 	<div
 		bind:this={navElement}
