@@ -129,9 +129,9 @@ async def get_all_channels(user=Depends(get_verified_user)):
 @router.post("/create", response_model=Optional[ChannelModel])
 async def create_new_channel(form_data: ChannelForm, user=Depends(get_admin_user)):
     try:
-        if form_data.type == "dm" and len(form_data.user_ids) == 1:
+        if form_data.type == "dm":
             existing_channel = Channels.get_dm_channel_by_user_ids(
-                [user.id, form_data.user_ids[0]]
+                [user.id, *form_data.user_ids]
             )
             if existing_channel:
                 Channels.update_member_active_status(existing_channel.id, user.id, True)
