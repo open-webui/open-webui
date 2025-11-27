@@ -5,7 +5,7 @@
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 
-	import { chatId, showSidebar, socket, user } from '$lib/stores';
+	import { chatId, channelId as _channelId, showSidebar, socket, user } from '$lib/stores';
 	import { getChannelById, getChannelMessages, sendMessage } from '$lib/apis/channels';
 
 	import Messages from './Messages.svelte';
@@ -62,6 +62,7 @@
 
 		currentId = id;
 		updateLastReadAt(id);
+		_channelId.set(id);
 
 		top = false;
 		messages = null;
@@ -220,6 +221,7 @@
 	onDestroy(() => {
 		// last read at
 		updateLastReadAt(id);
+		_channelId.set(null);
 		$socket?.off('events:channel', channelEventHandler);
 	});
 </script>

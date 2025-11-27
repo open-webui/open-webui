@@ -29,7 +29,8 @@
 		appInfo,
 		toolServers,
 		playingNotificationSound,
-		channels
+		channels,
+		channelId
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -486,7 +487,7 @@
 			const data = event?.data?.data ?? null;
 
 			if ($channels) {
-				if ($channels.find((ch) => ch.id === event.channel_id)) {
+				if ($channels.find((ch) => ch.id === event.channel_id) && $channelId !== event.channel_id) {
 					channels.set(
 						$channels.map((ch) => {
 							if (ch.id === event.channel_id) {
