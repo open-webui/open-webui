@@ -113,39 +113,39 @@
 					<!-- ai-friend 	屏蔽临时聊天 -->
 					{#if $user?.role === 'user' ? ($user?.permissions?.chat?.temporary ?? true) && !($user?.permissions?.chat?.temporary_enforced ?? false) : true}
 						{#if !chat?.id}
-						{#if false}
-							<Tooltip content={$i18n.t(`Temporary Chat`)}>
-								<button
-									class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-									id="temporary-chat-button"
-									on:click={async () => {
-										if (($settings?.temporaryChatByDefault ?? false) && $temporaryChatEnabled) {
-											// for proper initNewChat handling
-											await temporaryChatEnabled.set(null);
-										} else {
-											await temporaryChatEnabled.set(!$temporaryChatEnabled);
-										}
+							{#if false}
+								<Tooltip content={$i18n.t(`Temporary Chat`)}>
+									<button
+										class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+										id="temporary-chat-button"
+										on:click={async () => {
+											if (($settings?.temporaryChatByDefault ?? false) && $temporaryChatEnabled) {
+												// for proper initNewChat handling
+												await temporaryChatEnabled.set(null);
+											} else {
+												await temporaryChatEnabled.set(!$temporaryChatEnabled);
+											}
 
-										await goto('/');
+											await goto('/');
 
-										// add 'temporary-chat=true' to the URL
-										if ($temporaryChatEnabled) {
-											window.history.replaceState(null, '', '?temporary-chat=true');
-										} else {
-											window.history.replaceState(null, '', location.pathname);
-										}
-									}}
-								>
-									<div class=" m-auto self-center">
-										{#if $temporaryChatEnabled}
-											<ChatBubbleDottedChecked className=" size-4.5" strokeWidth="1.5" />
-										{:else}
-											<ChatBubbleDotted className=" size-4.5" strokeWidth="1.5" />
-										{/if}
-									</div>
-								</button>
-							</Tooltip>
-						{/if}
+											// add 'temporary-chat=true' to the URL
+											if ($temporaryChatEnabled) {
+												window.history.replaceState(null, '', '?temporary-chat=true');
+											} else {
+												window.history.replaceState(null, '', location.pathname);
+											}
+										}}
+									>
+										<div class=" m-auto self-center">
+											{#if $temporaryChatEnabled}
+												<ChatBubbleDottedChecked className=" size-4.5" strokeWidth="1.5" />
+											{:else}
+												<ChatBubbleDotted className=" size-4.5" strokeWidth="1.5" />
+											{/if}
+										</div>
+									</button>
+								</Tooltip>
+							{/if}
 						{:else if $temporaryChatEnabled}
 							<Tooltip content={$i18n.t(`Save Chat`)}>
 								<button
@@ -205,23 +205,23 @@
 					{/if} -->
 
 					<!-- ai-friend 	屏蔽对话高级设置 -->
-				{#if false}
-					{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
-						<Tooltip content={$i18n.t('Controls')}>
-							<button
-								class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-								on:click={async () => {
-									await showControls.set(!$showControls);
-								}}
-								aria-label="Controls"
-							>
-								<div class=" m-auto self-center">
-									<Knobs className=" size-5" strokeWidth="1" />
-								</div>
-							</button>
-						</Tooltip>
+					{#if false}
+						{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
+							<Tooltip content={$i18n.t('Controls')}>
+								<button
+									class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+									on:click={async () => {
+										await showControls.set(!$showControls);
+									}}
+									aria-label="Controls"
+								>
+									<div class=" m-auto self-center">
+										<Knobs className=" size-5" strokeWidth="1" />
+									</div>
+								</button>
+							</Tooltip>
+						{/if}
 					{/if}
-				{/if}
 
 					<!-- {#if $user !== undefined && $user !== null}
 						<UserMenu
