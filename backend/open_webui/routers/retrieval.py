@@ -1629,7 +1629,7 @@ def process_file(
                     file.id,
                     {"bypass_rag": True}
                 )
-                Files.update_file_data_by_id(file.id, {"status": "completed"})
+
                 return {
                     "status": True,
                     "collection_name": None,
