@@ -11,7 +11,17 @@ from open_webui.utils.misc import throttle
 
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, Date, exists, select
+from sqlalchemy import (
+    BigInteger,
+    JSON,
+    Column,
+    String,
+    Boolean,
+    Text,
+    Date,
+    exists,
+    select,
+)
 from sqlalchemy import or_, case
 
 import datetime
@@ -21,63 +31,101 @@ import datetime
 ####################
 
 
-class User(Base):
-    __tablename__ = "user"
-
-    id = Column(String, primary_key=True, unique=True)
-    name = Column(String)
-
-    email = Column(String)
-    username = Column(String(50), nullable=True)
-
-    role = Column(String)
-    profile_image_url = Column(Text)
-
-    bio = Column(Text, nullable=True)
-    gender = Column(Text, nullable=True)
-    date_of_birth = Column(Date, nullable=True)
-
-    info = Column(JSONField, nullable=True)
-    settings = Column(JSONField, nullable=True)
-
-    api_key = Column(String, nullable=True, unique=True)
-    oauth_sub = Column(Text, unique=True)
-
-    last_active_at = Column(BigInteger)
-
-    updated_at = Column(BigInteger)
-    created_at = Column(BigInteger)
-
-
 class UserSettings(BaseModel):
     ui: Optional[dict] = {}
     model_config = ConfigDict(extra="allow")
     pass
 
 
+class User(Base):
+    __tablename__ = "user"
+
+    id = Column(String, primary_key=True, unique=True)
+    email = Column(String)
+    username = Column(String(50), nullable=True)
+    role = Column(String)
+
+    name = Column(String)
+    is_active = Column(Boolean, nullable=False, default=False)
+
+    profile_image_url = Column(Text)
+    profile_banner_image_url = Column(Text, nullable=True)
+
+    bio = Column(Text, nullable=True)
+    gender = Column(Text, nullable=True)
+    date_of_birth = Column(Date, nullable=True)
+    timezone = Column(String, nullable=True)
+
+    status_emoji = Column(String, nullable=True)
+    status_message = Column(Text, nullable=True)
+    status_expires_at = Column(BigInteger, nullable=True)
+
+    info = Column(JSON, nullable=True)
+    settings = Column(JSON, nullable=True)
+
+    oauth = Column(JSON, nullable=True)
+
+    last_active_at = Column(BigInteger)
+    updated_at = Column(BigInteger)
+    created_at = Column(BigInteger)
+
+
 class UserModel(BaseModel):
     id: str
-    name: str
 
     email: str
     username: Optional[str] = None
-
     role: str = "pending"
+
+    name: str
+    is_active: bool = False
+
     profile_image_url: str
+    profile_banner_image_url: Optional[str] = None
 
     bio: Optional[str] = None
     gender: Optional[str] = None
     date_of_birth: Optional[datetime.date] = None
+    timezone: Optional[str] = None
+
+    status_emoji: Optional[str] = None
+    status_message: Optional[str] = None
+    status_expires_at: Optional[int] = None
 
     info: Optional[dict] = None
     settings: Optional[UserSettings] = None
 
-    api_key: Optional[str] = None
-    oauth_sub: Optional[str] = None
+    oauth: Optional[dict] = None
 
     last_active_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ApiKey(Base):
+    __tablename__ = "api_key"
+
+    id = Column(Text, primary_key=True, unique=True)
+    user_id = Column(Text, nullable=False)
+    key = Column(Text, unique=True, nullable=False)
+    data = Column(JSON, nullable=True)
+    expires_at = Column(BigInteger, nullable=True)
+    last_used_at = Column(BigInteger, nullable=True)
+    created_at = Column(BigInteger, nullable=False)
+    updated_at = Column(BigInteger, nullable=False)
+
+
+class ApiKeyModel(BaseModel):
+    id: str
+    user_id: str
+    key: str
+    data: Optional[dict] = None
+    expires_at: Optional[int] = None
+    last_used_at: Optional[int] = None
+    created_at: int  # timestamp in epoch
+    updated_at: int  # timestamp in epoch
 
     model_config = ConfigDict(from_attributes=True)
 
