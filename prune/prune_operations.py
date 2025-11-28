@@ -422,13 +422,15 @@ def safe_delete_file_by_id(file_id: str, vector_cleaner) -> bool:
         return False
 
 
-def cleanup_orphaned_uploads(active_file_ids: Set[str]) -> None:
+def cleanup_orphaned_uploads(active_file_ids: Set[str]) -> int:
     """
     Clean up orphaned files in the uploads directory.
+
+    Returns the number of files deleted.
     """
     upload_dir = Path(CACHE_DIR).parent / "uploads"
     if not upload_dir.exists():
-        return
+        return 0
 
     deleted_count = 0
 
@@ -467,6 +469,8 @@ def cleanup_orphaned_uploads(active_file_ids: Set[str]) -> None:
 
     if deleted_count > 0:
         log.info(f"Deleted {deleted_count} orphaned upload files")
+
+    return deleted_count
 
 
 def delete_inactive_users(

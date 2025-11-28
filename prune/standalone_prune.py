@@ -661,7 +661,9 @@ def run_prune(form_data: PruneDataForm):
         final_active_kb_ids = {kb.id for kb in Knowledges.get_knowledge_bases()}
         final_active_user_ids = {user.id for user in Users.get_users()["users"]}
 
-        cleanup_orphaned_uploads(final_active_file_ids)
+        deleted_uploads = cleanup_orphaned_uploads(final_active_file_ids)
+        if deleted_uploads > 0:
+            log.info(f"Deleted {deleted_uploads} orphaned upload files")
 
         # Audio cache cleanup
         if form_data.audio_cache_max_age_days is not None:
