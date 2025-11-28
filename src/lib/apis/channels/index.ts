@@ -378,6 +378,7 @@ export const getChannelThreadMessages = async (
 };
 
 type MessageForm = {
+	temp_id?: string;
 	reply_to_id?: string;
 	parent_id?: string;
 	content: string;

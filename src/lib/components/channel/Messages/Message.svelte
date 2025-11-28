@@ -47,6 +47,7 @@
 
 	export let replyToMessage = false;
 	export let disabled = false;
+	export let pending = false;
 
 	export let onDelete: Function = () => {};
 	export let onEdit: Function = () => {};
@@ -380,7 +381,7 @@
 						</div>
 					</div>
 				{:else}
-					<div class=" min-w-full markdown-prose">
+					<div class=" min-w-full markdown-prose {pending ? 'opacity-50' : ''}">
 						{#if (message?.content ?? '').trim() === '' && message?.meta?.model_id}
 							<Skeleton />
 						{:else}

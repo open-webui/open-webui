@@ -765,7 +765,7 @@ async def new_message_handler(
                 "message_id": message.id,
                 "data": {
                     "type": "message",
-                    "data": message.model_dump(),
+                    "data": {"temp_id": form_data.temp_id, **message.model_dump()},
                 },
                 "user": UserNameResponse(**user.model_dump()).model_dump(),
                 "channel": channel.model_dump(),

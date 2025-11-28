@@ -4,6 +4,7 @@
 
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { v4 as uuidv4 } from 'uuid';
 
 	import {
 		chatId,
@@ -118,7 +119,8 @@
 
 			if (type === 'message') {
 				if ((data?.parent_id ?? null) === null) {
-					messages = [data, ...messages];
+					const tempId = data?.temp_id ?? null;
+					messages = [{ ...data, temp_id: null }, ...messages.filter((m) => m?.temp_id !== tempId)];
 
 					if (typingUsers.find((user) => user.id === event.user.id)) {
 						typingUsers = typingUsers.filter((user) => user.id !== event.user.id);
@@ -183,11 +185,30 @@
 			return;
 		}
 
-		const res = await sendMessage(localStorage.token, id, {
+		const tempId = uuidv4();
+
+		const message = {
+			temp_id: tempId,
 			content: content,
 			data: data,
 			reply_to_id: replyToMessage?.id ?? null
-		}).catch((error) => {
+		};
+
+		const ts = Date.now() * 1000000; // nanoseconds
+		messages = [
+			{
+				...message,
+				id: tempId,
+				user_id: $user?.id,
+				user: $user,
+				reply_to_message: replyToMessage ?? null,
+				created_at: ts,
+				updated_at: ts
+			},
+			...messages
+		];
+
+		const res = await sendMessage(localStorage.token, id, message).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});

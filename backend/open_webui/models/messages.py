@@ -90,6 +90,7 @@ class MessageModel(BaseModel):
 
 
 class MessageForm(BaseModel):
+    temp_id: Optional[str] = None
     content: str
     reply_to_id: Optional[str] = None
     parent_id: Optional[str] = None
