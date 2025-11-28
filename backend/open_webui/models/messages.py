@@ -111,6 +111,10 @@ class MessageReplyToResponse(MessageUserResponse):
     reply_to_message: Optional[MessageUserResponse] = None
 
 
+class MessageWithReactionsResponse(MessageUserResponse):
+    reactions: list[Reactions]
+
+
 class MessageResponse(MessageReplyToResponse):
     latest_reply_at: Optional[int]
     reply_count: int
@@ -306,6 +310,20 @@ class MessageTable:
             )
             return MessageModel.model_validate(message) if message else None
 
+    def get_pinned_messages_by_channel_id(
+        self, channel_id: str, skip: int = 0, limit: int = 50
+    ) -> list[MessageModel]:
+        with get_db() as db:
+            all_messages = (
+                db.query(Message)
+                .filter_by(channel_id=channel_id, is_pinned=True)
+                .order_by(Message.pinned_at.desc())
+                .offset(skip)
+                .limit(limit)
+                .all()
+            )
+            return [MessageModel.model_validate(message) for message in all_messages]
+
     def update_message_by_id(
         self, id: str, form_data: MessageForm
     ) -> Optional[MessageModel]:
@@ -325,7 +343,7 @@ class MessageTable:
             db.refresh(message)
             return MessageModel.model_validate(message) if message else None
 
-    def update_message_pin_by_id(
+    def update_is_pinned_by_id(
         self, id: str, is_pinned: bool, pinned_by: Optional[str] = None
     ) -> Optional[MessageModel]:
         with get_db() as db:
@@ -333,7 +351,6 @@ class MessageTable:
             message.is_pinned = is_pinned
             message.pinned_at = int(time.time_ns()) if is_pinned else None
             message.pinned_by = pinned_by if is_pinned else None
-            message.updated_at = int(time.time_ns())
             db.commit()
             db.refresh(message)
             return MessageModel.model_validate(message) if message else None

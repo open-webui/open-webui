@@ -31,6 +31,7 @@ from open_webui.models.messages import (
     Messages,
     MessageModel,
     MessageResponse,
+    MessageWithReactionsResponse,
     MessageForm,
 )
 
@@ -464,6 +465,62 @@ async def get_channel_messages(
 
 
 ############################
+# GetPinnedChannelMessages
+############################
+
+PAGE_ITEM_COUNT_PINNED = 20
+
+
+@router.get("/{id}/messages/pinned", response_model=list[MessageWithReactionsResponse])
+async def get_pinned_channel_messages(
+    id: str, page: int = 1, user=Depends(get_verified_user)
+):
+    channel = Channels.get_channel_by_id(id)
+    if not channel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if channel.type == "dm":
+        if not Channels.is_user_channel_member(channel.id, user.id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
+            )
+    else:
+        if user.role != "admin" and not has_access(
+            user.id, type="read", access_control=channel.access_control
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
+            )
+
+    page = max(1, page)
+    skip = (page - 1) * PAGE_ITEM_COUNT_PINNED
+    limit = PAGE_ITEM_COUNT_PINNED
+
+    message_list = Messages.get_pinned_messages_by_channel_id(id, skip, limit)
+    users = {}
+
+    messages = []
+    for message in message_list:
+        if message.user_id not in users:
+            user = Users.get_user_by_id(message.user_id)
+            users[message.user_id] = user
+
+        messages.append(
+            MessageWithReactionsResponse(
+                **{
+                    **message.model_dump(),
+                    "reactions": Messages.get_reactions_by_message_id(message.id),
+                    "user": UserNameResponse(**users[message.user_id].model_dump()),
+                }
+            )
+        )
+
+    return messages
+
+
+############################
 # PostNewMessage
 ############################
 
@@ -832,6 +889,69 @@ async def get_channel_message(
             ),
         }
     )
+
+
+############################
+# PinChannelMessage
+############################
+
+
+class PinMessageForm(BaseModel):
+    is_pinned: bool
+
+
+@router.post(
+    "/{id}/messages/{message_id}/pin", response_model=Optional[MessageUserResponse]
+)
+async def pin_channel_message(
+    id: str, message_id: str, form_data: PinMessageForm, user=Depends(get_verified_user)
+):
+    channel = Channels.get_channel_by_id(id)
+    if not channel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if channel.type == "dm":
+        if not Channels.is_user_channel_member(channel.id, user.id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
+            )
+    else:
+        if user.role != "admin" and not has_access(
+            user.id, type="read", access_control=channel.access_control
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
+            )
+
+    message = Messages.get_message_by_id(message_id)
+    if not message:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if message.channel_id != id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    try:
+        Messages.update_is_pinned_by_id(message_id, form_data.is_pinned, user.id)
+        message = Messages.get_message_by_id(message_id)
+        return MessageUserResponse(
+            **{
+                **message.model_dump(),
+                "user": UserNameResponse(
+                    **Users.get_user_by_id(message.user_id).model_dump()
+                ),
+            }
+        )
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
 
 
 ############################

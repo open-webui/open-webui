@@ -16,7 +16,13 @@
 	import Message from './Messages/Message.svelte';
 	import Loader from '../common/Loader.svelte';
 	import Spinner from '../common/Spinner.svelte';
-	import { addReaction, deleteMessage, removeReaction, updateMessage } from '$lib/apis/channels';
+	import {
+		addReaction,
+		deleteMessage,
+		pinMessage,
+		removeReaction,
+		updateMessage
+	} from '$lib/apis/channels';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	const i18n = getContext('i18n');
@@ -154,6 +160,26 @@
 				}}
 				onReply={(message) => {
 					onReply(message);
+				}}
+				onPin={async (message) => {
+					messages = messages.map((m) => {
+						if (m.id === message.id) {
+							m.is_pinned = !m.is_pinned;
+							m.pinned_by = !m.is_pinned ? null : $user?.id;
+							m.pinned_at = !m.is_pinned ? null : Date.now() * 1000000;
+						}
+						return m;
+					});
+
+					const updatedMessage = await pinMessage(
+						localStorage.token,
+						message.channel_id,
+						message.id,
+						message.is_pinned
+					).catch((error) => {
+						toast.error(`${error}`);
+						return null;
+					});
 				}}
 				onThread={(id) => {
 					onThread(id);

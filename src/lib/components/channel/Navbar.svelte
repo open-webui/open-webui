@@ -18,16 +18,20 @@
 	import UserAlt from '../icons/UserAlt.svelte';
 	import ChannelInfoModal from './ChannelInfoModal.svelte';
 	import Users from '../icons/Users.svelte';
+	import Pin from '../icons/Pin.svelte';
+	import PinnedMessagesModal from './PinnedMessagesModal.svelte';
 
 	const i18n = getContext('i18n');
 
+	let showChannelPinnedMessagesModal = false;
 	let showChannelInfoModal = false;
 
 	export let channel;
 </script>
 
+<PinnedMessagesModal bind:show={showChannelPinnedMessagesModal} {channel} />
 <ChannelInfoModal bind:show={showChannelInfoModal} {channel} />
-<nav class="sticky top-0 z-30 w-full px-1.5 py-1 -mb-8 flex items-center drag-region">
+<nav class="sticky top-0 z-30 w-full px-1.5 py-1 -mb-8 flex items-center drag-region flex flex-col">
 	<div
 		id="navbar-bg-gradient-to-b"
 		class=" bg-linear-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1]"
@@ -111,6 +115,21 @@
 			</div>
 
 			<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400 gap-1">
+				<Tooltip content={$i18n.t('Pinned Messages')}>
+					<button
+						class=" flex cursor-pointer py-1.5 px-1.5 border dark:border-gray-850 border-gray-50 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+						aria-label="Pinned Messages"
+						type="button"
+						on:click={() => {
+							showChannelPinnedMessagesModal = true;
+						}}
+					>
+						<div class=" flex items-center gap-0.5 m-auto self-center">
+							<Pin className=" size-4" strokeWidth="1.5" />
+						</div>
+					</button>
+				</Tooltip>
+
 				{#if channel?.user_count !== undefined}
 					<Tooltip content={$i18n.t('Users')}>
 						<button
