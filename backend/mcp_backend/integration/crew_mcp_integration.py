@@ -56,6 +56,31 @@ class CrewMCPManager:
         self.news_server_path = (
             self.backend_dir / "mcp_backend" / "servers" / "fastmcp_news_server.py"
         )
+        self.sharepoint_server_path = (
+            self.backend_dir
+            / "mcp_backend"
+            / "servers"
+            / "generic_sharepoint_server_obo.py"
+        )
+
+        # MPO-specific configuration path (example of organization-specific config with OBO)
+        self.mpo_sharepoint_server_path = (
+            self.backend_dir / "mcp_backend" / "servers" / "mpo_sharepoint_config.py"
+        )
+
+        # User token for OBO flow
+        self.user_jwt_token = None
+
+    def set_user_token(self, token: str):
+        """Set the user's JWT token for OBO authentication"""
+        self.user_jwt_token = token
+        logger.info(f"User JWT token set for OBO flow: {bool(token)}")
+
+        # Set as environment variable for SharePoint MCP servers to use
+        if token:
+            os.environ["USER_JWT_TOKEN"] = token
+        elif "USER_JWT_TOKEN" in os.environ:
+            del os.environ["USER_JWT_TOKEN"]
 
     def get_azure_llm_config(self) -> LLM:
         """Get Azure OpenAI LLM configuration for CrewAI"""
@@ -206,6 +231,106 @@ class CrewMCPManager:
             logger.error(f"Error in CrewAI MCP news integration: {e}")
             raise
 
+    def run_sharepoint_crew(self, query: str = "Search SharePoint documents") -> str:
+        """
+        Run a CrewAI crew with MCP SharePoint server tools using the generic implementation
+
+        Args:
+            query: The SharePoint-related query to process
+
+        Returns:
+            The crew's response
+        """
+        # Use MPO-specific config if it exists, otherwise fall back to generic
+        server_path = (
+            self.mpo_sharepoint_server_path
+            if self.mpo_sharepoint_server_path.exists()
+            else self.sharepoint_server_path
+        )
+
+        if not server_path.exists():
+            raise FileNotFoundError(f"SharePoint server not found at {server_path}")
+
+        logger.info(f"Starting CrewAI MCP SharePoint integration for query: {query}")
+        logger.info(f"Using server: {server_path}")
+
+        # Configure stdio server parameters for generic SharePoint server
+        server_params = StdioServerParameters(
+            command="python3",
+            args=[str(server_path)],
+            env=dict(
+                os.environ
+            ),  # Pass current environment (includes SharePoint credentials)
+        )
+
+        try:
+            # Use MCPServerAdapter with context manager for automatic cleanup
+            with MCPServerAdapter(server_params) as mcp_tools:
+                logger.info(
+                    f"Available MCP SharePoint tools: {[tool.name for tool in mcp_tools]}"
+                )
+
+                # Create Azure OpenAI LLM
+                llm = self.get_azure_llm_config()
+
+                # Create SharePoint specialist agent with MCP tools
+                sharepoint_agent = Agent(
+                    role="SharePoint Document Specialist",
+                    goal="Search and retrieve information from SharePoint documents based on user queries, providing accurate and relevant document content and metadata using Microsoft Graph API with user-scoped access",
+                    backstory="I am an AI specialist focused on SharePoint document retrieval and search using Microsoft Graph API with On-Behalf-Of flow. I have user-scoped access to SharePoint via MCP tools and can search documents, retrieve content, explore folder structures, and provide detailed information about SharePoint resources. I excel at understanding user information needs and finding the most relevant documents across any organizational structure while maintaining proper user permissions.",
+                    tools=mcp_tools,  # Pass MCP tools to agent
+                    llm=llm,
+                    verbose=True,
+                )
+
+                # Create task for SharePoint query
+                sharepoint_task = Task(
+                    description=f"""Process this SharePoint-related query: {query}
+                    
+Available tools include:
+- search_sharepoint_documents: Search for documents based on keywords
+- list_sharepoint_folder_contents: Explore folder structures and get counts  
+- get_sharepoint_document_content: Retrieve specific document content
+- get_sharepoint_folder_tree: Get hierarchical folder structure
+- find_folders_by_pattern: Find folders matching specific patterns
+- get_sharepoint_configuration: Check current SharePoint settings
+
+Use the most appropriate tools for the query. For counting projects or understanding structure, use folder exploration tools. For finding specific documents, use search tools.
+
+IMPORTANT: If the user is asking a specific question (like "What is the projected length?", "How many jobs?", "What is the cost?"), analyze the retrieved document content and extract the specific answer. Do not just regurgitate the entire document - provide a direct, intelligent answer to their question.""",
+                    expected_output="""Provide a direct, intelligent answer to the user's specific question based on the SharePoint search results. 
+
+If the user asked a specific question:
+- Extract the exact answer from the document content (e.g., "1,000 km", "$50 billion", "51,000 jobs")
+- Provide the answer clearly and concisely
+- Include the source document name and relevant context
+- If the answer involves numbers, dates, or specific facts, quote them exactly
+
+If the user asked for general information:
+- Provide a comprehensive summary with document titles, key points, and relevant excerpts
+- Include links and folder locations for easy access
+
+Format your response to directly address what the user actually asked for.""",
+                    agent=sharepoint_agent,
+                )
+
+                # Create and execute crew
+                sharepoint_crew = Crew(
+                    agents=[sharepoint_agent],
+                    tasks=[sharepoint_task],
+                    process=Process.sequential,
+                    verbose=True,
+                )
+
+                # Execute the crew
+                logger.info("Executing CrewAI SharePoint crew...")
+                result = sharepoint_crew.kickoff()
+                return str(result)
+
+        except Exception as e:
+            logger.error(f"Error in CrewAI MCP SharePoint integration: {e}")
+            raise
+
     def run_multi_server_crew(self, query: str) -> str:
         """
         Run crews from multiple servers sequentially and combine results.
@@ -232,6 +357,9 @@ class CrewMCPManager:
         has_news_server = any(
             "news" in name.lower() for name in available_servers.keys()
         )
+        has_sharepoint_server = any(
+            "sharepoint" in name.lower() for name in available_servers.keys()
+        )
 
         try:
             # Run time crew if available
@@ -256,6 +384,18 @@ class CrewMCPManager:
                     logger.error(f"News crew failed: {e}")
                     results.append(
                         "News Information: Could not retrieve news information."
+                    )
+
+            # Run SharePoint crew if available
+            if has_sharepoint_server:
+                logger.info("Running SharePoint crew for multi-server query")
+                try:
+                    sharepoint_result = self.run_sharepoint_crew(query)
+                    results.append(f"SharePoint Information:\n{sharepoint_result}")
+                except Exception as e:
+                    logger.error(f"SharePoint crew failed: {e}")
+                    results.append(
+                        "SharePoint Information: Could not retrieve SharePoint information."
                     )
 
             if not results:
@@ -300,9 +440,16 @@ class CrewMCPManager:
                     for tool in selected_tools
                 ):
                     available_specialists.append("NEWS")
+                if any(
+                    "sharepoint" in tool.lower()
+                    or "document" in tool.lower()
+                    or "search" in tool.lower()
+                    for tool in selected_tools
+                ):
+                    available_specialists.append("SHAREPOINT")
             else:
                 # If no tools selected, all specialists are available
-                available_specialists = ["TIME", "NEWS"]
+                available_specialists = ["TIME", "NEWS", "SHAREPOINT"]
 
             logger.info(f"Available specialists: {available_specialists}")
 
@@ -316,6 +463,7 @@ class CrewMCPManager:
                 Available specialists:
                 - TIME: Handles current time, dates, timezones, scheduling, time-related calculations
                 - NEWS: Handles current news, headlines, articles, breaking news, news search
+                - SHAREPOINT: Handles SharePoint document search, retrieval, and content access
                 
                 Available specialists for this query: {", ".join(available_specialists)}
                 
@@ -341,12 +489,14 @@ Based on what the user is actually asking for, decide:
 1. ROUTING DECISION: Which specialist(s) should handle this query?
    - Choose TIME if the user needs: current time, date, timezone info, time calculations, scheduling
    - Choose NEWS if the user needs: current news, headlines, breaking news, articles, news search  
-   - Choose BOTH if the user needs information from both domains
+   - Choose SHAREPOINT if the user needs: SharePoint documents, file search, document retrieval, content access
+   - Choose multiple specialists if the user needs information from multiple domains
    - Choose the most relevant one if the query could go either way
 
 2. QUERY ADAPTATION: What specific question should each chosen specialist answer?
    - For TIME specialist: Adapt the query to focus on time-related aspects
    - For NEWS specialist: Adapt the query to focus on news-related aspects
+   - For SHAREPOINT specialist: Adapt the query to focus on document/content search aspects
    - Make sure each specialist gets a clear, focused query
 
 3. COORDINATION: How should the results be presented?
@@ -356,9 +506,10 @@ Based on what the user is actually asking for, decide:
 Think carefully about the user's actual intent and information needs.""",
                 expected_output="""Provide your routing decision in this exact format:
 
-ROUTING_DECISION: [TIME|NEWS|BOTH]
+ROUTING_DECISION: [TIME|NEWS|SHAREPOINT|TIME+NEWS|TIME+SHAREPOINT|NEWS+SHAREPOINT|TIME+NEWS+SHAREPOINT]
 TIME_QUERY: [specific query for time specialist or NONE]
 NEWS_QUERY: [specific query for news specialist or NONE]
+SHAREPOINT_QUERY: [specific query for sharepoint specialist or NONE]
 PRESENTATION: [brief note on how to present results]
 
 Be decisive and specific. Only route to specialists that are actually needed.""",
@@ -384,6 +535,7 @@ Be decisive and specific. Only route to specialists that are actually needed."""
             routing_decision = None
             time_query = None
             news_query = None
+            sharepoint_query = None
 
             for line in routing_str.split("\n"):
                 line = line.strip()
@@ -395,9 +547,14 @@ Be decisive and specific. Only route to specialists that are actually needed."""
                 elif line.startswith("NEWS_QUERY:"):
                     news_query_raw = line.split(":", 1)[1].strip()
                     news_query = news_query_raw if news_query_raw != "NONE" else None
+                elif line.startswith("SHAREPOINT_QUERY:"):
+                    sharepoint_query_raw = line.split(":", 1)[1].strip()
+                    sharepoint_query = (
+                        sharepoint_query_raw if sharepoint_query_raw != "NONE" else None
+                    )
 
             logger.info(
-                f"Parsed routing - decision: {routing_decision}, time_query: {time_query}, news_query: {news_query}"
+                f"Parsed routing - decision: {routing_decision}, time_query: {time_query}, news_query: {news_query}, sharepoint_query: {sharepoint_query}"
             )
 
             # Execute the routing decision
@@ -427,6 +584,20 @@ Be decisive and specific. Only route to specialists that are actually needed."""
                         "Unable to retrieve news information at this moment."
                     )
 
+            # Route to sharepoint specialist if needed and available
+            if sharepoint_query and "SHAREPOINT" in available_specialists:
+                logger.info(
+                    f"Routing to SHAREPOINT specialist with query: {sharepoint_query}"
+                )
+                try:
+                    sharepoint_response = self.run_sharepoint_crew(sharepoint_query)
+                    responses.append(sharepoint_response)
+                except Exception as e:
+                    logger.error(f"Error from SHAREPOINT specialist: {e}")
+                    responses.append(
+                        "Unable to retrieve SharePoint information at this moment."
+                    )
+
             # If no routing was determined or no responses, use simple fallback
             if not responses:
                 logger.info(
@@ -441,6 +612,10 @@ Be decisive and specific. Only route to specialists that are actually needed."""
                     logger.info("Fallback: defaulting to NEWS specialist")
                     news_response = self.run_news_crew(query)
                     responses.append(news_response)
+                elif "SHAREPOINT" in available_specialists:
+                    logger.info("Fallback: defaulting to SHAREPOINT specialist")
+                    sharepoint_response = self.run_sharepoint_crew(query)
+                    responses.append(sharepoint_response)
 
             # Return the response(s)
             if len(responses) == 1:

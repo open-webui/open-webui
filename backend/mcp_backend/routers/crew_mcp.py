@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from typing import Optional, Dict, Any
 from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
 from open_webui.utils.auth import get_verified_user
@@ -17,6 +18,40 @@ from open_webui.socket.main import get_event_emitter
 # Add the backend directory to the path to import crew_mcp_integration
 backend_dir = Path(__file__).parent.parent.parent
 sys.path.append(str(backend_dir))
+
+# Initialize HTTPBearer for token extraction
+bearer_security = HTTPBearer(auto_error=False)
+
+
+def extract_user_token(
+    request: Request,
+    auth_token: Optional[HTTPAuthorizationCredentials] = Depends(bearer_security),
+) -> Optional[str]:
+    """Extract the user's OAuth token from the request for OBO flow"""
+    token = None
+
+    # First priority: OAuth access token from Microsoft login (for SharePoint OBO)
+    if "oauth_access_token" in request.cookies:
+        token = request.cookies.get("oauth_access_token")
+        logging.info("Using OAuth access token for SharePoint OBO flow")
+
+    # Second priority: OAuth ID token (may work for some scenarios)
+    elif "oauth_id_token" in request.cookies:
+        token = request.cookies.get("oauth_id_token")
+        logging.info("Using OAuth ID token for SharePoint OBO flow")
+
+    # Third priority: Authorization header (may be internal JWT)
+    elif auth_token is not None:
+        token = auth_token.credentials
+        logging.info("Using authorization header token")
+
+    # Fourth priority: Session token cookie (internal JWT)
+    elif "token" in request.cookies:
+        token = request.cookies.get("token")
+        logging.info("Using session token cookie")
+
+    return token
+
 
 try:
     from mcp_backend.integration.crew_mcp_integration import CrewMCPManager
@@ -249,7 +284,10 @@ async def get_mcp_tools(user=Depends(get_verified_user)) -> MCPToolsResponse:
 
 @router.post("/query")
 async def run_crew_query(
-    request_data: Request, request: CrewMCPQuery, user=Depends(get_verified_user)
+    request_data: Request,
+    request: CrewMCPQuery,
+    user=Depends(get_verified_user),
+    auth_token: Optional[HTTPAuthorizationCredentials] = Depends(bearer_security),
 ) -> CrewMCPResponse:
     """Run a CrewAI query with MCP tools"""
     if not crew_mcp_manager:
@@ -261,8 +299,13 @@ async def run_crew_query(
         )
 
     try:
+        # For local development, don't try to extract OAuth tokens
+        # In production K8s, the OAuth flow provides proper tokens automatically
         log.info(f"Running CrewAI query for user {user.id}: {request.query}")
         log.info(f"Selected tools: {request.selected_tools}")
+
+        # Don't set user token for local development
+        # crew_mcp_manager.set_user_token(user_jwt_token)
 
         # Get available tools first
         tools = crew_mcp_manager.get_available_tools()

@@ -255,7 +255,11 @@ class FastMCPManager:
                 "working_dir": config.get("working_dir"),
                 "url": config.get("url"),
                 "is_builtin": name
-                in ["time_server", "news_server"],  # Mark built-in servers
+                in [
+                    "time_server",
+                    "news_server",
+                    "sharepoint_server",
+                ],  # Mark built-in servers
             }
             servers.append(server_info)
 
@@ -439,6 +443,29 @@ class FastMCPManager:
         else:
             log.warning(f"News server not found at {news_server_path}")
 
+        # Add configuration for SharePoint server (stdio)
+        sharepoint_server_path = (
+            backend_dir / "mcp_backend" / "servers" / "fastmcp_sharepoint_server.py"
+        )
+
+        log.info(f"Looking for SharePoint server at: {sharepoint_server_path}")
+        log.info(f"SharePoint server exists: {sharepoint_server_path.exists()}")
+
+        if sharepoint_server_path.exists():
+            self.add_server_config(
+                name="sharepoint_server",
+                command=["python", str(sharepoint_server_path)],
+                working_dir=str(backend_dir),
+                env=dict(os.environ),  # Pass current environment variables
+                transport="stdio",
+            )
+
+            # Start the SharePoint server
+            await self.start_server("sharepoint_server")
+            log.info("SharePoint server started successfully")
+        else:
+            log.warning(f"SharePoint server not found at {sharepoint_server_path}")
+
     async def initialize_external_servers(self):
         """Initialize external MCP servers from database"""
         try:
@@ -517,7 +544,11 @@ class FastMCPManager:
                         tool_list = []
                         for tool in tools:
                             # Mark if this is a built-in server
-                            is_builtin = server_name in ["time_server", "news_server"]
+                            is_builtin = server_name in [
+                                "time_server",
+                                "news_server",
+                                "sharepoint_server",
+                            ]
                             tool_dict = {
                                 "name": tool.name,
                                 "description": tool.description,
@@ -543,7 +574,11 @@ class FastMCPManager:
                         tool_list = []
                         for tool in tools:
                             # Mark if this is a built-in server
-                            is_builtin = server_name in ["time_server", "news_server"]
+                            is_builtin = server_name in [
+                                "time_server",
+                                "news_server",
+                                "sharepoint_server",
+                            ]
                             tool_dict = {
                                 "name": tool.name,
                                 "description": tool.description,
