@@ -16,7 +16,13 @@
 	import Message from './Messages/Message.svelte';
 	import Loader from '../common/Loader.svelte';
 	import Spinner from '../common/Spinner.svelte';
-	import { addReaction, deleteMessage, removeReaction, updateMessage } from '$lib/apis/channels';
+	import {
+		addReaction,
+		deleteMessage,
+		pinMessage,
+		removeReaction,
+		updateMessage
+	} from '$lib/apis/channels';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	const i18n = getContext('i18n');
@@ -122,11 +128,12 @@
 				{message}
 				{thread}
 				replyToMessage={replyToMessage?.id === message.id}
-				disabled={!channel?.write_access}
+				disabled={!channel?.write_access || message?.temp_id}
+				pending={!!message?.temp_id}
 				showUserProfile={messageIdx === 0 ||
 					messageList.at(messageIdx - 1)?.user_id !== message.user_id ||
 					messageList.at(messageIdx - 1)?.meta?.model_id !== message?.meta?.model_id ||
-					message?.reply_to_message}
+					message?.reply_to_message !== null}
 				onDelete={() => {
 					messages = messages.filter((m) => m.id !== message.id);
 
@@ -154,6 +161,26 @@
 				}}
 				onReply={(message) => {
 					onReply(message);
+				}}
+				onPin={async (message) => {
+					messages = messages.map((m) => {
+						if (m.id === message.id) {
+							m.is_pinned = !m.is_pinned;
+							m.pinned_by = !m.is_pinned ? null : $user?.id;
+							m.pinned_at = !m.is_pinned ? null : Date.now() * 1000000;
+						}
+						return m;
+					});
+
+					const updatedMessage = await pinMessage(
+						localStorage.token,
+						message.channel_id,
+						message.id,
+						message.is_pinned
+					).catch((error) => {
+						toast.error(`${error}`);
+						return null;
+					});
 				}}
 				onThread={(id) => {
 					onThread(id);

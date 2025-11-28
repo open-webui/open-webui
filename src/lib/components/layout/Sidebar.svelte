@@ -707,6 +707,7 @@
 					{#if $user !== undefined && $user !== null}
 						<UserMenu
 							role={$user?.role}
+							showActiveUsers={false}
 							on:show={(e) => {
 								if (e.detail === 'archived-chat') {
 									showArchivedChats.set(true);
@@ -1256,6 +1257,7 @@
 					{#if $user !== undefined && $user !== null}
 						<UserMenu
 							role={$user?.role}
+							showActiveUsers={false}
 							on:show={(e) => {
 								if (e.detail === 'archived-chat') {
 									showArchivedChats.set(true);
