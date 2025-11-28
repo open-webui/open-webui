@@ -772,19 +772,23 @@ async def chat_image_generation_handler(
     if not chat_id:
         return form_data
 
-    chat = Chats.get_chat_by_id_and_user_id(chat_id, user.id)
-
     __event_emitter__ = extra_params["__event_emitter__"]
-    await __event_emitter__(
-        {
-            "type": "status",
-            "data": {"description": "Creating image", "done": False},
-        }
-    )
 
-    messages_map = chat.chat.get("history", {}).get("messages", {})
-    message_id = chat.chat.get("history", {}).get("currentId")
-    message_list = get_message_list(messages_map, message_id)
+    if chat_id.startswith("local:"):
+        message_list = form_data.get("messages", [])
+    else:
+        chat = Chats.get_chat_by_id_and_user_id(chat_id, user.id)
+        await __event_emitter__(
+            {
+                "type": "status",
+                "data": {"description": "Creating image", "done": False},
+            }
+        )
+
+        messages_map = chat.chat.get("history", {}).get("messages", {})
+        message_id = chat.chat.get("history", {}).get("currentId")
+        message_list = get_message_list(messages_map, message_id)
+
     user_message = get_last_user_message(message_list)
 
     prompt = user_message
