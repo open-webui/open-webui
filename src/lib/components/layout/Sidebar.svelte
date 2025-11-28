@@ -57,6 +57,7 @@
 	import ChannelModal from './Sidebar/ChannelModal.svelte';
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
+	import Modal from '../common/Modal.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -68,7 +69,7 @@
 	// Multi-selection state - using array to preserve selection order
 	let selectedChatIds: string[] = [];
 	let showBulkActions = false;
-
+	let showLoaderWhileProcessing = false;
 	// Reactive statements for multi-selection
 	$: showBulkActions = selectedChatIds.length > 0;
 	$: firstSelectedChatId = selectedChatIds.length > 0 ? selectedChatIds[0] : null;
@@ -315,12 +316,25 @@
 
 		showDeleteConfirm = true;
 	};
+
+	const processDeletion = async (fn: () => Promise<any>) => {
+		showLoaderWhileProcessing = true;
+		try {
+			const result = await fn();
+			return result;
+		} finally {
+			showLoaderWhileProcessing = false;
+		}
+	};
+
 	const confirmDeleteSelectedChats = async () => {
 		// In delete mode, only delete explicitly selected chats
 		const chatIdsArray = selectedChatIds;
 
 		try {
-			const result = await deleteMultipleChats(localStorage.token, chatIdsArray);
+			const result = await processDeletion(() =>
+				deleteMultipleChats(localStorage.token, chatIdsArray)
+			);
 
 			if (result.failed_deletions.length > 0) {
 				const message =
@@ -1057,6 +1071,20 @@
 		{$i18n.t('selected chat(s)')}. {$i18n.t('This action cannot be undone')}.
 	</div>
 </ConfirmDialog>
+
+<Modal bind:show={showLoaderWhileProcessing} size="sm" disableClose={true} disableFocusTrap={true}>
+	<div class="px-5 py-4">
+		<div class="flex flex-col items-center text-center space-y-3">
+			<Spinner className="size-8" />
+			<div class="text-lg font-semibold dark:text-gray-200">
+				{$i18n.t('Deleting selected chats...')}
+			</div>
+			<div class="text-sm text-gray-600 dark:text-gray-400">
+				{$i18n.t('Please wait')}
+			</div>
+		</div>
+	</div>
+</Modal>
 
 <style>
 	.scrollbar-hidden:active::-webkit-scrollbar-thumb,
