@@ -10,7 +10,6 @@ from pydantic import BaseModel
 from open_webui.socket.main import (
     sio,
     get_user_ids_from_room,
-    get_active_status_by_user_id,
 )
 from open_webui.models.users import (
     UserIdNameResponse,
@@ -99,10 +98,7 @@ async def get_channels(user=Depends(get_verified_user)):
             ]
             users = [
                 UserIdNameStatusResponse(
-                    **{
-                        **user.model_dump(),
-                        "is_active": get_active_status_by_user_id(user.id),
-                    }
+                    **{**user.model_dump(), "is_active": Users.is_user_active(user.id)}
                 )
                 for user in Users.get_users_by_user_ids(user_ids)
             ]
@@ -284,7 +280,7 @@ async def get_channel_members_by_id(
         return {
             "users": [
                 UserModelResponse(
-                    **user.model_dump(), is_active=get_active_status_by_user_id(user.id)
+                    **user.model_dump(), is_active=Users.is_user_active(user.id)
                 )
                 for user in users
             ],
@@ -316,7 +312,7 @@ async def get_channel_members_by_id(
         return {
             "users": [
                 UserModelResponse(
-                    **user.model_dump(), is_active=get_active_status_by_user_id(user.id)
+                    **user.model_dump(), is_active=Users.is_user_active(user.id)
                 )
                 for user in users
             ],

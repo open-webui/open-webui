@@ -489,7 +489,7 @@ class UsersTable:
             return None
 
     @throttle(DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL)
-    def update_user_last_active_by_id(self, id: str) -> Optional[UserModel]:
+    def update_last_active_by_id(self, id: str) -> Optional[UserModel]:
         try:
             with get_db() as db:
                 db.query(User).filter_by(id=id).update(

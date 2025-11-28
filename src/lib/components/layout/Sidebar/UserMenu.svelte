@@ -222,7 +222,7 @@
 			</DropdownMenu.Item>
 
 			{#if showActiveUsers && usage}
-				{#if usage?.user_ids?.length > 0}
+				{#if usage?.user_count}
 					<hr class=" border-gray-50 dark:border-gray-800 my-1 p-0" />
 
 					<Tooltip
@@ -250,7 +250,7 @@
 									{$i18n.t('Active Users')}:
 								</span>
 								<span class=" font-semibold">
-									{usage?.user_ids?.length}
+									{usage?.user_count}
 								</span>
 							</div>
 						</div>
