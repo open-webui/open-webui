@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.41] - 2025-11-27
+## [0.6.41] - 2025-11-28
 
 ### Added
 
@@ -40,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- ⚠️ **IMPORTANT for Multi-Instance Deployments** — This release includes database schema changes (new columns added to "channel_member" and "message" tables for unread message tracking and pinning functionality); multi-worker, multi-server, or load-balanced deployments must update all instances simultaneously rather than performing rolling updates, as running mixed versions will cause application failures due to schema incompatibility between old and new instances. [Commit](https://github.com/open-webui/open-webui/commit/64b4d5d9c280b926746584aaf92b447d09deb386)
+- ⚠️ **IMPORTANT for Multi-Instance Deployments** — This release includes database schema changes; multi-worker, multi-server, or load-balanced deployments must update all instances simultaneously rather than performing rolling updates, as running mixed versions will cause application failures due to schema incompatibility between old and new instances. [Commit](https://github.com/open-webui/open-webui/commit/64b4d5d9c280b926746584aaf92b447d09deb386)
 - 💬 Channel creation is now restricted to administrators only, with the channel add button hidden for regular users to maintain organizational control over communication channels. [Commit](https://github.com/open-webui/open-webui/commit/421aba7cd7cd708168b1f2565026c74525a67905)
 
 ## [0.6.40] - 2025-11-25
