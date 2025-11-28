@@ -55,6 +55,7 @@ export const folders = writable([]);
 export const selectedFolder = writable(null);
 
 export const models: Writable<Model[]> = writable([]);
+export const userModels: Writable<any[]> = writable([]);
 
 export const prompts: Writable<null | Prompt[]> = writable(null);
 export const knowledge: Writable<null | Document[]> = writable(null);

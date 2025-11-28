@@ -91,6 +91,7 @@ from open_webui.routers import (
     evaluations,
     tools,
     users,
+    user_models,
     utils,
     scim,
 )
@@ -1297,7 +1298,9 @@ app.include_router(configs.router, prefix="/api/v1/configs", tags=["configs"])
 app.include_router(auths.router, prefix="/api/v1/auths", tags=["auths"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 
-
+app.include_router(
+    user_models.router, prefix="/api/v1/user/models", tags=["user_models"]
+)
 app.include_router(channels.router, prefix="/api/v1/channels", tags=["channels"])
 app.include_router(chats.router, prefix="/api/v1/chats", tags=["chats"])
 app.include_router(notes.router, prefix="/api/v1/notes", tags=["notes"])

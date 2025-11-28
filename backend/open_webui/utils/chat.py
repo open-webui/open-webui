@@ -38,6 +38,7 @@ from open_webui.routers.pipelines import (
 
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
+from open_webui.models.user_model_credentials import UserModelCredentials
 
 
 from open_webui.utils.plugin import (
@@ -225,6 +226,23 @@ async def generate_chat_completion(
 
     # === 4. 验证模型存在性 ===
     model_id = form_data["model"]
+
+    # 私有模型直连：如果是用户私有模型，使用 credential_id 注入 direct 配置
+    if form_data.get("is_user_model") and form_data.get("model_item", {}).get("credential_id"):
+        cred = UserModelCredentials.get_credential_by_id_and_user_id(
+            form_data["model_item"]["credential_id"], user.id
+        )
+        if not cred:
+            raise Exception("User model credential not found")
+        request.state.direct = True
+        request.state.model = {
+            "id": cred.model_id,
+            "name": cred.name or cred.model_id,
+            "base_url": cred.base_url,
+            "api_key": cred.api_key,
+        }
+        models = {request.state.model["id"]: request.state.model}
+        model_id = cred.model_id
     if model_id not in models:
         raise Exception("Model not found")
 

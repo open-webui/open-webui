@@ -15,7 +15,15 @@
 	import { getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
 
-	import { config, models, settings, temporaryChatEnabled, TTSWorker, user } from '$lib/stores';
+import {
+	config,
+	models,
+	settings,
+	temporaryChatEnabled,
+	TTSWorker,
+	user,
+	userModels
+} from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -147,8 +155,30 @@
 	let buttonsContainerElement: HTMLDivElement;
 	let showDeleteConfirm = false;
 
-	let model = null;
-	$: model = $models.find((m) => m.id === message.model);
+let model = null;
+let userModel = null;
+let modelName = '';
+
+$: {
+	const platformModel = $models.find((m) => m.id === message.model);
+	const credentialModel = (() => {
+		// 优先使用随消息携带的 credential_id 精确匹配
+		if (message?.model_item?.credential_id) {
+			return $userModels.find((m) => m.id === message.model_item.credential_id);
+		}
+		// 兼容历史消息：通过 model_id 反查
+		return $userModels.find((m) => m.model_id === message.model);
+	})();
+
+	userModel = credentialModel ? { ...credentialModel, id: credentialModel.model_id } : null;
+	model = platformModel ?? userModel;
+
+	modelName =
+		message.modelName ??
+		model?.name ??
+		(userModel?.name ?? userModel?.model_id) ??
+		message.model;
+}
 
 	let edit = false;
 	let editedContent = '';
@@ -619,10 +649,10 @@
 
 		<div class="flex-auto w-0 pl-1 relative">
 			<Name>
-				<Tooltip content={model?.name ?? message.model} placement="top-start">
-					<span class="line-clamp-1 text-black dark:text-white">
-						{model?.name ?? message.model}
-					</span>
+		<Tooltip content={modelName} placement="top-start">
+			<span class="line-clamp-1 text-black dark:text-white">
+				{modelName}
+			</span>
 				</Tooltip>
 
 				{#if message.timestamp}

@@ -16,6 +16,7 @@
 	import { toast } from 'svelte-sonner';
 	import Tag from '$lib/components/icons/Tag.svelte';
 	import Label from '$lib/components/icons/Label.svelte';
+	import { createEventDispatcher } from 'svelte';
 
 	const i18n = getContext('i18n');
 
@@ -28,6 +29,8 @@
 	export let pinModelHandler: (modelId: string) => void = () => {};
 
 	export let onClick: () => void = () => {};
+
+	const dispatch = createEventDispatcher();
 
 	const copyLinkHandler = async (model) => {
 		const baseUrl = window.location.origin;
@@ -86,11 +89,19 @@
 			</div>
 
 			<div class="flex items-center">
-				<Tooltip content={`${item.label} (${item.value})`} placement="top-start">
+				<Tooltip content={`${item.label}`} placement="top-start">
 					<div class="line-clamp-1">
 						{item.label}
 					</div>
 				</Tooltip>
+
+				{#if item?.source === 'user'}
+					<div
+						class="ml-2 inline-flex items-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-100 px-1.5 py-0.5 text-[11px]"
+					>
+						{$i18n.t('My API')}
+					</div>
+				{/if}
 			</div>
 
 			<div class=" shrink-0 flex items-center gap-2">
@@ -249,9 +260,14 @@
 		<ModelItemMenu
 			bind:show={showMenu}
 			model={item.model}
+			{item}
 			{pinModelHandler}
 			copyLinkHandler={() => {
 				copyLinkHandler(item.model);
+			}}
+			onDelete={(cred) => {
+				const target = cred?._credential ?? cred;
+				dispatch('deleteUserModel', target);
 			}}
 		>
 			<button

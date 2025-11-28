@@ -44,11 +44,14 @@
 	export let placeholder = $i18n.t('Select a model');
 	export let searchEnabled = true;
 	export let searchPlaceholder = $i18n.t('Search a model');
+	export let addUserModel: Function = () => {};
 
 	export let items: {
 		label: string;
 		value: string;
 		model: Model;
+		source?: string;
+		_credential?: any;
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		[key: string]: any;
 	}[] = [];
@@ -541,6 +544,33 @@
 			</div>
 
 			<div class="px-2.5 max-h-64 overflow-y-auto group relative">
+				<!-- Add private model button -->
+				<button
+					class="w-full text-left px-2 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/60 flex items-center gap-2 transition mb-1"
+					on:click={() => {
+						addUserModel();
+						show = false;
+					}}
+				>
+					<div
+						class="size-7 rounded-full bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900 flex items-center justify-center"
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="size-4"
+						>
+							<path
+								d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
+							/>
+						</svg>
+					</div>
+					<div class="text-sm font-medium text-gray-900 dark:text-gray-100">
+						{$i18n.t('Add My API')}
+					</div>
+				</button>
+
 				{#each filteredItems as item, index}
 					<ModelItem
 						{selectedModelIdx}
@@ -554,6 +584,12 @@
 							selectedModelIdx = index;
 
 							show = false;
+						}}
+						on:deleteUserModel={(e) => {
+							dispatch('deleteUserModel', e.detail);
+						}}
+						on:editUserModel={(e) => {
+							dispatch('editUserModel', e.detail);
 						}}
 					/>
 				{:else}

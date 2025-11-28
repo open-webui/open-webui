@@ -14,6 +14,9 @@
 
 	export let show = false;
 	export let model;
+	export let item: any = {};
+	
+	export let onDelete: Function = () => {};  // required: pass handler from parent
 
 	export let pinModelHandler: (modelId: string) => void = () => {};
 	export let copyLinkHandler: Function = () => {};
@@ -92,5 +95,20 @@
 
 			<div class="flex items-center">{$i18n.t('Copy Link')}</div>
 		</DropdownMenu.Item>
+
+		{#if item?.source === 'user'}
+			<DropdownMenu.Item
+				type="button"
+				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-red-500"
+				on:click={(e) => {
+					e.stopPropagation();
+					e.preventDefault();
+					onDelete(item);
+					show = false;
+				}}
+			>
+				<div class="flex items-center">{$i18n.t('Delete')}</div>
+			</DropdownMenu.Item>
+		{/if}
 	</DropdownMenu.Content>
 </DropdownMenu.Root>
