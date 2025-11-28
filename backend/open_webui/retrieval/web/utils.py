@@ -12,6 +12,8 @@ from typing import (
     Optional,
     Sequence,
     Union,
+    Iterator,
+    AsyncIterator,
 )
 import aiohttp
 import certifi
@@ -258,7 +260,7 @@ def get_web_loader(
     # to simplify the web search architecture.
     
     web_loader = SafeWebBaseLoader(
-        web_paths=safe_urls,
+        web_paths=list(safe_urls),
         verify_ssl=verify_ssl,
         trust_env=trust_env,
         requests_per_second=float(requests_per_second),
