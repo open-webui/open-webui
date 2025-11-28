@@ -869,9 +869,11 @@ export const processDetailsAndExtractToolCalls = (content) => {
 	if (matches && matches.length > 0) {
 		let previousDetailsEndIndex = 0;
 		for (const match of matches) {
-
 			let detailsStartIndex = content.indexOf(match, previousDetailsEndIndex);
-			let assistantMessage = content.substr(previousDetailsEndIndex, detailsStartIndex - previousDetailsEndIndex);
+			let assistantMessage = content.substr(
+				previousDetailsEndIndex,
+				detailsStartIndex - previousDetailsEndIndex
+			);
 			previousDetailsEndIndex = detailsStartIndex + match.length;
 
 			assistantMessage = assistantMessage.trim('\n');
@@ -900,7 +902,7 @@ export const processDetailsAndExtractToolCalls = (content) => {
 			toolCall.result = parseDoubleEncodedString(toolCall.result);
 
 			messages.push(toolCall);
-		}
+		};
 
 		let finalAssistantMessage = content.substr(previousDetailsEndIndex);
 		finalAssistantMessage = finalAssistantMessage.trim('\n');
@@ -917,7 +919,7 @@ export const processDetailsAndExtractToolCalls = (content) => {
 function parseDoubleEncodedString(value) {
 	try {
 		let parsedValue = JSON.parse(value);
-		if (typeof parsedValue == "string") {
+		if (typeof parsedValue == 'string') {
 			return parsedValue;
 		}
 	} catch {}
