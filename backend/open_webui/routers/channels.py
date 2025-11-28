@@ -14,6 +14,7 @@ from open_webui.socket.main import (
 )
 from open_webui.models.users import (
     UserIdNameResponse,
+    UserIdNameStatusResponse,
     UserListResponse,
     UserModelResponse,
     Users,
@@ -68,7 +69,7 @@ router = APIRouter()
 
 class ChannelListItemResponse(ChannelModel):
     user_ids: Optional[list[str]] = None  # 'dm' channels only
-    users: Optional[list[UserIdNameResponse]] = None  # 'dm' channels only
+    users: Optional[list[UserIdNameStatusResponse]] = None  # 'dm' channels only
 
     last_message_at: Optional[int] = None  # timestamp in epoch (time_ns)
     unread_count: int = 0
@@ -97,7 +98,12 @@ async def get_channels(user=Depends(get_verified_user)):
                 for member in Channels.get_members_by_channel_id(channel.id)
             ]
             users = [
-                UserIdNameResponse(**user.model_dump())
+                UserIdNameStatusResponse(
+                    **{
+                        **user.model_dump(),
+                        "is_active": get_active_status_by_user_id(user.id),
+                    }
+                )
                 for user in Users.get_users_by_user_ids(user_ids)
             ]
 

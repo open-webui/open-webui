@@ -125,6 +125,12 @@ class UserIdNameResponse(BaseModel):
     name: str
 
 
+class UserIdNameStatusResponse(BaseModel):
+    id: str
+    name: str
+    is_active: bool
+
+
 class UserInfoListResponse(BaseModel):
     users: list[UserInfoResponse]
     total: int
