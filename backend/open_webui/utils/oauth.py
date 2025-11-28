@@ -7,6 +7,7 @@ import sys
 import urllib
 import uuid
 import json
+from urllib.parse import quote
 from datetime import datetime, timedelta
 
 import re
@@ -1077,6 +1078,47 @@ class OAuthManager:
                 elif isinstance(claim_data, int):
                     oauth_roles = [str(claim_data)]
 
+            # Check if this is Google OAuth with Cloud Identity scope
+            if (
+                provider == "google"
+                and access_token
+                and "https://www.googleapis.com/auth/cloud-identity.groups.readonly"
+                in GOOGLE_OAUTH_SCOPE.value
+            ):
+
+                log.debug(
+                    "Google OAuth with Cloud Identity scope detected - fetching groups via API"
+                )
+                user_email = user_data.get(auth_manager_config.OAUTH_EMAIL_CLAIM, "")
+                if user_email:
+                    try:
+                        google_groups = (
+                            await self._fetch_google_groups_via_cloud_identity(
+                                access_token, user_email
+                            )
+                        )
+                        # Store groups in user_data for potential group management later
+                        if "google_groups" not in user_data:
+                            user_data["google_groups"] = google_groups
+
+                        # Use Google groups as oauth_roles for role determination
+                        oauth_roles = google_groups
+                        log.debug(f"Using Google groups as roles: {oauth_roles}")
+                    except Exception as e:
+                        log.error(f"Failed to fetch Google groups: {e}")
+                        # Fall back to default behavior with claims
+                        oauth_roles = []
+
+            # If not using Google groups or Google groups fetch failed, use traditional claims method
+            if not oauth_roles:
+                # Next block extracts the roles from the user data, accepting nested claims of any depth
+                if oauth_claim and oauth_allowed_roles and oauth_admin_roles:
+                    claim_data = user_data
+                    nested_claims = oauth_claim.split(".")
+                    for nested_claim in nested_claims:
+                        claim_data = claim_data.get(nested_claim, {})
+                    oauth_roles = claim_data if isinstance(claim_data, list) else []
+
             log.debug(f"Oauth Roles claim: {oauth_claim}")
             log.debug(f"User roles from oauth: {oauth_roles}")
             log.debug(f"Accepted user roles: {oauth_allowed_roles}")
@@ -1426,9 +1468,8 @@ class OAuthManager:
                     exc_info=True,
                 )
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
-
-            # Try to get userinfo from the token first, some providers include it there
             user_data: UserInfo = token.get("userinfo")
+
             if (
                 (not user_data)
                 or (auth_manager_config.OAUTH_EMAIL_CLAIM not in user_data)
@@ -1506,13 +1547,13 @@ class OAuthManager:
                 else:
                     log.warning(f"OAuth callback failed, email is missing: {user_data}")
                     raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+
             email = email.lower()
 
             # If allowed domains are configured, check if the email domain is in the list
             if (
                 "*" not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
-                and email.split("@")[-1]
-                not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
+                and email.split("@")[-1] not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
             ):
                 log.warning(
                     f"OAuth callback failed, e-mail domain is not in the list of allowed domains: {user_data}"
@@ -1521,6 +1562,7 @@ class OAuthManager:
 
             # Check if the user exists
             user = Users.get_user_by_oauth_sub(provider_sub)
+
             if not user:
                 # If the user does not exist, check if merging is enabled
                 if auth_manager_config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL:
@@ -1544,8 +1586,7 @@ class OAuthManager:
                     picture_claim = auth_manager_config.OAUTH_PICTURE_CLAIM
                     if picture_claim:
                         new_picture_url = user_data.get(
-                            picture_claim,
-                            OAUTH_PROVIDERS[provider].get("picture_url", ""),
+                            picture_claim, OAUTH_PROVIDERS[provider].get("picture_url", "")
                         )
                         processed_picture_url = await self._process_picture_url(
                             new_picture_url, token.get("access_token")
@@ -1566,14 +1607,14 @@ class OAuthManager:
                     picture_claim = auth_manager_config.OAUTH_PICTURE_CLAIM
                     if picture_claim:
                         picture_url = user_data.get(
-                            picture_claim,
-                            OAUTH_PROVIDERS[provider].get("picture_url", ""),
+                            picture_claim, OAUTH_PROVIDERS[provider].get("picture_url", "")
                         )
                         picture_url = await self._process_picture_url(
                             picture_url, token.get("access_token")
                         )
                     else:
                         picture_url = "/user.png"
+
                     username_claim = auth_manager_config.OAUTH_USERNAME_CLAIM
 
                     name = user_data.get(username_claim)
