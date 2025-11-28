@@ -94,11 +94,12 @@ async def get_tools(
     tools_dict = {}
 
     for tool_id in tool_ids:
-        # Handle built-in web search tool
+        # Handle built-in web search tools (search and fetch)
         if tool_id == "builtin:web_search":
-            web_search_tool = get_web_search_tool_specs(extra_params)
-            if web_search_tool:
-                tools_dict["search_web"] = web_search_tool
+            web_search_tools = get_web_search_tool_specs(extra_params)
+            if web_search_tools:
+                for tool_name, tool_spec in web_search_tools.items():
+                    tools_dict[tool_name] = tool_spec
             continue
 
         tool = Tools.get_tool_by_id(tool_id)
@@ -822,29 +823,47 @@ def get_tool_server_url(url: Optional[str], path: str) -> str:
 
 def get_web_search_tool_specs(extra_params: dict) -> dict:
     """
-    Generate tool specs for the built-in web search tool.
-    Returns a dict containing the tool specs in OpenAI function calling format.
+    Generate tool specs for the built-in web search and fetch tools.
+    Returns a dict containing tool specs for both web_search and web_fetch.
 
     Args:
         extra_params: Extra parameters to inject (__request__, __user__, etc.)
     """
-    from open_webui.utils.web_search_tool import get_web_search_tool_instance
+    from open_webui.utils.web_search_tool import get_web_search_tools_instance
 
-    tool_instance = get_web_search_tool_instance()
+    tool_instance = get_web_search_tools_instance()
     specs = get_tool_specs(tool_instance)
 
     if not specs:
         return {}
 
-    # Wrap the callable with extra_params injection (e.g., __request__, __user__)
-    callable_with_params = get_async_tool_function_and_apply_extra_params(
-        tool_instance.search_web, extra_params
-    )
-
-    # Use the first (and only) spec from the tool
-    return {
-        "id": "builtin:web_search",
-        "name": "web_search",
-        "spec": specs[0],
-        "callable": callable_with_params,
-    }
+    tools = {}
+    
+    # Create a mapping of method names to specs
+    spec_map = {spec.get("function", {}).get("name", ""): spec for spec in specs}
+    
+    # Register web_search tool
+    if "web_search" in spec_map:
+        callable_search = get_async_tool_function_and_apply_extra_params(
+            tool_instance.web_search, extra_params
+        )
+        tools["web_search"] = {
+            "id": "builtin:web_search",
+            "name": "web_search",
+            "spec": spec_map["web_search"],
+            "callable": callable_search,
+        }
+    
+    # Register web_fetch tool
+    if "web_fetch" in spec_map:
+        callable_fetch = get_async_tool_function_and_apply_extra_params(
+            tool_instance.web_fetch, extra_params
+        )
+        tools["web_fetch"] = {
+            "id": "builtin:web_fetch",
+            "name": "web_fetch",
+            "spec": spec_map["web_fetch"],
+            "callable": callable_fetch,
+        }
+    
+    return tools

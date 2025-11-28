@@ -49,6 +49,20 @@ type YoutubeConfigForm = {
 	proxy_url: string;
 };
 
+type WebSearchConfigForm = {
+	ENABLE_WEB_SEARCH?: boolean;
+	EXA_API_KEY?: string;
+	EXA_SEARCH_NUM_RESULTS?: number;
+	EXA_SEARCH_TYPE?: string;
+	EXA_INCLUDE_DOMAINS?: string[];
+	EXA_EXCLUDE_DOMAINS?: string[];
+	EXA_CONTENTS_MAX_CHARACTERS?: number;
+	EXA_CONTENTS_LIVECRAWL?: string;
+	WEB_SEARCH_SYSTEM_PROMPT?: string;
+	YOUTUBE_LOADER_LANGUAGE?: string[];
+	YOUTUBE_LOADER_PROXY_URL?: string;
+};
+
 type RAGConfigForm = {
 	PDF_EXTRACT_IMAGES?: boolean;
 	ENABLE_GOOGLE_DRIVE_INTEGRATION?: boolean;
@@ -57,6 +71,7 @@ type RAGConfigForm = {
 	content_extraction?: ContentExtractConfigForm;
 	web_loader_ssl_verification?: boolean;
 	youtube?: YoutubeConfigForm;
+	web?: WebSearchConfigForm;
 };
 
 export const updateRAGConfig = async (token: string, payload: RAGConfigForm) => {

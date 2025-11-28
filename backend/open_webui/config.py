@@ -2765,7 +2765,7 @@ YOUTUBE_LOADER_PROXY_URL = PersistentConfig(
 
 
 ####################################
-# Web Search (RAG)
+# Web Search (Exa-only, simplified)
 ####################################
 
 ENABLE_WEB_SEARCH = PersistentConfig(
@@ -2774,306 +2774,69 @@ ENABLE_WEB_SEARCH = PersistentConfig(
     os.getenv("ENABLE_WEB_SEARCH", "False").lower() == "true",
 )
 
-WEB_SEARCH_ENGINE = PersistentConfig(
-    "WEB_SEARCH_ENGINE",
-    "rag.web.search.engine",
-    os.getenv("WEB_SEARCH_ENGINE", ""),
-)
-
-BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
-    "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL",
-    "rag.web.search.bypass_embedding_and_retrieval",
-    os.getenv("BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL", "False").lower() == "true",
-)
-
-
-BYPASS_WEB_SEARCH_WEB_LOADER = PersistentConfig(
-    "BYPASS_WEB_SEARCH_WEB_LOADER",
-    "rag.web.search.bypass_web_loader",
-    os.getenv("BYPASS_WEB_SEARCH_WEB_LOADER", "False").lower() == "true",
-)
-
-WEB_SEARCH_RESULT_COUNT = PersistentConfig(
-    "WEB_SEARCH_RESULT_COUNT",
-    "rag.web.search.result_count",
-    int(os.getenv("WEB_SEARCH_RESULT_COUNT", "3")),
-)
-
-
-# You can provide a list of your own websites to filter after performing a web search.
-# This ensures the highest level of safety and reliability of the information sources.
-WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(
-    "WEB_SEARCH_DOMAIN_FILTER_LIST",
-    "rag.web.search.domain.filter_list",
-    [
-        # "wikipedia.com",
-        # "wikimedia.org",
-        # "wikidata.org",
-    ],
-)
-
-WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
-    "WEB_SEARCH_CONCURRENT_REQUESTS",
-    "rag.web.search.concurrent_requests",
-    int(os.getenv("WEB_SEARCH_CONCURRENT_REQUESTS", "10")),
-)
-
-
-WEB_LOADER_ENGINE = PersistentConfig(
-    "WEB_LOADER_ENGINE",
-    "rag.web.loader.engine",
-    os.environ.get("WEB_LOADER_ENGINE", ""),
-)
-
-
-WEB_LOADER_CONCURRENT_REQUESTS = PersistentConfig(
-    "WEB_LOADER_CONCURRENT_REQUESTS",
-    "rag.web.loader.concurrent_requests",
-    int(os.getenv("WEB_LOADER_CONCURRENT_REQUESTS", "10")),
-)
-
-
-ENABLE_WEB_LOADER_SSL_VERIFICATION = PersistentConfig(
-    "ENABLE_WEB_LOADER_SSL_VERIFICATION",
-    "rag.web.loader.ssl_verification",
-    os.environ.get("ENABLE_WEB_LOADER_SSL_VERIFICATION", "True").lower() == "true",
-)
-
-WEB_SEARCH_TRUST_ENV = PersistentConfig(
-    "WEB_SEARCH_TRUST_ENV",
-    "rag.web.search.trust_env",
-    os.getenv("WEB_SEARCH_TRUST_ENV", "False").lower() == "true",
-)
-
-
-OLLAMA_CLOUD_WEB_SEARCH_API_KEY = PersistentConfig(
-    "OLLAMA_CLOUD_WEB_SEARCH_API_KEY",
-    "rag.web.search.ollama_cloud_api_key",
-    os.getenv("OLLAMA_CLOUD_API_KEY", ""),
-)
-
-SEARXNG_QUERY_URL = PersistentConfig(
-    "SEARXNG_QUERY_URL",
-    "rag.web.search.searxng_query_url",
-    os.getenv("SEARXNG_QUERY_URL", ""),
-)
-
-YACY_QUERY_URL = PersistentConfig(
-    "YACY_QUERY_URL",
-    "rag.web.search.yacy_query_url",
-    os.getenv("YACY_QUERY_URL", ""),
-)
-
-YACY_USERNAME = PersistentConfig(
-    "YACY_USERNAME",
-    "rag.web.search.yacy_username",
-    os.getenv("YACY_USERNAME", ""),
-)
-
-YACY_PASSWORD = PersistentConfig(
-    "YACY_PASSWORD",
-    "rag.web.search.yacy_password",
-    os.getenv("YACY_PASSWORD", ""),
-)
-
-GOOGLE_PSE_API_KEY = PersistentConfig(
-    "GOOGLE_PSE_API_KEY",
-    "rag.web.search.google_pse_api_key",
-    os.getenv("GOOGLE_PSE_API_KEY", ""),
-)
-
-GOOGLE_PSE_ENGINE_ID = PersistentConfig(
-    "GOOGLE_PSE_ENGINE_ID",
-    "rag.web.search.google_pse_engine_id",
-    os.getenv("GOOGLE_PSE_ENGINE_ID", ""),
-)
-
-BRAVE_SEARCH_API_KEY = PersistentConfig(
-    "BRAVE_SEARCH_API_KEY",
-    "rag.web.search.brave_search_api_key",
-    os.getenv("BRAVE_SEARCH_API_KEY", ""),
-)
-
-KAGI_SEARCH_API_KEY = PersistentConfig(
-    "KAGI_SEARCH_API_KEY",
-    "rag.web.search.kagi_search_api_key",
-    os.getenv("KAGI_SEARCH_API_KEY", ""),
-)
-
-MOJEEK_SEARCH_API_KEY = PersistentConfig(
-    "MOJEEK_SEARCH_API_KEY",
-    "rag.web.search.mojeek_search_api_key",
-    os.getenv("MOJEEK_SEARCH_API_KEY", ""),
-)
-
-BOCHA_SEARCH_API_KEY = PersistentConfig(
-    "BOCHA_SEARCH_API_KEY",
-    "rag.web.search.bocha_search_api_key",
-    os.getenv("BOCHA_SEARCH_API_KEY", ""),
-)
-
-SERPSTACK_API_KEY = PersistentConfig(
-    "SERPSTACK_API_KEY",
-    "rag.web.search.serpstack_api_key",
-    os.getenv("SERPSTACK_API_KEY", ""),
-)
-
-SERPSTACK_HTTPS = PersistentConfig(
-    "SERPSTACK_HTTPS",
-    "rag.web.search.serpstack_https",
-    os.getenv("SERPSTACK_HTTPS", "True").lower() == "true",
-)
-
-SERPER_API_KEY = PersistentConfig(
-    "SERPER_API_KEY",
-    "rag.web.search.serper_api_key",
-    os.getenv("SERPER_API_KEY", ""),
-)
-
-SERPLY_API_KEY = PersistentConfig(
-    "SERPLY_API_KEY",
-    "rag.web.search.serply_api_key",
-    os.getenv("SERPLY_API_KEY", ""),
-)
-
-JINA_API_KEY = PersistentConfig(
-    "JINA_API_KEY",
-    "rag.web.loader.jina_api_key",
-    os.getenv("JINA_API_KEY", ""),
-)
-
-SEARCHAPI_API_KEY = PersistentConfig(
-    "SEARCHAPI_API_KEY",
-    "rag.web.search.searchapi_api_key",
-    os.getenv("SEARCHAPI_API_KEY", ""),
-)
-
-SEARCHAPI_ENGINE = PersistentConfig(
-    "SEARCHAPI_ENGINE",
-    "rag.web.search.searchapi_engine",
-    os.getenv("SEARCHAPI_ENGINE", ""),
-)
-
-SERPAPI_API_KEY = PersistentConfig(
-    "SERPAPI_API_KEY",
-    "rag.web.search.serpapi_api_key",
-    os.getenv("SERPAPI_API_KEY", ""),
-)
-
-SERPAPI_ENGINE = PersistentConfig(
-    "SERPAPI_ENGINE",
-    "rag.web.search.serpapi_engine",
-    os.getenv("SERPAPI_ENGINE", ""),
-)
-
-BING_SEARCH_V7_ENDPOINT = PersistentConfig(
-    "BING_SEARCH_V7_ENDPOINT",
-    "rag.web.search.bing_search_v7_endpoint",
-    os.environ.get(
-        "BING_SEARCH_V7_ENDPOINT", "https://api.bing.microsoft.com/v7.0/search"
-    ),
-)
-
-BING_SEARCH_V7_SUBSCRIPTION_KEY = PersistentConfig(
-    "BING_SEARCH_V7_SUBSCRIPTION_KEY",
-    "rag.web.search.bing_search_v7_subscription_key",
-    os.environ.get("BING_SEARCH_V7_SUBSCRIPTION_KEY", ""),
-)
-
+# Exa API Configuration
 EXA_API_KEY = PersistentConfig(
     "EXA_API_KEY",
     "rag.web.search.exa_api_key",
     os.getenv("EXA_API_KEY", ""),
 )
 
-PERPLEXITY_API_KEY = PersistentConfig(
-    "PERPLEXITY_API_KEY",
-    "rag.web.search.perplexity_api_key",
-    os.getenv("PERPLEXITY_API_KEY", ""),
+# Exa Search Settings
+EXA_SEARCH_NUM_RESULTS = PersistentConfig(
+    "EXA_SEARCH_NUM_RESULTS",
+    "rag.web.search.exa_num_results",
+    int(os.getenv("EXA_SEARCH_NUM_RESULTS", "10")),
 )
 
-PERPLEXITY_MODEL = PersistentConfig(
-    "PERPLEXITY_MODEL",
-    "rag.web.search.perplexity_model",
-    os.getenv("PERPLEXITY_MODEL", "sonar"),
+EXA_SEARCH_TYPE = PersistentConfig(
+    "EXA_SEARCH_TYPE",
+    "rag.web.search.exa_search_type",
+    os.getenv("EXA_SEARCH_TYPE", "auto"),  # auto, neural, keyword
 )
 
-PERPLEXITY_SEARCH_CONTEXT_USAGE = PersistentConfig(
-    "PERPLEXITY_SEARCH_CONTEXT_USAGE",
-    "rag.web.search.perplexity_search_context_usage",
-    os.getenv("PERPLEXITY_SEARCH_CONTEXT_USAGE", "medium"),
+EXA_INCLUDE_DOMAINS = PersistentConfig(
+    "EXA_INCLUDE_DOMAINS",
+    "rag.web.search.exa_include_domains",
+    [],  # List of domains to include
 )
 
-SOUGOU_API_SID = PersistentConfig(
-    "SOUGOU_API_SID",
-    "rag.web.search.sougou_api_sid",
-    os.getenv("SOUGOU_API_SID", ""),
+EXA_EXCLUDE_DOMAINS = PersistentConfig(
+    "EXA_EXCLUDE_DOMAINS",
+    "rag.web.search.exa_exclude_domains",
+    [],  # List of domains to exclude
 )
 
-SOUGOU_API_SK = PersistentConfig(
-    "SOUGOU_API_SK",
-    "rag.web.search.sougou_api_sk",
-    os.getenv("SOUGOU_API_SK", ""),
+# Exa Contents/Fetch Settings
+EXA_CONTENTS_MAX_CHARACTERS = PersistentConfig(
+    "EXA_CONTENTS_MAX_CHARACTERS",
+    "rag.web.search.exa_contents_max_chars",
+    int(os.getenv("EXA_CONTENTS_MAX_CHARACTERS", "10000")),
 )
 
-TAVILY_API_KEY = PersistentConfig(
-    "TAVILY_API_KEY",
-    "rag.web.search.tavily_api_key",
-    os.getenv("TAVILY_API_KEY", ""),
+EXA_CONTENTS_LIVECRAWL = PersistentConfig(
+    "EXA_CONTENTS_LIVECRAWL",
+    "rag.web.search.exa_contents_livecrawl",
+    os.getenv("EXA_CONTENTS_LIVECRAWL", "fallback"),  # never, fallback, always
 )
 
-TAVILY_EXTRACT_DEPTH = PersistentConfig(
-    "TAVILY_EXTRACT_DEPTH",
-    "rag.web.search.tavily_extract_depth",
-    os.getenv("TAVILY_EXTRACT_DEPTH", "basic"),
-)
+# System prompt to add when web search is enabled
+DEFAULT_WEB_SEARCH_SYSTEM_PROMPT = """You have access to web search tools to help answer questions that may require up-to-date information from the internet.
 
-PLAYWRIGHT_WS_URL = PersistentConfig(
-    "PLAYWRIGHT_WS_URL",
-    "rag.web.loader.playwright_ws_url",
-    os.environ.get("PLAYWRIGHT_WS_URL", ""),
-)
+Available tools:
+1. `web_search` - Search the web for information. Returns a list of relevant URLs with titles and snippets.
+2. `web_fetch` - Fetch the full content from specific URLs. Use this to get detailed information from pages found via search.
 
-PLAYWRIGHT_TIMEOUT = PersistentConfig(
-    "PLAYWRIGHT_TIMEOUT",
-    "rag.web.loader.playwright_timeout",
-    int(os.environ.get("PLAYWRIGHT_TIMEOUT", "10000")),
-)
+Guidelines:
+- If the user's question involves current events, recent information, facts you're unsure about, or anything that would benefit from up-to-date web information, use the search tool first.
+- After searching, review the results and use the fetch tool to get full content from the most relevant URLs.
+- You can search and fetch multiple times to gather comprehensive information.
+- Always cite your sources by including the URLs of pages you referenced.
+- If web search doesn't provide useful results, acknowledge this and answer based on your training data."""
 
-FIRECRAWL_API_KEY = PersistentConfig(
-    "FIRECRAWL_API_KEY",
-    "rag.web.loader.firecrawl_api_key",
-    os.environ.get("FIRECRAWL_API_KEY", ""),
-)
-
-FIRECRAWL_API_BASE_URL = PersistentConfig(
-    "FIRECRAWL_API_BASE_URL",
-    "rag.web.loader.firecrawl_api_url",
-    os.environ.get("FIRECRAWL_API_BASE_URL", "https://api.firecrawl.dev"),
-)
-
-EXTERNAL_WEB_SEARCH_URL = PersistentConfig(
-    "EXTERNAL_WEB_SEARCH_URL",
-    "rag.web.search.external_web_search_url",
-    os.environ.get("EXTERNAL_WEB_SEARCH_URL", ""),
-)
-
-EXTERNAL_WEB_SEARCH_API_KEY = PersistentConfig(
-    "EXTERNAL_WEB_SEARCH_API_KEY",
-    "rag.web.search.external_web_search_api_key",
-    os.environ.get("EXTERNAL_WEB_SEARCH_API_KEY", ""),
-)
-
-EXTERNAL_WEB_LOADER_URL = PersistentConfig(
-    "EXTERNAL_WEB_LOADER_URL",
-    "rag.web.loader.external_web_loader_url",
-    os.environ.get("EXTERNAL_WEB_LOADER_URL", ""),
-)
-
-EXTERNAL_WEB_LOADER_API_KEY = PersistentConfig(
-    "EXTERNAL_WEB_LOADER_API_KEY",
-    "rag.web.loader.external_web_loader_api_key",
-    os.environ.get("EXTERNAL_WEB_LOADER_API_KEY", ""),
+WEB_SEARCH_SYSTEM_PROMPT = PersistentConfig(
+    "WEB_SEARCH_SYSTEM_PROMPT",
+    "rag.web.search.system_prompt",
+    os.getenv("WEB_SEARCH_SYSTEM_PROMPT", DEFAULT_WEB_SEARCH_SYSTEM_PROMPT),
 )
 
 ####################################

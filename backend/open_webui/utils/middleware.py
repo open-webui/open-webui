@@ -1188,7 +1188,20 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 metadata["params"] = {}
             metadata["params"]["function_calling"] = "native"
 
-            log.info("Auto-enabled web search tool with native function calling")
+            # Inject web search system prompt to guide the model
+            web_search_prompt = getattr(
+                request.app.state.config, 
+                'WEB_SEARCH_SYSTEM_PROMPT', 
+                ''
+            )
+            if web_search_prompt:
+                form_data["messages"] = add_or_update_system_message(
+                    web_search_prompt,
+                    form_data["messages"],
+                )
+                log.info("Injected web search system prompt")
+
+            log.info("Auto-enabled web search tools with native function calling")
 
         # OLD WEB SEARCH HANDLER - DISABLED IN FAVOR OF TOOL-BASED APPROACH
         # if "web_search" in features and features["web_search"]:
