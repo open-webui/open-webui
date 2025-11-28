@@ -44,7 +44,7 @@
 	let total = null;
 
 	let query = '';
-	let orderBy = 'created_at'; // default sort key
+	let orderBy = 'name'; // default sort key
 	let direction = 'asc'; // default sort order
 
 	const setSortKey = (key) => {
