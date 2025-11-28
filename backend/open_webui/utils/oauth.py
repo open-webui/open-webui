@@ -1074,8 +1074,8 @@ class OAuthManager:
                         oauth_roles = claim_data.split(OAUTH_ROLES_SEPARATOR)
                     else:
                         oauth_roles = [claim_data]
-            elif isinstance(claim_data, int):
-                oauth_roles = [str(claim_data)]
+                elif isinstance(claim_data, int):
+                    oauth_roles = [str(claim_data)]
 
             log.debug(f"Oauth Roles claim: {oauth_claim}")
             log.debug(f"User roles from oauth: {oauth_roles}")
