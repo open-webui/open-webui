@@ -132,12 +132,6 @@ if WEBSOCKET_MANAGER == "redis":
         redis_sentinels=redis_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
     )
-    USER_POOL = RedisDict(
-        f"{REDIS_KEY_PREFIX}:user_pool",
-        redis_url=WEBSOCKET_REDIS_URL,
-        redis_sentinels=redis_sentinels,
-        redis_cluster=WEBSOCKET_REDIS_CLUSTER,
-    )
     USAGE_POOL = RedisDict(
         f"{REDIS_KEY_PREFIX}:usage_pool",
         redis_url=WEBSOCKET_REDIS_URL,
@@ -159,7 +153,6 @@ else:
     MODELS = {}
 
     SESSION_POOL = {}
-    USER_POOL = {}
     USAGE_POOL = {}
 
     aquire_func = release_func = renew_func = lambda: True
@@ -235,16 +228,6 @@ def get_models_in_use():
     return models_in_use
 
 
-def get_active_user_ids():
-    """Get the list of active user IDs."""
-    return list(USER_POOL.keys())
-
-
-def get_user_active_status(user_id):
-    """Check if a user is currently active."""
-    return user_id in USER_POOL
-
-
 def get_user_id_from_session_pool(sid):
     user = SESSION_POOL.get(sid)
     if user:
@@ -268,12 +251,6 @@ def get_user_ids_from_room(room):
         set([SESSION_POOL.get(session_id)["id"] for session_id in active_session_ids])
     )
     return active_user_ids
-
-
-def get_active_status_by_user_id(user_id):
-    if user_id in USER_POOL:
-        return True
-    return False
 
 
 @sio.on("usage")
@@ -303,11 +280,6 @@ async def connect(sid, environ, auth):
             SESSION_POOL[sid] = user.model_dump(
                 exclude=["date_of_birth", "bio", "gender"]
             )
-            if user.id in USER_POOL:
-                USER_POOL[user.id] = USER_POOL[user.id] + [sid]
-            else:
-                USER_POOL[user.id] = [sid]
-
             await sio.enter_room(sid, f"user:{user.id}")
 
 
@@ -326,11 +298,15 @@ async def user_join(sid, data):
     if not user:
         return
 
-    SESSION_POOL[sid] = user.model_dump(exclude=["date_of_birth", "bio", "gender"])
-    if user.id in USER_POOL:
-        USER_POOL[user.id] = USER_POOL[user.id] + [sid]
-    else:
-        USER_POOL[user.id] = [sid]
+    SESSION_POOL[sid] = user.model_dump(
+        exclude=[
+            "profile_image_url",
+            "profile_banner_image_url",
+            "date_of_birth",
+            "bio",
+            "gender",
+        ]
+    )
 
     await sio.enter_room(sid, f"user:{user.id}")
     # Join all the channels
@@ -339,6 +315,13 @@ async def user_join(sid, data):
     for channel in channels:
         await sio.enter_room(sid, f"channel:{channel.id}")
     return {"id": user.id, "name": user.name}
+
+
+@sio.on("heartbeat")
+async def heartbeat(sid, data):
+    user = SESSION_POOL.get(sid)
+    if user:
+        Users.update_last_active_by_id(user["id"])
 
 
 @sio.on("join-channels")
@@ -669,13 +652,6 @@ async def disconnect(sid):
     if sid in SESSION_POOL:
         user = SESSION_POOL[sid]
         del SESSION_POOL[sid]
-
-        user_id = user["id"]
-        USER_POOL[user_id] = [_sid for _sid in USER_POOL[user_id] if _sid != sid]
-
-        if len(USER_POOL[user_id]) == 0:
-            del USER_POOL[user_id]
-
         await YDOC_MANAGER.remove_user_from_all_documents(sid)
     else:
         pass

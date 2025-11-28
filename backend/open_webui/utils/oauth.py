@@ -1496,7 +1496,10 @@ class OAuthManager:
                 log.warning(f"OAuth callback failed, sub is missing: {user_data}")
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
-            provider_sub = f"{provider}@{sub}"
+            oauth_data = {}
+            oauth_data[provider] = {
+                "sub": sub,
+            }
 
             # Email extraction
             email_claim = auth_manager_config.OAUTH_EMAIL_CLAIM
@@ -1543,13 +1546,12 @@ class OAuthManager:
                         log.warning(f"Error fetching GitHub email: {e}")
                         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
                 elif ENABLE_OAUTH_EMAIL_FALLBACK:
-                    email = f"{provider_sub}.local"
+                    email = f"{provider}@{sub}.local"
                 else:
                     log.warning(f"OAuth callback failed, email is missing: {user_data}")
                     raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
             email = email.lower()
-
             # If allowed domains are configured, check if the email domain is in the list
             if (
                 "*" not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
@@ -1570,7 +1572,7 @@ class OAuthManager:
                     user = Users.get_user_by_email(email)
                     if user:
                         # Update the user with the new oauth sub
-                        Users.update_user_oauth_sub_by_id(user.id, provider_sub)
+                        Users.update_user_oauth_by_id(user.id, provider, sub)
 
             if user:
                 determined_role = await self.get_user_role(

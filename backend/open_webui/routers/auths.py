@@ -1133,8 +1133,7 @@ async def generate_api_key(request: Request, user=Depends(get_current_user)):
 # delete api key
 @router.delete("/api_key", response_model=bool)
 async def delete_api_key(user=Depends(get_current_user)):
-    success = Users.update_user_api_key_by_id(user.id, None)
-    return success
+    return Users.delete_user_api_key_by_id(user.id)
 
 
 # get api key

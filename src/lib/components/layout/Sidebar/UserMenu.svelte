@@ -29,6 +29,8 @@
 	export let help = false;
 	export let className = 'max-w-[240px]';
 
+	export let showActiveUsers = true;
+
 	const dispatch = createEventDispatcher();
 
 	let usage = null;
@@ -219,8 +221,8 @@
 				<div class=" self-center truncate">{$i18n.t('Sign Out')}</div>
 			</DropdownMenu.Item>
 
-			{#if usage}
-				{#if usage?.user_ids?.length > 0}
+			{#if showActiveUsers && usage}
+				{#if usage?.user_count}
 					<hr class=" border-gray-50 dark:border-gray-800 my-1 p-0" />
 
 					<Tooltip
@@ -248,7 +250,7 @@
 									{$i18n.t('Active Users')}:
 								</span>
 								<span class=" font-semibold">
-									{usage?.user_ids?.length}
+									{usage?.user_count}
 								</span>
 							</div>
 						</div>

@@ -32,7 +32,6 @@ from open_webui.models.users import Users
 from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
-    get_active_status_by_user_id,
 )
 from open_webui.routers.tasks import (
     generate_queries,
@@ -773,19 +772,23 @@ async def chat_image_generation_handler(
     if not chat_id:
         return form_data
 
-    chat = Chats.get_chat_by_id_and_user_id(chat_id, user.id)
-
     __event_emitter__ = extra_params["__event_emitter__"]
-    await __event_emitter__(
-        {
-            "type": "status",
-            "data": {"description": "Creating image", "done": False},
-        }
-    )
 
-    messages_map = chat.chat.get("history", {}).get("messages", {})
-    message_id = chat.chat.get("history", {}).get("currentId")
-    message_list = get_message_list(messages_map, message_id)
+    if chat_id.startswith("local:"):
+        message_list = form_data.get("messages", [])
+    else:
+        chat = Chats.get_chat_by_id_and_user_id(chat_id, user.id)
+        await __event_emitter__(
+            {
+                "type": "status",
+                "data": {"description": "Creating image", "done": False},
+            }
+        )
+
+        messages_map = chat.chat.get("history", {}).get("messages", {})
+        message_id = chat.chat.get("history", {}).get("currentId")
+        message_list = get_message_list(messages_map, message_id)
+
     user_message = get_last_user_message(message_list)
 
     prompt = user_message
@@ -1915,7 +1918,7 @@ async def process_chat_response(
                             )
 
                             # Send a webhook notification if the user is not active
-                            if not get_active_status_by_user_id(user.id):
+                            if not Users.is_user_active(user.id):
                                 webhook_url = Users.get_user_webhook_url_by_id(user.id)
                                 if webhook_url:
                                     await post_webhook(
@@ -3210,7 +3213,7 @@ async def process_chat_response(
                     )
 
                 # Send a webhook notification if the user is not active
-                if not get_active_status_by_user_id(user.id):
+                if not Users.is_user_active(user.id):
                     webhook_url = Users.get_user_webhook_url_by_id(user.id)
                     if webhook_url:
                         await post_webhook(
