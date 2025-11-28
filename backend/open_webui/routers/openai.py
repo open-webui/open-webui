@@ -31,6 +31,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     BYPASS_MODEL_ACCESS_CONTROL,
+    API_REQUESTS_OVERRIDE_SYSTEM_MESSAGE,
 )
 from open_webui.models.users import UserModel
 
@@ -821,9 +822,17 @@ async def generate_chat_completion(
 
         if params:
             system = params.pop("system", None)
-
             payload = apply_model_params_to_body_openai(params, payload)
-            payload = apply_system_prompt_to_body(system, payload, metadata, user)
+
+            should_apply_system = True
+            if API_REQUESTS_OVERRIDE_SYSTEM_MESSAGE:
+                # If client already supplied a system message, skip injecting the configured one.
+                should_apply_system = not any(
+                    msg.get("role") == "system" for msg in payload.get("messages", [])
+                )
+
+            if should_apply_system:
+                payload = apply_system_prompt_to_body(system, payload, metadata, user)
 
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
