@@ -1869,9 +1869,9 @@
 		let messages = [];
 		if (params?.system || $settings.system) {
 			messages.push({
-						role: 'system',
-						content: `${params?.system ?? $settings?.system ?? ''}`
-					});
+				role: 'system',
+				content: `${params?.system ?? $settings?.system ?? ''}`
+			});
 		}
 
 		for (const message of _messages) {
@@ -1882,14 +1882,16 @@
 			let toolCallIndex = 0;
 
 			for (const processedMessage of processedMessages) {
-
-				if (typeof processedMessage == "string") {
+				if (typeof processedMessage == 'string') {
 					nonToolMesssage = {
 						role: message?.role,
 						content: message?.role === 'user' ? processedMessage : processedMessage.trim()
 					};
 
-					if (message?.role === 'user' && (message.files?.filter((file) => file.type === 'image').length > 0 ?? false)) {
+					if (
+						message?.role === 'user' &&
+						(message.files?.filter((file) => file.type === 'image').length > 0 ?? false)
+					) {
 						nonToolMesssage = {
 							...nonToolMesssage,
 							...message.files
@@ -1900,7 +1902,7 @@
 										url: file.url
 									}
 								}))
-						}
+						};
 					}
 
 					messages.push(nonToolMesssage);
