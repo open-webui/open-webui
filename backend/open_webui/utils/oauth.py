@@ -1329,7 +1329,10 @@ class OAuthManager:
                 log.warning(f"OAuth callback failed, sub is missing: {user_data}")
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
-            provider_sub = f"{provider}@{sub}"
+            oauth_data = {}
+            oauth_data[provider] = {
+                "sub": sub,
+            }
 
             # Email extraction
             email_claim = auth_manager_config.OAUTH_EMAIL_CLAIM
@@ -1376,12 +1379,12 @@ class OAuthManager:
                         log.warning(f"Error fetching GitHub email: {e}")
                         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
                 elif ENABLE_OAUTH_EMAIL_FALLBACK:
-                    email = f"{provider_sub}.local"
+                    email = f"{provider}@{sub}.local"
                 else:
                     log.warning(f"OAuth callback failed, email is missing: {user_data}")
                     raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
-            email = email.lower()
 
+            email = email.lower()
             # If allowed domains are configured, check if the email domain is in the list
             if (
                 "*" not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
@@ -1394,7 +1397,7 @@ class OAuthManager:
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
             # Check if the user exists
-            user = Users.get_user_by_oauth_sub(provider_sub)
+            user = Users.get_user_by_oauth_sub(provider, sub)
             if not user:
                 # If the user does not exist, check if merging is enabled
                 if auth_manager_config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL:
@@ -1402,7 +1405,7 @@ class OAuthManager:
                     user = Users.get_user_by_email(email)
                     if user:
                         # Update the user with the new oauth sub
-                        Users.update_user_oauth_sub_by_id(user.id, provider_sub)
+                        Users.update_user_oauth_by_id(user.id, provider, sub)
 
             if user:
                 determined_role = self.get_user_role(user, user_data)
@@ -1461,7 +1464,7 @@ class OAuthManager:
                         name=name,
                         profile_image_url=picture_url,
                         role=self.get_user_role(None, user_data),
-                        oauth_sub=provider_sub,
+                        oauth=oauth_data,
                     )
 
                     if auth_manager_config.WEBHOOK_URL:

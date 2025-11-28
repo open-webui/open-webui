@@ -26,12 +26,6 @@ from open_webui.models.users import (
     UserUpdateForm,
 )
 
-
-from open_webui.socket.main import (
-    get_active_status_by_user_id,
-    get_active_user_ids,
-    get_user_active_status,
-)
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS, STATIC_DIR
 
@@ -49,23 +43,6 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
-
-
-############################
-# GetActiveUsers
-############################
-
-
-@router.get("/active")
-async def get_active_users(
-    user=Depends(get_verified_user),
-):
-    """
-    Get a list of active users.
-    """
-    return {
-        "user_ids": get_active_user_ids(),
-    }
 
 
 ############################
@@ -364,7 +341,7 @@ async def update_user_info_by_session_user(
 class UserActiveResponse(BaseModel):
     name: str
     profile_image_url: Optional[str] = None
-    active: Optional[bool] = None
+    is_active: bool
     model_config = ConfigDict(extra="allow")
 
 
@@ -390,7 +367,7 @@ async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
             **{
                 "id": user.id,
                 "name": user.name,
-                "active": get_active_status_by_user_id(user_id),
+                "is_active": Users.is_user_active(user_id),
             }
         )
     else:
@@ -457,7 +434,7 @@ async def get_user_profile_image_by_id(user_id: str, user=Depends(get_verified_u
 @router.get("/{user_id}/active", response_model=dict)
 async def get_user_active_status_by_id(user_id: str, user=Depends(get_verified_user)):
     return {
-        "active": get_user_active_status(user_id),
+        "active": Users.is_user_active(user_id),
     }
 
 

@@ -32,7 +32,6 @@ from open_webui.models.users import Users
 from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
-    get_active_status_by_user_id,
 )
 from open_webui.routers.tasks import (
     generate_queries,
@@ -1915,7 +1914,7 @@ async def process_chat_response(
                             )
 
                             # Send a webhook notification if the user is not active
-                            if not get_active_status_by_user_id(user.id):
+                            if not Users.is_user_active(user.id):
                                 webhook_url = Users.get_user_webhook_url_by_id(user.id)
                                 if webhook_url:
                                     await post_webhook(
@@ -3210,7 +3209,7 @@ async def process_chat_response(
                     )
 
                 # Send a webhook notification if the user is not active
-                if not get_active_status_by_user_id(user.id):
+                if not Users.is_user_active(user.id):
                     webhook_url = Users.get_user_webhook_url_by_id(user.id)
                     if webhook_url:
                         await post_webhook(
