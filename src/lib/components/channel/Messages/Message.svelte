@@ -406,7 +406,9 @@
 												? ' bg-blue-300/10 outline outline-blue-500/50 outline-1'
 												: 'bg-gray-300/10 dark:bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1'}"
 											on:click={() => {
-												onReaction(reaction.name);
+												if (onReaction) {
+													onReaction(name);
+												}
 											}}
 										>
 											<Emoji shortCode={reaction.name} />
@@ -420,19 +422,21 @@
 									</Tooltip>
 								{/each}
 
-								<EmojiPicker
-									onSubmit={(name) => {
-										onReaction(name);
-									}}
-								>
-									<Tooltip content={$i18n.t('Add Reaction')}>
-										<div
-											class="flex items-center gap-1.5 bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1 transition rounded-xl px-1 py-1 cursor-pointer text-gray-500 dark:text-gray-400"
-										>
-											<FaceSmile />
-										</div>
-									</Tooltip>
-								</EmojiPicker>
+								{#if onReaction}
+									<EmojiPicker
+										onSubmit={(name) => {
+											onReaction(name);
+										}}
+									>
+										<Tooltip content={$i18n.t('Add Reaction')}>
+											<div
+												class="flex items-center gap-1.5 bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1 transition rounded-xl px-1 py-1 cursor-pointer text-gray-500 dark:text-gray-400"
+											>
+												<FaceSmile />
+											</div>
+										</Tooltip>
+									</EmojiPicker>
+								{/if}
 							</div>
 						</div>
 					{/if}
