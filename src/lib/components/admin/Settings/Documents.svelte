@@ -706,12 +706,29 @@
 
 					{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
 						<div class="  mb-2.5 flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">
+								{$i18n.t('Token Threshold for RAG')}
+							</div>
+							<div class="flex items-center relative">
+								<input
+									class="dark:bg-gray-900 w-20 pr-2 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+									type="number"
+									min="0"
+									step="1000"
+									placeholder="0"
+									bind:value={RAGConfig.RAG_TOKEN_THRESHOLD}
+								/>
+							</div>
+						</div>
+
+						<div class="  mb-2.5 flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">{$i18n.t('Text Splitter')}</div>
 							<div class="flex items-center relative">
 								<select
 									class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 									bind:value={RAGConfig.TEXT_SPLITTER}
 								>
+
 									<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
 									<option value="token">{$i18n.t('Token')} ({$i18n.t('Tiktoken')})</option>
 									<option value="markdown_header">{$i18n.t('Markdown (Header)')}</option>
