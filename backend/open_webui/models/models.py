@@ -144,9 +144,33 @@ class ModelForm(BaseModel):
 
 
 class ModelsTable:
+    """
+    模型数据访问层 - 管理 AI 模型的 CRUD 操作和权限控制
+
+    核心功能：
+    1. 模型管理：创建、查询、更新、删除模型配置
+    2. 权限控制：基于用户/组的访问权限管理
+    3. 模型同步：与外部模型源（如 Ollama、OpenAI）同步模型列表
+    4. 模型分类：区分基础模型（base_model）和自定义模型
+
+    模型类型：
+    - 基础模型（base_model_id == None）：从外部 API 同步的原始模型（如 gpt-4, llama3）
+    - 自定义模型（base_model_id != None）：用户创建的模型配置，指向基础模型
+    """
+
     def insert_new_model(
         self, form_data: ModelForm, user_id: str
     ) -> Optional[ModelModel]:
+        """
+        插入新模型配置
+
+        Args:
+            form_data: 模型表单数据（包含 id、name、params、meta 等）
+            user_id: 创建模型的用户 ID
+
+        Returns:
+            ModelModel: 创建成功返回模型对象，失败返回 None
+        """
         model = ModelModel(
             **{
                 **form_data.model_dump(),
@@ -171,18 +195,34 @@ class ModelsTable:
             return None
 
     def get_all_models(self) -> list[ModelModel]:
+        """
+        获取所有模型（包括基础模型和自定义模型）
+
+        Returns:
+            list[ModelModel]: 所有模型列表
+        """
         with get_db() as db:
             return [ModelModel.model_validate(model) for model in db.query(Model).all()]
 
     def get_models(self) -> list[ModelUserResponse]:
+        """
+        获取自定义模型列表（仅 base_model_id != None 的模型）
+
+        返回结果包含创建者的用户信息，用于前端显示模型来源
+
+        Returns:
+            list[ModelUserResponse]: 自定义模型列表（附带用户信息）
+        """
         with get_db() as db:
+            # 只查询自定义模型（base_model_id 不为 None）
             all_models = db.query(Model).filter(Model.base_model_id != None).all()
 
+            # 批量获取用户信息，避免 N+1 查询问题
             user_ids = list(set(model.user_id for model in all_models))
-
             users = Users.get_users_by_user_ids(user_ids) if user_ids else []
             users_dict = {user.id: user for user in users}
 
+            # 组装模型和用户信息
             models = []
             for model in all_models:
                 user = users_dict.get(model.user_id)
@@ -197,6 +237,14 @@ class ModelsTable:
             return models
 
     def get_base_models(self) -> list[ModelModel]:
+        """
+        获取基础模型列表（仅 base_model_id == None 的模型）
+
+        基础模型通常从外部 API（Ollama、OpenAI 等）同步而来
+
+        Returns:
+            list[ModelModel]: 基础模型列表
+        """
         with get_db() as db:
             return [
                 ModelModel.model_validate(model)
@@ -206,6 +254,20 @@ class ModelsTable:
     def get_models_by_user_id(
         self, user_id: str, permission: str = "write"
     ) -> list[ModelUserResponse]:
+        """
+        获取用户有权限访问的模型列表
+
+        权限判断逻辑：
+        1. 用户创建的模型（user_id 匹配）
+        2. 通过访问控制（access_control）授予权限的模型
+
+        Args:
+            user_id: 用户 ID
+            permission: 权限类型（"read" 或 "write"，默认 "write"）
+
+        Returns:
+            list[ModelUserResponse]: 用户有权限访问的模型列表
+        """
         models = self.get_models()
         user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user_id)}
         return [
@@ -216,6 +278,15 @@ class ModelsTable:
         ]
 
     def get_model_by_id(self, id: str) -> Optional[ModelModel]:
+        """
+        根据 ID 获取模型
+
+        Args:
+            id: 模型 ID
+
+        Returns:
+            ModelModel: 找到返回模型对象，未找到返回 None
+        """
         try:
             with get_db() as db:
                 model = db.get(Model, id)
@@ -224,6 +295,15 @@ class ModelsTable:
             return None
 
     def toggle_model_by_id(self, id: str) -> Optional[ModelModel]:
+        """
+        切换模型激活状态（启用/禁用）
+
+        Args:
+            id: 模型 ID
+
+        Returns:
+            ModelModel: 更新后的模型对象，失败返回 None
+        """
         with get_db() as db:
             try:
                 is_active = db.query(Model).filter_by(id=id).first().is_active
@@ -241,9 +321,19 @@ class ModelsTable:
                 return None
 
     def update_model_by_id(self, id: str, model: ModelForm) -> Optional[ModelModel]:
+        """
+        更新模型配置
+
+        Args:
+            id: 模型 ID
+            model: 更新后的模型数据
+
+        Returns:
+            ModelModel: 更新后的模型对象，失败返回 None
+        """
         try:
             with get_db() as db:
-                # update only the fields that are present in the model
+                # 只更新 ModelForm 中包含的字段（排除 id）
                 result = (
                     db.query(Model)
                     .filter_by(id=id)
@@ -259,6 +349,15 @@ class ModelsTable:
             return None
 
     def delete_model_by_id(self, id: str) -> bool:
+        """
+        删除指定模型
+
+        Args:
+            id: 模型 ID
+
+        Returns:
+            bool: 删除成功返回 True，失败返回 False
+        """
         try:
             with get_db() as db:
                 db.query(Model).filter_by(id=id).delete()
@@ -269,6 +368,12 @@ class ModelsTable:
             return False
 
     def delete_all_models(self) -> bool:
+        """
+        删除所有模型（危险操作，通常仅用于测试或重置）
+
+        Returns:
+            bool: 删除成功返回 True，失败返回 False
+        """
         try:
             with get_db() as db:
                 db.query(Model).delete()
@@ -279,18 +384,38 @@ class ModelsTable:
             return False
 
     def sync_models(self, user_id: str, models: list[ModelModel]) -> list[ModelModel]:
+        """
+        同步模型列表 - 与外部模型源（Ollama、OpenAI 等）同步
+
+        同步逻辑：
+        1. 更新已存在的模型
+        2. 插入新模型
+        3. 删除不再存在的模型
+
+        典型使用场景：
+        - 从 Ollama API 获取模型列表后同步到数据库
+        - 从 OpenAI API 获取模型列表后同步到数据库
+
+        Args:
+            user_id: 执行同步的用户 ID（作为模型创建者）
+            models: 外部模型列表
+
+        Returns:
+            list[ModelModel]: 同步后的所有模型列表
+        """
         try:
             with get_db() as db:
-                # Get existing models
+                # 获取现有模型
                 existing_models = db.query(Model).all()
                 existing_ids = {model.id for model in existing_models}
 
-                # Prepare a set of new model IDs
+                # 准备新模型 ID 集合
                 new_model_ids = {model.id for model in models}
 
-                # Update or insert models
+                # 更新或插入模型
                 for model in models:
                     if model.id in existing_ids:
+                        # 更新已存在的模型
                         db.query(Model).filter_by(id=model.id).update(
                             {
                                 **model.model_dump(),
@@ -299,6 +424,7 @@ class ModelsTable:
                             }
                         )
                     else:
+                        # 插入新模型
                         new_model = Model(
                             **{
                                 **model.model_dump(),
@@ -308,7 +434,7 @@ class ModelsTable:
                         )
                         db.add(new_model)
 
-                # Remove models that are no longer present
+                # 删除不再存在的模型
                 for model in existing_models:
                     if model.id not in new_model_ids:
                         db.delete(model)
