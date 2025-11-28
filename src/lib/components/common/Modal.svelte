@@ -12,6 +12,7 @@
 	export let containerClassName = 'p-3';
 	export let className = 'bg-gray-50 dark:bg-gray-900 rounded-2xl';
 	export let disableClose = false;
+	export let disableFocusTrap: boolean = false; // For component without focusable elements, skip trap creation
 	export let title = '';
 
 	// New props for custom focus behavior:
@@ -59,7 +60,7 @@
 	}
 
 	// Set up the focus trap using custom selectors if provided.
-	$: if (show && contentEl && !trap) {
+	$: if (show && contentEl && !trap && !disableFocusTrap) {
 		const config: any = {
 			clickOutsideDeactivates: true,
 			// This makes the trap record the active element automatically
