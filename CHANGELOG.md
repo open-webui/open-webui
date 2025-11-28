@@ -18,12 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 💬 Message pinning functionality was added to channels, allowing users to pin important messages for easy reference, with backend support for tracking pinned status, pin timestamp, and the user who pinned each message. [Commit](https://github.com/open-webui/open-webui/commit/64b4d5d9c280b926746584aaf92b447d09deb386)
 - 💬 Direct Message channels now display an active status indicator for one-on-one conversations, showing a visual green dot when the other participant is currently online. [Commit](https://github.com/open-webui/open-webui/commit/4b6773885cd7527c5a56b963781dac5e95105eec)
 - 👥 A group export API endpoint was added, enabling administrators to export complete group data including member lists for backup and migration purposes. [Commit](https://github.com/open-webui/open-webui/commit/09b6ea38c579659f8ca43ae5ea3746df3ac561ad)
+- 🔐 The admin user edit modal now displays OAuth identity information with a per-provider breakdown, showing each linked identity provider and its associated subject identifier separately. [#19573](https://github.com/open-webui/open-webui/pull/19573)
 - 🔐 OAuth role claim parsing now respects the "OAUTH_ROLES_SEPARATOR" configuration, enabling proper parsing of roles returned as comma-separated strings and providing consistent behavior with group claim handling. [#19514](https://github.com/open-webui/open-webui/pull/19514)
 - 🔄 Various improvements were implemented across the frontend and backend to enhance performance, stability, and security.
 - 🌐 Translations for German, French, Catalan, Simplified Chinese, and Traditional Chinese were enhanced and expanded.
 
 ### Fixed
 
+- 👥 Active user count accuracy was significantly improved by replacing the socket-based USER_POOL tracking with a database-backed heartbeat mechanism, resolving long-standing issues where Redis deployments displayed inflated user counts due to stale sessions never being cleaned up on disconnect. [#16074](https://github.com/open-webui/open-webui/discussions/16074), [Commit](https://github.com/open-webui/open-webui/commit/70948f8)
 - 👥 Model list filtering in workspaces was corrected to properly include models shared with user groups, ensuring members can view models they have write access to through group permissions. [#19461](https://github.com/open-webui/open-webui/issues/19461), [Commit](https://github.com/open-webui/open-webui/commit/69722ba973768a5f689f2e2351bf583a8db9bba8)
 - 👥 User profile image display in preview contexts was fixed by resolving a Pydantic validation error that prevented proper rendering. [Commit](https://github.com/open-webui/open-webui/commit/c7eb7136893b0ddfdc5d55ffc7a05bd84a00f5d6)
 - 🗄️ Redis TLS connection failures were resolved by updating the python-socketio dependency to version 5.15.0, restoring support for the "rediss://" URL schema. [#19480](https://github.com/open-webui/open-webui/issues/19480), [#19488](https://github.com/open-webui/open-webui/pull/19488)
@@ -42,9 +44,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- ⚠️ **IMPORTANT for Multi-Instance Deployments** — This release includes database schema changes; multi-worker, multi-server, or load-balanced deployments must update all instances simultaneously rather than performing rolling updates, as running mixed versions will cause application failures due to schema incompatibility between old and new instances. [Commit](https://github.com/open-webui/open-webui/commit/64b4d5d9c280b926746584aaf92b447d09deb386)
+- ⚠️ **IMPORTANT for Multi-Instance Deployments** — This release includes database schema changes; multi-worker, multi-server, or load-balanced deployments must update all instances simultaneously rather than performing rolling updates, as running mixed versions will cause application failures due to schema incompatibility between old and new instances. [#19573](https://github.com/open-webui/open-webui/pull/19573)
 - 💬 Channel creation is now restricted to administrators only, with the channel add button hidden for regular users to maintain organizational control over communication channels. [Commit](https://github.com/open-webui/open-webui/commit/421aba7cd7cd708168b1f2565026c74525a67905)
-- 👥 The active user count indicator was removed from the sidebar user menu to streamline the interface. [Commit](https://github.com/open-webui/open-webui/commit/848f3fd4d86ca66656e0ff0335773945af8d7d8d)
+- 👥 The active user count indicator was removed from the bottom-left user menu in the sidebar to streamline the interface. [Commit](https://github.com/open-webui/open-webui/commit/848f3fd4d86ca66656e0ff0335773945af8d7d8d)
+- 🔐 OAuth data storage was restructured to support multiple identity providers per user account, with automatic migration of existing OAuth associations preserving all user links. [#19573](https://github.com/open-webui/open-webui/pull/19573)
 
 ## [0.6.40] - 2025-11-25
 
