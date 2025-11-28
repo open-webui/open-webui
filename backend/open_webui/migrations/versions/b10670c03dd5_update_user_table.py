@@ -113,24 +113,12 @@ def _convert_column_to_text(table: str, column: str):
 
 
 def upgrade() -> None:
-
-    op.add_column(
-        "user",
-        sa.Column(
-            "is_active",
-            sa.Boolean(),
-            nullable=False,
-            default=False,
-            server_default=sa.sql.expression.false(),
-        ),
-    )
-
     op.add_column(
         "user", sa.Column("profile_banner_image_url", sa.Text(), nullable=True)
     )
-
     op.add_column("user", sa.Column("timezone", sa.String(), nullable=True))
 
+    op.add_column("user", sa.Column("presence_state", sa.String(), nullable=True))
     op.add_column("user", sa.Column("status_emoji", sa.String(), nullable=True))
     op.add_column("user", sa.Column("status_message", sa.Text(), nullable=True))
     op.add_column(
@@ -249,11 +237,10 @@ def downgrade() -> None:
     op.drop_table("api_key")
 
     with op.batch_alter_table("user") as batch_op:
-        batch_op.drop_column("is_active")
-
         batch_op.drop_column("profile_banner_image_url")
         batch_op.drop_column("timezone")
 
+        batch_op.drop_column("presence_state")
         batch_op.drop_column("status_emoji")
         batch_op.drop_column("status_message")
         batch_op.drop_column("status_expires_at")

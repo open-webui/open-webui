@@ -46,7 +46,6 @@ class User(Base):
     role = Column(String)
 
     name = Column(String)
-    is_active = Column(Boolean, nullable=False, default=False)
 
     profile_image_url = Column(Text)
     profile_banner_image_url = Column(Text, nullable=True)
@@ -56,6 +55,7 @@ class User(Base):
     date_of_birth = Column(Date, nullable=True)
     timezone = Column(String, nullable=True)
 
+    presence_state = Column(String, nullable=True)
     status_emoji = Column(String, nullable=True)
     status_message = Column(Text, nullable=True)
     status_expires_at = Column(BigInteger, nullable=True)
@@ -78,7 +78,6 @@ class UserModel(BaseModel):
     role: str = "pending"
 
     name: str
-    is_active: bool = False
 
     profile_image_url: str
     profile_banner_image_url: Optional[str] = None
@@ -88,6 +87,7 @@ class UserModel(BaseModel):
     date_of_birth: Optional[datetime.date] = None
     timezone: Optional[str] = None
 
+    presence_state: Optional[str] = None
     status_emoji: Optional[str] = None
     status_message: Optional[str] = None
     status_expires_at: Optional[int] = None
@@ -176,7 +176,7 @@ class UserIdNameResponse(BaseModel):
 class UserIdNameStatusResponse(BaseModel):
     id: str
     name: str
-    is_active: bool
+    is_active: bool = False
 
 
 class UserInfoListResponse(BaseModel):
@@ -635,6 +635,24 @@ class UsersTable:
                 return UserModel.model_validate(user)
             else:
                 return None
+
+    def get_active_user_count(self) -> int:
+        with get_db() as db:
+            # Consider user active if last_active_at within the last 3 minutes
+            three_minutes_ago = int(time.time()) - 180
+            count = (
+                db.query(User).filter(User.last_active_at >= three_minutes_ago).count()
+            )
+            return count
+
+    def is_user_active(self, user_id: str) -> bool:
+        with get_db() as db:
+            user = db.query(User).filter_by(id=user_id).first()
+            if user and user.last_active_at:
+                # Consider user active if last_active_at within the last 3 minutes
+                three_minutes_ago = int(time.time()) - 180
+                return user.last_active_at >= three_minutes_ago
+            return False
 
 
 Users = UsersTable()
