@@ -40,7 +40,7 @@ class MessageReactionModel(BaseModel):
 
 class Message(Base):
     __tablename__ = "message"
-    id = Column(Text, primary_key=True)
+    id = Column(Text, primary_key=True, unique=True)
 
     user_id = Column(Text)
     channel_id = Column(Text, nullable=True)

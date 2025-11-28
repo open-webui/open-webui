@@ -24,7 +24,7 @@ import datetime
 class User(Base):
     __tablename__ = "user"
 
-    id = Column(String, primary_key=True)
+    id = Column(String, primary_key=True, unique=True)
     name = Column(String)
 
     email = Column(String)

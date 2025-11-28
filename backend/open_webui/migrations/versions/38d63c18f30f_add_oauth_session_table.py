@@ -23,15 +23,18 @@ def upgrade() -> None:
     # Create oauth_session table
     op.create_table(
         "oauth_session",
-        sa.Column("id", sa.Text(), nullable=False),
-        sa.Column("user_id", sa.Text(), nullable=False),
+        sa.Column("id", sa.Text(), primary_key=True, nullable=False, unique=True),
+        sa.Column(
+            "user_id",
+            sa.Text(),
+            sa.ForeignKey("user.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("provider", sa.Text(), nullable=False),
         sa.Column("token", sa.Text(), nullable=False),
         sa.Column("expires_at", sa.BigInteger(), nullable=False),
         sa.Column("created_at", sa.BigInteger(), nullable=False),
         sa.Column("updated_at", sa.BigInteger(), nullable=False),
-        sa.PrimaryKeyConstraint("id"),
-        sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="CASCADE"),
     )
 
     # Create indexes for better performance
