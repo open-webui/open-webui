@@ -282,6 +282,8 @@ from open_webui.config import (
     EXA_CONTENTS_MAX_CHARACTERS,
     EXA_CONTENTS_LIVECRAWL,
     WEB_SEARCH_SYSTEM_PROMPT,
+    ENABLE_STUDY_MODE,
+    STUDY_MODE_SYSTEM_PROMPT,
     GOOGLE_DRIVE_CLIENT_ID,
     GOOGLE_DRIVE_API_KEY,
     ENABLE_ONEDRIVE_INTEGRATION,
@@ -870,6 +872,9 @@ app.state.config.EXA_EXCLUDE_DOMAINS = EXA_EXCLUDE_DOMAINS
 app.state.config.EXA_CONTENTS_MAX_CHARACTERS = EXA_CONTENTS_MAX_CHARACTERS
 app.state.config.EXA_CONTENTS_LIVECRAWL = EXA_CONTENTS_LIVECRAWL
 app.state.config.WEB_SEARCH_SYSTEM_PROMPT = WEB_SEARCH_SYSTEM_PROMPT
+
+app.state.config.ENABLE_STUDY_MODE = ENABLE_STUDY_MODE
+app.state.config.STUDY_MODE_SYSTEM_PROMPT = STUDY_MODE_SYSTEM_PROMPT
 
 app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = ENABLE_GOOGLE_DRIVE_INTEGRATION
 app.state.config.ENABLE_ONEDRIVE_INTEGRATION = ENABLE_ONEDRIVE_INTEGRATION
@@ -1677,6 +1682,7 @@ async def get_app_config(request: Request):
                     "enable_channels": app.state.config.ENABLE_CHANNELS,
                     "enable_notes": app.state.config.ENABLE_NOTES,
                     "enable_web_search": app.state.config.ENABLE_WEB_SEARCH,
+                    "enable_study_mode": app.state.config.ENABLE_STUDY_MODE,
                     "enable_code_execution": app.state.config.ENABLE_CODE_EXECUTION,
                     "enable_code_interpreter": app.state.config.ENABLE_CODE_INTERPRETER,
                     "enable_image_generation": app.state.config.ENABLE_IMAGE_GENERATION,

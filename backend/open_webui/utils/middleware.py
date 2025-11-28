@@ -1208,6 +1208,20 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
             log.info("Auto-enabled web search tools with native function calling")
 
+        # Study Mode
+        if "study_mode" in features and features["study_mode"]:
+            study_prompt = getattr(
+                request.app.state.config,
+                "STUDY_MODE_SYSTEM_PROMPT",
+                "",
+            )
+            if study_prompt:
+                form_data["messages"] = add_or_update_system_message(
+                    study_prompt,
+                    form_data["messages"],
+                )
+            log.info("Processed study mode")
+
         # OLD WEB SEARCH HANDLER - DISABLED IN FAVOR OF TOOL-BASED APPROACH
         # if "web_search" in features and features["web_search"]:
         #     form_data = await chat_web_search_handler(

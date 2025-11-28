@@ -107,6 +107,7 @@
 
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
+	export let studyModeEnabled = false;
 	export let codeInterpreterEnabled = false;
 
 	// Reasoning effort functionality
@@ -537,6 +538,9 @@
 			webSearchCapableModels.length &&
 		$config?.features?.enable_web_search &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.web_search);
+
+	let showStudyModeButton = false;
+	$: showStudyModeButton = $config?.features?.enable_study_mode;
 
 	let showImageGenerationButton = false;
 	$: showImageGenerationButton =
@@ -1550,16 +1554,18 @@
 											</Tooltip>
 										{/if}
 
-										{#if showImageGenerationButton || showCodeInterpreterButton || showToolsButton || (toggleFilters && toggleFilters.length > 0)}
+										{#if showStudyModeButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || (toggleFilters && toggleFilters.length > 0)}
 											<IntegrationsMenu
 												selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
 												{toggleFilters}
 												showWebSearchButton={false}
+												{showStudyModeButton}
 												{showImageGenerationButton}
 												{showCodeInterpreterButton}
 												bind:selectedToolIds
 												bind:selectedFilterIds
 												bind:webSearchEnabled
+												bind:studyModeEnabled
 												bind:imageGenerationEnabled
 												bind:codeInterpreterEnabled
 												closeOnOutsideClick={integrationsMenuCloseOnOutsideClick}

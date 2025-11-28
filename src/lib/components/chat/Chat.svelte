@@ -128,6 +128,7 @@
 	let selectedFilterIds = [];
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
+	let studyModeEnabled = false;
 	let codeInterpreterEnabled = false;
 
 	// Auto-save tool preferences when they change
@@ -200,15 +201,15 @@
 	// Get relevant groups for currently selected models
 	$: relevantGroups = Object.entries(tokenUsageGroups).filter(([groupName, groupData]) => {
 		const modelList = groupData.models || [];
-		return selectedModelIds.some(modelId => modelList.includes(modelId));
+		return selectedModelIds.some((modelId) => modelList.includes(modelId));
 	});
 
 	const startUsagePolling = () => {
 		if (usagePollingInterval) clearInterval(usagePollingInterval);
-		
+
 		// Initial fetch
 		fetchTokenUsage();
-		
+
 		// Poll every 3 seconds
 		usagePollingInterval = setInterval(fetchTokenUsage, 3000);
 	};
@@ -330,6 +331,7 @@
 		selectedToolIds = [];
 		selectedFilterIds = [];
 		webSearchEnabled = false;
+		studyModeEnabled = false;
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
 
@@ -649,6 +651,7 @@
 			selectedToolIds = [];
 			selectedFilterIds = [];
 			webSearchEnabled = false;
+			studyModeEnabled = false;
 			imageGenerationEnabled = false;
 			codeInterpreterEnabled = false;
 
@@ -1437,7 +1440,7 @@
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
 		const { id, done, choices, content, sources, selected_model_id, error, usage } = data;
-		
+
 		if (error) {
 			await handleOpenAIError(error, message);
 		}
@@ -1926,7 +1929,7 @@
 								} catch (visionError) {
 									console.error('Vision preprocessing failed:', visionError);
 									toast.error('Vision preprocessing failed. Sending without analysis.');
-									
+
 									responseMessage = _history.messages[responseMessageId];
 									responseMessage.statusHistory.push({
 										done: true,
@@ -1988,7 +1991,8 @@
 					$config?.features?.enable_web_search &&
 					($user?.role === 'admin' || $user?.permissions?.features?.web_search)
 						? webSearchEnabled
-						: false
+						: false,
+				study_mode: $config?.features?.enable_study_mode ? studyModeEnabled : false
 			};
 
 		const currentModels = atSelectedModel?.id ? [atSelectedModel.id] : selectedModels;
@@ -2117,7 +2121,10 @@
 					...(message.reasoning_details ? { reasoning_details: message.reasoning_details } : {})
 				};
 			})
-			.filter((message) => message?.role === 'user' || message?.content?.trim() || message?.reasoning_details);
+			.filter(
+				(message) =>
+					message?.role === 'user' || message?.content?.trim() || message?.reasoning_details
+			);
 
 		const toolIds = [];
 		const toolServerIds = [];
@@ -2410,7 +2417,7 @@
 		const mergedResponse = {
 			status: true,
 			content: ''
-				};
+		};
 		message.merged = mergedResponse;
 		history.messages[messageId] = message;
 
@@ -2726,7 +2733,8 @@
 									<div class="bg-gray-50 dark:bg-gray-850 rounded-lg p-3 text-xs">
 										{#each relevantGroups as [groupName, groupData]}
 											<div class="flex items-center justify-between mb-1 last:mb-0">
-												<span class="font-medium text-gray-700 dark:text-gray-300">{groupName}</span>
+												<span class="font-medium text-gray-700 dark:text-gray-300">{groupName}</span
+												>
 												<div class="flex items-center space-x-2 text-gray-600 dark:text-gray-400">
 													<span>{groupData.usage?.in?.toLocaleString() || 0} IN</span>
 													<span>·</span>
@@ -2757,6 +2765,7 @@
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
+									bind:studyModeEnabled
 									bind:atSelectedModel
 									bind:showCommands
 									toolServers={$toolServers}
@@ -2813,6 +2822,7 @@
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
+									bind:studyModeEnabled
 									bind:atSelectedModel
 									bind:showCommands
 									toolServers={$toolServers}

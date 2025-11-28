@@ -2840,6 +2840,30 @@ WEB_SEARCH_SYSTEM_PROMPT = PersistentConfig(
 )
 
 ####################################
+# Study Mode
+####################################
+
+ENABLE_STUDY_MODE = PersistentConfig(
+    "ENABLE_STUDY_MODE",
+    "study_mode.enable",
+    os.getenv("ENABLE_STUDY_MODE", "False").lower() == "true",
+)
+
+DEFAULT_STUDY_MODE_SYSTEM_PROMPT = """You are a helpful study assistant. When helping the user study, focus on:
+1. Explaining concepts clearly and concisely.
+2. Providing examples and analogies.
+3. Encouraging critical thinking by asking guiding questions.
+4. Summarizing key points.
+5. Using formatting (bold, lists) to make information easy to digest.
+"""
+
+STUDY_MODE_SYSTEM_PROMPT = PersistentConfig(
+    "STUDY_MODE_SYSTEM_PROMPT",
+    "study_mode.system_prompt",
+    os.getenv("STUDY_MODE_SYSTEM_PROMPT", DEFAULT_STUDY_MODE_SYSTEM_PROMPT),
+)
+
+####################################
 # Images
 ####################################
 

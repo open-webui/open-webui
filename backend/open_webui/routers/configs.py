@@ -490,3 +490,38 @@ async def get_banners(
     user=Depends(get_verified_user),
 ):
     return request.app.state.config.BANNERS
+
+
+############################
+# StudyMode Config
+############################
+
+
+class StudyModeConfigForm(BaseModel):
+    ENABLE_STUDY_MODE: bool
+    STUDY_MODE_SYSTEM_PROMPT: str
+
+
+@router.get("/study_mode", response_model=StudyModeConfigForm)
+async def get_study_mode_config(request: Request, user=Depends(get_admin_user)):
+    return {
+        "ENABLE_STUDY_MODE": request.app.state.config.ENABLE_STUDY_MODE,
+        "STUDY_MODE_SYSTEM_PROMPT": request.app.state.config.STUDY_MODE_SYSTEM_PROMPT,
+    }
+
+
+@router.post("/study_mode", response_model=StudyModeConfigForm)
+async def set_study_mode_config(
+    request: Request,
+    form_data: StudyModeConfigForm,
+    user=Depends(get_admin_user),
+):
+    request.app.state.config.ENABLE_STUDY_MODE = form_data.ENABLE_STUDY_MODE
+    request.app.state.config.STUDY_MODE_SYSTEM_PROMPT = (
+        form_data.STUDY_MODE_SYSTEM_PROMPT
+    )
+
+    return {
+        "ENABLE_STUDY_MODE": request.app.state.config.ENABLE_STUDY_MODE,
+        "STUDY_MODE_SYSTEM_PROMPT": request.app.state.config.STUDY_MODE_SYSTEM_PROMPT,
+    }
