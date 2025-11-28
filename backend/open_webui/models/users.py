@@ -225,7 +225,7 @@ class UsersTable:
         email: str,
         profile_image_url: str = "/user.png",
         role: str = "pending",
-        oauth_sub: Optional[str] = None,
+        oauth: Optional[dict] = None,
     ) -> Optional[UserModel]:
         with get_db() as db:
             user = UserModel(
@@ -238,7 +238,7 @@ class UsersTable:
                     "last_active_at": int(time.time()),
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
-                    "oauth_sub": oauth_sub,
+                    "oauth": oauth,
                 }
             )
             result = User(**user.model_dump())
@@ -274,11 +274,15 @@ class UsersTable:
         except Exception:
             return None
 
-    def get_user_by_oauth_sub(self, sub: str) -> Optional[UserModel]:
+    def get_user_by_oauth_sub(self, provider: str, sub: str) -> Optional[UserModel]:
         try:
             with get_db() as db:
-                user = db.query(User).filter_by(oauth_sub=sub).first()
-                return UserModel.model_validate(user)
+                user = (
+                    db.query(User)
+                    .filter(User.oauth.contains({provider: {"sub": sub}}))
+                    .first()
+                )
+                return UserModel.model_validate(user) if user else None
         except Exception:
             return None
 
@@ -493,16 +497,35 @@ class UsersTable:
         except Exception:
             return None
 
-    def update_user_oauth_sub_by_id(
-        self, id: str, oauth_sub: str
+    def update_user_oauth_by_id(
+        self, id: str, provider: str, sub: str
     ) -> Optional[UserModel]:
+        """
+        Update or insert an OAuth provider/sub pair into the user's oauth JSON field.
+        Example resulting structure:
+            {
+                "google": { "sub": "123" },
+                "github": { "sub": "abc" }
+            }
+        """
         try:
             with get_db() as db:
-                db.query(User).filter_by(id=id).update({"oauth_sub": oauth_sub})
+                user = db.query(User).filter_by(id=id).first()
+                if not user:
+                    return None
+
+                # Load existing oauth JSON or create empty
+                oauth = user.oauth or {}
+
+                # Update or insert provider entry
+                oauth[provider] = {"sub": sub}
+
+                # Persist updated JSON
+                db.query(User).filter_by(id=id).update({"oauth": oauth})
                 db.commit()
 
-                user = db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
+
         except Exception:
             return None
 
