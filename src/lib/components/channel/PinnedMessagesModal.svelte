@@ -97,7 +97,7 @@
 								class="flex flex-col gap-2 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent py-2"
 							>
 								{#if pinnedMessages.length === 0}
-									<div class=" text-center text-sm text-gray-500 dark:text-gray-400 py-6">
+									<div class=" text-center text-xs text-gray-500 dark:text-gray-400 py-6">
 										{$i18n.t('No pinned messages')}
 									</div>
 								{:else}
