@@ -440,6 +440,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "TOP_K": request.app.state.config.TOP_K,
         "BYPASS_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL,
         "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
+        "RAG_TOKEN_THRESHOLD": request.app.state.config.RAG_TOKEN_THRESHOLD,
         # Hybrid search settings
         "ENABLE_RAG_HYBRID_SEARCH": request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
         "ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS": request.app.state.config.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS,
@@ -614,6 +615,7 @@ class ConfigForm(BaseModel):
     TOP_K: Optional[int] = None
     BYPASS_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
     RAG_FULL_CONTEXT: Optional[bool] = None
+    RAG_TOKEN_THRESHOLD: Optional[int] = None
 
     # Hybrid search settings
     ENABLE_RAG_HYBRID_SEARCH: Optional[bool] = None
@@ -706,6 +708,11 @@ async def update_rag_config(
         form_data.RAG_FULL_CONTEXT
         if form_data.RAG_FULL_CONTEXT is not None
         else request.app.state.config.RAG_FULL_CONTEXT
+    )
+    request.app.state.config.RAG_TOKEN_THRESHOLD = (
+        form_data.RAG_TOKEN_THRESHOLD
+        if form_data.RAG_TOKEN_THRESHOLD is not None
+        else request.app.state.config.RAG_TOKEN_THRESHOLD
     )
 
     # Hybrid search settings
@@ -1591,7 +1598,37 @@ def process_file(
             hash = calculate_sha256_string(text_content)
             Files.update_file_hash_by_id(file.id, hash)
 
-            if request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
+            should_bypass = request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
+            token_count = 0
+
+            if not should_bypass and request.app.state.config.RAG_TOKEN_THRESHOLD > 0:
+                try:
+                    encoding = tiktoken.get_encoding(
+                        str(request.app.state.config.TIKTOKEN_ENCODING_NAME)
+                    )
+                    token_count = len(encoding.encode(text_content))
+
+                    if token_count <= request.app.state.config.RAG_TOKEN_THRESHOLD:
+                        should_bypass = True
+                        log.info(
+                            f"File '{file.filename}': {token_count} tokens "
+                            f"(<= {request.app.state.config.RAG_TOKEN_THRESHOLD}), bypassing RAG"
+                        )
+                    else:
+                        log.info(
+                            f"File '{file.filename}': {token_count} tokens "
+                            f"(> {request.app.state.config.RAG_TOKEN_THRESHOLD}), using RAG"
+                        )
+                except Exception as e:
+                    log.warning(f"Error counting tokens: {e}")
+
+            if should_bypass:
+                Files.update_file_data_by_id(file.id, {"status": "completed"})
+
+                Files.update_file_metadata_by_id(
+                    file.id,
+                    {"bypass_rag": True}
+                )
                 Files.update_file_data_by_id(file.id, {"status": "completed"})
                 return {
                     "status": True,
