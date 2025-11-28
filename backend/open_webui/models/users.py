@@ -231,8 +231,8 @@ class UsersTable:
             user = UserModel(
                 **{
                     "id": id,
-                    "name": name,
                     "email": email,
+                    "name": name,
                     "role": role,
                     "profile_image_url": profile_image_url,
                     "last_active_at": int(time.time()),
