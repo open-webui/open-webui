@@ -2616,6 +2616,14 @@ async def process_chat_response(
                                         or delta.get("reasoning")
                                         or delta.get("thinking")
                                     )
+
+                                    if delta_reasoning_details:
+                                        for detail in delta_reasoning_details:
+                                            if detail.get("type") == "reasoning.text":
+                                                reasoning_content = (
+                                                    reasoning_content or ""
+                                                ) + detail.get("text", "")
+
                                     if reasoning_content:
                                         if (
                                             not content_blocks

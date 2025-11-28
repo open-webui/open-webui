@@ -82,10 +82,22 @@ async function* openAIStreamToIterator(
 				continue;
 			}
 
-			yield {
-				done: false,
-				value: parsedData.choices?.[0]?.delta?.content ?? ''
-			};
+			const delta = parsedData.choices?.[0]?.delta;
+			const content = delta?.content ?? '';
+			const reasoning = delta?.reasoning_content ?? delta?.reasoning ?? '';
+
+			if (reasoning) {
+				// Yield reasoning content as value so it's displayed
+				yield { done: false, value: reasoning };
+			}
+
+			if (content) {
+				yield { done: false, value: content };
+			}
+
+			if (!content && !reasoning) {
+				yield { done: false, value: '' };
+			}
 		} catch (e) {
 			console.error('Error extracting delta from SSE event:', e);
 		}
