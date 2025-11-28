@@ -23,7 +23,7 @@
 			</div>
 
 			<div class=" flex items-center gap-2">
-				{#if user?.active}
+				{#if user?.is_active}
 					<div>
 						<span class="relative flex size-2">
 							<span
