@@ -1865,7 +1865,7 @@
 			$settings?.params?.stream_response ??
 			params?.stream_response ??
 			true;
-		
+
 		let messages = [];
 		if (params?.system || $settings.system) {
 			messages.push({
@@ -1879,7 +1879,7 @@
 			let processedMessages = processDetailsAndExtractToolCalls(content ?? '');
 			let nonToolMesssage = null;
 			let toolCallIndex = 0;
-			
+
 			for (const processedMessage of processedMessages) {
 
 				if (typeof processedMessage == "string") {
@@ -1905,7 +1905,7 @@
 					messages.push(nonToolMesssage);
 					continue;
 				}
-				
+
 				if (!nonToolMesssage) {
 					nonToolMesssage = {
 						role: message?.role,
@@ -1913,7 +1913,7 @@
 					};
 					messages.push(nonToolMesssage);
 				}
-				
+
 				nonToolMesssage.tool_calls ??= [];
 				nonToolMesssage.tool_calls.push({
 					index: toolCallIndex++,

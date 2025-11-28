@@ -919,7 +919,7 @@ function parseDoubleEncodedString(value) {
 	try
 	{
 		let parsedValue = JSON.parse(value);
-		if (typeof value == "string") {
+		if (typeof parsedValue == "string") {
 			return parsedValue;
 		}
 	}
