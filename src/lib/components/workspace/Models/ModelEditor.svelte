@@ -301,7 +301,9 @@
 			capabilities = { ...capabilities, ...(model?.meta?.capabilities ?? {}) };
 			defaultFeatureIds = model?.meta?.defaultFeatureIds ?? [];
 			vision_preprocessor_model_id = model?.meta?.vision_preprocessor_model_id ?? '';
-			vision_preprocessor_prompt = model?.meta?.vision_preprocessor_prompt ?? 'Perform OCR on this image and describe its contents in the context of the user query: {query}';
+			vision_preprocessor_prompt =
+				model?.meta?.vision_preprocessor_prompt ??
+				'Perform OCR on this image and describe its contents in the context of the user query: {query}';
 			capabilities = capabilities;
 
 			if ('access_control' in model) {
@@ -625,6 +627,9 @@
 						<div class="mt-2">
 							<div class="my-1">
 								<div class=" text-xs font-semibold mb-2">{$i18n.t('System Prompt')}</div>
+								<div class="text-xs text-gray-400 dark:text-gray-500 mb-2">
+									{$i18n.t('Note: Current date is automatically appended to the system prompt.')}
+								</div>
 								<div>
 									<Textarea
 										className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
@@ -804,7 +809,10 @@
 							<h3 class="text-sm font-semibold mb-3">Vision Preprocessor (for image inputs)</h3>
 							<div class="mb-3">
 								<label class="block text-xs font-semibold mb-1">Preprocessor Model</label>
-								<select bind:value={vision_preprocessor_model_id} class="text-sm w-full bg-transparent outline-hidden border rounded px-3 py-2">
+								<select
+									bind:value={vision_preprocessor_model_id}
+									class="text-sm w-full bg-transparent outline-hidden border rounded px-3 py-2"
+								>
 									<option value="">Select a vision model</option>
 									{#each visionPreprocessorModels as m}
 										<option value={m.id}>{m.name}</option>

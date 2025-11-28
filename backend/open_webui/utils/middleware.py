@@ -968,6 +968,11 @@ def apply_params_to_form_data(form_data, model):
         "system": str,
     }
 
+    if "system" in params:
+        form_data["messages"] = add_or_update_system_message(
+            str(params["system"]), form_data["messages"]
+        )
+
     for key in list(params.keys()):
         if key in open_webui_params:
             del params[key]

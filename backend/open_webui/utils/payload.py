@@ -7,6 +7,7 @@ from open_webui.utils.misc import (
 
 from typing import Callable, Optional
 import json
+from datetime import datetime
 
 
 # inplace function: form_data is modified
@@ -17,8 +18,14 @@ def apply_system_prompt_to_body(
     user=None,
     replace: bool = False,
 ) -> dict:
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    date_prompt = f"Current Date: {current_date}"
+
     if not system:
-        return form_data
+        system = date_prompt
+    else:
+        if date_prompt not in system:
+            system = f"{system}\n{date_prompt}"
 
     # Metadata (WebUI Usage)
     if metadata:

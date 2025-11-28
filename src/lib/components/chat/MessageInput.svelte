@@ -1520,14 +1520,14 @@
 										>
 											<div
 												id="input-menu-button"
-												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
+												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-9 flex justify-center items-center outline-hidden focus:outline-hidden"
 											>
-												<PlusAlt className="size-5.5" />
+												<PlusAlt className="size-6" />
 											</div>
 										</InputMenu>
 
 										<div
-											class="flex self-center w-[1px] h-4 mx-1 bg-gray-200/50 dark:bg-gray-800/50"
+											class="flex self-center w-[1px] h-5 mx-1 bg-gray-200/50 dark:bg-gray-800/50"
 										/>
 
 										{#if showWebSearchButton}
@@ -1535,12 +1535,12 @@
 												<button
 													on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
 													type="button"
-													class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
+													class="group p-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
 													($settings?.webSearch ?? false) === 'always'
 														? ' text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-600/10 border border-sky-200/40 dark:border-sky-500/20'
 														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
 												>
-													<GlobeAlt className="size-4" strokeWidth="1.75" />
+													<GlobeAlt className="size-5" strokeWidth="1.75" />
 													{#if webSearchEnabled}
 														<div class="hidden group-hover:block">
 															<XMark className="size-4" strokeWidth="1.75" />
@@ -1579,9 +1579,9 @@
 											>
 												<div
 													id="integration-menu-button"
-													class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
+													class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-9 flex justify-center items-center outline-hidden focus:outline-hidden"
 												>
-													<Component className="size-4.5" strokeWidth="1.5" />
+													<Component className="size-5" strokeWidth="1.5" />
 												</div>
 											</IntegrationsMenu>
 										{/if}
@@ -1671,7 +1671,7 @@
 											<Tooltip content={'Reasoning Effort'} placement="top">
 												<div class="relative flex items-center">
 													<div
-														class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
+														class="group p-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
 													>
 														<svg
 															xmlns="http://www.w3.org/2000/svg"
@@ -1683,12 +1683,9 @@
 															stroke-linejoin="round"
 															class="size-4"
 														>
-															<path d="M12 2a1 1 0 0 1 1 1v2a1 1 0 0 1-2 0V3a1 1 0 0 1 1-1z" />
 															<path
-																d="M12 14a4 4 0 0 1-4-4V6a1 1 0 0 1 2 0v1a1 1 0 0 0 2 0V6a1 1 0 0 1 2 0v4a4 4 0 0 1-4 4z"
+																d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
 															/>
-															<path d="M12 14a2 2 0 0 0 2 2v2a2 2 0 0 1-4 0v-2a2 2 0 0 0 2-2z" />
-															<polygon points="16 22 8 22 8 18 16 18 16 22" />
 														</svg>
 														<span class="text-xs font-medium"
 															>{reasoningEffort.charAt(0).toUpperCase() +
