@@ -274,7 +274,20 @@
 >
 	<PaneGroup direction="horizontal" class="w-full h-full">
 		<Pane defaultSize={50} minSize={50} class="h-full flex flex-col w-full relative">
-			<Navbar {channel} />
+			<Navbar
+				{channel}
+				onPin={(messageId, pinned) => {
+					messages = messages.map((message) => {
+						if (message.id === messageId) {
+							return {
+								...message,
+								is_pinned: pinned
+							};
+						}
+						return message;
+					});
+				}}
+			/>
 
 			<div class="flex-1 overflow-y-auto">
 				{#if channel}

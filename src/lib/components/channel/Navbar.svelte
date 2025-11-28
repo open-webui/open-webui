@@ -27,9 +27,11 @@
 	let showChannelInfoModal = false;
 
 	export let channel;
+
+	export let onPin = (messageId, pinned) => {};
 </script>
 
-<PinnedMessagesModal bind:show={showChannelPinnedMessagesModal} {channel} />
+<PinnedMessagesModal bind:show={showChannelPinnedMessagesModal} {channel} {onPin} />
 <ChannelInfoModal bind:show={showChannelInfoModal} {channel} />
 <nav class="sticky top-0 z-30 w-full px-1.5 py-1 -mb-8 flex items-center drag-region flex flex-col">
 	<div

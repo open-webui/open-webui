@@ -3,26 +3,21 @@
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
+	import { getChannelPinnedMessages, pinMessage } from '$lib/apis/channels';
+
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
 
-	import UserPlusSolid from '$lib/components/icons/UserPlusSolid.svelte';
-	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
-	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
-	import Hashtag from '../icons/Hashtag.svelte';
-	import Lock from '../icons/Lock.svelte';
-	import UserList from './ChannelInfoModal/UserList.svelte';
-	import { getChannelPinnedMessages, pinMessage } from '$lib/apis/channels';
 	import Message from './Messages/Message.svelte';
-	import { user } from '$lib/stores';
 	import Loader from '../common/Loader.svelte';
 
 	export let show = false;
 	export let channel = null;
+	export let onPin = (messageId, pinned) => {};
 
 	let page = 1;
-	let pinnedMessages = [];
+	let pinnedMessages = null;
 
 	let allItemsLoaded = false;
 	let loading = false;
@@ -41,7 +36,7 @@
 			);
 
 			if (res) {
-				pinnedMessages = [...pinnedMessages, ...res];
+				pinnedMessages = [...(pinnedMessages ?? []), ...res];
 			}
 
 			if (res.length === 0) {
@@ -56,7 +51,8 @@
 
 	const init = () => {
 		page = 1;
-		pinnedMessages = [];
+		pinnedMessages = null;
+		allItemsLoaded = false;
 
 		getPinnedMessages();
 	};
@@ -92,56 +88,69 @@
 			<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
 				<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 					<div class="flex flex-col w-full h-full pb-2 gap-1">
-						<div
-							class="flex flex-col gap-2 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent py-2"
-						>
-							{#each pinnedMessages as message, messageIdx (message.id)}
-								<Message
-									className="rounded-xl px-2"
-									{message}
-									{channel}
-									onPin={async (message) => {
-										pinnedMessages = pinnedMessages.filter((m) => m.id !== message.id);
+						{#if pinnedMessages === null}
+							<div class="my-10">
+								<Spinner className="size-5" />
+							</div>
+						{:else}
+							<div
+								class="flex flex-col gap-2 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent py-2"
+							>
+								{#if pinnedMessages.length === 0}
+									<div class=" text-center text-sm text-gray-500 dark:text-gray-400 py-6">
+										{$i18n.t('No pinned messages')}
+									</div>
+								{:else}
+									{#each pinnedMessages as message, messageIdx (message.id)}
+										<Message
+											className="rounded-xl px-2"
+											{message}
+											{channel}
+											onPin={async (message) => {
+												pinnedMessages = pinnedMessages.filter((m) => m.id !== message.id);
+												onPin(message.id, !message.is_pinned);
 
-										const updatedMessage = await pinMessage(
-											localStorage.token,
-											message.channel_id,
-											message.id,
-											!message.is_pinned
-										).catch((error) => {
-											toast.error(`${error}`);
-											return null;
-										});
+												const updatedMessage = await pinMessage(
+													localStorage.token,
+													message.channel_id,
+													message.id,
+													!message.is_pinned
+												).catch((error) => {
+													toast.error(`${error}`);
+													return null;
+												});
 
-										init();
-									}}
-									onReaction={false}
-									onThread={false}
-									onReply={false}
-									onEdit={false}
-									onDelete={false}
-								/>
+												init();
+											}}
+											onReaction={false}
+											onThread={false}
+											onReply={false}
+											onEdit={false}
+											onDelete={false}
+										/>
 
-								{#if messageIdx === pinnedMessages.length - 1 && !allItemsLoaded}
-									<Loader
-										on:visible={(e) => {
-											console.log('visible');
-											if (!loading) {
-												page += 1;
-												getPinnedMessages();
-											}
-										}}
-									>
-										<div
-											class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
-										>
-											<Spinner className=" size-4" />
-											<div class=" ">{$i18n.t('Loading...')}</div>
-										</div>
-									</Loader>
+										{#if messageIdx === pinnedMessages.length - 1 && !allItemsLoaded}
+											<Loader
+												on:visible={(e) => {
+													console.log('visible');
+													if (!loading) {
+														page += 1;
+														getPinnedMessages();
+													}
+												}}
+											>
+												<div
+													class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
+												>
+													<Spinner className=" size-4" />
+													<div class=" ">{$i18n.t('Loading...')}</div>
+												</div>
+											</Loader>
+										{/if}
+									{/each}
 								{/if}
-							{/each}
-						</div>
+							</div>
+						{/if}
 					</div>
 				</div>
 			</div>
