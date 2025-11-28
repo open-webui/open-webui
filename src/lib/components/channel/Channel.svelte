@@ -5,7 +5,14 @@
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 
-	import { chatId, channelId as _channelId, showSidebar, socket, user } from '$lib/stores';
+	import {
+		chatId,
+		channels,
+		channelId as _channelId,
+		showSidebar,
+		socket,
+		user
+	} from '$lib/stores';
 	import { getChannelById, getChannelMessages, sendMessage } from '$lib/apis/channels';
 
 	import Messages from './Messages.svelte';
@@ -53,6 +60,18 @@
 				type: 'last_read_at'
 			}
 		});
+
+		channels.set(
+			$channels.map((channel) => {
+				if (channel.id === channelId) {
+					return {
+						...channel,
+						unread_count: 0
+					};
+				}
+				return channel;
+			})
+		);
 	};
 
 	const initHandler = async () => {
