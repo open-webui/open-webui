@@ -261,8 +261,13 @@ class UsersTable:
     def get_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
         try:
             with get_db() as db:
-                user = db.query(User).filter_by(api_key=api_key).first()
-                return UserModel.model_validate(user)
+                user = (
+                    db.query(User)
+                    .join(ApiKey, User.id == ApiKey.user_id)
+                    .filter(ApiKey.key == api_key)
+                    .first()
+                )
+                return UserModel.model_validate(user) if user else None
         except Exception:
             return None
 
@@ -579,22 +584,44 @@ class UsersTable:
         except Exception:
             return False
 
-    def update_user_api_key_by_id(self, id: str, api_key: str) -> bool:
-        try:
-            with get_db() as db:
-                result = db.query(User).filter_by(id=id).update({"api_key": api_key})
-                db.commit()
-                return True if result == 1 else False
-        except Exception:
-            return False
-
     def get_user_api_key_by_id(self, id: str) -> Optional[str]:
         try:
             with get_db() as db:
-                user = db.query(User).filter_by(id=id).first()
-                return user.api_key
+                api_key = db.query(ApiKey).filter_by(user_id=id).first()
+                return api_key.key if api_key else None
         except Exception:
             return None
+
+    def update_user_api_key_by_id(self, id: str, api_key: str) -> bool:
+        try:
+            with get_db() as db:
+                db.query(ApiKey).filter_by(user_id=id).delete()
+                db.commit()
+
+                now = int(time.time())
+                new_api_key = ApiKey(
+                    id=f"key_{id}",
+                    user_id=id,
+                    key=api_key,
+                    created_at=now,
+                    updated_at=now,
+                )
+                db.add(new_api_key)
+                db.commit()
+
+                return True
+
+        except Exception:
+            return False
+
+    def delete_user_api_key_by_id(self, id: str) -> bool:
+        try:
+            with get_db() as db:
+                db.query(ApiKey).filter_by(user_id=id).delete()
+                db.commit()
+                return True
+        except Exception:
+            return False
 
     def get_valid_user_ids(self, user_ids: list[str]) -> list[str]:
         with get_db() as db:
