@@ -840,7 +840,15 @@ def get_web_search_tool_specs(extra_params: dict) -> dict:
     tools = {}
     
     # Create a mapping of method names to specs
-    spec_map = {spec.get("function", {}).get("name", ""): spec for spec in specs}
+    spec_map = {}
+    for spec in specs:
+        if "function" in spec:
+            name = spec["function"].get("name")
+        else:
+            name = spec.get("name")
+        
+        if name:
+            spec_map[name] = spec
     
     # Register web_search tool
     if "web_search" in spec_map:

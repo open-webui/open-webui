@@ -1530,11 +1530,31 @@
 											class="flex self-center w-[1px] h-4 mx-1 bg-gray-200/50 dark:bg-gray-800/50"
 										/>
 
-										{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || (toggleFilters && toggleFilters.length > 0)}
+										{#if showWebSearchButton}
+											<Tooltip content={$i18n.t('Web Search')} placement="top">
+												<button
+													on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
+													type="button"
+													class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
+													($settings?.webSearch ?? false) === 'always'
+														? ' text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-600/10 border border-sky-200/40 dark:border-sky-500/20'
+														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
+												>
+													<GlobeAlt className="size-4" strokeWidth="1.75" />
+													{#if webSearchEnabled}
+														<div class="hidden group-hover:block">
+															<XMark className="size-4" strokeWidth="1.75" />
+														</div>
+													{/if}
+												</button>
+											</Tooltip>
+										{/if}
+
+										{#if showImageGenerationButton || showCodeInterpreterButton || showToolsButton || (toggleFilters && toggleFilters.length > 0)}
 											<IntegrationsMenu
 												selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
 												{toggleFilters}
-												{showWebSearchButton}
+												showWebSearchButton={false}
 												{showImageGenerationButton}
 												{showCodeInterpreterButton}
 												bind:selectedToolIds
@@ -1649,37 +1669,44 @@
 
 											<!-- Reasoning Effort Selector -->
 											<Tooltip content={'Reasoning Effort'} placement="top">
-												<div class="flex items-center">
-													<select
-														bind:value={reasoningEffort}
-														on:change={handleReasoningEffortChange}
-														class="text-xs p-1.5 pr-6 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-all cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-750"
-														style="appearance: none; background-image: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 24 24%22 stroke=%22currentColor%22%3E%3Cpath stroke-linecap=%22round%22 stroke-linejoin=%22round%22 stroke-width=%222%22 d=%22M19 9l-7 7-7-7%22/%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right 0.25rem center; background-size: 1em 1em;"
+												<div class="relative flex items-center">
+													<div
+														class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
 													>
-														<option value="low">Low</option>
-														<option value="medium">Medium</option>
-														<option value="high">High</option>
-													</select>
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															viewBox="0 0 24 24"
+															fill="none"
+															stroke="currentColor"
+															stroke-width="2"
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															class="size-4"
+														>
+															<path d="M12 2a1 1 0 0 1 1 1v2a1 1 0 0 1-2 0V3a1 1 0 0 1 1-1z" />
+															<path
+																d="M12 14a4 4 0 0 1-4-4V6a1 1 0 0 1 2 0v1a1 1 0 0 0 2 0V6a1 1 0 0 1 2 0v4a4 4 0 0 1-4 4z"
+															/>
+															<path d="M12 14a2 2 0 0 0 2 2v2a2 2 0 0 1-4 0v-2a2 2 0 0 0 2-2z" />
+															<polygon points="16 22 8 22 8 18 16 18 16 22" />
+														</svg>
+														<span class="text-xs font-medium"
+															>{reasoningEffort.charAt(0).toUpperCase() +
+																reasoningEffort.slice(1)}</span
+														>
+
+														<select
+															bind:value={reasoningEffort}
+															on:change={handleReasoningEffortChange}
+															class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+														>
+															<option value="low">Low</option>
+															<option value="medium">Medium</option>
+															<option value="high">High</option>
+														</select>
+													</div>
 												</div>
 											</Tooltip>
-
-											{#if webSearchEnabled}
-												<Tooltip content={$i18n.t('Web Search')} placement="top">
-													<button
-														on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
-														type="button"
-														class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
-														($settings?.webSearch ?? false) === 'always'
-															? ' text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-600/10 border border-sky-200/40 dark:border-sky-500/20'
-															: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
-													>
-														<GlobeAlt className="size-4" strokeWidth="1.75" />
-														<div class="hidden group-hover:block">
-															<XMark className="size-4" strokeWidth="1.75" />
-														</div>
-													</button>
-												</Tooltip>
-											{/if}
 
 											{#if imageGenerationEnabled}
 												<Tooltip content={$i18n.t('Image')} placement="top">
