@@ -29,6 +29,8 @@
 	export let help = false;
 	export let className = 'max-w-[240px]';
 
+	export let showActiveUsers = true;
+
 	const dispatch = createEventDispatcher();
 
 	let usage = null;
@@ -219,7 +221,7 @@
 				<div class=" self-center truncate">{$i18n.t('Sign Out')}</div>
 			</DropdownMenu.Item>
 
-			{#if usage}
+			{#if showActiveUsers && usage}
 				{#if usage?.user_ids?.length > 0}
 					<hr class=" border-gray-50 dark:border-gray-800 my-1 p-0" />
 
