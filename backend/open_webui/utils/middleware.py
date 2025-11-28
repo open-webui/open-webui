@@ -119,6 +119,8 @@ from open_webui.env import (
     BYPASS_MODEL_ACCESS_CONTROL,
     ENABLE_REALTIME_CHAT_SAVE,
     ENABLE_QUERIES_CACHE,
+    ENABLE_WRAP_TOOL_RESULT,
+    TOOL_RESULT_INDENT_SIZE,
 )
 from open_webui.constants import TASKS
 
@@ -276,14 +278,18 @@ def process_tool_result(
                     )
                     tool_result.remove(item)
 
-    if isinstance(tool_result, list):
+    if isinstance(tool_result, list) and ENABLE_WRAP_TOOL_RESULT:
         tool_result = {"results": tool_result}
 
     if isinstance(tool_result, dict) or isinstance(tool_result, list):
-        tool_result = json.dumps(tool_result, indent=2, ensure_ascii=False)
+        tool_result = dump_tool_result_to_json(tool_result, ensure_ascii=False)
 
     return tool_result, tool_result_files, tool_result_embeds
 
+def dump_tool_result_to_json(model, ensure_ascii=True):
+    indent_size = None if TOOL_RESULT_INDENT_SIZE == 0 else TOOL_RESULT_INDENT_SIZE
+    separators = None if indent_size and indent_size > 0 else (',', ':')
+    return json.dumps(model, indent=indent_size, separators=separators, ensure_ascii=ensure_ascii)
 
 async def chat_completion_tools_handler(
     request: Request, body: dict, extra_params: dict, user: UserModel, models, tools
@@ -2069,9 +2075,9 @@ async def process_chat_response(
 
                                 if tool_result is not None:
                                     tool_result_embeds = result.get("embeds", "")
-                                    tool_calls_display_content = f'{tool_calls_display_content}<details type="tool_calls" done="true" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}" result="{html.escape(json.dumps(tool_result, ensure_ascii=False))}" files="{html.escape(json.dumps(tool_result_files)) if tool_result_files else ""}" embeds="{html.escape(json.dumps(tool_result_embeds))}">\n<summary>Tool Executed</summary>\n</details>\n'
+                                    tool_calls_display_content = f'{tool_calls_display_content}<details type="tool_calls" done="true" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(dump_tool_result_to_json(tool_arguments))}" result="{html.escape(dump_tool_result_to_json(tool_result, ensure_ascii=True))}" files="{html.escape(dump_tool_result_to_json(tool_result_files)) if tool_result_files else ""}" embeds="{html.escape(dump_tool_result_to_json(tool_result_embeds))}">\n<summary>Tool Executed</summary>\n</details>\n'
                                 else:
-                                    tool_calls_display_content = f'{tool_calls_display_content}<details type="tool_calls" done="false" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}">\n<summary>Executing...</summary>\n</details>\n'
+                                    tool_calls_display_content = f'{tool_calls_display_content}<details type="tool_calls" done="false" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(dump_tool_result_to_json(tool_arguments))}">\n<summary>Executing...</summary>\n</details>\n'
 
                             if not raw:
                                 content = f"{content}{tool_calls_display_content}"
@@ -2087,7 +2093,7 @@ async def process_chat_response(
                                     "arguments", ""
                                 )
 
-                                tool_calls_display_content = f'{tool_calls_display_content}\n<details type="tool_calls" done="false" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}">\n<summary>Executing...</summary>\n</details>\n'
+                                tool_calls_display_content = f'{tool_calls_display_content}\n<details type="tool_calls" done="false" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(dump_tool_result_to_json(tool_arguments))}">\n<summary>Executing...</summary>\n</details>\n'
 
                             if not raw:
                                 content = f"{content}{tool_calls_display_content}"
