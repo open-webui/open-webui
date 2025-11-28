@@ -896,13 +896,13 @@ export const processDetailsAndExtractToolCalls = (content) => {
 				name: attributes.name,
 				arguments: unescapeHtml(attributes.arguments ?? ''),
 				result: unescapeHtml(attributes.result ?? '')
-			}
+			};
 
 			toolCall.arguments = parseDoubleEncodedString(toolCall.arguments);
 			toolCall.result = parseDoubleEncodedString(toolCall.result);
 
 			messages.push(toolCall);
-		};
+		}
 
 		let finalAssistantMessage = content.substr(previousDetailsEndIndex);
 		finalAssistantMessage = finalAssistantMessage.trim('\n');
