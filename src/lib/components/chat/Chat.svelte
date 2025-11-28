@@ -1877,6 +1877,7 @@
 		for (const message of _messages) {
 			let content = message?.merged?.content ?? message?.content;
 			let processedMessages = processDetailsAndExtractToolCalls(content ?? '');
+
 			let nonToolMesssage = null;
 			let toolCallIndex = 0;
 

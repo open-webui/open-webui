@@ -286,10 +286,14 @@ def process_tool_result(
 
     return tool_result, tool_result_files, tool_result_embeds
 
+
 def dump_tool_result_to_json(model, ensure_ascii=True):
     indent_size = None if TOOL_RESULT_INDENT_SIZE == 0 else TOOL_RESULT_INDENT_SIZE
-    separators = None if indent_size and indent_size > 0 else (',', ':')
-    return json.dumps(model, indent=indent_size, separators=separators, ensure_ascii=ensure_ascii)
+    separators = None if indent_size and indent_size > 0 else (",", ":")
+    return json.dumps(
+        model, indent=indent_size, separators=separators, ensure_ascii=ensure_ascii
+    )
+
 
 async def chat_completion_tools_handler(
     request: Request, body: dict, extra_params: dict, user: UserModel, models, tools
