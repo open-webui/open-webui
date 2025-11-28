@@ -22,6 +22,7 @@
 	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
 	import Thread from './Thread.svelte';
 	import i18n from '$lib/i18n';
+	import Spinner from '../common/Spinner.svelte';
 
 	export let id = '';
 
@@ -289,8 +290,8 @@
 				}}
 			/>
 
-			<div class="flex-1 overflow-y-auto">
-				{#if channel}
+			{#if channel && messages !== null}
+				<div class="flex-1 overflow-y-auto">
 					<div
 						class=" pb-2.5 max-w-full z-10 scrollbar-hidden w-full h-full pt-6 flex-1 flex flex-col-reverse overflow-auto"
 						id="messages-container"
@@ -330,27 +331,33 @@
 							/>
 						{/key}
 					</div>
-				{/if}
-			</div>
+				</div>
 
-			<div class=" pb-[1rem] px-2.5">
-				<MessageInput
-					id="root"
-					bind:chatInputElement
-					bind:replyToMessage
-					{typingUsers}
-					userSuggestions={true}
-					channelSuggestions={true}
-					disabled={!channel?.write_access}
-					placeholder={!channel?.write_access
-						? $i18n.t('You do not have permission to send messages in this channel.')
-						: $i18n.t('Type here...')}
-					{onChange}
-					onSubmit={submitHandler}
-					{scrollToBottom}
-					{scrollEnd}
-				/>
-			</div>
+				<div class=" pb-[1rem] px-2.5">
+					<MessageInput
+						id="root"
+						bind:chatInputElement
+						bind:replyToMessage
+						{typingUsers}
+						userSuggestions={true}
+						channelSuggestions={true}
+						disabled={!channel?.write_access}
+						placeholder={!channel?.write_access
+							? $i18n.t('You do not have permission to send messages in this channel.')
+							: $i18n.t('Type here...')}
+						{onChange}
+						onSubmit={submitHandler}
+						{scrollToBottom}
+						{scrollEnd}
+					/>
+				</div>
+			{:else}
+				<div class=" flex items-center justify-center h-full w-full">
+					<div class="m-auto">
+						<Spinner className="size-5" />
+					</div>
+				</div>
+			{/if}
 		</Pane>
 
 		{#if !largeScreen}
