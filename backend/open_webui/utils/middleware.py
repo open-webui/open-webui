@@ -55,7 +55,7 @@ from open_webui.routers.pipelines import (
     process_pipeline_outlet_filter,
 )
 from open_webui.models.memories import Memories
-from open_webui.memory.mem0 import mem0_search
+from open_webui.memory.mem0 import mem0_search, mem0_search_and_add
 
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.files import (
@@ -534,7 +534,7 @@ async def chat_memory_handler(
     memories = Memories.get_memories_by_user_id(user.id) or []
 
     # === 2. 预留的 Mem0 检索结果 ===
-    mem0_results = await mem0_search(user.id, metadata.get("chat_id"), user_message)
+    mem0_results = await mem0_search_and_add(user.id, metadata.get("chat_id"), user_message)
 
     # === 3. 格式化记忆条目 ===
     entries = []
