@@ -219,8 +219,9 @@
 				id: null,
 				url: url,
 				name: url,
-				size: 0,
+				collection_name: '',
 				status: 'uploading',
+				size: 0,
 				error: '',
 				itemId: tempItemId
 			};
@@ -235,17 +236,34 @@
 
 				if (res) {
 					console.log(res);
-					knowledge.files = knowledge.files.map((item) => {
-						if (item.itemId === tempItemId) {
-							item.id = res.id;
-							item.name = res.name;
-							item.size = res.size;
-							item.status = 'uploaded';
-						}
-						return item;
-					});
 
-					await addFileHandler(res.id);
+					const content = res.file.data.content;
+					const filename = res.filename || url;
+
+					const file = new File([content], filename, { type: 'text/plain' });
+					const uploadedFile = await uploadFile(localStorage.token, file);
+
+					if (uploadedFile) {
+						knowledge.files = knowledge.files.map((item) => {
+							if (item.itemId === tempItemId) {
+								item.id = uploadedFile.id;
+								item.name = uploadedFile.filename;
+								item.size = uploadedFile.size;
+								item.status = 'uploaded';
+							}
+							return item;
+						});
+
+						await addFileHandler(uploadedFile.id);
+					} else {
+						knowledge.files = knowledge.files.map((item) => {
+							if (item.itemId === tempItemId) {
+								item.status = 'failed';
+								item.error = 'Failed to upload file';
+							}
+							return item;
+						});
+					}
 				} else {
 					knowledge.files = knowledge.files.filter((item) => item.itemId !== tempItemId);
 				}
