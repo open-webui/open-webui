@@ -147,3 +147,6 @@ opentelemetry-instrumentation-requests==0.58b0
 opentelemetry-instrumentation-logging==0.58b0
 opentelemetry-instrumentation-httpx==0.58b0
 opentelemetry-instrumentation-aiohttp-client==0.58b0
+
+# mem0
+mem0ai>=1.0.1
