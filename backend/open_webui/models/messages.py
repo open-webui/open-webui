@@ -373,6 +373,15 @@ class MessageTable:
         self, id: str, user_id: str, name: str
     ) -> Optional[MessageReactionModel]:
         with get_db() as db:
+            # check for existing reaction
+            existing_reaction = (
+                db.query(MessageReaction)
+                .filter_by(message_id=id, user_id=user_id, name=name)
+                .first()
+            )
+            if existing_reaction:
+                return MessageReactionModel.model_validate(existing_reaction)
+
             reaction_id = str(uuid.uuid4())
             reaction = MessageReactionModel(
                 id=reaction_id,
