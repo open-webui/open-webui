@@ -26,6 +26,7 @@
 	import { getGroups } from '$lib/apis/groups';
 
 	import { capitalizeFirstLetter, copyToClipboard } from '$lib/utils';
+	import { getTranslatedLabel } from '$lib/i18n';
 
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import ModelMenu from './Models/ModelMenu.svelte';
@@ -132,7 +133,7 @@
 		sessionStorage.model = JSON.stringify({
 			...model,
 			id: `${model.id}-clone`,
-			name: `${model.name} (Clone)`
+			name: `${getTranslatedLabel(model.name, $i18n.language?.split('-')[0] || 'de')} (Clone)`
 		});
 		goto('/workspace/models/create');
 	};
@@ -245,6 +246,8 @@
 			window.removeEventListener('blur-sm', onBlur);
 		};
 	});
+
+	$: langCode = $i18n.language?.split('-')[0] || 'de';
 </script>
 
 <svelte:head>
@@ -469,12 +472,12 @@
 								<div class="flex h-full w-full flex-1 flex-col justify-start self-center group">
 									<div class="flex-1 w-full">
 										<div class="flex items-center justify-between w-full">
-											<Tooltip content={model.name} className=" w-fit" placement="top-start">
+											<Tooltip content={getTranslatedLabel(model.name, langCode)} className=" w-fit" placement="top-start">
 												<a
 													class=" font-medium line-clamp-1 hover:underline capitalize"
 													href={`/?models=${encodeURIComponent(model.id)}`}
 												>
-													{model.name}
+													{getTranslatedLabel(model.name, langCode)}
 												</a>
 											</Tooltip>
 
