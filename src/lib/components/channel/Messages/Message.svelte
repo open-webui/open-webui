@@ -398,11 +398,44 @@
 						<div>
 							<div class="flex items-center flex-wrap gap-y-1.5 gap-1 mt-1 mb-2">
 								{#each message.reactions as reaction}
-									<Tooltip content={`:${reaction.name}:`}>
+									<Tooltip
+										content={$i18n.t('{{NAMES}} reacted with {{REACTION}}', {
+											NAMES: reaction.users
+												.reduce((acc, u, idx) => {
+													const name = u.id === $user?.id ? $i18n.t('You') : u.name;
+													const total = reaction.users.length;
+
+													// First three names always added normally
+													if (idx < 3) {
+														const separator =
+															idx === 0
+																? ''
+																: idx === Math.min(2, total - 1)
+																	? ` ${$i18n.t('and')} `
+																	: ', ';
+														return `${acc}${separator}${name}`;
+													}
+
+													// More than 4 → "and X others"
+													if (idx === 3 && total > 4) {
+														return (
+															acc +
+															` ${$i18n.t('and {{COUNT}} others', {
+																COUNT: total - 3
+															})}`
+														);
+													}
+
+													return acc;
+												}, '')
+												.trim(),
+											REACTION: `:${reaction.name}:`
+										})}
+									>
 										<button
-											class="flex items-center gap-1.5 transition rounded-xl px-2 py-1 cursor-pointer {reaction.user_ids.includes(
-												$user?.id
-											)
+											class="flex items-center gap-1.5 transition rounded-xl px-2 py-1 cursor-pointer {reaction.users
+												.map((u) => u.id)
+												.includes($user?.id)
 												? ' bg-blue-300/10 outline outline-blue-500/50 outline-1'
 												: 'bg-gray-300/10 dark:bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1'}"
 											on:click={() => {
@@ -413,9 +446,9 @@
 										>
 											<Emoji shortCode={reaction.name} />
 
-											{#if reaction.user_ids.length > 0}
+											{#if reaction.users.length > 0}
 												<div class="text-xs font-medium text-gray-500 dark:text-gray-400">
-													{reaction.user_ids?.length}
+													{reaction.users?.length}
 												</div>
 											{/if}
 										</button>

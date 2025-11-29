@@ -197,8 +197,8 @@
 								const reaction = m.reactions.find((reaction) => reaction.name === name);
 
 								if (reaction) {
-									reaction.user_ids = reaction.user_ids.filter((id) => id !== $user?.id);
-									reaction.count = reaction.user_ids.length;
+									reaction.users = reaction.users.filter((u) => u.id !== $user?.id);
+									reaction.count = reaction.users.length;
 
 									if (reaction.count === 0) {
 										m.reactions = m.reactions.filter((r) => r.name !== name);
@@ -224,12 +224,12 @@
 									const reaction = m.reactions.find((reaction) => reaction.name === name);
 
 									if (reaction) {
-										reaction.user_ids.push($user?.id);
-										reaction.count = reaction.user_ids.length;
+										reaction.users.push({ id: $user?.id, name: $user?.name });
+										reaction.count = reaction.users.length;
 									} else {
 										m.reactions.push({
 											name: name,
-											user_ids: [$user?.id],
+											users: [{ id: $user?.id, name: $user?.name }],
 											count: 1
 										});
 									}
