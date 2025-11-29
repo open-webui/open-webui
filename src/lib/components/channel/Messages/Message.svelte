@@ -407,7 +407,7 @@
 												: 'bg-gray-300/10 dark:bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1'}"
 											on:click={() => {
 												if (onReaction) {
-													onReaction(name);
+													onReaction(reaction.name);
 												}
 											}}
 										>
