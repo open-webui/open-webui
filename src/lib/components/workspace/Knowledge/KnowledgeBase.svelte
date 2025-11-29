@@ -33,6 +33,7 @@
 		updateFileFromKnowledgeById,
 		updateKnowledgeById
 	} from '$lib/apis/knowledge';
+	import { processWeb } from '$lib/apis/retrieval';
 	import { blobToFile } from '$lib/utils';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -206,6 +207,52 @@
 			}
 		} catch (e) {
 			toast.error(`${e}`);
+		}
+	};
+
+	const uploadWebBatchHandler = async (urls) => {
+		for (const url of urls) {
+			const tempItemId = uuidv4();
+			const fileItem = {
+				type: 'file',
+				file: '',
+				id: null,
+				url: url,
+				name: url,
+				size: 0,
+				status: 'uploading',
+				error: '',
+				itemId: tempItemId
+			};
+
+			knowledge.files = [...(knowledge.files ?? []), fileItem];
+
+			try {
+				const res = await processWeb(localStorage.token, '', url).catch((e) => {
+					toast.error(`${e}`);
+					return null;
+				});
+
+				if (res) {
+					console.log(res);
+					knowledge.files = knowledge.files.map((item) => {
+						if (item.itemId === tempItemId) {
+							item.id = res.id;
+							item.name = res.name;
+							item.size = res.size;
+							item.status = 'uploaded';
+						}
+						return item;
+					});
+
+					await addFileHandler(res.id);
+				} else {
+					knowledge.files = knowledge.files.filter((item) => item.itemId !== tempItemId);
+				}
+			} catch (e) {
+				toast.error(`${e}`);
+				knowledge.files = knowledge.files.filter((item) => item.itemId !== tempItemId);
+			}
 		}
 	};
 
@@ -920,16 +967,30 @@
 								<div>
 									<AddContentMenu
 										on:upload={(e) => {
-											if (e.detail.type === 'directory') {
+											if (e.detail.type === 'files') {
+												const input = document.createElement('input');
+												input.type = 'file';
+												input.multiple = true;
+												input.onchange = async (e) => {
+													if (e.target.files) {
+														for (const file of e.target.files) {
+															uploadFileHandler(file);
+														}
+													}
+												};
+												input.click();
+											} else if (e.detail.type === 'directory') {
 												uploadDirectoryHandler();
 											} else if (e.detail.type === 'text') {
 												showAddTextContentModal = true;
-											} else {
-												document.getElementById('files-input').click();
+											} else if (e.detail.type === 'web') {
+												uploadWebBatchHandler(e.detail.data);
 											}
 										}}
 										on:sync={(e) => {
-											showSyncConfirmModal = true;
+											if (e.detail.type === 'directory') {
+												showSyncConfirmModal = true;
+											}
 										}}
 									/>
 								</div>

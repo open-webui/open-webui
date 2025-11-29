@@ -10,13 +10,24 @@
 	import BarsArrowUp from '$lib/components/icons/BarsArrowUp.svelte';
 	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
 	import ArrowPath from '$lib/components/icons/ArrowPath.svelte';
+	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
+
+	import AttachWebpageModal from '$lib/components/chat/MessageInput/AttachWebpageModal.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let onClose: Function = () => {};
 
 	let show = false;
+	let showAttachWebpageModal = false;
 </script>
+
+<AttachWebpageModal
+	bind:show={showAttachWebpageModal}
+	onSubmit={(e) => {
+		dispatch('upload', e);
+	}}
+/>
 
 <Dropdown
 	bind:show
@@ -92,6 +103,16 @@
 					<div class="flex items-center">{$i18n.t('Sync directory')}</div>
 				</DropdownMenu.Item>
 			</Tooltip>
+
+			<DropdownMenu.Item
+				class="flex  gap-2  items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				on:click={() => {
+					showAttachWebpageModal = true;
+				}}
+			>
+				<GlobeAlt strokeWidth="2" />
+				<div class="flex items-center">{$i18n.t('Add from Website')}</div>
+			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
 				class="flex  gap-2  items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
