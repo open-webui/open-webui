@@ -58,7 +58,7 @@ def _mask_response(model):
     )
 
 
-@router.get("/", response_model=list[UserModelCredentialResponse])
+@router.get("", response_model=list[UserModelCredentialResponse])
 async def list_user_credentials(user=Depends(get_verified_user)):
     """
     获取当前用户的所有私有模型凭据
@@ -77,7 +77,7 @@ async def list_user_credentials(user=Depends(get_verified_user)):
     return [_mask_response(c) for c in creds]
 
 
-@router.post("/", response_model=UserModelCredentialResponse)
+@router.post("", response_model=UserModelCredentialResponse)
 async def create_user_credential(
     form_data: UserModelCredentialForm, user=Depends(get_verified_user)
 ):
