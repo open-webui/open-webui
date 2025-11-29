@@ -221,29 +221,30 @@ class ModelsTable:
         ]
 
     def _has_write_permission(self, query, filter: dict):
-        if filter.get("group_ids") or filter.get("user_id"):
-            conditions = []
+        group_ids = filter.get("group_ids", [])
+        user_id = filter.get("user_id")
 
-            # --- ANY group_ids match ("write".group_ids) ---
-            if filter.get("group_ids"):
-                group_ids = filter["group_ids"]
-                like_clauses = []
+        json_group_ids = Model.access_control["write"]["group_ids"]
 
-                for gid in group_ids:
-                    like_clauses.append(
-                        cast(Model.access_control, String).like(
-                            f'%"write"%"group_ids"%"{gid}"%'
-                        )
-                    )
+        conditions = []
+        if group_ids or user_id:
+            conditions.append(Model.access_control.is_(None))
 
-                # ANY → OR
-                conditions.append(or_(*like_clauses))
+        if user_id:
+            conditions.append(Model.user_id == user_id)
 
-            # --- user_id match (owner) ---
-            if filter.get("user_id"):
-                conditions.append(Model.user_id == filter["user_id"])
+        if group_ids:
+            group_conditions = []
 
-            # Apply OR across the two groups of conditions
+            for gid in group_ids:
+                # CASE: gid IN JSON array
+                # SQLite → json_extract(access_control, '$.write.group_ids') LIKE '%gid%'
+                # Postgres → access_control->'write'->'group_ids' @> '[gid]'
+                group_conditions.append(json_group_ids.contains([gid]))
+
+            conditions.append(or_(*group_conditions))
+
+        if conditions:
             query = query.filter(or_(*conditions))
 
         return query
