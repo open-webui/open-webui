@@ -1102,7 +1102,7 @@ class OAuthManager:
                 user_oauth_groups = []
 
         user_current_groups: list[GroupModel] = Groups.get_groups_by_member_id(user.id)
-        all_available_groups: list[GroupModel] = Groups.get_groups()
+        all_available_groups: list[GroupModel] = Groups.get_all_groups()
 
         # Create groups if they don't exist and creation is enabled
         if auth_manager_config.ENABLE_OAUTH_GROUP_CREATION:
@@ -1146,7 +1146,7 @@ class OAuthManager:
 
             # Refresh the list of all available groups if any were created
             if groups_created:
-                all_available_groups = Groups.get_groups()
+                all_available_groups = Groups.get_all_groups()
                 log.debug("Refreshed list of all available groups after creation.")
 
         log.debug(f"Oauth Groups claim: {oauth_claim}")
