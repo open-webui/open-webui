@@ -240,14 +240,17 @@
 					const content = res.file.data.content;
 					const filename = res.filename || url;
 
-					const file = new File([content], filename, { type: 'text/plain' });
-					const uploadedFile = await uploadFile(localStorage.token, file);
+					// Create a safe filename for the File object to avoid filesystem issues
+					const safeFilename = `web_content_${uuidv4()}.txt`;
+
+					const file = new File([content], safeFilename, { type: 'text/plain' });
+					const uploadedFile = await uploadFile(localStorage.token, file, { name: filename });
 
 					if (uploadedFile) {
 						knowledge.files = knowledge.files.map((item) => {
 							if (item.itemId === tempItemId) {
 								item.id = uploadedFile.id;
-								item.name = uploadedFile.filename;
+								item.name = filename; // Use the URL/filename as the title
 								item.size = uploadedFile.size;
 								item.status = 'uploaded';
 							}
