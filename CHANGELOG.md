@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.41] - 2025-11-28
+## [0.6.41] - 2025-11-29
 
 ### Added
 
@@ -15,8 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 💬 Users can now hide Direct Message channels from their sidebar while preserving message history, with automatic reactivation when new messages arrive from other participants, providing a cleaner interface for managing active conversations. [Commit](https://github.com/open-webui/open-webui/commit/acccb9afdd557274d6296c70258bb897bbb6652f)
 - 💬 A comprehensive user selection component was added to the channel creation modal, featuring search functionality, sortable user lists, pagination support, and multi-select checkboxes for building Direct Message participant lists. [Commit](https://github.com/open-webui/open-webui/commit/acccb9afdd557274d6296c70258bb897bbb6652f)
 - 💬 Channel unread message count tracking was implemented with visual badge indicators in the sidebar, automatically updating counts in real-time and marking messages as read when users view channels, with join/leave functionality to manage membership status. [Commit](https://github.com/open-webui/open-webui/commit/64b4d5d9c280b926746584aaf92b447d09deb386)
-- 💬 Message pinning functionality was added to channels, allowing users to pin important messages for easy reference, with backend support for tracking pinned status, pin timestamp, and the user who pinned each message. [Commit](https://github.com/open-webui/open-webui/commit/64b4d5d9c280b926746584aaf92b447d09deb386)
+- 💬 Message pinning functionality was added to channels, allowing users to pin important messages for easy reference with visual highlighting, a dedicated pinned messages modal accessible from the navbar, and complete backend support for tracking pinned status, pin timestamp, and the user who pinned each message. [Commit](https://github.com/open-webui/open-webui/commit/64b4d5d9c280b926746584aaf92b447d09deb386), [Commit](https://github.com/open-webui/open-webui/commit/aae2fce17355419d9c29f8100409108037895201)
 - 💬 Direct Message channels now display an active status indicator for one-on-one conversations, showing a visual green dot when the other participant is currently online. [Commit](https://github.com/open-webui/open-webui/commit/4b6773885cd7527c5a56b963781dac5e95105eec)
+- 💬 Channel messages now appear instantly when sent using optimistic UI rendering, displaying with a pending state while the server confirms delivery, providing a more responsive messaging experience. [Commit](https://github.com/open-webui/open-webui/commit/25994dd3da90600401f53596d4e4fb067c1b8eaa)
+- 💬 Channel message reactions now display the names of users who reacted when hovering over the emoji, showing up to three names with a count for additional reactors. [Commit](https://github.com/open-webui/open-webui/commit/05e79bdd0c7af70b631e958924e3656db1013b80)
 - 👥 A group export API endpoint was added, enabling administrators to export complete group data including member lists for backup and migration purposes. [Commit](https://github.com/open-webui/open-webui/commit/09b6ea38c579659f8ca43ae5ea3746df3ac561ad)
 - 👥 The admin user list now displays an active status indicator next to each user, showing a visual green dot for users who have been active within the last three minutes. [Commit](https://github.com/open-webui/open-webui/commit/1b095d12ff2465b83afa94af89ded9593f8a8655)
 - 🔐 The admin user edit modal now displays OAuth identity information with a per-provider breakdown, showing each linked identity provider and its associated subject identifier separately. [#19573](https://github.com/open-webui/open-webui/pull/19573)
@@ -42,6 +44,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ⚡ Redundant API calls on the admin user overview page were eliminated by consolidating reactive statements, reducing four duplicate requests to a single efficient call and significantly improving page load performance. [#19509](https://github.com/open-webui/open-webui/issues/19509), [Commit](https://github.com/open-webui/open-webui/commit/9f89cc5e9f7e1c6c9e2bc91177e08df7c79f66f9)
 - ⚡ Duplicate API calls on the workspace models page were eliminated by removing redundant model list fetching, reducing two identical requests to a single call and improving page responsiveness. [#19517](https://github.com/open-webui/open-webui/issues/19517), [Commit](https://github.com/open-webui/open-webui/commit/d1bbf6be7a4d1d53fa8ad46ca4f62fc4b2e6a8cb)
 - 🎨 The model valves button was corrected to prevent unintended form submission by adding explicit button type attribute, ensuring it no longer triggers message sending when the input area contains text. [#19534](https://github.com/open-webui/open-webui/pull/19534)
+- 🧠 Ollama model deletion was fixed by correcting the request payload format and ensuring the model selector properly displays the placeholder option. [Commit](https://github.com/open-webui/open-webui/commit/0f3156651c64bc5af188a65fc2908bdcecf30c74)
+- 🖼️ Image generation in temporary chats was fixed by correctly handling local chat sessions that are not persisted to the database. [Commit](https://github.com/open-webui/open-webui/commit/a7c7993bbf3a21cb7ba416525b89233cf2ad877f)
 
 ### Changed
 
