@@ -31,7 +31,7 @@
 </script>
 
 <Modal size="sm" bind:show>
-	<div class="px-5 py-4">
+	<div class="px-4 py-3">
 		<div class="flex justify-between items-center mb-3">
 			<div class="text-lg font-bold">{$i18n.t('Attach Webpage')}</div>
 			<button
