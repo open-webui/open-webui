@@ -183,7 +183,7 @@
 						</div>
 					</div>
 					<div class="w-full">
-						{#each users as user, userIdx}
+						{#each users as user, userIdx (user.id)}
 							<div class=" dark:border-gray-850 text-xs flex items-center justify-between">
 								<div class="px-3 py-1.5 font-medium text-gray-900 dark:text-white flex-1">
 									<div class="flex items-center gap-2">
