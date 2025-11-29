@@ -189,7 +189,7 @@
 					if (
 						(message?.reactions ?? [])
 							.find((reaction) => reaction.name === name)
-							?.user_ids?.includes($user?.id) ??
+							?.users?.some((u) => u.id === $user?.id) ??
 						false
 					) {
 						messages = messages.map((m) => {
