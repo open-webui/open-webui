@@ -1876,6 +1876,7 @@
 
 		for (const message of _messages) {
 			let content = message?.merged?.content ?? message?.content;
+			content = message?.role !== 'user' ? content?.trim() : content;
 			let processedMessages = processDetailsAndExtractToolCalls(content ?? '');
 
 			let nonToolMesssage = null;
@@ -1885,15 +1886,18 @@
 				if (typeof processedMessage == 'string') {
 					nonToolMesssage = {
 						role: message?.role,
-						content: message?.role === 'user' ? processedMessage : processedMessage.trim()
+						content: processedMessage
 					};
 
 					if (
 						message?.role === 'user' &&
 						(message.files?.filter((file) => file.type === 'image').length > 0 ?? false)
 					) {
-						nonToolMesssage = {
-							...nonToolMesssage,
+						nonToolMesssage.content = [
+							{
+								type: 'text',
+								text: nonToolMesssage.content
+							},
 							...message.files
 								.filter((file) => file.type === 'image')
 								.map((file) => ({
@@ -1902,7 +1906,7 @@
 										url: file.url
 									}
 								}))
-						};
+						];
 					}
 
 					messages.push(nonToolMesssage);
