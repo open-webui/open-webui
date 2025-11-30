@@ -124,7 +124,7 @@
 		<div class="flex flex-col gap-2">
 			{#each _promptSuggestions as prompt, promptIdx}
 				<div
-					class=" flex border rounded-2xl border-gray-100 dark:border-gray-850 bg-transparent p-2"
+					class=" flex border rounded-2xl border-gray-100/30 dark:border-gray-850/30 bg-transparent p-2"
 				>
 					<div class="flex flex-col md:flex-row w-full gap-1 md:gap-2 px-2">
 						<div class="gap-0.5 min-w-60">
