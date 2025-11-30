@@ -15,15 +15,15 @@
 	import { getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
 
-import {
-	config,
-	models,
-	settings,
-	temporaryChatEnabled,
-	TTSWorker,
-	user,
-	userModels
-} from '$lib/stores';
+	import {
+		config,
+		models,
+		settings,
+		temporaryChatEnabled,
+		TTSWorker,
+		user,
+		userModels
+	} from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -155,30 +155,27 @@ import {
 	let buttonsContainerElement: HTMLDivElement;
 	let showDeleteConfirm = false;
 
-let model = null;
-let userModel = null;
-let modelName = '';
+	let model = null;
+	let userModel = null;
+	let modelName = '';
 
-$: {
-	const platformModel = $models.find((m) => m.id === message.model);
-	const credentialModel = (() => {
-		// 优先使用随消息携带的 credential_id 精确匹配
-		if (message?.model_item?.credential_id) {
-			return $userModels.find((m) => m.id === message.model_item.credential_id);
-		}
-		// 兼容历史消息：通过 model_id 反查
-		return $userModels.find((m) => m.model_id === message.model);
-	})();
+	$: {
+		const platformModel = $models.find((m) => m.id === message.model);
+		const credentialModel = (() => {
+			// 优先使用随消息携带的 credential_id 精确匹配
+			if (message?.model_item?.credential_id) {
+				return $userModels.find((m) => m.id === message.model_item.credential_id);
+			}
+			// 兼容历史消息：通过 model_id 反查
+			return $userModels.find((m) => m.model_id === message.model);
+		})();
 
-	userModel = credentialModel ? { ...credentialModel, id: credentialModel.model_id } : null;
-	model = platformModel ?? userModel;
+		userModel = credentialModel ? { ...credentialModel, id: credentialModel.model_id } : null;
+		model = platformModel ?? userModel;
 
-	modelName =
-		message.modelName ??
-		model?.name ??
-		(userModel?.name ?? userModel?.model_id) ??
-		message.model;
-}
+		modelName =
+			message.modelName ?? model?.name ?? userModel?.name ?? userModel?.model_id ?? message.model;
+	}
 
 	let edit = false;
 	let editedContent = '';
@@ -649,10 +646,10 @@ $: {
 
 		<div class="flex-auto w-0 pl-1 relative">
 			<Name>
-		<Tooltip content={modelName} placement="top-start">
-			<span class="line-clamp-1 text-black dark:text-white">
-				{modelName}
-			</span>
+				<Tooltip content={modelName} placement="top-start">
+					<span class="line-clamp-1 text-black dark:text-white">
+						{modelName}
+					</span>
 				</Tooltip>
 
 				{#if message.timestamp}
@@ -1015,7 +1012,8 @@ $: {
 									</button>
 								</Tooltip>
 
-								{#if $user?.role === 'admin' || ($user?.permissions?.chat?.tts ?? true)}
+								<!-- 朗读按钮 -->
+								<!-- {#if $user?.role === 'admin' || ($user?.permissions?.chat?.tts ?? true)}
 									<Tooltip content={$i18n.t('Read Aloud')} placement="bottom">
 										<button
 											aria-label={$i18n.t('Read Aloud')}
@@ -1097,7 +1095,7 @@ $: {
 											{/if}
 										</button>
 									</Tooltip>
-								{/if}
+								{/if} -->
 
 								{#if $config?.features.enable_image_generation && ($user?.role === 'admin' || $user?.permissions?.features?.image_generation) && !readOnly}
 									<Tooltip content={$i18n.t('Generate Image')} placement="bottom">
@@ -1211,7 +1209,8 @@ $: {
 								{/if}
 
 								{#if !readOnly}
-									{#if !$temporaryChatEnabled && ($config?.features.enable_message_rating ?? true) && ($user?.role === 'admin' || ($user?.permissions?.chat?.rate_response ?? true))}
+									<!-- 点赞和踩 -->
+									<!-- {#if !$temporaryChatEnabled && ($config?.features.enable_message_rating ?? true) && ($user?.role === 'admin' || ($user?.permissions?.chat?.rate_response ?? true))}
 										<Tooltip content={$i18n.t('Good Response')} placement="bottom">
 											<button
 												aria-label={$i18n.t('Good Response')}
@@ -1287,9 +1286,10 @@ $: {
 												</svg>
 											</button>
 										</Tooltip>
-									{/if}
+									{/if} -->
 
-									{#if isLastMessage && ($user?.role === 'admin' || ($user?.permissions?.chat?.continue_response ?? true))}
+									<!-- 继续生成按钮 -->
+									<!-- {#if isLastMessage && ($user?.role === 'admin' || ($user?.permissions?.chat?.continue_response ?? true))}
 										<Tooltip content={$i18n.t('Continue Response')} placement="bottom">
 											<button
 												aria-label={$i18n.t('Continue Response')}
@@ -1324,7 +1324,7 @@ $: {
 												</svg>
 											</button>
 										</Tooltip>
-									{/if}
+									{/if} -->
 
 									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.regenerate_response ?? true)}
 										{#if $settings?.regenerateMenu ?? true}
@@ -1518,25 +1518,25 @@ $: {
 							}}
 						/>
 					{/if}
-					
+
 					<!-- AI friend 屏蔽提问提示 -->
 					{#if false}
-					{#if (isLastMessage || ($settings?.keepFollowUpPrompts ?? false)) && message.done && !readOnly && (message?.followUps ?? []).length > 0}
-						<div class="mt-2.5" in:fade={{ duration: 100 }}>
-							<FollowUps
-								followUps={message?.followUps}
-								onClick={(prompt) => {
-									if ($settings?.insertFollowUpPrompt ?? false) {
-										// Insert the follow-up prompt into the input box
-										setInputText(prompt);
-									} else {
-										// Submit the follow-up prompt directly
-										submitMessage(message?.id, prompt);
-									}
-								}}
-							/>
-						</div>
-					{/if}
+						{#if (isLastMessage || ($settings?.keepFollowUpPrompts ?? false)) && message.done && !readOnly && (message?.followUps ?? []).length > 0}
+							<div class="mt-2.5" in:fade={{ duration: 100 }}>
+								<FollowUps
+									followUps={message?.followUps}
+									onClick={(prompt) => {
+										if ($settings?.insertFollowUpPrompt ?? false) {
+											// Insert the follow-up prompt into the input box
+											setInputText(prompt);
+										} else {
+											// Submit the follow-up prompt directly
+											submitMessage(message?.id, prompt);
+										}
+									}}
+								/>
+							</div>
+						{/if}
 					{/if}
 				{/if}
 			</div>
