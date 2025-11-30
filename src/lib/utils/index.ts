@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
 import { WEBUI_BASE_URL } from '$lib/constants';
+import type { ModelColorsConfig } from '$lib/types';
 
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -1660,4 +1661,155 @@ export const getCodeBlockContents = (content: string): object => {
 		css: cssContent.trim(),
 		js: jsContent.trim()
 	};
+};
+
+/**
+ * Resolve the accent color and intensity for a given model from its meta,
+ * with inheritance from base model if not set.
+ * @param modelId - The ID of the selected model
+ * @param models - Array of all models (for inheritance lookup)
+ * @returns Object with color and intensity, or null if no accent set
+ */
+export const resolveModelAccent = (
+	modelId: string,
+	models: any[]
+): { color: string; intensity: number } | null => {
+	if (!modelId || !models || models.length === 0) {
+		return null;
+	}
+
+	const visited = new Set<string>(); // Prevent infinite loops
+
+	const getAccentRecursive = (id: string): { color: string; intensity: number } | null => {
+		if (visited.has(id)) return null;
+		visited.add(id);
+
+		const model = models.find((m) => m.id === id);
+		if (!model) return null;
+
+		// Check if this model has an accent_color set (in info.meta for workspace models)
+		if (model.info?.meta?.accent_color) {
+			return {
+				color: model.info.meta.accent_color,
+				intensity: model.info.meta.accent_intensity ?? 0.35
+			};
+		}
+
+		// If not, check the base model (inheritance)
+		if (model.info?.base_model_id) {
+			return getAccentRecursive(model.info.base_model_id);
+		}
+
+		return null;
+	};
+
+	return getAccentRecursive(modelId);
+};
+
+/**
+ * Resolve the accent color for a given model from its meta.accent_color,
+ * with inheritance from base model if not set.
+ * @deprecated Use resolveModelAccent instead for both color and intensity
+ */
+export const resolveModelAccentColor = (
+	modelId: string,
+	models: any[]
+): string | null => {
+	const accent = resolveModelAccent(modelId, models);
+	return accent?.color ?? null;
+};
+
+/**
+ * Resolve the accent color for a given model ID based on configuration.
+ * Matches exact model IDs first, then glob patterns (sorted by priority).
+ * @deprecated Use resolveModelAccentColor instead for per-model colors with inheritance
+ */
+export const resolveModelColor = (
+	modelId: string,
+	config: ModelColorsConfig
+): string => {
+	if (!config.enabled || !modelId) {
+		return config.defaultColor;
+	}
+
+	// Sort mappings by priority (higher first)
+	const sortedMappings = [...config.mappings].sort((a, b) => b.priority - a.priority);
+
+	for (const mapping of sortedMappings) {
+		if (matchesPattern(modelId, mapping.pattern)) {
+			return mapping.color;
+		}
+	}
+
+	return config.defaultColor;
+};
+
+/**
+ * Check if a model ID matches a pattern (exact match or glob-style wildcard).
+ */
+const matchesPattern = (modelId: string, pattern: string): boolean => {
+	// Exact match
+	if (pattern === modelId) {
+		return true;
+	}
+
+	// Convert glob pattern to regex (only supports * wildcard for now)
+	if (pattern.includes('*')) {
+		const regexPattern = pattern
+			.replace(/[.+?^${}()|[\]\\]/g, '\\$&') // Escape regex special chars
+			.replace(/\*/g, '.*'); // Convert * to .*
+		const regex = new RegExp(`^${regexPattern}$`, 'i');
+		return regex.test(modelId);
+	}
+
+	return false;
+};
+
+/**
+ * Apply the model accent color to the document via CSS custom properties.
+ * Pass null to clear/disable accent styling.
+ */
+export const applyModelAccent = (color: string | null): void => {
+	if (color) {
+		document.documentElement.style.setProperty('--model-accent', color);
+		document.documentElement.classList.add('model-accent-enabled');
+
+		// Also set RGB values for use with rgba()
+		const rgb = hexToRgb(color);
+		if (rgb) {
+			document.documentElement.style.setProperty(
+				'--model-accent-rgb',
+				`${rgb.r}, ${rgb.g}, ${rgb.b}`
+			);
+		}
+	} else {
+		// Clear accent styling
+		document.documentElement.style.removeProperty('--model-accent');
+		document.documentElement.style.removeProperty('--model-accent-rgb');
+		document.documentElement.classList.remove('model-accent-enabled');
+	}
+};
+
+/**
+ * Set the model accent intensity CSS variable.
+ * Intensity controls the opacity of accent styling elements.
+ * Pass null or 0.35 to use default intensity.
+ */
+export const setModelAccentIntensity = (intensity: number | null): void => {
+	const value = intensity ?? 0.35;
+	document.documentElement.style.setProperty('--model-accent-intensity', value.toString());
+};
+
+/**
+ * Convert hex color to RGB object.
+ */
+const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
+	const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+	return result
+		? {
+				r: parseInt(result[1], 16),
+				g: parseInt(result[2], 16),
+				b: parseInt(result[3], 16)
+			}
+		: null;
 };

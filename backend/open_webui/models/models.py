@@ -45,6 +45,18 @@ class ModelMeta(BaseModel):
 
     capabilities: Optional[dict] = None
 
+    accent_color: Optional[str] = None
+    """
+        Accent color for visual differentiation (hex format, e.g., '#3b82f6').
+        Inherited from base model if not set.
+    """
+
+    accent_intensity: Optional[float] = None
+    """
+        Intensity/opacity of the accent color (0.1 to 1.0).
+        Defaults to 0.35 if not set.
+    """
+
     model_config = ConfigDict(extra="allow")
 
     pass
