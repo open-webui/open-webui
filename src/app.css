@@ -33,6 +33,10 @@
 /* --app-text-scale is updated via the UI Scale slider (Interface.svelte) */
 :root {
 	--app-text-scale: 1;
+
+	/* Model accent colors - updated dynamically by applyModelAccent() */
+	--model-accent: #3b82f6;
+	--model-accent-rgb: 59, 130, 246;
 }
 
 html {
@@ -802,4 +806,62 @@ body {
 .pm-li-drop-outdent {
 	position: relative;
 	z-index: 0;
+}
+
+/* ========================================
+   Model Accent Color Styles
+   These only apply when html.model-accent-enabled
+   is present (i.e., when a model has an accent color set)
+   ======================================== */
+
+:root {
+	--model-accent-intensity: 0.35;
+}
+
+/* AI Response Message Border - only when accent is enabled */
+html.model-accent-enabled .model-accent-message-border {
+	border-left: 2px solid rgba(var(--model-accent-rgb), var(--model-accent-intensity));
+	padding-left: 0.75rem;
+	transition: border-color 0.2s ease-in-out;
+}
+
+/* Message Input Border - only when accent is enabled */
+html.model-accent-enabled .model-accent-input:focus,
+html.model-accent-enabled .model-accent-input:focus-within {
+	border-color: rgba(var(--model-accent-rgb), var(--model-accent-intensity));
+	box-shadow: 0 0 0 1px rgba(var(--model-accent-rgb), calc(var(--model-accent-intensity) * 0.3));
+	transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+/* Accent intensity slider with color preview */
+.accent-slider {
+	-webkit-appearance: none;
+	appearance: none;
+	height: 8px;
+	border-radius: 4px;
+	background: color-mix(in srgb, var(--slider-color) calc(var(--slider-opacity) * 100%), transparent);
+	outline: none;
+	border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.accent-slider::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: var(--slider-color);
+	cursor: pointer;
+	border: 2px solid white;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.accent-slider::-moz-range-thumb {
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: var(--slider-color);
+	cursor: pointer;
+	border: 2px solid white;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
