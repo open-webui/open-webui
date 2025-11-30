@@ -943,9 +943,12 @@ async def generate_chat_completion(
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
 
-        # Prioritize frontend 'reasoning' object over model 'reasoning_effort' (OpenRouter prefers unified reasoning object)
-    if "openrouter.ai" in url and "reasoning" in payload and isinstance(payload["reasoning"], dict):
+        # Always prioritize frontend 'reasoning' object over model 'reasoning_effort'
+    # reasoning_effort is deprecated in favor of reasoning object
+    if "reasoning" in payload and isinstance(payload["reasoning"], dict):
         payload.pop("reasoning_effort", None)
+    elif "reasoning_effort" in payload:
+        payload["reasoning"] = {"effort": payload.pop("reasoning_effort")}
 
     # Convert the modified body back to JSON
     if "logit_bias" in payload:
@@ -1207,14 +1210,21 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
         body_json = json.loads(body)
         model_id = body_json.get("model")
 
+        # Always prioritize frontend 'reasoning' object over model 'reasoning_effort'
+        # reasoning_effort is deprecated in favor of reasoning object
+        if "reasoning" in body_json and isinstance(body_json["reasoning"], dict):
+            body_json.pop("reasoning_effort", None)
+        elif "reasoning_effort" in body_json:
+            body_json["reasoning"] = {"effort": body_json.pop("reasoning_effort")}
+
         # Ensure usage is returned when streaming
         if body_json.get("stream", False):
             if "stream_options" not in body_json:
                 body_json["stream_options"] = {"include_usage": True}
-                body = json.dumps(body_json).encode()
             elif isinstance(body_json["stream_options"], dict):
                 body_json["stream_options"]["include_usage"] = True
-                body = json.dumps(body_json).encode()
+        
+        body = json.dumps(body_json).encode()
     except Exception:
         pass
 

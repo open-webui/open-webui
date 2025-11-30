@@ -948,17 +948,16 @@ def apply_params_to_form_data(form_data, model):
     params = form_data.pop("params", {})
     custom_params = params.pop("custom_params", {})
 
-    # Convert frontend reasoning object to reasoning_effort parameter
-    # Frontend sends: reasoning: { effort: 'medium' }
-    # Backend needs: reasoning_effort: 'medium'
-    reasoning = form_data.pop("reasoning", None)
+    # Convert reasoning_effort parameter to valid reasoning object
+    # Backend needs: reasoning: { effort: 'medium' }
+    reasoning = form_data.get("reasoning", None)
     if reasoning and isinstance(reasoning, dict):
-        effort = reasoning.get("effort")
-        if effort:
-            # Only set reasoning_effort if not already explicitly set in params
-            # This allows saved chat params or API params to take precedence
-            if "reasoning_effort" not in params:
-                params["reasoning_effort"] = effort
+        pass
+    else:
+        reasoning_effort = params.get("reasoning_effort")
+        if reasoning_effort:
+            form_data["reasoning"] = {"effort": reasoning_effort}
+            del params["reasoning_effort"]
 
     open_webui_params = {
         "stream_response": bool,
