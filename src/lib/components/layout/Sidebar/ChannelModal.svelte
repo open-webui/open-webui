@@ -234,9 +234,9 @@
 						</div>
 					{/if}
 
-					{#if type !== ''}
+					{#if ['dm'].includes(type)}
 						<div class="">
-							<MemberSelector bind:userIds includeGroups={type !== 'dm'} />
+							<MemberSelector bind:userIds includeGroups={false} />
 						</div>
 					{/if}
 
