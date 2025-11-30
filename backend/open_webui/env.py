@@ -451,6 +451,16 @@ WEBUI_AUTH_SIGNOUT_REDIRECT_URL = os.environ.get(
 )
 
 ####################################
+# SYSTEM PROMPT HANDLING
+####################################
+
+# When true, if a chat/completions API request provides a system message it replaces
+# the model's configured system prompt, instead of appending to it.
+API_REQUESTS_OVERRIDE_SYSTEM_MESSAGE = (
+    os.environ.get("API_REQUESTS_OVERRIDE_SYSTEM_MESSAGE", "False").lower() == "true"
+)
+
+####################################
 # WEBUI_SECRET_KEY
 ####################################
 
