@@ -300,7 +300,7 @@
 			align="start"
 			transition={flyAndScale}
 		>
-			{#if $user?.role === 'admin' || ($user.permissions?.chat?.share ?? true)}
+			<!-- {#if $user?.role === 'admin' || ($user.permissions?.chat?.share ?? true)}
 				<DropdownMenu.Item
 					class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl"
 					on:click={() => {
@@ -310,7 +310,7 @@
 					<Share strokeWidth="1.5" />
 					<div class="flex items-center">{$i18n.t('Share')}</div>
 				</DropdownMenu.Item>
-			{/if}
+			{/if} -->
 
 			<DropdownMenu.Sub>
 				<DropdownMenu.SubTrigger
@@ -395,13 +395,13 @@
 
 			{#if chatId}
 				<DropdownMenu.Sub>
-					<DropdownMenu.SubTrigger
+					<!-- <DropdownMenu.SubTrigger
 						class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
 					>
 						<Folder />
 
 						<div class="flex items-center">{$i18n.t('Move')}</div>
-					</DropdownMenu.SubTrigger>
+					</DropdownMenu.SubTrigger> -->
 					<DropdownMenu.SubContent
 						class="w-full rounded-2xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white border border-gray-100  dark:border-gray-800 shadow-lg max-h-52 overflow-y-auto scrollbar-hidden"
 						transition={flyAndScale}
