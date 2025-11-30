@@ -1123,6 +1123,7 @@
 	"No models selected": "Nenhum modelo selecionado",
 	"No Notes": "Sem Notas",
 	"No notes found": "Notas não encontradas",
+	"No pinned messages": "",
 	"No prompts found": "Nenhum prompt encontrado",
 	"No results": "Nenhum resultado encontrado",
 	"No results found": "Nenhum resultado encontrado",
@@ -1238,6 +1239,7 @@
 															 
 	"Pin": "Fixar",
 	"Pinned": "Fixado",
+	"Pinned Messages": "",
 	"Pioneer insights": "Insights pioneiros",
 	"Pipe": "",
 				

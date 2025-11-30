@@ -856,27 +856,76 @@ export const removeAllDetails = (content) => {
 	return content;
 };
 
-export const processDetails = (content) => {
+// This regex matches <details> tags with type="tool_calls" and captures their attributes
+const toolCallsDetailsRegex = /<details\s+type="tool_calls"([^>]*)>([\s\S]*?)<\/details>/gis;
+const detailsAttributesRegex = /(\w+)="([^"]*)"/g;
+
+export const processDetailsAndExtractToolCalls = (content) => {
 	content = removeDetails(content, ['reasoning', 'code_interpreter']);
 
-	// This regex matches <details> tags with type="tool_calls" and captures their attributes to convert them to a string
-	const detailsRegex = /<details\s+type="tool_calls"([^>]*)>([\s\S]*?)<\/details>/gis;
-	const matches = content.match(detailsRegex);
-	if (matches) {
+	// Split text and tool calls into messages array
+	let messages = [];
+	const matches = content.match(toolCallsDetailsRegex);
+	if (matches && matches.length > 0) {
+		let previousDetailsEndIndex = 0;
 		for (const match of matches) {
-			const attributesRegex = /(\w+)="([^"]*)"/g;
+			let detailsStartIndex = content.indexOf(match, previousDetailsEndIndex);
+			let assistantMessage = content.substr(
+				previousDetailsEndIndex,
+				detailsStartIndex - previousDetailsEndIndex
+			);
+			previousDetailsEndIndex = detailsStartIndex + match.length;
+
+			assistantMessage = assistantMessage.trim('\n');
+			if (assistantMessage.length > 0) {
+				messages.push(assistantMessage);
+			}
+
 			const attributes = {};
 			let attributeMatch;
-			while ((attributeMatch = attributesRegex.exec(match)) !== null) {
+			while ((attributeMatch = detailsAttributesRegex.exec(match)) !== null) {
 				attributes[attributeMatch[1]] = attributeMatch[2];
 			}
 
-			content = content.replace(match, `"${attributes.result}"`);
+			if (!attributes.id) {
+				continue;
+			}
+
+			let toolCall = {
+				id: attributes.id,
+				name: attributes.name,
+				arguments: unescapeHtml(attributes.arguments ?? ''),
+				result: unescapeHtml(attributes.result ?? '')
+			};
+
+			toolCall.arguments = parseDoubleEncodedString(toolCall.arguments);
+			toolCall.result = parseDoubleEncodedString(toolCall.result);
+
+			messages.push(toolCall);
 		}
+
+		let finalAssistantMessage = content.substr(previousDetailsEndIndex);
+		finalAssistantMessage = finalAssistantMessage.trim('\n');
+		if (finalAssistantMessage.length > 0) {
+			messages.push(finalAssistantMessage);
+		}
+	} else if (content.length > 0) {
+		messages.push(content);
 	}
 
-	return content;
+	return messages;
 };
+
+function parseDoubleEncodedString(value) {
+	try {
+		let parsedValue = JSON.parse(value);
+		if (typeof parsedValue == 'string') {
+			return parsedValue;
+		}
+	} catch {}
+
+	return value;
+}
 
 // This regular expression matches code blocks marked by triple backticks
 const codeBlockRegex = /```[\s\S]*?```/g;
