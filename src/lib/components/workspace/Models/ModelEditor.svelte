@@ -498,19 +498,17 @@
 				<div class="w-full">
 					<div class="flex flex-col">
 						<div class="flex justify-between items-start my-2">
-							<div class=" flex flex-col">
-								<div class="flex-1">
-									<div>
-										<input
-											class="text-4xl font-medium w-full bg-transparent outline-hidden"
-											placeholder={$i18n.t('Model Name')}
-											bind:value={name}
-											required
-										/>
-									</div>
+							<div class=" flex flex-col w-full">
+								<div class="flex-1 w-full">
+									<input
+										class="text-4xl font-medium w-full bg-transparent outline-hidden"
+										placeholder={$i18n.t('Model Name')}
+										bind:value={name}
+										required
+									/>
 								</div>
 
-								<div class="flex-1">
+								<div class="flex-1 w-full">
 									<div>
 										<input
 											class="text-xs w-full bg-transparent outline-hidden"
