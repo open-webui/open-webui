@@ -18,8 +18,6 @@
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import { getGroups } from '$lib/apis/groups';
 
-	export let onChange: Function = () => {};
-
 	export let includeGroups = true;
 	export let pagination = false;
 
@@ -33,6 +31,7 @@
 		? groups.filter((group) => group.name.toLowerCase().includes(query.toLowerCase()))
 		: [];
 
+	let selectedGroup = {};
 	let selectedUsers = {};
 
 	let page = 1;
@@ -42,15 +41,6 @@
 	let query = '';
 	let orderBy = 'name'; // default sort key
 	let direction = 'asc'; // default sort order
-
-	const setSortKey = (key) => {
-		if (orderBy === key) {
-			direction = direction === 'asc' ? 'desc' : 'asc';
-		} else {
-			orderBy = key;
-			direction = 'asc';
-		}
-	};
 
 	const getUserList = async () => {
 		try {
@@ -96,6 +86,38 @@
 			<Spinner className="size-5" />
 		</div>
 	{:else}
+		{#if groupIds.length > 0}
+			<div class="mx-1 mb-1.5">
+				<div class="text-xs text-gray-500 mx-0.5 mb-1">
+					{groupIds.length}
+					{$i18n.t('groups')}
+				</div>
+				<div class="flex gap-1 flex-wrap">
+					{#each groupIds as id}
+						{#if selectedGroup[id]}
+							<button
+								type="button"
+								class="inline-flex items-center space-x-1 px-2 py-1 bg-gray-100/50 dark:bg-gray-850 rounded-lg text-xs"
+								on:click={() => {
+									groupIds = groupIds.filter((gid) => gid !== id);
+									delete selectedGroup[id];
+								}}
+							>
+								<div>
+									{selectedGroup[id].name}
+									<span class="text-xs text-gray-500">{selectedGroup[id].member_count}</span>
+								</div>
+
+								<div>
+									<XMark className="size-3" />
+								</div>
+							</button>
+						{/if}
+					{/each}
+				</div>
+			</div>
+		{/if}
+
 		{#if userIds.length > 0}
 			<div class="mx-1 mb-1.5">
 				<div class="text-xs text-gray-500 mx-0.5 mb-1">
@@ -127,7 +149,7 @@
 			</div>
 		{/if}
 
-		<div class="flex gap-1 -mx-0.5 my-1.5">
+		<div class="flex gap-1 mb-1">
 			<div class=" flex w-full space-x-2">
 				<div class="flex flex-1">
 					<div class=" self-center ml-1 mr-3">
@@ -170,10 +192,11 @@
 										on:click={() => {
 											if ((groupIds ?? []).includes(group.id)) {
 												groupIds = groupIds.filter((id) => id !== group.id);
+												delete selectedGroup[group.id];
 											} else {
 												groupIds = [...groupIds, group.id];
+												selectedGroup[group.id] = group;
 											}
-											onChange(groupIds);
 										}}
 									>
 										<div class="px-3 py-1.5 font-medium text-gray-900 dark:text-white flex-1">
@@ -216,7 +239,6 @@
 												userIds = [...userIds, user.id];
 												selectedUsers[user.id] = user;
 											}
-											onChange(userIds);
 										}}
 									>
 										<div class="px-3 py-1.5 font-medium text-gray-900 dark:text-white flex-1">

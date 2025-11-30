@@ -261,6 +261,7 @@ async def get_channel_by_id(id: str, user=Depends(get_verified_user)):
                 **channel.model_dump(),
                 "user_ids": user_ids,
                 "users": users,
+                "is_manager": Channels.is_user_channel_manager(channel.id, user.id),
                 "write_access": True,
                 "user_count": len(user_ids),
                 "last_read_at": channel_member.last_read_at if channel_member else None,
@@ -291,6 +292,7 @@ async def get_channel_by_id(id: str, user=Depends(get_verified_user)):
                 **channel.model_dump(),
                 "user_ids": user_ids,
                 "users": users,
+                "is_manager": Channels.is_user_channel_manager(channel.id, user.id),
                 "write_access": write_access or user.role == "admin",
                 "user_count": user_count,
                 "last_read_at": channel_member.last_read_at if channel_member else None,
@@ -334,6 +336,7 @@ async def get_channel_members_by_id(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
 
+    if channel.type == "dm":
         user_ids = [
             member.user_id for member in Channels.get_members_by_channel_id(channel.id)
         ]
@@ -349,11 +352,8 @@ async def get_channel_members_by_id(
             ],
             "total": total,
         }
-
     else:
-        filter = {
-            "roles": ["!pending"],
-        }
+        filter = {}
 
         if query:
             filter["query"] = query
@@ -362,10 +362,16 @@ async def get_channel_members_by_id(
         if direction:
             filter["direction"] = direction
 
-        permitted_ids = get_permitted_group_and_user_ids("read", channel.access_control)
-        if permitted_ids:
-            filter["user_ids"] = permitted_ids.get("user_ids")
-            filter["group_ids"] = permitted_ids.get("group_ids")
+        if channel.type == "group":
+            filter["channel_id"] = channel.id
+        else:
+            filter["roles"] = ["!pending"]
+            permitted_ids = get_permitted_group_and_user_ids(
+                "read", channel.access_control
+            )
+            if permitted_ids:
+                filter["user_ids"] = permitted_ids.get("user_ids")
+                filter["group_ids"] = permitted_ids.get("group_ids")
 
         result = Users.get_users(filter=filter, skip=skip, limit=limit)
 
@@ -411,6 +417,101 @@ async def update_is_active_member_by_id_and_user_id(
 
     Channels.update_member_active_status(channel.id, user.id, form_data.is_active)
     return True
+
+
+#################################################
+# AddMembersById
+#################################################
+
+
+class UpdateMembersForm(BaseModel):
+    user_ids: list[str] = []
+    group_ids: list[str] = []
+
+
+@router.post("/{id}/update/members/add")
+async def add_members_by_id(
+    request: Request,
+    id: str,
+    form_data: UpdateMembersForm,
+    user=Depends(get_verified_user),
+):
+    if user.role != "admin" and not has_permission(
+        user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    channel = Channels.get_channel_by_id(id)
+    if not channel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if channel.user_id != user.id and user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    try:
+        memberships = Channels.add_members_to_channel(
+            channel.id, user.id, form_data.user_ids, form_data.group_ids
+        )
+
+        return memberships
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+
+#################################################
+#
+#################################################
+
+
+class RemoveMembersForm(BaseModel):
+    user_ids: list[str] = []
+
+
+@router.post("/{id}/update/members/remove")
+async def remove_members_by_id(
+    request: Request,
+    id: str,
+    form_data: RemoveMembersForm,
+    user=Depends(get_verified_user),
+):
+    if user.role != "admin" and not has_permission(
+        user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    channel = Channels.get_channel_by_id(id)
+    if not channel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if channel.user_id != user.id and user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    try:
+        deleted = Channels.remove_members_from_channel(channel.id, form_data.user_ids)
+
+        return deleted
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
 
 
 ############################

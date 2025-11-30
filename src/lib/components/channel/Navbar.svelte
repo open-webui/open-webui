@@ -29,10 +29,11 @@
 	export let channel;
 
 	export let onPin = (messageId, pinned) => {};
+	export let onUpdate = () => {};
 </script>
 
 <PinnedMessagesModal bind:show={showChannelPinnedMessagesModal} {channel} {onPin} />
-<ChannelInfoModal bind:show={showChannelInfoModal} {channel} />
+<ChannelInfoModal bind:show={showChannelInfoModal} {channel} {onUpdate} />
 <nav class="sticky top-0 z-30 w-full px-1.5 py-1 -mb-8 flex items-center drag-region flex flex-col">
 	<div
 		id="navbar-bg-gradient-to-b"

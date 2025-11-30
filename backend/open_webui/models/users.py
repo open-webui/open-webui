@@ -7,6 +7,9 @@ from open_webui.internal.db import Base, JSONField, get_db
 from open_webui.env import DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL
 from open_webui.models.chats import Chats
 from open_webui.models.groups import Groups, GroupMember
+from open_webui.models.channels import ChannelMember
+
+
 from open_webui.utils.misc import throttle
 
 
@@ -308,6 +311,17 @@ class UsersTable:
                         or_(
                             User.name.ilike(f"%{query_key}%"),
                             User.email.ilike(f"%{query_key}%"),
+                        )
+                    )
+
+                channel_id = filter.get("channel_id")
+                if channel_id:
+                    query = query.filter(
+                        exists(
+                            select(ChannelMember.id).where(
+                                ChannelMember.user_id == User.id,
+                                ChannelMember.channel_id == channel_id,
+                            )
                         )
                     )
 

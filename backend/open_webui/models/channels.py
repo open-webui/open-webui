@@ -5,7 +5,6 @@ from typing import Optional
 
 from open_webui.internal.db import Base, get_db
 from open_webui.models.groups import Groups
-from open_webui.utils.access_control import has_access
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, case
@@ -175,7 +174,9 @@ class ChannelWebhookModel(BaseModel):
 
 
 class ChannelResponse(ChannelModel):
+    is_manager: bool = False
     write_access: bool = False
+
     user_count: Optional[int] = None
 
 
@@ -196,32 +197,42 @@ class CreateChannelForm(ChannelForm):
 
 class ChannelTable:
 
-    def _create_memberships_by_user_ids_and_group_ids(
+    def _collect_unique_user_ids(
         self,
-        channel_id: str,
         invited_by: str,
         user_ids: Optional[list[str]] = None,
         group_ids: Optional[list[str]] = None,
-    ) -> list[ChannelMemberModel]:
-        # For group and direct message channels, automatically add the specified users as members
-        user_ids = user_ids or []
-        if invited_by not in user_ids:
-            user_ids.append(invited_by)  # Ensure the creator is also a member
+    ) -> set[str]:
+        """
+        Collect unique user ids from:
+        - invited_by
+        - user_ids
+        - each group in group_ids
+        Returns a set for efficient SQL diffing.
+        """
+        users = set(user_ids or [])
+        users.add(invited_by)
 
-        # Add users from specified groups
-        group_ids = group_ids or []
-        for group_id in group_ids:
-            group_user_ids = Groups.get_group_user_ids_by_id(group_id)
-            for uid in group_user_ids:
-                if uid not in user_ids:
-                    user_ids.append(uid)
+        for group_id in group_ids or []:
+            users.update(Groups.get_group_user_ids_by_id(group_id))
 
-        # Ensure uniqueness
-        user_ids = list(set(user_ids))
+        return users
 
+    def _create_membership_models(
+        self,
+        channel_id: str,
+        invited_by: str,
+        user_ids: set[str],
+    ) -> list[ChannelMember]:
+        """
+        Takes a set of NEW user IDs (already filtered to exclude existing members).
+        Returns ORM ChannelMember objects to be added.
+        """
+        now = int(time.time_ns())
         memberships = []
+
         for uid in user_ids:
-            channel_member = ChannelMemberModel(
+            model = ChannelMemberModel(
                 **{
                     "id": str(uuid.uuid4()),
                     "channel_id": channel_id,
@@ -230,17 +241,16 @@ class ChannelTable:
                     "is_active": True,
                     "is_channel_muted": False,
                     "is_channel_pinned": False,
-                    "invited_at": int(time.time_ns()),
+                    "invited_at": now,
                     "invited_by": invited_by,
-                    "joined_at": int(time.time_ns()),
+                    "joined_at": now,
                     "left_at": None,
-                    "last_read_at": int(time.time_ns()),
-                    "created_at": int(time.time_ns()),
-                    "updated_at": int(time.time_ns()),
+                    "last_read_at": now,
+                    "created_at": now,
+                    "updated_at": now,
                 }
             )
-
-            memberships.append(ChannelMember(**channel_member.model_dump()))
+            memberships.append(ChannelMember(**model.model_dump()))
 
         return memberships
 
@@ -262,14 +272,18 @@ class ChannelTable:
             new_channel = Channel(**channel.model_dump())
 
             if form_data.type in ["group", "dm"]:
-                memberships = self._create_memberships_by_user_ids_and_group_ids(
-                    channel.id,
-                    user_id,
-                    form_data.user_ids,
-                    form_data.group_ids,
+                users = self._collect_unique_user_ids(
+                    invited_by=user_id,
+                    user_ids=form_data.user_ids,
+                    group_ids=form_data.group_ids,
                 )
-                db.add_all(memberships)
+                memberships = self._create_membership_models(
+                    channel_id=new_channel.id,
+                    invited_by=user_id,
+                    user_ids=users,
+                )
 
+                db.add_all(memberships)
             db.add(new_channel)
             db.commit()
             return channel
@@ -279,24 +293,71 @@ class ChannelTable:
             channels = db.query(Channel).all()
             return [ChannelModel.model_validate(channel) for channel in channels]
 
-    def get_channels_by_user_id(
-        self, user_id: str, permission: str = "read"
-    ) -> list[ChannelModel]:
-        channels = self.get_channels()
+    def _has_permission(self, query, filter: dict, permission: str = "read"):
+        group_ids = filter.get("group_ids", [])
+        user_id = filter.get("user_id")
 
-        channel_list = []
-        for channel in channels:
-            if channel.type == "dm":
-                membership = self.get_member_by_channel_and_user_id(channel.id, user_id)
-                if membership and membership.is_active:
-                    channel_list.append(channel)
-            else:
-                if channel.user_id == user_id or has_access(
-                    user_id, permission, channel.access_control
-                ):
-                    channel_list.append(channel)
+        json_group_ids = Channel.access_control[permission]["group_ids"]
 
-        return channel_list
+        conditions = []
+        if group_ids or user_id:
+            conditions.append(Channel.access_control.is_(None))
+
+        if user_id:
+            conditions.append(Channel.user_id == user_id)
+
+        if group_ids:
+            group_conditions = []
+
+            for gid in group_ids:
+                # CASE: gid IN JSON array
+                # SQLite → json_extract(access_control, '$.write.group_ids') LIKE '%gid%'
+                # Postgres → access_control->'write'->'group_ids' @> '[gid]'
+                group_conditions.append(json_group_ids.contains([gid]))
+
+            conditions.append(or_(*group_conditions))
+
+        if conditions:
+            query = query.filter(or_(*conditions))
+
+        return query
+
+    def get_channels_by_user_id(self, user_id: str) -> list[ChannelModel]:
+        with get_db() as db:
+            user_group_ids = [
+                group.id for group in Groups.get_groups_by_member_id(user_id)
+            ]
+
+            membership_channels = (
+                db.query(Channel)
+                .join(ChannelMember, Channel.id == ChannelMember.channel_id)
+                .filter(
+                    Channel.deleted_at.is_(None),
+                    Channel.archived_at.is_(None),
+                    Channel.type.in_(["group", "dm"]),
+                    ChannelMember.user_id == user_id,
+                    ChannelMember.is_active.is_(True),
+                )
+                .all()
+            )
+
+            query = db.query(Channel).filter(
+                Channel.deleted_at.is_(None),
+                Channel.archived_at.is_(None),
+                or_(
+                    Channel.type.is_(None),  # True NULL/None
+                    Channel.type == "",  # Empty string
+                    and_(Channel.type != "group", Channel.type != "dm"),
+                ),
+            )
+            query = self._has_permission(
+                query, {"user_id": user_id, "group_ids": user_group_ids}
+            )
+
+            standard_channels = query.all()
+
+            all_channels = membership_channels + standard_channels
+            return [ChannelModel.model_validate(c) for c in all_channels]
 
     def get_dm_channel_by_user_ids(self, user_ids: list[str]) -> Optional[ChannelModel]:
         with get_db() as db:
@@ -330,6 +391,78 @@ class ChannelTable:
             )
 
             return ChannelModel.model_validate(channel) if channel else None
+
+    def add_members_to_channel(
+        self,
+        channel_id: str,
+        invited_by: str,
+        user_ids: Optional[list[str]] = None,
+        group_ids: Optional[list[str]] = None,
+    ) -> list[ChannelMemberModel]:
+        with get_db() as db:
+            # 1. Collect all user_ids including groups + inviter
+            requested_users = self._collect_unique_user_ids(
+                invited_by, user_ids, group_ids
+            )
+
+            existing_users = {
+                row.user_id
+                for row in db.query(ChannelMember.user_id)
+                .filter(ChannelMember.channel_id == channel_id)
+                .all()
+            }
+
+            new_user_ids = requested_users - existing_users
+            if not new_user_ids:
+                return []  # Nothing to add
+
+            new_memberships = self._create_membership_models(
+                channel_id, invited_by, new_user_ids
+            )
+
+            db.add_all(new_memberships)
+            db.commit()
+
+            return [
+                ChannelMemberModel.model_validate(membership)
+                for membership in new_memberships
+            ]
+
+    def remove_members_from_channel(
+        self,
+        channel_id: str,
+        user_ids: list[str],
+    ) -> int:
+        with get_db() as db:
+            result = (
+                db.query(ChannelMember)
+                .filter(
+                    ChannelMember.channel_id == channel_id,
+                    ChannelMember.user_id.in_(user_ids),
+                )
+                .delete(synchronize_session=False)
+            )
+            db.commit()
+            return result  # number of rows deleted
+
+    def is_user_channel_manager(self, channel_id: str, user_id: str) -> bool:
+        with get_db() as db:
+            # Check if the user is the creator of the channel
+            # or has a 'manager' role in ChannelMember
+            channel = db.query(Channel).filter(Channel.id == channel_id).first()
+            if channel and channel.user_id == user_id:
+                return True
+
+            membership = (
+                db.query(ChannelMember)
+                .filter(
+                    ChannelMember.channel_id == channel_id,
+                    ChannelMember.user_id == user_id,
+                    ChannelMember.role == "manager",
+                )
+                .first()
+            )
+            return membership is not None
 
     def join_channel(
         self, channel_id: str, user_id: str

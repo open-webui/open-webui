@@ -309,11 +309,13 @@ async def user_join(sid, data):
     )
 
     await sio.enter_room(sid, f"user:{user.id}")
+
     # Join all the channels
     channels = Channels.get_channels_by_user_id(user.id)
     log.debug(f"{channels=}")
     for channel in channels:
         await sio.enter_room(sid, f"channel:{channel.id}")
+
     return {"id": user.id, "name": user.name}
 
 

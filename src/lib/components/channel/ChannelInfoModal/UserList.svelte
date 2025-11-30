@@ -1,6 +1,6 @@
 <script>
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { WEBUI_NAME, config, user, showSidebar } from '$lib/stores';
+	import { WEBUI_NAME, config, user as _user, showSidebar } from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { onMount, getContext } from 'svelte';
 
@@ -14,29 +14,21 @@
 	import { getChannelMembersById } from '$lib/apis/channels';
 
 	import Pagination from '$lib/components/common/Pagination.svelte';
-	import ChatBubbles from '$lib/components/icons/ChatBubbles.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-
-	import EditUserModal from '$lib/components/admin/Users/UserList/EditUserModal.svelte';
-	import UserChatsModal from '$lib/components/admin/Users/UserList/UserChatsModal.svelte';
-	import AddUserModal from '$lib/components/admin/Users/UserList/AddUserModal.svelte';
-
-	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import RoleUpdateConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
-	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
-	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
-	import About from '$lib/components/chat/Settings/About.svelte';
-	import Banner from '$lib/components/common/Banner.svelte';
-	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ProfilePreview from '../Messages/Message/ProfilePreview.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let channel = null;
+
+	export let onAdd = null;
+	export let onRemove = null;
+
 	export let search = true;
 	export let sort = true;
 
@@ -85,7 +77,13 @@
 		}
 	};
 
-	$: if (page !== null && query !== null && orderBy !== null && direction !== null) {
+	$: if (
+		channel !== null &&
+		page !== null &&
+		query !== null &&
+		orderBy !== null &&
+		direction !== null
+	) {
 		getUserList();
 	}
 </script>
@@ -96,10 +94,33 @@
 			<Spinner className="size-5" />
 		</div>
 	{:else}
+		<div class="flex items-center justify-between px-2 mb-1">
+			<div class="flex gap-1 items-center">
+				<span class="text-sm">
+					{$i18n.t('Members')}
+				</span>
+				<span class="text-sm text-gray-500">{total}</span>
+			</div>
+
+			{#if onAdd}
+				<div class="">
+					<button
+						type="button"
+						class=" px-3 py-1.5 gap-1 rounded-xl bg-black dark:text-white dark:bg-gray-850/50 text-black transition font-medium text-xs flex items-center justify-center"
+						on:click={onAdd}
+					>
+						<Plus className="size-3.5 " />
+						<span>{$i18n.t('Add Member')}</span>
+					</button>
+				</div>
+			{/if}
+		</div>
+		<!-- <hr class="my-1 border-gray-100/5- dark:border-gray-850/50" /> -->
+
 		{#if search}
-			<div class="flex gap-1 px-0.5">
+			<div class="flex gap-1 px-1 mb-1">
 				<div class=" flex w-full space-x-2">
-					<div class="flex flex-1">
+					<div class="flex flex-1 items-center">
 						<div class=" self-center ml-1 mr-3">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -127,7 +148,7 @@
 		{#if users.length > 0}
 			<div class="scrollbar-hidden relative whitespace-nowrap w-full max-w-full">
 				<div class=" text-sm text-left text-gray-500 dark:text-gray-400 w-full max-w-full">
-					<div
+					<!-- <div
 						class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200 w-full mb-0.5"
 					>
 						<div
@@ -181,11 +202,11 @@
 								</div>
 							</button>
 						</div>
-					</div>
+					</div> -->
 					<div class="w-full">
 						{#each users as user, userIdx (user.id)}
 							<div class=" dark:border-gray-850 text-xs flex items-center justify-between">
-								<div class="px-3 py-1.5 font-medium text-gray-900 dark:text-white flex-1">
+								<div class="px-2 py-1.5 font-medium text-gray-900 dark:text-white flex-1">
 									<div class="flex items-center gap-2">
 										<ProfilePreview {user} side="right" align="center" sideOffset={6}>
 											<img
@@ -212,8 +233,8 @@
 									</div>
 								</div>
 
-								<div class="px-3 py-1">
-									<div class=" translate-y-0.5">
+								<div class="px-2 py-1 flex items-center gap-1 translate-y-0.5">
+									<div class=" ">
 										<Badge
 											type={user.role === 'admin'
 												? 'info'
@@ -223,6 +244,21 @@
 											content={$i18n.t(user.role)}
 										/>
 									</div>
+
+									{#if onRemove}
+										<div>
+											<button
+												class=" rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition disabled:opacity-50 disabled:cursor-not-allowed"
+												type="button"
+												disabled={user.id === $_user?.id}
+												on:click={() => {
+													onRemove(user.id);
+												}}
+											>
+												<XMark />
+											</button>
+										</div>
+									{/if}
 								</div>
 							</div>
 						{/each}

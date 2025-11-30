@@ -309,6 +309,11 @@
 						return message;
 					});
 				}}
+				onUpdate={async () => {
+					channel = await getChannelById(localStorage.token, id).catch((error) => {
+						return null;
+					});
+				}}
 			/>
 
 			{#if channel && messages !== null}
