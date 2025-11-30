@@ -157,18 +157,14 @@
 	<slot name="label">
 		<div class="mb-2">
 			<div class="flex w-full justify-between mb-1">
-				<div class=" self-center text-sm font-medium">
+				<div class=" self-center text-xs font-medium text-gray-500">
 					{$i18n.t('Knowledge')}
 				</div>
-			</div>
-
-			<div class=" text-xs dark:text-gray-500">
-				{$i18n.t('To attach knowledge base here, add them to the "Knowledge" workspace first.')}
 			</div>
 		</div>
 	</slot>
 
-	<div class="flex flex-col">
+	<div class="flex flex-col mb-1">
 		{#if selectedItems?.length > 0}
 			<div class=" flex flex-wrap items-center gap-2 mb-2.5">
 				{#each selectedItems as file, fileIdx}
@@ -227,5 +223,9 @@
 			</div>
 		{/if}
 		<!-- {knowledge} -->
+	</div>
+
+	<div class=" text-xs dark:text-gray-700">
+		{$i18n.t('To attach knowledge base here, add them to the "Knowledge" workspace first.')}
 	</div>
 </div>

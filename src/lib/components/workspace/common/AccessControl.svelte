@@ -63,7 +63,7 @@
 
 <div class=" rounded-lg flex flex-col gap-2">
 	<div class="">
-		<div class=" text-sm font-medium mb-1.5">{$i18n.t('Visibility')}</div>
+		<div class=" text-xs font-medium mb-2.5 text-gray-500">{$i18n.t('Visibility')}</div>
 
 		<div class="flex gap-2.5 items-center mb-1">
 			<div>
@@ -149,8 +149,8 @@
 			)}
 			<div>
 				<div class="">
-					<div class="flex justify-between mb-1.5">
-						<div class="text-sm font-medium">
+					<div class="flex justify-between mb-2.5">
+						<div class="text-xs font-medium text-gray-500">
 							{$i18n.t('Groups')}
 						</div>
 					</div>
@@ -224,7 +224,7 @@
 							<div class="flex flex-1 items-center">
 								<div class="w-full px-0.5">
 									<select
-										class="outline-hidden bg-transparent text-sm rounded-lg block w-full pr-10 max-w-full
+										class="outline-hidden bg-transparent text-sm block w-full pr-10 max-w-full
 									{selectedGroupId ? '' : 'text-gray-500'}
 									dark:placeholder-gray-500"
 										bind:value={selectedGroupId}
