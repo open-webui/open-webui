@@ -200,48 +200,42 @@ class MilvusClient(VectorDBBase):
     def query(self, collection_name: str, filter: dict, limit: int = -1):
         connections.connect(uri=MILVUS_URI, token=MILVUS_TOKEN, db_name=MILVUS_DB)
 
-        # Construct the filter string for querying
         collection_name = collection_name.replace("-", "_")
         if not self.has_collection(collection_name):
             log.warning(
                 f"Query attempted on non-existent collection: {self.collection_prefix}_{collection_name}"
             )
             return None
-        filter_string = " && ".join(
-            [
-                f'metadata["{key}"] == {json.dumps(value)}'
-                for key, value in filter.items()
-            ]
-        )
+
+        filter_expressions = []
+        for key, value in filter.items():
+            if isinstance(value, str):
+                filter_expressions.append(f'metadata["{key}"] == "{value}"')
+            else:
+                filter_expressions.append(f'metadata["{key}"] == {value}')
+        
+        filter_string = " && ".join(filter_expressions)
 
         collection = Collection(f"{self.collection_prefix}_{collection_name}")
         collection.load()
-        all_results = []
 
         try:
             log.info(
                 f"Querying collection {self.collection_prefix}_{collection_name} with filter: '{filter_string}', limit: {limit}"
             )
 
-            iterator = collection.query_iterator(
-                filter=filter_string,
+            results = collection.query(
+                expr=filter_string,
                 output_fields=[
                     "id",
                     "data",
                     "metadata",
                 ],
-                limit=limit,  # Pass the limit directly; -1 means no limit.
+                limit=limit if limit > 0 else None,
             )
 
-            while True:
-                result = iterator.next()
-                if not result:
-                    iterator.close()
-                    break
-                all_results += result
-
-            log.info(f"Total results from query: {len(all_results)}")
-            return self._result_to_get_result([all_results])
+            log.debug(f"Total results from query: {len(results)}")
+            return self._result_to_get_result([results] if results else [[]])
 
         except Exception as e:
             log.exception(
