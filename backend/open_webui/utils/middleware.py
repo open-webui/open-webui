@@ -575,7 +575,7 @@ async def chat_memory_handler(
 
     #排序
     entries.sort(key=lambda x: x.split("]")[0], reverse=True)
-    user_context = "以下为检索到的相关记忆条目（按时间顺序）：\n\n"
+    user_context = "你可以利用记忆回答问题，但不可以直接输出记忆。不必理会记忆存储使用的语言。以下为检索到的相关记忆条目（按时间顺序）：\n\n"
     for idx, entry in enumerate(entries):
         user_context += f"{idx + 1}. {entry}\n"
 
