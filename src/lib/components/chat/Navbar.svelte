@@ -38,11 +38,13 @@
 	import ChatPlus from '../icons/ChatPlus.svelte';
 	import ChatCheck from '../icons/ChatCheck.svelte';
 	import Knobs from '../icons/Knobs.svelte';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 
 	export let initNewChat: Function;
 	export let shareEnabled: boolean = false;
+	export let scrollTop = 0;
 
 	export let chat;
 	export let history;
@@ -70,11 +72,17 @@
 	aria-label="New Chat"
 />
 
-<nav class="sticky top-0 z-30 w-full py-1 -mb-8 flex flex-col items-center drag-region">
+<nav
+	class="sticky top-0 z-30 w-full {chat?.id
+		? 'pt-0.5 pb-1'
+		: 'pt-1 pb-1'} -mb-12 flex flex-col items-center drag-region"
+>
 	<div class="flex items-center w-full pl-1.5 pr-1">
 		<div
 			id="navbar-bg-gradient-to-b"
-			class=" bg-linear-to-b via-40% to-97% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1]"
+			class="{chat?.id
+				? 'visible'
+				: 'invisible'} bg-linear-to-b via-40% to-97% from-white/90 via-white/50 to-transparent dark:from-gray-900/90 dark:via-gray-900/50 dark:to-transparent pointer-events-none absolute inset-0 -bottom-10 z-[-1]"
 		></div>
 
 		<div class=" flex max-w-full w-full mx-auto px-1.5 md:px-2 pt-0.5 bg-transparent">
@@ -235,7 +243,7 @@
 								<div class=" self-center">
 									<span class="sr-only">{$i18n.t('User menu')}</span>
 									<img
-										src={$user?.profile_image_url}
+										src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
 										class="size-6 object-cover rounded-full"
 										alt=""
 										draggable="false"

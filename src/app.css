@@ -30,8 +30,33 @@
 	font-display: swap;
 }
 
+/* --app-text-scale is updated via the UI Scale slider (Interface.svelte) */
+:root {
+	--app-text-scale: 1;
+}
+
 html {
 	word-break: break-word;
+	/* font-size scales the entire document via the same UI control */
+	font-size: calc(1rem * var(--app-text-scale, 1));
+}
+
+#sidebar-chat-item {
+	/* sidebar item sizing scales for the chat list entries */
+	min-height: calc(32px * var(--app-text-scale, 1));
+	padding-inline: calc(11px * var(--app-text-scale, 1));
+	padding-block: calc(6px * var(--app-text-scale, 1));
+}
+
+#sidebar-chat-item div[dir='auto'] {
+	/* chat title line height follows the text scale */
+	height: calc(20px * var(--app-text-scale, 1));
+	line-height: calc(20px * var(--app-text-scale, 1));
+}
+
+#sidebar-chat-item input {
+	/* editing state input height is kept in sync */
+	min-height: calc(20px * var(--app-text-scale, 1));
 }
 
 code {

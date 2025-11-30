@@ -10,6 +10,7 @@
 		updateLdapConfig,
 		updateLdapServer
 	} from '$lib/apis/auths';
+	import { getGroups } from '$lib/apis/groups';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -32,6 +33,7 @@
 
 	let adminConfig = null;
 	let webhookUrl = '';
+	let groups = [];
 
 	// LDAP
 	let ENABLE_LDAP = false;
@@ -104,6 +106,9 @@
 			})(),
 			(async () => {
 				LDAP_SERVER = await getLdapServer(localStorage.token);
+			})(),
+			(async () => {
+				groups = await getGroups(localStorage.token);
 			})()
 		]);
 
@@ -299,6 +304,22 @@
 						</div>
 					</div>
 
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">{$i18n.t('Default Group')}</div>
+						<div class="flex items-center relative">
+							<select
+								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+								bind:value={adminConfig.DEFAULT_GROUP_ID}
+								placeholder={$i18n.t('Select a group')}
+							>
+								<option value={''}>None</option>
+								{#each groups as group}
+									<option value={group.id}>{group.name}</option>
+								{/each}
+							</select>
+						</div>
+					</div>
+
 					<div class=" mb-2.5 flex w-full justify-between pr-2">
 						<div class=" self-center text-xs font-medium">{$i18n.t('Enable New Sign Ups')}</div>
 
@@ -338,31 +359,31 @@
 					</div>
 
 					<div class="mb-2.5 flex w-full justify-between pr-2">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Enable API Key')}</div>
+						<div class=" self-center text-xs font-medium">{$i18n.t('Enable API Keys')}</div>
 
-						<Switch bind:state={adminConfig.ENABLE_API_KEY} />
+						<Switch bind:state={adminConfig.ENABLE_API_KEYS} />
 					</div>
 
-					{#if adminConfig?.ENABLE_API_KEY}
+					{#if adminConfig?.ENABLE_API_KEYS}
 						<div class="mb-2.5 flex w-full justify-between pr-2">
 							<div class=" self-center text-xs font-medium">
 								{$i18n.t('API Key Endpoint Restrictions')}
 							</div>
 
-							<Switch bind:state={adminConfig.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS} />
+							<Switch bind:state={adminConfig.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS} />
 						</div>
 
-						{#if adminConfig?.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS}
-							<div class=" flex w-full flex-col pr-2">
+						{#if adminConfig?.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS}
+							<div class=" flex w-full flex-col pr-2 mb-2.5">
 								<div class=" text-xs font-medium">
 									{$i18n.t('Allowed Endpoints')}
 								</div>
 
 								<input
-									class="w-full mt-1 rounded-lg text-sm dark:text-gray-300 bg-transparent outline-hidden"
+									class="w-full mt-1 text-sm dark:text-gray-300 bg-transparent outline-hidden"
 									type="text"
 									placeholder={`e.g.) /api/v1/messages, /api/v1/channels`}
-									bind:value={adminConfig.API_KEY_ALLOWED_ENDPOINTS}
+									bind:value={adminConfig.API_KEYS_ALLOWED_ENDPOINTS}
 								/>
 
 								<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">

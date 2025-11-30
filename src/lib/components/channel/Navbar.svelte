@@ -7,17 +7,26 @@
 	import { slide } from 'svelte/transition';
 	import { page } from '$app/stores';
 
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
+
 	import UserMenu from '$lib/components/layout/Sidebar/UserMenu.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
+	import Hashtag from '../icons/Hashtag.svelte';
+	import Lock from '../icons/Lock.svelte';
+	import UserAlt from '../icons/UserAlt.svelte';
+	import ChannelInfoModal from './ChannelInfoModal.svelte';
 
 	const i18n = getContext('i18n');
+
+	let showChannelInfoModal = false;
 
 	export let channel;
 </script>
 
-<nav class="sticky top-0 z-30 w-full px-1.5 py-1.5 -mb-8 flex items-center drag-region">
+<ChannelInfoModal bind:show={showChannelInfoModal} {channel} />
+<nav class="sticky top-0 z-30 w-full px-1.5 py-1 -mb-8 flex items-center drag-region">
 	<div
 		id="navbar-bg-gradient-to-b"
 		class=" bg-linear-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1]"
@@ -56,13 +65,46 @@
 			"
 			>
 				{#if channel}
-					<div class="line-clamp-1 capitalize font-medium font-primary text-lg">
-						{channel.name}
+					<div class="flex items-center gap-0.5 shrink-0">
+						<div class=" size-4 justify-center flex items-center">
+							{#if channel?.access_control === null}
+								<Hashtag className="size-3" strokeWidth="2.5" />
+							{:else}
+								<Lock className="size-5" strokeWidth="2" />
+							{/if}
+						</div>
+
+						<div
+							class=" text-left self-center overflow-hidden w-full line-clamp-1 capitalize flex-1"
+						>
+							{channel.name}
+						</div>
 					</div>
 				{/if}
 			</div>
 
-			<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
+			<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400 gap-1">
+				{#if channel?.user_count !== undefined}
+					<Tooltip content={$i18n.t('Users')}>
+						<button
+							class=" flex cursor-pointer py-1 px-1.5 border dark:border-gray-850 border-gray-50 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+							aria-label="User Count"
+							type="button"
+							on:click={() => {
+								showChannelInfoModal = true;
+							}}
+						>
+							<div class=" flex items-center gap-0.5 m-auto self-center">
+								<UserAlt className=" size-4" strokeWidth="1.5" />
+
+								<div class="text-sm">
+									{channel.user_count}
+								</div>
+							</div>
+						</button>
+					</Tooltip>
+				{/if}
+
 				{#if $user !== undefined}
 					<UserMenu
 						className="max-w-[240px]"
@@ -80,7 +122,7 @@
 						>
 							<div class=" self-center">
 								<img
-									src={$user?.profile_image_url}
+									src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
 									class="size-6 object-cover rounded-full"
 									alt="User profile"
 									draggable="false"

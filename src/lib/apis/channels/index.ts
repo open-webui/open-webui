@@ -101,6 +101,60 @@ export const getChannelById = async (token: string = '', channel_id: string) => 
 	return res;
 };
 
+export const getChannelUsersById = async (
+	token: string,
+	channel_id: string,
+	query?: string,
+	orderBy?: string,
+	direction?: string,
+	page = 1
+) => {
+	let error = null;
+	let res = null;
+
+	const searchParams = new URLSearchParams();
+
+	searchParams.set('page', `${page}`);
+
+	if (query) {
+		searchParams.set('query', query);
+	}
+
+	if (orderBy) {
+		searchParams.set('order_by', orderBy);
+	}
+
+	if (direction) {
+		searchParams.set('direction', direction);
+	}
+
+	res = await fetch(
+		`${WEBUI_API_BASE_URL}/channels/${channel_id}/users?${searchParams.toString()}`,
+		{
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`
+			}
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const updateChannelById = async (
 	token: string = '',
 	channel_id: string,
