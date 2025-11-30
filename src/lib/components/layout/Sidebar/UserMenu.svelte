@@ -29,6 +29,8 @@
 	export let help = false;
 	export let className = 'max-w-[240px]';
 
+	export let showActiveUsers = true;
+
 	const dispatch = createEventDispatcher();
 
 	let usage = null;
@@ -147,7 +149,7 @@
 			{/if}
 
 			{#if help}
-				<hr class=" border-gray-50 dark:border-gray-800 my-1 p-0" />
+				<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
 
 				<!-- {$i18n.t('Help')} -->
 
@@ -200,7 +202,7 @@
 				</DropdownMenu.Item>
 			{/if}
 
-			<hr class=" border-gray-50 dark:border-gray-800 my-1 p-0" />
+			<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
 
 			<DropdownMenu.Item
 				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
@@ -219,9 +221,9 @@
 				<div class=" self-center truncate">{$i18n.t('Sign Out')}</div>
 			</DropdownMenu.Item>
 
-			{#if usage}
-				{#if usage?.user_ids?.length > 0}
-					<hr class=" border-gray-50 dark:border-gray-800 my-1 p-0" />
+			{#if showActiveUsers && usage}
+				{#if usage?.user_count}
+					<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
 
 					<Tooltip
 						content={usage?.model_ids && usage?.model_ids.length > 0
@@ -248,7 +250,7 @@
 									{$i18n.t('Active Users')}:
 								</span>
 								<span class=" font-semibold">
-									{usage?.user_ids?.length}
+									{usage?.user_count}
 								</span>
 							</div>
 						</div>

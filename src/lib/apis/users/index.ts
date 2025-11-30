@@ -166,11 +166,33 @@ export const getUsers = async (
 	return res;
 };
 
-export const getAllUsers = async (token: string) => {
+export const searchUsers = async (
+	token: string,
+	query?: string,
+	orderBy?: string,
+	direction?: string,
+	page = 1
+) => {
 	let error = null;
 	let res = null;
 
-	res = await fetch(`${WEBUI_API_BASE_URL}/users/all`, {
+	const searchParams = new URLSearchParams();
+
+	searchParams.set('page', `${page}`);
+
+	if (query) {
+		searchParams.set('query', query);
+	}
+
+	if (orderBy) {
+		searchParams.set('order_by', orderBy);
+	}
+
+	if (direction) {
+		searchParams.set('direction', direction);
+	}
+
+	res = await fetch(`${WEBUI_API_BASE_URL}/users/search?${searchParams.toString()}`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -194,11 +216,11 @@ export const getAllUsers = async (token: string) => {
 	return res;
 };
 
-export const searchUsers = async (token: string, query: string) => {
+export const getAllUsers = async (token: string) => {
 	let error = null;
 	let res = null;
 
-	res = await fetch(`${WEBUI_API_BASE_URL}/users/search?query=${encodeURIComponent(query)}`, {
+	res = await fetch(`${WEBUI_API_BASE_URL}/users/all`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',

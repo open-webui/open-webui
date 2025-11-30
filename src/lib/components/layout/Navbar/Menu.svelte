@@ -359,7 +359,7 @@
 				</DropdownMenu.Item>
 			{/if}
 
-			<hr class="border-gray-50 dark:border-gray-800 my-1" />
+			<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
 
 			{#if !$temporaryChatEnabled && ($user?.role === 'admin' || ($user.permissions?.chat?.share ?? true))}
 				<DropdownMenu.Item
@@ -435,7 +435,7 @@
 			</DropdownMenu.Item>
 
 			{#if !$temporaryChatEnabled && chat?.id}
-				<hr class="border-gray-50 dark:border-gray-800 my-1" />
+				<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
 
 				<DropdownMenu.Sub>
 					<DropdownMenu.SubTrigger
@@ -475,7 +475,7 @@
 					<div class="flex items-center">{$i18n.t('Archive')}</div>
 				</DropdownMenu.Item>
 
-				<hr class="border-gray-50 dark:border-gray-800 my-1" />
+				<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
 
 				<div class="flex p-1">
 					<Tags chatId={chat.id} />

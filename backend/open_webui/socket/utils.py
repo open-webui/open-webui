@@ -86,6 +86,15 @@ class RedisDict:
     def items(self):
         return [(k, json.loads(v)) for k, v in self.redis.hgetall(self.name).items()]
 
+    def set(self, mapping: dict):
+        pipe = self.redis.pipeline()
+
+        pipe.delete(self.name)
+        if mapping:
+            pipe.hset(self.name, mapping={k: json.dumps(v) for k, v in mapping.items()})
+
+        pipe.execute()
+
     def get(self, key, default=None):
         try:
             return self[key]

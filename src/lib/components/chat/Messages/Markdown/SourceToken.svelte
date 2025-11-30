@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { LinkPreview } from 'bits-ui';
+	import { decodeString } from '$lib/utils';
 	import Source from './Source.svelte';
 
 	export let id;
@@ -50,7 +51,7 @@
 				}}
 			>
 				<span class="line-clamp-1">
-					{getDisplayTitle(formattedTitle(decodeURIComponent(sourceIds[token.ids[0] - 1])))}
+					{getDisplayTitle(formattedTitle(decodeString(sourceIds[token.ids[0] - 1])))}
 					<span class="dark:text-white/50 text-black/50">+{(token?.ids ?? []).length - 1}</span>
 				</span>
 			</button>

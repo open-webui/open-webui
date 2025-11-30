@@ -1326,7 +1326,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 					</RecordMenu>
 
 					<div
-						class="cursor-pointer flex gap-0.5 rounded-full border border-gray-50 dark:border-gray-850 dark:bg-gray-850 transition shadow-xl"
+						class="cursor-pointer flex gap-0.5 rounded-full border border-gray-50 dark:border-gray-850/30 dark:bg-gray-850 transition shadow-xl"
 					>
 						<Tooltip content={$i18n.t('AI')} placement="top">
 							{#if editing}

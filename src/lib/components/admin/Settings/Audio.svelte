@@ -212,7 +212,7 @@
 			<div>
 				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Speech-to-Text')}</div>
 
-				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 				{#if STT_ENGINE !== 'web'}
 					<div class="mb-2">
@@ -263,7 +263,7 @@
 						</div>
 					</div>
 
-					<hr class="border-gray-100 dark:border-gray-850 my-2" />
+					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div>
 						<div class=" mb-1.5 text-xs font-medium">{$i18n.t('STT Model')}</div>
@@ -289,7 +289,7 @@
 						</div>
 					</div>
 
-					<hr class="border-gray-100 dark:border-gray-850 my-2" />
+					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div>
 						<div class=" mb-1.5 text-xs font-medium">{$i18n.t('STT Model')}</div>
@@ -323,7 +323,7 @@
 							/>
 						</div>
 
-						<hr class="border-gray-100 dark:border-gray-850 my-2" />
+						<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 						<div>
 							<div class=" mb-1.5 text-xs font-medium">{$i18n.t('Azure Region')}</div>
@@ -391,7 +391,7 @@
 						</div>
 					</div>
 
-					<hr class="border-gray-100 dark:border-gray-850 my-2" />
+					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div>
 						<div class=" mb-1.5 text-xs font-medium">{$i18n.t('STT Model')}</div>
@@ -416,7 +416,7 @@
 						</div>
 					</div>
 
-					<hr class="border-gray-100 dark:border-gray-850 my-2" />
+					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div>
 						<div class="flex items-center justify-between mb-2">
@@ -500,7 +500,7 @@
 			<div>
 				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Text-to-Speech')}</div>
 
-				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 				<div class="mb-2 py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">{$i18n.t('Text-to-Speech Engine')}</div>
@@ -557,7 +557,7 @@
 							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_API_KEY} required />
 						</div>
 
-						<hr class="border-gray-100 dark:border-gray-850 my-2" />
+						<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 						<div>
 							<div class=" mb-1.5 text-xs font-medium">{$i18n.t('Azure Region')}</div>

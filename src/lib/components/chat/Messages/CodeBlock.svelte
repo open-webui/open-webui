@@ -42,7 +42,7 @@
 	export let code = '';
 	export let attributes = {};
 
-	export let className = 'mb-2';
+	export let className = '';
 	export let editorClassName = '';
 	export let stickyButtonsClassName = 'top-0';
 
@@ -417,7 +417,7 @@
 
 <div>
 	<div
-		class="relative {className} flex flex-col rounded-3xl border border-gray-100 dark:border-gray-850 my-0.5"
+		class="relative {className} flex flex-col rounded-3xl border border-gray-100/30 dark:border-gray-850/30 my-0.5"
 		dir="ltr"
 	>
 		{#if ['mermaid', 'vega', 'vega-lite'].includes(lang)}

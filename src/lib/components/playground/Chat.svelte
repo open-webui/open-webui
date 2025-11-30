@@ -216,7 +216,7 @@
 				<Collapsible
 					className="w-full flex-1"
 					bind:open={showSystem}
-					buttonClassName="w-full rounded-lg text-sm border border-gray-100 dark:border-gray-850 w-full py-1 px-1.5"
+					buttonClassName="w-full rounded-lg text-sm border border-gray-100/30 dark:border-gray-850/30 w-full py-1 px-1.5"
 					grow={true}
 				>
 					<div class="flex gap-2 justify-between items-center">
@@ -271,7 +271,9 @@
 			</div>
 
 			<div class="pb-3">
-				<div class="border border-gray-100 dark:border-gray-850 w-full px-3 py-2.5 rounded-xl">
+				<div
+					class="border border-gray-100/30 dark:border-gray-850/30 w-full px-3 py-2.5 rounded-xl"
+				>
 					<div class="py-0.5">
 						<!-- $i18n.t('a user') -->
 						<!-- $i18n.t('an assistant') -->
@@ -322,7 +324,7 @@
 						<div class="flex items-center justify-between gap-2 w-full sm:w-auto">
 							<div class="flex-1">
 								<select
-									class=" bg-transparent border border-gray-100 dark:border-gray-850 rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden w-full"
+									class=" bg-transparent border border-gray-100/30 dark:border-gray-850/30 rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden w-full"
 									bind:value={selectedModelId}
 								>
 									{#each $models as model}

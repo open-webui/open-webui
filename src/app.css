@@ -637,7 +637,7 @@ input[type='number'] {
 
 .tiptap th,
 .tiptap td {
-	@apply px-3 py-1.5 border border-gray-100 dark:border-gray-850;
+	@apply px-3 py-1.5 border border-gray-100/30 dark:border-gray-850/30;
 }
 
 .tiptap th {

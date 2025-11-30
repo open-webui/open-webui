@@ -4,7 +4,7 @@ pydantic==2.11.9
 python-multipart==0.0.20
 itsdangerous==2.2.0
 
-python-socketio==5.14.0
+python-socketio==5.15.0
 python-jose==3.5.0
 cryptography
 bcrypt==5.0.0
@@ -52,15 +52,15 @@ chromadb==1.1.0
 weaviate-client==4.17.0
 opensearch-py==2.8.0
 
-transformers
-sentence-transformers==5.1.1
+transformers==4.57.3
+sentence-transformers==5.1.2
 accelerate
 pyarrow==20.0.0 # fix: pin pyarrow version to 20 for rpi compatibility #15897
 einops==0.8.1 
 
 ftfy==6.2.3
 chardet==5.2.0
-pypdf==6.0.0
+pypdf==6.4.0
 fpdf2==2.8.2
 pymdown-extensions==10.14.2
 docx2txt==0.8
@@ -115,7 +115,7 @@ pgvector==0.4.1
 PyMySQL==1.1.1
 boto3==1.40.5
 
-pymilvus==2.6.2
+pymilvus==2.6.4
 qdrant-client==1.14.3
 playwright==1.49.1 # Caution: version must match docker-compose.playwright.yaml
 elasticsearch==9.1.0

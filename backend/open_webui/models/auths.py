@@ -3,7 +3,7 @@ import uuid
 from typing import Optional
 
 from open_webui.internal.db import Base, get_db
-from open_webui.models.users import UserModel, Users
+from open_webui.models.users import UserModel, UserProfileImageResponse, Users
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel
 from sqlalchemy import Boolean, Column, String, Text
@@ -46,15 +46,7 @@ class ApiKey(BaseModel):
     api_key: Optional[str] = None
 
 
-class UserResponse(BaseModel):
-    id: str
-    email: str
-    name: str
-    role: str
-    profile_image_url: str
-
-
-class SigninResponse(Token, UserResponse):
+class SigninResponse(Token, UserProfileImageResponse):
     pass
 
 
@@ -96,7 +88,7 @@ class AuthsTable:
         name: str,
         profile_image_url: str = "/user.png",
         role: str = "pending",
-        oauth_sub: Optional[str] = None,
+        oauth: Optional[dict] = None,
     ) -> Optional[UserModel]:
         with get_db() as db:
             log.info("insert_new_auth")
@@ -110,7 +102,7 @@ class AuthsTable:
             db.add(result)
 
             user = Users.insert_new_user(
-                id, name, email, profile_image_url, role, oauth_sub
+                id, name, email, profile_image_url, role, oauth=oauth
             )
 
             db.commit()

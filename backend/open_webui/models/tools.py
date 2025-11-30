@@ -24,7 +24,7 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 class Tool(Base):
     __tablename__ = "tool"
 
-    id = Column(String, primary_key=True)
+    id = Column(String, primary_key=True, unique=True)
     user_id = Column(String)
     name = Column(Text)
     content = Column(Text)

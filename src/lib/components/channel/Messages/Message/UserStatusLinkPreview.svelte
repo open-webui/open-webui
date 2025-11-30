@@ -14,7 +14,6 @@
 	export let sideOffset = 6;
 
 	let user = null;
-
 	onMount(async () => {
 		if (id) {
 			user = await getUserById(localStorage.token, id).catch((error) => {

@@ -100,6 +100,7 @@
 	<EditGroupModal
 		bind:show={showAddGroupModal}
 		edit={false}
+		tabs={['general', 'permissions']}
 		permissions={defaultPermissions}
 		onSubmit={addGroupHandler}
 	/>
@@ -175,7 +176,7 @@
 					<div class="w-full basis-2/5 text-right">{$i18n.t('Users')}</div>
 				</div>
 
-				<hr class="mt-1.5 border-gray-100 dark:border-gray-850" />
+				<hr class="mt-1.5 border-gray-100/30 dark:border-gray-850/30" />
 
 				{#each filteredGroups as group}
 					<div class="my-2">
@@ -185,7 +186,7 @@
 			</div>
 		{/if}
 
-		<hr class="mb-2 border-gray-100 dark:border-gray-850" />
+		<hr class="mb-2 border-gray-100/30 dark:border-gray-850/30" />
 
 		<EditGroupModal
 			bind:show={showDefaultPermissionsModal}

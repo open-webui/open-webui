@@ -336,7 +336,7 @@
 								? `bg-gray-50 dark:bg-gray-850 border-gray-100 dark:border-gray-800 border-2 ${
 										$mobile ? 'min-w-full' : 'min-w-80'
 									}`
-								: `border-gray-100 dark:border-gray-850 border-dashed ${
+								: `border-gray-100/30 dark:border-gray-850/30 border-dashed ${
 										$mobile ? 'min-w-full' : 'min-w-80'
 									}`} transition-all p-5 rounded-2xl"
 							on:click={async () => {

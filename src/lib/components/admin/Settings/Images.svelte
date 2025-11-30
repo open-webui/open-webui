@@ -291,7 +291,7 @@
 				<div class="mb-3">
 					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="mb-2.5">
 						<div class="flex w-full justify-between items-center">
@@ -309,7 +309,7 @@
 				<div class="mb-3">
 					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Create Image')}</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					{#if config.ENABLE_IMAGE_GENERATION}
 						<div class="mb-2.5">
@@ -882,7 +882,7 @@
 				<div class="mb-3">
 					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Edit Image')}</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="mb-2.5">
 						<div class="flex w-full justify-between items-center">

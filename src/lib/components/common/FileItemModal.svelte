@@ -205,7 +205,7 @@
 					</div>
 				{:else if isPDF}
 					<div
-						class="flex mb-2.5 scrollbar-none overflow-x-auto w-full border-b border-gray-50 dark:border-gray-850 text-center text-sm font-medium bg-transparent dark:text-gray-200"
+						class="flex mb-2.5 scrollbar-none overflow-x-auto w-full border-b border-gray-50 dark:border-gray-850/30 text-center text-sm font-medium bg-transparent dark:text-gray-200"
 					>
 						<button
 							class="min-w-fit py-1.5 px-4 border-b {selectedTab === ''

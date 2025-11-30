@@ -81,7 +81,7 @@
 				</DropdownMenu.Item>
 			{/if}
 
-			<hr class="border-gray-50 dark:border-gray-850 my-1" />
+			<hr class="border-gray-50 dark:border-gray-850/30 my-1" />
 
 			<DropdownMenu.Item
 				class="flex  gap-2  items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"

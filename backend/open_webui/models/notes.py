@@ -23,7 +23,7 @@ from sqlalchemy.sql import exists
 class Note(Base):
     __tablename__ = "note"
 
-    id = Column(Text, primary_key=True)
+    id = Column(Text, primary_key=True, unique=True)
     user_id = Column(Text)
 
     title = Column(Text)

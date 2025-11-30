@@ -121,6 +121,7 @@
 				...item,
 				type: 'collection'
 			}));
+
 		let collection_files =
 			knowledge.length > 0
 				? [
@@ -139,7 +140,7 @@
 							.map((file) => ({
 								...file,
 								name: file?.meta?.name,
-								description: `${file?.collection?.name} - ${file?.collection?.description}`,
+								description: `${file?.collection?.description}`,
 								knowledge: true, // DO NOT REMOVE, USED TO INDICATE KNOWLEDGE BASE FILE
 								type: 'file'
 							}))
@@ -218,7 +219,7 @@
 						content={item?.legacy
 							? $i18n.t('Legacy')
 							: item?.type === 'file'
-								? $i18n.t('File')
+								? `${item?.collection?.name} > ${$i18n.t('File')}`
 								: item?.type === 'collection'
 									? $i18n.t('Collection')
 									: ''}

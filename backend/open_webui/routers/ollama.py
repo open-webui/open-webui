@@ -879,6 +879,7 @@ async def delete_model(
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
     key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
 
+    r = None
     try:
         headers = {
             "Content-Type": "application/json",
@@ -892,7 +893,7 @@ async def delete_model(
             method="DELETE",
             url=f"{url}/api/delete",
             headers=headers,
-            data=form_data.model_dump_json(exclude_none=True).encode(),
+            json=form_data,
         )
         r.raise_for_status()
 
@@ -949,10 +950,7 @@ async def show_model_info(
             headers = include_user_info_headers(headers, user)
 
         r = requests.request(
-            method="POST",
-            url=f"{url}/api/show",
-            headers=headers,
-            data=form_data.model_dump_json(exclude_none=True).encode(),
+            method="POST", url=f"{url}/api/show", headers=headers, json=form_data
         )
         r.raise_for_status()
 

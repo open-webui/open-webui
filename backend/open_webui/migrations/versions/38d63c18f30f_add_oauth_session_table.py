@@ -20,18 +20,46 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # Ensure 'id' column in 'user' table is unique and primary key (ForeignKey constraint)
+    inspector = sa.inspect(op.get_bind())
+    columns = inspector.get_columns("user")
+
+    pk_columns = inspector.get_pk_constraint("user")["constrained_columns"]
+    id_column = next((col for col in columns if col["name"] == "id"), None)
+
+    if id_column and not id_column.get("unique", False):
+        unique_constraints = inspector.get_unique_constraints("user")
+        unique_columns = {tuple(u["column_names"]) for u in unique_constraints}
+
+        with op.batch_alter_table("user") as batch_op:
+            # If primary key is wrong, drop it
+            if pk_columns and pk_columns != ["id"]:
+                batch_op.drop_constraint(
+                    inspector.get_pk_constraint("user")["name"], type_="primary"
+                )
+
+            # Add unique constraint if missing
+            if ("id",) not in unique_columns:
+                batch_op.create_unique_constraint("uq_user_id", ["id"])
+
+            # Re-create correct primary key
+            batch_op.create_primary_key("pk_user_id", ["id"])
+
     # Create oauth_session table
     op.create_table(
         "oauth_session",
-        sa.Column("id", sa.Text(), nullable=False),
-        sa.Column("user_id", sa.Text(), nullable=False),
+        sa.Column("id", sa.Text(), primary_key=True, nullable=False, unique=True),
+        sa.Column(
+            "user_id",
+            sa.Text(),
+            sa.ForeignKey("user.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("provider", sa.Text(), nullable=False),
         sa.Column("token", sa.Text(), nullable=False),
         sa.Column("expires_at", sa.BigInteger(), nullable=False),
         sa.Column("created_at", sa.BigInteger(), nullable=False),
         sa.Column("updated_at", sa.BigInteger(), nullable=False),
-        sa.PrimaryKeyConstraint("id"),
-        sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="CASCADE"),
     )
 
     # Create indexes for better performance

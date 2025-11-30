@@ -111,7 +111,9 @@
 		if (channelSuggestions) {
 			// Add a dummy channel item
 			_channels = [
-				...$channels.map((c) => ({ type: 'channel', id: c.id, label: c.name, data: c }))
+				...$channels
+					.filter((c) => c?.type !== 'dm')
+					.map((c) => ({ type: 'channel', id: c.id, label: c.name, data: c }))
 			];
 		} else {
 			if (userSuggestions) {

@@ -53,7 +53,7 @@ class ModelMeta(BaseModel):
 class Model(Base):
     __tablename__ = "model"
 
-    id = Column(Text, primary_key=True)
+    id = Column(Text, primary_key=True, unique=True)
     """
         The model's id as used in the API. If set to an existing model, it will override the model.
     """
@@ -220,6 +220,35 @@ class ModelsTable:
             or has_access(user_id, permission, model.access_control, user_group_ids)
         ]
 
+    def _has_write_permission(self, query, filter: dict):
+        group_ids = filter.get("group_ids", [])
+        user_id = filter.get("user_id")
+
+        json_group_ids = Model.access_control["write"]["group_ids"]
+
+        conditions = []
+        if group_ids or user_id:
+            conditions.append(Model.access_control.is_(None))
+
+        if user_id:
+            conditions.append(Model.user_id == user_id)
+
+        if group_ids:
+            group_conditions = []
+
+            for gid in group_ids:
+                # CASE: gid IN JSON array
+                # SQLite → json_extract(access_control, '$.write.group_ids') LIKE '%gid%'
+                # Postgres → access_control->'write'->'group_ids' @> '[gid]'
+                group_conditions.append(json_group_ids.contains([gid]))
+
+            conditions.append(or_(*group_conditions))
+
+        if conditions:
+            query = query.filter(or_(*conditions))
+
+        return query
+
     def search_models(
         self, user_id: str, filter: dict = {}, skip: int = 0, limit: int = 30
     ) -> ModelListResponse:
@@ -238,11 +267,10 @@ class ModelsTable:
                         )
                     )
 
-                if filter.get("user_id"):
-                    query = query.filter(Model.user_id == filter.get("user_id"))
+                # Apply access control filtering
+                query = self._has_write_permission(query, filter)
 
                 view_option = filter.get("view_option")
-
                 if view_option == "created":
                     query = query.filter(Model.user_id == user_id)
                 elif view_option == "shared":
