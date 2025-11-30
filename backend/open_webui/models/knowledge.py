@@ -135,7 +135,7 @@ class KnowledgeTable:
 
             user_ids = list(set(knowledge.user_id for knowledge in all_knowledge))
 
-            users = Users.get_users_by_user_ids(user_ids) if user_ids else []
+            users = Users.get_users_by_user_ids(user_ids, db) if user_ids else []
             users_dict = {user.id: user for user in users}
 
             knowledge_bases = []

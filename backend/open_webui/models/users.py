@@ -417,8 +417,12 @@ class UsersTable:
                 "total": total,
             }
 
-    def get_users_by_user_ids(self, user_ids: list[str]) -> list[UserModel]:
-        with get_db() as db:
+    def get_users_by_user_ids(self, user_ids: list[str], db = None) -> list[UserModel]:
+        if db is None:
+            with get_db() as db:
+                users = db.query(User).filter(User.id.in_(user_ids)).all()
+                return [UserModel.model_validate(user) for user in users]
+        else:
             users = db.query(User).filter(User.id.in_(user_ids)).all()
             return [UserModel.model_validate(user) for user in users]
 

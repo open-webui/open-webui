@@ -152,7 +152,7 @@ class ToolsTable:
 
             user_ids = list(set(tool.user_id for tool in all_tools))
 
-            users = Users.get_users_by_user_ids(user_ids) if user_ids else []
+            users = Users.get_users_by_user_ids(user_ids, db) if user_ids else []
             users_dict = {user.id: user for user in users}
 
             tools = []
