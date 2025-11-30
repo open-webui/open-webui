@@ -1014,8 +1014,9 @@ $: {
 										</svg>
 									</button>
 								</Tooltip>
-
-								{#if $user?.role === 'admin' || ($user?.permissions?.chat?.tts ?? true)}
+								
+								<!-- 朗读按钮 -->
+								<!-- {#if $user?.role === 'admin' || ($user?.permissions?.chat?.tts ?? true)}
 									<Tooltip content={$i18n.t('Read Aloud')} placement="bottom">
 										<button
 											aria-label={$i18n.t('Read Aloud')}
@@ -1097,7 +1098,7 @@ $: {
 											{/if}
 										</button>
 									</Tooltip>
-								{/if}
+								{/if} -->
 
 								{#if $config?.features.enable_image_generation && ($user?.role === 'admin' || $user?.permissions?.features?.image_generation) && !readOnly}
 									<Tooltip content={$i18n.t('Generate Image')} placement="bottom">
@@ -1211,7 +1212,8 @@ $: {
 								{/if}
 
 								{#if !readOnly}
-									{#if !$temporaryChatEnabled && ($config?.features.enable_message_rating ?? true) && ($user?.role === 'admin' || ($user?.permissions?.chat?.rate_response ?? true))}
+									<!-- 点赞和踩 -->
+									<!-- {#if !$temporaryChatEnabled && ($config?.features.enable_message_rating ?? true) && ($user?.role === 'admin' || ($user?.permissions?.chat?.rate_response ?? true))}
 										<Tooltip content={$i18n.t('Good Response')} placement="bottom">
 											<button
 												aria-label={$i18n.t('Good Response')}
@@ -1287,9 +1289,10 @@ $: {
 												</svg>
 											</button>
 										</Tooltip>
-									{/if}
-
-									{#if isLastMessage && ($user?.role === 'admin' || ($user?.permissions?.chat?.continue_response ?? true))}
+									{/if} -->
+									
+									<!-- 继续生成按钮 -->
+									<!-- {#if isLastMessage && ($user?.role === 'admin' || ($user?.permissions?.chat?.continue_response ?? true))}
 										<Tooltip content={$i18n.t('Continue Response')} placement="bottom">
 											<button
 												aria-label={$i18n.t('Continue Response')}
@@ -1324,7 +1327,7 @@ $: {
 												</svg>
 											</button>
 										</Tooltip>
-									{/if}
+									{/if} -->
 
 									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.regenerate_response ?? true)}
 										{#if $settings?.regenerateMenu ?? true}
