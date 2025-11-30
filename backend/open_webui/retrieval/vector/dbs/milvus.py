@@ -231,7 +231,7 @@ class MilvusClient(VectorDBBase):
                     "data",
                     "metadata",
                 ],
-                limit=limit if limit > 0 else 16384,
+                limit=limit if limit > 0 else None,
             )
 
             log.debug(f"Total results from query: {len(results)}")
