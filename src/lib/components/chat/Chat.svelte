@@ -53,7 +53,10 @@
 		getPromptVariables,
 		processDetails,
 		removeAllDetails,
-		getCodeBlockContents
+		getCodeBlockContents,
+		resolveModelAccent,
+		applyModelAccent,
+		setModelAccentIntensity
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
 
@@ -241,6 +244,17 @@
 		sessionStorage.selectedModels = selectedModelsString;
 		console.log('saveSessionSelectedModels', selectedModels, sessionStorage.selectedModels);
 	};
+
+	// Apply model accent color and intensity when selected model changes
+	$: if (selectedModels && selectedModels[0] && $models) {
+		const accent = resolveModelAccent(selectedModels[0], $models);
+		if (accent) {
+			applyModelAccent(accent.color);
+			setModelAccentIntensity(accent.intensity);
+		} else {
+			applyModelAccent(null);
+		}
+	}
 
 	let oldSelectedModelIds = [''];
 	$: if (JSON.stringify(selectedModelIds) !== JSON.stringify(oldSelectedModelIds)) {

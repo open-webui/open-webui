@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 
-	import { onMount, getContext, tick } from 'svelte';
+	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	import { models, tools, functions, knowledge as knowledgeCollections, user } from '$lib/stores';
+	import { applyModelAccent, setModelAccentIntensity } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import { getTools } from '$lib/apis/tools';
@@ -72,7 +73,8 @@
 			profile_image_url: `${WEBUI_BASE_URL}/static/favicon.png`,
 			description: '',
 			suggestion_prompts: null,
-			tags: []
+			tags: [],
+			accent_color: null
 		},
 		params: {
 			system: ''
@@ -481,6 +483,7 @@
 								{$i18n.t('Reset Image')}</button
 							>
 						</div>
+
 					</div>
 				</div>
 
@@ -564,6 +567,108 @@
 								placeholder={$i18n.t('Add a short description about what this model does')}
 								bind:value={info.meta.description}
 							/>
+						{/if}
+					</div>
+
+					<div class="my-1">
+						<div class="mb-1 flex w-full justify-between items-center">
+							<div class=" self-center text-sm font-medium">{$i18n.t('Accent Color')}</div>
+
+							<button
+								class="p-1 text-xs flex rounded-sm transition"
+								type="button"
+								on:click={() => {
+									if (info.meta.accent_color) {
+										info.meta.accent_color = null;
+									} else {
+										info.meta.accent_color = '#3b82f6';
+									}
+								}}
+							>
+								{#if !info.meta.accent_color}
+									<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+								{:else}
+									<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+								{/if}
+							</button>
+						</div>
+
+						{#if info.meta.accent_color}
+							<div class="flex items-center gap-2">
+								<input
+									type="color"
+									class="w-8 h-8 rounded cursor-pointer border border-gray-200 dark:border-gray-700"
+									value={info.meta.accent_color}
+									on:input={(e) => {
+										info.meta.accent_color = e.target.value;
+										applyModelAccent(info.meta.accent_color);
+										setModelAccentIntensity(info.meta.accent_intensity ?? 0.35);
+									}}
+								/>
+								<input
+									type="text"
+									class="text-xs font-mono w-20 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-transparent"
+									value={info.meta.accent_color}
+									placeholder="#000000"
+									on:input={(e) => {
+										let val = e.target.value;
+										if (!val.startsWith('#')) val = '#' + val;
+										if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+											info.meta.accent_color = val;
+											applyModelAccent(info.meta.accent_color);
+											setModelAccentIntensity(info.meta.accent_intensity ?? 0.35);
+										}
+									}}
+									on:blur={(e) => {
+										let val = e.target.value;
+										if (!val.startsWith('#')) val = '#' + val;
+										if (!/^#[0-9A-Fa-f]{6}$/.test(val)) {
+											e.target.value = info.meta.accent_color;
+										}
+									}}
+								/>
+							</div>
+
+							<div class="mt-3">
+								<div class="flex items-center justify-between mb-1">
+									<span class="text-xs text-gray-500">{$i18n.t('Intensity')}</span>
+									<button
+										class="text-xs"
+										type="button"
+										on:click={() => {
+											if (info.meta.accent_intensity != null) {
+												info.meta.accent_intensity = null;
+											} else {
+												info.meta.accent_intensity = 0.35;
+											}
+											applyModelAccent(info.meta.accent_color);
+											setModelAccentIntensity(info.meta.accent_intensity ?? 0.35);
+										}}
+									>
+										{#if info.meta.accent_intensity == null}
+											<span>{$i18n.t('Default')}</span>
+										{:else}
+											<span>{Math.round(info.meta.accent_intensity * 100)}%</span>
+										{/if}
+									</button>
+								</div>
+								{#if info.meta.accent_intensity != null}
+									<input
+										type="range"
+										class="w-full accent-slider"
+										min="0.1"
+										max="1"
+										step="0.05"
+										value={info.meta.accent_intensity}
+										style="--slider-color: {info.meta.accent_color}; --slider-opacity: {info.meta.accent_intensity};"
+										on:input={(e) => {
+											info.meta.accent_intensity = parseFloat(e.target.value);
+											applyModelAccent(info.meta.accent_color);
+											setModelAccentIntensity(info.meta.accent_intensity);
+										}}
+									/>
+								{/if}
+							</div>
 						{/if}
 					</div>
 
