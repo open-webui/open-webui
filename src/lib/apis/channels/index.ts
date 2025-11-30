@@ -3,6 +3,7 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 type ChannelForm = {
 	type?: string;
 	name: string;
+	is_private?: boolean;
 	data?: object;
 	meta?: object;
 	access_control?: object;

@@ -1,18 +1,22 @@
 <script lang="ts">
 	import { getContext, createEventDispatcher, onMount } from 'svelte';
+	const i18n = getContext('i18n');
+
+	import { toast } from 'svelte-sonner';
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
+
 	import { createNewChannel, deleteChannelById } from '$lib/apis/channels';
+	import { user } from '$lib/stores';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
-
-	import { toast } from 'svelte-sonner';
-	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
-	import UserListSelector from '$lib/components/workspace/common/UserListSelector.svelte';
-	const i18n = getContext('i18n');
+	import MemberSelector from '$lib/components/workspace/common/MemberSelector.svelte';
+	import Visibility from '$lib/components/workspace/common/Visibility.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	export let show = false;
 	export let onSubmit: Function = () => {};
@@ -21,10 +25,14 @@
 	export let channel = null;
 	export let edit = false;
 
+	let channelTypes = ['group', 'dm'];
 	let type = '';
 	let name = '';
 
+	let isPrivate = null;
 	let accessControl = {};
+
+	let groupIds = [];
 	let userIds = [];
 
 	let loading = false;
@@ -33,12 +41,26 @@
 		name = name.replace(/\s/g, '-').toLocaleLowerCase();
 	}
 
+	$: onTypeChange(type);
+
+	const onTypeChange = (type) => {
+		if (type === 'group') {
+			if (isPrivate === null) {
+				isPrivate = true;
+			}
+		} else {
+			isPrivate = null;
+		}
+	};
+
 	const submitHandler = async () => {
 		loading = true;
 		await onSubmit({
 			type: type,
 			name: name.replace(/\s/g, '-'),
-			access_control: accessControl,
+			is_private: type === 'group' ? isPrivate : null,
+			access_control: type === '' ? accessControl : {},
+			group_ids: groupIds,
 			user_ids: userIds
 		});
 		show = false;
@@ -46,16 +68,24 @@
 	};
 
 	const init = () => {
-		type = channel?.type ?? '';
-		name = channel?.name ?? '';
-		accessControl = channel.access_control;
-		userIds = channel?.user_ids ?? [];
+		if ($user?.role === 'admin') {
+			channelTypes = ['', 'group', 'dm'];
+		} else {
+			channelTypes = ['group', 'dm'];
+		}
+
+		type = channel?.type ?? channelTypes[0];
+
+		if (channel) {
+			name = channel?.name ?? '';
+			isPrivate = channel?.is_private ?? null;
+			accessControl = channel.access_control;
+			userIds = channel?.user_ids ?? [];
+		}
 	};
 
 	$: if (show) {
-		if (channel) {
-			init();
-		}
+		init();
 	} else {
 		resetHandler();
 	}
@@ -119,20 +149,50 @@
 					}}
 				>
 					{#if !edit}
-						<div class="flex flex-col w-full mt-2">
+						<div class="flex flex-col w-full mt-2 mb-1">
 							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Channel Type')}</div>
 
 							<div class="flex-1">
-								<select
-									class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
-									bind:value={type}
+								<Tooltip
+									content={type === 'dm'
+										? $i18n.t('A private conversation between you and selected users')
+										: type === 'group'
+											? $i18n.t('A collaboration channel where people join as members')
+											: $i18n.t(
+													'A discussion channel where access is controlled by groups and permissions'
+												)}
+									placement="top-start"
 								>
-									<option value="">{$i18n.t('Channel')}</option>
-									<option value="dm">{$i18n.t('Direct Message')}</option>
-								</select>
+									<select
+										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+										bind:value={type}
+									>
+										{#each channelTypes as channelType, channelTypeIdx (channelType)}
+											<option value={channelType} selected={channelTypeIdx === 0}>
+												{#if channelType === 'group'}
+													{$i18n.t('Group Channel')}
+												{:else if channelType === 'dm'}
+													{$i18n.t('Direct Message')}
+												{:else if channelType === ''}
+													{$i18n.t('Channel')}
+												{/if}
+											</option>
+										{/each}
+									</select>
+								</Tooltip>
 							</div>
 						</div>
 					{/if}
+
+					<div class=" text-gray-300 dark:text-gray-700 text-xs">
+						{#if type === ''}
+							{$i18n.t('Discussion channel where access is based on groups and permissions')}
+						{:else if type === 'group'}
+							{$i18n.t('Collaboration channel where people join as members')}
+						{:else if type === 'dm'}
+							{$i18n.t('Private conversation between selected users')}
+						{/if}
+					</div>
 
 					<div class="flex flex-col w-full mt-2">
 						<div class=" mb-1 text-xs text-gray-500">
@@ -154,17 +214,31 @@
 						</div>
 					</div>
 
-					<hr class=" border-gray-100/40 dark:border-gray-700/10 my-2.5 w-full" />
-
-					<div class="-mx-2">
-						{#if type === 'dm'}
-							<UserListSelector bind:userIds />
-						{:else}
-							<div class="px-4 py-3 bg-gray-50 dark:bg-gray-950 rounded-3xl">
+					{#if type !== 'dm'}
+						<div class="-mx-2 mb-1 mt-2.5 px-2">
+							{#if type === ''}
 								<AccessControl bind:accessControl accessRoles={['read', 'write']} />
-							</div>
-						{/if}
-					</div>
+							{:else if type === 'group'}
+								<Visibility
+									state={isPrivate ? 'private' : 'public'}
+									onChange={(value) => {
+										if (value === 'private') {
+											isPrivate = true;
+										} else {
+											isPrivate = false;
+										}
+										console.log(value, isPrivate);
+									}}
+								/>
+							{/if}
+						</div>
+					{/if}
+
+					{#if type !== ''}
+						<div class="">
+							<MemberSelector bind:userIds includeGroups={type !== 'dm'} />
+						</div>
+					{/if}
 
 					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
 						{#if edit}

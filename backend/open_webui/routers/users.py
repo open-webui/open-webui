@@ -19,7 +19,7 @@ from open_webui.models.users import (
     UserGroupIdsModel,
     UserGroupIdsListResponse,
     UserInfoListResponse,
-    UserIdNameListResponse,
+    UserInfoListResponse,
     UserRoleUpdateForm,
     Users,
     UserSettings,
@@ -102,19 +102,30 @@ async def get_all_users(
     return Users.get_users()
 
 
-@router.get("/search", response_model=UserIdNameListResponse)
+@router.get("/search", response_model=UserInfoListResponse)
 async def search_users(
     query: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
+    page: Optional[int] = 1,
     user=Depends(get_verified_user),
 ):
     limit = PAGE_ITEM_COUNT
 
-    page = 1  # Always return the first page for search
+    page = max(1, page)
     skip = (page - 1) * limit
 
     filter = {}
     if query:
         filter["query"] = query
+
+    filter = {}
+    if query:
+        filter["query"] = query
+    if order_by:
+        filter["order_by"] = order_by
+    if direction:
+        filter["direction"] = direction
 
     return Users.get_users(filter=filter, skip=skip, limit=limit)
 
@@ -196,8 +207,9 @@ class ChatPermissions(BaseModel):
 
 class FeaturesPermissions(BaseModel):
     api_keys: bool = False
-    folders: bool = True
     notes: bool = True
+    channels: bool = True
+    folders: bool = True
     direct_tool_servers: bool = False
 
     web_search: bool = True

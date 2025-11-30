@@ -68,9 +68,9 @@
 
 				<div class=" text-xs text-gray-400 font-medium">
 					{#if state === 'private'}
-						{$i18n.t('Only select users and groups with permission can access')}
+						{$i18n.t('Only invited users can access')}
 					{:else}
-						{$i18n.t('Accessible to all users')}
+						{$i18n.t('Visible to all users')}
 					{/if}
 				</div>
 			</div>

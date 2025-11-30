@@ -4,6 +4,7 @@ import uuid
 from typing import Optional
 
 from open_webui.internal.db import Base, get_db
+from open_webui.models.groups import Groups
 from open_webui.utils.access_control import has_access
 
 from pydantic import BaseModel, ConfigDict
@@ -26,12 +27,23 @@ class Channel(Base):
     name = Column(Text)
     description = Column(Text, nullable=True)
 
+    # Used to indicate if the channel is private (for 'group' type channels)
+    is_private = Column(Boolean, nullable=True)
+
     data = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
     access_control = Column(JSON, nullable=True)
 
     created_at = Column(BigInteger)
+
     updated_at = Column(BigInteger)
+    updated_by = Column(Text, nullable=True)
+
+    archived_at = Column(BigInteger, nullable=True)
+    archived_by = Column(Text, nullable=True)
+
+    deleted_at = Column(BigInteger, nullable=True)
+    deleted_by = Column(Text, nullable=True)
 
 
 class ChannelModel(BaseModel):
@@ -39,17 +51,28 @@ class ChannelModel(BaseModel):
 
     id: str
     user_id: str
+
     type: Optional[str] = None
 
     name: str
     description: Optional[str] = None
+
+    is_private: Optional[bool] = None
 
     data: Optional[dict] = None
     meta: Optional[dict] = None
     access_control: Optional[dict] = None
 
     created_at: int  # timestamp in epoch (time_ns)
+
     updated_at: int  # timestamp in epoch (time_ns)
+    updated_by: Optional[str] = None
+
+    archived_at: Optional[int] = None  # timestamp in epoch (time_ns)
+    archived_by: Optional[str] = None
+
+    deleted_at: Optional[int] = None  # timestamp in epoch (time_ns)
+    deleted_by: Optional[str] = None
 
 
 class ChannelMember(Base):
@@ -59,7 +82,9 @@ class ChannelMember(Base):
     channel_id = Column(Text, nullable=False)
     user_id = Column(Text, nullable=False)
 
+    role = Column(Text, nullable=True)
     status = Column(Text, nullable=True)
+
     is_active = Column(Boolean, nullable=False, default=True)
 
     is_channel_muted = Column(Boolean, nullable=False, default=False)
@@ -67,6 +92,9 @@ class ChannelMember(Base):
 
     data = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
+
+    invited_at = Column(BigInteger, nullable=True)
+    invited_by = Column(Text, nullable=True)
 
     joined_at = Column(BigInteger)
     left_at = Column(BigInteger, nullable=True)
@@ -84,7 +112,9 @@ class ChannelMemberModel(BaseModel):
     channel_id: str
     user_id: str
 
+    role: Optional[str] = None
     status: Optional[str] = None
+
     is_active: bool = True
 
     is_channel_muted: bool = False
@@ -93,6 +123,9 @@ class ChannelMemberModel(BaseModel):
     data: Optional[dict] = None
     meta: Optional[dict] = None
 
+    invited_at: Optional[int] = None  # timestamp in epoch (time_ns)
+    invited_by: Optional[str] = None
+
     joined_at: Optional[int] = None  # timestamp in epoch (time_ns)
     left_at: Optional[int] = None  # timestamp in epoch (time_ns)
 
@@ -100,6 +133,40 @@ class ChannelMemberModel(BaseModel):
 
     created_at: Optional[int] = None  # timestamp in epoch (time_ns)
     updated_at: Optional[int] = None  # timestamp in epoch (time_ns)
+
+
+class ChannelWebhook(Base):
+    __tablename__ = "channel_webhook"
+
+    id = Column(Text, primary_key=True, unique=True)
+    channel_id = Column(Text, nullable=False)
+    user_id = Column(Text, nullable=False)
+
+    name = Column(Text, nullable=False)
+    profile_image_url = Column(Text, nullable=True)
+
+    token = Column(Text, nullable=False)
+    last_used_at = Column(BigInteger, nullable=True)
+
+    created_at = Column(BigInteger, nullable=False)
+    updated_at = Column(BigInteger, nullable=False)
+
+
+class ChannelWebhookModel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    channel_id: str
+    user_id: str
+
+    name: str
+    profile_image_url: Optional[str] = None
+
+    token: str
+    last_used_at: Optional[int] = None  # timestamp in epoch (time_ns)
+
+    created_at: int  # timestamp in epoch (time_ns)
+    updated_at: int  # timestamp in epoch (time_ns)
 
 
 ####################
@@ -113,18 +180,72 @@ class ChannelResponse(ChannelModel):
 
 
 class ChannelForm(BaseModel):
-    type: Optional[str] = None
-    name: str
+    name: str = ""
     description: Optional[str] = None
+    is_private: Optional[bool] = None
     data: Optional[dict] = None
     meta: Optional[dict] = None
     access_control: Optional[dict] = None
+    group_ids: Optional[list[str]] = None
     user_ids: Optional[list[str]] = None
 
 
+class CreateChannelForm(ChannelForm):
+    type: Optional[str] = None
+
+
 class ChannelTable:
+
+    def _create_memberships_by_user_ids_and_group_ids(
+        self,
+        channel_id: str,
+        invited_by: str,
+        user_ids: Optional[list[str]] = None,
+        group_ids: Optional[list[str]] = None,
+    ) -> list[ChannelMemberModel]:
+        # For group and direct message channels, automatically add the specified users as members
+        user_ids = user_ids or []
+        if invited_by not in user_ids:
+            user_ids.append(invited_by)  # Ensure the creator is also a member
+
+        # Add users from specified groups
+        group_ids = group_ids or []
+        for group_id in group_ids:
+            group_user_ids = Groups.get_group_user_ids_by_id(group_id)
+            for uid in group_user_ids:
+                if uid not in user_ids:
+                    user_ids.append(uid)
+
+        # Ensure uniqueness
+        user_ids = list(set(user_ids))
+
+        memberships = []
+        for uid in user_ids:
+            channel_member = ChannelMemberModel(
+                **{
+                    "id": str(uuid.uuid4()),
+                    "channel_id": channel_id,
+                    "user_id": uid,
+                    "status": "joined",
+                    "is_active": True,
+                    "is_channel_muted": False,
+                    "is_channel_pinned": False,
+                    "invited_at": int(time.time_ns()),
+                    "invited_by": invited_by,
+                    "joined_at": int(time.time_ns()),
+                    "left_at": None,
+                    "last_read_at": int(time.time_ns()),
+                    "created_at": int(time.time_ns()),
+                    "updated_at": int(time.time_ns()),
+                }
+            )
+
+            memberships.append(ChannelMember(**channel_member.model_dump()))
+
+        return memberships
+
     def insert_new_channel(
-        self, form_data: ChannelForm, user_id: str
+        self, form_data: CreateChannelForm, user_id: str
     ) -> Optional[ChannelModel]:
         with get_db() as db:
             channel = ChannelModel(
@@ -140,31 +261,14 @@ class ChannelTable:
             )
             new_channel = Channel(**channel.model_dump())
 
-            if form_data.type == "dm":
-                # For direct message channels, automatically add the specified users as members
-                user_ids = form_data.user_ids or []
-                if user_id not in user_ids:
-                    user_ids.append(user_id)  # Ensure the creator is also a member
-
-                for uid in user_ids:
-                    channel_member = ChannelMemberModel(
-                        **{
-                            "id": str(uuid.uuid4()),
-                            "channel_id": channel.id,
-                            "user_id": uid,
-                            "status": "joined",
-                            "is_active": True,
-                            "is_channel_muted": False,
-                            "is_channel_pinned": False,
-                            "joined_at": int(time.time_ns()),
-                            "left_at": None,
-                            "last_read_at": int(time.time_ns()),
-                            "created_at": int(time.time_ns()),
-                            "updated_at": int(time.time_ns()),
-                        }
-                    )
-                    new_membership = ChannelMember(**channel_member.model_dump())
-                    db.add(new_membership)
+            if form_data.type in ["group", "dm"]:
+                memberships = self._create_memberships_by_user_ids_and_group_ids(
+                    channel.id,
+                    user_id,
+                    form_data.user_ids,
+                    form_data.group_ids,
+                )
+                db.add_all(memberships)
 
             db.add(new_channel)
             db.commit()
@@ -398,8 +502,12 @@ class ChannelTable:
                 return None
 
             channel.name = form_data.name
+            channel.description = form_data.description
+            channel.is_private = form_data.is_private
+
             channel.data = form_data.data
             channel.meta = form_data.meta
+
             channel.access_control = form_data.access_control
             channel.updated_at = int(time.time_ns())
 

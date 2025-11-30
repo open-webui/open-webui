@@ -44,7 +44,7 @@
 							</div>
 						{:else}
 							<div class=" size-4 justify-center flex items-center">
-								{#if channel?.access_control === null}
+								{#if channel?.type === 'group' ? !channel?.is_private : channel?.access_control === null}
 									<Hashtag className="size-3.5" strokeWidth="2.5" />
 								{:else}
 									<Lock className="size-5.5" strokeWidth="2" />

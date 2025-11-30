@@ -92,7 +92,7 @@
 							{/if}
 						{:else}
 							<div class=" size-4.5 justify-center flex items-center">
-								{#if channel?.access_control === null}
+								{#if channel?.type === 'group' ? !channel?.is_private : channel?.access_control === null}
 									<Hashtag className="size-3.5" strokeWidth="2.5" />
 								{:else}
 									<Lock className="size-5" strokeWidth="2" />
@@ -100,9 +100,7 @@
 							</div>
 						{/if}
 
-						<div
-							class=" text-left self-center overflow-hidden w-full line-clamp-1 capitalize flex-1"
-						>
+						<div class=" text-left self-center overflow-hidden w-full line-clamp-1 flex-1">
 							{#if channel?.name}
 								{channel.name}
 							{:else}

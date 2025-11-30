@@ -26,6 +26,7 @@ from open_webui.models.channels import (
     ChannelModel,
     ChannelForm,
     ChannelResponse,
+    CreateChannelForm,
 )
 from open_webui.models.messages import (
     Messages,
@@ -53,6 +54,7 @@ from open_webui.utils.access_control import (
     has_access,
     get_users_with_access,
     get_permitted_group_and_user_ids,
+    has_permission,
 )
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.channels import extract_mentions, replace_mentions
@@ -76,10 +78,16 @@ class ChannelListItemResponse(ChannelModel):
 
 
 @router.get("/", response_model=list[ChannelListItemResponse])
-async def get_channels(user=Depends(get_verified_user)):
+async def get_channels(request: Request, user=Depends(get_verified_user)):
+    if user.role != "admin" and not has_permission(
+        user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
 
     channels = Channels.get_channels_by_user_id(user.id)
-
     channel_list = []
     for channel in channels:
         last_message = Messages.get_last_message_by_channel_id(channel.id)
@@ -125,12 +133,68 @@ async def get_all_channels(user=Depends(get_verified_user)):
 
 
 ############################
+# GetDMChannelByUserId
+############################
+
+
+@router.get("/dm/{user_id}", response_model=Optional[ChannelModel])
+async def get_dm_channel_by_user_id(
+    request: Request, user_id: str, user=Depends(get_verified_user)
+):
+    if user.role != "admin" and not has_permission(
+        user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    try:
+        existing_channel = Channels.get_dm_channel_by_user_ids([user.id, user_id])
+        if existing_channel:
+            Channels.update_member_active_status(existing_channel.id, user.id, True)
+            return ChannelModel(**existing_channel.model_dump())
+
+        channel = Channels.insert_new_channel(
+            CreateChannelForm(
+                type="dm",
+                name="",
+                user_ids=[user_id],
+            ),
+            user.id,
+        )
+        return ChannelModel(**channel.model_dump())
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+
+############################
 # CreateNewChannel
 ############################
 
 
 @router.post("/create", response_model=Optional[ChannelModel])
-async def create_new_channel(form_data: ChannelForm, user=Depends(get_admin_user)):
+async def create_new_channel(
+    request: Request, form_data: CreateChannelForm, user=Depends(get_verified_user)
+):
+    if user.role != "admin" and not has_permission(
+        user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    if form_data.type not in ["group", "dm"] and user.role != "admin":
+        # Only admins can create standard channels (joined by default)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
     try:
         if form_data.type == "dm":
             existing_channel = Channels.get_dm_channel_by_user_ids(
@@ -173,7 +237,7 @@ async def get_channel_by_id(id: str, user=Depends(get_verified_user)):
     user_ids = None
     users = None
 
-    if channel.type == "dm":
+    if channel.type in ["group", "dm"]:
         if not Channels.is_user_channel_member(channel.id, user.id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -203,7 +267,6 @@ async def get_channel_by_id(id: str, user=Depends(get_verified_user)):
                 "unread_count": unread_count,
             }
         )
-
     else:
         if user.role != "admin" and not has_access(
             user.id, type="read", access_control=channel.access_control
@@ -265,7 +328,7 @@ async def get_channel_members_by_id(
     page = max(1, page)
     skip = (page - 1) * limit
 
-    if channel.type == "dm":
+    if channel.type in ["group", "dm"]:
         if not Channels.is_user_channel_member(channel.id, user.id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -275,7 +338,6 @@ async def get_channel_members_by_id(
             member.user_id for member in Channels.get_members_by_channel_id(channel.id)
         ]
         users = Users.get_users_by_user_ids(user_ids)
-
         total = len(users)
 
         return {
@@ -358,12 +420,25 @@ async def update_is_active_member_by_id_and_user_id(
 
 @router.post("/{id}/update", response_model=Optional[ChannelModel])
 async def update_channel_by_id(
-    id: str, form_data: ChannelForm, user=Depends(get_admin_user)
+    request: Request, id: str, form_data: ChannelForm, user=Depends(get_verified_user)
 ):
+    if user.role != "admin" and not has_permission(
+        user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
     channel = Channels.get_channel_by_id(id)
     if not channel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if channel.user_id != user.id and user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
 
     try:
@@ -382,11 +457,26 @@ async def update_channel_by_id(
 
 
 @router.delete("/{id}/delete", response_model=bool)
-async def delete_channel_by_id(id: str, user=Depends(get_admin_user)):
+async def delete_channel_by_id(
+    request: Request, id: str, user=Depends(get_verified_user)
+):
+    if user.role != "admin" and not has_permission(
+        user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
     channel = Channels.get_channel_by_id(id)
     if not channel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if channel.user_id != user.id and user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
 
     try:
@@ -418,7 +508,7 @@ async def get_channel_messages(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if channel.type == "dm":
+    if channel.type in ["group", "dm"]:
         if not Channels.is_user_channel_member(channel.id, user.id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -481,7 +571,7 @@ async def get_pinned_channel_messages(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if channel.type == "dm":
+    if channel.type in ["group", "dm"]:
         if not Channels.is_user_channel_member(channel.id, user.id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -735,7 +825,7 @@ async def new_message_handler(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if channel.type == "dm":
+    if channel.type in ["group", "dm"]:
         if not Channels.is_user_channel_member(channel.id, user.id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -751,7 +841,7 @@ async def new_message_handler(
     try:
         message = Messages.insert_new_message(form_data, channel.id, user.id)
         if message:
-            if channel.type == "dm":
+            if channel.type in ["group", "dm"]:
                 members = Channels.get_members_by_channel_id(channel.id)
                 for member in members:
                     if not member.is_active:
@@ -857,7 +947,7 @@ async def get_channel_message(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if channel.type == "dm":
+    if channel.type in ["group", "dm"]:
         if not Channels.is_user_channel_member(channel.id, user.id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -912,7 +1002,7 @@ async def pin_channel_message(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if channel.type == "dm":
+    if channel.type in ["group", "dm"]:
         if not Channels.is_user_channel_member(channel.id, user.id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -975,7 +1065,7 @@ async def get_channel_thread_messages(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if channel.type == "dm":
+    if channel.type in ["group", "dm"]:
         if not Channels.is_user_channel_member(channel.id, user.id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -1040,7 +1130,7 @@ async def update_message_by_id(
             status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
         )
 
-    if channel.type == "dm":
+    if channel.type in ["group", "dm"]:
         if not Channels.is_user_channel_member(channel.id, user.id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -1104,7 +1194,7 @@ async def add_reaction_to_message(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if channel.type == "dm":
+    if channel.type in ["group", "dm"]:
         if not Channels.is_user_channel_member(channel.id, user.id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -1173,7 +1263,7 @@ async def remove_reaction_by_id_and_user_id_and_name(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if channel.type == "dm":
+    if channel.type in ["group", "dm"]:
         if not Channels.is_user_channel_member(channel.id, user.id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -1256,7 +1346,7 @@ async def delete_message_by_id(
             status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
         )
 
-    if channel.type == "dm":
+    if channel.type in ["group", "dm"]:
         if not Channels.is_user_channel_member(channel.id, user.id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
