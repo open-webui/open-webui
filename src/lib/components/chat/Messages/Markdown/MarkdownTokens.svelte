@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { decode } from 'html-entities';
-	import DOMPurify from 'dompurify';
 	import { onMount, getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -34,6 +33,8 @@
 
 	export let save = false;
 	export let preview = false;
+
+	export let paragraphTag = 'p';
 
 	export let editCodeBlock = true;
 	export let topPadding = false;
@@ -351,15 +352,27 @@
 			}}
 		></iframe>
 	{:else if token.type === 'paragraph'}
-		<p dir="auto">
-			<MarkdownInlineTokens
-				id={`${id}-${tokenIdx}-p`}
-				tokens={token.tokens ?? []}
-				{done}
-				{sourceIds}
-				{onSourceClick}
-			/>
-		</p>
+		{#if paragraphTag == 'span'}
+			<span dir="auto">
+				<MarkdownInlineTokens
+					id={`${id}-${tokenIdx}-p`}
+					tokens={token.tokens ?? []}
+					{done}
+					{sourceIds}
+					{onSourceClick}
+				/>
+			</span>
+		{:else}
+			<p dir="auto">
+				<MarkdownInlineTokens
+					id={`${id}-${tokenIdx}-p`}
+					tokens={token.tokens ?? []}
+					{done}
+					{sourceIds}
+					{onSourceClick}
+				/>
+			</p>
+		{/if}
 	{:else if token.type === 'text'}
 		{#if top}
 			<p>

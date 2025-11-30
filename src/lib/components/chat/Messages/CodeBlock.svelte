@@ -42,7 +42,7 @@
 	export let code = '';
 	export let attributes = {};
 
-	export let className = 'mb-2';
+	export let className = '';
 	export let editorClassName = '';
 	export let stickyButtonsClassName = 'top-0';
 

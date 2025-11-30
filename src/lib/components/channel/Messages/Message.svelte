@@ -388,8 +388,9 @@
 							<Markdown
 								id={message.id}
 								content={message.content}
+								paragraphTag="span"
 							/>{#if message.created_at !== message.updated_at && (message?.meta?.model_id ?? null) === null}<span
-									class="text-gray-500 text-[10px]">({$i18n.t('edited')})</span
+									class="text-gray-500 text-[10px] pl-1 self-center">({$i18n.t('edited')})</span
 								>{/if}
 						{/if}
 					</div>
