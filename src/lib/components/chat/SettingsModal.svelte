@@ -639,7 +639,7 @@
 								</div>
 								<div class=" self-center">{$i18n.t('General')}</div>
 							</button>
-						{:else if tabId === 'interface'}
+						<!-- {:else if tabId === 'interface'}
 							<button
 								role="tab"
 								aria-controls="tab-interface"
@@ -662,7 +662,7 @@
 									<AppNotification strokeWidth="2" />
 								</div>
 								<div class=" self-center">{$i18n.t('Interface')}</div>
-							</button>
+							</button> -->
 						{:else if tabId === 'connections'}
 							{#if $user?.role === 'admin' || ($user?.role === 'user' && $config?.features?.enable_direct_connections)}
 								<button
@@ -742,7 +742,7 @@
 								<div class=" self-center">{$i18n.t('Personalization')}</div>
 							</button>
 							{/if}
-						{:else if tabId === 'audio'}
+						<!-- {:else if tabId === 'audio'}
 							<button
 								role="tab"
 								aria-controls="tab-audio"
@@ -765,7 +765,7 @@
 									<SoundHigh strokeWidth="2" />
 								</div>
 								<div class=" self-center">{$i18n.t('Audio')}</div>
-							</button>
+							</button> -->
 						{:else if tabId === 'data_controls'}
 							<button
 								role="tab"

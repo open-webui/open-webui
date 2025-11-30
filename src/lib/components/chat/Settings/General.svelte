@@ -217,7 +217,7 @@
 				</div>
 			</div>
 
-			<div class=" flex w-full justify-between">
+			<!-- <div class=" flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Language')}</div>
 				<div class="flex items-center relative">
 					<select
@@ -235,8 +235,8 @@
 						{/each}
 					</select>
 				</div>
-			</div>
-			{#if $i18n.language === 'en-US' && !($config?.license_metadata ?? false)}
+			</div> -->
+			<!-- {#if $i18n.language === 'en-US' && !($config?.license_metadata ?? false)}
 				<div
 					class="mb-2 text-xs {($settings?.highContrastMode ?? false)
 						? 'text-gray-800 dark:text-gray-100'
@@ -253,9 +253,8 @@
 						Help us translate CyberLover!
 					</a>
 				</div>
-			{/if}
-
-			<div>
+			{/if} -->
+			<!-- <div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">{$i18n.t('Notifications')}</div>
 
@@ -273,10 +272,10 @@
 						{/if}
 					</button>
 				</div>
-			</div>
+			</div> -->
 		</div>
 
-		{#if $user?.role === 'admin' || (($user?.permissions.chat?.controls ?? true) && ($user?.permissions.chat?.system_prompt ?? true))}
+		<!-- {#if $user?.role === 'admin' || (($user?.permissions.chat?.controls ?? true) && ($user?.permissions.chat?.system_prompt ?? true))}
 			<hr class="border-gray-100/50 dark:border-gray-850 my-3" />
 
 			<div>
@@ -291,9 +290,9 @@
 					placeholder={$i18n.t('Enter system prompt here')}
 				/>
 			</div>
-		{/if}
+		{/if} -->
 
-		{#if $user?.role === 'admin' || (($user?.permissions.chat?.controls ?? true) && ($user?.permissions.chat?.params ?? true))}
+		<!-- {#if $user?.role === 'admin' || (($user?.permissions.chat?.controls ?? true) && ($user?.permissions.chat?.params ?? true))}
 			<div class="mt-2 space-y-3 pr-1.5">
 				<div class="flex justify-between items-center text-sm">
 					<div class="  font-medium">{$i18n.t('Advanced Parameters')}</div>
@@ -312,7 +311,7 @@
 					<AdvancedParams admin={$user?.role === 'admin'} bind:params />
 				{/if}
 			</div>
-		{/if}
+		{/if} -->
 	</div>
 
 	<div class="flex justify-end pt-3 text-sm font-medium">
