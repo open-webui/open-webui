@@ -83,7 +83,7 @@
 					}}
 				>
 					<div>
-						<ChatBubbleOval class="size-4" />
+						<ChatBubbleOval className="size-4" />
 					</div>
 
 					<div class="font-medium">
