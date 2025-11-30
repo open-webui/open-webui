@@ -682,7 +682,7 @@
 	"Export All Archived Chats": "导出所有已存档对话",
 	"Export All Chats (All Users)": "导出所有用户对话",
 	"Export chat (.json)": "JSON 文件 (.json)",
-	"Export Chats": "导出对话",
+	"Export Chats": "导出对话记录",
 	"Export Config to JSON File": "将配置信息导出为 JSON 文件",
 	"Export Presets": "导出预设",
 	"Export Prompt Suggestions": "导出提示词建议",

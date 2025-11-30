@@ -219,7 +219,7 @@
 				<div class=" self-center text-sm font-medium">{$i18n.t('Archived Chats')}</div>
 			</button>
 
-			{#if showArchiveConfirm}
+			<!-- {#if showArchiveConfirm}
 				<div class="flex justify-between rounded-md items-center py-2 px-3.5 w-full transition">
 					<div class="flex items-center space-x-3">
 						<svg
@@ -304,9 +304,9 @@
 					</div>
 					<div class=" self-center text-sm font-medium">{$i18n.t('Archive All Chats')}</div>
 				</button>
-			{/if}
+			{/if} -->
 
-			{#if showDeleteConfirm}
+			<!-- {#if showDeleteConfirm}
 				<div class="flex justify-between rounded-md items-center py-2 px-3.5 w-full transition">
 					<div class="flex items-center space-x-3">
 						<svg
@@ -388,7 +388,7 @@
 					</div>
 					<div class=" self-center text-sm font-medium">{$i18n.t('Delete All Chats')}</div>
 				</button>
-			{/if}
+			{/if} -->
 		</div>
 	</div>
 </div>
