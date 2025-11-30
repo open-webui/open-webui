@@ -208,107 +208,52 @@ class MilvusClient(VectorDBBase):
             )
             return None
 
-        # DEBUG: Log the raw filter input
-        log.info(f"[MILVUS_DEBUG] Raw filter input: {filter}")
+        # Build filter expression (matching multitenancy logic)
+        filter_expressions = []
+        for key, value in filter.items():
+            if isinstance(value, str):
+                filter_expressions.append(f'metadata["{key}"] == "{value}"')
+            else:
+                filter_expressions.append(f'metadata["{key}"] == {value}')
         
-        # Try multiple filter string construction methods
-        # FIX 1: Explicit string type handling (like multitenancy version)
-        filter_string_v1 = " && ".join(
-            [
-                f'metadata["{key}"] == "{value}"' if isinstance(value, str)
-                else f'metadata["{key}"] == {value}'
-                for key, value in filter.items()
-            ]
-        )
-        
-        # FIX 2: Always use json.dumps for proper escaping
-        filter_string_v2 = " && ".join(
-            [
-                f'metadata["{key}"] == {json.dumps(value)}'
-                for key, value in filter.items()
-            ]
-        )
-        
-        # FIX 3: Try dot notation instead of bracket notation
-        filter_string_v3 = " && ".join(
-            [
-                f'metadata.{key} == "{value}"' if isinstance(value, str)
-                else f'metadata.{key} == {value}'
-                for key, value in filter.items()
-            ]
-        )
+        filter_string = " && ".join(filter_expressions)
 
         collection = Collection(f"{self.collection_prefix}_{collection_name}")
         collection.load()
-        
-        # Try each filter version in order and log which one works
-        filter_versions = [
-            ("FIX_V1_EXPLICIT_STRING_QUOTES", filter_string_v1),
-            ("FIX_V2_JSON_DUMPS", filter_string_v2),
-            ("FIX_V3_DOT_NOTATION", filter_string_v3),
-        ]
-        
-        for fix_name, filter_string in filter_versions:
-            all_results = []
-            try:
-                log.info(
-                    f"[MILVUS_DEBUG] Trying {fix_name}: Querying collection {self.collection_prefix}_{collection_name} with filter: '{filter_string}', limit: {limit}"
-                )
 
-                iterator = collection.query_iterator(
-                    filter=filter_string,
-                    output_fields=[
-                        "id",
-                        "data",
-                        "metadata",
-                    ],
-                    limit=limit,
-                )
+        try:
+            log.info(
+                f"Querying collection {self.collection_prefix}_{collection_name} with filter: '{filter_string}', limit: {limit}"
+            )
 
-                while True:
-                    result = iterator.next()
-                    if not result:
-                        iterator.close()
-                        break
-                    all_results += result
+            # Use collection.query() directly instead of query_iterator()
+            # This matches the working multitenancy implementation
+            results = collection.query(
+                expr=filter_string,
+                output_fields=[
+                    "id",
+                    "data",
+                    "metadata",
+                ],
+                limit=limit if limit > 0 else 16384,  # Milvus max limit
+            )
 
-                log.info(f"[MILVUS_DEBUG] {fix_name} returned {len(all_results)} results")
-                
-                # Verify results actually match the filter (for hash queries)
-                if "hash" in filter and all_results:
-                    expected_hash = filter["hash"]
-                    matching_results = [
-                        r for r in all_results 
-                        if r.get("metadata", {}).get("hash") == expected_hash
-                    ]
-                    non_matching = len(all_results) - len(matching_results)
-                    
-                    if non_matching > 0:
-                        log.warning(
-                            f"[MILVUS_DEBUG] {fix_name} returned {non_matching} results that DON'T match hash filter! "
-                            f"Expected hash: {expected_hash}, Total results: {len(all_results)}, Matching: {len(matching_results)}"
-                        )
-                        # This filter version is broken, try next one
-                        continue
-                    else:
-                        log.info(f"[MILVUS_DEBUG] ✓ {fix_name} WORKS CORRECTLY - all {len(matching_results)} results match the hash filter")
-                        return self._result_to_get_result([matching_results])
-                else:
-                    # Non-hash query or empty results
-                    log.info(f"[MILVUS_DEBUG] {fix_name} SUCCESS - returning {len(all_results)} results")
-                    return self._result_to_get_result([all_results])
+            log.info(f"Total results from query: {len(results)}")
+            
+            # Convert results to the expected format
+            if results:
+                all_results = []
+                for result in results:
+                    all_results.append(result)
+                return self._result_to_get_result([all_results])
+            else:
+                return self._result_to_get_result([[]])
 
-            except Exception as e:
-                log.warning(
-                    f"[MILVUS_DEBUG] {fix_name} FAILED with error: {e}. Trying next filter version..."
-                )
-                continue
-        
-        # All versions failed
-        log.error(
-            f"[MILVUS_DEBUG] All filter versions failed for collection {self.collection_prefix}_{collection_name} with filter {filter}"
-        )
-        return None
+        except Exception as e:
+            log.exception(
+                f"Error querying collection {self.collection_prefix}_{collection_name} with filter '{filter_string}' and limit {limit}: {e}"
+            )
+            return None
 
     def get(self, collection_name: str) -> Optional[GetResult]:
         # Get all the items in the collection. This can be very resource-intensive for large collections.
