@@ -35,12 +35,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount, tick, getContext } from 'svelte';
 
-	import {
-		OLLAMA_API_BASE_URL,
-		OPENAI_API_BASE_URL,
-		WEBUI_API_BASE_URL,
-		WEBUI_BASE_URL
-	} from '$lib/constants';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, models, settings } from '$lib/stores';
 
 	import { chatCompletion } from '$lib/apis/openai';
@@ -189,7 +184,10 @@ Based on the user's instruction, update and enhance the existing notes or select
 			{
 				model: model.id,
 				stream: true,
-				messages: chatMessages
+				messages: chatMessages.map((m) => ({
+					role: m.role,
+					content: m.content
+				}))
 				// ...(files && files.length > 0 ? { files } : {}) // TODO: Decide whether to use native file handling or not
 			},
 			`${WEBUI_BASE_URL}/api`
@@ -327,7 +325,7 @@ Based on the user's instruction, update and enhance the existing notes or select
 	});
 </script>
 
-<div class="flex items-center mb-1.5 pt-1.5 px-2.5">
+<div class="flex items-center mb-1.5 pt-1.5">
 	<div class="flex items-center mr-1">
 		<button
 			class="p-0.5 bg-transparent transition rounded-lg"
@@ -358,7 +356,7 @@ Based on the user's instruction, update and enhance the existing notes or select
 	</div>
 </div>
 
-<div class="flex flex-col items-center flex-1 @container px-2.5">
+<div class="flex flex-col items-center flex-1 @container">
 	<div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
 		<div class="mx-auto w-full md:px-0 h-full relative">
 			<div class=" flex flex-col h-full">
@@ -377,7 +375,7 @@ Based on the user's instruction, update and enhance the existing notes or select
 
 				<div class=" pb-[1rem]">
 					{#if selectedContent}
-						<div class="text-xs rounded-xl px-3.5 py-3 w-full markdown-prose-xs">
+						<div class="text-xs rounded-xl px-2.5 py-3 w-full markdown-prose-xs">
 							<blockquote>
 								<div class=" line-clamp-3">
 									{selectedContent?.text}

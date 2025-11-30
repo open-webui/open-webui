@@ -36,6 +36,8 @@
 	import { createNewNote, deleteNoteById, getNotes } from '$lib/apis/notes';
 	import { capitalizeFirstLetter, copyToClipboard, getTimeRange } from '$lib/utils';
 
+	import { downloadPdf, createNoteHandler } from './utils';
+
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Search from '../icons/Search.svelte';
@@ -99,107 +101,19 @@
 		});
 	};
 
-	const createNoteHandler = async (content?: string) => {
-		//  $i18n.t('New Note'),
-		const res = await createNewNote(localStorage.token, {
-			// YYYY-MM-DD
-			title: dayjs().format('YYYY-MM-DD'),
-			data: {
-				content: {
-					json: null,
-					html: content ?? '',
-					md: content ?? ''
-				}
-			},
-			meta: null,
-			access_control: {}
-		}).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
-
-		if (res) {
-			goto(`/notes/${res.id}`);
-		}
-	};
-
 	const downloadHandler = async (type) => {
-		console.log('downloadHandler', type);
-		console.log('selectedNote', selectedNote);
-		if (type === 'md') {
+		if (type === 'txt') {
+			const blob = new Blob([selectedNote.data.content.md], { type: 'text/plain' });
+			saveAs(blob, `${selectedNote.title}.txt`);
+		} else if (type === 'md') {
 			const blob = new Blob([selectedNote.data.content.md], { type: 'text/markdown' });
 			saveAs(blob, `${selectedNote.title}.md`);
 		} else if (type === 'pdf') {
-			await downloadPdf(selectedNote);
-		}
-	};
-
-	const downloadPdf = async (note) => {
-		try {
-			const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
-				import('jspdf'),
-				import('html2canvas-pro')
-			]);
-
-			// Define a fixed virtual screen size
-			const virtualWidth = 1024; // Fixed width (adjust as needed)
-			const virtualHeight = 1400; // Fixed height (adjust as needed)
-
-			// STEP 1. Get a DOM node to render
-			const html = note.data?.content?.html ?? '';
-			let node;
-			if (html instanceof HTMLElement) {
-				node = html;
-			} else {
-				// If it's HTML string, render to a temporary hidden element
-				node = document.createElement('div');
-				node.innerHTML = html;
-				document.body.appendChild(node);
+			try {
+				await downloadPdf(selectedNote);
+			} catch (error) {
+				toast.error(`${error}`);
 			}
-
-			// Render to canvas with predefined width
-			const canvas = await html2canvas(node, {
-				useCORS: true,
-				scale: 2, // Keep at 1x to avoid unexpected enlargements
-				width: virtualWidth, // Set fixed virtual screen width
-				windowWidth: virtualWidth, // Ensure consistent rendering
-				windowHeight: virtualHeight
-			});
-
-			// Remove hidden node if needed
-			if (!(html instanceof HTMLElement)) {
-				document.body.removeChild(node);
-			}
-
-			const imgData = canvas.toDataURL('image/jpeg', 0.7);
-
-			// A4 page settings
-			const pdf = new jsPDF('p', 'mm', 'a4');
-			const imgWidth = 210; // A4 width in mm
-			const pageHeight = 297; // A4 height in mm
-
-			// Maintain aspect ratio
-			const imgHeight = (canvas.height * imgWidth) / canvas.width;
-			let heightLeft = imgHeight;
-			let position = 0;
-
-			pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-			heightLeft -= pageHeight;
-
-			// Handle additional pages
-			while (heightLeft > 0) {
-				position -= pageHeight;
-				pdf.addPage();
-
-				pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-				heightLeft -= pageHeight;
-			}
-
-			pdf.save(`${note.title}.pdf`);
-		} catch (error) {
-			console.error('Error generating PDF', error);
-
-			toast.error(`${error}`);
 		}
 	};
 
@@ -303,14 +217,6 @@
 	});
 
 	onMount(async () => {
-		if ($page.url.searchParams.get('content')) {
-			const content = $page.url.searchParams.get('content') ?? '';
-			if (content) {
-				createNoteHandler(content);
-				return;
-			}
-		}
-
 		await init();
 		loaded = true;
 
@@ -487,7 +393,11 @@
 						class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-white dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
 						type="button"
 						on:click={async () => {
-							createNoteHandler();
+							const res = await createNoteHandler(dayjs().format('YYYY-MM-DD'));
+
+							if (res) {
+								goto(`/notes/${res.id}`);
+							}
 						}}
 					>
 						<Plus className="size-4.5" strokeWidth="2.5" />

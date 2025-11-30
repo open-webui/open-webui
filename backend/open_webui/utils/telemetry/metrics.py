@@ -45,7 +45,6 @@ from open_webui.env import (
     OTEL_METRICS_OTLP_SPAN_EXPORTER,
     OTEL_METRICS_EXPORTER_OTLP_INSECURE,
 )
-from open_webui.socket.main import get_active_user_ids
 from open_webui.models.users import Users
 
 _EXPORT_INTERVAL_MILLIS = 10_000  # 10 seconds
@@ -99,6 +98,9 @@ def _build_meter_provider(resource: Resource) -> MeterProvider:
         View(
             instrument_name="webui.users.active",
         ),
+        View(
+            instrument_name="webui.users.active.today",
+        ),
     ]
 
     provider = MeterProvider(
@@ -132,7 +134,7 @@ def setup_metrics(app: FastAPI, resource: Resource) -> None:
     ) -> Sequence[metrics.Observation]:
         return [
             metrics.Observation(
-                value=len(get_active_user_ids()),
+                value=Users.get_active_user_count(),
             )
         ]
 
@@ -157,6 +159,18 @@ def setup_metrics(app: FastAPI, resource: Resource) -> None:
         description="Number of currently active users",
         unit="users",
         callbacks=[observe_active_users],
+    )
+
+    def observe_users_active_today(
+        options: metrics.CallbackOptions,
+    ) -> Sequence[metrics.Observation]:
+        return [metrics.Observation(value=Users.get_num_users_active_today())]
+
+    meter.create_observable_gauge(
+        name="webui.users.active.today",
+        description="Number of users active since midnight today",
+        unit="users",
+        callbacks=[observe_users_active_today],
     )
 
     # FastAPI middleware

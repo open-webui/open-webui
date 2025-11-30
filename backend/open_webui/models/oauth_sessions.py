@@ -25,7 +25,7 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 class OAuthSession(Base):
     __tablename__ = "oauth_session"
 
-    id = Column(Text, primary_key=True)
+    id = Column(Text, primary_key=True, unique=True)
     user_id = Column(Text, nullable=False)
     provider = Column(Text, nullable=False)
     token = Column(
@@ -260,6 +260,17 @@ class OAuthSessionTable:
                 return True
         except Exception as e:
             log.error(f"Error deleting OAuth sessions by user ID: {e}")
+            return False
+
+    def delete_sessions_by_provider(self, provider: str) -> bool:
+        """Delete all OAuth sessions for a provider"""
+        try:
+            with get_db() as db:
+                db.query(OAuthSession).filter_by(provider=provider).delete()
+                db.commit()
+                return True
+        except Exception as e:
+            log.error(f"Error deleting OAuth sessions by provider {provider}: {e}")
             return False
 
 

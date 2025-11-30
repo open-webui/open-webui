@@ -48,7 +48,7 @@
 			await config.set(await getBackendConfig());
 
 			if (!redirectPath) {
-				redirectPath = $page.url.searchParams.get('redirectPath') || '/';
+				redirectPath = $page.url.searchParams.get('redirect') || '/';
 			}
 
 			goto(redirectPath);
@@ -210,7 +210,7 @@
 				{#if ($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false}
 					<div class=" my-auto pb-10 w-full sm:max-w-md">
 						<div
-							class="flex items-center justify-center gap-3 text-xl sm:text-2xl text-center font-semibold dark:text-gray-200"
+							class="flex items-center justify-center gap-3 text-xl sm:text-2xl text-center font-medium dark:text-gray-200"
 						>
 							<div>
 								{$i18n.t('Signing in to {{WEBUI_NAME}}', { WEBUI_NAME: $WEBUI_NAME })}

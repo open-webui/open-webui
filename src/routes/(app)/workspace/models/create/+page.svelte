@@ -71,13 +71,17 @@
 				return;
 			}
 
-			let data = JSON.parse(event.data);
+			try {
+				let data = JSON.parse(event.data);
 
-			if (data?.info) {
-				data = data.info;
+				if (data?.info) {
+					data = data.info;
+				}
+
+				model = data;
+			} catch (e) {
+				console.error('Failed to parse message data:', e);
 			}
-
-			model = data;
 		});
 
 		if (window.opener ?? false) {

@@ -22,6 +22,18 @@
 	export let selectedUser;
 	export let sessionUser;
 
+	$: if (show) {
+		init();
+	}
+
+	const init = () => {
+		if (selectedUser) {
+			_user = selectedUser;
+			_user.password = '';
+			loadUserGroups();
+		}
+	};
+
 	let _user = {
 		profile_image_url: '',
 		role: 'pending',
@@ -52,14 +64,6 @@
 			return null;
 		});
 	};
-
-	onMount(() => {
-		if (selectedUser) {
-			_user = selectedUser;
-			_user.password = '';
-			loadUserGroups();
-		}
-	});
 </script>
 
 <Modal size="sm" bind:show>
@@ -87,7 +91,11 @@
 					<div class=" px-5 pt-3 pb-5 w-full">
 						<div class="flex self-center w-full">
 							<div class=" self-start h-full mr-6">
-								<UserProfileImage bind:profileImageUrl={_user.profile_image_url} user={_user} />
+								<UserProfileImage
+									imageClassName="size-14"
+									bind:profileImageUrl={_user.profile_image_url}
+									user={_user}
+								/>
 							</div>
 
 							<div class=" flex-1">
@@ -172,12 +180,17 @@
 										</div>
 									</div>
 
-									{#if _user?.oauth_sub}
+									{#if _user?.oauth}
 										<div class="flex flex-col w-full">
 											<div class=" mb-1 text-xs text-gray-500">{$i18n.t('OAuth ID')}</div>
 
-											<div class="flex-1 text-sm break-all mb-1">
-												{_user.oauth_sub ?? ''}
+											<div class="flex-1 text-sm break-all mb-1 flex flex-col space-y-1">
+												{#each Object.keys(_user.oauth) as key}
+													<div>
+														<span class="text-gray-500">{key}</span>
+														<span class="">{_user.oauth[key]?.sub}</span>
+													</div>
+												{/each}
 											</div>
 										</div>
 									{/if}

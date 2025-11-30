@@ -46,11 +46,35 @@ router = APIRouter()
 
 
 @router.get("/", response_model=list[FolderNameIdResponse])
-async def get_folders(user=Depends(get_verified_user)):
+async def get_folders(request: Request, user=Depends(get_verified_user)):
+    if request.app.state.config.ENABLE_FOLDERS is False:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    if user.role != "admin" and not has_permission(
+        user.id,
+        "features.folders",
+        request.app.state.config.USER_PERMISSIONS,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
     folders = Folders.get_folders_by_user_id(user.id)
 
     # Verify folder data integrity
+    folder_list = []
     for folder in folders:
+        if folder.parent_id and not Folders.get_folder_by_id_and_user_id(
+            folder.parent_id, user.id
+        ):
+            folder = Folders.update_folder_parent_id_by_id_and_user_id(
+                folder.id, user.id, None
+            )
+
         if folder.data:
             if "files" in folder.data:
                 valid_files = []
@@ -74,12 +98,9 @@ async def get_folders(user=Depends(get_verified_user)):
                     folder.id, user.id, FolderUpdateForm(data=folder.data)
                 )
 
-    return [
-        {
-            **folder.model_dump(),
-        }
-        for folder in folders
-    ]
+        folder_list.append(FolderNameIdResponse(**folder.model_dump()))
+
+    return folder_list
 
 
 ############################
@@ -253,7 +274,10 @@ async def update_folder_is_expanded_by_id(
 
 @router.delete("/{id}")
 async def delete_folder_by_id(
-    request: Request, id: str, user=Depends(get_verified_user)
+    request: Request,
+    id: str,
+    delete_contents: Optional[bool] = True,
+    user=Depends(get_verified_user),
 ):
     if Chats.count_chats_by_folder_id_and_user_id(id, user.id):
         chat_delete_permission = has_permission(
@@ -265,21 +289,37 @@ async def delete_folder_by_id(
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
 
-    folder = Folders.get_folder_by_id_and_user_id(id, user.id)
-    if folder:
-        try:
-            folder_ids = Folders.delete_folder_by_id_and_user_id(id, user.id)
-            for folder_id in folder_ids:
-                Chats.delete_chats_by_user_id_and_folder_id(user.id, folder_id)
+    folders = []
+    folders.append(Folders.get_folder_by_id_and_user_id(id, user.id))
+    while folders:
+        folder = folders.pop()
+        if folder:
+            try:
+                folder_ids = Folders.delete_folder_by_id_and_user_id(id, user.id)
 
-            return True
-        except Exception as e:
-            log.exception(e)
-            log.error(f"Error deleting folder: {id}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("Error deleting folder"),
-            )
+                for folder_id in folder_ids:
+                    if delete_contents:
+                        Chats.delete_chats_by_user_id_and_folder_id(user.id, folder_id)
+                    else:
+                        Chats.move_chats_by_user_id_and_folder_id(
+                            user.id, folder_id, None
+                        )
+
+                return True
+            except Exception as e:
+                log.exception(e)
+                log.error(f"Error deleting folder: {id}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT("Error deleting folder"),
+                )
+            finally:
+                # Get all subfolders
+                subfolders = Folders.get_folders_by_parent_id_and_user_id(
+                    folder.id, user.id
+                )
+                folders.extend(subfolders)
+
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

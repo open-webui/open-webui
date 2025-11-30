@@ -6,6 +6,7 @@ import shutil
 import asyncio
 import time
 
+import re
 import uuid
 from datetime import datetime, timedelta
 from multiprocessing import Value
@@ -36,7 +37,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSpl
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 from langchain_core.documents import Document
 
-from open_webui.models.files import FileModel, Files
+from open_webui.models.files import FileModel, FileUpdateForm, Files
 from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
 
@@ -68,6 +69,7 @@ from open_webui.retrieval.web.serply import search_serply
 from open_webui.retrieval.web.serpstack import search_serpstack
 from open_webui.retrieval.web.tavily import search_tavily
 from open_webui.retrieval.web.bing import search_bing
+from open_webui.retrieval.web.azure import search_azure
 from open_webui.retrieval.web.exa import search_exa
 from open_webui.retrieval.web.perplexity import search_perplexity
 from open_webui.retrieval.web.sougou import search_sougou
@@ -75,6 +77,7 @@ from open_webui.retrieval.web.firecrawl import search_firecrawl
 from open_webui.retrieval.web.external import search_external
 
 from open_webui.retrieval.utils import (
+    get_content_from_url,
     get_embedding_function,
     get_reranking_function,
     get_model_path,
@@ -194,6 +197,26 @@ def get_rf(
                     log.error(f"CrossEncoder: {e}")
                     raise Exception(ERROR_MESSAGES.DEFAULT("CrossEncoder error"))
 
+                # Safely adjust pad_token_id if missing as some models do not have this in config
+                try:
+                    model_cfg = getattr(rf, "model", None)
+                    if model_cfg and hasattr(model_cfg, "config"):
+                        cfg = model_cfg.config
+                        if getattr(cfg, "pad_token_id", None) is None:
+                            # Fallback to eos_token_id when available
+                            eos = getattr(cfg, "eos_token_id", None)
+                            if eos is not None:
+                                cfg.pad_token_id = eos
+                                log.debug(
+                                    f"Missing pad_token_id detected; set to eos_token_id={eos}"
+                                )
+                            else:
+                                log.warning(
+                                    "Neither pad_token_id nor eos_token_id present in model config"
+                                )
+                except Exception as e2:
+                    log.warning(f"Failed to adjust pad_token_id on CrossEncoder: {e2}")
+
     return rf
 
 
@@ -223,13 +246,14 @@ class SearchForm(BaseModel):
 async def get_status(request: Request):
     return {
         "status": True,
-        "chunk_size": request.app.state.config.CHUNK_SIZE,
-        "chunk_overlap": request.app.state.config.CHUNK_OVERLAP,
-        "template": request.app.state.config.RAG_TEMPLATE,
-        "embedding_engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
-        "embedding_model": request.app.state.config.RAG_EMBEDDING_MODEL,
-        "reranking_model": request.app.state.config.RAG_RERANKING_MODEL,
-        "embedding_batch_size": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+        "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
+        "CHUNK_OVERLAP": request.app.state.config.CHUNK_OVERLAP,
+        "RAG_TEMPLATE": request.app.state.config.RAG_TEMPLATE,
+        "RAG_EMBEDDING_ENGINE": request.app.state.config.RAG_EMBEDDING_ENGINE,
+        "RAG_EMBEDDING_MODEL": request.app.state.config.RAG_EMBEDDING_MODEL,
+        "RAG_RERANKING_MODEL": request.app.state.config.RAG_RERANKING_MODEL,
+        "RAG_EMBEDDING_BATCH_SIZE": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+        "ENABLE_ASYNC_EMBEDDING": request.app.state.config.ENABLE_ASYNC_EMBEDDING,
     }
 
 
@@ -237,9 +261,10 @@ async def get_status(request: Request):
 async def get_embedding_config(request: Request, user=Depends(get_admin_user)):
     return {
         "status": True,
-        "embedding_engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
-        "embedding_model": request.app.state.config.RAG_EMBEDDING_MODEL,
-        "embedding_batch_size": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+        "RAG_EMBEDDING_ENGINE": request.app.state.config.RAG_EMBEDDING_ENGINE,
+        "RAG_EMBEDDING_MODEL": request.app.state.config.RAG_EMBEDDING_MODEL,
+        "RAG_EMBEDDING_BATCH_SIZE": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+        "ENABLE_ASYNC_EMBEDDING": request.app.state.config.ENABLE_ASYNC_EMBEDDING,
         "openai_config": {
             "url": request.app.state.config.RAG_OPENAI_API_BASE_URL,
             "key": request.app.state.config.RAG_OPENAI_API_KEY,
@@ -276,18 +301,13 @@ class EmbeddingModelUpdateForm(BaseModel):
     openai_config: Optional[OpenAIConfigForm] = None
     ollama_config: Optional[OllamaConfigForm] = None
     azure_openai_config: Optional[AzureOpenAIConfigForm] = None
-    embedding_engine: str
-    embedding_model: str
-    embedding_batch_size: Optional[int] = 1
+    RAG_EMBEDDING_ENGINE: str
+    RAG_EMBEDDING_MODEL: str
+    RAG_EMBEDDING_BATCH_SIZE: Optional[int] = 1
+    ENABLE_ASYNC_EMBEDDING: Optional[bool] = True
 
 
-@router.post("/embedding/update")
-async def update_embedding_config(
-    request: Request, form_data: EmbeddingModelUpdateForm, user=Depends(get_admin_user)
-):
-    log.info(
-        f"Updating embedding model: {request.app.state.config.RAG_EMBEDDING_MODEL} to {form_data.embedding_model}"
-    )
+def unload_embedding_model(request: Request):
     if request.app.state.config.RAG_EMBEDDING_ENGINE == "":
         # unloads current internal embedding model and clears VRAM cache
         request.app.state.ef = None
@@ -300,9 +320,25 @@ async def update_embedding_config(
 
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
+
+
+@router.post("/embedding/update")
+async def update_embedding_config(
+    request: Request, form_data: EmbeddingModelUpdateForm, user=Depends(get_admin_user)
+):
+    log.info(
+        f"Updating embedding model: {request.app.state.config.RAG_EMBEDDING_MODEL} to {form_data.RAG_EMBEDDING_MODEL}"
+    )
+    unload_embedding_model(request)
     try:
-        request.app.state.config.RAG_EMBEDDING_ENGINE = form_data.embedding_engine
-        request.app.state.config.RAG_EMBEDDING_MODEL = form_data.embedding_model
+        request.app.state.config.RAG_EMBEDDING_ENGINE = form_data.RAG_EMBEDDING_ENGINE
+        request.app.state.config.RAG_EMBEDDING_MODEL = form_data.RAG_EMBEDDING_MODEL
+        request.app.state.config.RAG_EMBEDDING_BATCH_SIZE = (
+            form_data.RAG_EMBEDDING_BATCH_SIZE
+        )
+        request.app.state.config.ENABLE_ASYNC_EMBEDDING = (
+            form_data.ENABLE_ASYNC_EMBEDDING
+        )
 
         if request.app.state.config.RAG_EMBEDDING_ENGINE in [
             "ollama",
@@ -335,10 +371,6 @@ async def update_embedding_config(
                 request.app.state.config.RAG_AZURE_OPENAI_API_VERSION = (
                     form_data.azure_openai_config.version
                 )
-
-            request.app.state.config.RAG_EMBEDDING_BATCH_SIZE = (
-                form_data.embedding_batch_size
-            )
 
         request.app.state.ef = get_ef(
             request.app.state.config.RAG_EMBEDDING_ENGINE,
@@ -373,13 +405,15 @@ async def update_embedding_config(
                 if request.app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
                 else None
             ),
+            enable_async=request.app.state.config.ENABLE_ASYNC_EMBEDDING,
         )
 
         return {
             "status": True,
-            "embedding_engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
-            "embedding_model": request.app.state.config.RAG_EMBEDDING_MODEL,
-            "embedding_batch_size": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+            "RAG_EMBEDDING_ENGINE": request.app.state.config.RAG_EMBEDDING_ENGINE,
+            "RAG_EMBEDDING_MODEL": request.app.state.config.RAG_EMBEDDING_MODEL,
+            "RAG_EMBEDDING_BATCH_SIZE": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+            "ENABLE_ASYNC_EMBEDDING": request.app.state.config.ENABLE_ASYNC_EMBEDDING,
             "openai_config": {
                 "url": request.app.state.config.RAG_OPENAI_API_BASE_URL,
                 "key": request.app.state.config.RAG_OPENAI_API_KEY,
@@ -413,6 +447,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
         # Hybrid search settings
         "ENABLE_RAG_HYBRID_SEARCH": request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+        "ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS": request.app.state.config.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS,
         "TOP_K_RERANKER": request.app.state.config.TOP_K_RERANKER,
         "RELEVANCE_THRESHOLD": request.app.state.config.RELEVANCE_THRESHOLD,
         "HYBRID_BM25_WEIGHT": request.app.state.config.HYBRID_BM25_WEIGHT,
@@ -434,21 +469,17 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "EXTERNAL_DOCUMENT_LOADER_API_KEY": request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
         "TIKA_SERVER_URL": request.app.state.config.TIKA_SERVER_URL,
         "DOCLING_SERVER_URL": request.app.state.config.DOCLING_SERVER_URL,
+        "DOCLING_API_KEY": request.app.state.config.DOCLING_API_KEY,
         "DOCLING_PARAMS": request.app.state.config.DOCLING_PARAMS,
-        "DOCLING_DO_OCR": request.app.state.config.DOCLING_DO_OCR,
-        "DOCLING_FORCE_OCR": request.app.state.config.DOCLING_FORCE_OCR,
-        "DOCLING_OCR_ENGINE": request.app.state.config.DOCLING_OCR_ENGINE,
-        "DOCLING_OCR_LANG": request.app.state.config.DOCLING_OCR_LANG,
-        "DOCLING_PDF_BACKEND": request.app.state.config.DOCLING_PDF_BACKEND,
-        "DOCLING_TABLE_MODE": request.app.state.config.DOCLING_TABLE_MODE,
-        "DOCLING_PIPELINE": request.app.state.config.DOCLING_PIPELINE,
-        "DOCLING_DO_PICTURE_DESCRIPTION": request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
-        "DOCLING_PICTURE_DESCRIPTION_MODE": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE,
-        "DOCLING_PICTURE_DESCRIPTION_LOCAL": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL,
-        "DOCLING_PICTURE_DESCRIPTION_API": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API,
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
+        "MISTRAL_OCR_API_BASE_URL": request.app.state.config.MISTRAL_OCR_API_BASE_URL,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
+        # MinerU settings
+        "MINERU_API_MODE": request.app.state.config.MINERU_API_MODE,
+        "MINERU_API_URL": request.app.state.config.MINERU_API_URL,
+        "MINERU_API_KEY": request.app.state.config.MINERU_API_KEY,
+        "MINERU_PARAMS": request.app.state.config.MINERU_PARAMS,
         # Reranking settings
         "RAG_RERANKING_MODEL": request.app.state.config.RAG_RERANKING_MODEL,
         "RAG_RERANKING_ENGINE": request.app.state.config.RAG_RERANKING_ENGINE,
@@ -505,6 +536,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "PERPLEXITY_API_KEY": request.app.state.config.PERPLEXITY_API_KEY,
             "PERPLEXITY_MODEL": request.app.state.config.PERPLEXITY_MODEL,
             "PERPLEXITY_SEARCH_CONTEXT_USAGE": request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
+            "PERPLEXITY_SEARCH_API_URL": request.app.state.config.PERPLEXITY_SEARCH_API_URL,
             "SOUGOU_API_SID": request.app.state.config.SOUGOU_API_SID,
             "SOUGOU_API_SK": request.app.state.config.SOUGOU_API_SK,
             "WEB_LOADER_ENGINE": request.app.state.config.WEB_LOADER_ENGINE,
@@ -562,6 +594,7 @@ class WebConfig(BaseModel):
     PERPLEXITY_API_KEY: Optional[str] = None
     PERPLEXITY_MODEL: Optional[str] = None
     PERPLEXITY_SEARCH_CONTEXT_USAGE: Optional[str] = None
+    PERPLEXITY_SEARCH_API_URL: Optional[str] = None
     SOUGOU_API_SID: Optional[str] = None
     SOUGOU_API_SK: Optional[str] = None
     WEB_LOADER_ENGINE: Optional[str] = None
@@ -589,6 +622,7 @@ class ConfigForm(BaseModel):
 
     # Hybrid search settings
     ENABLE_RAG_HYBRID_SEARCH: Optional[bool] = None
+    ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS: Optional[bool] = None
     TOP_K_RERANKER: Optional[int] = None
     RELEVANCE_THRESHOLD: Optional[float] = None
     HYBRID_BM25_WEIGHT: Optional[float] = None
@@ -614,21 +648,18 @@ class ConfigForm(BaseModel):
 
     TIKA_SERVER_URL: Optional[str] = None
     DOCLING_SERVER_URL: Optional[str] = None
+    DOCLING_API_KEY: Optional[str] = None
     DOCLING_PARAMS: Optional[dict] = None
-    DOCLING_DO_OCR: Optional[bool] = None
-    DOCLING_FORCE_OCR: Optional[bool] = None
-    DOCLING_OCR_ENGINE: Optional[str] = None
-    DOCLING_OCR_LANG: Optional[str] = None
-    DOCLING_PDF_BACKEND: Optional[str] = None
-    DOCLING_TABLE_MODE: Optional[str] = None
-    DOCLING_PIPELINE: Optional[str] = None
-    DOCLING_DO_PICTURE_DESCRIPTION: Optional[bool] = None
-    DOCLING_PICTURE_DESCRIPTION_MODE: Optional[str] = None
-    DOCLING_PICTURE_DESCRIPTION_LOCAL: Optional[dict] = None
-    DOCLING_PICTURE_DESCRIPTION_API: Optional[dict] = None
     DOCUMENT_INTELLIGENCE_ENDPOINT: Optional[str] = None
     DOCUMENT_INTELLIGENCE_KEY: Optional[str] = None
+    MISTRAL_OCR_API_BASE_URL: Optional[str] = None
     MISTRAL_OCR_API_KEY: Optional[str] = None
+
+    # MinerU settings
+    MINERU_API_MODE: Optional[str] = None
+    MINERU_API_URL: Optional[str] = None
+    MINERU_API_KEY: Optional[str] = None
+    MINERU_PARAMS: Optional[dict] = None
 
     # Reranking settings
     RAG_RERANKING_MODEL: Optional[str] = None
@@ -687,6 +718,11 @@ async def update_rag_config(
         form_data.ENABLE_RAG_HYBRID_SEARCH
         if form_data.ENABLE_RAG_HYBRID_SEARCH is not None
         else request.app.state.config.ENABLE_RAG_HYBRID_SEARCH
+    )
+    request.app.state.config.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS = (
+        form_data.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS
+        if form_data.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS is not None
+        else request.app.state.config.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS
     )
 
     request.app.state.config.TOP_K_RERANKER = (
@@ -791,68 +827,16 @@ async def update_rag_config(
         if form_data.DOCLING_SERVER_URL is not None
         else request.app.state.config.DOCLING_SERVER_URL
     )
+    request.app.state.config.DOCLING_API_KEY = (
+        form_data.DOCLING_API_KEY
+        if form_data.DOCLING_API_KEY is not None
+        else request.app.state.config.DOCLING_API_KEY
+    )
     request.app.state.config.DOCLING_PARAMS = (
         form_data.DOCLING_PARAMS
         if form_data.DOCLING_PARAMS is not None
         else request.app.state.config.DOCLING_PARAMS
     )
-    request.app.state.config.DOCLING_DO_OCR = (
-        form_data.DOCLING_DO_OCR
-        if form_data.DOCLING_DO_OCR is not None
-        else request.app.state.config.DOCLING_DO_OCR
-    )
-    request.app.state.config.DOCLING_FORCE_OCR = (
-        form_data.DOCLING_FORCE_OCR
-        if form_data.DOCLING_FORCE_OCR is not None
-        else request.app.state.config.DOCLING_FORCE_OCR
-    )
-    request.app.state.config.DOCLING_OCR_ENGINE = (
-        form_data.DOCLING_OCR_ENGINE
-        if form_data.DOCLING_OCR_ENGINE is not None
-        else request.app.state.config.DOCLING_OCR_ENGINE
-    )
-    request.app.state.config.DOCLING_OCR_LANG = (
-        form_data.DOCLING_OCR_LANG
-        if form_data.DOCLING_OCR_LANG is not None
-        else request.app.state.config.DOCLING_OCR_LANG
-    )
-    request.app.state.config.DOCLING_PDF_BACKEND = (
-        form_data.DOCLING_PDF_BACKEND
-        if form_data.DOCLING_PDF_BACKEND is not None
-        else request.app.state.config.DOCLING_PDF_BACKEND
-    )
-    request.app.state.config.DOCLING_TABLE_MODE = (
-        form_data.DOCLING_TABLE_MODE
-        if form_data.DOCLING_TABLE_MODE is not None
-        else request.app.state.config.DOCLING_TABLE_MODE
-    )
-    request.app.state.config.DOCLING_PIPELINE = (
-        form_data.DOCLING_PIPELINE
-        if form_data.DOCLING_PIPELINE is not None
-        else request.app.state.config.DOCLING_PIPELINE
-    )
-    request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION = (
-        form_data.DOCLING_DO_PICTURE_DESCRIPTION
-        if form_data.DOCLING_DO_PICTURE_DESCRIPTION is not None
-        else request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION
-    )
-
-    request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE = (
-        form_data.DOCLING_PICTURE_DESCRIPTION_MODE
-        if form_data.DOCLING_PICTURE_DESCRIPTION_MODE is not None
-        else request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE
-    )
-    request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL = (
-        form_data.DOCLING_PICTURE_DESCRIPTION_LOCAL
-        if form_data.DOCLING_PICTURE_DESCRIPTION_LOCAL is not None
-        else request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL
-    )
-    request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API = (
-        form_data.DOCLING_PICTURE_DESCRIPTION_API
-        if form_data.DOCLING_PICTURE_DESCRIPTION_API is not None
-        else request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API
-    )
-
     request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = (
         form_data.DOCUMENT_INTELLIGENCE_ENDPOINT
         if form_data.DOCUMENT_INTELLIGENCE_ENDPOINT is not None
@@ -863,10 +847,38 @@ async def update_rag_config(
         if form_data.DOCUMENT_INTELLIGENCE_KEY is not None
         else request.app.state.config.DOCUMENT_INTELLIGENCE_KEY
     )
+
+    request.app.state.config.MISTRAL_OCR_API_BASE_URL = (
+        form_data.MISTRAL_OCR_API_BASE_URL
+        if form_data.MISTRAL_OCR_API_BASE_URL is not None
+        else request.app.state.config.MISTRAL_OCR_API_BASE_URL
+    )
     request.app.state.config.MISTRAL_OCR_API_KEY = (
         form_data.MISTRAL_OCR_API_KEY
         if form_data.MISTRAL_OCR_API_KEY is not None
         else request.app.state.config.MISTRAL_OCR_API_KEY
+    )
+
+    # MinerU settings
+    request.app.state.config.MINERU_API_MODE = (
+        form_data.MINERU_API_MODE
+        if form_data.MINERU_API_MODE is not None
+        else request.app.state.config.MINERU_API_MODE
+    )
+    request.app.state.config.MINERU_API_URL = (
+        form_data.MINERU_API_URL
+        if form_data.MINERU_API_URL is not None
+        else request.app.state.config.MINERU_API_URL
+    )
+    request.app.state.config.MINERU_API_KEY = (
+        form_data.MINERU_API_KEY
+        if form_data.MINERU_API_KEY is not None
+        else request.app.state.config.MINERU_API_KEY
+    )
+    request.app.state.config.MINERU_PARAMS = (
+        form_data.MINERU_PARAMS
+        if form_data.MINERU_PARAMS is not None
+        else request.app.state.config.MINERU_PARAMS
     )
 
     # Reranking settings
@@ -1050,6 +1062,9 @@ async def update_rag_config(
         request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE = (
             form_data.web.PERPLEXITY_SEARCH_CONTEXT_USAGE
         )
+        request.app.state.config.PERPLEXITY_SEARCH_API_URL = (
+            form_data.web.PERPLEXITY_SEARCH_API_URL
+        )
         request.app.state.config.SOUGOU_API_SID = form_data.web.SOUGOU_API_SID
         request.app.state.config.SOUGOU_API_SK = form_data.web.SOUGOU_API_SK
 
@@ -1118,21 +1133,17 @@ async def update_rag_config(
         "EXTERNAL_DOCUMENT_LOADER_API_KEY": request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
         "TIKA_SERVER_URL": request.app.state.config.TIKA_SERVER_URL,
         "DOCLING_SERVER_URL": request.app.state.config.DOCLING_SERVER_URL,
+        "DOCLING_API_KEY": request.app.state.config.DOCLING_API_KEY,
         "DOCLING_PARAMS": request.app.state.config.DOCLING_PARAMS,
-        "DOCLING_DO_OCR": request.app.state.config.DOCLING_DO_OCR,
-        "DOCLING_FORCE_OCR": request.app.state.config.DOCLING_FORCE_OCR,
-        "DOCLING_OCR_ENGINE": request.app.state.config.DOCLING_OCR_ENGINE,
-        "DOCLING_OCR_LANG": request.app.state.config.DOCLING_OCR_LANG,
-        "DOCLING_PDF_BACKEND": request.app.state.config.DOCLING_PDF_BACKEND,
-        "DOCLING_TABLE_MODE": request.app.state.config.DOCLING_TABLE_MODE,
-        "DOCLING_PIPELINE": request.app.state.config.DOCLING_PIPELINE,
-        "DOCLING_DO_PICTURE_DESCRIPTION": request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
-        "DOCLING_PICTURE_DESCRIPTION_MODE": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE,
-        "DOCLING_PICTURE_DESCRIPTION_LOCAL": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL,
-        "DOCLING_PICTURE_DESCRIPTION_API": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API,
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
+        "MISTRAL_OCR_API_BASE_URL": request.app.state.config.MISTRAL_OCR_API_BASE_URL,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
+        # MinerU settings
+        "MINERU_API_MODE": request.app.state.config.MINERU_API_MODE,
+        "MINERU_API_URL": request.app.state.config.MINERU_API_URL,
+        "MINERU_API_KEY": request.app.state.config.MINERU_API_KEY,
+        "MINERU_PARAMS": request.app.state.config.MINERU_PARAMS,
         # Reranking settings
         "RAG_RERANKING_MODEL": request.app.state.config.RAG_RERANKING_MODEL,
         "RAG_RERANKING_ENGINE": request.app.state.config.RAG_RERANKING_ENGINE,
@@ -1189,6 +1200,7 @@ async def update_rag_config(
             "PERPLEXITY_API_KEY": request.app.state.config.PERPLEXITY_API_KEY,
             "PERPLEXITY_MODEL": request.app.state.config.PERPLEXITY_MODEL,
             "PERPLEXITY_SEARCH_CONTEXT_USAGE": request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
+            "PERPLEXITY_SEARCH_API_URL": request.app.state.config.PERPLEXITY_SEARCH_API_URL,
             "SOUGOU_API_SID": request.app.state.config.SOUGOU_API_SID,
             "SOUGOU_API_SK": request.app.state.config.SOUGOU_API_SK,
             "WEB_LOADER_ENGINE": request.app.state.config.WEB_LOADER_ENGINE,
@@ -1242,7 +1254,7 @@ def save_docs_to_vector_db(
 
         return ", ".join(docs_info)
 
-    log.info(
+    log.debug(
         f"save_docs_to_vector_db: document {_get_docs_info(docs)} {collection_name}"
     )
 
@@ -1389,10 +1401,13 @@ def save_docs_to_vector_db(
             ),
         )
 
-        embeddings = embedding_function(
-            list(map(lambda x: x.replace("\n", " "), texts)),
-            prefix=RAG_EMBEDDING_CONTENT_PREFIX,
-            user=user,
+        # Run async embedding in sync context
+        embeddings = asyncio.run(
+            embedding_function(
+                list(map(lambda x: x.replace("\n", " "), texts)),
+                prefix=RAG_EMBEDDING_CONTENT_PREFIX,
+                user=user,
+            )
         )
         log.info(f"embeddings generated {len(embeddings)} for {len(texts)} items")
 
@@ -1431,6 +1446,9 @@ def process_file(
     form_data: ProcessFileForm,
     user=Depends(get_verified_user),
 ):
+    """
+    Process a file and save its content to the vector database.
+    """
     if user.role == "admin":
         file = Files.get_file_by_id(form_data.file_id)
     else:
@@ -1510,6 +1528,7 @@ def process_file(
                     file_path = Storage.get_file(file_path)
                     loader = Loader(
                         engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
+                        user=user,
                         DATALAB_MARKER_API_KEY=request.app.state.config.DATALAB_MARKER_API_KEY,
                         DATALAB_MARKER_API_BASE_URL=request.app.state.config.DATALAB_MARKER_API_BASE_URL,
                         DATALAB_MARKER_ADDITIONAL_CONFIG=request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG,
@@ -1525,24 +1544,17 @@ def process_file(
                         EXTERNAL_DOCUMENT_LOADER_API_KEY=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
                         TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
                         DOCLING_SERVER_URL=request.app.state.config.DOCLING_SERVER_URL,
-                        DOCLING_PARAMS={
-                            "do_ocr": request.app.state.config.DOCLING_DO_OCR,
-                            "force_ocr": request.app.state.config.DOCLING_FORCE_OCR,
-                            "ocr_engine": request.app.state.config.DOCLING_OCR_ENGINE,
-                            "ocr_lang": request.app.state.config.DOCLING_OCR_LANG,
-                            "pdf_backend": request.app.state.config.DOCLING_PDF_BACKEND,
-                            "table_mode": request.app.state.config.DOCLING_TABLE_MODE,
-                            "pipeline": request.app.state.config.DOCLING_PIPELINE,
-                            "do_picture_description": request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
-                            "picture_description_mode": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE,
-                            "picture_description_local": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL,
-                            "picture_description_api": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API,
-                            **request.app.state.config.DOCLING_PARAMS,
-                        },
+                        DOCLING_API_KEY=request.app.state.config.DOCLING_API_KEY,
+                        DOCLING_PARAMS=request.app.state.config.DOCLING_PARAMS,
                         PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
                         DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                         DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
+                        MISTRAL_OCR_API_BASE_URL=request.app.state.config.MISTRAL_OCR_API_BASE_URL,
                         MISTRAL_OCR_API_KEY=request.app.state.config.MISTRAL_OCR_API_KEY,
+                        MINERU_API_MODE=request.app.state.config.MINERU_API_MODE,
+                        MINERU_API_URL=request.app.state.config.MINERU_API_URL,
+                        MINERU_API_KEY=request.app.state.config.MINERU_API_KEY,
+                        MINERU_PARAMS=request.app.state.config.MINERU_PARAMS,
                     )
                     docs = loader.load(
                         file.filename, file.meta.get("content_type"), file_path
@@ -1663,7 +1675,7 @@ class ProcessTextForm(BaseModel):
 
 
 @router.post("/process/text")
-def process_text(
+async def process_text(
     request: Request,
     form_data: ProcessTextForm,
     user=Depends(get_verified_user),
@@ -1681,7 +1693,9 @@ def process_text(
     text_content = form_data.content
     log.debug(f"text_content: {text_content}")
 
-    result = save_docs_to_vector_db(request, docs, collection_name, user=user)
+    result = await run_in_threadpool(
+        save_docs_to_vector_db, request, docs, collection_name, user=user
+    )
     if result:
         return {
             "status": True,
@@ -1696,51 +1710,8 @@ def process_text(
 
 
 @router.post("/process/youtube")
-def process_youtube_video(
-    request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)
-):
-    try:
-        collection_name = form_data.collection_name
-        if not collection_name:
-            collection_name = calculate_sha256_string(form_data.url)[:63]
-
-        loader = YoutubeLoader(
-            form_data.url,
-            language=request.app.state.config.YOUTUBE_LOADER_LANGUAGE,
-            proxy_url=request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
-        )
-
-        docs = loader.load()
-        content = " ".join([doc.page_content for doc in docs])
-        log.debug(f"text_content: {content}")
-
-        save_docs_to_vector_db(
-            request, docs, collection_name, overwrite=True, user=user
-        )
-
-        return {
-            "status": True,
-            "collection_name": collection_name,
-            "filename": form_data.url,
-            "file": {
-                "data": {
-                    "content": content,
-                },
-                "meta": {
-                    "name": form_data.url,
-                },
-            },
-        }
-    except Exception as e:
-        log.exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
-        )
-
-
 @router.post("/process/web")
-def process_web(
+async def process_web(
     request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)
 ):
     try:
@@ -1748,19 +1719,19 @@ def process_web(
         if not collection_name:
             collection_name = calculate_sha256_string(form_data.url)[:63]
 
-        loader = get_web_loader(
-            form_data.url,
-            verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
-            requests_per_second=request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
+        content, docs = await run_in_threadpool(
+            get_content_from_url, request, form_data.url
         )
-        docs = loader.load()
-        content = " ".join([doc.page_content for doc in docs])
-
         log.debug(f"text_content: {content}")
 
         if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
-            save_docs_to_vector_db(
-                request, docs, collection_name, overwrite=True, user=user
+            await run_in_threadpool(
+                save_docs_to_vector_db,
+                request,
+                docs,
+                collection_name,
+                overwrite=True,
+                user=user,
             )
         else:
             collection_name = None
@@ -1785,7 +1756,6 @@ def process_web(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
         )
-
 
 from open_webui.config import (
     WEB_SEARCH_RATE_LIMIT_MAX_REQUESTS,
@@ -1843,7 +1813,9 @@ def search_rate_limit(max_calls: int, period: float):
     int(WEB_SEARCH_RATE_LIMIT_MAX_REQUESTS.value),
     int(WEB_SEARCH_RATE_LIMIT_MIN_SECONDS.value),
 )
-async def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
+def search_web(
+    request: Request, engine: str, query: str, user=None
+) -> list[SearchResult]:
     """Search the web using a search engine and return the results as a list of SearchResult objects.
     Will look for a search engine API key in environment variables in the following order:
     - SEARXNG_QUERY_URL
@@ -1884,6 +1856,8 @@ async def search_web(request: Request, engine: str, query: str) -> list[SearchRe
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                request.app.state.config.PERPLEXITY_SEARCH_API_URL,
+                user,
             )
         else:
             raise Exception("No PERPLEXITY_API_KEY found in environment variables")
@@ -1920,6 +1894,7 @@ async def search_web(request: Request, engine: str, query: str) -> list[SearchRe
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                referer=request.app.state.config.WEBUI_URL,
             )
         else:
             raise Exception(
@@ -2060,6 +2035,24 @@ async def search_web(request: Request, engine: str, query: str) -> list[SearchRe
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
         )
+    elif engine == "azure":
+        if (
+            request.app.state.config.AZURE_AI_SEARCH_API_KEY
+            and request.app.state.config.AZURE_AI_SEARCH_ENDPOINT
+            and request.app.state.config.AZURE_AI_SEARCH_INDEX_NAME
+        ):
+            return search_azure(
+                request.app.state.config.AZURE_AI_SEARCH_API_KEY,
+                request.app.state.config.AZURE_AI_SEARCH_ENDPOINT,
+                request.app.state.config.AZURE_AI_SEARCH_INDEX_NAME,
+                query,
+                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception(
+                "AZURE_AI_SEARCH_API_KEY, AZURE_AI_SEARCH_ENDPOINT, and AZURE_AI_SEARCH_INDEX_NAME are required for Azure AI Search"
+            )
     elif engine == "exa":
         return search_exa(
             request.app.state.config.EXA_API_KEY,
@@ -2102,11 +2095,13 @@ async def search_web(request: Request, engine: str, query: str) -> list[SearchRe
         )
     elif engine == "external":
         return search_external(
+            request,
             request.app.state.config.EXTERNAL_WEB_SEARCH_URL,
             request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY,
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            user=user,
         )
     else:
         raise Exception("No search engine API key found in environment variables")
@@ -2131,6 +2126,7 @@ async def process_web_search(
                 request,
                 request.app.state.config.WEB_SEARCH_ENGINE,
                 query,
+                user,
             )
             for query in form_data.queries
         ]
@@ -2154,6 +2150,12 @@ async def process_web_search(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.WEB_SEARCH_ERROR(e),
+        )
+
+    if len(urls) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.DEFAULT("No results found from web search"),
         )
 
     try:
@@ -2251,7 +2253,7 @@ class QueryDocForm(BaseModel):
 
 
 @router.post("/query/doc")
-def query_doc_handler(
+async def query_doc_handler(
     request: Request,
     form_data: QueryDocForm,
     user=Depends(get_verified_user),
@@ -2264,7 +2266,7 @@ def query_doc_handler(
             collection_results[form_data.collection_name] = VECTOR_DB_CLIENT.get(
                 collection_name=form_data.collection_name
             )
-            return query_doc_with_hybrid_search(
+            return await query_doc_with_hybrid_search(
                 collection_name=form_data.collection_name,
                 collection_result=collection_results[form_data.collection_name],
                 query=form_data.query,
@@ -2274,8 +2276,8 @@ def query_doc_handler(
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 reranking_function=(
                     (
-                        lambda sentences: request.app.state.RERANKING_FUNCTION(
-                            sentences, user=user
+                        lambda query, documents: request.app.state.RERANKING_FUNCTION(
+                            query, documents, user=user
                         )
                     )
                     if request.app.state.RERANKING_FUNCTION
@@ -2296,11 +2298,12 @@ def query_doc_handler(
                 user=user,
             )
         else:
+            query_embedding = await request.app.state.EMBEDDING_FUNCTION(
+                form_data.query, prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user
+            )
             return query_doc(
                 collection_name=form_data.collection_name,
-                query_embedding=request.app.state.EMBEDDING_FUNCTION(
-                    form_data.query, prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user
-                ),
+                query_embedding=query_embedding,
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 user=user,
             )
@@ -2320,10 +2323,11 @@ class QueryCollectionsForm(BaseModel):
     r: Optional[float] = None
     hybrid: Optional[bool] = None
     hybrid_bm25_weight: Optional[float] = None
+    enable_enriched_texts: Optional[bool] = None
 
 
 @router.post("/query/collection")
-def query_collection_handler(
+async def query_collection_handler(
     request: Request,
     form_data: QueryCollectionsForm,
     user=Depends(get_verified_user),
@@ -2332,7 +2336,7 @@ def query_collection_handler(
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and (
             form_data.hybrid is None or form_data.hybrid
         ):
-            return query_collection_with_hybrid_search(
+            return await query_collection_with_hybrid_search(
                 collection_names=form_data.collection_names,
                 queries=[form_data.query],
                 embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
@@ -2341,8 +2345,8 @@ def query_collection_handler(
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 reranking_function=(
                     (
-                        lambda sentences: request.app.state.RERANKING_FUNCTION(
-                            sentences, user=user
+                        lambda query, documents: request.app.state.RERANKING_FUNCTION(
+                            query, documents, user=user
                         )
                     )
                     if request.app.state.RERANKING_FUNCTION
@@ -2360,9 +2364,14 @@ def query_collection_handler(
                     if form_data.hybrid_bm25_weight
                     else request.app.state.config.HYBRID_BM25_WEIGHT
                 ),
+                enable_enriched_texts=(
+                    form_data.enable_enriched_texts
+                    if form_data.enable_enriched_texts is not None
+                    else request.app.state.config.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS
+                ),
             )
         else:
-            return query_collection(
+            return await query_collection(
                 collection_names=form_data.collection_names,
                 queries=[form_data.query],
                 embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
@@ -2444,7 +2453,7 @@ if ENV == "dev":
     @router.get("/ef/{text}")
     async def get_embeddings(request: Request, text: Optional[str] = "Hello World!"):
         return {
-            "result": request.app.state.EMBEDDING_FUNCTION(
+            "result": await request.app.state.EMBEDDING_FUNCTION(
                 text, prefix=RAG_EMBEDDING_QUERY_PREFIX
             )
         }
@@ -2467,7 +2476,7 @@ class BatchProcessFilesResponse(BaseModel):
 
 
 @router.post("/process/files/batch")
-def process_files_batch(
+async def process_files_batch(
     request: Request,
     form_data: BatchProcessFilesForm,
     user=Depends(get_verified_user),
@@ -2475,16 +2484,19 @@ def process_files_batch(
     """
     Process a batch of files and save them to the vector database.
     """
-    results: List[BatchProcessFilesResult] = []
-    errors: List[BatchProcessFilesResult] = []
+
     collection_name = form_data.collection_name
+
+    file_results: List[BatchProcessFilesResult] = []
+    file_errors: List[BatchProcessFilesResult] = []
+    file_updates: List[FileUpdateForm] = []
 
     # Prepare all documents first
     all_docs: List[Document] = []
+
     for file in form_data.files:
         try:
             text_content = file.data.get("content", "")
-
             docs: List[Document] = [
                 Document(
                     page_content=text_content.replace("<br/>", "\n"),
@@ -2498,45 +2510,49 @@ def process_files_batch(
                 )
             ]
 
-            hash = calculate_sha256_string(text_content)
-            Files.update_file_hash_by_id(file.id, hash)
-            Files.update_file_data_by_id(file.id, {"content": text_content})
-
             all_docs.extend(docs)
-            results.append(BatchProcessFilesResult(file_id=file.id, status="prepared"))
+
+            file_updates.append(
+                FileUpdateForm(
+                    hash=calculate_sha256_string(text_content),
+                    data={"content": text_content},
+                )
+            )
+            file_results.append(
+                BatchProcessFilesResult(file_id=file.id, status="prepared")
+            )
 
         except Exception as e:
             log.error(f"process_files_batch: Error processing file {file.id}: {str(e)}")
-            errors.append(
+            file_errors.append(
                 BatchProcessFilesResult(file_id=file.id, status="failed", error=str(e))
             )
 
     # Save all documents in one batch
     if all_docs:
         try:
-            save_docs_to_vector_db(
-                request=request,
-                docs=all_docs,
-                collection_name=collection_name,
+            await run_in_threadpool(
+                save_docs_to_vector_db,
+                request,
+                all_docs,
+                collection_name,
                 add=True,
                 user=user,
             )
 
             # Update all files with collection name
-            for result in results:
-                Files.update_file_metadata_by_id(
-                    result.file_id, {"collection_name": collection_name}
-                )
-                result.status = "completed"
+            for file_update, file_result in zip(file_updates, file_results):
+                Files.update_file_by_id(id=file_result.file_id, form_data=file_update)
+                file_result.status = "completed"
 
         except Exception as e:
             log.error(
                 f"process_files_batch: Error saving documents to vector DB: {str(e)}"
             )
-            for result in results:
-                result.status = "failed"
-                errors.append(
-                    BatchProcessFilesResult(file_id=result.file_id, error=str(e))
+            for file_result in file_results:
+                file_result.status = "failed"
+                file_errors.append(
+                    BatchProcessFilesResult(file_id=file_result.file_id, error=str(e))
                 )
 
-    return BatchProcessFilesResponse(results=results, errors=errors)
+    return BatchProcessFilesResponse(results=file_results, errors=file_errors)

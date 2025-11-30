@@ -18,7 +18,7 @@
 	let loaded = false;
 
 	let filesInputElement = null;
-	let inputFiles = [];
+	let inputFiles = null;
 
 	const uploadFileHandler = async (file, fullContext: boolean = false) => {
 		if ($user?.role !== 'admin' && !($user?.permissions?.chat?.file_upload ?? true)) {
@@ -157,7 +157,7 @@
 	<slot name="label">
 		<div class="mb-2">
 			<div class="flex w-full justify-between mb-1">
-				<div class=" self-center text-sm font-semibold">
+				<div class=" self-center text-sm font-medium">
 					{$i18n.t('Knowledge')}
 				</div>
 			</div>

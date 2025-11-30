@@ -124,11 +124,14 @@
 					</div>
 				</div>
 
-				<!-- <div class="flex items-center text-xl font-semibold">{$i18n.t('Workspace')}</div> -->
+				<!-- <div class="flex items-center text-xl font-medium">{$i18n.t('Workspace')}</div> -->
 			</div>
 		</nav>
 
-		<div class="  pb-1 px-[18px] flex-1 max-h-full overflow-y-auto" id="workspace-container">
+		<div
+			class="  pb-1 px-3 md:px-[18px] flex-1 max-h-full overflow-y-auto"
+			id="workspace-container"
+		>
 			<slot />
 		</div>
 	</div>

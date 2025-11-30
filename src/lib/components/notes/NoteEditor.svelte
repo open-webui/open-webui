@@ -38,11 +38,12 @@
 		WEBUI_NAME
 	} from '$lib/stores';
 
-	import NotePanel from '$lib/components/notes/NotePanel.svelte';
+	import { downloadPdf } from './utils';
 
 	import Controls from './NoteEditor/Controls.svelte';
 	import Chat from './NoteEditor/Chat.svelte';
 
+	import NotePanel from '$lib/components/notes/NotePanel.svelte';
 	import AccessControlModal from '$lib/components/workspace/common/AccessControlModal.svelte';
 
 	async function loadLocale(locales) {
@@ -566,76 +567,11 @@ ${content}
 			const blob = new Blob([note.data.content.md], { type: 'text/markdown' });
 			saveAs(blob, `${note.title}.md`);
 		} else if (type === 'pdf') {
-			await downloadPdf(note);
-		}
-	};
-
-	const downloadPdf = async (note) => {
-		try {
-			const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
-				import('jspdf'),
-				import('html2canvas-pro')
-			]);
-
-			// Define a fixed virtual screen size
-			const virtualWidth = 1024; // Fixed width (adjust as needed)
-			const virtualHeight = 1400; // Fixed height (adjust as needed)
-
-			// STEP 1. Get a DOM node to render
-			const html = note.data?.content?.html ?? '';
-			let node;
-			if (html instanceof HTMLElement) {
-				node = html;
-			} else {
-				// If it's HTML string, render to a temporary hidden element
-				node = document.createElement('div');
-				node.innerHTML = html;
-				document.body.appendChild(node);
+			try {
+				await downloadPdf(note);
+			} catch (error) {
+				toast.error(`${error}`);
 			}
-
-			// Render to canvas with predefined width
-			const canvas = await html2canvas(node, {
-				useCORS: true,
-				scale: 2, // Keep at 1x to avoid unexpected enlargements
-				width: virtualWidth, // Set fixed virtual screen width
-				windowWidth: virtualWidth, // Ensure consistent rendering
-				windowHeight: virtualHeight
-			});
-
-			// Remove hidden node if needed
-			if (!(html instanceof HTMLElement)) {
-				document.body.removeChild(node);
-			}
-
-			const imgData = canvas.toDataURL('image/jpeg', 0.7);
-
-			// A4 page settings
-			const pdf = new jsPDF('p', 'mm', 'a4');
-			const imgWidth = 210; // A4 width in mm
-			const pageHeight = 297; // A4 height in mm
-
-			// Maintain aspect ratio
-			const imgHeight = (canvas.height * imgWidth) / canvas.width;
-			let heightLeft = imgHeight;
-			let position = 0;
-
-			pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-			heightLeft -= pageHeight;
-
-			// Handle additional pages
-			while (heightLeft > 0) {
-				position -= pageHeight;
-				pdf.addPage();
-
-				pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-				heightLeft -= pageHeight;
-			}
-
-			pdf.save(`${note.title}.pdf`);
-		} catch (error) {
-			console.error('Error generating PDF', error);
-
-			toast.error(`${error}`);
 		}
 	};
 

@@ -1,6 +1,7 @@
 from typing import List, Optional
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
+from fastapi.concurrency import run_in_threadpool
 import logging
 
 from open_webui.models.knowledge import (
@@ -223,7 +224,8 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
             failed_files = []
             for file in files:
                 try:
-                    process_file(
+                    await run_in_threadpool(
+                        process_file,
                         request,
                         ProcessFileForm(
                             file_id=file.id, collection_name=knowledge_base.id
@@ -548,7 +550,11 @@ def remove_file_from_knowledge_by_id(
     try:
         VECTOR_DB_CLIENT.delete(
             collection_name=knowledge.id, filter={"file_id": form_data.file_id}
-        )
+        )  # Remove by file_id first
+
+        VECTOR_DB_CLIENT.delete(
+            collection_name=knowledge.id, filter={"hash": file.hash}
+        )  # Remove by hash as well in case of duplicates
     except Exception as e:
         log.debug("This was most likely caused by bypassing embedding processing")
         log.debug(e)
@@ -577,7 +583,6 @@ def remove_file_from_knowledge_by_id(
             data["file_ids"] = file_ids
 
             knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
-
             if knowledge:
                 files = Files.get_file_metadatas_by_ids(file_ids)
 
@@ -706,7 +711,7 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 
 
 @router.post("/{id}/files/batch/add", response_model=Optional[KnowledgeFilesResponse])
-def add_files_to_knowledge_batch(
+async def add_files_to_knowledge_batch(
     request: Request,
     id: str,
     form_data: list[KnowledgeFileIdForm],
@@ -746,7 +751,7 @@ def add_files_to_knowledge_batch(
 
     # Process files
     try:
-        result = process_files_batch(
+        result = await process_files_batch(
             request=request,
             form_data=BatchProcessFilesForm(files=files, collection_name=id),
             user=user,

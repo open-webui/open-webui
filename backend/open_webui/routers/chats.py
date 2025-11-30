@@ -7,6 +7,7 @@ from open_webui.socket.main import get_event_emitter
 from open_webui.models.chats import (
     ChatForm,
     ChatImportForm,
+    ChatsImportForm,
     ChatResponse,
     Chats,
     ChatTitleIdResponse,
@@ -39,6 +40,7 @@ router = APIRouter()
 def get_session_user_chat_list(
     user=Depends(get_verified_user),
     page: Optional[int] = None,
+    include_pinned: Optional[bool] = False,
     include_folders: Optional[bool] = False,
 ):
     try:
@@ -47,11 +49,15 @@ def get_session_user_chat_list(
             skip = (page - 1) * limit
 
             return Chats.get_chat_title_id_list_by_user_id(
-                user.id, include_folders=include_folders, skip=skip, limit=limit
+                user.id,
+                include_folders=include_folders,
+                include_pinned=include_pinned,
+                skip=skip,
+                limit=limit,
             )
         else:
             return Chats.get_chat_title_id_list_by_user_id(
-                user.id, include_folders=include_folders
+                user.id, include_folders=include_folders, include_pinned=include_pinned
             )
     except Exception as e:
         log.exception(e)
@@ -137,26 +143,15 @@ async def create_new_chat(form_data: ChatForm, user=Depends(get_verified_user)):
 
 
 ############################
-# ImportChat
+# ImportChats
 ############################
 
 
-@router.post("/import", response_model=Optional[ChatResponse])
-async def import_chat(form_data: ChatImportForm, user=Depends(get_verified_user)):
+@router.post("/import", response_model=list[ChatResponse])
+async def import_chats(form_data: ChatsImportForm, user=Depends(get_verified_user)):
     try:
-        chat = Chats.import_chat(user.id, form_data)
-        if chat:
-            tags = chat.meta.get("tags", [])
-            for tag_id in tags:
-                tag_id = tag_id.replace(" ", "_").lower()
-                tag_name = " ".join([word.capitalize() for word in tag_id.split("_")])
-                if (
-                    tag_id != "none"
-                    and Tags.get_tag_by_name_and_user_id(tag_name, user.id) is None
-                ):
-                    Tags.insert_new_tag(tag_name, user.id)
-
-        return ChatResponse(**chat.model_dump())
+        chats = Chats.import_chats(user.id, form_data.chats)
+        return chats
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -223,7 +218,7 @@ async def get_chat_list_by_folder_id(
     folder_id: str, page: Optional[int] = 1, user=Depends(get_verified_user)
 ):
     try:
-        limit = 60
+        limit = 10
         skip = (page - 1) * limit
 
         return [
@@ -653,19 +648,28 @@ async def clone_chat_by_id(
             "title": form_data.title if form_data.title else f"Clone of {chat.title}",
         }
 
-        chat = Chats.import_chat(
+        chats = Chats.import_chats(
             user.id,
-            ChatImportForm(
-                **{
-                    "chat": updated_chat,
-                    "meta": chat.meta,
-                    "pinned": chat.pinned,
-                    "folder_id": chat.folder_id,
-                }
-            ),
+            [
+                ChatImportForm(
+                    **{
+                        "chat": updated_chat,
+                        "meta": chat.meta,
+                        "pinned": chat.pinned,
+                        "folder_id": chat.folder_id,
+                    }
+                )
+            ],
         )
 
-        return ChatResponse(**chat.model_dump())
+        if chats:
+            chat = chats[0]
+            return ChatResponse(**chat.model_dump())
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=ERROR_MESSAGES.DEFAULT(),
+            )
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
@@ -693,18 +697,28 @@ async def clone_shared_chat_by_id(id: str, user=Depends(get_verified_user)):
             "title": f"Clone of {chat.title}",
         }
 
-        chat = Chats.import_chat(
+        chats = Chats.import_chats(
             user.id,
-            ChatImportForm(
-                **{
-                    "chat": updated_chat,
-                    "meta": chat.meta,
-                    "pinned": chat.pinned,
-                    "folder_id": chat.folder_id,
-                }
-            ),
+            [
+                ChatImportForm(
+                    **{
+                        "chat": updated_chat,
+                        "meta": chat.meta,
+                        "pinned": chat.pinned,
+                        "folder_id": chat.folder_id,
+                    }
+                )
+            ],
         )
-        return ChatResponse(**chat.model_dump())
+
+        if chats:
+            chat = chats[0]
+            return ChatResponse(**chat.model_dump())
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=ERROR_MESSAGES.DEFAULT(),
+            )
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()

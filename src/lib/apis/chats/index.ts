@@ -65,15 +65,7 @@ export const unarchiveAllChats = async (token: string) => {
 	return res;
 };
 
-export const importChat = async (
-	token: string,
-	chat: object,
-	meta: object | null,
-	pinned?: boolean,
-	folderId?: string | null,
-	createdAt: number | null = null,
-	updatedAt: number | null = null
-) => {
+export const importChats = async (token: string, chats: object[]) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/import`, {
@@ -84,12 +76,7 @@ export const importChat = async (
 			authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			chat: chat,
-			meta: meta ?? {},
-			pinned: pinned,
-			folder_id: folderId,
-			created_at: createdAt ?? null,
-			updated_at: updatedAt ?? null
+			chats
 		})
 	})
 		.then(async (res) => {
@@ -112,6 +99,7 @@ export const importChat = async (
 export const getChatList = async (
 	token: string = '',
 	page: number | null = null,
+	include_pinned: boolean = false,
 	include_folders: boolean = false
 ) => {
 	let error = null;
@@ -123,6 +111,10 @@ export const getChatList = async (
 
 	if (include_folders) {
 		searchParams.append('include_folders', 'true');
+	}
+
+	if (include_pinned) {
+		searchParams.append('include_pinned', 'true');
 	}
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/?${searchParams.toString()}`, {

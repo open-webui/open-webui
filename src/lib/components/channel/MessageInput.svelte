@@ -865,7 +865,7 @@
 								<div
 									class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-2.5 pb-[5px] px-1 resize-none h-fit max-h-96 overflow-auto"
 								>
-									{#key $settings?.richTextInput}
+									{#key $settings?.richTextInput && $settings?.showFormattingToolbar}
 										<RichTextInput
 											id="chat-input"
 											bind:this={chatInputElement}

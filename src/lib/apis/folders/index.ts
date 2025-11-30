@@ -239,10 +239,13 @@ export const updateFolderItemsById = async (token: string, id: string, items: Fo
 	return res;
 };
 
-export const deleteFolderById = async (token: string, id: string) => {
+export const deleteFolderById = async (token: string, id: string, deleteContents: boolean) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}`, {
+	const searchParams = new URLSearchParams();
+	searchParams.append('delete_contents', deleteContents ? 'true' : 'false');
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}?${searchParams.toString()}`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
