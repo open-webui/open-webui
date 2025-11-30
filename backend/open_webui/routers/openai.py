@@ -1210,21 +1210,14 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
         body_json = json.loads(body)
         model_id = body_json.get("model")
 
-        # Always prioritize frontend 'reasoning' object over model 'reasoning_effort'
-        # reasoning_effort is deprecated in favor of reasoning object
-        if "reasoning" in body_json and isinstance(body_json["reasoning"], dict):
-            body_json.pop("reasoning_effort", None)
-        elif "reasoning_effort" in body_json:
-            body_json["reasoning"] = {"effort": body_json.pop("reasoning_effort")}
-
         # Ensure usage is returned when streaming
         if body_json.get("stream", False):
             if "stream_options" not in body_json:
                 body_json["stream_options"] = {"include_usage": True}
+                body = json.dumps(body_json).encode()
             elif isinstance(body_json["stream_options"], dict):
                 body_json["stream_options"]["include_usage"] = True
-        
-        body = json.dumps(body_json).encode()
+                body = json.dumps(body_json).encode()
     except Exception:
         pass
 
