@@ -137,7 +137,7 @@ async def get_all_channels(user=Depends(get_verified_user)):
 ############################
 
 
-@router.get("/dm/{user_id}", response_model=Optional[ChannelModel])
+@router.get("/users/{user_id}", response_model=Optional[ChannelModel])
 async def get_dm_channel_by_user_id(
     request: Request, user_id: str, user=Depends(get_verified_user)
 ):

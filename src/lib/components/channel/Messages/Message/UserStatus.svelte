@@ -2,48 +2,96 @@
 	import { getContext, onMount } from 'svelte';
 
 	const i18n = getContext('i18n');
+
+	import { user as _user } from '$lib/stores';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { getDMChannelByUserId } from '$lib/apis/channels';
+
+	import ChatBubbles from '$lib/components/icons/ChatBubbles.svelte';
+	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
+	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
+	import { goto } from '$app/navigation';
 
 	export let user = null;
+
+	const directMessageHandler = async () => {
+		if (!user) {
+			return;
+		}
+
+		const res = await getDMChannelByUserId(localStorage.token, user.id).catch((error) => {
+			console.error('Error fetching DM channel:', error);
+			return null;
+		});
+
+		if (res) {
+			console.log(res);
+			goto(`/channels/${res.id}`);
+		}
+	};
 </script>
 
 {#if user}
-	<div class=" flex gap-3.5 w-full py-3 px-3 items-center">
-		<div class=" items-center flex shrink-0">
-			<img
-				src={`${WEBUI_API_BASE_URL}/users/${user?.id}/profile/image`}
-				class=" size-12 object-cover rounded-xl"
-				alt="profile"
-			/>
-		</div>
-
-		<div class=" flex flex-col w-full flex-1">
-			<div class="mb-0.5 font-medium line-clamp-1 pr-2">
-				{user.name}
+	<div class="py-2.5">
+		<div class=" flex gap-3.5 w-full px-2.5 items-center">
+			<div class=" items-center flex shrink-0">
+				<img
+					src={`${WEBUI_API_BASE_URL}/users/${user?.id}/profile/image`}
+					class=" size-12 object-cover rounded-xl"
+					alt="profile"
+				/>
 			</div>
 
-			<div class=" flex items-center gap-2">
-				{#if user?.is_active}
-					<div>
-						<span class="relative flex size-2">
-							<span
-								class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
-							/>
-							<span class="relative inline-flex rounded-full size-2 bg-green-500" />
-						</span>
-					</div>
+			<div class=" flex flex-col w-full flex-1">
+				<div class="mb-0.5 font-medium line-clamp-1 pr-2">
+					{user.name}
+				</div>
 
-					<span class="text-xs"> {$i18n.t('Active')} </span>
-				{:else}
-					<div>
-						<span class="relative flex size-2">
-							<span class="relative inline-flex rounded-full size-2 bg-gray-500" />
-						</span>
-					</div>
+				<div class=" flex items-center gap-2">
+					{#if user?.is_active}
+						<div>
+							<span class="relative flex size-2">
+								<span
+									class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
+								/>
+								<span class="relative inline-flex rounded-full size-2 bg-green-500" />
+							</span>
+						</div>
 
-					<span class="text-xs"> {$i18n.t('Away')} </span>
-				{/if}
+						<span class="text-xs"> {$i18n.t('Active')} </span>
+					{:else}
+						<div>
+							<span class="relative flex size-2">
+								<span class="relative inline-flex rounded-full size-2 bg-gray-500" />
+							</span>
+						</div>
+
+						<span class="text-xs"> {$i18n.t('Away')} </span>
+					{/if}
+				</div>
 			</div>
 		</div>
+
+		{#if $_user?.id !== user.id}
+			<hr class="border-gray-100/50 dark:border-gray-800/50 my-2.5" />
+
+			<div class=" flex flex-col w-full px-2.5 items-center">
+				<button
+					class="w-full text-left px-3 py-1.5 rounded-xl border border-gray-100/50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-850 transition flex items-center gap-2 text-sm"
+					type="button"
+					on:click={() => {
+						directMessageHandler();
+					}}
+				>
+					<div>
+						<ChatBubbleOval class="size-4" />
+					</div>
+
+					<div class="font-medium">
+						{$i18n.t('Message')}
+					</div>
+				</button>
+			</div>
+		{/if}
 	</div>
 {/if}
