@@ -76,8 +76,9 @@
 					<div class="flex items-center gap-0.5 shrink-0">
 						{#if channel?.type === 'dm'}
 							{#if channel?.users}
-								<div class="flex mr-1.5">
-									{#each channel.users.filter((u) => u.id !== $user?.id).slice(0, 2) as u, index}
+								{@const channelMembers = channel.users.filter((u) => u.id !== $user?.id)}
+								<div class="flex mr-1.5 relative">
+									{#each channelMembers.slice(0, 2) as u, index}
 										<img
 											src={`${WEBUI_API_BASE_URL}/users/${u.id}/profile/image`}
 											alt={u.name}
@@ -87,6 +88,24 @@
 												: ''}"
 										/>
 									{/each}
+
+									{#if channelMembers.length === 1}
+										<div class="absolute bottom-0 right-0">
+											<span class="relative flex size-2">
+												{#if channelMembers[0]?.is_active}
+													<span
+														class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
+													></span>
+												{/if}
+												<span
+													class="relative inline-flex size-2 rounded-full {channelMembers[0]
+														?.is_active
+														? 'bg-green-500'
+														: 'bg-gray-300 dark:bg-gray-700'} border-[1.5px] border-white dark:border-gray-900"
+												></span>
+											</span>
+										</div>
+									{/if}
 								</div>
 							{:else}
 								<Users className="size-4 ml-1 mr-0.5" strokeWidth="2" />

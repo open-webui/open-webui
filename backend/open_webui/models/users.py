@@ -107,6 +107,12 @@ class UserModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class UserStatusModel(UserModel):
+    is_active: bool = False
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ApiKey(Base):
     __tablename__ = "api_key"
 
@@ -179,7 +185,7 @@ class UserIdNameResponse(BaseModel):
 class UserIdNameStatusResponse(BaseModel):
     id: str
     name: str
-    is_active: bool = False
+    is_active: Optional[bool] = None
 
 
 class UserInfoListResponse(BaseModel):
@@ -431,7 +437,7 @@ class UsersTable:
                 "total": total,
             }
 
-    def get_users_by_user_ids(self, user_ids: list[str]) -> list[UserModel]:
+    def get_users_by_user_ids(self, user_ids: list[str]) -> list[UserStatusModel]:
         with get_db() as db:
             users = db.query(User).filter(User.id.in_(user_ids)).all()
             return [UserModel.model_validate(user) for user in users]
