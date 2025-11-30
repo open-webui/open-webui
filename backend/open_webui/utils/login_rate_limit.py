@@ -23,5 +23,4 @@ class RateLimiter:
         return True
 
     def reset(self, key: str):
-        if key in self.attempts:
-            del self.attempts[key]
+        self.attempts.pop(key)
