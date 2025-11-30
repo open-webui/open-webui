@@ -8,7 +8,7 @@ from typing import Optional
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.config import get_config, save_config
-from open_webui.config import BannerModel
+from open_webui.config import BannerModel, ModelColorsConfigModel
 
 from open_webui.utils.tools import (
     get_tool_server_data,
@@ -536,3 +536,27 @@ async def get_banners(
     user=Depends(get_verified_user),
 ):
     return request.app.state.config.BANNERS
+
+
+############################
+# ModelColors
+############################
+
+
+@router.get("/model-colors")
+async def get_model_colors(
+    request: Request,
+    user=Depends(get_verified_user),
+):
+    return request.app.state.config.MODEL_COLORS
+
+
+@router.post("/model-colors")
+async def set_model_colors(
+    request: Request,
+    form_data: ModelColorsConfigModel,
+    user=Depends(get_admin_user),
+):
+    data = form_data.model_dump()
+    request.app.state.config.MODEL_COLORS = data
+    return request.app.state.config.MODEL_COLORS

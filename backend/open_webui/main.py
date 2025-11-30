@@ -343,6 +343,7 @@ from open_webui.config import (
     WEBUI_AUTH,
     WEBUI_NAME,
     WEBUI_BANNERS,
+    MODEL_COLORS,
     WEBHOOK_URL,
     ADMIN_EMAIL,
     SHOW_ADMIN_DETAILS,
@@ -766,6 +767,7 @@ app.state.config.RESPONSE_WATERMARK = RESPONSE_WATERMARK
 app.state.config.USER_PERMISSIONS = USER_PERMISSIONS
 app.state.config.WEBHOOK_URL = WEBHOOK_URL
 app.state.config.BANNERS = WEBUI_BANNERS
+app.state.config.MODEL_COLORS = MODEL_COLORS
 
 
 app.state.config.ENABLE_FOLDERS = ENABLE_FOLDERS

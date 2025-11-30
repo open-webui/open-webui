@@ -15,7 +15,7 @@
 	import { getAllTags } from '$lib/apis/chats';
 	import { getPrompts } from '$lib/apis/prompts';
 	import { getTools } from '$lib/apis/tools';
-	import { getBanners } from '$lib/apis/configs';
+	import { getBanners, getModelColorsConfig } from '$lib/apis/configs';
 	import { getUserSettings } from '$lib/apis/users';
 
 	import { WEBUI_VERSION } from '$lib/constants';
@@ -32,6 +32,7 @@
 		functions,
 		tags,
 		banners,
+		modelColorsConfig,
 		showSettings,
 		showShortcuts,
 		showChangelog,
@@ -140,6 +141,11 @@
 		banners.set(bannersData);
 	};
 
+	const setModelColors = async () => {
+		const modelColorsData = await getModelColorsConfig(localStorage.token);
+		modelColorsConfig.set(modelColorsData);
+	};
+
 	const setTools = async () => {
 		const toolsData = await getTools(localStorage.token);
 		tools.set(toolsData);
@@ -158,6 +164,7 @@
 		await Promise.all([
 			checkLocalDBChats(),
 			setBanners(),
+			setModelColors(),
 			setTools(),
 			setUserSettings(async () => {
 				await Promise.all([setModels(), setToolServers()]);

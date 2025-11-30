@@ -10,17 +10,18 @@
 	import { config, settings, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 
-	import { banners as _banners } from '$lib/stores';
-	import type { Banner } from '$lib/types';
+	import { banners as _banners, modelColorsConfig as _modelColorsConfig } from '$lib/stores';
+	import type { Banner, ModelColorsConfig } from '$lib/types';
 
 	import { getBaseModels } from '$lib/apis/models';
-	import { getBanners, setBanners } from '$lib/apis/configs';
+	import { getBanners, setBanners, getModelColorsConfig, setModelColorsConfig } from '$lib/apis/configs';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Banners from './Interface/Banners.svelte';
+	import ModelColors from './Interface/ModelColors.svelte';
 	import PromptSuggestions from '$lib/components/workspace/Models/PromptSuggestions.svelte';
 
 	const dispatch = createEventDispatcher();
@@ -48,6 +49,11 @@
 
 	let promptSuggestions = [];
 	let banners: Banner[] = [];
+	let modelColorsConfig: ModelColorsConfig = {
+		enabled: false,
+		defaultColor: '#3b82f6',
+		mappings: []
+	};
 
 	const updateInterfaceHandler = async () => {
 		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
@@ -55,12 +61,19 @@
 		promptSuggestions = promptSuggestions.filter((p) => p.content !== '');
 		promptSuggestions = await setDefaultPromptSuggestions(localStorage.token, promptSuggestions);
 		await updateBanners();
+		await updateModelColors();
 
 		await config.set(await getBackendConfig());
 	};
 
 	const updateBanners = async () => {
 		_banners.set(await setBanners(localStorage.token, banners));
+	};
+
+	const updateModelColors = async () => {
+		// Filter out empty pattern mappings before saving
+		modelColorsConfig.mappings = modelColorsConfig.mappings.filter((m) => m.pattern !== '');
+		_modelColorsConfig.set(await setModelColorsConfig(localStorage.token, modelColorsConfig));
 	};
 
 	let workspaceModels = null;
@@ -72,6 +85,7 @@
 		taskConfig = await getTaskConfig(localStorage.token);
 		promptSuggestions = $config?.default_prompt_suggestions ?? [];
 		banners = await getBanners(localStorage.token);
+		modelColorsConfig = await getModelColorsConfig(localStorage.token);
 
 		workspaceModels = await getBaseModels(localStorage.token);
 		baseModels = await getModels(localStorage.token, null, false);
@@ -464,6 +478,16 @@
 					</div>
 
 					<Banners bind:banners />
+				</div>
+
+				<div class="mb-2.5">
+					<div class="flex w-full justify-between mb-2">
+						<div class="self-center text-xs">
+							{$i18n.t('Model Accent Colors')}
+						</div>
+					</div>
+
+					<ModelColors bind:config={modelColorsConfig} {models} />
 				</div>
 
 				{#if $user?.role === 'admin'}

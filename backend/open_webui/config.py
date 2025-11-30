@@ -1674,6 +1674,53 @@ except Exception as e:
 WEBUI_BANNERS = PersistentConfig("WEBUI_BANNERS", "ui.banners", banners)
 
 
+####################################
+# MODEL ACCENT COLORS
+####################################
+
+
+class WatermarkConfigModel(BaseModel):
+    enabled: bool = False
+    useModelIcon: bool = True
+    customUrl: Optional[str] = None
+    opacity: float = 0.03
+    position: str = "center"
+    size: str = "200px"
+
+
+class BadgeConfigModel(BaseModel):
+    enabled: bool = False
+    size: str = "24px"
+
+
+class ModelColorMappingModel(BaseModel):
+    pattern: str
+    color: str
+    priority: int = 0
+    watermark: Optional[WatermarkConfigModel] = None
+    badge: Optional[BadgeConfigModel] = None
+
+
+class ModelColorsConfigModel(BaseModel):
+    enabled: bool = False
+    defaultColor: str = "#3b82f6"
+    mappings: list[ModelColorMappingModel] = []
+
+
+try:
+    model_colors_data = json.loads(os.environ.get("MODEL_COLORS", "{}"))
+    model_colors = ModelColorsConfigModel(**model_colors_data) if model_colors_data else ModelColorsConfigModel()
+except Exception as e:
+    log.exception(f"Error loading MODEL_COLORS: {e}")
+    model_colors = ModelColorsConfigModel()
+
+MODEL_COLORS = PersistentConfig(
+    "MODEL_COLORS",
+    "ui.model_colors",
+    model_colors.model_dump(),
+)
+
+
 SHOW_ADMIN_DETAILS = PersistentConfig(
     "SHOW_ADMIN_DETAILS",
     "auth.admin.show",

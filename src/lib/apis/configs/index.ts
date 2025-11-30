@@ -1,5 +1,5 @@
 import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-import type { Banner } from '$lib/types';
+import type { Banner, ModelColorsConfig } from '$lib/types';
 
 export const importConfig = async (token: string, config) => {
 	let error = null;
@@ -431,6 +431,64 @@ export const setBanners = async (token: string, banners: Banner[]) => {
 		body: JSON.stringify({
 			banners: banners
 		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getModelColorsConfig = async (token: string): Promise<ModelColorsConfig> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/model-colors`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const setModelColorsConfig = async (
+	token: string,
+	config: ModelColorsConfig
+): Promise<ModelColorsConfig> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/model-colors`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(config)
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

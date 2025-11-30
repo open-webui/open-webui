@@ -767,7 +767,7 @@
 
 						<div
 							bind:this={contentContainerElement}
-							class="w-full flex flex-col relative {edit ? 'hidden' : ''}"
+							class="w-full flex flex-col relative model-accent-message-border {edit ? 'hidden' : ''}"
 							id="response-content-container"
 						>
 							{#if message.content === '' && !message.error && ((model?.info?.meta?.capabilities?.status_updates ?? true) ? (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 || (message?.statusHistory?.at(-1)?.hidden ?? false) : true)}
