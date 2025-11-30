@@ -8,6 +8,8 @@ from pydantic import BaseModel
 
 
 from open_webui.socket.main import (
+    emit_to_users,
+    enter_room_for_users,
     sio,
     get_user_ids_from_room,
 )
@@ -156,6 +158,20 @@ async def get_dm_channel_by_user_id(
     try:
         existing_channel = Channels.get_dm_channel_by_user_ids([user.id, user_id])
         if existing_channel:
+            participant_ids = [
+                member.user_id
+                for member in Channels.get_members_by_channel_id(existing_channel.id)
+            ]
+
+            await emit_to_users(
+                "events:channel",
+                {"data": {"type": "channel:created"}},
+                participant_ids,
+            )
+            await enter_room_for_users(
+                f"channel:{existing_channel.id}", participant_ids
+            )
+
             Channels.update_member_active_status(existing_channel.id, user.id, True)
             return ChannelModel(**existing_channel.model_dump())
 
@@ -167,7 +183,23 @@ async def get_dm_channel_by_user_id(
             ),
             user.id,
         )
-        return ChannelModel(**channel.model_dump())
+
+        if channel:
+            participant_ids = [
+                member.user_id
+                for member in Channels.get_members_by_channel_id(channel.id)
+            ]
+
+            await emit_to_users(
+                "events:channel",
+                {"data": {"type": "channel:created"}},
+                participant_ids,
+            )
+            await enter_room_for_users(f"channel:{channel.id}", participant_ids)
+
+            return ChannelModel(**channel.model_dump())
+        else:
+            raise Exception("Error creating channel")
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -205,11 +237,42 @@ async def create_new_channel(
                 [user.id, *form_data.user_ids]
             )
             if existing_channel:
+                participant_ids = [
+                    member.user_id
+                    for member in Channels.get_members_by_channel_id(
+                        existing_channel.id
+                    )
+                ]
+                await emit_to_users(
+                    "events:channel",
+                    {"data": {"type": "channel:created"}},
+                    participant_ids,
+                )
+                await enter_room_for_users(
+                    f"channel:{existing_channel.id}", participant_ids
+                )
+
                 Channels.update_member_active_status(existing_channel.id, user.id, True)
                 return ChannelModel(**existing_channel.model_dump())
 
         channel = Channels.insert_new_channel(form_data, user.id)
-        return ChannelModel(**channel.model_dump())
+
+        if channel:
+            participant_ids = [
+                member.user_id
+                for member in Channels.get_members_by_channel_id(channel.id)
+            ]
+
+            await emit_to_users(
+                "events:channel",
+                {"data": {"type": "channel:created"}},
+                participant_ids,
+            )
+            await enter_room_for_users(f"channel:{channel.id}", participant_ids)
+
+            return ChannelModel(**channel.model_dump())
+        else:
+            raise Exception("Error creating channel")
     except Exception as e:
         log.exception(e)
         raise HTTPException(

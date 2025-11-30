@@ -3,9 +3,9 @@
 
 	const i18n = getContext('i18n');
 
-	import { user as _user, socket } from '$lib/stores';
+	import { user as _user, channels, socket } from '$lib/stores';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { getDMChannelByUserId } from '$lib/apis/channels';
+	import { getChannels, getDMChannelByUserId } from '$lib/apis/channels';
 
 	import ChatBubbles from '$lib/components/icons/ChatBubbles.svelte';
 	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
@@ -25,7 +25,6 @@
 		});
 
 		if (res) {
-			$socket.emit('join-channels', { auth: { token: $_user?.token } });
 			goto(`/channels/${res.id}`);
 		}
 	};
