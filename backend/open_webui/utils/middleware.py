@@ -545,13 +545,37 @@ async def chat_memory_handler(
         entries.append(f"[{created_at_date}] {mem.content}")
 
     # 3.2 Mem0 检索结果
+    '''
+      {
+    "id": "3c90c3cc-0d44-4b50-8888-8dd25736052a",
+    "memory": "<string>",
+    "user_id": "<string>",
+    "metadata": {},
+    "categories": [
+      "<string>"
+    ],
+    "immutable": false,
+    "expiration_date": null,
+    "created_at": "2023-11-07T05:31:56Z",
+    "updated_at": "2023-11-07T05:31:56Z"
+  }
+    '''
     for item in mem0_results:
-        entries.append(f"[Mem0] {item}")
+        memory_content = item["memory"] if isinstance(item, dict) else item
+        created_at_date = time.strftime("%Y-%m-%d", time.localtime(item.get("created_at", 0))) if isinstance(item, dict) else "Unknown Date"
+        categories = item.get("categories", []) if isinstance(item, dict) else []
+        if categories:
+            entries.append(f"[{created_at_date}] {memory_content} (Categories: {', '.join(categories)})")
+        else:
+            entries.append(f"[{created_at_date}] {memory_content}")
+
 
     if not entries:
         return form_data
 
-    user_context = ""
+    #排序
+    entries.sort(key=lambda x: x.split("]")[0], reverse=True)
+    user_context = "以下为检索到的相关记忆条目（按时间顺序）：\n\n"
     for idx, entry in enumerate(entries):
         user_context += f"{idx + 1}. {entry}\n"
 

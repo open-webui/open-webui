@@ -28,7 +28,7 @@ async def mem0_search(user_id: str, chat_id: str, last_message: str) -> list[str
         log.debug(f"Mem0 search failed: {e}")
         return []
 
-async def mem0_search_and_add(user_id: str, chat_id: str, last_message: str) -> list[str]:
+async def mem0_search_and_add(user_id: str, chat_id: str, last_message: str) -> list[Dict]:
     """
     检索并添加记忆，添加记忆使用mem0 的add功能，返回若干相关记忆条目（字符串）。
     增加 chat_id 便于按会话窗口区分/隔离记忆。
@@ -45,7 +45,7 @@ async def mem0_search_and_add(user_id: str, chat_id: str, last_message: str) -> 
             memories=[]
         else:
             log.info(f"mem0_search_and_add found {len(serach_rst['results'])} results")
-            memories=[item.get("memory", item.get("text", "")) for item in serach_rst["results"]]
+            memories=serach_rst["results"]
         added_messages= [{"role": "user", "content": last_message}]
         memory_client.add(added_messages, user_id=user_id,enable_graph=True,async_mode=False, metadata={"session_id": chat_id})
         log.info(f"mem0_add added message for user_id: {user_id}")
