@@ -94,8 +94,12 @@ async def get_channels(request: Request, user=Depends(get_verified_user)):
         last_message_at = last_message.created_at if last_message else None
 
         channel_member = Channels.get_member_by_channel_and_user_id(channel.id, user.id)
-        unread_count = Messages.get_unread_message_count(
-            channel.id, user.id, channel_member.last_read_at if channel_member else None
+        unread_count = (
+            Messages.get_unread_message_count(
+                channel.id, user.id, channel_member.last_read_at
+            )
+            if channel_member
+            else 0
         )
 
         user_ids = None
