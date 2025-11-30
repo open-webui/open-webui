@@ -147,6 +147,7 @@ class ToolServerConnection(BaseModel):
     headers: Optional[dict | str] = None
     key: Optional[str]
     config: Optional[dict]
+    placeholders: Optional[list[str]] = None
 
     model_config = ConfigDict(extra="allow")
 
