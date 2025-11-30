@@ -708,13 +708,19 @@
 						{/if}
 					</div>
 
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+
 					<div class="my-2">
 						<Knowledge bind:selectedItems={knowledge} />
 					</div>
 
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+
 					<div class="my-2">
 						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
 					</div>
+
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="my-2">
 						<FiltersSelector
@@ -747,6 +753,8 @@
 							actions={$functions.filter((func) => func.type === 'action')}
 						/>
 					</div>
+
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="my-2">
 						<Capabilities bind:capabilities />

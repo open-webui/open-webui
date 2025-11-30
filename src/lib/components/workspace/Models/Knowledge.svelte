@@ -170,6 +170,7 @@
 				{#each selectedItems as file, fileIdx}
 					<FileItem
 						{file}
+						small={true}
 						item={file}
 						name={file.name}
 						modal={true}
