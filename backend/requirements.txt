@@ -17,7 +17,7 @@ aiohttp==3.12.15
 async-timeout
 aiocache
 aiofiles
-starlette-compress==1.6.0
+starlette-compress==1.6.1
 httpx[socks,http2,zstd,cli,brotli]==0.28.1
 starsessions[redis]==2.2.1
 
