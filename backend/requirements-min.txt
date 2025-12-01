@@ -41,7 +41,7 @@ asgiref==3.8.1
 mcp==1.21.2
 openai
 
-langchain==0.3.27
+langchain==1.1.0
 langchain-community==0.3.29
 fake-useragent==2.2.0
 
