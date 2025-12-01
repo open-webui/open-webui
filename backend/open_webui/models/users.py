@@ -188,7 +188,7 @@ class UserIdNameResponse(BaseModel):
     name: str
 
 
-class UserIdNameStatusResponse(BaseModel):
+class UserIdNameStatusResponse(UserStatus):
     id: str
     name: str
     is_active: Optional[bool] = None
