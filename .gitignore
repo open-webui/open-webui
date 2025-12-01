@@ -307,6 +307,3 @@ dist
 cypress/videos
 cypress/screenshots
 .vscode/settings.json
-
-# docker-compose for local development
-docker-compose.local.yaml
