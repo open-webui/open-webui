@@ -62,7 +62,7 @@ ftfy==6.2.3
 chardet==5.2.0
 pypdf==6.4.0
 fpdf2==2.8.2
-pymdown-extensions==10.14.2
+pymdown-extensions==10.17.2
 docx2txt==0.8
 python-pptx==1.0.2
 unstructured==0.18.18
