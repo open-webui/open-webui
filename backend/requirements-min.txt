@@ -25,7 +25,7 @@ httpx[socks,http2,zstd,cli,brotli]==0.28.1
 starsessions[redis]==2.2.1
 
 sqlalchemy==2.0.38
-alembic==1.14.0
+alembic==1.17.2
 peewee==3.18.1
 peewee-migrate==1.12.2
 
