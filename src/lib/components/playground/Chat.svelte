@@ -2,7 +2,8 @@
 	import { toast } from 'svelte-sonner';
 
 	import { goto } from '$app/navigation';
-	import { onMount, tick, getContext } from 'svelte';
+	import { page } from '$app/stores';
+	import { onMount, onDestroy, tick, getContext } from 'svelte';
 
 	import {
 		OLLAMA_API_BASE_URL,
@@ -15,6 +16,7 @@
 	import { chatCompletion } from '$lib/apis/openai';
 
 	import { splitStream } from '$lib/utils';
+	import { Shortcut, shortcuts } from '$lib/shortcuts';
 	import Collapsible from '../common/Collapsible.svelte';
 
 	import Messages from '$lib/components/playground/Chat/Messages.svelte';
@@ -35,6 +37,7 @@
 
 	let systemTextareaElement: HTMLTextAreaElement;
 	let messagesContainerElement: HTMLDivElement;
+	let playgroundInputElement: HTMLTextAreaElement;
 
 	let showSystem = false;
 	let showSettings = false;
@@ -193,6 +196,83 @@
 		}
 	};
 
+	// Helper function to check if the pressed keys match the shortcut definition
+	const isShortcutMatch = (event: KeyboardEvent, shortcut): boolean => {
+		const keys = shortcut?.keys || [];
+
+		const normalized = keys.map((k) => k.toLowerCase());
+		const needCtrl = normalized.includes('ctrl') || normalized.includes('mod');
+		const needShift = normalized.includes('shift');
+		const needAlt = normalized.includes('alt');
+
+		const mainKeys = normalized.filter((k) => !['ctrl', 'shift', 'alt', 'mod'].includes(k));
+
+		// Get the main key pressed
+		const keyPressed = event.key.toLowerCase();
+
+		// Check modifiers
+		if (needShift && !event.shiftKey) return false;
+
+		if (needCtrl && !(event.ctrlKey || event.metaKey)) return false;
+		if (!needCtrl && (event.ctrlKey || event.metaKey)) return false;
+		if (needAlt && !event.altKey) return false;
+		if (!needAlt && event.altKey) return false;
+
+		if (mainKeys.length && !mainKeys.includes(keyPressed)) return false;
+
+		return true;
+	};
+
+	const handleKeyboardShortcuts = (event: KeyboardEvent) => {
+		// Only handle shortcuts when on playground route
+		if (!$page.url.pathname.startsWith('/playground')) {
+			return;
+		}
+
+		const isInputFocused = document.activeElement === playgroundInputElement;
+		const isSystemFocused = document.activeElement === systemTextareaElement;
+
+		// Handle playground-specific shortcuts
+		if (isShortcutMatch(event, shortcuts[Shortcut.PLAYGROUND_FOCUS_INPUT])) {
+			event.preventDefault();
+			event.stopPropagation();
+			playgroundInputElement?.focus();
+		} else if (isShortcutMatch(event, shortcuts[Shortcut.PLAYGROUND_RUN])) {
+			if (isInputFocused && !loading && message.trim() && selectedModelId) {
+				event.preventDefault();
+				event.stopPropagation();
+				submitHandler();
+			}
+		} else if (isShortcutMatch(event, shortcuts[Shortcut.PLAYGROUND_CANCEL])) {
+			if (loading) {
+				event.preventDefault();
+				event.stopPropagation();
+				stopResponse();
+			}
+		} else if (isShortcutMatch(event, shortcuts[Shortcut.PLAYGROUND_ADD_MESSAGE])) {
+			if (isInputFocused && message.trim()) {
+				event.preventDefault();
+				event.stopPropagation();
+				addHandler();
+				role = role === 'user' ? 'assistant' : 'user';
+			}
+		} else if (isShortcutMatch(event, shortcuts[Shortcut.PLAYGROUND_TOGGLE_SYSTEM])) {
+			// Don't prevent default if user is typing in system textarea
+			if (!isSystemFocused) {
+				event.preventDefault();
+				event.stopPropagation();
+				showSystem = !showSystem;
+			}
+		} else if (isShortcutMatch(event, shortcuts[Shortcut.PLAYGROUND_TOGGLE_ROLE])) {
+			// Don't prevent default if user is typing in input
+			if (!isInputFocused && !isSystemFocused) {
+				event.preventDefault();
+				event.stopPropagation();
+				role = role === 'user' ? 'assistant' : 'user';
+			}
+		}
+	};
+
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
 			await goto('/');
@@ -206,6 +286,12 @@
 			selectedModelId = '';
 		}
 		loaded = true;
+
+		document.addEventListener('keydown', handleKeyboardShortcuts);
+	});
+
+	onDestroy(() => {
+		document.removeEventListener('keydown', handleKeyboardShortcuts);
 	});
 </script>
 
@@ -278,6 +364,7 @@
 						<!-- $i18n.t('a user') -->
 						<!-- $i18n.t('an assistant') -->
 						<textarea
+							bind:this={playgroundInputElement}
 							bind:value={message}
 							class=" w-full h-full bg-transparent resize-none outline-hidden text-sm"
 							placeholder={$i18n.t(`Enter {{role}} message here`, {

@@ -2,13 +2,15 @@
 	import { toast } from 'svelte-sonner';
 
 	import { goto } from '$app/navigation';
-	import { onMount, tick, getContext } from 'svelte';
+	import { page } from '$app/stores';
+	import { onMount, onDestroy, tick, getContext } from 'svelte';
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, models, settings, showSidebar } from '$lib/stores';
 	import { chatCompletion } from '$lib/apis/openai';
 
 	import { splitStream } from '$lib/utils';
+	import { Shortcut, shortcuts } from '$lib/shortcuts';
 	import Selector from '$lib/components/chat/ModelSelector/Selector.svelte';
 
 	const i18n = getContext('i18n');
@@ -103,6 +105,61 @@
 		}
 	};
 
+	// Helper function to check if the pressed keys match the shortcut definition
+	const isShortcutMatch = (event: KeyboardEvent, shortcut): boolean => {
+		const keys = shortcut?.keys || [];
+
+		const normalized = keys.map((k) => k.toLowerCase());
+		const needCtrl = normalized.includes('ctrl') || normalized.includes('mod');
+		const needShift = normalized.includes('shift');
+		const needAlt = normalized.includes('alt');
+
+		const mainKeys = normalized.filter((k) => !['ctrl', 'shift', 'alt', 'mod'].includes(k));
+
+		// Get the main key pressed
+		const keyPressed = event.key.toLowerCase();
+
+		// Check modifiers
+		if (needShift && !event.shiftKey) return false;
+
+		if (needCtrl && !(event.ctrlKey || event.metaKey)) return false;
+		if (!needCtrl && (event.ctrlKey || event.metaKey)) return false;
+		if (needAlt && !event.altKey) return false;
+		if (!needAlt && event.altKey) return false;
+
+		if (mainKeys.length && !mainKeys.includes(keyPressed)) return false;
+
+		return true;
+	};
+
+	const handleKeyboardShortcuts = (event: KeyboardEvent) => {
+		// Only handle shortcuts when on playground completions route
+		if (!$page.url.pathname.startsWith('/playground')) {
+			return;
+		}
+
+		const isInputFocused = document.activeElement === textCompletionAreaElement;
+
+		// Handle playground-specific shortcuts
+		if (isShortcutMatch(event, shortcuts[Shortcut.PLAYGROUND_FOCUS_INPUT])) {
+			event.preventDefault();
+			event.stopPropagation();
+			textCompletionAreaElement?.focus();
+		} else if (isShortcutMatch(event, shortcuts[Shortcut.PLAYGROUND_RUN])) {
+			if (isInputFocused && !loading && selectedModelId) {
+				event.preventDefault();
+				event.stopPropagation();
+				submitHandler();
+			}
+		} else if (isShortcutMatch(event, shortcuts[Shortcut.PLAYGROUND_CANCEL])) {
+			if (loading) {
+				event.preventDefault();
+				event.stopPropagation();
+				stopResponse();
+			}
+		}
+	};
+
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
 			await goto('/');
@@ -116,6 +173,12 @@
 			selectedModelId = '';
 		}
 		loaded = true;
+
+		document.addEventListener('keydown', handleKeyboardShortcuts);
+	});
+
+	onDestroy(() => {
+		document.removeEventListener('keydown', handleKeyboardShortcuts);
 	});
 </script>
 

@@ -38,7 +38,15 @@ export enum Shortcut {
 	REGENERATE_RESPONSE = 'regenerateResponse',
 	COPY_LAST_CODE_BLOCK = 'copyLastCodeBlock',
 	COPY_LAST_RESPONSE = 'copyLastResponse',
-	STOP_GENERATING = 'stopGenerating'
+	STOP_GENERATING = 'stopGenerating',
+
+	//Playground
+	PLAYGROUND_FOCUS_INPUT = 'playgroundFocusInput',
+	PLAYGROUND_RUN = 'playgroundRun',
+	PLAYGROUND_CANCEL = 'playgroundCancel',
+	PLAYGROUND_ADD_MESSAGE = 'playgroundAddMessage',
+	PLAYGROUND_TOGGLE_SYSTEM = 'playgroundToggleSystem',
+	PLAYGROUND_TOGGLE_ROLE = 'playgroundToggleRole'
 }
 
 export const shortcuts: ShortcutRegistry = {
@@ -152,5 +160,40 @@ export const shortcuts: ShortcutRegistry = {
 		name: 'Copy Last Code Block',
 		keys: ['mod', 'shift', ';'],
 		category: 'Message'
+	},
+
+	//Playground
+	[Shortcut.PLAYGROUND_FOCUS_INPUT]: {
+		name: 'Focus Playground Input',
+		keys: ['mod', 'L'],
+		category: 'Playground'
+	},
+	[Shortcut.PLAYGROUND_RUN]: {
+		name: 'Run Playground',
+		keys: ['mod', 'Enter'],
+		category: 'Playground',
+		tooltip: 'Only active when Playground input is focused.'
+	},
+	[Shortcut.PLAYGROUND_CANCEL]: {
+		name: 'Cancel Playground Generation',
+		keys: ['Escape'],
+		category: 'Playground',
+		tooltip: 'Only active when Playground is generating.'
+	},
+	[Shortcut.PLAYGROUND_ADD_MESSAGE]: {
+		name: 'Add Message',
+		keys: ['mod', 'shift', 'Enter'],
+		category: 'Playground',
+		tooltip: 'Only active when Playground input is focused.'
+	},
+	[Shortcut.PLAYGROUND_TOGGLE_SYSTEM]: {
+		name: 'Toggle System Instructions',
+		keys: ['mod', 'S'],
+		category: 'Playground'
+	},
+	[Shortcut.PLAYGROUND_TOGGLE_ROLE]: {
+		name: 'Toggle Role (User/Assistant)',
+		keys: ['mod', 'R'],
+		category: 'Playground'
 	}
 };
