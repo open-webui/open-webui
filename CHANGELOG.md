@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🎨 The model valves button was corrected to prevent unintended form submission by adding explicit button type attribute, ensuring it no longer triggers message sending when the input area contains text. [#19534](https://github.com/open-webui/open-webui/pull/19534)
 - 🧠 Ollama model deletion was fixed by correcting the request payload format and ensuring the model selector properly displays the placeholder option. [Commit](https://github.com/open-webui/open-webui/commit/0f3156651c64bc5af188a65fc2908bdcecf30c74)
 - 🖼️ Image generation in temporary chats was fixed by correctly handling local chat sessions that are not persisted to the database. [Commit](https://github.com/open-webui/open-webui/commit/a7c7993bbf3a21cb7ba416525b89233cf2ad877f)
+- 📊 Audit logging was fixed by correctly awaiting the async user authentication call, resolving failures where coroutine objects were passed instead of user data. [#19658](https://github.com/open-webui/open-webui/pull/19658), [Commit](https://github.com/open-webui/open-webui/commit/dba86bc)
 
 ### Changed
 
