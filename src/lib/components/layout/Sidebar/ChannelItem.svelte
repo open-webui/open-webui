@@ -31,10 +31,13 @@
 	{channel}
 	edit={true}
 	{onUpdate}
-	onSubmit={async ({ name, access_control }) => {
+	onSubmit={async ({ name, is_private, access_control, group_ids, user_ids }) => {
 		const res = await updateChannelById(localStorage.token, channel.id, {
 			name,
-			access_control
+			is_private,
+			access_control,
+			group_ids,
+			user_ids
 		}).catch((error) => {
 			toast.error(error.message);
 		});
@@ -119,7 +122,7 @@
 					{/if}
 				{:else}
 					<div class=" size-4 justify-center flex items-center ml-1">
-						{#if channel?.access_control === null}
+						{#if channel?.type === 'group' ? !channel?.is_private : channel?.access_control === null}
 							<Hashtag className="size-3.5" strokeWidth="2.5" />
 						{:else}
 							<Lock className="size-[15px]" strokeWidth="2" />
@@ -154,7 +157,7 @@
 		</div>
 	</a>
 
-	{#if channel?.type === 'dm'}
+	{#if ['dm'].includes(channel?.type)}
 		<div
 			class="ml-0.5 mr-1 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
 		>
@@ -181,7 +184,7 @@
 				<XMark className="size-3.5" />
 			</button>
 		</div>
-	{:else if $user?.role === 'admin'}
+	{:else if $user?.role === 'admin' || channel.user_id === $user?.id}
 		<div
 			class="ml-0.5 mr-1 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
 		>

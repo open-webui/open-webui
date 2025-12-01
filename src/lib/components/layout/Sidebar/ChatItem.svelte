@@ -476,6 +476,14 @@
 						on:mouseenter={() => {
 							ignoreBlur = true;
 						}}
+						on:click={(e) => {
+							e.preventDefault();
+							e.stopImmediatePropagation();
+							e.stopPropagation();
+
+							generateTitleHandler();
+							ignoreBlur = false;
+						}}
 					>
 						<Sparkles strokeWidth="2" />
 					</button>

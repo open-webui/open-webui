@@ -234,7 +234,7 @@
 			</div>
 		{/if}
 
-		<hr class="border-gray-50 dark:border-gray-850 my-4" />
+		<hr class="border-gray-50 dark:border-gray-850/30 my-4" />
 
 		{#if $config?.features.enable_login_form}
 			<div class="mt-2">

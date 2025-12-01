@@ -19,8 +19,9 @@ from open_webui.models.users import (
     UserGroupIdsModel,
     UserGroupIdsListResponse,
     UserInfoListResponse,
-    UserIdNameListResponse,
+    UserInfoListResponse,
     UserRoleUpdateForm,
+    UserStatus,
     Users,
     UserSettings,
     UserUpdateForm,
@@ -102,19 +103,30 @@ async def get_all_users(
     return Users.get_users()
 
 
-@router.get("/search", response_model=UserIdNameListResponse)
+@router.get("/search", response_model=UserInfoListResponse)
 async def search_users(
     query: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
+    page: Optional[int] = 1,
     user=Depends(get_verified_user),
 ):
     limit = PAGE_ITEM_COUNT
 
-    page = 1  # Always return the first page for search
+    page = max(1, page)
     skip = (page - 1) * limit
 
     filter = {}
     if query:
         filter["query"] = query
+
+    filter = {}
+    if query:
+        filter["query"] = query
+    if order_by:
+        filter["order_by"] = order_by
+    if direction:
+        filter["direction"] = direction
 
     return Users.get_users(filter=filter, skip=skip, limit=limit)
 
@@ -196,8 +208,9 @@ class ChatPermissions(BaseModel):
 
 class FeaturesPermissions(BaseModel):
     api_keys: bool = False
-    folders: bool = True
     notes: bool = True
+    channels: bool = True
+    folders: bool = True
     direct_tool_servers: bool = False
 
     web_search: bool = True
@@ -288,6 +301,43 @@ async def update_user_settings_by_session_user(
 
 
 ############################
+# GetUserStatusBySessionUser
+############################
+
+
+@router.get("/user/status")
+async def get_user_status_by_session_user(user=Depends(get_verified_user)):
+    user = Users.get_user_by_id(user.id)
+    if user:
+        return user
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
+
+
+############################
+# UpdateUserStatusBySessionUser
+############################
+
+
+@router.post("/user/status/update")
+async def update_user_status_by_session_user(
+    form_data: UserStatus, user=Depends(get_verified_user)
+):
+    user = Users.get_user_by_id(user.id)
+    if user:
+        user = Users.update_user_status_by_id(user.id, form_data)
+        return user
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
+
+
+############################
 # GetUserInfoBySessionUser
 ############################
 
@@ -338,9 +388,10 @@ async def update_user_info_by_session_user(
 ############################
 
 
-class UserActiveResponse(BaseModel):
+class UserActiveResponse(UserStatus):
     name: str
     profile_image_url: Optional[str] = None
+
     is_active: bool
     model_config = ConfigDict(extra="allow")
 
@@ -365,8 +416,7 @@ async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
     if user:
         return UserActiveResponse(
             **{
-                "id": user.id,
-                "name": user.name,
+                **user.model_dump(),
                 "is_active": Users.is_user_active(user_id),
             }
         )

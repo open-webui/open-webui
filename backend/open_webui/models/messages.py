@@ -5,7 +5,7 @@ from typing import Optional
 
 from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
-from open_webui.models.users import Users, UserNameResponse
+from open_webui.models.users import Users, User, UserNameResponse
 from open_webui.models.channels import Channels, ChannelMember
 
 
@@ -100,7 +100,7 @@ class MessageForm(BaseModel):
 
 class Reactions(BaseModel):
     name: str
-    user_ids: list[str]
+    users: list[dict]
     count: int
 
 
@@ -373,6 +373,15 @@ class MessageTable:
         self, id: str, user_id: str, name: str
     ) -> Optional[MessageReactionModel]:
         with get_db() as db:
+            # check for existing reaction
+            existing_reaction = (
+                db.query(MessageReaction)
+                .filter_by(message_id=id, user_id=user_id, name=name)
+                .first()
+            )
+            if existing_reaction:
+                return MessageReactionModel.model_validate(existing_reaction)
+
             reaction_id = str(uuid.uuid4())
             reaction = MessageReactionModel(
                 id=reaction_id,
@@ -389,17 +398,30 @@ class MessageTable:
 
     def get_reactions_by_message_id(self, id: str) -> list[Reactions]:
         with get_db() as db:
-            all_reactions = db.query(MessageReaction).filter_by(message_id=id).all()
+            # JOIN User so all user info is fetched in one query
+            results = (
+                db.query(MessageReaction, User)
+                .join(User, MessageReaction.user_id == User.id)
+                .filter(MessageReaction.message_id == id)
+                .all()
+            )
 
             reactions = {}
-            for reaction in all_reactions:
+
+            for reaction, user in results:
                 if reaction.name not in reactions:
                     reactions[reaction.name] = {
                         "name": reaction.name,
-                        "user_ids": [],
+                        "users": [],
                         "count": 0,
                     }
-                reactions[reaction.name]["user_ids"].append(reaction.user_id)
+
+                reactions[reaction.name]["users"].append(
+                    {
+                        "id": user.id,
+                        "name": user.name,
+                    }
+                )
                 reactions[reaction.name]["count"] += 1
 
             return [Reactions(**reaction) for reaction in reactions.values()]

@@ -98,7 +98,7 @@
 		</div>
 
 		{#if ollamaVersion}
-			<hr class=" border-gray-100 dark:border-gray-850" />
+			<hr class=" border-gray-100/30 dark:border-gray-850/30" />
 
 			<div>
 				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Ollama Version')}</div>
@@ -110,7 +110,7 @@
 			</div>
 		{/if}
 
-		<hr class=" border-gray-100 dark:border-gray-850" />
+		<hr class=" border-gray-100/30 dark:border-gray-850/30" />
 
 		{#if $config?.license_metadata}
 			<div class="mb-2 text-xs">
