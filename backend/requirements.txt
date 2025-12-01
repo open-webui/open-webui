@@ -68,7 +68,7 @@ python-pptx==1.0.2
 unstructured==0.18.18
 msoffcrypto-tool==5.4.2
 nltk==3.9.1
-Markdown==3.9
+Markdown==3.10
 pypandoc==1.15
 pandas==2.2.3
 openpyxl==3.1.5
