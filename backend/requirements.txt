@@ -105,7 +105,7 @@ google-auth-httplib2
 google-auth-oauthlib
 
 googleapis-common-protos==1.70.0
-google-cloud-storage==2.19.0
+google-cloud-storage==3.6.0
 
 ## Databases
 pymongo
