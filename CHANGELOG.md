@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.41] - 2025-12-01
+## [0.6.41] - 2025-12-02
 
 ### Added
 
@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 💬 Channel message reactions now display the names of users who reacted when hovering over the emoji, showing up to three names with a count for additional reactors. [Commit](https://github.com/open-webui/open-webui/commit/05e79bdd0c7af70b631e958924e3656db1013b80)
 - 💬 Channel creators can now edit and delete their own group and DM channels without requiring administrator privileges, enabling users to manage the channels they create independently. [Commit](https://github.com/open-webui/open-webui/commit/f589b7c1895a6a77166c047891acfa21bc0936c4)
 - 💬 A new API endpoint was added to directly get or create a Direct Message channel with a specific user by their ID, streamlining programmatic DM channel creation for integrations and frontend workflows. [Commit](https://github.com/open-webui/open-webui/commit/f589b7c1895a6a77166c047891acfa21bc0936c4)
+- 👥 Users can now set a custom status with an emoji and message that displays in profile previews, the sidebar user menu, and Direct Message channel items in the sidebar, with the ability to clear status at any time, providing visibility into availability or current focus similar to team communication platforms. [Commit](https://github.com/open-webui/open-webui/commit/51621ba91a982e52da168ce823abffd11ad3e4fa), [Commit](https://github.com/open-webui/open-webui/commit/f5e8d4d5a004115489c35725408b057e24dfe318)
 - 👥 A group export API endpoint was added, enabling administrators to export complete group data including member lists for backup and migration purposes. [Commit](https://github.com/open-webui/open-webui/commit/09b6ea38c579659f8ca43ae5ea3746df3ac561ad)
 - 👥 The admin user list now displays an active status indicator next to each user, showing a visual green dot for users who have been active within the last three minutes. [Commit](https://github.com/open-webui/open-webui/commit/1b095d12ff2465b83afa94af89ded9593f8a8655)
 - 🔐 The admin user edit modal now displays OAuth identity information with a per-provider breakdown, showing each linked identity provider and its associated subject identifier separately. [#19573](https://github.com/open-webui/open-webui/pull/19573)
@@ -34,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- 🛠️ Tool call response token duplication was fixed by removing redundant message history additions in non-native function calling mode, resolving an issue where tool results were included twice in the context and causing 2x token consumption. [#19656](https://github.com/open-webui/open-webui/issues/19656), [Commit](https://github.com/open-webui/open-webui/commit/52ccab8)
 - 👥 Active user count accuracy was significantly improved by replacing the socket-based USER_POOL tracking with a database-backed heartbeat mechanism, resolving long-standing issues where Redis deployments displayed inflated user counts due to stale sessions never being cleaned up on disconnect. [#16074](https://github.com/open-webui/open-webui/discussions/16074), [Commit](https://github.com/open-webui/open-webui/commit/70948f8803e417459d5203839f8077fdbfbbb213)
 - 👥 Model list filtering in workspaces was corrected to properly include models shared with user groups, ensuring members can view models they have write access to through group permissions. [#19461](https://github.com/open-webui/open-webui/issues/19461), [Commit](https://github.com/open-webui/open-webui/commit/69722ba973768a5f689f2e2351bf583a8db9bba8)
 - 👥 User profile image display in preview contexts was fixed by resolving a Pydantic validation error that prevented proper rendering. [Commit](https://github.com/open-webui/open-webui/commit/c7eb7136893b0ddfdc5d55ffc7a05bd84a00f5d6)
