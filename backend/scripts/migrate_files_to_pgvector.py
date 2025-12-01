@@ -22,7 +22,7 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-from open_webui.models.knowledge import Knowledges
+from open_webui.models.knowledge import Knowledges, KnowledgeModel
 from open_webui.models.files import Files, FileModel
 from open_webui.models.users import Users
 from open_webui.storage.provider import Storage
@@ -47,6 +47,7 @@ from open_webui.config import (
     CHUNK_SIZE,
     CHUNK_OVERLAP,
 )
+from open_webui.internal.db import get_db
 from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
 from langchain_core.documents import Document
 import tiktoken
@@ -54,6 +55,7 @@ import json
 import uuid
 import time
 import requests
+import urllib3
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
