@@ -92,7 +92,7 @@ youtube-transcript-api==1.2.2
 pytube==15.0.0
 
 pydub
-ddgs==9.0.0
+ddgs==9.9.2
 
 azure-ai-documentintelligence==1.0.2
 azure-identity==1.25.0
