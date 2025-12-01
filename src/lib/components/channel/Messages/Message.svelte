@@ -93,7 +93,7 @@
 				class=" absolute {showButtons ? '' : 'invisible group-hover:visible'} right-1 -top-2 z-10"
 			>
 				<div
-					class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100 dark:border-gray-850"
+					class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100/30 dark:border-gray-850/30"
 				>
 					{#if onReaction}
 						<EmojiPicker
@@ -388,8 +388,9 @@
 							<Markdown
 								id={message.id}
 								content={message.content}
+								paragraphTag="span"
 							/>{#if message.created_at !== message.updated_at && (message?.meta?.model_id ?? null) === null}<span
-									class="text-gray-500 text-[10px]">({$i18n.t('edited')})</span
+									class="text-gray-500 text-[10px] pl-1 self-center">({$i18n.t('edited')})</span
 								>{/if}
 						{/if}
 					</div>

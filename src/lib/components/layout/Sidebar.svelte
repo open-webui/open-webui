@@ -181,9 +181,18 @@
 	};
 
 	const initChannels = async () => {
+		// default (none), group, dm type
 		await channels.set(
 			(await getChannels(localStorage.token)).sort((a, b) =>
-				a.type === b.type ? 0 : a.type === 'dm' ? 1 : -1
+				a.type === b.type
+					? 0
+					: a.type === 'dm'
+						? 1
+						: a.type === 'group'
+							? b.type === 'dm'
+								? -1
+								: 0
+							: -1
 			)
 		);
 	};
@@ -486,7 +495,7 @@
 
 <ChannelModal
 	bind:show={showCreateChannel}
-	onSubmit={async ({ type, name, access_control, user_ids }) => {
+	onSubmit={async ({ type, name, is_private, access_control, group_ids, user_ids }) => {
 		name = name?.trim();
 
 		if (type === 'dm') {
@@ -504,7 +513,9 @@
 		const res = await createNewChannel(localStorage.token, {
 			type: type,
 			name: name,
+			is_private: is_private,
 			access_control: access_control,
+			group_ids: group_ids,
 			user_ids: user_ids
 		}).catch((error) => {
 			toast.error(`${error}`);
@@ -562,7 +573,7 @@
 
 {#if !$mobile && !$showSidebar}
 	<div
-		class=" pt-[7px] pb-2 px-2 flex flex-col justify-between text-black dark:text-white hover:bg-gray-50/30 dark:hover:bg-gray-950/30 h-full z-10 transition-all border-e-[0.5px] border-gray-50 dark:border-gray-850"
+		class=" pt-[7px] pb-2 px-2 flex flex-col justify-between text-black dark:text-white hover:bg-gray-50/30 dark:hover:bg-gray-950/30 h-full z-10 transition-all border-e-[0.5px] border-gray-50 dark:border-gray-850/30"
 		id="sidebar"
 	>
 		<button
@@ -707,6 +718,7 @@
 					{#if $user !== undefined && $user !== null}
 						<UserMenu
 							role={$user?.role}
+							profile={true}
 							showActiveUsers={false}
 							on:show={(e) => {
 								if (e.detail === 'archived-chat') {
@@ -940,14 +952,14 @@
 					</Folder>
 				{/if}
 
-				{#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0)}
+				{#if $config?.features?.enable_channels && ($user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true))}
 					<Folder
 						id="sidebar-channels"
 						className="px-2 mt-0.5"
 						name={$i18n.t('Channels')}
 						chevron={false}
 						dragAndDrop={false}
-						onAdd={$user?.role === 'admin'
+						onAdd={$user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true)
 							? async () => {
 									await tick();
 
@@ -1270,6 +1282,7 @@
 					{#if $user !== undefined && $user !== null}
 						<UserMenu
 							role={$user?.role}
+							profile={true}
 							showActiveUsers={false}
 							on:show={(e) => {
 								if (e.detail === 'archived-chat') {

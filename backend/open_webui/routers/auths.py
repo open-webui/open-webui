@@ -17,7 +17,12 @@ from open_webui.models.auths import (
     SignupForm,
     UpdatePasswordForm,
 )
-from open_webui.models.users import UserProfileImageResponse, Users, UpdateProfileForm
+from open_webui.models.users import (
+    UserProfileImageResponse,
+    Users,
+    UpdateProfileForm,
+    UserStatus,
+)
 from open_webui.models.groups import Groups
 from open_webui.models.oauth_sessions import OAuthSessions
 
@@ -82,7 +87,7 @@ class SessionUserResponse(Token, UserProfileImageResponse):
     permissions: Optional[dict] = None
 
 
-class SessionUserInfoResponse(SessionUserResponse):
+class SessionUserInfoResponse(SessionUserResponse, UserStatus):
     bio: Optional[str] = None
     gender: Optional[str] = None
     date_of_birth: Optional[datetime.date] = None
@@ -139,6 +144,9 @@ async def get_session_user(
         "bio": user.bio,
         "gender": user.gender,
         "date_of_birth": user.date_of_birth,
+        "status_emoji": user.status_emoji,
+        "status_message": user.status_message,
+        "status_expires_at": user.status_expires_at,
         "permissions": user_permissions,
     }
 

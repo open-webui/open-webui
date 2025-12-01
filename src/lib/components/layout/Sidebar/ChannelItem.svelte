@@ -15,6 +15,7 @@
 	import Hashtag from '$lib/components/icons/Hashtag.svelte';
 	import Users from '$lib/components/icons/Users.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import Emoji from '$lib/components/common/Emoji.svelte';
 
 	export let onUpdate: Function = () => {};
 
@@ -31,10 +32,13 @@
 	{channel}
 	edit={true}
 	{onUpdate}
-	onSubmit={async ({ name, access_control }) => {
+	onSubmit={async ({ name, is_private, access_control, group_ids, user_ids }) => {
 		const res = await updateChannelById(localStorage.token, channel.id, {
 			name,
-			access_control
+			is_private,
+			access_control,
+			group_ids,
+			user_ids
 		}).catch((error) => {
 			toast.error(error.message);
 		});
@@ -119,7 +123,7 @@
 					{/if}
 				{:else}
 					<div class=" size-4 justify-center flex items-center ml-1">
-						{#if channel?.access_control === null}
+						{#if channel?.type === 'group' ? !channel?.is_private : channel?.access_control === null}
 							<Hashtag className="size-3.5" strokeWidth="2.5" />
 						{:else}
 							<Lock className="size-[15px]" strokeWidth="2" />
@@ -128,14 +132,38 @@
 				{/if}
 			</div>
 
-			<div class=" text-left self-center overflow-hidden w-full line-clamp-1 flex-1 pr-1">
+			<div
+				class=" text-left self-center overflow-hidden w-full line-clamp-1 flex-1 pr-1 flex items-center gap-2.5"
+			>
 				{#if channel?.name}
-					{channel.name}
+					<span>
+						{channel.name}
+					</span>
 				{:else}
-					{channel?.users
-						?.filter((u) => u.id !== $user?.id)
-						.map((u) => u.name)
-						.join(', ')}
+					<span class="shrink-0">
+						{channel?.users
+							?.filter((u) => u.id !== $user?.id)
+							.map((u) => u.name)
+							.join(', ')}
+					</span>
+
+					{#if channel?.users?.length === 2}
+						{@const dmUser = channel.users.find((u) => u.id !== $user?.id)}
+
+						{#if dmUser?.status_emoji || dmUser?.status_message}
+							<span class="flex gap-1.5">
+								{#if dmUser?.status_emoji}
+									<div class=" self-center shrink-0">
+										<Emoji className="size-3.5" shortCode={dmUser?.status_emoji} />
+									</div>
+								{/if}
+
+								<div class="line-clamp-1 italic">
+									{dmUser?.status_message}
+								</div>
+							</span>
+						{/if}
+					{/if}
 				{/if}
 			</div>
 		</div>
@@ -154,7 +182,7 @@
 		</div>
 	</a>
 
-	{#if channel?.type === 'dm'}
+	{#if ['dm'].includes(channel?.type)}
 		<div
 			class="ml-0.5 mr-1 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
 		>
@@ -181,7 +209,7 @@
 				<XMark className="size-3.5" />
 			</button>
 		</div>
-	{:else if $user?.role === 'admin'}
+	{:else if $user?.role === 'admin' || channel.user_id === $user?.id}
 		<div
 			class="ml-0.5 mr-1 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
 		>

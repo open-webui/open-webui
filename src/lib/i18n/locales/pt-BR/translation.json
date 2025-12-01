@@ -32,6 +32,7 @@
 	"Accessible to all users": "Acessível para todos os usuários",
 	"Account": "Conta",
 	"Account Activation Pending": "Ativação da Conta Pendente",
+					   
 	"Accurate information": "Informações precisas",
 	"Action": "Ação",
 	"Action not found": "Ação não encontrada",
@@ -123,8 +124,10 @@
 	"and {{COUNT}} more": "e mais {{COUNT}}",
 	"and create a new shared link.": "e criar um novo link compartilhado.",
 	"Android": "Android",
+			  
 	"API Base URL": "URL Base da API",
 	"API Base URL for Datalab Marker service. Defaults to: https://www.datalab.to/api/v1/marker": "URL base da API para o serviço Datalab Marker. O padrão é: https://www.datalab.to/api/v1/marker",
+																																																																												 
 	"API Key": "Chave API",
 	"API Key created.": "Chave API criada.",
 	"API Key Endpoint Restrictions": "Restrições de endpoint de chave de API",
@@ -152,7 +155,7 @@
 	"Ask": "Perguntar",
 	"Ask a question": "Faça uma pergunta",
 	"Assistant": "Assistente",
-	"Async Embedding Processing": "",
+	"Async Embedding Processing": "Processamento de Embedding assíncrono",
 	"Attach File From Knowledge": "Anexar arquivo da base de conhecimento",
 	"Attach Knowledge": "Anexar Base de Conhecimento",
 	"Attach Notes": "Anexar Notas",
@@ -200,6 +203,7 @@
 	"Bocha Search API Key": "Chave da API de pesquisa Bocha",
 	"Bold": "Negrito",
 	"Boosting or penalizing specific tokens for constrained responses. Bias values will be clamped between -100 and 100 (inclusive). (Default: none)": "Aumentar ou penalizar tokens específicos para respostas restritas. Os valores de viés serão fixados entre -100 e 100 (inclusive). (Padrão: nenhum)",
+																																																
 	"Brave Search API Key": "Chave API do Brave Search",
 	"Bullet List": "Lista com marcadores",
 	"Button ID": "ID do botão",
@@ -223,7 +227,7 @@
 	"Channel deleted successfully": "Canal apagado com sucesso",
 	"Channel Name": "Nome do canal",
 	"Channel name cannot be empty.": "O nome do canal não pode estar vazio.",
-	"Channel Type": "",
+	"Channel Type": "Tipo de canal",
 	"Channel updated successfully": "Canal atualizado com sucesso",
 	"Channels": "Canais",
 	"Character": "Caracter",
@@ -422,6 +426,7 @@
 	"Deleted {{name}}": "Excluído {{name}}",
 	"Deleted User": "Usuário Excluído",
 	"Deployment names are required for Azure OpenAI": "Nomes de implantação são necessários para o Azure OpenAI",
+																									  
 	"Describe your knowledge base and objectives": "Descreva sua base de conhecimento e objetivos",
 	"Description": "Descrição",
 	"Detect Artifacts Automatically": "Detectar artefatos automaticamente",
@@ -430,7 +435,7 @@
 	"Direct": "Direto",
 	"Direct Connections": "Conexões Diretas",
 	"Direct Connections allow users to connect to their own OpenAI compatible API endpoints.": "As conexões diretas permitem que os usuários se conectem aos seus próprios terminais de API compatíveis com OpenAI.",
-	"Direct Message": "",
+	"Direct Message": "Mensagem direta",
 	"Direct Tool Servers": "Servidores de ferramentas diretas",
 	"Directory selection was cancelled": "A seleção do diretório foi cancelada",
 	"Disable Code Interpreter": "Desativar o interpretador de código",
@@ -455,6 +460,9 @@
 	"Displays citations in the response": "Exibir citações na resposta",
 	"Displays status updates (e.g., web search progress) in the response": "Exibe atualizações de status (por exemplo, progresso da pesquisa na web) na resposta",
 	"Dive into knowledge": "Explorar base de conhecimento",
+				  
+				  
+				  
 	"Do not install functions from sources you do not fully trust.": "Não instale funções de origens nas quais você não confia totalmente.",
 	"Do not install tools from sources you do not fully trust.": "Não instale ferramentas de origens nas quais você não confia totalmente.",
 	"Docling": "",
@@ -519,6 +527,7 @@
 	"Embedding Batch Size": "Tamanho do Lote de Embedding",
 	"Embedding Model": "Modelo de Embedding",
 	"Embedding Model Engine": "Motor do Modelo de Embedding",
+																											   
 	"Enable API Keys": "Habilitar chave de API",
 	"Enable autocomplete generation for chat messages": "Habilitar geração de preenchimento automático para mensagens do chat",
 	"Enable Code Execution": "Habilitar execução de código",
@@ -555,12 +564,14 @@
 	"Enter Chunk Overlap": "Digite a Sobreposição de Chunk",
 	"Enter Chunk Size": "Digite o Tamanho do Chunk",
 	"Enter comma-separated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "Insira pares \"token:bias_value\" separados por vírgulas (exemplo: 5432:100, 413:-100)",
+																		  
 	"Enter content for the pending user info overlay. Leave empty for default.": "Insira o conteúdo para a sobreposição de informações pendentes do usuário. Deixe em branco para o padrão.",
 	"Enter coordinates (e.g. 51.505, -0.09)": "Insira as coordenadas (por exemplo, 51,505, -0,09)",
 	"Enter Datalab Marker API Base URL": "Insira o URL base da API do marcador do Datalab",
 	"Enter Datalab Marker API Key": "Insira a chave da API do marcador do Datalab",
 	"Enter description": "Digite a descrição",
-	"Enter Docling API Key": "",
+	"Enter Docling API Key": "Insira a chave da API do Docling",
+																		 
 	"Enter Docling Server URL": "Digite a URL do servidor Docling",
 	"Enter Document Intelligence Endpoint": "Insira o endpoint do Document Intelligence",
 	"Enter Document Intelligence Key": "Insira a chave de inteligência do documento",
@@ -724,6 +735,7 @@
 	"Failed to save models configuration": "Falha ao salvar a configuração dos modelos",
 	"Failed to update settings": "Falha ao atualizar as configurações",
 	"Failed to upload file.": "Falha ao carregar o arquivo.",
+				   
 	"Features": "Funcionalidades",
 	"Features Permissions": "Permissões das Funcionalidades",
 	"February": "Fevereiro",
@@ -787,7 +799,7 @@
 	"Function is now globally disabled": "A função está agora desativada globalmente",
 	"Function is now globally enabled": "A função está agora ativada globalmente",
 	"Function Name": "Nome da Função",
-	"Function Name Filter List": "",
+	"Function Name Filter List": "Lista de filtros de nomes de funções",
 	"Function updated successfully": "Função atualizada com sucesso",
 	"Functions": "Funções",
 	"Functions allow arbitrary code execution.": "Funções permitem a execução arbitrária de código.",
@@ -880,6 +892,7 @@
 	"Import successful": "Importação bem-sucedida",
 	"Import Tools": "Importar Ferramentas",
 	"Important Update": "Atualização importante",
+																															
 	"Include": "Incluir",
 	"Include `--api-auth` flag when running stable-diffusion-webui": "Incluir a flag `--api-auth` ao executar stable-diffusion-webui",
 	"Include `--api` flag when running stable-diffusion-webui": "Incluir a flag `--api` ao executar stable-diffusion-webui",
@@ -1188,6 +1201,7 @@
 	"OpenAPI Spec": "",
 	"openapi.json URL or Path": "",
 	"Optional": "Opcional",
+																																																																																																											 
 	"or": "ou",
 	"Ordered List": "Lista ordenada",
 	"Organize your users": "Organizar seus usuários",
@@ -1202,12 +1216,14 @@
 	"Password": "Senha",
 	"Passwords do not match.": "As senhas não coincidem.",
 	"Paste Large Text as File": "Cole Textos Longos como Arquivo",
+				   
 	"PDF document (.pdf)": "Documento PDF (.pdf)",
 	"PDF Extract Images (OCR)": "Extrair Imagens do PDF (OCR)",
 	"pending": "pendente",
 	"Pending": "Pendente",
 	"Pending User Overlay Content": "Conteúdo de sobreposição de usuário pendente",
 	"Pending User Overlay Title": "Título de sobreposição de usuário pendente",
+							   
 	"Permission denied when accessing media devices": "Permissão negada ao acessar dispositivos de mídia",
 	"Permission denied when accessing microphone": "Permissão negada ao acessar o microfone",
 	"Permission denied when accessing microphone: {{error}}": "Permissão negada ao acessar o microfone: {{error}}",
@@ -1217,10 +1233,14 @@
 	"Perplexity Search API URL": "",
 	"Perplexity Search Context Usage": "Uso do contexto de pesquisa do Perplexity",
 	"Personalization": "Personalização",
+																					
+																				  
+															 
 	"Pin": "Fixar",
 	"Pinned": "Fixado",
 	"Pioneer insights": "Insights pioneiros",
 	"Pipe": "",
+				
 	"Pipeline deleted successfully": "Pipeline excluído com sucesso",
 	"Pipeline downloaded successfully": "Pipeline baixado com sucesso",
 	"Pipelines": "Pipelines",
@@ -1248,7 +1268,7 @@
 	"Please select a model.": "Selecione um modelo.",
 	"Please select a reason": "Por favor, seleccione uma razão",
 	"Please select a valid JSON file": "Selecione um arquivo JSON válido",
-	"Please select at least one user for Direct Message channel.": "",
+	"Please select at least one user for Direct Message channel.": "Por favor, selecione pelo menos um usuário para o canal de Mensagens Diretas.",
 	"Please wait until all files are uploaded.": "Aguarde até que todos os arquivos sejam enviados.",
 	"Port": "Porta",
 	"Positive attitude": "Atitude positiva",
@@ -1277,6 +1297,7 @@
 	"Pull \"{{searchValue}}\" from Ollama.com": "Obter \"{{searchValue}}\" de Ollama.com",
 	"Pull a model from Ollama.com": "Obter um modelo de Ollama.com",
 	"Pull Model": "Obter Modelo",
+				 
 	"Query Generation Prompt": "Prompt de Geração de Consulta",
 	"Querying": "Consultando",
 	"Quick Actions": "Ações rápidas",
@@ -1355,7 +1376,7 @@
 	"Run": "Executar",
 	"Running": "Executando",
 	"Running...": "Executando...",
-	"Runs embedding tasks concurrently to speed up processing. Turn off if rate limits become an issue.": "",
+	"Runs embedding tasks concurrently to speed up processing. Turn off if rate limits become an issue.": "Executa tarefas de incorporação simultaneamente para acelerar o processamento. Desative se os limites de taxa se tornarem um problema.",
 	"Save": "Salvar",
 	"Save & Create": "Salvar e Criar",
 	"Save & Update": "Salvar e Atualizar",
@@ -1499,6 +1520,7 @@
 	"Speech recognition error: {{error}}": "Erro de reconhecimento de fala: {{error}}",
 	"Speech-to-Text": "Fala-para-Texto",
 	"Speech-to-Text Engine": "Motor de Transcrição de Fala",
+				
 	"Start a new conversation": "Iniciar uma nova conversa",
 	"Start of the channel": "Início do canal",
 	"Start Tag": "Tag inicial",
@@ -1530,6 +1552,7 @@
 	"System": "Sistema",
 	"System Instructions": "Instruções do sistema",
 	"System Prompt": "Prompt do Sistema",
+								
 	"Tag": "",
 	"Tags": "",
 	"Tags Generation": "Geração de tags",
@@ -1702,7 +1725,7 @@
 	"User menu": "Menu do usuário",
 	"User Webhooks": "Webhooks do usuário",
 	"Username": "Nome do Usuário",
-	"users": "",
+	"users": "usuários",
 	"Users": "Usuários",
 	"Uses DefaultAzureCredential to authenticate": "Usa DefaultAzureCredential para autenticar",
 	"Uses OAuth 2.1 Dynamic Client Registration": "Utiliza o registro dinâmico de cliente OAuth 2.1",
@@ -1723,6 +1746,7 @@
 	"View Result from **{{NAME}}**": "Ver resultado de **{{NAME}}**",
 	"Visibility": "Visibilidade",
 	"Vision": "Visão",
+		   
 	"Voice": "Voz",
 	"Voice Input": "Entrada de voz",
 	"Voice mode": "Modo de voz",
