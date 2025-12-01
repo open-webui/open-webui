@@ -11,6 +11,8 @@
 	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
 	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
 	import { goto } from '$app/navigation';
+	import Emoji from '$lib/components/common/Emoji.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	export let user = null;
 
@@ -70,6 +72,25 @@
 				</div>
 			</div>
 		</div>
+
+		{#if user?.status_emoji || user?.status_message}
+			<div class="mx-2 mt-2">
+				<Tooltip content={user?.status_message}>
+					<div
+						class="mb-1 w-full gap-2 px-2.5 py-1.5 rounded-xl bg-gray-50 dark:text-white dark:bg-gray-900/50 text-black transition text-xs flex items-center"
+					>
+						{#if user?.status_emoji}
+							<div class=" self-center shrink-0">
+								<Emoji className="size-4" shortCode={user?.status_emoji} />
+							</div>
+						{/if}
+						<div class=" self-center line-clamp-2 flex-1 text-left">
+							{user?.status_message}
+						</div>
+					</div>
+				</Tooltip>
+			</div>
+		{/if}
 
 		{#if $_user?.id !== user.id}
 			<hr class="border-gray-100/50 dark:border-gray-800/50 my-2.5" />
