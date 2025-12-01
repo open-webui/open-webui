@@ -58,7 +58,7 @@ accelerate
 pyarrow==20.0.0 # fix: pin pyarrow version to 20 for rpi compatibility #15897
 einops==0.8.1 
 
-ftfy==6.2.3
+ftfy==6.3.1
 chardet==5.2.0
 pypdf==6.4.0
 fpdf2==2.8.2
