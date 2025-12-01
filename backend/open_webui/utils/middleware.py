@@ -458,12 +458,6 @@ async def chat_completion_tools_handler(
                             }
                         )
 
-                print(
-                    f"Tool {tool_function_name} result: {tool_result}",
-                    tool_result_files,
-                    tool_result_embeds,
-                )
-
                 if tool_result:
                     tool = tools[tool_function_name]
                     tool_id = tool.get("tool_id", "")
@@ -489,12 +483,6 @@ async def chat_completion_tools_handler(
                             ],
                             "tool_result": True,
                         }
-                    )
-
-                    # Citation is not enabled for this tool
-                    body["messages"] = add_or_update_user_message(
-                        f"\nTool `{tool_name}` Output: {tool_result}",
-                        body["messages"],
                     )
 
                     if (
