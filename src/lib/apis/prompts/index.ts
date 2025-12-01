@@ -134,6 +134,10 @@ export const getPromptByCommand = async (token: string, command: string) => {
 };
 
 export const updatePromptByCommand = async (token: string, prompt: PromptItem) => {
+	console.log('DEBUG updatePromptByCommand called with:', JSON.stringify(prompt, null, 2));
+	console.log('DEBUG access_control:', JSON.stringify(prompt.access_control, null, 2));
+	console.log('DEBUG updatePromptByCommand called with:', JSON.stringify(prompt, null, 2));
+	console.log('DEBUG access_control:', JSON.stringify(prompt.access_control, null, 2));
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/command/${prompt.command}/update`, {

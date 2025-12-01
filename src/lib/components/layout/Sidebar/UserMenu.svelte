@@ -8,6 +8,7 @@
 
 	import { getUsage } from '$lib/apis';
 	import { userSignOut } from '$lib/apis/auths';
+	import { getManagedGroups } from '$lib/apis/groups';
 
 	import { showSettings, mobile, showSidebar, showShortcuts, user } from '$lib/stores';
 
@@ -32,6 +33,8 @@
 	const dispatch = createEventDispatcher();
 
 	let usage = null;
+	let isGroupManager = false;
+
 	const getUsageInfo = async () => {
 		const res = await getUsage(localStorage.token).catch((error) => {
 			console.error('Error fetching usage info:', error);
@@ -44,8 +47,16 @@
 		}
 	};
 
+	const checkGroupManager = async () => {
+		if (role !== 'admin') {
+			const managedGroups = await getManagedGroups(localStorage.token).catch(() => []);
+			isGroupManager = managedGroups && managedGroups.length > 0;
+		}
+	};
+
 	$: if (show) {
 		getUsageInfo();
+		checkGroupManager();
 	}
 </script>
 
@@ -143,6 +154,24 @@
 						<UserGroup className="w-5 h-5" strokeWidth="1.5" />
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
+				</DropdownMenu.Item>
+			{:else if isGroupManager}
+				<DropdownMenu.Item
+					as="a"
+					href="/admin/users/groups"
+					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
+					on:click={async () => {
+						show = false;
+						if ($mobile) {
+							await tick();
+							showSidebar.set(false);
+						}
+					}}
+				>
+					<div class=" self-center mr-3">
+						<UserGroup className="w-5 h-5" strokeWidth="1.5" />
+					</div>
+					<div class=" self-center truncate">{$i18n.t('Manage Groups')}</div>
 				</DropdownMenu.Item>
 			{/if}
 

@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { onMount, getContext } from 'svelte';
+	import { onMount, getContext, createEventDispatcher } from 'svelte';
 	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
 
 	import { getGroupManagers, updateGroupManagers } from '$lib/apis/groups';
 	import { getUsers } from '$lib/apis/users';
@@ -65,6 +66,7 @@
 		try {
 			await updateGroupManagers(localStorage.token, groupId, managerIds);
 			toast.success($i18n.t('Managers updated successfully'));
+				dispatch('managersUpdated', { managerIds });
 		} catch (error) {
 			console.error('Error saving managers:', error);
 			toast.error($i18n.t('Failed to update managers'));
@@ -136,7 +138,7 @@
 								class="size-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
 								checked={managerIds.includes(user.id)}
 								disabled={saving}
-								on:click|stopPropagation={() => {}}
+								on:click|stopPropagation={() => toggleManager(user.id)}
 							/>
 						</div>
 					</button>

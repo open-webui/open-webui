@@ -301,9 +301,13 @@
 								{:else if selectedTab == 'permissions'}
 									<Permissions bind:permissions {defaultPermissions} />
 								{:else if selectedTab == 'managers'}
-									<Managers groupId={group?.id} />
+									<Managers groupId={group?.id} on:managersUpdated={(e) => {
+													if (group) {
+														group = { ...group, manager_ids: e.detail.managerIds };
+													}
+												}} />
 								{:else if selectedTab == 'users'}
-									<Users bind:userCount groupId={group?.id} />
+									<Users bind:userCount groupId={group?.id} managerIds={group?.manager_ids ?? []} />
 								{/if}
 							</div>
 

@@ -7,15 +7,35 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	import Sidebar from '$lib/components/icons/Sidebar.svelte';
+	import { getManagedGroups } from '$lib/apis/groups';
 
 	const i18n = getContext('i18n');
 
 	let loaded = false;
+	let isAdmin = false;
+	let isGroupManager = false;
 
 	onMount(async () => {
-		if ($user?.role !== 'admin') {
-			await goto('/');
+		isAdmin = $user?.role === 'admin';
+		
+		if (!isAdmin) {
+			// Check if user is a group manager
+			const managedGroups = await getManagedGroups(localStorage.token).catch(() => []);
+			isGroupManager = managedGroups && managedGroups.length > 0;
+			
+			if (isGroupManager) {
+				// Group managers can only access /admin/users/groups
+				if (!$page.url.pathname.includes('/admin/users/groups')) {
+					await goto('/admin/users/groups');
+					return;
+				}
+			} else {
+				// Neither admin nor group manager - redirect to home
+				await goto('/');
+				return;
+			}
 		}
+		
 		loaded = true;
 	});
 </script>
@@ -59,12 +79,14 @@
 					<div
 						class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent pt-1"
 					>
-						<a
-							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/users')
-								? ''
-								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-							href="/admin">{$i18n.t('Users')}</a
-						>
+						{#if isAdmin || isGroupManager}
+							<a
+								class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/users')
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								href={isGroupManager && !isAdmin ? '/admin/users/groups' : '/admin'}>{isGroupManager && !isAdmin ? $i18n.t('Groups') : $i18n.t('Users')}</a
+							>
+						{/if}
 
 						<!-- <a
 							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/analytics')
@@ -73,26 +95,28 @@
 							href="/admin/analytics">{$i18n.t('Analytics')}</a
 						> -->
 
-						<a
-							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/evaluations')
-								? ''
-								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-							href="/admin/evaluations">{$i18n.t('Evaluations')}</a
-						>
+						{#if isAdmin}
+							<a
+								class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/evaluations')
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								href="/admin/evaluations">{$i18n.t('Evaluations')}</a
+							>
 
-						<a
-							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/functions')
-								? ''
-								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-							href="/admin/functions">{$i18n.t('Functions')}</a
-						>
+							<a
+								class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/functions')
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								href="/admin/functions">{$i18n.t('Functions')}</a
+							>
 
-						<a
-							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/settings')
-								? ''
-								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-							href="/admin/settings">{$i18n.t('Settings')}</a
-						>
+							<a
+								class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/settings')
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								href="/admin/settings">{$i18n.t('Settings')}</a
+							>
+						{/if}
 					</div>
 				</div>
 			</div>

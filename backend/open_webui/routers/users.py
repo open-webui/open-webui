@@ -82,8 +82,17 @@ async def get_users(
     order_by: Optional[str] = None,
     direction: Optional[str] = None,
     page: Optional[int] = 1,
-    user=Depends(get_admin_user),
+    user=Depends(get_verified_user),
 ):
+    # Check if user is admin or a group manager
+    if user.role != "admin":
+        # Check if user manages any groups
+        managed_groups = Groups.get_groups_by_manager_id(user.id)
+        if not managed_groups:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
     limit = PAGE_ITEM_COUNT
 
     page = max(1, page)

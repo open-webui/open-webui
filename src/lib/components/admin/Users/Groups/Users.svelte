@@ -25,6 +25,7 @@
 
 	export let groupId: string;
 	export let userCount = 0;
+	export let managerIds: string[] = [];
 
 	let users = null;
 	let total = null;
@@ -211,7 +212,7 @@
 						</tr>
 					</thead>
 					<tbody class="">
-						{#each users as user, userIdx (user?.id ?? userIdx)}
+						{#each (users?.filter(u => !managerIds.includes(u.id)) ?? []) as user, userIdx (user?.id ?? userIdx)}
 							<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
 								<td class=" px-3 py-1 w-8">
 									<div class="flex w-full justify-center">

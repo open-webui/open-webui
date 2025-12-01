@@ -24,7 +24,7 @@ async def get_prompts(user=Depends(get_verified_user)):
     if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
         prompts = Prompts.get_prompts()
     else:
-        prompts = Prompts.get_prompts_by_user_id(user.id, "read")
+        prompts = Prompts.get_prompts_by_user_id(user.id, "write")
 
     return prompts
 
@@ -34,7 +34,7 @@ async def get_prompt_list(user=Depends(get_verified_user)):
     if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
         prompts = Prompts.get_prompts()
     else:
-        prompts = Prompts.get_prompts_by_user_id(user.id, "write")
+        prompts = Prompts.get_prompts_by_user_id(user.id, "read")
 
     return prompts
 
@@ -113,6 +113,11 @@ async def update_prompt_by_command(
     form_data: PromptForm,
     user=Depends(get_verified_user),
 ):
+    import logging
+    logging.warning(f"DEBUG: update_prompt_by_command called")
+    logging.warning(f"DEBUG: form_data = {form_data}")
+    logging.warning(f"DEBUG: form_data.access_control = {form_data.access_control}")
+    
     prompt = Prompts.get_prompt_by_command(f"/{command}")
     if not prompt:
         raise HTTPException(
@@ -148,6 +153,11 @@ async def update_prompt_by_command(
 
 @router.delete("/command/{command}/delete", response_model=bool)
 async def delete_prompt_by_command(command: str, user=Depends(get_verified_user)):
+    import logging
+    logging.warning(f"DEBUG: update_prompt_by_command called")
+    logging.warning(f"DEBUG: form_data = {form_data}")
+    logging.warning(f"DEBUG: form_data.access_control = {form_data.access_control}")
+    
     prompt = Prompts.get_prompt_by_command(f"/{command}")
     if not prompt:
         raise HTTPException(
