@@ -415,6 +415,7 @@ def ensure_group_created_by_column():
         if "created_by" not in columns:
             print("Adding missing column: group.created_by")
             conn.execute(text('ALTER TABLE "group" ADD COLUMN created_by TEXT;'))
+            conn.commit()
             print("Column 'created_by' added successfully")
         else:
             print("Column 'created_by' already exists")
@@ -430,6 +431,7 @@ def ensure_function_created_by_column():
         if "created_by" not in columns:
             print("Adding missing column: function.created_by")
             conn.execute(text('ALTER TABLE "function" ADD COLUMN created_by TEXT;'))
+            conn.commit()
             print("Column 'created_by' added successfully")
         else:
             print("Column 'created_by' already exists")
@@ -438,7 +440,7 @@ def ensure_tool_created_by_column():
     from open_webui.config import DATABASE_URL
 
     engine = create_engine(DATABASE_URL)
-    with engine.begin() as conn: 
+    # with engine.begin() as conn: 
         # conn.execute(text('DELETE FROM "tool";'))
         # conn.execute(text('DELETE FROM "prompt";'))
         # conn.execute(text('DELETE FROM "function";'))
@@ -447,13 +449,14 @@ def ensure_tool_created_by_column():
         # conn.execute(text('DELETE FROM "file";'))
         # conn.execute(text('DELETE FROM "config";'))
         # conn.execute(text('DELETE FROM "knowledge";'))
-    # with engine.connect() as conn:
+    with engine.connect() as conn:
         inspector = inspect(conn)
         columns = [col["name"] for col in inspector.get_columns("tool")]
 
         if "created_by" not in columns:
             print("Adding missing column: tool.created_by")
             conn.execute(text('ALTER TABLE "tool" ADD COLUMN created_by TEXT;'))
+            conn.commit()
             print("Column 'created_by' added successfully")
         else:
             print("Column 'created_by' already exists")
@@ -469,6 +472,7 @@ def ensure_model_created_by_column():
         if "created_by" not in columns:
             print("Adding missing column: model.created_by")
             conn.execute(text('ALTER TABLE "model" ADD COLUMN created_by TEXT;'))
+            conn.commit()
             print("Column 'created_by' added successfully")
         else:
             print(" Column 'created_by' already exists")
@@ -485,6 +489,7 @@ def ensure_chat_group_id_column():
         if "group_id" not in columns:
             print("Adding missing column: chat.group_id")
             conn.execute(text('ALTER TABLE "chat" ADD COLUMN group_id TEXT;'))
+            conn.commit()
             print("Column 'group_id' added successfully")
         else:
             print("Column 'group_id' already exists")
