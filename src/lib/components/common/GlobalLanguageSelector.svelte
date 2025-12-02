@@ -14,7 +14,7 @@
 
 <Tooltip content={$i18n.language === 'en-GB' ? 'Français' : 'English'}>
 	<button
-		class="group flex cursor-pointer p-2 rounded-xl bg-white dark:bg-gray-900 transition hover:bg-gray-100 dark:hover:bg-gray-800"
+		class="group flex cursor-pointer p-2 rounded-xl transition hover:bg-gray-50 dark:hover:bg-gray-850"
 		on:click={toggleLanguage}
 	>
 		<div
