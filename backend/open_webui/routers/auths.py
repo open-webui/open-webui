@@ -65,6 +65,7 @@ from open_webui.utils.auth import (
 )
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.access_control import get_permissions, has_permission
+from open_webui.utils.groups import apply_default_group_assignment
 
 from open_webui.utils.redis import get_redis_client
 from open_webui.utils.rate_limit import RateLimiter
@@ -417,6 +418,11 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                             500, detail=ERROR_MESSAGES.CREATE_USER_ERROR
                         )
 
+                    apply_default_group_assignment(
+                        request.app.state.config.DEFAULT_GROUP_ID,
+                        user.id,
+                    )
+
                 except HTTPException:
                     raise
                 except Exception as err:
@@ -465,7 +471,6 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                 ):
                     if ENABLE_LDAP_GROUP_CREATION:
                         Groups.create_groups_by_group_names(user.id, user_groups)
-
                     try:
                         Groups.sync_groups_by_group_names(user.id, user_groups)
                         log.info(
@@ -722,9 +727,10 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 # Disable signup after the first user is created
                 request.app.state.config.ENABLE_SIGNUP = False
 
-            default_group_id = getattr(request.app.state.config, "DEFAULT_GROUP_ID", "")
-            if default_group_id and default_group_id:
-                Groups.add_users_to_group(default_group_id, [user.id])
+            apply_default_group_assignment(
+                request.app.state.config.DEFAULT_GROUP_ID,
+                user.id,
+            )
 
             return {
                 "token": token,
@@ -829,7 +835,9 @@ async def signout(request: Request, response: Response):
 
 
 @router.post("/add", response_model=SigninResponse)
-async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
+async def add_user(
+    request: Request, form_data: AddUserForm, user=Depends(get_admin_user)
+):
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
@@ -854,6 +862,11 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
         )
 
         if user:
+            apply_default_group_assignment(
+                request.app.state.config.DEFAULT_GROUP_ID,
+                user.id,
+            )
+
             token = create_token(data={"id": user.id})
             return {
                 "token": token,
