@@ -224,18 +224,26 @@ class MilvusClient(VectorDBBase):
                 f"Querying collection {self.collection_prefix}_{collection_name} with filter: '{filter_string}', limit: {limit}"
             )
 
-            results = collection.query(
+            iterator = collection.query_iterator(
                 expr=filter_string,
                 output_fields=[
                     "id",
                     "data",
                     "metadata",
                 ],
-                limit=limit if limit > 0 else None,
+                limit=limit if limit > 0 else -1,
             )
 
-            log.debug(f"Total results from query: {len(results)}")
-            return self._result_to_get_result([results] if results else [[]])
+            all_results = []
+            while True:
+                batch = iterator.next()
+                if not batch:
+                    iterator.close()
+                    break
+                all_results.extend(batch)
+
+            log.debug(f"Total results from query: {len(all_results)}")
+            return self._result_to_get_result([all_results] if all_results else [[]])
 
         except Exception as e:
             log.exception(
