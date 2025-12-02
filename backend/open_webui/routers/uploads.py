@@ -24,6 +24,7 @@ from open_webui.config import (
 )
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.tenants import Tenants
+from open_webui.routers.luxor import rag_master_request
 from open_webui.utils.auth import get_verified_user, get_admin_user
 
 router = APIRouter()
@@ -77,6 +78,14 @@ def _build_prefix(tenant_bucket: str, user_id: str, visibility: str) -> str:
     return base
 
 
+def _get_user_tenant_bucket(user) -> Optional[str]:
+    if not getattr(user, "tenant_id", None):
+        return None
+
+    tenant = Tenants.get_tenant_by_id(user.tenant_id)
+    return tenant.s3_bucket if tenant else None
+
+
 class UploadResponse(BaseModel):
     bucket: str
     key: str
@@ -100,6 +109,17 @@ class PublicFile(BaseModel):
     last_modified: datetime
     url: str
     tenant_id: str
+
+
+class IngestUploadRequest(BaseModel):
+    key: str
+
+class RebuildTenantRequest(BaseModel):
+    tenant: str
+
+class RebuildUserRequest(BaseModel):
+    tenant: str
+    user: str
 
 
 @router.get("/tenants", response_model=list[TenantInfo])
@@ -159,6 +179,15 @@ async def upload_document(
 
     safe_name = _sanitize_filename(file.filename)
     stored_filename = f"{uuid.uuid4().hex}_{safe_name}"
+
+    if user.role != "admin":
+        user_tenant_bucket = _get_user_tenant_bucket(user)
+        if not user_tenant_bucket or user_tenant_bucket != tenant.s3_bucket:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authorized to upload files for tenant",
+            )
+
     tenant_prefix = _build_prefix(tenant.s3_bucket, user.id, normalized_visibility)
     object_key = posixpath.join(tenant_prefix, stored_filename)
 
@@ -238,6 +267,15 @@ def list_files(
 
     bucket_prefix = tenant.s3_bucket.rstrip("/")
 
+    if user.role != "admin":
+        user_tenant_bucket = _get_user_tenant_bucket(user)
+        if not user_tenant_bucket or user_tenant_bucket != bucket_prefix:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authorized to view tenants files.",
+            )
+
+
     if path:
         normalized_path = path.rstrip("/")
     else:
@@ -313,3 +351,182 @@ def list_files(
         )
 
     return files
+
+@router.post("/rebuild-tenant")
+async def rebuild_tenant(
+    form_data: RebuildTenantRequest,
+    user=Depends(get_verified_user),
+):
+    if STORAGE_PROVIDER != "s3":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="S3 storage provider is not configured on this deployment.",
+        )
+
+    if not S3_BUCKET_NAME:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="S3 bucket name is not configured.",
+        )
+
+    if not form_data.tenant:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="tenant is required.",
+        )
+
+    if user.role != "admin":
+        user_tenant_bucket = _get_user_tenant_bucket(user)
+        if not user_tenant_bucket or user_tenant_bucket != form_data.tenant:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authorized to rebuild this tenant.",
+            )
+
+    payload = {
+        "task": "rebuild-tenant",
+        "bucket": S3_BUCKET_NAME,
+        "tenant": form_data.tenant
+    }
+
+    try:
+        response = await rag_master_request(payload)
+    except HTTPException as exc:
+        raise exc
+    except Exception as exc:
+        log.exception("Failed to trigger Rebuild for %s: %s", form_data.tenant, exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to trigger ingestion for the uploaded file.",
+        )
+
+    return response
+
+@router.post("/rebuild-user")
+async def rebuild_user(
+    form_data: RebuildUserRequest,
+    user=Depends(get_verified_user),
+):
+    if STORAGE_PROVIDER != "s3":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="S3 storage provider is not configured on this deployment.",
+        )
+
+    if not S3_BUCKET_NAME:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="S3 bucket name is not configured.",
+        )
+
+    if not form_data.tenant:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="tenant is required.",
+        )
+    
+    if not form_data.user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="user is required.",
+        )
+
+    is_admin = user.role == "admin"
+    if not is_admin:
+        user_tenant_bucket = _get_user_tenant_bucket(user)
+        if not user_tenant_bucket or user_tenant_bucket != form_data.tenant:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authorized to rebuild this tenant.",
+            )
+
+    if user.id != form_data.user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authorized to rebuild this user.",
+        )
+
+    payload = {
+        "task": "rebuild-user",
+        "bucket": S3_BUCKET_NAME,
+        "tenant": form_data.tenant,
+        "user": form_data.user
+    }
+
+    try:
+        response = await rag_master_request(payload)
+    except HTTPException as exc:
+        raise exc
+    except Exception as exc:
+        log.exception("Failed to trigger Rebuild for %s: %s", form_data.tenant, exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to trigger ingestion for the uploaded file.",
+        )
+
+    return response
+
+
+@router.post("/ingest")
+async def ingest_uploaded_file(
+    form_data: IngestUploadRequest,
+    user=Depends(get_verified_user),
+):
+    if STORAGE_PROVIDER != "s3":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="S3 storage provider is not configured on this deployment.",
+        )
+
+    if not S3_BUCKET_NAME:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="S3 bucket name is not configured.",
+        )
+
+    if not form_data.key:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Object key is required.",
+        )
+    
+    key = form_data.key
+    split = key.split("/")
+    tenant = split[0] if split else ""
+    user_id = ""
+    if len(split) >= 4 and split[1] == "users":
+        user_id = split[2]
+
+    is_admin = user.role == "admin"
+    if not is_admin:
+        user_bucket = _get_user_tenant_bucket(user)
+        if not tenant or not user_bucket or user_bucket != tenant:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authorized to ingest objects for this tenant.",
+            )
+        
+    if user_id and user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authorized to ingest objects for this user.",
+        )
+
+    payload = {
+        "task": "ingest-upload",
+        "bucket": S3_BUCKET_NAME,
+        "key": form_data.key,
+    }
+
+    try:
+        response = await rag_master_request(payload)
+    except HTTPException as exc:
+        raise exc
+    except Exception as exc:
+        log.exception("Failed to trigger ingestion for %s: %s", form_data.key, exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to trigger ingestion for the uploaded file.",
+        )
+
+    return response

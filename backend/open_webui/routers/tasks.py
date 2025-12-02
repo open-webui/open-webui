@@ -21,7 +21,7 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.constants import TASKS
 
 from open_webui.routers.luxor import (
-    generate_chat_completion as generate_luxor_chat_completion,
+    rag_master_request as generate_luxor_chat_completion,
 )
 
 from open_webui.utils.payload import (convert_payload_openai_to_ollama, convert_payload_openai_to_luxor)

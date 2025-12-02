@@ -3,6 +3,9 @@
 	import {
 		getUploadTenants,
 		uploadDocument,
+		ingestUploadedDocument,
+		rebuildTenantArtifact,
+		rebuildUserArtifact,
 		type UploadDocumentResponse,
 		type UploadTenant,
 		type UploadVisibility
@@ -33,6 +36,8 @@
 	let selectedTenantId: string | null = null;
 	let tenantsInitialized = false;
 	let selectedTenant: UploadTenant | null = null;
+	let isRebuildingTenant = false;
+	let isRebuildingPrivate = false;
 
 	const loadTenants = async () => {
 		if (
@@ -114,6 +119,16 @@
 			);
 			uploadResult = result;
 			toast.success('Upload complete.');
+			try {
+				await ingestUploadedDocument(localStorage.token, result.key);
+				toast.success('Ingestion requested.');
+			} catch (err) {
+				const message =
+					typeof err === 'string'
+						? err
+						: (err?.detail ?? 'Failed to trigger ingestion of the uploaded file.');
+				toast.error(message);
+			}
 			selectedFile = null;
 			if (fileInput) {
 				fileInput.value = '';
@@ -123,6 +138,60 @@
 			toast.error(message);
 		} finally {
 			isUploading = false;
+		}
+	};
+
+	const ensureToken = () => {
+		if (!localStorage.token) {
+			toast.error('You must be signed in for this action.');
+			return null;
+		}
+		return localStorage.token;
+	};
+
+	const handleRebuildTenant = async () => {
+		if (!selectedTenant?.s3_bucket) {
+			toast.error('Select a tenant to rebuild.');
+			return;
+		}
+		const token = ensureToken();
+		if (!token) return;
+
+		isRebuildingTenant = true;
+		try {
+			await rebuildTenantArtifact(token, selectedTenant.s3_bucket);
+			toast.success('Tenant artifact rebuild requested.');
+		} catch (err) {
+			const message =
+				typeof err === 'string'
+					? err
+					: (err?.detail ?? 'Failed to rebuild tenant artifact.');
+			toast.error(message);
+		} finally {
+			isRebuildingTenant = false;
+		}
+	};
+
+	const handleRebuildPrivate = async () => {
+		if (!tenantBucket || !$user?.id) {
+			toast.error('Tenant information unavailable.');
+			return;
+		}
+		const token = ensureToken();
+		if (!token) return;
+
+		isRebuildingPrivate = true;
+		try {
+			await rebuildUserArtifact(token, tenantBucket, $user.id);
+			toast.success('Private artifact rebuild requested.');
+		} catch (err) {
+			const message =
+				typeof err === 'string'
+					? err
+					: (err?.detail ?? 'Failed to rebuild private artifact.');
+			toast.error(message);
+		} finally {
+			isRebuildingPrivate = false;
 		}
 	};
 
@@ -291,6 +360,23 @@
 						{/if}
 					{/if}
 				</div>
+			</div>
+		{/if}
+
+		{#if $user?.role === 'admin' && activeTab === 'public'}
+			<div class="flex justify-end">
+				<button
+					class="inline-flex items-center justify-center rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-200 disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-500"
+					type="button"
+					on:click={handleRebuildTenant}
+					disabled={!selectedTenant?.s3_bucket || isRebuildingTenant}
+				>
+					{#if isRebuildingTenant}
+						<span class="animate-pulse">Rebuilding…</span>
+					{:else}
+						Rebuild Tenant Artifact
+					{/if}
+				</button>
 			</div>
 		{/if}
 
@@ -485,19 +571,35 @@
 					Select a tenant to view its public files.
 				</div>
 			{/if}
-		{:else if privatePath}
-			<Files
-				path={privatePath}
-				tenantId={$user?.role === 'admin'
-					? (selectedTenantId ?? $user?.tenant_id ?? null)
-					: ($user?.tenant_id ?? null)}
-			/>
-		{:else}
-			<div
-				class="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 text-sm text-amber-900 shadow-sm dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100"
-			>
-				Select a tenant to view private files.
+		{:else if activeTab === 'private'}
+			<div class="flex justify-end">
+				<button
+					class="inline-flex items-center justify-center rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-200 disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-500"
+					type="button"
+					on:click={handleRebuildPrivate}
+					disabled={!tenantBucket || !$user?.id || isRebuildingPrivate}
+				>
+					{#if isRebuildingPrivate}
+						<span class="animate-pulse">Rebuilding…</span>
+					{:else}
+						Rebuild Private Artifact
+					{/if}
+				</button>
 			</div>
+			{#if privatePath}
+				<Files
+					path={privatePath}
+					tenantId={$user?.role === 'admin'
+						? (selectedTenantId ?? $user?.tenant_id ?? null)
+						: ($user?.tenant_id ?? null)}
+				/>
+			{:else}
+				<div
+					class="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 text-sm text-amber-900 shadow-sm dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100"
+				>
+					Select a tenant to view private files.
+				</div>
+			{/if}
 		{/if}
 	</div>
 </div>

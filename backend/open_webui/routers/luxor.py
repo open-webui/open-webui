@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
-async def generate_chat_completion(form_data: dict):
+async def rag_master_request(form_data: dict):
     url = os.environ['LIVE_URL']
     return await send_post_request(
         url=url,

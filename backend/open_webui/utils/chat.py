@@ -37,7 +37,7 @@ from open_webui.routers.pipelines import (
 )
 
 from open_webui.routers.luxor import (
-    generate_chat_completion as generate_luxor_chat_completion,
+    rag_master_request as generate_luxor_chat_completion,
 )
 
 from open_webui.models.functions import Functions
