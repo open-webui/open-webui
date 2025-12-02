@@ -1505,12 +1505,11 @@ class OAuthManager:
                 auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT
                 and user.role != "admin"
             ):
-                default_group_id = request.app.state.config.DEFAULT_GROUP_ID
                 self.update_user_groups(
                     user=user,
                     user_data=user_data,
                     default_permissions=request.app.state.config.USER_PERMISSIONS,
-                    default_group_id=default_group_id,
+                    default_group_id=request.app.state.config.DEFAULT_GROUP_ID,
                 )
 
         except Exception as e:
