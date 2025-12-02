@@ -423,25 +423,54 @@
 										{/if}
 
 										{#if mode === 'signup'}
-											<div class="mt-3 flex items-start text-sm text-left text-gray-700 dark:text-gray-300 gap-2">
-												<input
+											<div class="mt-3 flex flex-wrap items-center text-sm text-left text-gray-700 dark:text-gray-300 gap-2">
+												<button
+													type="button"
 													id="agree-privacy"
-													type="checkbox"
-													class="mt-0.5 rounded border-gray-300 bg-transparent text-gray-800 dark:text-gray-100 focus:ring-0"
-													bind:checked={agreeToPrivacy}
-												/>
-												<label for="agree-privacy" class="leading-tight">
-													<span>我已阅读并同意</span>
-													<button
-														type="button"
-														class="ml-1 underline font-medium"
-														on:click={() => {
-															showPrivacyModal = true;
-														}}
-													>
-														隐私协议
-													</button>
+													class="size-4 shrink-0 rounded border transition-all {agreeToPrivacy
+														? 'bg-blue-600 border-blue-600'
+														: 'border-gray-300 bg-transparent dark:bg-gray-800 dark:border-gray-600'
+													} flex items-center justify-center cursor-pointer"
+													on:click={() => {
+														agreeToPrivacy = !agreeToPrivacy;
+													}}
+													role="checkbox"
+													aria-checked={agreeToPrivacy}
+													aria-labelledby="agree-privacy-label"
+												>
+													{#if agreeToPrivacy}
+														<svg
+															viewBox="0 0 16 16"
+															fill="none"
+															stroke="white"
+															stroke-width="3"
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															class="w-3 h-3"
+														>
+															<path d="M4 8l3 3l5-5"/>
+														</svg>
+													{/if}
+												</button>
+												<label
+													id="agree-privacy-label"
+													for="agree-privacy"
+													class="inline-block cursor-pointer select-none"
+													on:click={() => {
+														agreeToPrivacy = !agreeToPrivacy;
+													}}
+												>
+													我已阅读并同意
 												</label>
+												<button
+													type="button"
+													class="underline font-medium hover:text-gray-900 dark:hover:text-gray-100"
+													on:click={() => {
+														showPrivacyModal = true;
+													}}
+												>
+													隐私协议
+												</button>
 											</div>
 										{/if}
 									</div>
