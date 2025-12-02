@@ -10,7 +10,7 @@ def apply_default_group_assignment(
 ) -> None:
     """
     Apply default group assignment to a user if default_group_id is provided.
-    
+
     Args:
         default_group_id: ID of the default group to add the user to
         user_id: ID of the user to add to the default group
