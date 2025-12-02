@@ -92,6 +92,16 @@
 			</div>
 		{/if}
 
+		{#if user?.bio}
+			<div class="mx-3.5 mt-2">
+				<Tooltip content={user?.bio}>
+					<div class=" self-center line-clamp-3 flex-1 text-left text-xs">
+						{user?.bio}
+					</div>
+				</Tooltip>
+			</div>
+		{/if}
+
 		{#if $_user?.id !== user.id}
 			<hr class="border-gray-100/50 dark:border-gray-800/50 my-2.5" />
 
