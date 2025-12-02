@@ -33,12 +33,12 @@
 </script>
 
 {#if user}
-	<div class="py-2.5">
-		<div class=" flex gap-3.5 w-full px-2.5 items-center">
+	<div class="py-3">
+		<div class=" flex gap-3.5 w-full px-3 items-center">
 			<div class=" items-center flex shrink-0">
 				<img
 					src={`${WEBUI_API_BASE_URL}/users/${user?.id}/profile/image`}
-					class=" size-12 object-cover rounded-xl"
+					class=" size-14 object-cover rounded-xl"
 					alt="profile"
 				/>
 			</div>
