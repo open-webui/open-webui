@@ -94,6 +94,16 @@ class AddUserForm(SignupForm):
     role: Optional[str] = "pending"
 
 
+class ResetPasswordCodeForm(BaseModel):
+    email: str
+
+
+class ResetPasswordForm(BaseModel):
+    email: str
+    code: str
+    new_password: str
+
+
 class AuthsTable:
     def insert_new_auth(
         self,

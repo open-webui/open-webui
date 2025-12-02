@@ -14,7 +14,9 @@
 		getSessionUser,
 		userSignIn,
 		userSignUp,
-		sendSignupCode
+		sendSignupCode,
+		sendResetCode,
+		resetPassword
 	} from '$lib/apis/auths';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
@@ -45,6 +47,16 @@
 	let sendCodeCooldown = 0;
 	let sendCodeTimer: ReturnType<typeof setInterval> | null = null;
 	let sendingCode = false;
+
+	const switchMode = (target: string) => {
+		clearSendCodeTimer();
+		mode = target;
+		verificationCode = '';
+		password = '';
+		confirmPassword = '';
+		sendCodeCooldown = 0;
+		sendingCode = false;
+	};
 
 	let ldapUsername = '';
 	let agreeToTerms = false;
@@ -110,6 +122,28 @@
 		await setSessionUser(sessionUser);
 	};
 
+	const resetPasswordHandler = async () => {
+		if (!verificationCode) {
+			toast.error('请输入邮箱验证码');
+			return;
+		}
+
+		if (password !== confirmPassword) {
+			toast.error($i18n.t('Passwords do not match.'));
+			return;
+		}
+
+		const res = await resetPassword(email, verificationCode, password).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			toast.success('密码已重置，请使用新密码登录');
+			switchMode('signin');
+		}
+	};
+
 	const ldapSignInHandler = async () => {
 		const sessionUser = await ldapUserSignIn(ldapUsername, password).catch((error) => {
 			toast.error(`${error}`);
@@ -150,10 +184,16 @@
 		}
 
 		sendingCode = true;
-		const res = await sendSignupCode(email).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
+		const res =
+			mode === 'reset'
+				? await sendResetCode(email).catch((error) => {
+						toast.error(`${error}`);
+						return null;
+					})
+				: await sendSignupCode(email).catch((error) => {
+						toast.error(`${error}`);
+						return null;
+					});
 		sendingCode = false;
 
 		if (res) {
@@ -172,6 +212,8 @@
 				return;
 			}
 			await signInHandler();
+		} else if (mode === 'reset') {
+			await resetPasswordHandler();
 		} else {
 			if (!agreeToPrivacy) {
 				toast.error('如果要注册，请先同意隐私协议');
@@ -332,6 +374,8 @@
 											{$i18n.t(`Get started with {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
 										{:else if mode === 'ldap'}
 											{$i18n.t(`Sign in to {{WEBUI_NAME}} with LDAP`, { WEBUI_NAME: $WEBUI_NAME })}
+										{:else if mode === 'reset'}
+											重置密码
 										{:else if mode === 'signin'}
 											{$i18n.t(`Sign in to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
 										{:else}
@@ -400,7 +444,7 @@
 													required
 												/>
 											</div>
-											{#if mode === 'signup'}
+											{#if mode === 'signup' || mode === 'reset'}
 												<div class="mb-2">
 													<label for="verification-code" class="text-sm font-medium text-left mb-1 block"
 														>邮箱验证码</label
@@ -498,10 +542,35 @@
 												>
 													用户协议
 												</button>
+												<button
+													type="button"
+													class="ml-auto underline font-medium hover:text-gray-900 dark:hover:text-gray-100"
+													on:click={() => switchMode('reset')}
+												>
+													忘记密码？
+												</button>
 											</div>
 										{/if}
 
 										{#if mode === 'signup' && $config?.features?.enable_signup_password_confirmation}
+											<div class="mt-2">
+												<label
+													for="confirm-password"
+													class="text-sm font-medium text-left mb-1 block"
+													>{$i18n.t('Confirm Password')}</label
+												>
+												<SensitiveInput
+													bind:value={confirmPassword}
+													type="password"
+													id="confirm-password"
+													class="my-0.5 w-full text-sm outline-hidden bg-transparent"
+													placeholder={$i18n.t('Confirm Your Password')}
+													autocomplete="new-password"
+													name="confirm-password"
+													required
+												/>
+											</div>
+										{:else if mode === 'reset'}
 											<div class="mt-2">
 												<label
 													for="confirm-password"
@@ -592,7 +661,9 @@
 													? $i18n.t('Sign in')
 													: ($config?.onboarding ?? false)
 														? $i18n.t('Create Admin Account')
-														: $i18n.t('Create Account')}
+														: mode === 'reset'
+															? '重置密码'
+															: $i18n.t('Create Account')}
 											</button>
 
 											{#if $config?.features.enable_signup && !($config?.onboarding ?? false)}

@@ -11,6 +11,8 @@ from open_webui.models.auths import (
     Auths,
     Token,
     LdapForm,
+    ResetPasswordCodeForm,
+    ResetPasswordForm,
     SigninForm,
     SigninResponse,
     SignupForm,
@@ -77,6 +79,8 @@ router = APIRouter()
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+RESET_CODE_PREFIX = "reset"
 
 ############################
 # GetSessionUser
@@ -792,6 +796,132 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
     except Exception as err:
         log.error(f"Signup error: {str(err)}")
         raise HTTPException(500, detail="An internal error occurred during signup.")
+
+
+############################
+# Password Reset via Email Code
+############################
+
+
+@router.post("/password/reset/code")
+async def send_reset_code(request: Request, form_data: ResetPasswordCodeForm):
+    email = form_data.email.lower()
+
+    if not validate_email_format(email):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
+        )
+
+    user = Users.get_user_by_email(email)
+    # 避免用户枚举：用户不存在也返回成功，不发送邮件
+    if not user:
+        return {"status": True}
+
+    manager: EmailVerificationManager = getattr(
+        request.app.state, "reset_verification_manager", None
+    )
+    if manager is None:
+        manager = EmailVerificationManager(request.app.state.redis, prefix="reset:code")
+        request.app.state.reset_verification_manager = manager
+
+    send_interval = request.app.state.email_verification_config["send_interval"]
+    can_send, remaining = manager.can_send(email, send_interval)
+    if not can_send:
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Please wait {int(remaining)} seconds before requesting a new code.",
+        )
+
+    ttl = request.app.state.email_verification_config["ttl"]
+    max_attempts = request.app.state.email_verification_config["max_attempts"]
+    smtp_config = request.app.state.email_verification_config.get("smtp", {})
+
+    if not smtp_config.get("server"):
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Email service is not configured.",
+        )
+
+    code = generate_verification_code()
+    manager.store_code(
+        email,
+        code,
+        ttl,
+        max_attempts,
+        request.client.host if request.client else None,
+    )
+
+    try:
+        send_email(
+            subject=f"{request.app.state.WEBUI_NAME} Password Reset Code",
+            body=(
+                f"Your password reset code is {code}.\n"
+                f"It expires in {max(1, int(ttl / 60))} minutes."
+            ),
+            to_email=email,
+            smtp_server=smtp_config.get("server", ""),
+            smtp_port=int(smtp_config.get("port", 587)),
+            smtp_username=smtp_config.get("username", ""),
+            smtp_password=smtp_config.get("password", ""),
+            from_email=smtp_config.get("from_email", EMAIL_SMTP_FROM),
+        )
+    except Exception as e:
+        log.error(f"Failed to send password reset email: {e}")
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send password reset email.",
+        )
+
+    return {"status": True}
+
+
+class PasswordResetResponse(BaseModel):
+    status: bool
+
+
+@router.post("/password/reset", response_model=PasswordResetResponse)
+async def reset_password(request: Request, form_data: ResetPasswordForm):
+    email = form_data.email.lower()
+
+    if not validate_email_format(email):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
+        )
+
+    user = Users.get_user_by_email(email)
+    if not user:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_CRED
+        )
+
+    manager: EmailVerificationManager = getattr(
+        request.app.state, "reset_verification_manager", None
+    )
+    if manager is None:
+        manager = EmailVerificationManager(request.app.state.redis, prefix="reset:code")
+        request.app.state.reset_verification_manager = manager
+
+    if not manager.validate_code(email, form_data.code):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification code.",
+        )
+
+    if len(form_data.new_password.encode("utf-8")) > 72:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.PASSWORD_TOO_LONG,
+        )
+
+    hashed = get_password_hash(form_data.new_password)
+    ok = Auths.update_user_password_by_id(user.id, hashed)
+    if not ok:
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to reset password.",
+        )
+
+    return PasswordResetResponse(status=True)
 
 
 @router.get("/signout")

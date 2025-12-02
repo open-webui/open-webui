@@ -581,6 +581,9 @@ async def lifespan(app: FastAPI):
         async_mode=True,
     )
     app.state.email_verification_manager = EmailVerificationManager(app.state.redis)
+    app.state.reset_verification_manager = EmailVerificationManager(
+        app.state.redis, prefix="reset:code"
+    )
 
     if app.state.redis is not None:
         app.state.redis_task_command_listener = asyncio.create_task(
@@ -644,6 +647,7 @@ app.state.config = AppConfig(
     redis_key_prefix=REDIS_KEY_PREFIX,
 )
 app.state.redis = None
+app.state.reset_verification_manager = None
 
 app.state.WEBUI_NAME = WEBUI_NAME
 app.state.LICENSE_METADATA = None
