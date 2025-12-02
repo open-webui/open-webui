@@ -750,6 +750,9 @@ async def pull_model(
         user=user,
     )
 
+    if is_running_in_container():
+        return original_post_request
+
     GOLDEN_NAME = None
 
     async def stream():
@@ -961,11 +964,14 @@ async def delete_model(
             method="DELETE",
             url=f"{url}/api/delete",
             headers=headers,
-            data=form_data.model_dump_json(exclude_none=True).encode(),
+            data=json.dumps(form_data).encode(),
         )
         r.raise_for_status()
 
         log.debug(f"r.text: {r.text}")
+        if is_running_in_container():
+            return True
+
         await delete_model_from_opu(request=request, model_name=model, user=user)
         return True
     except Exception as e:
@@ -2035,18 +2041,19 @@ async def upload_model(
                 log.info(f"Created Model: {model_name}")  # DEBUG
                 print("file_path:", file_path, "model_name :", model_name)
 
-                try:
-                    result_response = await upload_model_helper(
-                        user, file_path, model_name
-                    )
-                    yield f"data: json.dumps({'result': result_response})\n"
-                except Exception as e:
-                    res = {
-                        "error Ollama: Could not create model in target, Please try again.": str(
-                            e
+                if not is_running_in_container():
+                    try:
+                        result_response = await upload_model_helper(
+                            user, file_path, model_name
                         )
-                    }
-                    log.info(f"data: {json.dumps(res)}\n")
+                        yield f"data: json.dumps({'result': result_response})\n"
+                    except Exception as e:
+                        res = {
+                            "error Ollama: Could not create model in target, Please try again.": str(
+                                e
+                            )
+                        }
+                        log.info(f"data: {json.dumps(res)}\n")
 
                 create_payload = {
                     "model": model_name,
