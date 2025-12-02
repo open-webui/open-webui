@@ -13,6 +13,7 @@
 	import { get, type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { getOpenAIConfig } from '$lib/apis/openai';
 
 	import {
 		chatId,
@@ -1816,6 +1817,35 @@
 		return features;
 	};
 
+	const urlToBase64 = async (url: string): Promise<string> => {
+		try {
+			if (!url) throw new Error('URL is required');
+
+			const response = await fetch(`${WEBUI_BASE_URL}${url}`);
+			if (!response.ok) throw new Error(`Failed to fetch image: ${response.status}`);
+
+			const blob = await response.blob();
+			return new Promise((resolve, reject) => {
+				const reader = new FileReader();
+				reader.onloadend = () => {
+					const result = reader.result;
+					if (typeof result === 'string') {
+						resolve(result);
+					} else {
+						reject(new Error('Failed to convert blob to base64 string'));
+					}
+				};
+				reader.onerror = () => reject(new Error('Failed to read blob'));
+				reader.readAsDataURL(blob);
+			});
+		} catch (error) {
+			console.error('Error converting URL to base64:', error);
+			throw new Error(
+				`Failed to convert URL to base64: ${error instanceof Error ? error.message : 'Unknown error'}`
+			);
+		}
+	};
+
 	const sendMessageSocket = async (model, _messages, _history, responseMessageId, _chatId) => {
 		const responseMessage = _history.messages[responseMessageId];
 		const userMessage = _history.messages[responseMessage.parentId];
@@ -1866,45 +1896,162 @@
 			params?.stream_response ??
 			true;
 
-		let messages = [
-			params?.system || $settings.system
-				? {
-						role: 'system',
-						content: `${params?.system ?? $settings?.system ?? ''}`
-					}
-				: undefined,
-			..._messages.map((message) => ({
-				...message,
-				content: processDetails(message.content)
-			}))
-		].filter((message) => message);
+		let messages = [];
+		let OPENAI_API_BASE_URLS = [''];
 
-		messages = messages
-			.map((message, idx, arr) => ({
-				role: message.role,
-				...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
-				message.role === 'user'
-					? {
-							content: [
-								{
-									type: 'text',
-									text: message?.merged?.content ?? message.content
-								},
-								...message.files
-									.filter((file) => file.type === 'image')
-									.map((file) => ({
-										type: 'image_url',
-										image_url: {
-											url: file.url
+		// Get the configuration
+		await (async () => {
+			const config = await getOpenAIConfig(localStorage.token);
+			OPENAI_API_BASE_URLS = config.OPENAI_API_BASE_URLS;
+		})();
+
+		// Check if openrouter.ai is in the API base URLs
+		const isOpenRouter = OPENAI_API_BASE_URLS.some(
+			(url) => url && url.toLowerCase().includes('openrouter.ai')
+		);
+
+		if (isOpenRouter) {
+			// For OpenRouter
+			const base64Results = await Promise.all(
+				_messages.map(async (message) => {
+					if (message.role === 'assistant' && message.files?.some((f) => f.type === 'image')) {
+						const imageFiles = message.files.filter((f) => f.type === 'image');
+						const base64Results = await Promise.allSettled(
+							imageFiles.map((file) => urlToBase64(file.url))
+						);
+
+						const successfulBase64s = base64Results
+							.filter((r) => r.status === 'fulfilled')
+							.map((r) => r.value);
+
+						return {
+							original: message,
+							synthetic:
+								successfulBase64s.length > 0
+									? {
+											role: 'user',
+											content: [
+												{
+													type: 'text',
+													text: '[INTERNAL CONTEXT: Previous assistant sent images]'
+												},
+												...successfulBase64s.map((url) => ({
+													type: 'image_url',
+													image_url: { url }
+												}))
+											]
 										}
+									: null
+						};
+					}
+					return {
+						original: message,
+						synthetic: null
+					};
+				})
+			);
+
+			let processedMessages = [];
+			base64Results.forEach(({ original, synthetic }) => {
+				// Remove image from assistant messages to avoid API errors
+				const cleanOriginal =
+					original.role === 'assistant' && original.files?.some((f) => f.type === 'image')
+						? { ...original, files: original.files.filter((f) => f.type !== 'image') }
+						: { ...original };
+
+				processedMessages.push(cleanOriginal);
+				if (synthetic) {
+					processedMessages.push(synthetic);
+				}
+			});
+
+			messages = [
+				// Original system prompt
+				params?.system || $settings.system
+					? {
+							role: 'system',
+							content: `${params?.system ?? $settings?.system ?? ''}`
+						}
+					: undefined,
+
+				// Processed messages
+				...processedMessages.map((message) => {
+					// Skip processDetails for array content (synthetic messages)
+					const content = Array.isArray(message.content)
+						? message.content
+						: processDetails(message.content);
+
+					// Handle messages with image files
+					if (message.files?.some((f) => f.type === 'image')) {
+						return {
+							role: message.role,
+							content: [
+								{ type: 'text', text: content },
+								...message.files
+									.filter((f) => f.type === 'image')
+									.map((f) => ({
+										type: 'image_url',
+										image_url: { url: f.url }
 									}))
 							]
+						};
+					}
+
+					return {
+						role: message.role,
+						content
+					};
+				})
+			].filter(Boolean);
+
+			// Remove any empty messages
+			messages = messages.filter((msg) => {
+				if (typeof msg.content === 'string') {
+					return msg.content.trim();
+				}
+				return Array.isArray(msg.content) && msg.content.length > 0;
+			});
+		} else {
+			messages = [
+				params?.system || $settings.system
+					? {
+							role: 'system',
+							content: `${params?.system ?? $settings?.system ?? ''}`
 						}
-					: {
-							content: message?.merged?.content ?? message.content
-						})
-			}))
-			.filter((message) => message?.role === 'user' || message?.content?.trim());
+					: undefined,
+				..._messages.map((message) => ({
+					...message,
+					content: processDetails(message.content)
+				}))
+			].filter((message) => message);
+
+			messages = messages
+				.map((message, idx, arr) => ({
+					role: message.role,
+					...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
+					message.role === 'user'
+						? {
+								content: [
+									{
+										type: 'text',
+										text: message?.merged?.content ?? message.content
+									},
+									...message.files
+										.filter((file) => file.type === 'image')
+										.map((file) => ({
+											type: 'image_url',
+											image_url: {
+												url: file.url
+											}
+										}))
+								]
+							}
+						: {
+								content: message?.merged?.content ?? message.content
+							})
+				}))
+				.filter((message) => message?.role === 'user' || message?.content?.trim());
+		}
 
 		const toolIds = [];
 		const toolServerIds = [];
