@@ -702,8 +702,25 @@ class InteractivePruneUI:
                 task = progress.add_task("Running VACUUM (this may take a while)...", total=None)
                 try:
                     with get_db() as db:
-                        db.execute(text("VACUUM"))
-                    console.print("[green]✓[/green] Vacuumed main database")
+                        engine = db.get_bind()
+                        db_url = str(engine.url)
+
+                        if 'postgresql' in db_url:
+                            # PostgreSQL: VACUUM requires autocommit mode (no transaction)
+                            raw_connection = engine.raw_connection()
+                            try:
+                                raw_connection.set_isolation_level(0)  # AUTOCOMMIT mode
+                                cursor = raw_connection.cursor()
+                                cursor.execute("VACUUM ANALYZE")
+                                cursor.close()
+                                raw_connection.commit()
+                                console.print("[green]✓[/green] Vacuumed PostgreSQL main database")
+                            finally:
+                                raw_connection.close()
+                        else:
+                            # SQLite: Can run in transaction
+                            db.execute(text("VACUUM"))
+                            console.print("[green]✓[/green] Vacuumed main database")
 
                     if isinstance(self.vector_cleaner, ChromaDatabaseCleaner):
                         # Log size before VACUUM
@@ -717,9 +734,17 @@ class InteractivePruneUI:
                         freed_mb = size_before_mb - size_after_mb
                         console.print(f"[green]✓[/green] Vacuumed ChromaDB ({size_before_mb:.1f}MB → {size_after_mb:.1f}MB, freed {freed_mb:.1f}MB)")
                     elif isinstance(self.vector_cleaner, PGVectorDatabaseCleaner) and self.vector_cleaner.session:
-                        self.vector_cleaner.session.execute(text("VACUUM ANALYZE"))
-                        self.vector_cleaner.session.commit()
-                        console.print("[green]✓[/green] Vacuumed PostgreSQL")
+                        engine = self.vector_cleaner.session.get_bind()
+                        raw_connection = engine.raw_connection()
+                        try:
+                            raw_connection.set_isolation_level(0)  # AUTOCOMMIT mode
+                            cursor = raw_connection.cursor()
+                            cursor.execute("VACUUM ANALYZE")
+                            cursor.close()
+                            raw_connection.commit()
+                            console.print("[green]✓[/green] Vacuumed PostgreSQL vector database")
+                        finally:
+                            raw_connection.close()
                 except Exception as e:
                     console.print(f"[yellow]⚠ VACUUM failed: {e}[/yellow]")
 

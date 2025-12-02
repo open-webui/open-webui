@@ -76,22 +76,48 @@ python prune/prune.py          # Launch interactive mode
 
 ### Method 2: Docker Installation
 
-**Option A: Run inside container**
+**Step 1: Download the prune folder** (one-time setup)
 ```bash
-# Find your container
+# Clone only the prune folder using sparse checkout
+git clone --filter=blob:none --no-checkout https://github.com/Classic298/open-webui.git
+cd open-webui
+git sparse-checkout init --cone
+git sparse-checkout set prune
+git checkout claude/analyze-prune-router-01C8wACN95WDtT67c8ULXdkr
+```
+
+**Step 2: Copy files into your Docker container** (one-time setup)
+```bash
+# Find your Open WebUI container name
 docker ps | grep open-webui
 
-# Enter container
-docker exec -it <container-name> bash
-
-# Run prune script
-python /app/backend/prune/prune.py
+# Copy the prune folder into the container
+docker cp prune <container-name>:/app/
 ```
 
-**Option B: Direct execution**
+**Step 3: Run the prune script**
+
+**Option A: Run interactively inside container**
 ```bash
-docker exec <container-name> python /app/backend/prune/prune.py --days 90 --execute
+docker exec -it <container-name> bash
+cd /app
+python prune/prune.py
 ```
+
+**Option B: Direct execution from host**
+```bash
+docker exec <container-name> python /app/prune/prune.py --days 90 --execute
+```
+
+**Option C: Preview mode from host**
+```bash
+docker exec <container-name> python /app/prune/prune.py --days 90 --dry-run
+```
+
+**Important Notes:**
+- All environment variables are automatically inherited from the container
+- No additional dependencies needed (already in container)
+- Data persists in your Docker volumes
 
 ### Method 3: Pip Installation
 

@@ -8,10 +8,44 @@ that perform the actual pruning operations, counting, and cleanup.
 import logging
 import time
 from pathlib import Path
-from typing import Optional, Set
+from typing import Optional, Set, Callable, Any
 from sqlalchemy import select, text
+from sqlalchemy.exc import OperationalError
 
 log = logging.getLogger(__name__)
+
+
+def retry_on_db_lock(func: Callable, max_retries: int = 3, base_delay: float = 0.5) -> Any:
+    """
+    Retry a database operation if it fails due to database lock.
+    Uses exponential backoff: 0.5s, 1s, 2s
+
+    Args:
+        func: Function to retry
+        max_retries: Maximum number of retry attempts
+        base_delay: Base delay in seconds (doubles each retry)
+
+    Returns:
+        Result from the function
+
+    Raises:
+        Last exception if all retries fail
+    """
+    last_exception = None
+    for attempt in range(max_retries + 1):
+        try:
+            return func()
+        except OperationalError as e:
+            last_exception = e
+            if 'database is locked' in str(e).lower() and attempt < max_retries:
+                delay = base_delay * (2 ** attempt)
+                log.warning(f"Database locked, retrying in {delay}s (attempt {attempt + 1}/{max_retries})")
+                time.sleep(delay)
+            else:
+                raise
+
+    # This should never be reached, but just in case
+    raise last_exception
 
 # Import Open WebUI modules using compatibility layer (handles pip/docker/git installs)
 try:
@@ -263,7 +297,8 @@ def get_active_file_ids(knowledge_bases=None) -> Set[str]:
     try:
         # Preload all valid file IDs to avoid N database queries during validation
         # This is O(1) set lookup instead of O(n) DB queries
-        all_file_ids = {f.id for f in Files.get_files()}
+        # Use retry logic in case database is locked
+        all_file_ids = retry_on_db_lock(lambda: {f.id for f in Files.get_files()})
         log.debug(f"Preloaded {len(all_file_ids)} file IDs for validation")
 
         # Scan knowledge bases for file references
@@ -298,34 +333,39 @@ def get_active_file_ids(knowledge_bases=None) -> Set[str]:
 
         # Scan chats for file references
         # Stream chats using Core SELECT to avoid ORM overhead
-        chat_count = 0
-        with get_db() as db:
-            stmt = select(Chat.id, Chat.chat)
-            # SQLAlchemy 2.0+ compatibility: execution_options moved to statement
-            try:
-                result = db.execute(stmt.execution_options(stream_results=True))
-            except AttributeError:
-                # Fallback for older SQLAlchemy versions
-                result = db.execution_options(stream_results=True).execute(stmt)
+        # Wrap in retry logic in case of database lock
+        def scan_chats():
+            chat_count = 0
+            with get_db() as db:
+                stmt = select(Chat.id, Chat.chat)
+                # SQLAlchemy 2.0+ compatibility: execution_options moved to statement
+                try:
+                    result = db.execute(stmt.execution_options(stream_results=True))
+                except AttributeError:
+                    # Fallback for older SQLAlchemy versions
+                    result = db.execution_options(stream_results=True).execute(stmt)
 
-            while True:
-                rows = result.fetchmany(1000)
-                if not rows:
-                    break
+                while True:
+                    rows = result.fetchmany(1000)
+                    if not rows:
+                        break
 
-                for chat_id, chat_dict in rows:
-                    chat_count += 1
+                    for chat_id, chat_dict in rows:
+                        chat_count += 1
 
-                    # Skip if no chat data or not a dict
-                    if not chat_dict or not isinstance(chat_dict, dict):
-                        continue
+                        # Skip if no chat data or not a dict
+                        if not chat_dict or not isinstance(chat_dict, dict):
+                            continue
 
-                    try:
-                        # Direct dict traversal (no json.dumps needed)
-                        collect_file_ids_from_dict(chat_dict, active_file_ids, all_file_ids)
-                    except Exception as e:
-                        log.debug(f"Error processing chat {chat_id} for file references: {e}")
+                        try:
+                            # Direct dict traversal (no json.dumps needed)
+                            collect_file_ids_from_dict(chat_dict, active_file_ids, all_file_ids)
+                        except Exception as e:
+                            log.debug(f"Error processing chat {chat_id} for file references: {e}")
 
+            return chat_count
+
+        chat_count = retry_on_db_lock(scan_chats)
         log.debug(f"Scanned {chat_count} chats for file references")
 
         # Scan folders for file references

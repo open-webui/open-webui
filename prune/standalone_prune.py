@@ -685,8 +685,25 @@ def run_prune(form_data: PruneDataForm):
 
             try:
                 with get_db() as db:
-                    db.execute(text("VACUUM"))
-                    log.info("Vacuumed main database")
+                    engine = db.get_bind()
+                    db_url = str(engine.url)
+
+                    if 'postgresql' in db_url:
+                        # PostgreSQL: VACUUM requires autocommit mode (no transaction)
+                        raw_connection = engine.raw_connection()
+                        try:
+                            raw_connection.set_isolation_level(0)  # AUTOCOMMIT mode
+                            cursor = raw_connection.cursor()
+                            cursor.execute("VACUUM ANALYZE")
+                            cursor.close()
+                            raw_connection.commit()
+                            log.info("Vacuumed PostgreSQL main database")
+                        finally:
+                            raw_connection.close()
+                    else:
+                        # SQLite: Can run in transaction
+                        db.execute(text("VACUUM"))
+                        log.info("Vacuumed main database")
             except Exception as e:
                 log.error(f"Failed to vacuum main database: {e}")
 
@@ -703,9 +720,17 @@ def run_prune(form_data: PruneDataForm):
                 and vector_cleaner.session
             ):
                 try:
-                    vector_cleaner.session.execute(text("VACUUM ANALYZE"))
-                    vector_cleaner.session.commit()
-                    log.info("Executed VACUUM ANALYZE on PostgreSQL database")
+                    engine = vector_cleaner.session.get_bind()
+                    raw_connection = engine.raw_connection()
+                    try:
+                        raw_connection.set_isolation_level(0)  # AUTOCOMMIT mode
+                        cursor = raw_connection.cursor()
+                        cursor.execute("VACUUM ANALYZE")
+                        cursor.close()
+                        raw_connection.commit()
+                        log.info("Executed VACUUM ANALYZE on PostgreSQL database")
+                    finally:
+                        raw_connection.close()
                 except Exception as e:
                     log.error(f"Failed to vacuum PostgreSQL database: {e}")
         else:
