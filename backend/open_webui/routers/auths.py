@@ -469,10 +469,6 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                         )
                     except Exception as e:
                         log.error(f"Failed to sync groups for user {user.id}: {e}")
-                    apply_default_group_assignment(
-                        request.app.state.config.DEFAULT_GROUP_ID,
-                        user.id,
-                    )
 
                 return {
                     "token": token,
@@ -537,9 +533,6 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 
             if group_names:
                 Groups.sync_groups_by_group_names(user.id, group_names)
-                apply_default_group_assignment(
-                    request.app.state.config.DEFAULT_GROUP_ID,
-                    user.id,
                 )
 
     elif WEBUI_AUTH == False:
