@@ -131,3 +131,31 @@ export const getFiles = async (
 
 	return res;
 };
+
+export const ingestUploadedDocument = async (token: string, key: string) => {
+	let error: string | null = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/uploads/ingest`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ key })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err?.detail ?? 'Failed to trigger ingestion.';
+			return null;
+		});
+
+	if (error || !res) {
+		throw error ?? 'Failed to trigger ingestion.';
+	}
+
+	return res;
+};

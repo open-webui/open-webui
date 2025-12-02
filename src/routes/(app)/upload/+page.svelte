@@ -3,6 +3,7 @@
 	import {
 		getUploadTenants,
 		uploadDocument,
+		ingestUploadedDocument,
 		type UploadDocumentResponse,
 		type UploadTenant,
 		type UploadVisibility
@@ -114,6 +115,16 @@
 			);
 			uploadResult = result;
 			toast.success('Upload complete.');
+			try {
+				await ingestUploadedDocument(localStorage.token, result.key);
+				toast.success('Ingestion requested.');
+			} catch (err) {
+				const message =
+					typeof err === 'string'
+						? err
+						: (err?.detail ?? 'Failed to trigger ingestion of the uploaded file.');
+				toast.error(message);
+			}
 			selectedFile = null;
 			if (fileInput) {
 				fileInput.value = '';

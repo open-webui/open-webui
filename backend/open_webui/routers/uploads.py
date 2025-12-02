@@ -24,6 +24,7 @@ from open_webui.config import (
 )
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.tenants import Tenants
+from open_webui.routers.luxor import rag_master_request
 from open_webui.utils.auth import get_verified_user, get_admin_user
 
 router = APIRouter()
@@ -100,6 +101,10 @@ class PublicFile(BaseModel):
     last_modified: datetime
     url: str
     tenant_id: str
+
+
+class IngestUploadRequest(BaseModel):
+    key: str
 
 
 @router.get("/tenants", response_model=list[TenantInfo])
@@ -313,3 +318,46 @@ def list_files(
         )
 
     return files
+
+
+@router.post("/ingest")
+async def ingest_uploaded_file(
+    form_data: IngestUploadRequest,
+    user=Depends(get_verified_user),
+):
+    if STORAGE_PROVIDER != "s3":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="S3 storage provider is not configured on this deployment.",
+        )
+
+    if not S3_BUCKET_NAME:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="S3 bucket name is not configured.",
+        )
+
+    if not form_data.key:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Object key is required.",
+        )
+
+    payload = {
+        "task": "ingest-upload",
+        "bucket": S3_BUCKET_NAME,
+        "key": form_data.key,
+    }
+
+    try:
+        response = await rag_master_request(payload)
+    except HTTPException as exc:
+        raise exc
+    except Exception as exc:
+        log.exception("Failed to trigger ingestion for %s: %s", form_data.key, exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to trigger ingestion for the uploaded file.",
+        )
+
+    return response
