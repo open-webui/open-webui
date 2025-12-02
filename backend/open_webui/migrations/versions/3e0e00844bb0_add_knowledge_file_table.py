@@ -82,6 +82,12 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.BigInteger()),
     )
 
+    file_table = sa.Table(
+        "file",
+        sa.MetaData(),
+        sa.Column("id", sa.Text()),
+    )
+
     now = int(time.time())
     for knowledge_id, user_id, data in results:
         if not data:
@@ -98,8 +104,15 @@ def upgrade() -> None:
 
         file_ids = data.get("file_ids", [])
 
-        rows = [
-            {
+        for file_id in file_ids:
+            file_exists = connection.execute(
+                sa.select(file_table.c.id).where(file_table.c.id == file_id)
+            ).fetchone()
+
+            if not file_exists:
+                continue  # skip non-existing files
+
+            row = {
                 "id": str(uuid.uuid4()),
                 "user_id": user_id,
                 "knowledge_id": knowledge_id,
@@ -107,11 +120,7 @@ def upgrade() -> None:
                 "created_at": now,
                 "updated_at": now,
             }
-            for file_id in file_ids
-        ]
-
-        if rows:
-            connection.execute(kf_table.insert(), rows)
+            connection.execute(kf_table.insert().values(**row))
 
     with op.batch_alter_table("knowledge") as batch:
         batch.drop_column("data")
