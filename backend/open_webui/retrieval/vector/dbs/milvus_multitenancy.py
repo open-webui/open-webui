@@ -157,7 +157,6 @@ class MilvusClient(VectorDBBase):
             for item in items
         ]
         collection.insert(entities)
-        collection.flush()
 
     def search(
         self, collection_name: str, vectors: List[List[float]], limit: int
