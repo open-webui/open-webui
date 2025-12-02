@@ -414,7 +414,6 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                         user.id,
                     )
 
-
                 except HTTPException:
                     raise
                 except Exception as err:
@@ -474,7 +473,6 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                         request.app.state.config.DEFAULT_GROUP_ID,
                         user.id,
                     )
-
 
                 return {
                     "token": token,
@@ -857,7 +855,6 @@ async def add_user(
                 request.app.state.config.DEFAULT_GROUP_ID,
                 user.id,
             )
-
 
             token = create_token(data={"id": user.id})
             return {
