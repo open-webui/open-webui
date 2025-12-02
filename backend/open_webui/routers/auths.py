@@ -412,7 +412,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     default_group_id = getattr(
                         request.app.state.config, "DEFAULT_GROUP_ID", ""
                     )
-                    if default_group_id and default_group_id:
+                    if default_group_id:
                         Groups.add_users_to_group(default_group_id, [user.id])
                         log.info(
                             f"Added LDAP user {user.email} to default group {default_group_id}"
