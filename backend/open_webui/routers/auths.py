@@ -533,7 +533,6 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 
             if group_names:
                 Groups.sync_groups_by_group_names(user.id, group_names)
-                )
 
     elif WEBUI_AUTH == False:
         admin_email = "admin@localhost"
