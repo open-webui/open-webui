@@ -258,7 +258,7 @@ class FastMCPManager:
                 in [
                     "time_server",
                     "news_server",
-                    "sharepoint_server",
+                    "mpo_sharepoint_server",
                 ],  # Mark built-in servers
             }
             servers.append(server_info)
@@ -443,28 +443,42 @@ class FastMCPManager:
         else:
             log.warning(f"News server not found at {news_server_path}")
 
-        # Add configuration for SharePoint server (stdio)
-        sharepoint_server_path = (
-            backend_dir / "mcp_backend" / "servers" / "fastmcp_sharepoint_server.py"
+        # Add configuration for MPO SharePoint server (stdio)
+        mpo_sharepoint_server_path = (
+            backend_dir / "mcp_backend" / "servers" / "mpo_sharepoint_server.py"
         )
 
-        log.info(f"Looking for SharePoint server at: {sharepoint_server_path}")
-        log.info(f"SharePoint server exists: {sharepoint_server_path.exists()}")
+        log.info(f"Looking for MPO SharePoint server at: {mpo_sharepoint_server_path}")
+        log.info(f"MPO SharePoint server exists: {mpo_sharepoint_server_path.exists()}")
 
-        if sharepoint_server_path.exists():
+        if mpo_sharepoint_server_path.exists():
             self.add_server_config(
-                name="sharepoint_server",
-                command=["python", str(sharepoint_server_path)],
+                name="mpo_sharepoint_server",
+                command=["python", str(mpo_sharepoint_server_path)],
                 working_dir=str(backend_dir),
                 env=dict(os.environ),  # Pass current environment variables
                 transport="stdio",
             )
 
-            # Start the SharePoint server
-            await self.start_server("sharepoint_server")
-            log.info("SharePoint server started successfully")
+            # Start the MPO SharePoint server
+            await self.start_server("mpo_sharepoint_server")
+            log.info("MPO SharePoint server started successfully")
         else:
-            log.warning(f"SharePoint server not found at {sharepoint_server_path}")
+            log.warning(
+                f"MPO SharePoint server not found at {mpo_sharepoint_server_path}"
+            )
+
+        # Legacy SharePoint server (keep for backward compatibility)
+        sharepoint_server_path = (
+            backend_dir / "mcp_backend" / "servers" / "fastmcp_sharepoint_server.py"
+        )
+
+        if sharepoint_server_path.exists():
+            log.info(
+                "Legacy SharePoint server found but skipping (using MPO-specific server instead)"
+            )
+        else:
+            log.info("No legacy SharePoint server found")
 
     async def initialize_external_servers(self):
         """Initialize external MCP servers from database"""
@@ -547,7 +561,7 @@ class FastMCPManager:
                             is_builtin = server_name in [
                                 "time_server",
                                 "news_server",
-                                "sharepoint_server",
+                                "mpo_sharepoint_server",
                             ]
                             tool_dict = {
                                 "name": tool.name,
@@ -577,7 +591,7 @@ class FastMCPManager:
                             is_builtin = server_name in [
                                 "time_server",
                                 "news_server",
-                                "sharepoint_server",
+                                "mpo_sharepoint_server",
                             ]
                             tool_dict = {
                                 "name": tool.name,

@@ -421,7 +421,7 @@ async def get_builtin_servers(request: Request, user=Depends(get_admin_user)):
         servers = []
 
         # Only include actual built-in servers
-        builtin_server_names = ["time_server", "news_server", "sharepoint_server"]
+        builtin_server_names = ["time_server", "news_server", "mpo_sharepoint_server"]
 
         for name in server_names:
             if name not in builtin_server_names:
@@ -441,7 +441,7 @@ async def get_builtin_servers(request: Request, user=Depends(get_admin_user)):
             servers.append(
                 {
                     "name": name,
-                    "display_name": name.replace("_", " ").title(),
+                    "display_name": get_server_display_name(name),
                     "status": status,
                     "transport": config.get("transport", "stdio"),
                     "tools_count": tools_count,
@@ -454,12 +454,22 @@ async def get_builtin_servers(request: Request, user=Depends(get_admin_user)):
         return {"servers": []}
 
 
+def get_server_display_name(name: str) -> str:
+    """Get display name for MCP servers"""
+    display_names = {
+        "time_server": "MCP: Current Time",
+        "news_server": "MCP: News Headlines",
+        "mpo_sharepoint_server": "MCP: MPO SharePoint",
+    }
+    return display_names.get(name, name.replace("_", " ").title())
+
+
 def get_server_description(name: str) -> str:
-    """Get description for built-in servers"""
+    """Get description for built-in MCP servers"""
     descriptions = {
         "time_server": "Provides current time and timezone information",
         "news_server": "Provides latest news headlines from NewsDesk",
-        "sharepoint_server": "Provides SharePoint document search and retrieval for MPO",
+        "mpo_sharepoint_server": "Provides MPO SharePoint document search and retrieval",
     }
     return descriptions.get(name, f"Built-in MCP server: {name}")
 
@@ -471,7 +481,7 @@ async def restart_builtin_server(
     """Restart a built-in MCP server"""
     try:
         # Check if this is a valid built-in server
-        builtin_server_names = ["time_server", "news_server", "sharepoint_server"]
+        builtin_server_names = ["time_server", "news_server", "mpo_sharepoint_server"]
         if server_name not in builtin_server_names:
             raise HTTPException(
                 status_code=404, detail=f"Built-in server '{server_name}' not found"

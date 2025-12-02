@@ -15,7 +15,8 @@ const getMCPToolDescription = (toolName: string, i18n: any): string => {
 	// Map tool names to English descriptions (which serve as translation keys)
 	const toolDescriptions: Record<string, string> = {
 		get_current_time: 'Get current date and time in any timezone',
-		get_top_headlines: 'Get latest news headlines from around the world'
+		get_top_headlines: 'Get latest news headlines from around the world',
+		search_sharepoint_documents: 'Search and retrieve MPO SharePoint documents'
 	};
 
 	const englishDescription = toolDescriptions[actualToolName];
@@ -37,7 +38,8 @@ export const getMCPToolName = (toolName: string, i18n: any): string => {
 	// Map tool names to English display names (which serve as translation keys)
 	const toolNames: Record<string, string> = {
 		get_current_time: 'MCP: Current Time',
-		get_top_headlines: 'MCP: News Headlines'
+		get_top_headlines: 'MCP: News Headlines',
+		search_sharepoint_documents: 'MCP: MPO SharePoint'
 	};
 
 	const englishName = toolNames[actualToolName];

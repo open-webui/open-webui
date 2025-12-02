@@ -23,18 +23,42 @@ logger = logging.getLogger("sharepoint_oauth")
 class SharePointOAuthClient:
     """OAuth2 client for SharePoint with On-Behalf-Of flow support"""
 
-    def __init__(self):
-        """Initialize the OAuth client with configuration from environment"""
-        self.client_id = os.getenv("SHP_ID_APP")
-        self.client_secret = os.getenv("SHP_ID_APP_SECRET")
-        self.tenant_id = os.getenv("SHP_TENANT_ID")
-        self.site_url = os.getenv("SHP_SITE_URL")
-        # Force application-only access for local development to avoid OBO issues
-        self.use_delegated_access = (
-            os.getenv("SHP_USE_DELEGATED_ACCESS", "false").lower() == "true"
-            and os.getenv("USER_JWT_TOKEN") is not None
-        )
-        self.obo_scope = os.getenv(
+    def __init__(
+        self,
+        client_id: str = None,
+        client_secret: str = None,
+        tenant_id: str = None,
+        site_url: str = None,
+        use_delegated_access: bool = None,
+        obo_scope: str = None,
+    ):
+        """
+        Initialize the OAuth client with configuration.
+
+        Args:
+            client_id: Azure AD application client ID (if None, uses SHP_ID_APP env var)
+            client_secret: Azure AD application client secret (if None, uses SHP_ID_APP_SECRET env var)
+            tenant_id: Azure AD tenant ID (if None, uses SHP_TENANT_ID env var)
+            site_url: SharePoint site URL (if None, uses SHP_SITE_URL env var)
+            use_delegated_access: Enable OBO flow (if None, uses SHP_USE_DELEGATED_ACCESS env var)
+            obo_scope: OBO token scopes (if None, uses SHP_OBO_SCOPE env var)
+        """
+        # Support both direct parameters and environment variables for backward compatibility
+        self.client_id = client_id or os.getenv("SHP_ID_APP")
+        self.client_secret = client_secret or os.getenv("SHP_ID_APP_SECRET")
+        self.tenant_id = tenant_id or os.getenv("SHP_TENANT_ID")
+        self.site_url = site_url or os.getenv("SHP_SITE_URL")
+
+        # Global settings with defaults
+        if use_delegated_access is not None:
+            self.use_delegated_access = use_delegated_access
+        else:
+            self.use_delegated_access = (
+                os.getenv("SHP_USE_DELEGATED_ACCESS", "true").lower() == "true"
+                and os.getenv("USER_JWT_TOKEN") is not None
+            )
+
+        self.obo_scope = obo_scope or os.getenv(
             "SHP_OBO_SCOPE",
             "https://graph.microsoft.com/Sites.Read.All https://graph.microsoft.com/Files.Read.All",
         )
@@ -299,24 +323,22 @@ class SharePointOAuthClient:
         return await self.make_graph_request(endpoint, access_token)
 
     async def get_file_content(
-        self, access_token: str, site_id: str, drive_id: str, file_path: str
+        self, access_token: str, site_id: str, drive_id: str, file_id: str
     ) -> Tuple[bool, Any]:
         """
-        Get content of a specific file
+        Get content of a specific file by ID
 
         Args:
             access_token: Access token for authentication
             site_id: SharePoint site ID
             drive_id: Drive ID
-            file_path: Path to the file
+            file_id: File ID (not path)
 
         Returns:
             Tuple of (success, file_content)
         """
-        file_path_encoded = quote(file_path, safe="")
-        endpoint = (
-            f"sites/{site_id}/drives/{drive_id}/root:/{file_path_encoded}:/content"
-        )
+        # Use file ID to get content directly
+        endpoint = f"sites/{site_id}/drives/{drive_id}/items/{file_id}/content"
 
         try:
             url = f"{self.graph_base_url}/{endpoint}"

@@ -65,9 +65,16 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
 
                 # Create unique ID and name to avoid conflicts with regular tools
                 tool_id = f"mcp_{tool_name}"
-                display_name = (
-                    f"MCP: {tool_name}"  # Prefix to distinguish from regular tools
-                )
+                # Use server display name if available, otherwise add MCP prefix
+                server_name = mcp_tool.get("mcp_server_name", "")
+                if server_name:
+                    from mcp_backend.routers.mcp import get_server_display_name
+
+                    display_name = get_server_display_name(server_name)
+                else:
+                    display_name = (
+                        f"MCP: {tool_name}"  # Prefix to distinguish from regular tools
+                    )
 
                 # Check if we already have a tool with this ID and make it unique
                 existing_ids = [t.id for t in tools]

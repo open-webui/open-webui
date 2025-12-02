@@ -56,16 +56,17 @@ class CrewMCPManager:
         self.news_server_path = (
             self.backend_dir / "mcp_backend" / "servers" / "fastmcp_news_server.py"
         )
+        # SharePoint server paths - use new multi-department implementation
+        self.mpo_sharepoint_server_path = (
+            self.backend_dir / "mcp_backend" / "servers" / "mpo_sharepoint_server.py"
+        )
+
+        # Legacy generic SharePoint server (fallback)
         self.sharepoint_server_path = (
             self.backend_dir
             / "mcp_backend"
             / "servers"
-            / "generic_sharepoint_server_obo.py"
-        )
-
-        # MPO-specific configuration path (example of organization-specific config with OBO)
-        self.mpo_sharepoint_server_path = (
-            self.backend_dir / "mcp_backend" / "servers" / "mpo_sharepoint_config.py"
+            / "generic_sharepoint_server_multi_dept.py"
         )
 
         # User token for OBO flow
