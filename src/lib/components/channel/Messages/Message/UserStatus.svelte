@@ -77,7 +77,7 @@
 			<div class="mx-2 mt-2">
 				<Tooltip content={user?.status_message}>
 					<div
-						class="mb-1 w-full gap-2 px-2.5 py-1.5 rounded-xl bg-gray-50 dark:text-white dark:bg-gray-900/50 text-black transition text-xs flex items-center"
+						class="w-full gap-2 px-2.5 py-1.5 rounded-xl bg-gray-50 dark:text-white dark:bg-gray-900/50 text-black transition text-xs flex items-center"
 					>
 						{#if user?.status_emoji}
 							<div class=" self-center shrink-0">
