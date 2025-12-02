@@ -157,7 +157,11 @@
 				id, // knowledge base ID
 				file
 			).catch((e) => {
-				toast.error(`${e}`);
+				if (e && typeof e === 'string' && e.includes('Duplicate content')) {
+					toast.warning($i18n.t(e));
+				} else {
+					toast.error(`${e}`);
+				}
 				return null;
 			});
 

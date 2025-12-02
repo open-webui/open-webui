@@ -79,17 +79,7 @@ def query_doc(
         )
 
         if result:
-            # Log documents count and sample to debug
-            doc_count = len(result.documents[0]) if result.documents and result.documents[0] else 0
-            doc_sample = result.documents[0][0][:50] if result.documents and result.documents[0] and result.documents[0][0] else "EMPTY"
-            distances = result.distances[0][:3] if result.distances and result.distances[0] else []
-            print(
-                "*"*20,
-                f"query_doc:result collection={collection_name}, ids={len(result.ids[0]) if result.ids and result.ids[0] else 0}, "
-                f"documents={doc_count}, doc_sample='{doc_sample}...', "
-                f"distances={distances}, "
-                f"metadatas={len(result.metadatas[0]) if result.metadatas and result.metadatas[0] else 0}"
-            )
+            log.info(f"query_doc:result {result.ids} {result.metadatas}")
 
         return result
     except Exception as e:
@@ -267,14 +257,7 @@ def query_collection(
         # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
         # https://docs.trychroma.com/docs/collections/configure#configuring-chroma-collections
         return merge_and_sort_query_results(results, k=k, reverse=False)
-    elif VECTOR_DB == "pgvector":
-        # pgvector cosine_distance returns 0 for identical, 2 for opposite (lower = better)
-        # SQL query already orders by distance ASCENDING (best first)
-        # So we should NOT reverse - keep best matches first
-        return merge_and_sort_query_results(results, k=k, reverse=False)
     else:
-        # For other vector DBs, check their distance semantics
-        # Default to reverse=True for similarity scores (higher = better)
         return merge_and_sort_query_results(results, k=k, reverse=True)
 
 
@@ -315,14 +298,7 @@ def query_collection_with_hybrid_search(
         # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
         # https://docs.trychroma.com/docs/collections/configure#configuring-chroma-collections
         return merge_and_sort_query_results(results, k=k, reverse=False)
-    elif VECTOR_DB == "pgvector":
-        # pgvector cosine_distance returns 0 for identical, 2 for opposite (lower = better)
-        # SQL query already orders by distance ASCENDING (best first)
-        # So we should NOT reverse - keep best matches first
-        return merge_and_sort_query_results(results, k=k, reverse=False)
     else:
-        # For other vector DBs, check their distance semantics
-        # Default to reverse=True for similarity scores (higher = better)
         return merge_and_sort_query_results(results, k=k, reverse=True)
 
 
@@ -543,25 +519,15 @@ def get_sources_from_files(
         try:
             if "documents" in context:
                 if "metadatas" in context:
-                    documents = context["documents"][0] if context["documents"] else []
-                    metadatas = context["metadatas"][0] if context["metadatas"] else []
-                    file_obj = context.get("file", {})
-                    
-                    # Log for debugging
-                    log.debug(f"Building source from context: file={file_obj.get('name', 'N/A')}, documents_count={len(documents) if documents else 0}")
-                    
-                    if documents:  # Only create source if there are documents
-                        source = {
-                            "source": file_obj,
-                            "document": documents,
-                            "metadata": metadatas,
-                        }
-                        if "distances" in context and context["distances"]:
-                            source["distances"] = context["distances"][0]
+                    source = {
+                        "source": context["file"],
+                        "document": context["documents"][0],
+                        "metadata": context["metadatas"][0],
+                    }
+                    if "distances" in context and context["distances"]:
+                        source["distances"] = context["distances"][0]
 
-                        sources.append(source)
-                    else:
-                        log.warning(f"No documents in context for file: {file_obj.get('name', 'N/A')}")
+                    sources.append(source)
         except Exception as e:
             log.exception(e)
 

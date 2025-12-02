@@ -1146,20 +1146,19 @@ def save_docs_to_multiple_collections(
             user=user,
         )
 
-        # Create items once
-        items = [
-            {
-                "id": str(uuid.uuid4()),
-                "text": text,
-                "vector": embeddings[idx],
-                "metadata": metadatas[idx],
-            }
-            for idx, text in enumerate(texts)
-        ]
-
         # Insert embeddings into all collections
         for collection_name in collections:
             log.info(f"Adding embeddings to collection {collection_name}")
+            items = [
+                {
+                    "id": str(uuid.uuid4()),
+                    "text": text,
+                    "vector": embeddings[idx],
+                    "metadata": metadatas[idx],
+                }
+                for idx, text in enumerate(texts)
+            ]
+
             VECTOR_DB_CLIENT.insert(
                 collection_name=collection_name,
                 items=items,
