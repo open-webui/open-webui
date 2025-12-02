@@ -106,6 +106,13 @@ class PublicFile(BaseModel):
 class IngestUploadRequest(BaseModel):
     key: str
 
+class RebuildTenantRequest(BaseModel):
+    tenant: str
+
+class RebuildUserRequest(BaseModel):
+    tenant: str
+    user: str
+
 
 @router.get("/tenants", response_model=list[TenantInfo])
 def list_tenants(admin=Depends(get_admin_user)):
@@ -319,6 +326,109 @@ def list_files(
 
     return files
 
+@router.post("/rebuild-tenant")
+async def rebuild_tenant(
+    form_data: RebuildTenantRequest,
+    user=Depends(get_verified_user),
+):
+    if STORAGE_PROVIDER != "s3":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="S3 storage provider is not configured on this deployment.",
+        )
+
+    if not S3_BUCKET_NAME:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="S3 bucket name is not configured.",
+        )
+
+    if not form_data.tenant:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="tenant is required.",
+        )
+    
+    # TODO if user is not admin and user's tenant s3 key does not match form_data tenant (which is the passed s3 key) raise 401 unauthorized exception
+
+    payload = {
+        "task": "rebuild-tenant",
+        "bucket": S3_BUCKET_NAME,
+        "tenant": form_data.tenant
+    }
+
+    try:
+        response = await rag_master_request(payload)
+    except HTTPException as exc:
+        raise exc
+    except Exception as exc:
+        log.exception("Failed to trigger Rebuild for %s: %s", form_data.tenant, exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to trigger ingestion for the uploaded file.",
+        )
+
+    return response
+
+@router.post("/rebuild-user")
+async def rebuild_usert(
+    form_data: RebuildUserRequest,
+    user=Depends(get_verified_user),
+):
+    if STORAGE_PROVIDER != "s3":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="S3 storage provider is not configured on this deployment.",
+        )
+
+    if not S3_BUCKET_NAME:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="S3 bucket name is not configured.",
+        )
+
+    if not form_data.tenant:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="tenant is required.",
+        )
+    
+    if not form_data.user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="user is required.",
+        )
+    
+    if user.id != form_data.user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="user is required.",
+        )
+    
+    # TODO if user is not admin and user's tenant s3 key does not match form_data tenant (which is the passed s3 key) raise 401 unauthorized exception
+    # TODO if user's Id does not match form_data user (which is the passed user id) raise 401 unauthorized exception
+    
+
+    payload = {
+        "task": "rebuild-user",
+        "bucket": S3_BUCKET_NAME,
+        "tenant": form_data.tenant,
+        "user": form_data.user
+    }
+
+    try:
+        response = await rag_master_request(payload)
+    except HTTPException as exc:
+        raise exc
+    except Exception as exc:
+        log.exception("Failed to trigger Rebuild for %s: %s", form_data.tenant, exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to trigger ingestion for the uploaded file.",
+        )
+
+    return response
+
 
 @router.post("/ingest")
 async def ingest_uploaded_file(
@@ -342,6 +452,17 @@ async def ingest_uploaded_file(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Object key is required.",
         )
+    
+    key = form_data.key
+    split = key.split("/")
+    tenant = split[0]
+    user_id = ""
+    if len(split) == 4:
+        user_id = split[2]
+    
+
+    # TODO if user is not admin and user's tenant s3 key does not match tenant raise 401 unauthorized exception
+    # TODO if user_id is populated and user Id does not match user_id (which is the passed user id) raise 401 unauthorized exception
 
     payload = {
         "task": "ingest-upload",
