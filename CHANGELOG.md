@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.41] - 2025-12-03
+## [0.6.41] - 2025-12-02
 
 ### Added
 
@@ -66,8 +66,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Image generation in temporary chats was fixed by correctly handling local chat sessions that are not persisted to the database. [Commit](https://github.com/open-webui/open-webui/commit/a7c7993bbf3a21cb7ba416525b89233cf2ad877f)
 - Audit logging was fixed by correctly awaiting the async user authentication call, resolving failures where coroutine objects were passed instead of user data. [#19658](https://github.com/open-webui/open-webui/pull/19658), [Commit](https://github.com/open-webui/open-webui/commit/dba86bc)
 - Dark mode select dropdown styling was corrected to use proper background colors, fixing an issue where dropdown borders and hover states appeared white instead of matching the dark theme. [#19693](https://github.com/open-webui/open-webui/pull/19693), [#19442](https://github.com/open-webui/open-webui/issues/19442)
-- Milvus vector database query filtering was fixed by replacing the broken query_iterator() method with direct query() calls and correcting string quote handling in filter expressions, resolving false "duplicate content detected" errors that prevented uploading multiple files to knowledge bases. [#19602](https://github.com/open-webui/open-webui/pull/19602), [#18119](https://github.com/open-webui/open-webui/issues/18119), [#16345](https://github.com/open-webui/open-webui/issues/16345), [#17088](https://github.com/open-webui/open-webui/issues/17088), [#18485](https://github.com/open-webui/open-webui/issues/18485)
-- Milvus multitenancy vector database query filtering was fixed with the same corrections applied to the multitenancy implementation, resolving identical false duplicate detection errors in multi-tenant deployments. [#19695](https://github.com/open-webui/open-webui/pull/19695)
+- Milvus vector database query filtering was fixed by correcting string quote handling in filter expressions and using the proper parameter name for queries, resolving false "duplicate content detected" errors that prevented uploading multiple files to knowledge bases. [#19602](https://github.com/open-webui/open-webui/pull/19602), [#18119](https://github.com/open-webui/open-webui/issues/18119), [#16345](https://github.com/open-webui/open-webui/issues/16345), [#17088](https://github.com/open-webui/open-webui/issues/17088), [#18485](https://github.com/open-webui/open-webui/issues/18485)
+- Milvus multitenancy vector database was updated to use query_iterator() for improved robustness and consistency with the standard Milvus implementation, fixing the same false duplicate detection errors and improving handling of large result sets in multi-tenant deployments. [#19695](https://github.com/open-webui/open-webui/pull/19695)
 
 ### Changed
 
