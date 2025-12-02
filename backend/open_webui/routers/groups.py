@@ -32,31 +32,17 @@ router = APIRouter()
 
 @router.get("/", response_model=list[GroupResponse])
 async def get_groups(share: Optional[bool] = None, user=Depends(get_verified_user)):
-    if user.role == "admin":
-        groups = Groups.get_groups()
-    else:
-        groups = Groups.get_groups_by_member_id(user.id)
 
-    group_list = []
+    filter = {}
+    if user.role != "admin":
+        filter["member_id"] = user.id
 
-    for group in groups:
-        if share is not None:
-            # Check if the group has data and a config with share key
-            if (
-                group.data
-                and "share" in group.data.get("config", {})
-                and group.data["config"]["share"] != share
-            ):
-                continue
+    if share is not None:
+        filter["share"] = share
 
-        group_list.append(
-            GroupResponse(
-                **group.model_dump(),
-                member_count=Groups.get_group_member_count_by_id(group.id),
-            )
-        )
+    groups = Groups.get_groups(filter=filter)
 
-    return group_list
+    return groups
 
 
 ############################
@@ -98,6 +84,32 @@ async def get_group_by_id(id: str, user=Depends(get_admin_user)):
         return GroupResponse(
             **group.model_dump(),
             member_count=Groups.get_group_member_count_by_id(group.id),
+        )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
+# ExportGroupById
+############################
+
+
+class GroupExportResponse(GroupResponse):
+    user_ids: list[str] = []
+    pass
+
+
+@router.get("/id/{id}/export", response_model=Optional[GroupExportResponse])
+async def export_group_by_id(id: str, user=Depends(get_admin_user)):
+    group = Groups.get_group_by_id(id)
+    if group:
+        return GroupExportResponse(
+            **group.model_dump(),
+            member_count=Groups.get_group_member_count_by_id(group.id),
+            user_ids=Groups.get_group_user_ids_by_id(group.id),
         )
     else:
         raise HTTPException(

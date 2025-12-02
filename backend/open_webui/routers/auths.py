@@ -6,6 +6,7 @@ import logging
 from aiohttp import ClientSession
 import urllib
 
+
 from open_webui.models.auths import (
     AddUserForm,
     ApiKey,
@@ -16,9 +17,13 @@ from open_webui.models.auths import (
     SigninResponse,
     SignupForm,
     UpdatePasswordForm,
-    UserResponse,
 )
-from open_webui.models.users import Users, UpdateProfileForm
+from open_webui.models.users import (
+    UserProfileImageResponse,
+    Users,
+    UpdateProfileForm,
+    UserStatus,
+)
 from open_webui.models.groups import Groups
 from open_webui.models.oauth_sessions import OAuthSessions
 
@@ -61,6 +66,10 @@ from open_webui.utils.auth import (
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.access_control import get_permissions, has_permission
 
+from open_webui.utils.redis import get_redis_client
+from open_webui.utils.rate_limit import RateLimiter
+
+
 from typing import Optional, List
 
 from ssl import CERT_NONE, CERT_REQUIRED, PROTOCOL_TLS
@@ -73,17 +82,21 @@ router = APIRouter()
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
+signin_rate_limiter = RateLimiter(
+    redis_client=get_redis_client(), limit=5 * 3, window=60 * 3
+)
+
 ############################
 # GetSessionUser
 ############################
 
 
-class SessionUserResponse(Token, UserResponse):
+class SessionUserResponse(Token, UserProfileImageResponse):
     expires_at: Optional[int] = None
     permissions: Optional[dict] = None
 
 
-class SessionUserInfoResponse(SessionUserResponse):
+class SessionUserInfoResponse(SessionUserResponse, UserStatus):
     bio: Optional[str] = None
     gender: Optional[str] = None
     date_of_birth: Optional[datetime.date] = None
@@ -140,6 +153,9 @@ async def get_session_user(
         "bio": user.bio,
         "gender": user.gender,
         "date_of_birth": user.date_of_birth,
+        "status_emoji": user.status_emoji,
+        "status_message": user.status_message,
+        "status_expires_at": user.status_expires_at,
         "permissions": user_permissions,
     }
 
@@ -149,7 +165,7 @@ async def get_session_user(
 ############################
 
 
-@router.post("/update/profile", response_model=UserResponse)
+@router.post("/update/profile", response_model=UserProfileImageResponse)
 async def update_profile(
     form_data: UpdateProfileForm, session_user=Depends(get_verified_user)
 ):
@@ -544,6 +560,12 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
                 admin_email.lower(), lambda pw: verify_password(admin_password, pw)
             )
     else:
+        if signin_rate_limiter.is_limited(form_data.email.lower()):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
+            )
+
         password_bytes = form_data.password.encode("utf-8")
         if len(password_bytes) > 72:
             # TODO: Implement other hashing algorithms that support longer passwords
@@ -901,6 +923,7 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "JWT_EXPIRES_IN": request.app.state.config.JWT_EXPIRES_IN,
         "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
+        "ENABLE_FOLDERS": request.app.state.config.ENABLE_FOLDERS,
         "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
         "ENABLE_NOTES": request.app.state.config.ENABLE_NOTES,
         "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
@@ -922,6 +945,7 @@ class AdminConfig(BaseModel):
     JWT_EXPIRES_IN: str
     ENABLE_COMMUNITY_SHARING: bool
     ENABLE_MESSAGE_RATING: bool
+    ENABLE_FOLDERS: bool
     ENABLE_CHANNELS: bool
     ENABLE_NOTES: bool
     ENABLE_USER_WEBHOOKS: bool
@@ -946,6 +970,7 @@ async def update_admin_config(
         form_data.API_KEYS_ALLOWED_ENDPOINTS
     )
 
+    request.app.state.config.ENABLE_FOLDERS = form_data.ENABLE_FOLDERS
     request.app.state.config.ENABLE_CHANNELS = form_data.ENABLE_CHANNELS
     request.app.state.config.ENABLE_NOTES = form_data.ENABLE_NOTES
 
@@ -988,6 +1013,7 @@ async def update_admin_config(
         "JWT_EXPIRES_IN": request.app.state.config.JWT_EXPIRES_IN,
         "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
+        "ENABLE_FOLDERS": request.app.state.config.ENABLE_FOLDERS,
         "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
         "ENABLE_NOTES": request.app.state.config.ENABLE_NOTES,
         "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
@@ -1130,8 +1156,7 @@ async def generate_api_key(request: Request, user=Depends(get_current_user)):
 # delete api key
 @router.delete("/api_key", response_model=bool)
 async def delete_api_key(user=Depends(get_current_user)):
-    success = Users.update_user_api_key_by_id(user.id, None)
-    return success
+    return Users.delete_user_api_key_by_id(user.id)
 
 
 # get api key
