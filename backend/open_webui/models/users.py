@@ -24,8 +24,10 @@ from sqlalchemy import (
     Date,
     exists,
     select,
+    cast,
 )
 from sqlalchemy import or_, case
+from sqlalchemy.dialects.postgresql import JSONB
 
 import datetime
 
@@ -296,14 +298,21 @@ class UsersTable:
 
     def get_user_by_oauth_sub(self, provider: str, sub: str) -> Optional[UserModel]:
         try:
-            with get_db() as db:
-                user = (
-                    db.query(User)
-                    .filter(User.oauth.contains({provider: {"sub": sub}}))
-                    .first()
-                )
+            with get_db() as db:  # type: Session
+                dialect_name = db.bind.dialect.name
+
+                query = db.query(User)
+                if dialect_name == "sqlite":
+                    query = query.filter(User.oauth.contains({provider: {"sub": sub}}))
+                elif dialect_name == "postgresql":
+                    query = query.filter(
+                        User.oauth[provider].cast(JSONB)["sub"].astext == sub
+                    )
+
+                user = query.first()
                 return UserModel.model_validate(user) if user else None
-        except Exception:
+        except Exception as e:
+            # You may want to log the exception here
             return None
 
     def get_users(
