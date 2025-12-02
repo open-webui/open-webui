@@ -12,6 +12,7 @@ import logging
 from pathlib import Path
 from typing import List, Dict, Set
 import hashlib
+from datetime import datetime
 
 if "WEBUI_SECRET_KEY" not in os.environ or os.environ.get("WEBUI_SECRET_KEY") == "":
     os.environ["WEBUI_SECRET_KEY"] = "test-script-temporary-key"
@@ -29,6 +30,7 @@ from open_webui.storage.provider import Storage
 from open_webui.retrieval.loaders.main import Loader
 from open_webui.retrieval.vector.dbs.pgvector import PgvectorClient
 from open_webui.retrieval.utils import get_single_batch_embedding_function
+from sqlalchemy import text
 from open_webui.config import (
     RAG_EMBEDDING_ENGINE,
     RAG_EMBEDDING_MODEL,
@@ -174,12 +176,100 @@ def load_and_split_file(
         return []
 
 
+def generate_embeddings_with_retry_and_split(
+    texts: List[str],
+    embedding_function,
+    min_batch_size: int = 1,
+    user=None,
+) -> List:
+    """
+    Generate embeddings with retry logic and automatic batch splitting on failures.
+    
+    If retries fail, splits the batch in half and recursively processes smaller batches.
+    This handles timeouts and network errors for large batches.
+    
+    Args:
+        texts: List of text chunks to embed
+        embedding_function: Function to generate embeddings
+        min_batch_size: Minimum batch size before giving up (default: 1)
+    
+    Returns:
+        List of embedding vectors
+    """
+    if not texts:
+        return []
+    
+    processed_texts = [text.replace("\n", " ") for text in texts]
+    
+    # Retry logic for network errors
+    max_retries = 3
+    retry_count = 0
+    
+    while retry_count <= max_retries:
+        try:
+            # Pass user parameter to match normal upload behavior
+            # The embedding function signature is: lambda query, user=None
+            embeddings = embedding_function(processed_texts, user=user)
+            return embeddings
+        except Exception as e:
+            # Check if it's a network/connection/timeout error that we should retry
+            error_str = str(e).lower()
+            is_network_error = (
+                isinstance(e, (requests.exceptions.ChunkedEncodingError,
+                               requests.exceptions.ConnectionError,
+                               requests.exceptions.Timeout)) or
+                "connection" in error_str or
+                "incompleteread" in error_str or
+                "protocol" in error_str or
+                "broken" in error_str or
+                "timeout" in error_str
+            )
+            
+            if is_network_error and retry_count < max_retries:
+                retry_count += 1
+                wait_time = 2 ** retry_count  # Exponential backoff: 2, 4, 8 seconds
+                log.warning(f"Network error generating embeddings for {len(texts)} chunks (attempt {retry_count}/{max_retries}): {type(e).__name__}")
+                log.info(f"Retrying in {wait_time} seconds...")
+                time.sleep(wait_time)
+            else:
+                # Not a network error or max retries reached
+                # If batch is large enough, try splitting it in half
+                if len(texts) > min_batch_size and (is_network_error or "timeout" in error_str):
+                    log.warning(f"Failed to generate embeddings for {len(texts)} chunks after {retry_count} retries. Splitting batch in half...")
+                    mid = len(texts) // 2
+                    
+                    # Recursively process each half
+                    # Pass original texts (not processed) - the function will process them internally
+                    embeddings_first = generate_embeddings_with_retry_and_split(
+                        texts[:mid],
+                        embedding_function,
+                        min_batch_size,
+                        user=user
+                    )
+                    embeddings_second = generate_embeddings_with_retry_and_split(
+                        texts[mid:],
+                        embedding_function,
+                        min_batch_size,
+                        user=user
+                    )
+                    
+                    # Combine results
+                    return embeddings_first + embeddings_second
+                else:
+                    # Batch too small to split or non-network error
+                    log.error(f"Failed to generate embeddings for {len(texts)} chunks: {e}")
+                    raise
+    
+    raise ValueError("Failed to generate embeddings after all retries")
+
+
 def process_file_to_collections(
     file: FileModel,
     collections: List[str],
     user_email: str,
     pg_client: PgvectorClient,
     embedding_function,
+    user=None,
     overwrite: bool = False,
     dry_run: bool = False,
 ) -> bool:
@@ -196,10 +286,17 @@ def process_file_to_collections(
         
         # Prepare texts and metadatas
         texts = [doc.page_content for doc in docs]
+        
+        # Calculate hash from full document content (same as normal upload)
+        # This matches the behavior in retrieval.py where hash is calculated from text_content
+        # and the same hash is used for all chunks from the same file
+        text_content = " ".join(texts)
+        file_hash = calculate_sha256_string(text_content)
+        
         metadatas = [
             {
                 **doc.metadata,
-                "hash": calculate_sha256_string(doc.page_content),
+                "hash": file_hash,  # Use same hash for all chunks (matches normal upload)
                 "embedding_config": json.dumps({
                     "engine": RAG_EMBEDDING_ENGINE.value,
                     "model": RAG_EMBEDDING_MODEL.value,
@@ -209,49 +306,22 @@ def process_file_to_collections(
         ]
         
         # Convert datetime/list/dict to string (ChromaDB compatibility)
+        # This matches the normal upload process in retrieval.py
         for metadata in metadatas:
             for key, value in metadata.items():
-                if isinstance(value, (dict, list)):
-                    metadata[key] = json.dumps(value)
+                if (
+                    isinstance(value, datetime)
+                    or isinstance(value, list)
+                    or isinstance(value, dict)
+                ):
+                    if isinstance(value, datetime):
+                        metadata[key] = str(value)
+                    else:
+                        metadata[key] = json.dumps(value)
         
-        # Generate embeddings (same text processing as normal uploads)
+        # Generate embeddings with retry and automatic batch splitting
         log.info(f"Generating embeddings for {len(texts)} chunks from file {file.id}")
-        processed_texts = [text.replace("\n", " ") for text in texts]
-        
-        # Retry logic for network errors
-        max_retries = 3
-        retry_count = 0
-        embeddings = None
-        while retry_count <= max_retries:
-            try:
-                embeddings = embedding_function(processed_texts)
-                break
-            except Exception as e:
-                # Check if it's a network/connection error that we should retry
-                error_str = str(e).lower()
-                is_network_error = (
-                    isinstance(e, (requests.exceptions.ChunkedEncodingError,
-                                   requests.exceptions.ConnectionError,
-                                   requests.exceptions.Timeout)) or
-                    "connection" in error_str or
-                    "incompleteread" in error_str or
-                    "protocol" in error_str or
-                    "broken" in error_str
-                )
-                
-                if is_network_error and retry_count < max_retries:
-                    retry_count += 1
-                    wait_time = 2 ** retry_count  # Exponential backoff: 2, 4, 8 seconds
-                    log.warning(f"Network error generating embeddings (attempt {retry_count}/{max_retries}): {type(e).__name__}")
-                    log.info(f"Retrying in {wait_time} seconds...")
-                    time.sleep(wait_time)
-                else:
-                    # Not a network error or max retries reached
-                    log.error(f"Failed to generate embeddings: {e}")
-                    raise
-        
-        if embeddings is None:
-            raise ValueError("Failed to generate embeddings")
+        embeddings = generate_embeddings_with_retry_and_split(texts, embedding_function, user=user)
         
         if dry_run:
             log.info(f"[DRY RUN] Would insert {len(texts)} chunks into collections: {collections}")
@@ -277,6 +347,34 @@ def process_file_to_collections(
         # IMPORTANT: Since id is the primary key (not composite with collection_name),
         # we must generate unique IDs for each collection to avoid duplicate key errors
         for collection_name in collections:
+            # Check for existing duplicates/partials if not overwriting
+            if not overwrite:
+                try:
+                    # Check using hash if available in metadata, otherwise assume file_id check in delete() above was enough
+                    # But delete() only ran if overwrite=True.
+                    
+                    # We can check by file_id since we have it
+                    existing_chunks = pg_client.query(
+                        collection_name=collection_name,
+                        filter={"file_id": file.id}
+                    )
+                    
+                    if existing_chunks and existing_chunks.ids and existing_chunks.ids[0]:
+                        existing_count = len(existing_chunks.ids[0])
+                        new_count = len(texts)
+                        
+                        if existing_count == new_count:
+                            log.info(f"   ⚠️  File {file.id} already exists in {collection_name} with same chunk count. Skipping.")
+                            continue
+                        else:
+                            log.warning(f"   ⚠️  File {file.id} exists in {collection_name} but with different chunk count ({existing_count} vs {new_count}). Overwriting.")
+                            pg_client.delete(
+                                collection_name=collection_name,
+                                filter={"file_id": file.id}
+                            )
+                except Exception as e:
+                    log.debug(f"Error checking for existing chunks: {e}")
+
             log.info(f"Inserting {len(texts)} chunks into collection {collection_name}")
             
             # Generate unique items for this collection with unique IDs
@@ -507,6 +605,7 @@ def main() -> None:
             user_email=user_email,
             pg_client=pg_client,
             embedding_function=embedding_function,
+            user=user,
             overwrite=args.overwrite,
             dry_run=args.dry_run,
         )
@@ -524,6 +623,45 @@ def main() -> None:
     log.info(f"   Failed: {failed_count}")
     log.info(f"   Skipped: {skipped_count}")
     log.info("=" * 80)
+    
+    # Rebuild pgvector index for optimal retrieval performance
+    # IVFFlat indexes work best when built on the actual data distribution
+    # This is critical for good retrieval performance after bulk inserts
+    if not args.dry_run:
+        log.info("\n🔧 Rebuilding pgvector index for optimal retrieval performance...")
+        try:
+            # Get approximate row count to calculate optimal lists parameter
+            # lists should be approximately rows / 1000 for IVFFlat
+            result = pg_client.session.execute(
+                text("SELECT COUNT(*) FROM document_chunk")
+            ).scalar()
+            row_count = result if result else 0
+            
+            # Calculate optimal lists parameter (min 10, max 1000)
+            optimal_lists = max(10, min(1000, row_count // 1000)) if row_count > 0 else 100
+            
+            log.info(f"   Total chunks: {row_count}")
+            log.info(f"   Optimal lists parameter: {optimal_lists}")
+            
+            # Drop existing index
+            pg_client.session.execute(
+                text("DROP INDEX IF EXISTS idx_document_chunk_vector")
+            )
+            
+            # Recreate index with optimal parameters
+            pg_client.session.execute(
+                text(
+                    f"CREATE INDEX idx_document_chunk_vector "
+                    f"ON document_chunk USING ivfflat (vector vector_cosine_ops) "
+                    f"WITH (lists = {optimal_lists});"
+                )
+            )
+            pg_client.session.commit()
+            log.info("   ✅ Index rebuilt successfully")
+        except Exception as e:
+            log.warning(f"   ⚠️  Could not rebuild index: {e}")
+            log.warning("   Index may need manual rebuilding for optimal performance")
+            pg_client.session.rollback()
     
 
 
