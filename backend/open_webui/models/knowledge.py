@@ -217,6 +217,21 @@ class KnowledgeTable:
         except Exception:
             return None
 
+    def get_knowledges_by_file_id(self, file_id: str) -> list[KnowledgeModel]:
+        try:
+            with get_db() as db:
+                knowledges = (
+                    db.query(Knowledge)
+                    .join(KnowledgeFile, Knowledge.id == KnowledgeFile.knowledge_id)
+                    .filter(KnowledgeFile.file_id == file_id)
+                    .all()
+                )
+                return [
+                    KnowledgeModel.model_validate(knowledge) for knowledge in knowledges
+                ]
+        except Exception:
+            return []
+
     def get_files_by_id(self, knowledge_id: str) -> list[FileModel]:
         try:
             with get_db() as db:
