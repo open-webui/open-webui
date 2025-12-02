@@ -983,8 +983,7 @@ app.state.YOUTUBE_LOADER_TRANSLATION = None
 try:
     app.state.ef = get_ef(
         app.state.config.RAG_EMBEDDING_ENGINE,
-        app.state.config.RAG_EMBEDDING_MODEL,
-        RAG_EMBEDDING_MODEL_AUTO_UPDATE,
+        app.state.config.RAG_EMBEDDING_MODEL
     )
     if (
         app.state.config.ENABLE_RAG_HYBRID_SEARCH
@@ -995,7 +994,7 @@ try:
             app.state.config.RAG_RERANKING_MODEL,
             app.state.config.RAG_EXTERNAL_RERANKER_URL,
             app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
-            RAG_RERANKING_MODEL_AUTO_UPDATE,
+            
         )
     else:
         app.state.rf = None
