@@ -78,6 +78,14 @@ def _build_prefix(tenant_bucket: str, user_id: str, visibility: str) -> str:
     return base
 
 
+def _get_user_tenant_bucket(user) -> Optional[str]:
+    if not getattr(user, "tenant_id", None):
+        return None
+
+    tenant = Tenants.get_tenant_by_id(user.tenant_id)
+    return tenant.s3_bucket if tenant else None
+
+
 class UploadResponse(BaseModel):
     bucket: str
     key: str
@@ -171,6 +179,15 @@ async def upload_document(
 
     safe_name = _sanitize_filename(file.filename)
     stored_filename = f"{uuid.uuid4().hex}_{safe_name}"
+
+    if user.role != "admin":
+        user_tenant_bucket = _get_user_tenant_bucket(user)
+        if not user_tenant_bucket or user_tenant_bucket != tenant.s3_bucket:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authorized to upload files for tenant",
+            )
+
     tenant_prefix = _build_prefix(tenant.s3_bucket, user.id, normalized_visibility)
     object_key = posixpath.join(tenant_prefix, stored_filename)
 
@@ -249,6 +266,15 @@ def list_files(
         )
 
     bucket_prefix = tenant.s3_bucket.rstrip("/")
+
+    if user.role != "admin":
+        user_tenant_bucket = _get_user_tenant_bucket(user)
+        if not user_tenant_bucket or user_tenant_bucket != bucket_prefix:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authorized to view tenants files.",
+            )
+
 
     if path:
         normalized_path = path.rstrip("/")
@@ -348,8 +374,14 @@ async def rebuild_tenant(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="tenant is required.",
         )
-    
-    # TODO if user is not admin and user's tenant s3 key does not match form_data tenant (which is the passed s3 key) raise 401 unauthorized exception
+
+    if user.role != "admin":
+        user_tenant_bucket = _get_user_tenant_bucket(user)
+        if not user_tenant_bucket or user_tenant_bucket != form_data.tenant:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authorized to rebuild this tenant.",
+            )
 
     payload = {
         "task": "rebuild-tenant",
@@ -398,16 +430,21 @@ async def rebuild_usert(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="user is required.",
         )
-    
+
+    is_admin = user.role == "admin"
+    if not is_admin:
+        user_tenant_bucket = _get_user_tenant_bucket(user)
+        if not user_tenant_bucket or user_tenant_bucket != form_data.tenant:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authorized to rebuild this tenant.",
+            )
+
     if user.id != form_data.user:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="user is required.",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authorized to rebuild this user.",
         )
-    
-    # TODO if user is not admin and user's tenant s3 key does not match form_data tenant (which is the passed s3 key) raise 401 unauthorized exception
-    # TODO if user's Id does not match form_data user (which is the passed user id) raise 401 unauthorized exception
-    
 
     payload = {
         "task": "rebuild-user",
@@ -455,14 +492,25 @@ async def ingest_uploaded_file(
     
     key = form_data.key
     split = key.split("/")
-    tenant = split[0]
+    tenant = split[0] if split else ""
     user_id = ""
-    if len(split) == 4:
+    if len(split) >= 4 and split[1] == "users":
         user_id = split[2]
-    
 
-    # TODO if user is not admin and user's tenant s3 key does not match tenant raise 401 unauthorized exception
-    # TODO if user_id is populated and user Id does not match user_id (which is the passed user id) raise 401 unauthorized exception
+    is_admin = user.role == "admin"
+    if not is_admin:
+        user_bucket = _get_user_tenant_bucket(user)
+        if not tenant or not user_bucket or user_bucket != tenant:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authorized to ingest objects for this tenant.",
+            )
+        
+    if user_id and user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authorized to ingest objects for this user.",
+        )
 
     payload = {
         "task": "ingest-upload",
