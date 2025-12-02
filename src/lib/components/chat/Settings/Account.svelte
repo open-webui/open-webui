@@ -168,7 +168,7 @@
 
 							<div class="flex-1">
 								<select
-									class="w-full text-sm dark:text-gray-300 bg-transparent outline-hidden"
+									class="dark:bg-gray-900 w-full text-sm dark:text-gray-300 bg-transparent outline-hidden"
 									bind:value={_gender}
 									on:change={(e) => {
 										console.log(_gender);

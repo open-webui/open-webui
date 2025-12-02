@@ -105,7 +105,7 @@
 			<div>
 				<select
 					id="models"
-					class="outline-hidden bg-transparent text-sm font-medium block w-fit pr-10 max-w-full placeholder-gray-400"
+					class="dark:bg-gray-900 outline-hidden bg-transparent text-sm font-medium block w-fit pr-10 max-w-full placeholder-gray-400"
 					value={accessControl !== null ? 'private' : 'public'}
 					on:change={(e) => {
 						if (e.target.value === 'public') {
@@ -224,7 +224,7 @@
 							<div class="flex flex-1 items-center">
 								<div class="w-full px-0.5">
 									<select
-										class="outline-hidden bg-transparent text-sm block w-full pr-10 max-w-full
+										class="dark:bg-gray-900 outline-hidden bg-transparent text-sm block w-full pr-10 max-w-full
 									{selectedGroupId ? '' : 'text-gray-500'}
 									dark:placeholder-gray-500"
 										bind:value={selectedGroupId}
