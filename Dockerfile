@@ -4,6 +4,7 @@
 ARG USE_CUDA=false
 ARG USE_OLLAMA=false
 ARG USE_SLIM=false
+ARG USE_DMR=false
 ARG USE_PERMISSION_HARDENING=false
 # Tested with cu117 for CUDA 11 and cu121 for CUDA 12 (default)
 ARG USE_CUDA_VER=cu128
@@ -49,6 +50,7 @@ ARG USE_CUDA
 ARG USE_OLLAMA
 ARG USE_CUDA_VER
 ARG USE_SLIM
+ARG USE_DMR
 ARG USE_PERMISSION_HARDENING
 ARG USE_EMBEDDING_MODEL
 ARG USE_RERANKING_MODEL
@@ -152,6 +154,31 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     date +%s > /tmp/ollama_build_hash && \
     echo "Cache broken at timestamp: `cat /tmp/ollama_build_hash`" && \
     curl -fsSL https://ollama.com/install.sh | sh && \
+    rm -rf /var/lib/apt/lists/*; \
+    fi
+
+# Install Docker Model Runner if requested
+RUN if [ "$USE_DMR" = "true" ]; then \
+    apt-get update && \
+    apt-get install -y --no-install-recommends wget && \
+    ARCH=$(dpkg --print-architecture) && \
+    GO_VERSION=1.24.1 && \
+    wget -q https://go.dev/dl/go${GO_VERSION}.linux-${ARCH}.tar.gz && \
+    tar -C /usr/local -xzf go${GO_VERSION}.linux-${ARCH}.tar.gz && \
+    rm go${GO_VERSION}.linux-${ARCH}.tar.gz && \
+    export PATH=$PATH:/usr/local/go/bin && \
+    cd /tmp && \
+    git clone https://github.com/docker/model-runner.git && \
+    cd model-runner && \
+    /usr/local/go/bin/go build -o model-runner . && \
+    mv model-runner /usr/local/bin/ && \
+    cd /tmp/model-runner/cmd/cli && \
+    /usr/local/go/bin/go build -o model-cli . && \
+    mv model-cli /usr/local/bin/ && \
+    cd / && \
+    rm -rf /tmp/model-runner /usr/local/go && \
+    apt-get remove -y wget && \
+    apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*; \
     fi
 
