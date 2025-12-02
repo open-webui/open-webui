@@ -408,6 +408,16 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                             500, detail=ERROR_MESSAGES.CREATE_USER_ERROR
                         )
 
+                    # Apply default group assignment for LDAP users
+                    default_group_id = getattr(
+                        request.app.state.config, "DEFAULT_GROUP_ID", ""
+                    )
+                    if default_group_id and default_group_id:
+                        Groups.add_users_to_group(default_group_id, [user.id])
+                        log.info(
+                            f"Added LDAP user {user.email} to default group {default_group_id}"
+                        )
+
                 except HTTPException:
                     raise
                 except Exception as err:
@@ -456,7 +466,6 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                 ):
                     if ENABLE_LDAP_GROUP_CREATION:
                         Groups.create_groups_by_group_names(user.id, user_groups)
-
                     try:
                         Groups.sync_groups_by_group_names(user.id, user_groups)
                         log.info(
@@ -464,6 +473,12 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                         )
                     except Exception as e:
                         log.error(f"Failed to sync groups for user {user.id}: {e}")
+                    # Re-apply default group after sync (sync may have removed it)
+                    default_group_id = getattr(
+                        request.app.state.config, "DEFAULT_GROUP_ID", ""
+                    )
+                    if default_group_id:
+                        Groups.add_users_to_group(default_group_id, [user.id])
 
                 return {
                     "token": token,
@@ -814,7 +829,9 @@ async def signout(request: Request, response: Response):
 
 
 @router.post("/add", response_model=SigninResponse)
-async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
+async def add_user(
+    request: Request, form_data: AddUserForm, user=Depends(get_admin_user)
+):
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
@@ -839,6 +856,14 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
         )
 
         if user:
+            # Apply default group assignment for manually added users
+            default_group_id = getattr(request.app.state.config, "DEFAULT_GROUP_ID", "")
+            if default_group_id and default_group_id:
+                Groups.add_users_to_group(default_group_id, [user.id])
+                log.info(
+                    f"Added manually created user {user.email} to default group {default_group_id}"
+                )
+
             token = create_token(data={"id": user.id})
             return {
                 "token": token,

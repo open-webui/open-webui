@@ -1072,7 +1072,7 @@ class OAuthManager:
 
         return role
 
-    def update_user_groups(self, user, user_data, default_permissions):
+    def update_user_groups(self, user, user_data, default_permissions, default_group_id=""):
         log.debug("Running OAUTH Group management")
         oauth_claim = auth_manager_config.OAUTH_GROUPS_CLAIM
 
@@ -1158,6 +1158,13 @@ class OAuthManager:
 
         # Remove groups that user is no longer a part of
         for group_model in user_current_groups:
+            # Don't remove user from the default group during OAuth sync
+            if default_group_id and group_model.id == default_group_id:
+                log.debug(
+                    f"Skipping removal of default group {group_model.name} during OAuth sync"
+                )
+                continue
+
             if (
                 user_oauth_groups
                 and group_model.name not in user_oauth_groups
@@ -1167,7 +1174,6 @@ class OAuthManager:
                 log.debug(
                     f"Removing user from group {group_model.name} as it is no longer in their oauth groups"
                 )
-
                 Groups.remove_users_from_group(group_model.id, [user.id])
 
                 # In case a group is created, but perms are never assigned to the group by hitting "save"
@@ -1478,6 +1484,16 @@ class OAuthManager:
                                 "user": user.model_dump_json(exclude_none=True),
                             },
                         )
+
+                    # Apply default group assignment for OAuth users
+                    default_group_id = getattr(
+                        request.app.state.config, "DEFAULT_GROUP_ID", ""
+                    )
+                    if default_group_id and default_group_id:
+                        Groups.add_users_to_group(default_group_id, [user.id])
+                        log.info(
+                            f"Added OAuth user {user.email} to default group {default_group_id}"
+                        )
                 else:
                     raise HTTPException(
                         status.HTTP_403_FORBIDDEN,
@@ -1496,6 +1512,7 @@ class OAuthManager:
                     user=user,
                     user_data=user_data,
                     default_permissions=request.app.state.config.USER_PERMISSIONS,
+                    default_group_id=getattr(request.app.state.config, "DEFAULT_GROUP_ID", ""),
                 )
 
         except Exception as e:
