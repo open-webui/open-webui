@@ -370,6 +370,7 @@ async def update_embedding_config(
         request.app.state.ef = get_ef(
             request.app.state.config.RAG_EMBEDDING_ENGINE,
             request.app.state.config.RAG_EMBEDDING_MODEL,
+            RAG_EMBEDDING_MODEL_AUTO_UPDATE
         )
 
         request.app.state.EMBEDDING_FUNCTION = get_embedding_function(
