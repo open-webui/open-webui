@@ -27,6 +27,7 @@
 	'ms15138@nyu.edu',
 	'mb484@nyu.edu',
 	'sm11538@nyu.edu',
+	'ht2490@nyu.edu',
 	'ps5226@nyu.edu'
 	];
 

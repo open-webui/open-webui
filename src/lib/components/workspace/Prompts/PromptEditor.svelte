@@ -31,7 +31,7 @@
 
 	$: isSuperAdmin = $user?.email && [
 		'sm11538@nyu.edu', 'ms15138@nyu.edu', 'mb484@nyu.edu',
-		'cg4532@nyu.edu', 'ps5226@nyu.edu'
+		'cg4532@nyu.edu', 'ht2490@nyu.edu', 'ps5226@nyu.edu'
 	].includes($user.email);
 
 	// Set assignToEmail based on context

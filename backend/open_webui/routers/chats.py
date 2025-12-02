@@ -517,7 +517,7 @@ async def filter_chats_by_meta(form_data: ChatMetaFilterForm, user=Depends(get_v
             first_user = Users.get_first_user()
             allowed_emails = [
                 "sm11538@nyu.edu", "ms15138@nyu.edu", "mb484@nyu.edu",
-                "cg4532@nyu.edu", "ps5226@nyu.edu"
+                "cg4532@nyu.edu", "ht2490@nyu.edu", "ps5226@nyu.edu"
             ]
             is_super_admin = (first_user and user.id == first_user.id) or user.email in allowed_emails
             

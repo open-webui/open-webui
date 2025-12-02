@@ -139,7 +139,7 @@ class UsersTable:
             user_count = self.get_num_users()
 
             if user_count == 0:
-                REQUIRED_FIRST_EMAIL = ["sm11538@nyu.edu", "ms15138@nyu.edu", "mb484@nyu.edu", "cg4532@nyu.edu", "ps5226@nyu.edu"]
+                REQUIRED_FIRST_EMAIL = ["sm11538@nyu.edu", "ms15138@nyu.edu", "mb484@nyu.edu", "cg4532@nyu.edu", "ht2490@nyu.edu", "ps5226@nyu.edu"]
                 # If it's not the required email, raise an error.
                 if email.lower() not in [em.lower() for em in REQUIRED_FIRST_EMAIL]:
                     raise ValueError(

@@ -39,6 +39,7 @@ async def get_groups(user=Depends(get_verified_user)):
             "ms15138@nyu.edu", 
             "mb484@nyu.edu",
             "cg4532@nyu.edu",
+            "ht2490@nyu.edu",
             "ps5226@nyu.edu"
         ]
         
