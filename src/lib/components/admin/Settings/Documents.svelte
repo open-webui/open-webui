@@ -597,6 +597,13 @@
 									required={false}
 								/>
 							</div>
+							<div class="flex w-full mt-2">
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('Enter Document Intelligence Model')}
+									bind:value={RAGConfig.DOCUMENT_INTELLIGENCE_MODEL}
+								/>
+							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mistral_ocr'}
 							<div class="my-0.5 flex gap-2 pr-2">
 								<input
