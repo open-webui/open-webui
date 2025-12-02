@@ -159,3 +159,48 @@ export const ingestUploadedDocument = async (token: string, key: string) => {
 
 	return res;
 };
+
+const postJsonWithAuth = async <T>(
+	token: string,
+	path: string,
+	payload: Record<string, unknown>,
+	defaultError: string
+): Promise<T> => {
+	let error: string | null = null;
+	const res = await fetch(`${WEBUI_API_BASE_URL}${path}`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(payload)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err?.detail ?? defaultError;
+			return null;
+		});
+
+	if (error || !res) {
+		throw error ?? defaultError;
+	}
+
+	return res;
+};
+
+export const rebuildTenantArtifact = async (token: string, tenant: string) => {
+	return postJsonWithAuth(token, '/uploads/rebuild-tenant', { tenant }, 'Failed to rebuild tenant artifact.');
+};
+
+export const rebuildUserArtifact = async (token: string, tenant: string, user: string) => {
+	return postJsonWithAuth(
+		token,
+		'/uploads/rebuild-user',
+		{ tenant, user },
+		'Failed to rebuild private artifact.'
+	);
+};

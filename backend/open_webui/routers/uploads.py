@@ -403,7 +403,7 @@ async def rebuild_tenant(
     return response
 
 @router.post("/rebuild-user")
-async def rebuild_usert(
+async def rebuild_user(
     form_data: RebuildUserRequest,
     user=Depends(get_verified_user),
 ):
