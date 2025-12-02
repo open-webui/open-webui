@@ -984,8 +984,7 @@ app.state.YOUTUBE_LOADER_TRANSLATION = None
 
 try:
     app.state.ef = get_ef(
-        app.state.config.RAG_EMBEDDING_ENGINE,
-        app.state.config.RAG_EMBEDDING_MODEL
+        app.state.config.RAG_EMBEDDING_ENGINE, app.state.config.RAG_EMBEDDING_MODEL
     )
     if (
         app.state.config.ENABLE_RAG_HYBRID_SEARCH
@@ -996,7 +995,6 @@ try:
             app.state.config.RAG_RERANKING_MODEL,
             app.state.config.RAG_EXTERNAL_RERANKER_URL,
             app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
-            
         )
     else:
         app.state.rf = None
@@ -2087,7 +2085,7 @@ except Exception as e:
     )
 
 
-async def register_client(self, request, client_id: str) -> bool:
+async def register_client(request, client_id: str) -> bool:
     server_type, server_id = client_id.split(":", 1)
 
     connection = None
