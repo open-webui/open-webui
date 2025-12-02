@@ -310,3 +310,5 @@ dist
 cypress/videos
 cypress/screenshots
 .vscode/settings.json
+CONTRIBUTION_ANALYSIS.md
+TESTING_INSTRUCTIONS.md
