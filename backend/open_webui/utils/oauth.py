@@ -1487,10 +1487,8 @@ class OAuthManager:
                         )
 
                     apply_default_group_assignment(
-                        request.app.state.config,
+                        getattr(request.app.state.config, "DEFAULT_GROUP_ID", ""),
                         user.id,
-                        user.email,
-                        "OAuth"
                     )
 
                 else:

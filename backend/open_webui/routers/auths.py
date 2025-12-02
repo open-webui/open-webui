@@ -410,10 +410,8 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                         )
 
                     apply_default_group_assignment(
-                        request.app.state.config,
+                        getattr(request.app.state.config, "DEFAULT_GROUP_ID", ""),
                         user.id,
-                        user.email,
-                        "LDAP"
                     )
 
 
@@ -473,10 +471,8 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     except Exception as e:
                         log.error(f"Failed to sync groups for user {user.id}: {e}")
                     apply_default_group_assignment(
-                        request.app.state.config,
+                        getattr(request.app.state.config, "DEFAULT_GROUP_ID", ""),
                         user.id,
-                        user.email,
-                        "LDAP (group sync)"
                     )
 
 
@@ -723,10 +719,8 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 request.app.state.config.ENABLE_SIGNUP = False
 
             apply_default_group_assignment(
-                request.app.state.config,
+                getattr(request.app.state.config, "DEFAULT_GROUP_ID", ""),
                 user.id,
-                user.email,
-                "signup"
             )
 
             return {
@@ -860,10 +854,8 @@ async def add_user(
 
         if user:
             apply_default_group_assignment(
-                request.app.state.config,
+                getattr(request.app.state.config, "DEFAULT_GROUP_ID", ""),
                 user.id,
-                user.email,
-                "manual creation"
             )
 
 
