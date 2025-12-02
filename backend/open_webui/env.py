@@ -417,6 +417,59 @@ ENABLE_SIGNUP_PASSWORD_CONFIRMATION = (
     os.environ.get("ENABLE_SIGNUP_PASSWORD_CONFIRMATION", "False").lower() == "true"
 )
 
+# 注册邮箱验证码相关配置（强制开启，不再提供开关）
+# - EMAIL_SMTP_SERVER：SMTP 服务器地址，必填
+# - EMAIL_SMTP_PORT：SMTP 端口（默认 587）
+# - EMAIL_SMTP_USERNAME：SMTP 登录用户名
+# - EMAIL_SMTP_PASSWORD：SMTP 登录密码
+# - EMAIL_SMTP_FROM：发信人地址（默认 no-reply@localhost）
+# - EMAIL_VERIFICATION_CODE_TTL：验证码有效期秒数（默认 600）
+# - EMAIL_VERIFICATION_SEND_INTERVAL：同邮箱再次发送的冷却秒数（默认 60）
+# - EMAIL_VERIFICATION_MAX_ATTEMPTS：验证码最大验证次数，超限需重发（默认 5）
+ENABLE_SIGNUP_EMAIL_VERIFICATION = True
+
+# SMTP 配置：用于发送注册验证码
+# 服务器地址（开启验证码时必填）
+EMAIL_SMTP_SERVER = os.environ.get("EMAIL_SMTP_SERVER", "")
+# 端口，默认 587
+EMAIL_SMTP_PORT = os.environ.get("EMAIL_SMTP_PORT", "587")
+try:
+    EMAIL_SMTP_PORT = int(EMAIL_SMTP_PORT)
+except ValueError:
+    EMAIL_SMTP_PORT = 587
+
+EMAIL_SMTP_USERNAME = os.environ.get("EMAIL_SMTP_USERNAME", "")
+EMAIL_SMTP_PASSWORD = os.environ.get("EMAIL_SMTP_PASSWORD", "")
+# 发信人地址
+EMAIL_SMTP_FROM = os.environ.get("EMAIL_SMTP_FROM", "no-reply@localhost")
+
+# 验证码策略：有效期、发送冷却、最大尝试次数
+# 有效期（秒）
+EMAIL_VERIFICATION_CODE_TTL = os.environ.get("EMAIL_VERIFICATION_CODE_TTL", "600")
+try:
+    EMAIL_VERIFICATION_CODE_TTL = int(EMAIL_VERIFICATION_CODE_TTL)
+except ValueError:
+    EMAIL_VERIFICATION_CODE_TTL = 600
+
+# 发送冷却（秒）
+EMAIL_VERIFICATION_SEND_INTERVAL = os.environ.get(
+    "EMAIL_VERIFICATION_SEND_INTERVAL", "60"
+)
+try:
+    EMAIL_VERIFICATION_SEND_INTERVAL = int(EMAIL_VERIFICATION_SEND_INTERVAL)
+except ValueError:
+    EMAIL_VERIFICATION_SEND_INTERVAL = 60
+
+# 最大验证尝试次数
+EMAIL_VERIFICATION_MAX_ATTEMPTS = os.environ.get(
+    "EMAIL_VERIFICATION_MAX_ATTEMPTS", "5"
+)
+try:
+    EMAIL_VERIFICATION_MAX_ATTEMPTS = int(EMAIL_VERIFICATION_MAX_ATTEMPTS)
+except ValueError:
+    EMAIL_VERIFICATION_MAX_ATTEMPTS = 5
+
+
 WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
     "WEBUI_AUTH_TRUSTED_EMAIL_HEADER", None
 )

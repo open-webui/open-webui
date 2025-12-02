@@ -543,7 +543,7 @@
 				{/if}
 			</div>
 
-			<div class="px-2.5 max-h-64 overflow-y-auto group relative">
+			<div class="px-2.5 max-h-128 overflow-y-auto group relative">
 				<!-- Add private model button -->
 				<button
 					class="w-full text-left px-2 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/60 flex items-center gap-2 transition mb-1"

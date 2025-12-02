@@ -4,12 +4,18 @@
 
 	import { toast } from 'svelte-sonner';
 
-	import { onMount, getContext, tick } from 'svelte';
+	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
 	import { getBackendConfig } from '$lib/apis';
-	import { ldapUserSignIn, getSessionUser, userSignIn, userSignUp } from '$lib/apis/auths';
+	import {
+		ldapUserSignIn,
+		getSessionUser,
+		userSignIn,
+		userSignUp,
+		sendSignupCode
+	} from '$lib/apis/auths';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { agreementContent as defaultAgreementContent, privacyContent as defaultPrivacyContent } from '$lib/constants/legal';
@@ -35,6 +41,10 @@
 	let email = '';
 	let password = '';
 	let confirmPassword = '';
+	let verificationCode = '';
+	let sendCodeCooldown = 0;
+	let sendCodeTimer: ReturnType<typeof setInterval> | null = null;
+	let sendingCode = false;
 
 	let ldapUsername = '';
 	let agreeToTerms = false;
@@ -81,12 +91,21 @@
 			}
 		}
 
-		const sessionUser = await userSignUp(name, email, password, generateInitialsImage(name)).catch(
-			(error) => {
-				toast.error(`${error}`);
-				return null;
-			}
-		);
+		if (!verificationCode) {
+			toast.error('请输入邮箱验证码');
+			return;
+		}
+
+		const sessionUser = await userSignUp(
+			name,
+			email,
+			password,
+			generateInitialsImage(name),
+			verificationCode
+		).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
 
 		await setSessionUser(sessionUser);
 	};
@@ -97,6 +116,51 @@
 			return null;
 		});
 		await setSessionUser(sessionUser);
+	};
+
+	const clearSendCodeTimer = () => {
+		if (sendCodeTimer) {
+			clearInterval(sendCodeTimer);
+			sendCodeTimer = null;
+		}
+	};
+
+	const startSendCodeCooldown = (seconds: number) => {
+		clearSendCodeTimer();
+		sendCodeCooldown = seconds;
+
+		sendCodeTimer = setInterval(() => {
+			if (sendCodeCooldown <= 1) {
+				clearSendCodeTimer();
+				sendCodeCooldown = 0;
+			} else {
+				sendCodeCooldown -= 1;
+			}
+		}, 1000);
+	};
+
+	const sendCodeHandler = async () => {
+		if (!email) {
+			toast.error('请先填写邮箱');
+			return;
+		}
+
+		if (sendCodeCooldown > 0 || sendingCode) {
+			return;
+		}
+
+		sendingCode = true;
+		const res = await sendSignupCode(email).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		sendingCode = false;
+
+		if (res) {
+			toast.success('验证码已发送，请查收邮箱');
+			const interval = $config?.features?.signup_email_verification_send_interval ?? 60;
+			startSendCodeCooldown(interval);
+		}
 	};
 
 	const submitHandler = async () => {
@@ -195,6 +259,10 @@
 		} else {
 			onboarding = $config?.onboarding ?? false;
 		}
+	});
+
+	onDestroy(() => {
+		clearSendCodeTimer();
 	});
 </script>
 
@@ -332,6 +400,37 @@
 													required
 												/>
 											</div>
+											{#if mode === 'signup'}
+												<div class="mb-2">
+													<label for="verification-code" class="text-sm font-medium text-left mb-1 block"
+														>邮箱验证码</label
+													>
+													<div class="flex gap-2">
+														<input
+															bind:value={verificationCode}
+															type="text"
+															id="verification-code"
+															class="my-0.5 w-full text-sm outline-hidden bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600"
+															placeholder="请输入邮箱验证码"
+															autocomplete="one-time-code"
+														/>
+														<button
+															type="button"
+															class="shrink-0 px-3 rounded-full border-1 text-sm font-medium transition-all hover:bg-gray-700/10 dark:hover:bg-gray-100/10"
+															disabled={sendCodeCooldown > 0 || sendingCode}
+															on:click={sendCodeHandler}
+														>
+															{#if sendingCode}
+																发送中...
+															{:else if sendCodeCooldown > 0}
+																{sendCodeCooldown}s
+															{:else}
+																发送验证码
+															{/if}
+														</button>
+													</div>
+												</div>
+											{/if}
 										{/if}
 
 										<div>

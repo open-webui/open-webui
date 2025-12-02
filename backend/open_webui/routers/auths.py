@@ -14,6 +14,7 @@ from open_webui.models.auths import (
     SigninForm,
     SigninResponse,
     SignupForm,
+    SignupCodeForm,
     UpdatePasswordForm,
     UserResponse,
 )
@@ -30,6 +31,14 @@ from open_webui.env import (
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
     WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
+    EMAIL_VERIFICATION_CODE_TTL,
+    EMAIL_VERIFICATION_SEND_INTERVAL,
+    EMAIL_VERIFICATION_MAX_ATTEMPTS,
+    EMAIL_SMTP_SERVER,
+    EMAIL_SMTP_PORT,
+    EMAIL_SMTP_USERNAME,
+    EMAIL_SMTP_PASSWORD,
+    EMAIL_SMTP_FROM,
     ENABLE_INITIAL_ADMIN_SIGNUP,
     SRC_LOG_LEVELS,
 )
@@ -39,6 +48,11 @@ from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_L
 from pydantic import BaseModel
 
 from open_webui.utils.misc import parse_duration, validate_email_format
+from open_webui.utils.email_utils import (
+    EmailVerificationManager,
+    generate_verification_code,
+    send_email,
+)
 from open_webui.utils.auth import (
     decode_token,
     create_api_key,
@@ -561,6 +575,91 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 # SignUp
 ############################
 
+@router.post("/signup/code")
+async def send_signup_code(request: Request, form_data: SignupCodeForm):
+    has_users = Users.has_users()
+
+    if WEBUI_AUTH:
+        if (
+            not request.app.state.config.ENABLE_SIGNUP
+            or not request.app.state.config.ENABLE_LOGIN_FORM
+        ):
+            if has_users or not ENABLE_INITIAL_ADMIN_SIGNUP:
+                raise HTTPException(
+                    status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
+                )
+    else:
+        if has_users:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
+            )
+
+    email = form_data.email.lower()
+
+    if not validate_email_format(email):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
+        )
+
+    manager: EmailVerificationManager = getattr(
+        request.app.state, "email_verification_manager", None
+    )
+    if manager is None:
+        manager = EmailVerificationManager(request.app.state.redis)
+        request.app.state.email_verification_manager = manager
+
+    send_interval = request.app.state.email_verification_config["send_interval"]
+    can_send, remaining = manager.can_send(email, send_interval)
+    if not can_send:
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Please wait {int(remaining)} seconds before requesting a new code.",
+        )
+
+    ttl = request.app.state.email_verification_config["ttl"]
+    max_attempts = request.app.state.email_verification_config["max_attempts"]
+    smtp_config = request.app.state.email_verification_config.get("smtp", {})
+
+    print(smtp_config)
+
+    if not smtp_config.get("server"):
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Email service is not configured.",
+        )
+
+    code = generate_verification_code()
+    manager.store_code(
+        email,
+        code,
+        ttl,
+        max_attempts,
+        request.client.host if request.client else None,
+    )
+
+    try:
+        send_email(
+            subject=f"{request.app.state.WEBUI_NAME} Verification Code",
+            body=(
+                f"Your verification code is {code}.\n"
+                f"It expires in {max(1, int(ttl / 60))} minutes."
+            ),
+            to_email=email,
+            smtp_server=smtp_config.get("server", ""),
+            smtp_port=int(smtp_config.get("port", 587)),
+            smtp_username=smtp_config.get("username", ""),
+            smtp_password=smtp_config.get("password", ""),
+            from_email=smtp_config.get("from_email", EMAIL_SMTP_FROM),
+        )
+    except Exception as e:
+        log.error(f"Failed to send verification email: {e}")
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send verification email.",
+        )
+
+    return {"status": True}
+
 
 @router.post("/signup", response_model=SessionUserResponse)
 async def signup(request: Request, response: Response, form_data: SignupForm):
@@ -581,13 +680,35 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
             )
 
-    if not validate_email_format(form_data.email.lower()):
+    email = form_data.email.lower()
+
+    if not validate_email_format(email):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
         )
 
-    if Users.get_user_by_email(form_data.email.lower()):
+    if Users.get_user_by_email(email):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
+
+    if form_data.code is None:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail="Verification code is required.",
+        )
+
+    if form_data.code:
+        manager: EmailVerificationManager = getattr(
+            request.app.state, "email_verification_manager", None
+        )
+        if manager is None:
+            manager = EmailVerificationManager(request.app.state.redis)
+            request.app.state.email_verification_manager = manager
+
+        if not manager.validate_code(email, form_data.code):
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired verification code.",
+            )
 
     try:
         role = "admin" if not has_users else "user"
@@ -601,7 +722,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 
         hashed = get_password_hash(form_data.password)
         user = Auths.insert_new_auth(
-            form_data.email.lower(),
+            email,
             hashed,
             form_data.name,
             form_data.profile_image_url,

@@ -256,6 +256,9 @@ type Config = {
 		enable_api_key: boolean;
 		enable_signup: boolean;
 		enable_login_form: boolean;
+		enable_signup_email_verification?: boolean;
+		enable_signup_password_confirmation?: boolean;
+		signup_email_verification_send_interval?: number;
 		enable_web_search?: boolean;
 		enable_google_drive_integration: boolean;
 		enable_onedrive_integration: boolean;

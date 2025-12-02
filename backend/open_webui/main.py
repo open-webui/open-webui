@@ -441,6 +441,14 @@ from open_webui.env import (
     WEBUI_SESSION_COOKIE_SAME_SITE,
     WEBUI_SESSION_COOKIE_SECURE,
     ENABLE_SIGNUP_PASSWORD_CONFIRMATION,
+    EMAIL_SMTP_SERVER,
+    EMAIL_SMTP_PORT,
+    EMAIL_SMTP_USERNAME,
+    EMAIL_SMTP_PASSWORD,
+    EMAIL_SMTP_FROM,
+    EMAIL_VERIFICATION_CODE_TTL,
+    EMAIL_VERIFICATION_SEND_INTERVAL,
+    EMAIL_VERIFICATION_MAX_ATTEMPTS,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
     WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
@@ -465,6 +473,7 @@ from open_webui.utils.models import (
     check_model_access,
     get_filtered_models,
 )
+from open_webui.utils.email_utils import EmailVerificationManager
 from open_webui.utils.chat import (
     generate_chat_completion as chat_completion_handler,
     chat_completed as chat_completed_handler,
@@ -571,6 +580,7 @@ async def lifespan(app: FastAPI):
         redis_cluster=REDIS_CLUSTER,
         async_mode=True,
     )
+    app.state.email_verification_manager = EmailVerificationManager(app.state.redis)
 
     if app.state.redis is not None:
         app.state.redis_task_command_listener = asyncio.create_task(
@@ -732,6 +742,20 @@ app.state.config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
 
 app.state.config.SHOW_ADMIN_DETAILS = SHOW_ADMIN_DETAILS
 app.state.config.ADMIN_EMAIL = ADMIN_EMAIL
+
+app.state.email_verification_enabled = True
+app.state.email_verification_config = {
+    "ttl": EMAIL_VERIFICATION_CODE_TTL,
+    "send_interval": EMAIL_VERIFICATION_SEND_INTERVAL,
+    "max_attempts": EMAIL_VERIFICATION_MAX_ATTEMPTS,
+    "smtp": {
+        "server": EMAIL_SMTP_SERVER,
+        "port": EMAIL_SMTP_PORT,
+        "username": EMAIL_SMTP_USERNAME,
+        "password": EMAIL_SMTP_PASSWORD,
+        "from_email": EMAIL_SMTP_FROM,
+    },
+}
 
 
 app.state.config.DEFAULT_MODELS = DEFAULT_MODELS
@@ -1870,26 +1894,28 @@ async def get_app_config(request: Request):
 
     return {
         **({"onboarding": True} if onboarding else {}),
-        "status": True,
-        "name": app.state.WEBUI_NAME,
-        "version": VERSION,
-        "default_locale": str(DEFAULT_LOCALE),
-        "oauth": {
+            "status": True,
+            "name": app.state.WEBUI_NAME,
+            "version": VERSION,
+            "default_locale": str(DEFAULT_LOCALE),
+            "oauth": {
             "providers": {
                 name: config.get("name", name)
                 for name, config in OAUTH_PROVIDERS.items()
             }
         },
-        "features": {
-            "auth": WEBUI_AUTH,
-            "auth_trusted_header": bool(app.state.AUTH_TRUSTED_EMAIL_HEADER),
-            "enable_signup_password_confirmation": ENABLE_SIGNUP_PASSWORD_CONFIRMATION,
-            "enable_ldap": app.state.config.ENABLE_LDAP,
-            "enable_api_key": app.state.config.ENABLE_API_KEY,
-            "enable_signup": app.state.config.ENABLE_SIGNUP,
-            "enable_login_form": app.state.config.ENABLE_LOGIN_FORM,
-            "enable_websocket": ENABLE_WEBSOCKET_SUPPORT,
-            "enable_version_update_check": ENABLE_VERSION_UPDATE_CHECK,
+            "features": {
+                "auth": WEBUI_AUTH,
+                "auth_trusted_header": bool(app.state.AUTH_TRUSTED_EMAIL_HEADER),
+                "enable_signup_password_confirmation": ENABLE_SIGNUP_PASSWORD_CONFIRMATION,
+                "enable_signup_email_verification": True,
+                "enable_ldap": app.state.config.ENABLE_LDAP,
+                "enable_api_key": app.state.config.ENABLE_API_KEY,
+                "enable_signup": app.state.config.ENABLE_SIGNUP,
+                "enable_login_form": app.state.config.ENABLE_LOGIN_FORM,
+                "enable_websocket": ENABLE_WEBSOCKET_SUPPORT,
+                "enable_version_update_check": ENABLE_VERSION_UPDATE_CHECK,
+                "signup_email_verification_send_interval": app.state.email_verification_config["send_interval"],
             **(
                 {
                     "enable_direct_connections": app.state.config.ENABLE_DIRECT_CONNECTIONS,
