@@ -56,7 +56,6 @@ def is_string_allowed(
         return True
 
     allow_list, block_list = get_allow_block_lists(filter_list)
-    print(string, allow_list, block_list)
     strings = [string] if isinstance(string, str) else list(string)
 
     # If allow list is non-empty, require domain to match one of them
