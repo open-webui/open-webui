@@ -1,96 +1,113 @@
-# Open WebUI Standalone Prune Script
+# Open WebUI Prune Tool
 
-This directory contains a standalone command-line script that replicates the full logic and configurability of the Open WebUI prune API router, but runs independently without requiring the web server to be running.
+A standalone command-line tool for cleaning up your Open WebUI database, reclaiming disk space, and maintaining optimal performance.
 
-## 🚀 Quick Start (TL;DR)
+## Table of Contents
 
-**Interactive Mode (Easiest - Recommended for first time users):**
-```bash
-cd /path/to/open-webui        # Go to your Open WebUI installation directory
-source .venv/bin/activate      # Activate your Python environment (if using venv)
-python prune/prune.py          # Launch interactive mode - NO ARGUMENTS!
-```
+1. [Overview](#overview)
+2. [Features](#features)
+3. [Installation](#installation)
+4. [Quick Start](#quick-start)
+5. [Usage](#usage)
+6. [Configuration Options](#configuration-options)
+7. [Automation](#automation)
+8. [Important Warnings](#important-warnings)
+9. [Troubleshooting](#troubleshooting)
+10. [Support](#support)
 
-**Command Line Mode:**
-```bash
-cd /path/to/open-webui        # Go to your Open WebUI installation directory
-source .venv/bin/activate      # Activate your Python environment (if using venv)
-python prune/prune.py --help  # Show all options
-python prune/prune.py --days 90 --execute  # Delete chats older than 90 days
-```
+## Overview
 
-**That's it!** The script will automatically find your database and vector database configuration.
+The Prune Tool provides a safe and powerful way to clean up your Open WebUI instance by:
+- Deleting old chats and conversations
+- Removing inactive user accounts
+- Cleaning orphaned data (files, tools, prompts, etc.)
+- Removing old audio cache files
+- Optimizing database performance
 
-## Purpose
-
-The prune script allows you to:
-
-- Run data pruning operations via command line or cron jobs
-- Clean up orphaned data, old chats, inactive users
-- Preview what will be deleted before committing changes
-- Run database optimization (VACUUM)
-- Maintain your Open WebUI instance without using the web UI
+It runs independently of the web server and can be scheduled for automated maintenance.
 
 ## Features
 
-✅ **Fully Configurable** - All options from the web UI prune dialog are available via command-line flags
-✅ **Safe by Default** - Interactive mode for easy use, dry-run mode for command-line
-✅ **Complete Logic** - Uses the exact same code paths as the API router
-✅ **Database Access** - Full access to SQLAlchemy models and database operations
-✅ **Vector Database Support** - Supports ChromaDB, PGVector, Milvus (standard & multitenancy), and Qdrant (standard & multitenancy) with auto-detection
-✅ **File System Operations** - Cleans up orphaned uploads and audio cache
-✅ **Locking Mechanism** - Prevents concurrent prune operations
-✅ **Detailed Logging** - Comprehensive logging of all operations
+✅ **Two Operation Modes**
+- **Interactive Mode**: Beautiful terminal UI with step-by-step wizard
+- **Non-Interactive Mode**: Command-line interface for automation
 
-## Requirements
+✅ **Complete Configurability**
+- All 17 configuration options from the web UI prune dialog
+- Preview mode to see what will be deleted before execution
+- Fine-grained control over what gets deleted
 
-### Environment Access
+✅ **Database Support**
+- SQLite (default)
+- PostgreSQL
+- Vector databases: ChromaDB, PGVector, Milvus, Qdrant
 
-The script requires access to the same environment as Open WebUI:
+✅ **Safety Features**
+- File-based locking prevents concurrent operations
+- Dry-run mode by default
+- Multiple confirmation prompts (interactive mode)
+- Admin user protection
+- Detailed logging of all operations
 
-1. **Python Environment**: Same Python version and dependencies as Open WebUI backend
-2. **Database Access**: Must have `DATABASE_URL` environment variable set (or .env file)
-3. **File System Access**: Must be able to read/write to Open WebUI data directories
-4. **Module Imports**: Must be able to import from `backend.open_webui` modules
+## Installation
 
-### How to Access Database and Configuration
+### Prerequisites
 
-The script imports directly from Open WebUI's backend modules, which means it automatically gets:
+- Open WebUI installation
+- Python 3.8+
+- Access to Open WebUI's Python environment and database
 
-- **Database Connection**: Via `DATABASE_URL` environment variable (same as Open WebUI)
-- **Vector Database Config**: Via `VECTOR_DB` and related environment variables
-- **File Paths**: Via `CACHE_DIR` and other path configurations
-- **All Models**: Direct access to Users, Chats, Files, etc. ORM models
+### Method 1: Git Installation (Manual Install)
 
-## Installation & Setup
-
-### Method 1: Run from Open WebUI Directory (Recommended)
-
+**One-time setup:**
 ```bash
-cd /path/to/open-webui
-
-# Make sure you have the same environment as Open WebUI
-source .venv/bin/activate  # If using virtual environment
-
-# Interactive mode (recommended for first use)
-python prune/prune.py
-
-# OR command-line mode with options
-python prune/prune.py --help
-python prune/prune.py --days 90 --execute
+cd ~/path/to/open-webui        # Navigate to your Open WebUI directory
+source venv/bin/activate        # Activate your Python virtual environment
+pip install -r backend/requirements.txt  # Install backend dependencies
+pip install rich                # For interactive mode (optional)
 ```
 
-### Method 2: Set PYTHONPATH
-
+**Ready to use:**
 ```bash
-export PYTHONPATH="/path/to/open-webui:$PYTHONPATH"
-export DATABASE_URL="..."
-# ... other environment variables
-
-python /path/to/open-webui/prune/prune.py
+cd ~/path/to/open-webui        # Must run from repo root
+source venv/bin/activate
+python prune/prune.py          # Launch interactive mode
 ```
 
-### Method 3: Create a Wrapper Script
+### Method 2: Docker Installation
+
+**Option A: Run inside container**
+```bash
+# Find your container
+docker ps | grep open-webui
+
+# Enter container
+docker exec -it <container-name> bash
+
+# Run prune script
+python /app/backend/prune/prune.py
+```
+
+**Option B: Direct execution**
+```bash
+docker exec <container-name> python /app/backend/prune/prune.py --days 90 --execute
+```
+
+### Method 3: Pip Installation
+
+```bash
+# Activate environment where open-webui is installed
+source venv/bin/activate
+
+# Find installation location
+pip show open-webui | grep Location
+
+# Run from that location
+cd <location>
+python -m open_webui.prune  # Or appropriate path
+```
+
+### Method 4: Wrapper Script (Recommended for Automation)
 
 Create a file `run_prune.sh`:
 
@@ -99,96 +116,45 @@ Create a file `run_prune.sh`:
 cd /path/to/open-webui
 source .venv/bin/activate
 
-# Load environment from Open WebUI
+# Load environment variables
 if [ -f .env ]; then
     export $(cat .env | grep -v '^#' | xargs)
 fi
 
-# Run the prune script with arguments
+# Run prune script
 python prune/prune.py "$@"
 ```
 
-Make it executable:
+Make executable:
 ```bash
 chmod +x run_prune.sh
 ```
 
-Now you can run:
+## Quick Start
+
+### Interactive Mode (Recommended for First-Time Users)
+
 ```bash
-./run_prune.sh          # Interactive mode
-./run_prune.sh --help   # Show options
-./run_prune.sh --days 60 --execute
+python prune/prune.py
 ```
 
-## Usage Examples
+Features beautiful terminal UI with:
+- Step-by-step configuration wizard
+- Visual preview of what will be deleted
+- Multiple safety confirmations
+- Progress bars and status updates
 
-### Basic Preview (Safe - No Changes)
-
-```bash
-# Preview what would be deleted with default settings
-python standalone_prune.py --dry-run
-
-# Equivalent (dry-run is default if --execute not specified)
-python standalone_prune.py
-```
-
-### Delete Old Chats
+### Non-Interactive Mode
 
 ```bash
-# Preview deletion of chats older than 60 days
-python standalone_prune.py --days 60 --dry-run
+# Preview what would be deleted (safe, no changes)
+python prune/prune.py --days 90 --dry-run
 
-# Actually delete chats older than 60 days
-python standalone_prune.py --days 60 --execute
+# Delete chats older than 90 days
+python prune/prune.py --days 90 --execute
 
-# Delete chats older than 90 days, including archived chats
-python standalone_prune.py --days 90 --no-exempt-archived-chats --execute
-```
-
-### Delete Inactive Users
-
-```bash
-# Preview deletion of users inactive for 180+ days
-python standalone_prune.py --delete-inactive-users-days 180 --dry-run
-
-# Actually delete inactive users (exempting admins and pending users)
-python standalone_prune.py --delete-inactive-users-days 180 --execute
-
-# Delete inactive users including admins (NOT RECOMMENDED)
-python standalone_prune.py --delete-inactive-users-days 180 --no-exempt-admin-users --execute
-```
-
-### Clean Orphaned Data
-
-```bash
-# Clean only orphaned data (no age-based deletion)
-python standalone_prune.py --delete-orphaned-chats --execute
-
-# Clean all types of orphaned data
-python standalone_prune.py \
-  --delete-orphaned-chats \
-  --delete-orphaned-tools \
-  --delete-orphaned-functions \
-  --delete-orphaned-prompts \
-  --delete-orphaned-knowledge-bases \
-  --delete-orphaned-models \
-  --delete-orphaned-notes \
-  --delete-orphaned-folders \
-  --execute
-```
-
-### Audio Cache Cleanup
-
-```bash
-# Clean audio cache files older than 30 days
-python standalone_prune.py --audio-cache-max-age-days 30 --execute
-```
-
-### Full Cleanup with VACUUM
-
-```bash
-# Complete cleanup with database optimization
-python standalone_prune.py \
+# Full cleanup with optimization
+python prune/prune.py \
   --days 90 \
   --delete-inactive-users-days 180 \
   --audio-cache-max-age-days 30 \
@@ -196,238 +162,275 @@ python standalone_prune.py \
   --execute
 ```
 
-### Verbose Logging
+## Usage
 
+### Basic Patterns
+
+**Preview Mode (Safe):**
 ```bash
-# Enable debug logging for troubleshooting
-python standalone_prune.py --dry-run --verbose
-
-# Quiet mode (only errors)
-python standalone_prune.py --execute --quiet
+python prune/prune.py --days 60 --dry-run
 ```
 
-## Automation with Cron
+**Conservative Cleanup:**
+```bash
+python prune/prune.py \
+  --days 180 \
+  --exempt-archived-chats \
+  --exempt-chats-in-folders \
+  --execute
+```
 
-Create a cron job to run pruning automatically:
+**Orphaned Data Only:**
+```bash
+python prune/prune.py \
+  --delete-orphaned-chats \
+  --delete-orphaned-knowledge-bases \
+  --execute
+```
+
+**Inactive Users:**
+```bash
+python prune/prune.py \
+  --delete-inactive-users-days 180 \
+  --exempt-admin-users \
+  --exempt-pending-users \
+  --execute
+```
+
+## Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--days N` | int | None | Delete chats older than N days |
+| `--exempt-archived-chats` | flag | False | Keep archived chats |
+| `--exempt-chats-in-folders` | flag | False | Keep chats in folders/pinned |
+| `--delete-inactive-users-days N` | int | None | Delete users inactive N+ days |
+| `--exempt-admin-users` | flag | True | Never delete admins (RECOMMENDED) |
+| `--exempt-pending-users` | flag | True | Never delete pending users |
+| `--delete-orphaned-chats` | flag | True | Clean orphaned chats |
+| `--delete-orphaned-tools` | flag | False | Clean orphaned tools |
+| `--delete-orphaned-functions` | flag | False | Clean orphaned functions |
+| `--delete-orphaned-prompts` | flag | True | Clean orphaned prompts |
+| `--delete-orphaned-knowledge-bases` | flag | True | Clean orphaned KBs |
+| `--delete-orphaned-models` | flag | True | Clean orphaned models |
+| `--delete-orphaned-notes` | flag | True | Clean orphaned notes |
+| `--delete-orphaned-folders` | flag | True | Clean orphaned folders |
+| `--audio-cache-max-age-days N` | int | 30 | Clean audio files older than N days |
+| `--run-vacuum` | flag | False | Run database optimization (locks DB!) |
+| `--dry-run` | flag | True | Preview only (default) |
+| `--execute` | flag | - | Actually perform deletions |
+| `--verbose, -v` | flag | - | Enable debug logging |
+| `--quiet, -q` | flag | - | Suppress non-error output |
+
+### Using Flags
+
+To **disable** a default-true flag, use `--no-` prefix:
+```bash
+# Delete archived chats too
+python prune/prune.py --days 60 --no-exempt-archived-chats --execute
+
+# Include admins in deletion (NOT RECOMMENDED!)
+python prune/prune.py --delete-inactive-users-days 180 --no-exempt-admin-users --execute
+```
+
+## Automation
+
+### Cron Job Example
 
 ```bash
 # Edit crontab
 crontab -e
 
-# Add job to run every Sunday at 2 AM
-0 2 * * 0 /path/to/run_prune.sh --days 60 --audio-cache-max-age-days 30 --execute >> /var/log/openwebui-prune.log 2>&1
+# Weekly cleanup every Sunday at 2 AM
+0 2 * * 0 /path/to/run_prune.sh --days 90 --audio-cache-max-age-days 30 --execute >> /var/log/openwebui-prune.log 2>&1
 
-# Add job to run preview daily (for monitoring)
-0 1 * * * /path/to/run_prune.sh --dry-run >> /var/log/openwebui-prune-preview.log 2>&1
+# Monthly full cleanup with VACUUM (first Sunday at 3 AM)
+0 3 1-7 * 0 /path/to/run_prune.sh --days 60 --delete-inactive-users-days 180 --run-vacuum --execute >> /var/log/openwebui-prune-monthly.log 2>&1
 ```
 
-## Configuration Options
+### Best Practices for Automation
 
-### Execution Mode
-- `--dry-run`: Preview only, no changes (default)
-- `--execute`: Actually perform deletions
+1. **Always test manually first** with `--dry-run`
+2. **Schedule during low-usage hours** (2-4 AM)
+3. **Create backups before pruning** (automated backup script)
+4. **Monitor logs regularly** for errors
+5. **Start conservative**, adjust gradually
+6. **Never use VACUUM** during active hours
 
-### Age-Based Deletion
-- `--days N`: Delete chats older than N days
-- `--exempt-archived-chats`: Keep archived chats (default: true)
-- `--no-exempt-archived-chats`: Include archived chats in deletion
-- `--exempt-chats-in-folders`: Keep chats in folders/pinned
+## Important Warnings
 
-### Inactive User Deletion
-- `--delete-inactive-users-days N`: Delete users inactive for N+ days
-- `--exempt-admin-users`: Never delete admins (default: true, RECOMMENDED)
-- `--no-exempt-admin-users`: Include admins (NOT RECOMMENDED)
-- `--exempt-pending-users`: Never delete pending users (default: true)
-- `--no-exempt-pending-users`: Include pending users
+### ⚠️ CRITICAL: This is a Destructive Operation
 
-### Orphaned Data Deletion
-- `--delete-orphaned-chats`: Delete orphaned chats (default: true)
-- `--no-delete-orphaned-chats`: Skip orphaned chats
-- `--delete-orphaned-tools`: Delete orphaned tools
-- `--delete-orphaned-functions`: Delete orphaned functions
-- `--delete-orphaned-prompts`: Delete orphaned prompts (default: true)
-- `--delete-orphaned-knowledge-bases`: Delete orphaned KBs (default: true)
-- `--delete-orphaned-models`: Delete orphaned models (default: true)
-- `--delete-orphaned-notes`: Delete orphaned notes (default: true)
-- `--delete-orphaned-folders`: Delete orphaned folders (default: true)
+**Deleted data cannot be recovered. Always create backups before executing.**
 
-### Other Options
-- `--audio-cache-max-age-days N`: Delete audio cache files older than N days
-- `--run-vacuum`: Run VACUUM optimization (locks database!)
-- `--verbose, -v`: Enable debug logging
-- `--quiet, -q`: Suppress all output except errors
+```bash
+# For SQLite
+cp data/webui.db data/webui.db.backup
 
-## How It Works
+# For PostgreSQL
+pg_dump openwebui > backup.sql
 
-### Database Access
-
-The script imports Open WebUI's backend modules directly:
-
-```python
-from backend.open_webui.models.users import Users
-from backend.open_webui.models.chats import Chats
-from backend.open_webui.internal.db import get_db
+# Backup files
+tar -czf backup.tar.gz data/uploads data/vector_db
 ```
 
-This means it uses the exact same:
-- Database connection string (`DATABASE_URL`)
-- ORM models and schemas
-- Database session management
-- Query logic
+### ⚠️ User Deletion Cascades
 
-### Vector Database Access
+When you delete a user, **ALL their data is deleted**:
+- Chats and messages
+- Files and uploads
+- Custom tools and functions
+- Knowledge bases and embeddings
+- Prompts, models, notes, folders
+- Everything they created
 
-The script uses Open WebUI's vector database factory:
+**Recommendations:**
+- Use long periods (180+ days minimum)
+- **Always** exempt admin users
+- Test on staging first
 
-```python
-from backend.open_webui.routers.prune import get_vector_database_cleaner
+### ⚠️ VACUUM Locks Database
+
+When `--run-vacuum` is enabled:
+- **Entire database is locked** during operation
+- **All users will experience errors**
+- Can take **5-30+ minutes** (or longer)
+- **Only use during scheduled maintenance windows**
+
+### ⚠️ Preview First
+
+**Always run with `--dry-run` first** to see what will be deleted:
+
+```bash
+# Safe preview
+python prune/prune.py --days 60 --dry-run
+
+# Review output, then execute
+python prune/prune.py --days 60 --execute
 ```
-
-This automatically detects and uses:
-- ChromaDB: SQLite metadata + directory cleanup
-- PGVector: PostgreSQL table cleanup
-- Configures based on `VECTOR_DB` environment variable
-
-### File System Operations
-
-The script accesses the same file paths:
-
-```python
-from backend.open_webui.config import CACHE_DIR
-```
-
-This provides access to:
-- Upload directory: `{DATA_DIR}/uploads/`
-- Audio cache: `{CACHE_DIR}/audio/`
-- Vector DB: `{DATA_DIR}/vector_db/`
-- Lock file: `{CACHE_DIR}/.prune.lock`
-
-## Is This Script Truly Standalone?
-
-**Yes and No:**
-
-✅ **Yes, it's standalone in that:**
-- It's a command-line script (not part of the web server)
-- It can be run independently without the API
-- It can be scheduled via cron
-- It doesn't require the FastAPI server to be running
-- It has its own CLI interface
-
-❌ **No, it's not completely isolated because:**
-- It imports from Open WebUI backend modules
-- It requires the same Python environment
-- It needs access to the same database
-- It reads the same environment variables
-- It's essentially a CLI wrapper around the existing prune logic
-
-**This is actually a GOOD thing** because:
-- It reuses battle-tested code (no code duplication)
-- It automatically gets bug fixes and improvements
-- It maintains consistency with the web UI version
-- It reduces maintenance burden
-
-## Safety Features
-
-1. **File-Based Locking**: Prevents concurrent prune operations
-2. **Dry-Run by Default**: Requires explicit `--execute` flag
-3. **Detailed Preview**: Shows exactly what will be deleted
-4. **Comprehensive Logging**: All operations are logged
-5. **Error Handling**: Graceful failure with proper cleanup
-6. **Admin Protection**: Admins exempted from deletion by default
 
 ## Troubleshooting
 
-### "Failed to import Open WebUI modules"
+### Error: "Failed to import Open WebUI modules"
 
-**Problem**: Script can't find Open WebUI backend modules
+**Solution:** Must run from Open WebUI root directory
 
-**Solutions**:
 ```bash
-# Option 1: Run from Open WebUI directory
-cd /path/to/open-webui
-python prune/standalone_prune.py
-
-# Option 2: Set PYTHONPATH
-export PYTHONPATH="/path/to/open-webui:$PYTHONPATH"
-
-# Option 3: Activate Open WebUI virtual environment
-source /path/to/open-webui/.venv/bin/activate
+cd /path/to/open-webui  # Go to repo root, NOT prune/
+python prune/prune.py
 ```
 
-### "Failed to connect to database"
+### Error: "Failed to connect to database"
 
-**Problem**: Can't access database
+**Solution:** Ensure `DATABASE_URL` is set
 
-**Solutions**:
 ```bash
-# Make sure DATABASE_URL is set
-export DATABASE_URL="sqlite:////path/to/webui.db"
-# or for PostgreSQL
-export DATABASE_URL="postgresql://user:pass@localhost/openwebui"
+# Check environment variable
+echo $DATABASE_URL
 
-# Check if database file exists and is accessible
-ls -la /path/to/webui.db
+# For SQLite, verify file exists
+ls -la data/webui.db
+
+# Load from .env if needed
+export $(cat .env | grep -v '^#' | xargs)
 ```
 
-### "Vector database not available"
+### Error: "Operation already in progress"
 
-**Problem**: Vector database client initialization fails
+**Solution:** Remove stale lock file (if >2 hours old)
 
-**Solutions**:
 ```bash
-# Set vector database type
-export VECTOR_DB="chromadb"  # or "pgvector"
+# Check lock file age
+ls -la cache/.prune.lock
 
-# For ChromaDB, ensure directory exists
-ls -la /path/to/open-webui/data/vector_db/
-
-# For PGVector, ensure PostgreSQL connection works
-export VECTOR_DB_URL="postgresql://..."
+# Remove if stale
+rm cache/.prune.lock
 ```
 
-### "Permission denied" errors
+### Error: "No module named 'rich'"
 
-**Problem**: Can't read/write files
+**Solution:** Install optional dependency for interactive mode
 
-**Solutions**:
 ```bash
-# Run as the same user as Open WebUI
-sudo -u openwebui python prune/standalone_prune.py
-
-# Or fix permissions
-chown -R openwebui:openwebui /path/to/open-webui/data/
+pip install rich
 ```
 
-## Comparison: Standalone Script vs API
+### Performance Issues
 
-| Feature | Standalone Script | API Router |
-|---------|------------------|------------|
-| **Execution** | Command line | HTTP POST |
-| **Authentication** | None (OS-level) | Admin JWT token |
-| **Scheduling** | Cron jobs | External scheduler |
-| **Server Required** | No | Yes |
-| **Configuration** | CLI flags | JSON payload |
-| **Output** | Console/logs | JSON response |
-| **Code Reuse** | 100% (imports from prune.py) | Original implementation |
+If operations are very slow:
+- Check database size: `du -h data/webui.db`
+- Run during off-hours
+- Consider breaking into smaller operations
+- Monitor with `htop` during execution
 
-## Best Practices
+## How It Works
 
-1. **Always Preview First**: Run with `--dry-run` to see what will be deleted
-2. **Test on Staging**: Test on a copy of your database first
-3. **Backup Before Execution**: Create database backups before large cleanups
-4. **Schedule During Low Usage**: Run during maintenance windows
-5. **Monitor Logs**: Check logs after automated runs
-6. **Start Conservative**: Begin with longer retention periods
-7. **Avoid VACUUM on Production**: Unless during scheduled maintenance
-8. **Keep Admins Exempt**: Always use `--exempt-admin-users`
+The script accesses Open WebUI's backend directly:
+- Imports from `backend.open_webui` modules
+- Uses same database connection (`DATABASE_URL`)
+- Uses same vector database configuration
+- Reuses all prune logic from the API router
+
+**This means:**
+- ✅ No code duplication
+- ✅ Same behavior as web UI
+- ✅ Automatically gets updates
+- ✅ Battle-tested code
+
+**But requires:**
+- Same Python environment as Open WebUI
+- Access to database
+- Ability to import backend modules
+
+## Technical Details
+
+### What Gets Deleted
+
+**By Age:**
+- Chats older than specified days (based on `updated_at`)
+- Users inactive for specified days (based on `last_active_at`)
+- Audio cache files (based on file `mtime`)
+
+**Orphaned Data:**
+- Chats/tools/prompts/etc. from deleted users
+- Files not referenced in chats/KBs
+- Vector collections for deleted files/KBs
+- Physical upload files without DB records
+
+**Preserved:**
+- Active user accounts
+- Referenced files
+- Valid vector collections
+- Recent data (within retention period)
+- Exempted categories (archived, folders, admins)
+
+### Vector Database Support
+
+Fully supports cleanup for:
+- **ChromaDB**: SQLite metadata + directories + FTS indices
+- **PGVector**: PostgreSQL tables + embeddings
+- **Milvus**: Standard and multitenancy modes
+- **Qdrant**: Standard and multitenancy modes
+- **Others**: Safe no-op (does nothing)
+
+### Safety Features
+
+- **File-based locking** prevents concurrent runs
+- **Dry-run by default** requires explicit `--execute`
+- **Admin protection** enabled by default
+- **Stale lock detection** automatic cleanup
+- **Error handling** per-item with graceful degradation
+- **Comprehensive logging** all operations tracked
 
 ## Support
 
 For issues or questions:
-- Check the Open WebUI documentation
-- Review the prune.py source code for implementation details
-- Open an issue on the Open WebUI GitHub repository
+- Review this README
+- Check logs: `tail -f /var/log/openwebui-prune.log`
+- Test in staging environment
+- Open an issue on [Open WebUI GitHub](https://github.com/open-webui/open-webui)
+- Join [Open WebUI Discord](https://discord.gg/5rJgQTnV4s)
 
-## License
+---
 
-This script is part of Open WebUI and follows the same license.
+**Remember:** With great power comes great responsibility. Always preview first, create backups, and start with conservative settings!
