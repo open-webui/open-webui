@@ -6,6 +6,7 @@ import logging
 from aiohttp import ClientSession
 import urllib
 
+
 from open_webui.models.auths import (
     AddUserForm,
     ApiKey,
@@ -65,6 +66,10 @@ from open_webui.utils.auth import (
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.access_control import get_permissions, has_permission
 
+from open_webui.utils.redis import get_redis_client
+from open_webui.utils.rate_limit import RateLimiter
+
+
 from typing import Optional, List
 
 from ssl import CERT_NONE, CERT_REQUIRED, PROTOCOL_TLS
@@ -76,6 +81,10 @@ router = APIRouter()
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+signin_rate_limiter = RateLimiter(
+    redis_client=get_redis_client(), limit=5 * 3, window=60 * 3
+)
 
 ############################
 # GetSessionUser
@@ -551,6 +560,12 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
                 admin_email.lower(), lambda pw: verify_password(admin_password, pw)
             )
     else:
+        if signin_rate_limiter.is_limited(form_data.email.lower()):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
+            )
+
         password_bytes = form_data.password.encode("utf-8")
         if len(password_bytes) > 72:
             # TODO: Implement other hashing algorithms that support longer passwords
