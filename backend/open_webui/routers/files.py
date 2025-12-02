@@ -53,6 +53,7 @@ router = APIRouter()
 ############################
 
 
+# TODO: Optimize this function to use the knowledge_file table for faster lookups.
 def has_access_to_file(
     file_id: Optional[str], access_type: str, user=Depends(get_verified_user)
 ) -> bool:
