@@ -64,6 +64,7 @@ from open_webui.utils.auth import (
 )
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.access_control import get_permissions, has_permission
+from open_webui.utils.groups import apply_default_group_assignment
 
 from typing import Optional, List
 
@@ -408,15 +409,13 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                             500, detail=ERROR_MESSAGES.CREATE_USER_ERROR
                         )
 
-                    # Apply default group assignment for LDAP users
-                    default_group_id = getattr(
-                        request.app.state.config, "DEFAULT_GROUP_ID", ""
+                    apply_default_group_assignment(
+                        request.app.state.config,
+                        user.id,
+                        user.email,
+                        "LDAP"
                     )
-                    if default_group_id:
-                        Groups.add_users_to_group(default_group_id, [user.id])
-                        log.info(
-                            f"Added LDAP user {user.email} to default group {default_group_id}"
-                        )
+
 
                 except HTTPException:
                     raise
@@ -473,12 +472,13 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                         )
                     except Exception as e:
                         log.error(f"Failed to sync groups for user {user.id}: {e}")
-                    # Re-apply default group after sync (sync may have removed it)
-                    default_group_id = getattr(
-                        request.app.state.config, "DEFAULT_GROUP_ID", ""
+                    apply_default_group_assignment(
+                        request.app.state.config,
+                        user.id,
+                        user.email,
+                        "LDAP (group sync)"
                     )
-                    if default_group_id:
-                        Groups.add_users_to_group(default_group_id, [user.id])
+
 
                 return {
                     "token": token,
@@ -722,9 +722,12 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 # Disable signup after the first user is created
                 request.app.state.config.ENABLE_SIGNUP = False
 
-            default_group_id = getattr(request.app.state.config, "DEFAULT_GROUP_ID", "")
-            if default_group_id and default_group_id:
-                Groups.add_users_to_group(default_group_id, [user.id])
+            apply_default_group_assignment(
+                request.app.state.config,
+                user.id,
+                user.email,
+                "signup"
+            )
 
             return {
                 "token": token,
@@ -856,13 +859,13 @@ async def add_user(
         )
 
         if user:
-            # Apply default group assignment for manually added users
-            default_group_id = getattr(request.app.state.config, "DEFAULT_GROUP_ID", "")
-            if default_group_id and default_group_id:
-                Groups.add_users_to_group(default_group_id, [user.id])
-                log.info(
-                    f"Added manually created user {user.email} to default group {default_group_id}"
-                )
+            apply_default_group_assignment(
+                request.app.state.config,
+                user.id,
+                user.email,
+                "manual creation"
+            )
+
 
             token = create_token(data={"id": user.id})
             return {

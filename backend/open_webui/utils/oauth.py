@@ -72,6 +72,7 @@ from open_webui.env import (
 from open_webui.utils.misc import parse_duration
 from open_webui.utils.auth import get_password_hash, create_token
 from open_webui.utils.webhook import post_webhook
+from open_webui.utils.groups import apply_default_group_assignment
 
 from mcp.shared.auth import (
     OAuthClientMetadata as MCPOAuthClientMetadata,
@@ -1485,15 +1486,13 @@ class OAuthManager:
                             },
                         )
 
-                    # Apply default group assignment for OAuth users
-                    default_group_id = getattr(
-                        request.app.state.config, "DEFAULT_GROUP_ID", ""
+                    apply_default_group_assignment(
+                        request.app.state.config,
+                        user.id,
+                        user.email,
+                        "OAuth"
                     )
-                    if default_group_id and default_group_id:
-                        Groups.add_users_to_group(default_group_id, [user.id])
-                        log.info(
-                            f"Added OAuth user {user.email} to default group {default_group_id}"
-                        )
+
                 else:
                     raise HTTPException(
                         status.HTTP_403_FORBIDDEN,
@@ -1508,11 +1507,12 @@ class OAuthManager:
                 auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT
                 and user.role != "admin"
             ):
+                default_group_id = getattr(request.app.state.config, "DEFAULT_GROUP_ID", "")
                 self.update_user_groups(
                     user=user,
                     user_data=user_data,
                     default_permissions=request.app.state.config.USER_PERMISSIONS,
-                    default_group_id=getattr(request.app.state.config, "DEFAULT_GROUP_ID", ""),
+                    default_group_id=default_group_id,
                 )
 
         except Exception as e:
