@@ -22,6 +22,7 @@ from fastapi import (
 )
 
 from fastapi.responses import FileResponse, StreamingResponse
+
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
@@ -34,12 +35,19 @@ from open_webui.models.files import (
     Files,
 )
 from open_webui.models.knowledge import Knowledges
+from open_webui.models.groups import Groups
+
 
 from open_webui.routers.knowledge import get_knowledge, get_knowledge_list
 from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.routers.audio import transcribe
+
 from open_webui.storage.provider import Storage
+
+
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.access_control import has_access
+
 from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
@@ -53,31 +61,37 @@ router = APIRouter()
 ############################
 
 
+# TODO: Optimize this function to use the knowledge_file table for faster lookups.
 def has_access_to_file(
     file_id: Optional[str], access_type: str, user=Depends(get_verified_user)
 ) -> bool:
     file = Files.get_file_by_id(file_id)
     log.debug(f"Checking if user has {access_type} access to file")
-
     if not file:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    has_access = False
-    knowledge_base_id = file.meta.get("collection_name") if file.meta else None
+    knowledge_bases = Knowledges.get_knowledges_by_file_id(file_id)
+    user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
 
+    for knowledge_base in knowledge_bases:
+        if knowledge_base.user_id == user.id or has_access(
+            user.id, access_type, knowledge_base.access_control, user_group_ids
+        ):
+            return True
+
+    knowledge_base_id = file.meta.get("collection_name") if file.meta else None
     if knowledge_base_id:
         knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(
             user.id, access_type
         )
         for knowledge_base in knowledge_bases:
             if knowledge_base.id == knowledge_base_id:
-                has_access = True
-                break
+                return True
 
-    return has_access
+    return False
 
 
 ############################

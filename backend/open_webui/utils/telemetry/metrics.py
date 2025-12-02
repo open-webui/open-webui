@@ -45,7 +45,6 @@ from open_webui.env import (
     OTEL_METRICS_OTLP_SPAN_EXPORTER,
     OTEL_METRICS_EXPORTER_OTLP_INSECURE,
 )
-from open_webui.socket.main import get_active_user_ids
 from open_webui.models.users import Users
 
 _EXPORT_INTERVAL_MILLIS = 10_000  # 10 seconds
@@ -135,7 +134,7 @@ def setup_metrics(app: FastAPI, resource: Resource) -> None:
     ) -> Sequence[metrics.Observation]:
         return [
             metrics.Observation(
-                value=len(get_active_user_ids()),
+                value=Users.get_active_user_count(),
             )
         ]
 

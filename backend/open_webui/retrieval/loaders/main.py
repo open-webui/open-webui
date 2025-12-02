@@ -322,12 +322,14 @@ class Loader:
                     file_path=file_path,
                     api_endpoint=self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT"),
                     api_key=self.kwargs.get("DOCUMENT_INTELLIGENCE_KEY"),
+                    api_model=self.kwargs.get("DOCUMENT_INTELLIGENCE_MODEL"),
                 )
             else:
                 loader = AzureAIDocumentIntelligenceLoader(
                     file_path=file_path,
                     api_endpoint=self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT"),
                     azure_credential=DefaultAzureCredential(),
+                    api_model=self.kwargs.get("DOCUMENT_INTELLIGENCE_MODEL"),
                 )
         elif self.engine == "mineru" and file_ext in [
             "pdf"

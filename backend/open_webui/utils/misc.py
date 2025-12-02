@@ -6,7 +6,7 @@ import uuid
 import logging
 from datetime import timedelta
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, Optional, Sequence, Union
 import json
 import aiohttp
 
@@ -43,26 +43,28 @@ def get_allow_block_lists(filter_list):
     return allow_list, block_list
 
 
-def is_string_allowed(string: str, filter_list: Optional[list[str]] = None) -> bool:
+def is_string_allowed(
+    string: Union[str, Sequence[str]], filter_list: Optional[list[str]] = None
+) -> bool:
     """
     Checks if a string is allowed based on the provided filter list.
-    :param string: The string to check (e.g., domain or hostname).
+    :param string: The string or sequence of strings to check (e.g., domain or hostname).
     :param filter_list: List of allowed/blocked strings. Strings starting with "!" are blocked.
-    :return: True if the string is allowed, False otherwise.
+    :return: True if the string or sequence of strings is allowed, False otherwise.
     """
     if not filter_list:
         return True
 
     allow_list, block_list = get_allow_block_lists(filter_list)
-    print(string, allow_list, block_list)
+    strings = [string] if isinstance(string, str) else list(string)
 
     # If allow list is non-empty, require domain to match one of them
     if allow_list:
-        if not any(string.endswith(allowed) for allowed in allow_list):
+        if not any(s.endswith(allowed) for s in strings for allowed in allow_list):
             return False
 
     # Block list always removes matches
-    if any(string.endswith(blocked) for blocked in block_list):
+    if any(s.endswith(blocked) for s in strings for blocked in block_list):
         return False
 
     return True
