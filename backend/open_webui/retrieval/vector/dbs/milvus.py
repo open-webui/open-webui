@@ -213,7 +213,7 @@ class MilvusClient(VectorDBBase):
                 filter_expressions.append(f'metadata["{key}"] == "{value}"')
             else:
                 filter_expressions.append(f'metadata["{key}"] == {value}')
-        
+
         filter_string = " && ".join(filter_expressions)
 
         collection = Collection(f"{self.collection_prefix}_{collection_name}")

@@ -598,7 +598,9 @@
 								/>
 							</div>
 							<div class="my-0.5 flex flex-col w-full">
-								<div class=" mb-1 text-xs font-medium">{$i18n.t('Document Intelligence Model')}</div>
+								<div class=" mb-1 text-xs font-medium">
+									{$i18n.t('Document Intelligence Model')}
+								</div>
 								<div class="flex w-full">
 									<div class="flex-1 mr-2">
 										<input
