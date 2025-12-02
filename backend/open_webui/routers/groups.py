@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Optional
 import logging
 
-from open_webui.models.users import Users
+from open_webui.models.users import Users, UserInfoResponse
 from open_webui.models.groups import (
     Groups,
     GroupForm,
@@ -115,6 +115,24 @@ async def export_group_by_id(id: str, user=Depends(get_admin_user)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
+# GetUsersInGroupById
+############################
+
+
+@router.post("/id/{id}/users", response_model=list[UserInfoResponse])
+async def get_users_in_group(id: str, user=Depends(get_admin_user)):
+    try:
+        users = Users.get_users_by_group_id(id)
+        return users
+    except Exception as e:
+        log.exception(f"Error adding users to group {id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e),
         )
 
 

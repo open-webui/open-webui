@@ -452,6 +452,16 @@ class UsersTable:
                 "total": total,
             }
 
+    def get_users_by_group_id(self, group_id: str) -> list[UserModel]:
+        with get_db() as db:
+            users = (
+                db.query(User)
+                .join(GroupMember, User.id == GroupMember.user_id)
+                .filter(GroupMember.group_id == group_id)
+                .all()
+            )
+            return [UserModel.model_validate(user) for user in users]
+
     def get_users_by_user_ids(self, user_ids: list[str]) -> list[UserStatusModel]:
         with get_db() as db:
             users = db.query(User).filter(User.id.in_(user_ids)).all()
