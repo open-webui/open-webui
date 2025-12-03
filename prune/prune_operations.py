@@ -302,34 +302,31 @@ def get_active_file_ids(knowledge_bases=None) -> Set[str]:
         log.debug(f"Preloaded {len(all_file_ids)} file IDs for validation")
 
         # Scan knowledge bases for file references
+        # Note: Since v0.6.41, knowledge.data column was removed and replaced with
+        # knowledge_file table. We now use the existing API to query files per KB.
         if knowledge_bases is None:
             knowledge_bases = Knowledges.get_knowledge_bases()
         log.debug(f"Found {len(knowledge_bases)} knowledge bases")
 
+        # Memory-safe processing: iterate through KBs and extract file IDs incrementally
+        # We don't keep file objects in memory, just collect IDs
         for kb in knowledge_bases:
-            if not kb.data:
-                continue
+            try:
+                # Use existing API method that queries knowledge_file table
+                # get_files_by_id() performs:
+                # SELECT * FROM file JOIN knowledge_file WHERE knowledge_id = kb.id
+                kb_files = Knowledges.get_files_by_id(kb.id)
 
-            file_ids = []
+                # Extract file IDs only (memory efficient - don't keep full objects)
+                for file in kb_files:
+                    if file.id and file.id in all_file_ids:
+                        active_file_ids.add(file.id)
 
-            if isinstance(kb.data, dict) and "file_ids" in kb.data:
-                if isinstance(kb.data["file_ids"], list):
-                    file_ids.extend(kb.data["file_ids"])
+                # Help GC by clearing the list immediately after processing
+                del kb_files
 
-            if isinstance(kb.data, dict) and "files" in kb.data:
-                if isinstance(kb.data["files"], list):
-                    for file_ref in kb.data["files"]:
-                        if isinstance(file_ref, dict) and "id" in file_ref:
-                            file_ids.append(file_ref["id"])
-                        elif isinstance(file_ref, str):
-                            file_ids.append(file_ref)
-
-            for file_id in file_ids:
-                if isinstance(file_id, str) and file_id.strip():
-                    stripped_id = file_id.strip()
-                    # Validate against preloaded set (O(1) lookup)
-                    if stripped_id in all_file_ids:
-                        active_file_ids.add(stripped_id)
+            except Exception as e:
+                log.debug(f"Error scanning files for knowledge base {kb.id}: {e}")
 
         # Scan chats for file references
         # Stream chats using Core SELECT to avoid ORM overhead
