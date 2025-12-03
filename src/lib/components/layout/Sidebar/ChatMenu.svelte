@@ -85,20 +85,19 @@
 	const downloadPdf = async () => {
 		chat = await getChatById(localStorage.token, chatId);
 		if (chat) {
-			return;
+			await downloadChatPdf({
+				title: chat.chat.title,
+				stylizedPdfExport: $settings?.stylizedPdfExport ?? true,
+				chatText: await getChatAsText(chat),
+				async onBeforeRender() {
+					showFullMessages = true;
+					await tick();
+				},
+				onAfterRender() {
+					showFullMessages = false;
+				}
+			});
 		}
-		await downloadChatPdf({
-			title: chat.chat.title,
-			stylizedPdfExport: $settings?.stylizedPdfExport ?? true,
-			chatText: await getChatAsText(chat),
-			async onBeforeRender() {
-				showFullMessages = true;
-				await tick();
-			},
-			onAfterRender() {
-				showFullMessages = false;
-			}
-		});
 	};
 
 	const downloadJSONExport = async () => {
