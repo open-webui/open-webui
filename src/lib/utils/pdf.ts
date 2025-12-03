@@ -60,7 +60,7 @@ const DEFAULT_VIRTUAL_WIDTH = 800;
 /** Canvas scale factor for increased resolution */
 const CANVAS_SCALE = 2;
 /** JPEG quality for image compression (0.0 to 1.0) */
-const JPEG_QUALITY = 0.7;
+const JPEG_QUALITY = 0.95;
 
 // ==================== Shared Utility Functions ====================
 
@@ -384,7 +384,7 @@ export const downloadNotePdf = async (note: NoteData): Promise<void> => {
  * @throws Error if PDF generation fails or if chatText is missing in plain text mode
  */
 export const downloadChatPdf = async (options: ChatPdfOptions): Promise<void> => {
-    console.log('Downloading PDF', options);
+	console.log('Downloading PDF', options);
 
 	if (options.stylizedPdfExport ?? true) {
 		await options.onBeforeRender?.();
@@ -392,8 +392,8 @@ export const downloadChatPdf = async (options: ChatPdfOptions): Promise<void> =>
 		const containerElement = document.getElementById(
 			options.containerElementId || 'full-messages-container'
 		);
-		if (containerElement) {
-			try {
+		try {
+			if (containerElement) {
 				const virtualWidth = DEFAULT_VIRTUAL_WIDTH;
 
 				// Clone and style element for rendering
@@ -415,18 +415,18 @@ export const downloadChatPdf = async (options: ChatPdfOptions): Promise<void> =>
 				canvasToPdfWithSlicing(pdf, canvas, virtualWidth, A4_PAGE_WIDTH_MM, A4_PAGE_HEIGHT_MM);
 
 				pdf.save(`chat-${options.title}.pdf`);
-			} catch (error) {
-				console.error('Error generating PDF', error);
 			}
+		} finally {
+			await options.onAfterRender?.();
 		}
-		await options.onAfterRender?.();
-        return;
+
+		return;
 	}
 
-    if (!options.chatText) {
-        console.error('chatText is required for plain text PDF export');
-        return;
-    }
+	if (!options.chatText) {
+		console.error('chatText is required for plain text PDF export');
+		return;
+	}
 
-    await exportPlainTextToPdf(options.chatText, `chat-${options.title}.pdf`);
+	await exportPlainTextToPdf(options.chatText, `chat-${options.title}.pdf`);
 };
