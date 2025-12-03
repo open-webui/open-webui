@@ -14,7 +14,7 @@ Global environment variables (shared across all departments):
 
 Department-specific environment variables (prefix with DEPT_):
 - {DEPT}_SHP_ID_APP: Azure App Registration Client ID
-- {DEPT}_SHP_ID_APP_SECRET: Azure App Registration Client Secret  
+- {DEPT}_SHP_ID_APP_SECRET: Azure App Registration Client Secret
 - {DEPT}_SHP_TENANT_ID: Azure AD Tenant ID
 - {DEPT}_SHP_SITE_URL: SharePoint Site URL
 - {DEPT}_SHP_ORG_NAME: Organization name for tool descriptions
@@ -23,7 +23,7 @@ Department-specific environment variables (prefix with DEPT_):
 
 Example usage:
 - For MPO: create server with department_prefix="MPO"
-- For Finance: create server with department_prefix="FIN" 
+- For Finance: create server with department_prefix="FIN"
 - For IT: create server with department_prefix="IT"
 """
 import os
