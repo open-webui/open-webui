@@ -77,7 +77,7 @@ const isDarkMode = (): boolean => {
  * @returns New jsPDF instance configured for A4 portrait orientation
  */
 const createPdfDocument = async () => {
-  const { jsPDF } = await import('jspdf');
+	const { jsPDF } = await import('jspdf');
 	return new jsPDF('p', 'mm', 'a4');
 };
 
@@ -87,11 +87,7 @@ const createPdfDocument = async () => {
  * @param pageWidthMM - Page width in millimeters
  * @param pageHeightMM - Page height in millimeters
  */
-const applyDarkModeBackground = (
-	pdf: JSPDF,
-	pageWidthMM: number,
-	pageHeightMM: number
-): void => {
+const applyDarkModeBackground = (pdf: JSPDF, pageWidthMM: number, pageHeightMM: number): void => {
 	if (isDarkMode()) {
 		pdf.setFillColor(0, 0, 0);
 		pdf.rect(0, 0, pageWidthMM, pageHeightMM, 'F'); // black bg
@@ -124,7 +120,7 @@ const renderElementToCanvas = async (
 	virtualWidth: number,
 	options?: RenderCanvasOptions
 ): Promise<HTMLCanvasElement> => {
-  const { default: html2canvas } = await import('html2canvas-pro');
+	const { default: html2canvas } = await import('html2canvas-pro');
 
 	const isDark = isDarkMode();
 	const canvasOptions: Record<string, unknown> = {
@@ -187,17 +183,7 @@ const canvasToPdfWithSlicing = (
 		}
 
 		// Draw the slice of original canvas onto pageCanvas
-		ctx.drawImage(
-			canvas,
-			0,
-			offsetY,
-			canvas.width,
-			sliceHeight,
-			0,
-			0,
-			canvas.width,
-			sliceHeight
-		);
+		ctx.drawImage(canvas, 0, offsetY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
 
 		const imgData = pageCanvas.toDataURL('image/jpeg', JPEG_QUALITY);
 
@@ -293,10 +279,7 @@ const cloneElementForRendering = (element: HTMLElement, virtualWidth: number): H
  * @param text - Plain text content to export
  * @param filename - Filename for the PDF file
  */
-const exportPlainTextToPdf = async (
-	text: string,
-	filename: string
-): Promise<void> => {
+const exportPlainTextToPdf = async (text: string, filename: string): Promise<void> => {
 	const doc = await createPdfDocument();
 
 	// Margins
@@ -357,7 +340,9 @@ export const downloadNotePdf = async (note: NoteData): Promise<void> => {
 	const node = createNoteNode(note, DEFAULT_VIRTUAL_WIDTH);
 	const htmlContent = note.data?.content?.html;
 	const shouldRemoveNode = !(
-		htmlContent && typeof htmlContent === 'object' && htmlContent instanceof HTMLElement
+		htmlContent &&
+		typeof htmlContent === 'object' &&
+		htmlContent instanceof HTMLElement
 	);
 
 	try {
@@ -383,12 +368,12 @@ export const downloadNotePdf = async (note: NoteData): Promise<void> => {
 
 /**
  * Download PDF from chat (supports stylized and plain text modes)
- * 
+ *
  * Stylized mode: Renders the chat messages container as an image using html2canvas,
  * then converts it to PDF with proper pagination.
- * 
+ *
  * Plain text mode: Exports chat content as plain text with basic formatting.
- * 
+ *
  * @param options - Configuration object
  * @param options.containerElementId - ID of the container element to render (for stylized mode). Defaults to 'full-messages-container'
  * @param options.chatText - Plain text content (required for plain text mode)
