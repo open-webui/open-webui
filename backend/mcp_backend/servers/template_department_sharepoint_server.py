@@ -13,7 +13,7 @@ To onboard a new department:
 
 Environment variables required for {DEPT_UPPER}:
 - Global: SHP_USE_DELEGATED_ACCESS, SHP_OBO_SCOPE (shared across all departments)
-- Department-specific: 
+- Department-specific:
   - {DEPT_UPPER}_SHP_ID_APP: Azure AD application client ID
   - {DEPT_UPPER}_SHP_ID_APP_SECRET: Azure AD application client secret
   - {DEPT_UPPER}_SHP_TENANT_ID: Azure AD tenant ID
