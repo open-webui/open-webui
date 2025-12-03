@@ -44,9 +44,9 @@ interface ChatPdfOptions {
 	/** Whether to use stylized PDF export (default: true) */
 	stylizedPdfExport?: boolean;
 	/** Optional callback before rendering (for showing full messages) */
-	onBeforeRender?: () => Promise<void>;
+	onBeforeRender?: () => Promise<void> | void;
 	/** Optional callback after rendering (for hiding full messages) */
-	onAfterRender?: () => void;
+	onAfterRender?: () => Promise<void> | void;
 }
 
 // ==================== Shared Constants ====================
@@ -384,10 +384,10 @@ export const downloadNotePdf = async (note: NoteData): Promise<void> => {
  * @throws Error if PDF generation fails or if chatText is missing in plain text mode
  */
 export const downloadChatPdf = async (options: ChatPdfOptions): Promise<void> => {
+    console.log('Downloading PDF', options);
+
 	if (options.stylizedPdfExport ?? true) {
-		if (options.onBeforeRender) {
-			await options.onBeforeRender();
-		}
+		await options.onBeforeRender?.();
 
 		const containerElement = document.getElementById(
 			options.containerElementId || 'full-messages-container'
@@ -415,25 +415,18 @@ export const downloadChatPdf = async (options: ChatPdfOptions): Promise<void> =>
 				canvasToPdfWithSlicing(pdf, canvas, virtualWidth, A4_PAGE_WIDTH_MM, A4_PAGE_HEIGHT_MM);
 
 				pdf.save(`chat-${options.title}.pdf`);
-
-				if (options.onAfterRender) {
-					options.onAfterRender();
-				}
 			} catch (error) {
 				console.error('Error generating PDF', error);
-				if (options.onAfterRender) {
-					options.onAfterRender();
-				}
 			}
 		}
-	} else {
-		console.log('Downloading PDF');
-
-		if (!options.chatText) {
-			console.error('chatText is required for plain text PDF export');
-			return;
-		}
-
-		await exportPlainTextToPdf(options.chatText, `chat-${options.title}.pdf`);
+		await options.onAfterRender?.();
+        return;
 	}
+
+    if (!options.chatText) {
+        console.error('chatText is required for plain text PDF export');
+        return;
+    }
+
+    await exportPlainTextToPdf(options.chatText, `chat-${options.title}.pdf`);
 };
