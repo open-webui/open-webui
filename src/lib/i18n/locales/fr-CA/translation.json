@@ -971,7 +971,7 @@
 	"Provides current time and timezone information": "Fournit des informations sur l'heure actuelle et le fuseau horaire",
 	"Provides current, accurate information without disrupting web search": "Fournit des informations actuelles et précises sans perturber la recherche web",
 	"Provides latest news headlines from NewsDesk": "Fournit les derniers titres de presse de NewsDesk",
-	"Provides MPO SharePoint document search and retrieval": "Fournit la recherche et la récupération de documents SharePoint du BPM",
+	"Provides MPO SharePoint document search and retrieval": "Fournit la recherche et la récupération de documents SharePoint du BGP",
 	"Proxy URL": "URL du proxy",
 	"Public": "Publique",
 	"Pull \"{{searchValue}}\" from Ollama.com": "Récupérer « {{searchValue}} » depuis Ollama.com",
