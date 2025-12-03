@@ -17,7 +17,6 @@ aiocache
 aiofiles
 
 # PDF processing libraries for SharePoint document parsing
-PyPDF2==3.0.1
 pdfplumber==0.11.4
 
 sqlalchemy==2.0.32
@@ -125,8 +124,3 @@ grpcio>=1.49.1,<=1.67.1
 
 # Azure Storage for NewsDesk integration
 azure-storage-blob==12.25.1
-
-## SharePoint MCP Integration
-mcp-sharepoint==0.1.7
-office365-rest-python-client>=2.6.1
-pymupdf>=1.23.0
