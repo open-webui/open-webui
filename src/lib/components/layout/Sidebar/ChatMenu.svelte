@@ -88,6 +88,7 @@
 			await downloadChatPdf({
 				title: chat.chat.title,
 				stylizedPdfExport: $settings?.stylizedPdfExport ?? true,
+				containerElementId: 'full-messages-container',
 				chatText: await getChatAsText(chat),
 				async onBeforeRender() {
 					showFullMessages = true;

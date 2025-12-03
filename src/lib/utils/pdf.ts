@@ -375,7 +375,7 @@ export const downloadNotePdf = async (note: NoteData): Promise<void> => {
  * Plain text mode: Exports chat content as plain text with basic formatting.
  *
  * @param options - Configuration object
- * @param options.containerElementId - ID of the container element to render (for stylized mode). Defaults to 'full-messages-container'
+ * @param options.containerElementId - ID of the container element to render (for stylized mode).
  * @param options.chatText - Plain text content (required for plain text mode)
  * @param options.title - PDF filename (without .pdf extension)
  * @param options.stylizedPdfExport - Whether to use stylized PDF export (default: true)
@@ -386,12 +386,10 @@ export const downloadNotePdf = async (note: NoteData): Promise<void> => {
 export const downloadChatPdf = async (options: ChatPdfOptions): Promise<void> => {
 	console.log('Downloading PDF', options);
 
-	if (options.stylizedPdfExport ?? true) {
+	if ((options.stylizedPdfExport ?? true) && options.containerElementId) {
 		await options.onBeforeRender?.();
 
-		const containerElement = document.getElementById(
-			options.containerElementId || 'full-messages-container'
-		);
+		const containerElement = document.getElementById(options.containerElementId);
 		try {
 			if (containerElement) {
 				const virtualWidth = DEFAULT_VIRTUAL_WIDTH;
@@ -423,10 +421,10 @@ export const downloadChatPdf = async (options: ChatPdfOptions): Promise<void> =>
 		return;
 	}
 
-	if (!options.chatText) {
-		console.error('chatText is required for plain text PDF export');
+	if (options.chatText) {
+		await exportPlainTextToPdf(options.chatText, `chat-${options.title}.pdf`);
 		return;
 	}
 
-	await exportPlainTextToPdf(options.chatText, `chat-${options.title}.pdf`);
+	throw new Error('Either containerElementId or chatText is required');
 };
