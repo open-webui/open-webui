@@ -526,6 +526,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "SERPAPI_API_KEY": request.app.state.config.SERPAPI_API_KEY,
             "SERPAPI_ENGINE": request.app.state.config.SERPAPI_ENGINE,
             "JINA_API_KEY": request.app.state.config.JINA_API_KEY,
+            "JINA_SEARCH_API_URL": request.app.state.config.JINA_SEARCH_API_URL,
             "BING_SEARCH_V7_ENDPOINT": request.app.state.config.BING_SEARCH_V7_ENDPOINT,
             "BING_SEARCH_V7_SUBSCRIPTION_KEY": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
             "EXA_API_KEY": request.app.state.config.EXA_API_KEY,
@@ -584,6 +585,7 @@ class WebConfig(BaseModel):
     SERPAPI_API_KEY: Optional[str] = None
     SERPAPI_ENGINE: Optional[str] = None
     JINA_API_KEY: Optional[str] = None
+    JINA_SEARCH_API_URL: Optional[str] = None
     BING_SEARCH_V7_ENDPOINT: Optional[str] = None
     BING_SEARCH_V7_SUBSCRIPTION_KEY: Optional[str] = None
     EXA_API_KEY: Optional[str] = None
@@ -1051,6 +1053,7 @@ async def update_rag_config(
         request.app.state.config.SERPAPI_API_KEY = form_data.web.SERPAPI_API_KEY
         request.app.state.config.SERPAPI_ENGINE = form_data.web.SERPAPI_ENGINE
         request.app.state.config.JINA_API_KEY = form_data.web.JINA_API_KEY
+        request.app.state.config.JINA_SEARCH_API_URL = form_data.web.JINA_SEARCH_API_URL
         request.app.state.config.BING_SEARCH_V7_ENDPOINT = (
             form_data.web.BING_SEARCH_V7_ENDPOINT
         )
@@ -1196,6 +1199,7 @@ async def update_rag_config(
             "SERPAPI_API_KEY": request.app.state.config.SERPAPI_API_KEY,
             "SERPAPI_ENGINE": request.app.state.config.SERPAPI_ENGINE,
             "JINA_API_KEY": request.app.state.config.JINA_API_KEY,
+            "JINA_SEARCH_API_URL": request.app.state.config.JINA_SEARCH_API_URL,
             "BING_SEARCH_V7_ENDPOINT": request.app.state.config.BING_SEARCH_V7_ENDPOINT,
             "BING_SEARCH_V7_SUBSCRIPTION_KEY": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
             "EXA_API_KEY": request.app.state.config.EXA_API_KEY,
@@ -1458,7 +1462,6 @@ def process_file(
 
     if file:
         try:
-
             collection_name = form_data.collection_name
 
             if collection_name is None:
@@ -1971,6 +1974,7 @@ def search_web(
             request.app.state.config.JINA_API_KEY,
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            request.app.state.config.JINA_SEARCH_API_URL,
         )
     elif engine == "bing":
         return search_bing(
@@ -2057,7 +2061,6 @@ def search_web(
 async def process_web_search(
     request: Request, form_data: SearchForm, user=Depends(get_verified_user)
 ):
-
     urls = []
     result_items = []
 

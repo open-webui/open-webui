@@ -1,15 +1,20 @@
 import logging
 
 import requests
-from open_webui.retrieval.web.main import SearchResult
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.retrieval.web.main import SearchResult
 from yarl import URL
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-def search_jina(api_key: str, query: str, count: int) -> list[SearchResult]:
+def search_jina(
+    api_key: str,
+    query: str,
+    count: int,
+    api_url: str = "https://s.jina.ai/",
+) -> list[SearchResult]:
     """
     Search using Jina's Search API and return the results as a list of SearchResult objects.
     Args:
@@ -19,7 +24,12 @@ def search_jina(api_key: str, query: str, count: int) -> list[SearchResult]:
     Returns:
         list[SearchResult]: A list of search results
     """
-    jina_search_endpoint = "https://s.jina.ai/"
+    # Handle PersistentConfig object
+    if hasattr(api_key, "__str__"):
+        api_key = str(api_key)
+
+    if hasattr(api_url, "__str__"):
+        api_url = str(api_url)
 
     headers = {
         "Accept": "application/json",
@@ -30,7 +40,7 @@ def search_jina(api_key: str, query: str, count: int) -> list[SearchResult]:
 
     payload = {"q": query, "count": count if count <= 10 else 10}
 
-    url = str(URL(jina_search_endpoint))
+    url = str(URL(api_url))
     response = requests.post(url, headers=headers, json=payload)
     response.raise_for_status()
     data = response.json()

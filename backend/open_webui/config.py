@@ -808,7 +808,7 @@ def load_oauth_providers():
             f"⚠️  OAuth providers configured ({provider_list}) but OPENID_PROVIDER_URL not set - logout will not work!"
         )
         log.warning(
-            f"Set OPENID_PROVIDER_URL to your OAuth provider's OpenID Connect discovery endpoint to fix logout functionality."
+            "Set OPENID_PROVIDER_URL to your OAuth provider's OpenID Connect discovery endpoint to fix logout functionality."
         )
 
 
@@ -826,9 +826,9 @@ try:
             if item.is_file() or item.is_symlink():
                 try:
                     item.unlink()
-                except Exception as e:
+                except Exception:
                     pass
-except Exception as e:
+except Exception:
     pass
 
 for file_path in (FRONTEND_BUILD_DIR / "static").glob("**/*"):
@@ -3102,6 +3102,12 @@ JINA_API_KEY = PersistentConfig(
     "JINA_API_KEY",
     "rag.web.search.jina_api_key",
     os.getenv("JINA_API_KEY", ""),
+)
+
+JINA_SEARCH_API_URL = PersistentConfig(
+    "JINA_SEARCH_API_URL",
+    "rag.web.search.jina_search_api_url",
+    os.getenv("JINA_SEARCH_API_URL", "https://s.jina.ai/"),
 )
 
 SEARCHAPI_API_KEY = PersistentConfig(
