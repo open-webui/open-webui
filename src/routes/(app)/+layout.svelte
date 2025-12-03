@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { onMount, tick, getContext } from 'svelte';
+import { onMount, tick, getContext } from 'svelte';
 	import { openDB, deleteDB } from 'idb';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
@@ -16,6 +16,7 @@
 	import { getPrompts } from '$lib/apis/prompts';
 	import { getTools } from '$lib/apis/tools';
 	import { getBanners } from '$lib/apis/configs';
+	import { getLatestAnnouncements, markAnnouncementsRead, type AnnouncementUserView } from '$lib/apis/announcements';
 	import { getUserSettings } from '$lib/apis/users';
 
 	import { WEBUI_VERSION } from '$lib/constants';
@@ -35,6 +36,7 @@
 		showSettings,
 		showShortcuts,
 		showChangelog,
+		showAnnouncements,
 		temporaryChatEnabled,
 		toolServers,
 		showSearch,
@@ -44,6 +46,7 @@
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
+	import AnnouncementModal from '$lib/components/AnnouncementModal.svelte';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -55,6 +58,11 @@
 	let localDBChats = [];
 
 	let version;
+
+	let loadingAnnouncements = false;
+	let latestAnnouncements: AnnouncementUserView[] = [];
+	let lastSeenAnnouncementAt = 0;
+	let prevAnnouncementsOpen = false;
 
 	const clearChatInputStorage = () => {
 		const chatInputKeys = Object.keys(localStorage).filter((key) => key.startsWith('chat-input'));
@@ -144,6 +152,62 @@
 		tools.set(toolsData);
 	};
 
+	const loadAnnouncements = async (forceShow = false) => {
+		if ($user?.role !== 'user') return;
+		loadingAnnouncements = true;
+		lastSeenAnnouncementAt = Number(localStorage.getItem('announcementLastSeenAt') || '0');
+
+		const data = await getLatestAnnouncements(localStorage.token).catch((error) => {
+			console.error(error);
+			return null;
+		});
+
+		if (data) {
+			latestAnnouncements = data;
+			const hasNew = data.some(
+				(item) => item.is_read === false || (!!lastSeenAnnouncementAt && item.created_at > lastSeenAnnouncementAt)
+			);
+			if (forceShow) {
+				showAnnouncements.set(true);
+			} else {
+				showAnnouncements.set(hasNew && data.length > 0);
+			}
+		} else if (forceShow) {
+			showAnnouncements.set(true);
+		}
+
+		loadingAnnouncements = false;
+	};
+
+	const acknowledgeAnnouncements = async () => {
+		if (!latestAnnouncements || latestAnnouncements.length === 0) {
+			showAnnouncements.set(false);
+			return;
+		}
+
+		const unreadIds = latestAnnouncements.filter((item) => !item.is_read).map((item) => item.id);
+		if (unreadIds.length > 0) {
+			await markAnnouncementsRead(localStorage.token, unreadIds).catch((error) => {
+				console.error(error);
+				toast.error(error?.detail ?? error?.message ?? $i18n.t('Failed to mark read'));
+			});
+		}
+
+		const maxTs = Math.max(
+			lastSeenAnnouncementAt || 0,
+			...latestAnnouncements.map((item) => item.created_at ?? 0)
+		);
+		lastSeenAnnouncementAt = maxTs;
+		localStorage.setItem('announcementLastSeenAt', `${maxTs}`);
+
+		latestAnnouncements = latestAnnouncements.map((item) => ({ ...item, is_read: true }));
+		showAnnouncements.set(false);
+	};
+
+	const closeAnnouncementModal = async () => {
+		await acknowledgeAnnouncements();
+	};
+
 	onMount(async () => {
 		if ($user === undefined || $user === null) {
 			await goto('/auth');
@@ -162,6 +226,7 @@
 				await Promise.all([setModels(), setToolServers()]);
 			})
 		]);
+		await loadAnnouncements();
 
 		const setupKeyboardShortcuts = () => {
 			document.addEventListener('keydown', async function (event) {
@@ -297,6 +362,14 @@
 		loaded = true;
 	});
 
+	// 用户手动打开“公告”时，确保加载数据
+	$: {
+		if ($showAnnouncements && !prevAnnouncementsOpen && !loadingAnnouncements) {
+			loadAnnouncements(true);
+		}
+		prevAnnouncementsOpen = $showAnnouncements;
+	}
+
 	const checkForVersionUpdates = async () => {
 		version = await getVersionUpdates(localStorage.token).catch((error) => {
 			return {
@@ -309,6 +382,12 @@
 
 <SettingsModal bind:show={$showSettings} />
 <ChangelogModal bind:show={$showChangelog} />
+<AnnouncementModal
+	open={$showAnnouncements}
+	announcements={latestAnnouncements}
+	lastSeenAt={lastSeenAnnouncementAt}
+	onClose={closeAnnouncementModal}
+/>
 
 {#if version && compareVersion(version.latest, version.current) && ($settings?.showUpdateToast ?? true)}
 	<div class=" absolute bottom-8 right-8 z-50" in:fade={{ duration: 100 }}>

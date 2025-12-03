@@ -144,6 +144,41 @@
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
 				</DropdownMenu.Item>
+				<DropdownMenu.Item
+					as="a"
+					href="/announcements/manage"
+					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
+					on:click={async () => {
+						show = false;
+						if ($mobile) {
+							await tick();
+							showSidebar.set(false);
+						}
+					}}
+				>
+					<div class=" self-center mr-3">
+						<UserGroup className="w-5 h-5" strokeWidth="1.5" />
+					</div>
+					<div class=" self-center truncate">{$i18n.t('公告管理')}</div>
+				</DropdownMenu.Item>
+			{:else}
+				<DropdownMenu.Item
+					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
+					on:click={async () => {
+						show = false;
+						dispatch('show', 'announcements');
+						console.log('点击了公告');
+						if ($mobile) {
+							await tick();
+							showSidebar.set(false);
+						}
+					}}
+				>
+					<div class=" self-center mr-3">
+						<span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-[11px] font-semibold text-white">告</span>
+					</div>
+					<div class=" self-center truncate">{$i18n.t('公告')}</div>
+				</DropdownMenu.Item>
 			{/if}
 
 			{#if help}

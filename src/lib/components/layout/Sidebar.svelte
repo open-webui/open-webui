@@ -25,7 +25,8 @@
 		isApp,
 		models,
 		selectedFolder,
-		WEBUI_NAME
+		WEBUI_NAME,
+		showAnnouncements
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
@@ -767,6 +768,9 @@
 								if (e.detail === 'archived-chat') {
 									showArchivedChats.set(true);
 								}
+								if (e.detail === 'announcements') {
+									showAnnouncements.set(true);
+								}
 							}}
 						>
 							<div
@@ -1353,6 +1357,9 @@
 							on:show={(e) => {
 								if (e.detail === 'archived-chat') {
 									showArchivedChats.set(true);
+								}
+								if (e.detail === 'announcements') {
+									showAnnouncements.set(true);
 								}
 							}}
 						>
