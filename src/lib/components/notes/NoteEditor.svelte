@@ -38,7 +38,7 @@
 		WEBUI_NAME
 	} from '$lib/stores';
 
-	import { downloadPdf } from './utils';
+	import { downloadNotePdf } from '$lib/utils/pdf';
 
 	import Controls from './NoteEditor/Controls.svelte';
 	import Chat from './NoteEditor/Chat.svelte';
@@ -568,7 +568,7 @@ ${content}
 			saveAs(blob, `${note.title}.md`);
 		} else if (type === 'pdf') {
 			try {
-				await downloadPdf(note);
+				await downloadNotePdf(note);
 			} catch (error) {
 				toast.error(`${error}`);
 			}
