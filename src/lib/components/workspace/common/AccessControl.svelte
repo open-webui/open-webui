@@ -63,7 +63,7 @@
 
 <div class=" rounded-lg flex flex-col gap-2">
 	<div class="">
-		<div class=" text-sm font-medium mb-1.5">{$i18n.t('Visibility')}</div>
+		<div class=" text-xs font-medium mb-2.5 text-gray-500">{$i18n.t('Visibility')}</div>
 
 		<div class="flex gap-2.5 items-center mb-1">
 			<div>
@@ -105,7 +105,7 @@
 			<div>
 				<select
 					id="models"
-					class="outline-hidden bg-transparent text-sm font-medium rounded-lg block w-fit pr-10 max-w-full placeholder-gray-400"
+					class="dark:bg-gray-900 outline-hidden bg-transparent text-sm font-medium block w-fit pr-10 max-w-full placeholder-gray-400"
 					value={accessControl !== null ? 'private' : 'public'}
 					on:change={(e) => {
 						if (e.target.value === 'public') {
@@ -149,69 +149,19 @@
 			)}
 			<div>
 				<div class="">
-					<div class="flex justify-between mb-1.5">
-						<div class="text-sm font-medium">
+					<div class="flex justify-between mb-2.5">
+						<div class="text-xs font-medium text-gray-500">
 							{$i18n.t('Groups')}
 						</div>
 					</div>
 
-					<div class="mb-1">
-						<div class="flex w-full">
-							<div class="flex flex-1 items-center">
-								<div class="w-full px-0.5">
-									<select
-										class="outline-hidden bg-transparent text-sm rounded-lg block w-full pr-10 max-w-full
-									{selectedGroupId ? '' : 'text-gray-500'}
-									dark:placeholder-gray-500"
-										bind:value={selectedGroupId}
-										on:change={() => {
-											if (selectedGroupId !== '') {
-												accessControl.read.group_ids = [
-													...(accessControl?.read?.group_ids ?? []),
-													selectedGroupId
-												];
-
-												selectedGroupId = '';
-												onChange(accessControl);
-											}
-										}}
-									>
-										<option class=" text-gray-700" value="" disabled selected
-											>{$i18n.t('Select a group')}</option
-										>
-										{#each groups.filter((group) => !(accessControl?.read?.group_ids ?? []).includes(group.id)) as group}
-											<option class=" text-gray-700" value={group.id}>{group.name}</option>
-										{/each}
-									</select>
-								</div>
-								<!-- <div>
-								<Tooltip content={$i18n.t('Add Group')}>
-									<button
-										class=" p-1 rounded-xl bg-transparent dark:hover:bg-white/5 hover:bg-black/5 transition font-medium text-sm flex items-center space-x-1"
-										type="button"
-										on:click={() => {}}
-									>
-										<Plus className="size-3.5" />
-									</button>
-								</Tooltip>
-							</div> -->
-							</div>
-						</div>
-					</div>
-
-					<hr class=" border-gray-100 dark:border-gray-700/10 mt-1.5 mb-2.5 w-full" />
-
-					<div class="flex flex-col gap-2 mb-1 px-0.5">
-						{#if accessGroups.length > 0}
+					{#if accessGroups.length > 0}
+						<div class="flex flex-col gap-1.5 mb-2 px-0.5 mx-0.5">
 							{#each accessGroups as group}
-								<div class="flex items-center gap-3 justify-between text-xs w-full transition">
-									<div class="flex items-center gap-1.5 w-full font-medium">
+								<div class="flex items-center gap-3 justify-between text-sm w-full transition">
+									<div class="flex items-center gap-1.5 w-full">
 										<div>
-											<UserCircleSolid className="size-4" />
-										</div>
-
-										<div>
-											{group.name}
+											{group.name} <span class="text-xs text-gray-500">{group?.member_count}</span>
 										</div>
 									</div>
 
@@ -260,13 +210,46 @@
 									</div>
 								</div>
 							{/each}
-						{:else}
-							<div class="flex items-center justify-center">
-								<div class="text-gray-500 text-xs text-center py-2 px-10">
-									{$i18n.t('No groups with access, add a group to grant access')}
+						</div>
+					{/if}
+
+					<!-- <div class="flex items-center justify-center">
+						<div class="text-gray-500 text-xs text-center py-2 px-10">
+							{$i18n.t('No groups with access, add a group to grant access')}
+						</div>
+					</div> -->
+
+					<div class="mb-1">
+						<div class="flex w-full">
+							<div class="flex flex-1 items-center">
+								<div class="w-full px-0.5">
+									<select
+										class="dark:bg-gray-900 outline-hidden bg-transparent text-sm block w-full pr-10 max-w-full
+									{selectedGroupId ? '' : 'text-gray-500'}
+									dark:placeholder-gray-500"
+										bind:value={selectedGroupId}
+										on:change={() => {
+											if (selectedGroupId !== '') {
+												accessControl.read.group_ids = [
+													...(accessControl?.read?.group_ids ?? []),
+													selectedGroupId
+												];
+
+												selectedGroupId = '';
+												onChange(accessControl);
+											}
+										}}
+									>
+										<option class=" text-gray-700" value="" disabled selected
+											>{$i18n.t('Select a group')}</option
+										>
+										{#each groups.filter((group) => !(accessControl?.read?.group_ids ?? []).includes(group.id)) as group}
+											<option class=" text-gray-700" value={group.id}>{group.name}</option>
+										{/each}
+									</select>
 								</div>
 							</div>
-						{/if}
+						</div>
 					</div>
 				</div>
 			</div>

@@ -1073,7 +1073,7 @@
 							id="message-input-container"
 							class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border {$temporaryChatEnabled
 								? 'border-dashed border-gray-100 dark:border-gray-800 hover:border-gray-200 focus-within:border-gray-200 hover:dark:border-gray-700 focus-within:dark:border-gray-700'
-								: ' border-gray-100 dark:border-gray-850 hover:border-gray-200 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800'}  transition px-1 bg-white/5 dark:bg-gray-500/5 backdrop-blur-sm dark:text-gray-100"
+								: ' border-gray-100/30 dark:border-gray-850/30 hover:border-gray-200 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800'}  transition px-1 bg-white/5 dark:bg-gray-500/5 backdrop-blur-sm dark:text-gray-100"
 							dir={$settings?.chatDirection ?? 'auto'}
 						>
 							{#if atSelectedModel !== undefined}
@@ -1493,6 +1493,7 @@
 										<div class="ml-1 flex gap-1.5">
 											<Tooltip content={$i18n.t('Valves')} placement="top">
 												<button
+													type="button"
 													id="model-valves-button"
 													class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
 													on:click={() => {
@@ -1534,29 +1535,6 @@
 										{#each selectedFilterIds as filterId}
 											{@const filter = toggleFilters.find((f) => f.id === filterId)}
 											{#if filter}
-												<Tooltip content={filter?.name} placement="top">
-													<button
-														class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
-														on:click={() => {
-															showAbortJobConfirmDialog = true;
-															stopResponse();
-														}}
-													>
-														<svg
-															xmlns="http://www.w3.org/2000/svg"
-															viewBox="0 0 24 24"
-															fill="currentColor"
-															class="size-5"
-														>
-															<path
-																fill-rule="evenodd"
-																d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm6-2.438c0-.724.588-1.312 1.313-1.312h4.874c.725 0 1.313.588 1.313 1.313v4.874c0 .725-.588 1.313-1.313 1.313H9.564a1.312 1.312 0 01-1.313-1.313V9.564z"
-																clip-rule="evenodd"
-															/>
-														</svg>
-													</button>
-												</Tooltip>
-
 												<Tooltip content={filter?.name} placement="top">
 													<button
 														on:click|preventDefault={() => {
@@ -1608,7 +1586,6 @@
 												</button>
 											</Tooltip>
 										{/if}
-
 										{#if false}
 											{#if imageGenerationEnabled}
 												<Tooltip content={$i18n.t('Image')} placement="top">
@@ -1655,188 +1632,193 @@
 											{/if}
 										{/if}
 									</div>
-								</div>
 
-								<div class="self-end flex space-x-1 mr-1 shrink-0">
-									{#if false}
-										{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
-											<!-- {$i18n.t('Record voice')} -->
-											<Tooltip content={$i18n.t('Dictate')}>
-												<button
-													id="voice-input-button"
-													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 mr-0.5 self-center"
-													type="button"
-													on:click={async () => {
-														try {
-															let stream = await navigator.mediaDevices
-																.getUserMedia({ audio: true })
-																.catch(function (err) {
-																	toast.error(
-																		$i18n.t(
-																			`Permission denied when accessing microphone: {{error}}`,
-																			{
-																				error: err
-																			}
-																		)
-																	);
-																	return null;
-																});
-
-															if (stream) {
-																recording = true;
-																const tracks = stream.getTracks();
-																tracks.forEach((track) => track.stop());
-															}
-															stream = null;
-														} catch {
-															toast.error($i18n.t('Permission denied when accessing microphone'));
-														}
-													}}
-													aria-label="Voice Input"
-												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 20 20"
-														fill="currentColor"
-														class="w-5 h-5 translate-y-[0.5px]"
-													>
-														<path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
-														<path
-															d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z"
-														/>
-													</svg>
-												</button>
-											</Tooltip>
-										{/if}
-									{/if}
-
-									{#if (taskIds && taskIds.length > 0) || (history.currentId && history.messages[history.currentId]?.done != true) || generating}
-										<div class=" flex items-center">
-											<Tooltip content={$i18n.t('Stop')}>
-												<button
-													class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
-													on:click={() => {
-														showAbortJobConfirmDialog = true;
-														stopResponse();
-													}}
-												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 24 24"
-														fill="currentColor"
-														class="size-5"
-													>
-														<path
-															fill-rule="evenodd"
-															d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm6-2.438c0-.724.588-1.312 1.313-1.312h4.874c.725 0 1.313.588 1.313 1.313v4.874c0 .725-.588 1.313-1.313 1.313H9.564a1.312 1.312 0 01-1.313-1.313V9.564z"
-															clip-rule="evenodd"
-														/>
-													</svg>
-												</button>
-											</Tooltip>
-										</div>
-										{#if false}{:else if prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
-											<div class=" flex items-center">
-												<!-- {$i18n.t('Call')} -->
-												<Tooltip content={$i18n.t('Voice mode')}>
+									<div class="self-end flex space-x-1 mr-1 shrink-0">
+										{#if false}
+											{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
+												<!-- {$i18n.t('Record voice')} -->
+												<Tooltip content={$i18n.t('Dictate')}>
 													<button
-														class=" bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-1.5 self-center"
+														id="voice-input-button"
+														class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 mr-0.5 self-center"
 														type="button"
 														on:click={async () => {
-															if (selectedModels.length > 1) {
-																toast.error($i18n.t('Select only one model to call'));
-
-																return;
-															}
-
-															if ($config.audio.stt.engine === 'web') {
-																toast.error(
-																	$i18n.t('Call feature is not supported when using Web STT engine')
-																);
-
-																return;
-															}
-															// check if user has access to getUserMedia
 															try {
-																let stream = await navigator.mediaDevices.getUserMedia({
-																	audio: true
-																});
-																// If the user grants the permission, proceed to show the call overlay
+																let stream = await navigator.mediaDevices
+																	.getUserMedia({ audio: true })
+																	.catch(function (err) {
+																		toast.error(
+																			$i18n.t(
+																				`Permission denied when accessing microphone: {{error}}`,
+																				{
+																					error: err
+																				}
+																			)
+																		);
+																		return null;
+																	});
 
 																if (stream) {
+																	recording = true;
 																	const tracks = stream.getTracks();
 																	tracks.forEach((track) => track.stop());
 																}
-
 																stream = null;
-
-																if ($settings.audio?.tts?.engine === 'browser-kokoro') {
-																	// If the user has not initialized the TTS worker, initialize it
-																	if (!$TTSWorker) {
-																		await TTSWorker.set(
-																			new KokoroWorker({
-																				dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
-																			})
-																		);
-
-																		await $TTSWorker.init();
-																	}
-																}
-
-																showCallOverlay.set(true);
-																showControls.set(true);
-															} catch (err) {
-																// If the user denies the permission or an error occurs, show an error message
-																toast.error(
-																	$i18n.t('Permission denied when accessing media devices')
-																);
+															} catch {
+																toast.error($i18n.t('Permission denied when accessing microphone'));
 															}
 														}}
-														aria-label={$i18n.t('Voice mode')}
+														aria-label="Voice Input"
 													>
-														<Voice className="size-5" strokeWidth="2.5" />
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															viewBox="0 0 20 20"
+															fill="currentColor"
+															class="w-5 h-5 translate-y-[0.5px]"
+														>
+															<path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
+															<path
+																d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z"
+															/>
+														</svg>
+													</button>
+												</Tooltip>
+											{/if}
+										{/if}
+
+										{#if (taskIds && taskIds.length > 0) || (history.currentId && history.messages[history.currentId]?.done != true) || generating}
+											<div class=" flex items-center">
+												<Tooltip content={$i18n.t('Stop')}>
+													<button
+														class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
+														on:click={() => {
+															showAbortJobConfirmDialog = true;
+															stopResponse();
+														}}
+													>
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															viewBox="0 0 24 24"
+															fill="currentColor"
+															class="size-5"
+														>
+															<path
+																fill-rule="evenodd"
+																d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm6-2.438c0-.724.588-1.312 1.313-1.312h4.874c.725 0 1.313.588 1.313 1.313v4.874c0 .725-.588 1.313-1.313 1.313H9.564a1.312 1.312 0 01-1.313-1.313V9.564z"
+																clip-rule="evenodd"
+															/>
+														</svg>
+													</button>
+												</Tooltip>
+											</div>
+											{#if false}{:else if prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
+												<div class=" flex items-center">
+													{#if false}
+														<!-- {$i18n.t('Call')} -->
+														<Tooltip content={$i18n.t('Voice mode')}>
+															<button
+																class=" bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-1.5 self-center"
+																type="button"
+																on:click={async () => {
+																	if (selectedModels.length > 1) {
+																		toast.error($i18n.t('Select only one model to call'));
+
+																		return;
+																	}
+
+																	if ($config.audio.stt.engine === 'web') {
+																		toast.error(
+																			$i18n.t(
+																				'Call feature is not supported when using Web STT engine'
+																			)
+																		);
+
+																		return;
+																	}
+																	// check if user has access to getUserMedia
+																	try {
+																		let stream = await navigator.mediaDevices.getUserMedia({
+																			audio: true
+																		});
+																		// If the user grants the permission, proceed to show the call overlay
+
+																		if (stream) {
+																			const tracks = stream.getTracks();
+																			tracks.forEach((track) => track.stop());
+																		}
+
+																		stream = null;
+
+																		if ($settings.audio?.tts?.engine === 'browser-kokoro') {
+																			// If the user has not initialized the TTS worker, initialize it
+																			if (!$TTSWorker) {
+																				await TTSWorker.set(
+																					new KokoroWorker({
+																						dtype:
+																							$settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
+																					})
+																				);
+
+																				await $TTSWorker.init();
+																			}
+																		}
+
+																		showCallOverlay.set(true);
+																		showControls.set(true);
+																	} catch (err) {
+																		// If the user denies the permission or an error occurs, show an error message
+																		toast.error(
+																			$i18n.t('Permission denied when accessing media devices')
+																		);
+																	}
+																}}
+																aria-label={$i18n.t('Voice mode')}
+															>
+																<Voice className="size-5" strokeWidth="2.5" />
+															</button>
+														</Tooltip>
+													{/if}
+												</div>
+											{/if}
+										{:else}
+											<div class=" flex items-center">
+												<Tooltip content={$i18n.t('Send message')}>
+													<button
+														id="send-message-button"
+														class="{!(prompt === '' && files.length === 0)
+															? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
+															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
+														type="submit"
+														disabled={prompt === '' && files.length === 0}
+													>
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															viewBox="0 0 16 16"
+															fill="currentColor"
+															class="size-5"
+														>
+															<path
+																fill-rule="evenodd"
+																d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
+																clip-rule="evenodd"
+															/>
+														</svg>
 													</button>
 												</Tooltip>
 											</div>
 										{/if}
-									{:else}
-										<div class=" flex items-center">
-											<Tooltip content={$i18n.t('Send message')}>
-												<button
-													id="send-message-button"
-													class="{!(prompt === '' && files.length === 0)
-														? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-														: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
-													type="submit"
-													disabled={prompt === '' && files.length === 0}
-												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 16 16"
-														fill="currentColor"
-														class="size-5"
-													>
-														<path
-															fill-rule="evenodd"
-															d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
-															clip-rule="evenodd"
-														/>
-													</svg>
-												</button>
-											</Tooltip>
-										</div>
-									{/if}
+									</div>
 								</div>
 							</div>
-						</div>
 
-						{#if $config?.license_metadata?.input_footer}
-							<div class=" text-xs text-gray-500 text-center line-clamp-1 marked">
-								{@html DOMPurify.sanitize(marked($config?.license_metadata?.input_footer))}
-							</div>
-						{:else}
-							<div class="mb-1" />
-						{/if}
+							{#if $config?.license_metadata?.input_footer}
+								<div class=" text-xs text-gray-500 text-center line-clamp-1 marked">
+									{@html DOMPurify.sanitize(marked($config?.license_metadata?.input_footer))}
+								</div>
+							{:else}
+								<div class="mb-1" />
+							{/if}
+						</div>
 					</form>
 				</div>
 			</div>

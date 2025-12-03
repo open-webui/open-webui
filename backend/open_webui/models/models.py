@@ -13,6 +13,8 @@ from pydantic import BaseModel, ConfigDict
 
 from sqlalchemy import String, cast, or_, and_, func
 from sqlalchemy.dialects import postgresql, sqlite
+
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
 
 
@@ -53,7 +55,7 @@ class ModelMeta(BaseModel):
 class Model(Base):
     __tablename__ = "model"
 
-    id = Column(Text, primary_key=True)
+    id = Column(Text, primary_key=True, unique=True)
     """
         The model's id as used in the API. If set to an existing model, it will override the model.
     """
@@ -220,6 +222,48 @@ class ModelsTable:
             or has_access(user_id, permission, model.access_control, user_group_ids)
         ]
 
+    def _has_permission(self, db, query, filter: dict, permission: str = "read"):
+        group_ids = filter.get("group_ids", [])
+        user_id = filter.get("user_id")
+
+        dialect_name = db.bind.dialect.name
+
+        # Public access
+        conditions = []
+        if group_ids or user_id:
+            conditions.extend(
+                [
+                    Model.access_control.is_(None),
+                    cast(Model.access_control, String) == "null",
+                ]
+            )
+
+        # User-level permission
+        if user_id:
+            conditions.append(Model.user_id == user_id)
+
+        # Group-level permission
+        if group_ids:
+            group_conditions = []
+            for gid in group_ids:
+                if dialect_name == "sqlite":
+                    group_conditions.append(
+                        Model.access_control[permission]["group_ids"].contains([gid])
+                    )
+                elif dialect_name == "postgresql":
+                    group_conditions.append(
+                        cast(
+                            Model.access_control[permission]["group_ids"],
+                            JSONB,
+                        ).contains([gid])
+                    )
+            conditions.append(or_(*group_conditions))
+
+        if conditions:
+            query = query.filter(or_(*conditions))
+
+        return query
+
     def search_models(
         self, user_id: str, filter: dict = {}, skip: int = 0, limit: int = 30
     ) -> ModelListResponse:
@@ -238,15 +282,19 @@ class ModelsTable:
                         )
                     )
 
-                if filter.get("user_id"):
-                    query = query.filter(Model.user_id == filter.get("user_id"))
-
                 view_option = filter.get("view_option")
-
                 if view_option == "created":
                     query = query.filter(Model.user_id == user_id)
                 elif view_option == "shared":
                     query = query.filter(Model.user_id != user_id)
+
+                # Apply access control filtering
+                query = self._has_permission(
+                    db,
+                    query,
+                    filter,
+                    permission="write",
+                )
 
                 tag = filter.get("tag")
                 if tag:
@@ -290,10 +338,15 @@ class ModelsTable:
 
             models = []
             for model, user in items:
-                model_model = ModelModel.model_validate(model)
-                user_model = UserResponse(**UserModel.model_validate(user).model_dump())
                 models.append(
-                    ModelUserResponse(**model_model.model_dump(), user=user_model)
+                    ModelUserResponse(
+                        **ModelModel.model_validate(model).model_dump(),
+                        user=(
+                            UserResponse(**UserModel.model_validate(user).model_dump())
+                            if user
+                            else None
+                        ),
+                    )
                 )
 
             return ModelListResponse(items=models, total=total)

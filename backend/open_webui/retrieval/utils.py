@@ -782,6 +782,7 @@ def get_embedding_function(
     key,
     embedding_batch_size,
     azure_api_version=None,
+    enable_async=True,
 ) -> Awaitable:
     if embedding_engine == "":
         # Sentence transformers: CPU-bound sync operation
@@ -816,16 +817,26 @@ def get_embedding_function(
                     query[i : i + embedding_batch_size]
                     for i in range(0, len(query), embedding_batch_size)
                 ]
-                log.debug(
-                    f"generate_multiple_async: Processing {len(batches)} batches in parallel"
-                )
 
-                # Execute all batches in parallel
-                tasks = [
-                    embedding_function(batch, prefix=prefix, user=user)
-                    for batch in batches
-                ]
-                batch_results = await asyncio.gather(*tasks)
+                if enable_async:
+                    log.debug(
+                        f"generate_multiple_async: Processing {len(batches)} batches in parallel"
+                    )
+                    # Execute all batches in parallel
+                    tasks = [
+                        embedding_function(batch, prefix=prefix, user=user)
+                        for batch in batches
+                    ]
+                    batch_results = await asyncio.gather(*tasks)
+                else:
+                    log.debug(
+                        f"generate_multiple_async: Processing {len(batches)} batches sequentially"
+                    )
+                    batch_results = []
+                    for batch in batches:
+                        batch_results.append(
+                            await embedding_function(batch, prefix=prefix, user=user)
+                        )
 
                 # Flatten results
                 embeddings = []
@@ -1077,23 +1088,19 @@ async def get_sources_from_items(
                         or knowledge_base.user_id == user.id
                         or has_access(user.id, "read", knowledge_base.access_control)
                     ):
-
-                        file_ids = knowledge_base.data.get("file_ids", [])
+                        files = Knowledges.get_files_by_id(knowledge_base.id)
 
                         documents = []
                         metadatas = []
-                        for file_id in file_ids:
-                            file_object = Files.get_file_by_id(file_id)
-
-                            if file_object:
-                                documents.append(file_object.data.get("content", ""))
-                                metadatas.append(
-                                    {
-                                        "file_id": file_id,
-                                        "name": file_object.filename,
-                                        "source": file_object.filename,
-                                    }
-                                )
+                        for file in files:
+                            documents.append(file.data.get("content", ""))
+                            metadatas.append(
+                                {
+                                    "file_id": file.id,
+                                    "name": file.filename,
+                                    "source": file.filename,
+                                }
+                            )
 
                         query_result = {
                             "documents": [documents],

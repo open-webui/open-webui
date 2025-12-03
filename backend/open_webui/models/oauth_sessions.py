@@ -25,7 +25,7 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 class OAuthSession(Base):
     __tablename__ = "oauth_session"
 
-    id = Column(Text, primary_key=True)
+    id = Column(Text, primary_key=True, unique=True)
     user_id = Column(Text, nullable=False)
     provider = Column(Text, nullable=False)
     token = Column(

@@ -1,13 +1,13 @@
 # Minimal requirements for backend to run
 # WIP: use this as a reference to build a minimal docker image
 
-fastapi==0.118.0
+fastapi==0.123.0
 uvicorn[standard]==0.37.0
-pydantic==2.11.9
+pydantic==2.12.5
 python-multipart==0.0.20
 itsdangerous==2.2.0
 
-python-socketio==5.13.0
+python-socketio==5.15.0
 python-jose==3.5.0
 cryptography
 bcrypt==5.0.0
@@ -20,14 +20,14 @@ aiohttp==3.12.15
 async-timeout
 aiocache
 aiofiles
-starlette-compress==1.6.0
+starlette-compress==1.6.1
 httpx[socks,http2,zstd,cli,brotli]==0.28.1
 starsessions[redis]==2.2.1
 
 sqlalchemy==2.0.38
-alembic==1.14.0
-peewee==3.18.1
-peewee-migrate==1.12.2
+alembic==1.17.2
+peewee==3.18.3
+peewee-migrate==1.14.3
 
 pycrdt==0.12.25
 redis
@@ -36,9 +36,9 @@ APScheduler==3.10.4
 RestrictedPython==8.0
 
 loguru==0.7.3
-asgiref==3.8.1
+asgiref==3.11.0
 
-mcp==1.21.2
+mcp==1.22.0
 openai
 
 langchain==0.3.27
@@ -46,5 +46,6 @@ langchain-community==0.3.29
 fake-useragent==2.2.0
 
 chromadb==1.1.0
-black==25.9.0
+black==25.11.0
 pydub
+chardet==5.2.0
