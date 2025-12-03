@@ -17,6 +17,7 @@
 
 	import { settings, user, shortCodesToEmojis } from '$lib/stores';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { getMessageData } from '$lib/apis/channels';
 
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
@@ -42,6 +43,8 @@
 	export let className = '';
 
 	export let message;
+	export let channel;
+
 	export let showUserProfile = true;
 	export let thread = false;
 
@@ -61,6 +64,21 @@
 	let edit = false;
 	let editedContent = null;
 	let showDeleteConfirmDialog = false;
+
+	const loadMessageData = async () => {
+		if (message && message?.data) {
+			const res = await getMessageData(localStorage.token, channel?.id, message.id);
+			if (res) {
+				message.data = res;
+			}
+		}
+	};
+
+	onMount(async () => {
+		if (message && message?.data) {
+			await loadMessageData();
+		}
+	});
 </script>
 
 <ConfirmDialog
@@ -314,7 +332,12 @@
 					</Name>
 				{/if}
 
-				{#if (message?.data?.files ?? []).length > 0}
+				{#if message?.data === true}
+					<!-- loading indicator -->
+					<div class=" my-2">
+						<Skeleton />
+					</div>
+				{:else if (message?.data?.files ?? []).length > 0}
 					<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
 						{#each message?.data?.files as file}
 							<div>
