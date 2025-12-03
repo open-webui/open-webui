@@ -65,7 +65,7 @@
 	</div>
 </div>
 
-<hr class="border-gray-50 dark:border-gray-850 my-1" />
+<hr class="border-gray-50 dark:border-gray-850/30 my-1" />
 
 <div class="flex flex-col w-full mt-2">
 	<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Setting')}</div>

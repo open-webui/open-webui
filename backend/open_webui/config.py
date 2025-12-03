@@ -583,14 +583,16 @@ OAUTH_ROLES_CLAIM = PersistentConfig(
     os.environ.get("OAUTH_ROLES_CLAIM", "roles"),
 )
 
-SEP = os.environ.get("OAUTH_ROLES_SEPARATOR", ",")
+OAUTH_ROLES_SEPARATOR = os.environ.get("OAUTH_ROLES_SEPARATOR", ",")
 
 OAUTH_ALLOWED_ROLES = PersistentConfig(
     "OAUTH_ALLOWED_ROLES",
     "oauth.allowed_roles",
     [
         role.strip()
-        for role in os.environ.get("OAUTH_ALLOWED_ROLES", f"user{SEP}admin").split(SEP)
+        for role in os.environ.get(
+            "OAUTH_ALLOWED_ROLES", f"user{OAUTH_ROLES_SEPARATOR}admin"
+        ).split(OAUTH_ROLES_SEPARATOR)
         if role
     ],
 )
@@ -600,7 +602,9 @@ OAUTH_ADMIN_ROLES = PersistentConfig(
     "oauth.admin_roles",
     [
         role.strip()
-        for role in os.environ.get("OAUTH_ADMIN_ROLES", "admin").split(SEP)
+        for role in os.environ.get("OAUTH_ADMIN_ROLES", "admin").split(
+            OAUTH_ROLES_SEPARATOR
+        )
         if role
     ],
 )
@@ -1443,8 +1447,16 @@ USER_PERMISSIONS_FEATURES_CODE_INTERPRETER = (
     == "true"
 )
 
+USER_PERMISSIONS_FEATURES_FOLDERS = (
+    os.environ.get("USER_PERMISSIONS_FEATURES_FOLDERS", "True").lower() == "true"
+)
+
 USER_PERMISSIONS_FEATURES_NOTES = (
     os.environ.get("USER_PERMISSIONS_FEATURES_NOTES", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_FEATURES_CHANNELS = (
+    os.environ.get("USER_PERMISSIONS_FEATURES_CHANNELS", "True").lower() == "true"
 )
 
 USER_PERMISSIONS_FEATURES_API_KEYS = (
@@ -1499,12 +1511,16 @@ DEFAULT_USER_PERMISSIONS = {
         "temporary_enforced": USER_PERMISSIONS_CHAT_TEMPORARY_ENFORCED,
     },
     "features": {
+        # General features
         "api_keys": USER_PERMISSIONS_FEATURES_API_KEYS,
+        "notes": USER_PERMISSIONS_FEATURES_NOTES,
+        "folders": USER_PERMISSIONS_FEATURES_FOLDERS,
+        "channels": USER_PERMISSIONS_FEATURES_CHANNELS,
         "direct_tool_servers": USER_PERMISSIONS_FEATURES_DIRECT_TOOL_SERVERS,
+        # Chat features
         "web_search": USER_PERMISSIONS_FEATURES_WEB_SEARCH,
         "image_generation": USER_PERMISSIONS_FEATURES_IMAGE_GENERATION,
         "code_interpreter": USER_PERMISSIONS_FEATURES_CODE_INTERPRETER,
-        "notes": USER_PERMISSIONS_FEATURES_NOTES,
     },
 }
 
@@ -1512,6 +1528,12 @@ USER_PERMISSIONS = PersistentConfig(
     "USER_PERMISSIONS",
     "user.permissions",
     DEFAULT_USER_PERMISSIONS,
+)
+
+ENABLE_FOLDERS = PersistentConfig(
+    "ENABLE_FOLDERS",
+    "folders.enable",
+    os.environ.get("ENABLE_FOLDERS", "True").lower() == "true",
 )
 
 ENABLE_CHANNELS = PersistentConfig(
@@ -2566,6 +2588,12 @@ DOCUMENT_INTELLIGENCE_KEY = PersistentConfig(
     "DOCUMENT_INTELLIGENCE_KEY",
     "rag.document_intelligence_key",
     os.getenv("DOCUMENT_INTELLIGENCE_KEY", ""),
+)
+
+DOCUMENT_INTELLIGENCE_MODEL = PersistentConfig(
+    "DOCUMENT_INTELLIGENCE_MODEL",
+    "rag.document_intelligence_model",
+    os.getenv("DOCUMENT_INTELLIGENCE_MODEL", "prebuilt-layout"),
 )
 
 MISTRAL_OCR_API_BASE_URL = PersistentConfig(
