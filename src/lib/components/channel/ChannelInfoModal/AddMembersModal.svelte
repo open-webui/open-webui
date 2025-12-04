@@ -37,6 +37,16 @@
 			toast.error($i18n.t('Failed to add members'));
 		}
 	};
+
+	const reset = () => {
+		userIds = [];
+		groupIds = [];
+		loading = false;
+	};
+
+	$: if (!show) {
+		reset();
+	}
 </script>
 
 {#if channel}

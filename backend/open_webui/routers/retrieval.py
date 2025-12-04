@@ -123,7 +123,7 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 def get_ef(
     engine: str,
     embedding_model: str,
-    auto_update: bool = False,
+    auto_update: bool = RAG_EMBEDDING_MODEL_AUTO_UPDATE,
 ):
     ef = None
     if embedding_model and engine == "":
@@ -148,7 +148,7 @@ def get_rf(
     reranking_model: Optional[str] = None,
     external_reranker_url: str = "",
     external_reranker_api_key: str = "",
-    auto_update: bool = False,
+    auto_update: bool = RAG_RERANKING_MODEL_AUTO_UPDATE,
 ):
     rf = None
     if reranking_model:
@@ -468,6 +468,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "DOCLING_PARAMS": request.app.state.config.DOCLING_PARAMS,
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
+        "DOCUMENT_INTELLIGENCE_MODEL": request.app.state.config.DOCUMENT_INTELLIGENCE_MODEL,
         "MISTRAL_OCR_API_BASE_URL": request.app.state.config.MISTRAL_OCR_API_BASE_URL,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
         # MinerU settings
@@ -647,6 +648,7 @@ class ConfigForm(BaseModel):
     DOCLING_PARAMS: Optional[dict] = None
     DOCUMENT_INTELLIGENCE_ENDPOINT: Optional[str] = None
     DOCUMENT_INTELLIGENCE_KEY: Optional[str] = None
+    DOCUMENT_INTELLIGENCE_MODEL: Optional[str] = None
     MISTRAL_OCR_API_BASE_URL: Optional[str] = None
     MISTRAL_OCR_API_KEY: Optional[str] = None
 
@@ -842,6 +844,11 @@ async def update_rag_config(
         if form_data.DOCUMENT_INTELLIGENCE_KEY is not None
         else request.app.state.config.DOCUMENT_INTELLIGENCE_KEY
     )
+    request.app.state.config.DOCUMENT_INTELLIGENCE_MODEL = (
+        form_data.DOCUMENT_INTELLIGENCE_MODEL
+        if form_data.DOCUMENT_INTELLIGENCE_MODEL is not None
+        else request.app.state.config.DOCUMENT_INTELLIGENCE_MODEL
+    )
 
     request.app.state.config.MISTRAL_OCR_API_BASE_URL = (
         form_data.MISTRAL_OCR_API_BASE_URL
@@ -927,7 +934,6 @@ async def update_rag_config(
                     request.app.state.config.RAG_RERANKING_MODEL,
                     request.app.state.config.RAG_EXTERNAL_RERANKER_URL,
                     request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
-                    True,
                 )
 
                 request.app.state.RERANKING_FUNCTION = get_reranking_function(
@@ -1132,6 +1138,7 @@ async def update_rag_config(
         "DOCLING_PARAMS": request.app.state.config.DOCLING_PARAMS,
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
+        "DOCUMENT_INTELLIGENCE_MODEL": request.app.state.config.DOCUMENT_INTELLIGENCE_MODEL,
         "MISTRAL_OCR_API_BASE_URL": request.app.state.config.MISTRAL_OCR_API_BASE_URL,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
         # MinerU settings
@@ -1544,6 +1551,7 @@ def process_file(
                         PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
                         DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                         DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
+                        DOCUMENT_INTELLIGENCE_MODEL=request.app.state.config.DOCUMENT_INTELLIGENCE_MODEL,
                         MISTRAL_OCR_API_BASE_URL=request.app.state.config.MISTRAL_OCR_API_BASE_URL,
                         MISTRAL_OCR_API_KEY=request.app.state.config.MISTRAL_OCR_API_KEY,
                         MINERU_API_MODE=request.app.state.config.MINERU_API_MODE,

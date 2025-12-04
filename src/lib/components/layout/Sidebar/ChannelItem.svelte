@@ -15,6 +15,7 @@
 	import Hashtag from '$lib/components/icons/Hashtag.svelte';
 	import Users from '$lib/components/icons/Users.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import Emoji from '$lib/components/common/Emoji.svelte';
 
 	export let onUpdate: Function = () => {};
 
@@ -131,14 +132,38 @@
 				{/if}
 			</div>
 
-			<div class=" text-left self-center overflow-hidden w-full line-clamp-1 flex-1 pr-1">
+			<div
+				class=" text-left self-center overflow-hidden w-full line-clamp-1 flex-1 pr-1 flex items-center gap-2.5"
+			>
 				{#if channel?.name}
-					{channel.name}
+					<span>
+						{channel.name}
+					</span>
 				{:else}
-					{channel?.users
-						?.filter((u) => u.id !== $user?.id)
-						.map((u) => u.name)
-						.join(', ')}
+					<span class="shrink-0">
+						{channel?.users
+							?.filter((u) => u.id !== $user?.id)
+							.map((u) => u.name)
+							.join(', ')}
+					</span>
+
+					{#if channel?.users?.length === 2}
+						{@const dmUser = channel.users.find((u) => u.id !== $user?.id)}
+
+						{#if dmUser?.status_emoji || dmUser?.status_message}
+							<span class="flex gap-1.5">
+								{#if dmUser?.status_emoji}
+									<div class=" self-center shrink-0">
+										<Emoji className="size-3.5" shortCode={dmUser?.status_emoji} />
+									</div>
+								{/if}
+
+								<div class="line-clamp-1 italic">
+									{dmUser?.status_message}
+								</div>
+							</span>
+						{/if}
+					{/if}
 				{/if}
 			</div>
 		</div>

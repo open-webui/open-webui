@@ -364,7 +364,7 @@
 							type="button"
 							class="rounded-lg p-1 transition outline-gray-200 hover:bg-gray-100 dark:outline-gray-700 dark:hover:bg-gray-800"
 							on:click={() => {
-								textScale = Math.max(1, textScale);
+								textScale = Math.max(1, parseFloat((textScale - 0.1).toFixed(2)));
 								setTextScaleHandler(textScale);
 							}}
 							aria-labelledby="ui-scale-label"
@@ -397,7 +397,7 @@
 							type="button"
 							class="rounded-lg p-1 transition outline-gray-200 hover:bg-gray-100 dark:outline-gray-700 dark:hover:bg-gray-800"
 							on:click={() => {
-								textScale = Math.min(1.5, textScale);
+								textScale = Math.min(1.5, parseFloat((textScale + 0.1).toFixed(2)));
 								setTextScaleHandler(textScale);
 							}}
 							aria-labelledby="ui-scale-label"

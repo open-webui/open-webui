@@ -183,16 +183,9 @@
 	const initChannels = async () => {
 		// default (none), group, dm type
 		await channels.set(
-			(await getChannels(localStorage.token)).sort((a, b) =>
-				a.type === b.type
-					? 0
-					: a.type === 'dm'
-						? 1
-						: a.type === 'group'
-							? b.type === 'dm'
-								? -1
-								: 0
-							: -1
+			(await getChannels(localStorage.token)).sort(
+				(a, b) =>
+					['', null, 'group', 'dm'].indexOf(a.type) - ['', null, 'group', 'dm'].indexOf(b.type)
 			)
 		);
 	};

@@ -2590,6 +2590,12 @@ DOCUMENT_INTELLIGENCE_KEY = PersistentConfig(
     os.getenv("DOCUMENT_INTELLIGENCE_KEY", ""),
 )
 
+DOCUMENT_INTELLIGENCE_MODEL = PersistentConfig(
+    "DOCUMENT_INTELLIGENCE_MODEL",
+    "rag.document_intelligence_model",
+    os.getenv("DOCUMENT_INTELLIGENCE_MODEL", "prebuilt-layout"),
+)
+
 MISTRAL_OCR_API_BASE_URL = PersistentConfig(
     "MISTRAL_OCR_API_BASE_URL",
     "rag.MISTRAL_OCR_API_BASE_URL",

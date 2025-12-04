@@ -5,7 +5,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
 from pydantic import BaseModel
-
+from pydantic import field_validator
 
 from open_webui.socket.main import (
     emit_to_users,
@@ -38,6 +38,8 @@ from open_webui.models.messages import (
     MessageForm,
 )
 
+
+from open_webui.utils.files import get_image_base64_from_file_id
 
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
@@ -666,7 +668,16 @@ async def delete_channel_by_id(
 
 
 class MessageUserResponse(MessageResponse):
-    pass
+    data: bool | None = None
+
+    @field_validator("data", mode="before")
+    def convert_data_to_bool(cls, v):
+        # No data or not a dict → False
+        if not isinstance(v, dict):
+            return False
+
+        # True if ANY value in the dict is non-empty
+        return any(bool(val) for val in v.values())
 
 
 @router.get("/{id}/messages", response_model=list[MessageUserResponse])
@@ -906,6 +917,10 @@ async def model_response_handler(request, channel, message, user):
                     for file in thread_message_files:
                         if file.get("type", "") == "image":
                             images.append(file.get("url", ""))
+                        elif file.get("content_type", "").startswith("image/"):
+                            image = get_image_base64_from_file_id(file.get("id", ""))
+                            if image:
+                                images.append(image)
 
                 thread_history_string = "\n\n".join(thread_history)
                 system_message = {
@@ -1108,7 +1123,7 @@ async def post_new_message(
 ############################
 
 
-@router.get("/{id}/messages/{message_id}", response_model=Optional[MessageUserResponse])
+@router.get("/{id}/messages/{message_id}", response_model=Optional[MessageResponse])
 async def get_channel_message(
     id: str, message_id: str, user=Depends(get_verified_user)
 ):
@@ -1142,7 +1157,7 @@ async def get_channel_message(
             status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
         )
 
-    return MessageUserResponse(
+    return MessageResponse(
         **{
             **message.model_dump(),
             "user": UserNameResponse(
@@ -1150,6 +1165,48 @@ async def get_channel_message(
             ),
         }
     )
+
+
+############################
+# GetChannelMessageData
+############################
+
+
+@router.get("/{id}/messages/{message_id}/data", response_model=Optional[dict])
+async def get_channel_message_data(
+    id: str, message_id: str, user=Depends(get_verified_user)
+):
+    channel = Channels.get_channel_by_id(id)
+    if not channel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if channel.type in ["group", "dm"]:
+        if not Channels.is_user_channel_member(channel.id, user.id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
+            )
+    else:
+        if user.role != "admin" and not has_access(
+            user.id, type="read", access_control=channel.access_control
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
+            )
+
+    message = Messages.get_message_by_id(message_id)
+    if not message:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if message.channel_id != id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    return message.data
 
 
 ############################

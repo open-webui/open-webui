@@ -137,6 +137,7 @@
 							class="mb-1 w-full gap-2 px-2.5 py-1.5 rounded-xl bg-gray-50 dark:text-white dark:bg-gray-900/50 text-black transition text-xs flex items-center"
 							type="button"
 							on:click={() => {
+								show = false;
 								showUserStatusModal = true;
 							}}
 						>
@@ -187,6 +188,7 @@
 							class="mb-1 w-full px-3 py-1.5 gap-1 rounded-xl bg-gray-50 dark:text-white dark:bg-gray-900/50 text-black transition text-xs flex items-center justify-center"
 							type="button"
 							on:click={() => {
+								show = false;
 								showUserStatusModal = true;
 							}}
 						>

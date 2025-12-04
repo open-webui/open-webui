@@ -353,7 +353,7 @@
 				<div class="flex w-full">
 					<div class="flex-1">
 						<select
-							class="w-full text-sm bg-transparent dark:text-gray-300 outline-hidden"
+							class="dark:bg-gray-900 w-full text-sm bg-transparent dark:text-gray-300 outline-hidden"
 							bind:value={voice}
 						>
 							<option value="" selected={voice !== ''}>{$i18n.t('Default')}</option>

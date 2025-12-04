@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, createEventDispatcher, onMount } from 'svelte';
+	import { getContext, createEventDispatcher, onMount, tick } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import { toast } from 'svelte-sonner';
@@ -52,9 +52,16 @@
 		resetHandler();
 	}
 
-	const init = () => {
+	const init = async () => {
 		emoji = $user?.status_emoji || '';
 		message = $user?.status_message || '';
+
+		await tick();
+		const input = document.getElementById('status-message') as HTMLInputElement;
+		if (input) {
+			input.focus();
+			input.select();
+		}
 	};
 
 	const resetHandler = () => {
@@ -113,6 +120,7 @@
 							</EmojiPicker>
 
 							<input
+								id="status-message"
 								type="text"
 								bind:value={message}
 								class={`w-full flex-1 text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}

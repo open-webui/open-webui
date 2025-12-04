@@ -33,12 +33,12 @@
 </script>
 
 {#if user}
-	<div class="py-2.5">
-		<div class=" flex gap-3.5 w-full px-2.5 items-center">
+	<div class="py-3">
+		<div class=" flex gap-3.5 w-full px-3 items-center">
 			<div class=" items-center flex shrink-0">
 				<img
 					src={`${WEBUI_API_BASE_URL}/users/${user?.id}/profile/image`}
-					class=" size-12 object-cover rounded-xl"
+					class=" size-14 object-cover rounded-xl"
 					alt="profile"
 				/>
 			</div>
@@ -77,7 +77,7 @@
 			<div class="mx-2 mt-2">
 				<Tooltip content={user?.status_message}>
 					<div
-						class="mb-1 w-full gap-2 px-2.5 py-1.5 rounded-xl bg-gray-50 dark:text-white dark:bg-gray-900/50 text-black transition text-xs flex items-center"
+						class="w-full gap-2 px-2.5 py-1.5 rounded-xl bg-gray-50 dark:text-white dark:bg-gray-900/50 text-black transition text-xs flex items-center"
 					>
 						{#if user?.status_emoji}
 							<div class=" self-center shrink-0">
@@ -87,6 +87,16 @@
 						<div class=" self-center line-clamp-2 flex-1 text-left">
 							{user?.status_message}
 						</div>
+					</div>
+				</Tooltip>
+			</div>
+		{/if}
+
+		{#if user?.bio}
+			<div class="mx-3.5 mt-2">
+				<Tooltip content={user?.bio}>
+					<div class=" self-center line-clamp-3 flex-1 text-left text-xs">
+						{user?.bio}
 					</div>
 				</Tooltip>
 			</div>

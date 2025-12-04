@@ -126,6 +126,7 @@
 		{#each messageList as message, messageIdx (id ? `${id}-${message.id}` : message.id)}
 			<Message
 				{message}
+				{channel}
 				{thread}
 				replyToMessage={replyToMessage?.id === message.id}
 				disabled={!channel?.write_access || message?.temp_id}

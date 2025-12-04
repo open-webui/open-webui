@@ -235,7 +235,7 @@ async def invalidate_token(request, token):
         jti = decoded.get("jti")
         exp = decoded.get("exp")
 
-        if jti:
+        if jti and exp:
             ttl = exp - int(
                 datetime.now(UTC).timestamp()
             )  # Calculate time-to-live for the token
