@@ -1,3 +1,4 @@
+./unitest/
 x.py
 yarn.lock
 .DS_Store
@@ -7,7 +8,7 @@ node_modules
 /package
 .env
 .env.*
-!.env.example
+!.env.exampley
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 # Byte-compiled / optimized / DLL files

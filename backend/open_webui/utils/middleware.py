@@ -562,7 +562,8 @@ async def chat_memory_handler(
     '''
     for item in mem0_results:
         memory_content = item["memory"] if isinstance(item, dict) else item
-        created_at_date = time.strftime("%Y-%m-%d", time.localtime(item.get("created_at", 0))) if isinstance(item, dict) else "Unknown Date"
+        created_at_date = item["created_at"] if isinstance(item, dict) else "unknown date"
+
         categories = item.get("categories", []) if isinstance(item, dict) else []
         if categories:
             entries.append(f"[{created_at_date}] {memory_content} (Categories: {', '.join(categories)})")
