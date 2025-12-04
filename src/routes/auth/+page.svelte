@@ -573,6 +573,7 @@
 						<div class="max-w-3xl mx-auto">
 							<div class="mt-2 text-[0.7rem] text-gray-500 dark:text-gray-400">
 								{$i18n.t('Copyright ® Private AI Company (2025).')}
+								{$i18n.t('Powered by AT.COM.')}
 							</div>
 						</div>
 					</div>
