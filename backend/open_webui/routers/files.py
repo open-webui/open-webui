@@ -179,7 +179,7 @@ def upload_file_handler(
     user=Depends(get_verified_user),
     background_tasks: Optional[BackgroundTasks] = None,
 ):
-    log.info(f"file.content_type: {file.content_type}")
+    log.info(f"file.content_type: {file.content_type} {process}")
 
     if isinstance(metadata, str):
         try:

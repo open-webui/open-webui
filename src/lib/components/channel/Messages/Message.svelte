@@ -341,8 +341,12 @@
 					<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
 						{#each message?.data?.files as file}
 							<div>
-								{#if file.type === 'image'}
-									<Image src={file.url} alt={file.name} imageClassName=" max-h-96 rounded-lg" />
+								{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
+									<Image
+										src={`${file.url}${file?.content_type ? '/content' : ''}`}
+										alt={file.name}
+										imageClassName=" max-h-96 rounded-lg"
+									/>
 								{:else}
 									<FileItem
 										item={file}
