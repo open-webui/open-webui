@@ -1800,7 +1800,7 @@
 	"You": "თქვენ",
 	"You are currently using a trial license. Please contact support to upgrade your license.": "",
 	"You can only chat with a maximum of {{maxCount}} file(s) at a time.": "",
-	"You can personalize your interactions with LLMs by adding memories through the 'Manage' button below, making them more helpful and tailored to you.": "",
+	"You can personalize your interactions with LLMs by adding memories through the 'Manage' button below, making them more helpful and tailored to you.": "თქვენ შეგიძლიათ პერსონალიზაცია გაუკეთოთ LLM-ებთან ურთიერთობას ქვემოთ განთავსებული 'მართვა' ღილაკის მეშვეობით მეხსიერებების დამატებით, რათა ისინი უფრო სასარგებლო და თქვენზე მორგებული გახდეს.",
 	"You cannot upload an empty file.": "ცარიელ ფაილს ვერ ატვირთავთ.",
 	"You do not have permission to send messages in this channel.": "ამ არხზე შეტყობინების გაგზავნის უფლება არ გაქვთ.",
 	"You do not have permission to send messages in this thread.": "ამ ნაკადში შეტყობინების გაგზავნის უფლება არ გაქვთ.",

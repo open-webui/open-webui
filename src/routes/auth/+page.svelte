@@ -24,6 +24,7 @@
 	const i18n = getContext('i18n');
 
 	let loaded = false;
+	let assetBase = WEBUI_BASE_URL;
 
 	let mode = $config?.features.enable_ldap ? 'ldap' : 'signin';
 
@@ -43,7 +44,12 @@
 			if (sessionUser.token) {
 				localStorage.token = sessionUser.token;
 			}
-			$socket.emit('user-join', { auth: { token: sessionUser.token } });
+			// socket might not be initialized yet in guest flow
+			try {
+				$socket?.emit('user-join', { auth: { token: sessionUser.token } });
+			} catch (e) {
+				console.warn('socket emit skipped', e);
+			}
 			await user.set(sessionUser);
 			await config.set(await getBackendConfig());
 
@@ -129,6 +135,7 @@
 	};
 
 	let onboarding = false;
+	let sameOrigin = '';
 
 	async function setLogoImage() {
 		await tick();
@@ -139,10 +146,10 @@
 
 			if (isDarkMode) {
 				const darkImage = new Image();
-				darkImage.src = `${WEBUI_BASE_URL}/static/favicon-dark.png`;
+				darkImage.src = `${assetBase}/static/favicon-dark.png`;
 
 				darkImage.onload = () => {
-					logo.src = `${WEBUI_BASE_URL}/static/favicon-dark.png`;
+					logo.src = `${assetBase}/static/favicon-dark.png`;
 					logo.style.filter = ''; // Ensure no inversion is applied if favicon-dark.png exists
 				};
 
@@ -154,8 +161,13 @@
 	}
 
 	onMount(async () => {
+		if (typeof window !== 'undefined') {
+			sameOrigin = window.location.origin ?? '';
+			assetBase = sameOrigin || WEBUI_BASE_URL || '';
+		}
+
 		const redirectPath = $page.url.searchParams.get('redirect');
-		if ($user !== undefined) {
+		if ($user) {
 			goto(redirectPath || '/');
 		} else {
 			if (redirectPath) {
@@ -229,7 +241,7 @@
 									<img
 										id="logo"
 										crossorigin="anonymous"
-										src="{WEBUI_BASE_URL}/static/favicon.png"
+										src="{assetBase}/static/favicon.png"
 										class="size-24 rounded-full"
 										alt=""
 									/>
@@ -575,7 +587,7 @@
 						<img
 							id="logo"
 							crossorigin="anonymous"
-							src="{WEBUI_BASE_URL}/static/favicon.png"
+										src="{assetBase}/static/favicon.png"
 							class=" w-6 rounded-full"
 							alt=""
 						/>

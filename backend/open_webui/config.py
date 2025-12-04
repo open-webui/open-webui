@@ -998,7 +998,7 @@ if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
 if ENV == "prod":
     if OLLAMA_BASE_URL == "/ollama" and not K8S_FLAG:
         if USE_OLLAMA_DOCKER.lower() == "true":
-            # if you use all-in-one docker container (Open WebUI + Ollama)
+            # if you use all-in-one docker container (??? + Ollama)
             # with the docker build arg USE_OLLAMA=true (--build-arg="USE_OLLAMA=true") this only works with http://localhost:11434
             OLLAMA_BASE_URL = "http://localhost:11434"
         else:
@@ -1166,27 +1166,27 @@ except Exception as e:
 if default_prompt_suggestions == []:
     default_prompt_suggestions = [
         {
-            "title": ["Help me study", "vocabulary for a college entrance exam"],
-            "content": "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.",
+            "title": ["დამეხმარე მეცადინეობაში", "ლექსიკა გამოცდისთვის"],
+            "content": "მომიმზადე ლექსიკის სავარჯიშო: დაწერე წინადადება სიცარიელით და რამდენიმე ვარიანტი, რომ ავირჩიო სწორი სიტყვა.",
         },
         {
-            "title": ["Give me ideas", "for what to do with my kids' art"],
-            "content": "What are 5 creative things I could do with my kids' art? I don't want to throw them away, but it's also so much clutter.",
+            "title": ["მომეცი იდეები", "ბავშვების ნახატების გასამჯობინოს"],
+            "content": "მომეცი 5 კრეატიული იდეა, როგორ გამოვიყენო ბავშვების ნახატები — არ მინდა გადაყრა, მაგრამ სივრცეც მაკლია.",
         },
         {
-            "title": ["Tell me a fun fact", "about the Roman Empire"],
-            "content": "Tell me a random fun fact about the Roman Empire",
+            "title": ["მითხარი საინტერესო ფაქტი", "რომის იმპერიაზე"],
+            "content": "მითხარი ერთი საინტერესო, უცნაური ფაქტი რომის იმპერიაზე.",
         },
         {
-            "title": ["Show me a code snippet", "of a website's sticky header"],
-            "content": "Show me a code snippet of a website's sticky header in CSS and JavaScript.",
+            "title": ["მაჩვენე კოდის მაგალითი", "ვებგვერდის სტიკი ჰედერისთვის"],
+            "content": "მაჩვენე CSS და JavaScript-ის მაგალითი, რომლითაც შევქმნი sticky header-ს ვებგვერდზე.",
         },
         {
             "title": [
-                "Explain options trading",
-                "if I'm familiar with buying and selling stocks",
+                "ამიხსენი ოპციონებით ვაჭრობა",
+                "თუ ვიცნობ აქციების ყიდვა-გაყიდვას",
             ],
-            "content": "Explain options trading in simple terms if I'm familiar with buying and selling stocks.",
+            "content": "ამიხსენი მარტივად, რას ნიშნავს ოპციონებით ვაჭრობა, თუ უკვე ვიცნობ აქციების ყიდვა-გაყიდვას.",
         },
         {
             "title": ["Overcome procrastination", "give me tips"],

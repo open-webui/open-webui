@@ -15,9 +15,9 @@ KEY_FILE = Path.cwd() / ".webui_secret_key"
 
 def version_callback(value: bool):
     if value:
-        from open_webui.env import VERSION
+        from open_webui.env import VERSION, WEBUI_NAME
 
-        typer.echo(f"Open WebUI version: {VERSION}")
+        typer.echo(f"{WEBUI_NAME} version: {VERSION}")
         raise typer.Exit()
 
 

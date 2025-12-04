@@ -142,10 +142,14 @@
 	};
 
 	onMount(async () => {
-		if ($user === undefined || $user === null) {
-			await goto('/auth');
+		const hasUser = $user !== undefined && $user !== null;
+
+		if (!hasUser) {
+			// Anonymous session: skip user-dependent bootstrapping
+			loaded = true;
 			return;
 		}
+
 		if (!['user', 'admin'].includes($user?.role)) {
 			return;
 		}
@@ -390,6 +394,31 @@
 					</div>
 				{/if}
 			{/if}
+		</div>
+	</div>
+{:else}
+	<div class="app relative">
+		<div
+			class=" text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-screen max-h-[100dvh] overflow-auto flex flex-row justify-end"
+		>
+			<div class="absolute top-4 right-4 z-50">
+				<button
+					class="px-3 py-1.5 rounded-full text-sm font-medium bg-gray-900 text-white hover:bg-gray-800 transition dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
+					type="button"
+					on:click={() => goto('/auth')}
+				>
+					{$i18n.t('Sign in')}
+				</button>
+			</div>
+			<div class="w-full flex-1 h-full">
+				{#if loaded}
+					<slot />
+				{:else}
+					<div class="w-full h-full flex items-center justify-center">
+						<Spinner className="size-5" />
+					</div>
+				{/if}
+			</div>
 		</div>
 	</div>
 {/if}

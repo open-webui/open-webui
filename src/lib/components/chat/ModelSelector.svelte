@@ -3,15 +3,17 @@
 	import { onMount, tick, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Selector from './ModelSelector/Selector.svelte';
-	import Tooltip from '../common/Tooltip.svelte';
+import Tooltip from '../common/Tooltip.svelte';
 
-	import { updateUserSettings } from '$lib/apis/users';
-	const i18n = getContext('i18n');
+import { updateUserSettings } from '$lib/apis/users';
+const i18n = getContext('i18n');
 
-	export let selectedModels = [''];
-	export let disabled = false;
+const MAX_MODELS = 3;
 
-	export let showSetDefault = true;
+export let selectedModels = [''];
+export let disabled = false;
+
+export let showSetDefault = true;
 
 	const saveDefaultModel = async () => {
 		const hasEmptyModel = selectedModels.filter((it) => it === '');
@@ -76,8 +78,16 @@
 						<Tooltip content={$i18n.t('Add Model')}>
 							<button
 								class=" "
-								{disabled}
+								disabled={disabled || selectedModels.length >= MAX_MODELS}
 								on:click={() => {
+									if (selectedModels.length >= MAX_MODELS) {
+										toast.error(
+											$i18n.t('You can only add up to {{count}} models', {
+												count: MAX_MODELS
+											})
+										);
+										return;
+									}
 									selectedModels = [...selectedModels, ''];
 								}}
 								aria-label="Add Model"

@@ -112,6 +112,23 @@
 
 		languages = await getLanguages();
 
+		// Limit language list for non-admin users
+		if ($user?.role !== 'admin') {
+			const allowedCodes = ['ka', 'ka-GE', 'ka_GE', 'en', 'en-US', 'ru', 'ru-RU', 'ru-RU'];
+			const isAllowed = (code: string) =>
+				allowedCodes.includes(code) || code?.toLowerCase().startsWith('ka');
+
+			const filtered = languages.filter((language) => isAllowed(language?.code));
+
+			// Only apply filter if we still have options
+			if (filtered.length > 0) {
+				languages = filtered;
+				if (!isAllowed(lang)) {
+					lang = languages?.[0]?.code ?? lang;
+				}
+			}
+		}
+
 		notificationEnabled = $settings.notificationEnabled ?? false;
 		system = $settings.system ?? '';
 
@@ -206,13 +223,10 @@
 						placeholder={$i18n.t('Select a theme')}
 						on:change={() => themeChangeHandler(selectedTheme)}
 					>
-						<option value="system">⚙️ {$i18n.t('System')}</option>
-						<option value="dark">🌑 {$i18n.t('Dark')}</option>
-						<option value="oled-dark">🌃 {$i18n.t('OLED Dark')}</option>
-						<option value="light">☀️ {$i18n.t('Light')}</option>
-						<option value="her">🌷 Her</option>
-						<!-- <option value="rose-pine dark">🪻 {$i18n.t('Rosé Pine')}</option>
-						<option value="rose-pine-dawn light">🌷 {$i18n.t('Rosé Pine Dawn')}</option> -->
+				<option value="system">{$i18n.t('System')}</option>
+				<option value="dark">{$i18n.t('Dark')}</option>
+				<option value="oled-dark">{$i18n.t('OLED Dark')}</option>
+				<option value="light">{$i18n.t('Light')}</option>
 					</select>
 				</div>
 			</div>
@@ -236,24 +250,7 @@
 					</select>
 				</div>
 			</div>
-			{#if $i18n.language === 'en-US' && !($config?.license_metadata ?? false)}
-				<div
-					class="mb-2 text-xs {($settings?.highContrastMode ?? false)
-						? 'text-gray-800 dark:text-gray-100'
-						: 'text-gray-400 dark:text-gray-500'}"
-				>
-					Couldn't find your language?
-					<a
-						class="font-medium underline {($settings?.highContrastMode ?? false)
-							? 'text-gray-700 dark:text-gray-200'
-							: 'text-gray-300'}"
-						href="https://github.com/open-webui/open-webui/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization"
-						target="_blank"
-					>
-						Help us translate Open WebUI!
-					</a>
-				</div>
-			{/if}
+			<!-- Removed "Couldn't find your language? Help us translate" banner -->
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
@@ -293,7 +290,7 @@
 			</div>
 		{/if}
 
-		{#if $user?.role === 'admin' || (($user?.permissions.chat?.controls ?? true) && ($user?.permissions.chat?.params ?? true))}
+		{#if $user?.role === 'admin'}
 			<div class="mt-2 space-y-3 pr-1.5">
 				<div class="flex justify-between items-center text-sm">
 					<div class="  font-medium">{$i18n.t('Advanced Parameters')}</div>

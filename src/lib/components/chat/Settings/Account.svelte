@@ -170,33 +170,15 @@
 								<select
 									class="dark:bg-gray-900 w-full text-sm dark:text-gray-300 bg-transparent outline-hidden"
 									bind:value={_gender}
-									on:change={(e) => {
-										console.log(_gender);
-
-										if (_gender === 'custom') {
-											// Handle custom gender input
-											gender = '';
-										} else {
-											gender = _gender;
-										}
+									on:change={() => {
+										gender = _gender;
 									}}
 								>
 									<option value="" selected>{$i18n.t('Prefer not to say')}</option>
 									<option value="male">{$i18n.t('Male')}</option>
 									<option value="female">{$i18n.t('Female')}</option>
-									<option value="custom">{$i18n.t('Custom')}</option>
 								</select>
 							</div>
-
-							{#if _gender === 'custom'}
-								<input
-									class="w-full text-sm dark:text-gray-300 bg-transparent outline-hidden mt-1"
-									type="text"
-									required
-									placeholder={$i18n.t('Enter your gender')}
-									bind:value={gender}
-								/>
-							{/if}
 						</div>
 
 						<div class="flex flex-col w-full mt-2">
@@ -216,7 +198,7 @@
 			</div>
 		</div>
 
-		{#if $config?.features?.enable_user_webhooks}
+		{#if $user?.role === 'admin' && $config?.features?.enable_user_webhooks}
 			<div class="mt-2">
 				<div class="flex flex-col w-full">
 					<div class=" mb-1 text-xs font-medium">{$i18n.t('Notification Webhook')}</div>

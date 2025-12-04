@@ -7,7 +7,7 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 """
-Azure AI Search integration for Open WebUI.
+Azure AI Search integration for ???.
 Documentation: https://learn.microsoft.com/en-us/python/api/overview/azure/search-documents-readme?view=azure-python
 
 Required package: azure-search-documents

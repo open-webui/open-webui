@@ -356,7 +356,7 @@
 
 					if ($isLastActiveTab) {
 						if ($settings?.notificationEnabled ?? false) {
-							new Notification(`${title} • Open WebUI`, {
+							new Notification(`${title} • ???`, {
 								body: content,
 								icon: `${WEBUI_BASE_URL}/static/favicon.png`
 							});
@@ -546,7 +546,7 @@
 
 				if ($isLastActiveTab) {
 					if ($settings?.notificationEnabled ?? false) {
-						new Notification(`${title} • Open WebUI`, {
+						new Notification(`${title} • ???`, {
 							body: data?.content,
 							icon: `${WEBUI_API_BASE_URL}/users/${data?.user?.id}/profile/image`
 						});
@@ -736,12 +736,13 @@
 			await WEBUI_NAME.set(backendConfig.name);
 
 			if ($config) {
-				await setupSocket($config.features?.enable_websocket ?? true);
+				const hasToken = !!localStorage.token;
 
-				const currentUrl = `${window.location.pathname}${window.location.search}`;
-				const encodedUrl = encodeURIComponent(currentUrl);
+				if (hasToken) {
+					await setupSocket($config.features?.enable_websocket ?? true);
+				}
 
-				if (localStorage.token) {
+				if (hasToken) {
 					// Get Session User Info
 					const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
 						toast.error(`${error}`);
@@ -752,16 +753,13 @@
 						await user.set(sessionUser);
 						await config.set(await getBackendConfig());
 					} else {
-						// Redirect Invalid Session User to /auth Page
+						// Clear invalid session and stay on current page
 						localStorage.removeItem('token');
-						await goto(`/auth?redirect=${encodedUrl}`);
+						user.set(null);
 					}
 				} else {
-					// Don't redirect if we're already on the auth page
-					// Needed because we pass in tokens from OAuth logins via URL fragments
-					if ($page.url.pathname !== '/auth') {
-						await goto(`/auth?redirect=${encodedUrl}`);
-					}
+					// Anonymous session: keep user null and stay on the page
+					user.set(null);
 				}
 			}
 		} else {
@@ -809,7 +807,7 @@
 
 <svelte:head>
 	<title>{$WEBUI_NAME}</title>
-	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
+	<link crossorigin="anonymous" rel="icon" href="/static/favicon.png" />
 
 	<meta name="apple-mobile-web-app-title" content={$WEBUI_NAME} />
 	<meta name="description" content={$WEBUI_NAME} />

@@ -315,22 +315,24 @@
 					</DropdownMenu.Item>
 				{/if}
 
-				<DropdownMenu.Item
-					class="flex gap-3 items-center py-1.5 px-3 text-sm select-none w-full  hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition cursor-pointer"
-					id="chat-share-button"
-					on:click={async () => {
-						show = false;
-						showShortcuts.set(!$showShortcuts);
+				{#if role === 'admin'}
+					<DropdownMenu.Item
+						class="flex gap-3 items-center py-1.5 px-3 text-sm select-none w-full  hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition cursor-pointer"
+						id="chat-share-button"
+						on:click={async () => {
+							show = false;
+							showShortcuts.set(!$showShortcuts);
 
-						if ($mobile) {
-							await tick();
-							showSidebar.set(false);
-						}
-					}}
-				>
-					<Keyboard className="size-5" />
-					<div class="flex items-center">{$i18n.t('Keyboard shortcuts')}</div>
-				</DropdownMenu.Item>
+							if ($mobile) {
+								await tick();
+								showSidebar.set(false);
+							}
+						}}
+					>
+						<Keyboard className="size-5" />
+						<div class="flex items-center">{$i18n.t('Keyboard shortcuts')}</div>
+					</DropdownMenu.Item>
+				{/if}
 			{/if}
 
 			<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
@@ -342,7 +344,7 @@
 					user.set(null);
 					localStorage.removeItem('token');
 
-					location.href = res?.redirect_url ?? '/auth';
+					location.href = res?.redirect_url ?? '/';
 					show = false;
 				}}
 			>
