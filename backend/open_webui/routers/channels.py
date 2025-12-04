@@ -39,6 +39,8 @@ from open_webui.models.messages import (
 )
 
 
+from open_webui.utils.files import get_image_base64_from_file_id
+
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
@@ -915,6 +917,10 @@ async def model_response_handler(request, channel, message, user):
                     for file in thread_message_files:
                         if file.get("type", "") == "image":
                             images.append(file.get("url", ""))
+                        elif file.get("content_type", "").startswith("image/"):
+                            image = get_image_base64_from_file_id(file.get("id", ""))
+                            if image:
+                                images.append(image)
 
                 thread_history_string = "\n\n".join(thread_history)
                 system_message = {
