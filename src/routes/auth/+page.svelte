@@ -35,7 +35,7 @@
 
 	let loaded = false;
 
-	let mode = $config?.features.enable_ldap ? 'ldap' : 'signin';
+	let mode = $config?.features.enable_ldap ? 'ldap' : ($page.url.searchParams.get('mode') as string) || 'signin';
 
 	let form = null;
 
@@ -283,6 +283,11 @@
 			if (redirectPath) {
 				localStorage.setItem('redirectPath', redirectPath);
 			}
+		}
+
+		const presetMode = $page.url.searchParams.get('mode');
+		if (presetMode === 'signup' || presetMode === 'signin' || presetMode === 'reset') {
+			mode = presetMode;
 		}
 
 		const error = $page.url.searchParams.get('error');
