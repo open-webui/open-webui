@@ -144,7 +144,7 @@ class DoclingLoader:
         with open(self.file_path, "rb") as f:
             headers = {}
             if self.api_key:
-                headers["Authorization"] = f"Bearer {self.api_key}"
+                headers["X-Api-Key"] = f"{self.api_key}"
 
             files = {
                 "files": (
