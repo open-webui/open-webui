@@ -67,6 +67,7 @@
 	}
 
 	let system = '';
+	let rag_template = '';
 	let info = {
 		id: '',
 		base_model_id: null,
@@ -78,12 +79,14 @@
 			tags: []
 		},
 		params: {
-			system: ''
+			system: '',
+			rag_template: ''
 		}
 	};
 
-	let params = {
-		system: ''
+	let params: {
+		system: '';
+		rag_template: '';
 	};
 
 	let knowledge = [];
@@ -207,6 +210,7 @@
 		}
 
 		info.params.system = system.trim() === '' ? null : system;
+		info.params.rag_template = rag_template.trim() === '' ? null : rag_template;
 		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 		Object.keys(info.params).forEach((key) => {
 			if (info.params[key] === '' || info.params[key] === null) {
@@ -254,6 +258,7 @@
 			}
 
 			system = model?.params?.system ?? '';
+			rag_template = model?.params?.rag_template ?? '';
 
 			params = { ...params, ...model?.params };
 			params.stop = params?.stop
@@ -640,6 +645,18 @@
 										)}
 										rows={4}
 										bind:value={system}
+									/>
+								</div>
+							</div>
+
+							<div class="my-1">
+								<div class=" text-xs font-semibold mb-2">{$i18n.t('RAG Template')}</div>
+								<div>
+									<Textarea
+										placeholder={$i18n.t(
+											'Leave empty to use the default prompt, or enter a custom prompt'
+										)}
+										bind:value={rag_template}
 									/>
 								</div>
 							</div>
