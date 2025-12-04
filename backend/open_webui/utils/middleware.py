@@ -716,19 +716,36 @@ async def chat_web_search_handler(
     return form_data
 
 
-def get_last_images(message_list):
+
+
+def get_last_user_images(message_list):
+    """Get all images from the last USER message only"""
     images = []
     for message in reversed(message_list):
-        images_flag = False
-        for file in message.get("files", []):
-            if file.get("type") == "image":
-                images.append(file.get("url"))
-                images_flag = True
-
-        if images_flag:
-            break
-
+        if message.get("role") == "user":
+            for file in message.get("files", []):
+                if file.get("type") == "image":
+                    images.append(file.get("url"))
+            break  # Only from most recent user message
     return images
+
+def get_last_assistant_image(message_list):
+    """Get the most recent ASSISTANT-generated image"""
+    for message in reversed(message_list):
+        if message.get("role") == "assistant":
+            for file in message.get("files", []):
+                if file.get("type") == "image":
+                    return file.get("url")
+    return None
+
+def get_last_images(message_list):
+    assistant_image = get_last_assistant_image(message_list)
+    user_images = get_last_user_images(message_list)
+
+    if assistant_image:
+        return [assistant_image] + user_images 
+
+    return user_images
 
 
 def get_image_urls(delta_images, request, metadata, user) -> list[str]:
