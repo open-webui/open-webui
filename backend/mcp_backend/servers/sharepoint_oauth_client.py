@@ -161,9 +161,47 @@ class SharePointOAuthClient:
         Returns:
             Access token string or None if failed
         """
+        # Check if we're in localhost development environment
+        is_localhost = (
+            os.getenv("ENVIRONMENT", "").lower()
+            in ["", "local", "localhost", "development"]
+            or "localhost" in os.getenv("WEBUI_BASE_URL", "")
+            or "localhost" in os.getenv("CORS_ALLOW_ORIGIN", "")
+            or os.getenv("ENABLE_SIGNUP", "").lower()
+            == "true"  # Local dev has signup enabled
+        )
+
         if self.use_delegated_access and user_token:
-            logger.info("Using delegated access (OBO flow)")
-            return await self.get_obo_token(user_token)
+            # Skip OBO for placeholder or invalid tokens (localhost only)
+            if user_token == "user_token_placeholder" or not user_token.strip():
+                if is_localhost:
+                    logger.info(
+                        "Invalid user token in localhost - falling back to application access"
+                    )
+                    return await self.get_application_token()
+                else:
+                    logger.error(
+                        "Invalid user token in production environment - authentication required"
+                    )
+                    return None
+
+            logger.info("Attempting delegated access (OBO flow)")
+            obo_token = await self.get_obo_token(user_token)
+
+            # If OBO fails, only fall back to application access in localhost
+            if not obo_token:
+                if is_localhost:
+                    logger.info(
+                        "OBO flow failed in localhost - falling back to application access"
+                    )
+                    return await self.get_application_token()
+                else:
+                    logger.error(
+                        "OBO flow failed in production environment - authentication required"
+                    )
+                    return None
+
+            return obo_token
         else:
             logger.info("Using application access (client credentials)")
             return await self.get_application_token()

@@ -28,29 +28,43 @@ def extract_user_token(
     auth_token: Optional[HTTPAuthorizationCredentials] = Depends(bearer_security),
 ) -> Optional[str]:
     """Extract the user's OAuth token from the request for OBO flow"""
-    token = None
+    import os
+
+    # Check if we're in localhost development environment
+    is_localhost = (
+        os.getenv("ENVIRONMENT", "").lower()
+        in ["", "local", "localhost", "development"]
+        or "localhost" in os.getenv("WEBUI_BASE_URL", "")
+        or "localhost" in os.getenv("CORS_ALLOW_ORIGIN", "")
+        or os.getenv("ENABLE_SIGNUP", "").lower()
+        == "true"  # Local dev has signup enabled
+    )
 
     # First priority: OAuth access token from Microsoft login (for SharePoint OBO)
     if "oauth_access_token" in request.cookies:
         token = request.cookies.get("oauth_access_token")
         logging.info("Using OAuth access token for SharePoint OBO flow")
+        return token
 
     # Second priority: OAuth ID token (may work for some scenarios)
     elif "oauth_id_token" in request.cookies:
         token = request.cookies.get("oauth_id_token")
         logging.info("Using OAuth ID token for SharePoint OBO flow")
+        return token
 
-    # Third priority: Authorization header (may be internal JWT)
-    elif auth_token is not None:
-        token = auth_token.credentials
-        logging.info("Using authorization header token")
-
-    # Fourth priority: Session token cookie (internal JWT)
-    elif "token" in request.cookies:
-        token = request.cookies.get("token")
-        logging.info("Using session token cookie")
-
-    return token
+    # No OAuth tokens found
+    else:
+        if is_localhost:
+            logging.info(
+                "No OAuth tokens found in localhost - will use application-only authentication"
+            )
+            return None
+        else:
+            logging.warning(
+                "No OAuth tokens found in production environment - OAuth2 proxy may not be configured"
+            )
+            # Still return None but with warning - let SharePoint client handle the error
+            return None
 
 
 try:
@@ -299,13 +313,19 @@ async def run_crew_query(
         )
 
     try:
-        # For local development, don't try to extract OAuth tokens
-        # In production K8s, the OAuth flow provides proper tokens automatically
+        # Extract user token for SharePoint OBO flow (environment-aware)
+        user_jwt_token = extract_user_token(request_data, auth_token)
+
         log.info(f"Running CrewAI query for user {user.id}: {request.query}")
         log.info(f"Selected tools: {request.selected_tools}")
+        log.info(f"User token available for OBO flow: {bool(user_jwt_token)}")
 
-        # Don't set user token for local development
-        # crew_mcp_manager.set_user_token(user_jwt_token)
+        # Set user token in CrewAI manager for SharePoint OBO authentication
+        # This works in both local (gracefully degraded) and K8s (full OAuth) environments
+        if user_jwt_token and user_jwt_token != "user_token_placeholder":
+            crew_mcp_manager.set_user_token(user_jwt_token)
+        else:
+            log.info("No OAuth token available - using application-only authentication")
 
         # Get available tools first
         tools = crew_mcp_manager.get_available_tools()
