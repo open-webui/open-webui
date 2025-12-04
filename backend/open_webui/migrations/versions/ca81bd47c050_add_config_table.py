@@ -10,7 +10,7 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
-from open_webui.migrations.util import get_existing_tables
+from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision: str = "ca81bd47c050"
@@ -20,6 +20,15 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade():
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    existing_tables = set(inspector.get_table_names())
+    
+    # Only proceed if config table doesn't exist
+    if "config" in existing_tables:
+        print("config table already exists, skipping creation")
+        return
+    
     op.create_table(
         "config",
         sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
@@ -41,4 +50,12 @@ def upgrade():
 
 
 def downgrade():
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    existing_tables = set(inspector.get_table_names())
+    
+    if "config" not in existing_tables:
+        print("config table does not exist, skipping drop")
+        return
+    
     op.drop_table("config")
