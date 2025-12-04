@@ -55,7 +55,7 @@ from open_webui.config import (
     OAUTH_ALLOWED_DOMAINS,
     OAUTH_UPDATE_PICTURE_ON_LOGIN,
     OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID,
-    AUTH0_AUDIENCE,
+    OAUTH_AUDIENCE,
     WEBHOOK_URL,
     JWT_EXPIRES_IN,
     AppConfig,
@@ -127,7 +127,7 @@ auth_manager_config.OAUTH_ALLOWED_DOMAINS = OAUTH_ALLOWED_DOMAINS
 auth_manager_config.WEBHOOK_URL = WEBHOOK_URL
 auth_manager_config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
 auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN = OAUTH_UPDATE_PICTURE_ON_LOGIN
-auth_manager_config.AUTH0_AUDIENCE = AUTH0_AUDIENCE
+auth_manager_config.OAUTH_AUDIENCE = OAUTH_AUDIENCE
 
 
 FERNET = None
@@ -1274,8 +1274,8 @@ class OAuthManager:
             raise HTTPException(404)
         
         kwargs = {}
-        if (auth_manager_config.AUTH0_AUDIENCE):
-            kwargs["audience"] = auth_manager_config.AUTH0_AUDIENCE
+        if (auth_manager_config.OAUTH_AUDIENCE):
+            kwargs["audience"] = auth_manager_config.OAUTH_AUDIENCE
 
         return await client.authorize_redirect(request, redirect_uri, **kwargs)
 
