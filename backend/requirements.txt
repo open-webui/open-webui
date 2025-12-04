@@ -118,7 +118,7 @@ boto3==1.41.5
 pymilvus==2.6.4
 qdrant-client==1.14.3
 playwright==1.56.0 # Caution: version must match docker-compose.playwright.yaml
-elasticsearch==9.1.0
+elasticsearch==8.0.0<9.0.0
 pinecone==6.0.2
 oracledb==3.2.0
 
