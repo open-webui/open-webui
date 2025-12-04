@@ -182,12 +182,18 @@
 
 	const initChannels = async () => {
 		// default (none), group, dm type
-		await channels.set(
-			(await getChannels(localStorage.token)).sort(
-				(a, b) =>
-					['', null, 'group', 'dm'].indexOf(a.type) - ['', null, 'group', 'dm'].indexOf(b.type)
-			)
-		);
+		const res = await getChannels(localStorage.token).catch((error) => {
+			return null;
+		});
+
+		if (res) {
+			await channels.set(
+				res.sort(
+					(a, b) =>
+						['', null, 'group', 'dm'].indexOf(a.type) - ['', null, 'group', 'dm'].indexOf(b.type)
+				)
+			);
+		}
 	};
 
 	const initChatList = async () => {

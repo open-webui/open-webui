@@ -487,12 +487,19 @@
 
 		// handle channel created event
 		if (event.data?.type === 'channel:created') {
-			await channels.set(
-				(await getChannels(localStorage.token)).sort(
-					(a, b) =>
-						['', null, 'group', 'dm'].indexOf(a.type) - ['', null, 'group', 'dm'].indexOf(b.type)
-				)
-			);
+			const res = await getChannels(localStorage.token).catch(async (error) => {
+				return null;
+			});
+
+			if (res) {
+				await channels.set(
+					res.sort(
+						(a, b) =>
+							['', null, 'group', 'dm'].indexOf(a.type) - ['', null, 'group', 'dm'].indexOf(b.type)
+					)
+				);
+			}
+
 			return;
 		}
 
@@ -531,13 +538,19 @@
 						})
 					);
 				} else {
-					await channels.set(
-						(await getChannels(localStorage.token)).sort(
-							(a, b) =>
-								['', null, 'group', 'dm'].indexOf(a.type) -
-								['', null, 'group', 'dm'].indexOf(b.type)
-						)
-					);
+					const res = await getChannels(localStorage.token).catch(async (error) => {
+						return null;
+					});
+
+					if (res) {
+						await channels.set(
+							res.sort(
+								(a, b) =>
+									['', null, 'group', 'dm'].indexOf(a.type) -
+									['', null, 'group', 'dm'].indexOf(b.type)
+							)
+						);
+					}
 				}
 			}
 
