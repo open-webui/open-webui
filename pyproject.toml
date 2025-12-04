@@ -146,7 +146,7 @@ all = [
     "playwright==1.56.0",
     "elasticsearch==9.1.0",
 
-    "qdrant-client==1.14.3",
+    "qdrant-client==1.16.1",
     "weaviate-client==4.17.0",
     "pymilvus==2.6.4",
     "pinecone==6.0.2",
