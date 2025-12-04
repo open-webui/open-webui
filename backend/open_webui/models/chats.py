@@ -933,7 +933,7 @@ class ChatTable:
                     import time
 
                     cutoff_timestamp = int(time.time()) - (max_age_days * 24 * 60 * 60)
-                    query = query.filter(Chat.created_at < cutoff_timestamp)
+                    query = query.filter(Chat.updated_at < cutoff_timestamp)
 
                 # Apply preservation filters
                 if preserve_pinned:
