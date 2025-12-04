@@ -401,25 +401,58 @@ def add_file_to_knowledge_by_id(
 
         # Update knowledge base metadata
         if file_item:
-            data = knowledge.data or {}
+            # Re-fetch knowledge to get latest state (avoid race conditions)
+            knowledge = Knowledges.get_knowledge_by_id(id=id)
+            if not knowledge:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.NOT_FOUND,
+                )
+            
+            log.info(f"Adding file {file_id} to knowledge {id} by user {user.id} (email: {user.email})")
+            log.info(f"Knowledge owner: {knowledge.user_id}, current data: {knowledge.data}")
+            
+            # Ensure data is initialized properly
+            data = knowledge.data if knowledge.data is not None else {}
+            if not isinstance(data, dict):
+                data = {}
             file_ids = data.get("file_ids", [])
+            if not isinstance(file_ids, list):
+                file_ids = []
 
-            file_ids.append(file_id)
+            # Add file_id if not already present (avoid duplicates)
+            if file_id not in file_ids:
+                file_ids.append(file_id)
             data["file_ids"] = file_ids
 
-            knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
+            log.info(f"Updating knowledge {id} with data: {data}")
 
-            if knowledge:
-                files = Files.get_files_by_ids(file_ids)
+            # Update knowledge base with new file_ids
+            updated_knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
 
+            if not updated_knowledge:
+                log.error(f"Failed to update knowledge {id} with file {file_id} for user {user.id} (email: {user.email})")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to update knowledge base metadata. File was uploaded but may not appear in the UI.",
+                )
+            
+            log.info(f"Update returned knowledge {id} with data: {updated_knowledge.data}")
+            
+            # Verify the update succeeded by checking file_id is in the response
+            if updated_knowledge.data and file_id in updated_knowledge.data.get("file_ids", []):
+                files = Files.get_files_by_ids(updated_knowledge.data.get("file_ids", []))
+
+                log.info(f"Successfully updated knowledge {id}: file {file_id} is in file_ids list")
                 return KnowledgeFilesResponse(
-                    **knowledge.model_dump(),
+                    **updated_knowledge.model_dump(),
                     files=files,
                 )
             else:
+                log.error(f"File {file_id} not found in updated knowledge {id} data. Updated data: {updated_knowledge.data}")
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.DEFAULT("knowledge"),
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="File was uploaded but failed to update knowledge base metadata.",
                 )
         else:
             raise HTTPException(

@@ -107,9 +107,18 @@ class KnowledgeTable:
         self, user_id: str, form_data: KnowledgeForm
     ) -> Optional[KnowledgeModel]:
         with get_db() as db:
+            # Ensure data is initialized with file_ids list if not provided
+            form_data_dict = form_data.model_dump(exclude={"assign_to_email"})
+            if form_data_dict.get("data") is None:
+                form_data_dict["data"] = {"file_ids": []}
+            elif not isinstance(form_data_dict.get("data"), dict):
+                form_data_dict["data"] = {"file_ids": []}
+            elif "file_ids" not in form_data_dict["data"]:
+                form_data_dict["data"]["file_ids"] = []
+            
             knowledge = KnowledgeModel(
                 **{
-                    **form_data.model_dump(exclude={"assign_to_email"}),
+                    **form_data_dict,
                     "id": str(uuid.uuid4()),
                     "user_id": user_id,
                     "created_at": int(time.time()),
@@ -190,7 +199,17 @@ class KnowledgeTable:
         try:
             with get_db() as db:
                 knowledge = db.query(Knowledge).filter_by(id=id).first()
-                return KnowledgeModel.model_validate(knowledge) if knowledge else None
+                if knowledge:
+                    # Ensure data is never None - initialize with file_ids if missing
+                    knowledge_model = KnowledgeModel.model_validate(knowledge)
+                    if knowledge_model.data is None:
+                        knowledge_model.data = {"file_ids": []}
+                    elif not isinstance(knowledge_model.data, dict):
+                        knowledge_model.data = {"file_ids": []}
+                    elif "file_ids" not in knowledge_model.data:
+                        knowledge_model.data["file_ids"] = []
+                    return knowledge_model
+                return None
         except Exception:
             return None
 
@@ -215,20 +234,79 @@ class KnowledgeTable:
     def update_knowledge_data_by_id(
         self, id: str, data: dict
     ) -> Optional[KnowledgeModel]:
-        try:
-            with get_db() as db:
-                knowledge = self.get_knowledge_by_id(id=id)
-                db.query(Knowledge).filter_by(id=id).update(
-                    {
-                        "data": data,
-                        "updated_at": int(time.time()),
-                    }
-                )
-                db.commit()
-                return self.get_knowledge_by_id(id=id)
-        except Exception as e:
-            log.exception(e)
-            return None
+        import time as time_module
+        max_retries = 3
+        retry_delay = 0.1  # 100ms
+        
+        for attempt in range(max_retries):
+            try:
+                with get_db() as db:
+                    # Verify knowledge exists before updating
+                    knowledge_exists = db.query(Knowledge).filter_by(id=id).first()
+                    if not knowledge_exists:
+                        log.error(f"Knowledge {id} not found for data update")
+                        return None
+                    
+                    # Log current state for debugging
+                    log.info(f"Updating knowledge {id} (attempt {attempt + 1}/{max_retries}): user_id={knowledge_exists.user_id}, current_data={knowledge_exists.data}, new_data={data}")
+                    
+                    # Ensure data is a dict with file_ids key
+                    if not isinstance(data, dict):
+                        log.error(f"Invalid data type for knowledge {id}: {type(data)}")
+                        return None
+                    if "file_ids" not in data:
+                        data["file_ids"] = []
+                    
+                    # Perform the update
+                    rows_updated = db.query(Knowledge).filter_by(id=id).update(
+                        {
+                            "data": data,
+                            "updated_at": int(time.time()),
+                        }
+                    )
+                    db.commit()
+                    
+                    log.info(f"Update commit completed for knowledge {id}: rows_updated={rows_updated}")
+                    
+                    # Verify the update succeeded
+                    if rows_updated == 0:
+                        if attempt < max_retries - 1:
+                            log.warning(f"No rows updated for knowledge {id} on attempt {attempt + 1}, retrying...")
+                            time_module.sleep(retry_delay * (attempt + 1))  # Exponential backoff
+                            continue
+                        else:
+                            log.error(f"No rows updated for knowledge {id} after {max_retries} attempts - possible transaction conflict or row lock")
+                            return None
+                    
+                    # Refresh and read from the same session to ensure consistency
+                    db.expire_all()  # Expire all objects to force fresh read
+                    updated_knowledge = db.query(Knowledge).filter_by(id=id).first()
+                    if not updated_knowledge:
+                        log.error(f"Failed to retrieve updated knowledge {id} from same session")
+                        return None
+                    
+                    log.info(f"Retrieved updated knowledge {id}: data={updated_knowledge.data}")
+                    
+                    # Convert to model and normalize data
+                    knowledge_model = KnowledgeModel.model_validate(updated_knowledge)
+                    if knowledge_model.data is None:
+                        knowledge_model.data = {"file_ids": []}
+                    elif not isinstance(knowledge_model.data, dict):
+                        knowledge_model.data = {"file_ids": []}
+                    elif "file_ids" not in knowledge_model.data:
+                        knowledge_model.data["file_ids"] = []
+                    
+                    return knowledge_model
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    log.warning(f"Error updating knowledge {id} on attempt {attempt + 1}, retrying: {e}")
+                    time_module.sleep(retry_delay * (attempt + 1))
+                    continue
+                else:
+                    log.exception(f"Error updating knowledge data for {id} after {max_retries} attempts: {e}")
+                    return None
+        
+        return None
 
     def delete_knowledge_by_id(self, id: str) -> bool:
         try:
