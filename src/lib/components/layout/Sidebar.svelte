@@ -1021,19 +1021,19 @@
 							bind:folderRegistry
 							{folders}
 							{shiftKey}
-							onDelete={(folderId) => {
+							onDelete={async (folderId) => {
 								selectedFolder.set(null);
-								initChatList();
+								await initChatList();
 							}}
-							on:update={() => {
-								initChatList();
+							on:update={async () => {
+								await initChatList();
 							}}
 							on:import={(e) => {
 								const { folderId, items } = e.detail;
 								importChatHandler(items, false, folderId);
 							}}
 							on:change={async () => {
-								initChatList();
+								await initChatList();
 							}}
 						/>
 					</Folder>
@@ -1085,7 +1085,7 @@
 									const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
 								}
 
-								initChatList();
+								await initChatList();
 							}
 						} else if (type === 'folder') {
 							if (folders[id].parent_id === null) {
@@ -1154,7 +1154,7 @@
 													const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
 												}
 
-												initChatList();
+												await initChatList();
 											}
 										}
 									}}
@@ -1177,7 +1177,7 @@
 													selectedChatId = null;
 												}}
 												on:change={async () => {
-													initChatList();
+													await initChatList();
 												}}
 												on:tag={(e) => {
 													const { type, name } = e.detail;
@@ -1237,7 +1237,7 @@
 											selectedChatId = null;
 										}}
 										on:change={async () => {
-											initChatList();
+											await initChatList();
 										}}
 										on:tag={(e) => {
 											const { type, name } = e.detail;

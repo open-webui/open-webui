@@ -621,6 +621,15 @@ else:
     except Exception:
         CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = 30
 
+# 全局调试开关（默认开启）
+CHAT_DEBUG_FLAG = os.environ.get("CHAT_DEBUG_FALG", "True").lower() == "true"
+
+# 摘要/聊天相关的默认阈值
+SUMMARY_TOKEN_THRESHOLD_DEFAULT = os.environ.get("SUMMARY_TOKEN_THRESHOLD", "3000")
+try:
+    SUMMARY_TOKEN_THRESHOLD_DEFAULT = int(SUMMARY_TOKEN_THRESHOLD_DEFAULT)
+except Exception:
+    SUMMARY_TOKEN_THRESHOLD_DEFAULT = 3000
 
 ####################################
 # WEBSOCKET SUPPORT

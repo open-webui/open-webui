@@ -1004,12 +1004,6 @@ async def generate_chat_completion(
             log.debug(
                 f"chatting_completion hook user={user.id} chat_id={metadata.get('chat_id')} model={payload.get('model')}"
             )
-
-            last_process_payload(
-                user_id = user.id,
-                session_id = metadata.get("chat_id"),
-                messages = extract_timestamped_messages(payload.get("messages", [])),
-            )
         except Exception as e:
             log.debug(f"chatting_completion 钩子执行失败: {e}")
 
