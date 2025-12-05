@@ -1,32 +1,34 @@
 @reference "./tailwind.css";
 
 @font-face {
-	font-family: 'Inter';
-	src: url('/assets/fonts/Inter-Variable.ttf');
+	font-family: 'SourceHanSansCN';
+	src: url('/assets/fonts/SourceHanSans/SourceHanSansCN-Regular.otf') format('opentype');
+	font-weight: 400;
+	font-style: normal;
 	font-display: swap;
 }
 
 @font-face {
-	font-family: 'Archivo';
-	src: url('/assets/fonts/Archivo-Variable.ttf');
+	font-family: 'SourceHanSansCN';
+	src: url('/assets/fonts/SourceHanSans/SourceHanSansCN-Bold.otf') format('opentype');
+	font-weight: 700;
+	font-style: normal;
 	font-display: swap;
 }
 
 @font-face {
-	font-family: 'Mona Sans';
-	src: url('/assets/fonts/Mona-Sans.woff2');
+	font-family: 'LINESeedSans';
+	src: url('/assets/fonts/LINESeedSans/LINESeedSans_A_Rg.ttf') format('truetype');
+	font-weight: 400;
+	font-style: normal;
 	font-display: swap;
 }
 
 @font-face {
-	font-family: 'InstrumentSerif';
-	src: url('/assets/fonts/InstrumentSerif-Regular.ttf');
-	font-display: swap;
-}
-
-@font-face {
-	font-family: 'Vazirmatn';
-	src: url('/assets/fonts/Vazirmatn-Variable.ttf');
+	font-family: 'LINESeedSans';
+	src: url('/assets/fonts/LINESeedSans/LINESeedSans_A_Bd.ttf') format('truetype');
+	font-weight: 700;
+	font-style: normal;
 	font-display: swap;
 }
 
@@ -46,7 +48,7 @@ code {
 }
 
 .font-secondary {
-	font-family: 'InstrumentSerif', sans-serif;
+	font-family: 'SourceHanSansCN', 'LINESeedSans', sans-serif;
 }
 
 .marked a {
@@ -94,7 +96,7 @@ textarea::placeholder {
 }
 
 .font-primary {
-	font-family: 'Archivo', 'Vazirmatn', sans-serif;
+	font-family: 'LINESeedSans', 'SourceHanSansCN', sans-serif;
 }
 
 .drag-region {
