@@ -69,7 +69,7 @@
 
 		const parts = file.key.split('/');
 		const derivedBucket = tenantBucket ?? (parts[0] ?? null);
-		const derivedUserId = parts.length >= 3 && parts[1] === 'users' ? parts[2] : $user?.id ?? null;
+		const derivedUserId = parts.length >= 3 && parts[1] === 'users' ? parts[2] : null;
 
 		deletingKey = file.key;
 		try {
