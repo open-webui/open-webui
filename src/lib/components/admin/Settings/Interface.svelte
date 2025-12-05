@@ -97,16 +97,14 @@
 					(item) => (item.suggestion && !item.context) || (!item.suggestion && item.context)
 				);
 
-				if (incompleteFollowUp) {
-					toast.error(
-						$i18n.t(
-							'Please fill in both the suggestion and context words for all custom follow-ups, or remove the incomplete ones.'
-						)
-					);
-					return;
-				}
-
-				taskConfig.CUSTOM_FOLLOW_UP_SUGGESTIONS = taskConfig.CUSTOM_FOLLOW_UP_SUGGESTIONS.filter(
+			if (incompleteFollowUp) {
+				toast.error(
+					$i18n.t(
+						'Please fill in both the suggestion and context description for all custom follow-ups, or remove the incomplete ones.'
+					)
+				);
+				return;
+			}				taskConfig.CUSTOM_FOLLOW_UP_SUGGESTIONS = taskConfig.CUSTOM_FOLLOW_UP_SUGGESTIONS.filter(
 					(item) => item.suggestion && item.context
 				);
 			}
@@ -363,7 +361,7 @@
                                             </div>
                                             <Tooltip
                                                 content={$i18n.t(
-                                                    'Define a specific follow-up suggestion to be displayed when context words match the conversation.'
+                                                    'Define a specific follow-up suggestion to be displayed when the conversation is semantically similar to the context description.'
                                                 )}
                                                 placement="top-start"
                                             >
