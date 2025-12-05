@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聊天记录筛选器 (JSON)</title>
+    <style>
+        :root {
+            --bg-color: #0f1115;
+            --card-bg: #161b22;
+            --text-main: #e6edf3;
+            --text-dim: #8b949e;
+            --accent-color: #2f81f7;
+            --accent-hover: #58a6ff;
+            --border-color: #30363d;
+            --success-color: #238636;
+            --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 顶部导航 */
+        header {
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--card-bg);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+
+        h1 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h1::before {
+            content: '';
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background-color: var(--accent-color);
+            border-radius: 2px;
+            box-shadow: 0 0 8px var(--accent-color);
+        }
+
+        .version-tag {
+            font-size: 0.7rem;
+            background: var(--border-color);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--text-dim);
+            margin-left: 5px;
+        }
+
+        /* 控制区域 */
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .file-upload-wrapper {
+            position: relative;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+            color: var(--text-main);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            font-family: var(--font-mono);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            border-color: var(--accent-hover);
+            color: var(--accent-hover);
+        }
+
+        .btn-primary {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+            color: white;
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            background-color: #2ea043;
+            border-color: #2ea043;
+            color: white;
+            box-shadow: 0 0 10px rgba(46, 160, 67, 0.4);
+        }
+
+        .btn-primary:disabled {
+            background-color: var(--border-color);
+            border-color: var(--border-color);
+            color: var(--text-dim);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .stats {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            font-family: var(--font-mono);
+            margin-right: 15px;
+        }
+
+        /* 主体列表区域 */
+        main {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .empty-state {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--text-dim);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .data-table th, .data-table td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table th {
+            position: sticky;
+            top: 0;
+            background-color: var(--bg-color);
+            color: var(--text-dim);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            z-index: 5;
+        }
+
+        .data-table tr:hover td {
+            background-color: rgba(47, 129, 247, 0.05);
+        }
+
+        .col-check { width: 50px; text-align: center; }
+        .col-title { width: auto; font-weight: 500; }
+        .col-date { width: 250px; font-family: var(--font-mono); color: var(--accent-color); }
+
+        /* 自定义复选框 */
+        input[type="checkbox"] {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 4px;
+            background-color: transparent;
+            cursor: pointer;
+            position: relative;
+        }
+
+        input[type="checkbox"]:checked {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        input[type="checkbox"]:checked::after {
+            content: '✔';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 10px;
+        }
+
+        /* 滚动条 */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-color); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>CHAT_FILTER <span class="version-tag">ARRAY_MODE</span></h1>
+        
+        <div class="controls">
+            <span class="stats" id="stats-display">等待导入文件...</span>
+            
+            <div class="file-upload-wrapper">
+                <label for="file-input" class="btn">📂 导入 JSON</label>
+                <input type="file" id="file-input" accept=".json,application/json">
+            </div>
+
+            <button id="download-btn" class="btn btn-primary" disabled>⬇ 导出 JSON</button>
+        </div>
+    </header>
+
+    <main id="main-container">
+        <div class="empty-state" id="empty-state">
+            <p>请点击右上角导入 JSON 文件</p>
+            <p style="font-size: 0.8rem; margin-top: 10px; opacity: 0.6;">支持格式: Standard JSON Array `[{},{}]`</p>
+        </div>
+
+        <table class="data-table" id="result-table">
+            <thead>
+                <tr>
+                    <th class="col-check">
+                        <input type="checkbox" id="select-all" title="全选/取消全选">
+                    </th>
+                    <th class="col-title">TITLE</th>
+                    <th class="col-date">INSERTED_AT</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                </tbody>
+        </table>
+    </main>
+
+    <script>
+        // 状态管理
+        let rawData = [];
+        let selectedIndices = new Set();
+
+        // DOM 元素
+        const fileInput = document.getElementById('file-input');
+        const downloadBtn = document.getElementById('download-btn');
+        const tableBody = document.getElementById('table-body');
+        const resultTable = document.getElementById('result-table');
+        const emptyState = document.getElementById('empty-state');
+        const statsDisplay = document.getElementById('stats-display');
+        const selectAllCheckbox = document.getElementById('select-all');
+
+        // 监听文件上传
+        fileInput.addEventListener('change', handleFileUpload);
+        
+        // 监听全选
+        selectAllCheckbox.addEventListener('change', (e) => {
+            const checkboxes = document.querySelectorAll('.item-checkbox');
+            const isChecked = e.target.checked;
+            
+            checkboxes.forEach(cb => {
+                cb.checked = isChecked;
+                const index = parseInt(cb.dataset.index);
+                if (isChecked) {
+                    selectedIndices.add(index);
+                } else {
+                    selectedIndices.delete(index);
+                }
+            });
+            updateStats();
+        });
+
+        // 监听导出按钮
+        downloadBtn.addEventListener('click', exportData);
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // 重置界面
+            statsDisplay.textContent = "正在解析...";
+            tableBody.innerHTML = '';
+            rawData = [];
+            selectedIndices.clear();
+            selectAllCheckbox.checked = false;
+            downloadBtn.disabled = true;
+
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const content = e.target.result;
+                    // 解析整个 JSON
+                    const parsed = JSON.parse(content);
+                    
+                    // 校验格式：必须是数组
+                    if (!Array.isArray(parsed)) {
+                        throw new Error("文件格式错误：JSON 根节点必须是数组 [...]");
+                    }
+
+                    rawData = parsed;
+
+                    if (rawData.length > 0) {
+                        renderTable();
+                        emptyState.style.display = 'none';
+                        resultTable.style.display = 'table';
+                        downloadBtn.disabled = false;
+                    } else {
+                        statsDisplay.textContent = "JSON 数组为空";
+                    }
+
+                } catch (err) {
+                    console.error(err);
+                    alert(`解析失败: ${err.message}`);
+                    statsDisplay.textContent = "错误";
+                }
+            };
+
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function renderTable() {
+            const fragment = document.createDocumentFragment();
+
+            rawData.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                
+                // 宽容处理：防止某些对象缺少字段
+                const title = item.title || '<无标题>';
+                const date = item.inserted_at || '-';
+
+                tr.innerHTML = `
+                    <td class="col-check">
+                        <input type="checkbox" class="item-checkbox" data-index="${index}">
+                    </td>
+                    <td class="col-title">${escapeHtml(title)}</td>
+                    <td class="col-date">${escapeHtml(String(date))}</td>
+                `;
+                fragment.appendChild(tr);
+            });
+
+            tableBody.appendChild(fragment);
+
+            // 更新统计
+            updateStats();
+        }
+
+        // 使用事件委托处理表格内的 Checkbox 点击
+        tableBody.addEventListener('change', (e) => {
+            if (e.target.classList.contains('item-checkbox')) {
+                const index = parseInt(e.target.dataset.index);
+                if (e.target.checked) {
+                    selectedIndices.add(index);
+                } else {
+                    selectedIndices.delete(index);
+                }
+                
+                // 联动全选框状态
+                if (selectedIndices.size === rawData.length && rawData.length > 0) {
+                    selectAllCheckbox.checked = true;
+                    selectAllCheckbox.indeterminate = false;
+                } else if (selectedIndices.size === 0) {
+                    selectAllCheckbox.checked = false;
+                    selectAllCheckbox.indeterminate = false;
+                } else {
+                    selectAllCheckbox.indeterminate = true;
+                }
+
+                updateStats();
+            }
+        });
+
+        function updateStats() {
+            const total = rawData.length;
+            const selected = selectedIndices.size;
+            statsDisplay.textContent = `总数: ${total} | 已选: ${selected}`;
+        }
+
+        function exportData() {
+            if (selectedIndices.size === 0) {
+                if(!confirm('未选择任何记录，确定要导出一个空数组吗？')) return;
+            }
+
+            // 筛选数据
+            const filteredData = rawData.filter((_, index) => selectedIndices.has(index));
+            
+            // 转换为 JSON 字符串 (美化输出，缩进2空格)
+            const outputString = JSON.stringify(filteredData, null, 2);
+            
+            // 创建 Blob
+            const blob = new Blob([outputString], { type: 'application/json;charset=utf-8' });
+            
+            // 创建下载链接
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `filtered_chat_${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            
+            // 清理
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // 防 XSS 简单转义
+        function escapeHtml(text) {
+            if (typeof text !== 'string') return text;
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>

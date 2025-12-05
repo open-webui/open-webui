@@ -52,6 +52,7 @@
 	import Folder from '../common/Folder.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Folders from './Sidebar/Folders.svelte';
+	import ImportChatsModal from './ImportChatsModal.svelte';
 	import { getChannels, createNewChannel } from '$lib/apis/channels';
 	import ChannelModal from './Sidebar/ChannelModal.svelte';
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
@@ -64,8 +65,6 @@
 	import PinnedModelList from './Sidebar/PinnedModelList.svelte';
 	import Note from '../icons/Note.svelte';
 	import { slide } from 'svelte/transition';
-	import { getImportOrigin, convertOpenAIChats } from '$lib/utils';
-	import { extractChatsFromFile } from '$lib/utils/chatImport';
 
 	const BREAKPOINT = 768;
 
@@ -79,6 +78,8 @@
 
 	let showCreateChannel = false;
 
+	let showImportChatsModal = false;
+
 	// Pagination variables
 	let chatListLoading = false;
 	let allChatsLoaded = false;
@@ -89,10 +90,6 @@
 	let folderRegistry = {};
 
 	let newFolderId = null;
-
-	// Import Chats state
-	let importFiles;
-	let chatImportInputElement: HTMLInputElement;
 
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
@@ -356,32 +353,6 @@
 		shiftKey = false;
 		selectedChatId = null;
 	};
-
-	// Import Chats handler
-	$: if (importFiles) {
-		console.log(importFiles);
-
-		if (importFiles.length > 0) {
-			extractChatsFromFile(importFiles[0])
-				.then((chats) => {
-					console.log(chats);
-					if (getImportOrigin(chats) == 'openai') {
-						try {
-							chats = convertOpenAIChats(chats);
-						} catch (error) {
-							console.log('Unable to import chats:', error);
-							toast.error($i18n.t('Failed to convert OpenAI chats'));
-							return;
-						}
-					}
-					importChatsHandler(chats);
-				})
-				.catch((error) => {
-					console.error('Import error:', error);
-					toast.error($i18n.t(error.message));
-				});
-		}
-	}
 
 	const importChatsHandler = async (_chats) => {
 		for (const chat of _chats) {
@@ -1313,19 +1284,10 @@
 				></div>
 
 				<!-- Import Chats Button -->
-				<input
-					id="sidebar-chat-import-input"
-					bind:this={chatImportInputElement}
-					bind:files={importFiles}
-					type="file"
-					accept=".json,.zip"
-					hidden
-				/>
-
 				<button
 					class="flex w-full items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100/50 dark:hover:bg-gray-900 transition outline-none"
 					on:click={() => {
-						chatImportInputElement.click();
+						showImportChatsModal = true;
 					}}
 					draggable="false"
 					aria-label={$i18n.t('Import Chats')}
@@ -1348,7 +1310,6 @@
 						<div class="self-center text-sm font-primary">{$i18n.t('Import Chats')}</div>
 					</div>
 				</button>
-
 
 				<div class="flex flex-col font-primary">
 					{#if $user !== undefined && $user !== null}
@@ -1383,3 +1344,10 @@
 		</div>
 	</div>
 {/if}
+
+<ImportChatsModal
+	bind:show={showImportChatsModal}
+	onImport={async (chats) => {
+		await importChatsHandler(chats);
+	}}
+/>
