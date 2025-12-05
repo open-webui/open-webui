@@ -565,7 +565,7 @@ import CloudArrowUp from '../icons/CloudArrowUp.svelte';
 							<img
 								crossorigin="anonymous"
 								src="{WEBUI_BASE_URL}/static/favicon.png"
-								class="sidebar-new-chat-icon size-6 rounded-full group-hover:hidden"
+								class="sidebar-new-chat-icon size-9 rounded-full group-hover:hidden"
 								alt=""
 							/>
 
@@ -757,7 +757,7 @@ import CloudArrowUp from '../icons/CloudArrowUp.svelte';
 				class="sidebar px-2 pt-2 pb-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 -mb-3"
 			>
 				<a
-					class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition no-drag-region"
+					class="flex items-center rounded-xl size-12 h-full justify-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition no-drag-region"
 					href="/"
 					draggable="false"
 					on:click={newChatHandler}
@@ -765,7 +765,7 @@ import CloudArrowUp from '../icons/CloudArrowUp.svelte';
 					<img
 						crossorigin="anonymous"
 						src="{WEBUI_BASE_URL}/static/favicon.png"
-						class="sidebar-new-chat-icon size-6 rounded-full"
+						class="sidebar-new-chat-icon size-12 rounded-full"
 						alt=""
 					/>
 				</a>
