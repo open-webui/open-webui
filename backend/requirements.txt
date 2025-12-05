@@ -33,7 +33,6 @@ RestrictedPython==8.0
 
 loguru==0.7.2
 asgiref==3.8.1
-tqdm
 
 # AI libraries
 openai
