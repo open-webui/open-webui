@@ -352,6 +352,8 @@ def list_files(
                 key = obj.get("Key")
                 if not key or key.endswith("/"):
                     continue
+                if "/txt/" in key:
+                    continue
                 if relative == "" and key.startswith(private_prefix):
                     continue
 
