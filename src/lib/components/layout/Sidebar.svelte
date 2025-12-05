@@ -1290,7 +1290,7 @@
 						showImportChatsModal = true;
 					}}
 					draggable="false"
-					aria-label={$i18n.t('Import Chats')}
+					aria-label="导入聊天记录"
 				>
 					<div class="self-center">
 						<svg
@@ -1307,7 +1307,7 @@
 						</svg>
 					</div>
 					<div class="flex self-center translate-y-[0.5px]">
-						<div class="self-center text-sm font-primary">{$i18n.t('Import Chats')}</div>
+						<div class="self-center text-sm font-primary">导入聊天记录</div>
 					</div>
 				</button>
 
