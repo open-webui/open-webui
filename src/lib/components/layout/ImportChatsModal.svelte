@@ -29,12 +29,26 @@
 		resetState();
 	}
 
-	const parseTxtAsJson = async (file: File) => {
+	const parseJsonOrJsonlText = async (file: File) => {
 		const text = await file.text();
 		try {
-			return JSON.parse(text);
-		} catch (error) {
-			throw new Error('纯文本文件需包含有效的 JSON 内容');
+			const parsed = JSON.parse(text);
+			return Array.isArray(parsed) ? parsed : [parsed];
+		} catch (jsonError) {
+			const lines = text
+				.split('\n')
+				.map((l) => l.trim())
+				.filter((l) => l.length > 0);
+
+			if (lines.length === 0) {
+				throw new Error('文件为空，无法解析');
+			}
+
+			try {
+				return lines.map((line) => JSON.parse(line));
+			} catch (lineError) {
+				throw new Error('纯文本/JSONL 文件需包含有效的 JSON 或逐行 JSON 对象');
+			}
 		}
 	};
 
@@ -48,8 +62,8 @@
 			const ext = file.name.split('.').pop()?.toLowerCase();
 			let chats: any = null;
 
-			if (ext === 'txt') {
-				chats = await parseTxtAsJson(file);
+			if (ext === 'txt' || ext === 'jsonl') {
+				chats = await parseJsonOrJsonlText(file);
 			} else {
 				chats = await extractChatsFromFile(file);
 			}
@@ -104,6 +118,17 @@
 
 		try {
 			importing = true;
+			const jsonlString = chatsToImport.map((item) => JSON.stringify(item)).join('\n');
+			const blob = new Blob([jsonlString], { type: 'application/json' });
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `filtered_chats_${new Date().toISOString().slice(0, 10)}.jsonl`;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+
 			await onImport(chatsToImport);
 			show = false;
 			toast.success('开始导入筛选后的对话记录');
@@ -235,7 +260,7 @@
 					<input
 						bind:this={fileInputEl}
 						type="file"
-						accept=".json,.zip,.txt,application/json"
+						accept=".json,.jsonl,.zip,.txt,application/json"
 						hidden
 						on:change={handleFileInputChange}
 					/>
