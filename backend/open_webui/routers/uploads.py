@@ -398,13 +398,29 @@ async def delete_uploaded_file(
         )
 
     relative_path = key[len(bucket_prefix) :].lstrip("/")
-    base_relative, _ = posixpath.splitext(relative_path)
-    txt_candidates = []
-    if base_relative:
-        txt_candidates.append(posixpath.join(bucket_prefix, "txt", f"{base_relative}.txt"))
+    relative_dir = posixpath.dirname(relative_path)
+    filename = posixpath.basename(relative_path)
+    filename_stem, _ = posixpath.splitext(filename)
+
+    def add_candidate(targets: list[str], *parts: str):
+        candidate = posixpath.join(*parts)
+        if candidate not in targets:
+            targets.append(candidate)
+
+    txt_candidates: list[str] = []
+
+    if filename_stem:
+        add_candidate(txt_candidates, bucket_prefix, "txt", relative_dir, f"{filename_stem}.txt")
+
     if relative_path:
-        txt_candidates.append(posixpath.join(bucket_prefix, "txt", f"{relative_path}.txt"))
-        txt_candidates.append(posixpath.join(bucket_prefix, "txt", relative_path))
+        add_candidate(txt_candidates, bucket_prefix, "txt", f"{relative_path}.txt")
+        add_candidate(txt_candidates, bucket_prefix, "txt", relative_path)
+
+    if relative_dir:
+        if filename_stem:
+            add_candidate(txt_candidates, bucket_prefix, relative_dir, "txt", f"{filename_stem}.txt")
+        add_candidate(txt_candidates, bucket_prefix, relative_dir, "txt", f"{filename}.txt")
+        add_candidate(txt_candidates, bucket_prefix, relative_dir, "txt", filename)
 
     is_admin = user.role == "admin"
     if not is_admin:
