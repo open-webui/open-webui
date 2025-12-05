@@ -436,12 +436,14 @@ async def delete_uploaded_file(
         )
         txt_candidates.append(posixpath.join(txt_dir, f"{filename_stem}.txt"))
 
-    user_bucket = _get_user_tenant_bucket(user)
-    if not tenant or not user_bucket or user_bucket != tenant:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authorized to delete objects for this tenant.",
-        )
+    is_admin = user.role == "admin"
+    if not is_admin:
+        user_bucket = _get_user_tenant_bucket(user)
+        if not tenant or not user_bucket or user_bucket != tenant:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authorized to delete objects for this tenant.",
+            )
 
     if is_private and user.id != user_id:
         raise HTTPException(
