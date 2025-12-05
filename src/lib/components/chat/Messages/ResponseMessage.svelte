@@ -583,7 +583,7 @@
 					($i18n.language === 'dg-DG'
 						? `${WEBUI_BASE_URL}/doge.png`
 						: `${WEBUI_BASE_URL}/favicon.png`)}
-				className={'size-8 assistant-message-profile-image'}
+				className={'size-10 assistant-message-profile-image'}
 			/>
 		</div>
 
