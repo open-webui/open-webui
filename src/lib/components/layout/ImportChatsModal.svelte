@@ -46,7 +46,7 @@
 		fileName = file.name;
 		try {
 			const ext = file.name.split('.').pop()?.toLowerCase();
-			let chats = null;
+			let chats: any = null;
 
 			if (ext === 'txt') {
 				chats = await parseTxtAsJson(file);
@@ -55,11 +55,7 @@
 			}
 
 			if (getImportOrigin(chats) === 'openai') {
-				try {
-					chats = convertOpenAIChats(chats);
-				} catch (error) {
-					throw new Error('Failed to convert OpenAI chats');
-				}
+				chats = convertOpenAIChats(chats);
 			}
 
 			if (!Array.isArray(chats)) {
@@ -141,6 +137,16 @@
 		});
 
 	let fileInputEl: HTMLInputElement;
+
+	const handleFileInputChange = (event: Event) => {
+		const input = event.currentTarget as HTMLInputElement;
+		handleFiles(input.files ?? []);
+	};
+
+	const handleSelectAllChange = (event: Event) => {
+		const input = event.currentTarget as HTMLInputElement;
+		toggleSelectAll(input.checked);
+	};
 </script>
 
 <Modal bind:show size="xl" className="bg-white/95 dark:bg-gray-900/95 rounded-4xl p-1">
@@ -231,7 +237,7 @@
 						type="file"
 						accept=".json,.zip,.txt,application/json"
 						hidden
-						on:change={(e) => handleFiles((e.currentTarget as HTMLInputElement).files)}
+						on:change={handleFileInputChange}
 					/>
 				</div>
 
@@ -248,7 +254,7 @@
 									class="accent-blue-600"
 									checked={rawChats.length > 0 && selectedIndices.size === rawChats.length}
 									indeterminate={selectedIndices.size > 0 && selectedIndices.size < rawChats.length}
-									on:change={(e) => toggleSelectAll((e.currentTarget as HTMLInputElement).checked)}
+									on:change={handleSelectAllChange}
 								/>
 								<span>全选 / 取消全选</span>
 							</label>
