@@ -128,6 +128,12 @@ async def get_daily_users_count(domain: str = None, user=Depends(get_verified_us
 ############################
 # User Default Permissions
 ############################
+class MCPPermissions(BaseModel):
+    time_server: bool = False
+    news_server: bool = False
+    mpo_sharepoint_server: bool = False
+
+
 class WorkspacePermissions(BaseModel):
     models: bool = False
     knowledge: bool = False
@@ -153,6 +159,7 @@ class UserPermissions(BaseModel):
     workspace: WorkspacePermissions
     chat: ChatPermissions
     features: FeaturesPermissions
+    mcp: MCPPermissions
 
 
 @router.get("/default/permissions", response_model=UserPermissions)
@@ -166,6 +173,9 @@ async def get_user_permissions(request: Request, user=Depends(get_admin_user)):
         ),
         "features": FeaturesPermissions(
             **request.app.state.config.USER_PERMISSIONS.get("features", {})
+        ),
+        "mcp": MCPPermissions(
+            **request.app.state.config.USER_PERMISSIONS.get("mcp", {})
         ),
     }
 
