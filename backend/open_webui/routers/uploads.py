@@ -78,6 +78,28 @@ def _build_prefix(tenant_bucket: str, user_id: str, visibility: str) -> str:
     return base
 
 
+def object_exists(s3_client, bucket: str, key: str) -> bool:
+    """
+    Confirm an object exists. Falls back to list when HEAD is forbidden
+    (some buckets allow delete but not head/get).
+    """
+    try:
+        s3_client.head_object(Bucket=bucket, Key=key)
+        return True
+    except ClientError as exc:
+        error_code = exc.response.get("Error", {}).get("Code", "")
+        if error_code in ("404", "NoSuchKey", "NotFound", "NoSuchBucket"):
+            return False
+        if error_code in ("403", "AccessDenied", "Forbidden"):
+            try:
+                resp = s3_client.list_objects_v2(Bucket=bucket, Prefix=key, MaxKeys=1)
+                contents = resp.get("Contents", [])
+                return any(obj.get("Key") == key for obj in contents)
+            except ClientError:
+                return False
+        return True
+
+
 def _get_user_tenant_bucket(user) -> Optional[str]:
     if not getattr(user, "tenant_id", None):
         return None
@@ -398,29 +420,21 @@ async def delete_uploaded_file(
         )
 
     relative_path = key[len(bucket_prefix) :].lstrip("/")
-    relative_dir = posixpath.dirname(relative_path)
-    filename = posixpath.basename(relative_path)
-    filename_stem, _ = posixpath.splitext(filename)
-
-    def add_candidate(targets: list[str], *parts: str):
-        candidate = posixpath.join(*parts)
-        if candidate not in targets:
-            targets.append(candidate)
-
     txt_candidates: list[str] = []
 
+    # Insert a /txt/ folder right before the filename and swap extension to .txt.
+    # Works for both public (e.g., <bucket>/txt/file.txt) and private
+    # (e.g., <bucket>/users/<user_id>/txt/file.txt) paths.
+    dir_path = posixpath.dirname(relative_path)
+    filename = posixpath.basename(relative_path)
+    filename_stem, _ = posixpath.splitext(filename)
     if filename_stem:
-        add_candidate(txt_candidates, bucket_prefix, "txt", relative_dir, f"{filename_stem}.txt")
-
-    if relative_path:
-        add_candidate(txt_candidates, bucket_prefix, "txt", f"{relative_path}.txt")
-        add_candidate(txt_candidates, bucket_prefix, "txt", relative_path)
-
-    if relative_dir:
-        if filename_stem:
-            add_candidate(txt_candidates, bucket_prefix, relative_dir, "txt", f"{filename_stem}.txt")
-        add_candidate(txt_candidates, bucket_prefix, relative_dir, "txt", f"{filename}.txt")
-        add_candidate(txt_candidates, bucket_prefix, relative_dir, "txt", filename)
+        txt_dir = (
+            posixpath.join(bucket_prefix, dir_path, "txt")
+            if dir_path
+            else posixpath.join(bucket_prefix, "txt")
+        )
+        txt_candidates.append(posixpath.join(txt_dir, f"{filename_stem}.txt"))
 
     is_admin = user.role == "admin"
     if not is_admin:
@@ -440,10 +454,12 @@ async def delete_uploaded_file(
     s3_client = _get_s3_client()
 
     try:
-        s3_client.delete_object(Bucket=S3_BUCKET_NAME, Key=key)
+        if object_exists(s3_client, S3_BUCKET_NAME, key):
+            s3_client.delete_object(Bucket=S3_BUCKET_NAME, Key=key)
         for txt_key in txt_candidates:
             try:
-                s3_client.delete_object(Bucket=S3_BUCKET_NAME, Key=txt_key)
+                if object_exists(s3_client, S3_BUCKET_NAME, txt_key):
+                    s3_client.delete_object(Bucket=S3_BUCKET_NAME, Key=txt_key)
             except ClientError as exc:
                 error_code = exc.response.get("Error", {}).get("Code", "")
                 if error_code not in ("NoSuchKey", "NoSuchBucket"):
