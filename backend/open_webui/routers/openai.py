@@ -1007,6 +1007,22 @@ async def generate_chat_completion(
         except Exception as e:
             log.debug(f"chatting_completion 钩子执行失败: {e}")
 
+    
+    # 移除上游不识别的内部参数
+    for key in [
+        "is_user_model",
+        "variables",
+        "model_item",
+        "background_tasks",
+        "chat_id",
+        "id",
+        "message_id",
+        "session_id",
+        "filter_ids",
+        "tool_servers",
+    ]:
+        payload.pop(key, None)
+
     payload = json.dumps(payload)  # 序列化为 JSON 字符串
 
     # === 11. 初始化请求状态变量 ===
