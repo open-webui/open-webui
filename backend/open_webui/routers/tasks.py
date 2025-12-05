@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 from typing import Optional
 import logging
-import re
+import json
 
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.task import (
@@ -63,6 +63,8 @@ async def get_task_config(request: Request, user=Depends(get_verified_user)):
         "TAGS_GENERATION_PROMPT_TEMPLATE": request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE,
         "FOLLOW_UP_GENERATION_PROMPT_TEMPLATE": request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE,
         "ENABLE_FOLLOW_UP_GENERATION": request.app.state.config.ENABLE_FOLLOW_UP_GENERATION,
+        "CUSTOM_FOLLOW_UP_SUGGESTIONS": request.app.state.config.CUSTOM_FOLLOW_UP_SUGGESTIONS,
+        "USE_CUSTOM_FOLLOW_UP": request.app.state.config.USE_CUSTOM_FOLLOW_UP,
         "ENABLE_TAGS_GENERATION": request.app.state.config.ENABLE_TAGS_GENERATION,
         "ENABLE_TITLE_GENERATION": request.app.state.config.ENABLE_TITLE_GENERATION,
         "ENABLE_SEARCH_QUERY_GENERATION": request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION,
@@ -84,6 +86,8 @@ class TaskConfigForm(BaseModel):
     TAGS_GENERATION_PROMPT_TEMPLATE: str
     FOLLOW_UP_GENERATION_PROMPT_TEMPLATE: str
     ENABLE_FOLLOW_UP_GENERATION: bool
+    CUSTOM_FOLLOW_UP_SUGGESTIONS: list
+    USE_CUSTOM_FOLLOW_UP: bool
     ENABLE_TAGS_GENERATION: bool
     ENABLE_SEARCH_QUERY_GENERATION: bool
     ENABLE_RETRIEVAL_QUERY_GENERATION: bool
@@ -108,6 +112,12 @@ async def update_task_config(
     )
     request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = (
         form_data.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE
+    )
+    request.app.state.config.CUSTOM_FOLLOW_UP_SUGGESTIONS = (
+        form_data.CUSTOM_FOLLOW_UP_SUGGESTIONS
+    )
+    request.app.state.config.USE_CUSTOM_FOLLOW_UP = (
+        form_data.USE_CUSTOM_FOLLOW_UP
     )
 
     request.app.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = (
@@ -155,6 +165,7 @@ async def update_task_config(
         "ENABLE_TAGS_GENERATION": request.app.state.config.ENABLE_TAGS_GENERATION,
         "ENABLE_FOLLOW_UP_GENERATION": request.app.state.config.ENABLE_FOLLOW_UP_GENERATION,
         "FOLLOW_UP_GENERATION_PROMPT_TEMPLATE": request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE,
+        "CUSTOM_FOLLOW_UP_SUGGESTIONS": request.app.state.config.CUSTOM_FOLLOW_UP_SUGGESTIONS,
         "ENABLE_SEARCH_QUERY_GENERATION": request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION,
         "ENABLE_RETRIEVAL_QUERY_GENERATION": request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION,
         "QUERY_GENERATION_PROMPT_TEMPLATE": request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE,
@@ -258,6 +269,109 @@ async def generate_follow_ups(
             content={"detail": "Follow-up generation is disabled"},
         )
 
+    use_custom = request.app.state.config.USE_CUSTOM_FOLLOW_UP
+    custom_suggestions = request.app.state.config.CUSTOM_FOLLOW_UP_SUGGESTIONS
+    matched_suggestions = []
+    
+    if use_custom and custom_suggestions and len(custom_suggestions) > 0:
+        messages = form_data.get("messages", [])
+        
+        if messages:
+            last_user_msg = None
+            for msg in reversed(messages):
+                if isinstance(msg, dict) and msg.get("role") == "user":
+                    last_user_msg = msg.get("content", "")
+                    break
+            
+            if not last_user_msg:
+                return
+            
+            conversation_context = last_user_msg
+            
+            # Filter out suggestions that match exactly the user's last message
+            # This prevents suggesting the same follow-up that was just clicked
+            filtered_suggestions = []
+            for suggestion in custom_suggestions:
+                if isinstance(suggestion, dict):
+                    suggestion_text = suggestion.get("suggestion", "")
+                    if suggestion_text and suggestion_text.strip().lower() != last_user_msg.strip().lower():
+                        filtered_suggestions.append(suggestion)
+            
+            if filtered_suggestions:
+                custom_suggestions = filtered_suggestions
+            
+            if conversation_context:
+                try:
+                    import inspect
+                    import re
+                    embedding_function = request.app.state.EMBEDDING_FUNCTION
+                    if not embedding_function:
+                        raise Exception("Embedding function not initialized")
+                    
+                    if inspect.iscoroutinefunction(embedding_function):
+                        context_embedding = await embedding_function(conversation_context)
+                    else:
+                        context_embedding = embedding_function(conversation_context)
+                    
+                    user_msg_lower = conversation_context.lower()       
+                    similarities = []
+                    for custom_suggestion in custom_suggestions:
+                        if not isinstance(custom_suggestion, dict):
+                            continue
+                        
+                        context_desc = custom_suggestion.get("context", "")
+                        suggestion_text = custom_suggestion.get("suggestion", "")
+                        
+                        if context_desc and suggestion_text:
+                            if inspect.iscoroutinefunction(embedding_function):
+                                desc_embedding = await embedding_function(context_desc)
+                            else:
+                                desc_embedding = embedding_function(context_desc)
+                            
+                            # Calculate cosine similarity
+                            cosine_sim = sum(a * b for a, b in zip(context_embedding, desc_embedding)) / (
+                                (sum(a * a for a in context_embedding) ** 0.5) *
+                                (sum(b * b for b in desc_embedding) ** 0.5)
+                            )
+
+                            context_lower = context_desc.lower()
+                            keywords = re.findall(r'\b[a-záàâãéèêíïóôõöúçñ]+\b', context_lower)
+                            keyword_boost = 0.0
+                            keyword_matches = 0
+                            
+                            for keyword in keywords:
+                                if len(keyword) > 3 and keyword in user_msg_lower:
+                                        keyword_matches += 1
+                            
+                            if keyword_matches > 0:
+                                keyword_boost = min(0.15, keyword_matches * 0.05)
+                            
+                            final_score = cosine_sim + keyword_boost
+                            similarities.append((final_score, suggestion_text, cosine_sim, keyword_boost))
+                    
+                    similarities.sort(reverse=True, key=lambda x: x[0])
+                    
+                    # Only match suggestions with high similarity (threshold: 0.45)
+                    matched_suggestions = [s[1] for s in similarities if s[0] > 0.45]
+                        
+                except Exception as e:
+                    log.error(f"Error calculating semantic similarity for custom follow-ups: {e}")
+                    # Fallback to keyword matching if embeddings fail
+                    last_user_message = messages[-1].get("content", "").lower() if messages else ""
+                    for custom_suggestion in custom_suggestions:
+                        if not isinstance(custom_suggestion, dict):
+                            continue
+                        context_words = custom_suggestion.get("context", "")
+                        suggestion_text = custom_suggestion.get("suggestion", "")
+                        if context_words and suggestion_text:
+                            keywords = [kw.strip().lower() for kw in context_words.split(",") if kw.strip()]
+                            if any(keyword in last_user_message for keyword in keywords):
+                                if suggestion_text not in matched_suggestions:
+                                    matched_suggestions.append(suggestion_text)
+    
+    if len(matched_suggestions) >= 5:
+        return {"follow_ups": matched_suggestions[:5]}
+
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
         models = {
             request.state.model["id"]: request.state.model,
@@ -281,10 +395,6 @@ async def generate_follow_ups(
         models,
     )
 
-    log.debug(
-        f"generating chat title using model {task_model_id} for user {user.email} "
-    )
-
     if request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE != "":
         template = request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE
     else:
@@ -301,6 +411,7 @@ async def generate_follow_ups(
             "task": str(TASKS.FOLLOW_UP_GENERATION),
             "task_body": form_data,
             "chat_id": form_data.get("chat_id", None),
+            "matched_custom_suggestions": matched_suggestions,
         },
     }
 
@@ -311,7 +422,28 @@ async def generate_follow_ups(
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        ai_response = await generate_chat_completion(request, form_data=payload, user=user)
+        
+        if matched_suggestions:
+            if isinstance(ai_response, dict) and "choices" in ai_response:
+                try:
+                    response_message = ai_response.get("choices", [])[0].get("message", {})
+                    follow_ups_string = response_message.get("content") or response_message.get("reasoning_content", "")
+                    follow_ups_string = follow_ups_string[follow_ups_string.find("{") : follow_ups_string.rfind("}") + 1]
+                    ai_suggestions = json.loads(follow_ups_string).get("follow_ups", [])
+                    
+                    combined = matched_suggestions[:5]
+                    remaining_slots = 5 - len(combined)
+                    
+                    if remaining_slots > 0:
+                        combined.extend(ai_suggestions[:remaining_slots])
+                    
+                    return {"follow_ups": combined}
+                except Exception as e:
+                    log.error(f"Error combining suggestions: {e}")
+                    return {"follow_ups": matched_suggestions[:5]}
+        
+        return ai_response
     except Exception as e:
         log.error("Exception occurred", exc_info=True)
         return JSONResponse(

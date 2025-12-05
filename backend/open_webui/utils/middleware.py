@@ -1646,7 +1646,11 @@ async def process_chat_response(
                     )
 
                     if res and isinstance(res, dict):
-                        if len(res.get("choices", [])) == 1:
+                        follow_ups = []
+                        
+                        if "follow_ups" in res:
+                            follow_ups = res.get("follow_ups", [])
+                        elif len(res.get("choices", [])) == 1:
                             response_message = res.get("choices", [])[0].get(
                                 "message", {}
                             )
@@ -1654,18 +1658,20 @@ async def process_chat_response(
                             follow_ups_string = response_message.get(
                                 "content"
                             ) or response_message.get("reasoning_content", "")
-                        else:
-                            follow_ups_string = ""
 
-                        follow_ups_string = follow_ups_string[
-                            follow_ups_string.find("{") : follow_ups_string.rfind("}")
-                            + 1
-                        ]
+                            follow_ups_string = follow_ups_string[
+                                follow_ups_string.find("{") : follow_ups_string.rfind("}")
+                                + 1
+                            ]
 
-                        try:
-                            follow_ups = json.loads(follow_ups_string).get(
-                                "follow_ups", []
-                            )
+                            try:
+                                follow_ups = json.loads(follow_ups_string).get(
+                                    "follow_ups", []
+                                )
+                            except Exception as e:
+                                follow_ups = []
+                        
+                        if follow_ups:
                             await event_emitter(
                                 {
                                     "type": "chat:message:follow_ups",
@@ -1683,9 +1689,6 @@ async def process_chat_response(
                                         "followUps": follow_ups,
                                     },
                                 )
-
-                        except Exception as e:
-                            pass
 
                 if not metadata.get("chat_id", "").startswith(
                     "local:"

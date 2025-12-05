@@ -1818,6 +1818,18 @@ ENABLE_FOLLOW_UP_GENERATION = PersistentConfig(
     os.environ.get("ENABLE_FOLLOW_UP_GENERATION", "True").lower() == "true",
 )
 
+CUSTOM_FOLLOW_UP_SUGGESTIONS = PersistentConfig(
+    "CUSTOM_FOLLOW_UP_SUGGESTIONS",
+    "task.follow_up.custom_suggestions",
+    json.loads(os.environ.get("CUSTOM_FOLLOW_UP_SUGGESTIONS", "[]")),
+)
+
+USE_CUSTOM_FOLLOW_UP = PersistentConfig(
+    "USE_CUSTOM_FOLLOW_UP",
+    "task.follow_up.use_custom",
+    os.environ.get("USE_CUSTOM_FOLLOW_UP", "False").lower() == "true",
+)
+
 ENABLE_TAGS_GENERATION = PersistentConfig(
     "ENABLE_TAGS_GENERATION",
     "task.tags.enable",
