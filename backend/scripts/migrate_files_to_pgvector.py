@@ -57,7 +57,7 @@ import uuid
 import time
 import requests
 from requests.exceptions import HTTPError
-from tqdm import tqdm
+
 
 # Set up logging with explicit name (after open_webui imports may have configured logging)
 log = logging.getLogger("migrate_files_to_pgvector")
@@ -513,25 +513,13 @@ def process_file_to_collections(
         max_batch_size = 500
         log.info(f"Generating embeddings for {len(texts)} chunks from file {file.id} (max batch size: {max_batch_size})")
         
-        # Create progress bar for embedding generation
-        embed_progress = tqdm(
-            total=len(texts),
-            desc=f"Embedding chunks",
-            unit="chunk",
-            leave=False,
-            disable=logging.getLogger().level > logging.INFO
+        embeddings = generate_embeddings_with_retry_and_split(
+            texts, 
+            embedding_function, 
+            max_batch_size=max_batch_size, 
+            user=user,
+            progress_bar=None
         )
-        
-        try:
-            embeddings = generate_embeddings_with_retry_and_split(
-                texts, 
-                embedding_function, 
-                max_batch_size=max_batch_size, 
-                user=user,
-                progress_bar=embed_progress
-            )
-        finally:
-            embed_progress.close()
         
         if dry_run:
             log.info(f"[DRY RUN] Would insert {len(texts)} chunks into collections: {collections}")
@@ -681,7 +669,7 @@ def main() -> None:
     file_to_collections: Dict[str, Set[str]] = {}
     
     # 1. Get all knowledge bases first (to build complete mapping)
-    log.info("\n📚 Building collection mapping from knowledge bases...")
+    print("\n📚 Building collection mapping from knowledge bases...", flush=True)
     knowledge_bases = Knowledges.get_knowledge_bases()
     
     # Build mapping of file_id -> knowledge base IDs
@@ -690,7 +678,7 @@ def main() -> None:
             continue
         
         file_ids = kb.data.get("file_ids", []) if kb.data else []
-        log.info(f"Knowledge base '{kb.name}' (id: {kb.id}): {len(file_ids)} files")
+        print(f"   Knowledge base '{kb.name}' (id: {kb.id}): {len(file_ids)} files", flush=True)
         
         for file_id in file_ids:
             if file_id not in file_to_collections:
@@ -698,7 +686,7 @@ def main() -> None:
             file_to_collections[file_id].add(kb.id)  # Add to knowledge base collection
     
     # 2. Get all files and ensure they're in the mapping
-    log.info("\n📄 Processing files...")
+    print("\n📄 Processing files...", flush=True)
     all_files = Files.get_files()
     
     # Build complete list of files to process
@@ -739,13 +727,13 @@ def main() -> None:
                 else:
                     log.warning(f"File {file_id} listed in knowledge base but not found in database")
             
-            log.info(f"   Processing {len(files_to_process)} files from knowledge bases only")
+            print(f"   Processing {len(files_to_process)} files from knowledge bases only", flush=True)
         else:
             # Process all files that are either:
             # 1. In any knowledge base, OR
             # 2. All files (to ensure file-{file.id} collections exist)
             files_to_process = all_files
-            log.info(f"   Processing all {len(files_to_process)} files in database")
+            print(f"   Processing all {len(files_to_process)} files in database", flush=True)
     
     # Check if there are any files to process
     if not files_to_process:
@@ -760,9 +748,9 @@ def main() -> None:
         file_to_collections[file.id].add(f"file-{file.id}")  # Always add to file collection
     
     # Verify mapping completeness
-    log.info(f"\n📊 Collection mapping summary:")
-    log.info(f"   Files to process: {len(files_to_process)}")
-    log.info(f"   Files with collections mapped: {len(file_to_collections)}")
+    print(f"\n📊 Collection mapping summary:", flush=True)
+    print(f"   Files to process: {len(files_to_process)}", flush=True)
+    print(f"   Files with collections mapped: {len(file_to_collections)}", flush=True)
     
     # Check for files in knowledge bases that aren't in files_to_process
     all_kb_file_ids = set()
@@ -774,65 +762,56 @@ def main() -> None:
     
     missing_files = all_kb_file_ids - {f.id for f in files_to_process}
     if missing_files:
-        log.warning(f"   ⚠️  {len(missing_files)} file(s) in knowledge bases but not in files_to_process:")
+        print(f"   ⚠️  {len(missing_files)} file(s) in knowledge bases but not in files_to_process:", flush=True)
         for file_id in missing_files:
             file = Files.get_file_by_id(file_id)
             if file:
-                log.warning(f"      - {file.filename} (id: {file_id}) - will be added to processing list")
+                print(f"      - {file.filename} (id: {file_id}) - will be added to processing list", flush=True)
                 files_to_process.append(file)
                 if file.id not in file_to_collections:
                     file_to_collections[file.id] = set()
                 file_to_collections[file.id].add(f"file-{file.id}")
             else:
-                log.warning(f"      - File not found (id: {file_id})")
+                print(f"      - File not found (id: {file_id})", flush=True)
     
     # 3. Process each file
-    log.info(f"\n🔄 Processing {len(files_to_process)} files...")
-    log.info("=" * 80)
+    print(f"\n🔄 Starting processing of {len(files_to_process)} files...", flush=True)
+    print("=" * 80, flush=True)
     
     processed_count = 0
     failed_count = 0
     skipped_count = 0
     complete_count = 0  # Files that were already complete
     
-    # Create progress bar for file processing
-    file_progress = tqdm(
-        total=len(files_to_process),
-        desc="Processing files",
-        unit="file",
-        disable=logging.getLogger().level > logging.INFO
-    )
+    total_files = len(files_to_process)
     
-    for file in files_to_process:
-        # Update progress bar description with current file
-        file_progress.set_description(f"Processing: {file.filename[:50]}")
+    for i, file in enumerate(files_to_process):
+        current_num = i + 1
+        print(f"\n[{current_num}/{total_files}] 📄 Processing: {file.filename}", flush=True)
         
         collections = list(file_to_collections.get(file.id, set()))
         if not collections:
             log.warning(f"File {file.id} ({file.filename}) has no collections, skipping")
             skipped_count += 1
-            file_progress.update(1)
             continue
         
         # Get user email for chunk size/overlap
         user = Users.get_user_by_id(file.user_id)
         user_email = user.email if user else "default"
         
-        log.info(f"\n📄 Processing file: {file.filename} (id: {file.id})")
-        log.info(f"   Collections: {collections}")
+        # log.info(f"\n📄 Processing file: {file.filename} (id: {file.id})")
+        # log.info(f"   Collections: {collections}")
         
         # Verify file exists
         if not file.path:
             log.warning(f"   ⚠️  File {file.id} has no path, skipping")
             skipped_count += 1
-            file_progress.update(1)
             continue
         
         file_path = Storage.get_file(file.path)
         if not os.path.exists(file_path):
             log.warning(f"   ⚠️  File not found at {file_path}, skipping")
             skipped_count += 1
-            file_progress.update(1)
             continue
         
         success, was_complete = process_file_to_collections(
@@ -852,24 +831,20 @@ def main() -> None:
             # Already logged in process_file_to_collections
         elif success:
             processed_count += 1
-            log.info(f"   ✅ Successfully processed file {file.id}")
+            print(f"   ✅ Successfully processed file {file.id}", flush=True)
         else:
             failed_count += 1
-            log.warning(f"   ❌ Failed to process file {file.id}")
+            print(f"   ❌ Failed to process file {file.id}", flush=True)
         
-        # Update progress bar
-        file_progress.update(1)
     
-    # Close progress bar
-    file_progress.close()
-    
-    log.info("\n" + "=" * 80)
-    log.info(f"✅ Processing complete!")
-    log.info(f"   Processed: {processed_count}")
-    log.info(f"   Already complete (skipped): {complete_count}")
-    log.info(f"   Failed: {failed_count}")
-    log.info(f"   Skipped (other): {skipped_count}")
-    log.info("=" * 80)
+    print("\n" + "=" * 80, flush=True)
+    print("✅ PROCESSING COMPLETE", flush=True)
+    print("-" * 80, flush=True)
+    print(f"   Processed:              {processed_count}", flush=True)
+    print(f"   Already complete:       {complete_count}", flush=True)
+    print(f"   Failed:                 {failed_count}", flush=True)
+    print(f"   Skipped:                {skipped_count}", flush=True)
+    print("=" * 80, flush=True)
     
     # Rebuild pgvector index for optimal retrieval performance
     # IVFFlat indexes work best when built on the actual data distribution
