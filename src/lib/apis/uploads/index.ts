@@ -160,6 +160,10 @@ export const ingestUploadedDocument = async (token: string, key: string) => {
 	return res;
 };
 
+export const deleteUpload = async (token: string, key: string) => {
+	return postJsonWithAuth(token, '/uploads/delete', { key }, 'Failed to delete file.');
+};
+
 const postJsonWithAuth = async <T>(
 	token: string,
 	path: string,
