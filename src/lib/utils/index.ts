@@ -660,9 +660,19 @@ export const calculateSHA256 = async (file) => {
 
 export const getImportOrigin = (_chats) => {
 	// Check what external service chat imports are from
-	if ('mapping' in _chats[0]) {
+	const first = Array.isArray(_chats) ? _chats[0] : null;
+	if (!first || typeof first !== 'object') return 'webui';
+
+	if ('mapping' in first) {
+		// DeepSeek exports use mapping + fragments instead of content.parts/text
+		const mappingValues = Object.values(first.mapping || {});
+		const hasFragments = mappingValues.some(
+			(entry: any) => entry?.message && Array.isArray(entry.message.fragments)
+		);
+		if (hasFragments) return 'deepseek';
 		return 'openai';
 	}
+
 	return 'webui';
 };
 
@@ -747,6 +757,75 @@ const convertOpenAIMessages = (convo) => {
 	return chat;
 };
 
+const fragmentsToContent = (fragments: any) => {
+	if (!Array.isArray(fragments)) return '';
+	return fragments
+		.map((frag) => (typeof frag?.content === 'string' ? frag.content : ''))
+		.filter(Boolean)
+		.join('\n\n');
+};
+
+const convertDeepseekMessages = (convo) => {
+	// Parse DeepSeek chat messages (mapping + fragments) into chat dictionary
+	const mapping = convo['mapping'];
+	const messages = [];
+	let currentId = '';
+	let lastId = null;
+
+	for (const message_id in mapping) {
+		const message = mapping[message_id];
+		currentId = message_id;
+		try {
+			const fragments = message?.message?.fragments;
+			const content = fragmentsToContent(fragments);
+
+			if (messages.length === 0 && (!content || content === '')) {
+				continue;
+			}
+
+			const inferredRole = (() => {
+				if (Array.isArray(fragments)) {
+					const firstType = fragments.find((f) => typeof f?.type === 'string')?.type;
+					if (firstType === 'REQUEST') return 'user';
+					if (firstType === 'RESPONSE') return 'assistant';
+				}
+				return message?.message?.author?.role !== 'user' ? 'assistant' : 'user';
+			})();
+
+			const new_chat = {
+				id: message_id,
+				parentId: lastId,
+				childrenIds: message['children'] || [],
+				role: inferredRole,
+				content,
+				model: message?.message?.model || 'deepseek-chat',
+				done: true,
+				context: null
+			};
+			messages.push(new_chat);
+			lastId = currentId;
+		} catch (error) {
+			console.log('Error with DeepSeek message', message, '\nError:', error);
+		}
+	}
+
+	const history: Record<PropertyKey, (typeof messages)[number]> = {};
+	messages.forEach((obj) => (history[obj.id] = obj));
+
+	const chat = {
+		history: {
+			currentId: currentId,
+			messages: history
+		},
+		models: [messages[0]?.model || 'deepseek-chat'],
+		messages: messages,
+		options: {},
+		timestamp: convo['inserted_at'] || convo['updated_at'] || convo['create_time'],
+		title: convo['title'] ?? 'New Chat'
+	};
+	return chat;
+};
+
 const validateChat = (chat) => {
 	// Because ChatGPT sometimes has features we can't use like DALL-E or might have corrupted messages, need to validate
 	const messages = chat.messages;
@@ -798,6 +877,29 @@ export const convertOpenAIChats = (_chats) => {
 		}
 	}
 	console.log(failed, 'Conversations could not be imported');
+	return chats;
+};
+
+export const convertDeepseekChats = (_chats) => {
+	const chats = [];
+	let failed = 0;
+
+	for (const convo of _chats) {
+		const chat = convertDeepseekMessages(convo);
+
+		if (validateChat(chat)) {
+			chats.push({
+				id: convo['id'],
+				user_id: '',
+				title: convo['title'],
+				chat: chat,
+				timestamp: convo['inserted_at'] || convo['updated_at'] || convo['create_time']
+			});
+		} else {
+			failed++;
+		}
+	}
+	console.log(failed, 'DeepSeek conversations could not be imported');
 	return chats;
 };
 

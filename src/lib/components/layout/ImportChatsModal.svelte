@@ -3,7 +3,7 @@
 	import Modal from '../common/Modal.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import { extractChatsFromFile } from '$lib/utils/chatImport';
-	import { getImportOrigin, convertOpenAIChats } from '$lib/utils';
+	import { getImportOrigin, convertOpenAIChats, convertDeepseekChats } from '$lib/utils';
 
 	export let show = false;
 	export let onImport: (chats: any[]) => Promise<void>;
@@ -41,15 +41,27 @@
 				.filter((l) => l.length > 0);
 
 			if (lines.length === 0) {
-				throw new Error('文件为空，无法解析');
+				throw new Error('File is empty, nothing to parse');
 			}
 
 			try {
 				return lines.map((line) => JSON.parse(line));
 			} catch (lineError) {
-				throw new Error('纯文本/JSONL 文件需包含有效的 JSON 或逐行 JSON 对象');
+				throw new Error('Plain text JSONL must contain one valid JSON object per line');
 			}
 		}
+	};
+
+	const normalizeChats = (chats: any) => {
+		if (Array.isArray(chats)) return chats;
+
+		if (chats && typeof chats === 'object') {
+			if (Array.isArray((chats as any).conversations)) {
+				return (chats as any).conversations;
+			}
+		}
+
+		throw new Error('File content must be a JSON array of chats');
 	};
 
 	const handleFiles = async (files: FileList | File[]) => {
@@ -68,12 +80,18 @@
 				chats = await extractChatsFromFile(file);
 			}
 
-			if (getImportOrigin(chats) === 'openai') {
-				chats = convertOpenAIChats(chats);
+			chats = normalizeChats(chats);
+
+			if (chats.length === 0) {
+				throw new Error('File contained zero chat records');
 			}
 
-			if (!Array.isArray(chats)) {
-				throw new Error('文件内容需为 JSON 数组');
+			const origin = getImportOrigin(chats);
+
+			if (origin === 'openai') {
+				chats = convertOpenAIChats(chats);
+			} else if (origin === 'deepseek') {
+				chats = convertDeepseekChats(chats);
 			}
 
 			rawChats = chats;
@@ -105,14 +123,14 @@
 
 	const confirmImport = async () => {
 		if (!rawChats.length) {
-			toast.error('请先上传对话记录文件');
+			toast.error('Please upload a chat history file first');
 			return;
 		}
 		const chatsToImport =
 			selectedIndices.size > 0 ? rawChats.filter((_, idx) => selectedIndices.has(idx)) : rawChats;
 
 		if (!chatsToImport.length) {
-			toast.error('未选择任何记录');
+			toast.error('No records selected');
 			return;
 		}
 
@@ -131,7 +149,7 @@
 
 			await onImport(chatsToImport);
 			show = false;
-			toast.success('开始导入筛选后的对话记录');
+			toast.success('Starting import for the filtered chats');
 		} catch (error) {
 			console.error(error);
 			toast.error(error instanceof Error ? error.message : `${error}`);
@@ -148,7 +166,7 @@
 				chat?.title ??
 				chat?.chat?.title ??
 				meta?.subject ??
-				'未命名对话';
+				'Untitled chat';
 			const date =
 				meta?.inserted_at ??
 				meta?.created_at ??
@@ -178,15 +196,15 @@
 	<div class="p-6 space-y-6 font-primary">
 		<div class="flex items-start justify-between gap-4">
 			<div>
-				<div class="text-lg font-semibold text-gray-900 dark:text-white">对话记录导入中心</div>
+				<div class="text-lg font-semibold text-gray-900 dark:text-white">Chat Import Center</div>
 				<div class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-					完成准备、筛选后再执行导入，提升成功率与速度。
+					Upload your exported history, filter the records you need, then import.
 				</div>
 			</div>
 			<button
 				class="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
 				on:click={() => (show = false)}
-				aria-label="关闭导入中心"
+				aria-label="Close import modal"
 			>
 				✕
 			</button>
@@ -194,27 +212,25 @@
 
 		<div class="space-y-4">
 			<div class="rounded-2xl border border-gray-100 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-900/60 p-4">
-				<div class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">
-					1. 准备您的对话记录
-				</div>
+				<div class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">1. Prepare file</div>
 				<div class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed space-y-1">
-					<p>请确保导出文件格式为 <strong>JSON (.json)</strong> 或 <strong>纯文本 (.txt)</strong>。</p>
 					<p>
-						请前往原平台导出历史对话，如 DeepSeek — 系统设置 — 数据管理 — 导出所有历史对话，
-						ChatGPT — 设置 — 数据管理 — 导出数据。
+						Supported formats: <strong>JSON (.json)</strong>, <strong>JSONL (.jsonl/.txt)</strong>, or
+						OpenAI ZIP export (auto-converted).
 					</p>
-					<p>如果导出的文件内容过多或过大，建议使用下方的筛选功能生成新的导入文件，以加快导入速度。</p>
+					<p>Large exports can be filtered below to speed up the import.</p>
 				</div>
 			</div>
 
 			<div class="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
 				<div class="flex items-center justify-between">
-					<div class="text-sm font-semibold text-gray-800 dark:text-gray-100">2. 筛选记录</div>
+					<div class="text-sm font-semibold text-gray-800 dark:text-gray-100">2. Filter records</div>
 					<button
 						class="text-xs px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-850"
 						on:click={() => (filterOpen = !filterOpen)}
+						type="button"
 					>
-						{filterOpen ? '收起高级筛选器' : '高级筛选器'}
+						{filterOpen ? 'Hide filters' : 'Show filters'}
 					</button>
 				</div>
 
@@ -233,7 +249,7 @@
 				>
 					<div class="flex flex-col items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
 						<div class="font-medium text-gray-900 dark:text-white">
-							{fileName ? `已选择：${fileName}` : '拖拽文件到此处，或点击上传'}
+							{fileName ? `Selected: ${fileName}` : 'Drag a file here or click to upload'}
 						</div>
 						<div class="flex items-center gap-2">
 							<button
@@ -241,16 +257,16 @@
 								on:click={() => fileInputEl.click()}
 								type="button"
 							>
-								选择文件
+								Choose file
 							</button>
 							<div class="text-xs text-gray-500 dark:text-gray-400">
-								支持 .json / .txt，OpenAI 导出支持自动转换
+								Supports .json / .jsonl / .txt / .zip exports
 							</div>
 						</div>
 						{#if loading}
 							<div class="flex items-center gap-2 text-blue-600 dark:text-blue-300">
 								<Spinner className="size-4" />
-								<span>正在解析文件...</span>
+								<span>Parsing file...</span>
 							</div>
 						{/if}
 						{#if errorMsg}
@@ -270,8 +286,10 @@
 					<div class="space-y-3">
 						<div class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
 							<div>
-								总数：{rawChats.length} | 已选：{selectedIndices.size}
-								{selectedIndices.size === 0 && rawChats.length > 0 ? '（未选则默认导入全部）' : ''}
+								Total: {rawChats.length} | Selected: {selectedIndices.size}
+								{selectedIndices.size === 0 && rawChats.length > 0
+									? ' (none selected will import all)'
+									: ''}
 							</div>
 							<label class="flex items-center gap-2 cursor-pointer select-none">
 								<input
@@ -281,7 +299,7 @@
 									indeterminate={selectedIndices.size > 0 && selectedIndices.size < rawChats.length}
 									on:change={handleSelectAllChange}
 								/>
-								<span>全选 / 取消全选</span>
+								<span>Select / Deselect all</span>
 							</label>
 						</div>
 
@@ -289,16 +307,16 @@
 							<table class="w-full text-sm">
 								<thead class="text-left bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-300">
 									<tr>
-										<th class="w-14 py-2 px-3">选择</th>
-										<th class="py-2 px-3">标题 / 摘要</th>
-										<th class="w-48 py-2 px-3">时间</th>
+										<th class="w-14 py-2 px-3">Pick</th>
+										<th class="py-2 px-3">Title / Summary</th>
+										<th class="w-48 py-2 px-3">Timestamp</th>
 									</tr>
 								</thead>
 								<tbody>
 									{#if !rawChats.length}
 										<tr>
 											<td colspan="3" class="py-4 text-center text-gray-500 dark:text-gray-400">
-												请先上传文件以查看可筛选的记录
+												Upload a file to see filterable records
 											</td>
 										</tr>
 									{:else}
@@ -330,9 +348,9 @@
 			</div>
 
 			<div class="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
-				<div class="text-sm font-semibold text-gray-800 dark:text-gray-100">3. 导入记录</div>
+				<div class="text-sm font-semibold text-gray-800 dark:text-gray-100">3. Import</div>
 				<div class="text-xs text-gray-500 dark:text-gray-400">
-					确认后将按筛选结果导入到当前账户的对话列表中。
+					Confirmed records will be imported into your current account.
 				</div>
 				<div class="flex items-center justify-end gap-3">
 					<button
@@ -340,7 +358,7 @@
 						on:click={() => (show = false)}
 						type="button"
 					>
-						取消
+						Cancel
 					</button>
 					<button
 						class="px-4 py-2 text-sm rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
@@ -351,7 +369,7 @@
 						{#if importing}
 							<Spinner className="size-4" />
 						{/if}
-						<span>{importing ? '正在导入...' : '确认导入'}</span>
+						<span>{importing ? 'Importing...' : 'Confirm import'}</span>
 					</button>
 				</div>
 			</div>
