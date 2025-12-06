@@ -448,19 +448,39 @@
 									</div>
 								</div>
 							</div>
-						{:else if webConfig.WEB_SEARCH_ENGINE === 'jina'}
-							<div class="mb-2.5 flex w-full flex-col">
-								<div>
-									<div class=" self-center text-xs font-medium mb-1">
-										{$i18n.t('Jina API Key')}
-									</div>
+					{:else if webConfig.WEB_SEARCH_ENGINE === 'jina'}
+						<div class="mb-2.5 flex w-full flex-col">
+							<div>
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('Jina Search API URL')}
+								</div>
 
-									<SensitiveInput
-										placeholder={$i18n.t('Enter Jina API Key')}
-										bind:value={webConfig.JINA_API_KEY}
-									/>
+								<div class="flex w-full">
+									<div class="flex-1">
+										<input
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+											type="text"
+											placeholder={$i18n.t('Enter Jina Search API URL')}
+											bind:value={webConfig.JINA_SEARCH_API_URL}
+											autocomplete="off"
+										/>
+									</div>
 								</div>
 							</div>
+						</div>
+
+						<div class="mb-2.5 flex w-full flex-col">
+							<div>
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('Jina API Key')}
+								</div>
+
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Jina API Key')}
+									bind:value={webConfig.JINA_API_KEY}
+								/>
+							</div>
+						</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'bing'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
