@@ -421,13 +421,10 @@
 						imageUrl = await compressImageHandler(imageUrl, $settings, $config);
 					}
 
-					files = [
-						...files,
-						{
-							type: 'image',
-							url: `${imageUrl}`
-						}
-					];
+					const blob = await (await fetch(imageUrl)).blob();
+					const compressedFile = new File([blob], file.name, { type: file.type });
+
+					uploadFileHandler(compressedFile, false);
 				};
 
 				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
@@ -437,7 +434,7 @@
 		});
 	};
 
-	const uploadFileHandler = async (file) => {
+	const uploadFileHandler = async (file, process = true) => {
 		const tempItemId = uuidv4();
 		const fileItem = {
 			type: 'file',
@@ -461,7 +458,6 @@
 
 		try {
 			// During the file upload, file content is automatically extracted.
-
 			// If the file is an audio file, provide the language for STT.
 			let metadata = null;
 			if (
@@ -473,7 +469,7 @@
 				};
 			}
 
-			const uploadedFile = await uploadFile(localStorage.token, file, metadata);
+			const uploadedFile = await uploadFile(localStorage.token, file, metadata, process);
 
 			if (uploadedFile) {
 				console.info('File upload completed:', {
@@ -492,6 +488,7 @@
 				fileItem.id = uploadedFile.id;
 				fileItem.collection_name =
 					uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
+				fileItem.content_type = uploadedFile.meta?.content_type || uploadedFile.content_type;
 				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
 
 				files = files;
@@ -807,11 +804,11 @@
 							{#if files.length > 0}
 								<div class="mx-2 mt-2.5 -mb-1 flex flex-wrap gap-2">
 									{#each files as file, fileIdx}
-										{#if file.type === 'image'}
+										{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
 											<div class=" relative group">
 												<div class="relative">
 													<Image
-														src={file.url}
+														src={`${file.url}${file?.content_type ? '/content' : ''}`}
 														alt=""
 														imageClassName=" size-10 rounded-xl object-cover"
 													/>
