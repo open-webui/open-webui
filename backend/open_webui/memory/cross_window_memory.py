@@ -16,6 +16,7 @@ def last_process_payload(
         messages (List[Dict]): 该用户在该对话下的聊天消息列表，
             形如 {"role": "system|user|assistant", "content": "...", "timestamp": 0}。
     """
-    print("user_id:", user_id)
-    print("session_id:", session_id)
-    print("messages:", messages)
+    return 
+    # print("user_id:", user_id)
+    # print("session_id:", session_id)
+    # print("messages:", messages)

@@ -1998,11 +1998,7 @@ const getCombinedModelById = (modelId) => {
 		const isUserModel = combinedModel?.source === 'user';
 		const credential = combinedModel?.credential;
 
-		const stream =
-			model?.info?.params?.stream_response ??
-			$settings?.params?.stream_response ??
-			params?.stream_response ??
-			true;
+		const stream = true;
 
 		let messages = [
 			params?.system || $settings.system

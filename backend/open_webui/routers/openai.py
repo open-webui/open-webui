@@ -1004,14 +1004,24 @@ async def generate_chat_completion(
             log.debug(
                 f"chatting_completion hook user={user.id} chat_id={metadata.get('chat_id')} model={payload.get('model')}"
             )
-
-            last_process_payload(
-                user_id = user.id,
-                session_id = metadata.get("chat_id"),
-                messages = extract_timestamped_messages(payload.get("messages", [])),
-            )
         except Exception as e:
             log.debug(f"chatting_completion 钩子执行失败: {e}")
+
+    
+    # 移除上游不识别的内部参数
+    for key in [
+        "is_user_model",
+        "variables",
+        "model_item",
+        "background_tasks",
+        "chat_id",
+        "id",
+        "message_id",
+        "session_id",
+        "filter_ids",
+        "tool_servers",
+    ]:
+        payload.pop(key, None)
 
     payload = json.dumps(payload)  # 序列化为 JSON 字符串
 

@@ -252,6 +252,62 @@ class ChatTable:
 
         return chat.chat.get("history", {}).get("messages", {}).get(message_id, {})
 
+    def get_summary_by_user_id_and_chat_id(
+        self, user_id: str, chat_id: str
+    ) -> Optional[dict]:
+        """
+        读取 chat.meta.summary，包含摘要内容及摘要边界（last_message_id/timestamp）。
+        """
+        chat = self.get_chat_by_id_and_user_id(chat_id, user_id)
+        if chat is None:
+            return None
+
+        return chat.meta.get("summary", None) if isinstance(chat.meta, dict) else None
+
+    def set_summary_by_user_id_and_chat_id(
+        self,
+        user_id: str,
+        chat_id: str,
+        summary: str,
+        last_message_id: Optional[str],
+        last_timestamp: Optional[int],
+        recent_message_ids: Optional[list[str]] = None,
+    ) -> Optional[ChatModel]:
+        """
+        写入 chat.meta.summary，并更新更新时间。
+        """
+        try:
+            with get_db() as db:
+                chat = db.query(Chat).filter_by(id=chat_id, user_id=user_id).first()
+
+                if chat is None:
+                    return None
+
+                meta = chat.meta if isinstance(chat.meta, dict) else {}
+                new_meta = {
+                    **meta,
+                    "summary": {
+                        "content": summary,
+                        "last_message_id": last_message_id,
+                        "last_timestamp": last_timestamp,
+                    },
+                    **(
+                        {"recent_message_id_for_cold_start": recent_message_ids}
+                        if recent_message_ids is not None
+                        else {}
+                    ),
+                }
+
+                # 重新赋值以触发 SQLAlchemy 变更检测
+                chat.meta = new_meta
+                chat.updated_at = int(time.time())
+                db.commit()
+                db.refresh(chat)
+                return ChatModel.model_validate(chat)
+        except Exception as e:
+            log.exception(f"set_summary_by_user_id_and_chat_id failed: {e}")
+            return None
+
     def upsert_message_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, message: dict
     ) -> Optional[ChatModel]:

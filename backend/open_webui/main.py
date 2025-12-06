@@ -465,6 +465,8 @@ from open_webui.env import (
     EXTERNAL_PWA_MANIFEST_URL,
     AIOHTTP_CLIENT_SESSION_SSL,
     ENABLE_STAR_SESSIONS_MIDDLEWARE,
+
+    CHAT_DEBUG_FLAG,
 )
 
 
@@ -481,6 +483,12 @@ from open_webui.utils.chat import (
     chat_action as chat_action_handler,
 )
 from open_webui.utils.misc import get_message_list
+from open_webui.utils.summary import (
+    summarize,
+    compute_token_count,
+    build_ordered_messages,
+    get_recent_messages_by_user_id,
+)
 from open_webui.utils.embeddings import generate_embeddings
 from open_webui.utils.middleware import process_chat_payload, process_chat_response
 from open_webui.utils.access_control import has_access
@@ -1619,7 +1627,69 @@ async def chat_completion(
     # === 8. 定义内部处理函数 process_chat ===
     async def process_chat(request, form_data, user, metadata, model):
         """处理完整的聊天流程：Payload 处理 → LLM 调用 → 响应处理"""
+
+        async def ensure_initial_summary():
+            """
+            如果是新聊天，其中没有summary，获得最近的若干次互动，生成一次摘要并保存。
+            触发条件：非 local 会话，无已有摘要。
+            """
+
+            # 获取 chat_id（跳过本地会话）
+            chat_id = metadata.get("chat_id")
+            if not chat_id or str(chat_id).startswith("local:"):
+                return
+
+            try:
+                # 检查是否已有摘要
+                old_summary = Chats.get_summary_by_user_id_and_chat_id(user.id, chat_id)
+                if CHAT_DEBUG_FLAG:
+                    print(f"[summary:init] chat_id={chat_id} 现有摘要={bool(old_summary)}")
+                if old_summary:
+                    if CHAT_DEBUG_FLAG:
+                        print(f"[summary:init] chat_id={chat_id} 已存在摘要，跳过生成")
+                    return
+
+                # 获取消息列表
+                ordered = get_recent_messages_by_user_id(user.id, chat_id, 100)
+                if CHAT_DEBUG_FLAG:
+                    print(f"[summary:init] chat_id={chat_id} 最近消息数={len(ordered)} (优先当前会话)")
+
+                if not ordered:
+                    if CHAT_DEBUG_FLAG:
+                        print(f"[summary:init] chat_id={chat_id} 无可用消息，跳过生成")
+                    return
+
+                # 调用 LLM 生成摘要并保存
+                summary_text = summarize(ordered, None)
+                last_id = ordered[-1].get("id") if ordered else None
+                recent_ids = [m.get("id") for m in ordered[-20:] if m.get("id")]  # 记录最近20条消息为冷启动消息
+
+                if CHAT_DEBUG_FLAG:
+                    print(
+                        f"[summary:init] chat_id={chat_id} 生成首条摘要，msg_count={len(ordered)}, last_id={last_id}, recent_ids={len(recent_ids)}"
+                    )
+
+                    print("[summary:init]: ordered")
+                    for i in ordered:
+                        print(i['role'], "  ", i['content'][:100])
+
+                res = Chats.set_summary_by_user_id_and_chat_id(
+                    user.id,
+                    chat_id,
+                    summary_text,
+                    last_id,
+                    int(time.time()),
+                    recent_message_ids=recent_ids,
+                )
+                if not res:
+                    if CHAT_DEBUG_FLAG:
+                        print(f"[summary:init] chat_id={chat_id} 写入摘要失败")
+            except Exception as e:
+                log.exception(f"initial summary failed: {e}")
+
         try:
+            await ensure_initial_summary()
+
             # 8.1 Payload 预处理：执行 Pipeline Filters、工具注入、RAG 检索等
             # remark：并不涉及消息的持久化，只涉及发送给 LLM 前，上下文的封装
             form_data, metadata, events = await process_chat_payload(
@@ -1661,7 +1731,7 @@ async def chat_completion(
 
         # 8.6 异常处理：记录错误到数据库并通知前端
         except Exception as e:
-            log.debug(f"Error processing chat payload: {e}")
+            log.exception(f"Error processing chat payload: {e}")
             if metadata.get("chat_id") and metadata.get("message_id"):
                 try:
                     # 将错误信息保存到消息记录
