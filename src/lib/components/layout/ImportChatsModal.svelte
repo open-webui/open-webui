@@ -13,12 +13,14 @@
 	let importing = false;
 	let filterOpen = true;
 	let errorMsg = '';
+	let successMsg = '';
 	let fileName = '';
 	let rawChats: any[] = [];
 	let selectedIndices: Set<number> = new Set();
 
 	const resetState = () => {
 		errorMsg = '';
+		successMsg = '';
 		fileName = '';
 		rawChats = [];
 		selectedIndices = new Set();
@@ -69,6 +71,7 @@
 		const file = files[0];
 		loading = true;
 		errorMsg = '';
+		successMsg = '';
 		fileName = file.name;
 		try {
 			const ext = file.name.split('.').pop()?.toLowerCase();
@@ -97,9 +100,11 @@
 			rawChats = chats;
 			selectedIndices = new Set(rawChats.map((_, idx) => idx));
 			filterOpen = true;
+			successMsg = '解析成功';
 		} catch (error) {
 			console.error(error);
 			errorMsg = error instanceof Error ? error.message : `${error}`;
+			successMsg = '';
 			rawChats = [];
 			selectedIndices = new Set();
 		} finally {
@@ -271,6 +276,9 @@
 						{/if}
 						{#if errorMsg}
 							<div class="text-xs text-red-500">{errorMsg}</div>
+						{/if}
+						{#if successMsg}
+							<div class="text-xs text-green-600 dark:text-green-400">{successMsg}</div>
 						{/if}
 					</div>
 					<input
