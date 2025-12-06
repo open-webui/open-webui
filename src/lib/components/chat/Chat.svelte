@@ -51,7 +51,7 @@
 		getMessageContentParts,
 		createMessagesList,
 		getPromptVariables,
-		processDetails,
+		processDetailsAndExtractToolCalls,
 		removeAllDetails,
 		getCodeBlockContents
 	} from '$lib/utils';
@@ -1873,45 +1873,79 @@
 			params?.stream_response ??
 			true;
 
-		let messages = [
-			params?.system || $settings.system
-				? {
-						role: 'system',
-						content: `${params?.system ?? $settings?.system ?? ''}`
-					}
-				: undefined,
-			..._messages.map((message) => ({
-				...message,
-				content: processDetails(message.content)
-			}))
-		].filter((message) => message);
+		let messages = [];
+		if (params?.system || $settings.system) {
+			messages.push({
+				role: 'system',
+				content: `${params?.system ?? $settings?.system ?? ''}`
+			});
+		}
 
-		messages = messages
-			.map((message, idx, arr) => ({
-				role: message.role,
-				...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
-				message.role === 'user'
-					? {
-							content: [
-								{
-									type: 'text',
-									text: message?.merged?.content ?? message.content
-								},
-								...message.files
-									.filter((file) => file.type === 'image')
-									.map((file) => ({
-										type: 'image_url',
-										image_url: {
-											url: file.url
-										}
-									}))
-							]
-						}
-					: {
-							content: message?.merged?.content ?? message.content
-						})
-			}))
-			.filter((message) => message?.role === 'user' || message?.content?.trim());
+		for (const message of _messages) {
+			let content = message?.merged?.content ?? message?.content;
+			content = message?.role !== 'user' ? content?.trim() : content;
+			let processedMessages = processDetailsAndExtractToolCalls(content ?? '');
+
+			let nonToolMesssage = null;
+			let toolCallIndex = 0;
+
+			for (const processedMessage of processedMessages) {
+				if (typeof processedMessage == 'string') {
+					nonToolMesssage = {
+						role: message?.role,
+						content: processedMessage
+					};
+
+					if (
+						message?.role === 'user' &&
+						(message.files?.filter((file) => file.type === 'image').length > 0 ?? false)
+					) {
+						nonToolMesssage.content = [
+							{
+								type: 'text',
+								text: nonToolMesssage.content
+							},
+							...message.files
+								.filter((file) => file.type === 'image')
+								.map((file) => ({
+									type: 'image_url',
+									image_url: {
+										url: file.url
+									}
+								}))
+						];
+					}
+
+					messages.push(nonToolMesssage);
+					continue;
+				}
+
+				if (!nonToolMesssage) {
+					nonToolMesssage = {
+						role: message?.role,
+						content: ''
+					};
+					messages.push(nonToolMesssage);
+				}
+
+				nonToolMesssage.tool_calls ??= [];
+				nonToolMesssage.tool_calls.push({
+					index: toolCallIndex++,
+					id: processedMessage.id,
+					type: 'function',
+					function: {
+						name: processedMessage.name,
+						arguments: processedMessage.arguments
+					}
+				});
+
+				messages.push({
+					role: 'tool',
+					tool_call_id: processedMessage.id,
+					content: processedMessage.result
+				});
+			}
+		}
 
 		const toolIds = [];
 		const toolServerIds = [];
