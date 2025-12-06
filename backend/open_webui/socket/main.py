@@ -32,6 +32,7 @@ from open_webui.env import (
     WEBSOCKET_SENTINEL_PORT,
     WEBSOCKET_SENTINEL_HOSTS,
     REDIS_KEY_PREFIX,
+    REDIS_SOCKET_CONNECT_TIMEOUT,
     WEBSOCKET_REDIS_OPTIONS,
     WEBSOCKET_SERVER_PING_TIMEOUT,
     WEBSOCKET_SERVER_PING_INTERVAL,
@@ -62,17 +63,22 @@ REDIS = None
 SOCKETIO_CORS_ORIGINS = "*" if CORS_ALLOW_ORIGIN == ["*"] else CORS_ALLOW_ORIGIN
 
 if WEBSOCKET_MANAGER == "redis":
+    mgr_redis_options = {**WEBSOCKET_REDIS_OPTIONS} if WEBSOCKET_REDIS_OPTIONS else {}
+    if "socket_connect_timeout" not in mgr_redis_options:
+        mgr_redis_options["socket_connect_timeout"] = REDIS_SOCKET_CONNECT_TIMEOUT
+
     if WEBSOCKET_SENTINEL_HOSTS:
         mgr = socketio.AsyncRedisManager(
             get_sentinel_url_from_env(
                 WEBSOCKET_REDIS_URL, WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT
             ),
-            redis_options=WEBSOCKET_REDIS_OPTIONS,
+            redis_options=mgr_redis_options,
         )
     else:
         mgr = socketio.AsyncRedisManager(
-            WEBSOCKET_REDIS_URL, redis_options=WEBSOCKET_REDIS_OPTIONS
+            WEBSOCKET_REDIS_URL, redis_options=mgr_redis_options
         )
+
     sio = socketio.AsyncServer(
         cors_allowed_origins=SOCKETIO_CORS_ORIGINS,
         async_mode="asgi",

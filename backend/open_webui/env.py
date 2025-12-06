@@ -395,6 +395,18 @@ try:
 except ValueError:
     REDIS_SENTINEL_MAX_RETRY_COUNT = 2
 
+# Socket/Connect timeout for connections to Redis/Sentinel nodes
+REDIS_SOCKET_CONNECT_TIMEOUT = os.environ.get(
+    "REDIS_SOCKET_CONNECT_TIMEOUT", "5"
+)
+try:
+    if REDIS_SOCKET_CONNECT_TIMEOUT.lower() == "none":
+        REDIS_SOCKET_CONNECT_TIMEOUT = None
+    else:
+        REDIS_SOCKET_CONNECT_TIMEOUT = max(float(REDIS_SOCKET_CONNECT_TIMEOUT), 0.0)
+except ValueError:
+    REDIS_SOCKET_CONNECT_TIMEOUT = 5.0
+
 ####################################
 # UVICORN WORKERS
 ####################################
