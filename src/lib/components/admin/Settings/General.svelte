@@ -707,6 +707,13 @@
 
 						<Switch bind:state={adminConfig.ENABLE_USER_WEBHOOKS} />
 					</div>
+					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Allow Individual Knowledge File Attachments')}
+						</div>
+
+						<Switch bind:state={adminConfig.ENABLE_INDIVIDUAL_KNOWLEDGE_FILE_ATTACHMENTS} />
+					</div>
 
 					<div class="mb-2.5">
 						<div class=" self-center text-xs font-medium mb-2">
