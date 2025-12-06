@@ -629,6 +629,11 @@ OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID = (
     == "true"
 )
 
+OAUTH_AUDIENCE = PersistentConfig(
+    "OAUTH_AUDIENCE",
+    "oauth.audience",
+    os.environ.get("OAUTH_AUDIENCE", ""),
+)
 
 def load_oauth_providers():
     OAUTH_PROVIDERS.clear()
