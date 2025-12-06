@@ -3006,6 +3006,21 @@ ENABLE_WEB_LOADER_SSL_VERIFICATION = PersistentConfig(
     os.environ.get("ENABLE_WEB_LOADER_SSL_VERIFICATION", "True").lower() == "true",
 )
 
+
+WEB_LOADER_TIMEOUT = PersistentConfig(
+    "WEB_LOADER_TIMEOUT",
+    "rag.web.loader.timeout",
+    int(os.getenv("WEB_LOADER_TIMEOUT", "10000")),
+)
+
+
+WEB_LOADER_RETRY_COUNT = PersistentConfig(
+    "WEB_LOADER_RETRY_COUNT",
+    "rag.web.loader.retry_count",
+    int(os.getenv("WEB_LOADER_RETRY_COUNT", "3")),
+)
+
+
 WEB_SEARCH_TRUST_ENV = PersistentConfig(
     "WEB_SEARCH_TRUST_ENV",
     "rag.web.search.trust_env",

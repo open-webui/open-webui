@@ -537,6 +537,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "SOUGOU_API_SK": request.app.state.config.SOUGOU_API_SK,
             "WEB_LOADER_ENGINE": request.app.state.config.WEB_LOADER_ENGINE,
             "ENABLE_WEB_LOADER_SSL_VERIFICATION": request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
+            "WEB_LOADER_TIMEOUT": request.app.state.config.WEB_LOADER_TIMEOUT,
+            "WEB_LOADER_RETRY_COUNT": request.app.state.config.WEB_LOADER_RETRY_COUNT,
             "PLAYWRIGHT_WS_URL": request.app.state.config.PLAYWRIGHT_WS_URL,
             "PLAYWRIGHT_TIMEOUT": request.app.state.config.PLAYWRIGHT_TIMEOUT,
             "FIRECRAWL_API_KEY": request.app.state.config.FIRECRAWL_API_KEY,
@@ -595,6 +597,8 @@ class WebConfig(BaseModel):
     SOUGOU_API_SK: Optional[str] = None
     WEB_LOADER_ENGINE: Optional[str] = None
     ENABLE_WEB_LOADER_SSL_VERIFICATION: Optional[bool] = None
+    WEB_LOADER_TIMEOUT: Optional[int] = None
+    WEB_LOADER_RETRY_COUNT: Optional[int] = None
     PLAYWRIGHT_WS_URL: Optional[str] = None
     PLAYWRIGHT_TIMEOUT: Optional[int] = None
     FIRECRAWL_API_KEY: Optional[str] = None
@@ -1074,6 +1078,12 @@ async def update_rag_config(
         request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION = (
             form_data.web.ENABLE_WEB_LOADER_SSL_VERIFICATION
         )
+        request.app.state.config.WEB_LOADER_TIMEOUT = (
+            form_data.web.WEB_LOADER_TIMEOUT
+        )
+        request.app.state.config.WEB_LOADER_RETRY_COUNT = (
+            form_data.web.WEB_LOADER_RETRY_COUNT
+        )
         request.app.state.config.PLAYWRIGHT_WS_URL = form_data.web.PLAYWRIGHT_WS_URL
         request.app.state.config.PLAYWRIGHT_TIMEOUT = form_data.web.PLAYWRIGHT_TIMEOUT
         request.app.state.config.FIRECRAWL_API_KEY = form_data.web.FIRECRAWL_API_KEY
@@ -1207,6 +1217,8 @@ async def update_rag_config(
             "SOUGOU_API_SK": request.app.state.config.SOUGOU_API_SK,
             "WEB_LOADER_ENGINE": request.app.state.config.WEB_LOADER_ENGINE,
             "ENABLE_WEB_LOADER_SSL_VERIFICATION": request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
+            "WEB_LOADER_TIMEOUT": request.app.state.config.WEB_LOADER_TIMEOUT,
+            "WEB_LOADER_RETRY_COUNT": request.app.state.config.WEB_LOADER_RETRY_COUNT,
             "PLAYWRIGHT_WS_URL": request.app.state.config.PLAYWRIGHT_WS_URL,
             "PLAYWRIGHT_TIMEOUT": request.app.state.config.PLAYWRIGHT_TIMEOUT,
             "FIRECRAWL_API_KEY": request.app.state.config.FIRECRAWL_API_KEY,
