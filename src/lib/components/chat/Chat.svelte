@@ -2538,7 +2538,13 @@
 										const { type, data } = e.detail;
 
 										if (type === 'web') {
-											await uploadWeb(data);
+											if (Array.isArray(data)) {
+												for (const url of data) {
+													await uploadWeb(url);
+												}
+											} else {
+												await uploadWeb(data);
+											}
 										} else if (type === 'youtube') {
 											await uploadYoutubeTranscription(data);
 										} else if (type === 'google-drive') {
@@ -2590,7 +2596,13 @@
 										const { type, data } = e.detail;
 
 										if (type === 'web') {
-											await uploadWeb(data);
+											if (Array.isArray(data)) {
+												for (const url of data) {
+													await uploadWeb(url);
+												}
+											} else {
+												await uploadWeb(data);
+											}
 										} else if (type === 'youtube') {
 											await uploadYoutubeTranscription(data);
 										}
