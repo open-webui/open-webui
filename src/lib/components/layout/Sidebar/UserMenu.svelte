@@ -8,8 +8,9 @@
 
 	import { getUsage } from '$lib/apis';
 	import { userSignOut } from '$lib/apis/auths';
+	import { getBalance } from '$lib/apis/billing';
 
-	import { showSettings, mobile, showSidebar, showShortcuts, user } from '$lib/stores';
+	import { showSettings, mobile, showSidebar, showShortcuts, user, balance } from '$lib/stores';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
@@ -21,6 +22,7 @@
 	import Code from '$lib/components/icons/Code.svelte';
 	import UserGroup from '$lib/components/icons/UserGroup.svelte';
 	import SignOut from '$lib/components/icons/SignOut.svelte';
+	import BalanceDisplay from '$lib/components/billing/BalanceDisplay.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -44,8 +46,18 @@
 		}
 	};
 
+	const loadBalance = async () => {
+		try {
+			const balanceInfo = await getBalance(localStorage.token);
+			balance.set(balanceInfo);
+		} catch (error) {
+			console.error('Error fetching balance:', error);
+		}
+	};
+
 	$: if (show) {
 		getUsageInfo();
+		loadBalance();
 	}
 </script>
 
@@ -70,6 +82,47 @@
 			align="start"
 			transition={(e) => fade(e, { duration: 100 })}
 		>
+			<!-- 余额显示 -->
+			<div class="px-2 py-2">
+				<BalanceDisplay compact={true} />
+			</div>
+
+			<hr class="border-gray-50 dark:border-gray-800 my-1 p-0" />
+
+			<!-- 计费中心入口 -->
+			<DropdownMenu.Item
+				as="a"
+				href="/billing"
+				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
+				on:click={async () => {
+					show = false;
+					if ($mobile) {
+						await tick();
+						showSidebar.set(false);
+					}
+				}}
+			>
+				<div class="self-center mr-3">
+					<svg
+						class="w-5 h-5"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+						xmlns="http://www.w3.org/2000/svg"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="1.5"
+							d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+						/>
+					</svg>
+				</div>
+				<div class="self-center truncate">{$i18n.t('计费中心')}</div>
+			</DropdownMenu.Item>
+
+			<hr class="border-gray-50 dark:border-gray-800 my-1 p-0" />
+
 			<DropdownMenu.Item
 				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
 				on:click={async () => {

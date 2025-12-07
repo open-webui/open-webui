@@ -94,6 +94,9 @@ export const currentChatPage = writable(1);
 export const isLastActiveTab = writable(true);
 export const playingNotificationSound = writable(false);
 
+// Billing
+export { balance, billingLogs, billingStats, isLowBalance, isFrozen, formatCurrency, formatDate } from './billing';
+
 export type Model = OpenAIModel | OllamaModel;
 
 type BaseModel = {

@@ -21,6 +21,9 @@
 	import EditUserModal from '$lib/components/admin/Users/UserList/EditUserModal.svelte';
 	import UserChatsModal from '$lib/components/admin/Users/UserList/UserChatsModal.svelte';
 	import AddUserModal from '$lib/components/admin/Users/UserList/AddUserModal.svelte';
+	import BalanceModal from '$lib/components/admin/Users/UserList/BalanceModal.svelte';
+	import RechargeHistoryModal from '$lib/components/admin/Users/UserList/RechargeHistoryModal.svelte';
+	import UserBalanceDetailModal from '$lib/components/admin/Users/UserList/UserBalanceDetailModal.svelte';
 
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import RoleUpdateConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -52,6 +55,10 @@
 
 	let showUserChatsModal = false;
 	let showEditUserModal = false;
+	let showBalanceModal = false;
+	let showRechargeHistoryModal = false;
+	let showBalanceDetailModal = false;
+	let balanceOperation = 'recharge'; // 'recharge' or 'deduct'
 
 	const deleteUserHandler = async (id) => {
 		const res = await deleteUserById(localStorage.token, id).catch((error) => {
@@ -132,6 +139,36 @@
 
 {#if selectedUser}
 	<UserChatsModal bind:show={showUserChatsModal} user={selectedUser} />
+{/if}
+
+{#if selectedUser}
+	<BalanceModal
+		bind:show={showBalanceModal}
+		selectedUser={selectedUser}
+		bind:operation={balanceOperation}
+		on:save={() => {
+			getUserList();
+		}}
+	/>
+{/if}
+
+{#if selectedUser}
+	<RechargeHistoryModal bind:show={showRechargeHistoryModal} selectedUser={selectedUser} />
+{/if}
+
+{#if selectedUser}
+	<UserBalanceDetailModal
+		bind:show={showBalanceDetailModal}
+		selectedUser={selectedUser}
+		onRecharge={() => {
+			showBalanceModal = true;
+			balanceOperation = 'recharge';
+		}}
+		onDeduct={() => {
+			showBalanceModal = true;
+			balanceOperation = 'deduct';
+		}}
+	/>
 {/if}
 
 {#if ($config?.license_metadata?.seats ?? null) !== null && total && total > $config?.license_metadata?.seats}
@@ -296,6 +333,30 @@
 					<th
 						scope="col"
 						class="px-2.5 py-2 cursor-pointer select-none"
+						on:click={() => setSortKey('balance')}
+					>
+						<div class="flex gap-1.5 items-center">
+							{$i18n.t('余额')}
+
+							{#if orderBy === 'balance'}
+								<span class="font-normal"
+									>{#if direction === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
+					</th>
+
+					<th
+						scope="col"
+						class="px-2.5 py-2 cursor-pointer select-none"
 						on:click={() => setSortKey('last_active_at')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -364,8 +425,8 @@
 								<img
 									class="rounded-full w-6 h-6 object-cover mr-2.5 flex-shrink-0"
 									src={user?.profile_image_url?.startsWith(WEBUI_BASE_URL) ||
-									user.profile_image_url.startsWith('https://www.gravatar.com/avatar/') ||
-									user.profile_image_url.startsWith('data:')
+									user?.profile_image_url?.startsWith('https://www.gravatar.com/avatar/') ||
+									user?.profile_image_url?.startsWith('data:')
 										? user.profile_image_url
 										: `${WEBUI_BASE_URL}/user.png`}
 									alt="user"
@@ -375,6 +436,29 @@
 							</div>
 						</td>
 						<td class=" px-3 py-1"> {user.email} </td>
+
+						<td class="px-3 py-1 min-w-[8rem] w-32">
+							<div class="flex items-center gap-2">
+								{#if user.billing_status === 'frozen'}
+									<span class="text-xs px-1.5 py-0.5 rounded-full w-fit bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+										{$i18n.t('冻结')}
+									</span>
+								{:else}
+									<span class="text-xs px-1.5 py-0.5 rounded-full w-fit bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+										{$i18n.t('正常')}
+									</span>
+								{/if}
+								<button
+									class="font-medium hover:text-blue-600 dark:hover:text-blue-400 transition cursor-pointer"
+									on:click={() => {
+										selectedUser = user;
+										showBalanceDetailModal = true;
+									}}
+								>
+									¥{(Number(user.balance || 0) / 10000).toFixed(2)}
+								</button>
+							</div>
+						</td>
 
 						<td class=" px-3 py-1">
 							{dayjs(user.last_active_at * 1000).fromNow()}
