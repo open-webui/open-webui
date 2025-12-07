@@ -40,14 +40,14 @@ class RechargeRequest(BaseModel):
     """充值请求"""
 
     user_id: str = Field(..., description="用户ID")
-    amount: Decimal = Field(..., gt=0, description="充值金额（元）")
+    amount: int = Field(..., ne=0, description="充值/扣费金额（毫），1元 = 10000毫，正数充值，负数扣费")
     remark: str = Field(default="", description="备注")
 
 
 class RechargeResponse(BaseModel):
     """充值响应"""
 
-    balance: float = Field(..., description="充值后余额（元）")
+    balance: float = Field(..., description="充值后余额（毫），1元 = 10000毫")
     status: str = Field(..., description="账户状态")
 
 
