@@ -775,6 +775,22 @@
 								<Switch bind:state={webConfig.ENABLE_WEB_LOADER_SSL_VERIFICATION} />
 							</div>
 						</div>
+						<div class="mt-2">
+							<div class=" self-center text-xs font-medium mb-1">
+								{$i18n.t('Safe WebLoader Timeout (s)')}
+							</div>
+
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										placeholder={$i18n.t('Enter Safe Webloader Timeout')}
+										bind:value={webConfig.SAFE_WEBLOADER_TIMEOUT}
+										autocomplete="off"
+									/>
+								</div>
+							</div>
+						</div>						
 					{:else if webConfig.WEB_LOADER_ENGINE === 'playwright'}
 						<div class="mb-2.5 flex w-full flex-col">
 							<div>

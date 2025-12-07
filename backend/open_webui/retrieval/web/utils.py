@@ -40,6 +40,7 @@ from open_webui.config import (
     EXTERNAL_WEB_LOADER_URL,
     EXTERNAL_WEB_LOADER_API_KEY,
     WEB_FETCH_FILTER_LIST,
+    SAFE_WEBLOADER_TIMEOUT,
 )
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.utils.misc import is_string_allowed
@@ -674,6 +675,9 @@ def get_web_loader(
 
     if WEB_LOADER_ENGINE.value == "" or WEB_LOADER_ENGINE.value == "safe_web":
         WebLoaderClass = SafeWebBaseLoader
+        timeout = SAFE_WEBLOADER_TIMEOUT.value
+        requests_kwargs = {"timeout": timeout}
+        web_loader_args["requests_kwargs"] = requests_kwargs
     if WEB_LOADER_ENGINE.value == "playwright":
         WebLoaderClass = SafePlaywrightURLLoader
         web_loader_args["playwright_timeout"] = PLAYWRIGHT_TIMEOUT.value

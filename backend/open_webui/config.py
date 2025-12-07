@@ -3007,6 +3007,13 @@ WEB_SEARCH_TRUST_ENV = PersistentConfig(
     os.getenv("WEB_SEARCH_TRUST_ENV", "False").lower() == "true",
 )
 
+SAFE_WEBLOADER_TIMEOUT = PersistentConfig(
+    "SAFE_WEBLOADER_TIMEOUT",
+    "rag.web.loader.safe_webloader_timeout",
+    float(
+        os.environ.get("SAFE_WEBLOADER_TIMEOUT", "10")
+    ),  # timeout in seconds (see requests.get)
+)
 
 OLLAMA_CLOUD_WEB_SEARCH_API_KEY = PersistentConfig(
     "OLLAMA_CLOUD_WEB_SEARCH_API_KEY",
