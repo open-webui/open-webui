@@ -120,11 +120,23 @@ def calculate_cost(
 
     # 2. 计算费用（毫）
     # 公式: (tokens * price_per_million) / 1000000
-    input_cost = (prompt_tokens * input_price) // 1000000
-    output_cost = (completion_tokens * output_price) // 1000000
-    total_cost = input_cost + output_cost
+    # 使用整数计算，先相加再向上取整，避免浮点数精度问题和重复向上取整
 
-    return int(total_cost)
+    # 计算原始费用（未除以 1000000）
+    input_cost_raw = prompt_tokens * input_price
+    output_cost_raw = completion_tokens * output_price
+    total_cost_raw = input_cost_raw + output_cost_raw
+
+    # 如果有 token 消耗
+    if total_cost_raw > 0:
+        # 向上取整: ceil(a/b) = (a + b - 1) // b
+        total_cost = (total_cost_raw + 999999) // 1000000
+        # 如果计算结果 < 1 毫，至少扣 1 毫
+        total_cost = max(1, total_cost)
+    else:
+        total_cost = 0
+
+    return total_cost
 
 
 def deduct_balance(

@@ -207,9 +207,17 @@
 										<span>实际消费:</span>
 										<span class="font-mono">{formatCurrency(log.cost, true)}</span>
 									</div>
-									<div class="flex justify-between text-green-600 dark:text-green-400">
-										<span>退款金额:</span>
-										<span class="font-mono">-{formatCurrency(log.refundAmount, true)}</span>
+									<div class="flex justify-between" class:text-green-600={log.refundAmount > 0} class:text-red-600={log.refundAmount < 0} class:dark:text-green-400={log.refundAmount > 0} class:dark:text-red-400={log.refundAmount < 0}>
+										<span>{log.refundAmount >= 0 ? '退款金额' : '补扣金额'}:</span>
+										<span class="font-mono">
+											{#if log.refundAmount > 0}
+												+{formatCurrency(log.refundAmount, true)}
+											{:else if log.refundAmount < 0}
+												{formatCurrency(log.refundAmount, true)}
+											{:else}
+												{formatCurrency(0, true)}
+											{/if}
+										</span>
 									</div>
 									{#if log.precharge_id}
 										<div class="flex justify-between pt-1 mt-1 border-t border-gray-200 dark:border-gray-700">

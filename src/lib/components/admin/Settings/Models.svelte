@@ -15,6 +15,7 @@
 		updateModelById,
 		importModels
 	} from '$lib/apis/models';
+	import { listModelPricing } from '$lib/apis/billing';
 	import { copyToClipboard } from '$lib/utils';
 	import { page } from '$app/stores';
 
@@ -34,6 +35,7 @@
 	import Download from '$lib/components/icons/Download.svelte';
 	import ManageModelsModal from './Models/ManageModelsModal.svelte';
 	import ModelMenu from '$lib/components/admin/Settings/Models/ModelMenu.svelte';
+	import ModelPricingModal from '$lib/components/admin/Settings/Models/ModelPricingModal.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import Eye from '$lib/components/icons/Eye.svelte';
@@ -55,6 +57,11 @@
 
 	let showConfigModal = false;
 	let showManageModal = false;
+
+	// 定价相关
+	let modelPricings = {};
+	let showPricingModal = false;
+	let selectedModelForPricing = null;
 
 	$: if (models) {
 		filteredModels = models
@@ -84,13 +91,27 @@
 		workspaceModels = await getBaseModels(localStorage.token);
 		baseModels = await getModels(localStorage.token, null, true);
 
+		// 加载所有模型定价
+		try {
+			const pricingList = await listModelPricing();
+			modelPricings = pricingList.reduce((acc, p) => {
+				acc[p.model_id] = p;
+				return acc;
+			}, {});
+		} catch (error) {
+			console.error('加载定价失败:', error);
+			modelPricings = {};
+		}
+
 		models = baseModels.map((m) => {
 			const workspaceModel = workspaceModels.find((wm) => wm.id === m.id);
+			const pricing = modelPricings[m.id]; // 获取定价
 
 			if (workspaceModel) {
 				return {
 					...m,
-					...workspaceModel
+					...workspaceModel,
+					pricing // 附加定价信息
 				};
 			} else {
 				return {
@@ -98,7 +119,8 @@
 					id: m.id,
 					name: m.name,
 
-					is_active: true
+					is_active: true,
+					pricing // 附加定价信息
 				};
 			}
 		});
@@ -245,6 +267,14 @@
 
 <ConfigureModelsModal bind:show={showConfigModal} initHandler={init} />
 <ManageModelsModal bind:show={showManageModal} />
+<ModelPricingModal
+	bind:show={showPricingModal}
+	model={selectedModelForPricing}
+	pricing={selectedModelForPricing?.pricing || modelPricings[selectedModelForPricing?.id]}
+	on:save={async () => {
+		await init(); // 重新加载数据
+	}}
+/>
 
 {#if models !== null}
 	{#if selectedModelId === null}
@@ -365,6 +395,63 @@
 												: model.id}
 									</span>
 								</div>
+
+								<!-- 定价信息 -->
+								{#if model.pricing || modelPricings[model.id]}
+									{@const pricing = model.pricing || modelPricings[model.id]}
+									<div class="flex items-center gap-2 text-xs mt-1.5">
+										<!-- 定价显示 -->
+										<span class="text-gray-600 dark:text-gray-400">
+											<span class="text-gray-400 dark:text-gray-500">入</span>
+											<span class="font-mono">¥{(pricing.input_price / 10000).toFixed(2)}</span>
+											<span class="mx-1.5 text-gray-300 dark:text-gray-600">|</span>
+											<span class="text-gray-400 dark:text-gray-500">出</span>
+											<span class="font-mono">¥{(pricing.output_price / 10000).toFixed(2)}</span>
+											<span class="text-gray-400 dark:text-gray-500 ml-0.5">/M</span>
+										</span>
+
+										<!-- 编辑按钮（仅管理员） -->
+										{#if $user?.role === 'admin'}
+											<button
+												class="text-blue-600 dark:text-blue-400 hover:underline"
+												on:click|stopPropagation={() => {
+													selectedModelForPricing = model;
+													showPricingModal = true;
+												}}
+											>
+												{$i18n.t('编辑')}
+											</button>
+										{/if}
+									</div>
+								{:else}
+									<!-- 默认定价 -->
+									<div class="flex items-center gap-2 text-xs mt-1.5">
+										<span class="text-gray-400 dark:text-gray-500">
+											<span>入</span>
+											<span class="font-mono">¥1.00</span>
+											<span class="mx-1.5 text-gray-300 dark:text-gray-600">|</span>
+											<span>出</span>
+											<span class="font-mono">¥2.00</span>
+											<span class="ml-0.5">/M</span>
+										</span>
+										<span class="text-orange-500 dark:text-orange-400 text-[10px] px-1 py-0.5 bg-orange-100 dark:bg-orange-900/30 rounded">
+											{$i18n.t('默认')}
+										</span>
+
+										<!-- 编辑按钮（仅管理员） -->
+										{#if $user?.role === 'admin'}
+											<button
+												class="text-blue-600 dark:text-blue-400 hover:underline"
+												on:click|stopPropagation={() => {
+													selectedModelForPricing = model;
+													showPricingModal = true;
+												}}
+											>
+												{$i18n.t('设置')}
+											</button>
+										{/if}
+									</div>
+								{/if}
 							</div>
 						</button>
 						<div class="flex flex-row gap-0.5 items-center self-center">
