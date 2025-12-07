@@ -55,7 +55,7 @@ dependencies = [
     "langchain-community==0.3.29",
 
     "fake-useragent==2.2.0",
-    "chromadb==1.0.20",
+    "chromadb==1.3.5",
     "opensearch-py==2.8.0",
     "PyMySQL==1.1.1",
     "boto3==1.41.5",
@@ -146,9 +146,9 @@ all = [
     "playwright==1.56.0",
     "elasticsearch==9.1.0",
 
-    "qdrant-client==1.14.3",
+    "qdrant-client==1.16.1",
     "weaviate-client==4.17.0",
-    "pymilvus==2.6.4",
+    "pymilvus==2.6.5",
     "pinecone==6.0.2",
     "oracledb==3.2.0",
     "colbert-ai==0.2.21",

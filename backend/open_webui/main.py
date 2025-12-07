@@ -1033,6 +1033,7 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
         if app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
         else None
     ),
+    enable_async=app.state.config.ENABLE_ASYNC_EMBEDDING,
 )
 
 app.state.RERANKING_FUNCTION = get_reranking_function(
