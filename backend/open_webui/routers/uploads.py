@@ -108,24 +108,6 @@ def _get_user_tenant_bucket(user) -> Optional[str]:
     return tenant.s3_bucket if tenant else None
 
 
-def _has_txt_documents(s3_client, tenant: str, user: Optional[str] = None) -> bool:
-    # Check presence of any .txt under tenant/txt/ or tenant/users/<user>/txt/
-    if user:
-        prefix = f"{tenant.rstrip('/')}/users/{user}/txt/"
-    else:
-        prefix = f"{tenant.rstrip('/')}/txt/"
-    try:
-        resp = s3_client.list_objects_v2(Bucket=S3_BUCKET_NAME, Prefix=prefix, MaxKeys=1)
-    except ClientError as exc:
-        log.exception("Failed to check S3 for txt documents: %s", exc)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to inspect S3 for text documents.",
-        )
-    contents = resp.get("Contents", []) or []
-    return any(obj.get("Key", "").lower().endswith(".txt") for obj in contents)
-
-
 class UploadResponse(BaseModel):
     bucket: str
     key: str
@@ -524,13 +506,6 @@ async def rebuild_tenant(
                 detail="Not authorized to rebuild this tenant.",
             )
 
-    s3_client = _get_s3_client()
-    if not _has_txt_documents(s3_client, form_data.tenant):
-        return {
-            "status": "skipped",
-            "reason": f"No text documents to embed for {form_data.tenant}",
-        }
-
     payload = {
         "task": "rebuild-tenant",
         "bucket": S3_BUCKET_NAME,
@@ -593,13 +568,6 @@ async def rebuild_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authorized to rebuild this user.",
         )
-
-    s3_client = _get_s3_client()
-    if not _has_txt_documents(s3_client, form_data.tenant, form_data.user):
-        return {
-            "status": "skipped",
-            "reason": f"No text documents to embed for {form_data.tenant}/users/{form_data.user}",
-        }
 
     payload = {
         "task": "rebuild-user",
