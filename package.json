@@ -94,6 +94,7 @@
 		"crc-32": "^1.2.2",
 		"dayjs": "^1.11.10",
 		"dompurify": "^3.2.6",
+		"echarts": "^6.0.0",
 		"eventsource-parser": "^1.1.2",
 		"file-saver": "^2.0.5",
 		"focus-trap": "^7.6.4",
