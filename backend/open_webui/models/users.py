@@ -11,7 +11,7 @@ from open_webui.utils.misc import throttle
 
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, Date
+from sqlalchemy import BigInteger, Column, String, Text, Date, Integer
 from sqlalchemy import or_
 
 import datetime
@@ -48,6 +48,11 @@ class User(Base):
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
 
+    # 计费相关字段（以分为单位存储）
+    balance = Column(Integer, default=0, nullable=False)  # 账户余额（分）
+    total_consumed = Column(Integer, default=0, nullable=False)  # 累计消费（分）
+    billing_status = Column(String(20), default="active", nullable=False)  # active/frozen
+
 
 class UserSettings(BaseModel):
     ui: Optional[dict] = {}
@@ -78,6 +83,11 @@ class UserModel(BaseModel):
     last_active_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
+
+    # 计费相关字段（以分为单位）
+    balance: Optional[int] = 0
+    total_consumed: Optional[int] = 0
+    billing_status: Optional[str] = "active"
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -272,6 +282,11 @@ class UsersTable:
                         query = query.order_by(User.role.asc())
                     else:
                         query = query.order_by(User.role.desc())
+                elif order_by == "balance":
+                    if direction == "asc":
+                        query = query.order_by(User.balance.asc())
+                    else:
+                        query = query.order_by(User.balance.desc())
 
             else:
                 query = query.order_by(User.created_at.desc())
