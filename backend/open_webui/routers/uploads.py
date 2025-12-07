@@ -155,7 +155,7 @@ def list_tenants(admin=Depends(get_admin_user)):
     return [TenantInfo(**tenant.model_dump()) for tenant in tenants]
 
 
-@router.post("/", response_model=UploadResponse)
+@router.post("", response_model=UploadResponse)
 async def upload_document(
     file: UploadFile = File(...),
     visibility: str = Form("public"),
