@@ -87,6 +87,7 @@ class DailyStats(BaseModel):
 
     date: str
     cost: float
+    by_model: dict[str, float] = {}  # 按模型分组的消费
 
 
 class ModelStats(BaseModel):
@@ -102,6 +103,7 @@ class StatsResponse(BaseModel):
 
     daily: list[DailyStats]
     by_model: list[ModelStats]
+    models: list[str] = []  # 所有模型列表（用于前端生成堆叠图系列）
 
 
 ####################
@@ -189,40 +191,100 @@ async def get_logs(
 
 
 @router.get("/stats", response_model=StatsResponse)
-async def get_stats(user=Depends(get_verified_user), days: int = 7):
+async def get_stats(
+    user=Depends(get_verified_user),
+    days: int = 7,
+    granularity: str = "day"
+):
     """
     查询统计报表
 
-    按日统计和按模型统计
+    Args:
+        days: 查询天数
+        granularity: 时间粒度 (hour/day/month)
 
     需要登录
     """
     try:
         from sqlalchemy import func
+        from datetime import datetime, timedelta
+        from dateutil.relativedelta import relativedelta
 
         with get_db() as db:
-            # cutoff: 纳秒级时间戳
+            now = datetime.now()
             cutoff = int((time.time() - days * 86400) * 1000000000)
 
-            # 按日统计
-            daily_query = (
+            # 根据粒度选择分组方式和生成完整时间序列（包含当前时段）
+            if granularity == "hour":
+                trunc_unit = "hour"
+                date_format = "%H:00"
+                # 生成过去24小时的完整序列（包含当前小时）
+                all_periods = []
+                for i in range(23, -1, -1):
+                    dt = now - timedelta(hours=i)
+                    all_periods.append(dt.replace(minute=0, second=0, microsecond=0))
+            elif granularity == "month":
+                trunc_unit = "month"
+                date_format = "%Y-%m"
+                # 生成过去12个月的完整序列（包含当前月）
+                all_periods = []
+                for i in range(11, -1, -1):
+                    dt = now - relativedelta(months=i)
+                    all_periods.append(dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0))
+            else:
+                # 默认按天分组
+                trunc_unit = "day"
+                date_format = "%m-%d"
+                # 生成过去N天的完整序列（包含今天）
+                all_periods = []
+                for i in range(days - 1, -1, -1):
+                    dt = now - timedelta(days=i)
+                    all_periods.append(dt.replace(hour=0, minute=0, second=0, microsecond=0))
+
+            # 按时间+模型分组统计（用于堆叠图）
+            daily_by_model_query = (
                 db.query(
                     func.date_trunc(
-                        "day",
-                        # created_at 是纳秒级，需要除以 1000000000 转换为秒级
+                        trunc_unit,
                         func.to_timestamp(BillingLog.created_at / 1000000000)
                     ).label("date"),
+                    BillingLog.model_id,
                     func.sum(BillingLog.total_cost).label("total"),
                 )
                 .filter(
                     BillingLog.user_id == user.id,
                     BillingLog.created_at >= cutoff,
-                    BillingLog.log_type == "deduct",
+                    BillingLog.log_type.in_(["deduct", "settle"]),
                 )
-                .group_by("date")
+                .group_by("date", BillingLog.model_id)
                 .order_by("date")
                 .all()
             )
+
+            # 构建数据结构: {date_key: {model_id: cost, ...}, ...}
+            data_dict: dict[str, dict[str, float]] = {}
+            all_models: set[str] = set()
+            for d in daily_by_model_query:
+                if d[0] and d[1]:
+                    date_key = d[0].strftime(date_format)
+                    model_id = d[1]
+                    cost = d[2] / 10000 if d[2] else 0
+                    all_models.add(model_id)
+                    if date_key not in data_dict:
+                        data_dict[date_key] = {}
+                    data_dict[date_key][model_id] = cost
+
+            log.debug(f"统计查询: granularity={granularity}, days={days}, 记录数={len(daily_by_model_query)}, 模型数={len(all_models)}")
+
+            # 填充完整时间序列
+            daily_stats = []
+            for period in all_periods:
+                key = period.strftime(date_format)
+                by_model = data_dict.get(key, {})
+                total_cost = sum(by_model.values())
+                daily_stats.append(DailyStats(date=key, cost=total_cost, by_model=by_model))
+
+            log.debug(f"生成时间序列: 数量={len(daily_stats)}, 模型列表={list(all_models)}")
 
             # 按模型统计
             by_model_query = (
@@ -234,23 +296,20 @@ async def get_stats(user=Depends(get_verified_user), days: int = 7):
                 .filter(
                     BillingLog.user_id == user.id,
                     BillingLog.created_at >= cutoff,
-                    BillingLog.log_type == "deduct",
+                    BillingLog.log_type.in_(["deduct", "settle"]),
                 )
                 .group_by(BillingLog.model_id)
                 .order_by(func.sum(BillingLog.total_cost).desc())
                 .all()
             )
 
-            # cost 单位转换：毫 → 元（除以 10000）
             return StatsResponse(
-                daily=[
-                    DailyStats(date=str(d[0].date()), cost=d[1] / 10000 if d[1] else 0)
-                    for d in daily_query
-                ],
+                daily=daily_stats,
                 by_model=[
                     ModelStats(model=m[0], cost=m[1] / 10000 if m[1] else 0, count=m[2])
                     for m in by_model_query
                 ],
+                models=sorted(list(all_models)),  # 按字母排序的模型列表
             )
     except Exception as e:
         log.error(f"查询统计失败: {e}")

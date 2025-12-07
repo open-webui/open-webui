@@ -155,6 +155,69 @@ def remove_system_message(messages: list[dict]) -> list[dict]:
     return [message for message in messages if message["role"] != "system"]
 
 
+def merge_consecutive_messages(messages: list[dict]) -> list[dict]:
+    """
+    合并连续的同角色消息，避免 LLM API 报错
+
+    某些 LLM API（如 OpenAI）不允许连续的 assistant 或 user 消息。
+    此函数将连续的同角色消息合并为一条，并过滤空内容的非 system 消息。
+
+    :param messages: 消息列表
+    :return: 合并后的消息列表
+    """
+    if not messages:
+        return messages
+
+    # 先过滤掉空内容的非 system 消息
+    def is_valid_message(msg: dict) -> bool:
+        role = msg.get("role", "")
+        content = msg.get("content", "")
+
+        # system 消息保留
+        if role == "system":
+            return True
+
+        # 检查内容是否为空
+        if isinstance(content, list):
+            # 多模态消息：检查是否有非空内容
+            return any(
+                item.get("text", "").strip() or item.get("image_url")
+                for item in content
+                if isinstance(item, dict)
+            )
+        else:
+            # 文本消息：检查是否为空字符串
+            return bool(str(content).strip())
+
+    filtered = [msg for msg in messages if is_valid_message(msg)]
+
+    # 合并连续的同角色消息
+    merged = []
+    for msg in filtered:
+        if not merged:
+            merged.append({**msg})
+            continue
+
+        last = merged[-1]
+        # 如果角色相同（且不是 system），合并内容
+        if last.get("role") == msg.get("role") and last.get("role") != "system":
+            # 获取内容
+            last_content = last.get("content", "")
+            msg_content = msg.get("content", "")
+
+            # 处理 content 为 list 的情况（多模态消息）
+            if isinstance(last_content, list) or isinstance(msg_content, list):
+                # 多模态消息不合并，保持原样
+                merged.append({**msg})
+            else:
+                # 文本消息合并
+                last["content"] = f"{last_content}\n\n{msg_content}".strip()
+        else:
+            merged.append({**msg})
+
+    return merged
+
+
 def pop_system_message(messages: list[dict]) -> tuple[Optional[dict], list[dict]]:
     return get_system_message(messages), remove_system_message(messages)
 

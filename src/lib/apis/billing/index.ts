@@ -23,6 +23,7 @@ export interface BillingLog {
 export interface DailyStats {
 	date: string;
 	cost: number;
+	by_model: Record<string, number>;  // 按模型分组的消费
 }
 
 export interface ModelStats {
@@ -34,6 +35,7 @@ export interface ModelStats {
 export interface BillingStats {
 	daily: DailyStats[];
 	by_model: ModelStats[];
+	models: string[];  // 所有模型列表（用于堆叠图）
 }
 
 export interface ModelPricing {
@@ -133,11 +135,12 @@ export const getBillingLogs = async (
  */
 export const getBillingStats = async (
 	token: string,
-	days: number = 7
+	days: number = 7,
+	granularity: string = 'day'
 ): Promise<BillingStats> => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/billing/stats?days=${days}`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/billing/stats?days=${days}&granularity=${granularity}`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',

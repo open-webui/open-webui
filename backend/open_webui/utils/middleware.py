@@ -91,6 +91,7 @@ from open_webui.utils.misc import (
     prepend_to_first_user_message_content,
     convert_logit_bias_input_to_json,
     get_content_from_message,
+    merge_consecutive_messages,
 )
 from open_webui.utils.tools import get_tools
 from open_webui.utils.plugin import load_function_module_by_id
@@ -1183,6 +1184,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         ordered_messages = [summary_system_message, *ordered_messages]
 
     if ordered_messages:
+        # 合并连续的同角色消息，避免 LLM API 报错
+        ordered_messages = merge_consecutive_messages(ordered_messages)
         form_data["messages"] = ordered_messages
 
     # === 2. 处理 System Prompt 变量替换 ===
