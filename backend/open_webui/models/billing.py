@@ -26,8 +26,8 @@ class ModelPricing(Base):
 
     id = Column(String, primary_key=True)
     model_id = Column(String, unique=True, nullable=False)  # 模型标识，如 "gpt-4o"
-    input_price = Column(Integer, nullable=False)  # 输入价格（分/1k token）
-    output_price = Column(Integer, nullable=False)  # 输出价格（分/1k token）
+    input_price = Column(Integer, nullable=False)  # 输入价格（毫/1k token，1元=10000毫）
+    output_price = Column(Integer, nullable=False)  # 输出价格（毫/1k token，1元=10000毫）
     enabled = Column(Boolean, default=True, nullable=False)  # 是否启用
     created_at = Column(BigInteger, nullable=False)
     updated_at = Column(BigInteger, nullable=False)
@@ -43,8 +43,8 @@ class BillingLog(Base):
     model_id = Column(String, nullable=False)
     prompt_tokens = Column(Integer, default=0)
     completion_tokens = Column(Integer, default=0)
-    total_cost = Column(Integer, nullable=False)  # 本次费用（分）
-    balance_after = Column(Integer)  # 扣费后余额（分）
+    total_cost = Column(Integer, nullable=False)  # 本次费用（毫，1元=10000毫）
+    balance_after = Column(Integer)  # 扣费后余额（毫，1元=10000毫）
     log_type = Column(String(20), default="deduct")  # deduct/refund/precharge/settle
     created_at = Column(BigInteger, nullable=False, index=True)
 
@@ -52,7 +52,7 @@ class BillingLog(Base):
     precharge_id = Column(String, nullable=True, index=True)  # 预扣费事务ID
     status = Column(String(20), nullable=True, default="settled")  # precharge | settled | refunded
     estimated_tokens = Column(Integer, nullable=True)  # 预估tokens总数
-    refund_amount = Column(Integer, nullable=True)  # 退款金额（毫）
+    refund_amount = Column(Integer, nullable=True)  # 退款金额（毫，1元=10000毫）
 
 
 class RechargeLog(Base):
@@ -62,7 +62,7 @@ class RechargeLog(Base):
 
     id = Column(String, primary_key=True)
     user_id = Column(String, nullable=False, index=True)
-    amount = Column(Integer, nullable=False)  # 充值金额（分）
+    amount = Column(Integer, nullable=False)  # 充值金额（毫，1元=10000毫）
     operator_id = Column(String, nullable=False)  # 操作员ID
     remark = Column(Text)  # 备注
     created_at = Column(BigInteger, nullable=False)
@@ -74,12 +74,12 @@ class RechargeLog(Base):
 
 
 class ModelPricingModel(BaseModel):
-    """模型定价 Pydantic 模型（以分为单位）"""
+    """模型定价 Pydantic 模型（以毫为单位，1元=10000毫）"""
 
     id: str
     model_id: str
-    input_price: int  # 分/1k tokens
-    output_price: int  # 分/1k tokens
+    input_price: int  # 毫/1k tokens
+    output_price: int  # 毫/1k tokens
     enabled: bool
     created_at: int
     updated_at: int
@@ -88,15 +88,15 @@ class ModelPricingModel(BaseModel):
 
 
 class BillingLogModel(BaseModel):
-    """计费日志 Pydantic 模型（以分为单位）"""
+    """计费日志 Pydantic 模型（以毫为单位，1元=10000毫）"""
 
     id: str
     user_id: str
     model_id: str
     prompt_tokens: int
     completion_tokens: int
-    total_cost: int  # 分
-    balance_after: Optional[int]  # 分
+    total_cost: int  # 毫
+    balance_after: Optional[int]  # 毫
     log_type: str
     created_at: int
 
@@ -104,17 +104,17 @@ class BillingLogModel(BaseModel):
     precharge_id: Optional[str] = None
     status: Optional[str] = "settled"
     estimated_tokens: Optional[int] = None
-    refund_amount: Optional[int] = None
+    refund_amount: Optional[int] = None  # 毫
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class RechargeLogModel(BaseModel):
-    """充值日志 Pydantic 模型（以分为单位）"""
+    """充值日志 Pydantic 模型（以毫为单位，1元=10000毫）"""
 
     id: str
     user_id: str
-    amount: int  # 分
+    amount: int  # 毫
     operator_id: str
     remark: Optional[str]
     created_at: int

@@ -48,9 +48,9 @@ class User(Base):
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
 
-    # 计费相关字段（以分为单位存储）
-    balance = Column(Integer, default=0, nullable=False)  # 账户余额（分）
-    total_consumed = Column(Integer, default=0, nullable=False)  # 累计消费（分）
+    # 计费相关字段（以毫为单位存储，1元=10000毫）
+    balance = Column(Integer, default=0, nullable=False)  # 账户余额（毫，1元=10000毫）
+    total_consumed = Column(Integer, default=0, nullable=False)  # 累计消费（毫，1元=10000毫）
     billing_status = Column(String(20), default="active", nullable=False)  # active/frozen
 
 
@@ -84,9 +84,9 @@ class UserModel(BaseModel):
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
-    # 计费相关字段（以分为单位）
-    balance: Optional[int] = 0
-    total_consumed: Optional[int] = 0
+    # 计费相关字段（以毫为单位，1元=10000毫）
+    balance: Optional[int] = 0  # 毫
+    total_consumed: Optional[int] = 0  # 毫
     billing_status: Optional[str] = "active"
 
     model_config = ConfigDict(from_attributes=True)
