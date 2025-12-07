@@ -1025,7 +1025,47 @@ async def generate_chat_completion(
 
     payload = json.dumps(payload)  # 序列化为 JSON 字符串
 
-    # === 11. 初始化请求状态变量 ===
+    # === 11. 预扣费：流式请求启动前 ===
+    precharge_id = None
+    estimated_prompt = 0
+    if form_data.get("stream", False):  # 只对流式请求预扣费
+        from open_webui.utils.billing import estimate_prompt_tokens, precharge_balance
+
+        try:
+            # 1. tiktoken预估prompt tokens
+            messages = form_data.get("messages", [])
+            estimated_prompt = estimate_prompt_tokens(messages, model_id)
+
+            # 2. 获取max_tokens参数（默认4096）
+            max_completion = form_data.get("max_completion_tokens") or form_data.get("max_tokens", 4096)
+
+            # 3. 预扣费
+            precharge_id, precharged_cost, balance_after = precharge_balance(
+                user_id=user.id,
+                model_id=model_id,
+                estimated_prompt_tokens=estimated_prompt,
+                max_completion_tokens=max_completion
+            )
+
+            log.info(
+                f"预扣费成功: user={user.id} model={model_id} "
+                f"estimated={estimated_prompt}+{max_completion}tokens "
+                f"cost={precharged_cost / 10000:.4f}元 precharge_id={precharge_id}"
+            )
+        except HTTPException as e:
+            # 余额不足或账户冻结，直接抛出阻止请求
+            raise e
+        except Exception as e:
+            # 预扣费失败（如数据库错误、计费服务异常），降级为后付费
+            log.error(
+                f"预扣费失败，降级为后付费: user={user.id} model={model_id} "
+                f"estimated={estimated_prompt}+{max_completion}tokens "
+                f"error={type(e).__name__}: {str(e)}",
+                exc_info=True  # 打印完整堆栈
+            )
+            precharge_id = None
+
+    # === 12. 初始化请求状态变量 ===
     r = None
     session = None
     streaming = False
@@ -1049,10 +1089,106 @@ async def generate_chat_completion(
         # === 13. 处理响应 ===
         # Check if response is SSE
         if "text/event-stream" in r.headers.get("Content-Type", ""):
-            # 流式响应：直接转发 SSE 流
+            # 流式响应：添加计费包装器
             streaming = True
+
+            # 创建计费包装的流式生成器
+            async def stream_with_billing(
+                user_id: str,
+                model_id: str,
+                stream,
+                precharge_id: Optional[str],
+                estimated_prompt: int = 0
+            ):
+                """
+                流式响应计费包装器：预扣费模式下精确结算
+
+                Args:
+                    precharge_id: 预扣费事务ID（None表示降级为后付费）
+                    estimated_prompt: 预估的prompt tokens（用于fallback）
+                """
+                import asyncio
+                from open_webui.utils.billing import deduct_balance, settle_precharge
+
+                accumulated = {"prompt": 0, "completion": 0}
+                has_usage_data = False
+
+                try:
+                    # 1. 转发流式数据，累积 tokens
+                    async for chunk in stream:
+                        if b"data: " in chunk:
+                            try:
+                                data_str = chunk.decode().replace("data: ", "").strip()
+                                if data_str and data_str != "[DONE]":
+                                    data = json.loads(data_str)
+                                    if "usage" in data:
+                                        has_usage_data = True
+                                        # 修复bug：使用max()避免覆盖
+                                        accumulated["prompt"] = max(
+                                            accumulated["prompt"],
+                                            data["usage"].get("prompt_tokens", 0)
+                                        )
+                                        accumulated["completion"] += data["usage"].get("completion_tokens", 0)
+                            except Exception:
+                                pass
+                        yield chunk
+
+                except asyncio.CancelledError:
+                    # 客户端断开连接（用户取消）
+                    log.info(f"流式请求被取消: user={user_id} model={model_id}")
+                    raise  # 继续抛出，确保finally块执行
+
+                finally:
+                    # 2. 精确结算（无论正常结束还是中断）
+                    try:
+                        if precharge_id:
+                            # === 预扣费模式：精确结算 ===
+
+                            # Fallback：如果没有收到usage，使用预估值
+                            if not has_usage_data or accumulated["prompt"] == 0:
+                                log.warning(f"未收到usage信息，使用预估值: precharge_id={precharge_id}")
+                                accumulated["prompt"] = estimated_prompt
+
+                            # 结算
+                            actual_cost, refund, balance_after = settle_precharge(
+                                precharge_id=precharge_id,
+                                actual_prompt_tokens=accumulated["prompt"],
+                                actual_completion_tokens=accumulated["completion"]
+                            )
+
+                            log.info(
+                                f"结算完成: user={user_id} precharge_id={precharge_id} "
+                                f"actual={accumulated['prompt']}+{accumulated['completion']}tokens "
+                                f"cost={actual_cost / 10000:.4f}元 refund={refund / 10000:.4f}元"
+                            )
+
+                        elif accumulated["prompt"] > 0 or accumulated["completion"] > 0:
+                            # === 降级后付费模式：直接扣费 ===
+                            # 注意：此分支说明预扣费失败，使用后付费降级方案
+                            cost, balance_after = deduct_balance(
+                                user_id=user_id,
+                                model_id=model_id,
+                                prompt_tokens=accumulated["prompt"],
+                                completion_tokens=accumulated["completion"],
+                                log_type="deduct"
+                            )
+                            log.warning(
+                                f"降级后付费扣费（预扣费失败）: user={user_id} model={model_id} "
+                                f"actual={accumulated['prompt']}+{accumulated['completion']}tokens "
+                                f"cost={cost / 10000:.4f}元 balance={balance_after / 10000:.4f}元"
+                            )
+
+                    except Exception as e:
+                        log.error(f"计费结算异常: {e}", exc_info=True)
+
             return StreamingResponse(
-                r.content,
+                stream_with_billing(
+                    user.id,
+                    form_data.get("model", "unknown"),
+                    r.content,
+                    precharge_id,
+                    estimated_prompt
+                ),
                 status_code=r.status,
                 headers=dict(r.headers),
                 background=BackgroundTask(
@@ -1069,10 +1205,53 @@ async def generate_chat_completion(
 
             # 处理错误响应
             if r.status >= 400:
+                # 回滚预扣费（如果已预扣）
+                if precharge_id:
+                    from open_webui.utils.billing import settle_precharge
+                    try:
+                        settle_precharge(precharge_id, 0, 0)  # 全额退款
+                        log.info(f"API错误，预扣费已退款: precharge_id={precharge_id}")
+                    except Exception as e:
+                        log.error(f"预扣费回滚失败: {e}")
+
                 if isinstance(response, (dict, list)):
                     return JSONResponse(status_code=r.status, content=response)
                 else:
                     return PlainTextResponse(status_code=r.status, content=response)
+
+            # === 计费：非流式响应 ===
+            if isinstance(response, dict) and "usage" in response:
+                try:
+                    from open_webui.utils.billing import deduct_balance
+
+                    usage = response["usage"]
+                    cost, balance = deduct_balance(
+                        user_id=user.id,
+                        model_id=form_data.get("model", "unknown"),
+                        prompt_tokens=usage.get("prompt_tokens", 0),
+                        completion_tokens=usage.get("completion_tokens", 0),
+                    )
+                    # 添加计费信息到响应（可选）
+                    response["billing"] = {
+                        "cost": float(cost),
+                        "balance": float(balance),
+                    }
+                    log.info(
+                        f"非流式请求计费成功: user={user.id} model={form_data.get('model')} "
+                        f"tokens={usage.get('prompt_tokens', 0)}+{usage.get('completion_tokens', 0)} "
+                        f"cost={cost / 10000:.4f}元 balance={balance / 10000:.4f}元"
+                    )
+                except HTTPException as e:
+                    # 余额不足等错误直接抛出，中断响应
+                    log.error(f"非流式请求计费失败（业务异常）: {e.detail}")
+                    raise e
+                except Exception as e:
+                    # 其他计费错误仅记录日志，不中断响应
+                    log.error(
+                        f"非流式请求计费异常（系统异常）: user={user.id} model={form_data.get('model')} "
+                        f"error={type(e).__name__}: {str(e)}",
+                        exc_info=True
+                    )
 
             return response  # 成功响应
 
