@@ -1039,6 +1039,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     处理聊天请求的 Payload - 执行 Pipeline、Filter、功能增强和工具注入
 
     这是聊天请求预处理的核心函数，按以下顺序执行：
+    0. Billing Check (计费检查) - 检查用户余额是否充足 [激活]
     1. Pipeline Inlet (管道入口) - 自定义 Python 插件预处理 [已屏蔽]
     2. Filter Inlet (过滤器入口) - 函数过滤器预处理 [已屏蔽]
     3. Chat Memory (记忆) - 注入历史对话记忆 [激活]
@@ -1061,6 +1062,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     - 文件处理与 RAG 检索（向量数据库检索、上下文注入）
 
     当前激活功能：
+    - 计费检查（Billing Check）
     - 模型参数应用
     - System Prompt 变量替换
     - OAuth Token 获取
@@ -1082,6 +1084,22 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             - metadata: 更新后的元数据
             - events: 需要发送给前端的事件列表（如引用来源）
     """
+    # === 0. 计费预检查 ===
+    # 注意：只做预检查，不扣费。实际计费由openai.py负责
+    from fastapi import HTTPException
+    try:
+        from open_webui.utils.billing import check_user_balance_threshold
+
+        # 检查余额（默认阈值0.01元 = 100毫）
+        check_user_balance_threshold(user.id, threshold=100)
+
+    except HTTPException:
+        # 重新抛出业务异常（余额不足/账户冻结）
+        raise
+    except Exception as e:
+        # 其他异常仅记录日志，不阻断请求
+        log.error(f"计费预检查异常: {e}")
+
     # === 1. 应用模型参数到请求 ===
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
@@ -1296,7 +1314,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             files = form_data.get("files", [])
             files.extend(knowledge_files)
             form_data["files"] = files
-        variables = form_data.pop("variables", None)
+
+    # 清理前端元数据参数
+    variables = form_data.pop("variables", None)
 
     # === 10. Pipeline Inlet 处理 - 执行自定义 Python 插件 [已屏蔽] ===
     # Process the form_data through the pipeline
@@ -2311,7 +2331,6 @@ async def process_chat_response(
                 log.debug(f"Error occurred while processing request: {e}")
                 pass
 
-            # 返回处理后的响应（已合并 events 并更新数据库）
             return response
         else:
             # ----------------------------------------
