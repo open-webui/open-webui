@@ -78,6 +78,28 @@ def _build_prefix(tenant_bucket: str, user_id: str, visibility: str) -> str:
     return base
 
 
+def object_exists(s3_client, bucket: str, key: str) -> bool:
+    """
+    Confirm an object exists. Falls back to list when HEAD is forbidden
+    (some buckets allow delete but not head/get).
+    """
+    try:
+        s3_client.head_object(Bucket=bucket, Key=key)
+        return True
+    except ClientError as exc:
+        error_code = exc.response.get("Error", {}).get("Code", "")
+        if error_code in ("404", "NoSuchKey", "NotFound", "NoSuchBucket"):
+            return False
+        if error_code in ("403", "AccessDenied", "Forbidden"):
+            try:
+                resp = s3_client.list_objects_v2(Bucket=bucket, Prefix=key, MaxKeys=1)
+                contents = resp.get("Contents", [])
+                return any(obj.get("Key") == key for obj in contents)
+            except ClientError:
+                return False
+        return True
+
+
 def _get_user_tenant_bucket(user) -> Optional[str]:
     if not getattr(user, "tenant_id", None):
         return None
@@ -114,6 +136,11 @@ class PublicFile(BaseModel):
 class IngestUploadRequest(BaseModel):
     key: str
 
+
+class DeleteUploadRequest(BaseModel):
+    key: str
+
+
 class RebuildTenantRequest(BaseModel):
     tenant: str
 
@@ -128,7 +155,7 @@ def list_tenants(admin=Depends(get_admin_user)):
     return [TenantInfo(**tenant.model_dump()) for tenant in tenants]
 
 
-@router.post("/", response_model=UploadResponse)
+@router.post("", response_model=UploadResponse)
 async def upload_document(
     file: UploadFile = File(...),
     visibility: str = Form("public"),
@@ -325,6 +352,8 @@ def list_files(
                 key = obj.get("Key")
                 if not key or key.endswith("/"):
                     continue
+                if "/txt/" in key:
+                    continue
                 if relative == "" and key.startswith(private_prefix):
                     continue
 
@@ -351,6 +380,100 @@ def list_files(
         )
 
     return files
+
+
+@router.post("/delete")
+async def delete_uploaded_file(
+    form_data: DeleteUploadRequest,
+    user=Depends(get_verified_user),
+):
+    if STORAGE_PROVIDER != "s3":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="S3 storage provider is not configured on this deployment.",
+        )
+
+    if not S3_BUCKET_NAME:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="S3 bucket name is not configured.",
+        )
+
+    if not form_data.key:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Object key is required.",
+        )
+
+    key = form_data.key
+    split = key.split("/")
+    tenant = split[0] if split else ""
+    user_id = ""
+    is_private = False
+    if len(split) >= 4 and split[1] == "users":
+        user_id = split[2]
+        is_private = True
+
+    bucket_prefix = split[0] if split else ""
+    if not bucket_prefix:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid object key.",
+        )
+
+    relative_path = key[len(bucket_prefix) :].lstrip("/")
+    txt_candidates: list[str] = []
+
+    # Insert a /txt/ folder right before the filename and swap extension to .txt.
+    # Works for both public (e.g., <bucket>/txt/file.txt) and private
+    # (e.g., <bucket>/users/<user_id>/txt/file.txt) paths.
+    dir_path = posixpath.dirname(relative_path)
+    filename = posixpath.basename(relative_path)
+    filename_stem, _ = posixpath.splitext(filename)
+    if filename_stem:
+        txt_dir = (
+            posixpath.join(bucket_prefix, dir_path, "txt")
+            if dir_path
+            else posixpath.join(bucket_prefix, "txt")
+        )
+        txt_candidates.append(posixpath.join(txt_dir, f"{filename_stem}.txt"))
+
+    is_admin = user.role == "admin"
+    if not is_admin:
+        user_bucket = _get_user_tenant_bucket(user)
+        if not tenant or not user_bucket or user_bucket != tenant:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authorized to delete objects for this tenant.",
+            )
+
+    if is_private and user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authorized to delete objects for this user.",
+        )
+
+    s3_client = _get_s3_client()
+
+    try:
+        if object_exists(s3_client, S3_BUCKET_NAME, key):
+            s3_client.delete_object(Bucket=S3_BUCKET_NAME, Key=key)
+        for txt_key in txt_candidates:
+            try:
+                if object_exists(s3_client, S3_BUCKET_NAME, txt_key):
+                    s3_client.delete_object(Bucket=S3_BUCKET_NAME, Key=txt_key)
+            except ClientError as exc:
+                error_code = exc.response.get("Error", {}).get("Code", "")
+                if error_code not in ("NoSuchKey", "NoSuchBucket"):
+                    raise
+    except ClientError as exc:
+        log.exception("Failed to delete file from S3: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete file from storage.",
+        )
+
+    return {"status": "deleted", "key": key, "txt_keys": txt_candidates}
 
 @router.post("/rebuild-tenant")
 async def rebuild_tenant(

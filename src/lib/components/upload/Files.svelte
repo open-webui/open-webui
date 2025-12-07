@@ -1,15 +1,18 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import { getFiles, type StoredFile } from '$lib/apis/uploads';
+	import { deleteUpload, getFiles, rebuildUserArtifact, type StoredFile } from '$lib/apis/uploads';
+	import { user } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 
 	export let tenantId: string | null = null;
 	export let path: string | null = null;
+	export let tenantBucket: string | null = null;
 
 	let files: StoredFile[] = [];
 	let loading = false;
 	let error: string | null = null;
 	let lastParams = '';
+	let deletingKey: string | null = null;
 
 	const formatSize = (bytes: number) => {
 		if (!bytes) return '0 B';
@@ -52,6 +55,48 @@
 		lastParams = paramsKey;
 		loadFiles();
 	}
+
+	const deleteFileHandler = async (file: StoredFile) => {
+		if (!browser) return;
+		if (!localStorage.token) {
+			toast.error('You must be signed in to delete files.');
+			return;
+		}
+
+		const name = displayName(file.key);
+		const confirmed = window.confirm(`Delete ${name}? This cannot be undone.`);
+		if (!confirmed) return;
+
+		const parts = file.key.split('/');
+		const derivedBucket = tenantBucket ?? (parts[0] ?? null);
+		const derivedUserId = parts.length >= 3 && parts[1] === 'users' ? parts[2] : null;
+
+		deletingKey = file.key;
+		try {
+			const token = localStorage.token;
+			await deleteUpload(token, file.key);
+			files = files.filter((item) => item.key !== file.key);
+			toast.success('File deleted.');
+
+			if (derivedBucket && derivedUserId) {
+				try {
+					await rebuildUserArtifact(token, derivedBucket, derivedUserId);
+					toast.success('Private artifact rebuild requested.');
+				} catch (err) {
+					const message =
+						typeof err === 'string'
+							? err
+							: (err?.detail ?? 'Failed to rebuild private artifact.');
+					toast.error(message);
+				}
+			}
+		} catch (err) {
+			const message = typeof err === 'string' ? err : err?.detail ?? 'Failed to delete file.';
+			toast.error(message);
+		} finally {
+			deletingKey = null;
+		}
+	};
 </script>
 
 {#if loading}
@@ -88,15 +133,25 @@
 							{new Date(file.last_modified).toLocaleString()}
 						</td>
 						<td class="px-4 py-3">
-							<!-- TODO Downloading does not work locally.... might fix itself live?-->
-							<a
-								href={file.url}
-								target="_blank"
-								rel="noreferrer"
-								class="inline-flex w-28 items-center justify-center rounded-lg border border-blue-600 px-3 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50 dark:hover:bg-blue-950/30"
-							>
-								Download
-							</a>
+							<div class="inline-flex flex-col gap-2">
+								<!-- TODO Downloading does not work locally.... might fix itself live?-->
+								<a
+									href={file.url}
+									target="_blank"
+									rel="noreferrer"
+									class="inline-flex w-28 items-center justify-center rounded-lg border border-blue-600 px-3 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50 dark:hover:bg-blue-950/30"
+								>
+									Download
+								</a>
+								<button
+									type="button"
+									on:click={() => deleteFileHandler(file)}
+									disabled={deletingKey === file.key}
+									class="inline-flex w-28 items-center justify-center rounded-lg border border-red-600 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-70 dark:hover:bg-red-950/30"
+								>
+									{deletingKey === file.key ? 'Deleting...' : 'Delete'}
+								</button>
+							</div>
 						</td>
 					</tr>
 				{/each}

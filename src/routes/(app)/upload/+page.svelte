@@ -563,6 +563,7 @@
 					tenantId={$user?.role === 'admin'
 						? (selectedTenantId ?? $user?.tenant_id ?? null)
 						: ($user?.tenant_id ?? null)}
+					tenantBucket={tenantBucket}
 				/>
 			{:else}
 				<div
@@ -592,6 +593,7 @@
 					tenantId={$user?.role === 'admin'
 						? (selectedTenantId ?? $user?.tenant_id ?? null)
 						: ($user?.tenant_id ?? null)}
+					tenantBucket={tenantBucket}
 				/>
 			{:else}
 				<div
