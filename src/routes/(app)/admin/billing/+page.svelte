@@ -87,7 +87,7 @@
 </script>
 
 <svelte:head>
-	<title>{$i18n.t('充值管理')} | CyberLover Admin</title>
+	<title>{$i18n.t('充值管理')} | Cakumi Admin</title>
 </svelte:head>
 
 <div class="admin-billing-page max-w-6xl mx-auto px-4 py-6 space-y-6">

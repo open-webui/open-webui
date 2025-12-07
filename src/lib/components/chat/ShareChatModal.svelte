@@ -31,7 +31,7 @@
 		const _chat = chat.chat;
 		console.log('share', _chat);
 
-		toast.success($i18n.t('Redirecting you to CyberLover Community'));
+		toast.success($i18n.t('Redirecting you to Cakumi Community'));
 		const url = 'https://openwebui.com';
 		// const url = 'http://localhost:5173';
 
@@ -135,7 +135,7 @@
 										show = false;
 									}}
 								>
-									{$i18n.t('Share to CyberLover Community')}
+									{$i18n.t('Share to Cakumi Community')}
 								</button>
 							{/if}
 

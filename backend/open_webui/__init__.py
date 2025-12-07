@@ -17,7 +17,7 @@ def version_callback(value: bool):
     if value:
         from open_webui.env import VERSION
 
-        typer.echo(f"CyberLover version: {VERSION}")
+        typer.echo(f"Cakumi version: {VERSION}")
         raise typer.Exit()
 
 

@@ -106,8 +106,8 @@ class QdrantClient(VectorDBBase):
         Returns:
             tuple: (collection_name, tenant_id)
 
-        WARNING: This mapping relies on current CyberLover naming conventions for
-        collection names. If CyberLover changes how it generates collection names
+        WARNING: This mapping relies on current Cakumi naming conventions for
+        collection names. If Cakumi changes how it generates collection names
         (e.g., "user-memory-" prefix, "file-" prefix, web search patterns, or hash
         formats), this mapping will break and route data to incorrect collections.
         POTENTIALLY CAUSING HUGE DATA CORRUPTION, DATA CONSISTENCY ISSUES AND INCORRECT

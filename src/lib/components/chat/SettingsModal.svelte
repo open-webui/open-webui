@@ -424,7 +424,7 @@
 			keywords: [
 				'about app',
 				'about me',
-				'about CyberLover',
+				'about Cakumi',
 				'about page',
 				'about us',
 				'aboutapp',

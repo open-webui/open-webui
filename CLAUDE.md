@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-CyberLover 是一个功能丰富的自托管 AI 平台,支持完全离线运行。核心技术栈:
+Cakumi 是一个功能丰富的自托管 AI 平台,支持完全离线运行。核心技术栈:
 - **前端**: SvelteKit 4 + TypeScript + Vite 5 + Tailwind CSS 4
 - **后端**: Python 3.11 + FastAPI + SQLAlchemy
 - **部署**: Docker 多阶段构建,生产环境前后端同容器运行

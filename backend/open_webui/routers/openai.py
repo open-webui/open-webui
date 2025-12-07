@@ -137,7 +137,7 @@ async def get_headers_and_cookies(
         **(
             {
                 "HTTP-Referer": "https://openwebui.com/",
-                "X-Title": "CyberLover",
+                "X-Title": "Cakumi",
             }
             if "openrouter.ai" in url
             else {}
@@ -351,7 +351,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
             raise HTTPException(
                 status_code=r.status_code if r else 500,
-                detail=detail if detail else "CyberLover: Server Connection Error",
+                detail=detail if detail else "Cakumi: Server Connection Error",
             )
 
     except ValueError:
@@ -625,7 +625,7 @@ async def get_models(
                 # ClientError covers all aiohttp requests issues
                 log.exception(f"Client error: {str(e)}")
                 raise HTTPException(
-                    status_code=500, detail="CyberLover: Server Connection Error"
+                    status_code=500, detail="Cakumi: Server Connection Error"
                 )
             except Exception as e:
                 log.exception(f"Unexpected error: {e}")
@@ -722,12 +722,12 @@ async def verify_connection(
             # ClientError covers all aiohttp requests issues
             log.exception(f"Client error: {str(e)}")
             raise HTTPException(
-                status_code=500, detail="CyberLover: Server Connection Error"
+                status_code=500, detail="Cakumi: Server Connection Error"
             )
         except Exception as e:
             log.exception(f"Unexpected error: {e}")
             raise HTTPException(
-                status_code=500, detail="CyberLover: Server Connection Error"
+                status_code=500, detail="Cakumi: Server Connection Error"
             )
 
 
@@ -1260,7 +1260,7 @@ async def generate_chat_completion(
 
         raise HTTPException(
             status_code=r.status if r else 500,
-            detail="CyberLover: Server Connection Error",
+            detail="Cakumi: Server Connection Error",
         )
     finally:
         # === 14. 清理资源 ===
@@ -1344,7 +1344,7 @@ async def embeddings(request: Request, form_data: dict, user):
         log.exception(e)
         raise HTTPException(
             status_code=r.status if r else 500,
-            detail="CyberLover: Server Connection Error",
+            detail="Cakumi: Server Connection Error",
         )
     finally:
         if not streaming:
@@ -1437,7 +1437,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
         log.exception(e)
         raise HTTPException(
             status_code=r.status if r else 500,
-            detail="CyberLover: Server Connection Error",
+            detail="Cakumi: Server Connection Error",
         )
     finally:
         if not streaming:

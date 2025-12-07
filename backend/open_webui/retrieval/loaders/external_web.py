@@ -32,7 +32,7 @@ class ExternalWebLoader(BaseLoader):
                 response = requests.post(
                     self.external_url,
                     headers={
-                        "User-Agent": "CyberLover (https://github.com/open-webui/open-webui) External Web Loader",
+                        "User-Agent": "Cakumi (https://github.com/open-webui/open-webui) External Web Loader",
                         "Authorization": f"Bearer {self.external_api_key}",
                     },
                     json={

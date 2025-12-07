@@ -21,7 +21,7 @@
 </script>
 
 <svelte:head>
-	<title>{$i18n.t('计费中心')} | CyberLover</title>
+	<title>{$i18n.t('计费中心')} | Cakumi</title>
 </svelte:head>
 
 <div class="billing-page max-w-7xl mx-auto px-4 py-6 space-y-6">

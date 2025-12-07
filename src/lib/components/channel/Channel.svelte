@@ -202,7 +202,7 @@
 </script>
 
 <svelte:head>
-	<title>#{channel?.name ?? 'Channel'} • CyberLover</title>
+	<title>#{channel?.name ?? 'Channel'} • Cakumi</title>
 </svelte:head>
 
 <div

@@ -1,4 +1,4 @@
-"""OpenTelemetry metrics bootstrap for CyberLover.
+"""OpenTelemetry metrics bootstrap for Cakumi.
 
 This module initialises a MeterProvider that sends metrics to an OTLP
 collector. The collector is responsible for exposing a Prometheus

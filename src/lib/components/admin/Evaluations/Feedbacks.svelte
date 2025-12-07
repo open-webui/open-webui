@@ -126,7 +126,7 @@
 	};
 
 	const shareHandler = async () => {
-		toast.success($i18n.t('Redirecting you to CyberLover Community'));
+		toast.success($i18n.t('Redirecting you to Cakumi Community'));
 
 		// remove snapshot from feedbacks
 		const feedbacksToShare = feedbacks.map((f) => {
@@ -407,7 +407,7 @@
 					}}
 				>
 					<div class=" self-center mr-2 font-medium line-clamp-1">
-						{$i18n.t('Share to CyberLover Community')}
+						{$i18n.t('Share to Cakumi Community')}
 					</div>
 
 					<div class=" self-center">

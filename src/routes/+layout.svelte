@@ -292,7 +292,7 @@
 
 					if ($isLastActiveTab) {
 						if ($settings?.notificationEnabled ?? false) {
-							new Notification(`${title} • CyberLover`, {
+							new Notification(`${title} • Cakumi`, {
 								body: content,
 								icon: `${WEBUI_BASE_URL}/static/favicon.png`
 							});
@@ -441,7 +441,7 @@
 			if (type === 'message') {
 				if ($isLastActiveTab) {
 					if ($settings?.notificationEnabled ?? false) {
-						new Notification(`${data?.user?.name} (#${event?.channel?.name}) • CyberLover`, {
+						new Notification(`${data?.user?.name} (#${event?.channel?.name}) • Cakumi`, {
 							body: data?.content,
 							icon: data?.user?.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`
 						});
