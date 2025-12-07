@@ -23,6 +23,7 @@
 	import UserGroup from '$lib/components/icons/UserGroup.svelte';
 	import SignOut from '$lib/components/icons/SignOut.svelte';
 	import BalanceDisplay from '$lib/components/billing/BalanceDisplay.svelte';
+	import UserSuggestionModal from '$lib/components/common/UserSuggestionModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -34,6 +35,7 @@
 	const dispatch = createEventDispatcher();
 
 	let usage = null;
+	let showSuggestionModal = false;
 	const getUsageInfo = async () => {
 		const res = await getUsage(localStorage.token).catch((error) => {
 			console.error('Error fetching usage info:', error);
@@ -288,6 +290,19 @@
 				</DropdownMenu.Item>
 			{/if}
 
+			<DropdownMenu.Item
+				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
+				on:click={() => {
+					show = false;
+					showSuggestionModal = true;
+				}}
+			>
+				<div class=" self-center mr-3">
+					<span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-[11px] font-semibold text-white">反</span>
+				</div>
+				<div class=" self-center truncate">{$i18n.t('反馈')}</div>
+			</DropdownMenu.Item>
+
 			<hr class=" border-gray-50 dark:border-gray-800 my-1 p-0" />
 
 			<DropdownMenu.Item
@@ -350,3 +365,10 @@
 		</DropdownMenu.Content>
 	</slot>
 </DropdownMenu.Root>
+
+<UserSuggestionModal
+	bind:show={showSuggestionModal}
+	onClose={() => {
+		showSuggestionModal = false;
+	}}
+/>

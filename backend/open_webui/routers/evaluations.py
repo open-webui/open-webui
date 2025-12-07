@@ -9,6 +9,11 @@ from open_webui.models.feedbacks import (
     FeedbackForm,
     Feedbacks,
 )
+from open_webui.models.user_feedback import (
+    UserFeedbackModel,
+    UserFeedbackForm,
+    UserFeedbacks,
+)
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -71,6 +76,11 @@ class FeedbackUserResponse(FeedbackResponse):
     user: Optional[UserResponse] = None
 
 
+class UserSuggestionForm(BaseModel):
+    content: str
+    contact: Optional[str] = None
+
+
 @router.get("/feedbacks/all", response_model=list[FeedbackUserResponse])
 async def get_all_feedbacks(user=Depends(get_admin_user)):
     feedbacks = Feedbacks.get_all_feedbacks()
@@ -125,6 +135,56 @@ async def create_feedback(
         )
 
     return feedback
+
+
+@router.post("/feedback/suggestion", response_model=UserFeedbackModel)
+async def create_suggestion_feedback(
+    form_data: UserSuggestionForm, user=Depends(get_verified_user)
+):
+    """用户主动反馈入口：带 4 小时冷却期，命中则返回 429。"""
+    content = (form_data.content or "").strip()
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="反馈内容不能为空",
+        )
+
+    # 4 小时限流
+    recent = UserFeedbacks.get_recent_within(user.id, seconds=4 * 60 * 60)
+    if recent:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="您最近反馈过，请再等等一天",
+        )
+
+    feedback = UserFeedbacks.create(
+        user_id=user.id,
+        content=content,
+        contact=(form_data.contact or "").strip() or None,
+    )
+    if not feedback:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(),
+        )
+    return feedback
+
+
+@router.get("/feedbacks/suggestion", response_model=list[UserFeedbackModel])
+async def list_user_suggestions(user=Depends(get_admin_user)):
+    """管理员查看所有用户反馈。"""
+    return UserFeedbacks.list_all()
+
+
+@router.delete("/feedback/suggestion/{id}")
+async def delete_user_suggestion(id: str, user=Depends(get_admin_user)):
+    """管理员删除单条用户反馈。"""
+    success = UserFeedbacks.delete_by_id(id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+    return True
 
 
 @router.get("/feedback/{id}", response_model=FeedbackModel)
