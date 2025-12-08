@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
+	import { getMCPConfig } from '$lib/apis/mcp';
 	const i18n = getContext('i18n');
 
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -23,10 +24,32 @@
 		features: {
 			web_search: true,
 			image_generation: true
+		},
+		mcp: {
+			time_server: false,
+			news_server: false,
+			mpo_sharepoint_server: false
 		}
 	};
 
 	export let permissions = {};
+
+	// State for MCP configuration
+	let mcpEnabled = false;
+	let mcpConfigLoading = true;
+
+	// Function to check if MCP is globally enabled
+	const checkMCPEnabled = async () => {
+		try {
+			const mcpConfig = await getMCPConfig(localStorage.token);
+			mcpEnabled = mcpConfig?.ENABLE_MCP_API || false;
+		} catch (error) {
+			console.error('Failed to fetch MCP config:', error);
+			mcpEnabled = false;
+		} finally {
+			mcpConfigLoading = false;
+		}
+	};
 
 	// Reactive statement to ensure all fields are present in `permissions`
 	$: {
@@ -39,12 +62,14 @@
 			...obj,
 			workspace: { ...defaults.workspace, ...obj.workspace },
 			chat: { ...defaults.chat, ...obj.chat },
-			features: { ...defaults.features, ...obj.features }
+			features: { ...defaults.features, ...obj.features },
+			mcp: { ...defaults.mcp, ...obj.mcp }
 		};
 	}
 
 	onMount(() => {
 		permissions = fillMissingProperties(permissions, defaultPermissions);
+		checkMCPEnabled();
 	});
 </script>
 
@@ -258,4 +283,41 @@
 			<Switch bind:state={permissions.features.image_generation} />
 		</div>
 	</div>
+
+	<hr class=" border-gray-50 dark:border-gray-850 my-2" />
+
+	{#if !mcpConfigLoading && mcpEnabled}
+		<div>
+			<div class=" mb-2 text-sm font-medium">{$i18n.t('MCP Permissions')}</div>
+			<div class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+				{$i18n.t(
+					'Control access to specific MCP (Model Context Protocol) servers. These are always disabled by default.'
+				)}
+			</div>
+
+			<div class="  flex w-full justify-between my-2 pr-2">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('MCP: Current Time')}
+				</div>
+
+				<Switch bind:state={permissions.mcp.time_server} />
+			</div>
+
+			<div class="  flex w-full justify-between my-2 pr-2">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('MCP: News Headlines')}
+				</div>
+
+				<Switch bind:state={permissions.mcp.news_server} />
+			</div>
+
+			<div class="  flex w-full justify-between my-2 pr-2">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('MCP: MPO SharePoint')}
+				</div>
+
+				<Switch bind:state={permissions.mcp.mpo_sharepoint_server} />
+			</div>
+		</div>
+	{/if}
 </div>

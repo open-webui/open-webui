@@ -1144,6 +1144,11 @@ DEFAULT_USER_PERMISSIONS = {
         "web_search": USER_PERMISSIONS_FEATURES_WEB_SEARCH,
         "image_generation": USER_PERMISSIONS_FEATURES_IMAGE_GENERATION,
     },
+    "mcp": {
+        "time_server": False,
+        "news_server": False,
+        "mpo_sharepoint_server": False,
+    },
 }
 
 USER_PERMISSIONS = PersistentConfig(

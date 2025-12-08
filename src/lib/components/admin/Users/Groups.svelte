@@ -62,6 +62,11 @@
 		features: {
 			web_search: true,
 			image_generation: true
+		},
+		mcp: {
+			time_server: false,
+			news_server: false,
+			mpo_sharepoint_server: false
 		}
 	};
 

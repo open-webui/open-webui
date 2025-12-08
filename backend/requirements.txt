@@ -16,6 +16,9 @@ async-timeout
 aiocache
 aiofiles
 
+# PDF processing libraries for SharePoint document parsing
+pdfplumber==0.11.4
+
 sqlalchemy==2.0.32
 alembic==1.14.0
 peewee==3.17.8

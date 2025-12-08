@@ -329,6 +329,8 @@ class OAuthManager:
 
         if ENABLE_OAUTH_SIGNUP.value:
             oauth_id_token = token.get("id_token")
+            oauth_access_token = token.get("access_token")
+
             response.set_cookie(
                 key="oauth_id_token",
                 value=oauth_id_token,
@@ -336,6 +338,16 @@ class OAuthManager:
                 samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
                 secure=WEBUI_SESSION_COOKIE_SECURE,
             )
+
+            # Store access token for SharePoint OBO flow
+            if oauth_access_token:
+                response.set_cookie(
+                    key="oauth_access_token",
+                    value=oauth_access_token,
+                    httponly=True,
+                    samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
+                    secure=WEBUI_SESSION_COOKIE_SECURE,
+                )
         # Redirect back to the frontend with the JWT token
         redirect_url = f"{request.base_url}auth#token={jwt_token}"
         return RedirectResponse(url=redirect_url, headers=response.headers)

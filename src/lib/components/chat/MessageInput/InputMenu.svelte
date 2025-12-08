@@ -200,10 +200,7 @@
 									<div class="flex flex-col items-start min-w-0 flex-1">
 										<div class="text-sm font-medium leading-tight">
 											{#if tools[toolId].isMcp}
-												{getMCPToolName(
-													tools[toolId].meta?.manifest?.original_name || tools[toolId].name,
-													$i18n
-												)}
+												{getMCPToolName(tools[toolId].originalName, $i18n)}
 											{:else}
 												{tools[toolId].name}
 											{/if}
