@@ -111,6 +111,7 @@ from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 from open_webui.models.users import UserModel, Users
 from open_webui.models.chats import Chats
+from open_webui.models.user_model_credentials import UserModelCredentials
 
 from open_webui.config import (
     # Ollama
@@ -476,6 +477,7 @@ from open_webui.utils.models import (
     get_all_base_models,
     check_model_access,
     get_filtered_models,
+    transform_user_model_if_needed,
 )
 from open_webui.utils.email_utils import EmailVerificationManager
 from open_webui.utils.chat import (
@@ -1527,6 +1529,7 @@ async def chat_completion(
         await get_all_models(request, user=user)  # 从数据库和后端服务加载所有可用模型
 
     # === 2. 提取请求参数 ===
+    form_data = await transform_user_model_if_needed(form_data, user)
     model_id = form_data.get("model", None)  # 用户选择的模型 ID (如 "gpt-4")
     model_item = form_data.pop("model_item", {})  # 模型元数据 (包含 direct 标志)
     tasks = form_data.pop("background_tasks", None)  # 后台任务列表
@@ -1537,7 +1540,7 @@ async def chat_completion(
         if not model_item.get("direct", False):
             # 标准模式：使用平台内置模型
             if model_id not in request.app.state.MODELS:
-                raise Exception("Model not found")
+                raise Exception(f"Model not found: {model_id}")
  
             model = request.app.state.MODELS[model_id]  # 从缓存获取模型配置
             model_info = Models.get_model_by_id(model_id)  # 从数据库获取模型详细信息

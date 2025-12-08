@@ -860,98 +860,93 @@ async def generate_chat_completion(
     #     updated_at=1763971141 
     #     created_at=1763874812
 
-    # === 1. 权限检查配置 ===
-    if BYPASS_MODEL_ACCESS_CONTROL:
-        bypass_filter = True
-
-    idx = 0  # 用于标识使用哪个 OPENAI_API_BASE_URL
-
-    # === 2. 准备 Payload 和提取元数据 ===
+    # === 1. 准备 Payload 和清理内部参数 ===
     payload = {**form_data}
-    metadata = payload.pop("metadata", None)  # 移除内部元数据，不发送给上游 API
+    metadata = payload.pop("metadata", None)
+
+    # 清理掉上游 API 不认识的、仅供后端内部逻辑使用的参数，避免请求被拒绝
+    payload.pop("is_user_model", None)
+    payload.pop("model_item", None)
 
     model_id = form_data.get("model")
-    model_info = Models.get_model_by_id(model_id)
 
-    # === 3. 应用模型配置和权限检查 ===
-    # Check model info and override the payload
-    if model_info:
-        # 3.1 如果配置了 base_model_id，替换为底层模型 ID
-        # 例如：自定义模型 "my-gpt4" → 实际调用 "gpt-4-turbo"
-        if model_info.base_model_id:
-            payload["model"] = model_info.base_model_id
-            model_id = model_info.base_model_id
+    # === 2. 动态凭据和配置选择 ===
+    # 初始化所有后续逻辑需要用到的变量
+    url, key, api_config, model, model_info = None, None, {}, None, None
 
-        # 3.2 应用模型参数（temperature, max_tokens 等）
-        params = model_info.params.model_dump()
+    # 通过检查 request.state.direct 标志，来区分是“私有模型”还是“普通模型”
+    if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
+        # --- 私有模型路径 ---
+        # 对于私有模型（由上游函数识别并标记），直接从 request.state 中提取其独立的凭据和配置
+        direct_model_config = request.state.model
+        url = direct_model_config.get("base_url")
+        key = direct_model_config.get("api_key")
+        api_config = direct_model_config.get("config") or {}  # 保证 api_config 始终是字典，避免 NoneType 错误
+        
+        # 私有模型没有数据库中的 model_info 记录，但其本身（direct_model_config）就是完整的模型定义
+        model_info = None
+        model = direct_model_config
 
-        if params:
-            system = params.pop("system", None)  # 提取 system prompt
-
-            # 应用模型参数到 payload（覆盖用户传入的参数）
-            payload = apply_model_params_to_body_openai(params, payload)
-            # 注入或替换 system prompt
-            payload = apply_system_prompt_to_body(system, payload, metadata, user)
-
-        # 3.3 权限检查：验证用户是否有权限访问该模型
-        # Check if user has access to the model
-        if not bypass_filter and user.role == "user":
-            if not (
-                user.id == model_info.user_id  # 用户是模型创建者
-                or has_access(
-                    user.id, type="read", access_control=model_info.access_control
-                )  # 或用户在访问控制列表中
-            ):
-                raise HTTPException(
-                    status_code=403,
-                    detail="Model not found",
-                )
-    elif not bypass_filter:
-        # 如果模型信息不存在且未绕过过滤器，只有管理员可访问
-        if user.role != "admin":
-            raise HTTPException(
-                status_code=403,
-                detail="Model not found",
-            )
-
-    # === 4. 查找 OpenAI API 配置 ===
-    await get_all_models(request, user=user)  # 刷新模型列表
-    model = request.app.state.OPENAI_MODELS.get(model_id)
-    if model:
-        idx = model["urlIdx"]  # 获取 API 基础 URL 索引
+        # 健壮性检查：如果私有模型未提供 URL，则回退到使用第一个全局配置的 URL
+        if not url:
+            url = request.app.state.config.OPENAI_API_BASE_URLS[0]
+            # 如果私有模型也未提供 Key，则同时回退到使用全局 Key
+            if not key:
+                key = request.app.state.config.OPENAI_API_KEYS[0]
     else:
-        raise HTTPException(
-            status_code=404,
-            detail="Model not found",
+        # --- 普通平台模型路径 ---
+        # 保持原始逻辑，从数据库和全局配置中获取模型的凭据和设置
+        model_info = Models.get_model_by_id(model_id)
+        if model_info:
+            # 如果模型配置了 base_model_id，则实际请求时使用基础模型
+            if model_info.base_model_id:
+                payload["model"] = model_info.base_model_id
+                model_id = model_info.base_model_id
+
+            # 应用数据库中为该模型保存的特定参数（如 temperature, system_prompt 等）
+            params = model_info.params.model_dump()
+            if params:
+                system = params.pop("system", None)
+                payload = apply_model_params_to_body_openai(params, payload)
+                payload = apply_system_prompt_to_body(system, payload, metadata, user)
+
+            # 权限检查
+            if not bypass_filter and user.role == "user":
+                if not (user.id == model_info.user_id or has_access(user.id, type="read", access_control=model_info.access_control)):
+                    raise HTTPException(status_code=403, detail="Model not found")
+        elif not bypass_filter and user.role != "admin":
+            raise HTTPException(status_code=403, detail="Model not found")
+
+        # 从缓存的平台模型列表中查找模型，以确定其所属的 API (urlIdx)
+        await get_all_models(request, user=user)
+        model = request.app.state.OPENAI_MODELS.get(model_id)
+        if model:
+            idx = model["urlIdx"]
+        else:
+            raise HTTPException(status_code=404, detail=f"Model not found: {model_id}")
+
+        # 根据索引从全局配置中获取 url, key 和 api_config
+        url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
+        key = request.app.state.config.OPENAI_API_KEYS[idx]
+        api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
+            str(idx),
+            request.app.state.config.OPENAI_API_CONFIGS.get(url, {}),  # Legacy support
         )
 
-    # === 5. 获取 API 配置并处理 prefix_id ===
-    # Get the API config for the model
-    api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
-        str(idx),
-        request.app.state.config.OPENAI_API_CONFIGS.get(
-            request.app.state.config.OPENAI_API_BASE_URLS[idx], {}
-        ),  # Legacy support
-    )
-
-    # 移除模型 ID 前缀（如果配置了 prefix_id）
-    # 例如：模型 ID "custom.gpt-4" → 发送给 API 的是 "gpt-4"
+    # === 3. 应用通用配置和特殊处理 ===
+    # 移除模型 ID 的前缀（如果配置了）
     prefix_id = api_config.get("prefix_id", None)
     if prefix_id:
         payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
 
-    # === 6. Pipeline 模式：注入用户信息 ===
-    # Add user info to the payload if the model is a pipeline
-    if "pipeline" in model and model.get("pipeline"):
+    # 如果是 Pipeline 类型的模型，注入用户信息
+    if model and "pipeline" in model and model.get("pipeline"):
         payload["user"] = {
             "name": user.name,
             "id": user.id,
             "email": user.email,
             "role": user.role,
         }
-
-    url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
-    key = request.app.state.config.OPENAI_API_KEYS[idx]
 
     # === 7. 推理模型特殊处理 ===
     # Check if model is a reasoning model that needs special handling

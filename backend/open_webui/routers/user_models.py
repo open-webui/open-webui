@@ -2,10 +2,10 @@
 用户私有模型凭据管理 - API 路由层
 
 提供的接口：
-- GET    /api/user/models/credentials      - 获取当前用户的所有私有模型凭据
-- POST   /api/user/models/credentials      - 创建新的私有模型凭据
-- PUT    /api/user/models/credentials/{id} - 更新指定的私有模型凭据
-- DELETE /api/user/models/credentials/{id} - 删除指定的私有模型凭据
+- GET    /api/v1/user/models        - 获取当前用户的所有私有模型凭据
+- POST   /api/v1/user/models        - 创建新的私有模型凭据
+- PUT    /api/v1/user/models/{id}   - 更新指定的私有模型凭据
+- DELETE /api/v1/user/models/{id}   - 删除指定的私有模型凭据
 
 安全设计：
 - 所有接口都需要用户认证（get_verified_user）

@@ -371,3 +371,43 @@ def get_filtered_models(models, user):
         return filtered_models
     else:
         return models
+
+
+async def transform_user_model_if_needed(form_data: dict, user: UserModel):
+    model_id = form_data.get("model")
+    model_item = form_data.get("model_item", {})
+
+    credential_id = model_item.get("credential_id")
+    if credential_id and credential_id.startswith("user:"):
+        from open_webui.models.user_model_credentials import UserModelCredentials
+        from open_webui.constants import ERROR_MESSAGES
+        from fastapi import HTTPException, status
+
+        cred_id = credential_id.replace("user:", "")
+        cred = UserModelCredentials.get_credential_by_id_and_user_id(cred_id, user.id)
+
+        if not cred:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ERROR_MESSAGES.USER_MODEL_CREDENTIAL_NOT_FOUND(),
+            )
+
+        model_item.clear()
+        model_item.update({
+            "direct": True,
+            "id": cred.model_id,
+            "name": cred.name or cred.model_id,
+            "owned_by": "user",
+            "base_url": cred.base_url,
+            "api_key": cred.api_key,
+            "config": cred.config,
+        })
+        
+        if form_data.get('model') != cred.model_id:
+            form_data['model'] = cred.model_id
+        model_id = cred.model_id
+    
+    form_data["model_item"] = model_item
+    form_data["model"] = model_id
+    
+    return form_data

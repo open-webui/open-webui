@@ -45,7 +45,7 @@ from open_webui.utils.plugin import (
     load_function_module_by_id,
     get_function_module_from_cache,
 )
-from open_webui.utils.models import get_all_models, check_model_access
+from open_webui.utils.models import get_all_models, check_model_access, transform_user_model_if_needed
 from open_webui.utils.payload import convert_payload_openai_to_ollama
 from open_webui.utils.response import (
     convert_response_ollama_to_openai,
@@ -249,9 +249,14 @@ async def generate_chat_completion(
     model = models[model_id]
 
     # === 5. Direct 模式分支：直连外部 API ===
+    # 原始逻辑是调用 generate_direct_chat_completion，但该函数实际上是一个无法处理 API 请求的“断头路”。
+    # 经过调试发现，真正能将请求发送到上游 OpenAI 兼容 API 的是 generate_openai_chat_completion。
+    # 因此，当识别为直连模式时（例如用户私有模型），将请求直接导向 generate_openai_chat_completion。
     if getattr(request.state, "direct", False):
-        return await generate_direct_chat_completion(
-            request, form_data, user=user, models=models
+        return await generate_openai_chat_completion(
+            request=request,
+            form_data=form_data,
+            user=user,
         )
     else:
         # === 6. 标准模式：检查用户权限 ===
@@ -369,6 +374,13 @@ chat_completion = generate_chat_completion
 async def chat_completed(request: Request, form_data: dict, user: Any):
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
+
+    form_data = await transform_user_model_if_needed(form_data, user)
+    model_item = form_data.get("model_item", {})
+
+    if model_item.get("direct", False):
+        request.state.direct = True
+        request.state.model = model_item
 
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
         models = {
