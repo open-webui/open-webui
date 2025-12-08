@@ -1,5 +1,5 @@
 from opensearchpy import OpenSearch
-from opensearchpy.helpers import bulk
+from opensearchpy.helpers import bulk, scan
 from typing import Optional
 
 from open_webui.retrieval.vector.utils import process_metadata
@@ -28,10 +28,10 @@ class OpenSearchClient(VectorDBBase):
             http_auth=(OPENSEARCH_USERNAME, OPENSEARCH_PASSWORD),
         )
 
-    def _get_index_name(self, collection_name: str) -> str:
-        return f"{self.index_prefix}_{collection_name}"
+    def _get_index_name(self, dimension: int) -> str:
+        return f"{self.index_prefix}_d{str(dimension)}"
 
-    def _result_to_get_result(self, result) -> GetResult:
+    def _result_to_get_result(self, result) -> GetResult | None:
         if not result["hits"]["hits"]:
             return None
 
@@ -46,7 +46,7 @@ class OpenSearchClient(VectorDBBase):
 
         return GetResult(ids=[ids], documents=[documents], metadatas=[metadatas])
 
-    def _result_to_search_result(self, result) -> SearchResult:
+    def _result_to_search_result(self, result) -> SearchResult | None:
         if not result["hits"]["hits"]:
             return None
 
@@ -68,11 +68,12 @@ class OpenSearchClient(VectorDBBase):
             metadatas=[metadatas],
         )
 
-    def _create_index(self, collection_name: str, dimension: int):
+    def _create_index(self, dimension: int):
         body = {
             "settings": {"index": {"knn": True}},
             "mappings": {
                 "properties": {
+                    "collection": {"type": "keyword"},
                     "id": {"type": "keyword"},
                     "vector": {
                         "type": "knn_vector",
@@ -94,23 +95,27 @@ class OpenSearchClient(VectorDBBase):
                 }
             },
         }
-        self.client.indices.create(
-            index=self._get_index_name(collection_name), body=body
-        )
+        self.client.indices.create(index=self._get_index_name(dimension), body=body)
 
     def _create_batches(self, items: list[VectorItem], batch_size=100):
         for i in range(0, len(items), batch_size):
-            yield items[i : i + batch_size]
+            yield items[i : min(i + batch_size, len(items))]
 
-    def has_collection(self, collection_name: str) -> bool:
-        # has_collection here means has index.
-        # We are simply adapting to the norms of the other DBs.
-        return self.client.indices.exists(index=self._get_index_name(collection_name))
+    def has_collection(self, collection_name) -> bool:
+        query_body = {"query": {"bool": {"filter": []}}}
+        query_body["query"]["bool"]["filter"].append(
+            {"term": {"collection": collection_name}}
+        )
+
+        try:
+            response = self.client.count(index=f"{self.index_prefix}*", body=query_body)
+            return response["count"] > 0
+        except Exception as e:
+            return False
 
     def delete_collection(self, collection_name: str):
-        # delete_collection here means delete index.
-        # We are simply adapting to the norms of the other DBs.
-        self.client.indices.delete(index=self._get_index_name(collection_name))
+        query = {"query": {"term": {"collection": collection_name}}}
+        self.client.delete_by_query(index=f"{self.index_prefix}*", body=query)
 
     def search(
         self,
@@ -119,33 +124,31 @@ class OpenSearchClient(VectorDBBase):
         filter: Optional[dict] = None,
         limit: int = 10,
     ) -> Optional[SearchResult]:
+        query = {
+            "size": limit,
+            "_source": ["text", "metadata"],
+            "query": {
+                "script_score": {
+                    "query": {
+                        "bool": {"filter": [{"term": {"collection": collection_name}}]}
+                    },
+                    "script": {
+                        "source": "(cosineSimilarity(params.query_value, doc[params.field]) + 1.0) / 2.0",
+                        "params": {
+                            "field": "vector",
+                            "query_value": vectors[0],
+                        },  # Assuming single query vector
+                    },
+                }
+            },
+        }
+
         try:
-            if not self.has_collection(collection_name):
-                return None
-
-            query = {
-                "size": limit,
-                "_source": ["text", "metadata"],
-                "query": {
-                    "script_score": {
-                        "query": {"match_all": {}},
-                        "script": {
-                            "source": "(cosineSimilarity(params.query_value, doc[params.field]) + 1.0) / 2.0",
-                            "params": {
-                                "field": "vector",
-                                "query_value": vectors[0],
-                            },  # Assuming single query vector
-                        },
-                    }
-                },
-            }
-
             result = self.client.search(
-                index=self._get_index_name(collection_name), body=query
+                index=self._get_index_name(len(vectors[0])), body=query
             )
 
             return self._result_to_search_result(result)
-
         except Exception as e:
             return None
 
@@ -161,15 +164,15 @@ class OpenSearchClient(VectorDBBase):
         }
 
         for field, value in filter.items():
-            query_body["query"]["bool"]["filter"].append(
-                {"term": {"metadata." + str(field) + ".keyword": value}}
-            )
-
-        size = limit if limit else 10000
+            query_body["query"]["bool"]["filter"].append({"term": {field: value}})
+        query_body["query"]["bool"]["filter"].append(
+            {"term": {"collection": collection_name}}
+        )
+        size = limit if limit else 10
 
         try:
             result = self.client.search(
-                index=self._get_index_name(collection_name),
+                index=f"{self.index_prefix}*",
                 body=query_body,
                 size=size,
             )
@@ -179,30 +182,38 @@ class OpenSearchClient(VectorDBBase):
         except Exception as e:
             return None
 
-    def _create_index_if_not_exists(self, collection_name: str, dimension: int):
-        if not self.has_collection(collection_name):
-            self._create_index(collection_name, dimension)
+    def _has_index(self, dimension: int):
+        return self.client.indices.exists(
+            index=self._get_index_name(dimension=dimension)
+        )
+
+    def get_or_create_index(self, dimension: int):
+        if not self._has_index(dimension=dimension):
+            self._create_index(dimension=dimension)
 
     def get(self, collection_name: str) -> Optional[GetResult]:
-        query = {"query": {"match_all": {}}, "_source": ["text", "metadata"]}
+        query = {
+            "query": {"bool": {"filter": [{"term": {"collection": collection_name}}]}},
+            "_source": ["text", "metadata"],
+        }
 
-        result = self.client.search(
-            index=self._get_index_name(collection_name), body=query
-        )
-        return self._result_to_get_result(result)
+        results = list(scan(self.client, index=f"{self.index_prefix}*", query=query))
+
+        return self._result_to_get_result(results)
 
     def insert(self, collection_name: str, items: list[VectorItem]):
-        self._create_index_if_not_exists(
-            collection_name=collection_name, dimension=len(items[0]["vector"])
-        )
+        dimension = len(items[0]["vector"])
+
+        if not self._has_index(dimension):
+            self._create_index(dimension)
 
         for batch in self._create_batches(items):
             actions = [
                 {
-                    "_op_type": "index",
-                    "_index": self._get_index_name(collection_name),
+                    "_index": self._get_index_name(dimension),
                     "_id": item["id"],
                     "_source": {
+                        "collection": collection_name,
                         "vector": item["vector"],
                         "text": item["text"],
                         "metadata": process_metadata(item["metadata"]),
@@ -211,20 +222,20 @@ class OpenSearchClient(VectorDBBase):
                 for item in batch
             ]
             bulk(self.client, actions)
-        self.client.indices.refresh(self._get_index_name(collection_name))
 
     def upsert(self, collection_name: str, items: list[VectorItem]):
-        self._create_index_if_not_exists(
-            collection_name=collection_name, dimension=len(items[0]["vector"])
-        )
+        dimension = len(items[0]["vector"])
+        if not self._has_index(dimension):
+            self._create_index(dimension)
 
         for batch in self._create_batches(items):
             actions = [
                 {
                     "_op_type": "update",
-                    "_index": self._get_index_name(collection_name),
+                    "_index": self._get_index_name(dimension),
                     "_id": item["id"],
                     "doc": {
+                        "collection": collection_name,
                         "vector": item["vector"],
                         "text": item["text"],
                         "metadata": process_metadata(item["metadata"]),
@@ -234,7 +245,6 @@ class OpenSearchClient(VectorDBBase):
                 for item in batch
             ]
             bulk(self.client, actions)
-        self.client.indices.refresh(self._get_index_name(collection_name))
 
     def delete(
         self,
@@ -242,28 +252,19 @@ class OpenSearchClient(VectorDBBase):
         ids: Optional[list[str]] = None,
         filter: Optional[dict] = None,
     ):
+        query = {
+            "query": {"bool": {"filter": [{"term": {"collection": collection_name}}]}}
+        }
+
         if ids:
-            actions = [
-                {
-                    "_op_type": "delete",
-                    "_index": self._get_index_name(collection_name),
-                    "_id": id,
-                }
-                for id in ids
-            ]
-            bulk(self.client, actions)
+            query["query"]["bool"]["filter"].append({"terms": {"_id": ids}})
         elif filter:
-            query_body = {
-                "query": {"bool": {"filter": []}},
-            }
             for field, value in filter.items():
-                query_body["query"]["bool"]["filter"].append(
-                    {"term": {"metadata." + str(field) + ".keyword": value}}
+                query["query"]["bool"]["filter"].append(
+                    {"term": {f"metadata.{field}": value}}
                 )
-            self.client.delete_by_query(
-                index=self._get_index_name(collection_name), body=query_body
-            )
-        self.client.indices.refresh(self._get_index_name(collection_name))
+
+        self.client.delete_by_query(index=f"{self.index_prefix}*", body=query)
 
     def reset(self):
         indices = self.client.indices.get(index=f"{self.index_prefix}_*")
