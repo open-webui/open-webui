@@ -374,6 +374,22 @@ def get_filtered_models(models, user):
 
 
 async def transform_user_model_if_needed(form_data: dict, user: UserModel):
+    # If model_item is missing, try to reconstruct it from chat history
+    if "model_item" not in form_data or not form_data.get("model_item"):
+        chat_id = form_data.get("chat_id")
+        if chat_id:
+            from open_webui.models.chats import Chats
+            messages_map = Chats.get_messages_map_by_chat_id(chat_id)
+            if messages_map:
+                for message in messages_map.values():
+                    if "models" in message and isinstance(message["models"], list) and message["models"]:
+                        for model_ref in message["models"]:
+                            if isinstance(model_ref, str) and model_ref.startswith("user:"):
+                                form_data["model_item"] = { "credential_id": model_ref }
+                                break
+                    if "model_item" in form_data:
+                        break
+
     model_id = form_data.get("model")
     model_item = form_data.get("model_item", {})
 
