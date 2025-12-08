@@ -16,6 +16,9 @@ async-timeout
 aiocache
 aiofiles
 
+# PDF processing libraries for SharePoint document parsing
+pdfplumber==0.11.4
+
 sqlalchemy==2.0.32
 alembic==1.14.0
 peewee==3.17.8
@@ -44,7 +47,7 @@ fake-useragent==1.5.1
 qdrant-client~=1.12.0
 
 # txtai-wikipedia Wiki Grounding dependencies
-transformers>=4.46.0,<5.0.0
+transformers>=4.50.0,<5.0.0
 txtai[graph]==9.0.0
 sentence-transformers>=5.0.0
 sacremoses==0.1.1
@@ -58,7 +61,7 @@ pypdf>=5.0.0
 fpdf2==2.8.2
 pymdown-extensions==10.11.2
 docx2txt==0.8
-python-pptx==1.0.0
+python-pptx==1.0.2
 unstructured==0.15.9
 nltk==3.9.1
 Markdown==3.7
@@ -83,7 +86,7 @@ authlib==1.3.2
 
 black==24.8.0
 langfuse==2.44.0
-youtube-transcript-api==0.6.3
+youtube-transcript-api>=1.2.2
 pytube==15.0.0
 
 extract_msg
@@ -106,13 +109,16 @@ google-cloud-storage==2.19.0
 ## LDAP
 ldap3==2.9.1
 
+## Docling for advanced document parsing
+docling==2.59.0
+
 ## MCP (Model Context Protocol)
 fastmcp==2.5.2
 pytz==2025.2
 
 ## CrewAI MCP Integration
-crewai==0.140.0
-crewai-tools[mcp]==0.49.0
+crewai
+crewai-tools[mcp]>=0.76.0
 protobuf>=5.26.1,<6.0.0
 grpcio>=1.49.1,<=1.67.1
 

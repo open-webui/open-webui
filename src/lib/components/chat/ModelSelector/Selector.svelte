@@ -242,7 +242,11 @@
 	<DropdownMenu.Trigger
 		class="relative w-full font-primary"
 		id="model-selector-{id}-button"
-		aria-label={selectedModel ? selectedModel.label : placeholder}
+		aria-haspopup="listbox"
+		aria-expanded={show}
+		aria-label={$i18n.t('Select a model, currently "{{model}}"', {
+			model: selectedModel?.label ?? $i18n.t('None')
+		})}
 	>
 		<div
 			class="flex w-full text-left px-0.5 outline-none bg-white dark:bg-gray-900 truncate {triggerClassName} justify-between font-medium text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md focus:outline-none"

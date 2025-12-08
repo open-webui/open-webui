@@ -330,10 +330,11 @@
 							<div class="ml-1">
 								<Tooltip content={model.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
 									<Switch
-										bind:state={model.is_active}
+										state={model.is_active}
 										on:change={async (e) => {
-											toggleModelById(localStorage.token, model.id);
+											await toggleModelById(localStorage.token, model.id);
 											_models.set(await getModels(localStorage.token));
+											models = await getWorkspaceModels(localStorage.token);
 										}}
 									/>
 								</Tooltip>

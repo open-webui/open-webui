@@ -102,11 +102,12 @@
 				return true;
 			} else {
 				const query = search.toLowerCase();
-				// Search by name, email, or domain (extracted from email)
+				// Search by name, email, domain (extracted from email), or role
 				return (
 					user.name.toLowerCase().includes(query) ||
 					user.email.toLowerCase().includes(query) ||
-					user.email.toLowerCase().split('@')[1]?.includes(query)
+					user.email.toLowerCase().split('@')[1]?.includes(query) ||
+					user.role.toLowerCase().includes(query)
 				);
 			}
 		})

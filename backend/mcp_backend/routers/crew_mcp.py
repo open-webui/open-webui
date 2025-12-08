@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from typing import Optional, Dict, Any
 from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
 from open_webui.utils.auth import get_verified_user
@@ -17,6 +18,54 @@ from open_webui.socket.main import get_event_emitter
 # Add the backend directory to the path to import crew_mcp_integration
 backend_dir = Path(__file__).parent.parent.parent
 sys.path.append(str(backend_dir))
+
+# Initialize HTTPBearer for token extraction
+bearer_security = HTTPBearer(auto_error=False)
+
+
+def extract_user_token(
+    request: Request,
+    auth_token: Optional[HTTPAuthorizationCredentials] = Depends(bearer_security),
+) -> Optional[str]:
+    """Extract the user's OAuth token from the request for OBO flow"""
+    import os
+
+    # Check if we're in localhost development environment
+    is_localhost = (
+        os.getenv("ENVIRONMENT", "").lower()
+        in ["", "local", "localhost", "development"]
+        or "localhost" in os.getenv("WEBUI_BASE_URL", "")
+        or "localhost" in os.getenv("CORS_ALLOW_ORIGIN", "")
+        or os.getenv("ENABLE_SIGNUP", "").lower()
+        == "true"  # Local dev has signup enabled
+    )
+
+    # First priority: OAuth access token from Microsoft login (for SharePoint OBO)
+    if "oauth_access_token" in request.cookies:
+        token = request.cookies.get("oauth_access_token")
+        logging.info("Using OAuth access token for SharePoint OBO flow")
+        return token
+
+    # Second priority: OAuth ID token (may work for some scenarios)
+    elif "oauth_id_token" in request.cookies:
+        token = request.cookies.get("oauth_id_token")
+        logging.info("Using OAuth ID token for SharePoint OBO flow")
+        return token
+
+    # No OAuth tokens found
+    else:
+        if is_localhost:
+            logging.info(
+                "No OAuth tokens found in localhost - will use application-only authentication"
+            )
+            return None
+        else:
+            logging.warning(
+                "No OAuth tokens found in production environment - OAuth2 proxy may not be configured"
+            )
+            # Still return None but with warning - let SharePoint client handle the error
+            return None
+
 
 try:
     from mcp_backend.integration.crew_mcp_integration import CrewMCPManager
@@ -249,7 +298,10 @@ async def get_mcp_tools(user=Depends(get_verified_user)) -> MCPToolsResponse:
 
 @router.post("/query")
 async def run_crew_query(
-    request_data: Request, request: CrewMCPQuery, user=Depends(get_verified_user)
+    request_data: Request,
+    request: CrewMCPQuery,
+    user=Depends(get_verified_user),
+    auth_token: Optional[HTTPAuthorizationCredentials] = Depends(bearer_security),
 ) -> CrewMCPResponse:
     """Run a CrewAI query with MCP tools"""
     if not crew_mcp_manager:
@@ -261,8 +313,19 @@ async def run_crew_query(
         )
 
     try:
+        # Extract user token for SharePoint OBO flow (environment-aware)
+        user_jwt_token = extract_user_token(request_data, auth_token)
+
         log.info(f"Running CrewAI query for user {user.id}: {request.query}")
         log.info(f"Selected tools: {request.selected_tools}")
+        log.info(f"User token available for OBO flow: {bool(user_jwt_token)}")
+
+        # Set user token in CrewAI manager for SharePoint OBO authentication
+        # This works in both local (gracefully degraded) and K8s (full OAuth) environments
+        if user_jwt_token and user_jwt_token != "user_token_placeholder":
+            crew_mcp_manager.set_user_token(user_jwt_token)
+        else:
+            log.info("No OAuth token available - using application-only authentication")
 
         # Get available tools first
         tools = crew_mcp_manager.get_available_tools()
