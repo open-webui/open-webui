@@ -65,6 +65,7 @@
 	import PinnedModelList from './Sidebar/PinnedModelList.svelte';
 	import Note from '../icons/Note.svelte';
 	import { slide } from 'svelte/transition';
+	import { convertDeepseekChats, getImportOrigin } from '$lib/utils';
 
 	const BREAKPOINT = 768;
 
@@ -355,7 +356,20 @@
 	};
 
 	const importChatsHandler = async (_chats) => {
-		for (const chat of _chats) {
+		let chatsToImport = _chats;
+
+		const origin = getImportOrigin(chatsToImport);
+		if (origin === 'deepseek') {
+			try {
+				chatsToImport = convertDeepseekChats(chatsToImport);
+			} catch (error) {
+				console.error('DeepSeek conversion failed', error);
+				toast.error('DeepSeek 聊天转换失败');
+				return;
+			}
+		}
+
+		for (const chat of chatsToImport) {
 			console.log(chat);
 
 			if (chat.chat) {
