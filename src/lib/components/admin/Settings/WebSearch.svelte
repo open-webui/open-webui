@@ -769,6 +769,19 @@
 					{#if webConfig.WEB_LOADER_ENGINE === '' || webConfig.WEB_LOADER_ENGINE === 'safe_web'}
 						<div class="  mb-2.5 flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">
+								{$i18n.t('Timeout')}
+							</div>
+							<div class="flex items-center relative">
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('Timeout')}
+									bind:value={webConfig.WEB_LOADER_TIMEOUT}
+								/>
+							</div>
+						</div>
+
+						<div class="  mb-2.5 flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">
 								{$i18n.t('Verify SSL Certificate')}
 							</div>
 							<div class="flex items-center relative">
