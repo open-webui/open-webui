@@ -269,7 +269,7 @@ async def generate_chat_completion(
             )
         
         if model.get("owned_by") == "luxor":
-            form_data = convert_payload_openai_to_luxor(form_data)
+            form_data = convert_payload_openai_to_luxor(form_data, user)
             response = await generate_luxor_chat_completion(
                 form_data=form_data
             )

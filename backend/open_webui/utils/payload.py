@@ -4,10 +4,12 @@ from open_webui.utils.misc import (
     add_or_update_system_message,
     replace_system_message_content,
 )
-from open_webui.utils.luxtronic import get_luxtronic_model_names    
 from typing import Callable, Optional
 import json
 from fastapi import HTTPException
+from open_webui.config import S3_BUCKET_NAME
+from open_webui.models.tenants import Tenants
+from open_webui.models.users import UserModel
 
 # inplace function: form_data is modified
 def apply_system_prompt_to_body(
@@ -275,34 +277,59 @@ def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
 
     return ollama_messages
 
-def convert_payload_openai_to_luxor(openai_payload: dict) -> dict:
+def _get_tenant_bucket_for_user(user: UserModel) -> str:
+    if not getattr(user, "tenant_id", None):
+        raise HTTPException(
+            status_code=400,
+            detail="User is not associated with a tenant.",
+        )
+
+    tenant = Tenants.get_tenant_by_id(user.tenant_id)
+    if not tenant or not tenant.s3_bucket:
+        raise HTTPException(
+            status_code=400,
+            detail="Tenant storage configuration missing.",
+        )
+
+    return tenant.s3_bucket
+
+
+def convert_payload_openai_to_luxor(openai_payload: dict, user: Optional[UserModel]) -> dict:
     """
     Converts a payload formatted for OpenAI's API to be compatible with Luxor's API endpoint for chat completions.
 
     Args:
         openai_payload (dict): The payload originally designed for OpenAI API usage.
+        user (UserModel): Authenticated user issuing the request.
 
     Returns:
         dict: A modified payload compatible with the Luxor API.
     """
     luxor_payload = {}
-    question_type = openai_payload["model"].split(":")[1]
 
-    luxor_question_types = get_luxtronic_model_names()
+    if not user:
+        raise HTTPException(
+            status_code=400,
+            detail="User context required for Luxor requests.",
+        )
+    if not S3_BUCKET_NAME:
+        raise HTTPException(
+            status_code=500,
+            detail="Luxor storage bucket is not configured.",
+        )
 
-    if question_type not in luxor_question_types:                                                                                                                                                                                                      
-          raise HTTPException(                                                                                                                                                                                                                           
-              status_code=400,                                                                                                                                                                                                                           
-              detail=f"Unsupported Luxor question_type '{question_type}'. "                                                                                                                                                                             
-          )     
-
-    luxor_payload["question_type"] = question_type
+    tenant_bucket = _get_tenant_bucket_for_user(user)
 
     messages = openai_payload.get(("messages"))
     luxor_payload["messages"] = messages
+    luxor_payload["bucket"] = S3_BUCKET_NAME
+    luxor_payload["tenant"] = tenant_bucket
+    luxor_payload["user"] = user.id
 
     if openai_payload.get("task"):
         luxor_payload["task"] = openai_payload.get("task")
+    else:
+        luxor_payload["task"] = "generate-completion"
 
     return luxor_payload   
 
