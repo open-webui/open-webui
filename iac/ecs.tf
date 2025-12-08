@@ -80,6 +80,13 @@ resource "aws_ecs_task_definition" "webui_scaled" {
   execution_role_arn       = aws_iam_role.openwebui_execution_role.arn
   task_role_arn           = aws_iam_role.openwebui_execution_role.arn
 
+  # Ensure secret versions exist before task definition is created
+  # This prevents tasks from failing due to missing AWSCURRENT staging label
+  depends_on = [
+    aws_secretsmanager_secret_version.redis_connection,
+    aws_secretsmanager_secret_version.webui_shared_secret
+  ]
+
   container_definitions = jsonencode([
     {
       name      = "openwebui"
@@ -381,8 +388,13 @@ resource "aws_ecs_service" "webui_scaled" {
     container_port   = 8080
   }
 
-  # Wait for target group to be ready
-  depends_on = [aws_lb_listener.webui_listener]
+  # Wait for target group and secret versions to be ready
+  # This ensures secrets have AWSCURRENT staging label before tasks start
+  depends_on = [
+    aws_lb_listener.webui_listener,
+    aws_secretsmanager_secret_version.redis_connection,
+    aws_secretsmanager_secret_version.webui_shared_secret
+  ]
 
   # Enable deployment circuit breaker
   deployment_controller {
