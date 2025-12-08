@@ -91,14 +91,10 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     # deep copy the base models to avoid modifying the original list
     models = [model.copy() for model in base_models]
 
-    luxtronic_model_names = get_luxtronic_model_names(user)
-
-    
-    for source in luxtronic_model_names:
-        models.append(
+    models.append(
             {
-                "id": f"luxor:{source}",
-                "name": f"Luxor {source}",
+                "id": f"luxor:latest",
+                "name": f"Luxor",
                 "object": "model",
                 "created": int(time.time()),
                 "owned_by": "luxor",
