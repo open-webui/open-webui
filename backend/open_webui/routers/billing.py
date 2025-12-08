@@ -418,3 +418,220 @@ async def get_recharge_logs(
     except Exception as e:
         log.error(f"查询充值记录失败: {e}")
         raise HTTPException(status_code=500, detail=f"查询充值记录失败: {str(e)}")
+
+
+####################
+# Payment API (用户自助充值)
+####################
+
+
+class CreateOrderRequest(BaseModel):
+    """创建充值订单请求"""
+
+    amount: float = Field(..., gt=0, le=10000, description="充值金额（元），1-10000")
+
+
+class CreateOrderResponse(BaseModel):
+    """创建充值订单响应"""
+
+    order_id: str
+    out_trade_no: str
+    qr_code: str
+    amount: float
+    expired_at: int
+
+
+class OrderStatusResponse(BaseModel):
+    """订单状态响应"""
+
+    order_id: str
+    status: str
+    amount: float
+    paid_at: Optional[int] = None
+
+
+@router.post("/payment/create", response_model=CreateOrderResponse)
+async def create_payment_order(req: CreateOrderRequest, user=Depends(get_verified_user)):
+    """
+    创建充值订单（生成支付二维码）
+
+    需要登录
+    """
+    import uuid as uuid_module
+
+    from open_webui.utils.alipay import create_qr_payment, is_alipay_configured
+    from open_webui.models.billing import PaymentOrders
+
+    # 检查支付宝配置
+    if not is_alipay_configured():
+        raise HTTPException(status_code=503, detail="支付功能暂未开放，请联系管理员")
+
+    # 验证金额
+    if req.amount < 1:
+        raise HTTPException(status_code=400, detail="充值金额最低1元")
+    if req.amount > 10000:
+        raise HTTPException(status_code=400, detail="充值金额最高10000元")
+
+    # 生成订单号: CK + 时间戳 + 随机字符
+    out_trade_no = f"CK{int(time.time())}{uuid_module.uuid4().hex[:8].upper()}"
+
+    # 调用支付宝创建订单
+    success, msg, qr_code = create_qr_payment(
+        out_trade_no=out_trade_no,
+        amount_yuan=req.amount,
+        subject="Cakumi账户充值",
+    )
+
+    if not success:
+        log.error(f"创建支付订单失败: {msg}")
+        raise HTTPException(status_code=500, detail=f"创建订单失败: {msg}")
+
+    # 保存订单到数据库
+    now = int(time.time())
+    expired_at = now + 900  # 15分钟后过期
+
+    order = PaymentOrders.create(
+        user_id=user.id,
+        out_trade_no=out_trade_no,
+        amount=int(req.amount * 10000),  # 元 → 毫
+        qr_code=qr_code,
+        expired_at=expired_at,
+        payment_method="alipay",
+    )
+
+    log.info(f"创建支付订单成功: {out_trade_no}, 用户={user.id}, 金额={req.amount}元")
+
+    return CreateOrderResponse(
+        order_id=order.id,
+        out_trade_no=out_trade_no,
+        qr_code=qr_code,
+        amount=req.amount,
+        expired_at=expired_at,
+    )
+
+
+@router.get("/payment/status/{order_id}", response_model=OrderStatusResponse)
+async def get_payment_status(order_id: str, user=Depends(get_verified_user)):
+    """
+    查询订单状态（前端轮询）
+
+    需要登录
+    """
+    from open_webui.models.billing import PaymentOrders
+
+    order = PaymentOrders.get_by_id(order_id)
+
+    if not order:
+        raise HTTPException(status_code=404, detail="订单不存在")
+
+    # 确保只能查询自己的订单
+    if order.user_id != user.id:
+        raise HTTPException(status_code=403, detail="无权查询该订单")
+
+    return OrderStatusResponse(
+        order_id=order.id,
+        status=order.status,
+        amount=order.amount / 10000,  # 毫 → 元
+        paid_at=order.paid_at,
+    )
+
+
+@router.post("/payment/notify")
+async def alipay_notify(request):
+    """
+    支付宝异步通知回调
+
+    注意：此接口无需登录验证
+    """
+    from fastapi import Request
+    from open_webui.utils.alipay import verify_notify_sign
+    from open_webui.models.billing import PaymentOrders, RechargeLog
+    from open_webui.models.users import Users
+    import uuid as uuid_module
+
+    # 获取回调参数
+    form_data = await request.form()
+    params = dict(form_data)
+
+    log.info(f"收到支付宝回调: {params.get('out_trade_no')}")
+
+    # 验签
+    if not verify_notify_sign(params):
+        log.error("支付宝回调验签失败")
+        return "fail"
+
+    out_trade_no = params.get("out_trade_no")
+    trade_no = params.get("trade_no")
+    trade_status = params.get("trade_status")
+
+    # 只处理支付成功状态
+    if trade_status not in ["TRADE_SUCCESS", "TRADE_FINISHED"]:
+        log.info(f"支付宝回调，非成功状态: {trade_status}")
+        return "success"
+
+    # 查询订单
+    order = PaymentOrders.get_by_out_trade_no(out_trade_no)
+    if not order:
+        log.error(f"支付宝回调，订单不存在: {out_trade_no}")
+        return "success"
+
+    # 幂等检查：已处理的订单直接返回成功
+    if order.status == "paid":
+        log.info(f"支付宝回调，订单已处理: {out_trade_no}")
+        return "success"
+
+    # 更新订单状态
+    now = int(time.time())
+    PaymentOrders.update_status(
+        out_trade_no=out_trade_no,
+        status="paid",
+        trade_no=trade_no,
+        paid_at=now,
+    )
+
+    # 增加用户余额
+    try:
+        from open_webui.models.users import User as UserModel
+
+        with get_db() as db:
+            user = db.query(UserModel).filter_by(id=order.user_id).first()
+            if user:
+                user.balance = (user.balance or 0) + order.amount
+                db.commit()
+
+                # 记录充值日志
+                recharge_log = RechargeLog(
+                    id=str(uuid_module.uuid4()),
+                    user_id=order.user_id,
+                    amount=order.amount,
+                    operator_id="system",  # 系统自动充值
+                    remark=f"支付宝充值，订单号: {out_trade_no}",
+                    created_at=now,
+                )
+                db.add(recharge_log)
+                db.commit()
+
+                log.info(
+                    f"支付成功: 用户={order.user_id}, 金额={order.amount / 10000:.2f}元, "
+                    f"订单={out_trade_no}"
+                )
+    except Exception as e:
+        log.error(f"支付回调处理失败: {e}")
+        # 即使余额更新失败，也返回 success，避免支付宝重复回调
+        # 后续可通过定时任务修复
+
+    return "success"
+
+
+@router.get("/payment/config")
+async def get_payment_config():
+    """
+    获取支付配置状态
+
+    公开接口，用于前端判断是否显示充值功能
+    """
+    from open_webui.utils.alipay import is_alipay_configured
+
+    return {
+        "alipay_enabled": is_alipay_configured(),
+    }

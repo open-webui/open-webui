@@ -875,3 +875,14 @@ PIP_PACKAGE_INDEX_OPTIONS = os.getenv("PIP_PACKAGE_INDEX_OPTIONS", "").split()
 ####################################
 
 EXTERNAL_PWA_MANIFEST_URL = os.environ.get("EXTERNAL_PWA_MANIFEST_URL")
+
+
+####################################
+# ALIPAY PAYMENT
+####################################
+
+ALIPAY_APP_ID = os.environ.get("ALIPAY_APP_ID", "")
+ALIPAY_PRIVATE_KEY = os.environ.get("ALIPAY_PRIVATE_KEY", "")  # 应用私钥
+ALIPAY_PUBLIC_KEY = os.environ.get("ALIPAY_PUBLIC_KEY", "")  # 支付宝公钥
+ALIPAY_NOTIFY_URL = os.environ.get("ALIPAY_NOTIFY_URL", "")  # 异步通知地址
+ALIPAY_SANDBOX = os.environ.get("ALIPAY_SANDBOX", "false").lower() == "true"  # 沙箱模式

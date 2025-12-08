@@ -138,27 +138,28 @@
 		<table class="w-full">
 			<thead>
 				<tr class="bg-gray-50 dark:bg-gray-800">
-					<th class="px-4 py-3 text-left text-xs font-semibold">{$i18n.t('时间')}</th>
-					<th class="px-4 py-3 text-left text-xs font-semibold">{$i18n.t('模型')}</th>
-					<th class="px-4 py-3 text-left text-xs font-semibold">{$i18n.t('类型')}</th>
-					<th class="px-4 py-3 text-right text-xs font-semibold">{$i18n.t('输入Token')}</th>
-					<th class="px-4 py-3 text-right text-xs font-semibold">{$i18n.t('输出Token')}</th>
-					<th class="px-4 py-3 text-right text-xs font-semibold">{$i18n.t('费用')}</th>
-					<th class="px-4 py-3 text-right text-xs font-semibold">{$i18n.t('余额')}</th>
+					<th class="px-4 py-3 text-left text-xs font-semibold whitespace-nowrap">{$i18n.t('时间')}</th>
+					<th class="px-4 py-3 text-left text-xs font-semibold whitespace-nowrap">{$i18n.t('模型')}</th>
+					<th class="px-4 py-3 text-left text-xs font-semibold whitespace-nowrap">{$i18n.t('类型')}</th>
+					<th class="px-4 py-3 text-right text-xs font-semibold whitespace-nowrap">{$i18n.t('输入Token')}</th>
+					<th class="px-4 py-3 text-right text-xs font-semibold whitespace-nowrap">{$i18n.t('输出Token')}</th>
+					<th class="px-4 py-3 text-right text-xs font-semibold whitespace-nowrap">{$i18n.t('费用')}</th>
+					<th class="px-4 py-3 text-right text-xs font-semibold whitespace-nowrap">{$i18n.t('余额')}</th>
 				</tr>
 			</thead>
 			<tbody>
 				{#each mergedLogs as log (log.id)}
 					<tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-						<td class="px-4 py-3 text-sm">{formatDate(log.created_at)}</td>
-						<td class="px-4 py-3">
+						<td class="px-4 py-3 text-sm whitespace-nowrap">{formatDate(log.created_at)}</td>
+						<td class="px-4 py-3 whitespace-nowrap">
 							<code
-								class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono"
+								class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono max-w-[160px] truncate inline-block align-middle"
+								title={log.model_id}
 							>
 								{log.model_id}
 							</code>
 						</td>
-						<td class="px-4 py-3">
+						<td class="px-4 py-3 whitespace-nowrap">
 							<div class="flex items-center gap-2">
 								<span class="text-sm font-semibold {getLogTypeClass(log.displayType)}">
 									{getLogTypeLabel(log.displayType)}
@@ -182,14 +183,14 @@
 								{/if}
 							</div>
 						</td>
-						<td class="px-4 py-3 text-right text-sm">{log.prompt_tokens.toLocaleString()}</td>
-						<td class="px-4 py-3 text-right text-sm">
+						<td class="px-4 py-3 text-right text-sm whitespace-nowrap">{log.prompt_tokens.toLocaleString()}</td>
+						<td class="px-4 py-3 text-right text-sm whitespace-nowrap">
 							{log.completion_tokens.toLocaleString()}
 						</td>
-						<td class="px-4 py-3 text-right text-sm font-semibold" class:text-green-600={log.cost < 0} class:text-red-600={log.cost >= 0}>
+						<td class="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap" class:text-green-600={log.cost < 0} class:text-red-600={log.cost >= 0}>
 							{formatCurrency(log.cost, true)}
 						</td>
-						<td class="px-4 py-3 text-right text-sm">
+						<td class="px-4 py-3 text-right text-sm whitespace-nowrap">
 							{log.balance_after !== null ? formatCurrency(log.balance_after, false) : '-'}
 						</td>
 					</tr>

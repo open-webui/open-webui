@@ -68,6 +68,25 @@ class RechargeLog(Base):
     created_at = Column(BigInteger, nullable=False)
 
 
+class PaymentOrder(Base):
+    """支付订单表"""
+
+    __tablename__ = "payment_order"
+
+    id = Column(String, primary_key=True)  # 内部订单号
+    user_id = Column(String, nullable=False, index=True)
+    out_trade_no = Column(String(64), unique=True, nullable=False)  # 商户订单号
+    trade_no = Column(String(64), nullable=True)  # 支付宝交易号
+    amount = Column(Integer, nullable=False)  # 金额（毫，1元=10000毫）
+    status = Column(String(20), default="pending")  # pending/paid/closed/refunded
+    payment_method = Column(String(20), default="alipay")  # alipay
+    qr_code = Column(Text, nullable=True)  # 支付二维码内容
+    paid_at = Column(BigInteger, nullable=True)  # 支付时间
+    created_at = Column(BigInteger, nullable=False)
+    updated_at = Column(BigInteger, nullable=False)
+    expired_at = Column(BigInteger, nullable=False)  # 订单过期时间
+
+
 ####################
 # Pydantic Models
 ####################
@@ -118,6 +137,25 @@ class RechargeLogModel(BaseModel):
     operator_id: str
     remark: Optional[str]
     created_at: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaymentOrderModel(BaseModel):
+    """支付订单 Pydantic 模型（以毫为单位，1元=10000毫）"""
+
+    id: str
+    user_id: str
+    out_trade_no: str
+    trade_no: Optional[str] = None
+    amount: int  # 毫
+    status: str
+    payment_method: str
+    qr_code: Optional[str] = None
+    paid_at: Optional[int] = None
+    created_at: int
+    updated_at: int
+    expired_at: int
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -270,7 +308,106 @@ class RechargeLogTable:
             ]
 
 
+class PaymentOrderTable:
+    """支付订单数据访问层"""
+
+    def create(
+        self,
+        user_id: str,
+        out_trade_no: str,
+        amount: int,
+        qr_code: str,
+        expired_at: int,
+        payment_method: str = "alipay",
+    ) -> PaymentOrderModel:
+        """创建支付订单"""
+        now = int(time.time())
+        with get_db() as db:
+            order = PaymentOrder(
+                id=str(uuid.uuid4()),
+                user_id=user_id,
+                out_trade_no=out_trade_no,
+                amount=amount,
+                status="pending",
+                payment_method=payment_method,
+                qr_code=qr_code,
+                created_at=now,
+                updated_at=now,
+                expired_at=expired_at,
+            )
+            db.add(order)
+            db.commit()
+            db.refresh(order)
+            return PaymentOrderModel.model_validate(order)
+
+    def get_by_id(self, order_id: str) -> Optional[PaymentOrderModel]:
+        """根据ID获取订单"""
+        with get_db() as db:
+            order = db.query(PaymentOrder).filter_by(id=order_id).first()
+            return PaymentOrderModel.model_validate(order) if order else None
+
+    def get_by_out_trade_no(self, out_trade_no: str) -> Optional[PaymentOrderModel]:
+        """根据商户订单号获取订单"""
+        with get_db() as db:
+            order = db.query(PaymentOrder).filter_by(out_trade_no=out_trade_no).first()
+            return PaymentOrderModel.model_validate(order) if order else None
+
+    def get_by_user_id(
+        self, user_id: str, limit: int = 50, offset: int = 0
+    ) -> list[PaymentOrderModel]:
+        """获取用户支付订单"""
+        with get_db() as db:
+            orders = (
+                db.query(PaymentOrder)
+                .filter_by(user_id=user_id)
+                .order_by(PaymentOrder.created_at.desc())
+                .limit(limit)
+                .offset(offset)
+                .all()
+            )
+            return [PaymentOrderModel.model_validate(o) for o in orders]
+
+    def update_status(
+        self,
+        out_trade_no: str,
+        status: str,
+        trade_no: Optional[str] = None,
+        paid_at: Optional[int] = None,
+    ) -> bool:
+        """更新订单状态"""
+        with get_db() as db:
+            order = db.query(PaymentOrder).filter_by(out_trade_no=out_trade_no).first()
+            if not order:
+                return False
+
+            order.status = status
+            order.updated_at = int(time.time())
+            if trade_no:
+                order.trade_no = trade_no
+            if paid_at:
+                order.paid_at = paid_at
+
+            db.commit()
+            return True
+
+    def close_expired_orders(self) -> int:
+        """关闭过期订单"""
+        now = int(time.time())
+        with get_db() as db:
+            result = (
+                db.query(PaymentOrder)
+                .filter(
+                    PaymentOrder.status == "pending",
+                    PaymentOrder.expired_at < now,
+                )
+                .update({"status": "closed", "updated_at": now})
+            )
+            db.commit()
+            return result
+
+
 # 单例实例
 ModelPricings = ModelPricingTable()
 BillingLogs = BillingLogTable()
 RechargeLogs = RechargeLogTable()
+PaymentOrders = PaymentOrderTable()

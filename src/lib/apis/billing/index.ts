@@ -327,3 +327,120 @@ export const getRechargeLogsByUserId = async (
 
 	return res;
 };
+
+// ========== 支付相关 API ==========
+
+export interface CreateOrderResponse {
+	order_id: string;
+	out_trade_no: string;
+	qr_code: string;
+	amount: number;
+	expired_at: number;
+}
+
+export interface OrderStatusResponse {
+	order_id: string;
+	status: string;
+	amount: number;
+	paid_at: number | null;
+}
+
+export interface PaymentConfig {
+	alipay_enabled: boolean;
+}
+
+/**
+ * 获取支付配置状态
+ */
+export const getPaymentConfig = async (): Promise<PaymentConfig> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/billing/payment/config`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json'
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail || err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+/**
+ * 创建充值订单
+ */
+export const createPaymentOrder = async (
+	token: string,
+	amount: number
+): Promise<CreateOrderResponse> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/billing/payment/create`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ amount })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail || err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+/**
+ * 查询订单状态
+ */
+export const getPaymentStatus = async (
+	token: string,
+	orderId: string
+): Promise<OrderStatusResponse> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/billing/payment/status/${orderId}`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail || err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
