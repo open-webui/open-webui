@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.42] - 2025-12-09
+
+### Added
+
+- 💬 Channel message data lazy loading was implemented, deferring attachment and file metadata retrieval until needed to improve initial message list load performance. [Commit](https://github.com/open-webui/open-webui/commit/54b7ec56d6bcd2d79addc1694b757dab18cf18c5)
+- 🖼️ Channel image upload handling was optimized to process and store compressed images directly as files rather than inline data, improving memory efficiency and message load times. [Commit](https://github.com/open-webui/open-webui/commit/22f1b764a7ea1add0a896906a9ef00b4b6743adc)
+- 🎥 Video file playback support was added to channel messages, enabling inline video viewing with native player controls. [Commit](https://github.com/open-webui/open-webui/commit/7b126b23d50a0bd36a350fe09dc1dbe3df105318)
+- 🔑 The "OAUTH_AUDIENCE" environment variable now allows OAuth providers to specify audience parameters for JWT access token generation. [#19768](https://github.com/open-webui/open-webui/pull/19768)
+- 🔌 The "REDIS_SOCKET_CONNECT_TIMEOUT" environment variable now allows configuring socket connection timeouts for Redis and Sentinel connections, addressing potential failover and responsiveness issues in distributed deployments. [#19799](https://github.com/open-webui/open-webui/pull/19799), [Docs:#882](https://github.com/open-webui/docs/pull/882)
+- ⏱️ The "WEB_LOADER_TIMEOUT" environment variable now allows configuring request timeouts for SafeWebBaseLoader operations. [#19804](https://github.com/open-webui/open-webui/pull/19804), [#19734](https://github.com/open-webui/open-webui/issues/19734)
+- 👥 User profile previews now display group membership information for easier identification of user roles and permissions. [Commit](https://github.com/open-webui/open-webui/commit/2b1a29d44bde9fbc20ff9f0a5ded1ce8ded9d90d)
+- 🔄 Various improvements were implemented across the frontend and backend to enhance performance, stability, and security.
+- 🌐 Translations for Portuguese (Brazil), Simplified Chinese, Traditional Chinese, Catalan, and Spanish were enhanced and expanded.
+
+### Fixed
+
+- 🛡️ Chat loading failures when channels permissions were disabled are now prevented through graceful error handling. [Commit](https://github.com/open-webui/open-webui/commit/5c2df97f04cce5cb7087d288f816f91a739688c1)
+- 🎚️ Text scale adjustment buttons in Interface Settings were fixed to correctly increment and decrement the scale value. [#19699](https://github.com/open-webui/open-webui/pull/19699)
+- 📁 The move button is now hidden when no folders exist, preventing display of non-functional controls. [#19705](https://github.com/open-webui/open-webui/pull/19705)
+- 📦 Qdrant client dependency was updated to resolve startup version incompatibility warnings. [#19757](https://github.com/open-webui/open-webui/pull/19757)
+- 🧮 The "ENABLE_ASYNC_EMBEDDING" environment variable is now correctly applied to embedding operations when configured exclusively via environment variables. [#19748](https://github.com/open-webui/open-webui/pull/19748)
+- 🔒 Temporary chat permission enforcement now correctly prevents users from enabling the feature through personal settings when disabled in default or group permissions. [#19785](https://github.com/open-webui/open-webui/issues/19785)
+- 🔧 Pipeline settings save failures when valve properties contain null values are now handled correctly. [#19791](https://github.com/open-webui/open-webui/pull/19791)
+- 🎨 Image editing with reference images now correctly uses both previously generated images and newly uploaded reference images. [Commit](https://github.com/open-webui/open-webui/commit/bcd50ed8f1b7387fd700538ae0d74fc72f3c53d0)
+- 📑 Source citation rendering errors when citation syntax appeared in user messages or contexts without source data were resolved. [Commit](https://github.com/open-webui/open-webui/commit/3c8f1cf8e58d52e86375634b0381374298b1b4f3)
+
 ## [0.6.41] - 2025-12-02
 
 ### Added
