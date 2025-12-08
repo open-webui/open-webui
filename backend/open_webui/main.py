@@ -504,6 +504,7 @@ from open_webui.utils.oauth import (
     OAuthManager,
     OAuthClientManager,
     OAuthClientInformationFull,
+    periodic_oauth_token_refresh,
 )
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 from open_webui.utils.redis import get_redis_connection
@@ -599,6 +600,11 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(periodic_usage_pool_cleanup())
 
+    # Start background task for proactive OAuth token refresh
+    app.state.oauth_token_refresh_task = asyncio.create_task(
+        periodic_oauth_token_refresh(app)
+    )
+
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         await get_all_models(
             Request(
@@ -621,6 +627,10 @@ async def lifespan(app: FastAPI):
         )
 
     yield
+
+    # Cleanup background tasks on shutdown
+    if hasattr(app.state, "oauth_token_refresh_task"):
+        app.state.oauth_token_refresh_task.cancel()
 
     if hasattr(app.state, "redis_task_command_listener"):
         app.state.redis_task_command_listener.cancel()

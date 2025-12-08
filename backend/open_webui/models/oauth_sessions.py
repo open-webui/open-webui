@@ -273,5 +273,40 @@ class OAuthSessionTable:
             log.error(f"Error deleting OAuth sessions by provider {provider}: {e}")
             return False
 
+    def get_expiring_sessions(self, minutes: int = 10) -> List[OAuthSessionModel]:
+        """Get all OAuth sessions expiring within the specified minutes.
+
+        Args:
+            minutes: Number of minutes from now to check for expiring sessions.
+
+        Returns:
+            List of OAuth sessions that will expire within the specified time window.
+        """
+        try:
+            with get_db() as db:
+                current_time = int(time.time())
+                expiry_threshold = current_time + (minutes * 60)
+
+                sessions = (
+                    db.query(OAuthSession)
+                    .filter(OAuthSession.expires_at <= expiry_threshold)
+                    .filter(OAuthSession.expires_at > current_time)  # Not already expired
+                    .all()
+                )
+
+                results = []
+                for session in sessions:
+                    try:
+                        session.token = self._decrypt_token(session.token)
+                        results.append(OAuthSessionModel.model_validate(session))
+                    except Exception as e:
+                        log.error(f"Error decrypting token for session {session.id}: {e}")
+                        continue
+
+                return results
+        except Exception as e:
+            log.error(f"Error getting expiring OAuth sessions: {e}")
+            return []
+
 
 OAuthSessions = OAuthSessionTable()
