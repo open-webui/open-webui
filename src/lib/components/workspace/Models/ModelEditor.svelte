@@ -24,6 +24,8 @@
 	import DefaultFiltersSelector from './DefaultFiltersSelector.svelte';
 	import DefaultFeatures from './DefaultFeatures.svelte';
 	import PromptSuggestions from './PromptSuggestions.svelte';
+	import AccessControlModal from '../common/AccessControlModal.svelte';
+	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -43,6 +45,7 @@
 
 	let showAdvanced = false;
 	let showPreview = false;
+	let showAccessControlModal = false;
 
 	let loaded = false;
 
@@ -465,6 +468,14 @@
 			</div>
 		</div>
 	{/if}
+
+	<AccessControlModal
+		bind:show={showAccessControlModal}
+		bind:accessControl
+		accessRoles={['read', 'write']}
+		share={$user?.permissions?.sharing?.models || $user?.role === 'admin'}
+		sharePublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin'}
+	/>
 
 	{#if onBack}
 		<button

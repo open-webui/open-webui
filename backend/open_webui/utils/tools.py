@@ -150,11 +150,12 @@ async def get_tools(
                     )
 
                     specs = tool_server_data.get("specs", [])
-                    function_name_filter_list = (
-                        tool_server_connection.get("config", {})
-                        .get("function_name_filter_list", "")
-                        .split(",")
-                    )
+                    function_name_filter_list = tool_server_connection.get(
+                        "config", {}
+                    ).get("function_name_filter_list", "")
+
+                    if isinstance(function_name_filter_list, str):
+                        function_name_filter_list = function_name_filter_list.split(",")
 
                     for spec in specs:
                         function_name = spec["name"]

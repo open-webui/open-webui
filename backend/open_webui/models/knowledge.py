@@ -7,13 +7,21 @@ import uuid
 from open_webui.internal.db import Base, get_db
 from open_webui.env import SRC_LOG_LEVELS
 
-from open_webui.models.files import FileMetadataResponse
+from open_webui.models.files import File, FileModel, FileMetadataResponse
 from open_webui.models.groups import Groups
 from open_webui.models.users import Users, UserResponse
 
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, JSON
+from sqlalchemy import (
+    BigInteger,
+    Column,
+    ForeignKey,
+    String,
+    Text,
+    JSON,
+    UniqueConstraint,
+)
 
 from open_webui.utils.access_control import has_access
 
@@ -34,9 +42,7 @@ class Knowledge(Base):
     name = Column(Text)
     description = Column(Text)
 
-    data = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
-
     access_control = Column(JSON, nullable=True)  # Controls data access levels.
     # Defines access control rules for this entry.
     # - `None`: Public access, available to all users with the "user" role.
@@ -67,7 +73,6 @@ class KnowledgeModel(BaseModel):
     name: str
     description: str
 
-    data: Optional[dict] = None
     meta: Optional[dict] = None
 
     access_control: Optional[dict] = None
@@ -76,11 +81,42 @@ class KnowledgeModel(BaseModel):
     updated_at: int  # timestamp in epoch
 
 
+class KnowledgeFile(Base):
+    __tablename__ = "knowledge_file"
+
+    id = Column(Text, unique=True, primary_key=True)
+
+    knowledge_id = Column(
+        Text, ForeignKey("knowledge.id", ondelete="CASCADE"), nullable=False
+    )
+    file_id = Column(Text, ForeignKey("file.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Text, nullable=False)
+
+    created_at = Column(BigInteger, nullable=False)
+    updated_at = Column(BigInteger, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "knowledge_id", "file_id", name="uq_knowledge_file_knowledge_file"
+        ),
+    )
+
+
+class KnowledgeFileModel(BaseModel):
+    id: str
+    knowledge_id: str
+    file_id: str
+    user_id: str
+
+    created_at: int  # timestamp in epoch
+    updated_at: int  # timestamp in epoch
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 ####################
 # Forms
 ####################
-
-
 class KnowledgeUserModel(KnowledgeModel):
     user: Optional[UserResponse] = None
 
@@ -96,7 +132,6 @@ class KnowledgeUserResponse(KnowledgeUserModel):
 class KnowledgeForm(BaseModel):
     name: str
     description: str
-    data: Optional[dict] = None
     access_control: Optional[dict] = None
 
 
@@ -180,6 +215,100 @@ class KnowledgeTable:
                 knowledge = db.query(Knowledge).filter_by(id=id).first()
                 return KnowledgeModel.model_validate(knowledge) if knowledge else None
         except Exception:
+            return None
+
+    def get_knowledges_by_file_id(self, file_id: str) -> list[KnowledgeModel]:
+        try:
+            with get_db() as db:
+                knowledges = (
+                    db.query(Knowledge)
+                    .join(KnowledgeFile, Knowledge.id == KnowledgeFile.knowledge_id)
+                    .filter(KnowledgeFile.file_id == file_id)
+                    .all()
+                )
+                return [
+                    KnowledgeModel.model_validate(knowledge) for knowledge in knowledges
+                ]
+        except Exception:
+            return []
+
+    def get_files_by_id(self, knowledge_id: str) -> list[FileModel]:
+        try:
+            with get_db() as db:
+                files = (
+                    db.query(File)
+                    .join(KnowledgeFile, File.id == KnowledgeFile.file_id)
+                    .filter(KnowledgeFile.knowledge_id == knowledge_id)
+                    .all()
+                )
+                return [FileModel.model_validate(file) for file in files]
+        except Exception:
+            return []
+
+    def get_file_metadatas_by_id(self, knowledge_id: str) -> list[FileMetadataResponse]:
+        try:
+            with get_db() as db:
+                files = self.get_files_by_id(knowledge_id)
+                return [FileMetadataResponse(**file.model_dump()) for file in files]
+        except Exception:
+            return []
+
+    def add_file_to_knowledge_by_id(
+        self, knowledge_id: str, file_id: str, user_id: str
+    ) -> Optional[KnowledgeFileModel]:
+        with get_db() as db:
+            knowledge_file = KnowledgeFileModel(
+                **{
+                    "id": str(uuid.uuid4()),
+                    "knowledge_id": knowledge_id,
+                    "file_id": file_id,
+                    "user_id": user_id,
+                    "created_at": int(time.time()),
+                    "updated_at": int(time.time()),
+                }
+            )
+
+            try:
+                result = KnowledgeFile(**knowledge_file.model_dump())
+                db.add(result)
+                db.commit()
+                db.refresh(result)
+                if result:
+                    return KnowledgeFileModel.model_validate(result)
+                else:
+                    return None
+            except Exception:
+                return None
+
+    def remove_file_from_knowledge_by_id(self, knowledge_id: str, file_id: str) -> bool:
+        try:
+            with get_db() as db:
+                db.query(KnowledgeFile).filter_by(
+                    knowledge_id=knowledge_id, file_id=file_id
+                ).delete()
+                db.commit()
+                return True
+        except Exception:
+            return False
+
+    def reset_knowledge_by_id(self, id: str) -> Optional[KnowledgeModel]:
+        try:
+            with get_db() as db:
+                # Delete all knowledge_file entries for this knowledge_id
+                db.query(KnowledgeFile).filter_by(knowledge_id=id).delete()
+                db.commit()
+
+                # Update the knowledge entry's updated_at timestamp
+                db.query(Knowledge).filter_by(id=id).update(
+                    {
+                        "updated_at": int(time.time()),
+                    }
+                )
+                db.commit()
+
+                return self.get_knowledge_by_id(id=id)
+        except Exception as e:
+            log.exception(e)
             return None
 
     def update_knowledge_by_id(
