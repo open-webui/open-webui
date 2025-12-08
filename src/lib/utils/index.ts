@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+﻿import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
 import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -212,6 +212,10 @@ export const convertMessagesToHistory = (messages) => {
 		messages: {},
 		currentId: null
 	};
+
+	if (!messages || !Array.isArray(messages)) {
+		return history;
+	}
 
 	let parentMessageId = null;
 	let messageId = null;
@@ -699,7 +703,7 @@ export const getUserPosition = async (raw = false) => {
 	}
 };
 
-const convertOpenAIMessages = (convo) => {
+export const convertOpenAIMessages = (convo) => {
 	// Parse OpenAI chat messages and create chat dictionary for creating new chats
 	const mapping = convo['mapping'];
 	const messages = [];
@@ -765,7 +769,7 @@ const fragmentsToContent = (fragments: any) => {
 		.join('\n\n');
 };
 
-const convertDeepseekMessages = (convo) => {
+export const convertDeepseekMessages = (convo) => {
 	// Parse DeepSeek chat messages (mapping + fragments) into chat dictionary
 	const mapping = convo['mapping'];
 	const messages = [];
