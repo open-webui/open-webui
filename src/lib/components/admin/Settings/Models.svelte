@@ -74,7 +74,7 @@
 						...m,
 						id: m.id,
 						name: m.name,
-						is_active: true
+						is_active: m.is_active ?? true
 					};
 				}
 			})
@@ -111,13 +111,14 @@
 				meta: {},
 				params: {},
 				access_control: {},
-				is_active: model.is_active
+				is_active: !model.is_active
 			}).catch(() => null);
 		} else {
 			await toggleModelById(localStorage.token, model.id);
 		}
 
 		_models.set(await getModels(localStorage.token));
+		await init();
 	};
 
 	onMount(async () => {
@@ -253,7 +254,7 @@
 									content={(model?.is_active ?? true) ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 								>
 									<Switch
-										bind:state={model.is_active}
+										state={model.is_active}
 										on:change={async () => {
 											toggleModelHandler(model);
 										}}

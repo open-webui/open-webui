@@ -35,27 +35,22 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
     # Add MCP tools if available (check both enabled flag and manager existence)
     try:
         # Handle both dict and object config access
-        enable_mcp = True  # Default to enabled to check if MCP manager exists
+        enable_mcp = False  # Default to disabled
         if hasattr(request.app.state.config, "ENABLE_MCP_API"):
             enable_mcp = request.app.state.config.ENABLE_MCP_API
         elif isinstance(request.app.state.config, dict):
-            enable_mcp = request.app.state.config.get(
-                "ENABLE_MCP_API", True
-            )  # Default to True
+            enable_mcp = request.app.state.config.get("ENABLE_MCP_API", False)
 
-        # Also check if MCP manager exists (built-in servers)
-        has_mcp_manager = (
-            hasattr(request.app.state, "mcp_manager") and request.app.state.mcp_manager
-        )
-
-        if enable_mcp or has_mcp_manager:
+        # Only proceed if global MCP is enabled
+        if enable_mcp:
             from mcp_backend.routers.mcp import get_all_mcp_tools
             from open_webui.models.tools import ToolMeta
 
             mcp_tools_response = await get_all_mcp_tools(request)
             mcp_tools = mcp_tools_response.get("tools", [])
 
-            print(f"DEBUG: Found {len(mcp_tools)} MCP tools from get_all_mcp_tools")
+            # Track added MCP servers to prevent duplicates (one entry per server)
+            added_mcp_servers = set()
 
             for mcp_tool in mcp_tools:
                 # Create a pseudo-tool entry for MCP tools
@@ -63,11 +58,35 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
                 if not tool_name:
                     continue
 
+                # Get server name for permission checking
+                server_name = mcp_tool.get("mcp_server_name", "")
+
+                # Only add one entry per server (not per tool)
+                if server_name in added_mcp_servers:
+                    continue
+
+                # Check if user has permission for this specific MCP server
+                # Skip permission check for admins
+                if user.role != "admin" and server_name:
+                    permission_key = f"mcp.{server_name}"
+                    if not has_permission(
+                        user.id,
+                        permission_key,
+                        request.app.state.config.USER_PERMISSIONS,
+                    ):
+                        continue  # Skip this tool if user doesn't have permission
+
+                # Mark this server as added
+                added_mcp_servers.add(server_name)
+
                 # Create unique ID and name to avoid conflicts with regular tools
-                tool_id = f"mcp_{tool_name}"
-                display_name = (
-                    f"MCP: {tool_name}"  # Prefix to distinguish from regular tools
-                )
+                tool_id = f"mcp_{server_name}"
+                if server_name:
+                    from mcp_backend.routers.mcp import get_server_display_name
+
+                    display_name = get_server_display_name(server_name)
+                else:
+                    display_name = f"MCP: {tool_name.replace('_', ' ').title()}"
 
                 # Check if we already have a tool with this ID and make it unique
                 existing_ids = [t.id for t in tools]
@@ -98,12 +117,8 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
                     user=None,  # No specific user for MCP tools
                 )
                 tools.append(mcp_tool_entry)
-                print(f"DEBUG: Added MCP tool: {display_name} with ID: {tool_id}")
     except Exception as e:
         print(f"Error loading MCP tools in tools router: {e}")
-        import traceback
-
-        traceback.print_exc()
 
     return tools
 
