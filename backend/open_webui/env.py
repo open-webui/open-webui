@@ -630,12 +630,12 @@ WEBSOCKET_REDIS_OPTIONS = os.environ.get("WEBSOCKET_REDIS_OPTIONS", "")
 
 
 if WEBSOCKET_REDIS_OPTIONS == "":
-    log.debug("No WEBSOCKET_REDIS_OPTIONS provided, defaulting to None")
     if REDIS_SOCKET_CONNECT_TIMEOUT:
         WEBSOCKET_REDIS_OPTIONS = {
             "socket_connect_timeout": REDIS_SOCKET_CONNECT_TIMEOUT
         }
     else:
+        log.debug("No WEBSOCKET_REDIS_OPTIONS provided, defaulting to None")
         WEBSOCKET_REDIS_OPTIONS = None
 else:
     try:
