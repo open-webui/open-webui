@@ -2732,10 +2732,19 @@
 								<div class="px-4 pb-2">
 									<div class="bg-gray-50 dark:bg-gray-850 rounded-lg p-3 text-xs">
 										{#each relevantGroups as [groupName, groupData]}
+											{@const isOverLimit =
+												groupData.limit && (groupData.usage?.total || 0) > groupData.limit}
 											<div class="flex items-center justify-between mb-1 last:mb-0">
-												<span class="font-medium text-gray-700 dark:text-gray-300">{groupName}</span
+												<span
+													class="font-medium {isOverLimit
+														? 'text-red-600 dark:text-red-400'
+														: 'text-gray-700 dark:text-gray-300'}">{groupName}</span
 												>
-												<div class="flex items-center space-x-2 text-gray-600 dark:text-gray-400">
+												<div
+													class="flex items-center space-x-2 {isOverLimit
+														? 'text-red-600 dark:text-red-400'
+														: 'text-gray-600 dark:text-gray-400'}"
+												>
 													<span>{groupData.usage?.in?.toLocaleString() || 0} IN</span>
 													<span>·</span>
 													<span>{groupData.usage?.out?.toLocaleString() || 0} OUT</span>

@@ -2664,7 +2664,9 @@ async def process_chat_response(
                                             )
                                         }
 
-                                    if value:
+                                    # Skip processing 'value' if reasoning_content was already handled
+                                    # Some APIs duplicate reasoning tokens to 'content' for backwards compatibility
+                                    if value and not reasoning_content:
                                         if (
                                             content_blocks
                                             and content_blocks[-1]["type"]

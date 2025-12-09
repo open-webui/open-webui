@@ -60,14 +60,35 @@
 	//////////////////////////
 
 	const loadSharedChat = async () => {
-		const userSettings = await getUserSettings(localStorage.token).catch((error) => {
-			console.error(error);
-			return null;
-		});
+		// Try to load user settings if logged in, otherwise use local storage
+		if (localStorage.token) {
+			const userSettings = await getUserSettings(localStorage.token).catch((error) => {
+				console.error(error);
+				return null;
+			});
 
-		if (userSettings) {
-			settings.set(userSettings.ui);
+			if (userSettings) {
+				settings.set(userSettings.ui);
+			} else {
+				let localStorageSettings = {} as Parameters<(typeof settings)['set']>[0];
+
+				try {
+					localStorageSettings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+				} catch (e: unknown) {
+					console.error('Failed to parse settings from localStorage', e);
+				}
+
+				settings.set(localStorageSettings);
+			}
+
+			await models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
 		} else {
+			// Anonymous user - use default/local settings
 			let localStorageSettings = {} as Parameters<(typeof settings)['set']>[0];
 
 			try {
@@ -79,23 +100,20 @@
 			settings.set(localStorageSettings);
 		}
 
-		await models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-			)
-		);
 		await chatId.set($page.params.id);
-		chat = await getChatByShareId(localStorage.token, $chatId).catch(async (error) => {
+		chat = await getChatByShareId(localStorage.token ?? '', $chatId).catch(async (error) => {
 			await goto('/');
 			return null;
 		});
 
 		if (chat) {
-			user = await getUserById(localStorage.token, chat.user_id).catch((error) => {
-				console.error(error);
-				return null;
-			});
+			// Try to get user info if we have a token, otherwise just proceed without it
+			if (localStorage.token) {
+				user = await getUserById(localStorage.token, chat.user_id).catch((error) => {
+					console.error(error);
+					return null;
+				});
+			}
 
 			const chatContent = chat.chat;
 
@@ -129,6 +147,14 @@
 
 	const cloneSharedChat = async () => {
 		if (!chat) return;
+
+		// Redirect to login if not authenticated
+		if (!localStorage.token) {
+			const currentUrl = `${window.location.pathname}${window.location.search}`;
+			const encodedUrl = encodeURIComponent(currentUrl);
+			await goto(`/auth?redirect=${encodedUrl}`);
+			return;
+		}
 
 		const res = await cloneSharedChatById(localStorage.token, chat.id).catch((error) => {
 			toast.error(`${error}`);

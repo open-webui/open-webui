@@ -754,7 +754,7 @@
 				}
 
 				const compressImageHandler = async (imageUrl, settings = {}, config = {}) => {
-					// Quick shortcut so we don’t do unnecessary work.
+					// Quick shortcut so we don't do unnecessary work.
 					const settingsCompression = settings?.imageCompression ?? false;
 					const configWidth = config?.file?.image_compression?.width ?? null;
 					const configHeight = config?.file?.image_compression?.height ?? null;
@@ -789,19 +789,106 @@
 					return imageUrl;
 				};
 
+				// Generate a unique ID for tracking this upload
+				const tempImageId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+				// Create a low-res preview immediately using canvas
+				const createThumbnail = (file): Promise<string> => {
+					return new Promise((resolve) => {
+						const thumbReader = new FileReader();
+						thumbReader.onload = (e) => {
+							const img = document.createElement('img');
+							img.onload = () => {
+								const canvas = document.createElement('canvas');
+								const MAX_THUMB_SIZE = 100;
+								let width = img.width;
+								let height = img.height;
+
+								if (width > height) {
+									if (width > MAX_THUMB_SIZE) {
+										height *= MAX_THUMB_SIZE / width;
+										width = MAX_THUMB_SIZE;
+									}
+								} else {
+									if (height > MAX_THUMB_SIZE) {
+										width *= MAX_THUMB_SIZE / height;
+										height = MAX_THUMB_SIZE;
+									}
+								}
+
+								canvas.width = width;
+								canvas.height = height;
+								const ctx = canvas.getContext('2d');
+								ctx.drawImage(img, 0, 0, width, height);
+								resolve(canvas.toDataURL('image/jpeg', 0.5));
+							};
+							img.onerror = () => resolve('');
+							img.src = e.target.result as string;
+						};
+						thumbReader.onerror = () => resolve('');
+						thumbReader.readAsDataURL(file);
+					});
+				};
+
+				// Add placeholder with loading state and thumbnail preview
+				const thumbnailUrl = await createThumbnail(file);
+				files = [
+					...files,
+					{
+						type: 'image',
+						url: thumbnailUrl,
+						status: 'uploading',
+						progress: 0,
+						itemId: tempImageId
+					}
+				];
+
+				// Helper to update progress
+				const updateProgress = (progress: number) => {
+					const fileIndex = files.findIndex((f) => f.itemId === tempImageId);
+					if (fileIndex !== -1) {
+						files[fileIndex].progress = progress;
+						files = files;
+					}
+				};
+
 				let reader = new FileReader();
+
+				// Track reading progress (0-80% of total)
+				reader.onprogress = (event) => {
+					if (event.lengthComputable) {
+						const readProgress = Math.round((event.loaded / event.total) * 80);
+						updateProgress(readProgress);
+					}
+				};
+
 				reader.onload = async (event) => {
 					let imageUrl = event.target.result;
 
+					// Reading complete, now compressing (80-100%)
+					updateProgress(85);
+
 					imageUrl = await compressImageHandler(imageUrl, $settings, $config);
 
-					files = [
-						...files,
-						{
+					updateProgress(95);
+
+					// Find and update the placeholder image
+					const fileIndex = files.findIndex((f) => f.itemId === tempImageId);
+					if (fileIndex !== -1) {
+						files[fileIndex] = {
 							type: 'image',
-							url: `${imageUrl}`
-						}
-					];
+							url: `${imageUrl}`,
+							status: 'uploaded',
+							progress: 100,
+							itemId: tempImageId
+						};
+						files = files;
+					}
+				};
+				reader.onerror = () => {
+					// Remove the placeholder on error
+					files = files.filter((f) => f.itemId !== tempImageId);
+					toast.error($i18n.t('Failed to read image file'));
 				};
 				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
 			} else {
@@ -1178,16 +1265,51 @@
 									<div class="mx-2 mt-2.5 pb-1.5 flex items-center flex-wrap gap-2">
 										{#each files as file, fileIdx}
 											{#if file.type === 'image'}
-												<div class=" relative group">
-													<div class="relative flex items-center">
+												<div class="relative group">
+													<div class="relative">
 														<Image
 															src={file.url}
 															alt=""
-															imageClassName=" size-10 rounded-xl object-cover"
+															imageClassName="max-h-48 max-w-64 rounded-xl object-cover"
 														/>
+														{#if file.status === 'uploading'}
+															<div
+																class="absolute inset-0 rounded-xl bg-black/40 flex items-center justify-center"
+															>
+																<!-- Circular progress ring -->
+																<svg class="size-12" viewBox="0 0 36 36">
+																	<!-- Background circle -->
+																	<circle
+																		cx="18"
+																		cy="18"
+																		r="14"
+																		fill="none"
+																		stroke="rgba(255,255,255,0.3)"
+																		stroke-width="3"
+																	/>
+																	<!-- Progress circle -->
+																	<circle
+																		cx="18"
+																		cy="18"
+																		r="14"
+																		fill="none"
+																		stroke="white"
+																		stroke-width="3"
+																		stroke-linecap="round"
+																		stroke-dasharray={2 * Math.PI * 14}
+																		stroke-dashoffset={2 *
+																			Math.PI *
+																			14 *
+																			(1 - (file.progress || 0) / 100)}
+																		transform="rotate(-90 18 18)"
+																		class="transition-all duration-150"
+																	/>
+																</svg>
+															</div>
+														{/if}
 														{#if atSelectedModel ? effectiveVisionCapableModels.length === 0 : selectedModels.length !== effectiveVisionCapableModels.length}
 															<Tooltip
-																className=" absolute top-1 left-1"
+																className="absolute top-2 left-2"
 																content={$i18n.t(
 																	'Models without native vision (using preprocessor): {{ models }}',
 																	{
@@ -1204,7 +1326,7 @@
 																	viewBox="0 0 24 24"
 																	fill="currentColor"
 																	aria-hidden="true"
-																	class="size-4 fill-yellow-300"
+																	class="size-5 fill-yellow-300"
 																>
 																	<path
 																		fill-rule="evenodd"
@@ -1215,12 +1337,13 @@
 															</Tooltip>
 														{/if}
 													</div>
-													<div class=" absolute -top-1 -right-1">
+													<!-- Action buttons (top right) -->
+													<div class="absolute top-1.5 right-1.5 flex gap-1">
 														<button
-															class=" bg-white text-black border border-white rounded-full {($settings?.highContrastMode ??
+															class="p-1.5 bg-white/90 hover:bg-white text-gray-700 rounded-full shadow-sm {($settings?.highContrastMode ??
 															false)
 																? ''
-																: 'outline-hidden focus:outline-hidden group-hover:visible invisible transition'}"
+																: 'group-hover:opacity-100 opacity-0 transition-opacity'}"
 															type="button"
 															aria-label={$i18n.t('Remove file')}
 															on:click={() => {
