@@ -105,14 +105,38 @@
 				settings.set(localStorageSettings);
 			}
 
-			models.set(
-				await getModels(
-					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-				)
-			);
-			banners.set(await getBanners(localStorage.token));
-			tools.set(await getTools(localStorage.token));
+			// Parallel API calls for better performance
+			try {
+				const [modelsData, bannersData, toolsData] = await Promise.all([
+					getModels(
+						localStorage.token,
+						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					).catch((error) => {
+						console.error('Error loading models:', error);
+						return null;
+					}),
+					getBanners(localStorage.token).catch((error) => {
+						console.error('Error loading banners:', error);
+						return null;
+					}),
+					getTools(localStorage.token).catch((error) => {
+						console.error('Error loading tools:', error);
+						return null;
+					})
+				]);
+				
+				if (modelsData !== null) {
+					models.set(modelsData);
+				}
+				if (bannersData !== null) {
+					banners.set(bannersData);
+				}
+				if (toolsData !== null) {
+					tools.set(toolsData);
+				}
+			} catch (error) {
+				console.error('Error loading workspace data:', error);
+			}
 
 			document.addEventListener('keydown', async function (event) {
 				const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac

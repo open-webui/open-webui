@@ -274,6 +274,20 @@ class ModelsTable:
         except Exception:
             return None
 
+    def get_models_by_ids(self, ids: list[str]) -> dict[str, ModelModel]:
+        """Batch fetch models by IDs. Returns a dictionary mapping model_id -> ModelModel."""
+        if not ids:
+            return {}
+        try:
+            with get_db() as db:
+                models = db.query(Model).filter(Model.id.in_(ids)).all()
+                return {
+                    model.id: ModelModel.model_validate(model)
+                    for model in models
+                }
+        except Exception:
+            return {}
+
     # def get_model_by_id(self, id: str, user_email: str) -> Optional[ModelModel]:
     #     try:
     #         with get_db() as db:

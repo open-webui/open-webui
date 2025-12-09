@@ -175,21 +175,58 @@ class KnowledgeTable:
         self, user_id: str, permission: str = "write"
     ) -> list[KnowledgeUserModel]:
         with get_db() as db:
-            all_knowledge_bases = (
-                db.query(Knowledge).order_by(Knowledge.updated_at.desc()).all()
+            # Optimize: First get knowledge bases owned by user (SQL filter)
+            # Then get all others for access control checks
+            owned_knowledge = (
+                db.query(Knowledge)
+                .filter(Knowledge.user_id == user_id)
+                .order_by(Knowledge.updated_at.desc())
+                .all()
             )
+            
+            # Get all other knowledge bases for access control checks
+            other_knowledge = (
+                db.query(Knowledge)
+                .filter(Knowledge.user_id != user_id)
+                .order_by(Knowledge.updated_at.desc())
+                .all()
+            )
+            
+            # Combine and dedupe (in case of any overlap)
+            all_knowledge_bases = owned_knowledge + other_knowledge
             knowledge_for_user = []
+            
+            # Batch fetch all unique user_ids to avoid N+1 queries
+            unique_user_ids = list(set([kb.user_id for kb in all_knowledge_bases]))
+            users_dict = {}
+            if unique_user_ids:
+                # Use batch method if available, otherwise fall back to individual lookups
+                batch_users = Users.get_users_by_user_ids(unique_user_ids)
+                users_dict = {user.id: user.model_dump() for user in batch_users}
+                # Fill in None for any user_ids not found
+                for uid in unique_user_ids:
+                    if uid not in users_dict:
+                        users_dict[uid] = None
 
             for knowledge in all_knowledge_bases:
-                if (knowledge.user_id == user_id or 
-                    has_access(user_id, permission, knowledge.access_control) or
-                    self._item_assigned_to_user_groups(user_id, knowledge, permission)):
-                    user = Users.get_user_by_id(knowledge.user_id)
+                # Check ownership first (fast path)
+                if knowledge.user_id == user_id:
                     knowledge_for_user.append(
                         KnowledgeUserModel.model_validate(
                             {
                                 **KnowledgeModel.model_validate(knowledge).model_dump(),
-                                "user": user.model_dump() if user else None,
+                                "user": users_dict.get(knowledge.user_id),
+                            }
+                        )
+                    )
+                # Then check access control (slower, but only for non-owned items)
+                elif (has_access(user_id, permission, knowledge.access_control) or
+                      self._item_assigned_to_user_groups(user_id, knowledge, permission)):
+                    knowledge_for_user.append(
+                        KnowledgeUserModel.model_validate(
+                            {
+                                **KnowledgeModel.model_validate(knowledge).model_dump(),
+                                "user": users_dict.get(knowledge.user_id),
                             }
                         )
                     )

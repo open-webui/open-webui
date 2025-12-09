@@ -48,34 +48,49 @@ async def get_knowledge(user=Depends(get_verified_user)):
     # else:
     knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "read")
 
-    # Get files for each knowledge base
-    knowledge_with_files = []
+    # Batch file operations: Collect all file_ids from all knowledge bases first
+    all_file_ids = []
+    knowledge_file_ids_map = {}  # Maps knowledge_base.id -> list of file_ids
+    
     for knowledge_base in knowledge_bases:
-        files = []
+        file_ids = []
         if knowledge_base.data:
-            files = Files.get_file_metadatas_by_ids(
-                knowledge_base.data.get("file_ids", [])
-            )
+            file_ids = knowledge_base.data.get("file_ids", [])
+        
+        if file_ids:
+            all_file_ids.extend(file_ids)
+            knowledge_file_ids_map[knowledge_base.id] = file_ids
+        else:
+            knowledge_file_ids_map[knowledge_base.id] = []
 
+    # Single batch query for all file metadata
+    all_files_dict = {}
+    if all_file_ids:
+        all_files = Files.get_file_metadatas_by_ids(all_file_ids)
+        all_files_dict = {file.id: file for file in all_files}
+
+    # Build response with files mapped back to knowledge bases
+    knowledge_with_files = []
+    knowledge_bases_to_update = []  # Track knowledge bases with missing files
+    
+    for knowledge_base in knowledge_bases:
+        file_ids = knowledge_file_ids_map.get(knowledge_base.id, [])
+        files = []
+        
+        if file_ids:
+            # Get files from the batch-loaded dictionary
+            files = [all_files_dict[file_id] for file_id in file_ids if file_id in all_files_dict]
+            
             # Check if all files exist
-            if len(files) != len(knowledge_base.data.get("file_ids", [])):
-                missing_files = list(
-                    set(knowledge_base.data.get("file_ids", []))
-                    - set([file.id for file in files])
-                )
+            if len(files) != len(file_ids):
+                missing_files = list(set(file_ids) - set([file.id for file in files]))
                 if missing_files:
-                    data = knowledge_base.data or {}
-                    file_ids = data.get("file_ids", [])
-
-                    for missing_file in missing_files:
-                        file_ids.remove(missing_file)
-
-                    data["file_ids"] = file_ids
-                    Knowledges.update_knowledge_data_by_id(
-                        id=knowledge_base.id, data=data
-                    )
-
-                    files = Files.get_file_metadatas_by_ids(file_ids)
+                    # Track for batch update
+                    knowledge_bases_to_update.append({
+                        "knowledge_base": knowledge_base,
+                        "missing_files": missing_files,
+                        "file_ids": file_ids
+                    })
 
         knowledge_with_files.append(
             KnowledgeUserResponse(
@@ -83,6 +98,19 @@ async def get_knowledge(user=Depends(get_verified_user)):
                 files=files,
             )
         )
+    
+    # Batch update knowledge bases with missing files removed
+    for kb_update in knowledge_bases_to_update:
+        data = kb_update["knowledge_base"].data or {}
+        file_ids = [fid for fid in kb_update["file_ids"] if fid not in kb_update["missing_files"]]
+        data["file_ids"] = file_ids
+        Knowledges.update_knowledge_data_by_id(id=kb_update["knowledge_base"].id, data=data)
+        
+        # Update the response with corrected files
+        for kb_response in knowledge_with_files:
+            if kb_response.id == kb_update["knowledge_base"].id:
+                kb_response.files = [all_files_dict[fid] for fid in file_ids if fid in all_files_dict]
+                break
 
     return knowledge_with_files
 
@@ -96,34 +124,49 @@ async def get_knowledge_list(user=Depends(get_verified_user)):
     # else:
     knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "write")
 
-    # Get files for each knowledge base
-    knowledge_with_files = []
+    # Batch file operations: Collect all file_ids from all knowledge bases first
+    all_file_ids = []
+    knowledge_file_ids_map = {}  # Maps knowledge_base.id -> list of file_ids
+    
     for knowledge_base in knowledge_bases:
-        files = []
+        file_ids = []
         if knowledge_base.data:
-            files = Files.get_file_metadatas_by_ids(
-                knowledge_base.data.get("file_ids", [])
-            )
+            file_ids = knowledge_base.data.get("file_ids", [])
+        
+        if file_ids:
+            all_file_ids.extend(file_ids)
+            knowledge_file_ids_map[knowledge_base.id] = file_ids
+        else:
+            knowledge_file_ids_map[knowledge_base.id] = []
 
+    # Single batch query for all file metadata
+    all_files_dict = {}
+    if all_file_ids:
+        all_files = Files.get_file_metadatas_by_ids(all_file_ids)
+        all_files_dict = {file.id: file for file in all_files}
+
+    # Build response with files mapped back to knowledge bases
+    knowledge_with_files = []
+    knowledge_bases_to_update = []  # Track knowledge bases with missing files
+    
+    for knowledge_base in knowledge_bases:
+        file_ids = knowledge_file_ids_map.get(knowledge_base.id, [])
+        files = []
+        
+        if file_ids:
+            # Get files from the batch-loaded dictionary
+            files = [all_files_dict[file_id] for file_id in file_ids if file_id in all_files_dict]
+            
             # Check if all files exist
-            if len(files) != len(knowledge_base.data.get("file_ids", [])):
-                missing_files = list(
-                    set(knowledge_base.data.get("file_ids", []))
-                    - set([file.id for file in files])
-                )
+            if len(files) != len(file_ids):
+                missing_files = list(set(file_ids) - set([file.id for file in files]))
                 if missing_files:
-                    data = knowledge_base.data or {}
-                    file_ids = data.get("file_ids", [])
-
-                    for missing_file in missing_files:
-                        file_ids.remove(missing_file)
-
-                    data["file_ids"] = file_ids
-                    Knowledges.update_knowledge_data_by_id(
-                        id=knowledge_base.id, data=data
-                    )
-
-                    files = Files.get_file_metadatas_by_ids(file_ids)
+                    # Track for batch update
+                    knowledge_bases_to_update.append({
+                        "knowledge_base": knowledge_base,
+                        "missing_files": missing_files,
+                        "file_ids": file_ids
+                    })
 
         knowledge_with_files.append(
             KnowledgeUserResponse(
@@ -131,6 +174,20 @@ async def get_knowledge_list(user=Depends(get_verified_user)):
                 files=files,
             )
         )
+    
+    # Batch update knowledge bases with missing files removed
+    for kb_update in knowledge_bases_to_update:
+        data = kb_update["knowledge_base"].data or {}
+        file_ids = [fid for fid in kb_update["file_ids"] if fid not in kb_update["missing_files"]]
+        data["file_ids"] = file_ids
+        Knowledges.update_knowledge_data_by_id(id=kb_update["knowledge_base"].id, data=data)
+        
+        # Update the response with corrected files
+        for kb_response in knowledge_with_files:
+            if kb_response.id == kb_update["knowledge_base"].id:
+                kb_response.files = [all_files_dict[fid] for fid in file_ids if fid in all_files_dict]
+                break
+
     return knowledge_with_files
 
 

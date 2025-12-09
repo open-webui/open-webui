@@ -1065,6 +1065,10 @@ if audit_level != AuditLevel.NONE:
 @app.get("/api/models")
 async def get_models(request: Request, user=Depends(get_verified_user)):
     def get_filtered_models(models, user):
+        # Batch fetch all model info first
+        model_ids = [model["id"] for model in models if not model.get("arena")]
+        model_info_dict = Models.get_models_by_ids(model_ids) if model_ids else {}
+        
         filtered_models = []
         for model in models:
             if model.get("arena"):
@@ -1078,7 +1082,8 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
                     filtered_models.append(model)
                 continue
 
-            model_info = Models.get_model_by_id(model["id"])
+            # Use batch-fetched model info
+            model_info = model_info_dict.get(model["id"])
             if model_info:
                 if user.id == model_info.user_id or has_access(
                     user.id, type="read", access_control=model_info.access_control
