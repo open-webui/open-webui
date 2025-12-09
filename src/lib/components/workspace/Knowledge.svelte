@@ -242,11 +242,11 @@
 									</div>
 
 									<div class=" flex items-center gap-1 justify-between px-1.5">
-										<div class=" flex items-center gap-2">
+										<div class=" flex-1 min-w-0 flex items-center gap-2">
 											<div class=" text-sm font-medium line-clamp-1 capitalize">{item.name}</div>
 										</div>
 
-										<div>
+										<div class="shrink-0">
 											<div class="text-xs text-gray-500">
 												<Tooltip
 													content={item?.user?.email ?? $i18n.t('Deleted User')}
