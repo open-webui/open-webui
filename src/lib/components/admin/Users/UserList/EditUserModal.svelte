@@ -6,8 +6,8 @@
 
 	import { goto } from '$app/navigation';
 
-	import { updateUserById, getUserGroupsById } from '$lib/apis/users';
-	import type { UploadTenant } from '$lib/apis/uploads';
+import { updateUserById, getUserGroupsById } from '$lib/apis/users';
+import type { TenantInfo } from '$lib/apis/tenants';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
@@ -22,7 +22,7 @@
 	export let show = false;
 	export let selectedUser;
 	export let sessionUser;
-	export let tenantLookup: Record<string, UploadTenant> = {};
+export let tenantLookup: Record<string, TenantInfo> = {};
 
 	$: if (show) {
 		init();

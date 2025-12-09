@@ -302,6 +302,10 @@ class UsersTable:
         with get_db() as db:
             return db.query(User).count()
 
+    def count_users_by_tenant(self, tenant_id: str) -> int:
+        with get_db() as db:
+            return db.query(User).filter_by(tenant_id=tenant_id).count()
+
     def has_users(self) -> bool:
         with get_db() as db:
             return db.query(db.query(User).exists()).scalar()

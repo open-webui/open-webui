@@ -3,7 +3,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, getContext } from 'svelte';
 	import { addUser } from '$lib/apis/auths';
-	import { getUploadTenants, type UploadTenant } from '$lib/apis/uploads';
+import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -22,7 +22,7 @@
 	let tab = '';
 	let inputFiles;
 
-	let tenantOptions: UploadTenant[] = [];
+	let tenantOptions: TenantInfo[] = [];
 	let tenantOptionsLoading = false;
 	let tenantLoadError: string | null = null;
 

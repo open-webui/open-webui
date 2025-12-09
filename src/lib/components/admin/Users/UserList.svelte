@@ -33,7 +33,7 @@
 	import Banner from '$lib/components/common/Banner.svelte';
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import { getUploadTenants, type UploadTenant } from '$lib/apis/uploads';
+	import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 
 	const i18n = getContext('i18n');
 
@@ -54,10 +54,10 @@
 	let showUserChatsModal = false;
 	let showEditUserModal = false;
 
-	let tenantOptions: UploadTenant[] = [];
+	let tenantOptions: TenantInfo[] = [];
 	let tenantOptionsLoading = false;
 	let tenantLoadError: string | null = null;
-	let tenantLookup: Record<string, UploadTenant> = {};
+	let tenantLookup: Record<string, TenantInfo> = {};
 
 	const deleteUserHandler = async (id) => {
 		const res = await deleteUserById(localStorage.token, id).catch((error) => {
@@ -90,7 +90,7 @@
 
 		try {
 			tenantOptions = await getUploadTenants(localStorage.token);
-			tenantLookup = tenantOptions.reduce<Record<string, UploadTenant>>((acc, tenant) => {
+			tenantLookup = tenantOptions.reduce<Record<string, TenantInfo>>((acc, tenant) => {
 				acc[tenant.id] = tenant;
 				return acc;
 			}, {});

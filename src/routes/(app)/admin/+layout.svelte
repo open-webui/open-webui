@@ -60,6 +60,13 @@
 						class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent pt-1"
 					>
 						<a
+							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/tenants')
+								? ''
+								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+							href="/admin/tenants">{$i18n.t('Tenants')}</a
+						>
+
+						<a
 							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/users')
 								? ''
 								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
