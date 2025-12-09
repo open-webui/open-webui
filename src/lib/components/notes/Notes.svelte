@@ -163,17 +163,33 @@
 		await getItemsPage();
 	};
 
-	$: if (loaded && query !== undefined && sortKey !== undefined && viewOption !== undefined) {
+	$: if (
+		loaded &&
+		query !== undefined &&
+		sortKey !== undefined &&
+		permission !== undefined &&
+		viewOption !== undefined
+	) {
 		init();
 	}
 
 	const getItemsPage = async () => {
 		itemsLoading = true;
-		const res = await searchNotes(localStorage.token, query, viewOption, sortKey, page).catch(
-			() => {
-				return [];
-			}
-		);
+
+		if (viewOption === 'created') {
+			permission = null;
+		}
+
+		const res = await searchNotes(
+			localStorage.token,
+			query,
+			viewOption,
+			permission,
+			sortKey,
+			page
+		).catch(() => {
+			return [];
+		});
 
 		if (res) {
 			console.log(res);
@@ -367,7 +383,7 @@
 					}}
 				>
 					<div
-						class="flex gap-1.5 w-fit text-center text-sm rounded-full bg-transparent px-0.5 whitespace-nowrap"
+						class="flex gap-3 w-fit text-center text-sm rounded-full bg-transparent px-0.5 whitespace-nowrap"
 					>
 						<DropdownOptions
 							align="start"
@@ -386,6 +402,17 @@
 								}
 							}}
 						/>
+
+						{#if [null, 'shared'].includes(viewOption)}
+							<DropdownOptions
+								align="start"
+								bind:value={permission}
+								items={[
+									{ value: null, label: $i18n.t('Write') },
+									{ value: 'read_only', label: $i18n.t('Read Only') }
+								]}
+							/>
+						{/if}
 					</div>
 				</div>
 
@@ -411,17 +438,21 @@
 			{#if (items ?? []).length > 0}
 				{@const notes = groupNotes(items)}
 
-				<div class="@container h-full py-2 px-2.5">
+				<div class="@container h-full py-2.5 px-2.5">
 					<div class="">
-						{#each Object.keys(notes) as timeRange}
+						{#each Object.keys(notes) as timeRange, idx}
 							<div
-								class="mb-3 w-full text-xs text-gray-500 dark:text-gray-500 font-medium px-2.5 pb-2.5"
+								class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium px-2.5 pb-2.5"
 							>
 								{$i18n.t(timeRange)}
 							</div>
 
 							{#if displayOption === null}
-								<div class="gap-1.5 flex flex-col">
+								<div
+									class="{Object.keys(notes).length - 1 !== idx
+										? 'mb-3'
+										: ''} gap-1.5 flex flex-col"
+								>
 									{#each notes[timeRange] as note, idx (note.id)}
 										<div
 											class=" flex cursor-pointer w-full px-3.5 py-1.5 border border-gray-50 dark:border-gray-850/30 bg-transparent dark:hover:bg-gray-850 hover:bg-white rounded-2xl transition"
@@ -494,7 +525,9 @@
 								</div>
 							{:else if displayOption === 'grid'}
 								<div
-									class="mb-5 gap-2.5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+									class="{Object.keys(notes).length - 1 !== idx
+										? 'mb-5'
+										: ''} gap-2.5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
 								>
 									{#each notes[timeRange] as note, idx (note.id)}
 										<div

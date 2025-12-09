@@ -95,6 +95,7 @@ export const searchNotes = async (
 	token: string = '',
 	query: string | null = null,
 	viewOption: string | null = null,
+	permission: string | null = null,
 	sortKey: string | null = null,
 	page: number | null = null
 ) => {
@@ -107,6 +108,10 @@ export const searchNotes = async (
 
 	if (viewOption !== null) {
 		searchParams.append('view_option', viewOption);
+	}
+
+	if (permission !== null) {
+		searchParams.append('permission', permission);
 	}
 
 	if (sortKey !== null) {

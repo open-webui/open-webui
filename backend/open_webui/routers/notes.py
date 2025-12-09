@@ -84,6 +84,7 @@ async def search_notes(
     request: Request,
     query: Optional[str] = None,
     view_option: Optional[str] = None,
+    permission: Optional[str] = None,
     order_by: Optional[str] = None,
     direction: Optional[str] = None,
     page: Optional[int] = 1,
@@ -108,6 +109,8 @@ async def search_notes(
         filter["query"] = query
     if view_option:
         filter["view_option"] = view_option
+    if permission:
+        filter["permission"] = permission
     if order_by:
         filter["order_by"] = order_by
     if direction:
@@ -156,7 +159,11 @@ async def create_new_note(
 ############################
 
 
-@router.get("/{id}", response_model=Optional[NoteModel])
+class NoteResponse(NoteModel):
+    write_access: bool = False
+
+
+@router.get("/{id}", response_model=Optional[NoteResponse])
 async def get_note_by_id(request: Request, id: str, user=Depends(get_verified_user)):
     if user.role != "admin" and not has_permission(
         user.id, "features.notes", request.app.state.config.USER_PERMISSIONS
@@ -180,7 +187,11 @@ async def get_note_by_id(request: Request, id: str, user=Depends(get_verified_us
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
 
-    return note
+    write_access = has_access(
+        user.id, type="write", access_control=note.access_control, strict=False
+    )
+
+    return NoteResponse(**note.model_dump(), write_access=write_access)
 
 
 ############################
