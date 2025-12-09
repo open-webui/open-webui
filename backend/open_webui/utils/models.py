@@ -19,7 +19,6 @@ from open_webui.utils.plugin import (
     get_function_module_from_cache,
 )
 from open_webui.utils.access_control import has_access
-from open_webui.utils.luxtronic import get_luxtronic_model_names                                                                                                                                                                                       
 
 from open_webui.config import (
     BYPASS_ADMIN_ACCESS_CONTROL,
@@ -91,26 +90,22 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     # deep copy the base models to avoid modifying the original list
     models = [model.copy() for model in base_models]
 
-    luxtronic_model_names = get_luxtronic_model_names(user)
-
-    
-    for source in luxtronic_model_names:
-        models.append(
-            {
-                "id": f"luxor:{source}",
-                "name": f"Luxor {source}",
-                "object": "model",
-                "created": int(time.time()),
-                "owned_by": "luxor",
-                "info": {
-                    "meta": {
-                        "description": "Luxor provider",
-                        "capabilities": {"vision": False, "web_search": False},
-                        "access_control": None,
-                    }
-                },
-            }
-        )
+    models.append(
+        {
+            "id": "luxor:latest",
+            "name": "Luxor",
+            "object": "model",
+            "created": int(time.time()),
+            "owned_by": "luxor",
+            "info": {
+                "meta": {
+                    "description": "Luxor provider",
+                    "capabilities": {"vision": False, "web_search": False},
+                    "access_control": None,
+                }
+            },
+        }
+    )
 
     # If there are no models, return an empty list
     if len(models) == 0:
@@ -345,26 +340,8 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
     request.app.state.MODELS = {model["id"]: model for model in models}
 
-    if user and user.role != "admin":
-        allowed_lux_models = set(
-            get_luxtronic_model_names(user, restrict_to_user=True)
-        )
-        if allowed_lux_models:
-            tenant_filtered_models = [
-                model
-                for model in models
-                if model.get("owned_by") != "luxor"
-                or model["id"].split(":", 1)[1] in allowed_lux_models
-            ]
-        else:
-            tenant_filtered_models = [
-                model for model in models if model.get("owned_by") != "luxor"
-            ]
-    else:
-        tenant_filtered_models = models
-
-    log.debug(f"get_all_models() returned {len(tenant_filtered_models)} models")
-    return tenant_filtered_models
+    log.debug(f"get_all_models() returned {len(models)} models")
+    return models
 
 
 def check_model_access(user, model):

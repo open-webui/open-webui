@@ -79,10 +79,11 @@
 		getTaskIdsByChatId
 	} from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
-	import { uploadFile } from '$lib/apis/files';
-	import { createOpenAITextStream } from '$lib/apis/streaming';
-	import { getFunctions } from '$lib/apis/functions';
-	import { updateFolderById } from '$lib/apis/folders';
+import { uploadFile } from '$lib/apis/files';
+import { createOpenAITextStream } from '$lib/apis/streaming';
+import { getFunctions } from '$lib/apis/functions';
+import { updateFolderById } from '$lib/apis/folders';
+import { getUploadTenants, type UploadTenant } from '$lib/apis/uploads';
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
@@ -151,9 +152,104 @@
 
 	// Chat Input
 	let prompt = '';
-	let chatFiles = [];
-	let files = [];
-	let params = {};
+let chatFiles = [];
+let files = [];
+let params = {};
+
+const TENANT_OVERRIDE_STORAGE_KEY = 'luxor_tenant_override';
+
+let tenantOptions: UploadTenant[] = [];
+let tenantOptionsLoading = false;
+let tenantLoadError: string | null = null;
+let selectedTenantId: string | null = null;
+let adminTenantInit = false;
+let tenantFetchInitiated = false;
+
+const isBrowser = () => typeof window !== 'undefined';
+
+const getStoredTenantOverride = () => {
+	if (!isBrowser()) {
+		return null;
+	}
+	return window.localStorage.getItem(TENANT_OVERRIDE_STORAGE_KEY);
+};
+
+const persistTenantOverride = (tenantId: string | null) => {
+	if (!isBrowser()) {
+		return;
+	}
+
+	if (tenantId) {
+		window.localStorage.setItem(TENANT_OVERRIDE_STORAGE_KEY, tenantId);
+	} else {
+		window.localStorage.removeItem(TENANT_OVERRIDE_STORAGE_KEY);
+	}
+};
+
+const updateSelectedTenantId = (tenantId: string | null, persist = true) => {
+	selectedTenantId = tenantId;
+	if (persist) {
+		persistTenantOverride(tenantId);
+	}
+};
+
+const handleTenantOverrideChange = (tenantId: string | null) => {
+	updateSelectedTenantId(tenantId);
+};
+
+const loadTenantOptionsForAdmin = async () => {
+	if (!isBrowser()) {
+		return;
+	}
+
+	const token = window.localStorage?.token;
+	if (!token) {
+		tenantFetchInitiated = false;
+		return;
+	}
+
+	tenantOptionsLoading = true;
+	tenantLoadError = null;
+
+	try {
+		const tenantList = await getUploadTenants(token);
+		tenantOptions = tenantList;
+
+		if (selectedTenantId && !tenantOptions.some((tenant) => tenant.id === selectedTenantId)) {
+			updateSelectedTenantId(null);
+		}
+	} catch (err) {
+		console.error(err);
+		const fallbackMessage =
+			typeof err === 'string'
+				? err
+				: $i18n.t('Failed to load tenants.') ?? 'Failed to load tenants.';
+		tenantLoadError = fallbackMessage;
+		toast.error(fallbackMessage);
+	} finally {
+		tenantOptionsLoading = false;
+	}
+};
+
+$: if ($user?.role === 'admin') {
+	if (!adminTenantInit && isBrowser()) {
+		updateSelectedTenantId(getStoredTenantOverride(), false);
+		adminTenantInit = true;
+	}
+
+	if (!tenantFetchInitiated && isBrowser()) {
+		tenantFetchInitiated = true;
+		loadTenantOptionsForAdmin();
+	}
+} else {
+	if (selectedTenantId !== null) {
+		updateSelectedTenantId(null, false);
+	}
+	tenantOptions = [];
+	tenantLoadError = null;
+	tenantFetchInitiated = false;
+	adminTenantInit = false;
+}
 
 	$: if (chatIdProp) {
 		navigateHandler();
@@ -1940,6 +2036,9 @@
 			}
 		}
 
+		const luxorTenantPayload =
+			$user?.role === 'admin' && selectedTenantId ? { luxor_tenant_id: selectedTenantId } : {};
+
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
 			{
@@ -1995,7 +2094,8 @@
 								include_usage: true
 							}
 						}
-					: {})
+					: {}),
+				...luxorTenantPayload
 			},
 			`${WEBUI_BASE_URL}/api`
 		).catch(async (error) => {
@@ -2445,6 +2545,11 @@
 						{initNewChat}
 						archiveChatHandler={() => {}}
 						{moveChatHandler}
+						tenantOptions={tenantOptions}
+						{selectedTenantId}
+						tenantOptionsLoading={tenantOptionsLoading}
+						tenantLoadError={tenantLoadError}
+						onTenantChange={handleTenantOverrideChange}
 						onSaveTempChat={async () => {
 							try {
 								if (!history?.currentId || !Object.keys(history.messages).length) {

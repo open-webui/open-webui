@@ -142,6 +142,8 @@ async def get_session_user(
         "permissions": user_permissions,
         "tenant_id": user.tenant_id,
         "tenant_s3_bucket": tenant_bucket,
+        "tenant_id": user.tenant_id,
+        "tenant_s3_bucket": tenant_bucket,
     }
 
 
@@ -446,6 +448,11 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     except Exception as e:
                         log.error(f"Failed to sync groups for user {user.id}: {e}")
 
+                tenant_bucket = None
+                if user.tenant_id:
+                    tenant = Tenants.get_tenant_by_id(user.tenant_id)
+                    tenant_bucket = tenant.s3_bucket if tenant else None
+
                 return {
                     "token": token,
                     "token_type": "Bearer",
@@ -456,6 +463,8 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     "role": user.role,
                     "profile_image_url": user.profile_image_url,
                     "permissions": user_permissions,
+                    "tenant_id": user.tenant_id,
+                    "tenant_s3_bucket": tenant_bucket,
                 }
             else:
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
@@ -561,6 +570,11 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             user.id, request.app.state.config.USER_PERMISSIONS
         )
 
+        tenant_bucket = None
+        if user.tenant_id:
+            tenant = Tenants.get_tenant_by_id(user.tenant_id)
+            tenant_bucket = tenant.s3_bucket if tenant else None
+
         return {
             "token": token,
             "token_type": "Bearer",
@@ -571,6 +585,8 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             "role": user.role,
             "profile_image_url": user.profile_image_url,
             "permissions": user_permissions,
+            "tenant_id": user.tenant_id,
+            "tenant_s3_bucket": tenant_bucket,
         }
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
@@ -674,6 +690,11 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 # Disable signup after the first user is created
                 request.app.state.config.ENABLE_SIGNUP = False
 
+            tenant_bucket = None
+            if user.tenant_id:
+                tenant = Tenants.get_tenant_by_id(user.tenant_id)
+                tenant_bucket = tenant.s3_bucket if tenant else None
+
             return {
                 "token": token,
                 "token_type": "Bearer",
@@ -684,6 +705,8 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 "role": user.role,
                 "profile_image_url": user.profile_image_url,
                 "permissions": user_permissions,
+                "tenant_id": user.tenant_id,
+                "tenant_s3_bucket": tenant_bucket,
             }
         else:
             raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
