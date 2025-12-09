@@ -1,6 +1,38 @@
 import json
 import redis
+from redis.connection import ConnectionPool
 import uuid
+import threading
+
+# Shared connection pool for all Redis operations (one per pod)
+_redis_pools = {}
+_pool_lock = threading.Lock()  # Thread-safe pool creation
+
+
+def get_redis_pool(redis_url):
+    """Get or create a shared Redis connection pool for the given URL.
+    
+    This ensures all Redis operations share connections efficiently,
+    improving performance under concurrent load.
+    
+    Thread-safe: Uses a lock to prevent race conditions when creating pools.
+    """
+    global _redis_pools
+    # Double-check locking pattern for thread safety
+    if redis_url not in _redis_pools:
+        with _pool_lock:
+            # Check again after acquiring lock (double-check pattern)
+            if redis_url not in _redis_pools:
+                _redis_pools[redis_url] = ConnectionPool.from_url(
+                    redis_url,
+                    decode_responses=True,
+                    max_connections=50,  # Maximum connections in pool (adjust based on load)
+                    retry_on_timeout=True,
+                    socket_connect_timeout=5,
+                    socket_timeout=5,
+                    health_check_interval=30,  # Health check every 30 seconds
+                )
+    return _redis_pools[redis_url]
 
 
 class RedisLock:
@@ -9,7 +41,9 @@ class RedisLock:
         self.lock_id = str(uuid.uuid4())
         self.timeout_secs = timeout_secs
         self.lock_obtained = False
-        self.redis = redis.Redis.from_url(redis_url, decode_responses=True)
+        # Use connection pool instead of direct connection for better performance
+        pool = get_redis_pool(redis_url)
+        self.redis = redis.Redis(connection_pool=pool)
 
     def aquire_lock(self):
         # nx=True will only set this key if it _hasn't_ already been set
@@ -33,7 +67,9 @@ class RedisLock:
 class RedisDict:
     def __init__(self, name, redis_url):
         self.name = name
-        self.redis = redis.Redis.from_url(redis_url, decode_responses=True)
+        # Use connection pool instead of direct connection for better performance
+        pool = get_redis_pool(redis_url)
+        self.redis = redis.Redis(connection_pool=pool)
 
     def __setitem__(self, key, value):
         serialized_value = json.dumps(value)
