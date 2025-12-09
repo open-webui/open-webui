@@ -483,11 +483,7 @@
 							<LangPicker bind:selected={taskConfig.TRANSLATION_LANGUAGES} />
 					</div>
 					<div class=" space-y-3">
-						<div class="flex w-full justify-between mb-2">
-							<div class=" self-center text-xs">
-								{$i18n.t('Default Prompt Suggestions')}
-							</div>
-						</div>
+
 						<PromptSuggestions bind:promptSuggestions />
 
 						{#if promptSuggestions.length > 0}
