@@ -20,7 +20,7 @@
 	};
 </script>
 
-<div class="mt-2">
+<div class="mt-2 md:mt-0 flex flex-col w-full">
 	<label class="text-[0.65rem] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
 		{$i18n.t('Tenant Scope')}
 	</label>

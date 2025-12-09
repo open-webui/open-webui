@@ -106,25 +106,29 @@ export let onTenantChange: (tenantId: string | null) => void = () => {};
 				{/if}
 
 				<div
-					class="flex-1 overflow-hidden max-w-full py-0.5
-			{$showSidebar ? 'ml-1' : ''}
-			"
+					class="flex-1 overflow-hidden max-w-full py-0.5 {$showSidebar ? 'ml-1' : ''}"
 				>
-					{#if showModelSelector}
-						<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
-					{/if}
+					<div class="flex flex-col gap-2 md:flex-row md:items-end md:gap-3">
+						{#if showModelSelector}
+							<div class="flex-1 min-w-0">
+								<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
+							</div>
+						{/if}
 
-					{#if $user?.role === 'admin'}
-						<TenantSelector
-							tenants={tenantOptions}
-							{selectedTenantId}
-							loading={tenantOptionsLoading}
-							error={tenantLoadError}
-							on:change={(event) => {
-								onTenantChange?.(event.detail);
-							}}
-						/>
-					{/if}
+						{#if $user?.role === 'admin'}
+							<div class="w-full md:flex-none md:w-auto md:min-w-[220px]">
+								<TenantSelector
+									tenants={tenantOptions}
+									{selectedTenantId}
+									loading={tenantOptionsLoading}
+									error={tenantLoadError}
+									on:change={(event) => {
+										onTenantChange?.(event.detail);
+									}}
+								/>
+							</div>
+						{/if}
+					</div>
 				</div>
 
 				<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
