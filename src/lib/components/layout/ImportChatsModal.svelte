@@ -173,10 +173,10 @@
 			<div>
 				<div class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
 					<span class="w-3 h-3 rounded bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"></span>
-					Chat Filter & Import
+					记录筛选与导入
 				</div>
 				<div class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-					导入 JSON 数组，筛选所需的聊天记录，自动下载并导入。
+					筛选所需的聊天记录
 				</div>
 			</div>
 			<button
@@ -191,7 +191,7 @@
 		<div class="space-y-4">
 			<div class="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
 				<div class="flex items-center justify-between">
-					<div class="text-sm font-semibold text-gray-800 dark:text-gray-100">1. 读取文件 (JSON Array)</div>
+					<div class="text-sm font-semibold text-gray-800 dark:text-gray-100">1. 读取文件</div>
 				</div>
 
 				<div
