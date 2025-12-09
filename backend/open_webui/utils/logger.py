@@ -2,8 +2,17 @@ import json
 import logging
 import sys
 from typing import TYPE_CHECKING
+from datetime import timezone
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    # Fallback for Python < 3.9
+    from backports.zoneinfo import ZoneInfo
 
 from loguru import logger
+
+# Configure timezone to NYC (America/New_York)
+NYC_TIMEZONE = ZoneInfo("America/New_York")
 
 from open_webui.env import (
     AUDIT_LOG_FILE_ROTATION_SIZE,
@@ -20,15 +29,23 @@ if TYPE_CHECKING:
 def stdout_format(record: "Record") -> str:
     """
     Generates a formatted string for log records that are output to the console. This format includes a timestamp, log level, source location (module, function, and line), the log message, and any extra data (serialized as JSON).
+    
+    Timestamps are displayed in NYC timezone (America/New_York).
 
     Parameters:
     record (Record): A Loguru record that contains logging details including time, level, name, function, line, message, and any extra context.
     Returns:
     str: A formatted log string intended for stdout.
     """
+    # Convert time to NYC timezone and format it
+    nyc_time = record["time"].astimezone(NYC_TIMEZONE)
+    time_str = nyc_time.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+    # Determine if EST or EDT based on timezone offset
+    tz_abbr = "EST" if nyc_time.utcoffset().total_seconds() == -18000 else "EDT"
+    
     record["extra"]["extra_json"] = json.dumps(record["extra"])
     return (
-        "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
+        f"<green>{time_str} {tz_abbr}</green> | "
         "<level>{level: <8}</level> | "
         "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
         "<level>{message}</level> - {extra[extra_json]}"
@@ -98,7 +115,9 @@ def start_logger():
 
     A console (stdout) handler for general log messages (excluding those marked as auditable).
     An optional file handler for audit logs if audit logging is enabled.
-    Additionally, this function reconfigures Python’s standard logging to route through Loguru and adjusts logging levels for Uvicorn.
+    Additionally, this function reconfigures Python's standard logging to route through Loguru and adjusts logging levels for Uvicorn.
+    
+    All timestamps are displayed in NYC timezone (America/New_York).
 
     Parameters:
     enable_audit_logging (bool): Determines whether audit-specific log entries should be recorded to file.

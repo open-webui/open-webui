@@ -86,30 +86,42 @@ async def periodic_usage_pool_cleanup():
 
             now = int(time.time())
             send_usage = False
-            for model_id, connections in list(USAGE_POOL.items()):
-                # Creating a list of sids to remove if they have timed out
-                expired_sids = [
-                    sid
-                    for sid, details in connections.items()
-                    if now - details["updated_at"] > TIMEOUT_DURATION
-                ]
+            try:
+                for model_id, connections in list(USAGE_POOL.items()):
+                    # Ensure connections is a dict
+                    if not isinstance(connections, dict):
+                        log.warning(f"USAGE_POOL[{model_id}] is not a dict, resetting. Value: {connections}")
+                        del USAGE_POOL[model_id]
+                        continue
+                    
+                    # Creating a list of sids to remove if they have timed out
+                    expired_sids = [
+                        sid
+                        for sid, details in connections.items()
+                        if isinstance(details, dict) and now - details.get("updated_at", 0) > TIMEOUT_DURATION
+                    ]
 
-                for sid in expired_sids:
-                    del connections[sid]
+                    for sid in expired_sids:
+                        if sid in connections:
+                            del connections[sid]
 
-                if not connections:
-                    log.debug(f"Cleaning up model {model_id} from usage pool")
-                    del USAGE_POOL[model_id]
-                else:
-                    USAGE_POOL[model_id] = connections
+                    if not connections:
+                        log.debug(f"Cleaning up model {model_id} from usage pool")
+                        del USAGE_POOL[model_id]
+                    else:
+                        USAGE_POOL[model_id] = connections
 
-                send_usage = True
+                    send_usage = True
 
-            if send_usage:
-                # Emit updated usage information after cleaning
-                await sio.emit("usage", {"models": get_models_in_use()})
+                if send_usage:
+                    # Emit updated usage information after cleaning
+                    await sio.emit("usage", {"models": get_models_in_use()})
+            except Exception as e:
+                log.error(f"Error in usage pool cleanup iteration: {e}", exc_info=True)
 
             await asyncio.sleep(TIMEOUT_DURATION)
+    except Exception as e:
+        log.error(f"Fatal error in periodic_usage_pool_cleanup: {e}", exc_info=True)
     finally:
         release_func()
 
@@ -128,18 +140,26 @@ def get_models_in_use():
 
 @sio.on("usage")
 async def usage(sid, data):
-    model_id = data["model"]
-    # Record the timestamp for the last update
-    current_time = int(time.time())
+    try:
+        model_id = data["model"]
+        # Record the timestamp for the last update
+        current_time = int(time.time())
 
-    # Store the new usage data and task
-    USAGE_POOL[model_id] = {
-        **(USAGE_POOL[model_id] if model_id in USAGE_POOL else {}),
-        sid: {"updated_at": current_time},
-    }
+        # Store the new usage data and task - ensure existing value is a dict
+        existing_usage = USAGE_POOL.get(model_id, {})
+        if not isinstance(existing_usage, dict):
+            log.warning(f"USAGE_POOL[{model_id}] is not a dict, resetting. Value: {existing_usage}")
+            existing_usage = {}
+        
+        USAGE_POOL[model_id] = {
+            **existing_usage,
+            sid: {"updated_at": current_time},
+        }
 
-    # Broadcast the usage data to all clients
-    await sio.emit("usage", {"models": get_models_in_use()})
+        # Broadcast the usage data to all clients
+        await sio.emit("usage", {"models": get_models_in_use()})
+    except Exception as e:
+        log.error(f"Error in usage handler for session {sid}: {e}", exc_info=True)
 
 
 @sio.event
@@ -152,15 +172,21 @@ async def connect(sid, environ, auth):
             user = Users.get_user_by_id(data["id"])
 
         if user:
-            SESSION_POOL[sid] = user.model_dump()
-            if user.id in USER_POOL:
-                USER_POOL[user.id] = USER_POOL[user.id] + [sid]
-            else:
-                USER_POOL[user.id] = [sid]
+            try:
+                SESSION_POOL[sid] = user.model_dump()
+                # Safely handle USER_POOL - ensure it's always a list
+                existing_sessions = USER_POOL.get(user.id, [])
+                if not isinstance(existing_sessions, list):
+                    # Handle corrupted data - reset to empty list
+                    log.warning(f"USER_POOL[{user.id}] is not a list, resetting. Value: {existing_sessions}")
+                    existing_sessions = []
+                USER_POOL[user.id] = existing_sessions + [sid]
 
-            # print(f"user {user.name}({user.id}) connected with session ID {sid}")
-            await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
-            await sio.emit("usage", {"models": get_models_in_use()})
+                # print(f"user {user.name}({user.id}) connected with session ID {sid}")
+                await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
+                await sio.emit("usage", {"models": get_models_in_use()})
+            except Exception as e:
+                log.error(f"Error in connect handler for user {user.id}: {e}", exc_info=True)
 
 
 @sio.on("user-join")
@@ -178,22 +204,29 @@ async def user_join(sid, data):
     if not user:
         return
 
-    SESSION_POOL[sid] = user.model_dump()
-    if user.id in USER_POOL:
-        USER_POOL[user.id] = USER_POOL[user.id] + [sid]
-    else:
-        USER_POOL[user.id] = [sid]
+    try:
+        SESSION_POOL[sid] = user.model_dump()
+        # Safely handle USER_POOL - ensure it's always a list
+        existing_sessions = USER_POOL.get(user.id, [])
+        if not isinstance(existing_sessions, list):
+            # Handle corrupted data - reset to empty list
+            log.warning(f"USER_POOL[{user.id}] is not a list, resetting. Value: {existing_sessions}")
+            existing_sessions = []
+        USER_POOL[user.id] = existing_sessions + [sid]
 
-    # Join all the channels
-    channels = Channels.get_channels_by_user_id(user.id)
-    log.debug(f"{channels=}")
-    for channel in channels:
-        await sio.enter_room(sid, f"channel:{channel.id}")
+        # Join all the channels
+        channels = Channels.get_channels_by_user_id(user.id)
+        log.debug(f"{channels=}")
+        for channel in channels:
+            await sio.enter_room(sid, f"channel:{channel.id}")
 
-    # print(f"user {user.name}({user.id}) connected with session ID {sid}")
+        # print(f"user {user.name}({user.id}) connected with session ID {sid}")
 
-    await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
-    return {"id": user.id, "name": user.name}
+        await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
+        return {"id": user.id, "name": user.name}
+    except Exception as e:
+        log.error(f"Error in user_join handler for user {user.id}: {e}", exc_info=True)
+        return None
 
 
 @sio.on("join-channels")
@@ -233,13 +266,19 @@ async def channel_events(sid, data):
     event_type = event_data["type"]
 
     if event_type == "typing":
+        # Safely get user from session pool
+        user_data = SESSION_POOL.get(sid)
+        if not user_data:
+            log.warning(f"Session {sid} not found in SESSION_POOL for channel-events")
+            return
+        
         await sio.emit(
             "channel-events",
             {
                 "channel_id": data["channel_id"],
                 "message_id": data.get("message_id", None),
                 "data": event_data,
-                "user": UserNameResponse(**SESSION_POOL[sid]).model_dump(),
+                "user": UserNameResponse(**user_data).model_dump(),
             },
             room=room,
         )
@@ -252,20 +291,32 @@ async def user_list(sid):
 
 @sio.event
 async def disconnect(sid):
-    if sid in SESSION_POOL:
-        user = SESSION_POOL[sid]
-        del SESSION_POOL[sid]
+    try:
+        if sid in SESSION_POOL:
+            user = SESSION_POOL[sid]
+            del SESSION_POOL[sid]
 
-        user_id = user["id"]
-        USER_POOL[user_id] = [_sid for _sid in USER_POOL[user_id] if _sid != sid]
+            user_id = user["id"]
+            # Safely handle USER_POOL - ensure it's always a list
+            existing_sessions = USER_POOL.get(user_id, [])
+            if not isinstance(existing_sessions, list):
+                log.warning(f"USER_POOL[{user_id}] is not a list in disconnect, resetting. Value: {existing_sessions}")
+                existing_sessions = []
+            
+            filtered_sessions = [_sid for _sid in existing_sessions if _sid != sid]
 
-        if len(USER_POOL[user_id]) == 0:
-            del USER_POOL[user_id]
+            if len(filtered_sessions) == 0:
+                if user_id in USER_POOL:
+                    del USER_POOL[user_id]
+            else:
+                USER_POOL[user_id] = filtered_sessions
 
-        await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
-    else:
-        pass
-        # print(f"Unknown session ID {sid} disconnected")
+            await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
+        else:
+            pass
+            # print(f"Unknown session ID {sid} disconnected")
+    except Exception as e:
+        log.error(f"Error in disconnect handler for session {sid}: {e}", exc_info=True)
 
 
 def get_event_emitter(request_info):
@@ -358,7 +409,11 @@ def get_user_ids_from_room(room):
 
     active_user_ids = list(
         set(
-            [SESSION_POOL.get(session_id[0])["id"] for session_id in active_session_ids]
+            [
+                user_data["id"]
+                for session_id in active_session_ids
+                if (user_data := SESSION_POOL.get(session_id[0])) is not None
+            ]
         )
     )
     return active_user_ids
