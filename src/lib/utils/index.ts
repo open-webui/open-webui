@@ -765,67 +765,102 @@ const fragmentsToContent = (fragments: any) => {
 		.join('\n\n');
 };
 
-const convertDeepseekMessages = (convo) => {
-	// Parse DeepSeek chat messages (mapping + fragments) into chat dictionary
-	const mapping = convo['mapping'];
-	const messages = [];
-	let currentId = '';
-	let lastId = null;
-
-	for (const message_id in mapping) {
-		const message = mapping[message_id];
-		currentId = message_id;
-		try {
-			const fragments = message?.message?.fragments;
-			const content = fragmentsToContent(fragments);
-
-			if (messages.length === 0 && (!content || content === '')) {
-				continue;
-			}
-
-			const inferredRole = (() => {
-				if (Array.isArray(fragments)) {
-					const firstType = fragments.find((f) => typeof f?.type === 'string')?.type;
-					if (firstType === 'REQUEST') return 'user';
-					if (firstType === 'RESPONSE') return 'assistant';
-				}
-				return message?.message?.author?.role !== 'user' ? 'assistant' : 'user';
-			})();
-
-			const new_chat = {
-				id: message_id,
-				parentId: lastId,
-				childrenIds: message['children'] || [],
-				role: inferredRole,
-				content,
-				model: message?.message?.model || 'deepseek-chat',
-				done: true,
-				context: null
-			};
-			messages.push(new_chat);
-			lastId = currentId;
-		} catch (error) {
-			console.log('Error with DeepSeek message', message, '\nError:', error);
-		}
-	}
-
-	const history: Record<PropertyKey, (typeof messages)[number]> = {};
-	messages.forEach((obj) => (history[obj.id] = obj));
-
-	const chat = {
-		history: {
-			currentId: currentId,
-			messages: history
-		},
-		models: [messages[0]?.model || 'deepseek-chat'],
-		messages: messages,
-		options: {},
-		timestamp: convo['inserted_at'] || convo['updated_at'] || convo['create_time'],
-		title: convo['title'] ?? 'New Chat'
-	};
-	return chat;
+const parseDeepseekTimestamp = (value: any): number | null => {
+	// DeepSeek exports often use ISO strings; convert to Unix seconds
+	if (value === undefined || value === null) return null;
+	if (typeof value === 'number') return value;
+	const parsed = Date.parse(value);
+	if (Number.isNaN(parsed)) return null;
+	return Math.floor(parsed / 1000);
 };
 
+const convertDeepseekMessages = (convo) => {
+    const mapping = convo['mapping'];
+    const messages = [];
+    // 即使缺少这个函数，这里给一个简单的补丁以防报错
+    const fragmentsToContent = (frags) => frags?.map(f => f.content).join('') || '';
+    const createdAt = parseDeepseekTimestamp(convo['create_time'] || convo['created_at']);
+    const updatedAt = parseDeepseekTimestamp(
+        convo['updated_at'] || convo['inserted_at'] || convo['create_time']
+    );
+
+    // 1. 先把所有节点处理一遍，存入字典，不管顺序
+    const rawNodes = {};
+    
+    Object.keys(mapping).forEach(id => {
+        const node = mapping[id];
+        const fragments = node?.message?.fragments;
+        const content = fragments ? fragmentsToContent(fragments) : '';
+        
+        // 推断角色
+        let inferredRole = 'user';
+        if (Array.isArray(fragments)) {
+             const firstType = fragments.find((f) => typeof f?.type === 'string')?.type;
+             if (firstType === 'RESPONSE') inferredRole = 'assistant';
+        } else if (node?.message?.author?.role !== 'user') {
+             inferredRole = 'assistant';
+        }
+
+        rawNodes[id] = {
+            id: id,
+            originalParent: node.parent, // 保留原始 parent
+            childrenIds: node.children || [],
+            role: inferredRole,
+            content: content,
+            model: node?.message?.model || 'deepseek-chat',
+            hasContent: !!content && content.trim() !== ''
+        };
+    });
+
+    // 2. 按照父子关系重建顺序 (拓扑排序的简化版：顺藤摸瓜)
+    // 找到真正的 Root (通常是 message 为 null 的那个)
+    let currentNodeId = Object.keys(rawNodes).find(id => !rawNodes[id].originalParent);
+    
+    // 如果找不到 null parent，尝试找 'root'
+    if (!currentNodeId && rawNodes['root']) currentNodeId = 'root';
+
+    let lastValidId = null; // 用于记录上一个有效的内容节点，作为 parentId
+
+    // 3. 链式遍历
+    while (currentNodeId) {
+        const node = rawNodes[currentNodeId];
+        if (!node) break;
+
+        // 只有当有内容时才加入 messages 列表
+        if (node.hasContent) {
+            messages.push({
+                id: node.id,
+                parentId: lastValidId, // 指向上一个有效节点，而不是原始的空 root
+                childrenIds: node.childrenIds,
+                role: node.role,
+                content: node.content,
+                model: node.model,
+                done: true,
+                context: null
+            });
+            lastValidId = node.id; // 更新有效节点指针
+        }
+
+        // 移动到下一个节点 (这里假设是单线性对话，取第一个 child)
+        // DeepSeek 的对话通常是线性的，如果有分支，这里需要更复杂的树形处理
+        currentNodeId = node.childrenIds[0]; 
+    }
+
+    const history = {};
+    messages.forEach((obj) => (history[obj.id] = obj));
+
+    return {
+        history: {
+            currentId: lastValidId, // 最后的 ID
+            messages: history
+        },
+        models: [messages[0]?.model || 'deepseek-chat'],
+        messages: messages,
+        options: {},
+        timestamp: updatedAt ?? createdAt ?? Math.floor(Date.now() / 1000),
+        title: convo['title'] ?? 'New Chat'
+    };
+};
 const validateChat = (chat) => {
 	// Because ChatGPT sometimes has features we can't use like DALL-E or might have corrupted messages, need to validate
 	const messages = chat.messages;
@@ -886,6 +921,10 @@ export const convertDeepseekChats = (_chats) => {
 
 	for (const convo of _chats) {
 		const chat = convertDeepseekMessages(convo);
+		const createdAt = parseDeepseekTimestamp(convo['create_time'] || convo['created_at']);
+		const updatedAt = parseDeepseekTimestamp(
+			convo['updated_at'] || convo['inserted_at'] || convo['create_time']
+		);
 
 		if (validateChat(chat)) {
 			chats.push({
@@ -893,7 +932,9 @@ export const convertDeepseekChats = (_chats) => {
 				user_id: '',
 				title: convo['title'],
 				chat: chat,
-				timestamp: convo['inserted_at'] || convo['updated_at'] || convo['create_time']
+				timestamp: updatedAt ?? createdAt ?? null,
+				created_at: createdAt ?? null,
+				updated_at: updatedAt ?? null
 			});
 		} else {
 			failed++;
