@@ -33,6 +33,7 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.pdf_generator import PDFGenerator
 from open_webui.models.users import Users
+from open_webui.utils.super_admin import is_super_admin
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -514,14 +515,9 @@ async def filter_chats_by_meta(form_data: ChatMetaFilterForm, user=Depends(get_v
             user_group_ids = [g.id for g in user_groups]
             
             # Check if super admin
-            first_user = Users.get_first_user()
-            allowed_emails = [
-                "sm11538@nyu.edu", "ms15138@nyu.edu", "mb484@nyu.edu",
-                "cg4532@nyu.edu", "ht2490@nyu.edu", "ps5226@nyu.edu"
-            ]
-            is_super_admin = (first_user and user.id == first_user.id) or user.email in allowed_emails
+            user_is_super_admin = is_super_admin(user)
             
-            if form_data.group_id not in user_group_ids and group.user_id != user.id and not is_super_admin:
+            if form_data.group_id not in user_group_ids and group.user_id != user.id and not user_is_super_admin:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="You don't have access to this group"

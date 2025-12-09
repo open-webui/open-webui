@@ -4,10 +4,22 @@
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
 
 	import { user } from '$lib/stores';
+	import { getSuperAdminEmails } from '$lib/apis/users';
 
-	const SPECIAL_ADMIN_EMAILS = ['cg4532@nyu.edu','ms15138@nyu.edu','mb484@nyu.edu','sm11538@nyu.edu','ht2490@nyu.edu','ps5226@nyu.edu'];
+	let superAdminEmails: string[] = [];
+	let canViewFileSettings = false;
 
-	const canViewFileSettings = () => SPECIAL_ADMIN_EMAILS.includes($user?.email);
+	const checkCanViewFileSettings = () => {
+		if (!$user?.email) {
+			canViewFileSettings = false;
+			return;
+		}
+		canViewFileSettings = superAdminEmails.some(email => email.toLowerCase() === $user.email.toLowerCase());
+	};
+
+	$: if ($user?.email && superAdminEmails.length > 0) {
+		checkCanViewFileSettings();
+	}
 
 	const dispatch = createEventDispatcher();
 
@@ -296,6 +308,16 @@
 	};
 
 	onMount(async () => {
+		// Fetch super admin emails from API
+		try {
+			if (localStorage.token) {
+				superAdminEmails = await getSuperAdminEmails(localStorage.token);
+				checkCanViewFileSettings();
+			}
+		} catch (error) {
+			console.error('Error fetching super admin emails:', error);
+		}
+
 		await setEmbeddingConfig();
 		await setRerankingConfig();
 

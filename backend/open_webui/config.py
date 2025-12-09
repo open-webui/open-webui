@@ -317,18 +317,22 @@ class UserScopedConfig:
                         final_value = self.default
                         break
                 if final_value != self.default:
-                    print(f"User {email} has personal config for {self.config_path}: {final_value}")
+                    logging.debug(f"User {email} has personal config for {self.config_path}: {final_value}")
                 return final_value
 
             # Step 2: Check group creator's config
             user = Users.get_user_by_email(email)
-            print(f"User {email} maps to user_id={user.id}")
+            if not user:
+                # User not found, return default
+                logging.debug(f"User {email} not found, using default for {self.config_path}")
+                return self.default
+            logging.debug(f"User {email} maps to user_id={user.id}")
             user_groups = Groups.get_groups_by_member_id(user.id)
-            print(f"User {email} is part of groups: {user_groups}")
+            logging.debug(f"User {email} is part of groups: {[g.id for g in user_groups]}")
             
             for group in user_groups:
                 group_creator_email = group.created_by
-                print(f"Group created by {group_creator_email}")
+                logging.debug(f"Group {group.id} created by {group_creator_email}")
                 if group_creator_email:
                     creator_entry = db.query(Config).filter_by(email=group_creator_email).first()
                     if creator_entry and isinstance(creator_entry.data, dict):
@@ -342,11 +346,11 @@ class UserScopedConfig:
                                 final_value = self.default
                                 break
                         if final_value != self.default:
-                            print(f"Group admin {group_creator_email} has config for {self.config_path}: {final_value}")
+                            logging.debug(f"Group admin {group_creator_email} has config for {self.config_path}: {final_value}")
                         return final_value
 
             # Step 3: Fallback
-            print(f"Using default for {email} for {self.config_path}")
+            logging.debug(f"Using default for {email} for {self.config_path}")
             return self.default
 
     def set(self, email: str, value: Any):
@@ -1903,6 +1907,20 @@ RAG_EMBEDDING_BATCH_SIZE = PersistentConfig(
         os.environ.get("RAG_EMBEDDING_BATCH_SIZE")
         or os.environ.get("RAG_EMBEDDING_OPENAI_BATCH_SIZE", "1")
     ),
+)
+
+# Portkey virtual key - user-specific, inherits from group admin if user is member
+# For admins: uses their own virtual key from config
+# For group members: inherits virtual key from their group's admin
+# Default: from RAG_EMBEDDING_MODEL if it's a virtual key (doesn't start with "@")
+_DEFAULT_PORTKEY_VIRTUAL_KEY = (
+    RAG_EMBEDDING_MODEL.value 
+    if not RAG_EMBEDDING_MODEL.value.startswith("@") 
+    else "text-embedding-d47871"
+)
+RAG_EMBEDDING_PORTKEY_VIRTUAL_KEY = UserScopedConfig(
+    "rag.embedding.portkey_virtual_key",
+    _DEFAULT_PORTKEY_VIRTUAL_KEY
 )
 
 RAG_RERANKING_MODEL = PersistentConfig(

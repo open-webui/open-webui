@@ -14,6 +14,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 
 from open_webui.models.knowledge import Knowledges
+from open_webui.models.users import Users
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.utils.auth import get_verified_user
 from open_webui.retrieval.web.tavily import search_tavily
@@ -355,8 +356,10 @@ def search_knowledge_base(query: str, user_id: str, request: Request, model, k: 
             return []
         
         try:
+            # Get user object from user_id for proper virtual key resolution
+            user = Users.get_user_by_id(user_id)
             embedding_function = request.app.state.EMBEDDING_FUNCTION
-            query_embedding = embedding_function(query, user_id)
+            query_embedding = embedding_function(query, user=user)
         except Exception as e:
             logging.error(f"Failed to generate embeddings: {e}")
             return []

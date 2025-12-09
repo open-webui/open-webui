@@ -21,23 +21,24 @@
 	import Evaluations from './Settings/Evaluations.svelte';
 	import CodeExecution from './Settings/CodeExecution.svelte';
 	import { user } from '$lib/stores'; 
+	import { getSuperAdminEmails } from '$lib/apis/users';
 
-	const SPECIAL_ADMIN_EMAILS = [
-	'cg4532@nyu.edu',
-	'ms15138@nyu.edu',
-	'mb484@nyu.edu',
-	'sm11538@nyu.edu',
-	'ht2490@nyu.edu',
-	'ps5226@nyu.edu'
-	];
+	let superAdminEmails: string[] = [];
+	let canViewRestrictedTabs = false;
 
-	const canViewRestrictedTabs = () => SPECIAL_ADMIN_EMAILS.includes($user?.email);
+	const checkCanViewRestrictedTabs = () => {
+		if (!$user?.email) {
+			canViewRestrictedTabs = false;
+			return;
+		}
+		canViewRestrictedTabs = superAdminEmails.some(email => email.toLowerCase() === $user.email.toLowerCase());
+	};
 
 	const i18n = getContext('i18n');
 
 	let selectedTab = 'models';
 
-	onMount(() => {
+	onMount(async () => {
 		const containerElement = document.getElementById('admin-settings-tabs-container');
 
 		if (containerElement) {
@@ -48,7 +49,21 @@
 				}
 			});
 		}
+
+		// Fetch super admin emails from API
+		try {
+			if (localStorage.token) {
+				superAdminEmails = await getSuperAdminEmails(localStorage.token);
+				checkCanViewRestrictedTabs();
+			}
+		} catch (error) {
+			console.error('Error fetching super admin emails:', error);
+		}
 	});
+
+	$: if ($user?.email && superAdminEmails.length > 0) {
+		checkCanViewRestrictedTabs();
+	}
 </script>
 
 <div class="flex flex-col lg:flex-row w-full h-full pb-2 lg:space-x-4">

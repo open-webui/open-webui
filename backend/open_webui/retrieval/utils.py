@@ -1,7 +1,7 @@
 import logging
 import os
 import uuid
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 import asyncio
 import requests
@@ -12,8 +12,15 @@ from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriev
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 
+try:
+    from portkey_ai import Portkey
+    PORTKEY_SDK_AVAILABLE = True
+except ImportError:
+    PORTKEY_SDK_AVAILABLE = False
+    log.warning("Portkey SDK not available. Install portkey-ai package for embedding support.")
 
-from open_webui.config import VECTOR_DB
+
+from open_webui.config import VECTOR_DB, RAG_EMBEDDING_PORTKEY_VIRTUAL_KEY, RAG_EMBEDDING_MODEL
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.utils.misc import get_last_user_message, calculate_sha256_string
 
@@ -612,99 +619,130 @@ def generate_openai_batch_embeddings(
         return None
 
 
-from dataclasses import dataclass
 from typing import Optional, List, Union
 
 
-# Create a dataclass to store the result of the embedding generation
-@dataclass
-class EmbeddingResult:
-    embeddings: Optional[List[List[float]]] = None
-    error: Optional[Exception] = None
-    retriable: bool = False
-
-
-def generate_portkey_batch_embeddings(
+def generate_portkey_embeddings_sdk(
     model: str,
-    texts: list[str],
-    url: str = "",
-    key: str = "",
-    user: UserModel = None,
-    backoff: bool = True,
-    virtual_key: str = "text-embedding-d47871",
-    max_retries: int = 10,
-    initial_backoff: float = 62.0,  #  Using single backoff of 62s once rate limit reached
-) -> EmbeddingResult:
+    texts: Union[str, List[str]],
+    base_url: str,
+    api_key: str,
+    virtual_key: Optional[str] = None,
+    encoding_format: str = "float",
+) -> Union[List[float], List[List[float]]]:
+    """
+    Generate embeddings using Portkey Python SDK.
+    
+    This function uses the official Portkey SDK to generate embeddings for either
+    a single string or a batch of strings. The SDK handles retries, error handling,
+    and HTTP management automatically.
+    
+    Important: In Portkey, the model config value might be a virtual key identifier
+    (e.g., "text-embedding-d47871") rather than the actual model name. Virtual keys
+    route to actual models (e.g., "@openai-embedding/text-embedding-3-small").
+    
+    Args:
+        model: Portkey model identifier or virtual key
+               - If starts with "@", treated as model name (e.g., "@openai-embedding/text-embedding-3-small")
+               - Otherwise, treated as virtual key and default model is used
+        texts: Single string or list of strings to embed
+        base_url: Portkey API base URL
+        api_key: Portkey API key
+        virtual_key: Optional Portkey virtual key (for routing/billing).
+                    If not provided and model doesn't start with "@", model is used as virtual_key.
+        encoding_format: "float" for uncompressed embeddings (default), None for compressed base64
+        
+    Returns:
+        list[float] if texts is a single string
+        list[list[float]] if texts is a list of strings
+        
+    Raises:
+        ImportError: If portkey_ai SDK is not installed
+        Exception: For any Portkey API errors (handled by SDK)
+    """
+    if not PORTKEY_SDK_AVAILABLE:
+        raise ImportError(
+            "Portkey SDK (portkey_ai) is not installed. "
+            "Install it with: pip install portkey-ai"
+        )
+    
+    # Determine if model is actually a virtual key or a model name
+    # Portkey models start with "@" (e.g., "@openai-embedding/text-embedding-3-small")
+    # Virtual keys don't start with "@" (e.g., "text-embedding-d47871")
+    
+    # Priority: explicit virtual_key > user-specific virtual_key > model config as virtual_key
+    if virtual_key:
+        # Virtual key is explicitly provided (from user config or passed parameter)
+        actual_virtual_key = virtual_key
+        if model.startswith("@"):
+            # Model is a proper model name
+            actual_model = model
+        else:
+            # Model config is also a virtual key, but we use the explicit one and default model
+            actual_model = "@openai-embedding/text-embedding-3-small"
+        log.debug(
+            f"Using explicit virtual_key '{actual_virtual_key}' with model '{actual_model}'"
+        )
+    elif not model.startswith("@"):
+        # Model config value is a virtual key (e.g., "text-embedding-d47871")
+        # Use it as virtual_key and default to common embedding model
+        actual_virtual_key = model  # Model config IS the virtual key
+        actual_model = "@openai-embedding/text-embedding-3-small"  # Default embedding model
+        log.debug(
+            f"Model config '{model}' doesn't start with '@', treating as virtual_key. "
+            f"Using model '{actual_model}' with virtual_key '{actual_virtual_key}'"
+        )
+    else:
+        # Model is proper model name, no virtual_key provided
+        actual_model = model
+        actual_virtual_key = None
+        log.debug(f"Using model '{actual_model}' without virtual_key")
+    
+    # Initialize Portkey client with virtual_key if provided
+    # The SDK supports virtual_key as a parameter in client initialization
+    client_kwargs = {
+        "base_url": base_url,
+        "api_key": api_key
+    }
+    if actual_virtual_key:
+        client_kwargs["virtual_key"] = actual_virtual_key
+    
+    portkey = Portkey(**client_kwargs)
+    
+    # Generate embeddings using SDK
+    # The SDK handles retries, rate limiting, and error handling automatically
     try:
-        import time
-        import requests
-
-        headers = {
-            "Content-Type": "application/json",
-            "x-portkey-api-key": key,
-            "x-portkey-virtual-key": virtual_key,
-        }
-
-        retry_count = 0
-        backoff_time = initial_backoff
         log.info(
-            f"Processing embeddings for {len(texts)} text chunks in a single batch"
+            f"Generating Portkey embeddings via SDK: "
+            f"model={actual_model}, virtual_key={actual_virtual_key}, "
+            f"texts_count={len(texts) if isinstance(texts, list) else 1}, "
+            f"encoding_format={encoding_format}"
         )
-
-        while retry_count <= max_retries:
-            try:
-                r = requests.post(
-                    f"{url}/embeddings",
-                    headers=headers,
-                    json={"input": texts, "model": model, "encoding_format": "float"},
-                    timeout=60,  # To prevent hanging on large requests
-                )
-                r.raise_for_status()
-                data = r.json()
-
-                if "data" in data:
-                    return EmbeddingResult(
-                        embeddings=[elem["embedding"] for elem in data["data"]]
-                    )
-                else:
-                    return EmbeddingResult(
-                        error=ValueError("Response missing expected embedding data"),
-                        retriable=False,
-                    )
-
-            except requests.exceptions.HTTPError as e:
-                if (
-                    e.response.status_code == 429
-                    and retry_count < max_retries
-                    and backoff
-                ):
-                    # Rate limit hit, apply backoff
-                    log.warning(
-                        f"Rate limit hit, retrying in {backoff_time} seconds..."
-                    )
-                    time.sleep(backoff_time)
-                    # backoff_time *= 2  # Exponential backoff (Not using)
-                    retry_count += 1
-                elif e.response.status_code == 413:
-                    # Payload too large - cannot handle in a single batch
-                    log.warning("Request entity too large, need to batch smaller")
-                    return EmbeddingResult(
-                        error=ValueError("Payload too large for single batch"),
-                        retriable=True,
-                    )
-                else:
-                    # Other error or max retries reached
-                    log.exception(f"Error generating portkey batch embeddings: {e}")
-                    return EmbeddingResult(error=e, retriable=False)
-
-        # If we get here, we've exhausted all retries
-        return EmbeddingResult(
-            error=ValueError("Maximum retries exceeded for rate limiting"),
-            retriable=False,
+        
+        response = portkey.embeddings.create(
+            model=actual_model,
+            input=texts,
+            encoding_format=encoding_format
         )
+        
+        # Extract embeddings from response
+        # Response.data is a list of EmbeddingData objects, ordered by index
+        embeddings = [item.embedding for item in response.data]
+        
+        # Validate embeddings were generated
+        if not embeddings:
+            raise ValueError("No embeddings returned from Portkey SDK")
+        
+        # Return single embedding for single string, list for batch
+        if isinstance(texts, str):
+            if len(embeddings) == 0:
+                raise ValueError("Expected at least one embedding for single text input")
+            return embeddings[0]
+        return embeddings
+        
     except Exception as e:
-        log.exception(f"Error generating portkey batch embeddings: {e}")
-        return EmbeddingResult(error=e, retriable=False)
+        log.exception(f"Error generating Portkey embeddings via SDK: {e}")
+        raise
 
 
 def generate_ollama_batch_embeddings(
@@ -744,9 +782,47 @@ def generate_ollama_batch_embeddings(
 def generate_embeddings(
     engine: str, model: str, text: Union[str, list[str]], backoff: bool, **kwargs
 ):
+    """
+    Generate embeddings using the specified engine.
+    
+    This function routes embedding requests to the appropriate engine implementation.
+    For Portkey, it uses the official Python SDK for clean, maintainable code.
+    
+    Args:
+        engine: Embedding engine ("ollama", "openai", "portkey", or "" for local)
+        model: Model identifier
+        text: Single string or list of strings to embed
+        backoff: Whether to use exponential backoff (for legacy compatibility)
+        **kwargs: Additional engine-specific parameters:
+            - url: API base URL
+            - key: API key
+            - user: UserModel instance
+            - virtual_key: (Portkey only) Virtual key for routing/billing
+            
+    Returns:
+        list[float] if text is a single string
+        list[list[float]] if text is a list of strings
+    """
     url = kwargs.get("url", "")
     key = kwargs.get("key", "")
     user = kwargs.get("user")
+    
+    # For Portkey: Get user-specific virtual key
+    # - For admins: Use their own virtual key from config
+    # - For group members: Inherit virtual key from their group's admin
+    # - Fallback: Use default from RAG_EMBEDDING_MODEL or model config
+    virtual_key = kwargs.get("virtual_key", None)
+    if engine == "portkey" and user and user.email:
+        # Get user-specific virtual key (inherits from group admin if user is member)
+        user_virtual_key = RAG_EMBEDDING_PORTKEY_VIRTUAL_KEY.get(user.email)
+        if user_virtual_key:
+            virtual_key = user_virtual_key
+            log.debug(f"Using user-specific virtual key for {user.email}: {virtual_key}")
+        elif virtual_key is None:
+            # Fallback: use model config value if it's a virtual key
+            if model and not model.startswith("@"):
+                virtual_key = model
+                log.debug(f"Using model config as virtual key: {virtual_key}")
 
     if engine == "ollama":
         if isinstance(text, list):
@@ -772,26 +848,18 @@ def generate_embeddings(
 
         return embeddings[0] if isinstance(text, str) else embeddings
     elif engine == "portkey":
-        if isinstance(text, list):
-            embeddings = generate_portkey_batch_embeddings(
-                model, text, url, key, user, backoff
-            )
-        else:
-            embeddings = generate_portkey_batch_embeddings(
-                model, [text], url, key, user, backoff
-            )
+        # Use SDK-based implementation - no fallback to old HTTP requests
+        embeddings = generate_portkey_embeddings_sdk(
+            model=model,
+            texts=text,
+            base_url=url,
+            api_key=key,
+            virtual_key=virtual_key,
+            encoding_format="float"
+        )
+        return embeddings
     else:
         raise ValueError(f"Unknown embedding engine: {engine}")
-
-    # Handle the new EmbeddingResult object
-    if isinstance(embeddings, EmbeddingResult):
-        if embeddings.error:
-            raise embeddings.error
-        return (
-            embeddings.embeddings[0] if isinstance(text, str) else embeddings.embeddings
-        )
-
-    return embeddings[0] if isinstance(text, str) else embeddings
 
 
 import operator

@@ -38,10 +38,29 @@
 	let allUsers = [];
 	let adminUsers = [];
 
-	$: isSuperAdmin = $user?.email && [
-		'sm11538@nyu.edu', 'ms15138@nyu.edu', 'mb484@nyu.edu',
-		'cg4532@nyu.edu', 'ht2490@nyu.edu', 'ps5226@nyu.edu'
-	].includes($user.email);
+	let isSuperAdmin = false;
+
+	import { checkIfSuperAdmin } from '$lib/apis/users';
+	import { onMount } from 'svelte';
+
+	onMount(async () => {
+		if ($user?.email && localStorage.token) {
+			try {
+				isSuperAdmin = await checkIfSuperAdmin(localStorage.token, $user.email);
+			} catch (error) {
+				console.error('Error checking super admin status:', error);
+				isSuperAdmin = false;
+			}
+		}
+	});
+
+	$: if ($user?.email && localStorage.token && !isSuperAdmin) {
+		checkIfSuperAdmin(localStorage.token, $user.email).then(result => {
+			isSuperAdmin = result;
+		}).catch(err => {
+			console.error('Error checking super admin status:', err);
+		});
+	}
 
 	// Set assignToEmail immediately based on context
 	$: if (isSuperAdmin) {

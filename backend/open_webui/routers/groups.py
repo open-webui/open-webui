@@ -16,6 +16,7 @@ from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.super_admin import is_super_admin
 from open_webui.env import SRC_LOG_LEVELS
 
 
@@ -33,17 +34,7 @@ router = APIRouter()
 async def get_groups(user=Depends(get_verified_user)):
     if user.role == "admin":
         # Check if super admin
-        first_user = Users.get_first_user()
-        allowed_emails = [
-            "sm11538@nyu.edu",
-            "ms15138@nyu.edu", 
-            "mb484@nyu.edu",
-            "cg4532@nyu.edu",
-            "ht2490@nyu.edu",
-            "ps5226@nyu.edu"
-        ]
-        
-        if (first_user and user.id == first_user.id) or user.email in allowed_emails:
+        if is_super_admin(user):
             return Groups.get_groups()  # Super admin gets ALL groups
         elif user.info and user.info.get("is_co_admin"):
             return Groups.get_groups_by_member_id(user.id)  # Co-admins get groups they're members of
