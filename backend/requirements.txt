@@ -16,7 +16,7 @@ requests==2.32.5
 aiohttp==3.12.15
 
 # Payment
-alipay-sdk-python==3.6.915
+alipay-sdk-python==3.7.868
 async-timeout
 aiocache
 aiofiles
