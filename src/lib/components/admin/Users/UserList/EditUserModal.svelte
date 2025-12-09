@@ -7,6 +7,7 @@
 	import { goto } from '$app/navigation';
 
 	import { updateUserById, getUserGroupsById } from '$lib/apis/users';
+	import type { UploadTenant } from '$lib/apis/uploads';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
@@ -21,6 +22,7 @@
 	export let show = false;
 	export let selectedUser;
 	export let sessionUser;
+	export let tenantLookup: Record<string, UploadTenant> = {};
 
 	$: if (show) {
 		init();
@@ -39,8 +41,19 @@
 		role: 'pending',
 		name: '',
 		email: '',
-		password: ''
+		password: '',
+		tenant_id: ''
 	};
+
+	let tenantDisplay = '';
+
+	const getTenantLabel = (tenantId?: string | null) => {
+		if (!tenantId) return '';
+		const tenant = tenantLookup?.[tenantId];
+		return tenant ? tenant.name : tenantId;
+	};
+
+	$: tenantDisplay = getTenantLabel(_user?.tenant_id);
 
 	let userGroups: any[] | null = null;
 
@@ -136,17 +149,20 @@
 									<div class="flex flex-col w-full">
 										<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Role')}</div>
 
-										<div class="flex-1">
-											<select
-												class="w-full dark:bg-gray-900 text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
-												bind:value={_user.role}
-												disabled={_user.id == sessionUser.id}
-												required
-											>
-												<option value="admin">{$i18n.t('Admin')}</option>
-												<option value="user">{$i18n.t('User')}</option>
-												<option value="pending">{$i18n.t('Pending')}</option>
-											</select>
+										<div
+											class="px-3 py-2 rounded-lg border border-gray-100 dark:border-gray-800 bg-transparent text-sm text-gray-900 dark:text-gray-100"
+										>
+											{$i18n.t(_user.role)}
+										</div>
+									</div>
+
+									<div class="flex flex-col w-full">
+										<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Tenant')}</div>
+
+										<div
+											class="px-3 py-2 rounded-lg border border-gray-100 dark:border-gray-800 bg-transparent text-sm text-gray-900 dark:text-gray-100"
+										>
+											{tenantDisplay || $i18n.t('Unassigned')}
 										</div>
 									</div>
 
