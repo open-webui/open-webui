@@ -258,7 +258,7 @@
 					
 					{#if rawChats.length > 0}
 					<div class="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400">
-						<span class="font-mono">Total: {rawChats.length} | Selected: {selectedIndices.size}</span>
+						<span class="font-mono">总计: {rawChats.length} | 已选: {selectedIndices.size}</span>
 						<label class="flex items-center gap-2 cursor-pointer select-none hover:text-gray-900 dark:hover:text-white transition-colors">
 							<input
 								type="checkbox"
@@ -337,7 +337,7 @@
 					{#if importing}
 						<Spinner className="size-4" />
 					{/if}
-					<span>导出并导入 ({selectedIndices.size})</span>
+					<span>导入 ({selectedIndices.size})</span>
 				</button>
 			</div>
 		</div>
