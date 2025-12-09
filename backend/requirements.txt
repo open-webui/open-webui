@@ -1,4 +1,4 @@
-fastapi==0.123.9
+fastapi==0.124.0
 uvicorn[standard]==0.37.0
 pydantic==2.12.5
 python-multipart==0.0.20
@@ -37,11 +37,11 @@ asgiref==3.11.0
 
 # AI libraries
 tiktoken
-mcp==1.23.1
+mcp==1.23.3
 
 openai
 anthropic
-google-genai==1.53.0
+google-genai==1.54.0
 google-generativeai==0.8.5
 
 langchain==0.3.27
@@ -60,9 +60,9 @@ einops==0.8.1
 
 ftfy==6.3.1
 chardet==5.2.0
-pypdf==6.4.0
+pypdf==6.4.1
 fpdf2==2.8.5
-pymdown-extensions==10.17.2
+pymdown-extensions==10.18
 docx2txt==0.9
 python-pptx==1.0.2
 unstructured==0.18.21
@@ -87,12 +87,12 @@ rank-bm25==0.2.2
 onnxruntime==1.23.2
 faster-whisper==1.2.1
 
-black==25.11.0
+black==25.12.0
 youtube-transcript-api==1.2.3
 pytube==15.0.0
 
 pydub
-ddgs==9.9.2
+ddgs==9.9.3
 
 azure-ai-documentintelligence==1.0.2
 azure-identity==1.25.1
@@ -105,7 +105,7 @@ google-auth-httplib2
 google-auth-oauthlib
 
 googleapis-common-protos==1.72.0
-google-cloud-storage==2.19.0
+google-cloud-storage==3.7.0
 
 ## Databases
 pymongo
@@ -113,14 +113,14 @@ psycopg2-binary==2.9.11
 pgvector==0.4.2
 
 PyMySQL==1.1.2
-boto3==1.42.3
+boto3==1.42.5
 
 pymilvus==2.6.5
 qdrant-client==1.16.1
-playwright==1.56.0 # Caution: version must match docker-compose.playwright.yaml
+playwright==1.57.0 # Caution: version must match docker-compose.playwright.yaml - Update the docker-compose.yaml if necessary
 elasticsearch==9.2.0
 pinecone==6.0.2
-oracledb==3.2.0
+oracledb==3.4.1
 
 av==14.0.1 # Caution: Set due to FATAL FIPS SELFTEST FAILURE, see discussion https://github.com/open-webui/open-webui/discussions/15720
 
@@ -136,7 +136,7 @@ pytest-docker~=3.2.5
 ldap3==2.9.1
 
 ## Firecrawl
-firecrawl-py==4.10.2
+firecrawl-py==4.10.4
 
 ## Trace
 opentelemetry-api==1.39.0
