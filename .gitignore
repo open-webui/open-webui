@@ -319,3 +319,6 @@ redis-deployment-info/
 
 # Portkey SDK documentation and evaluation files
 .portkey sdk/
+
+# Performance analysis documentation (not for version control)
+PERFORMANCE_ANALYSIS.md
