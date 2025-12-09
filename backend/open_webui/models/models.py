@@ -11,9 +11,8 @@ from open_webui.models.users import Users, UserResponse
 
 from pydantic import BaseModel, ConfigDict
 
-from sqlalchemy import or_, and_, func
-from sqlalchemy.dialects import postgresql, sqlite
-from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
+from sqlalchemy import Index
+from sqlalchemy import BigInteger, Column, Text, JSON, Boolean, Integer, String
 
 
 from open_webui.utils.access_control import has_access
@@ -54,52 +53,54 @@ class Model(Base):
     __tablename__ = "model"
 
     id = Column(Text, primary_key=True)
-    """
-        The model's id as used in the API. If set to an existing model, it will override the model.
-    """
+    """模型唯一标识符，用于 API 调用"""
+
     user_id = Column(Text)
+    """模型创建者的用户 ID，用于权限控制"""
 
     base_model_id = Column(Text, nullable=True)
-    """
-        An optional pointer to the actual model that should be used when proxying requests.
-    """
+    """指向实际使用的基础模型的 ID，NULL 表示基础模型"""
 
     name = Column(Text)
-    """
-        The human-readable display name of the model.
-    """
+    """人类可读的模型显示名称"""
+
+    icon_url = Column(Text, nullable=True)
+    """模型图标 URL，用于列表展示"""
+
+    provider = Column(String(50), nullable=True)
+    """供应商标识，如 openai、anthropic、ollama"""
+
+    description = Column(Text, nullable=True)
+    """模型简介文案，前端展示用"""
 
     params = Column(JSONField)
-    """
-        Holds a JSON encoded blob of parameters, see `ModelParams`.
-    """
+    """模型运行参数，存储为 JSON 格式"""
 
     meta = Column(JSONField)
-    """
-        Holds a JSON encoded blob of metadata, see `ModelMeta`.
-    """
+    """模型元数据，存储为 JSON 格式"""
 
-    access_control = Column(JSON, nullable=True)  # Controls data access levels.
-    # Defines access control rules for this entry.
-    # - `None`: Public access, available to all users with the "user" role.
-    # - `{}`: Private access, restricted exclusively to the owner.
-    # - Custom permissions: Specific access control for reading and writing;
-    #   Can specify group or user-level restrictions:
-    #   {
-    #      "read": {
-    #          "group_ids": ["group_id1", "group_id2"],
-    #          "user_ids":  ["user_id1", "user_id2"]
-    #      },
-    #      "write": {
-    #          "group_ids": ["group_id1", "group_id2"],
-    #          "user_ids":  ["user_id1", "user_id2"]
-    #      }
-    #   }
+    context_length = Column(Integer, nullable=False, default=4096)
+    """上下文长度限制，默认 4096"""
+
+    tags = Column(JSONField, nullable=True)
+    """模型标签，用于分组和筛选"""
+
+    sort_order = Column(Integer, nullable=False, default=0)
+    """排序权重，数值越大越靠前"""
+
+    access_control = Column(JSON, nullable=True)
+    """访问控制规则，None=公开，{}=私有，JSON=自定义权限"""
 
     is_active = Column(Boolean, default=True)
+    """模型激活状态，False 表示已禁用"""
 
     updated_at = Column(BigInteger)
+    """最后更新时间戳（Unix 时间戳）"""
+
     created_at = Column(BigInteger)
+    """创建时间戳（Unix 时间戳）"""
+
+    __table_args__ = (Index("idx_model_provider", "provider"),)
 
 
 class ModelModel(BaseModel):
@@ -108,8 +109,14 @@ class ModelModel(BaseModel):
     base_model_id: Optional[str] = None
 
     name: str
+    icon_url: Optional[str] = None
+    provider: Optional[str] = None
+    description: Optional[str] = None
     params: ModelParams
     meta: ModelMeta
+    context_length: int = 4096
+    tags: Optional[dict] = None
+    sort_order: int = 0
 
     access_control: Optional[dict] = None
 
@@ -137,8 +144,14 @@ class ModelForm(BaseModel):
     id: str
     base_model_id: Optional[str] = None
     name: str
+    icon_url: Optional[str] = None
+    provider: Optional[str] = None
+    description: Optional[str] = None
     meta: ModelMeta
     params: ModelParams
+    context_length: int = 4096
+    tags: Optional[dict] = None
+    sort_order: int = 0
     access_control: Optional[dict] = None
     is_active: bool = True
 
