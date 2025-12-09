@@ -562,7 +562,7 @@
 					path={publicPath}
 					tenantId={$user?.role === 'admin'
 						? (selectedTenantId ?? $user?.tenant_id ?? null)
-						: ($user?.tenant_id ?? null)}
+						: undefined}
 					tenantBucket={tenantBucket}
 				/>
 			{:else}
@@ -592,7 +592,7 @@
 					path={privatePath}
 					tenantId={$user?.role === 'admin'
 						? (selectedTenantId ?? $user?.tenant_id ?? null)
-						: ($user?.tenant_id ?? null)}
+						: undefined}
 					tenantBucket={tenantBucket}
 				/>
 			{:else}
