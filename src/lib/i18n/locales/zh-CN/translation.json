@@ -1624,6 +1624,7 @@
 	"Tika": "Tika",
 	"Tika Server URL required.": "请输入 Tika 服务器接口地址",
 	"Tiktoken": "Tiktoken",
+	"Timeout": "超时时间",
 	"Title": "标题",
 	"Title Auto-Generation": "自动生成标题",
 	"Title cannot be an empty string.": "标题不能为空",

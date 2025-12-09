@@ -1624,6 +1624,7 @@
 	"Tika": "Tika",
 	"Tika Server URL required.": "需要提供 Tika 伺服器 URL。",
 	"Tiktoken": "Tiktoken",
+	"Timeout": "逾時時間",
 	"Title": "標題",
 	"Title Auto-Generation": "自動產生標題",
 	"Title cannot be an empty string.": "標題不能是空字串。",
