@@ -568,13 +568,15 @@ async def send_chat_message_event_by_id(
 async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified_user)):
     if user.role == "admin":
         chat = Chats.get_chat_by_id(id)
-        for tag in chat.meta.get("tags", []):
-            if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 1:
-                Tags.delete_tag_by_name_and_user_id(tag, user.id)
+        if chat:
+            for tag in chat.meta.get("tags", []):
+                if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 1:
+                    Tags.delete_tag_by_name_and_user_id(tag, user.id)
 
-        result = Chats.delete_chat_by_id(id)
-
-        return result
+            result = Chats.delete_chat_by_id(id)
+            return result
+        else:
+            return False
     else:
         if not has_permission(
             user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS
@@ -584,12 +586,15 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
 
-        chat = Chats.get_chat_by_id(id)
-        for tag in chat.meta.get("tags", []):
-            if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 1:
-                Tags.delete_tag_by_name_and_user_id(tag, user.id)
+        chat = Chats.get_chat_by_id_and_user_id(id, user.id)
+        if chat:
+            for tag in chat.meta.get("tags", []):
+                if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 1:
+                    Tags.delete_tag_by_name_and_user_id(tag, user.id)
 
-        result = Chats.delete_chat_by_id_and_user_id(id, user.id)
+            result = Chats.delete_chat_by_id_and_user_id(id, user.id)
+        else:
+            return False
         return result
 
 
