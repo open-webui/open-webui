@@ -1,0 +1,3 @@
+# FILE: bandit.yaml
+exclude_dirs: ['backend/data/cache']
+skips: ['B101']

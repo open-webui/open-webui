@@ -1,0 +1,129 @@
+name: Bearer Security Scan
+
+on:
+  schedule:
+    # Run every Monday at 7:00 AM EST (12:00 PM UTC)
+    - cron: '0 12 * * 1'
+  workflow_dispatch:  # Keep manual trigger for testing
+
+permissions:
+  contents: read
+
+jobs:
+  security_scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - name: Run Bearer scan
+        uses: bearer/bearer-action@v2
+        continue-on-error: true
+        with:
+          severity: 'critical,high'
+          format: 'json'
+          output: 'bearer_report.json'
+
+      - name: Upload Bearer JSON report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bearer-report
+          path: bearer_report.json
+
+      - name: Check for critical and high findings
+        id: check_findings
+        run: |
+          if [ -f bearer_report.json ]; then
+            # Count critical and high severity findings
+            CRITICAL_COUNT=$(jq '(.critical // []) | length' bearer_report.json)
+            HIGH_COUNT=$(jq '(.high // []) | length' bearer_report.json)
+            TOTAL_COUNT=$((CRITICAL_COUNT + HIGH_COUNT))
+            
+            echo "total_count=$TOTAL_COUNT" >> $GITHUB_OUTPUT
+            
+            if [ "$CRITICAL_COUNT" -gt 0 ] || [ "$HIGH_COUNT" -gt 0 ]; then
+              echo "has_findings=true" >> $GITHUB_OUTPUT
+              
+              echo "Bearer Security Scan Summary:"
+              echo "Critical Issues: $CRITICAL_COUNT"
+              echo "High Issues: $HIGH_COUNT"
+              echo "Total Issues: $TOTAL_COUNT"
+              echo ""
+              
+              # Create detailed findings report
+              {
+                echo "Bearer Security Scan Report"
+                echo "============================"
+                echo ""
+                echo "Repository: ${{ github.repository }}"
+                echo "Branch: ${{ github.ref_name }}"
+                echo "Scan Date: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+                echo "Critical Issues: $CRITICAL_COUNT"
+                echo "High Issues: $HIGH_COUNT"
+                echo "Total Issues: $TOTAL_COUNT"
+                echo ""
+                echo "============================"
+                echo ""
+                
+                if [ "$CRITICAL_COUNT" -gt 0 ]; then
+                  echo "CRITICAL SEVERITY FINDINGS:"
+                  echo ""
+                  jq -r '.critical[] | "[\(.id)] \(.title)\nFile: \(.filename):\(.line_number)\nCWE: \(.cwe_ids | join(", "))\nDescription: \(.description)\n\n---\n"' bearer_report.json
+                  echo ""
+                fi
+                
+                if [ "$HIGH_COUNT" -gt 0 ]; then
+                  echo "HIGH SEVERITY FINDINGS:"
+                  echo ""
+                  jq -r '.high[] | "[\(.id)] \(.title)\nFile: \(.filename):\(.line_number)\nCWE: \(.cwe_ids | join(", "))\nDescription: \(.description)\n\n---\n"' bearer_report.json
+                fi
+              } > security_findings.txt
+            else
+              echo "has_findings=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "has_findings=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send GC Notify email with attachment
+        if: steps.check_findings.outputs.has_findings == 'true'
+        run: |
+          # Read and encode the file
+          FILE_CONTENT=$(base64 < security_findings.txt)
+          
+          # Send email to multiple recipients (comma-separated in secret)
+          IFS=',' read -ra EMAILS <<< "${{ secrets.NOTIFICATION_EMAIL }}"
+          for EMAIL in "${EMAILS[@]}"; do
+            # Trim whitespace
+            EMAIL=$(echo "$EMAIL" | xargs)
+            
+            echo "Sending notification to: $EMAIL"
+            
+            # Use jq to properly construct the JSON payload
+            jq -n \
+              --arg email "$EMAIL" \
+              --arg template "${{ secrets.GC_NOTIFY_TEMPLATE_ID }}" \
+              --arg repo "${{ github.repository }}" \
+              --arg file "$FILE_CONTENT" \
+              --arg run_id "${{ github.run_id }}" \
+              '{
+                email_address: $email,
+                template_id: $template,
+                personalisation: {
+                  library_name: "Bearer",
+                  repository_name: $repo,
+                  application_file: {
+                    file: $file,
+                    filename: ("bearer_security_findings_" + $run_id + ".txt"),
+                    sending_method: "attach"
+                  }
+                }
+              }' | curl -X POST "https://api.notification.canada.ca/v2/notifications/email" \
+              -H "Authorization: ApiKey-v1 ${{ secrets.GC_NOTIFY_API_KEY }}" \
+              -H "Content-Type: application/json" \
+              -d @-
+            
+            echo ""
+          done
