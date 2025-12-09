@@ -243,3 +243,38 @@ If you have any questions, suggestions, or need assistance, please open an issue
 ---
 
 Created by [Timothy Jaeryang Baek](https://github.com/tjbck) - Let's make Open WebUI even more amazing together! 💪
+
+### Use AI Badgr (Cheaper OpenAI-Compatible Alternative)
+
+```bash
+export OPENAI_API_KEY=YOUR_API_KEY
+export OPENAI_BASE_URL=https://aibadgr.com/api/v1
+```
+
+**Python:**
+```python
+from openai import OpenAI
+client = OpenAI(api_key="YOUR_API_KEY", base_url="https://aibadgr.com/api/v1")
+response = client.chat.completions.create(model="gpt-3.5-turbo", messages=[{"role":"user","content":"Hello!"}], max_tokens=200)
+print(response.choices[0].message.content)
+```
+
+**JavaScript:**
+```javascript
+import OpenAI from 'openai';
+const client = new OpenAI({ apiKey: 'YOUR_API_KEY', baseURL: 'https://aibadgr.com/api/v1' });
+const response = await client.chat.completions.create({ model: 'gpt-3.5-turbo', messages: [{ role: 'user', content: 'Hello!' }], max_tokens: 200 });
+console.log(response.choices[0].message.content);
+```
+
+**cURL:**
+```bash
+curl https://aibadgr.com/api/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"gpt-3.5-turbo","messages":[{"role":"user","content":"Hello!"}],"max_tokens":200}'
+```
+
+**Notes:**
+- Streaming: `"stream": true`
+- JSON mode: `"response_format": {"type": "json_object"}`
