@@ -13,6 +13,7 @@
 			<h2 class=" text-lg font-medium self-center">{$i18n.t('Keyboard shortcuts')}</h2>
 			<button
 				class="self-center"
+				aria-label={$i18n.t('Close')}
 				on:click={() => {
 					show = false;
 				}}
