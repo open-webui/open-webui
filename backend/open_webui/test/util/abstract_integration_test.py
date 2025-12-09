@@ -147,17 +147,19 @@ class AbstractPostgresTest(AbstractIntegrationTest):
 
         # truncate all tables
         tables = [
+            "user",
             "auth",
-            "chat",
             "chatidtag",
+            "chat",
             "document",
             "memory",
             "model",
-            "tenant",
             "prompt",
             "tag",
-            '"user"',
+            "tenant",
         ]
+        Session.execute(text("SET FOREIGN_KEY_CHECKS=0"))
         for table in tables:
-            Session.execute(text(f"TRUNCATE TABLE {table}"))
+            Session.execute(text(f"TRUNCATE TABLE `{table}`"))
+        Session.execute(text("SET FOREIGN_KEY_CHECKS=1"))
         Session.commit()

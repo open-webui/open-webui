@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from test.util.abstract_integration_test import AbstractPostgresTest
 from test.util.mock_user import mock_webui_user
 
@@ -136,6 +138,30 @@ class TestAuths(AbstractPostgresTest):
         assert data["profile_image_url"] == "/user.png"
         assert data["token"] is not None and len(data["token"]) > 0
         assert data["token_type"] == "Bearer"
+
+    def test_add_user_with_tenant_id(self):
+        from open_webui.models.tenants import Tenants, TenantForm
+        random_suffix = uuid4().hex
+        tenant = Tenants.create_tenant(TenantForm(name=f"Tenant-{random_suffix}"))
+
+        with mock_webui_user():
+            response = self.fast_api_client.post(
+                self.create_url("/add"),
+                json={
+                    "name": "Tenant User",
+                    "email": f"tenant.user+{random_suffix}@openwebui.com",
+                    "password": "password",
+                    "role": "user",
+                    "tenant_id": tenant.id,
+                },
+            )
+        assert response.status_code == 200
+
+        created_user = self.users.get_user_by_email(
+            f"tenant.user+{random_suffix}@openwebui.com"
+        )
+        assert created_user is not None
+        assert created_user.tenant_id == tenant.id
 
     def test_get_admin_details(self):
         self.auths.insert_new_auth(
