@@ -2092,7 +2092,10 @@ async def process_chat_response(
                                     f"[summary:update] chat_id={chat_id} 切片总数={len(ordered)} 摘要参与消息数={len(summary_messages)} "
                                     f"上次摘要 message_id={existing_summary.get('last_message_id') if existing_summary else None}"
                                 )
-                            summary_text = summarize(summary_messages, old_summary)
+                            
+                            # 获取当前模型ID，确保使用正确的模型进行摘要更新
+                            model_id = model.get("id") if model else None
+                            summary_text = summarize(summary_messages, old_summary, model=model_id)
                             last_msg_id = (
                                 summary_messages[-1].get("id")
                                 if summary_messages
