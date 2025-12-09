@@ -68,20 +68,25 @@
 	let models = null;
 	let total = null;
 
+	let searchDebounceTimer;
+
 	$: if (
 		page !== undefined &&
 		query !== undefined &&
 		selectedTag !== undefined &&
 		viewOption !== undefined
 	) {
-		getModelList();
+		clearTimeout(searchDebounceTimer);
+		searchDebounceTimer = setTimeout(() => {
+			getModelList();
+		}, 300);
 	}
 
 	const getModelList = async () => {
 		try {
 			const res = await getWorkspaceModels(
 				localStorage.token,
-				query,
+				query.slice(0, 500),
 				viewOption,
 				selectedTag,
 				null,
