@@ -22,6 +22,18 @@ export interface FacilitiesResponse {
 	error?: string;
 }
 
+export interface ExtractFormDataRequest {
+	sponsor: string;
+	model: string;
+	files: any[];
+}
+
+export interface ExtractFormDataResponse {
+	success: boolean;
+	form_data: Record<string, string>;
+	error?: string;
+}
+
 export const generateFacilitiesResponse = async (
 	token: string,
 	request: FacilitiesRequest
@@ -132,4 +144,40 @@ export const downloadFacilitiesDocument = async (
 		console.error('Error downloading facilities document:', error);
 		throw error;
 	}
+};
+
+export const extractFormDataFromFiles = async (
+	token: string,
+	request: ExtractFormDataRequest
+): Promise<ExtractFormDataResponse> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/facilities/extract-form-data`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(request)
+	})
+		.then(async (res) => {
+			if (!res.ok) {
+				const errorData = await res.json();
+				console.error('Extract form data API error response:', errorData);
+				throw errorData;
+			}
+			return res.json();
+		})
+		.catch((err) => {
+			console.error('Extract form data API fetch error:', err);
+			error = err.detail ?? err.message ?? 'Server connection failed';
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
 };

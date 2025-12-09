@@ -125,6 +125,16 @@ class FacilitiesResponse(BaseModel):
     sections: Dict[str, str]  
     error: Optional[str] = None
 
+class ExtractFormDataRequest(BaseModel):
+    sponsor: str
+    model: str
+    files: List[Dict]
+
+class ExtractFormDataResponse(BaseModel):
+    success: bool
+    form_data: Dict[str, str]
+    error: Optional[str] = None
+
 def get_section_labels(sponsor: str) -> List[str]:
     """Get section labels based on sponsor type"""
     if sponsor == "NSF":
@@ -1266,4 +1276,341 @@ async def download_facilities_document(
     except Exception as e:
         logging.error(f"Error generating {download_data.format} document: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to generate document: {str(e)}")
+
+# Prompt template for extracting form data from files
+EXTRACT_FORM_DATA_PROMPT = """You are an expert at analyzing research documents and extracting relevant information for grant proposal forms.
+
+Analyze the provided document content and extract information for the following section:
+
+**Section: {section_label}**
+{section_instructions}
+
+**Document Content:**
+\"\"\"
+{document_content}
+\"\"\"
+
+**CRITICAL EXTRACTION REQUIREMENTS:**
+1. Extract ONLY information that is directly relevant to this specific section based on the definition provided
+2. Focus on MAIN KEYWORDS and KEY INFORMATION - identify the most important facts
+3. Maximum 5 lines of text - be concise but comprehensive
+4. Include all main points that fit the section definition
+5. If the section asks for specific details (like square footage, location, equipment names, models), extract those if mentioned
+6. **CRITICAL: If no relevant information is found for this section, you MUST NOT return anything (nothing, not even "empty string" or "not available" or any other text)**
+7. Do not invent or assume information not present in the document
+8. Focus on factual information that can be directly used in a grant proposal
+9. Each line should contain distinct, important information - avoid repetition
+10. Prioritize specific details (names, numbers, locations) over general statements
+
+**Output Format:**
+- Maximum 5 lines
+- Each line should be a complete, meaningful statement
+- Include key keywords, names, numbers, and specific details
+- Cover all main aspects mentioned in the section definition
+- **If nothing is found: return absolutely nothing (empty string, no text at all - do NOT write "empty string", "not available", "no information found", or any other placeholder text)**
+
+Return ONLY the extracted information for this section (max 5 lines), nothing else. If no relevant information is found, return a completely empty string with no text whatsoever."""
+
+@router.post("/extract-form-data", response_model=ExtractFormDataResponse)
+async def extract_form_data_from_files(request: Request, form_data: ExtractFormDataRequest, user=Depends(get_verified_user)):
+    """
+    Extract form data from uploaded files using LLM
+    Only works when facilities is enabled for the user
+    """
+    if not request.app.state.config.ENABLE_FACILITIES.get(user.email):
+        raise HTTPException(status_code=403, detail="Facilities feature is not enabled for this user")
+    
+    try:
+        if form_data.sponsor not in ["NSF", "NIH"]:
+            raise HTTPException(status_code=400, detail="Invalid sponsor. Must be 'NSF' or 'NIH'")
+        
+        if not form_data.files or len(form_data.files) == 0:
+            raise HTTPException(status_code=400, detail="No files provided")
+        
+        # Get model information
+        model = request.app.state.MODELS.get(form_data.model)
+        if not model:
+            raise HTTPException(status_code=400, detail="Model not found")
+        
+        # Process attached files to get their content
+        attached_files_sources = []
+        try:
+            from open_webui.utils.middleware import chat_completion_files_handler
+            
+            mock_body = {
+                "model": form_data.model,
+                "metadata": {
+                    "files": form_data.files
+                },
+                "messages": [{"role": "user", "content": "Extract form data from attached files"}]
+            }
+            
+            processed_body, file_flags = await chat_completion_files_handler(request, mock_body, user)
+            attached_files_sources = file_flags.get("sources", [])
+            
+            logging.info(f"Processed {len(attached_files_sources)} file sources for extraction")
+            
+        except Exception as e:
+            logging.error(f"Error processing attached files: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to process files: {str(e)}")
+        
+        # Combine all document content from files
+        all_document_content = []
+        for source in attached_files_sources:
+            documents = source.get("document", [])
+            for doc in documents:
+                if isinstance(doc, str):
+                    all_document_content.append(doc)
+        
+        combined_content = "\n\n".join(all_document_content)
+        
+        if not combined_content.strip():
+            raise HTTPException(status_code=400, detail="No content extracted from files")
+        
+        logging.info(f"Combined document content length: {len(combined_content)} characters")
+        
+        # section instructions based on sponsor with clear, detailed definitions
+        section_definitions = {
+        "projectTitle": {
+            "label": "1. Project Title",
+            "instructions": """Extract the formal research project title.
+
+    DEFINITION:
+    The official title of the NSF proposal or research project.
+
+    Look for (in order of preference):
+    - The title on the NSF cover sheet or first page.
+    - The title at the top of the "Project Summary" or "Project Overview" page.
+
+    Guidelines:
+    - Extract the exact title text as written (do not paraphrase).
+    - Exclude labels like 'Project Summary', 'Overview', 'Intellectual Merit', etc.
+    - If multiple titles appear (e.g. main + internal code), choose the main NSF project title."""
+        },
+
+        "researchSpaceFacilities": {
+            "label": "2. Research Space and Facilities",
+            "instructions": """Extract information about physical research spaces and facilities.
+
+    DEFINITION (FACILITIES):
+    Describe relevant Laboratory, Clinical, Animal, Computer, and Office facilities/resources that are
+    physically available to the project. Focus on physical spaces, not individual pieces of equipment.
+
+    Look for:
+    - Laboratory spaces (research labs, experimental labs, wet/dry labs, structural labs, robotics labs).
+    - Clinical or animal facilities, if present.
+    - Computer facilities as physical spaces (data centers, server rooms, visualization labs).
+    - Office facilities (research offices, student workspaces, shared collaboration areas).
+    - Large-scale test spaces (e.g., high-bay labs, large-scale testing halls, field test sites, testbeds as physical locations).
+    - Location details (building names, centers, campuses, addresses).
+    - Physical characteristics (e.g., high-bay, reaction floor, cleanroom, number of floors, capacity).
+    - Any mention of floor area / square footage (if present), but DO NOT extract any costs.
+
+    Guidelines:
+    - Focus on describing the physical spaces and their suitability for the proposed research.
+    - Do NOT include detailed equipment lists here (those go under Core Instrumentation or Equipment).
+    - Do NOT extract any financial or budget information."""
+        },
+
+        "coreInstrumentation": {
+            "label": "3. Core Instrumentation",
+            "instructions": """Extract information about specialized research instruments and experimental platforms.
+
+    DEFINITION:
+    Specialized scientific and engineering equipment used to conduct experiments or measurements.
+    These are typically non-general-purpose instruments or platforms.
+
+    Include (examples, not exhaustive):
+    - Wireless and networking testbeds (e.g., mmWave testbeds, COSMOS nodes, UAV communication testbeds).
+    - Software-defined radios (SDRs), RF frontends, antennas, transceivers.
+    - National Instruments / LabVIEW PXI systems, custom RF chains, measurement racks.
+    - Robotic platforms (humanoids, quadrupeds, industrial arms) used for research.
+    - Structural testing rigs, load frames, reaction frames, actuators, sensing systems.
+    - Scientific instruments, sensors, motion capture systems, specialized cameras, etc.
+    - Any clearly experimental hardware platform built or used specifically for research.
+
+    Look for:
+    - Named testbeds, platforms, or systems explicitly used in experiments.
+    - Descriptions of what the instrument or platform enables (e.g., “high-data-rate mmWave experimentation”, “full-scale building connection testing”).
+    - Distinction between experimental hardware and general-purpose computing.
+
+    DO NOT include:
+    - General-purpose computers, servers, HPC clusters, or storage systems (these go under Computing and Data Resources).
+    - Purely physical building/space descriptions (those go under Research Space and Facilities).
+
+    Guidelines:
+    - Focus on capabilities and relevance to the project, not price or purchase details.
+    - Do NOT extract any financial or budget information."""
+        },
+
+        "computingDataResources": {
+            "label": "4. Computing and Data Resources",
+            "instructions": """Extract information about computational and data infrastructure.
+
+    DEFINITION:
+    Any computational, storage, or data-related infrastructure that supports simulation, data analysis,
+    modeling, visualization, or large-scale experiments.
+
+    Include:
+    - High Performance Computing (HPC) clusters and supercomputers.
+    - University research computing facilities (e.g., central research computing, research data centers).
+    - GPU clusters, parallel computing systems, virtualization environments, cloud or edge resources.
+    - Specialized simulator/emulator resources (e.g., NS3 setups, network emulation environments) when described as computing infrastructure.
+    - Storage systems and data infrastructure (SAN/NAS, research data storage, archival systems).
+    - Secure data enclaves, big-data platforms (Hadoop, Spark clusters, large databases).
+    - Visualization facilities that are primarily computing-centered (e.g., tiled display walls with dedicated compute).
+
+    Look for:
+    - Named clusters or facilities (e.g., 'Shamu cluster', 'Research Computing Facility', 'HPC cluster').
+    - Descriptions of CPU cores, memory, TB of storage, networking, or similar capacity-related info.
+    - References to secure computing environments for sensitive or large datasets.
+
+    DO NOT include:
+    - Experimental instruments (SDRs, testbeds, robots, sensors) — those belong to Core Instrumentation.
+    - Purely physical descriptions of buildings or rooms (those belong to Research Space and Facilities).
+
+    Guidelines:
+    - Focus on the computing and data capabilities provided to the project.
+    - Do NOT extract any financial or budget information (no costs, prices, or funding amounts)."""
+        },
+
+        "internalFacilitiesNYU": {
+            "label": "5a. Internal Facilities (NYU)",
+            "instructions": """Extract facilities, resources, and infrastructure explicitly provided by NYU (New York University).
+
+    DEFINITION:
+    Facilities, resources, or infrastructure located at or provided by NYU.
+
+    Look for:
+    - Mentions of NYU, New York University, internal university facilities
+    - NYU-specific labs, centers, institutes, facilities
+    - NYU resources, NYU infrastructure, NYU equipment
+    - Facilities located at NYU campuses or NYU buildings
+    - NYU-provided services, resources, or support
+
+    Guidelines:
+    - This section is an NYU-specific view: re-group NYU-related items already captured in other sections and summarize them as internal resources.
+    - Only include resources clearly identified as part of NYU.
+    - Do NOT include facilities or equipment that are clearly external or at other institutions.
+    - Do NOT extract any financial or budget information."""
+        },
+
+        "externalFacilitiesOther": {
+            "label": "5b. External Facilities (Other Institutions)",
+            "instructions": """Extract facilities, resources, and infrastructure at institutions other than NYU.
+
+    DEFINITION:
+    Resources provided or made available by collaborating universities, research centers, industry partners,
+    or national facilities that are not part of NYU.
+
+    Look for:
+    - Named partner universities or institutions and their labs, centers, or facilities.
+    - External structural labs, testbeds, robotics facilities, VR/AR labs, or large-scale testing sites.
+    - External HPC or computing resources (e.g., partner institution clusters, national centers) explicitly available to the project.
+    - Shared experimental platforms or testbeds hosted at other institutions.
+
+    Guidelines:
+    - Only include facilities clearly attributed to external institutions (non-NYU).
+    - Summarize these as external resources that complement NYU’s internal facilities.
+    - Do NOT include NYU facilities in this section."""
+        },
+
+        "specialInfrastructure": {
+            "label": "6. Special Infrastructure",
+            "instructions": """Extract information about unique, one-of-a-kind, or particularly notable infrastructure.
+
+    DEFINITION:
+    Infrastructure that is special, unusual, or uniquely important to the proposed project and does not fit
+    cleanly into a single category above, or is called out in the proposal as a distinctive capability.
+
+    Look for:
+    - National or regional testbeds or platforms (e.g., large-scale wireless testbeds, full-scale building testbeds).
+    - One-of-a-kind experimental systems or prototypes (e.g., custom multi-gigabit mesh backhaul systems, unique SDR platforms).
+    - Specialized infrastructure with strict environmental or operational requirements (e.g., cleanrooms, vibration-isolated labs, specialized VR/AR walls).
+    - Large integrated systems that combine space, equipment, and computing into a distinctive resource.
+
+    Guidelines:
+    - Focus on what makes the infrastructure special or unique relative to standard labs/equipment.
+    - This section can reference facilities already mentioned but highlight their uniqueness and role in the project.
+    - Do NOT extract any financial or budget information."""
+        },
+
+        "equipment": {
+            "label": "7. Equipment",
+            "instructions": """Extract information about equipment, instruments, and tools that are not already clearly captured
+    under Core Instrumentation, or that are listed more generally.
+
+    DEFINITION:
+    Research equipment, instruments, and tools (broadly defined), including both specialized and
+    supporting devices.
+
+    Include:
+    - Named equipment, instruments, and tools with models or specifications (if mentioned).
+    - Laboratory tools, measurement devices, and supporting hardware that may be secondary to the main core instrumentation.
+    - General equipment that may not be explicitly part of a named testbed but still supports the research.
+
+    Relationship to Core Instrumentation:
+    - Core Instrumentation should capture the main experimental platforms and major research instruments.
+    - Equipment here can include additional or supporting instruments, tools, or devices, especially when listed in more generic equipment sections.
+
+    Look for:
+    - Equipment names, types, models, or brief specs (if present).
+    - Descriptions of capabilities or roles in the research.
+    - Indications of availability and usage for the project.
+
+    Guidelines:
+    - Do NOT duplicate long lists already captured under Core Instrumentation unless needed to complete the picture.
+    - Do NOT include computers, servers, or HPC clusters here (those belong to Computing and Data Resources).
+    - Do NOT extract any financial or budget information (no prices, no purchase details)."""
+        }
+    }
+
+        
+        # sections to extract based on sponsor
+        if form_data.sponsor == "NSF":
+            sections_to_extract = ["projectTitle", "researchSpaceFacilities", "coreInstrumentation", 
+                                  "computingDataResources", "internalFacilitiesNYU", "externalFacilitiesOther", 
+                                  "specialInfrastructure"]
+        else:  # NIH
+            sections_to_extract = ["projectTitle", "researchSpaceFacilities", "coreInstrumentation", 
+                                  "computingDataResources", "internalFacilitiesNYU", "externalFacilitiesOther", 
+                                  "specialInfrastructure", "equipment"]
+        
+        extracted_form_data = {}
+        
+        for section_key in sections_to_extract:
+            section_info = section_definitions[section_key]
+            
+            prompt = EXTRACT_FORM_DATA_PROMPT.format(
+                section_label=section_info["label"],
+                section_instructions=section_info["instructions"],
+                document_content=combined_content[:50000]  # Limit content to avoid token limits
+            )
+            
+            try:
+                extracted_text = await call_llm_direct(prompt, form_data.model, user, request)
+                extracted_text = extracted_text.strip()
+                
+                if extracted_text and len(extracted_text) > 10:
+                    extracted_form_data[section_key] = extracted_text
+                    logging.info(f"Extracted {len(extracted_text)} characters for {section_key}")
+                else:
+                    extracted_form_data[section_key] = ""
+                    logging.info(f"No relevant content found for {section_key}")
+                    
+            except Exception as e:
+                logging.error(f"Error extracting data for {section_key}: {e}")
+                extracted_form_data[section_key] = ""
+        
+        return ExtractFormDataResponse(
+            success=True,
+            form_data=extracted_form_data,
+            error=None
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error in extract_form_data_from_files: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
