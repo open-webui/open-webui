@@ -25,16 +25,12 @@
 
 <div>
 	<div class="flex w-full justify-between mb-1">
-		<div class=" self-center text-sm font-medium">{$i18n.t('Tools')}</div>
+		<div class=" self-center text-xs font-medium text-gray-500">{$i18n.t('Tools')}</div>
 	</div>
 
-	<div class=" text-xs dark:text-gray-500">
-		{$i18n.t('To select toolkits here, add them to the "Tools" workspace first.')}
-	</div>
-
-	<div class="flex flex-col">
+	<div class="flex flex-col mb-1">
 		{#if tools.length > 0}
-			<div class=" flex items-center mt-2 flex-wrap">
+			<div class=" flex items-center flex-wrap">
 				{#each Object.keys(_tools) as tool, toolIdx}
 					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">
@@ -56,5 +52,9 @@
 				{/each}
 			</div>
 		{/if}
+	</div>
+
+	<div class=" text-xs dark:text-gray-700">
+		{$i18n.t('To select toolkits here, add them to the "Tools" workspace first.')}
 	</div>
 </div>

@@ -7,6 +7,9 @@ from open_webui.internal.db import Base, JSONField, get_db
 from open_webui.env import DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL
 from open_webui.models.chats import Chats
 from open_webui.models.groups import Groups, GroupMember
+from open_webui.models.channels import ChannelMember
+
+
 from open_webui.utils.misc import throttle
 
 
@@ -21,8 +24,10 @@ from sqlalchemy import (
     Date,
     exists,
     select,
+    cast,
 )
 from sqlalchemy import or_, case
+from sqlalchemy.dialects.postgresql import JSONB
 
 import datetime
 
@@ -104,6 +109,12 @@ class UserModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class UserStatusModel(UserModel):
+    is_active: bool = False
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ApiKey(Base):
     __tablename__ = "api_key"
 
@@ -161,7 +172,13 @@ class UserGroupIdsListResponse(BaseModel):
     total: int
 
 
-class UserInfoResponse(BaseModel):
+class UserStatus(BaseModel):
+    status_emoji: Optional[str] = None
+    status_message: Optional[str] = None
+    status_expires_at: Optional[int] = None
+
+
+class UserInfoResponse(UserStatus):
     id: str
     name: str
     email: str
@@ -173,10 +190,10 @@ class UserIdNameResponse(BaseModel):
     name: str
 
 
-class UserIdNameStatusResponse(BaseModel):
+class UserIdNameStatusResponse(UserStatus):
     id: str
     name: str
-    is_active: bool = False
+    is_active: Optional[bool] = None
 
 
 class UserInfoListResponse(BaseModel):
@@ -281,14 +298,21 @@ class UsersTable:
 
     def get_user_by_oauth_sub(self, provider: str, sub: str) -> Optional[UserModel]:
         try:
-            with get_db() as db:
-                user = (
-                    db.query(User)
-                    .filter(User.oauth.contains({provider: {"sub": sub}}))
-                    .first()
-                )
+            with get_db() as db:  # type: Session
+                dialect_name = db.bind.dialect.name
+
+                query = db.query(User)
+                if dialect_name == "sqlite":
+                    query = query.filter(User.oauth.contains({provider: {"sub": sub}}))
+                elif dialect_name == "postgresql":
+                    query = query.filter(
+                        User.oauth[provider].cast(JSONB)["sub"].astext == sub
+                    )
+
+                user = query.first()
                 return UserModel.model_validate(user) if user else None
-        except Exception:
+        except Exception as e:
+            # You may want to log the exception here
             return None
 
     def get_users(
@@ -308,6 +332,17 @@ class UsersTable:
                         or_(
                             User.name.ilike(f"%{query_key}%"),
                             User.email.ilike(f"%{query_key}%"),
+                        )
+                    )
+
+                channel_id = filter.get("channel_id")
+                if channel_id:
+                    query = query.filter(
+                        exists(
+                            select(ChannelMember.id).where(
+                                ChannelMember.user_id == User.id,
+                                ChannelMember.channel_id == channel_id,
+                            )
                         )
                     )
 
@@ -417,7 +452,17 @@ class UsersTable:
                 "total": total,
             }
 
-    def get_users_by_user_ids(self, user_ids: list[str]) -> list[UserModel]:
+    def get_users_by_group_id(self, group_id: str) -> list[UserModel]:
+        with get_db() as db:
+            users = (
+                db.query(User)
+                .join(GroupMember, User.id == GroupMember.user_id)
+                .filter(GroupMember.group_id == group_id)
+                .all()
+            )
+            return [UserModel.model_validate(user) for user in users]
+
+    def get_users_by_user_ids(self, user_ids: list[str]) -> list[UserStatusModel]:
         with get_db() as db:
             users = db.query(User).filter(User.id.in_(user_ids)).all()
             return [UserModel.model_validate(user) for user in users]
@@ -468,6 +513,21 @@ class UsersTable:
             with get_db() as db:
                 db.query(User).filter_by(id=id).update({"role": role})
                 db.commit()
+                user = db.query(User).filter_by(id=id).first()
+                return UserModel.model_validate(user)
+        except Exception:
+            return None
+
+    def update_user_status_by_id(
+        self, id: str, form_data: UserStatus
+    ) -> Optional[UserModel]:
+        try:
+            with get_db() as db:
+                db.query(User).filter_by(id=id).update(
+                    {**form_data.model_dump(exclude_none=True)}
+                )
+                db.commit()
+
                 user = db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
         except Exception:

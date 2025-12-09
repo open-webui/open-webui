@@ -6,6 +6,7 @@ import logging
 from aiohttp import ClientSession
 import urllib
 
+
 from open_webui.models.auths import (
     AddUserForm,
     ApiKey,
@@ -17,7 +18,12 @@ from open_webui.models.auths import (
     SignupForm,
     UpdatePasswordForm,
 )
-from open_webui.models.users import UserProfileImageResponse, Users, UpdateProfileForm
+from open_webui.models.users import (
+    UserProfileImageResponse,
+    Users,
+    UpdateProfileForm,
+    UserStatus,
+)
 from open_webui.models.groups import Groups
 from open_webui.models.oauth_sessions import OAuthSessions
 
@@ -59,6 +65,11 @@ from open_webui.utils.auth import (
 )
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.access_control import get_permissions, has_permission
+from open_webui.utils.groups import apply_default_group_assignment
+
+from open_webui.utils.redis import get_redis_client
+from open_webui.utils.rate_limit import RateLimiter
+
 
 from typing import Optional, List
 
@@ -72,6 +83,10 @@ router = APIRouter()
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
+signin_rate_limiter = RateLimiter(
+    redis_client=get_redis_client(), limit=5 * 3, window=60 * 3
+)
+
 ############################
 # GetSessionUser
 ############################
@@ -82,7 +97,7 @@ class SessionUserResponse(Token, UserProfileImageResponse):
     permissions: Optional[dict] = None
 
 
-class SessionUserInfoResponse(SessionUserResponse):
+class SessionUserInfoResponse(SessionUserResponse, UserStatus):
     bio: Optional[str] = None
     gender: Optional[str] = None
     date_of_birth: Optional[datetime.date] = None
@@ -139,6 +154,9 @@ async def get_session_user(
         "bio": user.bio,
         "gender": user.gender,
         "date_of_birth": user.date_of_birth,
+        "status_emoji": user.status_emoji,
+        "status_message": user.status_message,
+        "status_expires_at": user.status_expires_at,
         "permissions": user_permissions,
     }
 
@@ -400,6 +418,11 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                             500, detail=ERROR_MESSAGES.CREATE_USER_ERROR
                         )
 
+                    apply_default_group_assignment(
+                        request.app.state.config.DEFAULT_GROUP_ID,
+                        user.id,
+                    )
+
                 except HTTPException:
                     raise
                 except Exception as err:
@@ -448,7 +471,6 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                 ):
                     if ENABLE_LDAP_GROUP_CREATION:
                         Groups.create_groups_by_group_names(user.id, user_groups)
-
                     try:
                         Groups.sync_groups_by_group_names(user.id, user_groups)
                         log.info(
@@ -543,6 +565,12 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
                 admin_email.lower(), lambda pw: verify_password(admin_password, pw)
             )
     else:
+        if signin_rate_limiter.is_limited(form_data.email.lower()):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
+            )
+
         password_bytes = form_data.password.encode("utf-8")
         if len(password_bytes) > 72:
             # TODO: Implement other hashing algorithms that support longer passwords
@@ -699,9 +727,10 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 # Disable signup after the first user is created
                 request.app.state.config.ENABLE_SIGNUP = False
 
-            default_group_id = getattr(request.app.state.config, "DEFAULT_GROUP_ID", "")
-            if default_group_id and default_group_id:
-                Groups.add_users_to_group(default_group_id, [user.id])
+            apply_default_group_assignment(
+                request.app.state.config.DEFAULT_GROUP_ID,
+                user.id,
+            )
 
             return {
                 "token": token,
@@ -806,7 +835,9 @@ async def signout(request: Request, response: Response):
 
 
 @router.post("/add", response_model=SigninResponse)
-async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
+async def add_user(
+    request: Request, form_data: AddUserForm, user=Depends(get_admin_user)
+):
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
@@ -831,6 +862,11 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
         )
 
         if user:
+            apply_default_group_assignment(
+                request.app.state.config.DEFAULT_GROUP_ID,
+                user.id,
+            )
+
             token = create_token(data={"id": user.id})
             return {
                 "token": token,

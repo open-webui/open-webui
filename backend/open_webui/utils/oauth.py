@@ -57,6 +57,7 @@ from open_webui.config import (
     OAUTH_ALLOWED_DOMAINS,
     OAUTH_UPDATE_PICTURE_ON_LOGIN,
     OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID,
+    OAUTH_AUDIENCE,
     WEBHOOK_URL,
     JWT_EXPIRES_IN,
     GOOGLE_OAUTH_SCOPE,
@@ -75,6 +76,7 @@ from open_webui.env import (
 from open_webui.utils.misc import parse_duration
 from open_webui.utils.auth import get_password_hash, create_token
 from open_webui.utils.webhook import post_webhook
+from open_webui.utils.groups import apply_default_group_assignment
 
 from mcp.shared.auth import (
     OAuthClientMetadata as MCPOAuthClientMetadata,
@@ -128,6 +130,7 @@ auth_manager_config.OAUTH_ALLOWED_DOMAINS = OAUTH_ALLOWED_DOMAINS
 auth_manager_config.WEBHOOK_URL = WEBHOOK_URL
 auth_manager_config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
 auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN = OAUTH_UPDATE_PICTURE_ON_LOGIN
+auth_manager_config.OAUTH_AUDIENCE = OAUTH_AUDIENCE
 
 
 FERNET = None
@@ -1270,7 +1273,7 @@ class OAuthManager:
                     user_oauth_groups = []
 
         user_current_groups: list[GroupModel] = Groups.get_groups_by_member_id(user.id)
-        all_available_groups: list[GroupModel] = Groups.get_groups()
+        all_available_groups: list[GroupModel] = Groups.get_all_groups()
 
         # Create groups if they don't exist and creation is enabled
         if auth_manager_config.ENABLE_OAUTH_GROUP_CREATION:
@@ -1314,7 +1317,7 @@ class OAuthManager:
 
             # Refresh the list of all available groups if any were created
             if groups_created:
-                all_available_groups = Groups.get_groups()
+                all_available_groups = Groups.get_all_groups()
                 log.debug("Refreshed list of all available groups after creation.")
 
         log.debug(f"Oauth Groups claim: {oauth_claim}")
@@ -1335,7 +1338,6 @@ class OAuthManager:
                 log.debug(
                     f"Removing user from group {group_model.name} as it is no longer in their oauth groups"
                 )
-
                 Groups.remove_users_from_group(group_model.id, [user.id])
 
                 # In case a group is created, but perms are never assigned to the group by hitting "save"
@@ -1438,7 +1440,12 @@ class OAuthManager:
         client = self.get_client(provider)
         if client is None:
             raise HTTPException(404)
-        return await client.authorize_redirect(request, redirect_uri)
+
+        kwargs = {}
+        if (auth_manager_config.OAUTH_AUDIENCE):
+            kwargs["audience"] = auth_manager_config.OAUTH_AUDIENCE
+
+        return await client.authorize_redirect(request, redirect_uri, **kwargs)
 
     async def handle_callback(self, request, provider, response):
         if provider not in OAUTH_PROVIDERS:
@@ -1649,6 +1656,11 @@ class OAuthManager:
                             "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
                             "user": user.model_dump_json(exclude_none=True),
                         },
+                    )
+
+                    apply_default_group_assignment(
+                        request.app.state.config.DEFAULT_GROUP_ID,
+                        user.id,
                     )
                 else:
                     raise HTTPException(

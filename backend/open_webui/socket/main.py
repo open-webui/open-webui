@@ -253,6 +253,38 @@ def get_user_ids_from_room(room):
     return active_user_ids
 
 
+async def emit_to_users(event: str, data: dict, user_ids: list[str]):
+    """
+    Send a message to specific users using their user:{id} rooms.
+
+    Args:
+        event (str): The event name to emit.
+        data (dict): The payload/data to send.
+        user_ids (list[str]): The target users' IDs.
+    """
+    try:
+        for user_id in user_ids:
+            await sio.emit(event, data, room=f"user:{user_id}")
+    except Exception as e:
+        log.debug(f"Failed to emit event {event} to users {user_ids}: {e}")
+
+
+async def enter_room_for_users(room: str, user_ids: list[str]):
+    """
+    Make all sessions of a user join a specific room.
+    Args:
+        room (str): The room to join.
+        user_ids (list[str]): The target user's IDs.
+    """
+    try:
+        for user_id in user_ids:
+            session_ids = get_session_ids_from_room(f"user:{user_id}")
+            for sid in session_ids:
+                await sio.enter_room(sid, room)
+    except Exception as e:
+        log.debug(f"Failed to make users {user_ids} join room {room}: {e}")
+
+
 @sio.on("usage")
 async def usage(sid, data):
     if sid in SESSION_POOL:
@@ -309,11 +341,13 @@ async def user_join(sid, data):
     )
 
     await sio.enter_room(sid, f"user:{user.id}")
+
     # Join all the channels
     channels = Channels.get_channels_by_user_id(user.id)
     log.debug(f"{channels=}")
     for channel in channels:
         await sio.enter_room(sid, f"channel:{channel.id}")
+
     return {"id": user.id, "name": user.name}
 
 
