@@ -28,7 +28,6 @@ docker run --rm \
   export LUXTRONIC_TENANT_SEED='[                                                                                                                                          
     {                                                                                                                                                                      
       "name": "Acme Widgets",                                                                                                                                              
-      "model_names": ["acme_doc", "acme_sales"],                                                                                                                           
       "users": [                                                                                                                                                           
         {"name": "Acme Admin", "email": "admin@acme.example", "password": "StrongPass1!", "role": "user"},                                                                
         {"name": "Acme User",  "email": "user@acme.example",  "password": "StrongPass2!", "role": "user"}                                                                  
@@ -36,14 +35,12 @@ docker run --rm \
     },                                                                                                                                                                     
     {                                                                                                                                                                      
       "name": "Globex Manufacturing",                                                                                                                                      
-      "model_names": ["globex_ops", "globex_support"],                                                                                                                     
       "users": [                                                                                                                                                           
         {"name": "Globex Manager", "email": "manager@globex.example", "password": "GlobexPass1!", "role": "user"}                                                         
       ]                                                                                                                                                                    
     },
     {                                                                                                                                                                      
       "name": "Initech",                                                                                                                                                   
-      "model_names": ["initech_q"],                                                                                                                                        
       "users": [                                                                                                                                                           
         {"name": "Initech Analyst", "email": "analyst@initech.example", "password": "TPSreport1!", "role": "user"}                                                         
       ]                                                                                                                                                                    

@@ -37,24 +37,20 @@ def upsert_tenant(entry: dict[str, Any]):
     if not name:
         raise SystemExit("Each tenant entry must include a 'name'.")
     
-    s3_bucket = name.replace("/", " ").replace(" ", "_").lower()
-
-    model_names = entry.get("model_names") or []
-    if not isinstance(model_names, list):
-        raise SystemExit(f"Tenant '{name}' model_names must be a list.")
+    s3_bucket = entry.get("s3_bucket")
 
     existing = Tenants.get_tenant_by_name(name)
     if existing:
         update_fields = {}
-        if model_names:
-            update_fields["model_names"] = model_names
+        if s3_bucket:
+            update_fields["s3_bucket"] = s3_bucket
         if update_fields:
             Tenants.update_tenant(existing.id, TenantUpdateForm(**update_fields))
         tenant = Tenants.get_tenant_by_name(name)
-        print(f"Tenant '{name}' already exists. Updating assignments.")
+        print(f"Tenant '{name}' already exists. Updating configuration.")
         return tenant
     
-    tenant = Tenants.create_tenant(TenantForm(name=name, model_names=model_names, s3_bucket=s3_bucket))
+    tenant = Tenants.create_tenant(TenantForm(name=name, s3_bucket=s3_bucket))
     print(f"Created tenant '{name}'.")
     return tenant
 
