@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.42] - 2025-12-09
+## [0.6.42] - 2025-12-10
 
 ### Added
 
@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔧 Pipeline settings save failures when valve properties contain null values are now handled correctly. [#19791](https://github.com/open-webui/open-webui/pull/19791)
 - 🎨 Image editing with reference images now correctly uses both previously generated images and newly uploaded reference images. [Commit](https://github.com/open-webui/open-webui/commit/bcd50ed8f1b7387fd700538ae0d74fc72f3c53d0)
 - 📑 Source citation rendering errors when citation syntax appeared in user messages or contexts without source data were resolved. [Commit](https://github.com/open-webui/open-webui/commit/3c8f1cf8e58d52e86375634b0381374298b1b4f3)
+- 💭 Text loss in the explanation feature when using the "CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE" environment variable was resolved by correcting newline handling in streaming responses. [#19829](https://github.com/open-webui/open-webui/pull/19829)
 
 ## [0.6.41] - 2025-12-02
 
