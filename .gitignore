@@ -313,3 +313,9 @@ docker-compose.local.yaml
 
 # Redis deployment info (local deployment artifacts, not for version control)
 redis-deployment-info/
+
+# Test files (hidden tests directory)
+.tests/
+
+# Portkey SDK documentation and evaluation files
+.portkey sdk/
