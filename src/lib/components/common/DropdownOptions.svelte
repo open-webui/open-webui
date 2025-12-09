@@ -15,6 +15,8 @@
 		{ value: 'top', label: $i18n.t('Top') }
 	];
 
+	export let onChange: (value: string) => void = () => {};
+
 	let open = false;
 </script>
 
@@ -44,6 +46,7 @@
 					on:click={() => {
 						value = item.value;
 						open = false;
+						onChange(value);
 					}}
 				>
 					{item.label}

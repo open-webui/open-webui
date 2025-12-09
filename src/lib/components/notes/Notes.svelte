@@ -161,10 +161,9 @@
 	const init = async () => {
 		reset();
 		await getItemsPage();
-		loaded = true;
 	};
 
-	$: if (query !== undefined && sortKey !== undefined && viewOption !== undefined) {
+	$: if (loaded && query !== undefined && sortKey !== undefined && viewOption !== undefined) {
 		init();
 	}
 
@@ -251,6 +250,11 @@
 	};
 
 	onMount(async () => {
+		viewOption = localStorage?.noteViewOption ?? null;
+		displayOption = localStorage?.noteDisplayOption ?? null;
+
+		loaded = true;
+
 		const dropzoneElement = document.getElementById('notes-container');
 		dropzoneElement?.addEventListener('dragover', onDragOver);
 		dropzoneElement?.addEventListener('drop', onDrop);
@@ -374,6 +378,13 @@
 								{ value: 'created', label: $i18n.t('Created by you') },
 								{ value: 'shared', label: $i18n.t('Shared with you') }
 							]}
+							onChange={(value) => {
+								if (value) {
+									localStorage.noteViewOption = value;
+								} else {
+									delete localStorage.noteViewOption;
+								}
+							}}
 						/>
 					</div>
 				</div>
@@ -386,6 +397,13 @@
 							{ value: null, label: $i18n.t('List') },
 							{ value: 'grid', label: $i18n.t('Grid') }
 						]}
+						onChange={() => {
+							if (displayOption) {
+								localStorage.noteDisplayOption = displayOption;
+							} else {
+								delete localStorage.noteDisplayOption;
+							}
+						}}
 					/>
 				</div>
 			</div>
@@ -394,16 +412,16 @@
 				{@const notes = groupNotes(items)}
 
 				<div class="@container h-full py-2 px-2.5">
-					<div class="pb-10">
+					<div class="">
 						{#each Object.keys(notes) as timeRange}
 							<div
-								class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium px-2.5 pb-2.5"
+								class="mb-3 w-full text-xs text-gray-500 dark:text-gray-500 font-medium px-2.5 pb-2.5"
 							>
 								{$i18n.t(timeRange)}
 							</div>
 
 							{#if displayOption === null}
-								<div class="mb-3 gap-1.5 flex flex-col">
+								<div class="gap-1.5 flex flex-col">
 									{#each notes[timeRange] as note, idx (note.id)}
 										<div
 											class=" flex cursor-pointer w-full px-3.5 py-1.5 border border-gray-50 dark:border-gray-850/30 bg-transparent dark:hover:bg-gray-850 hover:bg-white rounded-2xl transition"
