@@ -246,6 +246,10 @@ def query_collection(
     results = []
     
     # Parallelize query processing for faster RAG retrieval
+    # Note: Thread-safety depends on the vector DB implementation:
+    # - Postgres (pgvector): Uses scoped_session - thread-safe
+    # - SQLite-based DBs: May have issues with concurrent access
+    # - Chroma/Qdrant/Milvus: Generally thread-safe if using separate clients per thread
     def process_query_collection_pair(query: str, collection_name: str):
         """Process a single query against a single collection"""
         try:
@@ -269,17 +273,30 @@ def query_collection(
         for collection_name in collection_names
     ]
     
-    # Process in parallel using ThreadPoolExecutor
-    with ThreadPoolExecutor(max_workers=min(len(query_collection_pairs), 10)) as executor:
-        future_to_pair = {
-            executor.submit(process_query_collection_pair, query, collection_name): (query, collection_name)
-            for query, collection_name in query_collection_pairs
-        }
-        
-        for future in as_completed(future_to_pair):
-            result = future.result()
-            if result is not None:
-                results.append(result)
+    # For single query or single collection, process sequentially to avoid overhead
+    # For multiple queries/collections, use parallel processing
+    if len(query_collection_pairs) == 1:
+        # Sequential processing for single query-collection pair
+        result = process_query_collection_pair(query_collection_pairs[0][0], query_collection_pairs[0][1])
+        if result is not None:
+            results.append(result)
+    else:
+        # Process in parallel using ThreadPoolExecutor
+        # Limit workers to prevent resource exhaustion and potential SQLite lock issues
+        max_workers = min(len(query_collection_pairs), 10)
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_pair = {
+                executor.submit(process_query_collection_pair, query, collection_name): (query, collection_name)
+                for query, collection_name in query_collection_pairs
+            }
+            
+            for future in as_completed(future_to_pair):
+                try:
+                    result = future.result()
+                    if result is not None:
+                        results.append(result)
+                except Exception as e:
+                    log.exception(f"Error in parallel query processing: {e}")
 
     if VECTOR_DB == "chroma":
         # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
@@ -301,6 +318,7 @@ def query_collection_with_hybrid_search(
     errors = []
     
     # Parallelize query processing for faster RAG retrieval with hybrid search
+    # Note: Thread-safety depends on the vector DB implementation
     def process_hybrid_search(query: str, collection_name: str):
         """Process a single query against a single collection with hybrid search"""
         try:
@@ -326,19 +344,35 @@ def query_collection_with_hybrid_search(
         for query in queries
     ]
     
-    # Process in parallel using ThreadPoolExecutor
-    with ThreadPoolExecutor(max_workers=min(len(query_collection_pairs), 10)) as executor:
-        future_to_pair = {
-            executor.submit(process_hybrid_search, query, collection_name): (query, collection_name)
-            for query, collection_name in query_collection_pairs
-        }
-        
-        for future in as_completed(future_to_pair):
-            pair_result = future.result()
-            if pair_result["result"] is not None:
-                results.append(pair_result["result"])
-            elif pair_result["error"]:
-                errors.append(pair_result)
+    # For single query or single collection, process sequentially to avoid overhead
+    # For multiple queries/collections, use parallel processing
+    if len(query_collection_pairs) == 1:
+        # Sequential processing for single query-collection pair
+        pair_result = process_hybrid_search(query_collection_pairs[0][0], query_collection_pairs[0][1])
+        if pair_result["result"] is not None:
+            results.append(pair_result["result"])
+        elif pair_result["error"]:
+            errors.append(pair_result)
+    else:
+        # Process in parallel using ThreadPoolExecutor
+        # Limit workers to prevent resource exhaustion and potential SQLite lock issues
+        max_workers = min(len(query_collection_pairs), 10)
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_pair = {
+                executor.submit(process_hybrid_search, query, collection_name): (query, collection_name)
+                for query, collection_name in query_collection_pairs
+            }
+            
+            for future in as_completed(future_to_pair):
+                try:
+                    pair_result = future.result()
+                    if pair_result["result"] is not None:
+                        results.append(pair_result["result"])
+                    elif pair_result["error"]:
+                        errors.append(pair_result)
+                except Exception as e:
+                    log.exception(f"Error in parallel hybrid search processing: {e}")
+                    errors.append({"result": None, "error": str(e), "collection": "unknown"})
 
     # Only raise error if ALL searches failed
     if len(errors) == len(query_collection_pairs):
