@@ -461,14 +461,24 @@
 												<a href={`/notes/${note.id}`} class="w-full flex flex-col justify-between">
 													<div class="flex-1">
 														<div class="  flex items-center gap-2 self-center justify-between">
-															<div class=" text-sm font-medium capitalize flex-1 w-full">
-																{note.title}
-															</div>
+															<Tooltip
+																content={note.title}
+																className="flex-1"
+																placement="top-start"
+															>
+																<div
+																	class=" text-sm font-medium capitalize flex-1 w-full line-clamp-1"
+																>
+																	{note.title}
+																</div>
+															</Tooltip>
 
 															<div class="flex shrink-0 items-center text-xs gap-2.5">
-																<div>
-																	{dayjs(note.updated_at / 1000000).fromNow()}
-																</div>
+																<Tooltip content={dayjs(note.updated_at / 1000000).format('LLLL')}>
+																	<div>
+																		{dayjs(note.updated_at / 1000000).fromNow()}
+																	</div>
+																</Tooltip>
 																<Tooltip
 																	content={note?.user?.email ?? $i18n.t('Deleted User')}
 																	className="flex shrink-0"
