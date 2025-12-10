@@ -47,7 +47,11 @@ from starlette.responses import Response, StreamingResponse
 
 from open_webui.utils import logger
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
-from open_webui.utils.logger import start_logger
+from open_webui.utils.logger import start_logger, NYC_TIMEZONE
+
+# Set timezone early - before any logging happens
+import os
+os.environ["TZ"] = "America/New_York"
 from open_webui.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
@@ -368,6 +372,8 @@ if SAFE_MODE:
     print("SAFE MODE ENABLED")
     Functions.deactivate_all_functions()
 
+# Initialize logging early - will be reconfigured by start_logger() with NYC timezone
+# This is temporary initialization before start_logger() is called in lifespan()
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])

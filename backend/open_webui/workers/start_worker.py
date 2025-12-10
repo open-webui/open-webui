@@ -17,11 +17,43 @@ backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
-# Configure logging before importing other modules
+# Set timezone to NYC before any logging
+import os
+os.environ["TZ"] = "America/New_York"
+
+# Import timezone-aware formatter
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo
+
+NYC_TIMEZONE = ZoneInfo("America/New_York")
+
+# Configure logging before importing other modules with NYC timezone
+from datetime import datetime
+
+class NYCFormatter(logging.Formatter):
+    """Formatter that converts timestamps to NYC timezone"""
+    def formatTime(self, record, datefmt=None):
+        ct = datetime.fromtimestamp(record.created, tz=NYC_TIMEZONE)
+        if datefmt:
+            s = ct.strftime(datefmt)
+        else:
+            t = ct.strftime('%Y-%m-%d %H:%M:%S')
+            s = f"{t} {ct.strftime('%Z')}"
+        return s
+
+nyc_formatter = NYCFormatter(
+    fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+handler = logging.StreamHandler()
+handler.setFormatter(nyc_formatter)
+
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    handlers=[handler]
 )
 
 log = logging.getLogger(__name__)

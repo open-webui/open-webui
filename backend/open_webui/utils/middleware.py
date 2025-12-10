@@ -93,6 +93,8 @@ from open_webui.env import (
 from open_webui.constants import TASKS
 
 
+# Logging will be configured by start_logger() with NYC timezone
+# This is temporary - standard logging will be intercepted by Loguru
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])

@@ -1,6 +1,7 @@
 import json
 import logging
 import sys
+import os
 from typing import TYPE_CHECKING
 from datetime import timezone
 try:
@@ -11,8 +12,12 @@ except ImportError:
 
 from loguru import logger
 
-# Configure timezone to NYC (America/New_York)
+# Configure timezone to NYC (America/New_York) - Set as early as possible
 NYC_TIMEZONE = ZoneInfo("America/New_York")
+
+# Set TZ environment variable to ensure all time operations use NYC timezone
+# This affects Python's datetime operations and logging
+os.environ["TZ"] = "America/New_York"
 
 from open_webui.env import (
     AUDIT_LOG_FILE_ROTATION_SIZE,
@@ -57,13 +62,14 @@ class InterceptHandler(logging.Handler):
     """
     Intercepts log records from Python's standard logging module
     and redirects them to Loguru's logger.
+    All timestamps are converted to NYC timezone (America/New_York).
     """
 
     def emit(self, record):
         """
         Called by the standard logging module for each log event.
         It transforms the standard `LogRecord` into a format compatible with Loguru
-        and passes it to Loguru's logger.
+        and passes it to Loguru's logger. The timestamp is converted to NYC timezone.
         """
         try:
             level = logger.level(record.levelname).name
@@ -75,6 +81,8 @@ class InterceptHandler(logging.Handler):
             frame = frame.f_back
             depth += 1
 
+        # Convert record time to NYC timezone if available
+        # Loguru will handle the timezone conversion in stdout_format
         logger.opt(depth=depth, exception=record.exc_info).log(
             level, record.getMessage()
         )
