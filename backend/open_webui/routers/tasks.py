@@ -96,17 +96,32 @@ async def get_task_config(request: Request, user=Depends(get_verified_user)):
     # Check if user has access to the required Gemini 2.5 Flash Lite model
     has_task_model_access = user_has_access_to_task_model(user, models)
     
+    # Get per-admin task config settings (inherits from group admin if user is in a group)
+    task_model_external = request.app.state.config.TASK_MODEL_EXTERNAL.get(user.email)
+    enable_title_generation = request.app.state.config.ENABLE_TITLE_GENERATION.get(user.email)
+    enable_tags_generation = request.app.state.config.ENABLE_TAGS_GENERATION.get(user.email)
+    enable_autocomplete_generation = request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION.get(user.email)
+    enable_search_query_generation = request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION.get(user.email)
+    enable_retrieval_query_generation = request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION.get(user.email)
+    
     # Auto-set TASK_MODEL_EXTERNAL to Gemini 2.5 Flash Lite if user has access
-    # Otherwise, keep current value or empty
-    task_model_external = REQUIRED_TASK_MODEL_ID if has_task_model_access else ""
+    # Otherwise, use the stored value (which might be empty)
+    if has_task_model_access:
+        # Auto-set to Gemini if not already set or if stored value is empty
+        if not task_model_external or task_model_external == "":
+            task_model_external = REQUIRED_TASK_MODEL_ID
+    else:
+        # User doesn't have access - ensure it's empty
+        task_model_external = ""
     
     # Auto-enable/disable all task features based on model access
-    # If user doesn't have access, disable all features regardless of config
-    enable_title_generation = has_task_model_access and request.app.state.config.ENABLE_TITLE_GENERATION
-    enable_tags_generation = has_task_model_access and request.app.state.config.ENABLE_TAGS_GENERATION
-    enable_autocomplete_generation = has_task_model_access and request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION
-    enable_search_query_generation = has_task_model_access and request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION
-    enable_retrieval_query_generation = has_task_model_access and request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION
+    # If user doesn't have access, disable all features regardless of stored config
+    if not has_task_model_access:
+        enable_title_generation = False
+        enable_tags_generation = False
+        enable_autocomplete_generation = False
+        enable_search_query_generation = False
+        enable_retrieval_query_generation = False
     
     return {
         "TASK_MODEL": request.app.state.config.TASK_MODEL,
@@ -153,25 +168,26 @@ async def update_task_config(
     # Check if user has access to the required Gemini 2.5 Flash Lite model
     has_task_model_access = user_has_access_to_task_model(user, models)
     
-    # Force TASK_MODEL_EXTERNAL to be Gemini 2.5 Flash Lite if user has access
-    # Otherwise, clear it and disable all features
+    # Save per-admin task config settings (only admin can save, applies to their group)
     if has_task_model_access:
-        request.app.state.config.TASK_MODEL_EXTERNAL = REQUIRED_TASK_MODEL_ID
-        # Only save the enabled flags if user has access
-        request.app.state.config.ENABLE_TITLE_GENERATION = form_data.ENABLE_TITLE_GENERATION
-        request.app.state.config.ENABLE_TAGS_GENERATION = form_data.ENABLE_TAGS_GENERATION
-        request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION = form_data.ENABLE_AUTOCOMPLETE_GENERATION
-        request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION = form_data.ENABLE_SEARCH_QUERY_GENERATION
-        request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION = form_data.ENABLE_RETRIEVAL_QUERY_GENERATION
+        # Force TASK_MODEL_EXTERNAL to be Gemini 2.5 Flash Lite if user has access
+        request.app.state.config.TASK_MODEL_EXTERNAL.set(user.email, REQUIRED_TASK_MODEL_ID)
+        # Save the enabled flags if user has access
+        request.app.state.config.ENABLE_TITLE_GENERATION.set(user.email, form_data.ENABLE_TITLE_GENERATION)
+        request.app.state.config.ENABLE_TAGS_GENERATION.set(user.email, form_data.ENABLE_TAGS_GENERATION)
+        request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION.set(user.email, form_data.ENABLE_AUTOCOMPLETE_GENERATION)
+        request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION.set(user.email, form_data.ENABLE_SEARCH_QUERY_GENERATION)
+        request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION.set(user.email, form_data.ENABLE_RETRIEVAL_QUERY_GENERATION)
     else:
         # User doesn't have access - clear model and disable all features
-        request.app.state.config.TASK_MODEL_EXTERNAL = ""
-        request.app.state.config.ENABLE_TITLE_GENERATION = False
-        request.app.state.config.ENABLE_TAGS_GENERATION = False
-        request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION = False
-        request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION = False
-        request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION = False
+        request.app.state.config.TASK_MODEL_EXTERNAL.set(user.email, "")
+        request.app.state.config.ENABLE_TITLE_GENERATION.set(user.email, False)
+        request.app.state.config.ENABLE_TAGS_GENERATION.set(user.email, False)
+        request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION.set(user.email, False)
+        request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION.set(user.email, False)
+        request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION.set(user.email, False)
     
+    # Save global configs (prompt templates and TASK_MODEL)
     request.app.state.config.TASK_MODEL = form_data.TASK_MODEL
     request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = (
         form_data.TITLE_GENERATION_PROMPT_TEMPLATE
@@ -197,15 +213,19 @@ async def update_task_config(
     )
 
     # Return updated config (same logic as get_task_config)
-    enable_title_generation = has_task_model_access and request.app.state.config.ENABLE_TITLE_GENERATION
-    enable_tags_generation = has_task_model_access and request.app.state.config.ENABLE_TAGS_GENERATION
-    enable_autocomplete_generation = has_task_model_access and request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION
-    enable_search_query_generation = has_task_model_access and request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION
-    enable_retrieval_query_generation = has_task_model_access and request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION
+    task_model_external = request.app.state.config.TASK_MODEL_EXTERNAL.get(user.email)
+    if has_task_model_access and (not task_model_external or task_model_external == ""):
+        task_model_external = REQUIRED_TASK_MODEL_ID
+    
+    enable_title_generation = request.app.state.config.ENABLE_TITLE_GENERATION.get(user.email) if has_task_model_access else False
+    enable_tags_generation = request.app.state.config.ENABLE_TAGS_GENERATION.get(user.email) if has_task_model_access else False
+    enable_autocomplete_generation = request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION.get(user.email) if has_task_model_access else False
+    enable_search_query_generation = request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION.get(user.email) if has_task_model_access else False
+    enable_retrieval_query_generation = request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION.get(user.email) if has_task_model_access else False
 
     return {
         "TASK_MODEL": request.app.state.config.TASK_MODEL,
-        "TASK_MODEL_EXTERNAL": request.app.state.config.TASK_MODEL_EXTERNAL,
+        "TASK_MODEL_EXTERNAL": task_model_external,
         "ENABLE_TITLE_GENERATION": enable_title_generation,
         "TITLE_GENERATION_PROMPT_TEMPLATE": request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE,
         "IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE": request.app.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,
@@ -240,7 +260,8 @@ async def generate_title(
             content={"detail": "Title generation requires access to Gemini 2.5 Flash Lite model"},
         )
 
-    if not request.app.state.config.ENABLE_TITLE_GENERATION:
+    # Check per-admin config (inherits from group admin if user is in a group)
+    if not request.app.state.config.ENABLE_TITLE_GENERATION.get(user.email):
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={"detail": "Title generation is disabled"},
@@ -255,10 +276,11 @@ async def generate_title(
 
     # Check if the user has a custom task model
     # If the user has a custom task model, use that model
+    # Use per-admin TASK_MODEL_EXTERNAL (inherits from group admin)
     task_model_id = get_task_model_id(
         model_id,
         request.app.state.config.TASK_MODEL,
-        request.app.state.config.TASK_MODEL_EXTERNAL,
+        request.app.state.config.TASK_MODEL_EXTERNAL.get(user.email),
         models,
     )
 
@@ -345,7 +367,8 @@ async def generate_chat_tags(
             content={"detail": "Tags generation requires access to Gemini 2.5 Flash Lite model"},
         )
 
-    if not request.app.state.config.ENABLE_TAGS_GENERATION:
+    # Check per-admin config (inherits from group admin if user is in a group)
+    if not request.app.state.config.ENABLE_TAGS_GENERATION.get(user.email):
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={"detail": "Tags generation is disabled"},
@@ -360,10 +383,11 @@ async def generate_chat_tags(
 
     # Check if the user has a custom task model
     # If the user has a custom task model, use that model
+    # Use per-admin TASK_MODEL_EXTERNAL (inherits from group admin)
     task_model_id = get_task_model_id(
         model_id,
         request.app.state.config.TASK_MODEL,
-        request.app.state.config.TASK_MODEL_EXTERNAL,
+        request.app.state.config.TASK_MODEL_EXTERNAL.get(user.email),
         models,
     )
 
@@ -428,10 +452,11 @@ async def generate_image_prompt(
 
     # Check if the user has a custom task model
     # If the user has a custom task model, use that model
+    # Use per-admin TASK_MODEL_EXTERNAL (inherits from group admin)
     task_model_id = get_task_model_id(
         model_id,
         request.app.state.config.TASK_MODEL,
-        request.app.state.config.TASK_MODEL_EXTERNAL,
+        request.app.state.config.TASK_MODEL_EXTERNAL.get(user.email),
         models,
     )
 
@@ -501,13 +526,15 @@ async def generate_queries(
 
     type = form_data.get("type")
     if type == "web_search":
-        if not request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION:
+        # Check per-admin config (inherits from group admin if user is in a group)
+        if not request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION.get(user.email):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Search query generation is disabled",
             )
     elif type == "retrieval":
-        if not request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION:
+        # Check per-admin config (inherits from group admin if user is in a group)
+        if not request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION.get(user.email):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Query generation is disabled",
@@ -522,10 +549,11 @@ async def generate_queries(
 
     # Check if the user has a custom task model
     # If the user has a custom task model, use that model
+    # Use per-admin TASK_MODEL_EXTERNAL (inherits from group admin)
     task_model_id = get_task_model_id(
         model_id,
         request.app.state.config.TASK_MODEL,
-        request.app.state.config.TASK_MODEL_EXTERNAL,
+        request.app.state.config.TASK_MODEL_EXTERNAL.get(user.email),
         models,
     )
 
@@ -588,7 +616,8 @@ async def generate_autocompletion(
             detail="Autocompletion generation requires access to Gemini 2.5 Flash Lite model",
         )
     
-    if not request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION:
+    # Check per-admin config (inherits from group admin if user is in a group)
+    if not request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION.get(user.email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Autocompletion generation is disabled",
@@ -617,10 +646,11 @@ async def generate_autocompletion(
 
     # Check if the user has a custom task model
     # If the user has a custom task model, use that model
+    # Use per-admin TASK_MODEL_EXTERNAL (inherits from group admin)
     task_model_id = get_task_model_id(
         model_id,
         request.app.state.config.TASK_MODEL,
-        request.app.state.config.TASK_MODEL_EXTERNAL,
+        request.app.state.config.TASK_MODEL_EXTERNAL.get(user.email),
         models,
     )
 
@@ -686,10 +716,11 @@ async def generate_emoji(
 
     # Check if the user has a custom task model
     # If the user has a custom task model, use that model
+    # Use per-admin TASK_MODEL_EXTERNAL (inherits from group admin)
     task_model_id = get_task_model_id(
         model_id,
         request.app.state.config.TASK_MODEL,
-        request.app.state.config.TASK_MODEL_EXTERNAL,
+        request.app.state.config.TASK_MODEL_EXTERNAL.get(user.email),
         models,
     )
 
@@ -762,10 +793,11 @@ async def generate_moa_response(
 
     # Check if the user has a custom task model
     # If the user has a custom task model, use that model
+    # Use per-admin TASK_MODEL_EXTERNAL (inherits from group admin)
     task_model_id = get_task_model_id(
         model_id,
         request.app.state.config.TASK_MODEL,
-        request.app.state.config.TASK_MODEL_EXTERNAL,
+        request.app.state.config.TASK_MODEL_EXTERNAL.get(user.email),
         models,
     )
 

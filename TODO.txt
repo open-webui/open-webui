@@ -13,3 +13,87 @@
 MINOR:
 1. Auto completion should be DISABLED for all. Chat title generator should need to be set to gemini flash 2.5 lite as default if available, else no auto completion. 
 2. Pipe function to be handled better.
+
+
+## Issues Found from OpenShift Deployment Logs (2025-12-10)
+
+### CRITICAL - Migration Issue
+- [ ] Fix Alembic migration error: Database at revision '817da597db81' which doesn't exist in current branch
+  - Location: Migration system on startup
+  - Impact: Schema may be out of sync, potential data integrity issues
+  - Solution: Add bridge migration for '817da597db81' OR manually stamp database to known good revision
+  - Reference: logs_on_openshift.txt lines 6-70
+
+### CRITICAL - Background Task Exception Handling
+- [ ] Fix periodic_usage_pool_cleanup() to handle lock renewal failures gracefully
+  - Location: backend/open_webui/socket/main.py line 85
+  - Problem: Raises exception when Redis lock renewal fails, crashes background task
+  - Impact: Background cleanup stops, usage pool may grow unbounded
+  - Solution: Catch exceptions and log warning instead of raising, allow task to continue or exit gracefully
+  - Reference: logs_on_openshift.txt lines 739-801
+
+### HIGH PRIORITY - Lock Release Warning
+- [ ] Investigate and fix lock ID mismatch warning in RedisLock
+  - Location: backend/open_webui/socket/utils.py line 152 (release_lock)
+  - Problem: "Lock usage_cleanup_lock was not released: lock_id mismatch or lock already released"
+  - Impact: Potential race condition, locks may not be properly released
+  - Reference: logs_on_openshift.txt line 802
+
+### MEDIUM PRIORITY - Migration Error Handling
+- [ ] Review migration error handling - currently too permissive
+  - Location: backend/open_webui/config.py line 63
+  - Problem: Migration errors are caught and logged but app continues - may run with inconsistent schema
+  - Impact: Potential data corruption if schema doesn't match code expectations
+  - Solution: Decide on strategy - fail fast or continue with warnings
+
+### LOW PRIORITY - Performance Investigation (DETAILED ANALYSIS COMPLETE)
+- [ ] Optimize slow API response times for chat completions
+  - **Performance Breakdown (from logs_on_openshift.txt lines 726-844):**
+    - Autocompletion (typing "#"): ~24 seconds - User-initiated, external API latency
+    - Search Query Generation: ~25 seconds - External API call to ai-gateway.apps.cloud.rt.nyu.edu
+    - Embedding Generation: ~0.3 seconds - Fast, not a bottleneck
+    - Chat Completion: ~11 seconds - External API call
+    - **Total user-perceived time: ~36 seconds** (from message submit to response)
+  
+  - **Root Cause:** External API latency (ai-gateway.apps.cloud.rt.nyu.edu) is the primary bottleneck
+    - Search query generation: 25 seconds
+    - Chat completion: 11 seconds
+    - Both are sequential and cannot be fully parallelized (embeddings depend on queries)
+  
+  - **Optimization Opportunities:**
+    1. **Query Generation Optimization:**
+       - Consider skipping query generation if user message is already a good query (e.g., <50 chars, simple questions)
+       - Use faster/smaller model for query generation (already using TASK_MODEL, but could use even smaller)
+       - Cache query generation results for similar messages (hash-based caching)
+       - Add timeout and fallback to user message if query generation takes >5 seconds
+    
+    2. **Embedding Generation Optimization:**
+       - Already fast at 0.3s, but could pre-generate embeddings for common queries
+       - Batch embedding requests if multiple queries are generated
+    
+    3. **General Optimizations:**
+       - Add request timeout handling with graceful degradation
+       - Implement circuit breaker pattern for external API calls
+       - Add response caching for repeated queries
+       - Consider streaming query generation if supported by API
+       - Monitor and log slow external API calls for SLA tracking
+    
+    4. **Code Location for Optimizations:**
+       - `backend/open_webui/routers/tasks.py:391-470` - generate_queries endpoint
+       - `backend/open_webui/utils/middleware.py:516-579` - chat_completion_files_handler (query generation)
+       - `backend/open_webui/routers/openai.py:577+` - generate_chat_completion (main completion flow)
+  
+  - **Recommendations:**
+    - Priority 1: Add timeout and fallback for query generation (skip if >5s, use user message)
+    - Priority 2: Implement caching for query generation (cache key: hash of messages + model)
+    - Priority 3: Add skip logic for simple/short user messages (skip query generation entirely)
+    - Priority 4: Monitor external API performance and consider API gateway optimization
+  
+  - **Note:** Autocompletion is a separate user-triggered feature (typing "#"), not part of main chat flow. Its 24s latency is acceptable for a background suggestion feature, but could also benefit from timeout/caching.
+  
+  - Reference: logs_on_openshift.txt lines 726-844
+
+### NOTES
+- HTTP 304 status codes are NORMAL (cache validation, not errors)
+- Model requests are succeeding (all 200 OK)
+- Empty vector search results may be expected if no documents match

@@ -1392,8 +1392,8 @@ TASK_MODEL = PersistentConfig(
     os.environ.get("TASK_MODEL", ""),
 )
 
-TASK_MODEL_EXTERNAL = PersistentConfig(
-    "TASK_MODEL_EXTERNAL",
+# TASK_MODEL_EXTERNAL is now per-admin - auto-set to Gemini 2.5 Flash Lite if user has access
+TASK_MODEL_EXTERNAL = UserScopedConfig(
     "task.model.external",
     os.environ.get("TASK_MODEL_EXTERNAL", ""),
 )
@@ -1475,29 +1475,25 @@ Strictly return in JSON format:
 {{MESSAGES:END:6}}
 </chat_history>"""
 
-ENABLE_TAGS_GENERATION = PersistentConfig(
-    "ENABLE_TAGS_GENERATION",
+# Task feature flags are now per-admin, default to False (disabled)
+ENABLE_TAGS_GENERATION = UserScopedConfig(
     "task.tags.enable",
-    os.environ.get("ENABLE_TAGS_GENERATION", "True").lower() == "true",
+    os.environ.get("ENABLE_TAGS_GENERATION", "False").lower() == "true",
 )
 
-ENABLE_TITLE_GENERATION = PersistentConfig(
-    "ENABLE_TITLE_GENERATION",
+ENABLE_TITLE_GENERATION = UserScopedConfig(
     "task.title.enable",
-    os.environ.get("ENABLE_TITLE_GENERATION", "True").lower() == "true",
+    os.environ.get("ENABLE_TITLE_GENERATION", "False").lower() == "true",
 )
 
-
-ENABLE_SEARCH_QUERY_GENERATION = PersistentConfig(
-    "ENABLE_SEARCH_QUERY_GENERATION",
+ENABLE_SEARCH_QUERY_GENERATION = UserScopedConfig(
     "task.query.search.enable",
-    os.environ.get("ENABLE_SEARCH_QUERY_GENERATION", "True").lower() == "true",
+    os.environ.get("ENABLE_SEARCH_QUERY_GENERATION", "False").lower() == "true",
 )
 
-ENABLE_RETRIEVAL_QUERY_GENERATION = PersistentConfig(
-    "ENABLE_RETRIEVAL_QUERY_GENERATION",
+ENABLE_RETRIEVAL_QUERY_GENERATION = UserScopedConfig(
     "task.query.retrieval.enable",
-    os.environ.get("ENABLE_RETRIEVAL_QUERY_GENERATION", "True").lower() == "true",
+    os.environ.get("ENABLE_RETRIEVAL_QUERY_GENERATION", "False").lower() == "true",
 )
 
 
@@ -1531,10 +1527,10 @@ Strictly return in JSON format:
 </chat_history>
 """
 
-ENABLE_AUTOCOMPLETE_GENERATION = PersistentConfig(
-    "ENABLE_AUTOCOMPLETE_GENERATION",
+# Autocomplete generation is now per-admin, default to False (disabled)
+ENABLE_AUTOCOMPLETE_GENERATION = UserScopedConfig(
     "task.autocomplete.enable",
-    os.environ.get("ENABLE_AUTOCOMPLETE_GENERATION", "True").lower() == "true",
+    os.environ.get("ENABLE_AUTOCOMPLETE_GENERATION", "False").lower() == "true",
 )
 
 AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = PersistentConfig(
