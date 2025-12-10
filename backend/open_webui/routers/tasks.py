@@ -101,7 +101,11 @@ def user_has_access_to_task_model(user, models: dict) -> bool:
 async def get_task_config(request: Request, user=Depends(get_verified_user)):
     # Get available models for the user
     from open_webui.utils.models import get_all_models
-    models = await get_all_models(request, user)
+    models_list = await get_all_models(request, user)
+    
+    # Convert to dict for fast lookup (get_all_models returns a list)
+    # Also available at request.app.state.MODELS after the call
+    models = {model["id"]: model for model in models_list}
     
     # Check if user has access to the required Gemini 2.5 Flash Lite model
     has_task_model_access = user_has_access_to_task_model(user, models)
@@ -173,7 +177,10 @@ async def update_task_config(
 ):
     # Get available models for the admin user
     from open_webui.utils.models import get_all_models
-    models = await get_all_models(request, user)
+    models_list = await get_all_models(request, user)
+    
+    # Convert to dict for fast lookup (get_all_models returns a list)
+    models = {model["id"]: model for model in models_list}
     
     # Check if user has access to the required Gemini 2.5 Flash Lite model
     has_task_model_access = user_has_access_to_task_model(user, models)
@@ -261,7 +268,8 @@ async def generate_title(
         }
     else:
         from open_webui.utils.models import get_all_models
-        models = await get_all_models(request, user)
+        models_list = await get_all_models(request, user)
+        models = {model["id"]: model for model in models_list}
     
     # Check if user has access to the required Gemini 2.5 Flash Lite model
     if not user_has_access_to_task_model(user, models):
@@ -368,7 +376,8 @@ async def generate_chat_tags(
         }
     else:
         from open_webui.utils.models import get_all_models
-        models = await get_all_models(request, user)
+        models_list = await get_all_models(request, user)
+        models = {model["id"]: model for model in models_list}
     
     # Check if user has access to the required Gemini 2.5 Flash Lite model
     if not user_has_access_to_task_model(user, models):
@@ -525,7 +534,8 @@ async def generate_queries(
         }
     else:
         from open_webui.utils.models import get_all_models
-        models = await get_all_models(request, user)
+        models_list = await get_all_models(request, user)
+        models = {model["id"]: model for model in models_list}
     
     # Check if user has access to the required Gemini 2.5 Flash Lite model
     if not user_has_access_to_task_model(user, models):
@@ -617,7 +627,8 @@ async def generate_autocompletion(
         }
     else:
         from open_webui.utils.models import get_all_models
-        models = await get_all_models(request, user)
+        models_list = await get_all_models(request, user)
+        models = {model["id"]: model for model in models_list}
     
     # Check if user has access to the required Gemini 2.5 Flash Lite model
     if not user_has_access_to_task_model(user, models):
