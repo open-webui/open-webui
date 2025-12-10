@@ -245,6 +245,21 @@ def query_collection(
 ) -> dict:
     results = []
     
+    # Handle edge cases
+    if not queries or len(queries) == 0:
+        log.warning("query_collection called with empty queries list")
+        return merge_and_sort_query_results(results, k=k, reverse=True) if VECTOR_DB != "chroma" else merge_and_sort_query_results(results, k=k, reverse=False)
+    
+    if not collection_names or len(collection_names) == 0:
+        log.warning("query_collection called with empty collection_names list")
+        return merge_and_sort_query_results(results, k=k, reverse=True) if VECTOR_DB != "chroma" else merge_and_sort_query_results(results, k=k, reverse=False)
+    
+    # Filter out empty queries
+    queries = [q for q in queries if q and q.strip()]
+    if not queries:
+        log.warning("All queries were empty after filtering")
+        return merge_and_sort_query_results(results, k=k, reverse=True) if VECTOR_DB != "chroma" else merge_and_sort_query_results(results, k=k, reverse=False)
+    
     # Batch embedding generation for multiple queries (faster than individual calls)
     # The embedding_function supports both single strings and lists of strings
     query_embedding_map = {}
@@ -262,11 +277,20 @@ def query_collection(
                     # Check if embeddings are nested lists or flat lists
                     if len(query_embeddings) > 0 and isinstance(query_embeddings[0], list):
                         # Already in correct format: [[emb1], [emb2], ...]
-                        query_embedding_map = {queries[i]: query_embeddings[i] for i in range(len(queries))}
+                        # Validate embeddings are not empty
+                        for i, emb in enumerate(query_embeddings):
+                            if isinstance(emb, list) and len(emb) > 0:
+                                query_embedding_map[queries[i]] = emb
+                            else:
+                                log.warning(f"Empty or invalid embedding for query {i}: {queries[i]}")
                     else:
                         # Flat list: might be single embedding or needs wrapping
                         # If length matches, assume each element is an embedding vector
-                        query_embedding_map = {queries[i]: query_embeddings[i] for i in range(len(queries))}
+                        for i, emb in enumerate(query_embeddings):
+                            if isinstance(emb, list) and len(emb) > 0:
+                                query_embedding_map[queries[i]] = emb
+                            else:
+                                log.warning(f"Empty or invalid embedding for query {i}: {queries[i]}")
                 else:
                     # Mismatch - fallback to individual calls
                     log.warning(f"Batch embedding returned {len(query_embeddings)} results for {len(queries)} queries, falling back to individual calls")
@@ -275,15 +299,18 @@ def query_collection(
                 # Unexpected return type - fallback
                 log.warning(f"Batch embedding returned unexpected type: {type(query_embeddings)}, falling back to individual calls")
                 raise ValueError("Unexpected batch embedding return type")
-        else:
+        elif len(queries) == 1:
             # Single query - embed normally
             embedding = embedding_function(queries[0])
             # Ensure it's a list (embedding functions should return list[float])
-            if isinstance(embedding, list):
+            if isinstance(embedding, list) and len(embedding) > 0:
                 query_embedding_map[queries[0]] = embedding
             else:
-                # Unexpected format - wrap in list as fallback
-                query_embedding_map[queries[0]] = [embedding]
+                # Invalid embedding - log and skip
+                log.warning(f"Empty or invalid embedding for single query: {queries[0]}")
+                if not isinstance(embedding, list):
+                    # Try wrapping as fallback
+                    query_embedding_map[queries[0]] = [embedding] if embedding else None
     except Exception as e:
         log.exception(f"Error generating batch embeddings: {e}")
         # Fallback to individual embedding generation
@@ -291,10 +318,21 @@ def query_collection(
         for query in queries:
             try:
                 embedding = embedding_function(query)
-                query_embedding_map[query] = embedding if isinstance(embedding, list) else [embedding]
+                if isinstance(embedding, list) and len(embedding) > 0:
+                    query_embedding_map[query] = embedding
+                elif isinstance(embedding, list) and len(embedding) == 0:
+                    log.warning(f"Empty embedding returned for query: {query}")
+                else:
+                    # Wrap non-list embeddings
+                    query_embedding_map[query] = [embedding] if embedding else None
             except Exception as embed_error:
                 log.exception(f"Error embedding query '{query}': {embed_error}")
                 continue
+    
+    # Validate we have at least some embeddings
+    if not query_embedding_map:
+        log.error("Failed to generate embeddings for any queries")
+        return merge_and_sort_query_results(results, k=k, reverse=True) if VECTOR_DB != "chroma" else merge_and_sort_query_results(results, k=k, reverse=False)
     
     # Parallelize query processing for faster RAG retrieval
     # Note: Thread-safety depends on the vector DB implementation:
@@ -317,23 +355,31 @@ def query_collection(
         return None
     
     # Create all query-collection pairs with pre-computed embeddings
-    query_collection_pairs = [
-        (query, collection_name, query_embedding_map.get(query))
-        for query in queries
-        for collection_name in collection_names
-        if query in query_embedding_map  # Only include queries that were successfully embedded
-    ]
+    # Filter out None embeddings and ensure embeddings are valid lists
+    query_collection_pairs = []
+    for query in queries:
+        if query not in query_embedding_map:
+            continue
+        embedding = query_embedding_map[query]
+        if embedding is None or not isinstance(embedding, list) or len(embedding) == 0:
+            continue
+        for collection_name in collection_names:
+            query_collection_pairs.append((query, collection_name, embedding))
+    
+    if not query_collection_pairs:
+        log.warning("No valid query-collection pairs after filtering invalid embeddings")
+        return merge_and_sort_query_results(results, k=k, reverse=True) if VECTOR_DB != "chroma" else merge_and_sort_query_results(results, k=k, reverse=False)
     
     # For single query-collection pair, process sequentially to avoid overhead
     # For multiple queries/collections, use parallel processing
     if len(query_collection_pairs) == 1:
         # Sequential processing for single query-collection pair
         query, collection_name, query_embedding = query_collection_pairs[0]
-        if query_embedding:
+        if query_embedding and isinstance(query_embedding, list) and len(query_embedding) > 0:
             result = process_query_collection_pair(query, collection_name, query_embedding)
             if result is not None:
                 results.append(result)
-    else:
+    elif len(query_collection_pairs) > 1:
         # Process in parallel using ThreadPoolExecutor
         # Limit workers to prevent resource exhaustion and potential SQLite lock issues
         max_workers = min(len(query_collection_pairs), 10)
@@ -341,16 +387,19 @@ def query_collection(
             future_to_pair = {
                 executor.submit(process_query_collection_pair, query, collection_name, query_embedding): (query, collection_name)
                 for query, collection_name, query_embedding in query_collection_pairs
-                if query_embedding is not None  # Only submit if embedding exists
+                if query_embedding is not None and isinstance(query_embedding, list) and len(query_embedding) > 0
             }
             
-            for future in as_completed(future_to_pair):
-                try:
-                    result = future.result()
-                    if result is not None:
-                        results.append(result)
-                except Exception as e:
-                    log.exception(f"Error in parallel query processing: {e}")
+            if not future_to_pair:
+                log.warning("No valid futures created for parallel query processing")
+            else:
+                for future in as_completed(future_to_pair):
+                    try:
+                        result = future.result()
+                        if result is not None:
+                            results.append(result)
+                    except Exception as e:
+                        log.exception(f"Error in parallel query processing: {e}")
 
     if VECTOR_DB == "chroma":
         # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
@@ -370,6 +419,21 @@ def query_collection_with_hybrid_search(
 ) -> dict:
     results = []
     errors = []
+    
+    # Handle edge cases
+    if not queries or len(queries) == 0:
+        log.warning("query_collection_with_hybrid_search called with empty queries list")
+        return merge_and_sort_query_results(results, k=k, reverse=True) if VECTOR_DB != "chroma" else merge_and_sort_query_results(results, k=k, reverse=False)
+    
+    if not collection_names or len(collection_names) == 0:
+        log.warning("query_collection_with_hybrid_search called with empty collection_names list")
+        return merge_and_sort_query_results(results, k=k, reverse=True) if VECTOR_DB != "chroma" else merge_and_sort_query_results(results, k=k, reverse=False)
+    
+    # Filter out empty queries
+    queries = [q for q in queries if q and q.strip()]
+    if not queries:
+        log.warning("All queries were empty after filtering in hybrid search")
+        return merge_and_sort_query_results(results, k=k, reverse=True) if VECTOR_DB != "chroma" else merge_and_sort_query_results(results, k=k, reverse=False)
     
     # Parallelize query processing for faster RAG retrieval with hybrid search
     # Note: Thread-safety depends on the vector DB implementation
@@ -398,7 +462,11 @@ def query_collection_with_hybrid_search(
         for query in queries
     ]
     
-    # For single query or single collection, process sequentially to avoid overhead
+    if not query_collection_pairs:
+        log.warning("No valid query-collection pairs for hybrid search")
+        return merge_and_sort_query_results(results, k=k, reverse=True) if VECTOR_DB != "chroma" else merge_and_sort_query_results(results, k=k, reverse=False)
+    
+    # For single query-collection pair, process sequentially to avoid overhead
     # For multiple queries/collections, use parallel processing
     if len(query_collection_pairs) == 1:
         # Sequential processing for single query-collection pair
