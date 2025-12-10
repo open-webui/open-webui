@@ -4,6 +4,7 @@
 	const i18n = getContext('i18n');
 
 	import { getGroups } from '$lib/apis/groups';
+	import { getAllUsers } from '$lib/apis/users';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
@@ -20,6 +21,9 @@
 
 	let selectedGroupId = '';
 	let groups = [];
+
+	let selectedUserId = '';
+	let users = [];
 
 	$: if (!sharePublic && accessControl === null) {
 		initPublicAccess();
@@ -43,6 +47,8 @@
 
 	onMount(async () => {
 		groups = await getGroups(localStorage.token, true);
+		users = await getAllUsers(localStorage.token);
+		users = users?.users ?? [];
 
 		if (accessControl === null) {
 			initPublicAccess();
@@ -245,6 +251,111 @@
 										>
 										{#each groups.filter((group) => !(accessControl?.read?.group_ids ?? []).includes(group.id)) as group}
 											<option class=" text-gray-700" value={group.id}>{group.name}</option>
+										{/each}
+									</select>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Users section -->
+			{@const accessUsers = users.filter((user) =>
+				(accessControl?.read?.user_ids ?? []).includes(user.id)
+			)}
+			<div class="mt-4">
+				<div class="">
+					<div class="flex justify-between mb-2.5">
+						<div class="text-xs font-medium text-gray-500">
+							{$i18n.t('Users')}
+						</div>
+					</div>
+
+					{#if accessUsers.length > 0}
+						<div class="flex flex-col gap-1.5 mb-2 px-0.5 mx-0.5">
+							{#each accessUsers as user}
+								<div class="flex items-center gap-3 justify-between text-sm w-full transition">
+									<div class="flex items-center gap-1.5 w-full">
+										<div>
+											{user.name} <span class="text-xs text-gray-500">{user?.email}</span>
+										</div>
+									</div>
+
+									<div class="w-full flex justify-end items-center gap-0.5">
+										<button
+											class=""
+											type="button"
+											on:click={() => {
+												if (accessRoles.includes('write')) {
+													if ((accessControl?.write?.user_ids ?? []).includes(user.id)) {
+														accessControl.write.user_ids = (
+															accessControl?.write?.user_ids ?? []
+														).filter((user_id) => user_id !== user.id);
+													} else {
+														accessControl.write.user_ids = [
+															...(accessControl?.write?.user_ids ?? []),
+															user.id
+														];
+													}
+													onChange(accessControl);
+												}
+											}}
+										>
+											{#if (accessControl?.write?.user_ids ?? []).includes(user.id)}
+												<Badge type={'success'} content={$i18n.t('Write')} />
+											{:else}
+												<Badge type={'info'} content={$i18n.t('Read')} />
+											{/if}
+										</button>
+
+										<button
+											class=" rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+											type="button"
+											on:click={() => {
+												accessControl.read.user_ids = (
+													accessControl?.read?.user_ids ?? []
+												).filter((id) => id !== user.id);
+												accessControl.write.user_ids = (
+													accessControl?.write?.user_ids ?? []
+												).filter((id) => id !== user.id);
+												onChange(accessControl);
+											}}
+										>
+											<XMark />
+										</button>
+									</div>
+								</div>
+							{/each}
+						</div>
+					{/if}
+
+					<div class="mb-1">
+						<div class="flex w-full">
+							<div class="flex flex-1 items-center">
+								<div class="w-full px-0.5">
+									<select
+										class="dark:bg-gray-900 outline-hidden bg-transparent text-sm block w-full pr-10 max-w-full
+									{selectedUserId ? '' : 'text-gray-500'}
+									dark:placeholder-gray-500"
+										bind:value={selectedUserId}
+										on:change={() => {
+											if (selectedUserId !== '') {
+												accessControl.read.user_ids = [
+													...(accessControl?.read?.user_ids ?? []),
+													selectedUserId
+												];
+
+												selectedUserId = '';
+												onChange(accessControl);
+											}
+										}}
+									>
+										<option class=" text-gray-700" value="" disabled selected
+											>{$i18n.t('Select a user')}</option
+										>
+										{#each users.filter((user) => !(accessControl?.read?.user_ids ?? []).includes(user.id)) as user}
+											<option class=" text-gray-700" value={user.id}>{user.name} ({user.email})</option>
 										{/each}
 									</select>
 								</div>
