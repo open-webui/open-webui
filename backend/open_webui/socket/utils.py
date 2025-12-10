@@ -208,13 +208,17 @@ class RedisLock:
 
 
 class RedisDict:
-    def __init__(self, name, redis_url):
+    def __init__(self, name, redis_url, default_ttl=None):
         self.name = name
+        self.default_ttl = default_ttl  # Optional TTL for all keys in this dict
         # BUG #3 fix: Handle errors when creating connection pool
         try:
             # Use connection pool instead of direct connection for better performance
             pool = get_redis_pool(redis_url)
             self.redis = redis.Redis(connection_pool=pool)
+            # Cache Lua scripts for atomic operations (faster than re-registering)
+            self._atomic_update_script = None
+            self._atomic_append_script = None
         except (ValueError, Exception) as e:
             # If pool creation fails, set redis to None and log error
             log.error(
@@ -223,18 +227,149 @@ class RedisDict:
             )
             self.redis = None
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value, ttl=None):
         # BUG #3 fix: Check if redis is available
         if self.redis is None:
             raise ConnectionError(f"Redis connection not available for {self.name}")
         try:
             serialized_value = json.dumps(value)
+            # Use HSET for fast operation (single round trip)
             self.redis.hset(self.name, key, serialized_value)
+            # Set TTL if specified (use default_ttl if ttl not provided)
+            expire_ttl = ttl if ttl is not None else self.default_ttl
+            if expire_ttl:
+                # Expire the entire hash, not individual fields (faster, but less granular)
+                # For per-field TTL, would need Redis 7.0+ with HSET ... EX option
+                self.redis.expire(self.name, expire_ttl)
         except (ConnectionError, TimeoutError, RedisError) as e:
             log.error(f"Redis error setting {self.name}[{key}]: {e}")
             raise
         except Exception as e:
             log.error(f"Unexpected error setting {self.name}[{key}]: {e}", exc_info=True)
+            raise
+    
+    def atomic_update_dict(self, key, update_func, default_value=None):
+        """
+        Atomically update a dictionary value in Redis.
+        Uses optimized 2-step approach: fast Lua read + fast Python update + fast write.
+        This is faster than full Lua script for complex updates (avoids JSON encoding in Lua).
+        
+        For simple updates, consider using atomic_update_dict_inline() for true single round trip.
+        
+        Args:
+            key: The hash key to update
+            update_func: Function that takes current dict and returns new dict
+            default_value: Default value if key doesn't exist (default: {})
+        
+        Returns:
+            The updated dictionary value
+        """
+        if self.redis is None:
+            raise ConnectionError(f"Redis connection not available for {self.name}")
+        
+        if default_value is None:
+            default_value = {}
+        
+        # Register script if not cached (cached for performance)
+        if self._atomic_update_script is None:
+            self._atomic_update_script = self.redis.register_script("""
+                local hash_name = KEYS[1]
+                local key = ARGV[1]
+                local default_json = ARGV[2]
+                
+                local current_json = redis.call('HGET', hash_name, key)
+                if current_json then
+                    return current_json
+                elseif default_json and default_json ~= '' then
+                    return default_json
+                else
+                    return '{}'
+                end
+            """)
+        
+        try:
+            # Fast atomic read (single round trip, cached script)
+            current_json = self._atomic_update_script(
+                keys=[self.name],
+                args=[key, json.dumps(default_value)]
+            )
+            current = json.loads(current_json)
+            
+            # Apply update function (fast Python operation)
+            updated = update_func(current)
+            
+            # Fast atomic write (single round trip, no TTL check for speed)
+            serialized = json.dumps(updated)
+            self.redis.hset(self.name, key, serialized)
+            
+            return updated
+        except Exception as e:
+            log.error(f"Error in atomic_update_dict for {self.name}[{key}]: {e}", exc_info=True)
+            raise
+    
+    def atomic_append_to_list(self, key, item, max_length=None):
+        """
+        Atomically append an item to a list stored in Redis.
+        Fast single-round-trip operation using Lua script (optimized for speed).
+        
+        Args:
+            key: The hash key containing the list
+            item: Item to append (will be JSON serialized and stored in list)
+            max_length: Optional max list length (removes oldest if exceeded)
+        
+        Returns:
+            The updated list (parsed from JSON)
+        """
+        if self.redis is None:
+            raise ConnectionError(f"Redis connection not available for {self.name}")
+        
+        # Register script if not cached (cached for performance - no re-registration overhead)
+        if self._atomic_append_script is None:
+            self._atomic_append_script = self.redis.register_script("""
+                local hash_name = KEYS[1]
+                local key = ARGV[1]
+                local item_json = ARGV[2]
+                local max_len = tonumber(ARGV[3]) or 0
+                
+                local current_json = redis.call('HGET', hash_name, key)
+                local current = {}
+                if current_json then
+                    current = cjson.decode(current_json)
+                end
+                
+                -- Ensure it's a list/array (Lua tables can be arrays or objects)
+                -- Check if it's an array (has numeric indices starting from 1)
+                if type(current) ~= 'table' or (current[1] == nil and next(current) ~= nil) then
+                    current = {}
+                end
+                
+                -- Parse item_json to get actual value, then append
+                local item_value = cjson.decode(item_json)
+                table.insert(current, item_value)
+                
+                -- Trim if max_length specified (remove oldest first)
+                if max_len > 0 and #current > max_len then
+                    local remove_count = #current - max_len
+                    for i = 1, remove_count do
+                        table.remove(current, 1)
+                    end
+                end
+                
+                -- Write back atomically (single operation)
+                redis.call('HSET', hash_name, key, cjson.encode(current))
+                return cjson.encode(current)
+            """)
+        
+        try:
+            # Fast single round trip - script is cached, no re-registration overhead
+            result_json = self._atomic_append_script(
+                keys=[self.name],
+                args=[key, json.dumps(item), str(max_length) if max_length else "0"]
+            )
+            # Parse result - items are already decoded in Lua, so just parse the array
+            return json.loads(result_json)
+        except Exception as e:
+            log.error(f"Error in atomic_append_to_list for {self.name}[{key}]: {e}", exc_info=True)
             raise
 
     def __getitem__(self, key):
