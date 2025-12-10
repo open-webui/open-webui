@@ -232,6 +232,21 @@ class KnowledgeTable:
         except Exception:
             return None
 
+    def get_knowledge_by_id_and_user_id(
+        self, id: str, user_id: str
+    ) -> Optional[KnowledgeModel]:
+        knowledge = self.get_knowledge_by_id(id)
+        if not knowledge:
+            return None
+
+        if knowledge.user_id == user_id:
+            return knowledge
+
+        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user_id)}
+        if has_access(user_id, "write", knowledge.access_control, user_group_ids):
+            return knowledge
+        return None
+
     def get_knowledges_by_file_id(self, file_id: str) -> list[KnowledgeModel]:
         try:
             with get_db() as db:

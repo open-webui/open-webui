@@ -363,17 +363,17 @@ def add_file_to_knowledge_by_id(
             detail=ERROR_MESSAGES.FILE_NOT_PROCESSED,
         )
 
-    # Add file to knowledge base
-    Knowledges.add_file_to_knowledge_by_id(
-        knowledge_id=id, file_id=form_data.file_id, user_id=user.id
-    )
-
     # Add content to the vector database
     try:
         process_file(
             request,
             ProcessFileForm(file_id=form_data.file_id, collection_name=id),
             user=user,
+        )
+
+        # Add file to knowledge base
+        Knowledges.add_file_to_knowledge_by_id(
+            knowledge_id=id, file_id=form_data.file_id, user_id=user.id
         )
     except Exception as e:
         log.debug(e)

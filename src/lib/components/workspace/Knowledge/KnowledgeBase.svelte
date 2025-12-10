@@ -206,16 +206,16 @@
 
 		fileItems = [...(fileItems ?? []), fileItem];
 		try {
-			// If the file is an audio file, provide the language for STT.
-			let metadata = null;
-			if (
-				(file.type.startsWith('audio/') || file.type.startsWith('video/')) &&
+			let metadata = {
+				knowledge_id: knowledge.id,
+				// If the file is an audio file, provide the language for STT.
+				...((file.type.startsWith('audio/') || file.type.startsWith('video/')) &&
 				$settings?.audio?.stt?.language
-			) {
-				metadata = {
-					language: $settings?.audio?.stt?.language
-				};
-			}
+					? {
+							language: $settings?.audio?.stt?.language
+						}
+					: {})
+			};
 
 			const uploadedFile = await uploadFile(localStorage.token, file, metadata).catch((e) => {
 				toast.error(`${e}`);
@@ -441,16 +441,14 @@
 	};
 
 	const addFileHandler = async (fileId) => {
-		const updatedKnowledge = await addFileToKnowledgeById(localStorage.token, id, fileId).catch(
-			(e) => {
-				toast.error(`${e}`);
-				return null;
-			}
-		);
+		const res = await addFileToKnowledgeById(localStorage.token, id, fileId).catch((e) => {
+			toast.error(`${e}`);
+			return null;
+		});
 
-		if (updatedKnowledge) {
-			knowledge = updatedKnowledge;
+		if (res) {
 			toast.success($i18n.t('File added successfully.'));
+			init();
 		} else {
 			toast.error($i18n.t('Failed to add file.'));
 			fileItems = fileItems.filter((file) => file.id !== fileId);
@@ -462,13 +460,12 @@
 			console.log('Starting file deletion process for:', fileId);
 
 			// Remove from knowledge base only
-			const updatedKnowledge = await removeFileFromKnowledgeById(localStorage.token, id, fileId);
+			const res = await removeFileFromKnowledgeById(localStorage.token, id, fileId);
+			console.log('Knowledge base updated:', res);
 
-			console.log('Knowledge base updated:', updatedKnowledge);
-
-			if (updatedKnowledge) {
-				knowledge = updatedKnowledge;
+			if (res) {
 				toast.success($i18n.t('File removed successfully.'));
+				await init();
 			}
 		} catch (e) {
 			console.error('Error in deleteFileHandler:', e);

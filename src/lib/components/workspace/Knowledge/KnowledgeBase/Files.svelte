@@ -50,7 +50,9 @@
 
 						<div class="line-clamp-1">
 							{file?.name ?? file?.meta?.name}
-							<span class="text-xs text-gray-500">{formatFileSize(file?.meta?.size)}</span>
+							{#if file?.meta?.size}
+								<span class="text-xs text-gray-500">{formatFileSize(file?.meta?.size)}</span>
+							{/if}
 						</div>
 					</div>
 				</div>
