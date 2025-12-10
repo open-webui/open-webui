@@ -52,6 +52,7 @@
 	import FilesOverlay from '$lib/components/chat/MessageInput/FilesOverlay.svelte';
 	import DropdownOptions from '$lib/components/common/DropdownOptions.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
+	import { i } from 'vitest/dist/reporters-w_64AS5f.js';
 
 	let largeScreen = true;
 
@@ -565,6 +566,11 @@
 	const onDrop = async (e) => {
 		e.preventDefault();
 		dragged = false;
+
+		if (!knowledge?.write_access) {
+			toast.error($i18n.t('You do not have permission to upload files to this knowledge base.'));
+			return;
+		}
 
 		const handleUploadingFileFolder = (items) => {
 			for (const item of items) {
