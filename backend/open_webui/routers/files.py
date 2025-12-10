@@ -92,6 +92,10 @@ def has_access_to_file(
             if knowledge_base.id == knowledge_base_id:
                 return True
 
+    channels = Channels.get_channels_by_file_id_and_user_id(file_id, user.id)
+    if access_type == "read" and channels:
+        return True
+
     return False
 
 
