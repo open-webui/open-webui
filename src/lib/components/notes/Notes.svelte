@@ -337,7 +337,7 @@
 					>
 						<Plus className="size-3" strokeWidth="2.5" />
 
-						<div class=" md:ml-1 text-xs">{$i18n.t('New Note')}</div>
+						<div class=" ml-1 text-xs">{$i18n.t('New Note')}</div>
 					</button>
 				</div>
 			</div>
