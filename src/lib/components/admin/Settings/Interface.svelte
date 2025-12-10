@@ -33,7 +33,8 @@
 		ENABLE_SEARCH_QUERY_GENERATION: true,
 		ENABLE_RETRIEVAL_QUERY_GENERATION: true,
 		QUERY_GENERATION_PROMPT_TEMPLATE: '',
-		TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: ''
+		TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: '',
+		HAS_TASK_MODEL_ACCESS: false
 	};
 
 	let promptSuggestions = [];
@@ -123,6 +124,7 @@
 							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							bind:value={taskConfig.TASK_MODEL_EXTERNAL}
 							placeholder={$i18n.t('Select a model')}
+							disabled={!taskConfig.HAS_TASK_MODEL_ACCESS}
 						>
 							<option value="" selected>{$i18n.t('Current Model')}</option>
 							{#each $models as model}
@@ -131,6 +133,11 @@
 								</option>
 							{/each}
 						</select>
+						{#if !taskConfig.HAS_TASK_MODEL_ACCESS}
+							<div class="text-xs text-red-500 dark:text-red-400 mt-1">
+								Task features require access to Gemini 2.5 Flash Lite model
+							</div>
+						{/if}
 					</div>
 				</div>
 
@@ -139,7 +146,7 @@
 						{$i18n.t('Title Generation')}
 					</div>
 
-					<Switch bind:state={taskConfig.ENABLE_TITLE_GENERATION} />
+					<Switch bind:state={taskConfig.ENABLE_TITLE_GENERATION} disabled={!taskConfig.HAS_TASK_MODEL_ACCESS} />
 				</div>
 
 				{#if taskConfig.ENABLE_TITLE_GENERATION}
@@ -166,7 +173,7 @@
 						{$i18n.t('Tags Generation')}
 					</div>
 
-					<Switch bind:state={taskConfig.ENABLE_TAGS_GENERATION} />
+					<Switch bind:state={taskConfig.ENABLE_TAGS_GENERATION} disabled={!taskConfig.HAS_TASK_MODEL_ACCESS} />
 				</div>
 
 				{#if taskConfig.ENABLE_TAGS_GENERATION}
@@ -193,7 +200,7 @@
 						{$i18n.t('Retrieval Query Generation')}
 					</div>
 
-					<Switch bind:state={taskConfig.ENABLE_RETRIEVAL_QUERY_GENERATION} />
+					<Switch bind:state={taskConfig.ENABLE_RETRIEVAL_QUERY_GENERATION} disabled={!taskConfig.HAS_TASK_MODEL_ACCESS} />
 				</div>
 
 				<div class="mb-2.5 flex w-full items-center justify-between">
@@ -201,7 +208,7 @@
 						{$i18n.t('Web Search Query Generation')}
 					</div>
 
-					<Switch bind:state={taskConfig.ENABLE_SEARCH_QUERY_GENERATION} />
+					<Switch bind:state={taskConfig.ENABLE_SEARCH_QUERY_GENERATION} disabled={!taskConfig.HAS_TASK_MODEL_ACCESS} />
 				</div>
 
 				<div class="mb-2.5">
@@ -227,7 +234,7 @@
 					</div>
 
 					<Tooltip content={$i18n.t('Enable autocomplete generation for chat messages')}>
-						<Switch bind:state={taskConfig.ENABLE_AUTOCOMPLETE_GENERATION} />
+						<Switch bind:state={taskConfig.ENABLE_AUTOCOMPLETE_GENERATION} disabled={!taskConfig.HAS_TASK_MODEL_ACCESS} />
 					</Tooltip>
 				</div>
 
