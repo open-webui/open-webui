@@ -565,11 +565,15 @@ async def chat_completion_files_handler(
                 queries_response = {"queries": [queries_response]}
 
             queries = queries_response.get("queries", [])
-        except:
-            pass
+            log.debug(f"RAG query expansion generated {len(queries)} queries: {queries}")
+        except Exception as e:
+            # Query expansion failed - this is OK, we'll use the user's message as fallback
+            # This commonly happens when Gemini 2.5 Flash Lite is not available
+            log.debug(f"RAG query expansion failed (using user message as fallback): {e}")
 
         if len(queries) == 0:
             queries = [get_last_user_message(body["messages"])]
+            log.debug(f"Using user message as RAG query fallback: {queries}")
 
         try:
             # Offload get_sources_from_files to a separate thread

@@ -1879,7 +1879,7 @@ BYPASS_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
     "rag.bypass_embedding_and_retrieval",
     os.environ.get("BYPASS_EMBEDDING_AND_RETRIEVAL", "False").lower() == "true",
 )
-RAG_TOP_K = UserScopedConfig( "rag.top_k", int(os.environ.get("RAG_TOP_K", "4")))
+RAG_TOP_K = UserScopedConfig( "rag.top_k", int(os.environ.get("RAG_TOP_K", "10")))
 
 # RAG_TOP_K = PersistentConfig(
 #     "RAG_TOP_K", "rag.top_k", int(os.environ.get("RAG_TOP_K", "3"))
