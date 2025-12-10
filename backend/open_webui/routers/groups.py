@@ -78,7 +78,7 @@ async def create_new_group(form_data: GroupForm, user=Depends(get_admin_user)):
 
 
 @router.get("/id/{id}", response_model=Optional[GroupResponse])
-async def get_group_by_id(id: str, user=Depends(get_admin_user)):
+async def get_group_by_id(id: str, user=Depends(get_verified_user)):
     group = Groups.get_group_by_id(id)
     if group:
         return GroupResponse(
