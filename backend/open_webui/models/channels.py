@@ -152,12 +152,15 @@ class ChannelFile(Base):
     __tablename__ = "channel_file"
 
     id = Column(Text, unique=True, primary_key=True)
+    user_id = Column(Text, nullable=False)
 
     channel_id = Column(
         Text, ForeignKey("channel.id", ondelete="CASCADE"), nullable=False
     )
+    message_id = Column(
+        Text, ForeignKey("message.id", ondelete="CASCADE"), nullable=True
+    )
     file_id = Column(Text, ForeignKey("file.id", ondelete="CASCADE"), nullable=False)
-    user_id = Column(Text, nullable=False)
 
     created_at = Column(BigInteger, nullable=False)
     updated_at = Column(BigInteger, nullable=False)
@@ -861,6 +864,27 @@ class ChannelTable:
                     return None
             except Exception:
                 return None
+
+    def set_file_message_id_in_channel_by_id(
+        self, channel_id: str, file_id: str, message_id: str
+    ) -> bool:
+        try:
+            with get_db() as db:
+                channel_file = (
+                    db.query(ChannelFile)
+                    .filter_by(channel_id=channel_id, file_id=file_id)
+                    .first()
+                )
+                if not channel_file:
+                    return False
+
+                channel_file.message_id = message_id
+                channel_file.updated_at = int(time.time())
+
+                db.commit()
+                return True
+        except Exception:
+            return False
 
     def remove_file_from_channel_by_id(self, channel_id: str, file_id: str) -> bool:
         try:

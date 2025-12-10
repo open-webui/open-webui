@@ -1093,6 +1093,15 @@ async def post_new_message(
 
     try:
         message, channel = await new_message_handler(request, id, form_data, user)
+        try:
+            if files := message.data.get("files", []):
+                for file in files:
+                    Channels.set_file_message_id_in_channel_by_id(
+                        channel.id, file.get("id", ""), message.id
+                    )
+        except Exception as e:
+            log.debug(e)
+
         active_user_ids = get_user_ids_from_room(f"channel:{channel.id}")
 
         async def background_handler():
