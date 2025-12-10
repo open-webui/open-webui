@@ -5,6 +5,8 @@ API endpoints for CrewAI integration with MCP servers
 
 import logging
 import sys
+import json
+import aiohttp
 from pathlib import Path
 from typing import Optional, Dict, Any
 from fastapi import APIRouter, HTTPException, Depends, Request
@@ -27,8 +29,13 @@ def extract_user_token(
     request: Request,
     auth_token: Optional[HTTPAuthorizationCredentials] = Depends(bearer_security),
 ) -> Optional[str]:
-    """Extract the user's OAuth token from the request for OBO flow"""
+    """
+    Extract the user's OAuth token from the request for OBO flow.
+    Supports multiple OAuth2 proxy configurations and token sources.
+    """
     import os
+    import base64
+    import json
 
     # Check if we're in localhost development environment
     is_localhost = (
@@ -40,31 +47,225 @@ def extract_user_token(
         == "true"  # Local dev has signup enabled
     )
 
-    # First priority: OAuth access token from Microsoft login (for SharePoint OBO)
-    if "oauth_access_token" in request.cookies:
-        token = request.cookies.get("oauth_access_token")
-        logging.info("Using OAuth access token for SharePoint OBO flow")
-        return token
+    logging.info("=== OAuth Token Extraction Debug ===")
+    logging.info(f"Available headers: {list(request.headers.keys())}")
+    logging.info(f"Available cookies: {list(request.cookies.keys())}")
 
-    # Second priority: OAuth ID token (may work for some scenarios)
-    elif "oauth_id_token" in request.cookies:
-        token = request.cookies.get("oauth_id_token")
-        logging.info("Using OAuth ID token for SharePoint OBO flow")
-        return token
+    # Method 1: OAuth2 proxy forwarded headers
+    # Check common OAuth2 proxy header patterns
+    oauth_headers_to_check = [
+        "X-Forwarded-Access-Token",
+        "X-Auth-Request-Access-Token",
+        "X-Oauth-Token",
+        "X-Access-Token",
+        "Authorization",
+    ]
+
+    for header_name in oauth_headers_to_check:
+        token = request.headers.get(header_name, "")
+        if token:
+            # Handle Authorization header specifically
+            if header_name == "Authorization" and token.startswith("Bearer "):
+                token = token.split("Bearer ", 1)[1]
+
+            if token and token != "user_token_placeholder":
+                logging.info(
+                    f"Found OAuth token in header {header_name} (length: {len(token)})"
+                )
+                return token
+
+    # Method 2: OAuth2 proxy cookies (standard oauth2-proxy cookie names)
+    oauth_cookies_to_check = [
+        "oauth_access_token",
+        "oauth_id_token",
+        "oauth_token",
+        "_oauth2_proxy",  # Default oauth2-proxy session cookie
+        "CANChat",  # Your configured cookie name
+    ]
+
+    for cookie_name in oauth_cookies_to_check:
+        token = request.cookies.get(cookie_name, "")
+        if token and token != "user_token_placeholder":
+            logging.info(
+                f"Found OAuth token in cookie {cookie_name} (length: {len(token)})"
+            )
+
+            # If it's the oauth2-proxy session cookie, try to extract the access token
+            if cookie_name in ["_oauth2_proxy", "CANChat"]:
+                try:
+                    # OAuth2 proxy session cookies are often base64 encoded JSON
+                    # Try to decode and extract access token
+                    decoded_data = base64.b64decode(token + "==").decode("utf-8")
+                    session_data = json.loads(decoded_data)
+                    if "access_token" in session_data:
+                        access_token = session_data["access_token"]
+                        logging.info(
+                            f"Extracted access token from session cookie {cookie_name}"
+                        )
+                        return access_token
+                except (ValueError, json.JSONDecodeError, UnicodeDecodeError) as e:
+                    logging.debug(f"Could not decode session cookie {cookie_name}: {e}")
+                    # Fall back to using the cookie value as-is
+                    pass
+
+            return token
+
+    # Method 3: Try to use FastAPI HTTPBearer token
+    if auth_token and auth_token.credentials:
+        token = auth_token.credentials
+        if token and token != "user_token_placeholder":
+            logging.info(f"Found OAuth token via HTTPBearer (length: {len(token)})")
+            return token
+
+    # Method 4: Check for Microsoft Graph specific headers/cookies
+    ms_graph_headers = [
+        "X-MS-Token-AAD-Access-Token",
+        "X-MS-Token-AAD-Id-Token",
+        "X-Forwarded-AAD-Access-Token",
+    ]
+
+    for header_name in ms_graph_headers:
+        token = request.headers.get(header_name, "")
+        if token and token != "user_token_placeholder":
+            logging.info(f"Found Microsoft Graph token in header {header_name}")
+            return token
 
     # No OAuth tokens found
+    if is_localhost:
+        logging.info(
+            "No OAuth tokens found in localhost - will use application-only authentication"
+        )
+        return None
     else:
-        if is_localhost:
-            logging.info(
-                "No OAuth tokens found in localhost - will use application-only authentication"
-            )
+        logging.warning("No OAuth tokens found in k8s environment")
+        logging.warning("Available headers: " + ", ".join(request.headers.keys()))
+        logging.warning("Available cookies: " + ", ".join(request.cookies.keys()))
+        logging.warning(
+            "This may indicate OAuth2 proxy is not configured to forward tokens"
+        )
+        return None
+
+
+async def get_microsoft_graph_token_for_user(request: Request) -> Optional[str]:
+    """
+    Obtain a Microsoft Graph access token for the current user.
+    This uses the application's credentials to get an on-behalf-of token.
+    """
+    import os
+    import aiohttp
+    import logging
+
+    try:
+        # Get user email from OAuth2 proxy headers
+        user_email = request.headers.get("X-Forwarded-Email") or request.headers.get(
+            "X-Forwarded-User"
+        )
+        if not user_email:
+            logging.error("No user email found in OAuth2 proxy headers")
             return None
-        else:
-            logging.warning(
-                "No OAuth tokens found in production environment - OAuth2 proxy may not be configured"
-            )
-            # Still return None but with warning - let SharePoint client handle the error
+
+        # Get SharePoint app credentials
+        client_id = os.getenv("MPO_SHP_ID_APP")
+        client_secret = os.getenv("MPO_SHP_ID_APP_SECRET")
+        tenant_id = os.getenv("MPO_SHP_TENANT_ID")
+
+        if not all([client_id, client_secret, tenant_id]):
+            logging.error("Missing SharePoint app credentials for token exchange")
             return None
+
+        # Use client credentials flow to get an app-only token, then use it for user delegation
+        token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+
+        # First, try to get a token using the application's identity
+        async with aiohttp.ClientSession() as session:
+            # Method 1: Try to use any existing user token for on-behalf-of flow
+            existing_token = await extract_any_available_token(request)
+            if existing_token:
+                logging.info("Attempting on-behalf-of flow with existing token")
+
+                data = {
+                    "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "assertion": existing_token,
+                    "scope": "https://graph.microsoft.com/Sites.Read.All https://graph.microsoft.com/Files.Read.All",
+                    "requested_token_use": "on_behalf_of",
+                }
+
+                async with session.post(token_url, data=data) as response:
+                    if response.status == 200:
+                        token_data = await response.json()
+                        access_token = token_data.get("access_token")
+                        if access_token:
+                            logging.info(
+                                "Successfully obtained on-behalf-of token for SharePoint"
+                            )
+                            return access_token
+                    else:
+                        error_text = await response.text()
+                        logging.warning(
+                            f"On-behalf-of flow failed: {response.status} - {error_text}"
+                        )
+
+            # Method 2: Fallback to application-only token (current working method)
+            logging.info("Falling back to application-only token for SharePoint access")
+
+            data = {
+                "grant_type": "client_credentials",
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "scope": "https://graph.microsoft.com/.default",
+            }
+
+            async with session.post(token_url, data=data) as response:
+                if response.status == 200:
+                    token_data = await response.json()
+                    access_token = token_data.get("access_token")
+                    if access_token:
+                        logging.info(
+                            "Successfully obtained application-only token for SharePoint"
+                        )
+                        return access_token
+                else:
+                    error_text = await response.text()
+                    logging.error(
+                        f"Failed to obtain application token: {response.status} - {error_text}"
+                    )
+
+    except Exception as e:
+        logging.error(f"Error obtaining Microsoft Graph token: {e}")
+
+    return None
+
+
+async def extract_any_available_token(request: Request) -> Optional[str]:
+    """
+    Extract any available token that might be suitable for on-behalf-of flow.
+    This includes ID tokens which can sometimes be used for OBO.
+    """
+    # Check for ID token in headers (OAuth2 proxy might provide this)
+    id_token_headers = [
+        "X-Forwarded-Id-Token",
+        "X-Auth-Request-Id-Token",
+        "X-Oauth-Id-Token",
+    ]
+
+    for header_name in id_token_headers:
+        token = request.headers.get(header_name, "")
+        if token and len(token) > 50:  # Basic validation
+            logging.info(f"Found potential ID token in header {header_name}")
+            return token
+
+    # Check cookies for any JWT-like tokens
+    for cookie_name, cookie_value in request.cookies.items():
+        if len(cookie_value) > 100 and "." in cookie_value:  # JWT-like structure
+            # Skip obvious session cookies
+            if cookie_name.lower() in ["session", "sessionid", "csrftoken"]:
+                continue
+            logging.info(f"Found potential JWT token in cookie {cookie_name}")
+            return cookie_value
+
+    return None
 
 
 try:
@@ -313,8 +514,12 @@ async def run_crew_query(
         )
 
     try:
-        # Extract user token for SharePoint OBO flow (environment-aware)
-        user_jwt_token = extract_user_token(request_data, auth_token)
+        # Try to get a proper Microsoft Graph token for SharePoint OBO flow
+        user_jwt_token = await get_microsoft_graph_token_for_user(request_data)
+
+        # Fallback to extracting any available token from OAuth2 proxy
+        if not user_jwt_token:
+            user_jwt_token = extract_user_token(request_data, auth_token)
 
         log.info(f"Running CrewAI query for user {user.id}: {request.query}")
         log.info(f"Selected tools: {request.selected_tools}")
@@ -324,8 +529,11 @@ async def run_crew_query(
         # This works in both local (gracefully degraded) and K8s (full OAuth) environments
         if user_jwt_token and user_jwt_token != "user_token_placeholder":
             crew_mcp_manager.set_user_token(user_jwt_token)
+            log.info("Successfully set user token for SharePoint OBO flow")
         else:
-            log.info("No OAuth token available - using application-only authentication")
+            log.warning(
+                "No OAuth token available - falling back to application-only authentication"
+            )
 
         # Get available tools first
         tools = crew_mcp_manager.get_available_tools()
@@ -407,7 +615,10 @@ async def run_crew_query(
 
 @router.post("/multi")
 async def run_multi_server_crew_query(
-    request: CrewMCPQuery, user=Depends(get_verified_user)
+    request_data: Request,
+    request: CrewMCPQuery,
+    user=Depends(get_verified_user),
+    auth_token: Optional[HTTPAuthorizationCredentials] = Depends(bearer_security),
 ) -> CrewMCPResponse:
     """Run a CrewAI query using ALL available MCP servers and tools simultaneously"""
     if not crew_mcp_manager:
@@ -419,9 +630,26 @@ async def run_multi_server_crew_query(
         )
 
     try:
+        # Try to get a proper Microsoft Graph token for SharePoint OBO flow
+        user_jwt_token = await get_microsoft_graph_token_for_user(request_data)
+
+        # Fallback to extracting any available token from OAuth2 proxy
+        if not user_jwt_token:
+            user_jwt_token = extract_user_token(request_data, auth_token)
+
         log.info(
             f"Running CrewAI multi-server query for user {user.id}: {request.query}"
         )
+        log.info(f"User token available for OBO flow: {bool(user_jwt_token)}")
+
+        # Set user token in CrewAI manager for SharePoint OBO authentication
+        if user_jwt_token and user_jwt_token != "user_token_placeholder":
+            crew_mcp_manager.set_user_token(user_jwt_token)
+            log.info("Successfully set user token for SharePoint OBO flow")
+        else:
+            log.warning(
+                "No OAuth token available - falling back to application-only authentication"
+            )
 
         # Get available tools first
         tools = crew_mcp_manager.get_available_tools()
