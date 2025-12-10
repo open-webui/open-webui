@@ -16,6 +16,7 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
+	export let knowledge = null;
 	export let selectedFileId = null;
 	export let files = [];
 
@@ -79,19 +80,21 @@
 				</div>
 			</button>
 
-			<div class="flex items-center">
-				<Tooltip content={$i18n.t('Delete')}>
-					<button
-						class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-						type="button"
-						on:click={() => {
-							onDelete(file?.id ?? file?.tempId);
-						}}
-					>
-						<XMark />
-					</button>
-				</Tooltip>
-			</div>
+			{#if knowledge?.write_access}
+				<div class="flex items-center">
+					<Tooltip content={$i18n.t('Delete')}>
+						<button
+							class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+							type="button"
+							on:click={() => {
+								onDelete(file?.id ?? file?.tempId);
+							}}
+						>
+							<XMark />
+						</button>
+					</Tooltip>
+				</div>
+			{/if}
 		</div>
 	{/each}
 </div>

@@ -196,76 +196,80 @@
 			<!-- The Aleph dreams itself into being, and the void learns its own name -->
 			<div class=" my-2 px-3 grid grid-cols-1 lg:grid-cols-2 gap-2">
 				{#each filteredItems as item}
-					<Tooltip content={item?.description ?? item.name}>
-						<button
-							class=" flex space-x-4 cursor-pointer text-left w-full px-3 py-2.5 dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl"
-							on:click={() => {
-								if (item?.meta?.document) {
-									toast.error(
-										$i18n.t(
-											'Only collections can be edited, create a new knowledge base to edit/add documents.'
-										)
-									);
-								} else {
-									goto(`/workspace/knowledge/${item.id}`);
-								}
-							}}
-						>
-							<div class=" w-full">
-								<div class=" self-center flex-1">
-									<div class="flex items-center justify-between -my-1">
-										<div class=" flex gap-2 items-center">
-											<div>
-												{#if item?.meta?.document}
-													<Badge type="muted" content={$i18n.t('Document')} />
-												{:else}
-													<Badge type="success" content={$i18n.t('Collection')} />
-												{/if}
-											</div>
+					<button
+						class=" flex space-x-4 cursor-pointer text-left w-full px-3 py-2.5 dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl"
+						on:click={() => {
+							if (item?.meta?.document) {
+								toast.error(
+									$i18n.t(
+										'Only collections can be edited, create a new knowledge base to edit/add documents.'
+									)
+								);
+							} else {
+								goto(`/workspace/knowledge/${item.id}`);
+							}
+						}}
+					>
+						<div class=" w-full">
+							<div class=" self-center flex-1">
+								<div class="flex items-center justify-between -my-1">
+									<div class=" flex gap-2 items-center justify-between w-full">
+										<div>
+											<Badge type="success" content={$i18n.t('Collection')} />
+										</div>
 
+										{#if !item?.write_access}
+											<div>
+												<Badge type="muted" content={$i18n.t('Read Only')} />
+											</div>
+										{/if}
+									</div>
+
+									<div class="flex items-center gap-2">
+										<div class=" flex self-center">
+											<ItemMenu
+												on:delete={() => {
+													selectedItem = item;
+													showDeleteConfirm = true;
+												}}
+											/>
+										</div>
+									</div>
+								</div>
+
+								<div class=" flex items-center gap-1 justify-between px-1.5">
+									<Tooltip content={item?.description ?? item.name}>
+										<div class=" flex items-center gap-2">
+											<div class=" text-sm font-medium line-clamp-1 capitalize">{item.name}</div>
+										</div>
+									</Tooltip>
+
+									<div class="flex items-center gap-2">
+										<Tooltip content={dayjs(item.updated_at * 1000).format('LLLL')}>
 											<div class=" text-xs text-gray-500 line-clamp-1">
 												{$i18n.t('Updated')}
 												{dayjs(item.updated_at * 1000).fromNow()}
 											</div>
-										</div>
+										</Tooltip>
 
-										<div class="flex items-center gap-2">
-											<div class=" flex self-center">
-												<ItemMenu
-													on:delete={() => {
-														selectedItem = item;
-														showDeleteConfirm = true;
-													}}
-												/>
-											</div>
-										</div>
-									</div>
-
-									<div class=" flex items-center gap-1 justify-between px-1.5">
-										<div class=" flex items-center gap-2">
-											<div class=" text-sm font-medium line-clamp-1 capitalize">{item.name}</div>
-										</div>
-
-										<div>
-											<div class="text-xs text-gray-500">
-												<Tooltip
-													content={item?.user?.email ?? $i18n.t('Deleted User')}
-													className="flex shrink-0"
-													placement="top-start"
-												>
-													{$i18n.t('By {{name}}', {
-														name: capitalizeFirstLetter(
-															item?.user?.name ?? item?.user?.email ?? $i18n.t('Deleted User')
-														)
-													})}
-												</Tooltip>
-											</div>
+										<div class="text-xs text-gray-500">
+											<Tooltip
+												content={item?.user?.email ?? $i18n.t('Deleted User')}
+												className="flex shrink-0"
+												placement="top-start"
+											>
+												{$i18n.t('By {{name}}', {
+													name: capitalizeFirstLetter(
+														item?.user?.name ?? item?.user?.email ?? $i18n.t('Deleted User')
+													)
+												})}
+											</Tooltip>
 										</div>
 									</div>
 								</div>
 							</div>
-						</button>
-					</Tooltip>
+						</div>
+					</button>
 				{/each}
 			</div>
 		{:else}

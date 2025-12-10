@@ -41,7 +41,11 @@ router = APIRouter()
 ############################
 
 
-@router.get("/", response_model=list[KnowledgeUserResponse])
+class KnowledgeAccessResponse(KnowledgeUserResponse):
+    write_access: Optional[bool] = False
+
+
+@router.get("/", response_model=list[KnowledgeAccessResponse])
 async def get_knowledge(user=Depends(get_verified_user)):
     # Return knowledge bases with read access
     knowledge_bases = []
@@ -51,27 +55,29 @@ async def get_knowledge(user=Depends(get_verified_user)):
         knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "read")
 
     return [
-        KnowledgeUserResponse(
+        KnowledgeAccessResponse(
             **knowledge_base.model_dump(),
             files=Knowledges.get_file_metadatas_by_id(knowledge_base.id),
+            write_access=has_access(user.id, "write", knowledge_base.access_control),
         )
         for knowledge_base in knowledge_bases
     ]
 
 
-@router.get("/list", response_model=list[KnowledgeUserResponse])
+@router.get("/list", response_model=list[KnowledgeAccessResponse])
 async def get_knowledge_list(user=Depends(get_verified_user)):
     # Return knowledge bases with write access
     knowledge_bases = []
     if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
         knowledge_bases = Knowledges.get_knowledge_bases()
     else:
-        knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "write")
+        knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "read")
 
     return [
-        KnowledgeUserResponse(
+        KnowledgeAccessResponse(
             **knowledge_base.model_dump(),
             files=Knowledges.get_file_metadatas_by_id(knowledge_base.id),
+            write_access=has_access(user.id, "write", knowledge_base.access_control),
         )
         for knowledge_base in knowledge_bases
     ]
@@ -187,6 +193,7 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
 
 class KnowledgeFilesResponse(KnowledgeResponse):
     files: list[FileMetadataResponse]
+    write_access: Optional[bool] = False
 
 
 @router.get("/{id}", response_model=Optional[KnowledgeFilesResponse])
@@ -203,6 +210,7 @@ async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
             return KnowledgeFilesResponse(
                 **knowledge.model_dump(),
                 files=Knowledges.get_file_metadatas_by_id(knowledge.id),
+                write_access=has_access(user.id, "write", knowledge.access_control),
             )
     else:
         raise HTTPException(
