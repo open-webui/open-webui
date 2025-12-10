@@ -6,6 +6,8 @@ import uuid
 import threading
 import logging
 
+from open_webui.env import REDIS_MAX_CONNECTIONS
+
 log = logging.getLogger(__name__)
 
 # Shared connection pool for all Redis operations (one per pod)
@@ -250,11 +252,12 @@ class RedisDict:
     
     def atomic_update_dict(self, key, update_func, default_value=None):
         """
-        Atomically update a dictionary value in Redis.
-        Uses optimized 2-step approach: fast Lua read + fast Python update + fast write.
-        This is faster than full Lua script for complex updates (avoids JSON encoding in Lua).
+        Atomically update a dictionary value in Redis using optimistic locking.
+        Uses WATCH/MULTI/EXEC for true atomicity with retry on conflict.
         
-        For simple updates, consider using atomic_update_dict_inline() for true single round trip.
+        NOTE: For high-concurrency scenarios, prefer specialized methods like
+        atomic_set_dict_field() or atomic_remove_dict_field() which use Lua
+        scripts and are faster.
         
         Args:
             key: The hash key to update
@@ -270,41 +273,235 @@ class RedisDict:
         if default_value is None:
             default_value = {}
         
-        # Register script if not cached (cached for performance)
-        if self._atomic_update_script is None:
-            self._atomic_update_script = self.redis.register_script("""
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # Use pipeline with WATCH for optimistic locking
+                pipe = self.redis.pipeline(True)  # True = transaction mode
+                
+                # Watch the hash for changes
+                pipe.watch(self.name)
+                
+                # Get current value
+                current_json = self.redis.hget(self.name, key)
+                if current_json:
+                    current = json.loads(current_json)
+                else:
+                    current = default_value.copy() if isinstance(default_value, dict) else default_value
+                
+                # Apply update function
+                updated = update_func(current)
+                
+                # Start transaction
+                pipe.multi()
+                
+                # Write updated value
+                serialized = json.dumps(updated)
+                pipe.hset(self.name, key, serialized)
+                
+                # Execute - will raise WatchError if key was modified
+                pipe.execute()
+                
+                return updated
+            except redis.WatchError:
+                # Another client modified the key - retry
+                if attempt < max_retries - 1:
+                    continue
+                log.warning(f"atomic_update_dict failed after {max_retries} retries for {self.name}[{key}]")
+                raise
+            except Exception as e:
+                log.error(f"Error in atomic_update_dict for {self.name}[{key}]: {e}", exc_info=True)
+                raise
+            finally:
+                pipe.reset()
+    
+    def atomic_set_dict_field(self, key, field, value):
+        """
+        Atomically set a field in a dictionary stored in Redis hash.
+        Single Lua script = single round trip, truly atomic.
+        
+        Use this for operations like: USAGE_POOL[model_id][sid] = {"updated_at": time}
+        
+        Args:
+            key: The hash key (e.g., model_id)
+            field: The field within the dict (e.g., sid)
+            value: The value to set (will be JSON serialized)
+        
+        Returns:
+            The updated dictionary
+        """
+        if self.redis is None:
+            raise ConnectionError(f"Redis connection not available for {self.name}")
+        
+        # Register script if not cached
+        if not hasattr(self, '_atomic_set_field_script') or self._atomic_set_field_script is None:
+            self._atomic_set_field_script = self.redis.register_script("""
                 local hash_name = KEYS[1]
                 local key = ARGV[1]
-                local default_json = ARGV[2]
+                local field = ARGV[2]
+                local value_json = ARGV[3]
                 
                 local current_json = redis.call('HGET', hash_name, key)
+                local current = {}
                 if current_json then
-                    return current_json
-                elseif default_json and default_json ~= '' then
-                    return default_json
+                    local success, decoded = pcall(cjson.decode, current_json)
+                    if success and type(decoded) == 'table' then
+                        current = decoded
+                    end
+                end
+                
+                -- Decode value and set field
+                local value = cjson.decode(value_json)
+                current[field] = value
+                
+                -- Write back
+                redis.call('HSET', hash_name, key, cjson.encode(current))
+                return cjson.encode(current)
+            """)
+        
+        try:
+            result_json = self._atomic_set_field_script(
+                keys=[self.name],
+                args=[key, field, json.dumps(value)]
+            )
+            return json.loads(result_json)
+        except Exception as e:
+            log.error(f"Error in atomic_set_dict_field for {self.name}[{key}][{field}]: {e}", exc_info=True)
+            raise
+    
+    def atomic_remove_dict_fields(self, key, fields_to_remove):
+        """
+        Atomically remove multiple fields from a dictionary stored in Redis hash.
+        Single Lua script = single round trip, truly atomic.
+        
+        Use this for operations like: removing expired sids from USAGE_POOL[model_id]
+        
+        Args:
+            key: The hash key (e.g., model_id)
+            fields_to_remove: List of fields to remove (e.g., [sid1, sid2])
+        
+        Returns:
+            The updated dictionary, or None if dictionary became empty
+        """
+        if self.redis is None:
+            raise ConnectionError(f"Redis connection not available for {self.name}")
+        
+        if not fields_to_remove:
+            return self.get(key, {})
+        
+        # Register script if not cached
+        if not hasattr(self, '_atomic_remove_fields_script') or self._atomic_remove_fields_script is None:
+            self._atomic_remove_fields_script = self.redis.register_script("""
+                local hash_name = KEYS[1]
+                local key = ARGV[1]
+                local fields_json = ARGV[2]
+                
+                local current_json = redis.call('HGET', hash_name, key)
+                if not current_json then
+                    return nil
+                end
+                
+                local success, current = pcall(cjson.decode, current_json)
+                if not success or type(current) ~= 'table' then
+                    return nil
+                end
+                
+                -- Decode fields to remove
+                local fields = cjson.decode(fields_json)
+                for _, field in ipairs(fields) do
+                    current[field] = nil
+                end
+                
+                -- Check if empty
+                local is_empty = true
+                for _ in pairs(current) do
+                    is_empty = false
+                    break
+                end
+                
+                if is_empty then
+                    redis.call('HDEL', hash_name, key)
+                    return nil
                 else
-                    return '{}'
+                    redis.call('HSET', hash_name, key, cjson.encode(current))
+                    return cjson.encode(current)
                 end
             """)
         
         try:
-            # Fast atomic read (single round trip, cached script)
-            current_json = self._atomic_update_script(
+            result_json = self._atomic_remove_fields_script(
                 keys=[self.name],
-                args=[key, json.dumps(default_value)]
+                args=[key, json.dumps(fields_to_remove)]
             )
-            current = json.loads(current_json)
-            
-            # Apply update function (fast Python operation)
-            updated = update_func(current)
-            
-            # Fast atomic write (single round trip, no TTL check for speed)
-            serialized = json.dumps(updated)
-            self.redis.hset(self.name, key, serialized)
-            
-            return updated
+            if result_json is None:
+                return None
+            return json.loads(result_json)
         except Exception as e:
-            log.error(f"Error in atomic_update_dict for {self.name}[{key}]: {e}", exc_info=True)
+            log.error(f"Error in atomic_remove_dict_fields for {self.name}[{key}]: {e}", exc_info=True)
+            raise
+    
+    def atomic_remove_from_list(self, key, item_to_remove):
+        """
+        Atomically remove an item from a list stored in Redis hash.
+        Single Lua script = single round trip, truly atomic.
+        
+        Use this for operations like: removing a sid from USER_POOL[user_id]
+        
+        Args:
+            key: The hash key (e.g., user_id)
+            item_to_remove: Item to remove from the list
+        
+        Returns:
+            The updated list, or None if list became empty (key will be deleted)
+        """
+        if self.redis is None:
+            raise ConnectionError(f"Redis connection not available for {self.name}")
+        
+        # Register script if not cached
+        if not hasattr(self, '_atomic_remove_item_script') or self._atomic_remove_item_script is None:
+            self._atomic_remove_item_script = self.redis.register_script("""
+                local hash_name = KEYS[1]
+                local key = ARGV[1]
+                local item_to_remove = ARGV[2]
+                
+                local current_json = redis.call('HGET', hash_name, key)
+                if not current_json then
+                    return nil
+                end
+                
+                local success, current = pcall(cjson.decode, current_json)
+                if not success or type(current) ~= 'table' then
+                    return nil
+                end
+                
+                -- Remove item from list
+                local new_list = {}
+                for _, item in ipairs(current) do
+                    if item ~= item_to_remove then
+                        table.insert(new_list, item)
+                    end
+                end
+                
+                -- Check if empty
+                if #new_list == 0 then
+                    redis.call('HDEL', hash_name, key)
+                    return nil
+                else
+                    redis.call('HSET', hash_name, key, cjson.encode(new_list))
+                    return cjson.encode(new_list)
+                end
+            """)
+        
+        try:
+            result_json = self._atomic_remove_item_script(
+                keys=[self.name],
+                args=[key, item_to_remove]
+            )
+            if result_json is None:
+                return None
+            return json.loads(result_json)
+        except Exception as e:
+            log.error(f"Error in atomic_remove_from_list for {self.name}[{key}]: {e}", exc_info=True)
             raise
     
     def atomic_append_to_list(self, key, item, max_length=None):

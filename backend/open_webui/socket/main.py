@@ -115,7 +115,10 @@ async def periodic_usage_pool_cleanup():
                     # Ensure connections is a dict
                     if not isinstance(connections, dict):
                         log.warning(f"USAGE_POOL[{model_id}] is not a dict, resetting. Value: {connections}")
-                        del USAGE_POOL[model_id]
+                        try:
+                            del USAGE_POOL[model_id]
+                        except KeyError:
+                            pass  # Already deleted by another replica
                         continue
                     
                     # Creating a list of sids to remove if they have timed out
@@ -126,21 +129,11 @@ async def periodic_usage_pool_cleanup():
                     ]
 
                     if expired_sids:
-                        # Atomic update to remove expired sids (fast single round trip, prevents race conditions)
-                        # Fallback to regular dict operations if RedisDict not available
+                        # Use truly atomic Lua script for batch field removal (single round trip)
                         if isinstance(USAGE_POOL, RedisDict):
-                            def remove_expired(current_connections):
-                                if not isinstance(current_connections, dict):
-                                    return {}
-                                for expired_sid in expired_sids:
-                                    current_connections.pop(expired_sid, None)
-                                return current_connections if current_connections else None
-                            
-                            updated = USAGE_POOL.atomic_update_dict(model_id, remove_expired, default_value={})
-                            if updated is None:
-                                # Empty dict - delete the key
-                                log.debug(f"Cleaning up model {model_id} from usage pool")
-                                del USAGE_POOL[model_id]
+                            result = USAGE_POOL.atomic_remove_dict_fields(model_id, expired_sids)
+                            if result is None:
+                                log.debug(f"Cleaning up model {model_id} from usage pool (now empty)")
                         else:
                             # Fallback for regular dict (single-pod mode, no Redis)
                             for expired_sid in expired_sids:
@@ -186,16 +179,9 @@ async def usage(sid, data):
         # Record the timestamp for the last update
         current_time = int(time.time())
 
-        # Atomic update to prevent race conditions (fast single round trip)
-        # Fallback to regular dict operations if RedisDict not available
+        # Use truly atomic Lua script for single-round-trip update (prevents race conditions)
         if isinstance(USAGE_POOL, RedisDict):
-            def update_usage(existing_usage):
-                if not isinstance(existing_usage, dict):
-                    existing_usage = {}
-                existing_usage[sid] = {"updated_at": current_time}
-                return existing_usage
-            
-            USAGE_POOL.atomic_update_dict(model_id, update_usage, default_value={})
+            USAGE_POOL.atomic_set_dict_field(model_id, sid, {"updated_at": current_time})
         else:
             # Fallback for regular dict (single-pod mode, no Redis)
             existing_usage = USAGE_POOL.get(model_id, {})
@@ -351,20 +337,10 @@ async def disconnect(sid):
             del SESSION_POOL[sid]
 
             user_id = user["id"]
-            # Atomic update to remove sid from list (fast single round trip)
-            # Fallback to regular dict operations if RedisDict not available
+            # Use truly atomic Lua script for list item removal (single round trip)
             if isinstance(USER_POOL, RedisDict):
-                def remove_session(existing_sessions):
-                    if not isinstance(existing_sessions, list):
-                        return []
-                    filtered = [_sid for _sid in existing_sessions if _sid != sid]
-                    return filtered if filtered else None  # None means delete the key
-                
-                result = USER_POOL.atomic_update_dict(user_id, remove_session, default_value=[])
-                if result is None:
-                    # Empty list - delete the key
-                    if user_id in USER_POOL:
-                        del USER_POOL[user_id]
+                USER_POOL.atomic_remove_from_list(user_id, sid)
+                # Note: atomic_remove_from_list handles key deletion if list becomes empty
             else:
                 # Fallback for regular dict (single-pod mode, no Redis)
                 existing_sessions = USER_POOL.get(user_id, [])

@@ -148,7 +148,12 @@ class CacheManager:
             return False
     
     def _delete_pattern(self, pattern: str) -> int:
-        """Delete all keys matching pattern. Returns count of deleted keys."""
+        """Delete all keys matching pattern. Returns count of deleted keys.
+        
+        DEPRECATED: This method uses SCAN which is slow in high-traffic environments.
+        For bulk invalidation, use Set-based tracking methods like invalidate_user_settings()
+        or invalidate_group_admin_config() which are O(N) on the user's keys, not all Redis keys.
+        """
         # Quick check if Redis is available
         if not self._check_redis_available():
             return 0
