@@ -24,6 +24,29 @@ sys.path.append(str(backend_dir))
 # Initialize HTTPBearer for token extraction
 bearer_security = HTTPBearer(auto_error=False)
 
+# OAuth token extraction configuration
+OAUTH_HEADERS_TO_CHECK = [
+    "X-Forwarded-Access-Token",
+    "X-Auth-Request-Access-Token",
+    "X-Oauth-Token",
+    "X-Access-Token",
+    "Authorization",
+]
+
+OAUTH_COOKIES_TO_CHECK = [
+    "oauth_access_token",
+    "oauth_id_token",
+    "oauth_token",
+    "_oauth2_proxy",  # Default oauth2-proxy session cookie
+    "CANChat",  # Our configured cookie name
+]
+
+MS_GRAPH_HEADERS = [
+    "X-MS-Token-AAD-Access-Token",
+    "X-MS-Token-AAD-Id-Token",
+    "X-Forwarded-AAD-Access-Token",
+]
+
 
 def extract_user_token(
     request: Request,
@@ -43,21 +66,17 @@ def extract_user_token(
         or os.getenv("WEBUI_BASE_URL", "").startswith("http://localhost")
     )
 
+    # Cache debug info to avoid repeated computation
+    available_headers = list(request.headers.keys())
+    available_cookies = list(request.cookies.keys())
+
     logging.info("=== OAuth Token Extraction Debug ===")
-    logging.info(f"Available headers: {list(request.headers.keys())}")
-    logging.info(f"Available cookies: {list(request.cookies.keys())}")
+    logging.info(f"Available headers: {available_headers}")
+    logging.info(f"Available cookies: {available_cookies}")
 
     # Method 1: OAuth2 proxy forwarded headers
     # Check common OAuth2 proxy header patterns
-    oauth_headers_to_check = [
-        "X-Forwarded-Access-Token",
-        "X-Auth-Request-Access-Token",
-        "X-Oauth-Token",
-        "X-Access-Token",
-        "Authorization",
-    ]
-
-    for header_name in oauth_headers_to_check:
+    for header_name in OAUTH_HEADERS_TO_CHECK:
         token = request.headers.get(header_name, "")
         if token:
             # Handle Authorization header specifically
@@ -71,15 +90,7 @@ def extract_user_token(
                 return token
 
     # Method 2: OAuth2 proxy cookies (standard oauth2-proxy cookie names)
-    oauth_cookies_to_check = [
-        "oauth_access_token",
-        "oauth_id_token",
-        "oauth_token",
-        "_oauth2_proxy",  # Default oauth2-proxy session cookie
-        "CANChat",  # Your configured cookie name
-    ]
-
-    for cookie_name in oauth_cookies_to_check:
+    for cookie_name in OAUTH_COOKIES_TO_CHECK:
         token = request.cookies.get(cookie_name, "")
         if token and token != "user_token_placeholder":
             logging.info(
@@ -104,13 +115,7 @@ def extract_user_token(
             return token
 
     # Method 4: Check for Microsoft Graph specific headers/cookies
-    ms_graph_headers = [
-        "X-MS-Token-AAD-Access-Token",
-        "X-MS-Token-AAD-Id-Token",
-        "X-Forwarded-AAD-Access-Token",
-    ]
-
-    for header_name in ms_graph_headers:
+    for header_name in MS_GRAPH_HEADERS:
         token = request.headers.get(header_name, "")
         if token and token != "user_token_placeholder":
             logging.info(f"Found Microsoft Graph token in header {header_name}")
@@ -124,8 +129,8 @@ def extract_user_token(
         return None
     else:
         logging.warning("No OAuth tokens found in k8s environment")
-        logging.warning("Available headers: " + ", ".join(request.headers.keys()))
-        logging.warning("Available cookies: " + ", ".join(request.cookies.keys()))
+        logging.warning("Available headers: " + ", ".join(available_headers))
+        logging.warning("Available cookies: " + ", ".join(available_cookies))
         logging.warning(
             "This may indicate OAuth2 proxy is not configured to forward tokens"
         )
