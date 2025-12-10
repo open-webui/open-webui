@@ -286,7 +286,9 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     Returns:
         dict: A modified payload compatible with the Ollama API.
     """
-    ollama_payload = {}
+    # Start by copying all fields from the original payload to preserve unknown/Ollama-specific fields
+    # This is important for preserving parameters across tool calling loops
+    ollama_payload = {**openai_payload}
 
     # Mapping basic model and message details
     ollama_payload["model"] = openai_payload.get("model")
@@ -299,12 +301,13 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
 
     if "max_tokens" in openai_payload:
         ollama_payload["num_predict"] = openai_payload["max_tokens"]
-        del openai_payload["max_tokens"]
+        del ollama_payload["max_tokens"]
 
     # If there are advanced parameters in the payload, format them in Ollama's options field
     if openai_payload.get("options"):
-        ollama_payload["options"] = openai_payload["options"]
-        ollama_options = openai_payload["options"]
+        # Create a copy of options to avoid mutating the original
+        ollama_options = dict(openai_payload["options"])
+        ollama_payload["options"] = ollama_options
 
         def parse_json(value: str) -> dict:
             """
