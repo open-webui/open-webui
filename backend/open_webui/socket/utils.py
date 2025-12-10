@@ -9,13 +9,14 @@ import logging
 # Default Redis max connections (used if env import fails or not set)
 DEFAULT_REDIS_MAX_CONNECTIONS = 100
 
+# Import with robust fallback - catches ImportError, circular imports, and missing attribute
 try:
     from open_webui.env import REDIS_MAX_CONNECTIONS
-except ImportError:
-    REDIS_MAX_CONNECTIONS = DEFAULT_REDIS_MAX_CONNECTIONS
-
-# Ensure we have a valid value
-if REDIS_MAX_CONNECTIONS is None or not isinstance(REDIS_MAX_CONNECTIONS, int):
+    # Validate the imported value
+    if REDIS_MAX_CONNECTIONS is None or not isinstance(REDIS_MAX_CONNECTIONS, int):
+        REDIS_MAX_CONNECTIONS = DEFAULT_REDIS_MAX_CONNECTIONS
+except Exception:
+    # Any import error - use default
     REDIS_MAX_CONNECTIONS = DEFAULT_REDIS_MAX_CONNECTIONS
 
 log = logging.getLogger(__name__)
