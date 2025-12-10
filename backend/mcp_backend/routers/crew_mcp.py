@@ -137,10 +137,43 @@ def extract_user_token(
         return None
 
 
-async def get_microsoft_graph_token_for_user(request: Request) -> Optional[str]:
+def determine_department_from_tools(selected_tools: Optional[list] = None) -> str:
+    """
+    Determine department prefix from selected tools.
+
+    Args:
+        selected_tools: List of selected tool IDs from the frontend
+
+    Returns:
+        Department prefix (defaults to "MPO" if unable to determine)
+    """
+    if not selected_tools:
+        return "MPO"  # Default to MPO for backwards compatibility
+
+    # Look for department-specific tool patterns
+    for tool in selected_tools:
+        if isinstance(tool, str):
+            tool_str = tool.lower()
+            if "mpo" in tool_str or "major_projects" in tool_str:
+                return "MPO"
+            elif "fin" in tool_str or "finance" in tool_str:
+                return "FIN"
+            # Add more department mappings as needed
+
+    # Default to MPO if no specific department detected
+    return "MPO"
+
+
+async def get_microsoft_graph_token_for_user(
+    request: Request, department: str = "MPO"
+) -> Optional[str]:
     """
     Obtain a Microsoft Graph access token for the current user.
     This uses the application's credentials to get an on-behalf-of token.
+
+    Args:
+        request: The HTTP request object
+        department: Department prefix for environment variables (e.g., "MPO", "FIN")
     """
     import os
     import aiohttp
@@ -155,13 +188,16 @@ async def get_microsoft_graph_token_for_user(request: Request) -> Optional[str]:
             logging.error("No user email found in OAuth2 proxy headers")
             return None
 
-        # Get SharePoint app credentials
-        client_id = os.getenv("MPO_SHP_ID_APP")
-        client_secret = os.getenv("MPO_SHP_ID_APP_SECRET")
-        tenant_id = os.getenv("MPO_SHP_TENANT_ID")
+        # Get SharePoint app credentials using department prefix
+        client_id = os.getenv(f"{department}_SHP_ID_APP")
+        client_secret = os.getenv(f"{department}_SHP_ID_APP_SECRET")
+        tenant_id = os.getenv(f"{department}_SHP_TENANT_ID")
 
         if not all([client_id, client_secret, tenant_id]):
-            logging.error("Missing SharePoint app credentials for token exchange")
+            logging.error(
+                f"Missing SharePoint app credentials for {department} department. "
+                f"Required: {department}_SHP_ID_APP, {department}_SHP_ID_APP_SECRET, {department}_SHP_TENANT_ID"
+            )
             return None
 
         # Use client credentials flow to get an app-only token, then use it for user delegation
@@ -505,8 +541,13 @@ async def run_crew_query(
         )
 
     try:
+        # Determine department from selected tools
+        department = determine_department_from_tools(request.selected_tools)
+
         # Try to get a proper Microsoft Graph token for SharePoint OBO flow
-        user_jwt_token = await get_microsoft_graph_token_for_user(request_data)
+        user_jwt_token = await get_microsoft_graph_token_for_user(
+            request_data, department
+        )
 
         # Fallback to extracting any available token from OAuth2 proxy
         if not user_jwt_token:
@@ -621,8 +662,13 @@ async def run_multi_server_crew_query(
         )
 
     try:
+        # Determine department from selected tools (default to MPO for multi-server queries)
+        department = determine_department_from_tools(request.selected_tools)
+
         # Try to get a proper Microsoft Graph token for SharePoint OBO flow
-        user_jwt_token = await get_microsoft_graph_token_for_user(request_data)
+        user_jwt_token = await get_microsoft_graph_token_for_user(
+            request_data, department
+        )
 
         # Fallback to extracting any available token from OAuth2 proxy
         if not user_jwt_token:
