@@ -2,6 +2,7 @@ import logging
 import os
 import uuid
 from typing import Optional, Union, List
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import asyncio
 import requests
@@ -243,22 +244,42 @@ def query_collection(
     k: int,
 ) -> dict:
     results = []
-    for query in queries:
-        query_embedding = embedding_function(query)
-        for collection_name in collection_names:
+    
+    # Parallelize query processing for faster RAG retrieval
+    def process_query_collection_pair(query: str, collection_name: str):
+        """Process a single query against a single collection"""
+        try:
+            query_embedding = embedding_function(query)
             if collection_name:
-                try:
-                    result = query_doc(
-                        collection_name=collection_name,
-                        k=k,
-                        query_embedding=query_embedding,
-                    )
-                    if result is not None:
-                        results.append(result.model_dump())
-                except Exception as e:
-                    log.exception(f"Error when querying the collection: {e}")
-            else:
-                pass
+                result = query_doc(
+                    collection_name=collection_name,
+                    k=k,
+                    query_embedding=query_embedding,
+                )
+                if result is not None:
+                    return result.model_dump()
+        except Exception as e:
+            log.exception(f"Error when querying collection {collection_name} with query: {e}")
+        return None
+    
+    # Create all query-collection pairs
+    query_collection_pairs = [
+        (query, collection_name)
+        for query in queries
+        for collection_name in collection_names
+    ]
+    
+    # Process in parallel using ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=min(len(query_collection_pairs), 10)) as executor:
+        future_to_pair = {
+            executor.submit(process_query_collection_pair, query, collection_name): (query, collection_name)
+            for query, collection_name in query_collection_pairs
+        }
+        
+        for future in as_completed(future_to_pair):
+            result = future.result()
+            if result is not None:
+                results.append(result)
 
     if VECTOR_DB == "chroma":
         # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
@@ -277,26 +298,50 @@ def query_collection_with_hybrid_search(
     r: float,
 ) -> dict:
     results = []
-    error = False
-    for collection_name in collection_names:
+    errors = []
+    
+    # Parallelize query processing for faster RAG retrieval with hybrid search
+    def process_hybrid_search(query: str, collection_name: str):
+        """Process a single query against a single collection with hybrid search"""
         try:
-            for query in queries:
-                result = query_doc_with_hybrid_search(
-                    collection_name=collection_name,
-                    query=query,
-                    embedding_function=embedding_function,
-                    k=k,
-                    reranking_function=reranking_function,
-                    r=r,
-                )
-                results.append(result)
+            result = query_doc_with_hybrid_search(
+                collection_name=collection_name,
+                query=query,
+                embedding_function=embedding_function,
+                k=k,
+                reranking_function=reranking_function,
+                r=r,
+            )
+            return {"result": result, "error": None, "collection": collection_name}
         except Exception as e:
             log.exception(
-                "Error when querying the collection with " f"hybrid_search: {e}"
+                f"Error when querying collection {collection_name} with hybrid_search: {e}"
             )
-            error = True
+            return {"result": None, "error": str(e), "collection": collection_name}
+    
+    # Create all query-collection pairs
+    query_collection_pairs = [
+        (query, collection_name)
+        for collection_name in collection_names
+        for query in queries
+    ]
+    
+    # Process in parallel using ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=min(len(query_collection_pairs), 10)) as executor:
+        future_to_pair = {
+            executor.submit(process_hybrid_search, query, collection_name): (query, collection_name)
+            for query, collection_name in query_collection_pairs
+        }
+        
+        for future in as_completed(future_to_pair):
+            pair_result = future.result()
+            if pair_result["result"] is not None:
+                results.append(pair_result["result"])
+            elif pair_result["error"]:
+                errors.append(pair_result)
 
-    if error:
+    # Only raise error if ALL searches failed
+    if len(errors) == len(query_collection_pairs):
         raise Exception(
             "Hybrid search failed for all collections. Using Non hybrid search as fallback."
         )

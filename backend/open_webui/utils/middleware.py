@@ -321,9 +321,9 @@ async def chat_web_search_handler(
         )
         return form_data
 
-    all_results = []
-
-    for searchQuery in queries:
+    # Parallelize web search queries for faster processing
+    async def process_single_search(searchQuery: str):
+        """Process a single search query and return results with the query for tracking"""
         await event_emitter(
             {
                 "type": "status",
@@ -346,31 +346,7 @@ async def chat_web_search_handler(
                 ),
                 user=user,
             )
-
-            if results:
-                all_results.append(results)
-                files = form_data.get("files", [])
-
-                if results.get("collection_name"):
-                    files.append(
-                        {
-                            "collection_name": results["collection_name"],
-                            "name": searchQuery,
-                            "type": "web_search",
-                            "urls": results["filenames"],
-                        }
-                    )
-                elif results.get("docs"):
-                    files.append(
-                        {
-                            "docs": results.get("docs", []),
-                            "name": searchQuery,
-                            "type": "web_search",
-                            "urls": results["filenames"],
-                        }
-                    )
-
-                form_data["files"] = files
+            return {"query": searchQuery, "results": results, "error": None}
         except Exception as e:
             log.exception(e)
             await event_emitter(
@@ -385,6 +361,48 @@ async def chat_web_search_handler(
                     },
                 }
             )
+            return {"query": searchQuery, "results": None, "error": str(e)}
+
+    # Process all queries in parallel
+    search_tasks = [process_single_search(query) for query in queries]
+    search_results = await asyncio.gather(*search_tasks, return_exceptions=True)
+
+    # Collect successful results and update form_data
+    all_results = []
+    files = form_data.get("files", [])
+
+    for search_result in search_results:
+        if isinstance(search_result, Exception):
+            log.exception(f"Exception in parallel search: {search_result}")
+            continue
+        
+        query = search_result.get("query")
+        results = search_result.get("results")
+        error = search_result.get("error")
+
+        if results and not error:
+            all_results.append(results)
+
+            if results.get("collection_name"):
+                files.append(
+                    {
+                        "collection_name": results["collection_name"],
+                        "name": query,
+                        "type": "web_search",
+                        "urls": results["filenames"],
+                    }
+                )
+            elif results.get("docs"):
+                files.append(
+                    {
+                        "docs": results.get("docs", []),
+                        "name": query,
+                        "type": "web_search",
+                        "urls": results["filenames"],
+                    }
+                )
+
+    form_data["files"] = files
 
     if all_results:
         urls = []
