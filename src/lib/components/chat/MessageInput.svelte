@@ -1237,8 +1237,8 @@
 									id="chat-input-container"
 								>
 									{#if prompt.split('\n').length > 2}
-										<div class="absolute top-0 right-0 z-20">
-											<div class="mt-2.5">
+										<div class="fixed top-0 right-0 z-20">
+											<div class="mt-2.5 mr-3">
 												<button
 													type="button"
 													class="p-1 rounded-lg hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
