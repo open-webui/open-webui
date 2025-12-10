@@ -365,6 +365,7 @@
 						bind:chatInputElement
 						bind:replyToMessage
 						{typingUsers}
+						{channel}
 						userSuggestions={true}
 						channelSuggestions={true}
 						disabled={!channel?.write_access}
