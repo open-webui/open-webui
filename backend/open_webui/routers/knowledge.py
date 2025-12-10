@@ -58,7 +58,10 @@ async def get_knowledge(user=Depends(get_verified_user)):
         KnowledgeAccessResponse(
             **knowledge_base.model_dump(),
             files=Knowledges.get_file_metadatas_by_id(knowledge_base.id),
-            write_access=has_access(user.id, "write", knowledge_base.access_control),
+            write_access=(
+                user.id == knowledge_base.user_id
+                or has_access(user.id, "write", knowledge_base.access_control)
+            ),
         )
         for knowledge_base in knowledge_bases
     ]
@@ -77,7 +80,10 @@ async def get_knowledge_list(user=Depends(get_verified_user)):
         KnowledgeAccessResponse(
             **knowledge_base.model_dump(),
             files=Knowledges.get_file_metadatas_by_id(knowledge_base.id),
-            write_access=has_access(user.id, "write", knowledge_base.access_control),
+            write_access=(
+                user.id == knowledge_base.user_id
+                or has_access(user.id, "write", knowledge_base.access_control)
+            ),
         )
         for knowledge_base in knowledge_bases
     ]
@@ -210,7 +216,10 @@ async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
             return KnowledgeFilesResponse(
                 **knowledge.model_dump(),
                 files=Knowledges.get_file_metadatas_by_id(knowledge.id),
-                write_access=has_access(user.id, "write", knowledge.access_control),
+                write_access=(
+                    user.id == knowledge.user_id
+                    or has_access(user.id, "write", knowledge.access_control)
+                ),
             )
     else:
         raise HTTPException(
