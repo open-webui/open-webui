@@ -111,10 +111,11 @@
 		const baseModel = $models.find((m) => m.id === base_model_id);
 
 		if (baseModel) {
-			if (baseModel.owned_by === 'openai') {
-				capabilities.usage = baseModel?.meta?.capabilities?.usage ?? false;
-			} else {
-				delete capabilities.usage;
+			if (baseModel.owned_by === 'openai'
+				&& capabilities.usage
+				&& !baseModel?.meta?.capabilities?.usage
+			) {
+				capabilities.usage = false;
 			}
 			capabilities = capabilities;
 		}
