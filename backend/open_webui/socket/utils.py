@@ -6,7 +6,17 @@ import uuid
 import threading
 import logging
 
-from open_webui.env import REDIS_MAX_CONNECTIONS
+# Default Redis max connections (used if env import fails or not set)
+DEFAULT_REDIS_MAX_CONNECTIONS = 100
+
+try:
+    from open_webui.env import REDIS_MAX_CONNECTIONS
+except ImportError:
+    REDIS_MAX_CONNECTIONS = DEFAULT_REDIS_MAX_CONNECTIONS
+
+# Ensure we have a valid value
+if REDIS_MAX_CONNECTIONS is None or not isinstance(REDIS_MAX_CONNECTIONS, int):
+    REDIS_MAX_CONNECTIONS = DEFAULT_REDIS_MAX_CONNECTIONS
 
 log = logging.getLogger(__name__)
 
