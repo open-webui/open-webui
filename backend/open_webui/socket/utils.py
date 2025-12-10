@@ -47,7 +47,7 @@ def get_redis_pool(redis_url):
                     _redis_pools[redis_url] = ConnectionPool.from_url(
                         redis_url,
                         decode_responses=True,
-                        max_connections=50,  # Maximum connections in pool (adjust based on load)
+                        max_connections=REDIS_MAX_CONNECTIONS,  # Configurable via REDIS_MAX_CONNECTIONS env var
                         retry_on_timeout=True,
                         socket_connect_timeout=5,
                         socket_timeout=5,

@@ -325,6 +325,11 @@ redis-deployment-info/
 # Performance analysis documentation (not for version control)
 PERFORMANCE_ANALYSIS.md
 
+# Redis cache bug reports and analysis (not for version control)
+REDIS_CACHE_*.md
+REDIS_CACHE_*.txt
+logs_on_openshift.txt
+
 # Test frameworks (not for version control)
 test_frameworks/
 

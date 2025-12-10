@@ -6,6 +6,7 @@ import pkgutil
 import sys
 import shutil
 from pathlib import Path
+from typing import Optional
 
 import markdown
 from bs4 import BeautifulSoup
@@ -136,6 +137,32 @@ VERSION = PACKAGE_DATA["version"]
 
 
 # Function to parse each section
+def _safe_int_env(env_var: str, default: int, min_value: Optional[int] = None, max_value: Optional[int] = None) -> int:
+    """Safely parse integer environment variable with validation.
+    
+    Args:
+        env_var: Environment variable name
+        default: Default value if env var is not set or invalid
+        min_value: Optional minimum allowed value
+        max_value: Optional maximum allowed value
+        
+    Returns:
+        Parsed integer value, or default if parsing fails or value is out of range
+    """
+    try:
+        value = int(os.environ.get(env_var, str(default)))
+        if min_value is not None and value < min_value:
+            log.warning(f"{env_var}={value} is below minimum {min_value}, using default {default}")
+            return default
+        if max_value is not None and value > max_value:
+            log.warning(f"{env_var}={value} is above maximum {max_value}, using default {default}")
+            return default
+        return value
+    except (ValueError, TypeError) as e:
+        log.warning(f"Invalid {env_var} value '{os.environ.get(env_var)}': {e}. Using default {default}")
+        return default
+
+
 def parse_section(section):
     items = []
     for li in section.find_all("li"):
@@ -332,6 +359,12 @@ ENABLE_REALTIME_CHAT_SAVE = (
 ####################################
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+
+# Redis connection pool configuration
+# Higher values support more concurrent requests but use more memory
+# Default: 100 connections (increased from 50 for high-concurrency environments)
+# For multi-replica deployments, each pod maintains its own pool
+REDIS_MAX_CONNECTIONS = _safe_int_env("REDIS_MAX_CONNECTIONS", 100, min_value=10, max_value=500)
 
 ####################################
 # JOB QUEUE (RQ - Redis Queue)

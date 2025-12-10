@@ -54,6 +54,10 @@ def user_has_access_to_task_model(user, models: dict) -> bool:
     """
     Check if the user has access to the required Gemini 2.5 Flash Lite model.
     This model is required for all task features (title, tags, autocomplete, query generation).
+    
+    For Portkey/external models: If model exists in models dict, user has access
+    (models dict is already filtered by get_all_models which checks Portkey access).
+    For database models: Check database access control.
     """
     if REQUIRED_TASK_MODEL_ID not in models:
         return False
@@ -68,14 +72,20 @@ def user_has_access_to_task_model(user, models: dict) -> bool:
     else:
         # Check access to the model in the database
         model_info = Models.get_model_by_id(REQUIRED_TASK_MODEL_ID)
-        if not model_info:
-            return False
         
-        # Check access: user owns it, has explicit access, or has group access
-        if not (user.id == model_info.user_id 
-                or has_access(user.id, type="read", access_control=model_info.access_control)
-                or item_assigned_to_user_groups(user.id, model_info, "read")):
-            return False
+        if model_info:
+            # Model exists in database - check database access control
+            if not (user.id == model_info.user_id 
+                    or has_access(user.id, type="read", access_control=model_info.access_control)
+                    or item_assigned_to_user_groups(user.id, model_info, "read")):
+                return False
+        else:
+            # Model not in database (e.g., Portkey/external model)
+            # If model exists in models dict, user has access (get_all_models already filtered)
+            # Portkey models are dynamically fetched and don't need to be in database
+            # The fact that it's in the models dict means it's available to the user
+            log.debug(f"Model {REQUIRED_TASK_MODEL_ID} not in database but exists in models dict - allowing access")
+            return True
     
     return True
 

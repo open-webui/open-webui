@@ -1109,10 +1109,17 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
             # Use batch-fetched model info
             model_info = model_info_dict.get(model["id"])
             if model_info:
+                # Model exists in database - check database access control
                 if user.id == model_info.user_id or has_access(
                     user.id, type="read", access_control=model_info.access_control
                 ):
                     filtered_models.append(model)
+            else:
+                # Model not in database (e.g., Portkey/external models)
+                # If model exists in models dict, it's available from external source (Portkey)
+                # Include it since external models are dynamically fetched and don't need database entry
+                # The fact that it's in the models dict means it's available to the user
+                filtered_models.append(model)
 
         return filtered_models
 
