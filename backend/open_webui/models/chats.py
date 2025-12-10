@@ -126,6 +126,49 @@ class ChatTitleIdResponse(BaseModel):
     created_at: int
 
 
+class ChatListResponse(BaseModel):
+    items: list[ChatModel]
+    total: int
+
+
+class ChatUsageStatsResponse(BaseModel):
+    id: str  # chat id
+
+    models: dict = {}  # models used in the chat with their usage counts
+    message_count: int  # number of messages in the chat
+
+    history_models: dict = {}  # models used in the chat history with their usage counts
+    history_message_count: int  # number of messages in the chat history
+    history_user_message_count: int  # number of user messages in the chat history
+    history_assistant_message_count: (
+        int  # number of assistant messages in the chat history
+    )
+
+    average_response_time: (
+        float  # average response time of assistant messages in seconds
+    )
+    average_user_message_content_length: (
+        float  # average length of user message contents
+    )
+    average_assistant_message_content_length: (
+        float  # average length of assistant message contents
+    )
+
+    tags: list[str] = []  # tags associated with the chat
+
+    last_message_at: int  # timestamp of the last message
+    updated_at: int
+    created_at: int
+
+    model_config = ConfigDict(extra="allow")
+
+
+class ChatUsageStatsListResponse(BaseModel):
+    items: list[ChatUsageStatsResponse]
+    total: int
+    model_config = ConfigDict(extra="allow")
+
+
 class ChatTable:
     def _clean_null_bytes(self, obj):
         """
@@ -675,14 +718,31 @@ class ChatTable:
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
-    def get_chats_by_user_id(self, user_id: str) -> list[ChatModel]:
+    def get_chats_by_user_id(
+        self, user_id: str, skip: Optional[int] = None, limit: Optional[int] = None
+    ) -> ChatListResponse:
         with get_db() as db:
-            all_chats = (
+            query = (
                 db.query(Chat)
                 .filter_by(user_id=user_id)
                 .order_by(Chat.updated_at.desc())
             )
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+
+            total = query.count()
+
+            if skip is not None:
+                query = query.offset(skip)
+            if limit is not None:
+                query = query.limit(limit)
+
+            all_chats = query.all()
+
+            return ChatListResponse(
+                **{
+                    "items": [ChatModel.model_validate(chat) for chat in all_chats],
+                    "total": total,
+                }
+            )
 
     def get_pinned_chats_by_user_id(self, user_id: str) -> list[ChatModel]:
         with get_db() as db:
