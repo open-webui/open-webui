@@ -1137,7 +1137,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 					</div>
 
 					<div
-						class=" flex-1 w-full h-full overflow-auto px-3.5 pb-20 relative pt-2.5"
+						class=" flex-1 w-full h-full overflow-auto px-3.5 relative"
 						id="note-content-container"
 					>
 						{#if editing}
@@ -1152,7 +1152,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							bind:this={inputElement}
 							bind:editor
 							id={`note-${note.id}`}
-							className="input-prose-sm px-0.5"
+							className="input-prose-sm px-0.5 h-[calc(100%-2rem)]"
 							json={true}
 							bind:value={note.data.content.json}
 							html={note.data?.content?.html}
@@ -1250,8 +1250,8 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 				</div>
 			{/if}
 		</div>
-		<div class="absolute z-20 bottom-0 right-0 p-3.5 max-w-full w-full flex">
-			<div class="flex gap-1 w-full min-w-full justify-between">
+		<div class="absolute z-50 bottom-0 right-0 p-3.5 flex select-none">
+			<div class="flex flex-col gap-2 justify-end">
 				{#if recording}
 					<div class="flex-1 w-full">
 						<VoiceRecording
@@ -1276,6 +1276,39 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 						/>
 					</div>
 				{:else}
+					<div
+						class="cursor-pointer flex gap-0.5 rounded-full border border-gray-50 dark:border-gray-850/30 dark:bg-gray-850 transition shadow-xl"
+					>
+						<Tooltip content={$i18n.t('AI')} placement="top">
+							{#if editing}
+								<button
+									class="p-2 flex justify-center items-center hover:bg-gray-50 dark:hover:bg-gray-800 rounded-full transition shrink-0"
+									on:click={() => {
+										stopResponseHandler();
+									}}
+									type="button"
+								>
+									<Spinner className="size-5" />
+								</button>
+							{:else}
+								<AiMenu
+									onEdit={() => {
+										enhanceNoteHandler();
+									}}
+									onChat={() => {
+										showPanel = true;
+										selectedPanel = 'chat';
+									}}
+								>
+									<div
+										class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-white dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
+									>
+										<SparklesSolid />
+									</div>
+								</AiMenu>
+							{/if}
+						</Tooltip>
+					</div>
 					<RecordMenu
 						onRecord={async () => {
 							displayMediaRecord = false;
@@ -1331,40 +1364,6 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							</div>
 						</Tooltip>
 					</RecordMenu>
-
-					<div
-						class="cursor-pointer flex gap-0.5 rounded-full border border-gray-50 dark:border-gray-850/30 dark:bg-gray-850 transition shadow-xl"
-					>
-						<Tooltip content={$i18n.t('AI')} placement="top">
-							{#if editing}
-								<button
-									class="p-2 flex justify-center items-center hover:bg-gray-50 dark:hover:bg-gray-800 rounded-full transition shrink-0"
-									on:click={() => {
-										stopResponseHandler();
-									}}
-									type="button"
-								>
-									<Spinner className="size-5" />
-								</button>
-							{:else}
-								<AiMenu
-									onEdit={() => {
-										enhanceNoteHandler();
-									}}
-									onChat={() => {
-										showPanel = true;
-										selectedPanel = 'chat';
-									}}
-								>
-									<div
-										class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-white dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
-									>
-										<SparklesSolid />
-									</div>
-								</AiMenu>
-							{/if}
-						</Tooltip>
-					</div>
 				{/if}
 			</div>
 		</div>
