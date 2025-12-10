@@ -310,6 +310,8 @@ cypress/screenshots
 
 # docker-compose for local development
 docker-compose.local.yaml
+docker-compose.dev.yaml
+docker-compose.dev.sh
 
 # Redis deployment info (local deployment artifacts, not for version control)
 redis-deployment-info/

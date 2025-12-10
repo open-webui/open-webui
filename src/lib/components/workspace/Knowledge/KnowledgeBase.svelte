@@ -74,12 +74,23 @@
 	let isSuperAdmin = false;
 
 	import { checkIfSuperAdmin } from '$lib/apis/users';
-	import { onMount } from 'svelte';
 
+	// Combined onMount to fix race condition
 	onMount(async () => {
 		if ($user?.email && localStorage.token) {
 			try {
 				isSuperAdmin = await checkIfSuperAdmin(localStorage.token, $user.email);
+				
+				// Fetch users AFTER confirming super admin status
+				if (isSuperAdmin) {
+					const usersRes = await fetch(`${WEBUI_API_BASE_URL}/users/`, {
+						headers: { authorization: `Bearer ${localStorage.token}` }
+					});
+					if (usersRes.ok) {
+						allUsers = await usersRes.json();
+						adminUsers = allUsers.filter(u => u.role === 'admin');
+					}
+				}
 			} catch (error) {
 				console.error('Error checking super admin status:', error);
 				isSuperAdmin = false;
@@ -88,8 +99,18 @@
 	});
 
 	$: if ($user?.email && localStorage.token && !isSuperAdmin) {
-		checkIfSuperAdmin(localStorage.token, $user.email).then(result => {
+		checkIfSuperAdmin(localStorage.token, $user.email).then(async (result) => {
 			isSuperAdmin = result;
+			// Fetch users when isSuperAdmin becomes true
+			if (isSuperAdmin && adminUsers.length === 0) {
+				const usersRes = await fetch(`${WEBUI_API_BASE_URL}/users/`, {
+					headers: { authorization: `Bearer ${localStorage.token}` }
+				});
+				if (usersRes.ok) {
+					allUsers = await usersRes.json();
+					adminUsers = allUsers.filter(u => u.role === 'admin');
+				}
+			}
 		}).catch(err => {
 			console.error('Error checking super admin status:', err);
 		});
@@ -557,17 +578,6 @@
 		}
 
 		id = $page.params.id;
-
-		// Fetch users for assignment dropdown if super admin
-		if (isSuperAdmin) {
-			const usersRes = await fetch(`${WEBUI_API_BASE_URL}/users/`, {
-				headers: { authorization: `Bearer ${localStorage.token}` }
-			});
-			if (usersRes.ok) {
-				allUsers = await usersRes.json();
-				adminUsers = allUsers.filter(u => u.role === 'admin');
-			}
-		}
 
 		const res = await getKnowledgeById(localStorage.token, id).catch((e) => {
 			toast.error(`${e}`);

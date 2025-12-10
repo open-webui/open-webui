@@ -94,6 +94,10 @@ class GroupTable:
     def insert_new_group(
         self, user_id: str, user_email: str, form_data: GroupForm
     ) -> Optional[GroupModel]:
+        from open_webui.utils.cache import get_cache_manager
+        
+        cache = get_cache_manager()
+        
         with get_db() as db:
             group = GroupModel(
                 **{
@@ -112,7 +116,13 @@ class GroupTable:
                 db.commit()
                 db.refresh(result)
                 if result:
-                    return GroupModel.model_validate(result)
+                    group_model = GroupModel.model_validate(result)
+                    # Invalidate cache for group creator (if they're added as member)
+                    if group_model.user_ids and user_id in group_model.user_ids:
+                        cache.invalidate_user_groups(user_id)
+                        cache.invalidate_user_permissions(user_id)
+                        cache.invalidate_user_settings(user_id)
+                    return group_model
                 else:
                     return None
 
@@ -193,8 +203,16 @@ class GroupTable:
     def update_group_by_id(
         self, id: str, form_data: GroupUpdateForm, overwrite: bool = False
     ) -> Optional[GroupModel]:
+        from open_webui.utils.cache import get_cache_manager
+        
+        cache = get_cache_manager()
+        
         try:
             with get_db() as db:
+                # Get old group data to check what changed
+                old_group = self.get_group_by_id(id)
+                old_user_ids = old_group.user_ids if old_group else []
+                
                 db.query(Group).filter_by(id=id).update(
                     {
                         **form_data.model_dump(exclude_none=True),
@@ -202,17 +220,53 @@ class GroupTable:
                     }
                 )
                 db.commit()
-                return self.get_group_by_id(id=id)
+                
+                new_group = self.get_group_by_id(id=id)
+                
+                # Invalidate cache for group data
+                cache.invalidate_group_admin_config(id)
+                cache.invalidate_group_members(id)
+                
+                # If permissions changed, invalidate permissions for all members
+                if old_group and old_group.permissions != new_group.permissions:
+                    for user_id in old_user_ids:
+                        cache.invalidate_user_permissions(user_id)
+                
+                # If members changed, invalidate cache for affected users
+                new_user_ids = new_group.user_ids if new_group else []
+                affected_user_ids = set(old_user_ids) | set(new_user_ids)
+                for user_id in affected_user_ids:
+                    cache.invalidate_user_groups(user_id)
+                    cache.invalidate_user_permissions(user_id)
+                    cache.invalidate_user_settings(user_id)
+                
+                return new_group
         except Exception as e:
             log.exception(e)
             return None
 
     def delete_group_by_id(self, id: str) -> bool:
+        from open_webui.utils.cache import get_cache_manager
+        
+        cache = get_cache_manager()
+        
         try:
+            # Get group members before deletion
+            group = self.get_group_by_id(id)
+            user_ids = group.user_ids if group else []
+            
             with get_db() as db:
                 db.query(Group).filter_by(id=id).delete()
                 db.commit()
-                return True
+            
+            # Invalidate cache for group and all members
+            cache.invalidate_all_group_data(id)
+            for user_id in user_ids:
+                cache.invalidate_user_groups(user_id)
+                cache.invalidate_user_permissions(user_id)
+                cache.invalidate_user_settings(user_id)
+            
+            return True
         except Exception:
             return False
 
@@ -227,6 +281,10 @@ class GroupTable:
                 return False
 
     def remove_user_from_all_groups(self, user_id: str) -> bool:
+        from open_webui.utils.cache import get_cache_manager
+        
+        cache = get_cache_manager()
+        
         with get_db() as db:
             try:
                 groups = self.get_groups_by_member_id(user_id)
@@ -240,6 +298,12 @@ class GroupTable:
                         }
                     )
                     db.commit()
+                    
+                    # Invalidate cache for group and user
+                    cache.invalidate_group_members(group.id)
+                    cache.invalidate_user_groups(user_id)
+                    cache.invalidate_user_permissions(user_id)
+                    cache.invalidate_user_settings(user_id)
 
                 return True
             except Exception:

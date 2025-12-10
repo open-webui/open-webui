@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { getContext, tick, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
@@ -71,7 +71,7 @@
 		id="admin-settings-tabs-container"
 		class="tabs flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-40 dark:text-gray-200 text-sm font-medium text-left scrollbar-none"
 	>
-	{#if canViewRestrictedTabs()}
+	{#if canViewRestrictedTabs}
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
 			'general'
@@ -99,7 +99,7 @@
 		</button>
 	{/if}
 
-	{#if canViewRestrictedTabs()}
+	{#if canViewRestrictedTabs}
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'connections'
@@ -151,7 +151,7 @@
 			<div class=" self-center">{$i18n.t('Models')}</div>
 		</button>
 	
-	{#if canViewRestrictedTabs()}
+	{#if canViewRestrictedTabs}
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'evaluations'
@@ -221,7 +221,7 @@
 			</div>
 			<div class=" self-center">{$i18n.t('Web Search')}</div>
 		</button>
-	{#if canViewRestrictedTabs()}
+	{#if canViewRestrictedTabs}
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'code-execution'
@@ -249,7 +249,7 @@
 		</button>
 	{/if}
 
-	{#if canViewRestrictedTabs()}
+	{#if canViewRestrictedTabs}
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'interface'
@@ -305,7 +305,7 @@
 		</button>
 
 
-	{#if canViewRestrictedTabs()}	
+	{#if canViewRestrictedTabs}	
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'images'
@@ -333,7 +333,7 @@
 		</button>
 	{/if}
 	
-	{#if canViewRestrictedTabs()}
+	{#if canViewRestrictedTabs}
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'pipelines'
@@ -365,7 +365,7 @@
 		</button>
 	{/if}
 
-	{#if canViewRestrictedTabs()}
+	{#if canViewRestrictedTabs}
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'db'

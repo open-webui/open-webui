@@ -148,7 +148,15 @@
 	};
 
 	const uploadFileHandler = async (file, fullContext: boolean = false) => {
-		if ($_user?.role !== 'admin' && !($_user?.permissions?.chat?.file_upload ?? true)) {
+		// Check if user is loaded and has permissions
+		if (!$_user) {
+			toast.error($i18n.t('User not loaded. Please refresh the page.'));
+			return null;
+		}
+		
+		// Admin always has permission, otherwise check permissions
+		const hasPermission = $_user.role === 'admin' || ($_user?.permissions?.chat?.file_upload ?? true);
+		if (!hasPermission) {
 			toast.error($i18n.t('You do not have permission to upload files.'));
 			return null;
 		}

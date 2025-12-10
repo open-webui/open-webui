@@ -34,6 +34,14 @@ def get_permissions(
     If a permission is defined in multiple groups, the most permissive value is used (True > False).
     Permissions are nested in a dict with the permission key as the key and a boolean as the value.
     """
+    from open_webui.utils.cache import get_cache_manager
+    
+    cache = get_cache_manager()
+    
+    # Check cache first
+    cached_permissions = cache.get_user_permissions(user_id)
+    if cached_permissions is not None:
+        return cached_permissions
 
     def combine_permissions(
         permissions: Dict[str, Any], group_permissions: Dict[str, Any]
@@ -65,6 +73,9 @@ def get_permissions(
 
     # Ensure all fields from default_permissions are present and filled in
     permissions = fill_missing_permissions(permissions, default_permissions)
+    
+    # Cache the result
+    cache.set_user_permissions(user_id, permissions)
 
     return permissions
 
@@ -92,13 +103,10 @@ def has_permission(
 
     permission_hierarchy = permission_key.split(".")
 
-    # Retrieve user group permissions
-    user_groups = Groups.get_groups_by_member_id(user_id)
-
-    for group in user_groups:
-        group_permissions = group.permissions
-        if get_permission(group_permissions, permission_hierarchy):
-            return True
+    # Use get_permissions which is now cached
+    user_permissions = get_permissions(user_id, default_permissions)
+    if get_permission(user_permissions, permission_hierarchy):
+        return True
 
     # Check default permissions afterward if the group permissions don't allow it
     default_permissions = fill_missing_permissions(

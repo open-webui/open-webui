@@ -868,7 +868,7 @@
 				</div>
 			{/if}
 
-			{#if canViewFileSettings()}
+			{#if canViewFileSettings}
 				<div class="mb-3">
 					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Files')}</div>
 

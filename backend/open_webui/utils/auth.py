@@ -11,7 +11,7 @@ import os
 from datetime import UTC, datetime, timedelta
 from typing import Optional, Union, List, Dict
 
-from open_webui.models.users import Users
+from open_webui.models.users import Users, UserModel
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
@@ -196,15 +196,33 @@ def get_current_user(
         )
 
     if data is not None and "id" in data:
-        user = Users.get_user_by_id(data["id"])
+        user_id = data["id"]
+        
+        # Check cache first
+        from open_webui.utils.cache import get_cache_manager
+        cache = get_cache_manager()
+        
+        cached_user_data = cache.get_auth_user(user_id)
+        if cached_user_data is not None:
+            # Reconstruct UserModel from cached data
+            user = UserModel(**cached_user_data)
+            # Refresh the user's last active timestamp asynchronously
+            if background_tasks:
+                background_tasks.add_task(Users.update_user_last_active_by_id, user.id)
+            return user
+        
+        # Cache miss - fetch from database
+        user = Users.get_user_by_id(user_id)
         if user is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=ERROR_MESSAGES.INVALID_TOKEN,
             )
         else:
+            # Cache the user object (10 minute TTL for auth cache)
+            cache.set_auth_user(user_id, user.model_dump(), ttl=600)
+            
             # Refresh the user's last active timestamp asynchronously
-            # to prevent blocking the request
             if background_tasks:
                 background_tasks.add_task(Users.update_user_last_active_by_id, user.id)
         return user
@@ -216,16 +234,47 @@ def get_current_user(
 
 
 def get_current_user_by_api_key(api_key: str):
+    from open_webui.utils.cache import get_cache_manager
+    
+    cache = get_cache_manager()
+    
+    # Hash the API key for cache key (security: don't store raw keys)
+    api_key_hash = hashlib.sha256(api_key.encode()).hexdigest()
+    
+    # Check cache first
+    cached_user_id = cache.get_api_key_user(api_key_hash)
+    if cached_user_id is not None:
+        # Get user from cache or database
+        cached_user_data = cache.get_auth_user(cached_user_id)
+        if cached_user_data is not None:
+            user = UserModel(**cached_user_data)
+            Users.update_user_last_active_by_id(user.id)
+            return user
+        else:
+            # User cache expired, but API key mapping still valid - fetch user
+            user = Users.get_user_by_id(cached_user_id)
+            if user:
+                cache.set_auth_user(cached_user_id, user.model_dump(), ttl=600)
+                Users.update_user_last_active_by_id(user.id)
+                return user
+            else:
+                # User was deleted but API key cache still exists - invalidate it
+                cache.invalidate_api_key(api_key_hash)
+    
+    # Cache miss - fetch from database
     user = Users.get_user_by_api_key(api_key)
-
+    
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.INVALID_TOKEN,
         )
     else:
+        # Cache both API key mapping and user object
+        cache.set_api_key_user(api_key_hash, user.id, ttl=1800)  # 30 min TTL for API key
+        cache.set_auth_user(user.id, user.model_dump(), ttl=600)  # 10 min TTL for user
         Users.update_user_last_active_by_id(user.id)
-
+    
     return user
 
 

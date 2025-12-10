@@ -31,30 +31,78 @@
 	let isSuperAdmin = false;
 
 	import { checkIfSuperAdmin } from '$lib/apis/users';
-	import { onMount } from 'svelte';
 
+	// Combined onMount to fix race condition
 	onMount(async () => {
 		if ($user?.email && localStorage.token) {
 			try {
 				isSuperAdmin = await checkIfSuperAdmin(localStorage.token, $user.email);
+				
+				// Fetch users AFTER confirming super admin status
+				if (isSuperAdmin) {
+					const res = await fetch(`${WEBUI_API_BASE_URL}/users/`, {
+						headers: { authorization: `Bearer ${localStorage.token}` }
+					});
+					if (res.ok) {
+						allUsers = await res.json();
+						adminUsers = allUsers.filter(u => u.role === 'admin');
+						
+						if (edit && prompt?.user_id) {
+							const owner = allUsers.find(u => u.id === prompt.user_id);
+							if (owner) assignToEmail = owner.email;
+						} else if (!edit && !assignToEmail) {
+							assignToEmail = $user.email;
+						}
+					}
+				}
 			} catch (error) {
 				console.error('Error checking super admin status:', error);
 				isSuperAdmin = false;
 			}
 		}
+
+		if (prompt) {
+			title = prompt.title;
+			await tick();
+
+			command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
+			content = prompt.content;
+
+			accessControl = prompt?.access_control ?? {
+				read: { group_ids: [], user_ids: [] },
+				write: { group_ids: [], user_ids: [] }
+			};
+		}
 	});
 
 	$: if ($user?.email && localStorage.token && !isSuperAdmin) {
-		checkIfSuperAdmin(localStorage.token, $user.email).then(result => {
+		checkIfSuperAdmin(localStorage.token, $user.email).then(async (result) => {
 			isSuperAdmin = result;
+			// Fetch users when isSuperAdmin becomes true
+			if (isSuperAdmin && adminUsers.length === 0) {
+				const res = await fetch(`${WEBUI_API_BASE_URL}/users/`, {
+					headers: { authorization: `Bearer ${localStorage.token}` }
+				});
+				if (res.ok) {
+					allUsers = await res.json();
+					adminUsers = allUsers.filter(u => u.role === 'admin');
+					
+					if (edit && prompt?.user_id && !assignToEmail) {
+						const owner = allUsers.find(u => u.id === prompt.user_id);
+						if (owner) assignToEmail = owner.email;
+					} else if (!edit && !assignToEmail) {
+						assignToEmail = $user.email;
+					}
+				}
+			}
 		}).catch(err => {
 			console.error('Error checking super admin status:', err);
 		});
 	}
 
 	// Set assignToEmail based on context
-	$: if (isSuperAdmin) {
-		if (edit && prompt?.user_id && allUsers.length > 0 && !assignToEmail) {
+	$: if (isSuperAdmin && adminUsers.length > 0) {
+		if (edit && prompt?.user_id && !assignToEmail) {
 			const owner = allUsers.find(u => u.id === prompt.user_id);
 			if (owner) assignToEmail = owner.email;
 		} else if (!edit && $user?.email && !assignToEmail) {
@@ -103,39 +151,6 @@
 		// Test the input string against the regular expression
 		return regex.test(inputString);
 	};
-
-	onMount(async () => {
-		if (isSuperAdmin) {
-			const res = await fetch(`${WEBUI_API_BASE_URL}/users/`, {
-				headers: { authorization: `Bearer ${localStorage.token}` }
-			});
-			if (res.ok) {
-				allUsers = await res.json();
-				adminUsers = allUsers.filter(u => u.role === 'admin');
-				
-				if (edit && prompt?.user_id) {
-					const owner = allUsers.find(u => u.id === prompt.user_id);
-					if (owner) assignToEmail = owner.email;
-				} else if (!edit) {
-					assignToEmail = $user.email;
-				}
-			}
-		}
-
-		if (prompt) {
-			title = prompt.title;
-			await tick();
-
-			command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
-			content = prompt.content;
-
-			accessControl = prompt?.access_control ?? {
-				read: { group_ids: [], user_ids: [] },
-				write: { group_ids: [], user_ids: [] }
-			};
-
-		}
-	});
 </script>
 
 <AccessControlModal
