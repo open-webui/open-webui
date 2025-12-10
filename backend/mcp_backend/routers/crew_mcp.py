@@ -59,8 +59,13 @@ def extract_user_token(
     import os
 
     # Check if we're in localhost development environment
+    # Be precise to avoid matching k8s "canchat-development" environment
+    environment = os.getenv("ENVIRONMENT", "").lower()
     is_localhost = (
-        os.getenv("ENVIRONMENT", "").lower() in ["local", "localhost", "development"]
+        environment in ["local", "localhost", "development"]  # Exact match only
+        and not environment.startswith(
+            "canchat-"
+        )  # Exclude k8s environments like "canchat-development"
         or "localhost" in os.getenv("WEBUI_BASE_URL", "")
         or "127.0.0.1" in os.getenv("WEBUI_BASE_URL", "")
         or os.getenv("WEBUI_BASE_URL", "").startswith("http://localhost")
