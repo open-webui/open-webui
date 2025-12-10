@@ -85,11 +85,13 @@ def extract_user_token(
             logging.info(
                 f"Found OAuth token in cookie {cookie_name} (length: {len(token)})"
             )
-            
+
             # Skip oauth2-proxy session cookies as they're not meant for direct token extraction
             # OAuth2-proxy should be configured to forward access tokens via headers instead
             if cookie_name in ["_oauth2_proxy", "CANChat"]:
-                logging.debug(f"Skipping oauth2-proxy session cookie {cookie_name} - use header forwarding instead")
+                logging.debug(
+                    f"Skipping oauth2-proxy session cookie {cookie_name} - use header forwarding instead"
+                )
                 continue
 
             return token
