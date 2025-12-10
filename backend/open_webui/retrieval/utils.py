@@ -245,15 +245,65 @@ def query_collection(
 ) -> dict:
     results = []
     
+    # Batch embedding generation for multiple queries (faster than individual calls)
+    # The embedding_function supports both single strings and lists of strings
+    query_embedding_map = {}
+    try:
+        if len(queries) > 1:
+            # Batch embed all queries at once - significantly faster for multiple queries
+            log.debug(f"Batching {len(queries)} queries for embedding generation")
+            query_embeddings = embedding_function(queries)
+            
+            # Handle different return formats:
+            # - List of embeddings: [[emb1], [emb2], ...] or [emb1, emb2, ...]
+            # - Single embedding: [emb1] or just emb1 (shouldn't happen for batch)
+            if isinstance(query_embeddings, list):
+                if len(query_embeddings) == len(queries):
+                    # Check if embeddings are nested lists or flat lists
+                    if len(query_embeddings) > 0 and isinstance(query_embeddings[0], list):
+                        # Already in correct format: [[emb1], [emb2], ...]
+                        query_embedding_map = {queries[i]: query_embeddings[i] for i in range(len(queries))}
+                    else:
+                        # Flat list: might be single embedding or needs wrapping
+                        # If length matches, assume each element is an embedding vector
+                        query_embedding_map = {queries[i]: query_embeddings[i] for i in range(len(queries))}
+                else:
+                    # Mismatch - fallback to individual calls
+                    log.warning(f"Batch embedding returned {len(query_embeddings)} results for {len(queries)} queries, falling back to individual calls")
+                    raise ValueError("Batch embedding result length mismatch")
+            else:
+                # Unexpected return type - fallback
+                log.warning(f"Batch embedding returned unexpected type: {type(query_embeddings)}, falling back to individual calls")
+                raise ValueError("Unexpected batch embedding return type")
+        else:
+            # Single query - embed normally
+            embedding = embedding_function(queries[0])
+            # Ensure it's a list (embedding functions should return list[float])
+            if isinstance(embedding, list):
+                query_embedding_map[queries[0]] = embedding
+            else:
+                # Unexpected format - wrap in list as fallback
+                query_embedding_map[queries[0]] = [embedding]
+    except Exception as e:
+        log.exception(f"Error generating batch embeddings: {e}")
+        # Fallback to individual embedding generation
+        log.debug("Falling back to individual embedding generation")
+        for query in queries:
+            try:
+                embedding = embedding_function(query)
+                query_embedding_map[query] = embedding if isinstance(embedding, list) else [embedding]
+            except Exception as embed_error:
+                log.exception(f"Error embedding query '{query}': {embed_error}")
+                continue
+    
     # Parallelize query processing for faster RAG retrieval
     # Note: Thread-safety depends on the vector DB implementation:
     # - Postgres (pgvector): Uses scoped_session - thread-safe
     # - SQLite-based DBs: May have issues with concurrent access
     # - Chroma/Qdrant/Milvus: Generally thread-safe if using separate clients per thread
-    def process_query_collection_pair(query: str, collection_name: str):
-        """Process a single query against a single collection"""
+    def process_query_collection_pair(query: str, collection_name: str, query_embedding: list[float]):
+        """Process a single query against a single collection using pre-computed embedding"""
         try:
-            query_embedding = embedding_function(query)
             if collection_name:
                 result = query_doc(
                     collection_name=collection_name,
@@ -266,28 +316,32 @@ def query_collection(
             log.exception(f"Error when querying collection {collection_name} with query: {e}")
         return None
     
-    # Create all query-collection pairs
+    # Create all query-collection pairs with pre-computed embeddings
     query_collection_pairs = [
-        (query, collection_name)
+        (query, collection_name, query_embedding_map.get(query))
         for query in queries
         for collection_name in collection_names
+        if query in query_embedding_map  # Only include queries that were successfully embedded
     ]
     
-    # For single query or single collection, process sequentially to avoid overhead
+    # For single query-collection pair, process sequentially to avoid overhead
     # For multiple queries/collections, use parallel processing
     if len(query_collection_pairs) == 1:
         # Sequential processing for single query-collection pair
-        result = process_query_collection_pair(query_collection_pairs[0][0], query_collection_pairs[0][1])
-        if result is not None:
-            results.append(result)
+        query, collection_name, query_embedding = query_collection_pairs[0]
+        if query_embedding:
+            result = process_query_collection_pair(query, collection_name, query_embedding)
+            if result is not None:
+                results.append(result)
     else:
         # Process in parallel using ThreadPoolExecutor
         # Limit workers to prevent resource exhaustion and potential SQLite lock issues
         max_workers = min(len(query_collection_pairs), 10)
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_pair = {
-                executor.submit(process_query_collection_pair, query, collection_name): (query, collection_name)
-                for query, collection_name in query_collection_pairs
+                executor.submit(process_query_collection_pair, query, collection_name, query_embedding): (query, collection_name)
+                for query, collection_name, query_embedding in query_collection_pairs
+                if query_embedding is not None  # Only submit if embedding exists
             }
             
             for future in as_completed(future_to_pair):
