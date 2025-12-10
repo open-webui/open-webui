@@ -364,7 +364,7 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
                 collection_name = file.meta.get("collection_name")
 
             # Clean up vectors
-            cleanup_success = cleanup_file_vectors(file.id, collection_name)
+            cleanup_success = await cleanup_file_vectors(file.id, collection_name)
             if not cleanup_success:
                 log.warning(
                     f"Vector cleanup failed for file {file.id}, but continuing with file deletion"

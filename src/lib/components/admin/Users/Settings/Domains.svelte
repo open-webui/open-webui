@@ -80,7 +80,10 @@
 			showAddDomainForm = false;
 
 			toast.success(
-				$i18n.t('Domain "{domainName}" added for {departmentName}', { domainName, departmentName })
+				$i18n.t('Domain "{{domainName}}" added for {{departmentName}}', {
+					domainName,
+					departmentName
+				})
 			);
 		} catch (error) {
 			console.error('Failed to add domain:', error);
@@ -99,7 +102,7 @@
 			// Reload domains
 			await loadDomains();
 
-			toast.success($i18n.t('Domain "{domain}" deleted successfully', { domain }));
+			toast.success($i18n.t('Domain "{{domain}}" deleted successfully', { domain }));
 		} catch (error) {
 			console.error('Failed to delete domain:', error);
 			toast.error(error || $i18n.t('Failed to delete domain'));
@@ -191,7 +194,7 @@
 	<div class="space-y-3">
 		<button
 			type="button"
-			class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+			class="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
 			on:click={() => (showAddDomainForm = !showAddDomainForm)}
 		>
 			{showAddDomainForm ? $i18n.t('Cancel') : $i18n.t('+ Add Domain')}
@@ -239,14 +242,14 @@
 				<div class="flex flex-wrap gap-2 pt-2">
 					<button
 						type="button"
-						class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg"
+						class="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 text-sm font-medium rounded-lg"
 						on:click={addDomain}
 					>
 						{$i18n.t('Add Domain')}
 					</button>
 					<button
 						type="button"
-						class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 text-sm font-medium rounded-lg"
+						class="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 text-sm font-medium rounded-lg"
 						on:click={() => (showAddDomainForm = false)}
 					>
 						{$i18n.t('Cancel')}
@@ -310,14 +313,14 @@
 									<div class="flex space-x-2">
 										<button
 											type="button"
-											class="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg"
+											class="px-3 py-1 border border-gray-300 dark:border-gray-600 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 text-sm rounded-lg"
 											on:click={saveEditDomain}
 										>
 											{$i18n.t('Save')}
 										</button>
 										<button
 											type="button"
-											class="px-3 py-1 bg-gray-300 hover:bg-gray-400 text-gray-700 text-sm rounded-lg"
+											class="px-3 py-1 border border-gray-300 dark:border-gray-600 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 text-sm rounded-lg"
 											on:click={cancelEdit}
 										>
 											{$i18n.t('Cancel')}
@@ -340,14 +343,14 @@
 									<div class="flex space-x-2">
 										<button
 											type="button"
-											class="px-3 py-1 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-sm font-medium rounded-lg border border-blue-200 dark:border-blue-800"
+											class="px-3 py-1 border border-gray-300 dark:border-gray-600 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 text-sm font-medium rounded-lg"
 											on:click={() => startEditDomain(domainObj.domain)}
 										>
 											{$i18n.t('Edit')}
 										</button>
 										<button
 											type="button"
-											class="px-3 py-1 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 text-sm font-medium rounded-lg border border-red-200 dark:border-red-800"
+											class="px-3 py-1 border border-gray-300 dark:border-gray-600 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 text-sm font-medium rounded-lg"
 											on:click={() => (showDeleteConfirm = domainObj.domain)}
 										>
 											{$i18n.t('Delete')}
@@ -363,21 +366,21 @@
 								>
 									<div class="text-sm text-red-800 dark:text-red-200 mb-3">
 										{$i18n.t(
-											'Are you sure you want to delete the domain "{domain}"? This action cannot be undone.',
+											'Are you sure you want to delete the domain "{{domain}}"? This action cannot be undone.',
 											{ domain: domainObj.domain }
 										)}
 									</div>
 									<div class="flex space-x-2">
 										<button
 											type="button"
-											class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg"
+											class="px-3 py-1 border border-gray-300 dark:border-gray-600 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 text-sm rounded-lg"
 											on:click={() => deleteDomain(domainObj.domain)}
 										>
 											{$i18n.t('Delete')}
 										</button>
 										<button
 											type="button"
-											class="px-3 py-1 bg-gray-300 hover:bg-gray-400 text-gray-700 text-sm rounded-lg"
+											class="px-3 py-1 border border-gray-300 dark:border-gray-600 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 text-sm rounded-lg"
 											on:click={() => (showDeleteConfirm = null)}
 										>
 											{$i18n.t('Cancel')}

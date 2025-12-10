@@ -117,7 +117,7 @@
 				: 'hover:text-gray-500'} focus:outline-none"
 			disabled={loading}
 		>
-			<span class="sr-only">Close</span>
+			<span class="sr-only">{$i18n.t('Close')}</span>
 			<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 				<path
 					stroke-linecap="round"

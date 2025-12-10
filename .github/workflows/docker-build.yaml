@@ -14,10 +14,73 @@ env:
 jobs:
   build-main-image:
     runs-on: arc-ssc-dsai
+
+    # Set a timeout for the job
+    timeout-minutes: 30
+    
     permissions:
       contents: read
       packages: write
 
+    steps:
+      # GitHub Packages requires the entire repository name to be in lowercase
+      # although the repository owner has a lowercase username, this prevents some people from running actions after forking
+      - name: Set repository and image name to lowercase
+        run: |
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=${{ env.REGISTRY }}/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+        env:
+          IMAGE_NAME: '${{ github.repository }}'
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the GitHub Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker images (default latest tag)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.FULL_IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,prefix=git-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+          flavor: |
+            latest=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build Docker image (latest)
+        uses: docker/build-push-action@v5
+        id: build
+        with:
+          context: .
+          push: true
+          labels: ${{ steps.meta.outputs.labels }}
+          # outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+          no-cache: true  # Disable caching due to large/unstable images causing disk space issues
+          build-args: |
+            BUILD_HASH=${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+
+  backup-build-main-image:
+    runs-on: scsc-dsai-azuregithubrunner-vm
+    permissions:
+      contents: read
+      packages: write
+    
+    needs: build-main-image # Dependency: Runs after build-main-image completes or fails
+    if: failure() # Condition: Only runs if the previous job failed
     steps:
       # GitHub Packages requires the entire repository name to be in lowercase
       # although the repository owner has a lowercase username, this prevents some people from running actions after forking

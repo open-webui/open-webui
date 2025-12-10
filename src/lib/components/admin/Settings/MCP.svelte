@@ -439,16 +439,6 @@
 				<!-- Built-in MCP Servers -->
 				<div class="mb-6">
 					<div class="mb-3 text-sm font-medium flex items-center gap-2">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="currentColor"
-							class="w-4 h-4 text-green-500"
-						>
-							<path
-								d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z"
-							/>
-						</svg>
 						{$i18n.t('Built-in MCP Servers')}
 						{#if builtinServersLoading}
 							<Spinner className="size-3" />
@@ -461,25 +451,6 @@
 								class="flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-lg transition"
 							>
 								<div class="flex flex-1 text-left space-x-3.5 w-full">
-									<div class="self-center w-8">
-										<div
-											class="rounded-full object-cover {server.status === 'running'
-												? ''
-												: 'opacity-50 dark:opacity-50'}"
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 24 24"
-												fill="currentColor"
-												class="w-6 h-6 text-green-500"
-											>
-												<path
-													d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z"
-												/>
-											</svg>
-										</div>
-									</div>
-
 									<div class="flex-1 self-center">
 										<div class="font-medium text-sm">{server.display_name}</div>
 										<div class="text-xs text-gray-700 dark:text-gray-400 line-clamp-1 mb-1">
@@ -549,19 +520,6 @@
 				<!-- External MCP Servers -->
 				<div>
 					<div class="mb-3 text-sm font-medium flex items-center gap-2">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="currentColor"
-							class="w-4 h-4 text-purple-500"
-						>
-							<path
-								d="M6.75 6a.75.75 0 0 1 .75-.75h9a.75.75 0 0 1 .75.75v6a.75.75 0 0 1-.75.75h-9A.75.75 0 0 1 6.75 12V6Z"
-							/>
-							<path
-								d="M6.75 17.25a.75.75 0 0 1 .75-.75h9a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-.75.75h-9a.75.75 0 0 1-.75-.75v-1.5Z"
-							/>
-						</svg>
 						{$i18n.t('External MCP Servers')}
 						{#if externalServersLoading}
 							<Spinner className="size-3" />
@@ -761,19 +719,6 @@
 
 			<div>
 				<div class="mb-2 text-sm font-medium flex items-center gap-2">
-					<!-- MCP Tools Icon -->
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 24 24"
-						fill="currentColor"
-						class="w-4 h-4 text-green-500"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M12 6.75a5.25 5.25 0 016.775-5.025.75.75 0 01.313 1.248l-3.32 3.319c.063.475.276.934.641 1.299.365.365.824.578 1.3.641l3.318-3.319a.75.75 0 011.248.313 5.25 5.25 0 01-5.472 6.756c-1.018-.086-1.87.1-2.309.634L7.344 21.3A3.298 3.298 0 112.7 16.657l8.684-7.151c.533-.44.72-1.291.634-2.309A5.25 5.25 0 0112 6.75zM4.117 19.125a.75.75 0 01.75-.75h.008a.75.75 0 01.75.75v.008a.75.75 0 01-.75.75h-.008a.75.75 0 01-.75-.75v-.008z"
-							clip-rule="evenodd"
-						/>
-					</svg>
 					{$i18n.t('Available MCP Tools')}
 					{#if mcpToolsLoading}
 						<Spinner className="size-3" />
@@ -787,43 +732,18 @@
 								class="border dark:border-gray-700 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
 							>
 								<div class="flex items-center gap-2 mb-2">
-									<!-- Tool Icon -->
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="w-4 h-4 text-blue-400"
-									>
-										<path
-											fill-rule="evenodd"
-											d="M8 1a.75.75 0 01.75.75V6h-1.5V2.5L3 7v11h14V7l-4.25-4.5V6h-1.5V1.75A.75.75 0 0112 1h-4z"
-											clip-rule="evenodd"
-										/>
-									</svg>
 									<div class="font-medium text-sm">{tool.name}</div>
-									<!-- Tool Source Badge -->
-									{#if tool.mcp_server_url}
-										<!-- Legacy URL-based Server Tool -->
-										<span
-											class="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900 px-2 py-1 text-xs font-medium text-blue-700 dark:text-blue-300"
-										>
-											URL-based
-										</span>
-									{:else if tool.is_builtin === true}
-										<!-- Built-in Server Tool -->
-										<span
-											class="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-300"
-										>
+									<span
+										class="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
+									>
+										{#if tool.mcp_server_url}
+											{$i18n.t('URL-based')}
+										{:else if tool.is_builtin === true}
 											{$i18n.t('Built-in')}
-										</span>
-									{:else}
-										<!-- External MCP Server Tool -->
-										<span
-											class="inline-flex items-center rounded-full bg-purple-100 dark:bg-purple-900 px-2 py-1 text-xs font-medium text-purple-700 dark:text-purple-300"
-										>
+										{:else}
 											{$i18n.t('External')}
-										</span>
-									{/if}
+										{/if}
+									</span>
 								</div>
 								<!-- Server Source Information -->
 								{#if tool.mcp_server_url}

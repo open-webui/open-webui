@@ -144,6 +144,13 @@
 				<div class="  max-h-28 overflow-y-auto scrollbar-hidden">
 					{#each Object.keys(tools) as toolId}
 						<button
+							role="menuitem"
+							aria-label={tools[toolId].isMcp
+								? getMCPToolName(
+										tools[toolId].meta?.manifest?.original_name || tools[toolId].name,
+										$i18n
+									)
+								: tools[toolId].name}
 							class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
 							on:click={() => {
 								tools[toolId].enabled = !tools[toolId].enabled;
@@ -205,6 +212,9 @@
 							<div class=" flex-shrink-0">
 								<Switch
 									state={tools[toolId].enabled}
+									ariaLabel={tools[toolId].isMcp
+										? `${$i18n.t('Toggle')} ${getMCPToolName(tools[toolId].meta?.manifest?.original_name || tools[toolId].name, $i18n)}`
+										: `${$i18n.t('Toggle')} ${tools[toolId].name}`}
 									on:change={async (e) => {
 										const state = e.detail;
 										await tick();
@@ -225,6 +235,7 @@
 
 			{#if showImageGeneration}
 				<button
+					role="menuitem"
 					class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
 					on:click={() => {
 						imageGenerationEnabled = !imageGenerationEnabled;
@@ -235,7 +246,7 @@
 						<div class=" line-clamp-1">{$i18n.t('Image')}</div>
 					</div>
 
-					<Switch state={imageGenerationEnabled} />
+					<Switch state={imageGenerationEnabled} ariaLabel={$i18n.t('Toggle Image Generation')} />
 				</button>
 			{/if}
 
@@ -247,6 +258,7 @@
 					placement="right"
 				>
 					<button
+						role="menuitem"
 						class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl {wikiGroundingEnabled
 							? 'opacity-50 cursor-not-allowed'
 							: ''}"
@@ -266,7 +278,11 @@
 							<div class=" line-clamp-1">{$i18n.t('Web Search (Beta)')}</div>
 						</div>
 
-						<Switch state={webSearchEnabled} disabled={wikiGroundingEnabled} />
+						<Switch
+							state={webSearchEnabled}
+							ariaLabel={$i18n.t('Toggle Web Search')}
+							disabled={wikiGroundingEnabled}
+						/>
 					</button>
 				</Tooltip>
 			{/if}
@@ -302,6 +318,8 @@
 					}}
 				>
 					<button
+						role="menuitem"
+						aria-label={$i18n.t('Wiki Grounding')}
 						bind:this={wikiGroundingButton}
 						class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl {webSearchEnabled
 							? 'opacity-50 cursor-not-allowed'
@@ -329,7 +347,11 @@
 						</div>
 
 						<div class="flex items-center">
-							<Switch state={wikiGroundingEnabled} disabled={webSearchEnabled} />
+							<Switch
+								state={wikiGroundingEnabled}
+								ariaLabel={$i18n.t('Toggle Wiki Grounding')}
+								disabled={webSearchEnabled}
+							/>
 						</div>
 					</button>
 				</Tooltip>

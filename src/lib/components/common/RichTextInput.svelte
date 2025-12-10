@@ -387,8 +387,8 @@
 		);
 		if (placeholderExtension) {
 			placeholderExtension.options.placeholder = placeholderText;
-			(placeholderExtension.options.label = $i18n.t('Message Input')),
-				editor.view.dispatch(editor.view.state.tr); // Trigger a re-render
+			((placeholderExtension.options.label = $i18n.t('Message Input')),
+				editor.view.dispatch(editor.view.state.tr)); // Trigger a re-render
 		}
 	}
 </script>

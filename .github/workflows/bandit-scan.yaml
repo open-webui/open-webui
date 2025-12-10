@@ -1,0 +1,114 @@
+name: Bandit Security Scan
+
+on:
+  schedule:
+    # Run every Monday at 7:00 AM EST (12:00 PM UTC)
+    - cron: '0 12 * * 1'
+  workflow_dispatch:  # Keep manual trigger for testing
+
+jobs:
+  bandit-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run Bandit
+        uses: PyCQA/bandit-action@v1
+        continue-on-error: true
+        with:
+          configfile: '.bandit.yaml'
+          severity: 'high'
+          confidence: 'high'
+          skips: 'B101'
+          targets: '.'
+          exclude: 'backend/data/cache'
+
+      - name: Generate JSON report
+        run: |
+          pip install --upgrade "bandit"
+          bandit -r . -c .bandit.yaml -lll -iii -f json -o bandit_report.json || true
+
+      - name: Upload JSON report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-json-report
+          path: bandit_report.json
+
+      - name: Check for findings
+        id: check_findings
+        run: |
+          if [ -f bandit_report.json ]; then
+            # Count high severity findings
+            HIGH_COUNT=$(jq '[.results[] | select(.issue_severity == "HIGH")] | length' bandit_report.json)
+            echo "high_count=$HIGH_COUNT" >> $GITHUB_OUTPUT
+
+            if [ "$HIGH_COUNT" -gt 0 ]; then
+              echo "has_findings=true" >> $GITHUB_OUTPUT
+
+              echo "Bandit Security Scan Summary:"
+              echo "High Severity Issues: $HIGH_COUNT"
+              echo ""
+
+              {
+                echo "Bandit Security Scan Report"
+                echo "============================="
+                echo ""
+                echo "Repository: ${{ github.repository }}"
+                echo "Branch: ${{ github.ref_name }}"
+                echo "Scan Date: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+                echo "High Severity Issues: $HIGH_COUNT"
+                echo ""
+                echo "============================="
+                echo ""
+                echo "HIGH SEVERITY FINDINGS:"
+                echo ""
+                jq -r '.results[] | select(.issue_severity == "HIGH") | "[\(.test_id)] \(.issue_text)\nFile: \(.filename):\(.line_number)\nSeverity: \(.issue_severity)\nConfidence: \(.issue_confidence)\nCode:\n\(.code)\nCWE Link: \(.issue_cwe.link)\n\n---\n"' bandit_report.json
+              } > security_findings.txt
+            else
+              echo "has_findings=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "has_findings=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send GC Notify email with attachment
+        if: steps.check_findings.outputs.has_findings == 'true'
+        run: |
+          FILE_CONTENT=$(base64 < security_findings.txt)
+          IFS=',' read -ra EMAILS <<< "${{ secrets.NOTIFICATION_EMAIL }}"
+          for EMAIL in "${EMAILS[@]}"; do
+            EMAIL=$(echo "$EMAIL" | xargs)
+            echo "Sending notification to: $EMAIL"
+            jq -n \
+              --arg email "$EMAIL" \
+              --arg template "${{ secrets.GC_NOTIFY_TEMPLATE_ID }}" \
+              --arg repo "${{ github.repository }}" \
+              --arg file "$FILE_CONTENT" \
+              --arg run_id "${{ github.run_id }}" \
+              '{
+                email_address: $email,
+                template_id: $template,
+                personalisation: {
+                  library_name: "Bandit",
+                  repository_name: $repo,
+                  application_file: {
+                    file: $file,
+                    filename: ("bandit_security_findings_" + $run_id + ".txt"),
+                    sending_method: "attach"
+                  }
+                }
+              }' | curl -X POST "https://api.notification.canada.ca/v2/notifications/email" \
+              -H "Authorization: ApiKey-v1 ${{ secrets.GC_NOTIFY_API_KEY }}" \
+              -H "Content-Type: application/json" \
+              -d @-
+            echo ""
+          done

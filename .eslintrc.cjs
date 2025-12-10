@@ -4,7 +4,6 @@ module.exports = {
 		'eslint:recommended',
 		'plugin:@typescript-eslint/recommended',
 		'plugin:svelte/recommended',
-		'plugin:cypress/recommended',
 		'prettier'
 	],
 	parser: '@typescript-eslint/parser',
