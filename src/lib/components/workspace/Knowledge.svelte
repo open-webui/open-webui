@@ -211,8 +211,8 @@
 						}}
 					>
 						<div class=" w-full">
-							<div class=" self-center flex-1">
-								<div class="flex items-center justify-between -my-1">
+							<div class=" self-center flex-1 justify-between">
+								<div class="flex items-center justify-between -my-1 h-8">
 									<div class=" flex gap-2 items-center justify-between w-full">
 										<div>
 											<Badge type="success" content={$i18n.t('Collection')} />
@@ -224,17 +224,18 @@
 											</div>
 										{/if}
 									</div>
-
-									<div class="flex items-center gap-2">
-										<div class=" flex self-center">
-											<ItemMenu
-												on:delete={() => {
-													selectedItem = item;
-													showDeleteConfirm = true;
-												}}
-											/>
+									{#if item?.write_access}
+										<div class="flex items-center gap-2">
+											<div class=" flex self-center">
+												<ItemMenu
+													on:delete={() => {
+														selectedItem = item;
+														showDeleteConfirm = true;
+													}}
+												/>
+											</div>
 										</div>
-									</div>
+									{/if}
 								</div>
 
 								<div class=" flex items-center gap-1 justify-between px-1.5">
