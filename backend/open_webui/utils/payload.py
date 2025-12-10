@@ -4,10 +4,21 @@ from open_webui.utils.misc import (
     add_or_update_system_message,
     replace_system_message_content,
 )
-from open_webui.utils.luxtronic import get_luxtronic_model_names    
 from typing import Callable, Optional
+import logging
 import json
 from fastapi import HTTPException
+from open_webui.config import S3_BUCKET_NAME
+from open_webui.models.tenants import Tenants
+from open_webui.models.users import UserModel
+from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
+import sys
+
+logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+LUXOR_MODEL_SUFFIX = "latest"
 
 # inplace function: form_data is modified
 def apply_system_prompt_to_body(
@@ -275,36 +286,83 @@ def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
 
     return ollama_messages
 
-def convert_payload_openai_to_luxor(openai_payload: dict) -> dict:
+def _get_tenant_bucket_by_id(tenant_id: str) -> str:
+    tenant = Tenants.get_tenant_by_id(tenant_id)
+    if not tenant or not tenant.s3_bucket:
+        raise HTTPException(
+            status_code=400,
+            detail="Tenant storage configuration missing.",
+        )
+    return tenant.s3_bucket
+
+
+def _get_tenant_bucket_for_user(user: UserModel) -> str:
+    if not getattr(user, "tenant_id", None):
+        raise HTTPException(
+            status_code=400,
+            detail="User is not associated with a tenant.",
+        )
+
+    return _get_tenant_bucket_by_id(user.tenant_id)
+
+
+def convert_payload_openai_to_luxor(openai_payload: dict, user: Optional[UserModel]) -> dict:
     """
     Converts a payload formatted for OpenAI's API to be compatible with Luxor's API endpoint for chat completions.
 
     Args:
         openai_payload (dict): The payload originally designed for OpenAI API usage.
+        user (UserModel): Authenticated user issuing the request.
 
     Returns:
         dict: A modified payload compatible with the Luxor API.
     """
+    log.info("IN CONVERT!!!")
     luxor_payload = {}
-    question_type = openai_payload["model"].split(":")[1]
 
-    luxor_question_types = get_luxtronic_model_names()
+    if not user:
+        log.info("NO USER")
+        raise HTTPException(
+            status_code=400,
+            detail="User context required for Luxor requests.",
+        )
+    if not S3_BUCKET_NAME:
+        log.info("NO Bucket")
 
-    if question_type not in luxor_question_types:                                                                                                                                                                                                      
-          raise HTTPException(                                                                                                                                                                                                                           
-              status_code=400,                                                                                                                                                                                                                           
-              detail=f"Unsupported Luxor question_type '{question_type}'. "                                                                                                                                                                             
-          )     
+        raise HTTPException(
+            status_code=500,
+            detail="Luxor storage bucket is not configured.",
+        )
 
-    luxor_payload["question_type"] = question_type
+    model_id = openai_payload.get("model", "")
+    override_tenant_id = openai_payload.pop("luxor_tenant_id", None)
+    if override_tenant_id:
+        if getattr(user, "role", None) != "admin":
+            log.info("Tenant selection is restricted to admins.")
 
-    messages = openai_payload.get(("messages"))
+            raise HTTPException(
+                status_code=403,
+                detail="Tenant selection is restricted to admins.",
+            )
+        
+        log.info(f"Get Tenant Bucket By Override Id {override_tenant_id}")
+
+        tenant_bucket = _get_tenant_bucket_by_id(override_tenant_id)
+    else:
+        log.info(f"Get Tenant Bucket By User {user}")
+
+        tenant_bucket = _get_tenant_bucket_for_user(user)
+
+    messages = openai_payload.get("messages")
     luxor_payload["messages"] = messages
+    luxor_payload["bucket"] = S3_BUCKET_NAME
+    luxor_payload["tenant"] = tenant_bucket
+    luxor_payload["user"] = user.id
+    luxor_payload["model"] = model_id or "luxor:latest"
+    luxor_payload["task"] = openai_payload.get("task") or "generate-completion"
+    log.info(f"Complete complete!!!!!\n{luxor_payload}")
 
-    if openai_payload.get("task"):
-        luxor_payload["task"] = openai_payload.get("task")
-
-    return luxor_payload   
+    return luxor_payload
 
 def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     """

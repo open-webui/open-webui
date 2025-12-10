@@ -22,12 +22,12 @@
 
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
 	import ModelSelector from '../chat/ModelSelector.svelte';
-	import Tooltip from '../common/Tooltip.svelte';
-	import Menu from '$lib/components/layout/Navbar/Menu.svelte';
-	import UserMenu from '$lib/components/layout/Sidebar/UserMenu.svelte';
-	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
+import Tooltip from '../common/Tooltip.svelte';
+import Menu from '$lib/components/layout/Navbar/Menu.svelte';
+import UserMenu from '$lib/components/layout/Sidebar/UserMenu.svelte';
+import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
 
-	import PencilSquare from '../icons/PencilSquare.svelte';
+import PencilSquare from '../icons/PencilSquare.svelte';
 	import Banner from '../common/Banner.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
 
@@ -36,13 +36,15 @@
 
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import ChatPlus from '../icons/ChatPlus.svelte';
-	import ChatCheck from '../icons/ChatCheck.svelte';
-	import Knobs from '../icons/Knobs.svelte';
+import ChatCheck from '../icons/ChatCheck.svelte';
+import Knobs from '../icons/Knobs.svelte';
+import TenantSelector from './TenantSelector.svelte';
+import type { UploadTenant } from '$lib/apis/uploads';
 
 	const i18n = getContext('i18n');
 
 	export let initNewChat: Function;
-	export let shareEnabled: boolean = false;
+export let shareEnabled: boolean = false;
 
 	export let chat;
 	export let history;
@@ -51,7 +53,12 @@
 
 	export let onSaveTempChat: () => {};
 	export let archiveChatHandler: (id: string) => void;
-	export let moveChatHandler: (id: string, folderId: string) => void;
+export let moveChatHandler: (id: string, folderId: string) => void;
+export let tenantOptions: UploadTenant[] = [];
+export let selectedTenantId: string | null = null;
+export let tenantOptionsLoading: boolean = false;
+export let tenantLoadError: string | null = null;
+export let onTenantChange: (tenantId: string | null) => void = () => {};
 
 	let closedBannerIds = [];
 
@@ -99,13 +106,29 @@
 				{/if}
 
 				<div
-					class="flex-1 overflow-hidden max-w-full py-0.5
-			{$showSidebar ? 'ml-1' : ''}
-			"
+					class="flex-1 overflow-hidden max-w-full py-0.5 {$showSidebar ? 'ml-1' : ''}"
 				>
-					{#if showModelSelector}
-						<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
-					{/if}
+					<div class="flex flex-col gap-2 md:flex-row md:items-end md:gap-3">
+						{#if showModelSelector}
+							<div class="flex-1 min-w-0">
+								<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
+							</div>
+						{/if}
+
+						{#if $user?.role === 'admin'}
+							<div class="w-full md:flex-none md:w-auto md:min-w-[220px]">
+								<TenantSelector
+									tenants={tenantOptions}
+									{selectedTenantId}
+									loading={tenantOptionsLoading}
+									error={tenantLoadError}
+									on:change={(event) => {
+										onTenantChange?.(event.detail);
+									}}
+								/>
+							</div>
+						{/if}
+					</div>
 				</div>
 
 				<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">

@@ -290,7 +290,7 @@ async def generate_follow_ups(
     )
   
     if "luxor" in model_id:
-        form_data["task"] = "follow_up"
+        form_data["task"] = "follow-up"
         return await generate_chat_completion(request, form_data=form_data, user=user)
 
     if request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE != "":
