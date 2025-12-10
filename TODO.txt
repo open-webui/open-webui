@@ -68,7 +68,7 @@ MINOR:
        - Add timeout and fallback to user message if query generation takes >5 seconds
     
     2. **Embedding Generation Optimization:**
-       - Already fast at 0.3s, but could pre-generate embeddings for common queries
+       - Already fast at 0.3s, but could pre-generate embeddings for common queries [no]
        - Batch embedding requests if multiple queries are generated
     
     3. **General Optimizations:**
