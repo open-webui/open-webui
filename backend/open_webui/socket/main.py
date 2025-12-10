@@ -78,11 +78,33 @@ async def periodic_usage_pool_cleanup():
         log.debug("Usage pool cleanup lock already exists. Not running it.")
         return
     log.debug("Running periodic_usage_pool_cleanup")
+    
+    consecutive_renewal_failures = 0
+    max_renewal_failures = 3  # Allow some transient failures before giving up
+    
     try:
         while True:
             if not renew_func():
-                log.error(f"Unable to renew cleanup lock. Exiting usage pool cleanup.")
-                raise Exception("Unable to renew usage pool cleanup lock.")
+                consecutive_renewal_failures += 1
+                log.warning(
+                    f"Unable to renew cleanup lock (failure #{consecutive_renewal_failures}). "
+                    f"Lock may have expired or Redis is unavailable."
+                )
+                
+                # If we've had multiple consecutive failures, exit gracefully
+                if consecutive_renewal_failures >= max_renewal_failures:
+                    log.error(
+                        f"Too many consecutive lock renewal failures ({consecutive_renewal_failures}). "
+                        "Exiting usage pool cleanup. Another instance may take over."
+                    )
+                    break  # Exit gracefully instead of raising exception
+                
+                # For transient failures, wait a bit and try again before next iteration
+                await asyncio.sleep(1)
+                continue
+            
+            # Reset failure counter on successful renewal
+            consecutive_renewal_failures = 0
 
             now = int(time.time())
             send_usage = False
@@ -124,6 +146,7 @@ async def periodic_usage_pool_cleanup():
         log.error(f"Fatal error in periodic_usage_pool_cleanup: {e}", exc_info=True)
     finally:
         release_func()
+        log.debug("periodic_usage_pool_cleanup exited and released lock")
 
 
 app = socketio.ASGIApp(

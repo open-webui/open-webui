@@ -127,12 +127,18 @@ class RedisLock:
             self.lock_obtained = False
             return
         
+        # Make release idempotent: if lock is already marked as released, don't try again
+        if not self.lock_obtained:
+            log.debug(f"Lock {self.lock_name} already released, skipping release (idempotent)")
+            return
+        
         # BUG #8 fix: Use Lua script for atomic check-and-delete to prevent race condition
         # BUG #2 fix: Cache script to avoid re-registering on every call
         try:
             # Register script if not already cached
             if self._release_script is None:
                 # Lua script for atomic lock release (check lock_id matches before deleting)
+                # Returns: 1 = success, 2 = lock already expired/deleted, 0 = lock ID mismatch
                 self._release_script = self.redis.register_script("""
                     local lock_name = KEYS[1]
                     local lock_id = ARGV[1]
@@ -140,19 +146,34 @@ class RedisLock:
                     if current_id == lock_id then
                         redis.call('DEL', lock_name)
                         return 1
+                    elseif current_id == false then
+                        return 2
                     else
                         return 0
                     end
                 """)
             result = self._release_script(keys=[self.lock_name], args=[self.lock_id])
+            
+            # Always mark as released to make subsequent calls idempotent
+            self.lock_obtained = False
+            
             if result == 1:
-                self.lock_obtained = False
                 log.debug(f"Successfully released lock {self.lock_name}")
-            else:
-                log.warning(
-                    f"Lock {self.lock_name} was not released: lock_id mismatch or lock already released"
+            elif result == 2:
+                # Lock already expired/deleted - this is fine, just mark as released
+                log.debug(
+                    f"Lock {self.lock_name} already expired/deleted when attempting release. "
+                    "This is normal if lock expired naturally."
                 )
-                self.lock_obtained = False
+            else:
+                # result == 0: Lock ID mismatch
+                # This can happen legitimately if:
+                # 1. Lock expired and was re-acquired by another process
+                # 2. Process took too long and lock was taken over
+                log.info(
+                    f"Lock {self.lock_name} not released: lock_id mismatch. "
+                    "This is expected if the lock expired and was re-acquired by another process."
+                )
         except Exception as script_error:
             # Fallback to non-atomic method if Lua script fails
             # BUG #5 fix: Clear cached script so it will be re-registered on next attempt
@@ -164,11 +185,20 @@ class RedisLock:
                     self.redis.delete(self.lock_name)
                     self.lock_obtained = False
                     log.debug(f"Successfully released lock {self.lock_name} (fallback method)")
-                else:
-                    log.warning(
-                        f"Lock {self.lock_name} was not released: lock_id mismatch or lock already released"
-                    )
+                elif lock_value is None:
+                    # Lock already expired/deleted
                     self.lock_obtained = False
+                    log.debug(
+                        f"Lock {self.lock_name} already expired/deleted when attempting release (fallback). "
+                        "This is normal if lock expired naturally."
+                    )
+                else:
+                    # Lock ID mismatch
+                    self.lock_obtained = False
+                    log.info(
+                        f"Lock {self.lock_name} not released: lock_id mismatch (fallback). "
+                        "This is expected if the lock expired and was re-acquired by another process."
+                    )
             except (ConnectionError, TimeoutError, RedisError) as e:
                 log.error(f"Redis error releasing lock {self.lock_name}: {e}", exc_info=True)
                 self.lock_obtained = False
