@@ -1,14 +1,22 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
-	import { marked } from 'marked';
-
 	import { toast } from 'svelte-sonner';
 
+	import { marked } from 'marked';
 	import { v4 as uuidv4 } from 'uuid';
-	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
-	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
+	import dayjs from '$lib/dayjs';
+	import duration from 'dayjs/plugin/duration';
+	import relativeTime from 'dayjs/plugin/relativeTime';
+
+	dayjs.extend(duration);
+	dayjs.extend(relativeTime);
 
 	import { onMount, tick, getContext, createEventDispatcher, onDestroy } from 'svelte';
+
+	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
+	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
+	import { KokoroWorker } from '$lib/workers/KokoroWorker';
+
 	const dispatch = createEventDispatcher();
 
 	import {
@@ -49,6 +57,9 @@
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
+	import { createNoteHandler } from '../notes/utils';
+	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
+
 	import InputMenu from './MessageInput/InputMenu.svelte';
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
@@ -60,11 +71,9 @@
 	import Image from '../common/Image.svelte';
 
 	import XMark from '../icons/XMark.svelte';
-	import Headphone from '../icons/Headphone.svelte';
 	import GlobeAlt from '../icons/GlobeAlt.svelte';
 	import Photo from '../icons/Photo.svelte';
 	import Wrench from '../icons/Wrench.svelte';
-	import CommandLine from '../icons/CommandLine.svelte';
 	import Sparkles from '../icons/Sparkles.svelte';
 
 	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
@@ -74,12 +83,11 @@
 	import Component from '../icons/Component.svelte';
 	import PlusAlt from '../icons/PlusAlt.svelte';
 
-	import { KokoroWorker } from '$lib/workers/KokoroWorker';
-
-	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
 	import CommandSuggestionList from './MessageInput/CommandSuggestionList.svelte';
 	import Knobs from '../icons/Knobs.svelte';
 	import ValvesModal from '../workspace/common/ValvesModal.svelte';
+	import PageEdit from '../icons/PageEdit.svelte';
+	import { goto } from '$app/navigation';
 
 	const i18n = getContext('i18n');
 
@@ -108,6 +116,8 @@
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
+
+	let inputContent = null;
 
 	let showInputVariablesModal = false;
 	let inputVariablesModalCallback = (variableValues) => {};
@@ -730,6 +740,23 @@
 		});
 	};
 
+	const createNote = async () => {
+		if (inputContent?.md.trim() === '' && inputContent?.html.trim() === '') {
+			toast.error($i18n.t('Cannot create an empty note.'));
+			return;
+		}
+
+		const res = await createNoteHandler(
+			dayjs().format('YYYY-MM-DD'),
+			inputContent?.md,
+			inputContent?.html
+		);
+
+		if (res) {
+			goto(`/notes/${res.id}`);
+		}
+	};
+
 	const onDragOver = (e) => {
 		e.preventDefault();
 
@@ -1195,8 +1222,9 @@
 												<RichTextInput
 													bind:this={chatInputElement}
 													id="chat-input"
-													onChange={(e) => {
-														prompt = e.md;
+													onChange={(content) => {
+														prompt = content.md;
+														inputContent = content;
 														command = getCommand();
 													}}
 													json={true}
@@ -1620,13 +1648,13 @@
 									</div>
 								</div>
 
-								<div class="self-end flex space-x-1 mr-1 shrink-0">
+								<div class="self-end flex space-x-1 mr-1 shrink-0 gap-[0.5px]">
 									{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
 										<!-- {$i18n.t('Record voice')} -->
 										<Tooltip content={$i18n.t('Dictate')}>
 											<button
 												id="voice-input-button"
-												class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 mr-0.5 self-center"
+												class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 self-center"
 												type="button"
 												on:click={async () => {
 													try {
@@ -1759,6 +1787,24 @@
 											</Tooltip>
 										</div>
 									{:else}
+										{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
+											<div class=" flex items-center">
+												<Tooltip content={$i18n.t('Create note')}>
+													<button
+														id="send-message-button"
+														class=" text-gray-600 mr-0.5 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 self-center"
+														type="button"
+														disabled={prompt === '' && files.length === 0}
+														on:click={() => {
+															createNote();
+														}}
+													>
+														<PageEdit className="size-5" />
+													</button>
+												</Tooltip>
+											</div>
+										{/if}
+
 										<div class=" flex items-center">
 											<Tooltip content={$i18n.t('Send message')}>
 												<button

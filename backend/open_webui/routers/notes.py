@@ -135,7 +135,6 @@ async def search_notes(
 async def create_new_note(
     request: Request, form_data: NoteForm, user=Depends(get_verified_user)
 ):
-
     if user.role != "admin" and not has_permission(
         user.id, "features.notes", request.app.state.config.USER_PERMISSIONS
     ):
@@ -187,8 +186,12 @@ async def get_note_by_id(request: Request, id: str, user=Depends(get_verified_us
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
 
-    write_access = has_access(
-        user.id, type="write", access_control=note.access_control, strict=False
+    write_access = (
+        user.role == "admin"
+        or (user.id == note.user_id)
+        or has_access(
+            user.id, type="write", access_control=note.access_control, strict=False
+        )
     )
 
     return NoteResponse(**note.model_dump(), write_access=write_access)
