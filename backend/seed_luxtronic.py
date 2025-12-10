@@ -115,14 +115,21 @@ def upsert_tenant_schedule(tenant_id: str, interval_minutes: int = 60):
     offset_seconds = random.randint(0, interval_minutes * 60)
     next_run = datetime.utcnow() + timedelta(seconds=offset_seconds)
     sql = """
-        INSERT INTO tenant_rebuild_schedule (tenant, interval_minutes, next_run, enabled)
-        VALUES (:tenant, :interval_minutes, :next_run, 1)
+        INSERT INTO tenant_rebuild_schedule (tenant_id, interval_minutes, next_run, enabled)
+        VALUES (:tenant_id, :interval_minutes, :next_run, 1)
         ON DUPLICATE KEY UPDATE
             interval_minutes = VALUES(interval_minutes),
             next_run = IFNULL(next_run, VALUES(next_run))
     """
     with get_db() as db:
-        db.execute(text(sql), {"tenant": tenant_id, "interval_minutes": interval_minutes, "next_run": next_run})
+        db.execute(
+            text(sql),
+            {
+                "tenant_id": tenant_id,
+                "interval_minutes": interval_minutes,
+                "next_run": next_run,
+            },
+        )
         db.commit()
 
 

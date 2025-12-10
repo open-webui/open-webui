@@ -111,7 +111,12 @@ class TenantsTable:
             db.commit()
         try:
             with get_db() as db:
-                db.execute(text("DELETE FROM tenant_rebuild_schedule WHERE tenant = :tenant"), {"tenant": tenant_id})
+                db.execute(
+                    text(
+                        "DELETE FROM tenant_rebuild_schedule WHERE tenant_id = :tenant_id"
+                    ),
+                    {"tenant_id": tenant_id},
+                )
                 db.commit()
         except Exception as e:
             print(f"Warning: failed to delete tenant_rebuild_schedule row for {tenant_id}: {e}")
