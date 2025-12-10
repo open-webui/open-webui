@@ -49,7 +49,7 @@ from open_webui.utils.misc import (
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access
-from open_webui.utils.headers import include_user_info_headers
+from open_webui.utils.headers import include_user_info_headers, generate_safety_identifier
 
 
 log = logging.getLogger(__name__)
@@ -875,7 +875,7 @@ async def generate_chat_completion(
             "role": user.role,
         }
 
-    payload["safety_identifier"] = user.id
+    payload["safety_identifier"] = generate_safety_identifier(user.id)
 
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
