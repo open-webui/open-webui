@@ -44,7 +44,12 @@
 						: '  text-gray-500 dark:text-gray-400'}"
 					type="button"
 					on:click={() => {
-						value = item.value;
+						if (value === item.value) {
+							value = null;
+						} else {
+							value = item.value;
+						}
+
 						open = false;
 						onChange(value);
 					}}
