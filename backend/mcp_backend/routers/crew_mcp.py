@@ -39,12 +39,10 @@ def extract_user_token(
 
     # Check if we're in localhost development environment
     is_localhost = (
-        os.getenv("ENVIRONMENT", "").lower()
-        in ["", "local", "localhost", "development"]
+        os.getenv("ENVIRONMENT", "").lower() in ["local", "localhost", "development"]
         or "localhost" in os.getenv("WEBUI_BASE_URL", "")
-        or "localhost" in os.getenv("CORS_ALLOW_ORIGIN", "")
-        or os.getenv("ENABLE_SIGNUP", "").lower()
-        == "true"  # Local dev has signup enabled
+        or "127.0.0.1" in os.getenv("WEBUI_BASE_URL", "")
+        or os.getenv("WEBUI_BASE_URL", "").startswith("http://localhost")
     )
 
     logging.info("=== OAuth Token Extraction Debug ===")
