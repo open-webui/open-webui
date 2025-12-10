@@ -6,7 +6,9 @@ def _get_super_admin_emails() -> Set[str]:
     """
     Get super admin emails from environment variable.
     Environment variable format: comma-separated emails (e.g., "email1@nyu.edu,email2@nyu.edu")
-    Falls back to default list if env var is not set.
+    
+    REQUIRED: SUPER_ADMIN_EMAILS environment variable must be set.
+    Returns empty set if env var is not set (no hardcoded defaults).
     """
     env_emails = os.environ.get("SUPER_ADMIN_EMAILS", "").strip()
     
@@ -15,22 +17,18 @@ def _get_super_admin_emails() -> Set[str]:
         emails = [email.strip().lower() for email in env_emails.split(",") if email.strip()]
         return set(emails)
     else:
-        # Fallback to default list for backward compatibility
-        default_emails = [
-            "sm11538@nyu.edu",
-            "ms15138@nyu.edu", 
-            "mb484@nyu.edu",
-            "cg4532@nyu.edu",
-            "ht2490@nyu.edu",
-            "ps5226@nyu.edu"
-        ]
-        return set(email.lower() for email in default_emails)
+        # No fallback - env var is required
+        # Return empty set if not configured (will only allow first user as superadmin)
+        return set()
 
 
 def get_super_admin_emails() -> List[str]:
     """
     Get list of super admin emails (for API responses).
-    Returns emails in their original case as stored in env var or default list.
+    Returns emails in their original case as stored in env var.
+    
+    REQUIRED: SUPER_ADMIN_EMAILS environment variable must be set.
+    Returns empty list if env var is not set (no hardcoded defaults).
     """
     env_emails = os.environ.get("SUPER_ADMIN_EMAILS", "").strip()
     
@@ -38,15 +36,9 @@ def get_super_admin_emails() -> List[str]:
         emails = [email.strip() for email in env_emails.split(",") if email.strip()]
         return emails
     else:
-        # Fallback to default list
-        return [
-            "sm11538@nyu.edu",
-            "ms15138@nyu.edu", 
-            "mb484@nyu.edu",
-            "cg4532@nyu.edu",
-            "ht2490@nyu.edu",
-            "ps5226@nyu.edu"
-        ]
+        # No fallback - env var is required
+        # Return empty list if not configured
+        return []
 
 
 def is_super_admin(user) -> bool:
