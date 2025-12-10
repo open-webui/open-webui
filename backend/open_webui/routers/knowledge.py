@@ -18,6 +18,10 @@ from open_webui.routers.retrieval import (
     BatchProcessFilesForm,
 )
 from open_webui.storage.provider import Storage
+from open_webui.utils.file_cleanup import (
+    cleanup_file_completely,
+    cleanup_file_from_knowledge_only,
+)
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_verified_user
@@ -603,6 +607,13 @@ def remove_file_from_knowledge_by_id(
     form_data: KnowledgeFileIdForm,
     user=Depends(get_verified_user),
 ):
+    """
+    Remove a file from a knowledge collection.
+    
+    If the file is only in this knowledge collection, it will be completely deleted
+    (vector DB, SQL, physical file). If it's in multiple knowledge collections,
+    it will only be removed from this one.
+    """
     knowledge = Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
@@ -627,46 +638,96 @@ def remove_file_from_knowledge_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    # Remove content from the vector database
-    VECTOR_DB_CLIENT.delete(
-        collection_name=knowledge.id, filter={"file_id": form_data.file_id}
+    log.info(
+        f"Removing file {form_data.file_id} from knowledge collection {id} "
+        f"by user {user.id} (email: {user.email})"
     )
 
-    # Remove the file's collection from vector database
-    file_collection = f"file-{form_data.file_id}"
-    if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
-        VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+    # Check if file is actually in the current knowledge base
+    data = knowledge.data or {}
+    file_ids = data.get("file_ids", [])
+    if not isinstance(file_ids, list) or form_data.file_id not in file_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT("File is not in this knowledge collection"),
+        )
 
-    # Delete file from database
-    Files.delete_file_by_id(form_data.file_id)
+    # Check if file is used in other knowledge collections
+    all_knowledge_bases = Knowledges.get_knowledge_bases_by_file_id(form_data.file_id)
+    other_knowledge_bases = [
+        kb for kb in all_knowledge_bases if kb.id != id
+    ]
 
-    if knowledge:
-        data = knowledge.data or {}
-        file_ids = data.get("file_ids", [])
-
-        if form_data.file_id in file_ids:
-            file_ids.remove(form_data.file_id)
-            data["file_ids"] = file_ids
-
-            knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
-
-            if knowledge:
-                files = Files.get_files_by_ids(file_ids)
-
-                return KnowledgeFilesResponse(
-                    **knowledge.model_dump(),
-                    files=files,
-                )
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.DEFAULT("knowledge"),
-                )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("file_id"),
+    if other_knowledge_bases:
+        # File is used in other knowledge collections, only remove from this one
+        log.info(
+            f"File {form_data.file_id} is used in {len(other_knowledge_bases)} other "
+            f"knowledge collections, removing from {id} only"
+        )
+        success, details = cleanup_file_from_knowledge_only(
+            form_data.file_id, id
+        )
+        
+        if not success:
+            log.error(
+                f"Failed to remove file {form_data.file_id} from knowledge collection {id}: "
+                f"{details.get('errors', [])}"
             )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=ERROR_MESSAGES.DEFAULT(
+                    f"Error removing file from knowledge collection: {details.get('errors', [])}"
+                ),
+            )
+    else:
+        # File is only in this knowledge collection, do complete cleanup
+        log.info(
+            f"File {form_data.file_id} is only in knowledge collection {id}, "
+            f"performing complete cleanup"
+        )
+        # Don't exclude current knowledge base - we want to remove from everywhere
+        success, details = cleanup_file_completely(
+            file_id=form_data.file_id,
+            exclude_knowledge_id=None,  # Remove from all knowledge bases including this one
+            delete_physical_file=True,
+        )
+        
+        if not success:
+            log.error(
+                f"Failed to completely cleanup file {form_data.file_id}: "
+                f"{details.get('errors', [])}"
+            )
+            # Check if critical operations failed
+            if not details.get("sql_deleted") or not details.get("vector_db_cleaned"):
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=ERROR_MESSAGES.DEFAULT(
+                        f"Error deleting file: {details.get('errors', [])}"
+                    ),
+                )
+
+    # Refresh knowledge base to get updated file list
+    knowledge = Knowledges.get_knowledge_by_id(id=id)
+    if not knowledge:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT("Error retrieving updated knowledge base"),
+        )
+
+    # Get updated file list
+    data = knowledge.data or {}
+    file_ids = data.get("file_ids", [])
+    files = Files.get_files_by_ids(file_ids) if file_ids else []
+
+    log.info(
+        f"Successfully removed file {form_data.file_id} from knowledge collection {id}. "
+        f"Remaining files: {len(files)}"
+    )
+
+    return KnowledgeFilesResponse(
+        **knowledge.model_dump(),
+        files=files,
+    )
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

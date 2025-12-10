@@ -19,6 +19,7 @@ from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.routers.audio import transcribe
 from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.file_cleanup import cleanup_file_completely
 from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
@@ -447,29 +448,65 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.delete("/{id}")
 async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
+    """
+    Delete a file completely from all systems.
+    
+    This endpoint performs complete cleanup:
+    - Removes from all knowledge collections (vector DB and metadata)
+    - Deletes file-specific collection from vector DB
+    - Deletes from SQL database
+    - Deletes physical file from storage
+    """
     file = Files.get_file_by_id(id)
-    if file and (file.user_id == user.id or user.role == "admin"):
-        # We should add Chroma cleanup here
-
-        result = Files.delete_file_by_id(id)
-        if result:
-            try:
-                Storage.delete_file(file.path)
-            except Exception as e:
-                log.exception(e)
-                log.error("Error deleting files")
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.DEFAULT("Error deleting files"),
-                )
-            return {"message": "File deleted successfully"}
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("Error deleting file"),
-            )
-    else:
+    if not file:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+    
+    # Check permissions
+    if file.user_id != user.id and user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+    
+    log.info(
+        f"Deleting file {id} (filename: {file.filename}) "
+        f"by user {user.id} (email: {user.email})"
+    )
+    
+    # Use centralized cleanup utility for complete deletion
+    success, details = cleanup_file_completely(
+        file_id=id,
+        exclude_knowledge_id=None,  # Delete from all knowledge collections
+        delete_physical_file=True,
+    )
+    
+    if success:
+        log.info(f"Successfully deleted file {id} completely")
+        return {"message": "File deleted successfully"}
+    else:
+        # Log errors but still return success if critical operations completed
+        # (SQL deletion and vector DB cleanup are critical)
+        errors = details.get("errors", [])
+        log.warning(
+            f"File {id} deletion completed with some errors: {errors}. "
+            f"Details: {details}"
+        )
+        
+        # If critical operations failed, raise an error
+        if not details.get("sql_deleted") or not details.get("vector_db_cleaned"):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=ERROR_MESSAGES.DEFAULT(
+                    f"Error deleting file: {', '.join(errors) if errors else 'Unknown error'}"
+                ),
+            )
+        
+        # If only non-critical operations failed (like physical file deletion),
+        # still return success but log the warnings
+        return {
+            "message": "File deleted successfully",
+            "warnings": errors if errors else None,
+        }

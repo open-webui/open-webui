@@ -324,3 +324,9 @@ redis-deployment-info/
 
 # Performance analysis documentation (not for version control)
 PERFORMANCE_ANALYSIS.md
+
+# Test frameworks (not for version control)
+test_frameworks/
+
+# Documentation fixes (not for version control)
+.documentations_fixes/
