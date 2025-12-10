@@ -127,18 +127,30 @@ async def periodic_usage_pool_cleanup():
 
                     if expired_sids:
                         # Atomic update to remove expired sids (fast single round trip, prevents race conditions)
-                        def remove_expired(current_connections):
-                            if not isinstance(current_connections, dict):
-                                return {}
+                        # Fallback to regular dict operations if RedisDict not available
+                        if isinstance(USAGE_POOL, RedisDict):
+                            def remove_expired(current_connections):
+                                if not isinstance(current_connections, dict):
+                                    return {}
+                                for expired_sid in expired_sids:
+                                    current_connections.pop(expired_sid, None)
+                                return current_connections if current_connections else None
+                            
+                            updated = USAGE_POOL.atomic_update_dict(model_id, remove_expired, default_value={})
+                            if updated is None:
+                                # Empty dict - delete the key
+                                log.debug(f"Cleaning up model {model_id} from usage pool")
+                                del USAGE_POOL[model_id]
+                        else:
+                            # Fallback for regular dict (single-pod mode, no Redis)
                             for expired_sid in expired_sids:
-                                current_connections.pop(expired_sid, None)
-                            return current_connections if current_connections else None
-                        
-                        updated = USAGE_POOL.atomic_update_dict(model_id, remove_expired, default_value={})
-                        if updated is None:
-                            # Empty dict - delete the key
-                            log.debug(f"Cleaning up model {model_id} from usage pool")
-                            del USAGE_POOL[model_id]
+                                if expired_sid in connections:
+                                    del connections[expired_sid]
+                            if not connections:
+                                log.debug(f"Cleaning up model {model_id} from usage pool")
+                                del USAGE_POOL[model_id]
+                            else:
+                                USAGE_POOL[model_id] = connections
                         send_usage = True
 
                 if send_usage:
@@ -175,13 +187,22 @@ async def usage(sid, data):
         current_time = int(time.time())
 
         # Atomic update to prevent race conditions (fast single round trip)
-        def update_usage(existing_usage):
+        # Fallback to regular dict operations if RedisDict not available
+        if isinstance(USAGE_POOL, RedisDict):
+            def update_usage(existing_usage):
+                if not isinstance(existing_usage, dict):
+                    existing_usage = {}
+                existing_usage[sid] = {"updated_at": current_time}
+                return existing_usage
+            
+            USAGE_POOL.atomic_update_dict(model_id, update_usage, default_value={})
+        else:
+            # Fallback for regular dict (single-pod mode, no Redis)
+            existing_usage = USAGE_POOL.get(model_id, {})
             if not isinstance(existing_usage, dict):
                 existing_usage = {}
             existing_usage[sid] = {"updated_at": current_time}
-            return existing_usage
-        
-        USAGE_POOL.atomic_update_dict(model_id, update_usage, default_value={})
+            USAGE_POOL[model_id] = existing_usage
 
         # Broadcast the usage data to all clients
         await sio.emit("usage", {"models": get_models_in_use()})
@@ -202,8 +223,15 @@ async def connect(sid, environ, auth):
             try:
                 SESSION_POOL[sid] = user.model_dump()
                 # Atomic append to prevent race conditions (fast single round trip)
-                # No need to check if list - atomic operation handles it
-                USER_POOL.atomic_append_to_list(user.id, sid)
+                # Fallback to regular dict operations if RedisDict not available
+                if isinstance(USER_POOL, RedisDict):
+                    USER_POOL.atomic_append_to_list(user.id, sid)
+                else:
+                    # Fallback for regular dict (single-pod mode, no Redis)
+                    existing_sessions = USER_POOL.get(user.id, [])
+                    if not isinstance(existing_sessions, list):
+                        existing_sessions = []
+                    USER_POOL[user.id] = existing_sessions + [sid]
 
                 # print(f"user {user.name}({user.id}) connected with session ID {sid}")
                 await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
@@ -230,7 +258,15 @@ async def user_join(sid, data):
     try:
         SESSION_POOL[sid] = user.model_dump()
         # Atomic append to prevent race conditions (fast single round trip)
-        USER_POOL.atomic_append_to_list(user.id, sid)
+        # Fallback to regular dict operations if RedisDict not available
+        if isinstance(USER_POOL, RedisDict):
+            USER_POOL.atomic_append_to_list(user.id, sid)
+        else:
+            # Fallback for regular dict (single-pod mode, no Redis)
+            existing_sessions = USER_POOL.get(user.id, [])
+            if not isinstance(existing_sessions, list):
+                existing_sessions = []
+            USER_POOL[user.id] = existing_sessions + [sid]
 
         # Join all the channels
         channels = Channels.get_channels_by_user_id(user.id)
@@ -316,17 +352,30 @@ async def disconnect(sid):
 
             user_id = user["id"]
             # Atomic update to remove sid from list (fast single round trip)
-            def remove_session(existing_sessions):
+            # Fallback to regular dict operations if RedisDict not available
+            if isinstance(USER_POOL, RedisDict):
+                def remove_session(existing_sessions):
+                    if not isinstance(existing_sessions, list):
+                        return []
+                    filtered = [_sid for _sid in existing_sessions if _sid != sid]
+                    return filtered if filtered else None  # None means delete the key
+                
+                result = USER_POOL.atomic_update_dict(user_id, remove_session, default_value=[])
+                if result is None:
+                    # Empty list - delete the key
+                    if user_id in USER_POOL:
+                        del USER_POOL[user_id]
+            else:
+                # Fallback for regular dict (single-pod mode, no Redis)
+                existing_sessions = USER_POOL.get(user_id, [])
                 if not isinstance(existing_sessions, list):
-                    return []
-                filtered = [_sid for _sid in existing_sessions if _sid != sid]
-                return filtered if filtered else None  # None means delete the key
-            
-            result = USER_POOL.atomic_update_dict(user_id, remove_session, default_value=[])
-            if result is None:
-                # Empty list - delete the key
-                if user_id in USER_POOL:
-                    del USER_POOL[user_id]
+                    existing_sessions = []
+                filtered_sessions = [_sid for _sid in existing_sessions if _sid != sid]
+                if len(filtered_sessions) == 0:
+                    if user_id in USER_POOL:
+                        del USER_POOL[user_id]
+                else:
+                    USER_POOL[user_id] = filtered_sessions
 
             await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
         else:
