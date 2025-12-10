@@ -34,8 +34,6 @@ def extract_user_token(
     Supports multiple OAuth2 proxy configurations and token sources.
     """
     import os
-    import base64
-    import json
 
     # Check if we're in localhost development environment
     is_localhost = (
@@ -87,24 +85,12 @@ def extract_user_token(
             logging.info(
                 f"Found OAuth token in cookie {cookie_name} (length: {len(token)})"
             )
-
-            # If it's the oauth2-proxy session cookie, try to extract the access token
+            
+            # Skip oauth2-proxy session cookies as they're not meant for direct token extraction
+            # OAuth2-proxy should be configured to forward access tokens via headers instead
             if cookie_name in ["_oauth2_proxy", "CANChat"]:
-                try:
-                    # OAuth2 proxy session cookies are often base64 encoded JSON
-                    # Try to decode and extract access token
-                    decoded_data = base64.b64decode(token + "==").decode("utf-8")
-                    session_data = json.loads(decoded_data)
-                    if "access_token" in session_data:
-                        access_token = session_data["access_token"]
-                        logging.info(
-                            f"Extracted access token from session cookie {cookie_name}"
-                        )
-                        return access_token
-                except (ValueError, json.JSONDecodeError, UnicodeDecodeError) as e:
-                    logging.debug(f"Could not decode session cookie {cookie_name}: {e}")
-                    # Fall back to using the cookie value as-is
-                    pass
+                logging.debug(f"Skipping oauth2-proxy session cookie {cookie_name} - use header forwarding instead")
+                continue
 
             return token
 
