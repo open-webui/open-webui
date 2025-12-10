@@ -4,6 +4,7 @@ API endpoints for CrewAI integration with MCP servers
 """
 
 import logging
+import os
 import sys
 import json
 import aiohttp
@@ -25,26 +26,32 @@ sys.path.append(str(backend_dir))
 bearer_security = HTTPBearer(auto_error=False)
 
 # OAuth token extraction configuration
+# Default headers to check for OAuth tokens (configurable via environment variables)
 OAUTH_HEADERS_TO_CHECK = [
-    "X-Forwarded-Access-Token",
-    "X-Auth-Request-Access-Token",
-    "X-Oauth-Token",
-    "X-Access-Token",
-    "Authorization",
+    header.strip()
+    for header in os.getenv(
+        "OAUTH_HEADERS_TO_CHECK",
+        "X-Forwarded-Access-Token,X-Auth-Request-Access-Token,X-Oauth-Token,X-Access-Token,Authorization",
+    ).split(",")
+    if header.strip()
 ]
 
 OAUTH_COOKIES_TO_CHECK = [
-    "oauth_access_token",
-    "oauth_id_token",
-    "oauth_token",
-    "_oauth2_proxy",  # Default oauth2-proxy session cookie
-    "CANChat",  # Our configured cookie name
+    cookie.strip()
+    for cookie in os.getenv(
+        "OAUTH_COOKIES_TO_CHECK",
+        "oauth_access_token,oauth_id_token,oauth_token,_oauth2_proxy,CANChat",
+    ).split(",")
+    if cookie.strip()
 ]
 
 MS_GRAPH_HEADERS = [
-    "X-MS-Token-AAD-Access-Token",
-    "X-MS-Token-AAD-Id-Token",
-    "X-Forwarded-AAD-Access-Token",
+    header.strip()
+    for header in os.getenv(
+        "MS_GRAPH_HEADERS",
+        "X-MS-Token-AAD-Access-Token,X-MS-Token-AAD-Id-Token,X-Forwarded-AAD-Access-Token",
+    ).split(",")
+    if header.strip()
 ]
 
 
