@@ -9,7 +9,7 @@
 	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { capitalizeFirstLetter } from '$lib/utils';
+	import { capitalizeFirstLetter, formatFileSize } from '$lib/utils';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import DocumentPage from '$lib/components/icons/DocumentPage.svelte';
@@ -50,6 +50,7 @@
 
 						<div class="line-clamp-1">
 							{file?.name ?? file?.meta?.name}
+							<span class="text-xs text-gray-500">{formatFileSize(file?.meta?.size)}</span>
 						</div>
 					</div>
 				</div>
