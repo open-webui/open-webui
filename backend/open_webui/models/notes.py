@@ -302,9 +302,6 @@ class NoteTable:
             else:
                 query = query.order_by(Note.updated_at.desc())
 
-                for key, value in filter.items():
-                    query = query.filter(getattr(Note, key).ilike(f"%{value}%"))
-
             # Count BEFORE pagination
             total = query.count()
 

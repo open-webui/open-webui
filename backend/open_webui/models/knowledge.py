@@ -7,9 +7,14 @@ import uuid
 from open_webui.internal.db import Base, get_db
 from open_webui.env import SRC_LOG_LEVELS
 
-from open_webui.models.files import File, FileModel, FileMetadataResponse
+from open_webui.models.files import (
+    File,
+    FileModel,
+    FileMetadataResponse,
+    FileModelResponse,
+)
 from open_webui.models.groups import Groups
-from open_webui.models.users import Users, UserResponse
+from open_webui.models.users import User, UserModel, Users, UserResponse
 
 
 from pydantic import BaseModel, ConfigDict
@@ -21,6 +26,7 @@ from sqlalchemy import (
     Text,
     JSON,
     UniqueConstraint,
+    or_,
 )
 
 from open_webui.utils.access_control import has_access
@@ -135,6 +141,15 @@ class KnowledgeForm(BaseModel):
     access_control: Optional[dict] = None
 
 
+class FileUserResponse(FileModelResponse):
+    user: Optional[UserResponse] = None
+
+
+class KnowledgeFileListResponse(BaseModel):
+    items: list[FileUserResponse]
+    total: int
+
+
 class KnowledgeTable:
     def insert_new_knowledge(
         self, user_id: str, form_data: KnowledgeForm
@@ -231,6 +246,88 @@ class KnowledgeTable:
                 ]
         except Exception:
             return []
+
+    def search_files_by_id(
+        self,
+        knowledge_id: str,
+        user_id: str,
+        filter: dict,
+        skip: int = 0,
+        limit: int = 30,
+    ) -> KnowledgeFileListResponse:
+        try:
+            with get_db() as db:
+                query = (
+                    db.query(File, User)
+                    .join(KnowledgeFile, File.id == KnowledgeFile.file_id)
+                    .outerjoin(User, User.id == KnowledgeFile.user_id)
+                    .filter(KnowledgeFile.knowledge_id == knowledge_id)
+                )
+
+                if filter:
+                    query_key = filter.get("query")
+                    if query_key:
+                        query = query.filter(or_(File.filename.ilike(f"%{query_key}%")))
+
+                    view_option = filter.get("view_option")
+                    if view_option == "created":
+                        query = query.filter(KnowledgeFile.user_id == user_id)
+                    elif view_option == "shared":
+                        query = query.filter(KnowledgeFile.user_id != user_id)
+
+                    order_by = filter.get("order_by")
+                    direction = filter.get("direction")
+
+                    if order_by == "name":
+                        if direction == "asc":
+                            query = query.order_by(File.filename.asc())
+                        else:
+                            query = query.order_by(File.filename.desc())
+                    elif order_by == "created_at":
+                        if direction == "asc":
+                            query = query.order_by(File.created_at.asc())
+                        else:
+                            query = query.order_by(File.created_at.desc())
+                    elif order_by == "updated_at":
+                        if direction == "asc":
+                            query = query.order_by(File.updated_at.asc())
+                        else:
+                            query = query.order_by(File.updated_at.desc())
+                    else:
+                        query = query.order_by(File.updated_at.desc())
+
+                else:
+                    query = query.order_by(File.updated_at.desc())
+
+                # Count BEFORE pagination
+                total = query.count()
+
+                if skip:
+                    query = query.offset(skip)
+                if limit:
+                    query = query.limit(limit)
+
+                items = query.all()
+
+                files = []
+                for file, user in items:
+                    files.append(
+                        FileUserResponse(
+                            **FileModel.model_validate(file).model_dump(),
+                            user=(
+                                UserResponse(
+                                    **UserModel.model_validate(user).model_dump()
+                                )
+                                if user
+                                else None
+                            ),
+                        )
+                    )
+
+                return KnowledgeFileListResponse(items=files, total=total)
+        except Exception as e:
+            print(e)
+            return KnowledgeFileListResponse(items=[], total=0)
 
     def get_files_by_id(self, knowledge_id: str) -> list[FileModel]:
         try:

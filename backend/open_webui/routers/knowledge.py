@@ -5,6 +5,7 @@ from fastapi.concurrency import run_in_threadpool
 import logging
 
 from open_webui.models.knowledge import (
+    KnowledgeFileListResponse,
     Knowledges,
     KnowledgeForm,
     KnowledgeResponse,
@@ -262,6 +263,59 @@ async def update_knowledge_by_id(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.ID_TAKEN,
         )
+
+
+############################
+# GetKnowledgeFilesById
+############################
+
+
+@router.get("/{id}/files", response_model=KnowledgeFileListResponse)
+async def get_knowledge_files_by_id(
+    id: str,
+    query: Optional[str] = None,
+    view_option: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
+    page: Optional[int] = 1,
+    user=Depends(get_verified_user),
+):
+
+    knowledge = Knowledges.get_knowledge_by_id(id=id)
+    if not knowledge:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if not (
+        user.role == "admin"
+        or knowledge.user_id == user.id
+        or has_access(user.id, "read", knowledge.access_control)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    page = max(page, 1)
+
+    limit = 30
+    skip = (page - 1) * limit
+
+    filter = {}
+    if query:
+        filter["query"] = query
+    if view_option:
+        filter["view_option"] = view_option
+    if order_by:
+        filter["order_by"] = order_by
+    if direction:
+        filter["direction"] = direction
+
+    return Knowledges.search_files_by_id(
+        id, user.id, filter=filter, skip=skip, limit=limit
+    )
 
 
 ############################
