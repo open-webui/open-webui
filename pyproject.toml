@@ -32,6 +32,7 @@ dependencies = [
 
     "pymongo",
     "redis",
+    "rq==1.15.1",
     "boto3==1.35.53",
 
     "argon2-cffi==23.1.0",

@@ -3,13 +3,16 @@ import logging
 import mimetypes
 import os
 import shutil
+import time
 
 import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Iterator, List, Optional, Sequence, Union
+from uuid import UUID
 
 from fastapi import (
+    BackgroundTasks,
     Depends,
     FastAPI,
     File,
@@ -19,6 +22,10 @@ from fastapi import (
     Request,
     status,
     APIRouter,
+)
+from open_webui.utils.job_queue import (
+    enqueue_file_processing_job,
+    is_job_queue_available,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import run_in_threadpool
@@ -31,7 +38,12 @@ from langchain_core.documents import Document
 
 from open_webui.models.files import FileModel, Files
 from open_webui.models.knowledge import Knowledges
+from open_webui.models.users import Users
 from open_webui.storage.provider import Storage
+from open_webui.env import REDIS_URL
+from open_webui.socket.utils import RedisLock, get_redis_pool
+import redis
+from redis.exceptions import ConnectionError, TimeoutError, RedisError
 
 
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
@@ -781,6 +793,21 @@ async def update_query_settings(
 #
 ####################################
 
+def _get_user_chunk_settings(request: Request, user=None):
+    """
+    Helper function to safely get user chunk settings.
+    Handles cases where user is None (background tasks).
+    """
+    user_email = user.email if user and hasattr(user, 'email') else None
+    if user_email:
+        chunk_size = request.app.state.config.CHUNK_SIZE.get(user_email)
+        chunk_overlap = request.app.state.config.CHUNK_OVERLAP.get(user_email)
+    else:
+        # Use default chunk size if user is not available
+        chunk_size = request.app.state.config.CHUNK_SIZE.get(None) or 1000
+        chunk_overlap = request.app.state.config.CHUNK_OVERLAP.get(None) or 200
+    return user_email, chunk_size, chunk_overlap
+
 
 def save_docs_to_vector_db(
     request: Request,
@@ -826,15 +853,13 @@ def save_docs_to_vector_db(
                 raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
-        chunk_size = request.app.state.config.CHUNK_SIZE.get(user.email)
-        chunk_overlap = request.app.state.config.CHUNK_OVERLAP.get(user.email)
-        log.info(f"[Splitting] user={user.email} | chunk_size={chunk_size} | chunk_overlap={chunk_overlap}")
-
+        user_email, chunk_size, chunk_overlap = _get_user_chunk_settings(request, user)
+        log.info(f"[Splitting] user={user_email or 'background'} | chunk_size={chunk_size} | chunk_overlap={chunk_overlap}")
 
         if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
             text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=request.app.state.config.CHUNK_SIZE.get(user.email),
-                chunk_overlap=request.app.state.config.CHUNK_OVERLAP.get(user.email),
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap,
                 add_start_index=True,
             )
         elif request.app.state.config.TEXT_SPLITTER == "token":
@@ -845,8 +870,8 @@ def save_docs_to_vector_db(
             tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
             text_splitter = TokenTextSplitter(
                 encoding_name=str(request.app.state.config.TIKTOKEN_ENCODING_NAME),
-                chunk_size=request.app.state.config.CHUNK_SIZE.get(user.email),
-                chunk_overlap=request.app.state.config.CHUNK_OVERLAP.get(user.email),
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap,
                 add_start_index=True,
             )
         else:
@@ -1056,13 +1081,12 @@ def save_docs_to_multiple_collections(
                 raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
-        chunk_size = request.app.state.config.CHUNK_SIZE.get(user.email)
-        chunk_overlap = request.app.state.config.CHUNK_OVERLAP.get(user.email)
-        log.info(f"[Splitting] user={user.email} | chunk_size={chunk_size} | chunk_overlap={chunk_overlap}")
+        user_email, chunk_size, chunk_overlap = _get_user_chunk_settings(request, user)
+        log.info(f"[Splitting] user={user_email or 'background'} | chunk_size={chunk_size} | chunk_overlap={chunk_overlap}")
         if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
             text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=request.app.state.config.CHUNK_SIZE.get(user.email),
-                chunk_overlap=request.app.state.config.CHUNK_OVERLAP.get(user.email),
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap,
                 add_start_index=True,
             )
         elif request.app.state.config.TEXT_SPLITTER == "token":
@@ -1073,8 +1097,8 @@ def save_docs_to_multiple_collections(
             tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
             text_splitter = TokenTextSplitter(
                 encoding_name=str(request.app.state.config.TIKTOKEN_ENCODING_NAME),
-                chunk_size=request.app.state.config.CHUNK_SIZE.get(user.email),
-                chunk_overlap=request.app.state.config.CHUNK_OVERLAP.get(user.email),
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap,
                 add_start_index=True,
             )
         else:
@@ -1176,29 +1200,74 @@ class ProcessFileForm(BaseModel):
     collection_name: Optional[str] = None
 
 
-@router.post("/process/file")
-def process_file(
+def _process_file_sync(
     request: Request,
-    form_data: ProcessFileForm,
-    user=Depends(get_verified_user),
-    knowledge_id: Optional[
-        str
-    ] = None,  # Add knowledge_id parameter to signify generating embeddings for both file and knowledge base at once
-):
+    file_id: str,
+    content: Optional[str] = None,
+    collection_name: Optional[str] = None,
+    knowledge_id: Optional[str] = None,
+    user_id: Optional[str] = None,
+) -> None:
+    """
+    Core file processing logic that runs synchronously.
+    This is called from background tasks to process files.
+    
+    Args:
+        request: FastAPI Request object
+        file_id: ID of the file to process
+        content: Optional pre-extracted content
+        collection_name: Optional collection name
+        knowledge_id: Optional knowledge base ID
+        user_id: User ID for logging
+    """
     try:
-        file = Files.get_file_by_id(form_data.file_id)
-
-        collection_name = form_data.collection_name
+        # Get user object if user_id is provided
+        user = None
+        if user_id:
+            try:
+                user = Users.get_user_by_id(user_id)
+                if not user:
+                    log.warning(
+                        f"User {user_id} not found for file processing (file_id={file_id}), "
+                        "processing without user context"
+                    )
+            except Exception as user_error:
+                log.warning(
+                    f"Error retrieving user {user_id} for file processing (file_id={file_id}): {user_error}, "
+                    "processing without user context"
+                )
+        
+        # Update status to processing
+        Files.update_file_metadata_by_id(
+            file_id,
+            {
+                "processing_status": "processing",
+                "processing_started_at": int(time.time()),
+            },
+        )
+        
+        file = Files.get_file_by_id(file_id)
+        if not file:
+            error_msg = "File not found"
+            log.error(f"File {file_id} not found for processing (user_id={user_id})")
+            try:
+                Files.update_file_metadata_by_id(
+                    file_id,
+                    {
+                        "processing_status": "error",
+                        "processing_error": error_msg,
+                    },
+                )
+            except Exception as update_error:
+                log.error(f"Failed to update file status: {update_error}")
+            return
 
         if collection_name is None:
             collection_name = f"file-{file.id}"
 
-        if form_data.content:
+        if content:
             # Update the content in the file
-            # Usage: /files/{file_id}/data/content/update
-
             try:
-                # /files/{file_id}/data/content/update
                 VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
             except:
                 # Audio file upload pipeline
@@ -1206,7 +1275,7 @@ def process_file(
 
             docs = [
                 Document(
-                    page_content=form_data.content.replace("<br/>", "\n"),
+                    page_content=content.replace("<br/>", "\n"),
                     metadata={
                         **file.meta,
                         "name": file.filename,
@@ -1216,17 +1285,14 @@ def process_file(
                     },
                 )
             ]
-
-            text_content = form_data.content
-        elif form_data.collection_name:
+            text_content = content
+        elif collection_name:
             # Check if the file has already been processed and save the content
-            # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
-
             result = VECTOR_DB_CLIENT.query(
                 collection_name=f"file-{file.id}", filter={"file_id": file.id}
             )
 
-            if result is not None and len(result.ids[0]) > 0:
+            if result is not None and result.ids and len(result.ids) > 0 and len(result.ids[0]) > 0:
                 docs = [
                     Document(
                         page_content=result.documents[0][idx],
@@ -1251,7 +1317,6 @@ def process_file(
             text_content = file.data.get("content", "")
         else:
             # Process the file and save the content
-            # Usage: /files/
             file_path = file.path
             if file_path:
                 file_path = Storage.get_file(file_path)
@@ -1311,7 +1376,9 @@ def process_file(
                     collections = [file_collection, knowledge_id]
 
                     log.info(
-                        f"Processing file for both file collection and knowledge base: {collections}"
+                        f"Processing file file_id={file.id}, filename={file.filename} "
+                        f"for both file collection and knowledge base: collections={collections}, "
+                        f"user_id={user_id}"
                     )
 
                     result = save_docs_to_multiple_collections(
@@ -1323,7 +1390,7 @@ def process_file(
                             "name": file.filename,
                             "hash": hash,
                         },
-                        user=user,
+                        user=user,  # Use user object if available
                     )
 
                     # Use file collection name for file metadata
@@ -1332,6 +1399,16 @@ def process_file(
                             file.id,
                             {
                                 "collection_name": file_collection,
+                                "processing_status": "completed",
+                                "processing_completed_at": int(time.time()),
+                            },
+                        )
+                    else:
+                        Files.update_file_metadata_by_id(
+                            file.id,
+                            {
+                                "processing_status": "error",
+                                "processing_error": "Failed to save to vector DB",
                             },
                         )
                 else:
@@ -1344,8 +1421,8 @@ def process_file(
                             "name": file.filename,
                             "hash": hash,
                         },
-                        add=(True if form_data.collection_name else False),
-                        user=user,
+                        add=(True if collection_name else False),
+                        user=user,  # Use user object if available
                     )
 
                     if result:
@@ -1353,40 +1430,553 @@ def process_file(
                             file.id,
                             {
                                 "collection_name": collection_name,
+                                "processing_status": "completed",
+                                "processing_completed_at": int(time.time()),
                             },
                         )
-
-                if result:
-                    return {
-                        "status": True,
-                        "collection_name": (
-                            knowledge_id if knowledge_id else collection_name
-                        ),
-                        "filename": file.filename,
-                        "content": text_content,
-                    }
+                    else:
+                        Files.update_file_metadata_by_id(
+                            file.id,
+                            {
+                                "processing_status": "error",
+                                "processing_error": "Failed to save to vector DB",
+                            },
+                        )
             except Exception as e:
-                raise e
+                error_msg = str(e)
+                log.error(
+                    f"Error saving file to vector DB: file_id={file.id}, "
+                    f"filename={file.filename}, user_id={user_id}, error={error_msg}"
+                )
+                log.exception(e)
+                try:
+                    Files.update_file_metadata_by_id(
+                        file.id,
+                        {
+                            "processing_status": "error",
+                            "processing_error": error_msg,
+                        },
+                    )
+                except Exception as update_error:
+                    log.error(f"Failed to update file status after vector DB error: {update_error}")
         else:
-            return {
-                "status": True,
-                "collection_name": None,
-                "filename": file.filename,
-                "content": text_content,
-            }
+            # Bypass embedding, just mark as completed
+            Files.update_file_metadata_by_id(
+                file.id,
+                {
+                    "processing_status": "completed",
+                    "processing_completed_at": int(time.time()),
+                },
+            )
 
     except Exception as e:
+        # Consolidated error handling - log and update status
+        error_msg = str(e)
+        log.error(
+            f"Error in background file processing for file_id={file_id}, "
+            f"user_id={user_id}, error={error_msg}"
+        )
         log.exception(e)
-        if "No pandoc was found" in str(e):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.PANDOC_NOT_INSTALLED,
+        
+        # Update file status to error
+        try:
+            Files.update_file_metadata_by_id(
+                file_id,
+                {
+                    "processing_status": "error",
+                    "processing_error": error_msg,
+                },
             )
+        except Exception as update_error:
+            # If we can't update status, log it but don't fail
+            log.error(
+                f"Failed to update file status after processing error for file_id={file_id}: {update_error}"
+            )
+
+
+@router.post("/process/file")
+def process_file(
+    request: Request,
+    form_data: ProcessFileForm,
+    background_tasks: BackgroundTasks,
+    user=Depends(get_verified_user),
+    knowledge_id: Optional[
+        str
+    ] = None,  # Add knowledge_id parameter to signify generating embeddings for both file and knowledge base at once
+):
+    """
+    Process a file and generate embeddings.
+    
+    Processing runs in the background and the endpoint returns immediately
+    with status "processing". The file metadata will be updated with processing status.
+    """
+    # BUG #8 fix: Validate file_id format before any operations
+    try:
+        UUID(form_data.file_id)
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid file ID format: {form_data.file_id}. File ID must be a valid UUID."
+        )
+    
+    # BUG #7 fix: Cache file object to avoid multiple database fetches
+    file = Files.get_file_by_id(form_data.file_id)
+    if not file:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+    # Cache file object and metadata for reuse throughout the function
+    cached_file = file
+    cached_meta = file.meta or {}
+    
+    # Use Redis distributed lock to prevent race conditions in multi-replica deployments
+    # This ensures only one pod can start processing a file at a time
+    # Lock timeout is configurable via environment variable (default: 1 hour for large files)
+    def _safe_int_env(key: str, default: int, min_value: int = 1, max_value: int = 86400) -> int:
+        """Safely parse integer environment variable with fallback to default."""
+        try:
+            value = os.environ.get(key)
+            if value is None:
+                return default
+            parsed = int(value)
+            if parsed < min_value or parsed > max_value:
+                log.warning(
+                    f"Invalid value for {key} (must be between {min_value} and {max_value}): {parsed}, "
+                    f"using default {default}"
+                )
+                return default
+            return parsed
+        except (ValueError, TypeError) as e:
+            log.warning(
+                f"Invalid value for {key}: {os.environ.get(key)}, using default {default}. Error: {e}"
+            )
+            return default
+    
+    lock_timeout = _safe_int_env("FILE_PROCESSING_LOCK_TIMEOUT", 3600, min_value=60, max_value=86400)  # 1 min to 24 hours
+    lock_name = f"open-webui:file_processing_lock:{form_data.file_id}"
+    
+    processing_lock = None
+    lock_acquired = False
+    redis_available = True
+    status_update_succeeded = False  # BUG #1 fix: Initialize at function level to avoid scope issues
+    lock_released = False  # BUG #1 fix: Initialize at function level to avoid scope issues (used in background task block)
+    
+    try:
+        # Validate REDIS_URL before attempting to create lock (BUG #8 fix)
+        if not REDIS_URL:
+            log.warning("REDIS_URL not configured, falling back to database-level checking")
+            redis_available = False
         else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e),
+            processing_lock = RedisLock(
+                redis_url=REDIS_URL,
+                lock_name=lock_name,
+                timeout_secs=lock_timeout,
             )
+            # Try to acquire lock - distinguish between "lock held" vs "Redis unavailable" (BUG #2 fix)
+            lock_acquired = processing_lock.aquire_lock()
+            
+            if not lock_acquired:
+                # Check if Redis is actually available by testing connection
+                # If Redis is down, we'll fall through to database check
+                try:
+                    # BUG #5 fix: Reuse existing Redis connection from processing_lock instead of creating new one
+                    # This is more efficient and avoids exhausting connection pools
+                    # BUG #3 fix: No need to create new connection - reuse existing one or skip test
+                    if processing_lock and processing_lock.redis:
+                        # Reuse the existing connection
+                        processing_lock.redis.ping()
+                        redis_available = True
+                    else:
+                        # If processing_lock doesn't have redis, it means initialization failed
+                        # Don't create a new connection (resource leak), just mark as unavailable
+                        log.warning(
+                            f"Redis lock for file {form_data.file_id} has no connection. "
+                            "Marking Redis as unavailable."
+                        )
+                        redis_available = False
+                    # Redis is available but lock is held - another pod is processing
+                    # BUG #7 fix: Use cached file object instead of fetching again
+                    meta = cached_meta
+                    current_status = meta.get("processing_status", "processing")
+                    
+                    log.info(
+                        f"File {form_data.file_id} is already being processed (lock held by another pod), "
+                        f"skipping duplicate processing request from user {user.id}"
+                    )
+                    return {
+                        "status": current_status,
+                        "file_id": form_data.file_id,
+                        "filename": cached_file.filename,
+                        "message": f"File is already {current_status}. Please wait for completion.",
+                        "collection_name": meta.get("collection_name"),
+                        "content": None,
+                    }
+                except Exception as redis_test_error:
+                    # Redis is unavailable - fall through to database check
+                    log.warning(
+                        f"Redis unavailable for file processing lock (file_id={form_data.file_id}): {redis_test_error}. "
+                        "Falling back to database-level checking."
+                    )
+                    redis_available = False
+                    lock_acquired = False
+    except Exception as lock_init_error:
+        # Lock initialization failed - fall back to database check
+        log.warning(
+            f"Failed to initialize Redis lock for file {form_data.file_id}: {lock_init_error}. "
+            "Falling back to database-level checking.",
+            exc_info=True  # BUG #6 fix: Include full exception traceback for debugging
+        )
+        redis_available = False
+        lock_acquired = False
+    
+    # If Redis lock is not available, fall back to database-level checking
+    # This provides graceful degradation when Redis is unavailable
+    if not redis_available or not lock_acquired:
+        # Fallback: Check database status (double-check pattern)
+        # BUG #7 fix: Use cached file object, but refresh metadata to get latest status
+        # Re-fetch only metadata to get latest processing status
+        refreshed_file = Files.get_file_by_id(form_data.file_id)
+        if not refreshed_file:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ERROR_MESSAGES.NOT_FOUND,
+            )
+        # Update cached metadata with latest values
+        cached_meta = refreshed_file.meta or {}
+        # BUG #3 fix: Try to keep cached_file.meta in sync, but don't fail if assignment doesn't work
+        # (Pydantic models are mutable by default, but assignment might fail in edge cases)
+        try:
+            cached_file.meta = cached_meta
+        except (AttributeError, TypeError) as assign_error:
+            # Assignment failed - not critical, we'll use cached_meta directly
+            log.debug(f"Could not update cached_file.meta: {assign_error}, using cached_meta directly")
+        meta = cached_meta
+        current_status = meta.get("processing_status")
+        
+        # Check if already processing
+        if current_status in ["pending", "processing"]:
+            log.info(
+                f"File {form_data.file_id} is already {current_status} "
+                f"(Redis unavailable, using database check), "
+                f"skipping duplicate processing request from user {user.id}"
+            )
+            return {
+                "status": current_status,
+                "file_id": form_data.file_id,
+                "filename": cached_file.filename,
+                "message": f"File is already {current_status}. Please wait for completion.",
+                "collection_name": meta.get("collection_name"),
+                "content": None,
+            }
+        
+        # Set initial status (database-level check passed)
+        # BUG #2 fix: Use atomic database update to prevent race condition
+        # Only update if status is not already "pending" or "processing"
+        # This provides some protection against race conditions in fallback path
+        try:
+            from open_webui.internal.db import get_db, engine
+            from sqlalchemy import text
+            
+            # Detect database type for appropriate SQL syntax
+            # BUG #6 fix: Use engine.dialect.name for reliable database type detection
+            try:
+                is_postgresql = engine.dialect.name == 'postgresql'
+            except (AttributeError, Exception) as db_detect_error:
+                # Fallback to string matching if dialect.name not available
+                log.warning(f"Could not detect database type via dialect.name: {db_detect_error}, using string matching")
+                is_postgresql = "postgresql" in str(engine.url) if engine and engine.url else False
+            
+            with get_db() as db:
+                if is_postgresql:
+                    # PostgreSQL: Use JSONB functions for atomic update
+                    result = db.execute(
+                        text("""
+                            UPDATE file 
+                            SET meta = jsonb_set(
+                                COALESCE(meta, '{}'::jsonb),
+                                '{processing_status}',
+                                '"pending"',
+                                true
+                            )
+                            WHERE id = :file_id
+                            AND (
+                                meta->>'processing_status' IS NULL 
+                                OR meta->>'processing_status' NOT IN ('pending', 'processing')
+                            )
+                            RETURNING id
+                        """),
+                        {"file_id": form_data.file_id}
+                    )
+                else:
+                    # SQLite: Use JSON functions (json_set, json_extract)
+                    result = db.execute(
+                        text("""
+                            UPDATE file 
+                            SET meta = json_set(
+                                COALESCE(meta, '{}'),
+                                '$.processing_status',
+                                'pending'
+                            )
+                            WHERE id = :file_id
+                            AND (
+                                json_extract(meta, '$.processing_status') IS NULL 
+                                OR json_extract(meta, '$.processing_status') NOT IN ('pending', 'processing')
+                            )
+                        """),
+                        {"file_id": form_data.file_id}
+                    )
+                db.commit()
+                
+                # Check if update actually happened (row was updated)
+                # For SQLite, check rowcount; for PostgreSQL, check RETURNING result
+                if is_postgresql:
+                    updated_row = result.fetchone()
+                    update_succeeded = updated_row is not None
+                else:
+                    update_succeeded = result.rowcount > 0
+                
+                if not update_succeeded:
+                    # Another request already set status to pending/processing
+                    # Re-fetch to get current status
+                    refreshed_file = Files.get_file_by_id(form_data.file_id)
+                    if refreshed_file:
+                        meta = refreshed_file.meta or {}
+                        current_status = meta.get("processing_status", "processing")
+                        log.info(
+                            f"File {form_data.file_id} status changed to {current_status} during atomic update, "
+                            f"skipping duplicate processing request from user {user.id}"
+                        )
+                        return {
+                            "status": current_status,
+                            "file_id": form_data.file_id,
+                            "filename": cached_file.filename,
+                            "message": f"File is already {current_status}. Please wait for completion.",
+                            "collection_name": meta.get("collection_name"),
+                            "content": None,
+                        }
+        except Exception as atomic_update_error:
+            # If atomic update fails (e.g., database doesn't support JSON functions), fall back to regular update
+            log.warning(
+                f"Atomic update failed for file {form_data.file_id}: {atomic_update_error}. "
+                "Falling back to regular update (may have race condition).",
+                exc_info=True
+            )
+            # BUG #4 fix: Check return value in fallback path too
+            result = Files.update_file_metadata_by_id(
+                form_data.file_id,
+                {
+                    "processing_status": "pending",
+                },
+            )
+            if result is None:
+                log.error(
+                    f"Failed to update file status in fallback path for file_id={form_data.file_id}: "
+                    "update_file_metadata_by_id returned None"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to update file processing status. Please try again."
+                )
+    else:
+        # We have the Redis lock, now check status atomically
+        # BUG #5 fix: Wrap entire section in try-finally to ensure lock is always released
+        # Note: lock_released is initialized at function level to avoid scope issues
+        try:
+            # BUG #7 fix: Re-fetch only metadata to get latest state (file object cached)
+            refreshed_file = Files.get_file_by_id(form_data.file_id)
+            if not refreshed_file:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=ERROR_MESSAGES.NOT_FOUND,
+                )
+            # Update cached metadata with latest values
+            cached_meta = refreshed_file.meta or {}
+            # BUG #3 fix: Try to keep cached_file.meta in sync, but don't fail if assignment doesn't work
+            # (Pydantic models are mutable by default, but assignment might fail in edge cases)
+            try:
+                cached_file.meta = cached_meta
+            except (AttributeError, TypeError) as assign_error:
+                # Assignment failed - not critical, we'll use cached_meta directly
+                log.debug(f"Could not update cached_file.meta: {assign_error}, using cached_meta directly")
+            meta = cached_meta
+            current_status = meta.get("processing_status")
+            
+            # Check if already processing (double-check after acquiring lock)
+            if current_status in ["pending", "processing"]:
+                log.info(
+                    f"File {form_data.file_id} status is {current_status} after acquiring lock, "
+                    f"skipping duplicate processing request from user {user.id}"
+                )
+                # Release lock before returning (BUG #5 fix)
+                if processing_lock and lock_acquired and not lock_released:
+                    processing_lock.release_lock()
+                    lock_released = True
+                    log.debug(f"Released file processing lock for file_id={form_data.file_id} (already processing)")
+                return {
+                    "status": current_status,
+                    "file_id": form_data.file_id,
+                    "filename": cached_file.filename,
+                    "message": f"File is already {current_status}. Please wait for completion.",
+                    "collection_name": meta.get("collection_name"),
+                    "content": None,
+                }
+            
+            # Set initial status (we have the lock, so this is safe)
+            # Status update must succeed before we can proceed
+            try:
+                # Check return value to detect silent failures
+                result = Files.update_file_metadata_by_id(
+                    form_data.file_id,
+                    {
+                        "processing_status": "pending",
+                    },
+                )
+                # Check if update actually succeeded (returns FileModel on success, None on failure)
+                if result is None:
+                    # Update failed silently - don't release lock
+                    log.error(
+                        f"Failed to update file status for file_id={form_data.file_id}: "
+                        "update_file_metadata_by_id returned None"
+                    )
+                    status_update_succeeded = False
+                    raise Exception("File status update failed: update returned None")
+                # Status update succeeded
+                status_update_succeeded = True
+            except Exception as status_error:
+                # Status update failed - don't release lock to prevent another request from starting
+                log.error(
+                    f"Failed to update file status for file_id={form_data.file_id}: {status_error}. "
+                    "Lock will not be released to prevent duplicate processing."
+                )
+                status_update_succeeded = False
+                raise  # Re-raise to let caller know it failed
+        except Exception as outer_error:
+            # If any other error occurs (e.g., file not found), ensure lock is released
+            # Only release if not already released
+            if processing_lock and lock_acquired and not lock_released:
+                try:
+                    processing_lock.release_lock()
+                    lock_released = True
+                    log.debug(f"Released file processing lock for file_id={form_data.file_id} after error")
+                except Exception as release_error:
+                    log.error(f"Failed to release lock after error: {release_error}")
+            raise  # Re-raise the original error
+    
+    # Enqueue job to distributed job queue (RQ) if available, otherwise fall back to BackgroundTasks
+    # This enables distributed processing across multiple pods in Kubernetes
+    # CRITICAL: Keep lock held until we've successfully enqueued job or added BackgroundTask
+    # This prevents race conditions where multiple requests could process the same file
+    job_id = None
+    use_job_queue = False
+    job_enqueued = False
+    background_task_added = False
+    
+    try:
+        # Try to use job queue first if available
+        if is_job_queue_available():
+            try:
+                # Enqueue job to distributed job queue
+                job_id = enqueue_file_processing_job(
+                    file_id=form_data.file_id,
+                    content=form_data.content,
+                    collection_name=form_data.collection_name,
+                    knowledge_id=knowledge_id,
+                    user_id=user.id,
+                )
+                
+                if job_id is not None:
+                    # Successfully enqueued job
+                    use_job_queue = True
+                    job_enqueued = True
+                    log.info(f"Successfully enqueued job {job_id} for file_id={form_data.file_id}")
+                else:
+                    # Job queue unavailable, will fall back to BackgroundTasks
+                    log.warning(
+                        f"Job queue unavailable for file_id={form_data.file_id}, "
+                        "falling back to BackgroundTasks"
+                    )
+            except Exception as job_enqueue_error:
+                # If job enqueue fails, fall back to BackgroundTasks
+                log.warning(
+                    f"Failed to enqueue job for file_id={form_data.file_id}: {job_enqueue_error}, "
+                    "falling back to BackgroundTasks",
+                    exc_info=True
+                )
+        
+        # Fall back to BackgroundTasks if job queue wasn't used
+        if not job_enqueued:
+            try:
+                # Add background task (background_tasks is always provided by FastAPI)
+                background_tasks.add_task(
+                    _process_file_sync,
+                    request=request,
+                    file_id=form_data.file_id,
+                    content=form_data.content,
+                    collection_name=form_data.collection_name,
+                    knowledge_id=knowledge_id,
+                    user_id=user.id,
+                )
+                background_task_added = True
+                log.debug(f"Added BackgroundTask for file_id={form_data.file_id}")
+            except Exception as bg_task_error:
+                # If background task addition fails, log and re-raise
+                log.error(
+                    f"Failed to add BackgroundTask for file_id={form_data.file_id}: {bg_task_error}",
+                    exc_info=True
+                )
+                raise  # Re-raise the error - this will trigger lock release in finally block
+        
+        # Only mark as successful if we actually enqueued/added a task
+        if not (job_enqueued or background_task_added):
+            raise Exception("Failed to enqueue job or add BackgroundTask - no task was created")
+            
+    finally:
+        # CRITICAL FIX: Release lock AFTER successfully enqueueing job or adding BackgroundTask
+        # This ensures no race condition can occur
+        # Only release if we have the lock and haven't released it yet
+        if processing_lock and lock_acquired and not lock_released:
+            # Only release if status was successfully updated
+            # AND either job was enqueued OR background task was added
+            if status_update_succeeded and (job_enqueued or background_task_added):
+                try:
+                    processing_lock.release_lock()
+                    lock_released = True
+                    log.debug(
+                        f"Released file processing lock for file_id={form_data.file_id} "
+                        f"after successful task creation (job_enqueued={job_enqueued}, "
+                        f"background_task_added={background_task_added})"
+                    )
+                except Exception as release_error:
+                    log.error(f"Failed to release lock after task creation: {release_error}")
+            elif not status_update_succeeded:
+                log.warning(
+                    f"Lock NOT released for file_id={form_data.file_id} due to status update failure. "
+                    "Lock will expire after timeout."
+                )
+            elif not (job_enqueued or background_task_added):
+                log.warning(
+                    f"Lock NOT released for file_id={form_data.file_id} due to task creation failure. "
+                    "Lock will expire after timeout."
+                )
+    
+    # Return immediately with processing status (backward compatible format)
+    # Include both old format fields and new status for compatibility
+    result = {
+        "status": "processing",  # New format
+        "file_id": form_data.file_id,
+        "filename": cached_file.filename,
+        "message": "File processing started in background",
+        # Backward compatibility fields (will be None/empty until processing completes)
+        "collection_name": None,
+        "content": None,
+    }
+    
+    # Add job_id if job was successfully enqueued
+    if job_enqueued and job_id:
+        result["job_id"] = job_id
+    
+    return result
 
 
 class ProcessTextForm(BaseModel):

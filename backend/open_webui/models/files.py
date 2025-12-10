@@ -205,10 +205,15 @@ class FilesTable:
         with get_db() as db:
             try:
                 file = db.query(File).filter_by(id=id).first()
+                if not file:
+                    log.warning(f"File not found for metadata update: id={id}")
+                    return None
                 file.meta = {**(file.meta if file.meta else {}), **meta}
                 db.commit()
                 return FileModel.model_validate(file)
-            except Exception:
+            except Exception as e:
+                # BUG #4 fix: Log exceptions instead of swallowing them
+                log.error(f"Error updating file metadata for id={id}: {e}", exc_info=True)
                 return None
 
     def delete_file_by_id(self, id: str) -> bool:

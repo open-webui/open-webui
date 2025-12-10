@@ -330,3 +330,6 @@ test_frameworks/
 
 # Documentation fixes (not for version control)
 .documentations_fixes/
+
+# Cursor IDE files
+.cursor/

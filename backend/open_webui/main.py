@@ -361,7 +361,7 @@ from open_webui.utils.auth import (
 from open_webui.utils.oauth import OAuthManager
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 
-from open_webui.tasks import stop_task, list_tasks  # Import from tasks.py
+from open_webui.tasks import stop_task, list_tasks, periodic_task_cleanup, startup_cleanup  # Import from tasks.py
 
 
 if SAFE_MODE:
@@ -505,6 +505,24 @@ async def lifespan(app: FastAPI):
         get_license_data(app, app.state.config.LICENSE_KEY)
 
     asyncio.create_task(periodic_usage_pool_cleanup())
+    asyncio.create_task(periodic_task_cleanup())
+    # Clean up orphaned tasks on startup (fixes memory leak on pod restart)
+    startup_task = asyncio.create_task(startup_cleanup())
+    # Add error callback to log failures (BUG #6 fix)
+    # BUG #11 fix: Ensure log is available in callback by using logging.getLogger explicitly
+    def startup_cleanup_done_callback(task):
+        # Use logging.getLogger to ensure logger is available even if module-level log isn't
+        callback_log = logging.getLogger(__name__)
+        try:
+            if task.exception() is not None:
+                callback_log.error(f"Startup cleanup failed: {task.exception()}", exc_info=task.exception())
+        except Exception as e:
+            # Fallback to print if logging also fails
+            try:
+                callback_log.error(f"Error in startup cleanup callback: {e}", exc_info=True)
+            except Exception:
+                print(f"CRITICAL: Failed to log startup cleanup error: {e}", file=sys.stderr)
+    startup_task.add_done_callback(startup_cleanup_done_callback)
     ensure_group_created_by_column()
     ensure_model_created_by_column()
     ensure_tool_created_by_column()

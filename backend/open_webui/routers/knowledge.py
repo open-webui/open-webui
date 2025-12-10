@@ -1,6 +1,6 @@
 from typing import List, Optional
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, HTTPException, status, Request, UploadFile, File
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, Request, UploadFile, File
 import logging
 
 from open_webui.models.knowledge import (
@@ -17,7 +17,9 @@ from open_webui.routers.retrieval import (
     process_files_batch,
     BatchProcessFilesForm,
 )
+from open_webui.utils.job_queue import is_job_queue_available
 from open_webui.storage.provider import Storage
+from open_webui.routers.audio import transcribe
 from open_webui.utils.file_cleanup import (
     cleanup_file_completely,
     cleanup_file_from_knowledge_only,
@@ -370,6 +372,7 @@ class KnowledgeFileIdForm(BaseModel):
 def add_file_to_knowledge_by_id(
     request: Request,
     id: str,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     user=Depends(get_verified_user),
     file_metadata: dict = {},
@@ -425,42 +428,60 @@ def add_file_to_knowledge_by_id(
             ),
         )
 
-        try:
-            if file.content_type in [
-                "audio/mpeg",
-                "audio/wav",
-                "audio/ogg",
-                "audio/x-m4a",
-            ]:
-                file_path = Storage.get_file(file_path)
-                result = transcribe(request, file_path, user)
-                process_file(
-                    request,
-                    ProcessFileForm(file_id=file_id, content=result.get("text", "")),
-                    user=user,
-                    knowledge_id=id,  # Pass knowledge_id for single embedding
-                )
-            else:
-                # Process the file for both file and knowledge collections
-                process_file(
-                    request,
-                    ProcessFileForm(file_id=file_id),
-                    user=user,
-                    knowledge_id=id,  # Pass knowledge_id for single embedding
-                )
-
-            file_item = Files.get_file_by_id(id=file_id)
-        except Exception as e:
-            log.exception(e)
-            log.error(f"Error processing file: {file_item.id}")
-            file_item = FileModelResponse(
-                **{
-                    **file_item.model_dump(),
-                    "error": str(e.detail) if hasattr(e, "detail") else str(e),
-                }
-            )
+        # Process file in background
+        # Use job queue if available (distributed processing), otherwise use BackgroundTasks
+        if background_tasks or is_job_queue_available():
+            try:
+                if file.content_type in [
+                    "audio/mpeg",
+                    "audio/wav",
+                    "audio/ogg",
+                    "audio/x-m4a",
+                ]:
+                    # For audio files, transcribe first (this is quick), then process in background
+                    file_path = Storage.get_file(file_path)
+                    result = transcribe(request, file_path, user)
+                    process_file(
+                        request,
+                        ProcessFileForm(file_id=file_id, content=result.get("text", "")),
+                        user=user,
+                        knowledge_id=id,  # Pass knowledge_id for single embedding
+                        background_tasks=background_tasks,
+                    )
+                else:
+                    # Process the file for both file and knowledge collections in background
+                    # process_file will use job queue if available, otherwise BackgroundTasks
+                    process_file(
+                        request,
+                        ProcessFileForm(file_id=file_id),
+                        user=user,
+                        knowledge_id=id,  # Pass knowledge_id for single embedding
+                        background_tasks=background_tasks,
+                    )
+            except Exception as e:
+                log.exception(e)
+                log.error(f"Error starting background processing for file: {file_id}")
+                # Mark file as error since background task failed to start
+                try:
+                    Files.update_file_metadata_by_id(
+                        file_id,
+                        {
+                            "processing_status": "error",
+                            "processing_error": f"Failed to start background processing: {str(e)}",
+                        },
+                    )
+                except Exception as update_error:
+                    log.exception(f"Failed to update file status after background task error: {update_error}")
+                # Continue anyway - file is uploaded, user can retry processing manually
+        
+        # Get file item to return
+        file_item = Files.get_file_by_id(id=file_id)
 
         # Update knowledge base metadata
+        # Note: File is added to knowledge base immediately, but processing happens in background.
+        # The file will have processing_status="pending" or "processing" until embeddings are generated.
+        # This is acceptable - the file appears in the knowledge base UI but may not be ready for use
+        # until processing completes. Frontend should check processing_status before using files.
         if file_item:
             # Re-fetch knowledge to get latest state (avoid race conditions)
             knowledge = Knowledges.get_knowledge_by_id(id=id)
@@ -534,6 +555,7 @@ def update_file_from_knowledge_by_id(
     request: Request,
     id: str,
     form_data: KnowledgeFileIdForm,
+    background_tasks: BackgroundTasks,
     user=Depends(get_verified_user),
 ):
     knowledge = Knowledges.get_knowledge_by_id(id=id)
@@ -566,17 +588,24 @@ def update_file_from_knowledge_by_id(
         collection_name=knowledge.id, filter={"file_id": form_data.file_id}
     )
 
-    # Add content to the vector database
-    try:
+    # Add content to the vector database (in background)
+    # Use job queue if available (distributed processing), otherwise use BackgroundTasks or synchronous
+    if background_tasks or is_job_queue_available():
+        # Process in background (uses job queue if available)
         process_file(
             request,
             ProcessFileForm(file_id=form_data.file_id, collection_name=id),
             user=user,
+            background_tasks=background_tasks,
         )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
+    else:
+        # Process synchronously (backward compatibility - only if job queue and background_tasks unavailable)
+        # Note: This code path should not be reached since background_tasks is always injected by FastAPI
+        # But if somehow we get here, we'll just skip processing with a warning
+        log.warning(
+            f"Cannot process file {form_data.file_id} synchronously - "
+            "background_tasks not available and job queue not available. "
+            "File processing will need to be triggered manually."
         )
 
     if knowledge:
@@ -728,11 +757,6 @@ def remove_file_from_knowledge_by_id(
         **knowledge.model_dump(),
         files=files,
     )
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
 
 
 ############################

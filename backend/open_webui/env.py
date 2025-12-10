@@ -334,6 +334,79 @@ ENABLE_REALTIME_CHAT_SAVE = (
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
 ####################################
+# JOB QUEUE (RQ - Redis Queue)
+####################################
+
+# Enable/disable job queue for distributed processing
+# If False, falls back to FastAPI BackgroundTasks (in-memory, single pod only)
+ENABLE_JOB_QUEUE = os.environ.get("ENABLE_JOB_QUEUE", "True").lower() == "true"
+
+# Job timeout in seconds (default: 1 hour for large files)
+try:
+    JOB_TIMEOUT = int(os.environ.get("JOB_TIMEOUT", "3600"))
+    if JOB_TIMEOUT < 60:
+        log.warning(f"JOB_TIMEOUT={JOB_TIMEOUT} is too small (minimum 60 seconds), using default 3600")
+        JOB_TIMEOUT = 3600
+    elif JOB_TIMEOUT > 86400:
+        log.warning(f"JOB_TIMEOUT={JOB_TIMEOUT} is too large (maximum 86400 seconds), using default 3600")
+        JOB_TIMEOUT = 3600
+except (ValueError, TypeError) as e:
+    log.warning(f"Invalid JOB_TIMEOUT value '{os.environ.get('JOB_TIMEOUT')}': {e}. Using default 3600")
+    JOB_TIMEOUT = 3600
+
+# Maximum number of retries for failed jobs
+try:
+    JOB_MAX_RETRIES = int(os.environ.get("JOB_MAX_RETRIES", "3"))
+    if JOB_MAX_RETRIES < 0:
+        log.warning(f"JOB_MAX_RETRIES={JOB_MAX_RETRIES} cannot be negative, using default 3")
+        JOB_MAX_RETRIES = 3
+    elif JOB_MAX_RETRIES > 10:
+        log.warning(f"JOB_MAX_RETRIES={JOB_MAX_RETRIES} is too large (maximum 10), using default 3")
+        JOB_MAX_RETRIES = 3
+except (ValueError, TypeError) as e:
+    log.warning(f"Invalid JOB_MAX_RETRIES value '{os.environ.get('JOB_MAX_RETRIES')}': {e}. Using default 3")
+    JOB_MAX_RETRIES = 3
+
+# Retry delay in seconds
+try:
+    JOB_RETRY_DELAY = int(os.environ.get("JOB_RETRY_DELAY", "60"))
+    if JOB_RETRY_DELAY < 1:
+        log.warning(f"JOB_RETRY_DELAY={JOB_RETRY_DELAY} is too small (minimum 1 second), using default 60")
+        JOB_RETRY_DELAY = 60
+    elif JOB_RETRY_DELAY > 3600:
+        log.warning(f"JOB_RETRY_DELAY={JOB_RETRY_DELAY} is too large (maximum 3600 seconds), using default 60")
+        JOB_RETRY_DELAY = 60
+except (ValueError, TypeError) as e:
+    log.warning(f"Invalid JOB_RETRY_DELAY value '{os.environ.get('JOB_RETRY_DELAY')}': {e}. Using default 60")
+    JOB_RETRY_DELAY = 60
+
+# Job result TTL in seconds (default: 1 hour)
+try:
+    JOB_RESULT_TTL = int(os.environ.get("JOB_RESULT_TTL", "3600"))
+    if JOB_RESULT_TTL < 0:
+        log.warning(f"JOB_RESULT_TTL={JOB_RESULT_TTL} cannot be negative, using default 3600")
+        JOB_RESULT_TTL = 3600
+    elif JOB_RESULT_TTL > 604800:  # 7 days
+        log.warning(f"JOB_RESULT_TTL={JOB_RESULT_TTL} is too large (maximum 604800 seconds), using default 3600")
+        JOB_RESULT_TTL = 3600
+except (ValueError, TypeError) as e:
+    log.warning(f"Invalid JOB_RESULT_TTL value '{os.environ.get('JOB_RESULT_TTL')}': {e}. Using default 3600")
+    JOB_RESULT_TTL = 3600
+
+# Job failure TTL in seconds (default: 24 hours)
+try:
+    JOB_FAILURE_TTL = int(os.environ.get("JOB_FAILURE_TTL", "86400"))
+    if JOB_FAILURE_TTL < 0:
+        log.warning(f"JOB_FAILURE_TTL={JOB_FAILURE_TTL} cannot be negative, using default 86400")
+        JOB_FAILURE_TTL = 86400
+    elif JOB_FAILURE_TTL > 604800:  # 7 days
+        log.warning(f"JOB_FAILURE_TTL={JOB_FAILURE_TTL} is too large (maximum 604800 seconds), using default 86400")
+        JOB_FAILURE_TTL = 86400
+except (ValueError, TypeError) as e:
+    log.warning(f"Invalid JOB_FAILURE_TTL value '{os.environ.get('JOB_FAILURE_TTL')}': {e}. Using default 86400")
+    JOB_FAILURE_TTL = 86400
+
+####################################
 # WEBUI_AUTH (Required for security)
 ####################################
 

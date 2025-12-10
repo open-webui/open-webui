@@ -2,12 +2,14 @@
 2. Deleting files from knowledge collections does NOT currently delete the uploaded file from the Uploads directory, vector db or the SQL tables cleanly. This needs to be implemented cleanly.
 3. Improvements in codebases - better and more consistent logging, docstrings, and documentations for APIs for quick lookups.
 4. Clean ups - Document redundant code files, chunks and snippets to be reviewed and removed. 
-5. Error handling and loggins needs to be improved.
-6. A lot of LLMs and interactions with LLMs are from Pipes and not Ollama or direct connections to OpenAI. The base models like Gemini or Claude should be added just like how easily OpenAI models are added instead of adding them as a Pipe.
+5. Error handling and loggings needs to be improved.
+6. [NO NEED YET] A lot of LLMs and interactions with LLMs are from Pipes and not Ollama or direct connections to OpenAI. The base models like Gemini or Claude should be added just like how easily OpenAI models are added instead of adding them as a Pipe.
 7. Workflow and testing for GitHub builds and deploy. 
 8. Make file processing (embedding generation) run in background using FastAPI BackgroundTasks so users can navigate the app (go to new chats, switch workspaces, etc.) while files are being processed. Currently, file processing blocks the HTTP request, which means if users close the tab or navigate away, processing may be interrupted.
+9. Embeddings virtual keys need to be set by the admins themselves NOT the default one.
+10. Make the app more suitable for distributed multi-replica environment managed by kubernetes. When I developed, it was good for single pod systems but now that we are scaling, I am not sure what i can do to make the app more distributed friednly and also multi-replica friendly. List down the things based on your understnading of the codebase all the things I could do to make it more scale-friendly.
 
 
 MINOR:
-1. Auto completion should be set to gemini flash 2.5 lite as default if available, else no auto completion
+1. Auto completion should be DISABLED for all. Chat title generator should need to be set to gemini flash 2.5 lite as default if available, else no auto completion. 
 2. Pipe function to be handled better.
