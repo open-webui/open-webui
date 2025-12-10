@@ -52,7 +52,6 @@
 	import FilesOverlay from '$lib/components/chat/MessageInput/FilesOverlay.svelte';
 	import DropdownOptions from '$lib/components/common/DropdownOptions.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
-	import { i } from 'vitest/dist/reporters-w_64AS5f.js';
 
 	let largeScreen = true;
 
