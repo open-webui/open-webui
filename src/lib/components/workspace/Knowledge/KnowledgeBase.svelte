@@ -75,6 +75,7 @@
 
 	let id = null;
 	let knowledge: Knowledge | null = null;
+	let knowledgeId = null;
 
 	let selectedFileId = null;
 	let selectedFile = null;
@@ -101,7 +102,7 @@
 	};
 
 	$: if (
-		knowledge !== null &&
+		knowledgeId !== null &&
 		query !== undefined &&
 		viewOption !== undefined &&
 		sortKey !== undefined &&
@@ -121,7 +122,7 @@
 	}
 
 	const getItemsPage = async () => {
-		if (knowledge === null) return;
+		if (knowledgeId === null) return;
 
 		fileItems = null;
 		fileItemsTotal = null;
@@ -649,7 +650,6 @@
 		}
 
 		id = $page.params.id;
-
 		const res = await getKnowledgeById(localStorage.token, id).catch((e) => {
 			toast.error(`${e}`);
 			return null;
@@ -657,6 +657,7 @@
 
 		if (res) {
 			knowledge = res;
+			knowledgeId = knowledge?.id;
 		} else {
 			goto('/workspace/knowledge');
 		}
