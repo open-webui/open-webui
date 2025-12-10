@@ -753,6 +753,8 @@
 		);
 
 		if (res) {
+			// Clear the input content saved in session storage.
+			sessionStorage.removeItem('chat-input');
 			goto(`/notes/${res.id}`);
 		}
 	};
