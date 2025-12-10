@@ -1676,11 +1676,8 @@
 											</Tooltip>
 										</div>
 									{:else}
-										{#if prompt !== '' && ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
-											<Tooltip
-												content={$i18n.t('Create note')}
-												className="-mr-[0.5px] flex items-center"
-											>
+										{#if prompt !== '' && !history?.currentId && ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
+											<Tooltip content={$i18n.t('Create note')} className=" flex items-center">
 												<button
 													id="send-message-button"
 													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 self-center"
