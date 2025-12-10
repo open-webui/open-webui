@@ -24,41 +24,6 @@
 			await knowledge.set(await getKnowledgeBases(localStorage.token));
 		}
 
-		let legacy_documents = $knowledge
-			.filter((item) => item?.meta?.document)
-			.map((item) => ({
-				...item,
-				type: 'file'
-			}));
-
-		let legacy_collections =
-			legacy_documents.length > 0
-				? [
-						{
-							name: 'All Documents',
-							legacy: true,
-							type: 'collection',
-							description: 'Deprecated (legacy collection), please create a new knowledge base.',
-							title: $i18n.t('All Documents'),
-							collection_names: legacy_documents.map((item) => item.id)
-						},
-
-						...legacy_documents
-							.reduce((a, item) => {
-								return [...new Set([...a, ...(item?.meta?.tags ?? []).map((tag) => tag.name)])];
-							}, [])
-							.map((tag) => ({
-								name: tag,
-								legacy: true,
-								type: 'collection',
-								description: 'Deprecated (legacy collection), please create a new knowledge base.',
-								collection_names: legacy_documents
-									.filter((item) => (item?.meta?.tags ?? []).map((tag) => tag.name).includes(tag))
-									.map((item) => item.id)
-							}))
-					]
-				: [];
-
 		let collections = $knowledge
 			.filter((item) => !item?.meta?.document)
 			.map((item) => ({
@@ -91,15 +56,7 @@
 					]
 				: [];
 
-		items = [...collections, ...collection_files, ...legacy_collections, ...legacy_documents].map(
-			(item) => {
-				return {
-					...item,
-					...(item?.legacy || item?.meta?.legacy || item?.meta?.document ? { legacy: true } : {})
-				};
-			}
-		);
-
+		items = [...collections, ...collection_files];
 		await tick();
 
 		loaded = true;
