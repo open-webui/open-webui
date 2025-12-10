@@ -93,6 +93,7 @@ from open_webui.routers import (
     users,
     utils,
     uploads,
+    tenants,
     scim,
 )
 
@@ -481,7 +482,6 @@ from open_webui.utils.models import (
     check_model_access,
     get_filtered_models,
 )
-from open_webui.utils.luxtronic import user_can_access_lux_model
 from open_webui.utils.chat import (
     generate_chat_completion as chat_completion_handler,
     chat_completed as chat_completed_handler,
@@ -1336,6 +1336,7 @@ app.include_router(configs.router, prefix="/api/v1/configs", tags=["configs"])
 
 app.include_router(auths.router, prefix="/api/v1/auths", tags=["auths"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
+app.include_router(tenants.router, prefix="/api/v1/tenants", tags=["tenants"])
 
 
 app.include_router(channels.router, prefix="/api/v1/channels", tags=["channels"])
@@ -1490,11 +1491,6 @@ async def chat_completion(
             if model_id not in request.app.state.MODELS:
                 raise Exception("Model not found")
 
-            if not user_can_access_lux_model(user, model_id):
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN, detail="Model not found"
-                )
-
             model = request.app.state.MODELS[model_id]
             model_info = Models.get_model_by_id(model_id)
 
@@ -1556,6 +1552,10 @@ async def chat_completion(
                 ),
             },
         }
+
+        luxor_override = form_data.get("luxor_tenant_id")
+        if luxor_override:
+            metadata["luxor_tenant_id"] = luxor_override
 
         if metadata.get("chat_id") and (user and user.role != "admin"):
             if not metadata["chat_id"].startswith("local:"):

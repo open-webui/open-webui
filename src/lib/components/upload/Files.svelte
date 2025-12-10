@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { deleteUpload, getFiles, rebuildUserArtifact, type StoredFile } from '$lib/apis/uploads';
+	import { getTenantPromptFiles, deleteTenantPromptFile } from '$lib/apis/tenants';
 	import { user } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 
 	export let tenantId: string | null = null;
 	export let path: string | null = null;
 	export let tenantBucket: string | null = null;
+	export let useTenantPromptApi: boolean = false;
 
 	let files: StoredFile[] = [];
 	let loading = false;
@@ -39,7 +41,22 @@
 		loading = true;
 		error = null;
 		try {
-			files = await getFiles(localStorage.token, path, tenantId ?? undefined);
+			if (useTenantPromptApi) {
+				if (!tenantId) {
+					throw 'Tenant ID is required to load prompts.';
+				}
+
+				const promptFiles = await getTenantPromptFiles(localStorage.token, tenantId);
+				files = promptFiles.map((file) => ({
+					key: file.key,
+					size: file.size,
+					last_modified: file.last_modified ?? new Date().toISOString(),
+					url: file.url,
+					tenant_id: tenantId
+				}));
+			} else {
+				files = await getFiles(localStorage.token, path, tenantId ?? undefined);
+			}
 		} catch (err) {
 			const message = typeof err === 'string' ? err : err?.detail ?? 'Failed to load files.';
 			error = message;
@@ -74,7 +91,14 @@
 		deletingKey = file.key;
 		try {
 			const token = localStorage.token;
-			await deleteUpload(token, file.key);
+			if (useTenantPromptApi) {
+				if (!tenantId) {
+					throw 'Tenant ID is required to delete prompts.';
+				}
+				await deleteTenantPromptFile(token, tenantId, file.key);
+			} else {
+				await deleteUpload(token, file.key);
+			}
 			files = files.filter((item) => item.key !== file.key);
 			toast.success('File deleted.');
 
@@ -97,6 +121,10 @@
 			deletingKey = null;
 		}
 	};
+
+	export function refresh() {
+		loadFiles();
+	}
 </script>
 
 {#if loading}

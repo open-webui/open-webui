@@ -13,45 +13,12 @@ export type UploadDocumentResponse = {
 	tenant_id: string;
 };
 
-export type UploadTenant = {
-	id: string;
-	name: string;
-	s3_bucket: string;
-};
-
 export type StoredFile = {
 	key: string;
 	size: number;
 	last_modified: string;
 	url: string;
 	tenant_id: string;
-};
-
-export const getUploadTenants = async (token: string): Promise<UploadTenant[]> => {
-	let error: string | null = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/uploads/tenants`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.error(err);
-			error = err?.detail ?? 'Failed to load tenants.';
-			return null;
-		});
-
-	if (error || !res) {
-		throw error ?? 'Failed to load tenants.';
-	}
-
-	return res;
 };
 
 export const uploadDocument = async (

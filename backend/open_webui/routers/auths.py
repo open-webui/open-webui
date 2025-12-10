@@ -804,6 +804,7 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
             form_data.name,
             form_data.profile_image_url,
             form_data.role,
+            tenant_id=form_data.tenant_id,
         )
 
         if user:
