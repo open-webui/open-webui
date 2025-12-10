@@ -88,6 +88,8 @@
 	import ValvesModal from '../workspace/common/ValvesModal.svelte';
 	import PageEdit from '../icons/PageEdit.svelte';
 	import { goto } from '$app/navigation';
+	import InputModal from '../common/InputModal.svelte';
+	import Expand from '../icons/Expand.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -419,6 +421,8 @@
 	let commandsElement;
 
 	let inputFiles;
+
+	let showInputModal = false;
 
 	let dragged = false;
 	let shiftKey = false;
@@ -984,6 +988,20 @@
 	}}
 />
 
+<InputModal
+	bind:show={showInputModal}
+	bind:value={prompt}
+	bind:inputContent
+	onChange={(content) => {
+		console.log(content);
+		chatInputElement?.setContent(content?.json ?? null);
+	}}
+	onClose={async () => {
+		await tick();
+		chatInputElement?.focus();
+	}}
+/>
+
 {#if loaded}
 	<div class="w-full font-primary">
 		<div class=" mx-auto inset-x-0 bg-transparent flex justify-center">
@@ -1210,7 +1228,7 @@
 
 							<div class="px-2.5">
 								<div
-									class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pb-1 px-1 resize-none h-fit max-h-96 overflow-auto {files.length ===
+									class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pb-1 px-1 resize-none h-fit max-h-96 overflow-auto relative {files.length ===
 									0
 										? atSelectedModel !== undefined
 											? 'pt-1.5'
@@ -1218,12 +1236,30 @@
 										: ''}"
 									id="chat-input-container"
 								>
+									{#if prompt.split('\n').length > 2}
+										<div class="absolute top-0 right-0 z-20">
+											<div class="mt-2.5">
+												<button
+													type="button"
+													class="p-1 rounded-lg hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+													aria-label="Expand input"
+													on:click={async () => {
+														showInputModal = true;
+													}}
+												>
+													<Expand />
+												</button>
+											</div>
+										</div>
+									{/if}
+
 									{#if suggestions}
 										{#key $settings?.richTextInput ?? true}
 											{#key $settings?.showFormattingToolbar ?? false}
 												<RichTextInput
 													bind:this={chatInputElement}
 													id="chat-input"
+													editable={!showInputModal}
 													onChange={(content) => {
 														prompt = content.md;
 														inputContent = content;
