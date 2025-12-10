@@ -47,7 +47,7 @@
 	let key = '';
 	let headers = '';
 
-	let functionNameFilterList = [];
+	let functionNameFilterList = '';
 	let accessControl = {};
 
 	let id = '';
@@ -338,7 +338,7 @@
 		oauthClientInfo = null;
 
 		enable = true;
-		functionNameFilterList = [];
+		functionNameFilterList = '';
 		accessControl = null;
 	};
 
@@ -362,7 +362,7 @@
 			oauthClientInfo = connection.info?.oauth_client_info ?? null;
 
 			enable = connection.config?.enable ?? true;
-			functionNameFilterList = connection.config?.function_name_filter_list ?? [];
+			functionNameFilterList = connection.config?.function_name_filter_list ?? '';
 			accessControl = connection.config?.access_control ?? null;
 		}
 	};
@@ -534,7 +534,7 @@
 										<div class="flex-shrink-0 self-start">
 											<select
 												id="select-bearer-or-session"
-												class={`w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+												class={`dark:bg-gray-900 w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 												bind:value={spec_type}
 											>
 												<option value="url">{$i18n.t('URL')}</option>
@@ -644,7 +644,7 @@
 									<div class="flex-shrink-0 self-start">
 										<select
 											id="select-bearer-or-session"
-											class={`w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											class={`dark:bg-gray-900 w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 											bind:value={auth_type}
 										>
 											<option value="none">{$i18n.t('None')}</option>
@@ -818,10 +818,8 @@
 
 							<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 
-							<div class="my-2 -mx-2">
-								<div class="px-4 py-3 bg-gray-50 dark:bg-gray-950 rounded-3xl">
-									<AccessControl bind:accessControl />
-								</div>
+							<div class="my-2">
+								<AccessControl bind:accessControl />
 							</div>
 						{/if}
 					</div>

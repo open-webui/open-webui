@@ -110,7 +110,7 @@
 			</div>
 		</nav>
 
-		<div class=" pb-1 flex-1 max-h-full overflow-y-auto @container">
+		<div class=" flex-1 max-h-full overflow-y-auto @container">
 			<Notes />
 		</div>
 	</div>

@@ -5,6 +5,7 @@ from fastapi.concurrency import run_in_threadpool
 import logging
 
 from open_webui.models.knowledge import (
+    KnowledgeFileListResponse,
     Knowledges,
     KnowledgeForm,
     KnowledgeResponse,
@@ -43,97 +44,38 @@ router = APIRouter()
 
 @router.get("/", response_model=list[KnowledgeUserResponse])
 async def get_knowledge(user=Depends(get_verified_user)):
+    # Return knowledge bases with read access
     knowledge_bases = []
-
     if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
         knowledge_bases = Knowledges.get_knowledge_bases()
     else:
         knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "read")
 
-    # Get files for each knowledge base
-    knowledge_with_files = []
-    for knowledge_base in knowledge_bases:
-        files = []
-        if knowledge_base.data:
-            files = Files.get_file_metadatas_by_ids(
-                knowledge_base.data.get("file_ids", [])
-            )
-
-            # Check if all files exist
-            if len(files) != len(knowledge_base.data.get("file_ids", [])):
-                missing_files = list(
-                    set(knowledge_base.data.get("file_ids", []))
-                    - set([file.id for file in files])
-                )
-                if missing_files:
-                    data = knowledge_base.data or {}
-                    file_ids = data.get("file_ids", [])
-
-                    for missing_file in missing_files:
-                        file_ids.remove(missing_file)
-
-                    data["file_ids"] = file_ids
-                    Knowledges.update_knowledge_data_by_id(
-                        id=knowledge_base.id, data=data
-                    )
-
-                    files = Files.get_file_metadatas_by_ids(file_ids)
-
-        knowledge_with_files.append(
-            KnowledgeUserResponse(
-                **knowledge_base.model_dump(),
-                files=files,
-            )
+    return [
+        KnowledgeUserResponse(
+            **knowledge_base.model_dump(),
+            files=Knowledges.get_file_metadatas_by_id(knowledge_base.id),
         )
-
-    return knowledge_with_files
+        for knowledge_base in knowledge_bases
+    ]
 
 
 @router.get("/list", response_model=list[KnowledgeUserResponse])
 async def get_knowledge_list(user=Depends(get_verified_user)):
+    # Return knowledge bases with write access
     knowledge_bases = []
-
     if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
         knowledge_bases = Knowledges.get_knowledge_bases()
     else:
         knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "write")
 
-    # Get files for each knowledge base
-    knowledge_with_files = []
-    for knowledge_base in knowledge_bases:
-        files = []
-        if knowledge_base.data:
-            files = Files.get_file_metadatas_by_ids(
-                knowledge_base.data.get("file_ids", [])
-            )
-
-            # Check if all files exist
-            if len(files) != len(knowledge_base.data.get("file_ids", [])):
-                missing_files = list(
-                    set(knowledge_base.data.get("file_ids", []))
-                    - set([file.id for file in files])
-                )
-                if missing_files:
-                    data = knowledge_base.data or {}
-                    file_ids = data.get("file_ids", [])
-
-                    for missing_file in missing_files:
-                        file_ids.remove(missing_file)
-
-                    data["file_ids"] = file_ids
-                    Knowledges.update_knowledge_data_by_id(
-                        id=knowledge_base.id, data=data
-                    )
-
-                    files = Files.get_file_metadatas_by_ids(file_ids)
-
-        knowledge_with_files.append(
-            KnowledgeUserResponse(
-                **knowledge_base.model_dump(),
-                files=files,
-            )
+    return [
+        KnowledgeUserResponse(
+            **knowledge_base.model_dump(),
+            files=Knowledges.get_file_metadatas_by_id(knowledge_base.id),
         )
-    return knowledge_with_files
+        for knowledge_base in knowledge_bases
+    ]
 
 
 ############################
@@ -193,26 +135,9 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
 
     log.info(f"Starting reindexing for {len(knowledge_bases)} knowledge bases")
 
-    deleted_knowledge_bases = []
-
     for knowledge_base in knowledge_bases:
-        # -- Robust error handling for missing or invalid data
-        if not knowledge_base.data or not isinstance(knowledge_base.data, dict):
-            log.warning(
-                f"Knowledge base {knowledge_base.id} has no data or invalid data ({knowledge_base.data!r}). Deleting."
-            )
-            try:
-                Knowledges.delete_knowledge_by_id(id=knowledge_base.id)
-                deleted_knowledge_bases.append(knowledge_base.id)
-            except Exception as e:
-                log.error(
-                    f"Failed to delete invalid knowledge base {knowledge_base.id}: {e}"
-                )
-            continue
-
         try:
-            file_ids = knowledge_base.data.get("file_ids", [])
-            files = Files.get_files_by_ids(file_ids)
+            files = Knowledges.get_files_by_id(knowledge_base.id)
             try:
                 if VECTOR_DB_CLIENT.has_collection(collection_name=knowledge_base.id):
                     VECTOR_DB_CLIENT.delete_collection(
@@ -252,9 +177,7 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
             for failed in failed_files:
                 log.warning(f"File ID: {failed['file_id']}, Error: {failed['error']}")
 
-    log.info(
-        f"Reindexing completed. Deleted {len(deleted_knowledge_bases)} invalid knowledge bases: {deleted_knowledge_bases}"
-    )
+    log.info(f"Reindexing completed.")
     return True
 
 
@@ -272,19 +195,15 @@ async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
     knowledge = Knowledges.get_knowledge_by_id(id=id)
 
     if knowledge:
-
         if (
             user.role == "admin"
             or knowledge.user_id == user.id
             or has_access(user.id, "read", knowledge.access_control)
         ):
 
-            file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
-            files = Files.get_file_metadatas_by_ids(file_ids)
-
             return KnowledgeFilesResponse(
                 **knowledge.model_dump(),
-                files=files,
+                files=Knowledges.get_file_metadatas_by_id(knowledge.id),
             )
     else:
         raise HTTPException(
@@ -336,18 +255,68 @@ async def update_knowledge_by_id(
 
     knowledge = Knowledges.update_knowledge_by_id(id=id, form_data=form_data)
     if knowledge:
-        file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
-        files = Files.get_file_metadatas_by_ids(file_ids)
-
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
-            files=files,
+            files=Knowledges.get_file_metadatas_by_id(knowledge.id),
         )
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.ID_TAKEN,
         )
+
+
+############################
+# GetKnowledgeFilesById
+############################
+
+
+@router.get("/{id}/files", response_model=KnowledgeFileListResponse)
+async def get_knowledge_files_by_id(
+    id: str,
+    query: Optional[str] = None,
+    view_option: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
+    page: Optional[int] = 1,
+    user=Depends(get_verified_user),
+):
+
+    knowledge = Knowledges.get_knowledge_by_id(id=id)
+    if not knowledge:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if not (
+        user.role == "admin"
+        or knowledge.user_id == user.id
+        or has_access(user.id, "read", knowledge.access_control)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    page = max(page, 1)
+
+    limit = 30
+    skip = (page - 1) * limit
+
+    filter = {}
+    if query:
+        filter["query"] = query
+    if view_option:
+        filter["view_option"] = view_option
+    if order_by:
+        filter["order_by"] = order_by
+    if direction:
+        filter["direction"] = direction
+
+    return Knowledges.search_files_by_id(
+        id, user.id, filter=filter, skip=skip, limit=limit
+    )
 
 
 ############################
@@ -371,7 +340,6 @@ def add_file_to_knowledge_by_id(
     user=Depends(get_verified_user),
 ):
     knowledge = Knowledges.get_knowledge_by_id(id=id)
-
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -400,6 +368,11 @@ def add_file_to_knowledge_by_id(
             detail=ERROR_MESSAGES.FILE_NOT_PROCESSED,
         )
 
+    # Add file to knowledge base
+    Knowledges.add_file_to_knowledge_by_id(
+        knowledge_id=id, file_id=form_data.file_id, user_id=user.id
+    )
+
     # Add content to the vector database
     try:
         process_file(
@@ -415,32 +388,10 @@ def add_file_to_knowledge_by_id(
         )
 
     if knowledge:
-        data = knowledge.data or {}
-        file_ids = data.get("file_ids", [])
-
-        if form_data.file_id not in file_ids:
-            file_ids.append(form_data.file_id)
-            data["file_ids"] = file_ids
-
-            knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
-
-            if knowledge:
-                files = Files.get_file_metadatas_by_ids(file_ids)
-
-                return KnowledgeFilesResponse(
-                    **knowledge.model_dump(),
-                    files=files,
-                )
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.DEFAULT("knowledge"),
-                )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("file_id"),
-            )
+        return KnowledgeFilesResponse(
+            **knowledge.model_dump(),
+            files=Knowledges.get_file_metadatas_by_id(knowledge.id),
+        )
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -555,14 +506,9 @@ def update_file_from_knowledge_by_id(
         )
 
     if knowledge:
-        data = knowledge.data or {}
-        file_ids = data.get("file_ids", [])
-
-        files = Files.get_file_metadatas_by_ids(file_ids)
-
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
-            files=files,
+            files=Knowledges.get_file_metadatas_by_id(knowledge.id),
         )
     else:
         raise HTTPException(
@@ -607,11 +553,19 @@ def remove_file_from_knowledge_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
+    Knowledges.remove_file_from_knowledge_by_id(
+        knowledge_id=id, file_id=form_data.file_id
+    )
+
     # Remove content from the vector database
     try:
         VECTOR_DB_CLIENT.delete(
             collection_name=knowledge.id, filter={"file_id": form_data.file_id}
-        )
+        )  # Remove by file_id first
+
+        VECTOR_DB_CLIENT.delete(
+            collection_name=knowledge.id, filter={"hash": file.hash}
+        )  # Remove by hash as well in case of duplicates
     except Exception as e:
         log.debug("This was most likely caused by bypassing embedding processing")
         log.debug(e)
@@ -632,32 +586,10 @@ def remove_file_from_knowledge_by_id(
         Files.delete_file_by_id(form_data.file_id)
 
     if knowledge:
-        data = knowledge.data or {}
-        file_ids = data.get("file_ids", [])
-
-        if form_data.file_id in file_ids:
-            file_ids.remove(form_data.file_id)
-            data["file_ids"] = file_ids
-
-            knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
-
-            if knowledge:
-                files = Files.get_file_metadatas_by_ids(file_ids)
-
-                return KnowledgeFilesResponse(
-                    **knowledge.model_dump(),
-                    files=files,
-                )
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.DEFAULT("knowledge"),
-                )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("file_id"),
-            )
+        return KnowledgeFilesResponse(
+            **knowledge.model_dump(),
+            files=Knowledges.get_file_metadatas_by_id(knowledge.id),
+        )
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -758,8 +690,7 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
         log.debug(e)
         pass
 
-    knowledge = Knowledges.update_knowledge_data_by_id(id=id, data={"file_ids": []})
-
+    knowledge = Knowledges.reset_knowledge_by_id(id=id)
     return knowledge
 
 
@@ -769,7 +700,7 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 
 
 @router.post("/{id}/files/batch/add", response_model=Optional[KnowledgeFilesResponse])
-def add_files_to_knowledge_batch(
+async def add_files_to_knowledge_batch(
     request: Request,
     id: str,
     form_data: list[KnowledgeFileIdForm],
@@ -809,7 +740,7 @@ def add_files_to_knowledge_batch(
 
     # Process files
     try:
-        result = process_files_batch(
+        result = await process_files_batch(
             request=request,
             form_data=BatchProcessFilesForm(files=files, collection_name=id),
             user=user,
@@ -820,25 +751,19 @@ def add_files_to_knowledge_batch(
         )
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-    # Add successful files to knowledge base
-    data = knowledge.data or {}
-    existing_file_ids = data.get("file_ids", [])
-
     # Only add files that were successfully processed
     successful_file_ids = [r.file_id for r in result.results if r.status == "completed"]
     for file_id in successful_file_ids:
-        if file_id not in existing_file_ids:
-            existing_file_ids.append(file_id)
-
-    data["file_ids"] = existing_file_ids
-    knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
+        Knowledges.add_file_to_knowledge_by_id(
+            knowledge_id=id, file_id=file_id, user_id=user.id
+        )
 
     # If there were any errors, include them in the response
     if result.errors:
         error_details = [f"{err.file_id}: {err.error}" for err in result.errors]
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
-            files=Files.get_file_metadatas_by_ids(existing_file_ids),
+            files=Knowledges.get_file_metadatas_by_id(knowledge.id),
             warnings={
                 "message": "Some files failed to process",
                 "errors": error_details,
@@ -847,5 +772,5 @@ def add_files_to_knowledge_batch(
 
     return KnowledgeFilesResponse(
         **knowledge.model_dump(),
-        files=Files.get_file_metadatas_by_ids(existing_file_ids),
+        files=Knowledges.get_file_metadatas_by_id(knowledge.id),
     )

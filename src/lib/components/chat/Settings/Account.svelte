@@ -168,7 +168,7 @@
 
 							<div class="flex-1">
 								<select
-									class="w-full text-sm dark:text-gray-300 bg-transparent outline-hidden"
+									class="dark:bg-gray-900 w-full text-sm dark:text-gray-300 bg-transparent outline-hidden"
 									bind:value={_gender}
 									on:change={(e) => {
 										console.log(_gender);
@@ -234,7 +234,7 @@
 			</div>
 		{/if}
 
-		<hr class="border-gray-50 dark:border-gray-850 my-4" />
+		<hr class="border-gray-50 dark:border-gray-850/30 my-4" />
 
 		{#if $config?.features.enable_login_form}
 			<div class="mt-2">

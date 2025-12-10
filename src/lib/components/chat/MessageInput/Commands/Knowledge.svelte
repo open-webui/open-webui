@@ -80,47 +80,13 @@
 	};
 
 	onMount(async () => {
-		let legacy_documents = knowledge
-			.filter((item) => item?.meta?.document)
-			.map((item) => ({
-				...item,
-				type: 'file'
-			}));
-
-		let legacy_collections =
-			legacy_documents.length > 0
-				? [
-						{
-							name: 'All Documents',
-							legacy: true,
-							type: 'collection',
-							description: 'Deprecated (legacy collection), please create a new knowledge base.',
-							title: $i18n.t('All Documents'),
-							collection_names: legacy_documents.map((item) => item.id)
-						},
-
-						...legacy_documents
-							.reduce((a, item) => {
-								return [...new Set([...a, ...(item?.meta?.tags ?? []).map((tag) => tag.name)])];
-							}, [])
-							.map((tag) => ({
-								name: tag,
-								legacy: true,
-								type: 'collection',
-								description: 'Deprecated (legacy collection), please create a new knowledge base.',
-								collection_names: legacy_documents
-									.filter((item) => (item?.meta?.tags ?? []).map((tag) => tag.name).includes(tag))
-									.map((item) => item.id)
-							}))
-					]
-				: [];
-
 		let collections = knowledge
 			.filter((item) => !item?.meta?.document)
 			.map((item) => ({
 				...item,
 				type: 'collection'
 			}));
+
 		let collection_files =
 			knowledge.length > 0
 				? [
@@ -139,7 +105,7 @@
 							.map((file) => ({
 								...file,
 								name: file?.meta?.name,
-								description: `${file?.collection?.name} - ${file?.collection?.description}`,
+								description: `${file?.collection?.description}`,
 								knowledge: true, // DO NOT REMOVE, USED TO INDICATE KNOWLEDGE BASE FILE
 								type: 'file'
 							}))
@@ -153,19 +119,7 @@
 			title: folder.name
 		}));
 
-		items = [
-			...folder_items,
-			...collections,
-			...collection_files,
-			...legacy_collections,
-			...legacy_documents
-		].map((item) => {
-			return {
-				...item,
-				...(item?.legacy || item?.meta?.legacy || item?.meta?.document ? { legacy: true } : {})
-			};
-		});
-
+		items = [...folder_items, ...collections, ...collection_files];
 		fuse = new Fuse(items, {
 			keys: ['name', 'description']
 		});
@@ -218,7 +172,7 @@
 						content={item?.legacy
 							? $i18n.t('Legacy')
 							: item?.type === 'file'
-								? $i18n.t('File')
+								? `${item?.collection?.name} > ${$i18n.t('File')}`
 								: item?.type === 'collection'
 									? $i18n.t('Collection')
 									: ''}

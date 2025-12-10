@@ -33,6 +33,7 @@
 	import Banner from '$lib/components/common/Banner.svelte';
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -96,11 +97,7 @@
 		}
 	};
 
-	$: if (page) {
-		getUserList();
-	}
-
-	$: if (query !== null && orderBy && direction) {
+	$: if (query !== null && page !== null && orderBy !== null && direction !== null) {
 		getUserList();
 	}
 </script>
@@ -221,7 +218,7 @@
 	<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
 		<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full">
 			<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
-				<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850">
+				<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850/30">
 					<th
 						scope="col"
 						class="px-2.5 py-2 cursor-pointer select-none"
@@ -359,14 +356,27 @@
 							</button>
 						</td>
 						<td class="px-3 py-1 font-medium text-gray-900 dark:text-white max-w-48">
-							<div class="flex items-center">
-								<img
-									class="rounded-full w-6 h-6 object-cover mr-2.5 flex-shrink-0"
-									src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
-									alt="user"
-								/>
+							<div class="flex items-center gap-2">
+								<ProfilePreview {user} side="right" align="center" sideOffset={6}>
+									<img
+										class="rounded-full w-6 h-6 object-cover mr-0.5 flex-shrink-0"
+										src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
+										alt="user"
+									/>
+								</ProfilePreview>
 
 								<div class="font-medium truncate">{user.name}</div>
+
+								{#if user?.last_active_at && Date.now() / 1000 - user.last_active_at < 180}
+									<div>
+										<span class="relative flex size-1.5">
+											<span
+												class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
+											></span>
+											<span class="relative inline-flex size-1.5 rounded-full bg-green-500"></span>
+										</span>
+									</div>
+								{/if}
 							</div>
 						</td>
 						<td class=" px-3 py-1"> {user.email} </td>

@@ -3,6 +3,7 @@ import logging
 from typing import Optional
 
 
+from open_webui.utils.misc import get_message_list
 from open_webui.socket.main import get_event_emitter
 from open_webui.models.chats import (
     ChatForm,
@@ -59,6 +60,64 @@ def get_session_user_chat_list(
             return Chats.get_chat_title_id_list_by_user_id(
                 user.id, include_folders=include_folders, include_pinned=include_pinned
             )
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+
+############################
+# GetChatList
+############################
+
+
+@router.get("/stats/usage", response_model=list[ChatTitleIdResponse])
+def get_session_user_chat_usage(
+    user=Depends(get_verified_user),
+):
+    try:
+        chats = Chats.get_chats_by_user_id(user.id)
+
+        chat_stats = []
+        for chat in chats:
+            messages_map = chat.chat.get("history", {}).get("messages", {})
+            message_id = chat.chat.get("history", {}).get("currentId")
+
+            if messages_map and message_id:
+                try:
+                    message_list = get_message_list(messages_map, message_id)
+                    message_count = len(message_list)
+
+                    last_assistant_message = next(
+                        (
+                            message
+                            for message in reversed(message_list)
+                            if message["role"] == "assistant"
+                        ),
+                        None,
+                    )
+
+                    model_id = (
+                        last_assistant_message.get("model", None)
+                        if last_assistant_message
+                        else None
+                    )
+                    chat_stats.append(
+                        {
+                            "id": chat.id,
+                            "model_id": model_id,
+                            "message_count": message_count,
+                            "tags": chat.meta.get("tags", []),
+                            "model_ids": chat.chat.get("models", []),
+                            "updated_at": chat.updated_at,
+                            "created_at": chat.created_at,
+                        }
+                    )
+                except Exception as e:
+                    pass
+        return chat_stats
+
     except Exception as e:
         log.exception(e)
         raise HTTPException(

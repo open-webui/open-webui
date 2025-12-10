@@ -82,7 +82,7 @@
 						<div class="relative overflow-x-auto">
 							<table class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-auto">
 								<thead
-									class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-2 border-gray-50 dark:border-gray-850"
+									class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-2 border-gray-50 dark:border-gray-850/30"
 								>
 									<tr>
 										<th scope="col" class="px-3 py-2"> {$i18n.t('Name')} </th>
@@ -94,7 +94,7 @@
 								</thead>
 								<tbody>
 									{#each memories as memory}
-										<tr class="border-b border-gray-50 dark:border-gray-850 items-center">
+										<tr class="border-b border-gray-50 dark:border-gray-850/30 items-center">
 											<td class="px-3 py-1">
 												<div class="line-clamp-1">
 													{memory.content}
