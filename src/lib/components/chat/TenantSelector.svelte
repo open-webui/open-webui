@@ -3,11 +3,11 @@
 	import type { i18n as i18nType } from 'i18next';
 	import type { Writable } from 'svelte/store';
 
-	import type { UploadTenant } from '$lib/apis/uploads';
+	import type { TenantInfo } from '$lib/apis/tenants';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
-	export let tenants: UploadTenant[] = [];
+	export let tenants: TenantInfo[] = [];
 	export let selectedTenantId: string | null = null;
 	export let loading: boolean = false;
 	export let error: string | null = null;

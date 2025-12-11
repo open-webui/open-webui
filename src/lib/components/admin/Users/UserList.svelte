@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, showSidebar } from '$lib/stores';
 	import { goto } from '$app/navigation';
@@ -33,6 +33,7 @@
 	import Banner from '$lib/components/common/Banner.svelte';
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 
 	const i18n = getContext('i18n');
 
@@ -52,6 +53,11 @@
 
 	let showUserChatsModal = false;
 	let showEditUserModal = false;
+
+	let tenantOptions: TenantInfo[] = [];
+	let tenantOptionsLoading = false;
+	let tenantLoadError: string | null = null;
+	let tenantLookup: Record<string, TenantInfo> = {};
 
 	const deleteUserHandler = async (id) => {
 		const res = await deleteUserById(localStorage.token, id).catch((error) => {
@@ -77,6 +83,31 @@
 			direction = 'asc';
 		}
 	};
+
+	const getTenantOptions = async () => {
+		tenantOptionsLoading = true;
+		tenantLoadError = null;
+
+		try {
+			tenantOptions = await getUploadTenants(localStorage.token);
+			tenantLookup = tenantOptions.reduce<Record<string, TenantInfo>>((acc, tenant) => {
+				acc[tenant.id] = tenant;
+				return acc;
+			}, {});
+		} catch (error) {
+			console.error(error);
+			tenantLoadError =
+				(typeof error === 'string' && error) || 'Failed to load tenants.';
+			tenantOptions = [];
+			tenantLookup = {};
+		} finally {
+			tenantOptionsLoading = false;
+		}
+	};
+
+	onMount(() => {
+		getTenantOptions();
+	});
 
 	const getUserList = async () => {
 		try {
@@ -123,6 +154,7 @@
 	bind:show={showEditUserModal}
 	{selectedUser}
 	sessionUser={$user}
+	{tenantLookup}
 	on:save={async () => {
 		getUserList();
 	}}
@@ -217,6 +249,16 @@
 		</div>
 	</div>
 
+	{#if tenantLoadError}
+		<p class="text-xs text-red-500 mt-1 px-0.5">
+			{$i18n.t('Unable to load tenant information')}: {tenantLoadError}
+		</p>
+	{:else if tenantOptionsLoading}
+		<p class="text-xs text-gray-500 mt-1 px-0.5">
+			{$i18n.t('Loading tenant information...')}
+		</p>
+	{/if}
+
 	<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
 		<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full">
 			<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
@@ -289,6 +331,9 @@
 								</span>
 							{/if}
 						</div>
+					</th>
+					<th scope="col" class="px-2.5 py-2">
+						{$i18n.t('Tenant')}
 					</th>
 
 					<th
@@ -373,6 +418,18 @@
 							</div>
 						</td>
 						<td class=" px-3 py-1"> {user.email} </td>
+
+						<td class=" px-3 py-1">
+							{#if user.tenant_id}
+								{#if tenantLookup?.[user.tenant_id]}
+									{tenantLookup[user.tenant_id].name}
+								{:else}
+									<span class="font-mono text-xs text-gray-500">{user.tenant_id}</span>
+								{/if}
+							{:else}
+								<span class="text-gray-400">—</span>
+							{/if}
+						</td>
 
 						<td class=" px-3 py-1">
 							{dayjs(user.last_active_at * 1000).fromNow()}

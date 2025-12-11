@@ -3,6 +3,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, getContext } from 'svelte';
 	import { addUser } from '$lib/apis/auths';
+import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -21,11 +22,16 @@
 	let tab = '';
 	let inputFiles;
 
+	let tenantOptions: TenantInfo[] = [];
+	let tenantOptionsLoading = false;
+	let tenantLoadError: string | null = null;
+
 	let _user = {
 		name: '',
 		email: '',
 		password: '',
-		role: 'user'
+		role: 'user',
+		tenant_id: ''
 	};
 
 	$: if (show) {
@@ -33,8 +39,38 @@
 			name: '',
 			email: '',
 			password: '',
-			role: 'user'
+			role: 'user',
+			tenant_id: ''
 		};
+	}
+
+	$: if (_user.role === 'admin' && _user.tenant_id !== '') {
+		_user.tenant_id = '';
+	}
+
+	const fetchTenantOptions = async () => {
+		if (tenantOptionsLoading) return;
+
+		tenantOptionsLoading = true;
+		tenantLoadError = null;
+		try {
+			tenantOptions = await getUploadTenants(localStorage.token);
+		} catch (error) {
+			console.error(error);
+			tenantLoadError =
+				(typeof error === 'string' && error) || 'Failed to load tenants. Please try again.';
+			toast.error(tenantLoadError);
+		} finally {
+			tenantOptionsLoading = false;
+		}
+	};
+
+	onMount(() => {
+		fetchTenantOptions();
+	});
+
+	$: if (show && tenantOptions.length === 0 && !tenantOptionsLoading && !tenantLoadError) {
+		fetchTenantOptions();
 	}
 
 	const submitHandler = async () => {
@@ -44,6 +80,11 @@
 		};
 
 		if (tab === '') {
+			if (_user.role !== 'admin' && !_user.tenant_id) {
+				toast.error($i18n.t('Please select a tenant'));
+				return;
+			}
+
 			loading = true;
 
 			const res = await addUser(
@@ -52,7 +93,8 @@
 				_user.email,
 				_user.password,
 				_user.role,
-				generateInitialsImage(_user.name)
+				generateInitialsImage(_user.name),
+				_user.role === 'admin' ? null : _user.tenant_id
 			).catch((error) => {
 				toast.error(`${error}`);
 			});
@@ -191,6 +233,38 @@
 									</select>
 								</div>
 							</div>
+
+							{#if _user.role !== 'admin'}
+								<div class="flex flex-col w-full mt-1">
+									<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Tenant')}</div>
+
+									<div class="flex-1">
+										<select
+											class="w-full rounded-lg text-sm bg-transparent dark:disabled:text-gray-500 outline-hidden"
+											bind:value={_user.tenant_id}
+											required
+											disabled={tenantOptionsLoading || tenantOptions.length === 0}
+										>
+											<option value="" disabled selected={_user.tenant_id === ''}>
+												{#if tenantOptionsLoading}
+													{$i18n.t('Loading tenants...')}
+												{:else}
+													{$i18n.t('Select a tenant')}
+												{/if}
+											</option>
+											{#each tenantOptions as tenant}
+												<option value={tenant.id}>{tenant.name}</option>
+											{/each}
+										</select>
+									</div>
+
+									{#if tenantLoadError}
+										<p class="mt-1 text-xs text-red-500">{tenantLoadError}</p>
+									{:else if !tenantOptionsLoading && tenantOptions.length === 0}
+										<p class="mt-1 text-xs text-gray-500">{$i18n.t('No tenants available.')}</p>
+									{/if}
+								</div>
+							{/if}
 
 							<div class="flex flex-col w-full mt-1">
 								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>

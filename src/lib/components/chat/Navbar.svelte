@@ -39,7 +39,7 @@ import PencilSquare from '../icons/PencilSquare.svelte';
 import ChatCheck from '../icons/ChatCheck.svelte';
 import Knobs from '../icons/Knobs.svelte';
 import TenantSelector from './TenantSelector.svelte';
-import type { UploadTenant } from '$lib/apis/uploads';
+import type { TenantInfo } from '$lib/apis/tenants';
 
 	const i18n = getContext('i18n');
 
@@ -54,7 +54,7 @@ export let shareEnabled: boolean = false;
 	export let onSaveTempChat: () => {};
 	export let archiveChatHandler: (id: string) => void;
 export let moveChatHandler: (id: string, folderId: string) => void;
-export let tenantOptions: UploadTenant[] = [];
+export let tenantOptions: TenantInfo[] = [];
 export let selectedTenantId: string | null = null;
 export let tenantOptionsLoading: boolean = false;
 export let tenantLoadError: string | null = null;

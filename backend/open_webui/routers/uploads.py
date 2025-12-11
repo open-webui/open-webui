@@ -6,25 +6,24 @@ import uuid
 from datetime import datetime
 from typing import Literal, Optional, List
 
-import boto3
-from botocore.config import Config
 from botocore.exceptions import ClientError
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel
 
 from open_webui.config import (
     STORAGE_PROVIDER,
-    S3_ACCESS_KEY_ID,
-    S3_SECRET_ACCESS_KEY,
-    S3_REGION_NAME,
     S3_BUCKET_NAME,
-    S3_ENDPOINT_URL,
-    S3_USE_ACCELERATE_ENDPOINT,
-    S3_ADDRESSING_STYLE,
 )
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.tenants import Tenants
 from open_webui.routers.luxor import rag_master_request
+from open_webui.services.s3 import (
+    get_s3_client,
+    upload_fileobj,
+    delete_object,
+    object_exists,
+    generate_presigned_url,
+)
 from open_webui.utils.auth import get_verified_user, get_admin_user
 
 router = APIRouter()
@@ -33,37 +32,6 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 VISIBILITY_OPTIONS = {"public", "private"}
-
-_s3_client = None
-
-
-def _get_s3_client():
-    global _s3_client
-    if _s3_client is not None:
-        return _s3_client
-
-    config = Config(
-        s3={
-            "use_accelerate_endpoint": S3_USE_ACCELERATE_ENDPOINT,
-            "addressing_style": S3_ADDRESSING_STYLE,
-        },
-        request_checksum_calculation="when_required",
-        response_checksum_validation="when_required",
-    )
-
-    client_args = {
-        "region_name": S3_REGION_NAME,
-        "endpoint_url": S3_ENDPOINT_URL,
-        "config": config,
-    }
-
-    if S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY:
-        client_args["aws_access_key_id"] = S3_ACCESS_KEY_ID
-        client_args["aws_secret_access_key"] = S3_SECRET_ACCESS_KEY
-
-    _s3_client = boto3.client("s3", **client_args)
-    return _s3_client
-
 
 def _sanitize_filename(filename: Optional[str]) -> str:
     base_name = os.path.basename(filename or "upload")
@@ -76,28 +44,6 @@ def _build_prefix(tenant_bucket: str, user_id: str, visibility: str) -> str:
     if visibility == "private":
         base = posixpath.join(base, "users", user_id)
     return base
-
-
-def object_exists(s3_client, bucket: str, key: str) -> bool:
-    """
-    Confirm an object exists. Falls back to list when HEAD is forbidden
-    (some buckets allow delete but not head/get).
-    """
-    try:
-        s3_client.head_object(Bucket=bucket, Key=key)
-        return True
-    except ClientError as exc:
-        error_code = exc.response.get("Error", {}).get("Code", "")
-        if error_code in ("404", "NoSuchKey", "NotFound", "NoSuchBucket"):
-            return False
-        if error_code in ("403", "AccessDenied", "Forbidden"):
-            try:
-                resp = s3_client.list_objects_v2(Bucket=bucket, Prefix=key, MaxKeys=1)
-                contents = resp.get("Contents", [])
-                return any(obj.get("Key") == key for obj in contents)
-            except ClientError:
-                return False
-        return True
 
 
 def _get_user_tenant_bucket(user) -> Optional[str]:
@@ -117,12 +63,6 @@ class UploadResponse(BaseModel):
     stored_filename: str
     tenant_prefix: str
     tenant_id: str
-
-
-class TenantInfo(BaseModel):
-    id: str
-    name: str
-    s3_bucket: str
 
 
 class PublicFile(BaseModel):
@@ -147,12 +87,6 @@ class RebuildTenantRequest(BaseModel):
 class RebuildUserRequest(BaseModel):
     tenant: str
     user: str
-
-
-@router.get("/tenants", response_model=list[TenantInfo])
-def list_tenants(admin=Depends(get_admin_user)):
-    tenants = Tenants.get_tenants()
-    return [TenantInfo(**tenant.model_dump()) for tenant in tenants]
 
 
 @router.post("", response_model=UploadResponse)
@@ -218,20 +152,14 @@ async def upload_document(
     tenant_prefix = _build_prefix(tenant.s3_bucket, user.id, normalized_visibility)
     object_key = posixpath.join(tenant_prefix, stored_filename)
 
-    s3_client = _get_s3_client()
-
     extra_args = {}
     if file.content_type:
         extra_args["ContentType"] = file.content_type
 
     try:
-        file.file.seek(0)
-        if extra_args:
-            s3_client.upload_fileobj(
-                file.file, S3_BUCKET_NAME, object_key, ExtraArgs=extra_args
-            )
-        else:
-            s3_client.upload_fileobj(file.file, S3_BUCKET_NAME, object_key)
+        upload_fileobj(
+            file.file, S3_BUCKET_NAME, object_key, extra_args if extra_args else None
+        )
     except ClientError as exc:
         log.exception("Failed uploading file to S3: %s", exc)
         raise HTTPException(
@@ -341,8 +269,10 @@ def list_files(
 
     list_prefix = normalized_path_with_slash
     private_prefix = bucket_public_prefix + "users/"
+    prompts_prefix = bucket_prefix + "/prompts/"
+    listing_prompts = normalized_path_with_slash.startswith(prompts_prefix)
 
-    s3_client = _get_s3_client()
+    s3_client = get_s3_client()
     paginator = s3_client.get_paginator("list_objects_v2")
     files: List[PublicFile] = []
 
@@ -352,16 +282,14 @@ def list_files(
                 key = obj.get("Key")
                 if not key or key.endswith("/"):
                     continue
+                if key.startswith(prompts_prefix) and not listing_prompts:
+                    continue
                 if "/txt/" in key:
                     continue
                 if relative == "" and key.startswith(private_prefix):
                     continue
 
-                url = s3_client.generate_presigned_url(
-                    "get_object",
-                    Params={"Bucket": S3_BUCKET_NAME, "Key": key},
-                    ExpiresIn=3600,
-                )
+                url = generate_presigned_url(S3_BUCKET_NAME, key)
 
                 files.append(
                     PublicFile(
@@ -453,15 +381,13 @@ async def delete_uploaded_file(
             detail="Not authorized to delete objects for this user.",
         )
 
-    s3_client = _get_s3_client()
-
     try:
-        if object_exists(s3_client, S3_BUCKET_NAME, key):
-            s3_client.delete_object(Bucket=S3_BUCKET_NAME, Key=key)
+        if object_exists(S3_BUCKET_NAME, key):
+            delete_object(S3_BUCKET_NAME, key)
         for txt_key in txt_candidates:
             try:
-                if object_exists(s3_client, S3_BUCKET_NAME, txt_key):
-                    s3_client.delete_object(Bucket=S3_BUCKET_NAME, Key=txt_key)
+                if object_exists(S3_BUCKET_NAME, txt_key):
+                    delete_object(S3_BUCKET_NAME, txt_key)
             except ClientError as exc:
                 error_code = exc.response.get("Error", {}).get("Code", "")
                 if error_code not in ("NoSuchKey", "NoSuchBucket"):

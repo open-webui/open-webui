@@ -1,15 +1,14 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import {
-		getUploadTenants,
-		uploadDocument,
-		ingestUploadedDocument,
-		rebuildTenantArtifact,
-		rebuildUserArtifact,
-		type UploadDocumentResponse,
-		type UploadTenant,
-		type UploadVisibility
-	} from '$lib/apis/uploads';
+import {
+	uploadDocument,
+	ingestUploadedDocument,
+	rebuildTenantArtifact,
+	rebuildUserArtifact,
+	type UploadDocumentResponse,
+	type UploadVisibility
+} from '$lib/apis/uploads';
+import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 	import { WEBUI_NAME, user, showArchivedChats, showSidebar, mobile } from '$lib/stores';
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
@@ -31,11 +30,11 @@
 	let isUploading = false;
 	let uploadResult: UploadDocumentResponse | null = null;
 	let fileInput: HTMLInputElement | null = null;
-	let tenants: UploadTenant[] = [];
+	let tenants: TenantInfo[] = [];
 	let tenantsLoading = false;
 	let selectedTenantId: string | null = null;
 	let tenantsInitialized = false;
-	let selectedTenant: UploadTenant | null = null;
+	let selectedTenant: TenantInfo | null = null;
 	let isRebuildingTenant = false;
 	let isRebuildingPrivate = false;
 

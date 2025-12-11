@@ -83,7 +83,7 @@ import { uploadFile } from '$lib/apis/files';
 import { createOpenAITextStream } from '$lib/apis/streaming';
 import { getFunctions } from '$lib/apis/functions';
 import { updateFolderById } from '$lib/apis/folders';
-import { getUploadTenants, type UploadTenant } from '$lib/apis/uploads';
+import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
@@ -158,7 +158,7 @@ let params = {};
 
 const TENANT_OVERRIDE_STORAGE_KEY = 'luxor_tenant_override';
 
-let tenantOptions: UploadTenant[] = [];
+let tenantOptions: TenantInfo[] = [];
 let tenantOptionsLoading = false;
 let tenantLoadError: string | null = null;
 let selectedTenantId: string | null = null;

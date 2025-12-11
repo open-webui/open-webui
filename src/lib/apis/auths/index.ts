@@ -358,7 +358,8 @@ export const addUser = async (
 	email: string,
 	password: string,
 	role: string = 'pending',
-	profile_image_url: null | string = null
+	profile_image_url: null | string = null,
+	tenant_id?: string | null
 ) => {
 	let error = null;
 
@@ -373,7 +374,8 @@ export const addUser = async (
 			email: email,
 			password: password,
 			role: role,
-			...(profile_image_url && { profile_image_url: profile_image_url })
+			...(profile_image_url && { profile_image_url: profile_image_url }),
+			...(tenant_id ? { tenant_id } : {})
 		})
 	})
 		.then(async (res) => {
