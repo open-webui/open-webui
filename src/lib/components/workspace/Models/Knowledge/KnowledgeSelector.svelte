@@ -16,6 +16,7 @@
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import PageEdit from '$lib/components/icons/PageEdit.svelte';
+	import DocumentPage from '$lib/components/icons/DocumentPage.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -165,9 +166,13 @@
 										<Tooltip content={$i18n.t('Note')} placement="top">
 											<PageEdit className="size-4" />
 										</Tooltip>
-									{:else}
+									{:else if item.type === 'collection'}
 										<Tooltip content={$i18n.t('Collection')} placement="top">
 											<Database className="size-4" />
+										</Tooltip>
+									{:else if item.type === 'file'}
+										<Tooltip content={$i18n.t('File')} placement="top">
+											<DocumentPage className="size-4" />
 										</Tooltip>
 									{/if}
 
