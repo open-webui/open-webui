@@ -675,6 +675,21 @@ def get_sources_from_files(
             if not collection_names:
                 log.debug(f"skipping {file} as it has already been extracted")
                 continue
+            
+            # Log collection names being queried for debugging RAG issues
+            log.info(f"[RAG Query] file_id={file.get('id')} | collection_names={list(collection_names)} | queries_count={len(queries)}")
+            
+            # Check if collections actually exist and have documents
+            for coll_name in collection_names:
+                try:
+                    has_coll = VECTOR_DB_CLIENT.has_collection(collection_name=coll_name)
+                    if not has_coll:
+                        log.warning(
+                            f"[RAG Query WARNING] Collection '{coll_name}' does not exist! "
+                            f"File may not have been processed. Check file processing status."
+                        )
+                except Exception as check_err:
+                    log.debug(f"Could not check collection existence: {check_err}")
 
             if full_context:
                 try:
@@ -711,6 +726,17 @@ def get_sources_from_files(
                                 embedding_function=embedding_function,
                                 k=k,
                             )
+                            
+                            # Log if no results were found for debugging
+                            if context is None or not context.get("documents") or not context["documents"][0]:
+                                log.warning(
+                                    f"[RAG Query WARNING] No documents found for file_id={file.get('id')} | "
+                                    f"collections={list(collection_names)} | "
+                                    f"Possible causes: "
+                                    f"1) File not processed yet (check processing_status), "
+                                    f"2) Content extraction failed (empty PDF/scanned image), "
+                                    f"3) Embedding failed during upload"
+                                )
                 except Exception as e:
                     log.exception(e)
 

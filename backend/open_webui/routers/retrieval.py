@@ -1965,7 +1965,17 @@ def process_file(
     if request.app.state.config.RAG_EMBEDDING_ENGINE in ["openai", "portkey"]:
         embedding_api_key = request.app.state.config.RAG_OPENAI_API_KEY.get(user.email)
         if not embedding_api_key:
-            log.warning(f"No embedding API key configured for user {user.email} - embedding may fail")
+            log.error(
+                f"[File Processing BLOCKED] No embedding API key configured for user {user.email}. "
+                f"File processing will fail without an API key. "
+                f"Please configure the embedding API key in Settings > Documents > Embedding Model Engine."
+            )
+            # Return early with error - don't waste resources on processing that will fail
+            return {
+                "status": False,
+                "file_id": form_data.file_id,
+                "error": "No embedding API key configured. Please configure in Settings > Documents.",
+            }
     
     try:
         # Try to use job queue first if available
