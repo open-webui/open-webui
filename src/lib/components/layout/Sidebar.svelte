@@ -378,14 +378,13 @@
 	let isResizing = false;
 
 	let startWidth = 0;
-	let startX = 0;
-	let endX = 0;
+	let startClientX = 0;
 
 	const resizeStartHandler = (e: MouseEvent) => {
 		if ($mobile) return;
 		isResizing = true;
 
-		startX = e.clientX;
+		startClientX = e.clientX;
 		startWidth = $sidebarWidth ?? 260;
 
 		document.body.style.userSelect = 'none';
@@ -399,8 +398,8 @@
 		localStorage.setItem('sidebarWidth', String($sidebarWidth));
 	};
 
-	const applyResize = () => {
-		const dx = endX - startX;
+	const resizeSidebarHandler = (endClientX) => {
+		const dx = endClientX - startClientX;
 		const newSidebarWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + dx));
 
 		sidebarWidth.set(newSidebarWidth);
@@ -622,8 +621,7 @@
 <svelte:window
 	on:mousemove={(e) => {
 		if (!isResizing) return;
-		endX = e.clientX;
-		applyResize();
+		resizeSidebarHandler(e.clientX);
 	}}
 	on:mouseup={() => {
 		resizeEndHandler();
