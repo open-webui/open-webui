@@ -247,7 +247,7 @@
 					event.preventDefault();
 					document.getElementById('generate-message-pair-button')?.click();
 				} else if (
-					isShortcutMatch(event, shortcuts[Shortcut.REGENERATE_RESPONSE]) && 
+					isShortcutMatch(event, shortcuts[Shortcut.REGENERATE_RESPONSE]) &&
 					document.activeElement?.id === 'chat-input'
 				) {
 					console.log('Shortcut triggered: REGENERATE_RESPONSE');
