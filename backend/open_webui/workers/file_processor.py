@@ -91,9 +91,12 @@ class MockState:
             
             # Initialize embedding function for queries
             # Determine API URL and key based on engine type
+            # Note: RAG_OPENAI_API_KEY is now a UserScopedConfig, use default at worker init
+            # Per-user API keys are retrieved during actual document processing
             if self.config.RAG_EMBEDDING_ENGINE in ["openai", "portkey"]:
                 api_url = self.config.RAG_OPENAI_API_BASE_URL
-                api_key = self.config.RAG_OPENAI_API_KEY
+                # Use default API key from env var or empty string
+                api_key = self.config.RAG_OPENAI_API_KEY.default
             else:
                 api_url = self.config.RAG_OLLAMA_BASE_URL
                 api_key = self.config.RAG_OLLAMA_API_KEY

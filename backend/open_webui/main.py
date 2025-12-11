@@ -794,6 +794,8 @@ except Exception as e:
     pass
 
 
+# At startup, use default API key (no user context yet)
+# Per-user API keys are used during actual document processing
 app.state.EMBEDDING_FUNCTION = get_embedding_function(
     app.state.config.RAG_EMBEDDING_ENGINE,
     app.state.config.RAG_EMBEDDING_MODEL,
@@ -805,7 +807,8 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
         else app.state.config.RAG_OLLAMA_BASE_URL
     ),
     (
-        app.state.config.RAG_OPENAI_API_KEY
+        # UserScopedConfig - use default at startup (empty or env var)
+        app.state.config.RAG_OPENAI_API_KEY.default
         if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
         or app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
         else app.state.config.RAG_OLLAMA_API_KEY

@@ -2077,10 +2077,12 @@ RAG_OPENAI_API_BASE_URL = PersistentConfig(
     "rag.openai_api_base_url",
     os.getenv("RAG_OPENAI_API_BASE_URL", "https://ai-gateway.apps.cloud.rt.nyu.edu/v1"),
 )
-RAG_OPENAI_API_KEY = PersistentConfig(
-    "RAG_OPENAI_API_KEY",
+# Per-admin embedding API key
+# Each admin sets their own key that applies to them and their user group
+# No hardcoded default - admins must configure their own key
+RAG_OPENAI_API_KEY = UserScopedConfig(
     "rag.openai_api_key",
-    os.getenv("RAG_OPENAI_API_KEY", "dogDlg+W3/1qn7LsU3oTuJHDEopS"),
+    os.getenv("RAG_OPENAI_API_KEY", ""),  # Empty default - must be configured by admin
 )
 
 RAG_OLLAMA_BASE_URL = PersistentConfig(

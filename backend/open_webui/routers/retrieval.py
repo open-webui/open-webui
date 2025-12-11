@@ -220,7 +220,8 @@ async def get_embedding_config(request: Request, user=Depends(get_verified_user)
         "embedding_batch_size": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         "openai_config": {
             "url": request.app.state.config.RAG_OPENAI_API_BASE_URL,
-            "key": request.app.state.config.RAG_OPENAI_API_KEY,
+            # Per-admin API key - each admin configures their own key for their group
+            "key": request.app.state.config.RAG_OPENAI_API_KEY.get(user.email),
         },
         "ollama_config": {
             "url": request.app.state.config.RAG_OLLAMA_BASE_URL,
@@ -275,8 +276,9 @@ async def update_embedding_config(
                 request.app.state.config.RAG_OPENAI_API_BASE_URL = (
                     form_data.openai_config.url
                 )
-                request.app.state.config.RAG_OPENAI_API_KEY = (
-                    form_data.openai_config.key
+                # Per-admin API key - set for this admin and their group
+                request.app.state.config.RAG_OPENAI_API_KEY.set(
+                    user.email, form_data.openai_config.key
                 )
 
             if form_data.ollama_config is not None:
@@ -296,6 +298,9 @@ async def update_embedding_config(
             request.app.state.config.RAG_EMBEDDING_MODEL,
         )
 
+        # Get user's API key for embedding function
+        user_api_key = request.app.state.config.RAG_OPENAI_API_KEY.get(user.email)
+        
         request.app.state.EMBEDDING_FUNCTION = get_embedding_function(
             request.app.state.config.RAG_EMBEDDING_ENGINE,
             request.app.state.config.RAG_EMBEDDING_MODEL,
@@ -307,7 +312,7 @@ async def update_embedding_config(
                 else request.app.state.config.RAG_OLLAMA_BASE_URL
             ),
             (
-                request.app.state.config.RAG_OPENAI_API_KEY
+                user_api_key
                 if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
                 or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
                 else request.app.state.config.RAG_OLLAMA_API_KEY
@@ -322,7 +327,8 @@ async def update_embedding_config(
             "embedding_batch_size": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
             "openai_config": {
                 "url": request.app.state.config.RAG_OPENAI_API_BASE_URL,
-                "key": request.app.state.config.RAG_OPENAI_API_KEY,
+                # Per-admin API key
+                "key": user_api_key,
             },
             "ollama_config": {
                 "url": request.app.state.config.RAG_OLLAMA_BASE_URL,
@@ -922,6 +928,15 @@ def save_docs_to_vector_db(
                 return True
 
         log.info(f"adding to collection {collection_name}")
+        
+        # Get user's API key for embeddings (per-admin key)
+        user_email = user.email if user else None
+        user_api_key = (
+            request.app.state.config.RAG_OPENAI_API_KEY.get(user_email)
+            if user_email
+            else request.app.state.config.RAG_OPENAI_API_KEY.default
+        )
+        
         # Embedding function that sends all texts at once
         # embedding_function = get_embedding_function(
         embedding_function = get_single_batch_embedding_function(
@@ -935,7 +950,7 @@ def save_docs_to_vector_db(
                 else request.app.state.config.RAG_OLLAMA_BASE_URL
             ),
             (
-                request.app.state.config.RAG_OPENAI_API_KEY
+                user_api_key
                 if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
                 or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
                 else request.app.state.config.RAG_OLLAMA_API_KEY
@@ -1146,6 +1161,14 @@ def save_docs_to_multiple_collections(
                     VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
                     log.info(f"Deleting existing collection {collection_name}")
 
+        # Get user's API key for embeddings (per-admin key)
+        user_email = user.email if user else None
+        user_api_key = (
+            request.app.state.config.RAG_OPENAI_API_KEY.get(user_email)
+            if user_email
+            else request.app.state.config.RAG_OPENAI_API_KEY.default
+        )
+        
         # Usage of get_embeddings_with_fallback
         embeddings = get_embeddings_with_fallback(
             request.app.state.config.RAG_EMBEDDING_ENGINE,
@@ -1158,7 +1181,7 @@ def save_docs_to_multiple_collections(
                 else request.app.state.config.RAG_OLLAMA_BASE_URL
             ),
             (
-                request.app.state.config.RAG_OPENAI_API_KEY
+                user_api_key
                 if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
                 or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
                 else request.app.state.config.RAG_OLLAMA_API_KEY
