@@ -224,6 +224,10 @@
 		mergeResponses(messageId, responses, chatId);
 	};
 
+	$: if (messageId && messageId !== currentMessageId) {
+		initHandler();
+	}
+
 	onMount(async () => {
 		await initHandler();
 		await tick();
@@ -282,7 +286,7 @@
 						</div>
 					</div>
 
-					{#if selectedModelIdx !== null}
+					{#if selectedModelIdx !== null && groupedMessageIds[selectedModelIdx]?.messageIds}
 						{@const _messageId =
 							groupedMessageIds[selectedModelIdx].messageIds[
 								groupedMessageIdsIdx[selectedModelIdx]
