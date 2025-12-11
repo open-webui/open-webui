@@ -867,6 +867,18 @@ async def add_user(
                 user.id,
             )
 
+            if request.app.state.config.WEBHOOK_URL:
+                await post_webhook(
+                    request.app.state.WEBUI_NAME,
+                    request.app.state.config.WEBHOOK_URL,
+                    WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                    {
+                        "action": "signup",
+                        "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                        "user": user.model_dump_json(exclude_none=True),
+                    },
+                )
+
             token = create_token(data={"id": user.id})
             return {
                 "token": token,
