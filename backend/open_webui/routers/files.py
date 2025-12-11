@@ -27,6 +27,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 
+from open_webui.models.channels import Channels
 from open_webui.models.users import Users
 from open_webui.models.files import (
     FileForm,
@@ -38,7 +39,6 @@ from open_webui.models.knowledge import Knowledges
 from open_webui.models.groups import Groups
 
 
-from open_webui.routers.knowledge import get_knowledge, get_knowledge_list
 from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.routers.audio import transcribe
 
@@ -91,6 +91,10 @@ def has_access_to_file(
             if knowledge_base.id == knowledge_base_id:
                 return True
 
+    channels = Channels.get_channels_by_file_id_and_user_id(file_id, user.id)
+    if access_type == "read" and channels:
+        return True
+
     return False
 
 
@@ -138,6 +142,7 @@ def process_uploaded_file(request, file, file_path, file_item, file_metadata, us
                 f"File type {file.content_type} is not provided, but trying to process anyway"
             )
             process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
+
     except Exception as e:
         log.error(f"Error processing file: {file_item.id}")
         Files.update_file_data_by_id(
@@ -246,6 +251,13 @@ def upload_file_handler(
                 }
             ),
         )
+
+        if "channel_id" in file_metadata:
+            channel = Channels.get_channel_by_id_and_user_id(
+                file_metadata["channel_id"], user.id
+            )
+            if channel:
+                Channels.add_file_to_channel_by_id(channel.id, file_item.id, user.id)
 
         if process:
             if background_tasks and process_in_background:

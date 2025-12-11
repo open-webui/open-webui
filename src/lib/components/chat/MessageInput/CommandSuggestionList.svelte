@@ -28,9 +28,6 @@
 		await Promise.all([
 			(async () => {
 				prompts.set(await getPrompts(localStorage.token));
-			})(),
-			(async () => {
-				knowledge.set(await getKnowledgeBases(localStorage.token));
 			})()
 		]);
 		loading = false;
@@ -103,7 +100,6 @@
 					bind:this={suggestionElement}
 					{query}
 					bind:filteredItems
-					knowledge={$knowledge ?? []}
 					onSelect={(e) => {
 						const { type, data } = e;
 

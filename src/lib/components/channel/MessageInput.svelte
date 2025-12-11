@@ -42,9 +42,10 @@
 	import XMark from '../icons/XMark.svelte';
 
 	export let placeholder = $i18n.t('Type here...');
+	export let chatInputElement;
 
 	export let id = null;
-	export let chatInputElement;
+	export let channel = null;
 
 	export let typingUsers = [];
 	export let inputLoading = false;
@@ -459,15 +460,16 @@
 		try {
 			// During the file upload, file content is automatically extracted.
 			// If the file is an audio file, provide the language for STT.
-			let metadata = null;
-			if (
-				(file.type.startsWith('audio/') || file.type.startsWith('video/')) &&
+			let metadata = {
+				channel_id: channel.id,
+				// If the file is an audio file, provide the language for STT.
+				...((file.type.startsWith('audio/') || file.type.startsWith('video/')) &&
 				$settings?.audio?.stt?.language
-			) {
-				metadata = {
-					language: $settings?.audio?.stt?.language
-				};
-			}
+					? {
+							language: $settings?.audio?.stt?.language
+						}
+					: {})
+			};
 
 			const uploadedFile = await uploadFile(localStorage.token, file, metadata, process);
 
