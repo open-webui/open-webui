@@ -36,7 +36,7 @@
 
 	let filter = {};
 	$: filter = {
-		...(query ? { query } : {}),
+		...(query ? { query: query } : {}),
 		...(orderBy ? { order_by: orderBy } : {}),
 		...(direction ? { direction } : {})
 	};

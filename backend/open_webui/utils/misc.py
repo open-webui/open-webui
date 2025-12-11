@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Callable, Optional, Sequence, Union
 import json
 import aiohttp
+import mimeparse
 
 
 import collections.abc
@@ -577,6 +578,37 @@ def throttle(interval: float = 10.0):
     return decorator
 
 
+def strict_match_mime_type(supported: list[str] | str, header: str) -> Optional[str]:
+    """
+    Strictly match the mime type with the supported mime types.
+
+    :param supported: The supported mime types.
+    :param header: The header to match.
+    :return: The matched mime type or None if no match is found.
+    """
+
+    try:
+        if isinstance(supported, str):
+            supported = supported.split(",")
+
+        supported = [s for s in supported if s.strip() and "/" in s]
+
+        match = mimeparse.best_match(supported, header)
+        if not match:
+            return None
+
+        _, _, match_params = mimeparse.parse_mime_type(match)
+        _, _, header_params = mimeparse.parse_mime_type(header)
+        for k, v in match_params.items():
+            if header_params.get(k) != v:
+                return None
+
+        return match
+    except Exception as e:
+        log.exception(f"Failed to match mime type {header}: {e}")
+        return None
+
+
 def extract_urls(text: str) -> list[str]:
     # Regex pattern to match URLs
     url_pattern = re.compile(
@@ -624,14 +656,17 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
                         yield line
                     else:
                         yield b"data: {}"
+                        yield b"\n"
                 else:
                     # Normal mode: check if line exceeds limit
                     if len(line) > max_buffer_size:
                         skip_mode = True
                         yield b"data: {}"
+                        yield b"\n"
                         log.info(f"Skip mode triggered, line size: {len(line)}")
                     else:
                         yield line
+                        yield b"\n"
 
             # Save the last incomplete fragment
             buffer = lines[-1]
@@ -646,5 +681,6 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
         # Process remaining buffer data
         if buffer and not skip_mode:
             yield buffer
+            yield b"\n"
 
     return yield_safe_stream_chunks()

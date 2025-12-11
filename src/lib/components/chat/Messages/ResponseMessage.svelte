@@ -824,6 +824,7 @@
 								<Citations
 									bind:this={citationsElement}
 									id={message?.id}
+									{chatId}
 									sources={message?.sources ?? message?.citations}
 									{readOnly}
 								/>

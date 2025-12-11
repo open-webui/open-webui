@@ -391,6 +391,7 @@ async def update_user_info_by_session_user(
 class UserActiveResponse(UserStatus):
     name: str
     profile_image_url: Optional[str] = None
+    groups: Optional[list] = []
 
     is_active: bool
     model_config = ConfigDict(extra="allow")
@@ -412,11 +413,12 @@ async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
             )
 
     user = Users.get_user_by_id(user_id)
-
     if user:
+        groups = Groups.get_groups_by_member_id(user_id)
         return UserActiveResponse(
             **{
                 **user.model_dump(),
+                "groups": [{"id": group.id, "name": group.name} for group in groups],
                 "is_active": Users.is_user_active(user_id),
             }
         )

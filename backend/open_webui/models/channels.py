@@ -10,7 +10,18 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.dialects.postgresql import JSONB
 
 
-from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, case, cast
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Column,
+    ForeignKey,
+    String,
+    Text,
+    JSON,
+    UniqueConstraint,
+    case,
+    cast,
+)
 from sqlalchemy import or_, func, select, and_, text
 from sqlalchemy.sql import exists
 
@@ -135,6 +146,41 @@ class ChannelMemberModel(BaseModel):
 
     created_at: Optional[int] = None  # timestamp in epoch (time_ns)
     updated_at: Optional[int] = None  # timestamp in epoch (time_ns)
+
+
+class ChannelFile(Base):
+    __tablename__ = "channel_file"
+
+    id = Column(Text, unique=True, primary_key=True)
+    user_id = Column(Text, nullable=False)
+
+    channel_id = Column(
+        Text, ForeignKey("channel.id", ondelete="CASCADE"), nullable=False
+    )
+    message_id = Column(
+        Text, ForeignKey("message.id", ondelete="CASCADE"), nullable=True
+    )
+    file_id = Column(Text, ForeignKey("file.id", ondelete="CASCADE"), nullable=False)
+
+    created_at = Column(BigInteger, nullable=False)
+    updated_at = Column(BigInteger, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("channel_id", "file_id", name="uq_channel_file_channel_file"),
+    )
+
+
+class ChannelFileModel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+
+    channel_id: str
+    file_id: str
+    user_id: str
+
+    created_at: int  # timestamp in epoch (time_ns)
+    updated_at: int  # timestamp in epoch (time_ns)
 
 
 class ChannelWebhook(Base):
@@ -642,6 +688,135 @@ class ChannelTable:
             channel = db.query(Channel).filter(Channel.id == id).first()
             return ChannelModel.model_validate(channel) if channel else None
 
+    def get_channels_by_file_id(self, file_id: str) -> list[ChannelModel]:
+        with get_db() as db:
+            channel_files = (
+                db.query(ChannelFile).filter(ChannelFile.file_id == file_id).all()
+            )
+            channel_ids = [cf.channel_id for cf in channel_files]
+            channels = db.query(Channel).filter(Channel.id.in_(channel_ids)).all()
+            return [ChannelModel.model_validate(channel) for channel in channels]
+
+    def get_channels_by_file_id_and_user_id(
+        self, file_id: str, user_id: str
+    ) -> list[ChannelModel]:
+        with get_db() as db:
+            # 1. Determine which channels have this file
+            channel_file_rows = (
+                db.query(ChannelFile).filter(ChannelFile.file_id == file_id).all()
+            )
+            channel_ids = [row.channel_id for row in channel_file_rows]
+
+            if not channel_ids:
+                return []
+
+            # 2. Load all channel rows that still exist
+            channels = (
+                db.query(Channel)
+                .filter(
+                    Channel.id.in_(channel_ids),
+                    Channel.deleted_at.is_(None),
+                    Channel.archived_at.is_(None),
+                )
+                .all()
+            )
+            if not channels:
+                return []
+
+            # Preload user's group membership
+            user_group_ids = [g.id for g in Groups.get_groups_by_member_id(user_id)]
+
+            allowed_channels = []
+
+            for channel in channels:
+                # --- Case A: group or dm => user must be an active member ---
+                if channel.type in ["group", "dm"]:
+                    membership = (
+                        db.query(ChannelMember)
+                        .filter(
+                            ChannelMember.channel_id == channel.id,
+                            ChannelMember.user_id == user_id,
+                            ChannelMember.is_active.is_(True),
+                        )
+                        .first()
+                    )
+                    if membership:
+                        allowed_channels.append(ChannelModel.model_validate(channel))
+                    continue
+
+                # --- Case B: standard channel => rely on ACL permissions ---
+                query = db.query(Channel).filter(Channel.id == channel.id)
+
+                query = self._has_permission(
+                    db,
+                    query,
+                    {"user_id": user_id, "group_ids": user_group_ids},
+                    permission="read",
+                )
+
+                allowed = query.first()
+                if allowed:
+                    allowed_channels.append(ChannelModel.model_validate(allowed))
+
+            return allowed_channels
+
+    def get_channel_by_id_and_user_id(
+        self, id: str, user_id: str
+    ) -> Optional[ChannelModel]:
+        with get_db() as db:
+            # Fetch the channel
+            channel: Channel = (
+                db.query(Channel)
+                .filter(
+                    Channel.id == id,
+                    Channel.deleted_at.is_(None),
+                    Channel.archived_at.is_(None),
+                )
+                .first()
+            )
+
+            if not channel:
+                return None
+
+            # If the channel is a group or dm, read access requires membership (active)
+            if channel.type in ["group", "dm"]:
+                membership = (
+                    db.query(ChannelMember)
+                    .filter(
+                        ChannelMember.channel_id == id,
+                        ChannelMember.user_id == user_id,
+                        ChannelMember.is_active.is_(True),
+                    )
+                    .first()
+                )
+                if membership:
+                    return ChannelModel.model_validate(channel)
+                else:
+                    return None
+
+            # For channels that are NOT group/dm, fall back to ACL-based read access
+            query = db.query(Channel).filter(Channel.id == id)
+
+            # Determine user groups
+            user_group_ids = [
+                group.id for group in Groups.get_groups_by_member_id(user_id)
+            ]
+
+            # Apply ACL rules
+            query = self._has_permission(
+                db,
+                query,
+                {"user_id": user_id, "group_ids": user_group_ids},
+                permission="read",
+            )
+
+            channel_allowed = query.first()
+            return (
+                ChannelModel.model_validate(channel_allowed)
+                if channel_allowed
+                else None
+            )
+
     def update_channel_by_id(
         self, id: str, form_data: ChannelForm
     ) -> Optional[ChannelModel]:
@@ -662,6 +837,65 @@ class ChannelTable:
 
             db.commit()
             return ChannelModel.model_validate(channel) if channel else None
+
+    def add_file_to_channel_by_id(
+        self, channel_id: str, file_id: str, user_id: str
+    ) -> Optional[ChannelFileModel]:
+        with get_db() as db:
+            channel_file = ChannelFileModel(
+                **{
+                    "id": str(uuid.uuid4()),
+                    "channel_id": channel_id,
+                    "file_id": file_id,
+                    "user_id": user_id,
+                    "created_at": int(time.time()),
+                    "updated_at": int(time.time()),
+                }
+            )
+
+            try:
+                result = ChannelFile(**channel_file.model_dump())
+                db.add(result)
+                db.commit()
+                db.refresh(result)
+                if result:
+                    return ChannelFileModel.model_validate(result)
+                else:
+                    return None
+            except Exception:
+                return None
+
+    def set_file_message_id_in_channel_by_id(
+        self, channel_id: str, file_id: str, message_id: str
+    ) -> bool:
+        try:
+            with get_db() as db:
+                channel_file = (
+                    db.query(ChannelFile)
+                    .filter_by(channel_id=channel_id, file_id=file_id)
+                    .first()
+                )
+                if not channel_file:
+                    return False
+
+                channel_file.message_id = message_id
+                channel_file.updated_at = int(time.time())
+
+                db.commit()
+                return True
+        except Exception:
+            return False
+
+    def remove_file_from_channel_by_id(self, channel_id: str, file_id: str) -> bool:
+        try:
+            with get_db() as db:
+                db.query(ChannelFile).filter_by(
+                    channel_id=channel_id, file_id=file_id
+                ).delete()
+                db.commit()
+                return True
+        except Exception:
+            return False
 
     def delete_channel_by_id(self, id: str):
         with get_db() as db:

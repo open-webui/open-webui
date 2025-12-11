@@ -803,3 +803,7 @@ body {
 	position: relative;
 	z-index: 0;
 }
+
+#note-content-container .ProseMirror {
+	padding-bottom: 2rem; /* space for the bottom toolbar */
+}
