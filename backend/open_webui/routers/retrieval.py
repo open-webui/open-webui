@@ -886,6 +886,13 @@ def save_docs_to_vector_db(
         docs = text_splitter.split_documents(docs)
 
     if len(docs) == 0:
+        # Provide detailed error for debugging empty content issues
+        log.error(
+            f"[Embedding Failed] No content to embed after text splitting. "
+            f"collection_name={collection_name} | "
+            f"This usually means the file content extraction returned empty text. "
+            f"Check the '[Content Extraction WARNING]' log above for details and suggestions."
+        )
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
     texts = [doc.page_content for doc in docs]
@@ -1122,6 +1129,13 @@ def save_docs_to_multiple_collections(
         docs = text_splitter.split_documents(docs)
 
     if len(docs) == 0:
+        # Provide detailed error for debugging empty content issues (multiple collections)
+        log.error(
+            f"[Embedding Failed] No content to embed after text splitting. "
+            f"collections={collections} | "
+            f"This usually means the file content extraction returned empty text. "
+            f"Check the '[Content Extraction WARNING]' log above for details and suggestions."
+        )
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
     texts = [doc.page_content for doc in docs]
@@ -1309,68 +1323,39 @@ def _process_file_sync(
                 )
             ]
             text_content = content
-        elif collection_name:
-            # Check if the file has already been processed and save the content
-            result = VECTOR_DB_CLIENT.query(
-                collection_name=f"file-{file.id}", filter={"file_id": file.id}
-            )
-
-            if result is not None and result.ids and len(result.ids) > 0 and len(result.ids[0]) > 0:
-                docs = [
-                    Document(
-                        page_content=result.documents[0][idx],
-                        metadata=result.metadatas[0][idx],
-                    )
-                    for idx, id in enumerate(result.ids[0])
-                ]
-            else:
-                docs = [
-                    Document(
-                        page_content=file.data.get("content", ""),
-                        metadata={
-                            **file.meta,
-                            "name": file.filename,
-                            "created_by": file.user_id,
-                            "file_id": file.id,
-                            "source": file.filename,
-                        },
-                    )
-                ]
-
-            text_content = file.data.get("content", "")
         else:
-            # Process the file and save the content
-            file_path = file.path
-            if file_path:
-                file_path = Storage.get_file(file_path)
-                loader = Loader(
-                    engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
-                    TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
-                    PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
-                    DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
-                    DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
-                )
-                docs = loader.load(
-                    file.filename, file.meta.get("content_type"), file_path
-                )
-
-                docs = [
-                    Document(
-                        page_content=doc.page_content,
-                        metadata={
-                            **doc.metadata,
-                            "name": file.filename,
-                            "created_by": file.user_id,
-                            "file_id": file.id,
-                            "source": file.filename,
-                        },
+            # No content provided - need to extract from file or use cached
+            docs = None
+            text_content = None
+            
+            # First, check if file has already been processed and exists in vector DB
+            if collection_name:
+                try:
+                    result = VECTOR_DB_CLIENT.query(
+                        collection_name=f"file-{file.id}", filter={"file_id": file.id}
                     )
-                    for doc in docs
-                ]
-            else:
+                    
+                    if result is not None and result.ids and len(result.ids) > 0 and len(result.ids[0]) > 0:
+                        # File already processed - use existing documents
+                        docs = [
+                            Document(
+                                page_content=result.documents[0][idx],
+                                metadata=result.metadatas[0][idx],
+                            )
+                            for idx, id in enumerate(result.ids[0])
+                        ]
+                        text_content = " ".join([doc.page_content for doc in docs])
+                        log.info(f"[Content Cache Hit] file_id={file.id} | Using existing {len(docs)} chunks from vector DB")
+                except Exception as query_error:
+                    log.debug(f"Vector DB query failed for file_id={file.id}: {query_error}")
+                    # Fall through to extraction
+            
+            # Also check if file.data already has content
+            if docs is None and file.data.get("content", "").strip():
+                existing_content = file.data.get("content", "")
                 docs = [
                     Document(
-                        page_content=file.data.get("content", ""),
+                        page_content=existing_content,
                         metadata={
                             **file.meta,
                             "name": file.filename,
@@ -1380,7 +1365,87 @@ def _process_file_sync(
                         },
                     )
                 ]
-            text_content = " ".join([doc.page_content for doc in docs])
+                text_content = existing_content
+                log.info(f"[Content Cache Hit] file_id={file.id} | Using existing content from file.data ({len(existing_content)} chars)")
+            
+            # If still no docs, extract from the actual file
+            if docs is None:
+                # Process the file and save the content
+                file_path = file.path
+                if file_path:
+                    file_path = Storage.get_file(file_path)
+                    
+                    # Log extraction engine being used
+                    extraction_engine = request.app.state.config.CONTENT_EXTRACTION_ENGINE or "default (PyPDF)"
+                    log.info(
+                        f"[Content Extraction] file_id={file.id} | filename={file.filename} | "
+                        f"content_type={file.meta.get('content_type')} | engine={extraction_engine}"
+                    )
+                    
+                    loader = Loader(
+                        engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
+                        TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
+                        PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
+                        DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
+                        DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
+                    )
+                    docs = loader.load(
+                        file.filename, file.meta.get("content_type"), file_path
+                    )
+                    
+                    # Log extraction results for debugging
+                    total_chars = sum(len(doc.page_content) for doc in docs)
+                    non_empty_docs = [doc for doc in docs if doc.page_content.strip()]
+                    log.info(
+                        f"[Content Extraction Result] file_id={file.id} | "
+                        f"pages_extracted={len(docs)} | non_empty_pages={len(non_empty_docs)} | "
+                        f"total_chars={total_chars}"
+                    )
+                    
+                    # Warn if extraction returned empty content
+                    if total_chars == 0:
+                        file_ext = file.filename.split(".")[-1].lower() if "." in file.filename else "unknown"
+                        log.warning(
+                            f"[Content Extraction WARNING] file_id={file.id} | filename={file.filename} | "
+                            f"No text content extracted! Possible reasons:\n"
+                            f"  - Scanned image PDF (no OCR text layer)\n"
+                            f"  - Protected/encrypted file\n"
+                            f"  - Unsupported encoding\n"
+                            f"  Suggestions:\n"
+                            f"  - For scanned PDFs: Enable Document Intelligence (Azure OCR) in Settings > Documents\n"
+                            f"  - For better extraction: Configure Tika server\n"
+                            f"  - Current engine: {extraction_engine}"
+                        )
+
+                    docs = [
+                        Document(
+                            page_content=doc.page_content,
+                            metadata={
+                                **doc.metadata,
+                                "name": file.filename,
+                                "created_by": file.user_id,
+                                "file_id": file.id,
+                                "source": file.filename,
+                            },
+                        )
+                        for doc in docs
+                    ]
+                else:
+                    # No file path - use empty content (should not happen normally)
+                    log.warning(f"[Content Extraction] file_id={file.id} | No file path available, using empty content")
+                    docs = [
+                        Document(
+                            page_content="",
+                            metadata={
+                                **file.meta,
+                                "name": file.filename,
+                                "created_by": file.user_id,
+                                "file_id": file.id,
+                                "source": file.filename,
+                            },
+                        )
+                    ]
+                text_content = " ".join([doc.page_content for doc in docs])
 
         log.debug(f"text_content: {text_content}")
         Files.update_file_data_by_id(
