@@ -2619,8 +2619,9 @@ def reset_upload_dir(user=Depends(get_admin_user)) -> bool:
 if ENV == "dev":
 
     @router.get("/ef/{text}")
-    async def get_embeddings(request: Request, text: Optional[str] = "Hello World!"):
-        return {"result": request.app.state.EMBEDDING_FUNCTION(text)}
+    async def get_embeddings(request: Request, text: Optional[str] = "Hello World!", user=Depends(get_verified_user)):
+        # Pass user to ensure per-user API key is used for embeddings
+        return {"result": request.app.state.EMBEDDING_FUNCTION(text, user=user)}
 
 
 class BatchProcessFilesForm(BaseModel):

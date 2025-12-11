@@ -16,8 +16,9 @@ router = APIRouter()
 
 
 @router.get("/ef")
-async def get_embeddings(request: Request):
-    return {"result": request.app.state.EMBEDDING_FUNCTION("hello world")}
+async def get_embeddings(request: Request, user=Depends(get_verified_user)):
+    # Pass user to ensure per-user API key is used for embeddings
+    return {"result": request.app.state.EMBEDDING_FUNCTION("hello world", user=user)}
 
 
 ############################
