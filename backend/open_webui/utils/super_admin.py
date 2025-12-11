@@ -1,14 +1,16 @@
 import os
 from typing import List, Set
 
+# Default super admin email - used if SUPER_ADMIN_EMAILS env var is not set
+DEFAULT_SUPER_ADMIN_EMAIL = "ms15138@nyu.edu"
+
 
 def _get_super_admin_emails() -> Set[str]:
     """
     Get super admin emails from environment variable.
     Environment variable format: comma-separated emails (e.g., "email1@nyu.edu,email2@nyu.edu")
     
-    REQUIRED: SUPER_ADMIN_EMAILS environment variable must be set.
-    Returns empty set if env var is not set (no hardcoded defaults).
+    If SUPER_ADMIN_EMAILS is not set, defaults to DEFAULT_SUPER_ADMIN_EMAIL (ms15138@nyu.edu).
     """
     env_emails = os.environ.get("SUPER_ADMIN_EMAILS", "").strip()
     
@@ -17,18 +19,16 @@ def _get_super_admin_emails() -> Set[str]:
         emails = [email.strip().lower() for email in env_emails.split(",") if email.strip()]
         return set(emails)
     else:
-        # No fallback - env var is required
-        # Return empty set if not configured (will only allow first user as superadmin)
-        return set()
+        # Use default super admin email
+        return {DEFAULT_SUPER_ADMIN_EMAIL.lower()}
 
 
 def get_super_admin_emails() -> List[str]:
     """
     Get list of super admin emails (for API responses).
-    Returns emails in their original case as stored in env var.
+    Returns emails in their original case.
     
-    REQUIRED: SUPER_ADMIN_EMAILS environment variable must be set.
-    Returns empty list if env var is not set (no hardcoded defaults).
+    If SUPER_ADMIN_EMAILS is not set, defaults to DEFAULT_SUPER_ADMIN_EMAIL (ms15138@nyu.edu).
     """
     env_emails = os.environ.get("SUPER_ADMIN_EMAILS", "").strip()
     
@@ -36,9 +36,8 @@ def get_super_admin_emails() -> List[str]:
         emails = [email.strip() for email in env_emails.split(",") if email.strip()]
         return emails
     else:
-        # No fallback - env var is required
-        # Return empty list if not configured
-        return []
+        # Use default super admin email
+        return [DEFAULT_SUPER_ADMIN_EMAIL]
 
 
 def is_super_admin(user) -> bool:
