@@ -677,8 +677,8 @@ class CacheManager:
         fetch_func: Callable[[], Any],
         ttl: int = DEFAULT_CACHE_TTL,
         lock_timeout: int = 5,
-        retry_wait_ms: int = 50,
-        max_retries: int = 3
+        retry_wait_ms: int = 50,  # Deprecated: no longer used (non-blocking fallback)
+        max_retries: int = 3  # Deprecated: no longer used (non-blocking fallback)
     ) -> Optional[Any]:
         """Get value from cache, or fetch and set with distributed locking to prevent cache stampede.
         
@@ -686,16 +686,19 @@ class CacheManager:
         1. Try to get from cache (fast path)
         2. If miss, try to acquire lock
         3. If lock acquired, fetch from DB, set cache, release lock
-        4. If lock not acquired, wait briefly and retry cache read (another replica is fetching)
-        5. If still miss after retries, fall back to direct fetch (avoid infinite wait)
+        4. If lock not acquired, immediately fall back to direct fetch (non-blocking)
+        
+        IMPORTANT: This function is non-blocking. If the lock isn't acquired, it immediately
+        falls back to direct fetch instead of sleeping. This prevents blocking the event loop
+        when called from async contexts.
         
         Args:
             cache_key: Redis cache key
             fetch_func: Function to fetch value from database if cache miss
             ttl: Cache TTL in seconds
             lock_timeout: Lock timeout in seconds (prevents deadlock)
-            retry_wait_ms: Milliseconds to wait before retrying cache read
-            max_retries: Maximum number of retries before falling back to direct fetch
+            retry_wait_ms: Deprecated - no longer used
+            max_retries: Deprecated - no longer used
             
         Returns:
             Cached or fetched value, or None if fetch fails
@@ -743,20 +746,14 @@ class CacheManager:
                 lock.release_lock()
         else:
             # Lock not acquired - another replica is fetching
-            # Wait briefly and retry cache read (stale-while-revalidate pattern)
-            for attempt in range(max_retries):
-                time.sleep(retry_wait_ms / 1000.0)  # Convert ms to seconds
-                cached_value = self._get(cache_key)
-                if cached_value is not None:
-                    return cached_value
-            
-            # Still miss after retries - fall back to direct fetch to avoid infinite wait
-            # This is rare but prevents blocking if lock holder crashes
-            log.debug(f"Cache miss after {max_retries} retries for {cache_key}, falling back to direct fetch")
+            # OPTIMIZATION: Instead of blocking with time.sleep(), immediately fall back to direct fetch
+            # This avoids blocking the event loop in async contexts while still being efficient
+            # The cache will be populated by the lock holder, benefiting future requests
+            log.debug(f"Cache lock not acquired for {cache_key}, falling back to direct fetch (non-blocking)")
             try:
                 value = fetch_func()
-                if value is not None:
-                    self._set(cache_key, value, ttl)
+                # Don't set cache here - the lock holder will do it
+                # This prevents race conditions and redundant writes
                 return value
             except Exception as e:
                 log.error(f"Error in fetch_func for {cache_key}: {e}", exc_info=True)

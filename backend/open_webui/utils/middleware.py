@@ -16,9 +16,18 @@ import ast
 
 from uuid import uuid4
 from concurrent.futures import ThreadPoolExecutor
+import atexit
 
 
 from fastapi import Request
+
+# Module-level ThreadPoolExecutor for RAG operations
+# This avoids creating a new thread pool for each request (expensive)
+# Max workers set to 10 to balance parallelism vs resource usage
+_RAG_EXECUTOR = ThreadPoolExecutor(max_workers=10, thread_name_prefix="rag_worker")
+
+# Ensure executor is properly cleaned up on shutdown
+atexit.register(_RAG_EXECUTOR.shutdown, wait=False)
 from fastapi import BackgroundTasks
 
 from starlette.responses import Response, StreamingResponse
@@ -576,25 +585,24 @@ async def chat_completion_files_handler(
             log.debug(f"Using user message as RAG query fallback: {queries}")
 
         try:
-            # Offload get_sources_from_files to a separate thread
+            # Offload get_sources_from_files to module-level thread pool (more efficient)
             loop = asyncio.get_running_loop()
-            with ThreadPoolExecutor() as executor:
-                sources = await loop.run_in_executor(
-                    executor,
-                    lambda: get_sources_from_files(
-                        request=request,
-                        files=files,
-                        queries=queries,
-                        embedding_function=lambda query: request.app.state.EMBEDDING_FUNCTION(
-                            query, user=user
-                        ),
-                        k=request.app.state.config.TOP_K.get(user.email),
-                        reranking_function=request.app.state.rf,
-                        r=request.app.state.config.RELEVANCE_THRESHOLD,
-                        hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH.get(user.email),
-                        full_context=request.app.state.config.RAG_FULL_CONTEXT.get(user.email),
+            sources = await loop.run_in_executor(
+                _RAG_EXECUTOR,
+                lambda: get_sources_from_files(
+                    request=request,
+                    files=files,
+                    queries=queries,
+                    embedding_function=lambda query: request.app.state.EMBEDDING_FUNCTION(
+                        query, user=user
                     ),
-                )
+                    k=request.app.state.config.TOP_K.get(user.email),
+                    reranking_function=request.app.state.rf,
+                    r=request.app.state.config.RELEVANCE_THRESHOLD,
+                    hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH.get(user.email),
+                    full_context=request.app.state.config.RAG_FULL_CONTEXT.get(user.email),
+                ),
+            )
         except Exception as e:
             log.exception(e)
 

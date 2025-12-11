@@ -46,11 +46,63 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
 
-# Gemini 2.5 Flash Lite model ID - required for all task features
-REQUIRED_TASK_MODEL_ID = "@vertexai/gemini-2.5-flash-lite"
+# Gemini 2.5 Flash Lite model patterns - required for all task features
+# Support multiple ID formats that Portkey might use
+GEMINI_FLASH_LITE_PATTERNS = [
+    "@vertexai/gemini-2.5-flash-lite",  # Portkey format with provider prefix
+    "gemini-2.5-flash-lite",             # Simple format
+    "gemini-2-5-flash-lite",             # Alternative format
+    "gemini-2.5-flash-lite-preview",     # Preview version
+]
+
+# Preferred model ID to set when configuring
+PREFERRED_TASK_MODEL_ID = "@vertexai/gemini-2.5-flash-lite"
 
 
-def user_has_access_to_task_model(user, models: dict) -> bool:
+def find_gemini_flash_lite_model(models: dict) -> Optional[str]:
+    """
+    Find the Gemini 2.5 Flash Lite model in the available models.
+    
+    Checks both exact matches and pattern-based matching to handle
+    different model ID formats from Portkey or other providers.
+    
+    Args:
+        models: Dictionary of model_id -> model info
+        
+    Returns:
+        The model ID if found, None otherwise
+    """
+    # First, check for exact matches
+    for pattern in GEMINI_FLASH_LITE_PATTERNS:
+        if pattern in models:
+            log.debug(f"Found Gemini Flash Lite model (exact match): {pattern}")
+            return pattern
+    
+    # Second, check for partial matches in model IDs (case-insensitive)
+    for model_id in models.keys():
+        model_id_lower = model_id.lower()
+        # Check if the model ID contains key indicators
+        if ("gemini" in model_id_lower and 
+            "flash" in model_id_lower and 
+            "lite" in model_id_lower and
+            ("2.5" in model_id or "2-5" in model_id)):
+            log.debug(f"Found Gemini Flash Lite model (partial match): {model_id}")
+            return model_id
+    
+    # Third, check model names in the model info
+    for model_id, model_info in models.items():
+        model_name = model_info.get("name", "").lower()
+        if ("gemini" in model_name and 
+            "flash" in model_name and 
+            "lite" in model_name):
+            log.debug(f"Found Gemini Flash Lite model (name match): {model_id} -> {model_name}")
+            return model_id
+    
+    log.debug(f"Gemini Flash Lite model not found. Available models: {list(models.keys())[:10]}...")
+    return None
+
+
+def user_has_access_to_task_model(user, models: dict) -> tuple[bool, Optional[str]]:
     """
     Check if the user has access to the required Gemini 2.5 Flash Lite model.
     This model is required for all task features (title, tags, autocomplete, query generation).
@@ -58,36 +110,46 @@ def user_has_access_to_task_model(user, models: dict) -> bool:
     For Portkey/external models: If model exists in models dict, user has access
     (models dict is already filtered by get_all_models which checks Portkey access).
     For database models: Check database access control.
-    """
-    if REQUIRED_TASK_MODEL_ID not in models:
-        return False
     
-    model = models[REQUIRED_TASK_MODEL_ID]
+    Returns:
+        Tuple of (has_access: bool, model_id: Optional[str])
+        model_id is the actual ID to use if access is granted
+    """
+    # Find the Gemini Flash Lite model using flexible matching
+    model_id = find_gemini_flash_lite_model(models)
+    
+    if model_id is None:
+        log.debug(f"User {user.email} does not have access to Gemini Flash Lite model (not found in available models)")
+        return False, None
+    
+    model = models[model_id]
     
     # Check if it's an arena model
     if model.get("arena"):
         access_control = model.get("info", {}).get("meta", {}).get("access_control", {})
         if not has_access(user.id, type="read", access_control=access_control):
-            return False
+            log.debug(f"User {user.email} does not have read access to arena model {model_id}")
+            return False, None
     else:
         # Check access to the model in the database
-        model_info = Models.get_model_by_id(REQUIRED_TASK_MODEL_ID)
+        model_info = Models.get_model_by_id(model_id)
         
         if model_info:
             # Model exists in database - check database access control
             if not (user.id == model_info.user_id 
                     or has_access(user.id, type="read", access_control=model_info.access_control)
                     or item_assigned_to_user_groups(user.id, model_info, "read")):
-                return False
+                log.debug(f"User {user.email} does not have database access to model {model_id}")
+                return False, None
         else:
             # Model not in database (e.g., Portkey/external model)
             # If model exists in models dict, user has access (get_all_models already filtered)
             # Portkey models are dynamically fetched and don't need to be in database
             # The fact that it's in the models dict means it's available to the user
-            log.debug(f"Model {REQUIRED_TASK_MODEL_ID} not in database but exists in models dict - allowing access")
-            return True
+            log.debug(f"Model {model_id} not in database but exists in models dict - allowing access for {user.email}")
     
-    return True
+    log.info(f"User {user.email} has access to Gemini Flash Lite model: {model_id}")
+    return True, model_id
 
 
 ##################################
@@ -108,7 +170,7 @@ async def get_task_config(request: Request, user=Depends(get_verified_user)):
     models = {model["id"]: model for model in models_list}
     
     # Check if user has access to the required Gemini 2.5 Flash Lite model
-    has_task_model_access = user_has_access_to_task_model(user, models)
+    has_task_model_access, found_model_id = user_has_access_to_task_model(user, models)
     
     # Get per-admin task config settings (inherits from group admin if user is in a group)
     task_model_external = request.app.state.config.TASK_MODEL_EXTERNAL.get(user.email)
@@ -118,12 +180,11 @@ async def get_task_config(request: Request, user=Depends(get_verified_user)):
     enable_search_query_generation = request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION.get(user.email)
     enable_retrieval_query_generation = request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION.get(user.email)
     
-    # Auto-set TASK_MODEL_EXTERNAL to Gemini 2.5 Flash Lite if user has access
-    # Otherwise, use the stored value (which might be empty)
-    if has_task_model_access:
-        # Auto-set to Gemini if not already set or if stored value is empty
-        if not task_model_external or task_model_external == "":
-            task_model_external = REQUIRED_TASK_MODEL_ID
+    # Auto-set TASK_MODEL_EXTERNAL to the found Gemini model if user has access
+    # Otherwise, use empty string
+    if has_task_model_access and found_model_id:
+        # Use the actual found model ID (handles different Portkey formats)
+        task_model_external = found_model_id
     else:
         # User doesn't have access - ensure it's empty
         task_model_external = ""
@@ -152,6 +213,7 @@ async def get_task_config(request: Request, user=Depends(get_verified_user)):
         "QUERY_GENERATION_PROMPT_TEMPLATE": request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE,
         "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE": request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
         "HAS_TASK_MODEL_ACCESS": has_task_model_access,  # Additional flag for frontend
+        "TASK_MODEL_ID": found_model_id,  # Actual model ID found (for debugging)
     }
 
 
@@ -183,12 +245,12 @@ async def update_task_config(
     models = {model["id"]: model for model in models_list}
     
     # Check if user has access to the required Gemini 2.5 Flash Lite model
-    has_task_model_access = user_has_access_to_task_model(user, models)
+    has_task_model_access, found_model_id = user_has_access_to_task_model(user, models)
     
     # Save per-admin task config settings (only admin can save, applies to their group)
-    if has_task_model_access:
-        # Force TASK_MODEL_EXTERNAL to be Gemini 2.5 Flash Lite if user has access
-        request.app.state.config.TASK_MODEL_EXTERNAL.set(user.email, REQUIRED_TASK_MODEL_ID)
+    if has_task_model_access and found_model_id:
+        # Use the actual found model ID (handles different Portkey formats)
+        request.app.state.config.TASK_MODEL_EXTERNAL.set(user.email, found_model_id)
         # Save the enabled flags if user has access
         request.app.state.config.ENABLE_TITLE_GENERATION.set(user.email, form_data.ENABLE_TITLE_GENERATION)
         request.app.state.config.ENABLE_TAGS_GENERATION.set(user.email, form_data.ENABLE_TAGS_GENERATION)
@@ -272,7 +334,8 @@ async def generate_title(
         models = {model["id"]: model for model in models_list}
     
     # Check if user has access to the required Gemini 2.5 Flash Lite model
-    if not user_has_access_to_task_model(user, models):
+    has_access, _ = user_has_access_to_task_model(user, models)
+    if not has_access:
         return JSONResponse(
             status_code=status.HTTP_403_FORBIDDEN,
             content={"detail": "Title generation requires access to Gemini 2.5 Flash Lite model"},
@@ -380,7 +443,8 @@ async def generate_chat_tags(
         models = {model["id"]: model for model in models_list}
     
     # Check if user has access to the required Gemini 2.5 Flash Lite model
-    if not user_has_access_to_task_model(user, models):
+    has_access, _ = user_has_access_to_task_model(user, models)
+    if not has_access:
         return JSONResponse(
             status_code=status.HTTP_403_FORBIDDEN,
             content={"detail": "Tags generation requires access to Gemini 2.5 Flash Lite model"},
@@ -538,7 +602,8 @@ async def generate_queries(
         models = {model["id"]: model for model in models_list}
     
     # Check if user has access to the required Gemini 2.5 Flash Lite model
-    if not user_has_access_to_task_model(user, models):
+    has_access, _ = user_has_access_to_task_model(user, models)
+    if not has_access:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Query generation requires access to Gemini 2.5 Flash Lite model",
@@ -631,7 +696,8 @@ async def generate_autocompletion(
         models = {model["id"]: model for model in models_list}
     
     # Check if user has access to the required Gemini 2.5 Flash Lite model
-    if not user_has_access_to_task_model(user, models):
+    has_access, _ = user_has_access_to_task_model(user, models)
+    if not has_access:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Autocompletion generation requires access to Gemini 2.5 Flash Lite model",
