@@ -255,7 +255,7 @@
 											</div>
 										</Tooltip>
 
-										<div class="flex items-center gap-2">
+										<div class="flex items-center gap-2 shrink-0">
 											<Tooltip content={dayjs(item.updated_at * 1000).format('LLLL')}>
 												<div class=" text-xs text-gray-500 line-clamp-1 hidden sm:block">
 													{$i18n.t('Updated')}
