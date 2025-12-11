@@ -858,6 +858,18 @@ def generate_portkey_embeddings_sdk(
             "Install it with: pip install portkey-ai"
         )
     
+    # Log API key status for debugging (masked for security)
+    key_status = "EMPTY" if not api_key else f"set ({len(api_key)} chars, ends with ...{api_key[-4:] if len(api_key) >= 4 else '***'})"
+    log.info(
+        f"Portkey SDK init: base_url={base_url}, api_key={key_status}"
+    )
+    
+    if not api_key:
+        log.error(
+            "Portkey API key is empty! This will result in 401 Unauthorized. "
+            "Ensure the admin has configured an embedding API key in Settings > Documents."
+        )
+    
     # Initialize Portkey client (simple - no deprecated virtual_key)
     portkey = Portkey(
         base_url=base_url,
@@ -960,6 +972,21 @@ def generate_embeddings(
     url = kwargs.get("url", "")
     key = kwargs.get("key", "")
     user = kwargs.get("user")
+    
+    # CRITICAL FIX: For portkey/openai engines, dynamically retrieve the user's API key
+    # The `key` passed in may be the startup default (empty), but users configure their own keys
+    # This ensures per-user API key scoping works correctly for RAG queries
+    if engine in ["openai", "portkey"] and user and hasattr(user, 'email') and user.email:
+        try:
+            from open_webui.config import RAG_OPENAI_API_KEY
+            user_key = RAG_OPENAI_API_KEY.get(user.email)
+            if user_key:
+                log.debug(f"Using per-user API key for {user.email} (key length: {len(user_key)})")
+                key = user_key
+            else:
+                log.warning(f"No embedding API key found for user {user.email} - using default (may be empty)")
+        except Exception as e:
+            log.warning(f"Failed to retrieve per-user API key: {e}")
 
     if engine == "ollama":
         if isinstance(text, list):
