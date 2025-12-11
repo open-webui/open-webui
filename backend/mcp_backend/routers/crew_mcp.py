@@ -36,6 +36,12 @@ def extract_graph_access_token(request: Request) -> Optional[str]:
     Extract the Graph API access token from OAuth2 proxy headers.
     This token will be used by ALL MCP servers for delegated SharePoint access.
     """
+    # Test token for local development (uncomment to test with real token)
+    # TEST_ACCESS_TOKEN = "use-your-real-access-token-here-for-testing"
+
+    # For testing: uncomment the line below to simulate having a real access token
+    # return TEST_ACCESS_TOKEN
+
     token = request.headers.get(GRAPH_ACCESS_TOKEN_HEADER)
     if token and token != "user_token_placeholder":
         logging.info(
@@ -49,7 +55,6 @@ def extract_graph_access_token(request: Request) -> Optional[str]:
     available_headers = list(request.headers.keys())
     logging.warning(f"Available headers: {available_headers}")
     return None
-
 
 
 async def get_graph_access_token_for_user(request: Request) -> Optional[str]:
@@ -320,9 +325,36 @@ async def run_crew_query(
                 "Successfully set user access token for SharePoint delegated access"
             )
         else:
-            log.warning(
-                "No Graph API access token available - SharePoint access may fail"
-            )
+            # In local development, provide a more helpful error message
+            import os
+
+            environment = os.getenv("ENVIRONMENT", "")
+
+            # Local development is detected by absence of "canchat-" prefix
+            # All k8s environments (dev/staging/prod) start with "canchat-"
+            is_local_dev = not environment.startswith("canchat-")
+
+            if is_local_dev:
+                log.warning(
+                    "Local development environment detected - SharePoint access requires OAuth2 proxy configuration"
+                )
+                # For local development, we should provide a clear message about the limitation
+                if any(
+                    "sharepoint" in str(tool).lower()
+                    for tool in (request.selected_tools or [])
+                ):
+                    return CrewMCPResponse(
+                        result="SharePoint access is not available in local development environment. "
+                        "This feature requires OAuth2 proxy integration which is only available in deployed environments (dev/staging/production). "
+                        "To test SharePoint functionality, please use the dev, staging, or production environments where proper Microsoft Graph authentication is configured.",
+                        tools_used=[],
+                        success=False,
+                        error="SharePoint requires OAuth2 proxy (not available locally)",
+                    )
+            else:
+                log.warning(
+                    "No Graph API access token available - SharePoint access may fail"
+                )
 
         # Get available tools first
         tools = crew_mcp_manager.get_available_tools()
@@ -434,9 +466,23 @@ async def run_multi_server_crew_query(
                 "Successfully set user access token for SharePoint delegated access"
             )
         else:
-            log.warning(
-                "No Graph API access token available - SharePoint access may fail"
-            )
+            # In local development, provide a more helpful error message
+            import os
+
+            environment = os.getenv("ENVIRONMENT", "")
+
+            # Local development is detected by absence of "canchat-" prefix
+            # All k8s environments (dev/staging/prod) start with "canchat-"
+            is_local_dev = not environment.startswith("canchat-")
+
+            if is_local_dev:
+                log.warning(
+                    "Local development environment detected - SharePoint access requires OAuth2 proxy configuration"
+                )
+            else:
+                log.warning(
+                    "No Graph API access token available - SharePoint access may fail"
+                )
 
         # Get available tools first
         tools = crew_mcp_manager.get_available_tools()
