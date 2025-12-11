@@ -40,24 +40,24 @@ class MockRequest:
     Mock Request object for workers that need app.state.config.
     Workers run in separate processes and don't have access to the FastAPI Request object.
     """
-    def __init__(self):
-        self.app = MockApp()
+    def __init__(self, embedding_api_key: Optional[str] = None):
+        self.app = MockApp(embedding_api_key=embedding_api_key)
 
 
 class MockApp:
     """
     Mock app object that provides access to config and other app state.
     """
-    def __init__(self):
+    def __init__(self, embedding_api_key: Optional[str] = None):
         # Initialize config (this reads from environment and database)
-        self.state = MockState()
+        self.state = MockState(embedding_api_key=embedding_api_key)
 
 
 class MockState:
     """
     Mock state object that provides access to configuration and embedding functions.
     """
-    def __init__(self):
+    def __init__(self, embedding_api_key: Optional[str] = None):
         # Initialize config with error handling
         # AppConfig may fail if database is not accessible or not initialized
         try:
@@ -91,12 +91,15 @@ class MockState:
             
             # Initialize embedding function for queries
             # Determine API URL and key based on engine type
-            # Note: RAG_OPENAI_API_KEY is now a UserScopedConfig, use default at worker init
-            # Per-user API keys are retrieved during actual document processing
+            # Use the embedding_api_key passed from the job if available
             if self.config.RAG_EMBEDDING_ENGINE in ["openai", "portkey"]:
                 api_url = self.config.RAG_OPENAI_API_BASE_URL
-                # Use default API key from env var or empty string
-                api_key = self.config.RAG_OPENAI_API_KEY.default
+                # Use passed API key (from admin config) or fall back to env default
+                api_key = embedding_api_key or self.config.RAG_OPENAI_API_KEY.default
+                if embedding_api_key:
+                    log.info(f"Using per-user embedding API key for Portkey (key length: {len(embedding_api_key)})")
+                elif not api_key:
+                    log.warning("No embedding API key provided - embedding may fail!")
             else:
                 api_url = self.config.RAG_OLLAMA_BASE_URL
                 api_key = self.config.RAG_OLLAMA_API_KEY
@@ -158,6 +161,7 @@ def process_file_job(
     collection_name: Optional[str] = None,
     knowledge_id: Optional[str] = None,
     user_id: Optional[str] = None,
+    embedding_api_key: Optional[str] = None,
 ) -> dict:
     """
     Process a file job. This function is called by RQ workers.
@@ -168,12 +172,14 @@ def process_file_job(
         collection_name: Optional collection name for embeddings
         knowledge_id: Optional knowledge base ID
         user_id: User ID who initiated the processing
+        embedding_api_key: API key for embedding service (per-user, from admin config)
         
     Returns:
         Dictionary with processing result
     """
     # Create mock request object for compatibility with existing code
-    request = MockRequest()
+    # Pass the embedding_api_key so it can re-initialize the embedding function
+    request = MockRequest(embedding_api_key=embedding_api_key)
     
     try:
         # Get user object if user_id is provided

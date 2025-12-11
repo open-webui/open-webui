@@ -1973,15 +1973,8 @@ RAG_EMBEDDING_BATCH_SIZE = PersistentConfig(
 # For admins: uses their own virtual key from config
 # For group members: inherits virtual key from their group's admin
 # Default: from RAG_EMBEDDING_MODEL if it's a virtual key (doesn't start with "@")
-_DEFAULT_PORTKEY_VIRTUAL_KEY = (
-    RAG_EMBEDDING_MODEL.value 
-    if not RAG_EMBEDDING_MODEL.value.startswith("@") 
-    else "text-embedding-d47871"
-)
-RAG_EMBEDDING_PORTKEY_VIRTUAL_KEY = UserScopedConfig(
-    "rag.embedding.portkey_virtual_key",
-    _DEFAULT_PORTKEY_VIRTUAL_KEY
-)
+# NOTE: RAG_EMBEDDING_PORTKEY_VIRTUAL_KEY has been removed (deprecated)
+# Portkey no longer uses virtual_key - only api_key is needed
 
 RAG_RERANKING_MODEL = PersistentConfig(
     "RAG_RERANKING_MODEL",

@@ -125,6 +125,7 @@ def enqueue_file_processing_job(
     collection_name: Optional[str] = None,
     knowledge_id: Optional[str] = None,
     user_id: Optional[str] = None,
+    embedding_api_key: Optional[str] = None,
     job_timeout: int = DEFAULT_JOB_TIMEOUT,
 ) -> Optional[str]:
     """
@@ -136,6 +137,7 @@ def enqueue_file_processing_job(
         collection_name: Optional collection name for embeddings (must be JSON-serializable)
         knowledge_id: Optional knowledge base ID (must be JSON-serializable)
         user_id: User ID who initiated the processing (must be JSON-serializable)
+        embedding_api_key: API key for embedding service (per-user, from admin config)
         job_timeout: Job timeout in seconds (default: 1 hour)
         
     Returns:
@@ -157,6 +159,7 @@ def enqueue_file_processing_job(
             "collection_name": collection_name,
             "knowledge_id": knowledge_id,
             "user_id": user_id,
+            "embedding_api_key": embedding_api_key,
         })
     except (TypeError, ValueError) as e:
         log.error(f"Job arguments are not JSON-serializable for file_id={file_id}: {e}")
@@ -202,6 +205,7 @@ def enqueue_file_processing_job(
             "collection_name": collection_name,
             "knowledge_id": knowledge_id,
             "user_id": user_id,
+            "embedding_api_key": embedding_api_key,
         }
         
         # Enqueue job with retry logic

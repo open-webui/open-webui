@@ -21,7 +21,7 @@ except ImportError:
     log.warning("Portkey SDK not available. Install portkey-ai package for embedding support.")
 
 
-from open_webui.config import VECTOR_DB, RAG_EMBEDDING_PORTKEY_VIRTUAL_KEY, RAG_EMBEDDING_MODEL
+from open_webui.config import VECTOR_DB, RAG_EMBEDDING_MODEL
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.utils.misc import get_last_user_message, calculate_sha256_string
 
@@ -828,7 +828,6 @@ def generate_portkey_embeddings_sdk(
     texts: Union[str, List[str]],
     base_url: str,
     api_key: str,
-    virtual_key: Optional[str] = None,
     encoding_format: str = "float",
 ) -> Union[List[float], List[List[float]]]:
     """
@@ -838,20 +837,12 @@ def generate_portkey_embeddings_sdk(
     a single string or a batch of strings. The SDK handles retries, error handling,
     and HTTP management automatically.
     
-    Important: In Portkey, the model config value might be a virtual key identifier
-    (e.g., "text-embedding-d47871") rather than the actual model name. Virtual keys
-    route to actual models (e.g., "@openai-embedding/text-embedding-3-small").
-    
     Args:
-        model: Portkey model identifier or virtual key
-               - If starts with "@", treated as model name (e.g., "@openai-embedding/text-embedding-3-small")
-               - Otherwise, treated as virtual key and default model is used
+        model: Portkey model identifier (e.g., "@openai-embedding/text-embedding-3-small")
         texts: Single string or list of strings to embed
-        base_url: Portkey API base URL
+        base_url: Portkey API base URL (e.g., "https://ai-gateway.apps.cloud.rt.nyu.edu/v1")
         api_key: Portkey API key
-        virtual_key: Optional Portkey virtual key (for routing/billing).
-                    If not provided and model doesn't start with "@", model is used as virtual_key.
-        encoding_format: "float" for uncompressed embeddings (default), None for compressed base64
+        encoding_format: "float" for uncompressed embeddings (default)
         
     Returns:
         list[float] if texts is a single string
@@ -867,61 +858,24 @@ def generate_portkey_embeddings_sdk(
             "Install it with: pip install portkey-ai"
         )
     
-    # Determine if model is actually a virtual key or a model name
-    # Portkey models start with "@" (e.g., "@openai-embedding/text-embedding-3-small")
-    # Virtual keys don't start with "@" (e.g., "text-embedding-d47871")
-    
-    # Priority: explicit virtual_key > user-specific virtual_key > model config as virtual_key
-    if virtual_key:
-        # Virtual key is explicitly provided (from user config or passed parameter)
-        actual_virtual_key = virtual_key
-        if model.startswith("@"):
-            # Model is a proper model name
-            actual_model = model
-        else:
-            # Model config is also a virtual key, but we use the explicit one and default model
-            actual_model = "@openai-embedding/text-embedding-3-small"
-        log.debug(
-            f"Using explicit virtual_key '{actual_virtual_key}' with model '{actual_model}'"
-        )
-    elif not model.startswith("@"):
-        # Model config value is a virtual key (e.g., "text-embedding-d47871")
-        # Use it as virtual_key and default to common embedding model
-        actual_virtual_key = model  # Model config IS the virtual key
-        actual_model = "@openai-embedding/text-embedding-3-small"  # Default embedding model
-        log.debug(
-            f"Model config '{model}' doesn't start with '@', treating as virtual_key. "
-            f"Using model '{actual_model}' with virtual_key '{actual_virtual_key}'"
-        )
-    else:
-        # Model is proper model name, no virtual_key provided
-        actual_model = model
-        actual_virtual_key = None
-        log.debug(f"Using model '{actual_model}' without virtual_key")
-    
-    # Initialize Portkey client with virtual_key if provided
-    # The SDK supports virtual_key as a parameter in client initialization
-    client_kwargs = {
-        "base_url": base_url,
-        "api_key": api_key
-    }
-    if actual_virtual_key:
-        client_kwargs["virtual_key"] = actual_virtual_key
-    
-    portkey = Portkey(**client_kwargs)
+    # Initialize Portkey client (simple - no deprecated virtual_key)
+    portkey = Portkey(
+        base_url=base_url,
+        api_key=api_key
+    )
     
     # Generate embeddings using SDK
     # The SDK handles retries, rate limiting, and error handling automatically
     try:
         log.info(
             f"Generating Portkey embeddings via SDK: "
-            f"model={actual_model}, virtual_key={actual_virtual_key}, "
+            f"model={model}, "
             f"texts_count={len(texts) if isinstance(texts, list) else 1}, "
             f"encoding_format={encoding_format}"
         )
         
         response = portkey.embeddings.create(
-            model=actual_model,
+            model=model,
             input=texts,
             encoding_format=encoding_format
         )
@@ -991,14 +945,13 @@ def generate_embeddings(
     
     Args:
         engine: Embedding engine ("ollama", "openai", "portkey", or "" for local)
-        model: Model identifier
+        model: Model identifier (e.g., "@openai-embedding/text-embedding-3-small")
         text: Single string or list of strings to embed
         backoff: Whether to use exponential backoff (for legacy compatibility)
         **kwargs: Additional engine-specific parameters:
             - url: API base URL
             - key: API key
             - user: UserModel instance
-            - virtual_key: (Portkey only) Virtual key for routing/billing
             
     Returns:
         list[float] if text is a single string
@@ -1007,23 +960,6 @@ def generate_embeddings(
     url = kwargs.get("url", "")
     key = kwargs.get("key", "")
     user = kwargs.get("user")
-    
-    # For Portkey: Get user-specific virtual key
-    # - For admins: Use their own virtual key from config
-    # - For group members: Inherit virtual key from their group's admin
-    # - Fallback: Use default from RAG_EMBEDDING_MODEL or model config
-    virtual_key = kwargs.get("virtual_key", None)
-    if engine == "portkey" and user and user.email:
-        # Get user-specific virtual key (inherits from group admin if user is member)
-        user_virtual_key = RAG_EMBEDDING_PORTKEY_VIRTUAL_KEY.get(user.email)
-        if user_virtual_key:
-            virtual_key = user_virtual_key
-            log.debug(f"Using user-specific virtual key for {user.email}: {virtual_key}")
-        elif virtual_key is None:
-            # Fallback: use model config value if it's a virtual key
-            if model and not model.startswith("@"):
-                virtual_key = model
-                log.debug(f"Using model config as virtual key: {virtual_key}")
 
     if engine == "ollama":
         if isinstance(text, list):
@@ -1049,13 +985,12 @@ def generate_embeddings(
 
         return embeddings[0] if isinstance(text, str) else embeddings
     elif engine == "portkey":
-        # Use SDK-based implementation - no fallback to old HTTP requests
+        # Use SDK-based implementation
         embeddings = generate_portkey_embeddings_sdk(
             model=model,
             texts=text,
             base_url=url,
             api_key=key,
-            virtual_key=virtual_key,
             encoding_format="float"
         )
         return embeddings

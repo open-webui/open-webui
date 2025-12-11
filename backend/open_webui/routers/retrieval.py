@@ -1895,6 +1895,13 @@ def process_file(
     job_enqueued = False
     background_task_added = False
     
+    # Get the user's embedding API key for the worker (per-admin scoped)
+    embedding_api_key = None
+    if request.app.state.config.RAG_EMBEDDING_ENGINE in ["openai", "portkey"]:
+        embedding_api_key = request.app.state.config.RAG_OPENAI_API_KEY.get(user.email)
+        if not embedding_api_key:
+            log.warning(f"No embedding API key configured for user {user.email} - embedding may fail")
+    
     try:
         # Try to use job queue first if available
         if is_job_queue_available():
@@ -1906,6 +1913,7 @@ def process_file(
                     collection_name=form_data.collection_name,
                     knowledge_id=knowledge_id,
                     user_id=user.id,
+                    embedding_api_key=embedding_api_key,
                 )
                 
                 if job_id is not None:
