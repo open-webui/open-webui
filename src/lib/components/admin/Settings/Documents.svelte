@@ -57,7 +57,7 @@
 	let showResetUploadDirConfirm = false;
 
 	let embeddingEngine = 'portkey';
-	let embeddingModel = 'text-embedding-d47871';
+	let embeddingModel = '@openai-embedding/text-embedding-3-small';
 	let embeddingBatchSize = 1;
 	let rerankingModel = '';
 
@@ -86,7 +86,7 @@
 	let OpenAIKey = '';
 
 	let PortkeyUrl = 'https://ai-gateway.apps.cloud.rt.nyu.edu/v1';
-	let PortkeyKey = 'dogDlg+W3/1qn7LsU3oTuJHDEopS';
+	let PortkeyKey = '';  // Admin must provide API key - no default
 
 	let OllamaUrl = '';
 	let OllamaKey = '';
@@ -263,7 +263,7 @@
 			embeddingEngine = embeddingConfig.embedding_engine || 'portkey';
 			if (!embeddingConfig.embedding_model) {
 				if (embeddingConfig.embedding_engine === 'portkey') {
-					embeddingModel = 'text-embedding-d47871'; 
+					embeddingModel = '@openai-embedding/text-embedding-3-small'; 
 				} else if (embeddingConfig.embedding_engine === '') {
 					embeddingModel = 'sentence-transformers/all-MiniLM-L6-v2';
 				} else {
@@ -291,7 +291,7 @@
 			OllamaUrl = embeddingConfig.ollama_config.url;
 		} else {
 		embeddingEngine = 'portkey';
-		embeddingModel = 'text-embedding-d47871';
+		embeddingModel = '@openai-embedding/text-embedding-3-small';
 		}
 	};
 
@@ -541,7 +541,7 @@
 										} else if (e.target.value === 'openai') {
 											embeddingModel = 'text-embedding-3-small';
 										} else if (e.target.value === 'portkey') {
-											embeddingModel = 'text-embedding-d47871'
+											embeddingModel = '@openai-embedding/text-embedding-3-small'
 										} else if (e.target.value === '') {
 											embeddingModel = 'sentence-transformers/all-MiniLM-L6-v2';
 										}

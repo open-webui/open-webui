@@ -1947,7 +1947,7 @@ PDF_EXTRACT_IMAGES = PersistentConfig(
 RAG_EMBEDDING_MODEL = PersistentConfig(
     "RAG_EMBEDDING_MODEL",
     "rag.embedding_model",
-    os.environ.get("RAG_EMBEDDING_MODEL", "text-embedding-d47871"),
+    os.environ.get("RAG_EMBEDDING_MODEL", "@openai-embedding/text-embedding-3-small"),
 )
 log.info(f"Embedding model set: {RAG_EMBEDDING_MODEL.value}")
 
