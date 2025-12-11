@@ -422,7 +422,7 @@
 
 	// Helper function to maintain file paths within zip
 	const syncDirectoryHandler = async () => {
-		if ((knowledge?.files ?? []).length > 0) {
+		if (fileItems.length > 0) {
 			const res = await resetKnowledgeById(localStorage.token, id).catch((e) => {
 				toast.error(`${e}`);
 			});
@@ -757,10 +757,10 @@
 							/>
 
 							<div class="shrink-0 mr-2.5">
-								{#if (knowledge?.files ?? []).length}
+								{#if fileItemsTotal}
 									<div class="text-xs text-gray-500">
 										{$i18n.t('{{count}} files', {
-											count: (knowledge?.files ?? []).length
+											count: fileItemsTotal
 										})}
 									</div>
 								{/if}

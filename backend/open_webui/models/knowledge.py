@@ -135,7 +135,7 @@ class KnowledgeResponse(KnowledgeModel):
 
 
 class KnowledgeUserResponse(KnowledgeUserModel):
-    files: Optional[list[FileMetadataResponse | dict]] = None
+    pass
 
 
 class KnowledgeForm(BaseModel):

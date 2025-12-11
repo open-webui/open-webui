@@ -39,8 +39,6 @@
 	};
 </script>
 
-{sourceIds}
-
 {#if sourceIds}
 	{#if (token?.ids ?? []).length == 1}
 		<Source id={token.ids[0] - 1} title={sourceIds[token.ids[0] - 1]} {onClick} />
