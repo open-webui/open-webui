@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.42] - 2025-12-11
+## [0.6.42] - 2025-12-12
 
 ### Added
 
@@ -24,13 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🎥 Video file playback support was added to channel messages, enabling inline video viewing with native player controls. [Commit](https://github.com/open-webui/open-webui/commit/7b126b23d50a0bd36a350fe09dc1dbe3df105318)
 - 📎 Channel file association tracking was implemented, automatically linking uploaded files to their respective channels with a dedicated association table enabling better organization and future file management features within channels. [Commit](https://github.com/open-webui/open-webui/commit/2bccf8350d0915f69b8020934bb179c52e81b7b5)
 - 👥 User profile previews now display group membership information for easier identification of user roles and permissions. [Commit](https://github.com/open-webui/open-webui/commit/2b1a29d44bde9fbc20ff9f0a5ded1ce8ded9d90d)
+- 🔐 LDAP authentication now supports user entries with multiple username attributes, correctly handling cases where the username field contains a list of values. [Commit](https://github.com/open-webui/open-webui/commit/379f888c9dc6dce21c3ef7a1fc455258aff993dc), [#19878](https://github.com/open-webui/open-webui/issues/19878)
 - 🔑 The "OAUTH_AUDIENCE" environment variable now allows OAuth providers to specify audience parameters for JWT access token generation. [#19768](https://github.com/open-webui/open-webui/pull/19768)
 - ⏰ The "REDIS_SOCKET_CONNECT_TIMEOUT" environment variable now allows configuring socket connection timeouts for Redis and Sentinel connections, addressing potential failover and responsiveness issues in distributed deployments. [#19799](https://github.com/open-webui/open-webui/pull/19799), [Docs:#882](https://github.com/open-webui/docs/pull/882)
 - ⏱️ The "WEB_LOADER_TIMEOUT" environment variable now allows configuring request timeouts for SafeWebBaseLoader operations. [#19804](https://github.com/open-webui/open-webui/pull/19804), [#19734](https://github.com/open-webui/open-webui/issues/19734)
 - 📊 An experimental chat usage statistics endpoint (GET /api/v1/chats/stats/usage) was added with pagination support (50 chats per page) and comprehensive per-chat analytics including model usage counts, user and assistant message breakdowns, average response times calculated from message timestamps, average content lengths, and last activity timestamps; this endpoint remains experimental and not suitable for production use as it performs intensive calculations by processing entire message histories for each chat without caching. [Commit](https://github.com/open-webui/open-webui/commit/a7993f6f4e4591cd2aaa4718ece9e5623557d019)
 - 🚀 Models page search input performance was optimized with a 300ms debounce to reduce server load and improve responsiveness. [#19832](https://github.com/open-webui/open-webui/pull/19832)
 - 🔄 Various improvements were implemented across the frontend and backend to enhance performance, stability, and security.
-- 🌐 Translations for Portuguese (Brazil), Simplified Chinese, Traditional Chinese, Catalan, and Spanish were enhanced and expanded.
+- 🌐 Translations for Danish, Portuguese (Brazil), Simplified Chinese, Traditional Chinese, Catalan, and Spanish were enhanced and expanded.
 
 ### Fixed
 
@@ -48,6 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔧 Pipeline settings save failures when valve properties contain null values are now handled correctly. [#19791](https://github.com/open-webui/open-webui/pull/19791)
 - 🔍 Search bar freezing and crashing issues in Models, Chat, and Archived Chat pages caused by excessively long queries exceeding server URL limits were resolved by truncating queries to 500 characters, and knowledge base layout shifting with long names was fixed by adjusting flex container properties. [#19832](https://github.com/open-webui/open-webui/pull/19832)
 - 🎤 Audio file upload failures caused by MIME type matching issues with spacing variations and codec parameters were resolved by implementing proper MIME type parsing. [#17771](https://github.com/open-webui/open-webui/pull/17771), [#17761](https://github.com/open-webui/open-webui/issues/17761)
+- ⌨️ Regenerate response keyboard shortcut now only activates when chat input is selected, preventing unintended regeneration when modals are open or other UI elements are focused. [#19875](https://github.com/open-webui/open-webui/pull/19875)
+- 📋 Log truncation issues in Docker deployments during application crashes were resolved by disabling Python stdio buffering, ensuring complete diagnostic output is captured. [#19844](https://github.com/open-webui/open-webui/issues/19844)
+- 🔴 Redis cluster compatibility issues with disabled KEYS command were resolved by replacing blocking KEYS operations with production-safe SCAN iterations. [#19871](https://github.com/open-webui/open-webui/pull/19871), [#15834](https://github.com/open-webui/open-webui/issues/15834)
 
 ### Changed
 
