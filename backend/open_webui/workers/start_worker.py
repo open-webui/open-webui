@@ -9,7 +9,6 @@ Usage:
 
 import os
 import sys
-import logging
 import socket
 
 # Add backend directory to Python path
@@ -18,54 +17,23 @@ if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
 # Set timezone to NYC before any logging
-import os
 os.environ["TZ"] = "America/New_York"
 
-# Import timezone-aware formatter
-try:
-    from zoneinfo import ZoneInfo
-except ImportError:
-    from backports.zoneinfo import ZoneInfo
+# Initialize proper logger (uses NYC timezone and proper formatting)
+from open_webui.utils import logger
+logger.start_logger()
 
-NYC_TIMEZONE = ZoneInfo("America/New_York")
-
-# Configure logging before importing other modules with NYC timezone
-from datetime import datetime
-
-class NYCFormatter(logging.Formatter):
-    """Formatter that converts timestamps to NYC timezone"""
-    def formatTime(self, record, datefmt=None):
-        ct = datetime.fromtimestamp(record.created, tz=NYC_TIMEZONE)
-        if datefmt:
-            s = ct.strftime(datefmt)
-        else:
-            t = ct.strftime('%Y-%m-%d %H:%M:%S')
-            s = f"{t} {ct.strftime('%Z')}"
-        return s
-
-nyc_formatter = NYCFormatter(
-    fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-
-handler = logging.StreamHandler()
-handler.setFormatter(nyc_formatter)
-
-logging.basicConfig(
-    level=logging.INFO,
-    handlers=[handler]
-)
-
+import logging
 log = logging.getLogger(__name__)
 
 from rq import Worker, Queue, Connection
 from redis import Redis
-from open_webui.env import REDIS_URL, SRC_LOG_LEVELS
+from open_webui.env import REDIS_URL, SRC_LOG_LEVELS, ENABLE_JOB_QUEUE
 from open_webui.socket.utils import get_redis_pool
 from open_webui.utils.job_queue import FILE_PROCESSING_QUEUE_NAME
 
 # Set log level from environment
-log.setLevel(SRC_LOG_LEVELS.get("MODELS", logging.INFO))
+log.setLevel(SRC_LOG_LEVELS.get("WORKER", SRC_LOG_LEVELS.get("MODELS", logging.INFO)))
 
 
 def initialize_database():
@@ -102,8 +70,22 @@ def initialize_database():
 def start_worker():
     """Start RQ worker for file processing queue"""
     try:
+        log.info("=" * 80)
+        log.info("RQ Worker Startup - Initializing file processing worker")
+        log.info("=" * 80)
+        
+        # Check if job queue is enabled
+        if not ENABLE_JOB_QUEUE:
+            log.error(
+                "ENABLE_JOB_QUEUE is False. Worker requires job queue to be enabled. "
+                "Set ENABLE_JOB_QUEUE=True to start worker."
+            )
+            sys.exit(1)
+        log.info("Job queue is enabled (ENABLE_JOB_QUEUE=True)")
+        
         # Initialize database connections early
         # This ensures database is available when jobs are processed
+        log.info("Initializing database connection...")
         db_initialized = initialize_database()
         
         if not db_initialized:
@@ -111,26 +93,45 @@ def start_worker():
                 "Database initialization failed. Worker will continue but "
                 "file processing jobs may fail if they require database access."
             )
+        else:
+            log.info("Database connection initialized successfully")
         
+        # Validate Redis URL
         if not REDIS_URL:
             log.error("REDIS_URL not configured, cannot start worker")
+            log.error("Please set REDIS_URL environment variable to start the worker")
             sys.exit(1)
         
+        log.info(f"REDIS_URL configured: {REDIS_URL.split('@')[0]}@...")  # Hide password in logs
+        
         # Get Redis connection pool
+        log.info("Connecting to Redis...")
         try:
             pool = get_redis_pool(REDIS_URL)
             redis_conn = Redis(connection_pool=pool)
             
             # Test Redis connection
             redis_conn.ping()
-            log.info(f"Redis connection established: {REDIS_URL}")
+            log.info("Redis connection established successfully")
+            
+            # Test queue access
+            test_queue = Queue(FILE_PROCESSING_QUEUE_NAME, connection=redis_conn)
+            queue_length = len(test_queue)
+            log.info(f"Queue '{FILE_PROCESSING_QUEUE_NAME}' accessible (current length: {queue_length})")
         except Exception as redis_error:
             log.error(f"Failed to connect to Redis: {redis_error}", exc_info=True)
+            log.error("Worker cannot start without Redis connection. Please check:")
+            log.error("  1. REDIS_URL is correct")
+            log.error("  2. Redis server is running and accessible")
+            log.error("  3. Network connectivity to Redis")
             sys.exit(1)
         
         # Generate worker name with hostname and PID for better identification
         hostname = socket.gethostname()
         worker_name = f"file_processor_{hostname}_{os.getpid()}"
+        
+        log.info(f"Worker name: {worker_name}")
+        log.info(f"Queue name: {FILE_PROCESSING_QUEUE_NAME}")
         
         # Create queue connection
         with Connection(redis_conn):
@@ -140,18 +141,23 @@ def start_worker():
             # Create and start worker
             worker = Worker([queue], name=worker_name)
             
+            log.info("=" * 80)
             log.info(
-                f"Starting RQ worker '{worker_name}' for queue '{FILE_PROCESSING_QUEUE_NAME}' "
-                f"on Redis: {REDIS_URL}"
+                f"✅ RQ Worker '{worker_name}' starting for queue '{FILE_PROCESSING_QUEUE_NAME}'"
             )
+            log.info(f"   Redis: {REDIS_URL.split('@')[0]}@...")
+            log.info(f"   Hostname: {hostname}")
+            log.info(f"   PID: {os.getpid()}")
+            log.info("=" * 80)
+            log.info("Worker is ready to process jobs. Waiting for jobs...")
             
             # Start worker (this blocks)
             worker.work()
     except KeyboardInterrupt:
-        log.info("Worker stopped by user")
+        log.info("Worker stopped by user (KeyboardInterrupt)")
         sys.exit(0)
     except Exception as e:
-        log.error(f"Worker error: {e}", exc_info=True)
+        log.error(f"Fatal worker error: {e}", exc_info=True)
         sys.exit(1)
 
 
