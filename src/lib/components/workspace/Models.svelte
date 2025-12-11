@@ -68,13 +68,18 @@
 	let models = null;
 	let total = null;
 
+	let searchDebounceTimer;
+
 	$: if (
 		page !== undefined &&
 		query !== undefined &&
 		selectedTag !== undefined &&
 		viewOption !== undefined
 	) {
-		getModelList();
+		clearTimeout(searchDebounceTimer);
+		searchDebounceTimer = setTimeout(() => {
+			getModelList();
+		}, 300);
 	}
 
 	const getModelList = async () => {
@@ -381,6 +386,7 @@
 					class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={query}
 					placeholder={$i18n.t('Search Models')}
+					maxlength="500"
 				/>
 
 				{#if query}
