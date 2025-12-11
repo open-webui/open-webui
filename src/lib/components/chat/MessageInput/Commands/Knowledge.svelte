@@ -6,16 +6,17 @@
 
 	import { tick, getContext, onMount, onDestroy } from 'svelte';
 
+	import { folders } from '$lib/stores';
+	import { getFolders } from '$lib/apis/folders';
+	import { searchKnowledgeBases, searchKnowledgeFiles } from '$lib/apis/knowledge';
 	import { removeLastWordFromString, isValidHttpUrl, isYoutubeUrl, decodeString } from '$lib/utils';
+
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import DocumentPage from '$lib/components/icons/DocumentPage.svelte';
 	import Database from '$lib/components/icons/Database.svelte';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 	import Youtube from '$lib/components/icons/Youtube.svelte';
-	import { folders } from '$lib/stores';
 	import Folder from '$lib/components/icons/Folder.svelte';
-	import { getFolders } from '$lib/apis/folders';
-	import { searchKnowledgeBases, searchKnowledgeFiles } from '$lib/apis/knowledge';
 
 	const i18n = getContext('i18n');
 
