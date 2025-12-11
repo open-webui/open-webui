@@ -15,6 +15,7 @@
 	import Youtube from '$lib/components/icons/Youtube.svelte';
 	import { folders } from '$lib/stores';
 	import Folder from '$lib/components/icons/Folder.svelte';
+	import { getFolders } from '$lib/apis/folders';
 
 	const i18n = getContext('i18n');
 
@@ -80,37 +81,16 @@
 	};
 
 	onMount(async () => {
+		if ($folders === null) {
+			await folders.set(await getFolders(localStorage.token));
+		}
+
 		let collections = knowledge
 			.filter((item) => !item?.meta?.document)
 			.map((item) => ({
 				...item,
 				type: 'collection'
 			}));
-
-		let collection_files =
-			knowledge.length > 0
-				? [
-						...knowledge
-							.reduce((a, item) => {
-								return [
-									...new Set([
-										...a,
-										...(item?.files ?? []).map((file) => ({
-											...file,
-											collection: { name: item.name, description: item.description } // DO NOT REMOVE, USED IN FILE DESCRIPTION/ATTACHMENT
-										}))
-									])
-								];
-							}, [])
-							.map((file) => ({
-								...file,
-								name: file?.meta?.name,
-								description: `${file?.collection?.description}`,
-								knowledge: true, // DO NOT REMOVE, USED TO INDICATE KNOWLEDGE BASE FILE
-								type: 'file'
-							}))
-					]
-				: [];
 
 		let folder_items = $folders.map((folder) => ({
 			...folder,
@@ -119,7 +99,7 @@
 			title: folder.name
 		}));
 
-		items = [...folder_items, ...collections, ...collection_files];
+		items = [...folder_items, ...collections];
 		fuse = new Fuse(items, {
 			keys: ['name', 'description']
 		});

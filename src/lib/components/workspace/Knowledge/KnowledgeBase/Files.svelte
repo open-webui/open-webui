@@ -43,13 +43,13 @@
 					<div class="flex gap-2 items-center line-clamp-1">
 						<div class="shrink-0">
 							{#if file?.status !== 'uploading'}
-								<DocumentPage className="size-3" />
+								<DocumentPage className="size-3.5" />
 							{:else}
-								<Spinner className="size-3" />
+								<Spinner className="size-3.5" />
 							{/if}
 						</div>
 
-						<div class="line-clamp-1">
+						<div class="line-clamp-1 text-sm">
 							{file?.name ?? file?.meta?.name}
 							{#if file?.meta?.size}
 								<span class="text-xs text-gray-500">{formatFileSize(file?.meta?.size)}</span>

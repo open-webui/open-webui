@@ -27,7 +27,6 @@
 	import {
 		addFileToKnowledgeById,
 		getKnowledgeById,
-		getKnowledgeBases,
 		removeFileFromKnowledgeById,
 		resetKnowledgeById,
 		updateFileFromKnowledgeById,
@@ -534,7 +533,6 @@
 
 			if (res) {
 				toast.success($i18n.t('Knowledge updated successfully'));
-				_knowledge.set(await getKnowledgeBases(localStorage.token));
 			}
 		}, 1000);
 	};

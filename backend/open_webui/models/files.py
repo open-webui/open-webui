@@ -104,6 +104,11 @@ class FileUpdateForm(BaseModel):
     meta: Optional[dict] = None
 
 
+class FileListResponse(BaseModel):
+    items: list[FileModel]
+    total: int
+
+
 class FilesTable:
     def insert_new_file(self, user_id: str, form_data: FileForm) -> Optional[FileModel]:
         with get_db() as db:
