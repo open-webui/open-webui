@@ -454,8 +454,7 @@ For issues or questions:
 - Review this README
 - Check logs: `tail -f /var/log/openwebui-prune.log`
 - Test in staging environment
-- Open an issue on [Open WebUI GitHub](https://github.com/open-webui/open-webui)
-- Join [Open WebUI Discord](https://discord.gg/5rJgQTnV4s)
+- Open an issue
 
 ---
 
