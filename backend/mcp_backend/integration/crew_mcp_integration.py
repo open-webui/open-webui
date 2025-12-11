@@ -331,19 +331,25 @@ Format your response to directly address what the user actually asked for.""",
         except Exception as e:
             error_msg = str(e)
             logger.error(f"Error in CrewAI MCP SharePoint integration: {error_msg}")
-            
+
             # Provide specific error messages based on the type of failure
-            if "Authentication" in error_msg or "access token" in error_msg or "401" in error_msg:
-                return "SharePoint access failed due to authentication issues. This may be because:\n\n" + \
-                       "1. You're in a local development environment where OAuth2 proxy is not configured\n" + \
-                       "2. Your authentication token has expired\n" + \
-                       "3. You don't have the necessary SharePoint permissions\n\n" + \
-                       "For local development, SharePoint integration requires deployment to environments with proper OAuth2 configuration (dev/staging/production)."
+            if (
+                "Authentication" in error_msg
+                or "access token" in error_msg
+                or "401" in error_msg
+            ):
+                return (
+                    "SharePoint access failed due to authentication issues. This may be because:\n\n"
+                    + "1. You're in a local development environment where OAuth2 proxy is not configured\n"
+                    + "2. Your authentication token has expired\n"
+                    + "3. You don't have the necessary SharePoint permissions\n\n"
+                    + "For local development, SharePoint integration requires deployment to environments with proper OAuth2 configuration (dev/staging/production)."
+                )
             elif "No documents found" in error_msg or "no results" in error_msg:
                 return "I searched the available SharePoint documents but could not find information related to your query. The documents may not contain this information, or it might be located in a different SharePoint site or folder that I don't have access to."
             else:
                 return f"I encountered an issue while searching SharePoint documents: {error_msg}. Please try rephrasing your query or contact support if the problem persists."
-            
+
             # Don't re-raise in production to avoid exposing internal errors
             # raise
 
@@ -411,7 +417,7 @@ Format your response to directly address what the user actually asked for.""",
                 except Exception as e:
                     error_msg = str(e)
                     logger.error(f"SharePoint crew failed: {error_msg}")
-                    
+
                     # Provide helpful error message for authentication issues
                     if "Authentication" in error_msg or "access token" in error_msg:
                         results.append(
@@ -620,9 +626,13 @@ Be decisive and specific. Only route to specialists that are actually needed."""
                 except Exception as e:
                     error_msg = str(e)
                     logger.error(f"Error from SHAREPOINT specialist: {error_msg}")
-                    
+
                     # Provide helpful error message for authentication issues
-                    if "Authentication" in error_msg or "access token" in error_msg or "OAuth" in error_msg:
+                    if (
+                        "Authentication" in error_msg
+                        or "access token" in error_msg
+                        or "OAuth" in error_msg
+                    ):
                         responses.append(
                             "SharePoint access is currently unavailable due to authentication requirements. "
                             "This feature requires OAuth2 proxy integration which is configured in deployed environments (dev/staging/production). "
