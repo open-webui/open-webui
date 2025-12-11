@@ -57,6 +57,7 @@ ARG GID
 
 ## Basis ##
 ENV ENV=prod \
+ PYTHONUNBUFFERED=1 \
     PORT=8080 \
     # pass build args to the build
     USE_OLLAMA_DOCKER=${USE_OLLAMA} \
