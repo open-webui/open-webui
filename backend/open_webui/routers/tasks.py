@@ -169,8 +169,23 @@ async def get_task_config(request: Request, user=Depends(get_verified_user)):
     # Also available at request.app.state.MODELS after the call
     models = {model["id"]: model for model in models_list}
     
+    # DEBUG: Log all available models to help identify correct Gemini model ID
+    log.info(f"=== AVAILABLE MODELS FOR USER {user.email} ===")
+    for model_id, model_info in models.items():
+        model_name = model_info.get("name", "N/A")
+        model_owned_by = model_info.get("owned_by", "N/A")
+        log.info(f"  Model ID: '{model_id}' | Name: '{model_name}' | Owned By: '{model_owned_by}'")
+    log.info(f"=== END AVAILABLE MODELS (Total: {len(models)}) ===")
+    
     # Check if user has access to the required Gemini 2.5 Flash Lite model
     has_task_model_access, found_model_id = user_has_access_to_task_model(user, models)
+    
+    # DEBUG: Log the result of model search
+    log.info(f"=== GEMINI MODEL SEARCH RESULT ===")
+    log.info(f"  User: {user.email}")
+    log.info(f"  Has Task Model Access: {has_task_model_access}")
+    log.info(f"  Found Model ID: '{found_model_id}'")
+    log.info(f"=== END MODEL SEARCH RESULT ===")
     
     # Get per-admin task config settings (inherits from group admin if user is in a group)
     task_model_external = request.app.state.config.TASK_MODEL_EXTERNAL.get(user.email)
