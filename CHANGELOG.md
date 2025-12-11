@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.42] - 2025-12-11
+## [0.6.42] - 2025-12-10
 
 ### Added
 
@@ -51,7 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- ⚠️ **IMPORTANT: Database Migration Required** — This release includes database schema changes (new "message_id" column in the "channel_file" table for message-file associations and new "data" column in the "knowledge" table for extensible metadata storage) that require all instances in multi-worker, multi-server, or load-balanced deployments to be updated simultaneously; running mixed versions will cause failures as older application instances cannot operate against the updated database schema. [Commit](https://github.com/open-webui/open-webui/commit/79cfe29bb2d09c3a9051dcbbfecbf15c23d19525)
+- ⚠️ **IMPORTANT: Database Migration Required** — This release includes database schema changes; multi-worker, multi-server, or load-balanced deployments must update all instances simultaneously rather than performing rolling updates, as running mixed versions will cause application failures due to schema incompatibility between old and new instances.
 - 🔌 Knowledge base file listing API was redesigned with paginated responses and new filtering parameters; the GET /knowledge/{id}/files endpoint now returns paginated results with user attribution instead of embedding all files in the knowledge object, which may require updates to custom integrations or scripts accessing knowledge base data programmatically. [Commit](https://github.com/open-webui/open-webui/commit/94a8439105f30203ea9d729787c9c5978f5c22a2)
 - 🗑️ Legacy knowledge base support for deprecated document collections and tag-based collections was removed; users with pre-knowledge base documents must migrate to the current knowledge base system as legacy items will no longer appear in selectors or command menus. [Commit](https://github.com/open-webui/open-webui/commit/a934dc997ed67a036dd7975e380f8036c447d3ed)
 
