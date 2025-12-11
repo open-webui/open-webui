@@ -7,7 +7,8 @@
 	dayjs.extend(relativeTime);
 
 	import { tick, getContext, onMount, onDestroy } from 'svelte';
-	import { removeLastWordFromString, isValidHttpUrl, isYoutubeUrl } from '$lib/utils';
+
+	import { removeLastWordFromString, isValidHttpUrl, isYoutubeUrl, decodeString } from '$lib/utils';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import DocumentPage from '$lib/components/icons/DocumentPage.svelte';
 	import Database from '$lib/components/icons/Database.svelte';
@@ -16,41 +17,31 @@
 	import { folders } from '$lib/stores';
 	import Folder from '$lib/components/icons/Folder.svelte';
 	import { getFolders } from '$lib/apis/folders';
+	import { searchKnowledgeBases, searchKnowledgeFiles } from '$lib/apis/knowledge';
 
 	const i18n = getContext('i18n');
 
 	export let query = '';
 	export let onSelect = (e) => {};
 
-	export let knowledge = [];
-
 	let selectedIdx = 0;
-
 	let items = [];
-	let fuse = null;
 
 	export let filteredItems = [];
-	$: if (fuse) {
-		filteredItems = [
-			...(query
-				? fuse.search(query).map((e) => {
-						return e.item;
-					})
-				: items),
-
-			...(query.startsWith('http')
-				? isYoutubeUrl(query)
-					? [{ type: 'youtube', name: query, description: query }]
-					: [
-							{
-								type: 'web',
-								name: query,
-								description: query
-							}
-						]
-				: [])
-		];
-	}
+	$: filteredItems = [
+		...(query.startsWith('http')
+			? isYoutubeUrl(query)
+				? [{ type: 'youtube', name: query, description: query }]
+				: [
+						{
+							type: 'web',
+							name: query,
+							description: query
+						}
+					]
+			: []),
+		...items
+	];
 
 	$: if (query) {
 		selectedIdx = 0;
@@ -72,11 +63,63 @@
 			item.click();
 		}
 	};
-	const decodeString = (str: string) => {
-		try {
-			return decodeURIComponent(str);
-		} catch (e) {
-			return str;
+
+	let folderItems = [];
+	let knowledgeItems = [];
+	let fileItems = [];
+
+	$: items = [...folderItems, ...knowledgeItems, ...fileItems];
+
+	$: if (query !== null) {
+		getItems();
+	}
+
+	const getItems = () => {
+		getFolderItems();
+		getKnowledgeItems();
+		getKnowledgeFileItems();
+	};
+
+	const getFolderItems = async () => {
+		folderItems = $folders
+			.map((folder) => ({
+				...folder,
+				type: 'folder',
+				description: $i18n.t('Folder'),
+				title: folder.name
+			}))
+			.filter((folder) => folder.name.toLowerCase().includes(query.toLowerCase()));
+	};
+
+	const getKnowledgeItems = async () => {
+		const res = await searchKnowledgeBases(localStorage.token, query).catch(() => {
+			return null;
+		});
+
+		if (res) {
+			knowledgeItems = res.items.map((item) => {
+				return {
+					...item,
+					type: 'collection'
+				};
+			});
+		}
+	};
+
+	const getKnowledgeFileItems = async () => {
+		const res = await searchKnowledgeFiles(localStorage.token, query).catch(() => {
+			return null;
+		});
+
+		if (res) {
+			fileItems = res.items.map((item) => {
+				return {
+					...item,
+					type: 'file',
+					name: item.filename,
+					description: item.collection ? item.collection.name : ''
+				};
+			});
 		}
 	};
 
@@ -84,25 +127,6 @@
 		if ($folders === null) {
 			await folders.set(await getFolders(localStorage.token));
 		}
-
-		let collections = knowledge
-			.filter((item) => !item?.meta?.document)
-			.map((item) => ({
-				...item,
-				type: 'collection'
-			}));
-
-		let folder_items = $folders.map((folder) => ({
-			...folder,
-			type: 'folder',
-			description: $i18n.t('Folder'),
-			title: folder.name
-		}));
-
-		items = [...folder_items, ...collections];
-		fuse = new Fuse(items, {
-			keys: ['name', 'description']
-		});
 
 		await tick();
 	});
@@ -122,12 +146,20 @@
 	});
 </script>
 
-<div class="px-2 text-xs text-gray-500 py-1">
-	{$i18n.t('Knowledge')}
-</div>
-
 {#if filteredItems.length > 0 || query.startsWith('http')}
 	{#each filteredItems as item, idx}
+		{#if idx === 0 || item?.type !== items[idx - 1]?.type}
+			<div class="px-2 text-xs text-gray-500 py-1">
+				{#if item?.type === 'folder'}
+					{$i18n.t('Folders')}
+				{:else if item?.type === 'collection'}
+					{$i18n.t('Collections')}
+				{:else if item?.type === 'file'}
+					{$i18n.t('Files')}
+				{/if}
+			</div>
+		{/if}
+
 		{#if !['youtube', 'web'].includes(item.type)}
 			<button
 				class=" px-2 py-1 rounded-xl w-full text-left flex justify-between items-center {idx ===
