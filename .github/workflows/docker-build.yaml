@@ -17,7 +17,7 @@ jobs:
 
     # Set a timeout for the job
     timeout-minutes: 30
-    
+
     permissions:
       contents: read
       packages: write
@@ -68,7 +68,8 @@ jobs:
           push: true
           labels: ${{ steps.meta.outputs.labels }}
           # outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
-          no-cache: true  # Disable caching due to large/unstable images causing disk space issues
+          cache-to: type=local,dest=/var/lib/docker/cache,mode=max
+          cache-from: type=local,src=/var/lib/docker/cache
           build-args: |
             BUILD_HASH=${{ github.sha }}
           tags: ${{ steps.meta.outputs.tags }}
@@ -78,7 +79,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    
+
     needs: build-main-image # Dependency: Runs after build-main-image completes or fails
     if: failure() # Condition: Only runs if the previous job failed
     steps:
