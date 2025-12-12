@@ -25,9 +25,9 @@ sys.path.append(str(backend_dir))
 # Initialize HTTPBearer for token extraction
 bearer_security = HTTPBearer(auto_error=False)
 
-# Simplified OAuth token extraction - we only need the Graph API access token
+# OAuth token extraction headers - K8s vs local development
 GRAPH_ACCESS_TOKEN_HEADER = os.getenv(
-    "GRAPH_ACCESS_TOKEN_HEADER", "X-Auth-Request-Access-Token"
+    "GRAPH_ACCESS_TOKEN_HEADER", "x-forwarded-access-token"  # K8s OAuth2 proxy header
 )
 
 
