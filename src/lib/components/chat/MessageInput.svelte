@@ -1139,7 +1139,10 @@
 							{/if}
 
 							{#if files.length > 0}
-								<div class="mx-2 mt-2.5 pb-1.5 flex items-center flex-wrap gap-2">
+								<div
+									class="mx-2 mt-2.5 pb-1.5 flex items-center flex-wrap gap-2"
+									dir={$settings?.chatDirection ?? 'auto'}
+								>
 									{#each files as file, fileIdx}
 										{#if file.type === 'image'}
 											<div class=" relative group">
