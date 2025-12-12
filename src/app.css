@@ -95,11 +95,11 @@ textarea::placeholder {
 }
 
 .input-prose {
-	@apply prose dark:prose-invert prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 whitespace-pre-line text-body-4 text-gray-50;
+	@apply prose dark:prose-invert prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 whitespace-pre-line text-body-4 text-gray-900 dark:text-gray-50;
 }
 
 /* Glass Morphism Styles */
-.glass-callout {
+.glass-callout-dark {
 	background: rgba(39, 40, 44, 0.2);
 	box-shadow: 
 		4px 4px 20px rgba(0, 0, 0, 0.1),
@@ -108,6 +108,25 @@ textarea::placeholder {
 	backdrop-filter: blur(10px);
 	border-radius: 40px 40px 40px 4px;
 }
+.glass-callout {
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: flex-start;
+	padding: 20px 28px;
+	gap: 16px;
+
+	background: rgba(253, 254, 254, 0.5);
+	box-shadow: 4px 4px 20px rgba(0, 0, 0, 0.1), inset 2px 2px 16px rgba(206, 212, 229, 0.1);
+	backdrop-filter: blur(10px);
+	border-radius: 20px 20px 20px 4px;
+
+	flex: none;
+	order: 0;
+	flex-grow: 0;
+}
+
 
 .glass-box {
 	background: rgba(39, 40, 44, 0.2);
@@ -469,7 +488,7 @@ input[type='number'] {
 	margin: 0 2px;
 	font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace !important;
 	font-size: 0.95em;
-	color: white;
+	color: #000;
 	box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.05);
 }
 
@@ -483,7 +502,7 @@ input[type='number'] {
 	.math-code-input {
 		background-color: rgba(96, 165, 250, 0.12) !important;
 		border-color: rgba(96, 165, 250, 0.4);
-		color: #93c5fd;
+		color: #fff;
 		box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.08);
 	}
 }

@@ -320,7 +320,7 @@
 {#if $user}
 	<div class="app relative">
 		<div
-			class=" text-gray-100 bg-gray-950  h-screen max-h-[100dvh] overflow-auto flex flex-row justify-end"
+			class=" text-gray-100 bg-[#E8EAF3] dark:bg-gray-950  h-screen max-h-[100dvh] overflow-auto flex flex-row justify-end"
 		>
 			{#if !['user', 'admin'].includes($user?.role)}
 				<AccountPending />
@@ -380,7 +380,9 @@
 					</div>
 				{/if}
 
-				<Sidebar />
+				{#if !$page.url.pathname.startsWith('/dashboard')}
+					<Sidebar />
+				{/if}
 
 				{#if loaded}
 					<slot />

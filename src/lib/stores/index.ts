@@ -297,3 +297,12 @@ export type SessionUser = {
 	role: string;
 	profile_image_url: string;
 };
+
+// Helper function to check if user has instructor permissions
+export function isInstructor(user: SessionUser | undefined): boolean {
+	// For now, admin includes instructor permissions
+	return user?.role === 'admin';
+
+	// Easy to refactor later to:
+	// return user?.role === 'admin' || user?.role === 'instructor';
+}

@@ -406,7 +406,7 @@
 		<a
 			id="sidebar-chat-item"
 			class="w-full flex items-center py-[2px] px-1 gap-2 h-[25px] rounded-xl whitespace-nowrap text-ellipsis {id ===
-			$chatId || confirmEdit
+				$chatId || confirmEdit
 				? 'bg-gray-500/30 dark:bg-gray-500/30'
 				: selected
 					? 'bg-gray-500/30 dark:bg-gray-500/30'
@@ -443,9 +443,9 @@
 				<div
 					dir="auto"
 					class="text-sm leading-[21px] font-normal text-left self-center overflow-hidden w-full truncate {id ===
-					$chatId || selected
-						? 'text-white dark:text-white'
-						: 'text-[#8D96AD] dark:text-[#8D96AD]'}"
+						$chatId || selected
+						? 'text-gray-800 dark:text-[#8D96AD]'
+						: 'text-gray-800 dark:text-[#8D96AD]'}"
 				>
 					{title}
 				</div>
@@ -454,39 +454,42 @@
 	{/if}
 
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
-	<div
-		id="sidebar-chat-item-menu"
-		class="{id === $chatId || confirmEdit || selected
-			? 'visible'
-			: 'invisible group-hover:visible'} absolute right-1 top-0 h-[25px] flex items-center pr-1 pl-5 bg-linear-to-l {id ===
-		$chatId || confirmEdit || selected
-			? ''
-			: ''} items-center h-full"
-		on:mouseenter={(e) => {
-			mouseOver = true;
-		}}
-		on:mouseleave={(e) => {
-			mouseOver = false;
-		}}
-	>
-		{#if confirmEdit}
-			<div
-				class="flex self-center items-center space-x-1.5 z-10 translate-y-[0.5px] -translate-x-[0.5px]"
-			>
-				<Tooltip content={$i18n.t('Generate')}>
-					<button
-						class=" self-center dark:hover:text-white transition disabled:cursor-not-allowed"
-						id="generate-title-button"
-						disabled={generating}
-						on:mouseenter={() => {
-							ignoreBlur = true;
-						}}
-					>
-						<Sparkles strokeWidth="2" />
-					</button>
-				</Tooltip>
-			</div>
-		{:else if shiftKey && mouseOver}
+	<div class="flex flex-row absolute right-1 top-0 h-[25px] items-center pr-1 pl-5 bg-linear-to-l {id ===
+				$chatId ||
+			confirmEdit ||
+			selected
+				? ''
+				: ''} ">
+		<div
+			id="sidebar-chat-item-menu "
+			class="{id === $chatId || confirmEdit || selected
+				? 'visible'
+				: 'invisible group-hover:visible'} items-center"
+			on:mouseenter={(e) => {
+				mouseOver = true;
+			}}
+			on:mouseleave={(e) => {
+				mouseOver = false;
+			}}
+		>
+			{#if confirmEdit}
+				<div
+					class="flex self-center items-center space-x-1.5 z-10 translate-y-[0.5px] -translate-x-[0.5px]"
+				>
+					<Tooltip content={$i18n.t('Generate')}>
+						<button
+							class=" self-center dark:hover:text-white transition disabled:cursor-not-allowed"
+							id="generate-title-button"
+							disabled={generating}
+							on:mouseenter={() => {
+								ignoreBlur = true;
+							}}
+						>
+							<Sparkles strokeWidth="2" />
+						</button>
+					</Tooltip>
+				</div>
+				<!-- {:else if shiftKey && mouseOver}
 			<div class=" flex items-center self-center space-x-1.5">
 				<Tooltip content={$i18n.t('Archive')} className="flex items-center">
 					<button
@@ -511,93 +514,93 @@
 						<GarbageBin strokeWidth="2" />
 					</button>
 				</Tooltip>
-			</div>
-		{:else}
-			<div class="flex self-center z-10 items-end gap-0.5">
-				<Tooltip content={bookmarked ? $i18n.t('Remove Bookmark') : $i18n.t('Add Bookmark')}>
-					<button
-						aria-label="Bookmark"
-						class="self-center dark:hover:text-white transition {bookmarked
-							? 'text-yellow-500'
-							: ''}"
-						on:click={toggleBookmark}
-					>
-						{#if bookmarked}
-							<BookmarkSolid className="size-4" />
-						{:else}
-							<Bookmark className="size-4" strokeWidth="2" />
-						{/if}
-					</button>
-				</Tooltip>
-
-				<ChatMenu
-					chatId={id}
-					cloneChatHandler={() => {
-						cloneChatHandler(id);
-					}}
-					shareHandler={() => {
-						showShareChatModal = true;
-					}}
-					{moveChatHandler}
-					archiveChatHandler={() => {
-						archiveChatHandler(id);
-					}}
-					{renameHandler}
-					deleteHandler={() => {
-						showDeleteConfirm = true;
-					}}
-					onClose={() => {
-						dispatch('unselect');
-					}}
-					on:change={async () => {
-						dispatch('change');
-					}}
-					on:tag={(e) => {
-						dispatch('tag', e.detail);
-					}}
-				>
-					<button
-						aria-label="Chat Menu"
-						class=" self-center dark:hover:text-white transition m-0"
-						on:click={() => {
-							dispatch('select');
+			</div> -->
+			{:else}
+				<div class="flex self-center z-10 items-end gap-0.5">
+					<ChatMenu
+						chatId={id}
+						cloneChatHandler={() => {
+							cloneChatHandler(id);
 						}}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
-							/>
-						</svg>
-					</button>
-				</ChatMenu>
-
-				{#if id === $chatId}
-					<!-- Shortcut support using "delete-chat-button" id -->
-					<button
-						id="delete-chat-button"
-						class="hidden"
-						on:click={() => {
+						shareHandler={() => {
+							showShareChatModal = true;
+						}}
+						{moveChatHandler}
+						archiveChatHandler={() => {
+							archiveChatHandler(id);
+						}}
+						{renameHandler}
+						deleteHandler={() => {
 							showDeleteConfirm = true;
 						}}
+						onClose={() => {
+							dispatch('unselect');
+						}}
+						on:change={async () => {
+							dispatch('change');
+						}}
+						on:tag={(e) => {
+							dispatch('tag', e.detail);
+						}}
 					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
+						<button
+							aria-label="Chat Menu"
+							class=" self-center dark:hover:text-white transition m-0 text-gray-900 dark:text-gray-400"
+							on:click={() => {
+								dispatch('select');
+							}}
 						>
-							<path
-								d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
-							/>
-						</svg>
-					</button>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 16 16"
+								fill="currentColor"
+								class="w-4 h-4"
+							>
+								<path
+									d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
+								/>
+							</svg>
+						</button>
+					</ChatMenu>
+
+					{#if id === $chatId}
+						<!-- Shortcut support using "delete-chat-button" id -->
+						<button
+							id="delete-chat-button"
+							class="hidden"
+							on:click={() => {
+								showDeleteConfirm = true;
+							}}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 16 16"
+								fill="currentColor"
+								class="w-4 h-4"
+							>
+								<path
+									d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
+								/>
+							</svg>
+						</button>
+					{/if}
+				</div>
+			{/if}
+		</div>
+		<Tooltip content={bookmarked ? $i18n.t('Remove Bookmark') : $i18n.t('Add Bookmark')}>
+			<button
+				aria-label="Bookmark"
+				class="self-center dark:hover:text-white transition {bookmarked
+					? 'text-gray-900'
+					: 'text-gray-900 dark:text-gray-400'}"
+				on:click={toggleBookmark}
+			>
+				{#if bookmarked}
+					<BookmarkSolid className="size-4" />
+				{:else}
+					<Bookmark className="size-4" strokeWidth="2" />
 				{/if}
-			</div>
-		{/if}
+			</button>
+		</Tooltip>
 	</div>
 </div>

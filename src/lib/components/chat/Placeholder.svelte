@@ -151,10 +151,10 @@
 							{$i18n.t('Hello, {{name}}', { name: $user?.name })}
 						{/if}
 					</div> -->
-					<div class="text-body-2 text-gray-50">
+					<div class="text-body-2 text-gray-900 dark:text-gray-50">
 						안녕하세요! 공업수학 AI 튜터입니다.
 					</div>
-					<div class="text-title-1 text-gray-50">
+					<div class="text-title-1 text-gray-900 dark:text-gray-50">
 						궁금한 것이 있으시면 언제든지 물어보세요.
 					</div>
 				</div>
@@ -244,6 +244,9 @@
 		</div>
 	{:else}
 		<div class="mx-auto max-w-5xl font-primary mt-2" in:fade={{ duration: 200, delay: 200 }}>
+			<div class="text-title-4 text-gray-900 mt-8">
+				이번 주 취약 개념 Top 3
+			</div>
 			<div class="mx-5">
 				<Suggestions
 					suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
@@ -251,6 +254,17 @@
 						$config?.default_prompt_suggestions ??
 						[]}
 					inputValue={prompt}
+					{onSelect}
+				/>
+			</div>
+			<div class="mx-5">
+				<Suggestions
+					suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
+						models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
+						$config?.default_prompt_suggestions ??
+						[]}
+					inputValue={prompt}
+					suggestionTitle={$i18n.t('전체 학생')}
 					{onSelect}
 				/>
 			</div>

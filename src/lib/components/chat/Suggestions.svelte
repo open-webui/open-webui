@@ -7,6 +7,7 @@
 
 	const i18n = getContext('i18n');
 
+	export let suggestionTitle = '개인별 진도';
 	export let suggestionPrompts = [];
 	export let className = '';
 	export let inputValue = '';
@@ -66,11 +67,11 @@
 </script>
 
 <div
-	class="mb-4 flex gap-1 text-xs font-medium items-center text-gray-600 dark:text-gray-400 w-full justify-center mt-12"
+	class="mb-1 flex gap-1 text-xs font-medium items-center text-gray-600 dark:text-gray-400 w-full justify-center mt-6"
 >
 	{#if filteredPrompts.length > 0}
 		<!-- <Bolt /> -->
-		<p class="text-body-3-medium text-gray-50">이번 주 취약 개념 Top 3</p>
+		<p class="text-body-3-medium text-[#1A1B1C] dark:text-gray-50">{suggestionTitle}</p>
 		<!-- {$i18n.t('Suggested')} -->
 	{:else}
 		<!-- Keine Vorschläge -->
@@ -85,11 +86,16 @@
 	{/if}
 </div>
 
-<div class="w-full">
+<div class="w-full py-4">
 	{#if filteredPrompts.length > 0}
-		<div role="list" class="flex gap-4 overflow-x-auto pb-2 scrollbar-thin {className}">
+		<div role="list" class="flex gap-4 overflow-x-auto pb-2 scrollbar-thin {className} px-12 pb-4">
 			{#each filteredPrompts as prompt, idx (prompt.id || `${prompt.content}-${idx}`)}
-				<div class="waterfall suggestion-card" style="animation-delay: {idx * 60}ms">
+				<div
+					class="waterfall box-border flex flex-col items-start p-5 gap-4 min-w-[270px] w-[270px]
+						bg-[rgba(253,254,254,0.7)] dark:bg-[rgba(39,40,44,0.5)]
+						shadow-lg rounded-2xl"
+					style="animation-delay: {idx * 60}ms"
+				>
 					<!-- Date Info -->
 					<div class="flex items-center gap-1">
 						<svg
@@ -98,23 +104,24 @@
 							viewBox="0 0 20 20"
 							fill="none"
 							xmlns="http://www.w3.org/2000/svg"
+							class="clock-icon"
 						>
 							<path
 								d="M10 5V10L13 13"
-								stroke="#B4BCD0"
+								class="stroke-[#596172] dark:stroke-[#B4BCD0]"
 								stroke-width="1.5"
 								stroke-linecap="round"
 								stroke-linejoin="round"
 							/>
-							<circle cx="10" cy="10" r="7" stroke="#B4BCD0" stroke-width="1.5" />
+							<circle cx="10" cy="10" r="7" class="stroke-[#596172] dark:stroke-[#B4BCD0]" stroke-width="1.5" />
 						</svg>
-						<span class="text-xs text-[#B4BCD0]">3일 전</span>
+						<span class="text-xs text-[#596172] dark:text-[#B4BCD0]">3일 전</span>
 					</div>
 
 					<!-- Content -->
 					<div class="flex flex-col gap-2">
 						{#if prompt.title && prompt.title[0] !== ''}
-							<div class="text-base font-normal text-white line-clamp-1 w-full">
+							<div class="text-base font-normal text-[#1A1B1C] dark:text-white line-clamp-1 w-full">
 								{prompt.title[0]}
 							</div>
 							<div class="flex items-center gap-1 text-xs text-[#8D96AD]">
@@ -147,7 +154,7 @@
 								<span class="line-clamp-1">{prompt.title[1]}</span>
 							</div>
 						{:else}
-							<div class="text-base font-normal text-white line-clamp-1">
+							<div class="text-base font-normal text-[#1A1B1C] dark:text-white line-clamp-1">
 								{prompt.content}
 							</div>
 							<div class="flex items-center gap-1 text-xs text-[#8D96AD]">
@@ -182,14 +189,14 @@
 						{/if}
 					</div>
 					<!-- Divider -->
-					<div class="border-t w-full h-0 border-gray-500/30"></div>
+					<div class="border-t w-full h-0 border-[rgba(206,212,229,0.2)] dark:border-gray-500/30"></div>
 
 					<!-- Action Buttons -->
 					<div class="flex items-center justify-between w-full">
 						<!-- Left: X and Check buttons -->
 						<div class="flex gap-2">
 							<button
-								class="action-button dismiss-button"
+								class="w-5 h-5 p-0 border-none bg-transparent cursor-pointer flex items-center justify-center transition-transform duration-200 hover:scale-110 active:scale-95"
 								on:click|stopPropagation={() => handleDismiss(prompt)}
 								aria-label="Dismiss"
 							>
@@ -202,14 +209,14 @@
 								>
 									<path
 										d="M5 5L15 15M5 15L15 5"
-										stroke="#DB576D"
+										stroke="#FF4D6A"
 										stroke-width="2"
 										stroke-linecap="round"
 									/>
 								</svg>
 							</button>
 							<button
-								class="action-button complete-button"
+								class="w-5 h-5 p-0 border-none bg-transparent cursor-pointer flex items-center justify-center transition-transform duration-200 hover:scale-110 active:scale-95"
 								on:click|stopPropagation={() => handleComplete(prompt)}
 								aria-label="Complete"
 							>
@@ -233,8 +240,13 @@
 						</div>
 
 						<!-- Right: Practice button -->
-						<button class="practice-button" on:click={() => handlePractice(prompt)}>
-							<span>바로 연습</span>
+						<button
+							class="flex flex-row items-center py-1 pl-4 pr-3 gap-1 bg-[#076EF4] rounded-full border-none cursor-pointer
+								font-['Pretendard',sans-serif] font-normal text-sm leading-[21px] text-[#FDFEFE]
+								transition-all duration-200 hover:bg-[#0558c7] hover:-translate-y-px active:translate-y-0"
+							on:click={() => handlePractice(prompt)}
+						>
+							<span>복습하기</span>
 							<svg
 								width="20"
 								height="20"
@@ -244,7 +256,7 @@
 							>
 								<path
 									d="M7 4L13 10L7 16"
-									stroke="white"
+									stroke="#FDFEFE"
 									stroke-width="2"
 									stroke-linecap="round"
 									stroke-linejoin="round"
@@ -277,79 +289,6 @@
 		animation-duration: 200ms;
 		animation-fill-mode: forwards;
 		animation-timing-function: ease;
-	}
-
-	.suggestion-card {
-		box-sizing: border-box;
-		display: flex;
-		flex-direction: column;
-		align-items: flex-start;
-		padding: 20px;
-		gap: 16px;
-
-		min-width: 300px;
-		width: 300px;
-		flex-shrink: 0;
-
-		background: rgba(39, 40, 44, 0.5);
-		box-shadow: 4px 4px 20px rgba(0, 0, 0, 0.1);
-		backdrop-filter: blur(20px);
-		-webkit-backdrop-filter: blur(20px);
-		border-radius: 20px;
-	}
-
-	.action-button {
-		width: 20px;
-		height: 20px;
-		padding: 0;
-		border: none;
-		background: transparent;
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		transition: transform 0.2s ease;
-	}
-
-	.action-button:hover {
-		transform: scale(1.1);
-	}
-
-	.action-button:active {
-		transform: scale(0.95);
-	}
-
-	.practice-button {
-		display: flex;
-		flex-direction: row;
-		align-items: center;
-		padding: 4px 12px 4px 16px;
-		gap: 4px;
-
-		background: #076ef4;
-		border-radius: 9999px;
-		border: none;
-		cursor: pointer;
-
-		font-family: 'Pretendard', sans-serif;
-		font-style: normal;
-		font-weight: 400;
-		font-size: 14px;
-		line-height: 21px;
-		color: #fdfefe;
-
-		transition:
-			background-color 0.2s ease,
-			transform 0.2s ease;
-	}
-
-	.practice-button:hover {
-		background: #0558c7;
-		transform: translateY(-1px);
-	}
-
-	.practice-button:active {
-		transform: translateY(0);
 	}
 
 	/* Scrollbar styling */
