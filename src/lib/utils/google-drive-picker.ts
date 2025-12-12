@@ -1,4 +1,6 @@
-// Google Drive Picker API configuration
+declare const gapi: any;
+declare const google: any;
+
 let API_KEY = '';
 let CLIENT_ID = '';
 
@@ -144,10 +146,10 @@ export const createPicker = () => {
 							}
 
 							// Construct download URL based on MIME type
-							const mimeType = doc[google.picker.Document.MIME_TYPE];
+							const mimeType: string = doc[google.picker.Document.MIME_TYPE];
 
-							let downloadUrl;
-							let exportFormat;
+							let downloadUrl: string;
+							let exportFormat: string;
 
 							if (mimeType.includes('google-apps')) {
 								// Handle Google Workspace files
