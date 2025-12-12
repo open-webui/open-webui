@@ -98,21 +98,9 @@ class TenantsTable:
             return TenantModel.model_validate(tenant) if tenant else None
 
     def delete_tenant(self, tenant_id: str) -> None:
-        from sqlalchemy import text
         with get_db() as db:
             db.query(Tenant).filter_by(id=tenant_id).delete()
             db.commit()
-        try:
-            with get_db() as db:
-                db.execute(
-                    text(
-                        "DELETE FROM tenant_rebuild_schedule WHERE tenant_id = :tenant_id"
-                    ),
-                    {"tenant_id": tenant_id},
-                )
-                db.commit()
-        except Exception as e:
-            print(f"Warning: failed to delete tenant_rebuild_schedule row for {tenant_id}: {e}")
 
 
 Tenants = TenantsTable()
