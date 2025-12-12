@@ -871,7 +871,9 @@ export const processDetails = (content) => {
 				attributes[attributeMatch[1]] = attributeMatch[2];
 			}
 
-			content = content.replace(match, `"${attributes.result}"`);
+			if (attributes.result) {
+				content = content.replace(match, `"${attributes.result}"`);
+			}
 		}
 	}
 
