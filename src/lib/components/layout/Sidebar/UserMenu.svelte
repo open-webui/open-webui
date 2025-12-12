@@ -64,7 +64,7 @@
 
 	<slot name="content">
 		<DropdownMenu.Content
-			class="w-full {className} flex flex-col items-start p-5 gap-2 bg-[rgba(113,122,143,0.3)] shadow-[4px_4px_20px_rgba(0,0,0,0.1)] backdrop-blur-[20px] rounded-[20px] rounded-bl-[4px] z-50 text-white text-xs border-0"
+			class="w-full {className} flex flex-col items-start p-5 gap-2 bg-gray-50 dark:bg-[rgba(113,122,143,0.3)] shadow-[4px_4px_20px_rgba(0,0,0,0.1)] backdrop-blur-[20px] rounded-[20px] rounded-bl-[4px] z-50 text-gray-900 dark:text-white text-xs border-0"
 			sideOffset={4}
 			side="top"
 			align="end"

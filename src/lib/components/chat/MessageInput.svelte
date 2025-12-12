@@ -1030,6 +1030,7 @@
 						<div
 							class=" absolute -top-12 left-0 right-0 flex justify-center z-30 pointer-events-none"
 						>
+							<!-- svelte-ignore a11y_consider_explicit_label -->
 							<button
 								class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
 								on:click={() => {
@@ -1304,7 +1305,7 @@
 									>
 										<div
 											id="input-menu-button"
-											class="w-12 h-12 rounded-full bg-[rgba(39,40,44,0.2)] shadow-[4px_4px_20px_rgba(0,0,0,0.1),inset_2px_2px_6px_rgba(206,212,229,0.2),inset_6px_6px_25px_rgba(206,212,229,0.15)] backdrop-blur-[10px] flex justify-center items-center hover:bg-[rgba(39,40,44,0.3)] transition outline-hidden focus:outline-hidden"
+											class="w-12 h-12 rounded-full text-gray-900 bg-white/50 dark:bg-[rgba(39,40,44,0.2)] shadow-[4px_4px_20px_rgba(0,0,0,0.1),inset_2px_2px_6px_rgba(206,212,229,0.2),inset_6px_6px_25px_rgba(206,212,229,0.15)] backdrop-blur-[10px] flex justify-center items-center hover:bg-[rgba(39,40,44,0.3)] transition outline-hidden focus:outline-hidden"
 										>
 											<PlusAlt className="size-10" />
 										</div>
@@ -1315,7 +1316,7 @@
 								<div
 									class="flex-1 flex {isMultiline
 										? 'flex-col-reverse items-start'
-										: 'flex-row items-center'} px-7 py-1.5 min-h-12 bg-[rgba(39,40,44,0.2)] shadow-[4px_4px_20px_rgba(0,0,0,0.1),inset_2px_2px_6px_rgba(206,212,229,0.2),inset_6px_6px_25px_rgba(206,212,229,0.15)] backdrop-blur-[10px] rounded-4xl gap-2"
+										: 'flex-row items-center'} px-7 py-1.5 min-h-12 bg-white/50 dark:bg-[rgba(39,40,44,0.2)] shadow-[4px_4px_20px_rgba(0,0,0,0.1),inset_2px_2px_6px_rgba(206,212,229,0.2),inset_6px_6px_25px_rgba(206,212,229,0.15)] backdrop-blur-[10px] rounded-4xl gap-2"
 								>
 									<!-- Dropdowns Section -->
 									<div class="flex-shrink-0 flex items-center gap-1.5 {isMultiline ? 'w-full' : ''}">
@@ -1413,7 +1414,7 @@
 									<!-- Editor Section -->
 									<div class="flex-grow {isMultiline ? 'w-full' : ''}">
 										<div
-											class="w-full scrollbar-hidden rtl:text-right ltr:text-left bg-transparent text-gray-50 text-body-3 outline-hidden h-fit max-h-96 overflow-auto"
+											class="w-full scrollbar-hidden rtl:text-right ltr:text-left bg-transparent text-gray-900 dark:text-gray-50 text-body-3 outline-hidden h-fit max-h-96 overflow-auto"
 											id="chat-input-container"
 										>
 										{#if suggestions}

@@ -624,20 +624,20 @@
 		id="message-{message.id}"
 		dir={$settings.chatDirection}
 	>
-		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 hidden @lg:flex mt-1 `}>
+		<!-- <div class={`shrink-0 ltr:mr-3 rtl:ml-3 hidden @lg:flex mt-1 `}>
 			<ProfileImage
 				src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model?.id}&lang=${$i18n.language}`}
 				className={'size-8 assistant-message-profile-image'}
 			/>
-		</div>
+		</div> -->
 
 		<div class="flex-auto w-0 pl-1 relative">
 			<Name>
-				<Tooltip content={model?.name ?? message.model} placement="top-start">
-					<span id="response-message-model-name" class="line-clamp-1 text-gray-100">
+				<!-- <Tooltip content={model?.name ?? message.model} placement="top-start">
+					<span id="response-message-model-name" class="line-clamp-1 text-gra-900 dark:text-gray-100">
 						{model?.name ?? message.model}
 					</span>
-				</Tooltip>
+				</Tooltip> -->
 
 				{#if message.timestamp}
 					<div
@@ -767,7 +767,7 @@
 
 						<div
 							bind:this={contentContainerElement}
-							class="w-[80%] flex flex-col relative {edit ? 'hidden' : ''} glass-callout text-gray-100 p-4"
+							class="w-[80%] flex flex-col relative {edit ? 'hidden' : ''}  glass-callout dark:glass-callout-dark text-gray-900 dark:text-gray-100 p-4"
 							id="response-content-container"
 						>
 							{#if message.content === '' && !message.error && ((model?.info?.meta?.capabilities?.status_updates ?? true) ? (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 || (message?.statusHistory?.at(-1)?.hidden ?? false) : true)}

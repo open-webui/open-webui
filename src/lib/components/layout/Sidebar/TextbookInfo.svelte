@@ -133,8 +133,8 @@
 <div class="px-2 mt-0.5">
 	<!-- Header -->
 	<div class="flex items-center justify-between py-2 px-2">
-		<div class="flex items-center gap-2">
-			<div class="text-gray-50">
+		<div class="flex items-center gap-2 text-gray-900 dark:text-gray-50">
+			<div class="">
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					fill="none"
@@ -150,7 +150,7 @@
 					/>
 				</svg>
 			</div>
-			<div class="text-sm font-medium text-gray-50">교재 정보</div>
+			<div class="text-sm font-medium ">교재 정보</div>
 		</div>
 	</div>
 
@@ -158,26 +158,28 @@
 	<div class="flex flex-col gap-2 mt-2">
 			<!-- Textbook Card -->
 			<div
-				class="mx-2 px-4 py-3 rounded-2xl bg-gray-800/50 dark:bg-gray-800/50 border border-gray-700/50"
+				class="mx-2 px-5 py-4 rounded-[20px] bg-[rgba(253,254,254,0.7)] border-0 shadow-[4px_4px_20px_rgba(0,0,0,0.1)] backdrop-blur-[20px]"
 			>
-				<div class="text-sm font-semibold text-white mb-2">{textbookData.title}</div>
-				<div class="text-xs text-gray-400">저자: {textbookData.author}</div>
-				<div class="text-xs text-gray-400">판: {textbookData.edition}</div>
+				<div class="w-[220px] text-sm font-normal text-[#1A1B1C] dark:text-white mb-1">{textbookData.title}</div>
+				<div class="flex flex-col gap-1 w-[220px]">
+					<div class="text-xs font-normal text-[#596172] dark:text-gray-400">저자: {textbookData.author}</div>
+					<div class="text-xs font-normal text-[#596172] dark:text-gray-400">판: {textbookData.edition}</div>
+				</div>
 			</div>
 
 			<!-- Sections -->
 			{#each textbookData.sections as section}
 				<div class="mx-2">
-					<div class="{expandedSections[section.id] ? 'bg-[rgba(39,40,44,0.5)] shadow-[4px_4px_20px_rgba(0,0,0,0.1)] backdrop-blur-[20px] rounded-[20px]' : ''}">
+					<div class="{expandedSections[section.id] ? 'bg-[rgba(253,254,254,0.5)] shadow-[4px_4px_20px_rgba(0,0,0,0.1),inset_2px_2px_16px_rgba(206,212,229,0.1)] backdrop-blur-[10px] rounded-2xl' : ''}">
 						<!-- Section Button Wrapper -->
 						<div>
 							<button
-								class="w-full h-9 flex items-center justify-between px-4 py-2 gap-2 rounded-full bg-[rgba(39,40,44,0.2)] backdrop-blur-[10px] shadow-[4px_4px_20px_rgba(0,0,0,0.1),inset_2px_2px_6px_rgba(206,212,229,0.2),inset_6px_6px_25px_rgba(206,212,229,0.15)] hover:bg-[rgba(39,40,44,0.3)] transition text-left"
+								class="w-full flex items-center justify-between px-4 py-2 gap-2 rounded-full bg-[rgba(253,254,254,0.5)] shadow-[4px_4px_20px_rgba(0,0,0,0.1),inset_2px_2px_16px_rgba(206,212,229,0.1)] backdrop-blur-[10px] hover:bg-[rgba(253,254,254,0.6)] transition text-left"
 								on:click={() => toggleSection(section.id)}
 							>
-								<span class="text-xs leading-[18px] text-[#FDFEFE] font-pretendard font-normal flex-1 truncate">{section.title}</span>
+								<span class="text-xs leading-[18px] text-[#1A1B1C] dark:text-[#FDFEFE] font-pretendard font-normal flex-1 truncate">{section.title}</span>
 								<ChevronDown
-									className="size-5 flex-shrink-0 transition-transform duration-200 {expandedSections[section.id]
+									className="size-5 flex-shrink-0 transition-transform duration-200 text-[#1A1B1C] dark:text-[#FDFEFE] {expandedSections[section.id]
 										? 'rotate-180'
 										: ''}"
 									strokeWidth="1.5"
@@ -187,18 +189,19 @@
 
 						<!-- Subsections -->
 						{#if expandedSections[section.id]}
-							<div class="w-full flex flex-col items-start px-1 py-1 gap-1 scale-y-[-1]" transition:slide={{ duration: 200 }}>
+							<div class="w-full flex flex-col items-start px-1 py-1 gap-1" transition:slide={{ duration: 200 }}>
 								{#each section.subsections as subsection}
 									<button
-										class="w-full flex items-center px-1 py-4 h-[25px] rounded-xl hover:bg-white/10 transition text-left scale-y-[-1]"
+										class="w-full flex items-center px-1 py-4 h-[25px] rounded-xl hover:bg-black/10 dark:hover:bg-white/10 transition text-left"
 										on:click={() => selectSubsection(subsection)}
 									>
-										<span class="text-caption text-gray-200 flex-1 truncate">{subsection.title}</span>
+										<span class="text-xs text-[#1A1B1C] dark:text-gray-200 flex-1 truncate">{subsection.title}</span>
 									</button>
 								{/each}
 							</div>
 						{/if}
 					</div>
+				
 				</div>
 			{/each}
 	</div>

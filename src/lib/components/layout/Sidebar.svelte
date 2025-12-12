@@ -25,7 +25,8 @@
 		isApp,
 		models,
 		selectedFolder,
-		WEBUI_NAME
+		WEBUI_NAME,
+		isInstructor
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
@@ -58,6 +59,7 @@
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Search from '../icons/Search.svelte';
+	import DashboardToggleSwitch from '../dashboard/DashboardToggleSwitch.svelte';
 	import SearchModal from './SearchModal.svelte';
 	import FolderModal from './Sidebar/Folders/FolderModal.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
@@ -601,7 +603,7 @@
 
 {#if !$mobile && !$showSidebar}
 	<div
-		class="px-4 pt-4 pb-2 flex flex-col justify-between text-gray-50 h-full z-10 transition-all bg-gray-900/50"
+		class="px-4 pt-4 pb-2 flex flex-col justify-between bg-gray-50/70 text-gray-900 dark:text-gray-50 h-full z-10 transition-all dark:bg-gray-900/50"
 		id="sidebar"
 	>
 		<!-- Top: HYU Logo -->
@@ -626,7 +628,7 @@
 				<button
 					class="flex rounded-xl size-8.5 justify-center items-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition {isWindows
 						? 'cursor-pointer'
-						: 'cursor-[e-resize]'}"
+						: 'cursor-[e-resize]'} text-gray-900 dark:text-gray-50"
 					on:click={() => {
 						showSidebar.set(!$showSidebar);
 					}}
@@ -671,7 +673,7 @@
 		bind:this={navElement}
 		id="sidebar"
 		class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
-			? `${$mobile ? 'bg-gray-50 dark:bg-gray-950' : 'bg-gray-900/50'} z-50`
+			? `${$mobile ? 'bg-gray-50 dark:bg-gray-950' : 'bg-gray-50 dark:bg-gray-950' } z-50`
 			: ' bg-transparent z-0 '} {$isApp
 			? `ml-[4.5rem] md:ml-0 `
 			: ' transition-all duration-300 '} shrink-0 text-gray-50 text-sm fixed top-0 left-0 overflow-x-hidden
@@ -685,43 +687,54 @@
 				: 'invisible'}"
 		>
 			<div
-				class="sidebar px-4 pt-4 pb-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 -mb-3"
+				class="sidebar px-4 pt-4 pb-1.5 flex flex-col gap-3 text-gray-600 dark:text-gray-400 sticky top-0 z-10"
 			>
-				<a
-					class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition no-drag-region"
-					href="https://hanyang.ac.kr/"
-					draggable="false"
-					on:click={newChatHandler}
-				>
-					<HYULogo36 />
-				</a>
+				<!-- Header Row -->
+				<div class="flex items-center space-x-1">
+					<a
+						class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition no-drag-region"
+						href="https://hanyang.ac.kr/"
+						draggable="false"
+					>
+						<HYULogo36 />
+					</a>
 
-				<a href="/" class="flex flex-1 px-1.5" on:click={newChatHandler}>
 					<div
 						id="sidebar-webui-name"
-						class=" self-center font-medium text-gray-50 dark:text-white font-primary"
+						class="flex flex-1 px-1.5 self-center font-medium text-gray-900 dark:text-white font-primary"
 					>
 						HYU AI Tutoring Assistant
 					</div>
-				</a>
-				<!-- <Tooltip
-					content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
-					placement="bottom"
+				</div>
+
+				<!-- New Chat Button -->
+				<a
+					href="/"
+					class="flex flex-row justify-center items-center py-1 pl-5 pr-7 gap-2
+						w-full h-[35px] bg-[#076EF4] rounded-full
+						hover:bg-[#0558c7] transition-colors duration-200 no-drag-region"
+					draggable="false"
+					on:click={newChatHandler}
 				>
-					<button
-						class="flex rounded-xl size-8.5 justify-center items-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition {isWindows
-							? 'cursor-pointer'
-							: 'cursor-[w-resize]'}"
-						on:click={() => {
-							showSidebar.set(!$showSidebar);
-						}}
-						aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+					<svg
+						width="24"
+						height="24"
+						viewBox="0 0 24 24"
+						fill="none"
+						xmlns="http://www.w3.org/2000/svg"
 					>
-						<div class=" self-center p-1.5">
-							<Sidebar />
-						</div>
-					</button>
-				</Tooltip> -->
+						<path
+							d="M12 5V19M5 12H19"
+							stroke="#FDFEFE"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
+					</svg>
+					<span class="text-body-3 text-[#FDFEFE]">
+						새 채팅
+					</span>
+				</a>
 
 				<div
 					class="{scrollTop > 0
@@ -940,7 +953,7 @@
 						<button
 							class="p-2 rounded-lg transition {activeTab === 'textbook'
 								? 'bg-gray-700/70 text-white'
-								: 'text-gray-400 hover:bg-gray-800/30 hover:text-gray-200'}"
+								: 'text-gray-900 dark:text-gray-400 hover:bg-gray-800/30 hover:text-gray-200'}"
 							on:click={() => {
 								activeTab = 'textbook';
 							}}
@@ -968,7 +981,7 @@
 						<button
 							class="p-2 rounded-lg transition {activeTab === 'history'
 								? 'bg-gray-700/70 text-white'
-								: 'text-gray-400 hover:bg-gray-800/30 hover:text-gray-200'}"
+								: 'text-gray-900 dark:text-gray-400 hover:bg-gray-800/30 hover:text-gray-200'}"
 							on:click={() => {
 								activeTab = 'history';
 							}}
@@ -1014,7 +1027,7 @@
 						<!-- History Toolbar -->
 						<div class="flex items-center justify-between py-2 px-2 rounded-xl">
 						<div class="flex items-center gap-2">
-							<div class="text-gray-50 dark:text-gray-400">
+							<div class="dark:text-gray-50 text-gray-900">
 								<svg
 									width="20"
 									height="20"
@@ -1036,12 +1049,12 @@
 									<g mask="url(#mask0_191_446)">
 										<path
 											d="M5 15L3.27333 16.7267C3.03556 16.9644 2.76389 17.018 2.45833 16.8873C2.15278 16.7567 2 16.5235 2 16.1875V3.5C2 3.0875 2.14688 2.73438 2.44063 2.44063C2.73438 2.14688 3.0875 2 3.5 2H16.5C16.9125 2 17.2656 2.14688 17.5594 2.44063C17.8531 2.73438 18 3.0875 18 3.5V13.5C18 13.9125 17.8531 14.2656 17.5594 14.5594C17.2656 14.8531 16.9125 15 16.5 15H5ZM4.375 13.5H16.5V3.5H3.5V14.375L4.375 13.5ZM5.75 12H11.25C11.4625 12 11.6406 11.9285 11.7844 11.7856C11.9281 11.6427 12 11.4656 12 11.2544C12 11.0431 11.9281 10.8646 11.7844 10.7188C11.6406 10.5729 11.4625 10.5 11.25 10.5H5.75C5.5375 10.5 5.35938 10.5715 5.21563 10.7144C5.07188 10.8573 5 11.0344 5 11.2456C5 11.4569 5.07188 11.6354 5.21563 11.7812C5.35938 11.9271 5.5375 12 5.75 12ZM5.75 9.25H14.25C14.4625 9.25 14.6406 9.17854 14.7844 9.03563C14.9281 8.89271 15 8.71563 15 8.50438C15 8.29313 14.9281 8.11458 14.7844 7.96875C14.6406 7.82292 14.4625 7.75 14.25 7.75H5.75C5.5375 7.75 5.35938 7.82146 5.21563 7.96437C5.07188 8.10729 5 8.28437 5 8.49562C5 8.70687 5.07188 8.88542 5.21563 9.03125C5.35938 9.17708 5.5375 9.25 5.75 9.25ZM5.75 6.5H14.25C14.4625 6.5 14.6406 6.42854 14.7844 6.28563C14.9281 6.14271 15 5.96563 15 5.75438C15 5.54313 14.9281 5.36458 14.7844 5.21875C14.6406 5.07292 14.4625 5 14.25 5H5.75C5.5375 5 5.35938 5.07146 5.21563 5.21437C5.07188 5.35729 5 5.53437 5 5.74562C5 5.95687 5.07188 6.13542 5.21563 6.28125C5.35938 6.42708 5.5375 6.5 5.75 6.5Z"
-											fill="#FDFEFE"
+											fill="currentColor"
 										/>
 									</g>
 								</svg>
 							</div>
-							<div class="text-sm font-medium text-gray-50 dark:text-gray-50">히스토리</div>
+							<div class="text-sm font-medium text-gray-900 dark:text-gray-50">히스토리</div>
 						</div>
 
 						<div class="flex items-center gap-1">
@@ -1050,7 +1063,7 @@
 								<button
 									class="p-1.5 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-800/50 transition {showBookmarkedOnly
 										? 'text-blue-400'
-										: 'text-gray-50'}"
+										: 'text-gray-900 dark:text-gray-400'}"
 									on:click={() => {
 										showBookmarkedOnly = !showBookmarkedOnly;
 									}}
@@ -1069,7 +1082,7 @@
 								<button
 									class="p-1.5 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-800/50 transition {showHistorySearch
 										? 'text-blue-400'
-										: 'text-gray-50'}"
+										: 'text-gray-900 dark:text-gray-400'}"
 									on:click={() => {
 										showHistorySearch = !showHistorySearch;
 										if (!showHistorySearch) {
@@ -1083,7 +1096,7 @@
 							</Tooltip>
 
 							<!-- Toggle Expand/Collapse Button -->
-							<Tooltip content={historyExpanded ? '접기' : '열기'} placement="bottom">
+							<!-- <Tooltip content={historyExpanded ? '접기' : '열기'} placement="bottom">
 								<button
 									class="p-1.5 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-800/50 transition text-gray-400"
 									on:click={() => {
@@ -1097,7 +1110,7 @@
 										<ChevronDown className="size-4" strokeWidth="1.5" />
 									{/if}
 								</button>
-							</Tooltip>
+							</Tooltip> -->
 						</div>
 					</div>
 
@@ -1201,16 +1214,18 @@
 									/>
 								</div>
 								<div class="flex flex-col items-start">
-									<div class=" self-center text-body-4-medium">
+									<div class=" self-center text-body-4-medium text-gray-900 dark:text-gray-50">
 										{$user?.name}
 									</div>
-									<div class=" self-center text-caption text-gray-300">
+									<div class=" self-center text-caption text-gray-600 dark:text-gray-300">
 										{$user?.role}
 									</div>
 								</div>
 							</div>
 						</UserMenu>
 					{/if}
+
+					
 				</div>
 				<Tooltip
 					content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
@@ -1218,7 +1233,7 @@
 				>
 					<div class="flex h-full items-center justify-center">
 						<button
-							class="flex rounded-xl size-8.5 justify-center items-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition {isWindows
+							class="flex rounded-xl size-8.5 justify-center items-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition text-gray-900 dark:text-gray-50 {isWindows
 								? 'cursor-pointer'
 								: 'cursor-[w-resize]'}"
 							on:click={() => {
@@ -1233,6 +1248,12 @@
 					</div>
 				</Tooltip>
 			</div>
+			<!-- Dashboard Toggle Switch (Instructor/Admin only) -->
+					{#if $user && isInstructor($user)}
+						<div class="px-3 pb-2 pt-2 w-full flex items-center justify-center">
+							<DashboardToggleSwitch activeMode="chat" />
+						</div>
+					{/if}
 		</div>
 	</div>
 {/if}
