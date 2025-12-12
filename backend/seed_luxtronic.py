@@ -7,10 +7,14 @@ from typing import Any
 BACKEND_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BACKEND_DIR))
 
+from open_webui.internal.db import get_db
 from open_webui.models.tenants import Tenants, TenantForm, TenantUpdateForm
 from open_webui.models.users import Users
 from open_webui.models.auths import Auths
 from open_webui.utils.auth import get_password_hash
+from sqlalchemy import text
+import random
+from datetime import datetime, timedelta
 
 ENV_VAR = "LUXTRONIC_TENANT_SEED"
 
@@ -48,10 +52,18 @@ def upsert_tenant(entry: dict[str, Any]):
             Tenants.update_tenant(existing.id, TenantUpdateForm(**update_fields))
         tenant = Tenants.get_tenant_by_name(name)
         print(f"Tenant '{name}' already exists. Updating configuration.")
+        try:
+            upsert_tenant_schedule(tenant.id)
+        except Exception as e:
+            print(f"Warning: could not upsert tenant schedule for existing tenant {tenant.id}: {e}")
         return tenant
     
     tenant = Tenants.create_tenant(TenantForm(name=name, s3_bucket=s3_bucket))
     print(f"Created tenant '{name}'.")
+    try:
+        upsert_tenant_schedule(tenant.id)
+    except Exception as e:
+        print(f"Warning: could not upsert tenant schedule for new tenant {tenant.id}: {e}")
     return tenant
 
 
@@ -93,6 +105,28 @@ def upsert_user(tenant_id: str, entry: dict[str, Any]):
     )
     print(f"Created user '{email}'.")
     return user
+
+
+def upsert_tenant_schedule(tenant_id: str, interval_minutes: int = 60):
+    offset_seconds = random.randint(0, interval_minutes * 60)
+    next_run = datetime.utcnow() + timedelta(seconds=offset_seconds)
+    sql = """
+        INSERT INTO tenant_rebuild_schedule (tenant_id, interval_minutes, next_run, enabled)
+        VALUES (:tenant_id, :interval_minutes, :next_run, 1)
+        ON DUPLICATE KEY UPDATE
+            interval_minutes = VALUES(interval_minutes),
+            next_run = IFNULL(next_run, VALUES(next_run))
+    """
+    with get_db() as db:
+        db.execute(
+            text(sql),
+            {
+                "tenant_id": tenant_id,
+                "interval_minutes": interval_minutes,
+                "next_run": next_run,
+            },
+        )
+        db.commit()
 
 
 def main():
