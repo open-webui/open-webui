@@ -38,7 +38,7 @@ services:
     volumes:
       - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
     ports:
-      - 8888:8888 # Prometheus metrics exposed by the Collector
+      - 8889:8889 # Prometheus metrics exposed
       - 13133:13133 # health_check extension
       - 4318:4318 # OTLP http receiver
 
