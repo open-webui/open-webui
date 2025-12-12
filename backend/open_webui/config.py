@@ -3462,10 +3462,16 @@ COMFYUI_WORKFLOW = PersistentConfig(
     os.getenv("COMFYUI_WORKFLOW", COMFYUI_DEFAULT_WORKFLOW),
 )
 
+comfyui_workflow_nodes = os.getenv("COMFYUI_WORKFLOW_NODES", "")
+try:
+    comfyui_workflow_nodes = json.loads(comfyui_workflow_nodes)
+except json.JSONDecodeError:
+    comfyui_workflow_nodes = []
+
 COMFYUI_WORKFLOW_NODES = PersistentConfig(
-    "COMFYUI_WORKFLOW",
+    "COMFYUI_WORKFLOW_NODES",
     "image_generation.comfyui.nodes",
-    [],
+    comfyui_workflow_nodes,
 )
 
 IMAGES_OPENAI_API_BASE_URL = PersistentConfig(
