@@ -1141,6 +1141,8 @@
 	"Share Chat": "Partage de chat",
 	"Share to OpenWebUI Community": "Partager avec la communauté OpenWebUI",
 	"Share your feedback to help us improve.": "Partagez vos commentaires pour nous aider à nous améliorer.",
+	"SharePoint access is not available in local development environment. This feature requires OAuth2 proxy integration which is only available in deployed environments (dev/staging/production). To test SharePoint functionality, please use the dev, staging, or production environments where proper Microsoft Graph authentication is configured. For local testing, check the extract_graph_access_token function to enable the local testing mechanism.": "L'accès à SharePoint n'est pas disponible dans l'environnement de développement local. Cette fonctionnalité nécessite l'intégration du proxy OAuth2 qui n'est disponible que dans les environnements déployés (dev/staging/production). Pour tester la fonctionnalité SharePoint, veuillez utiliser les environnements de développement, de préparation ou de production où l'authentification Microsoft Graph appropriée est configurée. Pour les tests locaux, vérifiez la fonction extract_graph_access_token pour activer le mécanisme de test local.",
+	"SharePoint requires OAuth2 proxy (not available locally)": "SharePoint nécessite un proxy OAuth2 (non disponible localement)",
 	"Show": "Montrer",
 	"Show \"What's New\" modal on login": "Afficher la fenêtre modale « Quoi de neuf » lors de la connexion",
 	"Show Admin Details in Account Pending Overlay": "Afficher les détails de l'administrateur dans la superposition en attente du compte",

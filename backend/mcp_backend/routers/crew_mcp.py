@@ -346,7 +346,8 @@ async def run_crew_query(
                     return CrewMCPResponse(
                         result="SharePoint access is not available in local development environment. "
                         "This feature requires OAuth2 proxy integration which is only available in deployed environments (dev/staging/production). "
-                        "To test SharePoint functionality, please use the dev, staging, or production environments where proper Microsoft Graph authentication is configured.",
+                        "To test SharePoint functionality, please use the dev, staging, or production environments where proper Microsoft Graph authentication is configured. "
+                        "For local testing, check the extract_graph_access_token function to enable the local testing mechanism.",
                         tools_used=[],
                         success=False,
                         error="SharePoint requires OAuth2 proxy (not available locally)",

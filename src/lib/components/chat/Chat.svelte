@@ -1420,8 +1420,20 @@
 							);
 
 							if (crewResponse && crewResponse.result) {
-								// Update message content with CrewAI response
-								responseMessage.content = crewResponse.result;
+								// Check if the result is a SharePoint error message and translate it
+								let displayResult = crewResponse.result;
+								if (
+									displayResult.startsWith(
+										'SharePoint access is not available in local development environment'
+									) ||
+									displayResult.startsWith('SharePoint requires OAuth2 proxy')
+								) {
+									// This is a SharePoint error message that needs translation
+									displayResult = $i18n.t(crewResponse.result);
+								}
+
+								// Update message content with CrewAI response (translated if needed)
+								responseMessage.content = displayResult;
 								responseMessage.done = true;
 								responseMessage.crewAI = true; // Mark as CrewAI response
 

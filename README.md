@@ -160,6 +160,7 @@ Run the backend in a **separate terminal** to manage your workflows cleanly.
 #### 3.1 Using VS Code Integrated Terminals (Optional)
 
 - Open a new terminal in VS Code: go to `Terminal` > `New Terminal` or use the shortcut:
+
   - **Windows/Linux:** `Ctrl + Shift +`
   - **macOS:** `Cmd + Shift +`
 

@@ -1141,6 +1141,8 @@
 	"Share Chat": "",
 	"Share to OpenWebUI Community": "",
 	"Share your feedback to help us improve.": "",
+	"SharePoint access is not available in local development environment. This feature requires OAuth2 proxy integration which is only available in deployed environments (dev/staging/production). To test SharePoint functionality, please use the dev, staging, or production environments where proper Microsoft Graph authentication is configured. For local testing, check the extract_graph_access_token function to enable the local testing mechanism.": "",
+	"SharePoint requires OAuth2 proxy (not available locally)": "",
 	"Show": "",
 	"Show \"What's New\" modal on login": "",
 	"Show Admin Details in Account Pending Overlay": "",

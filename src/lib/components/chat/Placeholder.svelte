@@ -96,7 +96,7 @@
 			: sanitizeResponseContent(model?.info?.meta?.description ?? '');
 
 	// Create a reactive statement that updates descriptions when locale changes
-	$: ($i18n.language, (modelDescription = getModelDesc(models[selectedModelIdx])));
+	$: $i18n.language, (modelDescription = getModelDesc(models[selectedModelIdx]));
 
 	$: {
 		// Whenever the model changes, trigger a suggestion reshuffle
