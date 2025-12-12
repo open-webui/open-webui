@@ -1345,8 +1345,7 @@ USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_PUBLIC_SHARING = (
 
 
 USER_PERMISSIONS_NOTES_ALLOW_SHARING = (
-    os.environ.get("USER_PERMISSIONS_NOTES_ALLOW_SHARING", "False").lower()
-    == "true"
+    os.environ.get("USER_PERMISSIONS_NOTES_ALLOW_SHARING", "False").lower() == "true"
 )
 
 USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING = (
@@ -3030,6 +3029,12 @@ SEARXNG_QUERY_URL = PersistentConfig(
     "SEARXNG_QUERY_URL",
     "rag.web.search.searxng_query_url",
     os.getenv("SEARXNG_QUERY_URL", ""),
+)
+
+SEARXNG_LANGUAGE = PersistentConfig(
+    "SEARXNG_LANGUAGE",
+    "rag.web.search.searxng_language",
+    os.getenv("SEARXNG_LANGUAGE", "all"),
 )
 
 YACY_QUERY_URL = PersistentConfig(
