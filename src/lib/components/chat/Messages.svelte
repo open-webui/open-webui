@@ -63,10 +63,13 @@
 	const loadMoreMessages = async () => {
 		// scroll slightly down to disable continuous loading
 		const element = document.getElementById('messages-container');
+		if (!element) return;
 		element.scrollTop = element.scrollTop + 100;
 
 		messagesLoading = true;
-		messagesCount += 20;
+		if (messagesCount !== null) {
+			messagesCount += 20;
+		}
 
 		await tick();
 
@@ -74,17 +77,21 @@
 	};
 
 	$: if (history.currentId) {
-		let _messages = [];
+		let _messages: any[] = [];
 
-		let message = history.messages[history.currentId];
+		let message: any | null = history.messages[history.currentId];
 		while (message && (messagesCount !== null ? _messages.length <= messagesCount : true)) {
 			_messages.unshift({ ...message });
-			message = message.parentId !== null ? history.messages[message.parentId] : null;
+			const nextMessage: any | null =
+				message.parentId !== null ? history.messages[message.parentId] : null;
+			message = nextMessage;
 		}
 
 		messages = _messages;
+		messagesLoading = false;
 	} else {
 		messages = [];
+		messagesLoading = false;
 	}
 
 	$: if (autoScroll && bottomPadding) {
@@ -96,6 +103,7 @@
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
+		if (!element) return;
 		element.scrollTop = element.scrollHeight;
 	};
 
@@ -117,7 +125,7 @@
 		// Determine the correct sibling list (either parent's children or root messages)
 		let siblings;
 		if (message.parentId !== null) {
-			siblings = history.messages[message.parentId].childrenIds;
+			siblings = history.messages[message.parentId]?.childrenIds ?? [];
 		} else {
 			siblings = Object.values(history.messages)
 				.filter((msg) => msg.parentId === null)
@@ -132,10 +140,12 @@
 		// If we're navigating to a different message
 		if (message.id !== messageId) {
 			// Drill down to the deepest child of that branch
-			let messageChildrenIds = history.messages[messageId].childrenIds;
+			let messageChildrenIds = history.messages[messageId]?.childrenIds ?? [];
 			while (messageChildrenIds.length !== 0) {
-				messageId = messageChildrenIds.at(-1);
-				messageChildrenIds = history.messages[messageId].childrenIds;
+				const lastId = messageChildrenIds.at(-1);
+				if (!lastId) break; // Ensure lastId is not undefined
+				messageId = lastId;
+				messageChildrenIds = history.messages[messageId]?.childrenIds ?? [];
 			}
 
 			history.currentId = messageId;
@@ -146,7 +156,9 @@
 		// Optional auto-scroll
 		if ($settings?.scrollOnBranchChange ?? true) {
 			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+			if (element) {
+				autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+			}
 
 			setTimeout(() => {
 				scrollToBottom();
@@ -156,17 +168,21 @@
 
 	const showPreviousMessage = async (message) => {
 		if (message.parentId !== null) {
+			const parentMessage = history.messages[message.parentId];
+			if (!parentMessage) return; // Add null check for parentMessage
+
 			let messageId =
-				history.messages[message.parentId].childrenIds[
-					Math.max(history.messages[message.parentId].childrenIds.indexOf(message.id) - 1, 0)
+				parentMessage.childrenIds[
+					Math.max(parentMessage.childrenIds.indexOf(message.id) - 1, 0)
 				];
 
 			if (message.id !== messageId) {
-				let messageChildrenIds = history.messages[messageId].childrenIds;
-
+				let messageChildrenIds = history.messages[messageId]?.childrenIds ?? [];
 				while (messageChildrenIds.length !== 0) {
-					messageId = messageChildrenIds.at(-1);
-					messageChildrenIds = history.messages[messageId].childrenIds;
+					const lastId = messageChildrenIds.at(-1);
+					if (!lastId) break;
+					messageId = lastId;
+					messageChildrenIds = history.messages[messageId]?.childrenIds ?? [];
 				}
 
 				history.currentId = messageId;
@@ -178,11 +194,12 @@
 			let messageId = childrenIds[Math.max(childrenIds.indexOf(message.id) - 1, 0)];
 
 			if (message.id !== messageId) {
-				let messageChildrenIds = history.messages[messageId].childrenIds;
-
+				let messageChildrenIds = history.messages[messageId]?.childrenIds ?? [];
 				while (messageChildrenIds.length !== 0) {
-					messageId = messageChildrenIds.at(-1);
-					messageChildrenIds = history.messages[messageId].childrenIds;
+					const lastId = messageChildrenIds.at(-1);
+					if (!lastId) break;
+					messageId = lastId;
+					messageChildrenIds = history.messages[messageId]?.childrenIds ?? [];
 				}
 
 				history.currentId = messageId;
@@ -193,7 +210,9 @@
 
 		if ($settings?.scrollOnBranchChange ?? true) {
 			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+			if (element) {
+				autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+			}
 
 			setTimeout(() => {
 				scrollToBottom();
@@ -203,20 +222,24 @@
 
 	const showNextMessage = async (message) => {
 		if (message.parentId !== null) {
+			const parentMessage = history.messages[message.parentId];
+			if (!parentMessage) return; // Add null check for parentMessage
+
 			let messageId =
-				history.messages[message.parentId].childrenIds[
+				parentMessage.childrenIds[
 					Math.min(
-						history.messages[message.parentId].childrenIds.indexOf(message.id) + 1,
-						history.messages[message.parentId].childrenIds.length - 1
+						parentMessage.childrenIds.indexOf(message.id) + 1,
+						parentMessage.childrenIds.length - 1
 					)
 				];
 
 			if (message.id !== messageId) {
-				let messageChildrenIds = history.messages[messageId].childrenIds;
-
+				let messageChildrenIds = history.messages[messageId]?.childrenIds ?? [];
 				while (messageChildrenIds.length !== 0) {
-					messageId = messageChildrenIds.at(-1);
-					messageChildrenIds = history.messages[messageId].childrenIds;
+					const lastId = messageChildrenIds.at(-1);
+					if (!lastId) break;
+					messageId = lastId;
+					messageChildrenIds = history.messages[messageId]?.childrenIds ?? [];
 				}
 
 				history.currentId = messageId;
@@ -229,11 +252,12 @@
 				childrenIds[Math.min(childrenIds.indexOf(message.id) + 1, childrenIds.length - 1)];
 
 			if (message.id !== messageId) {
-				let messageChildrenIds = history.messages[messageId].childrenIds;
-
+				let messageChildrenIds = history.messages[messageId]?.childrenIds ?? [];
 				while (messageChildrenIds.length !== 0) {
-					messageId = messageChildrenIds.at(-1);
-					messageChildrenIds = history.messages[messageId].childrenIds;
+					const lastId = messageChildrenIds.at(-1);
+					if (!lastId) break;
+					messageId = lastId;
+					messageChildrenIds = history.messages[messageId]?.childrenIds ?? [];
 				}
 
 				history.currentId = messageId;
@@ -244,7 +268,9 @@
 
 		if ($settings?.scrollOnBranchChange ?? true) {
 			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+			if (element) {
+				autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+			}
 
 			setTimeout(() => {
 				scrollToBottom();
@@ -253,6 +279,7 @@
 	};
 
 	const rateMessage = async (messageId, rating) => {
+		if (!history.messages[messageId]) return; // Add null check
 		history.messages[messageId].annotation = {
 			...history.messages[messageId].annotation,
 			rating: rating
@@ -266,6 +293,7 @@
 			toast.error($i18n.t('Model not selected'));
 			return;
 		}
+		if (!history.messages[messageId]) return; // Add null check
 		if (history.messages[messageId].role === 'user') {
 			if (submit) {
 				// New user message
@@ -285,7 +313,7 @@
 
 				let messageParentId = history.messages[messageId].parentId;
 
-				if (messageParentId !== null) {
+				if (messageParentId !== null && history.messages[messageParentId]) { // Add null check for parent message
 					history.messages[messageParentId].childrenIds = [
 						...history.messages[messageParentId].childrenIds,
 						userMessageId
@@ -308,6 +336,7 @@
 				// New response message
 				const responseMessageId = uuidv4();
 				const message = history.messages[messageId];
+				if (!message) return; // Add null check
 				const parentId = message.parentId;
 
 				const responseMessage = {
@@ -324,7 +353,7 @@
 				history.currentId = responseMessageId;
 
 				// Append messageId to childrenIds of parent message
-				if (parentId !== null) {
+				if (parentId !== null && history.messages[parentId]) { // Add null check for parent message
 					history.messages[parentId].childrenIds = [
 						...history.messages[parentId].childrenIds,
 						responseMessageId
@@ -352,6 +381,7 @@
 
 	const deleteMessage = async (messageId) => {
 		const messageToDelete = history.messages[messageId];
+		if (!messageToDelete) return; // Add null check
 		const parentMessageId = messageToDelete.parentId;
 		const childMessageIds = messageToDelete.childrenIds ?? [];
 
@@ -382,7 +412,9 @@
 
 		await tick();
 
-		showMessage({ id: parentMessageId });
+		if (parentMessageId && history.messages[parentMessageId]) {
+			showMessage(history.messages[parentMessageId]);
+		}
 
 		// Update the chat
 		await updateChat();
@@ -391,10 +423,12 @@
 	const triggerScroll = () => {
 		if (autoScroll) {
 			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
-			setTimeout(() => {
-				scrollToBottom();
-			}, 100);
+			if (element) {
+				autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+				setTimeout(() => {
+					scrollToBottom();
+				}, 100);
+			}
 		}
 	};
 </script>
