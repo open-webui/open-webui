@@ -3588,10 +3588,16 @@ IMAGES_EDIT_COMFYUI_WORKFLOW = PersistentConfig(
     os.getenv("IMAGES_EDIT_COMFYUI_WORKFLOW", ""),
 )
 
+images_edit_comfyui_workflow_nodes = os.getenv("IMAGES_EDIT_COMFYUI_WORKFLOW_NODES", "")
+try:
+    images_edit_comfyui_workflow_nodes = json.loads(images_edit_comfyui_workflow_nodes)
+except json.JSONDecodeError:
+    images_edit_comfyui_workflow_nodes = []
+
 IMAGES_EDIT_COMFYUI_WORKFLOW_NODES = PersistentConfig(
     "IMAGES_EDIT_COMFYUI_WORKFLOW_NODES",
     "images.edit.comfyui.nodes",
-    [],
+    images_edit_comfyui_workflow_nodes,
 )
 
 ####################################
