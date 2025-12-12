@@ -1420,8 +1420,27 @@
 							);
 
 							if (crewResponse && crewResponse.result) {
-								// Update message content with CrewAI response
-								responseMessage.content = crewResponse.result;
+								// Check if the result is a SharePoint error message and translate it
+								let displayResult = crewResponse.result;
+								if (
+									displayResult.startsWith(
+										'Microsoft Graph authentication is unavailable in local development mode'
+									) ||
+									displayResult.startsWith('Local environment lacks OAuth2 proxy')
+								) {
+									// This is a SharePoint error message that needs translation
+									displayResult = $i18n.t(crewResponse.result);
+								}
+
+								// These translation keys need to be preserved by i18n parser
+								// They are used dynamically above
+								$i18n.t(
+									'Microsoft Graph authentication is unavailable in local development mode. This integration depends on OAuth2 proxy services that are configured only in production deployments. For full SharePoint testing, please utilize the staging or production environments where Azure AD authentication is properly established. Local developers can modify the test token configuration in extract_graph_access_token to simulate authenticated requests.'
+								);
+								$i18n.t('Local environment lacks OAuth2 proxy for SharePoint access');
+
+								// Update message content with CrewAI response (translated if needed)
+								responseMessage.content = displayResult;
 								responseMessage.done = true;
 								responseMessage.crewAI = true; // Mark as CrewAI response
 

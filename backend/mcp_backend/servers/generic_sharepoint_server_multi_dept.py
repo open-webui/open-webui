@@ -73,10 +73,8 @@ class DepartmentSharePointConfig:
         self.department_prefix = department_prefix.upper()
 
         # Global settings (shared across all departments)
-        self.use_delegated_access = (
-            clean_env_var(os.getenv("SHP_USE_DELEGATED_ACCESS", "true")).lower()
-            == "true"
-        )
+        # Force delegated access only - no application fallback allowed
+        self.use_delegated_access = True
         self.obo_scope = clean_env_var(
             os.getenv(
                 "SHP_OBO_SCOPE",
@@ -176,7 +174,10 @@ def initialize_department_server(department_prefix: str):
         logger.error(
             f"Failed to initialize SharePoint server for {department_prefix}: {e}"
         )
-        raise
+        # Exit with error code so the MCP server doesn't start with broken config
+        import sys
+
+        sys.exit(1)
 
 
 def extract_user_token(context: Optional[Dict[str, Any]] = None) -> Optional[str]:
@@ -485,19 +486,26 @@ async def search_sharepoint_documents(
         if not user_token:
             user_token = os.getenv("USER_JWT_TOKEN")
 
-        # For local development, don't try OBO if no valid token available
-        if user_token == "user_token_placeholder" or not user_token:
-            logger.info(
-                "No OAuth token available - using application-only authentication for local development"
+        # Validate we have a proper user token for delegated access
+        if (
+            user_token == "user_token_placeholder"
+            or not user_token
+            or not user_token.strip()
+        ):
+            logger.error(
+                "No valid OAuth token available. SharePoint access requires user authentication."
             )
-            user_token = None  # This will trigger application-only flow
-        else:
-            logger.info(
-                f"Using OAuth token for SharePoint OBO flow: {bool(user_token)}"
-            )
-            # Log token type for debugging
-            if user_token and len(user_token) > 20:
-                logger.debug(f"Token type check - starts with: {user_token[:20]}...")
+            return {
+                "status": "error",
+                "error": "Authentication required",
+                "message": "You must be authenticated to access SharePoint documents. Please ensure you're logged in and have the necessary permissions.",
+                "organization": config.org_name if config else "Unknown",
+            }
+
+        logger.info(f"Using OAuth token for SharePoint OBO flow")
+        # Log token type for debugging
+        if user_token and len(user_token) > 20:
+            logger.debug(f"Token type check - starts with: {user_token[:20]}...")
 
         logger.info(f"Searching {config.org_name} SharePoint for: {query}")
 
@@ -508,7 +516,7 @@ async def search_sharepoint_documents(
                 "status": "error",
                 "query": query,
                 "error": "Failed to get access token",
-                "message": "Unable to authenticate with SharePoint using provided credentials",
+                "message": f"Unable to authenticate with {config.org_name} SharePoint. This may be due to insufficient permissions or expired credentials. Please ensure you have the necessary SharePoint access permissions for this organization.",
                 "organization": config.org_name,
             }
 
@@ -690,7 +698,7 @@ async def list_sharepoint_folder_contents(
                 "status": "error",
                 "folder": folder_path,
                 "error": "Failed to obtain access token",
-                "message": "Authentication failed. Check your configuration and user permissions.",
+                "message": f"Authentication failed for {config.org_name} SharePoint. Please ensure you have the necessary permissions and your session is valid.",
                 "organization": config.org_name,
             }
 
@@ -868,7 +876,7 @@ async def get_sharepoint_document_content(
                 "folder": folder_name,
                 "file": file_name,
                 "error": "Failed to obtain access token",
-                "message": "Authentication failed. Check your configuration and user permissions.",
+                "message": f"Authentication failed for {config.org_name} SharePoint. Please ensure you have the necessary permissions to access this file.",
                 "organization": config.org_name,
             }
 
