@@ -5,7 +5,6 @@
 
 	import Switch from './Switch.svelte';
 	import MapSelector from './Valves/MapSelector.svelte';
-	import { split } from 'postcss/lib/list';
 
 	export let valvesSpec = null;
 	export let valves = {};
@@ -168,7 +167,7 @@
 								on:change={() => {
 									dispatch('change');
 								}}
-							/>
+							></textarea>
 						{/if}
 					</div>
 				</div>

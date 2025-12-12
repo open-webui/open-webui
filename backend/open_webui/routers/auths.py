@@ -508,6 +508,15 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 
             user = Auths.authenticate_user(admin_email.lower(), admin_password)
     else:
+        password_bytes = form_data.password.encode("utf-8")
+        if len(password_bytes) > 72:
+            # TODO: Implement other hashing algorithms that support longer passwords
+            log.info("Password too long, truncating to 72 bytes for bcrypt")
+            password_bytes = password_bytes[:72]
+
+            # decode safely — ignore incomplete UTF-8 sequences
+            form_data.password = password_bytes.decode("utf-8", errors="ignore")
+
         user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
 
     if user:

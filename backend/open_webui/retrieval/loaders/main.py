@@ -272,7 +272,6 @@ class Loader:
                 loader = TikaLoader(
                     url=self.kwargs.get("TIKA_SERVER_URL"),
                     file_path=file_path,
-                    mime_type=file_content_type,
                     extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES"),
                 )
         elif (
@@ -369,14 +368,8 @@ class Loader:
                     azure_credential=DefaultAzureCredential(),
                 )
         elif self.engine == "mineru" and file_ext in [
-            "pdf",
-            "doc",
-            "docx",
-            "ppt",
-            "pptx",
-            "xls",
-            "xlsx",
-        ]:
+            "pdf"
+        ]:  # MinerU currently only supports PDF
             loader = MinerULoader(
                 file_path=file_path,
                 api_mode=self.kwargs.get("MINERU_API_MODE", "local"),
@@ -386,15 +379,6 @@ class Loader:
             )
         elif (
             self.engine == "mistral_ocr"
-            and self.kwargs.get("MISTRAL_OCR_API_KEY") != ""
-            and file_ext
-            in ["pdf"]  # Mistral OCR currently only supports PDF and images
-        ):
-            loader = MistralLoader(
-                api_key=self.kwargs.get("MISTRAL_OCR_API_KEY"), file_path=file_path
-            )
-        elif (
-            self.engine == "external"
             and self.kwargs.get("MISTRAL_OCR_API_KEY") != ""
             and file_ext
             in ["pdf"]  # Mistral OCR currently only supports PDF and images

@@ -39,13 +39,14 @@ from open_webui.config import (
     WHISPER_MODEL_DIR,
     CACHE_DIR,
     WHISPER_LANGUAGE,
+    ELEVENLABS_API_BASE_URL,
 )
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
+    ENV,
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
-    ENV,
     SRC_LOG_LEVELS,
     DEVICE_TYPE,
     ENABLE_FORWARD_USER_INFO_HEADERS,
@@ -413,7 +414,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 timeout=timeout, trust_env=True
             ) as session:
                 async with session.post(
-                    f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
+                    f"{ELEVENLABS_API_BASE_URL}/v1/text-to-speech/{voice_id}",
                     json={
                         "text": payload["input"],
                         "model_id": request.app.state.config.TTS_MODEL,
@@ -1037,7 +1038,7 @@ def get_available_models(request: Request) -> list[dict]:
     elif request.app.state.config.TTS_ENGINE == "elevenlabs":
         try:
             response = requests.get(
-                "https://api.elevenlabs.io/v1/models",
+                f"{ELEVENLABS_API_BASE_URL}/v1/models",
                 headers={
                     "xi-api-key": request.app.state.config.TTS_API_KEY,
                     "Content-Type": "application/json",
@@ -1141,7 +1142,7 @@ def get_elevenlabs_voices(api_key: str) -> dict:
     try:
         # TODO: Add retries
         response = requests.get(
-            "https://api.elevenlabs.io/v1/voices",
+            f"{ELEVENLABS_API_BASE_URL}/v1/voices",
             headers={
                 "xi-api-key": api_key,
                 "Content-Type": "application/json",

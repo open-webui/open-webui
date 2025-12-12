@@ -233,7 +233,7 @@
 						{
 							label: $i18n.t('Create a new note'),
 							onClick: async () => {
-								await goto(`/notes${query ? `?content=${query}` : ''}`);
+								await goto(`/notes?content=${query}`);
 								show = false;
 								onClose();
 							},

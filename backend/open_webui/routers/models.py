@@ -44,7 +44,9 @@ def validate_model_id(model_id: str) -> bool:
 ###########################
 
 
-@router.get("/", response_model=list[ModelUserResponse])
+@router.get(
+    "/list", response_model=list[ModelUserResponse]
+)  # do NOT use "/" as path, conflicts with main.py
 async def get_models(id: Optional[str] = None, user=Depends(get_verified_user)):
     if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
         return Models.get_models()
