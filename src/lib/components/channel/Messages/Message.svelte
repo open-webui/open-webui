@@ -338,7 +338,10 @@
 						<Skeleton />
 					</div>
 				{:else if (message?.data?.files ?? []).length > 0}
-					<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
+					<div
+						class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap"
+						dir={$settings?.chatDirection ?? 'auto'}
+					>
 						{#each message?.data?.files as file}
 							<div>
 								{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
