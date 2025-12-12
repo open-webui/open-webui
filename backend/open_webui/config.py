@@ -807,6 +807,32 @@ OLLAMA_API_CONFIGS = PersistentConfig(
     "ollama.api_configs",
     {},
 )
+####################################
+# Metrics
+####################################
+METRIC_DEFINITIONS = os.environ.get(
+    "METRIC_DEFINITIONS",
+    [
+        {
+            "name": "http_requests_total",
+            "type": "counter",
+            "description": "Total HTTP requests",
+            "unit": "",
+        },
+        {
+            "name": "http_request_duration_ms",
+            "type": "histogram",
+            "description": "Duration of HTTP requests in milliseconds",
+            "unit": "ms",
+        },
+        {
+            "name": "task_queue_size",
+            "type": "gauge",
+            "description": "Number of tasks in background queue",
+            "unit": "",
+        },
+    ],
+)
 
 ####################################
 # MCP (Model Context Protocol)

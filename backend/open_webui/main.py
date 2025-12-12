@@ -11,6 +11,9 @@ from urllib.parse import urlencode, parse_qs, urlparse
 from pydantic import BaseModel
 from sqlalchemy import text
 
+# Needs to be imported before fastapi to ensure instrumentation is set up correctly
+from open_webui.instrumentation import meter
+
 
 from fastapi import (
     Depends,
@@ -65,8 +68,8 @@ from open_webui.routers import (
     jira,
     utils,
 )
-from mcp_backend.routers import mcp, crew_mcp
 
+from mcp_backend.routers import mcp, crew_mcp
 from open_webui.routers.retrieval import (
     get_embedding_function,
     load_embedding_model,
@@ -88,6 +91,8 @@ from open_webui.config import (
     ENABLE_OLLAMA_API,
     OLLAMA_BASE_URLS,
     OLLAMA_API_CONFIGS,
+    # Metrics
+    METRIC_DEFINITIONS,
     # MCP (Model Context Protocol)
     ENABLE_MCP_API,
     MCP_BASE_URLS,
@@ -361,6 +366,23 @@ https://github.com/open-webui/open-webui
 async def lifespan(app: FastAPI):
     if RESET_CONFIG_ON_START:
         reset_config()
+
+    # Initialize metrics service
+    try:
+        from open_webui.metrics.service import MetricsService
+
+        # meter imported earlier than fastapi to ensure it's set up correctly.
+        app.state.metrics_meter = meter
+        app.state.metrics_service = MetricsService(
+            app.state.metrics_meter, METRIC_DEFINITIONS
+        )
+
+        log.info(
+            f"Metrics service initialized with the following meter: {app.state.metrics_meter.name}"
+        )
+
+    except Exception as e:
+        log.error(f"Failed to initialize the metrics service: {e}")
 
     # Initialize FastMCP manager
     try:

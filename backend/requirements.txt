@@ -124,3 +124,8 @@ grpcio>=1.49.1,<=1.67.1
 
 # Azure Storage for NewsDesk integration
 azure-storage-blob==12.25.1
+
+# Opentelemetry
+opentelemetry-api==1.39.1
+opentelemetry-sdk==1.39.1
+opentelemetry-exporter-otlp==1.39.1
