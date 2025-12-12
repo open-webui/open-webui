@@ -3463,9 +3463,9 @@ COMFYUI_WORKFLOW = PersistentConfig(
 )
 
 COMFYUI_WORKFLOW_NODES = PersistentConfig(
-    "COMFYUI_WORKFLOW",
+    "COMFYUI_WORKFLOW_NODES",
     "image_generation.comfyui.nodes",
-    [],
+    json.loads(os.environ.get("COMFYUI_WORKFLOW_NODES", "[]")),
 )
 
 IMAGES_OPENAI_API_BASE_URL = PersistentConfig(
@@ -3585,7 +3585,7 @@ IMAGES_EDIT_COMFYUI_WORKFLOW = PersistentConfig(
 IMAGES_EDIT_COMFYUI_WORKFLOW_NODES = PersistentConfig(
     "IMAGES_EDIT_COMFYUI_WORKFLOW_NODES",
     "images.edit.comfyui.nodes",
-    [],
+    json.loads(os.environ.get("IMAGES_EDIT_COMFYUI_WORKFLOW_NODES", "[]")),
 )
 
 ####################################
