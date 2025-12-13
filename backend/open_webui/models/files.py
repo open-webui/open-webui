@@ -104,6 +104,11 @@ class FileUpdateForm(BaseModel):
     meta: Optional[dict] = None
 
 
+class FileListResponse(BaseModel):
+    items: list[FileModel]
+    total: int
+
+
 class FilesTable:
     def insert_new_file(self, user_id: str, form_data: FileForm) -> Optional[FileModel]:
         with get_db() as db:
@@ -238,6 +243,7 @@ class FilesTable:
             try:
                 file = db.query(File).filter_by(id=id).first()
                 file.hash = hash
+                file.updated_at = int(time.time())
                 db.commit()
 
                 return FileModel.model_validate(file)
@@ -249,6 +255,7 @@ class FilesTable:
             try:
                 file = db.query(File).filter_by(id=id).first()
                 file.data = {**(file.data if file.data else {}), **data}
+                file.updated_at = int(time.time())
                 db.commit()
                 return FileModel.model_validate(file)
             except Exception as e:
@@ -260,6 +267,7 @@ class FilesTable:
             try:
                 file = db.query(File).filter_by(id=id).first()
                 file.meta = {**(file.meta if file.meta else {}), **meta}
+                file.updated_at = int(time.time())
                 db.commit()
                 return FileModel.model_validate(file)
             except Exception:

@@ -19,7 +19,7 @@
 
 		<div class="flex items-center -mr-1">
 			<select
-				class="w-full py-1 text-sm rounded-lg bg-transparent {selectedModelId
+				class="dark:bg-gray-900 w-full py-1 text-sm rounded-lg bg-transparent {selectedModelId
 					? ''
 					: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 				bind:value={selectedModelId}

@@ -84,8 +84,9 @@
 		},
 		features: {
 			api_keys: false,
-			folders: true,
 			notes: true,
+			channels: true,
+			folders: true,
 			direct_tool_servers: false,
 			web_search: true,
 			image_generation: true,

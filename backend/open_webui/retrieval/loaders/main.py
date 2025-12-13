@@ -144,19 +144,17 @@ class DoclingLoader:
         with open(self.file_path, "rb") as f:
             headers = {}
             if self.api_key:
-                headers["Authorization"] = f"Bearer {self.api_key}"
-
-            files = {
-                "files": (
-                    self.file_path,
-                    f,
-                    self.mime_type or "application/octet-stream",
-                )
-            }
+                headers["X-Api-Key"] = f"Bearer {self.api_key}"
 
             r = requests.post(
                 f"{self.url}/v1/convert/file",
-                files=files,
+                files={
+                    "files": (
+                        self.file_path,
+                        f,
+                        self.mime_type or "application/octet-stream",
+                    )
+                },
                 data={
                     "image_export_mode": "placeholder",
                     **self.params,
@@ -322,12 +320,14 @@ class Loader:
                     file_path=file_path,
                     api_endpoint=self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT"),
                     api_key=self.kwargs.get("DOCUMENT_INTELLIGENCE_KEY"),
+                    api_model=self.kwargs.get("DOCUMENT_INTELLIGENCE_MODEL"),
                 )
             else:
                 loader = AzureAIDocumentIntelligenceLoader(
                     file_path=file_path,
                     api_endpoint=self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT"),
                     azure_credential=DefaultAzureCredential(),
+                    api_model=self.kwargs.get("DOCUMENT_INTELLIGENCE_MODEL"),
                 )
         elif self.engine == "mineru" and file_ext in [
             "pdf"

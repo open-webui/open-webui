@@ -629,6 +629,12 @@ OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID = (
     == "true"
 )
 
+OAUTH_AUDIENCE = PersistentConfig(
+    "OAUTH_AUDIENCE",
+    "oauth.audience",
+    os.environ.get("OAUTH_AUDIENCE", ""),
+)
+
 
 def load_oauth_providers():
     OAUTH_PROVIDERS.clear()
@@ -1300,7 +1306,7 @@ USER_PERMISSIONS_WORKSPACE_MODELS_ALLOW_PUBLIC_SHARING = (
 
 USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ALLOW_SHARING = (
     os.environ.get(
-        "USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ALLOW_PUBLIC_SHARING", "False"
+        "USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ALLOW_SHARING", "False"
     ).lower()
     == "true"
 )
@@ -1339,7 +1345,7 @@ USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_PUBLIC_SHARING = (
 
 
 USER_PERMISSIONS_NOTES_ALLOW_SHARING = (
-    os.environ.get("USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING", "False").lower()
+    os.environ.get("USER_PERMISSIONS_NOTES_ALLOW_SHARING", "False").lower()
     == "true"
 )
 
@@ -1455,6 +1461,10 @@ USER_PERMISSIONS_FEATURES_NOTES = (
     os.environ.get("USER_PERMISSIONS_FEATURES_NOTES", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_FEATURES_CHANNELS = (
+    os.environ.get("USER_PERMISSIONS_FEATURES_CHANNELS", "True").lower() == "true"
+)
+
 USER_PERMISSIONS_FEATURES_API_KEYS = (
     os.environ.get("USER_PERMISSIONS_FEATURES_API_KEYS", "False").lower() == "true"
 )
@@ -1509,8 +1519,9 @@ DEFAULT_USER_PERMISSIONS = {
     "features": {
         # General features
         "api_keys": USER_PERMISSIONS_FEATURES_API_KEYS,
-        "folders": USER_PERMISSIONS_FEATURES_FOLDERS,
         "notes": USER_PERMISSIONS_FEATURES_NOTES,
+        "folders": USER_PERMISSIONS_FEATURES_FOLDERS,
+        "channels": USER_PERMISSIONS_FEATURES_CHANNELS,
         "direct_tool_servers": USER_PERMISSIONS_FEATURES_DIRECT_TOOL_SERVERS,
         # Chat features
         "web_search": USER_PERMISSIONS_FEATURES_WEB_SEARCH,
@@ -2585,6 +2596,12 @@ DOCUMENT_INTELLIGENCE_KEY = PersistentConfig(
     os.getenv("DOCUMENT_INTELLIGENCE_KEY", ""),
 )
 
+DOCUMENT_INTELLIGENCE_MODEL = PersistentConfig(
+    "DOCUMENT_INTELLIGENCE_MODEL",
+    "rag.document_intelligence_model",
+    os.getenv("DOCUMENT_INTELLIGENCE_MODEL", "prebuilt-layout"),
+)
+
 MISTRAL_OCR_API_BASE_URL = PersistentConfig(
     "MISTRAL_OCR_API_BASE_URL",
     "rag.MISTRAL_OCR_API_BASE_URL",
@@ -2981,6 +2998,12 @@ WEB_LOADER_CONCURRENT_REQUESTS = PersistentConfig(
     "WEB_LOADER_CONCURRENT_REQUESTS",
     "rag.web.loader.concurrent_requests",
     int(os.getenv("WEB_LOADER_CONCURRENT_REQUESTS", "10")),
+)
+
+WEB_LOADER_TIMEOUT = PersistentConfig(
+    "WEB_LOADER_TIMEOUT",
+    "rag.web.loader.timeout",
+    os.getenv("WEB_LOADER_TIMEOUT", ""),
 )
 
 

@@ -17,6 +17,7 @@
 
 	import { settings, user, shortCodesToEmojis } from '$lib/stores';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { getMessageData } from '$lib/apis/channels';
 
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
@@ -42,6 +43,8 @@
 	export let className = '';
 
 	export let message;
+	export let channel;
+
 	export let showUserProfile = true;
 	export let thread = false;
 
@@ -61,6 +64,21 @@
 	let edit = false;
 	let editedContent = null;
 	let showDeleteConfirmDialog = false;
+
+	const loadMessageData = async () => {
+		if (message && message?.data) {
+			const res = await getMessageData(localStorage.token, channel?.id, message.id);
+			if (res) {
+				message.data = res;
+			}
+		}
+	};
+
+	onMount(async () => {
+		if (message && message?.data) {
+			await loadMessageData();
+		}
+	});
 </script>
 
 <ConfirmDialog
@@ -93,7 +111,7 @@
 				class=" absolute {showButtons ? '' : 'invisible group-hover:visible'} right-1 -top-2 z-10"
 			>
 				<div
-					class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100 dark:border-gray-850"
+					class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100/30 dark:border-gray-850/30"
 				>
 					{#if onReaction}
 						<EmojiPicker
@@ -314,12 +332,30 @@
 					</Name>
 				{/if}
 
-				{#if (message?.data?.files ?? []).length > 0}
-					<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
+				{#if message?.data === true}
+					<!-- loading indicator -->
+					<div class=" my-2">
+						<Skeleton />
+					</div>
+				{:else if (message?.data?.files ?? []).length > 0}
+					<div
+						class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap"
+						dir={$settings?.chatDirection ?? 'auto'}
+					>
 						{#each message?.data?.files as file}
 							<div>
-								{#if file.type === 'image'}
-									<Image src={file.url} alt={file.name} imageClassName=" max-h-96 rounded-lg" />
+								{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
+									<Image
+										src={`${file.url}${file?.content_type ? '/content' : ''}`}
+										alt={file.name}
+										imageClassName=" max-h-96 rounded-lg"
+									/>
+								{:else if file.type === 'video' || (file?.content_type ?? '').startsWith('video/')}
+									<video
+										src={`${file.url}${file?.content_type ? '/content' : ''}`}
+										controls
+										class=" max-h-96 rounded-lg"
+									></video>
 								{:else}
 									<FileItem
 										item={file}
@@ -388,8 +424,9 @@
 							<Markdown
 								id={message.id}
 								content={message.content}
+								paragraphTag="span"
 							/>{#if message.created_at !== message.updated_at && (message?.meta?.model_id ?? null) === null}<span
-									class="text-gray-500 text-[10px]">({$i18n.t('edited')})</span
+									class="text-gray-500 text-[10px] pl-1 self-center">({$i18n.t('edited')})</span
 								>{/if}
 						{/if}
 					</div>
@@ -398,11 +435,44 @@
 						<div>
 							<div class="flex items-center flex-wrap gap-y-1.5 gap-1 mt-1 mb-2">
 								{#each message.reactions as reaction}
-									<Tooltip content={`:${reaction.name}:`}>
+									<Tooltip
+										content={$i18n.t('{{NAMES}} reacted with {{REACTION}}', {
+											NAMES: reaction.users
+												.reduce((acc, u, idx) => {
+													const name = u.id === $user?.id ? $i18n.t('You') : u.name;
+													const total = reaction.users.length;
+
+													// First three names always added normally
+													if (idx < 3) {
+														const separator =
+															idx === 0
+																? ''
+																: idx === Math.min(2, total - 1)
+																	? ` ${$i18n.t('and')} `
+																	: ', ';
+														return `${acc}${separator}${name}`;
+													}
+
+													// More than 4 → "and X others"
+													if (idx === 3 && total > 4) {
+														return (
+															acc +
+															` ${$i18n.t('and {{COUNT}} others', {
+																COUNT: total - 3
+															})}`
+														);
+													}
+
+													return acc;
+												}, '')
+												.trim(),
+											REACTION: `:${reaction.name}:`
+										})}
+									>
 										<button
-											class="flex items-center gap-1.5 transition rounded-xl px-2 py-1 cursor-pointer {reaction.user_ids.includes(
-												$user?.id
-											)
+											class="flex items-center gap-1.5 transition rounded-xl px-2 py-1 cursor-pointer {reaction.users
+												.map((u) => u.id)
+												.includes($user?.id)
 												? ' bg-blue-300/10 outline outline-blue-500/50 outline-1'
 												: 'bg-gray-300/10 dark:bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1'}"
 											on:click={() => {
@@ -413,9 +483,9 @@
 										>
 											<Emoji shortCode={reaction.name} />
 
-											{#if reaction.user_ids.length > 0}
+											{#if reaction.users.length > 0}
 												<div class="text-xs font-medium text-gray-500 dark:text-gray-400">
-													{reaction.user_ids?.length}
+													{reaction.users?.length}
 												</div>
 											{/if}
 										</button>

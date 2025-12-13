@@ -666,7 +666,10 @@
 						{/if}
 
 						{#if message?.files && message.files?.filter((f) => f.type === 'image').length > 0}
-							<div class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap">
+							<div
+								class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap"
+								dir={$settings?.chatDirection ?? 'auto'}
+							>
 								{#each message.files as file}
 									<div>
 										{#if file.type === 'image'}
@@ -824,6 +827,7 @@
 								<Citations
 									bind:this={citationsElement}
 									id={message?.id}
+									{chatId}
 									sources={message?.sources ?? message?.citations}
 									{readOnly}
 								/>
@@ -1460,37 +1464,35 @@
 										{/if}
 									{/if}
 
-									{#if isLastMessage}
-										{#each model?.actions ?? [] as action}
-											<Tooltip content={action.name} placement="bottom">
-												<button
-													type="button"
-													aria-label={action.name}
-													class="{isLastMessage || ($settings?.highContrastMode ?? false)
-														? 'visible'
-														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
-													on:click={() => {
-														actionMessage(action.id, message);
-													}}
-												>
-													{#if action?.icon}
-														<div class="size-4">
-															<img
-																src={action.icon}
-																class="w-4 h-4 {action.icon.includes('svg')
-																	? 'dark:invert-[80%]'
-																	: ''}"
-																style="fill: currentColor;"
-																alt={action.name}
-															/>
-														</div>
-													{:else}
-														<Sparkles strokeWidth="2.1" className="size-4" />
-													{/if}
-												</button>
-											</Tooltip>
-										{/each}
-									{/if}
+									{#each model?.actions ?? [] as action}
+										<Tooltip content={action.name} placement="bottom">
+											<button
+												type="button"
+												aria-label={action.name}
+												class="{isLastMessage || ($settings?.highContrastMode ?? false)
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+												on:click={() => {
+													actionMessage(action.id, message);
+												}}
+											>
+												{#if action?.icon}
+													<div class="size-4">
+														<img
+															src={action.icon}
+															class="w-4 h-4 {action.icon.includes('svg')
+																? 'dark:invert-[80%]'
+																: ''}"
+															style="fill: currentColor;"
+															alt={action.name}
+														/>
+													</div>
+												{:else}
+													<Sparkles strokeWidth="2.1" className="size-4" />
+												{/if}
+											</button>
+										</Tooltip>
+									{/each}
 								{/if}
 							{/if}
 						{/if}

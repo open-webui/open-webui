@@ -902,8 +902,15 @@
 
 	const initNewChat = async () => {
 		console.log('initNewChat');
-		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
-			await temporaryChatEnabled.set(true);
+		if ($user?.role !== 'admin') {
+			if ($user?.permissions?.chat?.temporary_enforced) {
+				await temporaryChatEnabled.set(true);
+			}
+
+			if (!$user?.permissions?.chat?.temporary) {
+				await temporaryChatEnabled.set(false);
+				return;
+			}
 		}
 
 		if ($settings?.temporaryChatByDefault ?? false) {
@@ -2377,7 +2384,7 @@
 
 <div
 	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
-		? '  md:max-w-[calc(100%-260px)]'
+		? '  md:max-w-[calc(100%-var(--sidebar-width))]'
 		: ' '} w-full max-w-full flex flex-col"
 	id="chat-container"
 >

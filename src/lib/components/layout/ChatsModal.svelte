@@ -121,6 +121,7 @@
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 						bind:value={query}
 						placeholder={$i18n.t('Search Chats')}
+						maxlength="500"
 					/>
 
 					{#if query}
@@ -353,7 +354,7 @@
 										class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-auto"
 									>
 										<thead
-											class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-1 border-gray-50 dark:border-gray-850"
+											class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-1 border-gray-50 dark:border-gray-850/30"
 										>
 											<tr>
 												<th scope="col" class="px-3 py-2"> {$i18n.t('Name')} </th>
@@ -367,7 +368,7 @@
 											{#each chats as chat, idx}
 												<tr
 													class="bg-transparent {idx !== chats.length - 1 &&
-														'border-b'} dark:bg-gray-900 border-gray-50 dark:border-gray-850 text-xs"
+														'border-b'} dark:bg-gray-900 border-gray-50 dark:border-gray-850/30 text-xs"
 												>
 													<td class="px-3 py-1 w-2/3">
 														<a href="/c/{chat.id}" target="_blank">
