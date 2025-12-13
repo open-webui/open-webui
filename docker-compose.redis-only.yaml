@@ -1,0 +1,13 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - open-webui-redis:/data
+
+volumes:
+  open-webui-redis: {}
+

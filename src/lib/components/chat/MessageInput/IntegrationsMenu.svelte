@@ -649,7 +649,7 @@
 								<div class="flex-1 truncate">
 									<div class="flex flex-1 gap-2 items-center">
 										<div class="shrink-0">
-											<Video className="size-4" strokeWidth="1.5" />
+											<Video className="size-4" strokeWidth="1.5"></Video>
 										</div>
 										<div class=" truncate">ვიდეო</div>
 									</div>
@@ -720,7 +720,7 @@
 						>
 							{#if !(tools[toolId]?.authenticated ?? true)}
 								<!-- make it slighly darker and not clickable -->
-								<div class="absolute inset-0 opacity-50 rounded-xl cursor-pointer z-10" />
+										<div class="absolute inset-0 opacity-50 rounded-xl cursor-pointer z-10"></div>
 							{/if}
 							<div class="flex-1 truncate">
 								<div class="flex flex-1 gap-2 items-center">

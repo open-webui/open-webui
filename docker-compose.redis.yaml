@@ -1,0 +1,28 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - open-webui-redis:/data
+
+  open-webui:
+    depends_on:
+      - redis
+    environment:
+      - "REDIS_URL=redis://redis:6379/0"
+      - "REDIS_KEY_PREFIX=${REDIS_KEY_PREFIX-owui}"
+      - "STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY-}"
+      - "STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET-}"
+      - "STRIPE_PRICE_ID_STT_10000=${STRIPE_PRICE_ID_STT_10000-}"
+      - "STRIPE_PRICE_ID_STT_100000=${STRIPE_PRICE_ID_STT_100000-}"
+      - "STRIPE_PRICE_ID_STT_500000=${STRIPE_PRICE_ID_STT_500000-}"
+      - "STRIPE_PRICE_ID_STT_1000000=${STRIPE_PRICE_ID_STT_1000000-}"
+      - "STRIPE_SUCCESS_URL=${STRIPE_SUCCESS_URL-}"
+      - "STRIPE_CANCEL_URL=${STRIPE_CANCEL_URL-}"
+      - "STRIPE_WEBHOOK_TOLERANCE_SECONDS=${STRIPE_WEBHOOK_TOLERANCE_SECONDS-300}"
+
+volumes:
+  open-webui-redis: {}

@@ -55,7 +55,7 @@
 		{#each Object.entries(categorizedShortcuts) as [category, items], categoryIndex}
 			{#if categoryIndex > 0}
 				<div class="py-3">
-					<div class="w-full border-t dark:border-gray-850 border-gray-50" />
+					<div class="w-full border-t dark:border-gray-850 border-gray-50"></div>
 				</div>
 			{/if}
 
