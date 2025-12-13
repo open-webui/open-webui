@@ -338,3 +338,16 @@ test_frameworks/
 
 # Cursor IDE files
 .cursor/
+
+# Kubernetes manifests with hardcoded secrets (OpenShift-specific, keep local only)
+kubernetes/manifest/base/rq-worker-deployment-openshift.yaml
+kubernetes/manifest/redis/redis-secret.yaml
+
+# Local deployment documentation and verification files (keep local only)
+COMPREHENSIVE_SYSTEM_VERIFICATION.md
+DEPLOYMENT_STATUS_REPORT.md
+DEPLOYMENT_VERIFICATION_SUCCESS.md
+RAG_QA_LOG_ANALYSIS.md
+SECRETS_REMOVAL_SUMMARY.md
+SYSTEM_STATUS_SUMMARY.md
+quick_health_check.sh
