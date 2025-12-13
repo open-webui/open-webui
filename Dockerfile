@@ -29,7 +29,7 @@ ARG BUILD_HASH
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --include=optional
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
