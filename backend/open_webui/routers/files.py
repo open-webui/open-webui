@@ -65,30 +65,33 @@ router = APIRouter()
 def has_access_to_file(
     file_id: Optional[str], access_type: str, user=Depends(get_verified_user)
 ) -> bool:
-    file = Files.get_file_by_id(file_id)
     log.debug(f"Checking if user has {access_type} access to file")
+    user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
+
+    # Check access via knowledge bases using the optimized method
+    # This uses the knowledge_file table directly and avoids fetching the File object if access is found
+    knowledge_access_data = Knowledges.get_file_access_control_data(file_id)
+    for k_user_id, k_access_control in knowledge_access_data:
+        if k_user_id == user.id:
+            return True
+        if has_access(user.id, access_type, k_access_control, user_group_ids):
+            return True
+
+    # If no access found via knowledge bases, fetch the file to check legacy metadata
+    file = Files.get_file_by_id(file_id)
     if not file:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    knowledge_bases = Knowledges.get_knowledges_by_file_id(file_id)
-    user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
-
-    for knowledge_base in knowledge_bases:
-        if knowledge_base.user_id == user.id or has_access(
-            user.id, access_type, knowledge_base.access_control, user_group_ids
-        ):
-            return True
-
     knowledge_base_id = file.meta.get("collection_name") if file.meta else None
     if knowledge_base_id:
-        knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(
-            user.id, access_type
-        )
-        for knowledge_base in knowledge_bases:
-            if knowledge_base.id == knowledge_base_id:
+        knowledge_base = Knowledges.get_knowledge_by_id(knowledge_base_id)
+        if knowledge_base:
+            if knowledge_base.user_id == user.id or has_access(
+                user.id, access_type, knowledge_base.access_control, user_group_ids
+            ):
                 return True
 
     return False

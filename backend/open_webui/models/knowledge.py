@@ -232,6 +232,23 @@ class KnowledgeTable:
         except Exception:
             return []
 
+    def get_file_access_control_data(self, file_id: str) -> list[tuple[str, dict]]:
+        """
+        Returns a list of (user_id, access_control) tuples for all knowledge bases
+        associated with the given file_id.
+        """
+        try:
+            with get_db() as db:
+                return (
+                    db.query(Knowledge.user_id, Knowledge.access_control)
+                    .join(KnowledgeFile, Knowledge.id == KnowledgeFile.knowledge_id)
+                    .filter(KnowledgeFile.file_id == file_id)
+                    .all()
+                )
+        except Exception as e:
+            log.error(f"Error fetching file access control data: {e}")
+            return []
+
     def get_files_by_id(self, knowledge_id: str) -> list[FileModel]:
         try:
             with get_db() as db:
