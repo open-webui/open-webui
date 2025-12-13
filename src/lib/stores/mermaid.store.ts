@@ -949,6 +949,7 @@ class MermaidStore {
 			this.broadcastChannelInitialized = false;
 		}
 	}
+}
 
 // Export singleton instance
 export const mermaidStore = new MermaidStore();
