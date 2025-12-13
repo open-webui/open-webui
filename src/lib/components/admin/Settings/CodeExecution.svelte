@@ -41,13 +41,13 @@
 		{#if config}
 			<div>
 				<div class="mb-3.5">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium text-gray-700 dark:text-gray-200">{$i18n.t('General')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 					<div class="mb-2.5">
 						<div class=" flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">
+							<div class=" self-center text-xs font-medium text-gray-700 dark:text-gray-200">
 								{$i18n.t('Enable Code Execution')}
 							</div>
 
@@ -57,7 +57,7 @@
 
 					<div class="mb-2.5">
 						<div class="flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('Code Execution Engine')}</div>
+							<div class=" self-center text-xs font-medium text-gray-700 dark:text-gray-200">{$i18n.t('Code Execution Engine')}</div>
 							<div class="flex items-center relative">
 								<select
 									class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
@@ -74,7 +74,7 @@
 						</div>
 
 						{#if config.CODE_EXECUTION_ENGINE === 'jupyter'}
-							<div class="text-gray-500 text-xs">
+							<div class="text-gray-500 dark:text-gray-400 text-xs">
 								{$i18n.t(
 									'Warning: Jupyter execution enables arbitrary code execution, posing severe security risks—proceed with extreme caution.'
 								)}
@@ -84,7 +84,7 @@
 
 					{#if config.CODE_EXECUTION_ENGINE === 'jupyter'}
 						<div class="mb-2.5 flex flex-col gap-1.5 w-full">
-							<div class="text-xs font-medium">
+							<div class="text-xs font-medium text-gray-700 dark:text-gray-200">
 								{$i18n.t('Jupyter URL')}
 							</div>
 
@@ -103,7 +103,7 @@
 
 						<div class="mb-2.5 flex flex-col gap-1.5 w-full">
 							<div class=" flex gap-2 w-full items-center justify-between">
-								<div class="text-xs font-medium">
+								<div class="text-xs font-medium text-gray-700 dark:text-gray-200">
 									{$i18n.t('Jupyter Auth')}
 								</div>
 
@@ -144,7 +144,7 @@
 						</div>
 
 						<div class="flex gap-2 w-full items-center justify-between">
-							<div class="text-xs font-medium">
+							<div class="text-xs font-medium text-gray-700 dark:text-gray-200">
 								{$i18n.t('Code Execution Timeout')}
 							</div>
 
@@ -164,13 +164,13 @@
 				</div>
 
 				<div class="mb-3.5">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Code Interpreter')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium text-gray-700 dark:text-gray-200">{$i18n.t('Code Interpreter')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 					<div class="mb-2.5">
 						<div class=" flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">
+							<div class=" self-center text-xs font-medium text-gray-700 dark:text-gray-200">
 								{$i18n.t('Enable Code Interpreter')}
 							</div>
 
@@ -181,7 +181,7 @@
 					{#if config.ENABLE_CODE_INTERPRETER}
 						<div class="mb-2.5">
 							<div class="  flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">
+								<div class=" self-center text-xs font-medium text-gray-700 dark:text-gray-200">
 									{$i18n.t('Code Interpreter Engine')}
 								</div>
 								<div class="flex items-center relative">
@@ -200,7 +200,7 @@
 							</div>
 
 							{#if config.CODE_INTERPRETER_ENGINE === 'jupyter'}
-								<div class="text-gray-500 text-xs">
+								<div class="text-gray-500 dark:text-gray-400 text-xs">
 									{$i18n.t(
 										'Warning: Jupyter execution enables arbitrary code execution, posing severe security risks—proceed with extreme caution.'
 									)}
@@ -210,7 +210,7 @@
 
 						{#if config.CODE_INTERPRETER_ENGINE === 'jupyter'}
 							<div class="mb-2.5 flex flex-col gap-1.5 w-full">
-								<div class="text-xs font-medium">
+								<div class="text-xs font-medium text-gray-700 dark:text-gray-200">
 									{$i18n.t('Jupyter URL')}
 								</div>
 
@@ -229,7 +229,7 @@
 
 							<div class="mb-2.5 flex flex-col gap-1.5 w-full">
 								<div class="flex gap-2 w-full items-center justify-between">
-									<div class="text-xs font-medium">
+									<div class="text-xs font-medium text-gray-700 dark:text-gray-200">
 										{$i18n.t('Jupyter Auth')}
 									</div>
 
@@ -270,7 +270,7 @@
 							</div>
 
 							<div class="flex gap-2 w-full items-center justify-between">
-								<div class="text-xs font-medium">
+								<div class="text-xs font-medium text-gray-700 dark:text-gray-200">
 									{$i18n.t('Code Execution Timeout')}
 								</div>
 

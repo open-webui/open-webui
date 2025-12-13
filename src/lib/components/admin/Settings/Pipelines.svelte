@@ -224,7 +224,7 @@
 	<div class="overflow-y-scroll scrollbar-hidden h-full">
 		{#if PIPELINES_LIST !== null}
 			<div class="flex w-full justify-between mb-2">
-				<div class=" self-center text-sm font-medium">
+				<div class=" self-center text-sm font-medium text-gray-700 dark:text-gray-200">
 					{$i18n.t('Manage Pipelines')}
 				</div>
 			</div>
@@ -257,7 +257,7 @@
 				</div>
 
 				<div class=" my-2">
-					<div class=" mb-2 text-sm font-medium">
+					<div class=" mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">
 						{$i18n.t('Upload Pipeline')}
 					</div>
 					<div class="flex w-full">
@@ -342,7 +342,7 @@
 				</div>
 
 				<div class=" my-2">
-					<div class=" mb-2 text-sm font-medium">
+					<div class=" mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">
 						{$i18n.t('Install from Github URL')}
 					</div>
 					<div class="flex w-full">
@@ -409,7 +409,7 @@
 						</button>
 					</div>
 
-					<div class="mt-2 text-xs text-gray-500">
+					<div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
 						<span class=" font-medium dark:text-gray-200">{$i18n.t('Warning:')}</span>
 						{$i18n.t('Pipelines are a plugin system with arbitrary code execution —')}
 						<span class=" font-medium dark:text-gray-400"
@@ -423,7 +423,7 @@
 				{#if pipelines !== null}
 					{#if pipelines.length > 0}
 						<div class="flex w-full justify-between mb-2">
-							<div class=" self-center text-sm font-medium">
+							<div class=" self-center text-sm font-medium text-gray-700 dark:text-gray-200">
 								{$i18n.t('Pipelines Valves')}
 							</div>
 						</div>
@@ -477,7 +477,7 @@
 										{#each Object.keys(valves_spec.properties) as property, idx}
 											<div class=" py-0.5 w-full justify-between">
 												<div class="flex w-full justify-between">
-													<div class=" self-center text-xs font-medium">
+													<div class=" self-center text-xs font-medium text-gray-700 dark:text-gray-200">
 														{valves_spec.properties[property].title}
 													</div>
 
@@ -513,7 +513,7 @@
 																</select>
 															{:else if (valves_spec.properties[property]?.type ?? null) === 'boolean'}
 																<div class="flex justify-between items-center">
-																	<div class="text-xs text-gray-500">
+																	<div class="text-xs text-gray-500 dark:text-gray-400">
 																		{valves[property] ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 																	</div>
 

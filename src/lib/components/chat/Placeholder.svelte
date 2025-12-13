@@ -62,6 +62,89 @@
 	let models = [];
 	let selectedModelIdx = 0;
 
+	// API로부터 받아온 추천 질문들
+	let personalSuggestions: any[] = [];
+	let allSuggestions: any[] = [];
+	let isLoadingSuggestions = true;
+
+	// API 응답을 Suggestions 컴포넌트 형식으로 변환
+	function transformApiResponse(recommendations: any[]): any[] {
+		return recommendations.map((item) => ({
+			id: item.id,
+			content: item.question,
+			title: [item.subsection_title, item.section_title]
+		}));
+	}
+
+	// 기본 fallback prompts 가져오기
+	function getFallbackPrompts() {
+		return (
+			atSelectedModel?.info?.meta?.suggestion_prompts ??
+			models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
+			$config?.default_prompt_suggestions ??
+			[]
+		);
+	}
+
+	// 개인화된 추천 질문 API 호출
+	async function fetchPersonalRecommendations() {
+		try {
+			const response = await fetch(
+				`${WEBUI_API_BASE_URL}/textbook/recommendations?k=3&shuffle=true`,
+				{
+					headers: {
+						Authorization: `Bearer ${localStorage.token}`,
+						'Content-Type': 'application/json'
+					}
+				}
+			);
+			if (!response.ok) throw new Error('Failed to fetch personal recommendations');
+			const data = await response.json();
+			return transformApiResponse(data);
+		} catch (error) {
+			console.error('Error fetching personal recommendations:', error);
+			return null;
+		}
+	}
+
+	// 전체 추천 질문 API 호출
+	async function fetchAllRecommendations() {
+		try {
+			const response = await fetch(
+				`${WEBUI_API_BASE_URL}/textbook/recommendations?k=3&shuffle=true`,
+				{
+					headers: {
+						Authorization: `Bearer ${localStorage.token}`,
+						'Content-Type': 'application/json'
+					}
+				}
+			);
+			if (!response.ok) throw new Error('Failed to fetch all recommendations');
+			const data = await response.json();
+			return transformApiResponse(data);
+		} catch (error) {
+			console.error('Error fetching all recommendations:', error);
+			return null;
+		}
+	}
+
+	onMount(async () => {
+		isLoadingSuggestions = true;
+
+		// 병렬로 두 API 호출
+		const [personal, all] = await Promise.all([
+			fetchPersonalRecommendations(),
+			fetchAllRecommendations()
+		]);
+
+		// API 성공 시 사용, 실패 시 fallback
+		const fallback = getFallbackPrompts();
+		personalSuggestions = personal ?? fallback;
+		allSuggestions = all ?? fallback;
+
+		isLoadingSuggestions = false;
+	});
+
 	$: if (selectedModels.length > 0) {
 		selectedModelIdx = models.length - 1;
 	}
@@ -244,25 +327,19 @@
 		</div>
 	{:else}
 		<div class="mx-auto max-w-5xl font-primary mt-2" in:fade={{ duration: 200, delay: 200 }}>
-			<div class="text-title-4 text-gray-900 mt-8">
+			<div class="text-title-4 text-gray-900 dark:text-gray-50 mt-8">
 				이번 주 취약 개념 Top 3
 			</div>
 			<div class="mx-5">
 				<Suggestions
-					suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
-						models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
-						$config?.default_prompt_suggestions ??
-						[]}
+					suggestionPrompts={personalSuggestions}
 					inputValue={prompt}
 					{onSelect}
 				/>
 			</div>
 			<div class="mx-5">
 				<Suggestions
-					suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
-						models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
-						$config?.default_prompt_suggestions ??
-						[]}
+					suggestionPrompts={allSuggestions}
 					inputValue={prompt}
 					suggestionTitle={$i18n.t('전체 학생')}
 					{onSelect}

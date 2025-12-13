@@ -289,7 +289,7 @@
 		{#if config}
 			<div>
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium text-gray-700 dark:text-gray-200">{$i18n.t('General')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -307,7 +307,7 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Create Image')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium text-gray-700 dark:text-gray-200">{$i18n.t('Create Image')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -544,10 +544,10 @@
 								</div>
 							</div>
 
-							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+							<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
 								{$i18n.t('Include `--api` flag when running stable-diffusion-webui')}
 								<a
-									class=" text-gray-300 font-medium"
+									class=" text-gray-700 dark:text-gray-300 font-medium"
 									href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/3734"
 									target="_blank"
 								>
@@ -576,10 +576,10 @@
 								</div>
 							</div>
 
-							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+							<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
 								{$i18n.t('Include `--api-auth` flag when running stable-diffusion-webui')}
 								<a
-									class=" text-gray-300 font-medium"
+									class=" text-gray-700 dark:text-gray-300 font-medium"
 									href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/13993"
 									target="_blank"
 								>
@@ -737,7 +737,7 @@
 								</div>
 							</div>
 
-							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+							<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
 								<CodeEditorModal
 									bind:show={showComfyUIWorkflowEditor}
 									value={config.COMFYUI_WORKFLOW}
@@ -775,7 +775,7 @@
 									{#each REQUIRED_WORKFLOW_NODES as node}
 										<div class="flex w-full flex-col">
 											<div class="shrink-0">
-												<div class=" capitalize line-clamp-1 w-20 text-gray-400 dark:text-gray-500">
+												<div class=" capitalize line-clamp-1 w-20 text-gray-500 dark:text-gray-400">
 													{node.type}{node.type === 'prompt' ? '*' : ''}
 												</div>
 											</div>
@@ -792,7 +792,7 @@
 													</Tooltip>
 												</div>
 
-												<div class="px-2 text-gray-400 dark:text-gray-500">:</div>
+												<div class="px-2 text-gray-500 dark:text-gray-400">:</div>
 
 												<div class="w-full">
 													<Tooltip
@@ -811,7 +811,7 @@
 									{/each}
 								</div>
 
-								<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+								<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
 									{$i18n.t('*Prompt node ID(s) are required for image generation')}
 								</div>
 							</div>
@@ -880,7 +880,7 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Edit Image')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium text-gray-700 dark:text-gray-200">{$i18n.t('Edit Image')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -1150,7 +1150,7 @@
 								</div>
 							</div>
 
-							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+							<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
 								<CodeEditorModal
 									bind:show={showComfyUIEditWorkflowEditor}
 									value={config.IMAGES_EDIT_COMFYUI_WORKFLOW}
@@ -1180,7 +1180,7 @@
 									{#each REQUIRED_EDIT_WORKFLOW_NODES as node}
 										<div class="flex w-full flex-col">
 											<div class="shrink-0">
-												<div class=" capitalize line-clamp-1 w-20 text-gray-400 dark:text-gray-500">
+												<div class=" capitalize line-clamp-1 w-20 text-gray-500 dark:text-gray-400">
 													{node.type}{['prompt', 'image'].includes(node.type) ? '*' : ''}
 												</div>
 											</div>
@@ -1197,7 +1197,7 @@
 													</Tooltip>
 												</div>
 
-												<div class="px-2 text-gray-400 dark:text-gray-500">:</div>
+												<div class="px-2 text-gray-500 dark:text-gray-400">:</div>
 
 												<div class="w-full">
 													<Tooltip
@@ -1216,7 +1216,7 @@
 									{/each}
 								</div>
 
-								<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+								<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
 									{$i18n.t('*Prompt node ID(s) are required for image generation')}
 								</div>
 							</div>

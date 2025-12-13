@@ -219,7 +219,7 @@
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
 		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && connectionsConfig !== null}
 			<div class="mb-3.5">
-				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+				<div class=" mt-0.5 mb-2.5 text-base font-medium text-gray-700 dark:text-gray-200">{$i18n.t('General')}</div>
 
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -243,7 +243,7 @@
 						{#if ENABLE_OPENAI_API}
 							<div class="">
 								<div class="flex justify-between items-center">
-									<div class="font-medium text-xs">{$i18n.t('Manage OpenAI API Connections')}</div>
+									<div class="font-medium text-xs text-gray-700 dark:text-gray-200">{$i18n.t('Manage OpenAI API Connections')}</div>
 
 									<Tooltip content={$i18n.t(`Add Connection`)}>
 										<button
@@ -307,7 +307,7 @@
 					{#if ENABLE_OLLAMA_API}
 						<div class="">
 							<div class="flex justify-between items-center">
-								<div class="font-medium text-xs">{$i18n.t('Manage Ollama API Connections')}</div>
+								<div class="font-medium text-xs text-gray-700 dark:text-gray-200">{$i18n.t('Manage Ollama API Connections')}</div>
 
 								<Tooltip content={$i18n.t(`Add Connection`)}>
 									<button
@@ -347,10 +347,10 @@
 								</div>
 							</div>
 
-							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+							<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
 								{$i18n.t('Trouble accessing Ollama?')}
 								<a
-									class=" text-gray-300 font-medium underline"
+									class=" text-gray-700 dark:text-gray-300 font-medium underline"
 									href="https://github.com/open-webui/open-webui#troubleshooting"
 									target="_blank"
 								>
@@ -377,7 +377,7 @@
 						</div>
 					</div>
 
-					<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+					<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
 						{$i18n.t(
 							'Direct Connections allow users to connect to their own OpenAI compatible API endpoints.'
 						)}
@@ -388,7 +388,7 @@
 
 				<div class="my-2">
 					<div class="flex justify-between items-center text-sm">
-						<div class=" text-xs font-medium">{$i18n.t('Cache Base Model List')}</div>
+						<div class=" text-xs font-medium text-gray-700 dark:text-gray-200">{$i18n.t('Cache Base Model List')}</div>
 
 						<div class="flex items-center">
 							<div class="">
@@ -402,7 +402,7 @@
 						</div>
 					</div>
 
-					<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+					<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
 						{$i18n.t(
 							'Base Model List Cache speeds up access by fetching base models only at startup or on settings save—faster, but may not show recent base model changes.'
 						)}

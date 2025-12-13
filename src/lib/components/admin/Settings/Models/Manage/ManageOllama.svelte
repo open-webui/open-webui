@@ -700,7 +700,7 @@
 						</Tooltip>
 					</div>
 
-					<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+					<div class="mt-2 mb-1 text-xs text-gray-500 dark:text-gray-400">
 						{$i18n.t('To access the available model names for downloading,')}
 						<a
 							class=" text-gray-500 dark:text-gray-300 font-medium underline"
@@ -925,7 +925,7 @@
 					<div class="flex justify-between items-center text-xs">
 						<div class=" text-sm font-medium">{$i18n.t('Experimental')}</div>
 						<button
-							class=" text-xs font-medium text-gray-500"
+							class=" text-xs font-medium text-gray-500 dark:text-gray-400"
 							type="button"
 							on:click={() => {
 								showExperimentalOllama = !showExperimentalOllama;
@@ -1080,7 +1080,7 @@
 								</div>
 							</div>
 						{/if}
-						<div class=" mt-1 text-xs text-gray-400 dark:text-gray-500">
+						<div class=" mt-1 text-xs text-gray-500 dark:text-gray-400">
 							{$i18n.t('To access the GGUF models available for downloading,')}
 							<a
 								class=" text-gray-500 dark:text-gray-300 font-medium underline"

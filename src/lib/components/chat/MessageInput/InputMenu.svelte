@@ -28,6 +28,8 @@
 	import Knowledge from './InputMenu/Knowledge.svelte';
 	import AttachWebpageModal from './AttachWebpageModal.svelte';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
+	import Check from '$lib/components/icons/Check.svelte';
+	import AdjustmentsHorizontal from '$lib/components/icons/AdjustmentsHorizontal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -45,6 +47,21 @@
 
 	export let onUpload: Function;
 	export let onClose: Function;
+
+	export let proficiencyLevel = 'intermediate';
+	export let responseStyle = 'question_guidance';
+
+	const proficiencyLevels = {
+		initial: '초급',
+		intermediate: '중급',
+		advanced: '고급'
+	};
+
+	const responseStyles = {
+		question_guidance: '질문식 유도',
+		problem_bank: '문제 은행',
+		detailed_lecture: '자세한 강의'
+	};
 
 	let show = false;
 	let tab = '';
@@ -130,7 +147,7 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-70 flex flex-col items-start p-5 gap-2 bg-[rgba(113,122,143,0.3)] shadow-[4px_4px_20px_rgba(0,0,0,0.1)] backdrop-blur-[20px] rounded-[20px] rounded-bl-[4px] z-50 text-white text-xs border-0 max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin transition"
+			class="flex flex-col items-start p-5 gap-2 bg-gray-50 dark:bg-[rgba(113,122,143,0.3)] shadow-[4px_4px_20px_rgba(0,0,0,0.1)] backdrop-blur-[20px] rounded-[20px] rounded-bl-[4px] z-50 text-gray-900 dark:text-white text-xs border-0 max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin transition"
 			sideOffset={4}
 			alignOffset={-6}
 			side="bottom"
@@ -139,6 +156,45 @@
 		>
 			{#if tab === ''}
 				<div in:fly={{ x: -20, duration: 150 }}>
+					<!-- 학습 설정 섹션 -->
+					<div class="w-full pb-2 mb-2 border-b border-gray-200 dark:border-white/20">
+						<button
+							class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 transition cursor-pointer text-xs leading-[18px]"
+							on:click={() => {
+								tab = 'proficiency';
+							}}
+						>
+							<AdjustmentsHorizontal className="size-4" />
+							<div class="flex items-center w-full justify-between">
+								<div class="flex items-center gap-1">
+									<span>수준:</span>
+									<span class="text-gray-500 dark:text-gray-300">{proficiencyLevels[proficiencyLevel]}</span>
+								</div>
+								<div class="text-gray-400">
+									<ChevronRight />
+								</div>
+							</div>
+						</button>
+
+						<button
+							class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 transition cursor-pointer text-xs leading-[18px]"
+							on:click={() => {
+								tab = 'response_style';
+							}}
+						>
+							<AdjustmentsHorizontal className="size-4" />
+							<div class="flex items-center w-full justify-between">
+								<div class="flex items-center gap-1">
+									<span>스타일:</span>
+									<span class="text-gray-500 dark:text-gray-300">{responseStyles[responseStyle]}</span>
+								</div>
+								<div class="text-gray-400">
+									<ChevronRight />
+								</div>
+							</div>
+						</button>
+					</div>
+
 					<Tooltip
 						content={fileUploadCapableModels.length !== selectedModels.length
 							? $i18n.t('Model(s) do not support file upload')
@@ -561,6 +617,68 @@
 							</div>
 						</DropdownMenu.Item>
 					{/if}
+				</div>
+			{:else if tab === 'proficiency'}
+				<div in:fly={{ x: 20, duration: 150 }}>
+					<button
+						class="flex w-full justify-between items-center p-1 gap-1 h-7 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 transition cursor-pointer text-xs leading-[18px]"
+						on:click={() => {
+							tab = '';
+						}}
+					>
+						<ChevronLeft />
+						<div class="flex items-center w-full justify-between">
+							<div>수준 선택</div>
+						</div>
+					</button>
+
+					{#each Object.entries(proficiencyLevels) as [key, label]}
+						<button
+							class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 transition cursor-pointer text-xs leading-[18px] {proficiencyLevel === key ? 'bg-gray-200 dark:bg-white/10' : ''}"
+							on:click={() => {
+								proficiencyLevel = key;
+								tab = '';
+							}}
+						>
+							<div class="flex items-center justify-between w-full">
+								<span>{label}</span>
+								{#if proficiencyLevel === key}
+									<Check className="size-4" />
+								{/if}
+							</div>
+						</button>
+					{/each}
+				</div>
+			{:else if tab === 'response_style'}
+				<div in:fly={{ x: 20, duration: 150 }}>
+					<button
+						class="flex w-full justify-between items-center p-1 gap-1 h-7 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 transition cursor-pointer text-xs leading-[18px]"
+						on:click={() => {
+							tab = '';
+						}}
+					>
+						<ChevronLeft />
+						<div class="flex items-center w-full justify-between">
+							<div>응답 스타일 선택</div>
+						</div>
+					</button>
+
+					{#each Object.entries(responseStyles) as [key, label]}
+						<button
+							class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 transition cursor-pointer text-xs leading-[18px] {responseStyle === key ? 'bg-gray-200 dark:bg-white/10' : ''}"
+							on:click={() => {
+								responseStyle = key;
+								tab = '';
+							}}
+						>
+							<div class="flex items-center justify-between w-full">
+								<span>{label}</span>
+								{#if responseStyle === key}
+									<Check className="size-4" />
+								{/if}
+							</div>
+						</button>
+					{/each}
 				</div>
 			{/if}
 		</DropdownMenu.Content>

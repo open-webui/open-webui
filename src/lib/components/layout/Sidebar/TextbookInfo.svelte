@@ -1,121 +1,55 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, onMount } from 'svelte';
 	import { slide } from 'svelte/transition';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 
 	const dispatch = createEventDispatcher();
 
-	// Dummy textbook data
-	const textbookData = {
-		title: 'Advanced Engineering Mathematics',
-		author: 'Erwin Kreyszig',
-		edition: '10th Edition',
-		sections: [
-			{
-				id: 'part-a',
-				title: 'Part A. 상미분방정식',
-				subsections: [
-					{
-						id: 'ode-1',
-						title: '1. 1계 상미분방정식 (First-Order ODEs)',
-						subtitle: '1계 미분방정식의 기본 개념과 해법을 학습합니다.'
-					},
-					{
-						id: 'ode-2',
-						title: '2. 2계 선형 상미분방정식 (Second-Order Linear ODEs)',
-						subtitle: '2계 선형 미분방정식의 해법과 응용을 다룹니다.'
-					},
-					{
-						id: 'ode-3',
-						title: '3. 고계 선형 상미분방정식 (Higher Order Linear ODEs)',
-						subtitle: '3계 이상의 선형 미분방정식을 학습합니다.'
-					}
-				]
-			},
-			{
-				id: 'part-b',
-				title: 'Part B. 선형 대수, 벡터 미적분',
-				subsections: [
-					{
-						id: 'linear-1',
-						title: '4. 선형 대수: 행렬, 벡터, 행렬식 (Linear Algebra: Matrices, Vectors, Determinants)',
-						subtitle: '행렬과 벡터의 기본 개념을 이해합니다.'
-					},
-					{
-						id: 'linear-2',
-						title: '5. 선형 대수: 행렬 고유값 문제 (Linear Algebra: Matrix Eigenvalue Problems)',
-						subtitle: '고유값과 고유벡터의 개념과 응용을 학습합니다.'
-					},
-					{
-						id: 'vector-1',
-						title: '6. 벡터 미적분: 그래디언트, 발산, 회전 (Vector Calculus: Gradient, Divergence, Curl)',
-						subtitle: '벡터장의 미분 연산자를 이해합니다.'
-					}
-				]
-			},
-			{
-				id: 'part-c',
-				title: 'Part C. 푸리에 해석, 편미분방정식',
-				subsections: [
-					{
-						id: 'fourier-1',
-						title: '7. 푸리에 급수 (Fourier Series)',
-						subtitle: '주기 함수의 푸리에 급수 전개를 학습합니다.'
-					},
-					{
-						id: 'fourier-2',
-						title: '8. 푸리에 적분과 변환 (Fourier Integrals and Transforms)',
-						subtitle: '푸리에 변환의 개념과 응용을 다룹니다.'
-					},
-					{
-						id: 'pde-1',
-						title: '9. 편미분방정식 (Partial Differential Equations)',
-						subtitle: '편미분방정식의 기본 개념과 해법을 학습합니다.'
-					}
-				]
-			},
-			{
-				id: 'part-d',
-				title: 'Part D. 복소 해석',
-				subsections: [
-					{
-						id: 'complex-1',
-						title: '10. 복소수와 복소 함수 (Complex Numbers and Functions)',
-						subtitle: '복소수의 기본 개념과 복소 함수를 이해합니다.'
-					},
-					{
-						id: 'complex-2',
-						title: '11. 복소 적분 (Complex Integration)',
-						subtitle: '복소 평면에서의 적분을 학습합니다.'
-					},
-					{
-						id: 'complex-3',
-						title: '12. 급수, 유수, 특이점 (Series, Residues, Singularities)',
-						subtitle: '복소 급수와 유수 정리를 다룹니다.'
-					}
-				]
-			},
-			{
-				id: 'part-e',
-				title: 'Part E. 수치 해석',
-				subsections: [
-					{
-						id: 'numerical-1',
-						title: '13. 선형 시스템의 수치 해법 (Numerical Methods for Linear Systems)',
-						subtitle: '선형 방정식 시스템의 수치 해법을 학습합니다.'
-					},
-					{
-						id: 'numerical-2',
-						title: '14. 미분방정식의 수치 해법 (Numerical Methods for Differential Equations)',
-						subtitle: '미분방정식을 수치적으로 풀어냅니다.'
-					}
-				]
+	interface Subsection {
+		id: string;
+		title: string;
+		subtitle: string;
+	}
+
+	interface Section {
+		id: string;
+		title: string;
+		subsections: Subsection[];
+	}
+
+	interface TextbookData {
+		title: string;
+		author: string;
+		edition: string;
+		sections: Section[];
+	}
+
+	let textbookData: TextbookData | null = null;
+	let loading = true;
+	let error: string | null = null;
+
+	onMount(async () => {
+		await fetchTextbookData();
+	});
+
+	async function fetchTextbookData() {
+		try {
+			loading = true;
+			error = null;
+			const response = await fetch('/api/v1/textbook/');
+			if (!response.ok) {
+				throw new Error('교과서 데이터를 불러오는데 실패했습니다.');
 			}
-		]
-	};
+			textbookData = await response.json();
+		} catch (e) {
+			error = e instanceof Error ? e.message : '알 수 없는 오류가 발생했습니다.';
+		} finally {
+			loading = false;
+		}
+	}
 
 	// State for expanded sections
-	let expandedSections = {};
+	let expandedSections: Record<string, boolean> = {};
 
 	const toggleSection = (sectionId) => {
 		expandedSections[sectionId] = !expandedSections[sectionId];
@@ -124,9 +58,14 @@
 
 	const selectSubsection = (subsection) => {
 		dispatch('subsection-select', {
+			id: subsection.id,
 			title: subsection.title,
 			subtitle: subsection.subtitle
 		});
+	};
+
+	const clearSection = () => {
+		dispatch('section-clear');
 	};
 </script>
 
@@ -156,16 +95,26 @@
 
 	<!-- Content -->
 	<div class="flex flex-col gap-2 mt-2">
-			<!-- Textbook Card -->
-			<div
-				class="mx-2 px-5 py-4 rounded-[20px] bg-[rgba(253,254,254,0.7)] border-0 shadow-[4px_4px_20px_rgba(0,0,0,0.1)] backdrop-blur-[20px]"
+		{#if loading}
+			<div class="mx-2 px-5 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+				불러오는 중...
+			</div>
+		{:else if error}
+			<div class="mx-2 px-5 py-4 text-center text-sm text-red-500">
+				{error}
+			</div>
+		{:else if textbookData}
+			<!-- Textbook Card - Click to clear chapter selection -->
+			<button
+				class="mx-2 px-5 py-4 rounded-2xl bg-[rgba(253,254,254,0.7)] border-0 shadow-[4px_4px_20px_rgba(0,0,0,0.1)] backdrop-blur-[20px] hover:bg-[rgba(253,254,254,0.85)] transition cursor-pointer text-left flex-1"
+				on:click={clearSection}
 			>
 				<div class="w-[220px] text-sm font-normal text-[#1A1B1C] dark:text-white mb-1">{textbookData.title}</div>
 				<div class="flex flex-col gap-1 w-[220px]">
 					<div class="text-xs font-normal text-[#596172] dark:text-gray-400">저자: {textbookData.author}</div>
 					<div class="text-xs font-normal text-[#596172] dark:text-gray-400">판: {textbookData.edition}</div>
 				</div>
-			</div>
+			</button>
 
 			<!-- Sections -->
 			{#each textbookData.sections as section}
@@ -204,5 +153,6 @@
 				
 				</div>
 			{/each}
+		{/if}
 	</div>
 </div>

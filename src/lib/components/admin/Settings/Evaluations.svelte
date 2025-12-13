@@ -104,12 +104,12 @@
 		{#if evaluationConfig !== null}
 			<div class="">
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium text-gray-700 dark:text-gray-200">{$i18n.t('General')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 					<div class="mb-2.5 flex w-full justify-between">
-						<div class=" text-xs font-medium">{$i18n.t('Arena Models')}</div>
+						<div class=" text-xs font-medium text-gray-700 dark:text-gray-200">{$i18n.t('Arena Models')}</div>
 
 						<Tooltip content={$i18n.t(`Message rating should be enabled to use this feature`)}>
 							<Switch bind:state={evaluationConfig.ENABLE_EVALUATION_ARENA_MODELS} />
@@ -119,7 +119,7 @@
 
 				{#if evaluationConfig.ENABLE_EVALUATION_ARENA_MODELS}
 					<div class="mb-3">
-						<div class=" mt-0.5 mb-2.5 text-base font-medium flex justify-between items-center">
+						<div class=" mt-0.5 mb-2.5 text-base font-medium text-gray-700 dark:text-gray-200 flex justify-between items-center">
 							<div>
 								{$i18n.t('Manage')}
 							</div>
@@ -155,7 +155,7 @@
 									/>
 								{/each}
 							{:else}
-								<div class=" text-center text-xs text-gray-500">
+								<div class=" text-center text-xs text-gray-500 dark:text-gray-400">
 									{$i18n.t(
 										`Using the default arena model with all models. Click the plus button to add custom models.`
 									)}

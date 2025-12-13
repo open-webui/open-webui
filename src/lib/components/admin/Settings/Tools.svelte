@@ -59,7 +59,7 @@
 		{#if servers !== null}
 			<div class="">
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium text-gray-700 dark:text-gray-200">{$i18n.t('General')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
@@ -68,7 +68,7 @@
 							URL: 'server?.url'
 						})} -->
 						<div class="flex justify-between items-center mb-0.5">
-							<div class="font-medium">{$i18n.t('Manage Tool Servers')}</div>
+							<div class="font-medium text-gray-700 dark:text-gray-200">{$i18n.t('Manage Tool Servers')}</div>
 
 							<Tooltip content={$i18n.t(`Add Connection`)}>
 								<button
@@ -99,7 +99,7 @@
 						</div>
 
 						<div class="my-1.5">
-							<div class="text-xs text-gray-500">
+							<div class="text-xs text-gray-500 dark:text-gray-400">
 								{$i18n.t('Connect to your own OpenAPI compatible external tool servers.')}
 							</div>
 						</div>

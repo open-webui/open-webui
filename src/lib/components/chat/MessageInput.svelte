@@ -113,10 +113,6 @@
 	export let proficiencyLevel = 'intermediate';
 	export let responseStyle = 'question_guidance';
 
-	// Dropdown state
-	let showProficiencyDropdown = false;
-	let showResponseStyleDropdown = false;
-
 	// Multiline detection for layout switching
 	let isMultiline = false;
 
@@ -127,28 +123,6 @@
 		// 줄바꿈이 있거나, 60자 이상이면 multiline으로 전환
 		isMultiline = lineBreaks > 0 || textLength > 30;
 	}
-
-	const proficiencyLevels = {
-		initial: '초급',
-		intermediate: '중급',
-		advanced: '고급'
-	};
-
-	const responseStyles = {
-		question_guidance: '질문식 유도',
-		problem_bank: '문제 은행',
-		detailed_lecture: '자세한 강의'
-	};
-
-	const setProficiencyLevel = (level) => {
-		proficiencyLevel = level;
-		showProficiencyDropdown = false;
-	};
-
-	const setResponseStyle = (style) => {
-		responseStyle = style;
-		showResponseStyleDropdown = false;
-	};
 
 	let showInputVariablesModal = false;
 	let inputVariablesModalCallback = (variableValues) => {};
@@ -824,21 +798,6 @@
 		shiftKey = false;
 	};
 
-	// 드롭다운 외부 클릭 핸들러
-	const handleClickOutside = (event) => {
-		const target = event.target;
-		const proficiencyDropdown = document.getElementById('proficiency-dropdown-input');
-		const responseStyleDropdown = document.getElementById('response-style-dropdown-input');
-
-		if (proficiencyDropdown && !proficiencyDropdown.contains(target)) {
-			showProficiencyDropdown = false;
-		}
-
-		if (responseStyleDropdown && !responseStyleDropdown.contains(target)) {
-			showResponseStyleDropdown = false;
-		}
-	};
-
 	onMount(async () => {
 		suggestions = [
 			{
@@ -968,9 +927,6 @@
 		dropzoneElement?.addEventListener('drop', onDrop);
 		dropzoneElement?.addEventListener('dragleave', onDragLeave);
 
-		// 외부 클릭 리스너 등록
-		document.addEventListener('click', handleClickOutside);
-
 		await tools.set(await getTools(localStorage.token));
 	});
 
@@ -989,9 +945,6 @@
 			dropzoneElement?.removeEventListener('drop', onDrop);
 			dropzoneElement?.removeEventListener('dragleave', onDragLeave);
 		}
-
-		// 외부 클릭 리스너 제거
-		document.removeEventListener('click', handleClickOutside);
 	});
 </script>
 
@@ -1251,6 +1204,8 @@
 								<div class="flex-none">
 									<InputMenu
 										bind:files
+										bind:proficiencyLevel
+										bind:responseStyle
 										selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
 										{fileUploadCapableModels}
 										{screenCaptureHandler}
@@ -1318,99 +1273,6 @@
 										? 'flex-col-reverse items-start'
 										: 'flex-row items-center'} px-7 py-1.5 min-h-12 bg-white/50 dark:bg-[rgba(39,40,44,0.2)] shadow-[4px_4px_20px_rgba(0,0,0,0.1),inset_2px_2px_6px_rgba(206,212,229,0.2),inset_6px_6px_25px_rgba(206,212,229,0.15)] backdrop-blur-[10px] rounded-4xl gap-2"
 								>
-									<!-- Dropdowns Section -->
-									<div class="flex-shrink-0 flex items-center gap-1.5 {isMultiline ? 'w-full' : ''}">
-										<!-- Proficiency Level Dropdown -->
-										<div class="relative" id="proficiency-dropdown-input">
-											<button
-												on:click={() => {
-													showProficiencyDropdown = !showProficiencyDropdown;
-													showResponseStyleDropdown = false;
-												}}
-												class="flex items-center gap-1 px-2.5 py-1 bg-[rgba(39,40,44,0.3)] shadow-[2px_2px_10px_rgba(0,0,0,0.1),inset_1px_1px_3px_rgba(206,212,229,0.15)] backdrop-blur-[10px] rounded-full h-7 text-caption text-gray-50 hover:bg-[rgba(39,40,44,0.4)] transition-all"
-												aria-label="수준 선택: {proficiencyLevels[proficiencyLevel]}"
-											>
-												<span>{proficiencyLevels[proficiencyLevel]}</span>
-												<svg
-													class="w-3 h-3 transition-transform duration-200 {showProficiencyDropdown
-														? 'rotate-180'
-														: ''}"
-													fill="none"
-													stroke="currentColor"
-													viewBox="0 0 24 24"
-												>
-													<path
-														d="M9.99595 12.75C9.89595 12.75 9.8022 12.7326 9.7147 12.6979C9.6272 12.6632 9.54873 12.6111 9.47928 12.5416L5.52803 8.59038C5.37053 8.43288 5.29525 8.25343 5.3022 8.05204C5.30914 7.85065 5.389 7.67357 5.54178 7.52079C5.69456 7.36801 5.87164 7.29163 6.07303 7.29163C6.27442 7.29163 6.4515 7.36801 6.60428 7.52079L10.0001 10.9375L13.4168 7.52079C13.5696 7.36801 13.7466 7.2951 13.948 7.30204C14.1494 7.30899 14.3265 7.38885 14.4793 7.54163C14.6321 7.6944 14.7084 7.87149 14.7084 8.07288C14.7084 8.27426 14.6297 8.45329 14.4722 8.60996L10.5209 12.5416C10.4459 12.6111 10.3647 12.6632 10.2772 12.6979C10.1897 12.7326 10.0959 12.75 9.99595 12.75Z"
-														fill="#FDFEFE"
-													/>
-												</svg>
-											</button>
-
-											{#if showProficiencyDropdown}
-												<div
-													class="absolute bottom-full mb-2 w-20 bg-[rgba(39,40,44,0.5)] shadow-[4px_4px_20px_rgba(0,0,0,0.1)] backdrop-blur-[20px] rounded-2xl z-50 p-1"
-												>
-													{#each Object.entries(proficiencyLevels) as [key, label]}
-														<button
-															on:click={() => setProficiencyLevel(key)}
-															class="w-full text-left px-3 py-1.5 rounded-xl text-caption {proficiencyLevel ===
-															key
-																? 'bg-[rgba(206,212,229,0.15)] text-gray-50 font-medium'
-																: 'text-gray-300 hover:bg-[rgba(206,212,229,0.1)] hover:text-gray-50'} transition-all"
-														>
-															{label}
-														</button>
-													{/each}
-												</div>
-											{/if}
-										</div>
-
-										<!-- Response Style Dropdown -->
-										<div class="relative" id="response-style-dropdown-input">
-											<button
-												on:click={() => {
-													showResponseStyleDropdown = !showResponseStyleDropdown;
-													showProficiencyDropdown = false;
-												}}
-												class="flex items-center gap-1 px-2.5 py-1 bg-[rgba(39,40,44,0.3)] shadow-[2px_2px_10px_rgba(0,0,0,0.1),inset_1px_1px_3px_rgba(206,212,229,0.15)] backdrop-blur-[10px] rounded-full h-7 text-caption text-gray-50 hover:bg-[rgba(39,40,44,0.4)] transition-all"
-												aria-label="응답 스타일 선택: {responseStyles[responseStyle]}"
-											>
-												<span>{responseStyles[responseStyle]}</span>
-												<svg
-													class="w-3 h-3 transition-transform duration-200 {showResponseStyleDropdown
-														? 'rotate-180'
-														: ''}"
-													fill="none"
-													stroke="currentColor"
-													viewBox="0 0 24 24"
-												>
-													<path
-														d="M9.99595 12.75C9.89595 12.75 9.8022 12.7326 9.7147 12.6979C9.6272 12.6632 9.54873 12.6111 9.47928 12.5416L5.52803 8.59038C5.37053 8.43288 5.29525 8.25343 5.3022 8.05204C5.30914 7.85065 5.389 7.67357 5.54178 7.52079C5.69456 7.36801 5.87164 7.29163 6.07303 7.29163C6.27442 7.29163 6.4515 7.36801 6.60428 7.52079L10.0001 10.9375L13.4168 7.52079C13.5696 7.36801 13.7466 7.2951 13.948 7.30204C14.1494 7.30899 14.3265 7.38885 14.4793 7.54163C14.6321 7.6944 14.7084 7.87149 14.7084 8.07288C14.7084 8.27426 14.6297 8.45329 14.4722 8.60996L10.5209 12.5416C10.4459 12.6111 10.3647 12.6632 10.2772 12.6979C10.1897 12.7326 10.0959 12.75 9.99595 12.75Z"
-														fill="#FDFEFE"
-													/>
-												</svg>
-											</button>
-
-											{#if showResponseStyleDropdown}
-												<div
-													class="absolute bottom-full mb-2 w-28 bg-[rgba(39,40,44,0.5)] shadow-[4px_4px_20px_rgba(0,0,0,0.1)] backdrop-blur-[20px] rounded-2xl z-50 p-1"
-												>
-													{#each Object.entries(responseStyles) as [key, label]}
-														<button
-															on:click={() => setResponseStyle(key)}
-															class="w-full text-left px-3 py-1.5 rounded-xl text-caption {responseStyle ===
-															key
-																? 'bg-[rgba(206,212,229,0.15)] text-gray-50 font-medium'
-																: 'text-gray-300 hover:bg-[rgba(206,212,229,0.1)] hover:text-gray-50'} transition-all"
-														>
-															{label}
-														</button>
-													{/each}
-												</div>
-											{/if}
-										</div>
-									</div>
-
 									<!-- Editor Section -->
 									<div class="flex-grow {isMultiline ? 'w-full' : ''}">
 										<div
