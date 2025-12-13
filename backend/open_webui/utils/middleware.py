@@ -757,21 +757,26 @@ async def chat_image_generation_handler(
 ):
     metadata = extra_params.get("__metadata__", {})
     chat_id = metadata.get("chat_id", None)
+    __event_emitter__ = extra_params.get("__event_emitter__", None)
+
+    # If chat_id is missing (e.g., direct API usage), still run image generation/edit
+    # using the provided form_data messages, but skip websocket events.
     if not chat_id:
-        return form_data
+        __event_emitter__ = None
 
-    __event_emitter__ = extra_params["__event_emitter__"]
-
-    if chat_id.startswith("local:"):
+    if not chat_id:
+        message_list = form_data.get("messages", [])
+    elif chat_id.startswith("local:"):
         message_list = form_data.get("messages", [])
     else:
         chat = Chats.get_chat_by_id_and_user_id(chat_id, user.id)
-        await __event_emitter__(
-            {
-                "type": "status",
-                "data": {"description": "Creating image", "done": False},
-            }
-        )
+        if __event_emitter__:
+            await __event_emitter__(
+                {
+                    "type": "status",
+                    "data": {"description": "Creating image", "done": False},
+                }
+            )
 
         messages_map = chat.chat.get("history", {}).get("messages", {})
         message_id = chat.chat.get("history", {}).get("currentId")
@@ -793,29 +798,36 @@ async def chat_image_generation_handler(
                 user=user,
             )
 
-            await __event_emitter__(
-                {
-                    "type": "status",
-                    "data": {"description": "Image created", "done": True},
-                }
-            )
+            if __event_emitter__:
+                await __event_emitter__(
+                    {
+                        "type": "status",
+                        "data": {"description": "Image created", "done": True},
+                    }
+                )
 
-            await __event_emitter__(
-                {
-                    "type": "files",
-                    "data": {
-                        "files": [
-                            {
-                                "type": "image",
-                                "url": image["url"],
-                            }
-                            for image in images
-                        ]
-                    },
-                }
-            )
+                await __event_emitter__(
+                    {
+                        "type": "files",
+                        "data": {
+                            "files": [
+                                {
+                                    "type": "image",
+                                    "url": image["url"],
+                                }
+                                for image in images
+                            ]
+                        },
+                    }
+                )
 
-            system_message_content = "<context>The requested image has been created and is now being shown to the user. Let them know that it has been generated.</context>"
+            system_message_content = (
+                "<context>"
+                "The requested image edit has been completed successfully and is now being shown to the user. "
+                "Let the user know the updated image is available in the chat."
+                + (f"\nImage edit prompt used:\n{prompt_text}" if (prompt_text := (str(prompt) if prompt is not None else "")) else "")
+                + "</context>"
+            )
         except Exception as e:
             log.debug(e)
 
@@ -826,15 +838,16 @@ async def chat_image_generation_handler(
                 else:
                     error_message = str(e.detail)
 
-            await __event_emitter__(
-                {
-                    "type": "status",
-                    "data": {
-                        "description": f"An error occurred while generating an image",
-                        "done": True,
-                    },
-                }
-            )
+            if __event_emitter__:
+                await __event_emitter__(
+                    {
+                        "type": "status",
+                        "data": {
+                            "description": f"An error occurred while generating an image",
+                            "done": True,
+                        },
+                    }
+                )
 
             system_message_content = f"<context>Image generation was attempted but failed. The system is currently unable to generate the image. Tell the user that the following error occurred: {error_message}</context>"
 
@@ -871,35 +884,49 @@ async def chat_image_generation_handler(
                 prompt = user_message
 
         try:
+            prompt_text = (
+                "\n".join([str(p) for p in prompt if p is not None])
+                if isinstance(prompt, list)
+                else (str(prompt) if prompt is not None else "")
+            )
+            if not (prompt_text or "").strip():
+                raise Exception("No prompt provided for image generation")
             images = await image_generations(
                 request=request,
-                form_data=CreateImageForm(**{"prompt": prompt}),
+                form_data=CreateImageForm(**{"prompt": prompt_text}),
                 user=user,
             )
 
-            await __event_emitter__(
-                {
-                    "type": "status",
-                    "data": {"description": "Image created", "done": True},
-                }
-            )
+            if __event_emitter__:
+                await __event_emitter__(
+                    {
+                        "type": "status",
+                        "data": {"description": "Image created", "done": True},
+                    }
+                )
 
-            await __event_emitter__(
-                {
-                    "type": "files",
-                    "data": {
-                        "files": [
-                            {
-                                "type": "image",
-                                "url": image["url"],
-                            }
-                            for image in images
-                        ]
-                    },
-                }
-            )
+                await __event_emitter__(
+                    {
+                        "type": "files",
+                        "data": {
+                            "files": [
+                                {
+                                    "type": "image",
+                                    "url": image["url"],
+                                }
+                                for image in images
+                            ]
+                        },
+                    }
+                )
 
-            system_message_content = "<context>The requested image has been created by the system successfully and is now being shown to the user. Let the user know that the image they requested has been generated and is now shown in the chat.</context>"
+            system_message_content = (
+                "<context>"
+                "The requested image has been generated successfully by the system and is now being shown to the user. "
+                "Let the user know the image they requested is available in the chat."
+                + (f"\nImage generation prompt used:\n{prompt_text}" if prompt_text else "")
+                + "</context>"
+            )
         except Exception as e:
             log.debug(e)
 
@@ -910,15 +937,16 @@ async def chat_image_generation_handler(
                 else:
                     error_message = str(e.detail)
 
-            await __event_emitter__(
-                {
-                    "type": "status",
-                    "data": {
-                        "description": f"An error occurred while generating an image",
-                        "done": True,
-                    },
-                }
-            )
+            if __event_emitter__:
+                await __event_emitter__(
+                    {
+                        "type": "status",
+                        "data": {
+                            "description": f"An error occurred while generating an image",
+                            "done": True,
+                        },
+                    }
+                )
 
             system_message_content = f"<context>Image generation was attempted but failed because of an error. The system is currently unable to generate the image. Tell the user that the following error occurred: {error_message}</context>"
 
