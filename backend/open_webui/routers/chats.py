@@ -696,9 +696,13 @@ async def send_chat_message_event_by_id(
 async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified_user)):
     if user.role == "admin":
         chat = Chats.get_chat_by_id(id)
-        for tag in chat.meta.get("tags", []):
-            if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 1:
-                Tags.delete_tag_by_name_and_user_id(tag, user.id)
+        tags = chat.meta.get("tags", [])
+        if tags:
+            tag_counts = Chats.count_chats_by_tag_names_and_user_id(tags, user.id)
+            for tag in tags:
+                tag_id = tag.replace(" ", "_").lower()
+                if tag_counts.get(tag_id, 0) == 1:
+                    Tags.delete_tag_by_name_and_user_id(tag, user.id)
 
         result = Chats.delete_chat_by_id(id)
 
@@ -713,9 +717,13 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified
             )
 
         chat = Chats.get_chat_by_id(id)
-        for tag in chat.meta.get("tags", []):
-            if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 1:
-                Tags.delete_tag_by_name_and_user_id(tag, user.id)
+        tags = chat.meta.get("tags", [])
+        if tags:
+            tag_counts = Chats.count_chats_by_tag_names_and_user_id(tags, user.id)
+            for tag in tags:
+                tag_id = tag.replace(" ", "_").lower()
+                if tag_counts.get(tag_id, 0) == 1:
+                    Tags.delete_tag_by_name_and_user_id(tag, user.id)
 
         result = Chats.delete_chat_by_id_and_user_id(id, user.id)
         return result
@@ -866,10 +874,14 @@ async def archive_chat_by_id(id: str, user=Depends(get_verified_user)):
 
         # Delete tags if chat is archived
         if chat.archived:
-            for tag_id in chat.meta.get("tags", []):
-                if Chats.count_chats_by_tag_name_and_user_id(tag_id, user.id) == 0:
-                    log.debug(f"deleting tag: {tag_id}")
-                    Tags.delete_tag_by_name_and_user_id(tag_id, user.id)
+            tags = chat.meta.get("tags", [])
+            if tags:
+                tag_counts = Chats.count_chats_by_tag_names_and_user_id(tags, user.id)
+                for tag in tags:
+                    tag_id_normalized = tag.replace(" ", "_").lower()
+                    if tag_counts.get(tag_id_normalized, 0) == 0:
+                        log.debug(f"deleting tag: {tag}")
+                        Tags.delete_tag_by_name_and_user_id(tag, user.id)
         else:
             for tag_id in chat.meta.get("tags", []):
                 tag = Tags.get_tag_by_name_and_user_id(tag_id, user.id)
@@ -1058,9 +1070,13 @@ async def delete_all_tags_by_id(id: str, user=Depends(get_verified_user)):
     if chat:
         Chats.delete_all_tags_by_id_and_user_id(id, user.id)
 
-        for tag in chat.meta.get("tags", []):
-            if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 0:
-                Tags.delete_tag_by_name_and_user_id(tag, user.id)
+        tags = chat.meta.get("tags", [])
+        if tags:
+            tag_counts = Chats.count_chats_by_tag_names_and_user_id(tags, user.id)
+            for tag in tags:
+                tag_id = tag.replace(" ", "_").lower()
+                if tag_counts.get(tag_id, 0) == 0:
+                    Tags.delete_tag_by_name_and_user_id(tag, user.id)
 
         return True
     else:

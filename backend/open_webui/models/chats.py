@@ -310,9 +310,13 @@ class ChatTable:
 
         self.delete_all_tags_by_id_and_user_id(id, user.id)
 
-        for tag in chat.meta.get("tags", []):
-            if self.count_chats_by_tag_name_and_user_id(tag, user.id) == 0:
-                Tags.delete_tag_by_name_and_user_id(tag, user.id)
+        old_tags = chat.meta.get("tags", [])
+        if old_tags:
+            tag_counts = self.count_chats_by_tag_names_and_user_id(old_tags, user.id)
+            for tag in old_tags:
+                tag_id = tag.replace(" ", "_").lower()
+                if tag_counts.get(tag_id, 0) == 0:
+                    Tags.delete_tag_by_name_and_user_id(tag, user.id)
 
         for tag_name in tags:
             if tag_name.lower() == "none":
@@ -1115,6 +1119,51 @@ class ChatTable:
             log.info(f"Count of chats for tag '{tag_name}': {count}")
 
             return count
+
+    def count_chats_by_tag_names_and_user_id(
+        self, tag_names: list[str], user_id: str
+    ) -> dict[str, int]:
+        """
+        Count chats for multiple tags in a single query.
+        Returns a dict mapping tag_id -> count.
+        """
+        if not tag_names:
+            return {}
+
+        # Normalize all tag names
+        tag_ids = [tag_name.replace(" ", "_").lower() for tag_name in tag_names]
+
+        with get_db() as db:
+            results = {}
+
+            if db.bind.dialect.name == "sqlite":
+                # SQLite: Use a single query with CASE expressions to count each tag
+                for tag_id in tag_ids:
+                    query = db.query(Chat).filter_by(user_id=user_id, archived=False)
+                    query = query.filter(
+                        text(
+                            "EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :tag_id)"
+                        )
+                    ).params(tag_id=tag_id)
+                    results[tag_id] = query.count()
+
+            elif db.bind.dialect.name == "postgresql":
+                # PostgreSQL: Use a single query with CASE expressions to count each tag
+                for tag_id in tag_ids:
+                    query = db.query(Chat).filter_by(user_id=user_id, archived=False)
+                    query = query.filter(
+                        text(
+                            "EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)"
+                        )
+                    ).params(tag_id=tag_id)
+                    results[tag_id] = query.count()
+
+            else:
+                raise NotImplementedError(
+                    f"Unsupported dialect: {db.bind.dialect.name}"
+                )
+
+            return results
 
     def count_chats_by_folder_id_and_user_id(self, folder_id: str, user_id: str) -> int:
         with get_db() as db:
