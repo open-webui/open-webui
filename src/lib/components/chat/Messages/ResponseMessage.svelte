@@ -24,7 +24,8 @@
 		TTSWorker,
 		user
 	} from '$lib/stores';
-	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
+	import { synthesizeOpenAISpeech, generateVoice } from '$lib/apis/audio';
+	import { generatePyPhoto } from '$lib/apis/py_photo';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
 		copyToClipboard as _copyToClipboard,
@@ -47,6 +48,8 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import WebSearchResults from './ResponseMessage/WebSearchResults.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
+	import Download from '$lib/components/icons/Download.svelte';
+	import Camera from '$lib/components/icons/Camera.svelte';
 
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
@@ -112,6 +115,50 @@
 			usage?: unknown;
 		};
 		annotation?: { type: string; rating: number };
+		voice_download?: {
+			enabled: boolean;
+			voice?: string;
+			status?: 'pending' | 'generating' | 'ready' | 'error';
+			error?: string;
+			id?: string;
+			ext?: string;
+			media_type?: string;
+			data_url?: string;
+			play_url?: string;
+			download_url?: string;
+		};
+		music?: {
+			enabled: boolean;
+			status?: 'pending' | 'generating' | 'ready' | 'error';
+			error?: string;
+			id?: string;
+			ext?: string;
+			media_type?: string;
+			data_url?: string;
+			play_url?: string;
+			download_url?: string;
+		};
+		video?: {
+			enabled: boolean;
+			status?: 'pending' | 'generating' | 'ready' | 'error';
+			error?: string;
+			id?: string;
+			ext?: string;
+			media_type?: string;
+			data_url?: string;
+			play_url?: string;
+			download_url?: string;
+		};
+		py_photo?: {
+			enabled: boolean;
+			status?: 'pending' | 'generating' | 'ready' | 'error';
+			error?: string;
+			id?: string;
+			media_type?: string;
+			data_url?: string;
+			view_url?: string;
+			download_url?: string;
+		};
 	}
 
 	export let chatId = '';
@@ -119,12 +166,151 @@
 	export let messageId;
 	export let selectedModels = [];
 
+	export let downloadVoiceEnabled = false;
+	export let downloadVoiceVoice = '';
+	export let downloadVoiceUnavailableMessage = '';
+	export let pyPhotoEnabled = false;
+
 	let message: MessageType = JSON.parse(JSON.stringify(history.messages[messageId]));
 	$: if (history.messages) {
 		if (JSON.stringify(message) !== JSON.stringify(history.messages[messageId])) {
 			message = JSON.parse(JSON.stringify(history.messages[messageId]));
 		}
 	}
+
+	const downloadVoiceHandler = async () => {
+		if (!downloadVoiceEnabled) return;
+		const current = history?.messages?.[messageId] as MessageType | undefined;
+		if (!current?.done) return;
+
+		const text = removeAllDetails(current?.content ?? '').trim();
+		if (!text) return;
+
+		if (($user?.role ?? '') !== 'admin' && downloadVoiceUnavailableMessage) {
+			saveMessage(current.id, {
+				...current,
+				voice_download: {
+					...(current.voice_download ?? {}),
+					enabled: true,
+					voice: downloadVoiceVoice || undefined,
+					status: 'error',
+					error: downloadVoiceUnavailableMessage
+				}
+			});
+			return;
+		}
+
+		if (current?.voice_download?.status === 'generating') return;
+		if (
+			current?.voice_download?.status === 'ready' &&
+			(current?.voice_download?.data_url || current?.voice_download?.play_url)
+		) {
+			return;
+		}
+
+		const voice = (downloadVoiceVoice || current?.voice_download?.voice || '').trim();
+
+		saveMessage(current.id, {
+			...current,
+			voice_download: {
+				...(current.voice_download ?? {}),
+				enabled: true,
+				voice: voice || undefined,
+				status: 'generating',
+				error: ''
+			}
+		});
+
+		await tick();
+
+		try {
+			const res = await generateVoice(localStorage.token, {
+				message_id: current.id,
+				input: text,
+				voice: voice || undefined
+			});
+
+			const latest = (history?.messages?.[messageId] as MessageType | undefined) ?? current;
+			saveMessage(latest.id, {
+				...latest,
+				voice_download: {
+					...(latest.voice_download ?? {}),
+					...res,
+					enabled: true,
+					voice: voice || undefined,
+					status: 'ready',
+					error: ''
+				}
+			});
+		} catch (e) {
+			const errMsg = typeof e === 'string' ? e : `${e}`;
+			const latest = (history?.messages?.[messageId] as MessageType | undefined) ?? current;
+			saveMessage(latest.id, {
+				...latest,
+				voice_download: {
+					...(latest.voice_download ?? {}),
+					enabled: true,
+					voice: voice || undefined,
+					status: 'error',
+					error: errMsg || $i18n.t('Insufficient credits for voice generation')
+				}
+			});
+		}
+	};
+
+	const pyPhotoHandler = async () => {
+		if (!pyPhotoEnabled) return;
+		const current = history?.messages?.[messageId] as MessageType | undefined;
+		if (!current?.done) return;
+
+		const text = removeAllDetails(current?.content ?? '').trim();
+		if (!text) return;
+
+		if (current?.py_photo?.status === 'generating') return;
+		if (current?.py_photo?.status === 'ready' && (current?.py_photo?.data_url || current?.py_photo?.view_url)) {
+			return;
+		}
+
+		saveMessage(current.id, {
+			...current,
+			py_photo: {
+				...(current.py_photo ?? {}),
+				enabled: true,
+				status: 'generating',
+				error: ''
+			}
+		});
+
+		await tick();
+
+		try {
+			const res = await generatePyPhoto(localStorage.token, { input: text, size: 1024 });
+
+			const latest = (history?.messages?.[messageId] as MessageType | undefined) ?? current;
+			saveMessage(latest.id, {
+				...latest,
+				py_photo: {
+					...(latest.py_photo ?? {}),
+					...res,
+					enabled: true,
+					status: 'ready',
+					error: ''
+				}
+			});
+		} catch (e) {
+			const errMsg = typeof e === 'string' ? e : `${e}`;
+			const latest = (history?.messages?.[messageId] as MessageType | undefined) ?? current;
+			saveMessage(latest.id, {
+				...latest,
+				py_photo: {
+					...(latest.py_photo ?? {}),
+					enabled: true,
+					status: 'error',
+					error: errMsg
+				}
+			});
+		}
+	};
 
 	export let siblings;
 
@@ -1426,6 +1612,48 @@
 										{/if}
 									{/if}
 
+									{#if downloadVoiceEnabled && message?.done && !readOnly && ($user?.role === 'admin' || ($user?.permissions?.chat?.tts ?? true))}
+										<Tooltip content={$i18n.t('Download Voice')} placement="bottom">
+											<button
+												type="button"
+												aria-label={$i18n.t('Download Voice')}
+												class="{isLastMessage
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+												on:click={() => {
+													void downloadVoiceHandler();
+												}}
+											>
+												{#if message?.voice_download?.status === 'generating'}
+													<Spinner className="w-4 h-4" />
+												{:else}
+													<Download className="w-4 h-4" strokeWidth="2.3" />
+												{/if}
+											</button>
+										</Tooltip>
+									{/if}
+
+									{#if pyPhotoEnabled && message?.done && !readOnly}
+										<Tooltip content="PY ფოტო" placement="bottom">
+											<button
+												type="button"
+												aria-label="PY ფოტო"
+												class="{isLastMessage
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+												on:click={() => {
+													void pyPhotoHandler();
+												}}
+											>
+												{#if message?.py_photo?.status === 'generating'}
+													<Spinner className="w-4 h-4" />
+												{:else}
+													<Camera className="w-4 h-4" strokeWidth="2.3" />
+												{/if}
+											</button>
+										</Tooltip>
+									{/if}
+
 									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete_message ?? true)}
 										{#if siblings.length > 1}
 											<Tooltip content={$i18n.t('Delete')} placement="bottom">
@@ -1495,6 +1723,177 @@
 							{/if}
 						{/if}
 					</div>
+
+					{#if message?.music?.enabled}
+						{#if message.music?.status === 'generating'}
+							<div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+								{$i18n.t('Generating music...')}
+							</div>
+						{:else if message.music?.status === 'ready' && (message.music?.data_url || message.music?.play_url)}
+							<div class="mt-2 flex items-center gap-2">
+								<audio
+									class="h-8 w-full max-w-xs"
+									controls
+									preload="none"
+									src={message.music.data_url ?? message.music.play_url}
+								/>
+
+								{#if message.music?.data_url}
+									<a
+										href={message.music.data_url}
+										class="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition"
+										aria-label={$i18n.t('Download')}
+										download={`music-${message.id}.${message.music.ext ?? 'mp3'}`}
+									>
+										<Download className="w-4 h-4" strokeWidth="2" />
+									</a>
+								{:else if message.music?.download_url}
+									<a
+										href={message.music.download_url}
+										class="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition"
+										aria-label={$i18n.t('Download')}
+										target="_blank"
+										rel="noreferrer"
+									>
+										<Download className="w-4 h-4" strokeWidth="2" />
+									</a>
+								{/if}
+							</div>
+						{:else if message.music?.status === 'error' && message.music?.error}
+							<div class="mt-2 text-xs text-amber-600 dark:text-amber-400">
+								{message.music.error}
+							</div>
+						{/if}
+					{/if}
+
+					{#if message?.video?.enabled}
+						{#if message.video?.status === 'generating'}
+							<div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+								{$i18n.t('Generating video...')}
+							</div>
+						{:else if message.video?.status === 'ready' && (message.video?.data_url || message.video?.play_url)}
+							<div class="mt-2 flex items-start gap-2">
+								<video
+									class="w-full max-w-md rounded-xl border border-gray-100 dark:border-gray-800"
+									controls
+									preload="none"
+									src={message.video.data_url ?? message.video.play_url}
+								/>
+
+								{#if message.video?.data_url}
+									<a
+										href={message.video.data_url}
+										class="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition"
+										aria-label={$i18n.t('Download')}
+										download={`video-${message.id}.${message.video.ext ?? 'mp4'}`}
+									>
+										<Download className="w-4 h-4" strokeWidth="2" />
+									</a>
+								{:else if message.video?.download_url}
+									<a
+										href={message.video.download_url}
+										class="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition"
+										aria-label={$i18n.t('Download')}
+										target="_blank"
+										rel="noreferrer"
+									>
+										<Download className="w-4 h-4" strokeWidth="2" />
+									</a>
+								{/if}
+							</div>
+						{:else if message.video?.status === 'error' && message.video?.error}
+							<div class="mt-2 text-xs text-amber-600 dark:text-amber-400">
+								{message.video.error}
+							</div>
+						{/if}
+					{/if}
+
+					{#if message?.py_photo?.enabled}
+						{#if message.py_photo?.status === 'generating'}
+							<div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+								{$i18n.t('Generating image...')}
+							</div>
+						{:else if message.py_photo?.status === 'ready' && (message.py_photo?.data_url || message.py_photo?.view_url)}
+							<div class="mt-2 flex flex-col gap-2">
+								<img
+									src={message.py_photo.data_url ?? message.py_photo.view_url}
+									alt="PY Photo"
+									class="w-full max-w-md rounded-xl border border-gray-100 dark:border-gray-800"
+									loading="lazy"
+									decoding="async"
+								/>
+
+								<div class="flex items-center gap-2">
+									{#if message.py_photo?.data_url}
+										<a
+											href={message.py_photo.data_url}
+											class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition text-sm"
+											aria-label={$i18n.t('Download')}
+											download={`py-photo-${message.id}.png`}
+										>
+											<Download className="w-4 h-4" strokeWidth="2" />{$i18n.t('Download')}
+										</a>
+									{:else if message.py_photo?.download_url}
+										<a
+											href={message.py_photo.download_url}
+											class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition text-sm"
+											aria-label={$i18n.t('Download')}
+											target="_blank"
+											rel="noreferrer"
+										>
+											<Download className="w-4 h-4" strokeWidth="2" />{$i18n.t('Download')}
+										</a>
+									{/if}
+								</div>
+							</div>
+						{:else if message.py_photo?.status === 'error' && message.py_photo?.error}
+							<div class="mt-2 text-xs text-amber-600 dark:text-amber-400">
+								{message.py_photo.error}
+							</div>
+						{/if}
+					{/if}
+
+					{#if message?.voice_download?.enabled}
+						{#if message.voice_download?.status === 'generating'}
+							<div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+								{$i18n.t('Generating voice...')}
+							</div>
+						{:else if message.voice_download?.status === 'ready' && (message.voice_download?.data_url || message.voice_download?.play_url)}
+							<div class="mt-2 flex items-center gap-2">
+								<audio
+									class="h-8 w-full max-w-xs"
+									controls
+									preload="none"
+									src={message.voice_download.data_url ?? message.voice_download.play_url}
+								/>
+
+								{#if message.voice_download?.data_url}
+									<a
+										href={message.voice_download.data_url}
+										class="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition"
+										aria-label={$i18n.t('Download')}
+										download={`voice-${message.id}.${message.voice_download.ext ?? 'mp3'}`}
+									>
+										<Download className="w-4 h-4" strokeWidth="2" />
+									</a>
+								{:else if message.voice_download?.download_url}
+									<a
+										href={message.voice_download.download_url}
+										class="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition"
+										aria-label={$i18n.t('Download')}
+										target="_blank"
+										rel="noreferrer"
+									>
+										<Download className="w-4 h-4" strokeWidth="2" />
+									</a>
+								{/if}
+							</div>
+						{:else if message.voice_download?.status === 'error' && message.voice_download?.error}
+							<div class="mt-2 text-xs text-amber-600 dark:text-amber-400">
+								{message.voice_download.error}
+							</div>
+						{/if}
+					{/if}
 
 					{#if message.done && showRateComment}
 						<RateComment

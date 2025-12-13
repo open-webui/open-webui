@@ -1,4 +1,5 @@
 import asyncio
+import asyncio
 import random
 
 import socketio
@@ -313,6 +314,10 @@ async def connect(sid, environ, auth):
                 exclude=["date_of_birth", "bio", "gender"]
             )
             await sio.enter_room(sid, f"user:{user.id}")
+        else:
+            await sio.enter_room(sid, f"user:anon:{sid}")
+    else:
+        await sio.enter_room(sid, f"user:anon:{sid}")
 
 
 @sio.on("user-join")

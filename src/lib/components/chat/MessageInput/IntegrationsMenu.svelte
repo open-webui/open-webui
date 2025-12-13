@@ -8,6 +8,9 @@
 
 	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
 	import { getTools } from '$lib/apis/tools';
+	import { getVoices, getVoiceStatus, type VoiceStatus } from '$lib/apis/audio';
+	import { getMusicStatus, type MusicStatus } from '$lib/apis/music';
+	import { getVideoStatus, type VideoStatus } from '$lib/apis/video';
 
 	import Knobs from '$lib/components/icons/Knobs.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -19,6 +22,10 @@
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 	import Photo from '$lib/components/icons/Photo.svelte';
 	import Terminal from '$lib/components/icons/Terminal.svelte';
+	import Download from '$lib/components/icons/Download.svelte';
+	import SoundHigh from '$lib/components/icons/SoundHigh.svelte';
+	import Camera from '$lib/components/icons/Camera.svelte';
+	import Video from '$lib/components/icons/Video.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 
@@ -40,6 +47,18 @@
 	export let showCodeInterpreterButton = false;
 	export let codeInterpreterEnabled = false;
 
+	export let downloadVoiceEnabled = false;
+	export let downloadVoiceVoice = '';
+	export let downloadVoiceUnavailableMessage = '';
+
+	export let musicEnabled = false;
+	export let musicUnavailableMessage = '';
+
+	export let pyPhotoEnabled = false;
+
+	export let videoEnabled = false;
+	export let videoUnavailableMessage = '';
+
 	export let onShowValves: Function;
 	export let onClose: Function;
 	export let closeOnOutsideClick = true;
@@ -49,14 +68,138 @@
 
 	let tools = null;
 
+	let mounted = false;
+	let voiceStatus: VoiceStatus | null = null;
+	let musicStatus: MusicStatus | null = null;
+	let videoStatus: VideoStatus | null = null;
+	let downloadVoiceVoices: { id: string; name: string }[] = [];
+	let downloadVoiceLoadingVoices = false;
+	let downloadVoiceLoadingStatus = false;
+	let musicLoadingStatus = false;
+	let videoLoadingStatus = false;
+
 	$: if (show) {
 		init();
+	}
+
+	$: if (mounted && show) {
+		void refreshVoiceStatus();
+		void refreshMusicStatus();
+		void refreshVideoStatus();
 	}
 
 	let fileUploadEnabled = true;
 	$: fileUploadEnabled =
 		fileUploadCapableModels.length === selectedModels.length &&
 		($user?.role === 'admin' || $user?.permissions?.chat?.file_upload);
+
+	const canUseDownloadVoice = () => $user?.role === 'admin' || ($user?.permissions?.chat?.tts ?? true);
+
+	const refreshVoiceStatus = async () => {
+		if (!mounted || downloadVoiceLoadingStatus) return;
+		downloadVoiceLoadingStatus = true;
+		try {
+			voiceStatus = await getVoiceStatus(localStorage.token);
+
+			if (!downloadVoiceVoice) {
+				downloadVoiceVoice = voiceStatus?.default_voice ?? '';
+			}
+
+			if (!voiceStatus?.available) {
+				downloadVoiceEnabled = false;
+				downloadVoiceUnavailableMessage = $i18n.t('Voice generation temporarily unavailable');
+			} else {
+				downloadVoiceUnavailableMessage = '';
+			}
+		} catch (e) {
+			voiceStatus = null;
+			downloadVoiceEnabled = false;
+			downloadVoiceUnavailableMessage = $i18n.t('Voice generation temporarily unavailable');
+		} finally {
+			downloadVoiceLoadingStatus = false;
+		}
+	};
+
+	const refreshMusicStatus = async () => {
+		if (!mounted || musicLoadingStatus) return;
+		musicLoadingStatus = true;
+		try {
+			musicStatus = await getMusicStatus(localStorage.token);
+
+			if (!musicStatus?.available) {
+				musicEnabled = false;
+				musicUnavailableMessage = $i18n.t('Music generation temporarily unavailable');
+			} else {
+				musicUnavailableMessage = '';
+			}
+		} catch (e) {
+			musicStatus = null;
+			musicEnabled = false;
+			musicUnavailableMessage = $i18n.t('Music generation temporarily unavailable');
+		} finally {
+			musicLoadingStatus = false;
+		}
+	};
+
+	const refreshVideoStatus = async () => {
+		if (!mounted || videoLoadingStatus) return;
+		videoLoadingStatus = true;
+		try {
+			videoStatus = await getVideoStatus(localStorage.token);
+
+			if (!videoStatus?.available) {
+				videoEnabled = false;
+				videoUnavailableMessage = $i18n.t('Video generation temporarily unavailable');
+			} else {
+				videoUnavailableMessage = '';
+			}
+		} catch (e) {
+			videoStatus = null;
+			videoEnabled = false;
+			videoUnavailableMessage = $i18n.t('Video generation temporarily unavailable');
+		} finally {
+			videoLoadingStatus = false;
+		}
+	};
+
+	const loadDownloadVoiceVoices = async () => {
+		if (!mounted || downloadVoiceLoadingVoices) return;
+		downloadVoiceLoadingVoices = true;
+		try {
+			const res = await getVoices(localStorage.token);
+			downloadVoiceVoices = (res?.voices ?? []).slice();
+			downloadVoiceVoices.sort((a, b) =>
+				(a.name ?? '').localeCompare(b.name ?? '', $i18n.resolvedLanguage)
+			);
+
+			if (
+				!downloadVoiceVoice ||
+				(downloadVoiceVoices.length > 0 &&
+					!downloadVoiceVoices.some((v) => v.id === downloadVoiceVoice))
+			) {
+				downloadVoiceVoice = voiceStatus?.default_voice ?? downloadVoiceVoices?.[0]?.id ?? '';
+			}
+		} catch (e) {
+			downloadVoiceVoices = [];
+		} finally {
+			downloadVoiceLoadingVoices = false;
+		}
+	};
+
+	$: if (mounted && downloadVoiceEnabled && voiceStatus?.available) {
+		void loadDownloadVoiceVoices();
+	}
+
+	$: if (mounted && !canUseDownloadVoice() && downloadVoiceEnabled) {
+		downloadVoiceEnabled = false;
+	}
+
+	onMount(() => {
+		mounted = true;
+		void refreshVoiceStatus();
+		void refreshMusicStatus();
+		void refreshVideoStatus();
+	});
 
 	const init = async () => {
 		if ($_tools === null) {
@@ -309,6 +452,227 @@
 							</button>
 						</Tooltip>
 					{/if}
+
+					{#if canUseDownloadVoice()}
+						<div>
+							<Tooltip content={$i18n.t('Generate and download a voice version')} placement="top-start">
+								<button
+									class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+									aria-pressed={downloadVoiceEnabled}
+									aria-label={$i18n.t('Download Voice')}
+									on:click={async () => {
+										if (downloadVoiceEnabled) {
+											downloadVoiceEnabled = false;
+											downloadVoiceUnavailableMessage = '';
+											return;
+										}
+
+										await refreshVoiceStatus();
+										if (!voiceStatus?.available) {
+											downloadVoiceEnabled = false;
+											if (!downloadVoiceUnavailableMessage) {
+												downloadVoiceUnavailableMessage = $i18n.t(
+													'Voice generation temporarily unavailable'
+												);
+											}
+											return;
+										}
+
+										downloadVoiceUnavailableMessage = '';
+										downloadVoiceEnabled = true;
+									}}
+								>
+									<div class="flex-1 truncate">
+										<div class="flex flex-1 gap-2 items-center">
+											<div class="shrink-0">
+												<Download className="size-4" strokeWidth="1.5" />
+											</div>
+											<div class=" truncate">{$i18n.t('Download Voice')}</div>
+										</div>
+									</div>
+
+									<div class=" shrink-0 flex items-center gap-2">
+										{#if downloadVoiceEnabled}
+											<select
+												class="h-8 max-w-[12rem] rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-2 text-xs text-gray-800 dark:text-gray-200 outline-hidden"
+												bind:value={downloadVoiceVoice}
+												disabled={downloadVoiceLoadingVoices || downloadVoiceVoices.length === 0}
+												on:click|stopPropagation
+												on:mousedown|stopPropagation
+												on:keydown|stopPropagation
+											>
+												{#if downloadVoiceLoadingVoices}
+													<option value="" selected>Loading voices...</option>
+												{:else}
+													{#each downloadVoiceVoices as voice}
+														<option value={voice.id}>{voice.name}</option>
+													{/each}
+												{/if}
+											</select>
+										{/if}
+
+										<Switch
+											state={downloadVoiceEnabled}
+											on:change={async (e) => {
+												const state = e.detail;
+												await tick();
+											}}
+										/>
+									</div>
+								</button>
+							</Tooltip>
+
+							{#if downloadVoiceUnavailableMessage}
+								<div class="px-3 pb-1 text-xs text-amber-600 dark:text-amber-400">
+									{downloadVoiceUnavailableMessage}
+								</div>
+							{/if}
+						</div>
+					{/if}
+
+					<div>
+						<Tooltip content={$i18n.t('Generate music from your prompt')} placement="top-start">
+							<button
+								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+								aria-pressed={musicEnabled}
+								aria-label={$i18n.t('Music')}
+								on:click={async () => {
+									if (musicEnabled) {
+										musicEnabled = false;
+										musicUnavailableMessage = '';
+										return;
+									}
+
+									await refreshMusicStatus();
+									if (!musicStatus?.available) {
+										musicEnabled = false;
+										if (!musicUnavailableMessage) {
+											musicUnavailableMessage = $i18n.t('Music generation temporarily unavailable');
+										}
+										return;
+									}
+
+									musicUnavailableMessage = '';
+									musicEnabled = true;
+									videoEnabled = false;
+									videoUnavailableMessage = '';
+								}}
+							>
+								<div class="flex-1 truncate">
+									<div class="flex flex-1 gap-2 items-center">
+										<div class="shrink-0">
+											<SoundHigh className="size-4" strokeWidth="1.5" />
+										</div>
+										<div class=" truncate">{$i18n.t('Music')}</div>
+									</div>
+								</div>
+
+								<div class=" shrink-0">
+									<Switch
+										state={musicEnabled}
+										on:change={async (e) => {
+											const state = e.detail;
+											await tick();
+										}}
+									/>
+								</div>
+							</button>
+						</Tooltip>
+
+						{#if musicUnavailableMessage}
+							<div class="px-3 pb-1 text-xs text-amber-600 dark:text-amber-400">
+								{musicUnavailableMessage}
+							</div>
+						{/if}
+					</div>
+
+					<div>
+						<Tooltip content={$i18n.t('Generate a 1:1 PNG from assistant text')} placement="top-start">
+							<button
+								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+								aria-pressed={pyPhotoEnabled}
+								aria-label={$i18n.t('PY Photo')}
+								on:click={() => {
+									pyPhotoEnabled = !pyPhotoEnabled;
+								}}
+							>
+								<div class="flex-1 truncate">
+									<div class="flex flex-1 gap-2 items-center">
+										<div class="shrink-0">
+											<Camera className="size-4" strokeWidth="1.5" />
+										</div>
+										<div class=" truncate">PY ფოტო</div>
+									</div>
+								</div>
+
+								<div class=" shrink-0">
+									<Switch
+										state={pyPhotoEnabled}
+										on:change={async (e) => {
+											const state = e.detail;
+											await tick();
+										}}
+									/>
+								</div>
+							</button>
+						</Tooltip>
+					</div>
+
+					<div>
+						<Tooltip content={$i18n.t('Generate video from your prompt')} placement="top-start">
+							<button
+								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+								aria-pressed={videoEnabled}
+								aria-label={$i18n.t('Video')}
+								on:click={async () => {
+									if (videoEnabled) {
+										videoEnabled = false;
+										videoUnavailableMessage = '';
+										return;
+									}
+
+									await refreshVideoStatus();
+									if (!videoStatus?.available) {
+										videoEnabled = false;
+										if (!videoUnavailableMessage) {
+											videoUnavailableMessage = $i18n.t('Video generation temporarily unavailable');
+										}
+										return;
+									}
+
+									videoUnavailableMessage = '';
+									videoEnabled = true;
+									musicEnabled = false;
+									musicUnavailableMessage = '';
+								}}
+							>
+								<div class="flex-1 truncate">
+									<div class="flex flex-1 gap-2 items-center">
+										<div class="shrink-0">
+											<Video className="size-4" strokeWidth="1.5" />
+										</div>
+										<div class=" truncate">ვიდეო</div>
+									</div>
+								</div>
+
+								<div class=" shrink-0">
+									<Switch
+										state={videoEnabled}
+										on:change={async (e) => {
+											const state = e.detail;
+											await tick();
+										}}
+									/>
+								</div>
+							</button>
+						</Tooltip>
+
+						{#if videoUnavailableMessage}
+							<div class="px-3 pb-1 text-xs text-amber-600 dark:text-amber-400">
+								{videoUnavailableMessage}
+							</div>
+						{/if}
+					</div>
 				</div>
 			{:else if tab === 'tools' && tools}
 				<div in:fly={{ x: 20, duration: 150 }}>

@@ -22,6 +22,12 @@
 
 	let STTEngine = '';
 	let STTLanguage = '';
+	let elevenLabsSttEnabled = false;
+	$: elevenLabsSttEnabled = $config?.audio?.stt?.engine === 'elevenlabs';
+	$: if (elevenLabsSttEnabled) {
+		STTEngine = '';
+		STTLanguage = 'kat';
+	}
 
 	let TTSEngine = '';
 	let TTSEngineConfig = {};
@@ -32,6 +38,13 @@
 
 	let voices = [];
 	let voice = '';
+	let elevenLabsTtsEnabled = false;
+	$: elevenLabsTtsEnabled = $config?.audio?.tts?.engine === 'elevenlabs';
+	$: if (elevenLabsTtsEnabled) {
+		TTSEngine = '';
+		TTSEngineConfig = {};
+		voice = $config?.audio?.tts?.voice ?? '';
+	}
 
 	// Audio speed control
 	let playbackRate = 1;
@@ -90,11 +103,19 @@
 
 		STTEngine = $settings?.audio?.stt?.engine ?? '';
 		STTLanguage = $settings?.audio?.stt?.language ?? '';
+		if (elevenLabsSttEnabled) {
+			STTEngine = '';
+			STTLanguage = 'kat';
+		}
 
 		TTSEngine = $settings?.audio?.tts?.engine ?? '';
 		TTSEngineConfig = $settings?.audio?.tts?.engineConfig ?? {};
 
-		if ($settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice) {
+		if (elevenLabsTtsEnabled) {
+			TTSEngine = '';
+			TTSEngineConfig = {};
+			voice = $config?.audio?.tts?.voice ?? '';
+		} else if ($settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice) {
 			voice = $settings?.audio?.tts?.voice ?? $config.audio.tts.voice ?? '';
 		} else {
 			voice = $config.audio.tts.voice ?? '';
@@ -159,15 +180,15 @@
 		saveSettings({
 			audio: {
 				stt: {
-					engine: STTEngine !== '' ? STTEngine : undefined,
-					language: STTLanguage !== '' ? STTLanguage : undefined
+					engine: elevenLabsSttEnabled ? undefined : STTEngine !== '' ? STTEngine : undefined,
+					language: elevenLabsSttEnabled ? undefined : STTLanguage !== '' ? STTLanguage : undefined
 				},
 				tts: {
-					engine: TTSEngine !== '' ? TTSEngine : undefined,
-					engineConfig: TTSEngineConfig,
+					engine: elevenLabsTtsEnabled ? undefined : TTSEngine !== '' ? TTSEngine : undefined,
+					engineConfig: elevenLabsTtsEnabled ? undefined : TTSEngineConfig,
 					playbackRate: playbackRate,
-					voice: voice !== '' ? voice : undefined,
-					defaultVoice: $config?.audio?.tts?.voice ?? '',
+					voice: elevenLabsTtsEnabled ? undefined : voice !== '' ? voice : undefined,
+					defaultVoice: elevenLabsTtsEnabled ? undefined : $config?.audio?.tts?.voice ?? '',
 					nonLocalVoices: $config.audio.tts.engine === '' ? nonLocalVoices : undefined
 				}
 			}
@@ -180,39 +201,55 @@
 			<div class=" mb-1 text-sm font-medium">{$i18n.t('STT Settings')}</div>
 
 			{#if $config.audio.stt.engine !== 'web'}
-				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Speech-to-Text Engine')}</div>
-					<div class="flex items-center relative">
-						<select
-							class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
-							bind:value={STTEngine}
-							placeholder={$i18n.t('Select an engine')}
-						>
-							<option value="">{$i18n.t('Default')}</option>
-							<option value="web">{$i18n.t('Web API')}</option>
-						</select>
+				{#if elevenLabsSttEnabled}
+					<div class=" py-0.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">{$i18n.t('Speech-to-Text Engine')}</div>
+						<div class="flex items-center relative text-xs px-3 text-gray-500 dark:text-gray-400">
+							ElevenLabs (Georgian only)
+						</div>
 					</div>
-				</div>
 
-				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Language')}</div>
-
-					<div class="flex items-center relative text-xs px-3">
-						<Tooltip
-							content={$i18n.t(
-								'The language of the input audio. Supplying the input language in ISO-639-1 (e.g. en) format will improve accuracy and latency. Leave blank to automatically detect the language.'
-							)}
-							placement="top"
-						>
-							<input
-								type="text"
-								bind:value={STTLanguage}
-								placeholder={$i18n.t('e.g. en')}
-								class=" text-sm text-right bg-transparent dark:text-gray-300 outline-hidden"
-							/>
-						</Tooltip>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">{$i18n.t('Language')}</div>
+						<div class="flex items-center relative text-xs px-3 text-gray-500 dark:text-gray-400">
+							<span class="font-mono">kat</span>
+						</div>
 					</div>
-				</div>
+				{:else}
+					<div class=" py-0.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">{$i18n.t('Speech-to-Text Engine')}</div>
+						<div class="flex items-center relative">
+							<select
+								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+								bind:value={STTEngine}
+								placeholder={$i18n.t('Select an engine')}
+							>
+								<option value="">{$i18n.t('Default')}</option>
+								<option value="web">{$i18n.t('Web API')}</option>
+							</select>
+						</div>
+					</div>
+
+					<div class=" py-0.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">{$i18n.t('Language')}</div>
+
+						<div class="flex items-center relative text-xs px-3">
+							<Tooltip
+								content={$i18n.t(
+									'The language of the input audio. Supplying the input language in ISO-639-1 (e.g. en) format will improve accuracy and latency. Leave blank to automatically detect the language.'
+								)}
+								placement="top"
+							>
+								<input
+									type="text"
+									bind:value={STTLanguage}
+									placeholder={$i18n.t('e.g. en')}
+									class=" text-sm text-right bg-transparent dark:text-gray-300 outline-hidden"
+								/>
+							</Tooltip>
+						</div>
+					</div>
+				{/if}
 			{/if}
 
 			<div class=" py-0.5 flex w-full justify-between">
@@ -241,16 +278,22 @@
 
 			<div class=" py-0.5 flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Text-to-Speech Engine')}</div>
-				<div class="flex items-center relative">
-					<select
-						class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
-						bind:value={TTSEngine}
-						placeholder={$i18n.t('Select an engine')}
-					>
-						<option value="">{$i18n.t('Default')}</option>
-						<option value="browser-kokoro">{$i18n.t('Kokoro.js (Browser)')}</option>
-					</select>
-				</div>
+				{#if elevenLabsTtsEnabled}
+					<div class="flex items-center relative text-xs px-3 text-gray-500 dark:text-gray-400">
+						{$i18n.t('ElevenLabs')}
+					</div>
+				{:else}
+					<div class="flex items-center relative">
+						<select
+							class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+							bind:value={TTSEngine}
+							placeholder={$i18n.t('Select an engine')}
+						>
+							<option value="">{$i18n.t('Default')}</option>
+							<option value="browser-kokoro">{$i18n.t('Kokoro.js (Browser)')}</option>
+						</select>
+					</div>
+				{/if}
 			</div>
 
 			{#if TTSEngine === 'browser-kokoro'}
@@ -308,7 +351,14 @@
 
 		<hr class=" border-gray-100/30 dark:border-gray-850/30" />
 
-		{#if TTSEngine === 'browser-kokoro'}
+		{#if elevenLabsTtsEnabled}
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">{$i18n.t('Set Voice')}</div>
+				<div class="flex items-center relative text-xs px-3 text-gray-500 dark:text-gray-400">
+					<span class="font-mono">{$config?.audio?.tts?.voice ?? ''}</span>
+				</div>
+			</div>
+		{:else if TTSEngine === 'browser-kokoro'}
 			{#if TTSModel}
 				<div>
 					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>

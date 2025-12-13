@@ -236,15 +236,20 @@ class AppConfig:
     ):
         if redis_url:
             super().__setattr__("_redis_key_prefix", redis_key_prefix)
-            super().__setattr__(
-                "_redis",
-                get_redis_connection(
-                    redis_url,
-                    redis_sentinels,
-                    redis_cluster,
-                    decode_responses=True,
-                ),
+            redis_conn = get_redis_connection(
+                redis_url,
+                redis_sentinels,
+                redis_cluster,
+                decode_responses=True,
             )
+            if redis_conn:
+                try:
+                    redis_conn.ping()
+                except Exception as e:
+                    log.warning("Redis configured but unavailable: %s", e)
+                    redis_conn = None
+
+            super().__setattr__("_redis", redis_conn)
 
         super().__setattr__("_state", {})
 
@@ -257,7 +262,10 @@ class AppConfig:
 
             if self._redis:
                 redis_key = f"{self._redis_key_prefix}:config:{key}"
-                self._redis.set(redis_key, json.dumps(self._state[key].value))
+                try:
+                    self._redis.set(redis_key, json.dumps(self._state[key].value))
+                except Exception as e:
+                    log.debug("Failed to write config to Redis: %s", e)
 
     def __getattr__(self, key):
         if key not in self._state:
@@ -266,7 +274,11 @@ class AppConfig:
         # If Redis is available, check for an updated value
         if self._redis:
             redis_key = f"{self._redis_key_prefix}:config:{key}"
-            redis_value = self._redis.get(redis_key)
+            try:
+                redis_value = self._redis.get(redis_key)
+            except Exception as e:
+                log.debug("Failed to read config from Redis: %s", e)
+                redis_value = None
 
             if redis_value is not None:
                 try:
@@ -1071,6 +1083,27 @@ OPENAI_API_CONFIGS = PersistentConfig(
     "OPENAI_API_CONFIGS",
     "openai.api_configs",
     {},
+)
+
+# OpenRouter (OpenAI-compatible)
+OPENROUTER_API_BASE_URL = os.environ.get(
+    "OPENROUTER_API_BASE_URL", "https://openrouter.ai/api/v1"
+)
+if OPENROUTER_API_BASE_URL.endswith("/"):
+    OPENROUTER_API_BASE_URL = OPENROUTER_API_BASE_URL[:-1]
+
+OPENROUTER_DEFAULT_MODEL_ID = "kwaipilot/kat-coder-pro:free"
+
+OPENROUTER_API_KEY = PersistentConfig(
+    "OPENROUTER_API_KEY",
+    "openrouter.api_key",
+    os.environ.get("OPENROUTER_API_KEY", ""),
+)
+
+OPENROUTER_ANONYMOUS_ENABLED = PersistentConfig(
+    "OPENROUTER_ANONYMOUS_ENABLED",
+    "openrouter.anonymous_enabled",
+    os.environ.get("OPENROUTER_ANONYMOUS_ENABLED", "true").lower() == "true",
 )
 
 # Get the actual OpenAI API key based on the base URL
@@ -3613,6 +3646,14 @@ ELEVENLABS_API_BASE_URL = os.getenv(
     "ELEVENLABS_API_BASE_URL", "https://api.elevenlabs.io"
 )
 
+AUDIO_STT_ELEVENLABS_API_KEY = PersistentConfig(
+    "AUDIO_STT_ELEVENLABS_API_KEY",
+    "audio.stt.elevenlabs.api_key",
+    os.getenv("AUDIO_STT_ELEVENLABS_API_KEY")
+    or os.getenv("AUDIO_STT_API_KEY")
+    or "",
+)
+
 AUDIO_STT_OPENAI_API_BASE_URL = PersistentConfig(
     "AUDIO_STT_OPENAI_API_BASE_URL",
     "audio.stt.openai.api_base_url",
@@ -3770,6 +3811,179 @@ AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = PersistentConfig(
     os.getenv(
         "AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT", "audio-24khz-160kbitrate-mono-mp3"
     ),
+)
+
+
+####################################
+# CREDITS (Per-domain)
+####################################
+
+def _credits_env_int(env_name: str, default: int) -> int:
+    try:
+        return int(os.environ.get(env_name, str(default)) or default)
+    except Exception:
+        return int(default)
+
+
+AUDIO_CREDITS_FREE_ANON = PersistentConfig(
+    "AUDIO_CREDITS_FREE_ANON",
+    "credits.audio.free_anon",
+    _credits_env_int("AUDIO_CREDITS_FREE_ANON", 100),
+)
+
+AUDIO_CREDITS_FREE_AUTH = PersistentConfig(
+    "AUDIO_CREDITS_FREE_AUTH",
+    "credits.audio.free_auth",
+    _credits_env_int("AUDIO_CREDITS_FREE_AUTH", 500),
+)
+
+PHOTO_CREDITS_FREE_ANON = PersistentConfig(
+    "PHOTO_CREDITS_FREE_ANON",
+    "credits.photo.free_anon",
+    _credits_env_int("PHOTO_CREDITS_FREE_ANON", 3),
+)
+
+PHOTO_CREDITS_FREE_AUTH = PersistentConfig(
+    "PHOTO_CREDITS_FREE_AUTH",
+    "credits.photo.free_auth",
+    _credits_env_int("PHOTO_CREDITS_FREE_AUTH", 5),
+)
+
+PHOTO_CREDITS_COST = PersistentConfig(
+    "PHOTO_CREDITS_COST",
+    "credits.photo.cost",
+    _credits_env_int("PHOTO_CREDITS_COST", 20),
+)
+
+VIDEO_CREDITS_FREE_ANON = PersistentConfig(
+    "VIDEO_CREDITS_FREE_ANON",
+    "credits.video.free_anon",
+    _credits_env_int("VIDEO_CREDITS_FREE_ANON", 1),
+)
+
+VIDEO_CREDITS_FREE_AUTH = PersistentConfig(
+    "VIDEO_CREDITS_FREE_AUTH",
+    "credits.video.free_auth",
+    _credits_env_int("VIDEO_CREDITS_FREE_AUTH", 3),
+)
+
+VIDEO_CREDITS_COST = PersistentConfig(
+    "VIDEO_CREDITS_COST",
+    "credits.video.cost",
+    _credits_env_int("VIDEO_CREDITS_COST", 100),
+)
+
+MUSIC_CREDITS_FREE_ANON = PersistentConfig(
+    "MUSIC_CREDITS_FREE_ANON",
+    "credits.music.free_anon",
+    _credits_env_int("MUSIC_CREDITS_FREE_ANON", 1),
+)
+
+MUSIC_CREDITS_FREE_AUTH = PersistentConfig(
+    "MUSIC_CREDITS_FREE_AUTH",
+    "credits.music.free_auth",
+    _credits_env_int("MUSIC_CREDITS_FREE_AUTH", 3),
+)
+
+MUSIC_CREDITS_COST = PersistentConfig(
+    "MUSIC_CREDITS_COST",
+    "credits.music.cost",
+    _credits_env_int("MUSIC_CREDITS_COST", 50),
+)
+
+PHOTO_CREDITS_PACKAGES = PersistentConfig(
+    "PHOTO_CREDITS_PACKAGES",
+    "credits.photo.packages",
+    [
+        {"package_code": "1000", "credits": 1000, "label": "1,000", "price_label": "25₾"},
+        {"package_code": "10000", "credits": 10000, "label": "10,000", "price_label": "150₾"},
+        {"package_code": "100000", "credits": 100000, "label": "100,000", "price_label": "400₾"},
+    ],
+)
+
+VIDEO_CREDITS_PACKAGES = PersistentConfig(
+    "VIDEO_CREDITS_PACKAGES",
+    "credits.video.packages",
+    [
+        {"package_code": "1000", "credits": 1000, "label": "1,000", "price_label": "20₾"},
+        {"package_code": "5000", "credits": 5000, "label": "5,000", "price_label": "300₾"},
+        {"package_code": "10000", "credits": 10000, "label": "10,000", "price_label": "700₾"},
+    ],
+)
+
+MUSIC_CREDITS_PACKAGES = PersistentConfig(
+    "MUSIC_CREDITS_PACKAGES",
+    "credits.music.packages",
+    [
+        {"package_code": "1000", "credits": 1000, "label": "1,000", "price_label": "50₾"},
+        {"package_code": "10000", "credits": 10000, "label": "10,000", "price_label": "300₾"},
+        {"package_code": "100000", "credits": 100000, "label": "100,000", "price_label": "1000₾"},
+    ],
+)
+
+
+####################################
+# MUSIC / VIDEO API
+####################################
+
+ENABLE_MUSIC_GENERATION = PersistentConfig(
+    "ENABLE_MUSIC_GENERATION",
+    "music.enable",
+    os.environ.get("ENABLE_MUSIC_GENERATION", "false").lower() == "true",
+)
+
+MUSIC_API_BASE_URL = PersistentConfig(
+    "MUSIC_API_BASE_URL",
+    "music.api.base_url",
+    os.environ.get("MUSIC_API_BASE_URL", ""),
+)
+
+MUSIC_API_KEY = PersistentConfig(
+    "MUSIC_API_KEY",
+    "music.api.key",
+    os.environ.get("MUSIC_API_KEY", ""),
+)
+
+MUSIC_API_GENERATE_PATH = PersistentConfig(
+    "MUSIC_API_GENERATE_PATH",
+    "music.api.generate_path",
+    os.environ.get("MUSIC_API_GENERATE_PATH", "/generate"),
+)
+
+MUSIC_MODEL = PersistentConfig(
+    "MUSIC_MODEL",
+    "music.model",
+    os.environ.get("MUSIC_MODEL", ""),
+)
+
+ENABLE_VIDEO_GENERATION = PersistentConfig(
+    "ENABLE_VIDEO_GENERATION",
+    "video.enable",
+    os.environ.get("ENABLE_VIDEO_GENERATION", "false").lower() == "true",
+)
+
+VIDEO_API_BASE_URL = PersistentConfig(
+    "VIDEO_API_BASE_URL",
+    "video.api.base_url",
+    os.environ.get("VIDEO_API_BASE_URL", ""),
+)
+
+VIDEO_API_KEY = PersistentConfig(
+    "VIDEO_API_KEY",
+    "video.api.key",
+    os.environ.get("VIDEO_API_KEY", ""),
+)
+
+VIDEO_API_GENERATE_PATH = PersistentConfig(
+    "VIDEO_API_GENERATE_PATH",
+    "video.api.generate_path",
+    os.environ.get("VIDEO_API_GENERATE_PATH", "/generate"),
+)
+
+VIDEO_MODEL = PersistentConfig(
+    "VIDEO_MODEL",
+    "video.model",
+    os.environ.get("VIDEO_MODEL", ""),
 )
 
 

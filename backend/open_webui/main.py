@@ -68,10 +68,15 @@ from open_webui.socket.main import (
     get_models_in_use,
 )
 from open_webui.routers import (
+    admin_credits,
     audio,
+    music,
+    video,
+    py_photo,
     images,
     ollama,
     openai,
+    openrouter,
     retrieval,
     pipelines,
     tasks,
@@ -92,6 +97,8 @@ from open_webui.routers import (
     tools,
     users,
     utils,
+    credits,
+    stripe,
     scim,
 )
 
@@ -119,6 +126,11 @@ from open_webui.config import (
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     OPENAI_API_CONFIGS,
+    # OpenRouter (OpenAI-compatible)
+    OPENROUTER_API_BASE_URL,
+    OPENROUTER_API_KEY,
+    OPENROUTER_ANONYMOUS_ENABLED,
+    OPENROUTER_DEFAULT_MODEL_ID,
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
     # Model list
@@ -181,6 +193,7 @@ from open_webui.config import (
     AUDIO_STT_ENGINE,
     AUDIO_STT_MODEL,
     AUDIO_STT_SUPPORTED_CONTENT_TYPES,
+    AUDIO_STT_ELEVENLABS_API_KEY,
     AUDIO_STT_OPENAI_API_BASE_URL,
     AUDIO_STT_OPENAI_API_KEY,
     AUDIO_STT_AZURE_API_KEY,
@@ -202,6 +215,32 @@ from open_webui.config import (
     AUDIO_TTS_AZURE_SPEECH_REGION,
     AUDIO_TTS_AZURE_SPEECH_BASE_URL,
     AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT,
+    # Credits (Per-domain)
+    AUDIO_CREDITS_FREE_ANON,
+    AUDIO_CREDITS_FREE_AUTH,
+    PHOTO_CREDITS_FREE_ANON,
+    PHOTO_CREDITS_FREE_AUTH,
+    PHOTO_CREDITS_COST,
+    PHOTO_CREDITS_PACKAGES,
+    VIDEO_CREDITS_FREE_ANON,
+    VIDEO_CREDITS_FREE_AUTH,
+    VIDEO_CREDITS_COST,
+    VIDEO_CREDITS_PACKAGES,
+    MUSIC_CREDITS_FREE_ANON,
+    MUSIC_CREDITS_FREE_AUTH,
+    MUSIC_CREDITS_COST,
+    MUSIC_CREDITS_PACKAGES,
+    # Music / Video API
+    ENABLE_MUSIC_GENERATION,
+    MUSIC_API_BASE_URL,
+    MUSIC_API_KEY,
+    MUSIC_API_GENERATE_PATH,
+    MUSIC_MODEL,
+    ENABLE_VIDEO_GENERATION,
+    VIDEO_API_BASE_URL,
+    VIDEO_API_KEY,
+    VIDEO_API_GENERATE_PATH,
+    VIDEO_MODEL,
     PLAYWRIGHT_WS_URL,
     PLAYWRIGHT_TIMEOUT,
     FIRECRAWL_API_BASE_URL,
@@ -495,6 +534,7 @@ from open_webui.utils.auth import (
     decode_token,
     get_admin_user,
     get_verified_user,
+    get_verified_user_or_none,
 )
 from open_webui.utils.plugin import install_tool_and_function_dependencies
 from open_webui.utils.oauth import (
@@ -546,7 +586,7 @@ class SPAStaticFiles(StaticFiles):
                 raise ex
 
 
-print(
+_STARTUP_BANNER = (
     rf"""
  ██████╗ ██████╗ ███████╗███╗   ██╗    ██╗    ██╗███████╗██████╗ ██╗   ██╗██╗
 ██╔═══██╗██╔══██╗██╔════╝████╗  ██║    ██║    ██║██╔════╝██╔══██╗██║   ██║██║
@@ -561,6 +601,16 @@ v{VERSION} - building the best AI user interface.
 https://github.com/open-webui/open-webui
 """
 )
+
+try:
+    print(_STARTUP_BANNER)
+except UnicodeEncodeError:
+    encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
+    print(
+        _STARTUP_BANNER.encode(encoding, errors="replace").decode(
+            encoding, errors="replace"
+        )
+    )
 
 
 @asynccontextmanager
@@ -587,6 +637,13 @@ async def lifespan(app: FastAPI):
         redis_cluster=REDIS_CLUSTER,
         async_mode=True,
     )
+
+    if app.state.redis is not None:
+        try:
+            await app.state.redis.ping()
+        except Exception as e:
+            log.warning("Redis configured but unavailable: %s", e)
+            app.state.redis = None
 
     if app.state.redis is not None:
         app.state.redis_task_command_listener = asyncio.create_task(
@@ -690,6 +747,23 @@ app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
 app.state.config.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
 app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
 app.state.config.OPENAI_API_CONFIGS = OPENAI_API_CONFIGS
+
+app.state.config.OPENROUTER_API_KEY = OPENROUTER_API_KEY
+app.state.config.OPENROUTER_ANONYMOUS_ENABLED = OPENROUTER_ANONYMOUS_ENABLED
+
+# Ensure OpenRouter is present as an OpenAI-compatible connection for model discovery.
+try:
+    openai_urls = list(app.state.config.OPENAI_API_BASE_URLS or [])
+    if OPENROUTER_API_BASE_URL not in openai_urls:
+        openai_urls.append(OPENROUTER_API_BASE_URL)
+        app.state.config.OPENAI_API_BASE_URLS = openai_urls
+
+    openai_keys = list(app.state.config.OPENAI_API_KEYS or [])
+    if len(openai_keys) < len(openai_urls):
+        openai_keys += [""] * (len(openai_urls) - len(openai_keys))
+        app.state.config.OPENAI_API_KEYS = openai_keys
+except Exception:
+    pass
 
 app.state.OPENAI_MODELS = {}
 
@@ -1127,6 +1201,8 @@ app.state.config.STT_ENGINE = AUDIO_STT_ENGINE
 app.state.config.STT_MODEL = AUDIO_STT_MODEL
 app.state.config.STT_SUPPORTED_CONTENT_TYPES = AUDIO_STT_SUPPORTED_CONTENT_TYPES
 
+app.state.config.AUDIO_STT_ELEVENLABS_API_KEY = AUDIO_STT_ELEVENLABS_API_KEY
+
 app.state.config.STT_OPENAI_API_BASE_URL = AUDIO_STT_OPENAI_API_BASE_URL
 app.state.config.STT_OPENAI_API_KEY = AUDIO_STT_OPENAI_API_KEY
 
@@ -1162,6 +1238,33 @@ app.state.config.TTS_SPLIT_ON = AUDIO_TTS_SPLIT_ON
 app.state.config.TTS_AZURE_SPEECH_REGION = AUDIO_TTS_AZURE_SPEECH_REGION
 app.state.config.TTS_AZURE_SPEECH_BASE_URL = AUDIO_TTS_AZURE_SPEECH_BASE_URL
 app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT
+
+app.state.config.AUDIO_CREDITS_FREE_ANON = AUDIO_CREDITS_FREE_ANON
+app.state.config.AUDIO_CREDITS_FREE_AUTH = AUDIO_CREDITS_FREE_AUTH
+app.state.config.PHOTO_CREDITS_FREE_ANON = PHOTO_CREDITS_FREE_ANON
+app.state.config.PHOTO_CREDITS_FREE_AUTH = PHOTO_CREDITS_FREE_AUTH
+app.state.config.PHOTO_CREDITS_COST = PHOTO_CREDITS_COST
+app.state.config.PHOTO_CREDITS_PACKAGES = PHOTO_CREDITS_PACKAGES
+app.state.config.VIDEO_CREDITS_FREE_ANON = VIDEO_CREDITS_FREE_ANON
+app.state.config.VIDEO_CREDITS_FREE_AUTH = VIDEO_CREDITS_FREE_AUTH
+app.state.config.VIDEO_CREDITS_COST = VIDEO_CREDITS_COST
+app.state.config.VIDEO_CREDITS_PACKAGES = VIDEO_CREDITS_PACKAGES
+app.state.config.MUSIC_CREDITS_FREE_ANON = MUSIC_CREDITS_FREE_ANON
+app.state.config.MUSIC_CREDITS_FREE_AUTH = MUSIC_CREDITS_FREE_AUTH
+app.state.config.MUSIC_CREDITS_COST = MUSIC_CREDITS_COST
+app.state.config.MUSIC_CREDITS_PACKAGES = MUSIC_CREDITS_PACKAGES
+
+app.state.config.ENABLE_MUSIC_GENERATION = ENABLE_MUSIC_GENERATION
+app.state.config.MUSIC_API_BASE_URL = MUSIC_API_BASE_URL
+app.state.config.MUSIC_API_KEY = MUSIC_API_KEY
+app.state.config.MUSIC_API_GENERATE_PATH = MUSIC_API_GENERATE_PATH
+app.state.config.MUSIC_MODEL = MUSIC_MODEL
+
+app.state.config.ENABLE_VIDEO_GENERATION = ENABLE_VIDEO_GENERATION
+app.state.config.VIDEO_API_BASE_URL = VIDEO_API_BASE_URL
+app.state.config.VIDEO_API_KEY = VIDEO_API_KEY
+app.state.config.VIDEO_API_GENERATE_PATH = VIDEO_API_GENERATE_PATH
+app.state.config.VIDEO_MODEL = VIDEO_MODEL
 
 
 app.state.faster_whisper_model = None
@@ -1364,6 +1467,7 @@ app.mount("/ws", socket_app)
 
 app.include_router(ollama.router, prefix="/ollama", tags=["ollama"])
 app.include_router(openai.router, prefix="/openai", tags=["openai"])
+app.include_router(openrouter.router, prefix="/api/v1/openrouter", tags=["openrouter"])
 
 
 app.include_router(pipelines.router, prefix="/api/v1/pipelines", tags=["pipelines"])
@@ -1371,12 +1475,20 @@ app.include_router(tasks.router, prefix="/api/v1/tasks", tags=["tasks"])
 app.include_router(images.router, prefix="/api/v1/images", tags=["images"])
 
 app.include_router(audio.router, prefix="/api/v1/audio", tags=["audio"])
+app.include_router(music.router, prefix="/api/v1/music", tags=["music"])
+app.include_router(video.router, prefix="/api/v1/video", tags=["video"])
+app.include_router(py_photo.router, prefix="/api/v1/py_photo", tags=["py-photo"])
 app.include_router(retrieval.router, prefix="/api/v1/retrieval", tags=["retrieval"])
 
 app.include_router(configs.router, prefix="/api/v1/configs", tags=["configs"])
 
 app.include_router(auths.router, prefix="/api/v1/auths", tags=["auths"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
+
+app.include_router(credits.router, prefix="/api/v1/credits", tags=["credits"])
+app.include_router(stripe.router, prefix="/api/v1/stripe", tags=["stripe"])
+app.include_router(admin_credits.router, prefix="/api/v1/admin/credits", tags=["admin-credits"])
+app.include_router(admin_credits.router, prefix="/api/admin/credits", tags=["admin-credits"])
 
 
 app.include_router(channels.router, prefix="/api/v1/channels", tags=["channels"])
@@ -1427,8 +1539,42 @@ if audit_level != AuditLevel.NONE:
 @app.get("/api/models")
 @app.get("/api/v1/models")  # Experimental: Compatibility with OpenAI API
 async def get_models(
-    request: Request, refresh: bool = False, user=Depends(get_verified_user)
+    request: Request, refresh: bool = False, user=Depends(get_verified_user_or_none)
 ):
+    if user is None:
+        anonymous_enabled = bool(request.app.state.config.OPENROUTER_ANONYMOUS_ENABLED)
+        openrouter_key = (request.app.state.config.OPENROUTER_API_KEY or "").strip()
+        if not openrouter_key:
+            try:
+                for idx, url in enumerate(request.app.state.config.OPENAI_API_BASE_URLS or []):
+                    if "openrouter.ai" in str(url):
+                        openrouter_key = (
+                            (request.app.state.config.OPENAI_API_KEYS[idx] or "").strip()
+                            if idx < len(request.app.state.config.OPENAI_API_KEYS or [])
+                            else ""
+                        )
+                        if openrouter_key:
+                            break
+            except Exception:
+                openrouter_key = ""
+
+        if not anonymous_enabled or not openrouter_key:
+            return {"data": []}
+
+        return {
+            "data": [
+                {
+                    "id": OPENROUTER_DEFAULT_MODEL_ID,
+                    "name": OPENROUTER_DEFAULT_MODEL_ID,
+                    "object": "model",
+                    "created": int(time.time()),
+                    "owned_by": "openai",
+                    "connection_type": "external",
+                    "tags": [{"name": "openrouter"}, {"name": "free"}],
+                }
+            ]
+        }
+
     all_models = await get_all_models(request, refresh=refresh, user=user)
 
     models = []
@@ -1469,6 +1615,36 @@ async def get_models(
         )
 
     models = get_filtered_models(models, user)
+
+    openrouter_key = (request.app.state.config.OPENROUTER_API_KEY or "").strip()
+    if not openrouter_key:
+        try:
+            for idx, url in enumerate(request.app.state.config.OPENAI_API_BASE_URLS or []):
+                if "openrouter.ai" in str(url):
+                    openrouter_key = (
+                        (request.app.state.config.OPENAI_API_KEYS[idx] or "").strip()
+                        if idx < len(request.app.state.config.OPENAI_API_KEYS or [])
+                        else ""
+                    )
+                    if openrouter_key:
+                        break
+        except Exception:
+            openrouter_key = ""
+
+    if openrouter_key:
+        models = [m for m in models if m.get("id") != OPENROUTER_DEFAULT_MODEL_ID]
+        models.insert(
+            0,
+            {
+                "id": OPENROUTER_DEFAULT_MODEL_ID,
+                "name": OPENROUTER_DEFAULT_MODEL_ID,
+                "object": "model",
+                "created": int(time.time()),
+                "owned_by": "openai",
+                "connection_type": "external",
+                "tags": [{"name": "openrouter"}, {"name": "free"}],
+            },
+        )
 
     log.debug(
         f"/api/models returned filtered models accessible to the user: {json.dumps([model.get('id') for model in models])}"
@@ -1519,14 +1695,53 @@ async def embeddings(
 async def chat_completion(
     request: Request,
     form_data: dict,
-    user=Depends(get_verified_user),
+    user=Depends(get_verified_user_or_none),
 ):
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
 
+    openrouter_key = (request.app.state.config.OPENROUTER_API_KEY or "").strip()
+    if not openrouter_key:
+        try:
+            for idx, url in enumerate(request.app.state.config.OPENAI_API_BASE_URLS or []):
+                if "openrouter.ai" in str(url):
+                    openrouter_key = (
+                        (request.app.state.config.OPENAI_API_KEYS[idx] or "").strip()
+                        if idx < len(request.app.state.config.OPENAI_API_KEYS or [])
+                        else ""
+                    )
+                    if openrouter_key:
+                        break
+        except Exception:
+            openrouter_key = ""
+
+    anonymous_openrouter_enabled = bool(request.app.state.config.OPENROUTER_ANONYMOUS_ENABLED)
+
+    if user is None:
+        if not anonymous_openrouter_enabled or not openrouter_key:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="OpenRouter is not available for anonymous users",
+            )
+        form_data["model"] = OPENROUTER_DEFAULT_MODEL_ID
+    else:
+        if not form_data.get("model") and openrouter_key:
+            form_data["model"] = OPENROUTER_DEFAULT_MODEL_ID
+
     model_id = form_data.get("model", None)
     model_item = form_data.pop("model_item", {})
     tasks = form_data.pop("background_tasks", None)
+
+    if user is None:
+        # Anonymous users must not be able to override provider via direct connections.
+        model_item = {}
+        tasks = None
+
+    if model_id == OPENROUTER_DEFAULT_MODEL_ID and not openrouter_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="OpenRouter API key is not configured",
+        )
 
     metadata = {}
     try:
@@ -1538,8 +1753,11 @@ async def chat_completion(
             model_info = Models.get_model_by_id(model_id)
 
             # Check if user has access to the model
-            if not BYPASS_MODEL_ACCESS_CONTROL and (
-                user.role != "admin" or not BYPASS_ADMIN_ACCESS_CONTROL
+            if (
+                user
+                and model_id != OPENROUTER_DEFAULT_MODEL_ID
+                and not BYPASS_MODEL_ACCESS_CONTROL
+                and (user.role != "admin" or not BYPASS_ADMIN_ACCESS_CONTROL)
             ):
                 try:
                     check_model_access(user, model)
@@ -1572,8 +1790,13 @@ async def chat_completion(
         if model_info_params.get("reasoning_tags") is not None:
             reasoning_tags = model_info_params.get("reasoning_tags")
 
+        session_id_for_user = form_data.get("session_id", None)
+        user_id_for_events = (
+            user.id if user is not None else f"anon:{session_id_for_user}" if session_id_for_user else None
+        )
+
         metadata = {
-            "user_id": user.id,
+            "user_id": user_id_for_events,
             "chat_id": form_data.pop("chat_id", None),
             "message_id": form_data.pop("id", None),
             "parent_message_id": form_data.pop("parent_id", None),
@@ -1716,8 +1939,11 @@ generate_chat_completion = chat_completion
 
 @app.post("/api/chat/completed")
 async def chat_completed(
-    request: Request, form_data: dict, user=Depends(get_verified_user)
+    request: Request, form_data: dict, user=Depends(get_verified_user_or_none)
 ):
+    if user is None:
+        return {"messages": []}
+
     try:
         model_item = form_data.pop("model_item", {})
 

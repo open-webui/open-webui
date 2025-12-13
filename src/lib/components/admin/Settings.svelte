@@ -12,6 +12,8 @@
 	import Pipelines from './Settings/Pipelines.svelte';
 	import Audio from './Settings/Audio.svelte';
 	import Images from './Settings/Images.svelte';
+	import Music from './Settings/Music.svelte';
+	import Video from './Settings/Video.svelte';
 	import Interface from './Settings/Interface.svelte';
 	import Models from './Settings/Models.svelte';
 	import Connections from './Settings/Connections.svelte';
@@ -44,6 +46,8 @@
 			'interface',
 			'audio',
 			'images',
+			'music',
+			'video',
 			'pipelines',
 			'db'
 		].includes(tabFromPath)
@@ -373,6 +377,55 @@
 		</button>
 
 		<button
+			id="music"
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+			'music'
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+			on:click={() => {
+				goto('/admin/settings/music');
+			}}
+		>
+			<div class=" self-center mr-2">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 16 16"
+					fill="currentColor"
+					class="w-4 h-4"
+				>
+					<path d="M9 2v8.23A2.5 2.5 0 1 0 10.5 12V5.15l3-.75V9.23A2.5 2.5 0 1 0 15 11V2.5a.5.5 0 0 0-.621-.485L9 3.25V2Z" />
+				</svg>
+			</div>
+			<div class=" self-center">{$i18n.t('Music')}</div>
+		</button>
+
+		<button
+			id="video"
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+			'video'
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+			on:click={() => {
+				goto('/admin/settings/video');
+			}}
+		>
+			<div class=" self-center mr-2">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.8"
+					class="w-4 h-4"
+				>
+					<path d="M3 7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
+					<path d="M17 9l4-2v10l-4-2V9Z" />
+				</svg>
+			</div>
+			<div class=" self-center">{$i18n.t('Video')}</div>
+		</button>
+
+		<button
 			id="pipelines"
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 			'pipelines'
@@ -499,6 +552,18 @@
 		{:else if selectedTab === 'images'}
 			<Images
 				on:save={() => {
+					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'music'}
+			<Music
+				saveHandler={() => {
+					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'video'}
+			<Video
+				saveHandler={() => {
 					toast.success($i18n.t('Settings saved successfully!'));
 				}}
 			/>

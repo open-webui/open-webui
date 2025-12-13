@@ -29,6 +29,7 @@
 		tags,
 		banners,
 		showSettings,
+		showCredits,
 		showShortcuts,
 		showChangelog,
 		temporaryChatEnabled,
@@ -39,6 +40,7 @@
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
+	import CreditsModal from '$lib/components/chat/CreditsModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
@@ -139,6 +141,67 @@
 	const setTools = async () => {
 		const toolsData = await getTools(localStorage.token);
 		tools.set(toolsData);
+	};
+
+	onMount(() => {
+		const onMessage = (event: MessageEvent) => {
+			if (event.origin !== window.location.origin) return;
+			if (!event.data || typeof event.data !== 'object') return;
+
+			const data = event.data as { type?: string; status?: string };
+			if (data.type !== 'owui:credits-return') return;
+
+			if (data.status === 'success') {
+				toast.success('Payment successful. Credits will update shortly.');
+				showCredits.set(true);
+			} else if (data.status === 'cancel') {
+				toast.info('Payment cancelled.');
+				showCredits.set(true);
+			}
+		};
+
+		window.addEventListener('message', onMessage);
+		return () => window.removeEventListener('message', onMessage);
+	});
+
+	const handleCreditsReturn = async () => {
+		const creditsReturn = $page.url.searchParams.get('credits');
+		if (!creditsReturn) return;
+
+		if (creditsReturn === 'success') {
+			toast.success('Payment successful. Credits will update shortly.');
+			showCredits.set(true);
+		} else if (creditsReturn === 'cancel') {
+			toast.info('Payment cancelled.');
+			showCredits.set(true);
+		} else {
+			return;
+		}
+
+		if (window.opener && !window.opener.closed) {
+			try {
+				window.opener.postMessage(
+					{ type: 'owui:credits-return', status: creditsReturn },
+					window.location.origin
+				);
+			} catch {
+				// ignore
+			}
+
+			try {
+				window.close();
+			} catch {
+				// ignore
+			}
+		}
+
+		const cleanedUrl = new URL($page.url);
+		cleanedUrl.searchParams.delete('credits');
+		await goto(`${cleanedUrl.pathname}${cleanedUrl.search}`, {
+			replaceState: true,
+			keepFocus: true,
+			noScroll: true
+		});
 	};
 
 	onMount(async () => {
@@ -273,6 +336,8 @@
 			}
 		}
 
+		await handleCreditsReturn();
+
 		// Check for version updates
 		if ($user?.role === 'admin' && $config?.features?.enable_version_update_check) {
 			// Check if the user has dismissed the update toast in the last 24 hours
@@ -303,6 +368,7 @@
 </script>
 
 <SettingsModal bind:show={$showSettings} />
+<CreditsModal bind:show={$showCredits} />
 <ChangelogModal bind:show={$showChangelog} />
 
 {#if version && compareVersion(version.latest, version.current) && ($settings?.showUpdateToast ?? true)}

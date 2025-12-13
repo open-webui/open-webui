@@ -7,7 +7,7 @@ export const getAudioConfig = async (token: string) => {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
+			...(token && { Authorization: `Bearer ${token}` })
 		}
 	})
 		.then(async (res) => {
@@ -41,7 +41,7 @@ export const updateAudioConfig = async (token: string, payload: OpenAIConfigForm
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
+			...(token && { Authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
 			...payload
@@ -76,7 +76,7 @@ export const transcribeAudio = async (token: string, file: File, language?: stri
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
-			authorization: `Bearer ${token}`
+			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: data
 	})
@@ -108,7 +108,7 @@ export const synthesizeOpenAISpeech = async (
 	const res = await fetch(`${AUDIO_API_BASE_URL}/speech`, {
 		method: 'POST',
 		headers: {
-			Authorization: `Bearer ${token}`,
+			...(token && { Authorization: `Bearer ${token}` }),
 			'Content-Type': 'application/json'
 		},
 		body: JSON.stringify({
@@ -146,7 +146,7 @@ export const getModels = async (token: string = ''): Promise<AvailableModelsResp
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
+			...(token && { Authorization: `Bearer ${token}` })
 		}
 	})
 		.then(async (res) => {
@@ -174,7 +174,7 @@ export const getVoices = async (token: string = '') => {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
+			...(token && { Authorization: `Bearer ${token}` })
 		}
 	})
 		.then(async (res) => {
@@ -185,6 +185,85 @@ export const getVoices = async (token: string = '') => {
 			error = err.detail;
 			console.error(err);
 
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export type VoiceStatus = {
+	available: boolean;
+	tts_configured: boolean;
+	tts_engine: string;
+	default_voice: string;
+	credits_required: boolean;
+	redis_available: boolean;
+};
+
+export const getVoiceStatus = async (token: string = ''): Promise<VoiceStatus> => {
+	let error = null;
+
+	const res = await fetch(`${AUDIO_API_BASE_URL}/voice/status`, {
+		method: 'GET',
+		credentials: 'include',
+		headers: {
+			'Content-Type': 'application/json',
+			...(token && { Authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail ?? err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export type VoiceGenerateResponse = {
+	id: string;
+	ext: string;
+	media_type: string;
+	data_url?: string;
+	play_url: string;
+	download_url: string;
+	charged: boolean;
+};
+
+export const generateVoice = async (
+	token: string = '',
+	payload: { message_id?: string; input: string; voice?: string; model?: string }
+): Promise<VoiceGenerateResponse> => {
+	let error = null;
+
+	const res = await fetch(`${AUDIO_API_BASE_URL}/voice`, {
+		method: 'POST',
+		credentials: 'include',
+		headers: {
+			'Content-Type': 'application/json',
+			...(token && { Authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify(payload)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail ?? err;
+			console.error(err);
 			return null;
 		});
 

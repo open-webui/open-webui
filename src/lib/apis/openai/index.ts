@@ -283,8 +283,8 @@ export const verifyOpenAIConnection = async (
 			method: 'GET',
 			headers: {
 				Accept: 'application/json',
-				Authorization: `Bearer ${key}`,
-				'Content-Type': 'application/json'
+				'Content-Type': 'application/json',
+				...(key && { Authorization: `Bearer ${key}` })
 			}
 		})
 			.then(async (res) => {
@@ -304,8 +304,8 @@ export const verifyOpenAIConnection = async (
 			method: 'POST',
 			headers: {
 				Accept: 'application/json',
-				Authorization: `Bearer ${token}`,
-				'Content-Type': 'application/json'
+				'Content-Type': 'application/json',
+				...(token && { Authorization: `Bearer ${token}` })
 			},
 			body: JSON.stringify({
 				url,
@@ -342,8 +342,8 @@ export const chatCompletion = async (
 		signal: controller.signal,
 		method: 'POST',
 		headers: {
-			Authorization: `Bearer ${token}`,
-			'Content-Type': 'application/json'
+			'Content-Type': 'application/json',
+			...(token && { Authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify(body)
 	}).catch((err) => {
@@ -369,8 +369,8 @@ export const generateOpenAIChatCompletion = async (
 	const res = await fetch(`${url}/chat/completions`, {
 		method: 'POST',
 		headers: {
-			Authorization: `Bearer ${token}`,
-			'Content-Type': 'application/json'
+			'Content-Type': 'application/json',
+			...(token && { Authorization: `Bearer ${token}` })
 		},
 		credentials: 'include',
 		body: JSON.stringify(body)
@@ -402,8 +402,8 @@ export const synthesizeOpenAISpeech = async (
 	const res = await fetch(`${OPENAI_API_BASE_URL}/audio/speech`, {
 		method: 'POST',
 		headers: {
-			Authorization: `Bearer ${token}`,
-			'Content-Type': 'application/json'
+			'Content-Type': 'application/json',
+			...(token && { Authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
 			model: model,

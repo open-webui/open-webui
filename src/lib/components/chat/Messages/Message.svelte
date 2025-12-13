@@ -38,6 +38,12 @@
 	export let continueResponse;
 	export let mergeResponses;
 
+	export let downloadVoiceEnabled = false;
+	export let downloadVoiceVoice = '';
+	export let downloadVoiceUnavailableMessage = '';
+
+	export let pyPhotoEnabled = false;
+
 	export let addMessages;
 	export let triggerScroll;
 	export let readOnly = false;
@@ -79,6 +85,10 @@
 				{history}
 				{messageId}
 				{selectedModels}
+				{downloadVoiceEnabled}
+				{downloadVoiceVoice}
+				{downloadVoiceUnavailableMessage}
+				{pyPhotoEnabled}
 				isLastMessage={messageId === history.currentId}
 				siblings={history.messages[history.messages[messageId].parentId]?.childrenIds ?? []}
 				{setInputText}
@@ -105,6 +115,10 @@
 				{chatId}
 				{messageId}
 				{selectedModels}
+				{downloadVoiceEnabled}
+				{downloadVoiceVoice}
+				{downloadVoiceUnavailableMessage}
+				{pyPhotoEnabled}
 				isLastMessage={messageId === history?.currentId}
 				{setInputText}
 				{updateChat}

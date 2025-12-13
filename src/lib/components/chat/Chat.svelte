@@ -70,6 +70,8 @@
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
 	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
+	import { generateMusic } from '$lib/apis/music';
+	import { generateVideo } from '$lib/apis/video';
 	import {
 		chatCompleted,
 		generateQueries,
@@ -138,6 +140,18 @@
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
 
+	let downloadVoiceEnabled = false;
+	let downloadVoiceVoice: string = '';
+	let downloadVoiceUnavailableMessage: string = '';
+
+	let musicEnabled = false;
+	let musicUnavailableMessage: string = '';
+
+	let pyPhotoEnabled = false;
+
+	let videoEnabled = false;
+	let videoUnavailableMessage: string = '';
+
 	let showCommands = false;
 
 	let generating = false;
@@ -174,6 +188,14 @@
 		selectedFilterIds = [];
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
+		codeInterpreterEnabled = false;
+		downloadVoiceEnabled = false;
+		downloadVoiceUnavailableMessage = '';
+		musicEnabled = false;
+		musicUnavailableMessage = '';
+		videoEnabled = false;
+		videoUnavailableMessage = '';
+		pyPhotoEnabled = false;
 
 		const storageChatInput = sessionStorage.getItem(
 			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
@@ -198,6 +220,11 @@
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
+						downloadVoiceEnabled = input.downloadVoiceEnabled ?? false;
+						downloadVoiceVoice = input.downloadVoiceVoice ?? downloadVoiceVoice;
+						musicEnabled = input.musicEnabled ?? false;
+						videoEnabled = input.videoEnabled ?? false;
+						pyPhotoEnabled = input.pyPhotoEnabled ?? false;
 					}
 				} catch (e) {}
 			} else {
@@ -580,6 +607,13 @@
 			webSearchEnabled = false;
 			imageGenerationEnabled = false;
 			codeInterpreterEnabled = false;
+			downloadVoiceEnabled = false;
+			downloadVoiceUnavailableMessage = '';
+			musicEnabled = false;
+			musicUnavailableMessage = '';
+			videoEnabled = false;
+			videoUnavailableMessage = '';
+			pyPhotoEnabled = false;
 
 			try {
 				const input = JSON.parse(storageChatInput);
@@ -592,6 +626,11 @@
 					webSearchEnabled = input.webSearchEnabled;
 					imageGenerationEnabled = input.imageGenerationEnabled;
 					codeInterpreterEnabled = input.codeInterpreterEnabled;
+					downloadVoiceEnabled = input.downloadVoiceEnabled ?? false;
+					downloadVoiceVoice = input.downloadVoiceVoice ?? downloadVoiceVoice;
+					musicEnabled = input.musicEnabled ?? false;
+					videoEnabled = input.videoEnabled ?? false;
+					pyPhotoEnabled = input.pyPhotoEnabled ?? false;
 				}
 			} catch (e) {}
 		}
@@ -902,6 +941,9 @@
 
 	const initNewChat = async () => {
 		console.log('initNewChat');
+		if (!localStorage.token && $temporaryChatEnabled !== true) {
+			await temporaryChatEnabled.set(true);
+		}
 		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
 			await temporaryChatEnabled.set(true);
 		}
@@ -1683,6 +1725,134 @@
 				? [atSelectedModel.id]
 				: selectedModels;
 
+		const generationMode = videoEnabled ? 'video' : musicEnabled ? 'music' : null;
+		if (generationMode) {
+			const model = $models.filter((m) => m.id === selectedModelIds[0]).at(0);
+
+			if (!model) {
+				toast.error($i18n.t(`Model {{modelId}} not found`, { modelId: selectedModelIds[0] }));
+				return;
+			}
+
+			let responseMessageId = uuidv4();
+			let responseMessage = {
+				parentId: parentId,
+				id: responseMessageId,
+				childrenIds: [],
+				role: 'assistant',
+				content: '',
+				model: model.id,
+				modelName: model.name ?? model.id,
+				modelIdx: modelIdx ? modelIdx : 0,
+				timestamp: Math.floor(Date.now() / 1000), // Unix epoch
+				done: false,
+				...(generationMode === 'music'
+					? {
+							music: {
+								enabled: true,
+								status: 'generating',
+								error: ''
+							}
+						}
+					: {
+							video: {
+								enabled: true,
+								status: 'generating',
+								error: ''
+							}
+						})
+			};
+
+			history.messages[responseMessageId] = responseMessage;
+			history.currentId = responseMessageId;
+
+			if (parentId !== null && history.messages[parentId]) {
+				history.messages[parentId].childrenIds = [
+					...history.messages[parentId].childrenIds,
+					responseMessageId
+				];
+			}
+			history = history;
+
+			if (newChat && _history.messages[_history.currentId].parentId === null) {
+				_chatId = await initChatHandler(_history);
+			}
+
+			await tick();
+
+			_history = JSON.parse(JSON.stringify(history));
+			await saveChatHandler(_chatId, _history);
+
+			const userMessage = _history.messages[parentId];
+			const promptText = userMessage?.content ?? '';
+
+			try {
+				if (generationMode === 'music') {
+					const res = await generateMusic(localStorage.token, { prompt: promptText });
+					const latest = history.messages[responseMessageId] ?? responseMessage;
+					history.messages[responseMessageId] = {
+						...latest,
+						done: true,
+						music: {
+							...(latest.music ?? {}),
+							...res,
+							enabled: true,
+							status: 'ready',
+							error: ''
+						}
+					};
+				} else {
+					const res = await generateVideo(localStorage.token, { prompt: promptText });
+					const latest = history.messages[responseMessageId] ?? responseMessage;
+					history.messages[responseMessageId] = {
+						...latest,
+						done: true,
+						video: {
+							...(latest.video ?? {}),
+							...res,
+							enabled: true,
+							status: 'ready',
+							error: ''
+						}
+					};
+				}
+			} catch (e) {
+				const errMsg = typeof e === 'string' ? e : `${e}`;
+				const latest = history.messages[responseMessageId] ?? responseMessage;
+				history.messages[responseMessageId] = {
+					...latest,
+					done: true,
+					...(generationMode === 'music'
+						? {
+								music: {
+									...(latest.music ?? {}),
+									enabled: true,
+									status: 'error',
+									error: errMsg
+								}
+							}
+						: {
+								video: {
+									...(latest.video ?? {}),
+									enabled: true,
+									status: 'error',
+									error: errMsg
+								}
+							})
+				};
+			}
+
+			history = history;
+			await tick();
+
+			_history = JSON.parse(JSON.stringify(history));
+			await saveChatHandler(_chatId, _history);
+
+			currentChatPage.set(1);
+			chats.set(await getChatList(localStorage.token, $currentChatPage));
+			return;
+		}
+
 		// Create response messages for each selected model
 		for (const [_modelIdx, modelId] of selectedModelIds.entries()) {
 			const model = $models.filter((m) => m.id === modelId).at(0);
@@ -2284,10 +2454,24 @@
 	const saveChatHandler = async (_chatId, history) => {
 		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
+				const historyToSave =
+					history && history.messages
+						? {
+								...history,
+								messages: Object.fromEntries(
+									Object.entries(history.messages).map(([id, msg]) => {
+										if (!msg?.voice_download?.data_url) return [id, msg];
+										const { data_url, ...voice_download } = msg.voice_download ?? {};
+										return [id, { ...msg, voice_download }];
+									})
+								)
+							}
+						: history;
+
 				chat = await updateChatById(localStorage.token, _chatId, {
 					models: selectedModels,
-					history: history,
-					messages: createMessagesList(history, history.currentId),
+					history: historyToSave,
+					messages: createMessagesList(historyToSave, historyToSave.currentId),
 					params: params,
 					files: chatFiles
 				});
@@ -2495,6 +2679,10 @@
 										{mergeResponses}
 										{chatActionHandler}
 										{addMessages}
+										downloadVoiceEnabled={downloadVoiceEnabled}
+										downloadVoiceVoice={downloadVoiceVoice}
+										downloadVoiceUnavailableMessage={downloadVoiceUnavailableMessage}
+										pyPhotoEnabled={pyPhotoEnabled}
 										topPadding={true}
 										bottomPadding={files.length > 0}
 										{onSelect}
@@ -2516,6 +2704,14 @@
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
+									bind:downloadVoiceEnabled
+									bind:downloadVoiceVoice
+									bind:downloadVoiceUnavailableMessage
+									bind:musicEnabled
+									bind:musicUnavailableMessage
+									bind:pyPhotoEnabled
+									bind:videoEnabled
+									bind:videoUnavailableMessage
 									bind:atSelectedModel
 									bind:showCommands
 									toolServers={$toolServers}
@@ -2568,6 +2764,14 @@
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
+									bind:downloadVoiceEnabled
+									bind:downloadVoiceVoice
+									bind:downloadVoiceUnavailableMessage
+									bind:musicEnabled
+									bind:musicUnavailableMessage
+									bind:pyPhotoEnabled
+									bind:videoEnabled
+									bind:videoUnavailableMessage
 									bind:atSelectedModel
 									bind:showCommands
 									toolServers={$toolServers}

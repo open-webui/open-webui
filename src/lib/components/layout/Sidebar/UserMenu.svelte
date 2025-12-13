@@ -9,7 +9,7 @@
 	import { getUsage } from '$lib/apis';
 	import { getSessionUser, userSignOut } from '$lib/apis/auths';
 
-	import { showSettings, mobile, showSidebar, showShortcuts, user } from '$lib/stores';
+	import { showCredits, showSettings, mobile, showSidebar, showShortcuts, user } from '$lib/stores';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
@@ -182,6 +182,18 @@
 							</div>
 						</button>
 					</div>
+					<div class="mx-1">
+						<button
+							class="mb-1 w-full px-3 py-1.5 gap-1 rounded-xl bg-gray-50 dark:text-white dark:bg-gray-900/50 text-black transition text-xs flex items-center justify-center"
+							type="button"
+							on:click={() => {
+								show = false;
+								showCredits.set(true);
+							}}
+						>
+							<div class=" self-center truncate">კრედიტები</div>
+						</button>
+					</div>
 				{:else}
 					<div class="mx-1">
 						<button
@@ -196,6 +208,18 @@
 								<FaceSmile className="size-4" strokeWidth="1.5" />
 							</div>
 							<div class=" self-center truncate">{$i18n.t('Update your status')}</div>
+						</button>
+					</div>
+					<div class="mx-1">
+						<button
+							class="mb-1 w-full px-3 py-1.5 gap-1 rounded-xl bg-gray-50 dark:text-white dark:bg-gray-900/50 text-black transition text-xs flex items-center justify-center"
+							type="button"
+							on:click={() => {
+								show = false;
+								showCredits.set(true);
+							}}
+						>
+							<div class=" self-center truncate">კრედიტები</div>
 						</button>
 					</div>
 				{/if}

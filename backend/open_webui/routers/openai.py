@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import time
 from typing import Optional
 
 import aiohttp
@@ -23,6 +24,8 @@ from starlette.background import BackgroundTask
 from open_webui.models.models import Models
 from open_webui.config import (
     CACHE_DIR,
+    OPENROUTER_API_BASE_URL,
+    OPENROUTER_DEFAULT_MODEL_ID,
 )
 from open_webui.env import (
     MODELS_CACHE_TTL,
@@ -126,12 +129,21 @@ async def get_headers_and_cookies(
     user: UserModel = None,
 ):
     cookies = {}
+    openrouter_key = ""
+    try:
+        openrouter_key = (request.app.state.config.OPENROUTER_API_KEY or "").strip()
+    except Exception:
+        openrouter_key = ""
+
+    if "openrouter.ai" in url and openrouter_key:
+        key = openrouter_key
+
     headers = {
         "Content-Type": "application/json",
         **(
             {
                 "HTTP-Referer": "https://openwebui.com/",
-                "X-Title": "???",
+                "X-Title": getattr(request.app.state, "WEBUI_NAME", "Open WebUI"),
             }
             if "openrouter.ai" in url
             else {}
@@ -335,7 +347,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
             raise HTTPException(
                 status_code=r.status_code if r else 500,
-                detail=detail if detail else "???: Server Connection Error",
+                detail=detail if detail else "Server Connection Error",
             )
 
     except ValueError:
@@ -361,13 +373,19 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 
     request_tasks = []
     for idx, url in enumerate(request.app.state.config.OPENAI_API_BASE_URLS):
+        effective_key = request.app.state.config.OPENAI_API_KEYS[idx]
+        if "openrouter.ai" in url:
+            openrouter_key = (request.app.state.config.OPENROUTER_API_KEY or "").strip()
+            if openrouter_key:
+                effective_key = openrouter_key
+
         if (str(idx) not in request.app.state.config.OPENAI_API_CONFIGS) and (
             url not in request.app.state.config.OPENAI_API_CONFIGS  # Legacy support
         ):
             request_tasks.append(
                 send_get_request(
                     f"{url}/models",
-                    request.app.state.config.OPENAI_API_KEYS[idx],
+                    effective_key,
                     user=user,
                 )
             )
@@ -387,7 +405,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
                     request_tasks.append(
                         send_get_request(
                             f"{url}/models",
-                            request.app.state.config.OPENAI_API_KEYS[idx],
+                            effective_key,
                             user=user,
                         )
                     )
@@ -534,6 +552,44 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
     models = get_merged_models(map(extract_data, responses))
     log.debug(f"models: {models}")
 
+    # Ensure the OpenRouter default free model is always present when OpenRouter is configured.
+    try:
+        openrouter_key = (request.app.state.config.OPENROUTER_API_KEY or "").strip()
+        if not openrouter_key:
+            for idx, url in enumerate(request.app.state.config.OPENAI_API_BASE_URLS or []):
+                if "openrouter.ai" in str(url):
+                    openrouter_key = (
+                        (request.app.state.config.OPENAI_API_KEYS[idx] or "").strip()
+                        if idx < len(request.app.state.config.OPENAI_API_KEYS or [])
+                        else ""
+                    )
+                    break
+
+        if openrouter_key and OPENROUTER_DEFAULT_MODEL_ID not in models:
+            openrouter_idx = None
+            for idx, url in enumerate(request.app.state.config.OPENAI_API_BASE_URLS or []):
+                if str(url).rstrip("/") == OPENROUTER_API_BASE_URL or "openrouter.ai" in str(url):
+                    openrouter_idx = idx
+                    break
+
+            if openrouter_idx is not None:
+                models[OPENROUTER_DEFAULT_MODEL_ID] = {
+                    "id": OPENROUTER_DEFAULT_MODEL_ID,
+                    "name": OPENROUTER_DEFAULT_MODEL_ID,
+                    "object": "model",
+                    "created": int(time.time()),
+                    "owned_by": "openai",
+                    "openai": {
+                        "id": OPENROUTER_DEFAULT_MODEL_ID,
+                        "name": OPENROUTER_DEFAULT_MODEL_ID,
+                    },
+                    "connection_type": "external",
+                    "urlIdx": openrouter_idx,
+                    "tags": [{"name": "openrouter"}, {"name": "free"}],
+                }
+    except Exception:
+        pass
+
     request.app.state.OPENAI_MODELS = models
     return {"data": list(models.values())}
 
@@ -614,7 +670,7 @@ async def get_models(
                 # ClientError covers all aiohttp requests issues
                 log.exception(f"Client error: {str(e)}")
                 raise HTTPException(
-                    status_code=500, detail="???: Server Connection Error"
+                    status_code=500, detail="Server Connection Error"
                 )
             except Exception as e:
                 log.exception(f"Unexpected error: {e}")
@@ -711,12 +767,12 @@ async def verify_connection(
             # ClientError covers all aiohttp requests issues
             log.exception(f"Client error: {str(e)}")
             raise HTTPException(
-                status_code=500, detail="???: Server Connection Error"
+                status_code=500, detail="Server Connection Error"
             )
         except Exception as e:
             log.exception(f"Unexpected error: {e}")
             raise HTTPException(
-                status_code=500, detail="???: Server Connection Error"
+                status_code=500, detail="Server Connection Error"
             )
 
 
@@ -848,6 +904,20 @@ async def generate_chat_completion(
     model = request.app.state.OPENAI_MODELS.get(model_id)
     if model:
         idx = model["urlIdx"]
+    elif model_id == OPENROUTER_DEFAULT_MODEL_ID:
+        openrouter_idx = None
+        for i, url in enumerate(request.app.state.config.OPENAI_API_BASE_URLS or []):
+            if str(url).rstrip("/") == OPENROUTER_API_BASE_URL or "openrouter.ai" in str(url):
+                openrouter_idx = i
+                break
+
+        if openrouter_idx is None:
+            raise HTTPException(
+                status_code=503,
+                detail="OpenRouter is not configured",
+            )
+
+        idx = openrouter_idx
     else:
         raise HTTPException(
             status_code=404,
@@ -867,7 +937,7 @@ async def generate_chat_completion(
         payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
 
     # Add user info to the payload if the model is a pipeline
-    if "pipeline" in model and model.get("pipeline"):
+    if user and "pipeline" in model and model.get("pipeline"):
         payload["user"] = {
             "name": user.name,
             "id": user.id,
@@ -965,7 +1035,7 @@ async def generate_chat_completion(
 
         raise HTTPException(
             status_code=r.status if r else 500,
-            detail="???: Server Connection Error",
+            detail="Server Connection Error",
         )
     finally:
         if not streaming:
@@ -1047,7 +1117,7 @@ async def embeddings(request: Request, form_data: dict, user):
         log.exception(e)
         raise HTTPException(
             status_code=r.status if r else 500,
-            detail="???: Server Connection Error",
+            detail="Server Connection Error",
         )
     finally:
         if not streaming:
@@ -1140,7 +1210,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
         log.exception(e)
         raise HTTPException(
             status_code=r.status if r else 500,
-            detail="???: Server Connection Error",
+            detail="Server Connection Error",
         )
     finally:
         if not streaming:

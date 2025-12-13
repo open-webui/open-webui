@@ -3,8 +3,11 @@
 	import { tick, getContext, onMount, onDestroy } from 'svelte';
 	import { config, settings } from '$lib/stores';
 	import { blobToFile, calculateSHA256, extractCurlyBraceWords } from '$lib/utils';
+	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { RealtimeSttStream } from '$lib/utils/realtime-stt';
 
 	import { transcribeAudio } from '$lib/apis/audio';
+	import { getCreditsStatus } from '$lib/apis/credits';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
 	import dayjs from 'dayjs';
@@ -33,6 +36,11 @@
 	let durationCounter = null;
 
 	let transcription = '';
+
+	$: elevenLabsSttEnabled = $config?.audio?.stt?.engine === 'elevenlabs';
+	let realtimeStt: RealtimeSttStream | null = null;
+	let committedTranscriptSent = false;
+	let lastRealtimeServerError: { message: string; ts: number } | null = null;
 
 	const startDurationCounter = () => {
 		durationCounter = setInterval(() => {
@@ -150,15 +158,19 @@
 		const file = blobToFile(audioBlob, `Recording-${dayjs().format('L LT')}.${ext}`);
 
 		if (transcribe) {
-			if ($config.audio.stt.engine === 'web' || ($settings?.audio?.stt?.engine ?? '') === 'web') {
+			if (
+				!elevenLabsSttEnabled &&
+				($config.audio.stt.engine === 'web' || ($settings?.audio?.stt?.engine ?? '') === 'web')
+			) {
 				// with web stt, we don't need to send the file to the server
 				return;
 			}
 
+			const language = elevenLabsSttEnabled ? 'kat' : $settings?.audio?.stt?.language;
 			const res = await transcribeAudio(
 				localStorage.token,
 				file,
-				$settings?.audio?.stt?.language
+				language
 			).catch((error) => {
 				toast.error(`${error}`);
 				return null;
@@ -178,6 +190,15 @@
 
 	const startRecording = async () => {
 		loading = true;
+		committedTranscriptSent = false;
+		transcription = '';
+
+		if (!localStorage.token) {
+			toast.error('ხმოვანი რეჟიმით სარგებლობისთვის გთხოვთ გაიაროთ ავტორიზაცია.');
+			loading = false;
+			recording = false;
+			return;
+		}
 
 		try {
 			if (displayMedia) {
@@ -207,6 +228,91 @@
 			toast.error($i18n.t('Error accessing media devices.'));
 			loading = false;
 			recording = false;
+			return;
+		}
+
+		if (elevenLabsSttEnabled) {
+			loading = false;
+			startDurationCounter();
+			analyseAudio(stream);
+
+			const apiBase = WEBUI_BASE_URL && WEBUI_BASE_URL !== '' ? WEBUI_BASE_URL : location.origin;
+			const wsBase = apiBase.replace(/^http/, 'ws');
+			const wsUrl = `${wsBase}/api/v1/audio/stt/realtime?token=${encodeURIComponent(
+				localStorage.token
+			)}`;
+
+			realtimeStt?.stop();
+			realtimeStt = new RealtimeSttStream({
+				wsUrl,
+				targetSampleRate: 16000,
+				shouldReconnect: async () => {
+					if (!recording) return false;
+					if (!localStorage.token) return false;
+
+					try {
+						const status = await Promise.race([
+							getCreditsStatus(localStorage.token),
+							new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500))
+						]);
+						if (!status) return true;
+						return (status?.domains?.audio?.total_remaining ?? 0) > 0;
+					} catch {
+						return true;
+					}
+				},
+				callbacks: {
+					onEvent: (event) => {
+						if (
+							event &&
+							typeof event === 'object' &&
+							(event as any).type === 'error' &&
+							typeof (event as any).code === 'string' &&
+							typeof (event as any).message === 'string'
+						) {
+							const message = (event as any).message as string;
+							lastRealtimeServerError = { message, ts: Date.now() };
+							toast.error(message);
+							recording = false;
+						}
+					},
+					onPartial: (text) => {
+						transcription = text;
+					},
+					onCommitted: (text) => {
+						if (committedTranscriptSent) return;
+
+						const trimmed = text.trim();
+						if (!trimmed) return;
+
+						committedTranscriptSent = true;
+						transcription = trimmed;
+
+						onConfirm({ text: trimmed, filename: '' });
+						recording = false;
+					},
+					onError: (error) => {
+						if (
+							lastRealtimeServerError &&
+							error === lastRealtimeServerError.message &&
+							Date.now() - lastRealtimeServerError.ts < 1500
+						) {
+							return;
+						}
+						toast.error(error);
+					}
+				}
+			});
+
+			try {
+				await realtimeStt.start(stream);
+			} catch (error) {
+				console.error('Error starting realtime STT:', error);
+				toast.error($i18n.t('Speech recognition failed. Please try again.'));
+				loading = false;
+				recording = false;
+			}
+
 			return;
 		}
 
@@ -262,7 +368,10 @@
 		}
 
 		if (transcribe) {
-			if ($config.audio.stt.engine === 'web' || ($settings?.audio?.stt?.engine ?? '') === 'web') {
+			if (
+				!elevenLabsSttEnabled &&
+				($config.audio.stt.engine === 'web' || ($settings?.audio?.stt?.engine ?? '') === 'web')
+			) {
 				if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
 					// Create a SpeechRecognition object
 					speechRecognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
@@ -325,6 +434,9 @@
 	};
 
 	const stopRecording = async () => {
+		realtimeStt?.stop();
+		realtimeStt = null;
+
 		if (recording && mediaRecorder) {
 			await mediaRecorder.stop();
 		}
@@ -346,6 +458,18 @@
 	};
 
 	const confirmRecording = async () => {
+		if (elevenLabsSttEnabled) {
+			const text = transcription.trim();
+			if (!text) {
+				toast.error($i18n.t('Speech recognition failed. Please try again.'));
+				return;
+			}
+
+			onConfirm({ text, filename: '' });
+			recording = false;
+			return;
+		}
+
 		loading = true;
 		confirmed = true;
 

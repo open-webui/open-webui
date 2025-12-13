@@ -7,13 +7,15 @@
 	import { blobToFile } from '$lib/utils';
 	import { generateEmoji } from '$lib/apis';
 	import { synthesizeOpenAISpeech, transcribeAudio } from '$lib/apis/audio';
+	import { getCreditsStatus } from '$lib/apis/credits';
 
 	import { toast } from 'svelte-sonner';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import VideoInputMenu from './CallOverlay/VideoInputMenu.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
-	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { RealtimeSttStream } from '$lib/utils/realtime-stt';
 
 	const i18n = getContext('i18n');
 
@@ -43,6 +45,13 @@
 	let mediaRecorder;
 	let audioStream = null;
 	let audioChunks = [];
+	let partialTranscript = '';
+	let realtimeStt: RealtimeSttStream | null = null;
+	let lastRealtimeServerError: { message: string; ts: number } | null = null;
+
+	$: elevenLabsSttEnabled = $config?.audio?.stt?.engine === 'elevenlabs';
+	const committedQueue: string[] = [];
+	let processingCommittedQueue = false;
 
 	let videoInputDevices = [];
 	let selectedVideoInputDeviceId = null;
@@ -148,6 +157,34 @@
 	const MIN_DECIBELS = -55;
 	const VISUALIZER_BUFFER_LENGTH = 300;
 
+	const processCommittedQueue = async () => {
+		if (processingCommittedQueue) return;
+		processingCommittedQueue = true;
+
+		try {
+			while (committedQueue.length > 0 && $showCallOverlay) {
+				const text = committedQueue.shift()?.trim();
+				if (!text) continue;
+
+				loading = true;
+				emoji = null;
+
+				if (cameraStream) {
+					const imageUrl = takeScreenshot();
+					files = [{ type: 'image', url: imageUrl }];
+				}
+
+				try {
+					await submitPrompt(text, { _raw: true });
+				} finally {
+					loading = false;
+				}
+			}
+		} finally {
+			processingCommittedQueue = false;
+		}
+	};
+
 	const transcribeHandler = async (audioBlob) => {
 		// Create a blob from the audio chunks
 
@@ -174,6 +211,12 @@
 	};
 
 	const stopRecordingCallback = async (_continue = true) => {
+		if (elevenLabsSttEnabled) {
+			audioChunks = [];
+			confirmed = false;
+			return;
+		}
+
 		if ($showCallOverlay) {
 			console.log('%c%s', 'color: red; font-size: 20px;', '🚨 stopRecordingCallback 🚨');
 
@@ -222,6 +265,13 @@
 
 	const startRecording = async () => {
 		if ($showCallOverlay) {
+			if (!localStorage.token) {
+				toast.error('ხმოვანი რეჟიმით სარგებლობისთვის გთხოვთ გაიაროთ ავტორიზაცია.');
+				showCallOverlay.set(false);
+				dispatch('close');
+				return;
+			}
+
 			if (!audioStream) {
 				audioStream = await navigator.mediaDevices.getUserMedia({
 					audio: {
@@ -231,6 +281,150 @@
 					}
 				});
 			}
+			if (elevenLabsSttEnabled) {
+				mediaRecorder = true;
+				analyseAudio(audioStream);
+
+				const apiBase = WEBUI_BASE_URL && WEBUI_BASE_URL !== '' ? WEBUI_BASE_URL : location.origin;
+				const wsBase = apiBase.replace(/^http/, 'ws');
+				const wsUrl = `${wsBase}/api/v1/audio/stt/realtime?token=${encodeURIComponent(
+					localStorage.token
+				)}`;
+
+				realtimeStt?.stop();
+				realtimeStt = new RealtimeSttStream({
+					wsUrl,
+					targetSampleRate: 16000,
+					shouldSendAudio: () => {
+						if (assistantSpeaking && !($settings?.voiceInterruption ?? false)) {
+							return false;
+						}
+						return true;
+					},
+					shouldReconnect: async () => {
+						if (!$showCallOverlay) return false;
+						if (!localStorage.token) return false;
+
+						try {
+							const status = await Promise.race([
+								getCreditsStatus(localStorage.token),
+								new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500))
+							]);
+							if (!status) return true;
+							return (status?.domains?.audio?.total_remaining ?? 0) > 0;
+						} catch {
+							return true;
+						}
+					},
+					callbacks: {
+						onEvent: (event) => {
+							if (
+								event &&
+								typeof event === 'object' &&
+								(event as any).type === 'error' &&
+								typeof (event as any).code === 'string' &&
+								typeof (event as any).message === 'string'
+							) {
+								const code = (event as any).code as string;
+								const message = (event as any).message as string;
+								lastRealtimeServerError = { message, ts: Date.now() };
+
+								if (code === 'AUTH_REQUIRED') {
+									toast.error(message);
+									stopAudioStream();
+									stopVideoStream();
+									showCallOverlay.set(false);
+									dispatch('close');
+									return;
+								}
+
+								if (
+									code === 'CREDITS_UNAVAILABLE' ||
+									code === 'STT_DISABLED' ||
+									code === 'STT_NOT_CONFIGURED' ||
+									code === 'SESSION_ACTIVE'
+								) {
+									toast.error(message);
+									stopAudioStream();
+									stopVideoStream();
+									showCallOverlay.set(false);
+									dispatch('close');
+									return;
+								}
+
+								if (code === 'LIMIT_EXHAUSTED') {
+									void (async () => {
+										await stopAudioStream();
+
+										try {
+											assistantSpeaking = true;
+											if ($config?.audio?.tts?.engine !== '') {
+												const res = await synthesizeOpenAISpeech(
+													localStorage.token,
+													$config?.audio?.tts?.voice,
+													message
+												).catch(() => null);
+
+												if (res) {
+													const blob = await res.blob();
+													const blobUrl = URL.createObjectURL(blob);
+													await playAudio(new Audio(blobUrl));
+												}
+											} else {
+												await speakSpeechSynthesisHandler(message);
+											}
+										} finally {
+											assistantSpeaking = false;
+										}
+
+										await stopVideoStream();
+										showCallOverlay.set(false);
+										dispatch('close');
+									})();
+									return;
+								}
+							}
+						},
+						onPartial: (text) => {
+							partialTranscript = text;
+							if (!hasStartedSpeaking && text.trim() !== '') {
+								hasStartedSpeaking = true;
+								if ($settings?.voiceInterruption ?? false) {
+									stopAllAudio();
+								}
+							}
+						},
+						onCommitted: (text) => {
+							const trimmed = text.trim();
+							if (!trimmed) return;
+
+							partialTranscript = '';
+							hasStartedSpeaking = false;
+							committedQueue.push(trimmed);
+							processCommittedQueue();
+						},
+						onError: (error) => {
+							if (
+								lastRealtimeServerError &&
+								error === lastRealtimeServerError.message &&
+								Date.now() - lastRealtimeServerError.ts < 1500
+							) {
+								return;
+							}
+							toast.error(error);
+						}
+					}
+				});
+
+				try {
+					await realtimeStt.start(audioStream);
+				} catch (e) {
+					toast.error(`${e}`);
+				}
+
+				return;
+			}
+
 			mediaRecorder = new MediaRecorder(audioStream);
 
 			mediaRecorder.onstart = () => {
@@ -254,12 +448,19 @@
 	};
 
 	const stopAudioStream = async () => {
-		try {
-			if (mediaRecorder) {
-				mediaRecorder.stop();
+		if (elevenLabsSttEnabled) {
+			realtimeStt?.stop();
+			realtimeStt = null;
+			partialTranscript = '';
+			mediaRecorder = false;
+		} else {
+			try {
+				if (mediaRecorder) {
+					mediaRecorder.stop();
+				}
+			} catch (error) {
+				console.log('Error stopping audio stream:', error);
 			}
-		} catch (error) {
-			console.log('Error stopping audio stream:', error);
 		}
 
 		if (!audioStream) return;
@@ -325,20 +526,22 @@
 				if (hasSound) {
 					// BIG RED TEXT
 					console.log('%c%s', 'color: red; font-size: 20px;', '🔊 Sound detected');
-					if (mediaRecorder && mediaRecorder.state !== 'recording') {
+					if (!elevenLabsSttEnabled && mediaRecorder && mediaRecorder.state !== 'recording') {
 						mediaRecorder.start();
 					}
 
 					if (!hasStartedSpeaking) {
 						hasStartedSpeaking = true;
-						stopAllAudio();
+						if (!assistantSpeaking || ($settings?.voiceInterruption ?? false)) {
+							stopAllAudio();
+						}
 					}
 
 					lastSoundTime = Date.now();
 				}
 
 				// Start silence detection only after initial speech/noise has been detected
-				if (hasStartedSpeaking) {
+				if (!elevenLabsSttEnabled && hasStartedSpeaking) {
 					if (Date.now() - lastSoundTime > 2000) {
 						confirmed = true;
 
@@ -948,7 +1151,9 @@
 					}}
 				>
 					<div class=" line-clamp-1 text-sm font-medium">
-						{#if loading}
+						{#if partialTranscript && !loading}
+							{partialTranscript}
+						{:else if loading}
 							{$i18n.t('Thinking...')}
 						{:else if assistantSpeaking}
 							{$i18n.t('Tap to interrupt')}

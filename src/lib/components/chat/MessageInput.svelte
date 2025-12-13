@@ -46,7 +46,6 @@
 	import { deleteFileById } from '$lib/apis/files';
 	import { getSessionUser } from '$lib/apis/auths';
 	import { getTools } from '$lib/apis/tools';
-
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
 	import InputMenu from './MessageInput/InputMenu.svelte';
@@ -58,11 +57,15 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import FileItem from '../common/FileItem.svelte';
 	import Image from '../common/Image.svelte';
+	import Switch from '../common/Switch.svelte';
 
 	import XMark from '../icons/XMark.svelte';
-	import Headphone from '../icons/Headphone.svelte';
 	import GlobeAlt from '../icons/GlobeAlt.svelte';
 	import Photo from '../icons/Photo.svelte';
+	import Download from '../icons/Download.svelte';
+	import SoundHigh from '../icons/SoundHigh.svelte';
+	import Camera from '../icons/Camera.svelte';
+	import Video from '../icons/Video.svelte';
 	import Wrench from '../icons/Wrench.svelte';
 	import CommandLine from '../icons/CommandLine.svelte';
 	import Sparkles from '../icons/Sparkles.svelte';
@@ -109,6 +112,18 @@
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
 
+	export let downloadVoiceEnabled = false;
+	export let downloadVoiceVoice = '';
+	export let downloadVoiceUnavailableMessage = '';
+
+	export let musicEnabled = false;
+	export let musicUnavailableMessage = '';
+
+	export let pyPhotoEnabled = false;
+
+	export let videoEnabled = false;
+	export let videoUnavailableMessage = '';
+
 	let showInputVariablesModal = false;
 	let inputVariablesModalCallback = (variableValues) => {};
 	let inputVariables = {};
@@ -138,7 +153,12 @@
 		selectedFilterIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
-		codeInterpreterEnabled
+		codeInterpreterEnabled,
+		downloadVoiceEnabled,
+		downloadVoiceVoice,
+		musicEnabled,
+		videoEnabled,
+		pyPhotoEnabled
 	});
 
 	const inputVariableHandler = async (text: string): Promise<string> => {
@@ -1436,45 +1456,51 @@
 										</div>
 									</InputMenu>
 
-									{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || (toggleFilters && toggleFilters.length > 0)}
+									<div
+										class="flex self-center w-[1px] h-4 mx-1 bg-gray-200/50 dark:bg-gray-800/50"
+									/>
+
+									<IntegrationsMenu
+										selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
+										{toggleFilters}
+										{showWebSearchButton}
+										{showImageGenerationButton}
+										{showCodeInterpreterButton}
+										bind:selectedToolIds
+										bind:selectedFilterIds
+										bind:webSearchEnabled
+										bind:imageGenerationEnabled
+										bind:codeInterpreterEnabled
+										bind:downloadVoiceEnabled
+										bind:downloadVoiceVoice
+										bind:downloadVoiceUnavailableMessage
+										bind:musicEnabled
+										bind:musicUnavailableMessage
+										bind:pyPhotoEnabled
+										bind:videoEnabled
+										bind:videoUnavailableMessage
+										closeOnOutsideClick={integrationsMenuCloseOnOutsideClick}
+										onShowValves={(e) => {
+											const { type, id } = e;
+											selectedValvesType = type;
+											selectedValvesItemId = id;
+											showValvesModal = true;
+											integrationsMenuCloseOnOutsideClick = false;
+										}}
+										onClose={async () => {
+											await tick();
+
+											const chatInput = document.getElementById('chat-input');
+											chatInput?.focus();
+										}}
+									>
 										<div
-											class="flex self-center w-[1px] h-4 mx-1 bg-gray-200/50 dark:bg-gray-800/50"
-										/>
-
-										<IntegrationsMenu
-											selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
-											{toggleFilters}
-											{showWebSearchButton}
-											{showImageGenerationButton}
-											{showCodeInterpreterButton}
-											bind:selectedToolIds
-											bind:selectedFilterIds
-											bind:webSearchEnabled
-											bind:imageGenerationEnabled
-											bind:codeInterpreterEnabled
-											closeOnOutsideClick={integrationsMenuCloseOnOutsideClick}
-											onShowValves={(e) => {
-												const { type, id } = e;
-												selectedValvesType = type;
-												selectedValvesItemId = id;
-												showValvesModal = true;
-												integrationsMenuCloseOnOutsideClick = false;
-											}}
-											onClose={async () => {
-												await tick();
-
-												const chatInput = document.getElementById('chat-input');
-												chatInput?.focus();
-											}}
+											id="integration-menu-button"
+											class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
 										>
-											<div
-												id="integration-menu-button"
-												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
-											>
-												<Component className="size-4.5" strokeWidth="1.5" />
-											</div>
-										</IntegrationsMenu>
-									{/if}
+											<Component className="size-4.5" strokeWidth="1.5" />
+										</div>
+									</IntegrationsMenu>
 
 									{#if selectedModelIds.length === 1 && $models.find((m) => m.id === selectedModelIds[0])?.has_user_valves}
 										<div class="ml-1 flex gap-1.5">
@@ -1617,6 +1643,95 @@
 												</button>
 											</Tooltip>
 										{/if}
+
+										{#if downloadVoiceEnabled}
+											<Tooltip content={$i18n.t('Download Voice')} placement="top">
+												<button
+													aria-label={$i18n.t('Disable Download Voice')}
+													aria-pressed={downloadVoiceEnabled}
+													on:click|preventDefault={() => {
+														downloadVoiceEnabled = false;
+														downloadVoiceUnavailableMessage = '';
+													}}
+													type="button"
+													class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {downloadVoiceEnabled
+														? ' text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-700/10 border border-sky-200/40 dark:border-sky-500/20'
+														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
+												>
+													<Download className="size-4" strokeWidth="1.75" />
+
+													<div class="hidden group-hover:block">
+														<XMark className="size-4" strokeWidth="1.75" />
+													</div>
+												</button>
+											</Tooltip>
+										{/if}
+
+										{#if musicEnabled}
+											<Tooltip content={$i18n.t('Music')} placement="top">
+												<button
+													aria-label={$i18n.t('Disable Music')}
+													aria-pressed={musicEnabled}
+													on:click|preventDefault={() => {
+														musicEnabled = false;
+														musicUnavailableMessage = '';
+													}}
+													type="button"
+													class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {musicEnabled
+														? ' text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-700/10 border border-sky-200/40 dark:border-sky-500/20'
+														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
+												>
+													<SoundHigh className="size-4" strokeWidth="1.75" />
+
+													<div class="hidden group-hover:block">
+														<XMark className="size-4" strokeWidth="1.75" />
+													</div>
+												</button>
+											</Tooltip>
+										{/if}
+
+										{#if pyPhotoEnabled}
+											<Tooltip content="PY ფოტო" placement="top">
+												<button
+													aria-label="Disable PY ფოტო"
+													aria-pressed={pyPhotoEnabled}
+													on:click|preventDefault={() => (pyPhotoEnabled = false)}
+													type="button"
+													class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {pyPhotoEnabled
+														? ' text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-700/10 border border-sky-200/40 dark:border-sky-500/20'
+														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
+												>
+													<Camera className="size-4" strokeWidth="1.75" />
+
+													<div class="hidden group-hover:block">
+														<XMark className="size-4" strokeWidth="1.75" />
+													</div>
+												</button>
+											</Tooltip>
+										{/if}
+
+										{#if videoEnabled}
+											<Tooltip content="ვიდეო" placement="top">
+												<button
+													aria-label="Disable ვიდეო"
+													aria-pressed={videoEnabled}
+													on:click|preventDefault={() => {
+														videoEnabled = false;
+														videoUnavailableMessage = '';
+													}}
+													type="button"
+													class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {videoEnabled
+														? ' text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-700/10 border border-sky-200/40 dark:border-sky-500/20'
+														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
+												>
+													<Video className="size-4" strokeWidth="1.75" />
+
+													<div class="hidden group-hover:block">
+														<XMark className="size-4" strokeWidth="1.75" />
+													</div>
+												</button>
+											</Tooltip>
+										{/if}
 									</div>
 								</div>
 
@@ -1714,6 +1829,13 @@
 																$i18n.t('Call feature is not supported when using Web STT engine')
 															);
 
+															return;
+														}
+
+														if (!$_user || !['user', 'admin'].includes($_user?.role) || !localStorage.token) {
+															toast.error(
+																'ხმოვანი რეჟიმით სარგებლობისთვის გთხოვთ გაიაროთ ავტორიზაცია.'
+															);
 															return;
 														}
 														// check if user has access to getUserMedia

@@ -78,6 +78,7 @@ export const audioQueue = writable(null);
 export const showSidebar = writable(false);
 export const showSearch = writable(false);
 export const showSettings = writable(false);
+export const showCredits = writable(false);
 export const showShortcuts = writable(false);
 export const showArchivedChats = writable(false);
 export const showChangelog = writable(false);

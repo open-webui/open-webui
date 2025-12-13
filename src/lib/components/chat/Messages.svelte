@@ -48,6 +48,12 @@
 	export let submitMessage: Function = () => {};
 	export let addMessages: Function = () => {};
 
+	export let downloadVoiceEnabled = false;
+	export let downloadVoiceVoice = '';
+	export let downloadVoiceUnavailableMessage = '';
+
+	export let pyPhotoEnabled = false;
+
 	export let readOnly = false;
 	export let editCodeBlock = true;
 
@@ -99,13 +105,49 @@
 		element.scrollTop = element.scrollHeight;
 	};
 
+	const stripEphemeralDataUrls = (message) => {
+		let next = message;
+
+		if (next?.voice_download?.data_url) {
+			const { data_url, ...voice_download } = next.voice_download ?? {};
+			next = { ...next, voice_download };
+		}
+
+		if (next?.music?.data_url) {
+			const { data_url, ...music } = next.music ?? {};
+			next = { ...next, music };
+		}
+
+		if (next?.video?.data_url) {
+			const { data_url, ...video } = next.video ?? {};
+			next = { ...next, video };
+		}
+
+		if (next?.py_photo?.data_url) {
+			const { data_url, ...py_photo } = next.py_photo ?? {};
+			next = { ...next, py_photo };
+		}
+
+		return next;
+	};
+
+	const stripEphemeralDataUrlsFromHistory = (history) => {
+		if (!history?.messages) return history;
+		return {
+			...history,
+			messages: Object.fromEntries(
+				Object.entries(history.messages).map(([id, msg]) => [id, stripEphemeralDataUrls(msg)])
+			)
+		};
+	};
+
 	const updateChat = async () => {
 		if (!$temporaryChatEnabled) {
 			history = history;
 			await tick();
 			await updateChatById(localStorage.token, chatId, {
-				history: history,
-				messages: messages
+				history: stripEphemeralDataUrlsFromHistory(history),
+				messages: (messages ?? []).map(stripEphemeralDataUrls)
 			});
 
 			currentChatPage.set(1);
@@ -428,6 +470,10 @@
 								{chatId}
 								bind:history
 								{selectedModels}
+								{downloadVoiceEnabled}
+								{downloadVoiceVoice}
+								{downloadVoiceUnavailableMessage}
+								{pyPhotoEnabled}
 								messageId={message.id}
 								idx={messageIdx}
 								{user}

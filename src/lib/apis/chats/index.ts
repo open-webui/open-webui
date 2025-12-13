@@ -907,6 +907,89 @@ export const deleteSharedChatById = async (token: string, id: string) => {
 export const updateChatById = async (token: string, id: string, chat: object) => {
 	let error = null;
 
+	const hasEphemeralDataUrl = (message: any) =>
+		Boolean(
+			message?.voice_download?.data_url ||
+				message?.music?.data_url ||
+				message?.video?.data_url ||
+				message?.py_photo?.data_url
+		);
+
+	const stripEphemeralDataUrls = (message: any) => {
+		let next = message;
+
+		if (next?.voice_download?.data_url) {
+			const { data_url, ...voice_download } = next.voice_download ?? {};
+			next = { ...next, voice_download };
+		}
+
+		if (next?.music?.data_url) {
+			const { data_url, ...music } = next.music ?? {};
+			next = { ...next, music };
+		}
+
+		if (next?.video?.data_url) {
+			const { data_url, ...video } = next.video ?? {};
+			next = { ...next, video };
+		}
+
+		if (next?.py_photo?.data_url) {
+			const { data_url, ...py_photo } = next.py_photo ?? {};
+			next = { ...next, py_photo };
+		}
+
+		return next;
+	};
+
+	const stripEphemeralDataUrlsFromHistory = (history: any) => {
+		if (!history?.messages || typeof history.messages !== 'object') return history;
+
+		const messagesById = history.messages as Record<string, any>;
+		let sanitizedMessagesById: Record<string, any> | null = null;
+
+		for (const [messageId, message] of Object.entries(messagesById)) {
+			if (!hasEphemeralDataUrl(message)) continue;
+			if (sanitizedMessagesById === null) {
+				sanitizedMessagesById = { ...messagesById };
+			}
+			sanitizedMessagesById[messageId] = stripEphemeralDataUrls(message);
+		}
+
+		if (sanitizedMessagesById === null) return history;
+		return { ...history, messages: sanitizedMessagesById };
+	};
+
+	const stripEphemeralDataUrlsFromMessages = (messages: any) => {
+		if (!Array.isArray(messages)) return messages;
+
+		let changed = false;
+		const sanitized = messages.map((message) => {
+			if (!hasEphemeralDataUrl(message)) return message;
+			changed = true;
+			return stripEphemeralDataUrls(message);
+		});
+
+		return changed ? sanitized : messages;
+	};
+
+	const sanitizeChatPayload = (payload: any) => {
+		if (!payload || typeof payload !== 'object') return payload;
+
+		const history = payload.history;
+		const messages = payload.messages;
+
+		const sanitizedHistory = stripEphemeralDataUrlsFromHistory(history);
+		const sanitizedMessages = stripEphemeralDataUrlsFromMessages(messages);
+
+		if (sanitizedHistory === history && sanitizedMessages === messages) return payload;
+
+		return {
+			...payload,
+			...(sanitizedHistory !== history ? { history: sanitizedHistory } : {}),
+			...(sanitizedMessages !== messages ? { messages: sanitizedMessages } : {})
+		};
+	};
+
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}`, {
 		method: 'POST',
 		headers: {
@@ -915,7 +998,7 @@ export const updateChatById = async (token: string, id: string, chat: object) =>
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			chat: chat
+			chat: sanitizeChatPayload(chat)
 		})
 	})
 		.then(async (res) => {

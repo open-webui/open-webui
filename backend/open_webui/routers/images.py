@@ -6,19 +6,22 @@ import json
 import logging
 import mimetypes
 import re
+import time
 from pathlib import Path
 from typing import Optional
 
 from urllib.parse import quote
+import aiofiles
 import requests
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, UploadFile, status
 from fastapi.responses import FileResponse
 
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS, SRC_LOG_LEVELS
 from open_webui.routers.files import upload_file_handler, get_file_content_by_id
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_verified_user, get_verified_user_or_none
+from open_webui.utils.domain_credits import commit_generation, preflight_generation
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.utils.images.comfyui import (
     ComfyUICreateImageForm,
@@ -37,6 +40,52 @@ IMAGE_CACHE_DIR = CACHE_DIR / "image" / "generations"
 IMAGE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 router = APIRouter()
+
+
+def _get_or_set_anon_id(request: Request, response: Response) -> str:
+    anon_id = (
+        request.headers.get("X-OWUI-ANON-ID")
+        or request.cookies.get("owui_anon_id")
+        or ""
+    ).strip()
+    if anon_id:
+        return anon_id
+
+    anon_id = uuid.uuid4().hex
+    response.set_cookie(
+        key="owui_anon_id",
+        value=anon_id,
+        max_age=60 * 60 * 24 * 365,
+        samesite="lax",
+    )
+    return anon_id
+
+
+def _sanitize_image_ext(ext: str | None) -> str:
+    ext = (ext or "").strip().lower()
+    if ext.startswith("."):
+        ext = ext[1:]
+    return ext or "png"
+
+
+def _image_cache_paths(*, image_id: str, ext: str) -> tuple[Path, Path]:
+    safe_ext = _sanitize_image_ext(ext)
+    file_path = IMAGE_CACHE_DIR / f"{image_id}.{safe_ext}"
+    meta_path = IMAGE_CACHE_DIR / f"{image_id}.json"
+    return file_path, meta_path
+
+
+def _find_cached_image_file(image_id: str) -> tuple[Path, str] | None:
+    image_id = str(image_id or "").strip()
+    if not image_id:
+        return None
+
+    for p in IMAGE_CACHE_DIR.glob(f"{image_id}.*"):
+        if p.name.endswith(".json"):
+            continue
+        ext = _sanitize_image_ext(p.suffix)
+        return p, ext
+    return None
 
 
 def set_image_model(request: Request, model: str):
@@ -517,9 +566,59 @@ def upload_image(request, image_data, content_type, metadata, user):
 @router.post("/generations")
 async def image_generations(
     request: Request,
+    response: Response,
     form_data: CreateImageForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_verified_user_or_none),
 ):
+    is_admin = getattr(user, "role", None) == "admin"
+    redis = request.app.state.redis
+
+    anon_id: str | None = None
+    subject_id = None
+    free_limit = None
+    cost = None
+    preflight = None
+
+    if not is_admin:
+        if redis is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Credits system is not available.",
+            )
+
+        if user is None:
+            anon_id = _get_or_set_anon_id(request, response)
+            subject_id = f"anon:{anon_id}"
+        else:
+            subject_id = user.id
+        free_limit = (
+            int(getattr(request.app.state.config, "PHOTO_CREDITS_FREE_AUTH", 0) or 0)
+            if user is not None
+            else int(getattr(request.app.state.config, "PHOTO_CREDITS_FREE_ANON", 0) or 0)
+        )
+        cost = int(getattr(request.app.state.config, "PHOTO_CREDITS_COST", 0) or 0)
+
+        try:
+            preflight = await preflight_generation(
+                redis,
+                domain="photo",
+                subject_id=subject_id,
+                free_limit=free_limit,
+                cost_credits=cost,
+                require_auth_after_free=True,
+                is_authenticated=user is not None,
+            )
+        except PermissionError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Please sign in to continue photo generation",
+            )
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail="Insufficient credits for photo generation",
+            )
+
     # if IMAGE_SIZE = 'auto', default WidthxHeight to the 512x512 default
     # This is only relevant when the user has set IMAGE_SIZE to 'auto' with an
     # image model other than gpt-image-1, which is warned about on settings save
@@ -546,7 +645,7 @@ async def image_generations(
                 "Content-Type": "application/json",
             }
 
-            if ENABLE_FORWARD_USER_INFO_HEADERS:
+            if ENABLE_FORWARD_USER_INFO_HEADERS and user is not None:
                 headers = include_user_info_headers(headers, user)
 
             url = f"{request.app.state.config.IMAGES_OPENAI_API_BASE_URL}/images/generations"
@@ -593,8 +692,38 @@ async def image_generations(
                 else:
                     image_data, content_type = get_image_data(image["b64_json"])
 
-                url = upload_image(request, image_data, content_type, data, user)
-                images.append({"url": url})
+                if user is None:
+                    image_id = uuid.uuid4().hex
+                    ext = _sanitize_image_ext(
+                        mimetypes.guess_extension(content_type or "") or "png"
+                    )
+                    file_path, meta_path = _image_cache_paths(image_id=image_id, ext=ext)
+
+                    async with aiofiles.open(file_path, "wb") as f:
+                        await f.write(image_data)
+                    async with aiofiles.open(meta_path, "w", encoding="utf-8") as f:
+                        await f.write(
+                            json.dumps(
+                                {"meta": data, "content_type": content_type},
+                                ensure_ascii=False,
+                            )
+                        )
+
+                    images.append({"url": f"/api/v1/images/generations/{image_id}"})
+                else:
+                    url = upload_image(request, image_data, content_type, data, user)
+                    images.append({"url": url})
+
+            if not is_admin and redis is not None and subject_id and preflight and free_limit is not None:
+                await commit_generation(
+                    redis,
+                    domain="photo",
+                    subject_id=subject_id,
+                    free_limit=free_limit,
+                    mode=preflight.mode,
+                    cost_credits=cost or 0,
+                    now_ts=int(time.time()),
+                )
             return images
 
         elif request.app.state.config.IMAGE_GENERATION_ENGINE == "gemini":
@@ -643,8 +772,27 @@ async def image_generations(
                     image_data, content_type = get_image_data(
                         image["bytesBase64Encoded"]
                     )
-                    url = upload_image(request, image_data, content_type, data, user)
-                    images.append({"url": url})
+                    if user is None:
+                        image_id = uuid.uuid4().hex
+                        ext = _sanitize_image_ext(
+                            mimetypes.guess_extension(content_type or "") or "png"
+                        )
+                        file_path, meta_path = _image_cache_paths(image_id=image_id, ext=ext)
+
+                        async with aiofiles.open(file_path, "wb") as f:
+                            await f.write(image_data)
+                        async with aiofiles.open(meta_path, "w", encoding="utf-8") as f:
+                            await f.write(
+                                json.dumps(
+                                    {"meta": data, "content_type": content_type},
+                                    ensure_ascii=False,
+                                )
+                            )
+
+                        images.append({"url": f"/api/v1/images/generations/{image_id}"})
+                    else:
+                        url = upload_image(request, image_data, content_type, data, user)
+                        images.append({"url": url})
             elif model.endswith(":generateContent"):
                 for image in res["candidates"]:
                     for part in image["content"]["parts"]:
@@ -652,11 +800,38 @@ async def image_generations(
                             image_data, content_type = get_image_data(
                                 part["inlineData"]["data"]
                             )
-                            url = upload_image(
-                                request, image_data, content_type, data, user
-                            )
-                            images.append({"url": url})
+                            if user is None:
+                                image_id = uuid.uuid4().hex
+                                ext = _sanitize_image_ext(
+                                    mimetypes.guess_extension(content_type or "") or "png"
+                                )
+                                file_path, meta_path = _image_cache_paths(image_id=image_id, ext=ext)
 
+                                async with aiofiles.open(file_path, "wb") as f:
+                                    await f.write(image_data)
+                                async with aiofiles.open(meta_path, "w", encoding="utf-8") as f:
+                                    await f.write(
+                                        json.dumps(
+                                            {"meta": data, "content_type": content_type},
+                                            ensure_ascii=False,
+                                        )
+                                    )
+
+                                images.append({"url": f"/api/v1/images/generations/{image_id}"})
+                            else:
+                                url = upload_image(request, image_data, content_type, data, user)
+                                images.append({"url": url})
+
+            if not is_admin and redis is not None and subject_id and preflight and free_limit is not None:
+                await commit_generation(
+                    redis,
+                    domain="photo",
+                    subject_id=subject_id,
+                    free_limit=free_limit,
+                    mode=preflight.mode,
+                    cost_credits=cost or 0,
+                    now_ts=int(time.time()),
+                )
             return images
 
         elif request.app.state.config.IMAGE_GENERATION_ENGINE == "comfyui":
@@ -687,7 +862,7 @@ async def image_generations(
             res = await comfyui_create_image(
                 model,
                 form_data,
-                user.id,
+                user.id if user is not None else (anon_id or uuid.uuid4().hex),
                 request.app.state.config.COMFYUI_BASE_URL,
                 request.app.state.config.COMFYUI_API_KEY,
             )
@@ -703,14 +878,47 @@ async def image_generations(
                     }
 
                 image_data, content_type = get_image_data(image["url"], headers)
-                url = upload_image(
-                    request,
-                    image_data,
-                    content_type,
-                    form_data.model_dump(exclude_none=True),
-                    user,
+                if user is None:
+                    image_id = uuid.uuid4().hex
+                    ext = _sanitize_image_ext(
+                        mimetypes.guess_extension(content_type or "") or "png"
+                    )
+                    file_path, meta_path = _image_cache_paths(image_id=image_id, ext=ext)
+
+                    async with aiofiles.open(file_path, "wb") as f:
+                        await f.write(image_data)
+                    async with aiofiles.open(meta_path, "w", encoding="utf-8") as f:
+                        await f.write(
+                            json.dumps(
+                                {
+                                    "meta": form_data.model_dump(exclude_none=True),
+                                    "content_type": content_type,
+                                },
+                                ensure_ascii=False,
+                            )
+                        )
+
+                    images.append({"url": f"/api/v1/images/generations/{image_id}"})
+                else:
+                    url = upload_image(
+                        request,
+                        image_data,
+                        content_type,
+                        form_data.model_dump(exclude_none=True),
+                        user,
+                    )
+                    images.append({"url": url})
+
+            if not is_admin and redis is not None and subject_id and preflight and free_limit is not None:
+                await commit_generation(
+                    redis,
+                    domain="photo",
+                    subject_id=subject_id,
+                    free_limit=free_limit,
+                    mode=preflight.mode,
+                    cost_credits=cost or 0,
+                    now_ts=int(time.time()),
                 )
-                images.append({"url": url})
             return images
         elif (
             request.app.state.config.IMAGE_GENERATION_ENGINE == "automatic1111"
@@ -750,14 +958,44 @@ async def image_generations(
 
             for image in res["images"]:
                 image_data, content_type = get_image_data(image)
-                url = upload_image(
-                    request,
-                    image_data,
-                    content_type,
-                    {**data, "info": res["info"]},
-                    user,
+                if user is None:
+                    image_id = uuid.uuid4().hex
+                    ext = _sanitize_image_ext(
+                        mimetypes.guess_extension(content_type or "") or "png"
+                    )
+                    file_path, meta_path = _image_cache_paths(image_id=image_id, ext=ext)
+
+                    async with aiofiles.open(file_path, "wb") as f:
+                        await f.write(image_data)
+                    async with aiofiles.open(meta_path, "w", encoding="utf-8") as f:
+                        await f.write(
+                            json.dumps(
+                                {"meta": {**data, "info": res.get("info")}, "content_type": content_type},
+                                ensure_ascii=False,
+                            )
+                        )
+
+                    images.append({"url": f"/api/v1/images/generations/{image_id}"})
+                else:
+                    url = upload_image(
+                        request,
+                        image_data,
+                        content_type,
+                        {**data, "info": res["info"]},
+                        user,
+                    )
+                    images.append({"url": url})
+
+            if not is_admin and redis is not None and subject_id and preflight and free_limit is not None:
+                await commit_generation(
+                    redis,
+                    domain="photo",
+                    subject_id=subject_id,
+                    free_limit=free_limit,
+                    mode=preflight.mode,
+                    cost_credits=cost or 0,
+                    now_ts=int(time.time()),
                 )
-                images.append({"url": url})
             return images
     except Exception as e:
         error = e
@@ -766,6 +1004,31 @@ async def image_generations(
             if "error" in data:
                 error = data["error"]["message"]
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(error))
+
+
+@router.get("/generations/{image_id}")
+async def get_cached_generation(image_id: str):
+    found = _find_cached_image_file(image_id=image_id)
+    if not found:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
+    file_path, ext = found
+    media_type = mimetypes.types_map.get(f".{_sanitize_image_ext(ext)}") or "image/png"
+    return FileResponse(file_path, media_type=media_type)
+
+
+@router.get("/generations/{image_id}/download")
+async def download_cached_generation(image_id: str):
+    found = _find_cached_image_file(image_id=image_id)
+    if not found:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
+    file_path, ext = found
+    safe_ext = _sanitize_image_ext(ext)
+    media_type = mimetypes.types_map.get(f".{safe_ext}") or "image/png"
+    return FileResponse(
+        file_path,
+        media_type=media_type,
+        filename=f"image-{image_id}.{safe_ext}",
+    )
 
 
 class EditImageForm(BaseModel):

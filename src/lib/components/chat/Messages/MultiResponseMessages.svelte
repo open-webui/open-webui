@@ -47,6 +47,12 @@
 
 	export let addMessages: Function;
 
+	export let downloadVoiceEnabled = false;
+	export let downloadVoiceVoice = '';
+	export let downloadVoiceUnavailableMessage = '';
+
+	export let pyPhotoEnabled = false;
+
 	export let triggerScroll: Function;
 
 	export let topPadding = false;
@@ -294,6 +300,10 @@
 									{history}
 									messageId={_messageId}
 									{selectedModels}
+									{downloadVoiceEnabled}
+									{downloadVoiceVoice}
+									{downloadVoiceUnavailableMessage}
+									{pyPhotoEnabled}
 									isLastMessage={true}
 									siblings={groupedMessageIds[selectedModelIdx].messageIds}
 									gotoMessage={(message, messageIdx) => gotoMessage(selectedModelIdx, messageIdx)}
@@ -350,6 +360,10 @@
 										{history}
 										messageId={_messageId}
 										{selectedModels}
+										{downloadVoiceEnabled}
+										{downloadVoiceVoice}
+										{downloadVoiceUnavailableMessage}
+										{pyPhotoEnabled}
 										isLastMessage={true}
 										siblings={groupedMessageIds[modelIdx].messageIds}
 										gotoMessage={(message, messageIdx) => gotoMessage(modelIdx, messageIdx)}

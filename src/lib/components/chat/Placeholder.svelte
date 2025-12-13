@@ -53,6 +53,17 @@
 	export let imageGenerationEnabled = false;
 	export let codeInterpreterEnabled = false;
 	export let webSearchEnabled = false;
+	export let downloadVoiceEnabled = false;
+	export let downloadVoiceVoice = '';
+	export let downloadVoiceUnavailableMessage = '';
+
+	export let musicEnabled = false;
+	export let musicUnavailableMessage = '';
+
+	export let pyPhotoEnabled = false;
+
+	export let videoEnabled = false;
+	export let videoUnavailableMessage = '';
 
 	export let onSelect = (e) => {};
 	export let onChange = (e) => {};
@@ -209,6 +220,14 @@
 					bind:imageGenerationEnabled
 					bind:codeInterpreterEnabled
 					bind:webSearchEnabled
+					bind:downloadVoiceEnabled
+					bind:downloadVoiceVoice
+					bind:downloadVoiceUnavailableMessage
+					bind:musicEnabled
+					bind:musicUnavailableMessage
+					bind:pyPhotoEnabled
+					bind:videoEnabled
+					bind:videoUnavailableMessage
 					bind:atSelectedModel
 					bind:showCommands
 					{toolServers}

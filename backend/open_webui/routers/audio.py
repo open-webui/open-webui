@@ -3,8 +3,10 @@ import json
 import logging
 import os
 import uuid
+import time
 import html
 import base64
+import re
 from functools import lru_cache
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
@@ -16,6 +18,8 @@ import aiohttp
 import aiofiles
 import requests
 import mimetypes
+import asyncio
+from urllib.parse import urlencode
 
 from fastapi import (
     Depends,
@@ -24,16 +28,22 @@ from fastapi import (
     Form,
     HTTPException,
     Request,
+    Response,
     UploadFile,
     status,
     APIRouter,
+    WebSocket,
+    WebSocketDisconnect,
+    Query,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
+import websockets
 
-from open_webui.utils.auth import get_admin_user, get_verified_user
+
+from open_webui.utils.auth import get_admin_user, get_verified_user, get_verified_user_or_none
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.config import (
     WHISPER_MODEL_AUTO_UPDATE,
@@ -51,6 +61,22 @@ from open_webui.env import (
     SRC_LOG_LEVELS,
     DEVICE_TYPE,
     ENABLE_FORWARD_USER_INFO_HEADERS,
+    REDIS_KEY_PREFIX,
+)
+from open_webui.models.users import Users
+from open_webui.models.stt_credit_ledger import record_stt_credits_charge, record_tts_credits_charge
+from open_webui.utils.auth import decode_token
+from open_webui.utils.stt_credits import (
+    AUTH_REQUIRED_MESSAGE_KA,
+    LIMIT_EXHAUSTED_MESSAGE_KA,
+    acquire_session_lock,
+    charge_committed_transcript,
+    committed_segment_signature,
+    count_credits,
+    get_credits_status,
+    refresh_session_lock,
+    release_session_lock,
+    SESSION_LOCK_REFRESH_SECONDS,
 )
 
 
@@ -170,6 +196,7 @@ class TTSConfigForm(BaseModel):
 class STTConfigForm(BaseModel):
     OPENAI_API_BASE_URL: str
     OPENAI_API_KEY: str
+    ELEVENLABS_API_KEY: str = ""
     ENGINE: str
     MODEL: str
     SUPPORTED_CONTENT_TYPES: list[str] = []
@@ -209,6 +236,7 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
         "stt": {
             "OPENAI_API_BASE_URL": request.app.state.config.STT_OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": request.app.state.config.STT_OPENAI_API_KEY,
+            "ELEVENLABS_API_KEY": request.app.state.config.AUDIO_STT_ELEVENLABS_API_KEY,
             "ENGINE": request.app.state.config.STT_ENGINE,
             "MODEL": request.app.state.config.STT_MODEL,
             "SUPPORTED_CONTENT_TYPES": request.app.state.config.STT_SUPPORTED_CONTENT_TYPES,
@@ -230,6 +258,9 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
 async def update_audio_config(
     request: Request, form_data: AudioConfigUpdateForm, user=Depends(get_admin_user)
 ):
+    if form_data.stt.ENGINE == "elevenlabs" and not form_data.stt.ELEVENLABS_API_KEY:
+        raise HTTPException(status_code=400, detail="ElevenLabs STT requires an API key")
+
     request.app.state.config.TTS_OPENAI_API_BASE_URL = form_data.tts.OPENAI_API_BASE_URL
     request.app.state.config.TTS_OPENAI_API_KEY = form_data.tts.OPENAI_API_KEY
     request.app.state.config.TTS_OPENAI_PARAMS = form_data.tts.OPENAI_PARAMS
@@ -248,6 +279,7 @@ async def update_audio_config(
 
     request.app.state.config.STT_OPENAI_API_BASE_URL = form_data.stt.OPENAI_API_BASE_URL
     request.app.state.config.STT_OPENAI_API_KEY = form_data.stt.OPENAI_API_KEY
+    request.app.state.config.AUDIO_STT_ELEVENLABS_API_KEY = form_data.stt.ELEVENLABS_API_KEY
     request.app.state.config.STT_ENGINE = form_data.stt.ENGINE
     request.app.state.config.STT_MODEL = form_data.stt.MODEL
     request.app.state.config.STT_SUPPORTED_CONTENT_TYPES = (
@@ -295,6 +327,7 @@ async def update_audio_config(
         "stt": {
             "OPENAI_API_BASE_URL": request.app.state.config.STT_OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": request.app.state.config.STT_OPENAI_API_KEY,
+            "ELEVENLABS_API_KEY": request.app.state.config.AUDIO_STT_ELEVENLABS_API_KEY,
             "ENGINE": request.app.state.config.STT_ENGINE,
             "MODEL": request.app.state.config.STT_MODEL,
             "SUPPORTED_CONTENT_TYPES": request.app.state.config.STT_SUPPORTED_CONTENT_TYPES,
@@ -327,53 +360,117 @@ def load_speech_pipeline(request):
         )
 
 
-@router.post("/speech")
-async def speech(request: Request, user=Depends(get_verified_user)):
-    body = await request.body()
-    name = hashlib.sha256(
+_VOICE_AUDIO_EXT_MEDIA_TYPES: dict[str, str] = {
+    "mp3": "audio/mpeg",
+    "wav": "audio/wav",
+    "ogg": "audio/ogg",
+    "opus": "audio/opus",
+    "aac": "audio/aac",
+    "flac": "audio/flac",
+    "m4a": "audio/mp4",
+}
+
+
+def _speech_cache_key(*, body: bytes, request: Request) -> str:
+    return hashlib.sha256(
         body
         + str(request.app.state.config.TTS_ENGINE).encode("utf-8")
         + str(request.app.state.config.TTS_MODEL).encode("utf-8")
     ).hexdigest()
 
-    file_path = SPEECH_CACHE_DIR.joinpath(f"{name}.mp3")
-    file_body_path = SPEECH_CACHE_DIR.joinpath(f"{name}.json")
 
-    # Check if the file already exists in the cache
-    if file_path.is_file():
-        return FileResponse(file_path)
+def _sanitize_audio_ext(ext: str | None) -> str:
+    ext = (ext or "").strip().lower()
+    if ext.startswith("."):
+        ext = ext[1:]
+    return ext or "mp3"
 
-    payload = None
-    try:
-        payload = json.loads(body.decode("utf-8"))
-    except Exception as e:
-        log.exception(e)
+
+def _guess_media_type_for_ext(ext: str) -> str:
+    ext = _sanitize_audio_ext(ext)
+    return (
+        _VOICE_AUDIO_EXT_MEDIA_TYPES.get(ext)
+        or mimetypes.types_map.get(f".{ext}")
+        or "application/octet-stream"
+    )
+
+
+def _tts_output_ext(*, request: Request, payload: dict) -> str:
+    engine = str(request.app.state.config.TTS_ENGINE or "")
+    if engine == "openai":
+        response_format = payload.get("response_format")
+        if isinstance(response_format, str) and response_format.strip():
+            return _sanitize_audio_ext(response_format)
+        return "mp3"
+
+    if engine == "azure":
+        output_format = str(request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT or "").lower()
+        if "riff" in output_format or "pcm" in output_format:
+            return "wav"
+        if "mp3" in output_format:
+            return "mp3"
+        return "mp3"
+
+    if engine == "transformers":
+        return "wav"
+
+    return "mp3"
+
+
+def _speech_cache_paths(*, cache_key: str, ext: str) -> tuple[os.PathLike, os.PathLike]:
+    safe_ext = _sanitize_audio_ext(ext)
+    file_path = SPEECH_CACHE_DIR.joinpath(f"{cache_key}.{safe_ext}")
+    file_body_path = SPEECH_CACHE_DIR.joinpath(f"{cache_key}.json")
+    return file_path, file_body_path
+
+
+async def _synthesize_speech_to_cache(
+    request: Request,
+    *,
+    user,
+    payload: dict,
+    cache_key: str,
+) -> tuple[os.PathLike, str, str]:
+    """
+    Returns: (file_path, ext, media_type)
+    """
+    if not isinstance(payload, dict):
         raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
-    r = None
-    if request.app.state.config.TTS_ENGINE == "openai":
-        payload["model"] = request.app.state.config.TTS_MODEL
+    # Normalize provider-specific defaults/overrides without duplicating TTS logic.
+    engine = str(request.app.state.config.TTS_ENGINE or "")
+    working_payload = dict(payload)
 
+    if engine == "openai":
+        working_payload["model"] = request.app.state.config.TTS_MODEL
+        working_payload = {
+            **working_payload,
+            **(request.app.state.config.TTS_OPENAI_PARAMS or {}),
+        }
+
+    ext = _tts_output_ext(request=request, payload=working_payload)
+    media_type = _guess_media_type_for_ext(ext)
+    file_path, file_body_path = _speech_cache_paths(cache_key=cache_key, ext=ext)
+
+    if file_path.is_file():
+        return file_path, ext, media_type
+
+    r = None
+
+    if engine == "openai":
         try:
             timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
-            async with aiohttp.ClientSession(
-                timeout=timeout, trust_env=True
-            ) as session:
-                payload = {
-                    **payload,
-                    **(request.app.state.config.TTS_OPENAI_PARAMS or {}),
-                }
-
+            async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
                 headers = {
                     "Content-Type": "application/json",
                     "Authorization": f"Bearer {request.app.state.config.TTS_OPENAI_API_KEY}",
                 }
-                if ENABLE_FORWARD_USER_INFO_HEADERS:
+                if ENABLE_FORWARD_USER_INFO_HEADERS and user is not None:
                     headers = include_user_info_headers(headers, user)
 
                 r = await session.post(
                     url=f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/speech",
-                    json=payload,
+                    json=working_payload,
                     headers=headers,
                     ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 )
@@ -384,20 +481,17 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                     await f.write(await r.read())
 
                 async with aiofiles.open(file_body_path, "w") as f:
-                    await f.write(json.dumps(payload))
+                    await f.write(json.dumps(working_payload))
 
-            return FileResponse(file_path)
+            return file_path, ext, media_type
 
         except Exception as e:
             log.exception(e)
-            detail = None
-
+            detail = "Server Connection Error"
             status_code = 500
-            detail = f"???: Server Connection Error"
 
             if r is not None:
-                status_code = r.status
-
+                status_code = getattr(r, "status", 500) or 500
                 try:
                     res = await r.json()
                     if "error" in res:
@@ -405,34 +499,31 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 except Exception:
                     detail = f"External: {e}"
 
-            raise HTTPException(
-                status_code=status_code,
-                detail=detail,
-            )
+            raise HTTPException(status_code=status_code, detail=detail)
 
-    elif request.app.state.config.TTS_ENGINE == "elevenlabs":
-        voice_id = payload.get("voice", "")
+    if engine == "elevenlabs":
+        if not request.app.state.config.TTS_API_KEY:
+            raise HTTPException(status_code=400, detail="TTS is not configured")
+
+        voice_id = str(working_payload.get("voice") or request.app.state.config.TTS_VOICE or "")
+        if not voice_id:
+            raise HTTPException(status_code=400, detail="TTS voice is not configured")
 
         if voice_id not in get_available_voices(request):
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid voice id",
-            )
+            raise HTTPException(status_code=400, detail="Invalid configured voice id")
 
         try:
             timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
-            async with aiohttp.ClientSession(
-                timeout=timeout, trust_env=True
-            ) as session:
+            async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
                 async with session.post(
                     f"{ELEVENLABS_API_BASE_URL}/v1/text-to-speech/{voice_id}",
                     json={
-                        "text": payload["input"],
+                        "text": working_payload.get("input", ""),
                         "model_id": request.app.state.config.TTS_MODEL,
                         "voice_settings": {"stability": 0.5, "similarity_boost": 0.5},
                     },
                     headers={
-                        "Accept": "audio/mpeg",
+                        "Accept": _guess_media_type_for_ext(ext),
                         "Content-Type": "application/json",
                         "xi-api-key": request.app.state.config.TTS_API_KEY,
                     },
@@ -444,16 +535,16 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                         await f.write(await r.read())
 
                     async with aiofiles.open(file_body_path, "w") as f:
-                        await f.write(json.dumps(payload))
+                        await f.write(json.dumps(working_payload))
 
-            return FileResponse(file_path)
+            return file_path, ext, media_type
 
         except Exception as e:
             log.exception(e)
             detail = None
 
             try:
-                if r.status != 200:
+                if r is not None and getattr(r, "status", 200) != 200:
                     res = await r.json()
                     if "error" in res:
                         detail = f"External: {res['error'].get('message', '')}"
@@ -462,30 +553,25 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
             raise HTTPException(
                 status_code=getattr(r, "status", 500) if r else 500,
-                detail=detail if detail else "???: Server Connection Error",
+                detail=detail if detail else "Server Connection Error",
             )
 
-    elif request.app.state.config.TTS_ENGINE == "azure":
-        try:
-            payload = json.loads(body.decode("utf-8"))
-        except Exception as e:
-            log.exception(e)
-            raise HTTPException(status_code=400, detail="Invalid JSON payload")
-
+    if engine == "azure":
         region = request.app.state.config.TTS_AZURE_SPEECH_REGION or "eastus"
         base_url = request.app.state.config.TTS_AZURE_SPEECH_BASE_URL
-        language = request.app.state.config.TTS_VOICE
-        locale = "-".join(request.app.state.config.TTS_VOICE.split("-")[:1])
+        voice_name = str(working_payload.get("voice") or request.app.state.config.TTS_VOICE or "")
+        if not voice_name:
+            raise HTTPException(status_code=400, detail="TTS voice is not configured")
+
+        locale = "-".join(voice_name.split("-")[:1])
         output_format = request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT
 
         try:
             data = f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="{locale}">
-                <voice name="{language}">{html.escape(payload["input"])}</voice>
+                <voice name="{voice_name}">{html.escape(str(working_payload.get("input", "")))}</voice>
             </speak>"""
             timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
-            async with aiohttp.ClientSession(
-                timeout=timeout, trust_env=True
-            ) as session:
+            async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
                 async with session.post(
                     (base_url or f"https://{region}.tts.speech.microsoft.com")
                     + "/cognitiveservices/v1",
@@ -503,16 +589,16 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                         await f.write(await r.read())
 
                     async with aiofiles.open(file_body_path, "w") as f:
-                        await f.write(json.dumps(payload))
+                        await f.write(json.dumps(working_payload))
 
-                    return FileResponse(file_path)
+                    return file_path, ext, media_type
 
         except Exception as e:
             log.exception(e)
             detail = None
 
             try:
-                if r.status != 200:
+                if r is not None and getattr(r, "status", 200) != 200:
                     res = await r.json()
                     if "error" in res:
                         detail = f"External: {res['error'].get('message', '')}"
@@ -521,17 +607,10 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
             raise HTTPException(
                 status_code=getattr(r, "status", 500) if r else 500,
-                detail=detail if detail else "???: Server Connection Error",
+                detail=detail if detail else "Server Connection Error",
             )
 
-    elif request.app.state.config.TTS_ENGINE == "transformers":
-        payload = None
-        try:
-            payload = json.loads(body.decode("utf-8"))
-        except Exception as e:
-            log.exception(e)
-            raise HTTPException(status_code=400, detail="Invalid JSON payload")
-
+    if engine == "transformers":
         import torch
         import soundfile as sf
 
@@ -552,16 +631,317 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         ).unsqueeze(0)
 
         speech = request.app.state.speech_synthesiser(
-            payload["input"],
+            str(working_payload.get("input", "")),
             forward_params={"speaker_embeddings": speaker_embedding},
         )
 
         sf.write(file_path, speech["audio"], samplerate=speech["sampling_rate"])
 
         async with aiofiles.open(file_body_path, "w") as f:
-            await f.write(json.dumps(payload))
+            await f.write(json.dumps(working_payload))
 
-        return FileResponse(file_path)
+        return file_path, ext, media_type
+
+    raise HTTPException(status_code=400, detail="TTS is not configured")
+
+
+def _find_cached_voice_file(*, audio_id: str) -> tuple[os.PathLike, str, str] | None:
+    if not re.fullmatch(r"[0-9a-f]{64}", audio_id or ""):
+        return None
+
+    for ext in ("mp3", "wav", "ogg", "opus", "aac", "flac", "m4a"):
+        file_path = SPEECH_CACHE_DIR.joinpath(f"{audio_id}.{ext}")
+        if file_path.is_file():
+            return file_path, ext, _guess_media_type_for_ext(ext)
+
+    return None
+
+
+@router.post("/speech")
+async def speech(request: Request, user=Depends(get_verified_user)):
+    body = await request.body()
+    cache_key = _speech_cache_key(body=body, request=request)
+
+    try:
+        payload = json.loads(body.decode("utf-8"))
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+    is_admin = getattr(user, "role", None) == "admin"
+    credits_needed = count_credits(str(payload.get("input", "")))
+    redis = request.app.state.redis
+    now_ts = None
+    status_before = None
+    free_limit = None
+
+    if not is_admin and credits_needed > 0:
+        if redis is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Credits system is not available.",
+            )
+
+        now_ts = int(time.time())
+        free_limit = int(getattr(request.app.state.config, "AUDIO_CREDITS_FREE_AUTH", 0) or 0)
+        status_before = await get_credits_status(
+            redis, user_id=user.id, now_ts=now_ts, free_limit=free_limit
+        )
+        if status_before.total_remaining < credits_needed:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail="Insufficient credits for voice generation",
+            )
+
+    file_path, _ext, media_type = await _synthesize_speech_to_cache(
+        request,
+        user=user,
+        payload=payload,
+        cache_key=cache_key,
+    )
+
+    charged = False
+    if (
+        not is_admin
+        and credits_needed > 0
+        and redis is not None
+        and now_ts is not None
+        and status_before is not None
+    ):
+        voice = str(payload.get("voice") or request.app.state.config.TTS_VOICE or "").strip()
+        signature_source = f"tts:speech:{cache_key}:{voice}"
+        signature = hashlib.sha256(signature_source.encode("utf-8")).hexdigest()
+
+        status_after, charged, _exhausted_after = await charge_committed_transcript(
+            redis,
+            user_id=user.id,
+            credits_needed=credits_needed,
+            signature=signature,
+            now_ts=now_ts,
+            free_limit=free_limit,
+        )
+
+        if charged:
+            free_to_use = min(status_before.free_remaining, credits_needed)
+            paid_to_use = max(0, credits_needed - free_to_use)
+            record_tts_credits_charge(
+                user_id=user.id,
+                reference_id=signature,
+                credits=credits_needed,
+                free_credits=free_to_use,
+                paid_credits=paid_to_use,
+                meta={
+                    "engine": str(request.app.state.config.TTS_ENGINE or ""),
+                    "model": str(request.app.state.config.TTS_MODEL or ""),
+                    "voice": voice,
+                    "chars": credits_needed,
+                    "cache_key": cache_key,
+                    "endpoint": "speech",
+                },
+                now_ts=now_ts,
+            )
+
+    return FileResponse(file_path, media_type=media_type)
+
+
+class VoiceGenerateForm(BaseModel):
+    message_id: str | None = None
+    input: str
+    voice: str | None = None
+    model: str | None = None
+
+
+def _get_or_set_anon_id(request: Request, response: Response) -> str:
+    anon_id = (
+        request.headers.get("X-OWUI-ANON-ID")
+        or request.cookies.get("owui_anon_id")
+        or ""
+    ).strip()
+    if anon_id:
+        return anon_id
+
+    anon_id = uuid.uuid4().hex
+    response.set_cookie(
+        key="owui_anon_id",
+        value=anon_id,
+        max_age=60 * 60 * 24 * 365,
+        samesite="lax",
+    )
+    return anon_id
+
+
+@router.get("/voice/status")
+async def voice_status(
+    request: Request,
+    response: Response,
+    user=Depends(get_verified_user_or_none),
+):
+    if user is None:
+        _get_or_set_anon_id(request, response)
+
+    is_admin = getattr(user, "role", None) == "admin"
+    tts_engine = str(request.app.state.config.TTS_ENGINE or "")
+    tts_configured = bool(tts_engine)
+    redis_available = request.app.state.redis is not None
+    credits_required = not is_admin
+    available = bool(tts_configured and (not credits_required or redis_available))
+
+    return {
+        "available": available,
+        "tts_configured": tts_configured,
+        "tts_engine": tts_engine,
+        "default_voice": request.app.state.config.TTS_VOICE,
+        "credits_required": credits_required,
+        "redis_available": redis_available,
+    }
+
+
+@router.post("/voice")
+async def generate_voice(
+    request: Request,
+    response: Response,
+    form_data: VoiceGenerateForm,
+    user=Depends(get_verified_user_or_none),
+):
+    input_text = str(form_data.input or "")
+    selected_voice = (
+        str(form_data.voice).strip()
+        if form_data.voice is not None
+        else str(request.app.state.config.TTS_VOICE or "").strip()
+    )
+
+    tts_payload: dict = {
+        "input": input_text,
+        "voice": selected_voice,
+        **({"model": form_data.model} if form_data.model else {}),
+    }
+
+    body_bytes = json.dumps(tts_payload, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    cache_key = _speech_cache_key(body=body_bytes, request=request)
+
+    is_admin = getattr(user, "role", None) == "admin"
+
+    credits_needed = count_credits(input_text)
+    redis = request.app.state.redis
+    subject_id: str | None = None
+    now_ts: int | None = None
+    status_before = None
+    free_limit: int | None = None
+
+    if not is_admin and credits_needed > 0:
+        if redis is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Voice generation temporarily unavailable",
+            )
+
+        subject_id = user.id if user is not None else f"anon:{_get_or_set_anon_id(request, response)}"
+        now_ts = int(time.time())
+        free_limit = (
+            int(getattr(request.app.state.config, "AUDIO_CREDITS_FREE_AUTH", 0) or 0)
+            if user is not None
+            else int(getattr(request.app.state.config, "AUDIO_CREDITS_FREE_ANON", 0) or 0)
+        )
+        status_before = await get_credits_status(
+            redis, user_id=subject_id, now_ts=now_ts, free_limit=free_limit
+        )
+
+        if user is None and status_before.free_remaining < credits_needed:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Please sign in to continue voice generation",
+            )
+
+        if user is not None and status_before.total_remaining < credits_needed:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail="Insufficient credits for voice generation",
+            )
+
+    file_path, ext, media_type = await _synthesize_speech_to_cache(
+        request,
+        user=user,
+        payload=tts_payload,
+        cache_key=cache_key,
+    )
+
+    data_url: str | None = None
+    try:
+        async with aiofiles.open(file_path, "rb") as f:
+            audio_bytes = await f.read()
+        audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
+        data_url = f"data:{media_type};base64,{audio_b64}"
+    except Exception:
+        data_url = None
+
+    charged = False
+    if not is_admin and credits_needed > 0 and redis is not None and subject_id and now_ts and status_before:
+        signature_source = f"tts:{form_data.message_id or cache_key}:{cache_key}:{selected_voice}"
+        signature = hashlib.sha256(signature_source.encode("utf-8")).hexdigest()
+
+        status_after, charged, _exhausted_after = await charge_committed_transcript(
+            redis,
+            user_id=subject_id,
+            credits_needed=credits_needed,
+            signature=signature,
+            now_ts=now_ts,
+            free_limit=free_limit,
+        )
+
+        if charged:
+            free_to_use = min(status_before.free_remaining, credits_needed)
+            paid_to_use = max(0, credits_needed - free_to_use)
+            record_tts_credits_charge(
+                user_id=subject_id,
+                reference_id=signature,
+                credits=credits_needed,
+                free_credits=free_to_use,
+                paid_credits=paid_to_use,
+                meta={
+                    "engine": str(request.app.state.config.TTS_ENGINE or ""),
+                    "model": str(request.app.state.config.TTS_MODEL or ""),
+                    "voice": selected_voice,
+                    "chars": credits_needed,
+                    "cache_key": cache_key,
+                    **({"message_id": form_data.message_id} if form_data.message_id else {}),
+                },
+                now_ts=now_ts,
+            )
+
+    play_url = f"/api/v1/audio/voice/{cache_key}"
+    download_url = f"/api/v1/audio/voice/{cache_key}/download"
+
+    return {
+        "id": cache_key,
+        "ext": ext,
+        "media_type": media_type,
+        "data_url": data_url,
+        "play_url": play_url,
+        "download_url": download_url,
+        "charged": charged,
+    }
+
+
+@router.get("/voice/{audio_id}")
+async def get_voice(audio_id: str):
+    found = _find_cached_voice_file(audio_id=audio_id)
+    if not found:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Audio not found")
+    file_path, _ext, media_type = found
+    return FileResponse(file_path, media_type=media_type)
+
+
+@router.get("/voice/{audio_id}/download")
+async def download_voice(audio_id: str):
+    found = _find_cached_voice_file(audio_id=audio_id)
+    if not found:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Audio not found")
+    file_path, ext, media_type = found
+    return FileResponse(
+        file_path,
+        media_type=media_type,
+        filename=f"voice-{audio_id}.{ext}",
+    )
 
 
 def transcription_handler(request, file_path, metadata, user=None):
@@ -653,7 +1033,13 @@ def transcription_handler(request, file_path, metadata, user=None):
                 except Exception:
                     detail = f"External: {e}"
 
-            raise Exception(detail if detail else "???: Server Connection Error")
+            raise Exception(detail if detail else "Server Connection Error")
+
+    elif request.app.state.config.STT_ENGINE == "elevenlabs":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="ElevenLabs STT is supported only via realtime voice mode.",
+        )
 
     elif request.app.state.config.STT_ENGINE == "deepgram":
         try:
@@ -724,7 +1110,7 @@ def transcription_handler(request, file_path, metadata, user=None):
                         detail = f"External: {res['error'].get('message', '')}"
                 except Exception:
                     detail = f"External: {e}"
-            raise Exception(detail if detail else "???: Server Connection Error")
+            raise Exception(detail if detail else "Server Connection Error")
 
     elif request.app.state.config.STT_ENGINE == "azure":
         # Check file exists and size
@@ -841,7 +1227,7 @@ def transcription_handler(request, file_path, metadata, user=None):
 
             raise HTTPException(
                 status_code=getattr(r, "status_code", 500) if r else 500,
-                detail=detail if detail else "???: Server Connection Error",
+                detail=detail if detail else "Server Connection Error",
             )
 
     elif request.app.state.config.STT_ENGINE == "mistral":
@@ -1021,7 +1407,7 @@ def transcription_handler(request, file_path, metadata, user=None):
 
             raise HTTPException(
                 status_code=getattr(r, "status_code", 500) if r else 500,
-                detail=detail if detail else "???: Server Connection Error",
+                detail=detail if detail else "Server Connection Error",
             )
 
 
@@ -1063,6 +1449,8 @@ def transcribe(
             for future in futures:
                 try:
                     results.append(future.result())
+                except HTTPException as http_exc:
+                    raise http_exc
                 except Exception as transcribe_exc:
                     raise HTTPException(
                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1145,7 +1533,7 @@ def split_audio(file_path, max_bytes, format="mp3", bitrate="32k"):
 
 
 @router.post("/transcriptions")
-def transcription(
+async def transcription(
     request: Request,
     file: UploadFile = File(...),
     language: Optional[str] = Form(None),
@@ -1191,7 +1579,64 @@ def transcription(
             if language:
                 metadata = {"language": language}
 
-            result = transcribe(request, file_path, metadata, user)
+            result = await asyncio.to_thread(transcribe, request, file_path, metadata, user)
+
+            is_admin = getattr(user, "role", None) == "admin"
+            if not is_admin:
+                redis = request.app.state.redis
+                if redis is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail="Credits system is not available.",
+                    )
+
+                text = result.get("text") if isinstance(result, dict) else ""
+                text = text if isinstance(text, str) else ""
+
+                credits_needed = count_credits(text)
+                if credits_needed > 0:
+                    now_ts = int(time.time())
+                    free_limit = int(
+                        getattr(request.app.state.config, "AUDIO_CREDITS_FREE_AUTH", 0) or 0
+                    )
+                    status_before = await get_credits_status(
+                        redis, user_id=user.id, now_ts=now_ts, free_limit=free_limit
+                    )
+                    if status_before.total_remaining < credits_needed:
+                        raise HTTPException(
+                            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                            detail="Insufficient credits for voice transcription",
+                        )
+
+                    signature_source = f"stt:file:{id}:{credits_needed}:{file.filename or ''}"
+                    signature = hashlib.sha256(signature_source.encode("utf-8")).hexdigest()
+                    status_after, charged, _exhausted_after = await charge_committed_transcript(
+                        redis,
+                        user_id=user.id,
+                        credits_needed=credits_needed,
+                        signature=signature,
+                        now_ts=now_ts,
+                        free_limit=free_limit,
+                    )
+                    if charged:
+                        free_to_use = min(status_before.free_remaining, credits_needed)
+                        paid_to_use = max(0, credits_needed - free_to_use)
+                        record_stt_credits_charge(
+                            user_id=user.id,
+                            signature=signature,
+                            credits=credits_needed,
+                            free_credits=free_to_use,
+                            paid_credits=paid_to_use,
+                            now_ts=now_ts,
+                        )
+                        log.info(
+                            "STT transcription credits charged user_id=%s credits=%s free_remaining=%s paid_balance=%s total_remaining=%s",
+                            user.id,
+                            credits_needed,
+                            status_after.free_remaining,
+                            status_after.paid_balance,
+                            status_after.total_remaining,
+                        )
 
             return {
                 **result,
@@ -1362,9 +1807,334 @@ def get_elevenlabs_voices(api_key: str) -> dict:
 
 
 @router.get("/voices")
-async def get_voices(request: Request, user=Depends(get_verified_user)):
+async def get_voices(request: Request, user=Depends(get_verified_user_or_none)):
     return {
         "voices": [
             {"id": k, "name": v} for k, v in get_available_voices(request).items()
         ]
     }
+
+
+def _get_elevenlabs_realtime_ws_url(base_url: str, *, model_id: str | None) -> str:
+    if base_url.startswith("https://"):
+        ws_base_url = "wss://" + base_url[len("https://") :]
+    elif base_url.startswith("http://"):
+        ws_base_url = "ws://" + base_url[len("http://") :]
+    else:
+        ws_base_url = base_url
+
+    params: dict[str, str] = {
+        "audio_format": "pcm_16000",
+        "language_code": "kat",
+        "commit_strategy": "vad",
+        "include_timestamps": "true",
+    }
+
+    params["model_id"] = model_id or "scribe_v2_realtime"
+
+    return f"{ws_base_url}/v1/speech-to-text/realtime?{urlencode(params)}"
+
+
+async def _verify_websocket_user(websocket: WebSocket, token: str | None):
+    if not token or token.startswith("sk-"):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    decoded = decode_token(token)
+    if decoded is None or "id" not in decoded:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    if decoded.get("jti") and websocket.app.state.redis:
+        revoked = await websocket.app.state.redis.get(
+            f"{REDIS_KEY_PREFIX}:auth:token:{decoded['jti']}:revoked"
+        )
+        if revoked:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+
+    user = Users.get_user_by_id(decoded["id"])
+    if user is None or user.role not in {"user", "admin"}:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    return user
+
+
+@router.websocket("/stt/realtime")
+async def stt_realtime(websocket: WebSocket, token: str | None = Query(default=None)):
+    await websocket.accept()
+
+    try:
+        async def send_error_and_close(*, code: str, message: str, close_code: int = 1000):
+            try:
+                await websocket.send_json({"type": "error", "code": code, "message": message})
+            except Exception:
+                pass
+            try:
+                await websocket.close(code=close_code)
+            except Exception:
+                pass
+
+        try:
+            user = await _verify_websocket_user(websocket, token)
+        except HTTPException as e:
+            if e.status_code == 401:
+                await send_error_and_close(
+                    code="AUTH_REQUIRED",
+                    message=AUTH_REQUIRED_MESSAGE_KA,
+                    close_code=1008,
+                )
+            else:
+                await send_error_and_close(code="ERROR", message=str(e.detail), close_code=1008)
+            return
+
+        if websocket.app.state.config.STT_ENGINE != "elevenlabs":
+            await send_error_and_close(
+                code="STT_DISABLED",
+                message="Realtime speech recognition is not enabled.",
+                close_code=1008,
+            )
+            return
+
+        api_key = websocket.app.state.config.AUDIO_STT_ELEVENLABS_API_KEY
+        if not api_key:
+            await send_error_and_close(
+                code="STT_NOT_CONFIGURED",
+                message="Realtime speech recognition is not configured.",
+                close_code=1011,
+            )
+            return
+
+        enforce_credits = getattr(user, "role", None) != "admin"
+
+        lock_value: str | None = None
+        if enforce_credits:
+            if websocket.app.state.redis is None:
+                await send_error_and_close(
+                    code="CREDITS_UNAVAILABLE",
+                    message="Credits system is not available.",
+                    close_code=1011,
+                )
+                return
+
+            now_ts = int(time.time())
+            credits_status = await get_credits_status(
+                websocket.app.state.redis,
+                user_id=user.id,
+                now_ts=now_ts,
+                free_limit=int(
+                    getattr(websocket.app.state.config, "AUDIO_CREDITS_FREE_AUTH", 0) or 0
+                ),
+            )
+            if credits_status.total_remaining <= 0:
+                await send_error_and_close(
+                    code="LIMIT_EXHAUSTED",
+                    message=LIMIT_EXHAUSTED_MESSAGE_KA,
+                    close_code=1000,
+                )
+                return
+
+            lock_value = uuid.uuid4().hex
+            acquired = await acquire_session_lock(
+                websocket.app.state.redis, user_id=user.id, value=lock_value
+            )
+            if not acquired:
+                await send_error_and_close(
+                    code="SESSION_ACTIVE",
+                    message="ხმოვანი სესია უკვე აქტიურია.",
+                    close_code=1008,
+                )
+                return
+
+        model_id = websocket.app.state.config.STT_MODEL or None
+        elevenlabs_ws_url = _get_elevenlabs_realtime_ws_url(
+            ELEVENLABS_API_BASE_URL, model_id=model_id
+        )
+        log.info(
+            "ElevenLabs realtime STT connect url=%s model_id=%s language_code=kat audio_format=pcm_16000 commit_strategy=vad include_timestamps=true",
+            elevenlabs_ws_url.split("?", 1)[0],
+            model_id or "scribe_v2_realtime",
+        )
+
+        lock_refresh_task: asyncio.Task | None = None
+        try:
+            async def refresh_lock_loop():
+                while True:
+                    await asyncio.sleep(SESSION_LOCK_REFRESH_SECONDS)
+                    await refresh_session_lock(
+                        websocket.app.state.redis, user_id=user.id, value=lock_value
+                    )
+
+            if enforce_credits:
+                lock_refresh_task = asyncio.create_task(refresh_lock_loop())
+
+            async with websockets.connect(
+                elevenlabs_ws_url,
+                additional_headers={"xi-api-key": api_key},
+                ping_interval=20,
+                ping_timeout=20,
+            ) as eleven_ws:
+
+                async def client_to_elevenlabs():
+                    try:
+                        while True:
+                            message = await websocket.receive()
+                            if message["type"] == "websocket.disconnect":
+                                return
+
+                            chunk = message.get("bytes")
+                            if not chunk:
+                                continue
+
+                            await eleven_ws.send(
+                                json.dumps(
+                                    {
+                                        "message_type": "input_audio_chunk",
+                                        "audio_base_64": base64.b64encode(chunk).decode(
+                                            "ascii"
+                                        ),
+                                        "commit": False,
+                                        "sample_rate": 16000,
+                                    }
+                                )
+                            )
+                    except WebSocketDisconnect:
+                        return
+
+                async def elevenlabs_to_client():
+                    async for message in eleven_ws:
+                        if isinstance(message, (bytes, bytearray)):
+                            continue
+
+                        if not isinstance(message, str):
+                            continue
+
+                        parsed = None
+                        try:
+                            parsed = json.loads(message)
+                        except Exception:
+                            await websocket.send_text(message)
+                            continue
+
+                        msg_type = parsed.get("message_type")
+                        if msg_type not in {
+                            "committed_transcript",
+                            "committed_transcript_with_timestamps",
+                        }:
+                            await websocket.send_text(message)
+                            continue
+
+                        if not enforce_credits:
+                            await websocket.send_text(message)
+                            continue
+
+                        text = parsed.get("text") if isinstance(parsed, dict) else ""
+                        text = text if isinstance(text, str) else ""
+                        credits_needed = count_credits(text)
+                        if credits_needed <= 0:
+                            await websocket.send_text(message)
+                            continue
+
+                        now_ts = int(time.time())
+                        status_before = await get_credits_status(
+                            websocket.app.state.redis,
+                            user_id=user.id,
+                            now_ts=now_ts,
+                            free_limit=int(
+                                getattr(websocket.app.state.config, "AUDIO_CREDITS_FREE_AUTH", 0)
+                                or 0
+                            ),
+                        )
+                        if status_before.total_remaining < credits_needed:
+                            await send_error_and_close(
+                                code="LIMIT_EXHAUSTED",
+                                message=LIMIT_EXHAUSTED_MESSAGE_KA,
+                                close_code=1000,
+                            )
+                            try:
+                                await eleven_ws.close()
+                            except Exception:
+                                pass
+                            return
+
+                        free_to_use = min(status_before.free_remaining, credits_needed)
+                        paid_to_use = max(0, credits_needed - free_to_use)
+
+                        signature = committed_segment_signature(
+                            text, words=parsed.get("words") if isinstance(parsed, dict) else None
+                        )
+                        status_after, charged, exhausted_after = await charge_committed_transcript(
+                            websocket.app.state.redis,
+                            user_id=user.id,
+                            credits_needed=credits_needed,
+                            signature=signature,
+                            now_ts=now_ts,
+                            free_limit=int(
+                                getattr(websocket.app.state.config, "AUDIO_CREDITS_FREE_AUTH", 0)
+                                or 0
+                            ),
+                        )
+                        if charged:
+                            record_stt_credits_charge(
+                                user_id=user.id,
+                                signature=signature,
+                                credits=credits_needed,
+                                free_credits=free_to_use,
+                                paid_credits=paid_to_use,
+                                now_ts=now_ts,
+                            )
+                            log.info(
+                                "Realtime STT credits charged user_id=%s credits=%s free_remaining=%s paid_balance=%s total_remaining=%s",
+                                user.id,
+                                credits_needed,
+                                status_after.free_remaining,
+                                status_after.paid_balance,
+                                status_after.total_remaining,
+                            )
+
+                        await websocket.send_text(message)
+
+                        if exhausted_after:
+                            await send_error_and_close(
+                                code="LIMIT_EXHAUSTED",
+                                message=LIMIT_EXHAUSTED_MESSAGE_KA,
+                                close_code=1000,
+                            )
+                            try:
+                                await eleven_ws.close()
+                            except Exception:
+                                pass
+                            return
+
+                client_task = asyncio.create_task(client_to_elevenlabs())
+                elevenlabs_task = asyncio.create_task(elevenlabs_to_client())
+
+                done, pending = await asyncio.wait(
+                    {client_task, elevenlabs_task},
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+                for task in pending:
+                    task.cancel()
+                await asyncio.gather(*pending, return_exceptions=True)
+        finally:
+            if lock_refresh_task is not None:
+                lock_refresh_task.cancel()
+                await asyncio.gather(lock_refresh_task, return_exceptions=True)
+            if enforce_credits and websocket.app.state.redis is not None and lock_value is not None:
+                await release_session_lock(
+                    websocket.app.state.redis, user_id=user.id, value=lock_value
+                )
+
+    except Exception as e:
+        log.exception("Realtime STT error: %s", e)
+        try:
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "code": "ERROR",
+                    "message": "Speech recognition failed. Please try again.",
+                }
+            )
+        except Exception:
+            pass
+        try:
+            await websocket.close(code=1011)
+        except Exception:
+            pass

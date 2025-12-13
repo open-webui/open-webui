@@ -50,6 +50,7 @@
 	let STT_AZURE_BASE_URL = '';
 	let STT_AZURE_MAX_SPEAKERS = '';
 	let STT_DEEPGRAM_API_KEY = '';
+	let STT_ELEVENLABS_API_KEY = '';
 	let STT_MISTRAL_API_KEY = '';
 	let STT_MISTRAL_API_BASE_URL = '';
 	let STT_MISTRAL_USE_CHAT_COMPLETIONS = false;
@@ -134,6 +135,7 @@
 				SUPPORTED_CONTENT_TYPES: STT_SUPPORTED_CONTENT_TYPES.split(','),
 				WHISPER_MODEL: STT_WHISPER_MODEL,
 				DEEPGRAM_API_KEY: STT_DEEPGRAM_API_KEY,
+				ELEVENLABS_API_KEY: STT_ELEVENLABS_API_KEY,
 				AZURE_API_KEY: STT_AZURE_API_KEY,
 				AZURE_REGION: STT_AZURE_REGION,
 				AZURE_LOCALES: STT_AZURE_LOCALES,
@@ -190,6 +192,7 @@
 			STT_AZURE_BASE_URL = res.stt.AZURE_BASE_URL;
 			STT_AZURE_MAX_SPEAKERS = res.stt.AZURE_MAX_SPEAKERS;
 			STT_DEEPGRAM_API_KEY = res.stt.DEEPGRAM_API_KEY;
+			STT_ELEVENLABS_API_KEY = res.stt.ELEVENLABS_API_KEY;
 			STT_MISTRAL_API_KEY = res.stt.MISTRAL_API_KEY;
 			STT_MISTRAL_API_BASE_URL = res.stt.MISTRAL_API_BASE_URL;
 			STT_MISTRAL_USE_CHAT_COMPLETIONS = res.stt.MISTRAL_USE_CHAT_COMPLETIONS;
@@ -242,6 +245,7 @@
 							<option value="">{$i18n.t('Whisper (Local)')}</option>
 							<option value="openai">{$i18n.t('OpenAI')}</option>
 							<option value="web">{$i18n.t('Web API')}</option>
+							<option value="elevenlabs">ElevenLabs (Scribe)</option>
 							<option value="deepgram">{$i18n.t('Deepgram')}</option>
 							<option value="azure">{$i18n.t('Azure AI Speech')}</option>
 							<option value="mistral">{$i18n.t('MistralAI')}</option>
@@ -280,6 +284,39 @@
 									<option value="whisper-1" />
 								</datalist>
 							</div>
+						</div>
+					</div>
+				{:else if STT_ENGINE === 'elevenlabs'}
+					<div>
+						<div class="mt-1 flex gap-2 mb-1">
+							<SensitiveInput
+								placeholder={$i18n.t('API Key')}
+								bind:value={STT_ELEVENLABS_API_KEY}
+								required
+							/>
+						</div>
+					</div>
+
+					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
+
+					<div>
+						<div class=" mb-1.5 text-xs font-medium">{$i18n.t('STT Model')}</div>
+						<div class="flex w-full">
+							<div class="flex-1">
+								<input
+									list="elevenlabs-model-list"
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									bind:value={STT_MODEL}
+									placeholder="scribe_v1"
+								/>
+
+								<datalist id="elevenlabs-model-list">
+									<option value="scribe_v1" />
+								</datalist>
+							</div>
+						</div>
+						<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+							Georgian language is fixed to <span class="font-mono">kat</span> (no auto-detect).
 						</div>
 					</div>
 				{:else if STT_ENGINE === 'deepgram'}

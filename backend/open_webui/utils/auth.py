@@ -415,3 +415,114 @@ def get_admin_user(user=Depends(get_current_user)):
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
     return user
+
+
+async def get_current_user_optional(
+    request: Request,
+    response: Response,
+    background_tasks: BackgroundTasks,
+    auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
+):
+    token = None
+
+    if auth_token is not None:
+        token = auth_token.credentials
+
+    if token is None and "token" in request.cookies:
+        token = request.cookies.get("token")
+
+    if token is None:
+        return None
+
+    # auth by api key
+    if token.startswith("sk-"):
+        user = get_current_user_by_api_key(request, token)
+
+        # Add user info to current span
+        current_span = trace.get_current_span()
+        if current_span:
+            current_span.set_attribute("client.user.id", user.id)
+            current_span.set_attribute("client.user.email", user.email)
+            current_span.set_attribute("client.user.role", user.role)
+            current_span.set_attribute("client.auth.type", "api_key")
+
+        return user
+
+    # auth by jwt token
+    try:
+        try:
+            data = decode_token(token)
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token",
+            )
+
+        if data is not None and "id" in data:
+            if data.get("jti") and not await is_valid_token(request, data):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token",
+                )
+
+            user = Users.get_user_by_id(data["id"])
+            if user is None:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=ERROR_MESSAGES.INVALID_TOKEN,
+                )
+            else:
+                if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
+                    trusted_email = request.headers.get(
+                        WEBUI_AUTH_TRUSTED_EMAIL_HEADER, ""
+                    ).lower()
+                    if trusted_email and user.email != trusted_email:
+                        raise HTTPException(
+                            status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="User mismatch. Please sign in again.",
+                        )
+
+                # Add user info to current span
+                current_span = trace.get_current_span()
+                if current_span:
+                    current_span.set_attribute("client.user.id", user.id)
+                    current_span.set_attribute("client.user.email", user.email)
+                    current_span.set_attribute("client.user.role", user.role)
+                    current_span.set_attribute("client.auth.type", "jwt")
+
+                # Refresh the user's last active timestamp asynchronously
+                # to prevent blocking the request
+                if background_tasks:
+                    background_tasks.add_task(Users.update_last_active_by_id, user.id)
+
+            return user
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+    except Exception as e:
+        # Delete the token cookie
+        if request.cookies.get("token"):
+            response.delete_cookie("token")
+
+        if request.cookies.get("oauth_id_token"):
+            response.delete_cookie("oauth_id_token")
+
+        # Delete OAuth session if present
+        if request.cookies.get("oauth_session_id"):
+            response.delete_cookie("oauth_session_id")
+
+        raise e
+
+
+def get_verified_user_or_none(user=Depends(get_current_user_optional)):
+    if user is None:
+        return None
+
+    if user.role not in {"user", "admin"}:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+    return user
