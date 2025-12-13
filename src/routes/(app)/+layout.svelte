@@ -55,6 +55,7 @@
 
 	let version;
 	let titleSuffix = '';
+	let themeObserver: MutationObserver | null = null;
 
 	onMount(async () => {
 		// Determine title suffix based on hostname (client-only)
@@ -64,6 +65,32 @@
 				titleSuffix = ' Dev';
 			} else if (host === 'localhost' || host === '127.0.0.1') {
 				titleSuffix = ' Local';
+			}
+
+			// Global Mermaid Initialization
+			try {
+				const currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+				await mermaidService.initialize();
+				console.log(`[Mermaid] Global initialization successful (theme: ${currentTheme})`);
+				mermaidStore.setInitialized(true, currentTheme);
+
+				// Observe theme changes
+				themeObserver = new MutationObserver((mutations) => {
+					mutations.forEach((mutation) => {
+						if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+							const newTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+							if (newTheme !== mermaidService.getTheme()) {
+								console.log(`[Mermaid] Theme change detected: ${mermaidService.getTheme()} → ${newTheme}`);
+								mermaidService.reinitialize(newTheme);
+								mermaidStore.setInitialized(true, newTheme);
+							}
+						}
+					});
+				});
+				themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+			} catch (error) {
+				console.error('[Mermaid] Global initialization failed:', error);
+				mermaidStore.setInitialized(false);
 			}
 		}
 		if ($user === undefined) {
@@ -259,9 +286,15 @@
 
 	onDestroy(() => {
 		// Cleanup Mermaid service
-		if (browser && mermaidService) {
-			mermaidService.destroy();
-			console.log('[Mermaid] Global cleanup completed');
+		if (browser) {
+			if (themeObserver) {
+				themeObserver.disconnect();
+				console.log('[Mermaid] Theme observer disconnected');
+			}
+			if (mermaidService) {
+				mermaidService.destroy();
+				console.log('[Mermaid] Global cleanup completed');
+			}
 		}
 	});
 </script>
