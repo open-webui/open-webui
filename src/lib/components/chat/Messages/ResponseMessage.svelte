@@ -778,45 +778,55 @@
 							{:else if message.content && message.error !== true}
 								<!-- always show message contents even if there's an error -->
 								<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
-								<ContentRenderer
-									id={`${chatId}-${message.id}`}
-									messageId={message.id}
-									{history}
-									{selectedModels}
-									content={message.content}
-									sources={message.sources}
-									floatingButtons={message?.done &&
-										!readOnly &&
-										($settings?.showFloatingActionButtons ?? true)}
-									save={!readOnly}
-									preview={!readOnly}
-									{editCodeBlock}
-									{topPadding}
-									done={($settings?.chatFadeStreamingText ?? true)
-										? (message?.done ?? false)
-										: true}
-									{model}
-									onTaskClick={async (e) => {
-										console.log(e);
-									}}
-									onSourceClick={async (id) => {
-										console.log(id);
+								<div class="w-full">
+									<div class="flex {($settings?.llmChatBubble ?? true) ? 'pb-1' : 'w-full'}">
+										<div
+											class="rounded-3xl {($settings?.llmChatBubble ?? true)
+												? `max-w-[90%] px-4 py-1.5 bg-gray-50 dark:bg-gray-850`
+												: ' w-full'}"
+										>
+											<ContentRenderer
+												id={`${chatId}-${message.id}`}
+												messageId={message.id}
+												{history}
+												{selectedModels}
+												content={message.content}
+												sources={message.sources}
+												floatingButtons={message?.done &&
+													!readOnly &&
+													($settings?.showFloatingActionButtons ?? true)}
+												save={!readOnly}
+												preview={!readOnly}
+												{editCodeBlock}
+												{topPadding}
+												done={($settings?.chatFadeStreamingText ?? true)
+													? (message?.done ?? false)
+													: true}
+												{model}
+												onTaskClick={async (e) => {
+													console.log(e);
+												}}
+												onSourceClick={async (id) => {
+													console.log(id);
 
-										if (citationsElement) {
-											citationsElement?.showSourceModal(id);
-										}
-									}}
-									onAddMessages={({ modelId, parentId, messages }) => {
-										addMessages({ modelId, parentId, messages });
-									}}
-									onSave={({ raw, oldContent, newContent }) => {
-										history.messages[message.id].content = history.messages[
-											message.id
-										].content.replace(raw, raw.replace(oldContent, newContent));
+													if (citationsElement) {
+														citationsElement?.showSourceModal(id);
+													}
+												}}
+												onAddMessages={({ modelId, parentId, messages }) => {
+													addMessages({ modelId, parentId, messages });
+												}}
+												onSave={({ raw, oldContent, newContent }) => {
+													history.messages[message.id].content = history.messages[
+														message.id
+													].content.replace(raw, raw.replace(oldContent, newContent));
 
-										updateChat();
-									}}
-								/>
+													updateChat();
+												}}
+											/>
+										</div>
+									</div>
+								</div>
 							{/if}
 
 							{#if message?.error}
