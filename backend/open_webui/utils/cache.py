@@ -46,11 +46,35 @@ CACHE_PREFIX_USER_API_KEYS = "cache:user:api_keys"  # Reverse mapping: user_id -
 class CacheManager:
     """Manages Redis caching for user and group data."""
     
-    def __init__(self, redis_url: str = REDIS_URL):
-        """Initialize cache manager with Redis connection pool."""
+    def __init__(self, redis_url: str = REDIS_URL, use_master: bool = True):
+        """
+        Initialize cache manager with Redis connection pool.
+        
+        Args:
+            redis_url: Redis connection URL (used if Sentinel is not configured)
+            use_master: If True, use master connection (for writes). If False, use replica (for reads).
+        """
         self.redis_url = redis_url
-        self.pool = get_redis_pool(redis_url)
-        self.redis = redis.Redis(connection_pool=self.pool)
+        self.use_master = use_master
+        self.pool = get_redis_pool(redis_url, use_master=use_master)
+        
+        # Handle Sentinel connection wrapper
+        if hasattr(self.pool, '_conn'):
+            self.redis = self.pool._conn
+        elif hasattr(self.pool, 'get_connection'):
+            # For Sentinel connections, get the appropriate connection
+            from open_webui.socket.utils import get_redis_master_connection, get_redis_replica_connection
+            if use_master:
+                self.redis = get_redis_master_connection()
+            else:
+                self.redis = get_redis_replica_connection()
+            if self.redis is None:
+                # Fallback to direct connection
+                self.redis = redis.Redis(connection_pool=self.pool)
+        else:
+            # Standard connection pool
+            self.redis = redis.Redis(connection_pool=self.pool)
+        
         self._redis_available = None  # Cache Redis availability check
         self._last_connection_error = None  # Track last connection error to reduce log spam
         self._last_availability_check = 0  # Track when we last checked Redis availability

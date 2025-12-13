@@ -8,7 +8,7 @@
 8. Make file processing (embedding generation) run in background using FastAPI BackgroundTasks so users can navigate the app (go to new chats, switch workspaces, etc.) while files are being processed. Currently, file processing blocks the HTTP request, which means if users close the tab or navigate away, processing may be interrupted.
 9. Embeddings virtual keys need to be set by the admins themselves NOT the default one.
 10. Make the app more suitable for distributed multi-replica environment managed by kubernetes. When I developed, it was good for single pod systems but now that we are scaling, I am not sure what i can do to make the app more distributed friednly and also multi-replica friendly. List down the things based on your understnading of the codebase all the things I could do to make it more scale-friendly.
-
+11. Multi replica for redis
 
 MINOR:
 1. Auto completion should be DISABLED for all. Chat title generator should need to be set to gemini flash 2.5 lite as default if available, else no auto completion. 
@@ -97,3 +97,53 @@ MINOR:
 - HTTP 304 status codes are NORMAL (cache validation, not errors)
 - Model requests are succeeding (all 200 OK)
 - Empty vector search results may be expected if no documents match
+
+## RBAC Security Issues - Functions, Pipes, and Pipelines (2025-01-XX)
+
+### CRITICAL - Functions Missing RBAC Implementation
+- [ ] Add `access_control` column to `Function` database table (currently missing, unlike Tools/Models/Prompts/Knowledge)
+- [ ] Update `Functions.get_functions()` to use proper RBAC checks:
+  - Currently only filters by `created_by == user_email` (line 137-154 in `models/functions.py`)
+  - Should use three-tier access check pattern like Tools/Prompts/Models:
+    1. Owner check: `function.user_id == user.id`
+    2. Direct access: `has_access(user.id, "read", function.access_control)`
+    3. Group-based: `item_assigned_to_user_groups(user.id, function, "read")`
+- [ ] Add execution-time RBAC enforcement in `generate_function_chat_completion()` and `chat_action()`
+  - Currently relies only on UI-level filtering (what appears in model list)
+  - No execution-time enforcement for admins (line 197 in `utils/chat.py` only checks regular users)
+  - Location: `backend/open_webui/functions.py` and `backend/open_webui/utils/chat.py`
+
+### HIGH PRIORITY - Pipes (Functions with type="pipe") RBAC Bug
+- [ ] Fix access control bug in `get_function_models()` (line 76 in `functions.py`):
+  - Current: `if (user.role == "admin" and pipe.created_by == user.email) or (user.role == "user") or is_super_admin(user):`
+  - Problem: Regular users see ALL pipes (should only see pipes they have access to)
+  - Admins only see pipes they created (correct behavior)
+  - Should use same three-tier RBAC pattern as Functions above
+- [ ] Add execution-time access check before pipe execution
+  - Location: `backend/open_webui/functions.py:142` (`generate_function_chat_completion`)
+  - Currently no validation that user has access to pipe before executing
+
+### HIGH PRIORITY - Actions RBAC Enforcement
+- [ ] Add execution-time RBAC check in `chat_action()` function
+  - Currently filtered in UI (`get_all_models()` line 218 filters by `created_by`)
+  - No execution-time enforcement if user directly calls action API
+  - Location: `backend/open_webui/utils/chat.py:343` (`chat_action`)
+  - Should verify: `action.user_id == user.id OR has_access() OR item_assigned_to_user_groups()`
+
+### MEDIUM PRIORITY - Pipelines RBAC Implementation
+- [ ] Implement RBAC for Pipelines (external plugin endpoints)
+  - Currently: All endpoints require `get_admin_user`, but any admin can access any pipeline
+  - No group-based access control
+  - Pipelines are external (not in database), so need to decide on access control strategy
+  - Location: `backend/open_webui/routers/pipelines.py`
+  - Options:
+    1. Store pipeline metadata in database with access_control field
+    2. Add access_control to pipeline configuration/metadata
+    3. Implement group-based filtering at API level
+
+### NOTES
+- Current protection is UI-level filtering (what appears in model/action lists)
+- Execution-time enforcement is missing for admins (only regular users have `check_model_access()`)
+- `check_model_access()` doesn't work for pipes (they're not in Models table)
+- Expected behavior: Admin A creates Function → only Admin A and users in Admin A's groups (if granted) can see/use it. Admin B cannot see or use it.
+- This matches the pattern used by Tools, Prompts, Models, and Knowledge resources

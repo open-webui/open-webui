@@ -56,9 +56,10 @@ if WEBSOCKET_MANAGER == "redis":
     log.debug("Using Redis to manage websockets.")
     # Set TTL for session/usage pools to prevent memory growth (1 hour default)
     # TTL is set per hash, not per field (faster, less granular)
-    SESSION_POOL = RedisDict("open-webui:session_pool", redis_url=WEBSOCKET_REDIS_URL, default_ttl=3600)
-    USER_POOL = RedisDict("open-webui:user_pool", redis_url=WEBSOCKET_REDIS_URL, default_ttl=3600)
-    USAGE_POOL = RedisDict("open-webui:usage_pool", redis_url=WEBSOCKET_REDIS_URL, default_ttl=1800)  # 30 min for usage
+    # Use master for writes (SESSION_POOL, USER_POOL, USAGE_POOL all need writes)
+    SESSION_POOL = RedisDict("open-webui:session_pool", redis_url=WEBSOCKET_REDIS_URL, default_ttl=3600, use_master=True)
+    USER_POOL = RedisDict("open-webui:user_pool", redis_url=WEBSOCKET_REDIS_URL, default_ttl=3600, use_master=True)
+    USAGE_POOL = RedisDict("open-webui:usage_pool", redis_url=WEBSOCKET_REDIS_URL, default_ttl=1800, use_master=True)  # 30 min for usage
 
     clean_up_lock = RedisLock(
         redis_url=WEBSOCKET_REDIS_URL,

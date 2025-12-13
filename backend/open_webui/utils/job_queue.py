@@ -94,10 +94,22 @@ def get_job_queue(queue_name: str = FILE_PROCESSING_QUEUE_NAME) -> Optional[Queu
                     del _queue_cache[queue_name]
         
         # Get Redis connection pool (shared across application)
-        pool = get_redis_pool(REDIS_URL)
-        # Create Redis connection that uses the pool
-        # This is efficient - the pool manages multiple connections
-        redis_conn = Redis(connection_pool=pool)
+        # Always use master for job queue (requires writes)
+        pool = get_redis_pool(REDIS_URL, use_master=True)
+        
+        # Handle Sentinel connection wrapper
+        if hasattr(pool, '_conn'):
+            redis_conn = pool._conn
+        elif hasattr(pool, 'get_connection'):
+            # For Sentinel connections, get master connection
+            from open_webui.socket.utils import get_redis_master_connection
+            redis_conn = get_redis_master_connection()
+            if redis_conn is None:
+                # Fallback to direct connection
+                redis_conn = Redis(connection_pool=pool)
+        else:
+            # Standard connection pool
+            redis_conn = Redis(connection_pool=pool)
         
         # Test connection
         redis_conn.ping()

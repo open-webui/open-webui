@@ -361,6 +361,16 @@ ENABLE_REALTIME_CHAT_SAVE = (
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
+# Redis Sentinel configuration for high availability
+# If REDIS_USE_SENTINEL is True, application will use Sentinel instead of direct Redis URL
+REDIS_USE_SENTINEL = os.environ.get("REDIS_USE_SENTINEL", "False").lower() == "true"
+# Sentinel hosts (comma-separated list, e.g., "redis-sentinel:26379" or "sentinel1:26379,sentinel2:26379")
+REDIS_SENTINEL_HOSTS = os.environ.get("REDIS_SENTINEL_HOSTS", "")
+# Master name that Sentinel monitors (default: "mymaster")
+REDIS_SENTINEL_SERVICE_NAME = os.environ.get("REDIS_SENTINEL_SERVICE_NAME", "mymaster")
+# Sentinel password (if required, optional)
+REDIS_SENTINEL_PASSWORD = os.environ.get("REDIS_SENTINEL_PASSWORD", None)
+
 # Redis connection pool configuration
 # Higher values support more concurrent requests but use more memory
 # Default: 100 connections (increased from 50 for high-concurrency environments)

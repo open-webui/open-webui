@@ -1,6 +1,7 @@
 import json
 import redis
 from redis.connection import ConnectionPool
+from redis.sentinel import Sentinel
 from redis.exceptions import ConnectionError, TimeoutError, RedisError
 import uuid
 import threading
@@ -25,17 +26,215 @@ log = logging.getLogger(__name__)
 _redis_pools = {}
 _pool_lock = threading.Lock()  # Thread-safe pool creation
 
+# Sentinel connection cache (one per pod)
+_sentinel_connection = None
+_sentinel_lock = threading.Lock()
+_master_connection = None
+_replica_connection = None
 
-def get_redis_pool(redis_url):
+
+def get_redis_sentinel_connection():
+    """Get or create a Redis Sentinel connection.
+    
+    Returns:
+        Sentinel instance or None if Sentinel is not configured
+    """
+    from open_webui.env import (
+        REDIS_USE_SENTINEL,
+        REDIS_SENTINEL_HOSTS,
+        REDIS_SENTINEL_SERVICE_NAME,
+        REDIS_SENTINEL_PASSWORD,
+    )
+    
+    if not REDIS_USE_SENTINEL or not REDIS_SENTINEL_HOSTS:
+        return None
+    
+    global _sentinel_connection
+    if _sentinel_connection is not None:
+        return _sentinel_connection
+    
+    with _sentinel_lock:
+        # Double-check after acquiring lock
+        if _sentinel_connection is not None:
+            return _sentinel_connection
+        
+        try:
+            # Parse Sentinel hosts (comma-separated list)
+            sentinel_hosts = []
+            for host_port in REDIS_SENTINEL_HOSTS.split(','):
+                host_port = host_port.strip()
+                if ':' in host_port:
+                    host, port = host_port.rsplit(':', 1)
+                    sentinel_hosts.append((host.strip(), int(port.strip())))
+                else:
+                    # Default port 26379
+                    sentinel_hosts.append((host_port.strip(), 26379))
+            
+            if not sentinel_hosts:
+                log.warning("REDIS_SENTINEL_HOSTS is empty, cannot create Sentinel connection")
+                return None
+            
+            # Create Sentinel connection
+            # socket_timeout: timeout for Sentinel operations
+            # socket_connect_timeout: timeout for connecting to Sentinel
+            sentinel_kwargs = {
+                'socket_timeout': 0.1,
+                'socket_connect_timeout': 5,
+            }
+            
+            if REDIS_SENTINEL_PASSWORD:
+                sentinel_kwargs['password'] = REDIS_SENTINEL_PASSWORD
+            
+            _sentinel_connection = Sentinel(
+                sentinel_hosts,
+                **sentinel_kwargs
+            )
+            
+            log.info(f"Created Redis Sentinel connection to {len(sentinel_hosts)} Sentinel(s)")
+            return _sentinel_connection
+        except Exception as e:
+            log.error(f"Failed to create Redis Sentinel connection: {e}", exc_info=True)
+            return None
+
+
+def get_redis_master_connection():
+    """Get master Redis connection from Sentinel.
+    
+    Returns:
+        Redis connection to master, or None if Sentinel is not available
+    """
+    sentinel = get_redis_sentinel_connection()
+    if sentinel is None:
+        return None
+    
+    from open_webui.env import REDIS_SENTINEL_SERVICE_NAME, REDIS_URL
+    
+    global _master_connection
+    if _master_connection is not None:
+        try:
+            # Test if connection is still alive
+            _master_connection.ping()
+            return _master_connection
+        except Exception:
+            # Connection is dead, recreate
+            _master_connection = None
+    
+    try:
+        # Get master connection from Sentinel
+        # socket_timeout: timeout for Redis operations
+        master_kwargs = {
+            'socket_timeout': 5,
+            'socket_connect_timeout': 5,
+            'decode_responses': True,
+        }
+        
+        # Extract password from REDIS_URL if present
+        # Format: redis://:password@host:port/db or redis://host:port/db
+        redis_password = None
+        if REDIS_URL and '@' in REDIS_URL:
+            # Extract password from URL
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(REDIS_URL)
+                if parsed.password:
+                    redis_password = parsed.password
+            except Exception:
+                pass
+        
+        if redis_password:
+            master_kwargs['password'] = redis_password
+        
+        _master_connection = sentinel.master_for(
+            REDIS_SENTINEL_SERVICE_NAME,
+            **master_kwargs
+        )
+        
+        # Test connection
+        _master_connection.ping()
+        log.debug("Created Redis master connection via Sentinel")
+        return _master_connection
+    except Exception as e:
+        log.error(f"Failed to get Redis master connection from Sentinel: {e}", exc_info=True)
+        _master_connection = None
+        return None
+
+
+def get_redis_replica_connection():
+    """Get replica Redis connection from Sentinel (for read operations).
+    
+    Returns:
+        Redis connection to replica, or None if Sentinel is not available
+    """
+    sentinel = get_redis_sentinel_connection()
+    if sentinel is None:
+        return None
+    
+    from open_webui.env import REDIS_SENTINEL_SERVICE_NAME, REDIS_URL
+    
+    global _replica_connection
+    if _replica_connection is not None:
+        try:
+            # Test if connection is still alive
+            _replica_connection.ping()
+            return _replica_connection
+        except Exception:
+            # Connection is dead, recreate
+            _replica_connection = None
+    
+    try:
+        # Get replica connection from Sentinel
+        replica_kwargs = {
+            'socket_timeout': 5,
+            'socket_connect_timeout': 5,
+            'decode_responses': True,
+        }
+        
+        # Extract password from REDIS_URL if present
+        redis_password = None
+        if REDIS_URL and '@' in REDIS_URL:
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(REDIS_URL)
+                if parsed.password:
+                    redis_password = parsed.password
+            except Exception:
+                pass
+        
+        if redis_password:
+            replica_kwargs['password'] = redis_password
+        
+        _replica_connection = sentinel.slave_for(
+            REDIS_SENTINEL_SERVICE_NAME,
+            **replica_kwargs
+        )
+        
+        # Test connection
+        _replica_connection.ping()
+        log.debug("Created Redis replica connection via Sentinel")
+        return _replica_connection
+    except Exception as e:
+        log.warning(f"Failed to get Redis replica connection from Sentinel: {e}")
+        # Fallback to master if replica is unavailable
+        _replica_connection = None
+        return get_redis_master_connection()
+
+
+def get_redis_pool(redis_url, use_master=True):
     """Get or create a shared Redis connection pool for the given URL.
     
     This ensures all Redis operations share connections efficiently,
     improving performance under concurrent load.
     
+    If Redis Sentinel is configured, returns a connection pool from Sentinel
+    (master for writes, replica for reads if use_master=False).
+    
     Thread-safe: Uses a lock to prevent race conditions when creating pools.
     
     Args:
         redis_url: Redis connection URL. Must be a non-empty string.
+        use_master: If True and Sentinel is configured, use master connection.
+                    If False and Sentinel is configured, use replica connection (for reads).
+                    Ignored if Sentinel is not configured.
         
     Returns:
         ConnectionPool: Redis connection pool
@@ -43,6 +242,39 @@ def get_redis_pool(redis_url):
     Raises:
         ValueError: If redis_url is None, empty, or invalid
     """
+    from open_webui.env import REDIS_USE_SENTINEL
+    
+    # If Sentinel is configured, use Sentinel connection
+    if REDIS_USE_SENTINEL:
+        if use_master:
+            redis_conn = get_redis_master_connection()
+        else:
+            redis_conn = get_redis_replica_connection()
+        
+        if redis_conn is None:
+            # Fallback to direct Redis URL if Sentinel fails
+            log.warning("Sentinel connection failed, falling back to direct Redis URL")
+        else:
+            # Return a connection pool wrapper for the Sentinel connection
+            # Note: Sentinel connections already manage their own pools internally
+            # We create a simple wrapper to maintain compatibility
+            try:
+                # Get the underlying connection pool from the Sentinel connection
+                # Sentinel connections use connection pools internally
+                return redis_conn.connection_pool
+            except AttributeError:
+                # If connection doesn't have a pool, create one
+                # This shouldn't happen with Sentinel, but handle it gracefully
+                log.warning("Sentinel connection doesn't have a connection pool, creating wrapper")
+                # Create a minimal pool wrapper
+                class SentinelPoolWrapper:
+                    def __init__(self, conn):
+                        self._conn = conn
+                    def get_connection(self, *args, **kwargs):
+                        return self._conn
+                return SentinelPoolWrapper(redis_conn)
+    
+    # Fallback to direct Redis URL connection (original behavior)
     # BUG #1 fix: Validate redis_url before using it
     if not redis_url or not isinstance(redis_url, str) or not redis_url.strip():
         raise ValueError(
@@ -81,8 +313,20 @@ class RedisLock:
         self._release_script = None  # BUG #2 fix: Cache Lua script for lock release
         # BUG #2 fix: Handle errors when creating connection pool
         try:
-            # Use connection pool instead of direct connection for better performance
-            pool = get_redis_pool(redis_url)
+            # Use connection pool - always use master for locks (critical for consistency)
+            pool = get_redis_pool(redis_url, use_master=True)
+            
+            # If pool is a wrapper (from Sentinel), get the actual connection
+            if hasattr(pool, '_conn'):
+                self.redis = pool._conn
+            elif hasattr(pool, 'get_connection'):
+                # For Sentinel connections, use the connection directly
+                self.redis = get_redis_master_connection()
+                if self.redis is None:
+                    # Fallback to direct connection
+                    self.redis = redis.Redis(connection_pool=pool)
+            else:
+                # Standard connection pool
             self.redis = redis.Redis(connection_pool=pool)
         except (ValueError, Exception) as e:
             # If pool creation fails, set redis to None and log error
@@ -221,13 +465,38 @@ class RedisLock:
 
 
 class RedisDict:
-    def __init__(self, name, redis_url, default_ttl=None):
+    def __init__(self, name, redis_url, default_ttl=None, use_master=True):
+        """
+        Initialize RedisDict with optional Sentinel support.
+        
+        Args:
+            name: Name of the Redis hash
+            redis_url: Redis connection URL (used if Sentinel is not configured)
+            default_ttl: Optional TTL for all keys in this dict
+            use_master: If True, use master connection (for writes). If False, use replica (for reads).
+        """
         self.name = name
         self.default_ttl = default_ttl  # Optional TTL for all keys in this dict
+        self.use_master = use_master  # Track if we should use master or replica
         # BUG #3 fix: Handle errors when creating connection pool
         try:
-            # Use connection pool instead of direct connection for better performance
-            pool = get_redis_pool(redis_url)
+            # Use connection pool - use_master determines if we use master or replica
+            pool = get_redis_pool(redis_url, use_master=use_master)
+            
+            # If pool is a wrapper (from Sentinel), get the actual connection
+            if hasattr(pool, '_conn'):
+                self.redis = pool._conn
+            elif hasattr(pool, 'get_connection'):
+                # For Sentinel connections, get the appropriate connection
+                if use_master:
+                    self.redis = get_redis_master_connection()
+                else:
+                    self.redis = get_redis_replica_connection()
+                if self.redis is None:
+                    # Fallback to direct connection
+                    self.redis = redis.Redis(connection_pool=pool)
+            else:
+                # Standard connection pool
             self.redis = redis.Redis(connection_pool=pool)
             # Cache Lua scripts for atomic operations (faster than re-registering)
             self._atomic_update_script = None
