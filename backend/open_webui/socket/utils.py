@@ -497,7 +497,7 @@ class RedisDict:
                     self.redis = redis.Redis(connection_pool=pool)
             else:
                 # Standard connection pool
-            self.redis = redis.Redis(connection_pool=pool)
+                self.redis = redis.Redis(connection_pool=pool)
             # Cache Lua scripts for atomic operations (faster than re-registering)
             self._atomic_update_script = None
             self._atomic_append_script = None
