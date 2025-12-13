@@ -29,7 +29,7 @@ ARG BUILD_HASH
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci && npm install @rollup/rollup-linux-x64-musl @tailwindcss/oxide-linux-x64-musl --save-optional --no-save
+RUN npm ci
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
