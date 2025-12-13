@@ -79,3 +79,4 @@ All critical fixes are applied and verified:
 **Note**: Content extraction returning empty is a separate issue (may be PDF-specific or extraction engine configuration). The worker will now at least attempt to process files and generate embeddings.
 
 
+
