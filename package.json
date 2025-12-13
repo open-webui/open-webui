@@ -95,7 +95,7 @@
 		"katex": "^0.16.21",
 		"kokoro-js": "^1.1.1",
 		"marked": "^9.1.0",
-		"mermaid": "11.12.2",
+		"mermaid": "^10.9.3",
 		"paneforge": "^0.0.6",
 		"panzoom": "^9.4.3",
 		"prosemirror-commands": "^1.6.0",
