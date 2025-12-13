@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# filepath: /Users/jiaqiyi/Documents/NAGA-open-webui/backend/use_local_model.sh
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd "$SCRIPT_DIR" || exit

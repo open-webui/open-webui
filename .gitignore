@@ -310,6 +310,7 @@ cypress/screenshots
 
 # docker-compose for local development
 docker-compose.local.yaml
+docker-compose.local.m1.yaml
 docker-compose.dev.yaml
 docker-compose.dev.sh
 
@@ -349,5 +350,6 @@ DEPLOYMENT_STATUS_REPORT.md
 DEPLOYMENT_VERIFICATION_SUCCESS.md
 RAG_QA_LOG_ANALYSIS.md
 SECRETS_REMOVAL_SUMMARY.md
+SECURITY_AUDIT_REPORT.md
 SYSTEM_STATUS_SUMMARY.md
 quick_health_check.sh
