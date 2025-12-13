@@ -356,3 +356,8 @@ MANIFEST_TRACKING_ANSWER.md
 MANIFEST_TRACKING_GUIDELINES.md
 SYSTEM_STATUS_SUMMARY.md
 quick_health_check.sh
+
+# Local deployment reference folder (namespace-specific deployment files)
+.local-deployment/
+# Exported configurations from OpenShift (may contain sensitive data)
+.local-deployment/exported-from-openshift/
