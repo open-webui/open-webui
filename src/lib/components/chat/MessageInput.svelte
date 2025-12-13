@@ -23,7 +23,7 @@
 
 	import { blobToFile, compressImage, createMessagesList, findWordIndices } from '$lib/utils';
 	import { transcribeAudio } from '$lib/apis/audio';
-	import { uploadFile } from '$lib/apis/files';
+	import { uploadFile, getFileProcessingStatus } from '$lib/apis/files';
 	import { generateAutoCompletion } from '$lib/apis';
 	import { deleteFileById } from '$lib/apis/files';
 
@@ -191,7 +191,8 @@
 				console.log('File upload completed:', {
 					id: uploadedFile.id,
 					name: fileItem.name,
-					collection: uploadedFile?.meta?.collection_name
+					collection: uploadedFile?.meta?.collection_name,
+					processing_status: uploadedFile?.meta?.processing_status
 				});
 
 				if (uploadedFile.error) {
@@ -199,12 +200,73 @@
 					toast.warning(uploadedFile.error);
 				}
 
-				fileItem.status = 'uploaded';
 				fileItem.file = uploadedFile;
 				fileItem.id = uploadedFile.id;
 				fileItem.collection_name =
 					uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
 				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+
+				// Check processing status from upload response
+				const processingStatus = uploadedFile?.meta?.processing_status;
+				
+				// If processing is pending or in progress, keep showing processing state
+				if (processingStatus === 'pending' || processingStatus === 'processing') {
+					fileItem.status = 'processing';
+					console.log(`File ${uploadedFile.id} is processing. Polling for completion...`);
+					
+					// Poll for processing completion
+					const pollInterval = setInterval(async () => {
+						try {
+							const statusResponse = await getFileProcessingStatus(localStorage.token, uploadedFile.id);
+							if (statusResponse) {
+								const currentStatus = statusResponse.processing_status;
+								console.log(`File ${uploadedFile.id} processing status: ${currentStatus}`);
+								
+								if (currentStatus === 'completed') {
+									clearInterval(pollInterval);
+									fileItem.status = 'uploaded';
+									fileItem.collection_name = statusResponse.collection_name || fileItem.collection_name;
+									files = files;
+									console.log(`File ${uploadedFile.id} processing completed!`);
+									toast.success($i18n.t('File processing completed and ready for queries'));
+								} else if (currentStatus === 'error') {
+									clearInterval(pollInterval);
+									fileItem.status = 'error';
+									fileItem.error = statusResponse.processing_error || 'Processing failed';
+									files = files;
+									console.error(`File ${uploadedFile.id} processing failed:`, statusResponse.processing_error);
+									toast.error($i18n.t('File processing failed: {{error}}', { error: statusResponse.processing_error || 'Unknown error' }));
+								}
+								// If still processing or pending, continue polling
+							}
+						} catch (pollError) {
+							console.error('Error polling file processing status:', pollError);
+							// Don't clear interval - keep trying
+						}
+					}, 2000); // Poll every 2 seconds
+					
+					// Stop polling after 5 minutes (timeout)
+					setTimeout(() => {
+						clearInterval(pollInterval);
+						if (fileItem.status === 'processing') {
+							console.warn(`File ${uploadedFile.id} processing timeout after 5 minutes`);
+							fileItem.status = 'uploaded'; // Show as uploaded even if still processing
+							files = files;
+							toast.warning($i18n.t('File upload complete. Processing may still be in progress.'));
+						}
+					}, 300000); // 5 minutes timeout
+				} else if (processingStatus === 'completed') {
+					// Already completed
+					fileItem.status = 'uploaded';
+				} else if (processingStatus === 'error') {
+					// Processing failed
+					fileItem.status = 'error';
+					fileItem.error = uploadedFile?.meta?.processing_error || 'Processing failed';
+					toast.error($i18n.t('File processing failed: {{error}}', { error: fileItem.error }));
+				} else {
+					// No status or unknown - assume uploaded (legacy behavior)
+					fileItem.status = 'uploaded';
+				}
 
 				files = files;
 			} else {
@@ -650,7 +712,7 @@
 													name={file.name}
 													type={file.type}
 													size={file?.size}
-													loading={file.status === 'uploading'}
+													loading={file.status === 'uploading' || file.status === 'processing'}
 													dismissible={true}
 													edit={true}
 													on:dismiss={async () => {

@@ -895,6 +895,23 @@ def generate_portkey_embeddings_sdk(
             "Portkey API key is empty! This will result in 401 Unauthorized. "
             "Ensure the admin has configured an embedding API key in Settings > Documents."
         )
+        raise ValueError(
+            "Portkey API key is required. Please configure it in Settings > Documents > Embedding."
+        )
+    
+    # CRITICAL: Validate base_url is not empty
+    # When base_url is empty, Portkey SDK defaults to https://api.portkey.ai/v1
+    # But the API key is typically configured for a custom gateway URL
+    # This mismatch causes 403 Forbidden errors
+    if not base_url or base_url.strip() == "":
+        error_msg = (
+            "Portkey base_url is empty! This causes the SDK to default to "
+            "https://api.portkey.ai/v1, which may not match your API key's gateway URL. "
+            "Please configure RAG_OPENAI_API_BASE_URL in Settings > Documents > Embedding, "
+            "or set the RAG_OPENAI_API_BASE_URL environment variable."
+        )
+        log.error(error_msg)
+        raise ValueError(error_msg)
     
     # Initialize Portkey client (simple - no deprecated virtual_key)
     portkey = Portkey(
@@ -934,6 +951,21 @@ def generate_portkey_embeddings_sdk(
         return embeddings
         
     except Exception as e:
+        error_msg = str(e)
+        # Provide more helpful error messages for common issues
+        if "403" in error_msg or "Forbidden" in error_msg:
+            log.error(
+                f"Portkey API returned 403 Forbidden. This usually means:\n"
+                f"1. The API key is not valid for the gateway URL ({base_url})\n"
+                f"2. The base_url ({base_url}) doesn't match the API key's configured gateway\n"
+                f"3. The API key doesn't have permission to use embeddings\n"
+                f"Please verify your API key and base_url in Settings > Documents > Embedding."
+            )
+        elif "401" in error_msg or "Unauthorized" in error_msg:
+            log.error(
+                f"Portkey API returned 401 Unauthorized. The API key may be invalid or expired. "
+                f"Please check your API key in Settings > Documents > Embedding."
+            )
         log.exception(f"Error generating Portkey embeddings via SDK: {e}")
         raise
 
@@ -1002,15 +1034,25 @@ def generate_embeddings(
     # CRITICAL FIX: For portkey/openai engines, dynamically retrieve the user's API key
     # The `key` passed in may be the startup default (empty), but users configure their own keys
     # This ensures per-user API key scoping works correctly for RAG queries
+    # RBAC: The key is retrieved based on user.email, which ensures:
+    # 1. User's own key (if set)
+    # 2. Group admin's key (if user is in a group created by an admin)
+    # 3. NOT accessible to other admins' keys (only their own group's admin)
     if engine in ["openai", "portkey"] and user and hasattr(user, 'email') and user.email:
         try:
             from open_webui.config import RAG_OPENAI_API_KEY
             user_key = RAG_OPENAI_API_KEY.get(user.email)
             if user_key:
-                log.debug(f"Using per-user API key for {user.email} (key length: {len(user_key)})")
+                log.info(
+                    f"Using RBAC-scoped embedding API key for {user.email} "
+                    f"(key length: {len(user_key)}, accessible only to this user and their group admin's groups)"
+                )
                 key = user_key
             else:
-                log.warning(f"No embedding API key found for user {user.email} - using default (may be empty)")
+                log.warning(
+                    f"No embedding API key found for user {user.email} - "
+                    f"check if user is in a group with an admin who has configured an API key"
+                )
         except Exception as e:
             log.warning(f"Failed to retrieve per-user API key: {e}")
 

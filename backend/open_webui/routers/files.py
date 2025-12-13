@@ -71,6 +71,8 @@ def upload_file(
         )
 
         # Process file in background
+        # NOTE: process_file will set processing_status="pending" when it enqueues the job
+        # We don't set it here to avoid race condition where process_file sees "pending" and skips processing
         # Use job queue if available (distributed processing), otherwise use BackgroundTasks
         if background_tasks or is_job_queue_available():
             try:

@@ -65,4 +65,37 @@ if [ -n "$SPACE_ID" ]; then
   export WEBUI_URL=${SPACE_HOST}
 fi
 
+# Start RQ worker in background if job queue is enabled
+if [[ "${ENABLE_JOB_QUEUE,,}" == "true" ]]; then
+  echo "=========================================="
+  echo "ENABLE_JOB_QUEUE is set to true"
+  echo "Starting RQ worker for file processing..."
+  echo "REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}"
+  echo "=========================================="
+  
+  # Start worker in background
+  python -m open_webui.workers.start_worker > /tmp/rq-worker.log 2>&1 &
+  worker_pid=$!
+  echo "RQ worker started with PID: $worker_pid"
+  
+  # Wait a moment to check if worker started successfully
+  sleep 2
+  if ! kill -0 $worker_pid 2>/dev/null; then
+    echo "WARNING: RQ worker process died immediately. Check /tmp/rq-worker.log for errors."
+    echo "File processing will fall back to BackgroundTasks if job queue is unavailable."
+  else
+    echo "RQ worker is running (PID: $worker_pid)"
+  fi
+  
+  # Function to cleanup worker on exit
+  cleanup_worker() {
+    if [ ! -z "$worker_pid" ] && kill -0 $worker_pid 2>/dev/null; then
+      echo "Stopping RQ worker (PID: $worker_pid)..."
+      kill $worker_pid 2>/dev/null || true
+      wait $worker_pid 2>/dev/null || true
+    fi
+  }
+  trap cleanup_worker EXIT INT TERM
+fi
+
 WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*'

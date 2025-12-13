@@ -366,10 +366,24 @@ class UserScopedConfig:
                 group_creator_email = group.created_by
                 logging.debug(f"Group {group.id} created by {group_creator_email}")
                 if group_creator_email:
+                    # RBAC: Check if this is an API key lookup - log for audit
+                    is_api_key_lookup = "api_key" in self.config_path or "openai_api_key" in self.config_path
+                    if is_api_key_lookup:
+                        logging.info(
+                            f"RBAC API Key Lookup: User {email} (ID: {user.id}) requesting API key. "
+                            f"Checking group {group.id} created by admin {group_creator_email}. "
+                            f"Key will only be accessible if user is in this admin's group."
+                        )
+                    
                     # Check cache for group admin config
                     cached_group_config = cache.get_group_admin_config(group.id, self.config_path)
                     if cached_group_config is not None:
                         logging.debug(f"Cache hit for group {group.id} admin config {self.config_path}: {cached_group_config}")
+                        if is_api_key_lookup:
+                            logging.info(
+                                f"RBAC API Key Access GRANTED: User {email} inheriting API key from "
+                                f"group admin {group_creator_email} (group {group.id})"
+                            )
                         # Also cache for user
                         cache.set_user_settings(user.id, self.config_path, cached_group_config)
                         return cached_group_config
@@ -388,6 +402,12 @@ class UserScopedConfig:
                                 break
                         if final_value != self.default:
                             logging.debug(f"Group admin {group_creator_email} has config for {self.config_path}: {final_value}")
+                            if is_api_key_lookup:
+                                logging.info(
+                                    f"RBAC API Key Access GRANTED: User {email} inheriting API key from "
+                                    f"group admin {group_creator_email} (group {group.id}). "
+                                    f"This key is ONLY accessible to users in groups created by {group_creator_email}."
+                                )
                             # Cache both group admin config and user settings
                             cache.set_group_admin_config(group.id, self.config_path, final_value)
                             cache.set_user_settings(user.id, self.config_path, final_value)
@@ -400,9 +420,30 @@ class UserScopedConfig:
             return self.default
 
     def set(self, email: str, value: Any):
+        """
+        Set a user-scoped configuration value.
+        
+        RBAC Note: For API keys (rag.openai_api_key), this stores the key under the admin's email.
+        The key will be accessible to:
+        1. The admin themselves (when they use their own email to lookup)
+        2. Users in groups created by this admin (via group inheritance)
+        3. NOT accessible to other admins or users in other admins' groups
+        
+        This ensures proper RBAC isolation between different admins and their groups.
+        """
         from open_webui.utils.cache import get_cache_manager
         
         cache = get_cache_manager()
+        
+        # RBAC: Log API key configuration for audit
+        is_api_key = "api_key" in self.config_path or "openai_api_key" in self.config_path
+        if is_api_key:
+            logging.info(
+                f"RBAC API Key Configuration: Admin {email} setting API key for {self.config_path}. "
+                f"This key will be accessible ONLY to: (1) Admin {email}, "
+                f"(2) Users in groups created by {email}. "
+                f"Other admins and their groups will NOT have access."
+            )
         
         with get_db() as db:
             entry = db.query(Config).filter_by(email=email).first()
@@ -432,6 +473,11 @@ class UserScopedConfig:
             # Also invalidate cache for all users who inherit from this user (as group admin)
             # Get all groups created by this user
             groups = Groups.get_groups(email)
+            if is_api_key:
+                logging.info(
+                    f"RBAC Cache Invalidation: Invalidating API key cache for admin {email} "
+                    f"and their {len(groups)} group(s) to ensure fresh RBAC enforcement"
+                )
             for group in groups:
                 # Invalidate group admin config cache
                 cache.invalidate_group_admin_config(group.id, self.config_path)

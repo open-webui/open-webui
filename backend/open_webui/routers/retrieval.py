@@ -100,6 +100,7 @@ from open_webui.config import (
 from open_webui.env import (
     SRC_LOG_LEVELS,
     DEVICE_TYPE,
+    ENABLE_JOB_QUEUE,
     DOCKER,
 )
 from open_webui.constants import ERROR_MESSAGES
@@ -190,6 +191,56 @@ class SearchForm(CollectionNameForm):
     query: str
 
 
+@router.get("/worker/status")
+async def get_worker_status(request: Request, user=Depends(get_verified_user)):
+    """
+    Get worker and job queue status for debugging.
+    """
+    from open_webui.utils.job_queue import (
+        get_job_queue,
+        FILE_PROCESSING_QUEUE_NAME,
+        is_job_queue_available,
+    )
+    from rq import Worker
+    
+    status = {
+        "job_queue_enabled": ENABLE_JOB_QUEUE,
+        "job_queue_available": False,
+        "queue_name": FILE_PROCESSING_QUEUE_NAME,
+        "queue_length": 0,
+        "workers": [],
+        "redis_connected": False,
+    }
+    
+    try:
+        if is_job_queue_available():
+            status["job_queue_available"] = True
+            queue = get_job_queue()
+            if queue:
+                status["queue_length"] = len(queue)
+                status["redis_connected"] = True
+                
+                # Get active workers
+                try:
+                    workers = Worker.all(queue=queue)
+                    status["workers"] = [
+                        {
+                            "name": w.name,
+                            "state": w.get_state(),
+                            "current_job": str(w.get_current_job_id()) if w.get_current_job_id() else None,
+                        }
+                        for w in workers
+                    ]
+                except Exception as worker_error:
+                    log.warning(f"Could not get worker status: {worker_error}")
+                    status["worker_error"] = str(worker_error)
+    except Exception as e:
+        log.error(f"Error checking worker status: {e}", exc_info=True)
+        status["error"] = str(e)
+    
+    return status
+
+
 @router.get("/")
 async def get_status(request: Request, user=Depends(get_verified_user)):
     chunk_size = request.app.state.config.CHUNK_SIZE.get(user.email)
@@ -213,6 +264,14 @@ async def get_status(request: Request, user=Depends(get_verified_user)):
 
 @router.get("/embedding")
 async def get_embedding_config(request: Request, user=Depends(get_verified_user)):
+    """
+    Get embedding configuration for the requesting user.
+    
+    RBAC: The API key returned is scoped to the requesting user:
+    - If user is an admin: Returns their own configured API key
+    - If user is in a group: Returns the group creator's (admin's) API key
+    - Other admins' API keys are NOT accessible (proper RBAC isolation)
+    """
     return {
         "status": True,
         "embedding_engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
@@ -220,7 +279,11 @@ async def get_embedding_config(request: Request, user=Depends(get_verified_user)
         "embedding_batch_size": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         "openai_config": {
             "url": request.app.state.config.RAG_OPENAI_API_BASE_URL,
-            # Per-admin API key - each admin configures their own key for their group
+            # RBAC: Per-admin API key - retrieved using requesting user's email
+            # This ensures the key is only accessible to:
+            # 1. The admin who configured it (when they request it)
+            # 2. Users in groups created by that admin (via group inheritance)
+            # 3. NOT accessible to other admins or their groups
             "key": request.app.state.config.RAG_OPENAI_API_KEY.get(user.email),
         },
         "ollama_config": {
@@ -276,9 +339,16 @@ async def update_embedding_config(
                 request.app.state.config.RAG_OPENAI_API_BASE_URL = (
                     form_data.openai_config.url
                 )
-                # Per-admin API key - set for this admin and their group
+                # Per-admin API key - set for this admin and their group (RBAC-protected)
+                # The key is stored under the admin's email and will be accessible to:
+                # 1. The admin themselves
+                # 2. Users in groups created by this admin
+                # 3. NOT accessible to other admins or their groups
                 request.app.state.config.RAG_OPENAI_API_KEY.set(
                     user.email, form_data.openai_config.key
+                )
+                log.info(
+                    f"Admin {user.email} configured embedding API key (RBAC: accessible to admin and their group members only)"
                 )
 
             if form_data.ollama_config is not None:
@@ -301,16 +371,31 @@ async def update_embedding_config(
         # Get user's API key for embedding function
         user_api_key = request.app.state.config.RAG_OPENAI_API_KEY.get(user.email)
         
+        # Get base URL value - handle PersistentConfig objects properly
+        if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai" or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey":
+            base_url_config = request.app.state.config.RAG_OPENAI_API_BASE_URL
+            base_url = (
+                base_url_config.value
+                if hasattr(base_url_config, 'value')
+                else str(base_url_config)
+            )
+            # Fallback to default if empty (from config.py default)
+            if not base_url or base_url.strip() == "":
+                base_url = "https://ai-gateway.apps.cloud.rt.nyu.edu/v1"
+                log.warning(f"RAG_OPENAI_API_BASE_URL is empty, using default: {base_url}")
+        else:
+            base_url_config = request.app.state.config.RAG_OLLAMA_BASE_URL
+            base_url = (
+                base_url_config.value
+                if hasattr(base_url_config, 'value')
+                else str(base_url_config)
+            )
+        
         request.app.state.EMBEDDING_FUNCTION = get_embedding_function(
             request.app.state.config.RAG_EMBEDDING_ENGINE,
             request.app.state.config.RAG_EMBEDDING_MODEL,
             request.app.state.ef,
-            (
-                request.app.state.config.RAG_OPENAI_API_BASE_URL
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-                or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
-                else request.app.state.config.RAG_OLLAMA_BASE_URL
-            ),
+            base_url,
             (
                 user_api_key
                 if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
@@ -858,6 +943,17 @@ def save_docs_to_vector_db(
                 log.info(f"Document with hash {metadata['hash']} already exists")
                 raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
+    # BUG #8 fix: Validate docs are not empty before splitting
+    if len(docs) == 0:
+        error_msg = (
+            f"[Embedding Failed] No documents to process. "
+            f"collection_name={collection_name} | "
+            f"This usually means the file content extraction returned empty text. "
+            f"Check the '[Content Extraction ERROR]' log above for details."
+        )
+        log.error(error_msg)
+        raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
+
     if split:
         user_email, chunk_size, chunk_overlap = _get_user_chunk_settings(request, user)
         log.info(f"[Splitting] user={user_email or 'background'} | chunk_size={chunk_size} | chunk_overlap={chunk_overlap}")
@@ -944,33 +1040,148 @@ def save_docs_to_vector_db(
             else request.app.state.config.RAG_OPENAI_API_KEY.default
         )
         
+        # Get base URL value - handle PersistentConfig objects properly
+        if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai" or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey":
+            base_url_config = request.app.state.config.RAG_OPENAI_API_BASE_URL
+            base_url = (
+                base_url_config.value
+                if hasattr(base_url_config, 'value')
+                else str(base_url_config)
+            )
+            print(f"  [STEP 3.1] Extracted base_url: {base_url}", flush=True)
+            log.info(f"  [STEP 3.1] Extracted base_url: {base_url}")
+            
+            # Fallback to default if empty (from config.py default)
+            if not base_url or base_url.strip() == "" or base_url == "None":
+                base_url = "https://ai-gateway.apps.cloud.rt.nyu.edu/v1"
+                print(f"  [STEP 3.2] ⚠️  Base URL was empty/None, using default: {base_url}", flush=True)
+                log.warning(f"  [STEP 3.2] Base URL was empty/None, using default: {base_url}")
+            else:
+                print(f"  [STEP 3.2] ✅ Using configured base URL: {base_url}", flush=True)
+                log.info(f"  [STEP 3.2] ✅ Using configured base URL: {base_url}")
+            
+            api_key_to_use = user_api_key
+            print(f"  [STEP 3.3] Using OpenAI/Portkey API key (user_api_key)", flush=True)
+            log.info(f"  [STEP 3.3] Using OpenAI/Portkey API key (user_api_key)")
+        else:
+            base_url_config = request.app.state.config.RAG_OLLAMA_BASE_URL
+            base_url = (
+                base_url_config.value
+                if hasattr(base_url_config, 'value')
+                else str(base_url_config)
+            )
+            api_key_to_use = request.app.state.config.RAG_OLLAMA_API_KEY
+            print(f"  [STEP 3.1] Using Ollama config: base_url={base_url}", flush=True)
+            log.info(f"  [STEP 3.1] Using Ollama config: base_url={base_url}")
+        
+        # CRITICAL BUG FIX: Validate API key before creating embedding function
+        print(f"  [STEP 4] Validating API key before embedding function creation...", flush=True)
+        log.info(f"  [STEP 4] Validating API key before embedding function creation...")
+        print(f"    api_key_to_use is None: {api_key_to_use is None}", flush=True)
+        print(f"    api_key_to_use is empty: {api_key_to_use == '' if api_key_to_use else 'N/A'}", flush=True)
+        print(f"    api_key_to_use length: {len(api_key_to_use) if api_key_to_use else 0}", flush=True)
+        log.info(f"    api_key_to_use is None: {api_key_to_use is None}")
+        log.info(f"    api_key_to_use is empty: {api_key_to_use == '' if api_key_to_use else 'N/A'}")
+        log.info(f"    api_key_to_use length: {len(api_key_to_use) if api_key_to_use else 0}")
+        
+        if not api_key_to_use or not api_key_to_use.strip():
+            error_msg = (
+                f"❌ CRITICAL BUG: API key is None or empty before embedding function creation. "
+                f"Cannot generate embeddings. "
+                f"user_email={user_email}, engine={request.app.state.config.RAG_EMBEDDING_ENGINE}"
+            )
+            print(f"  [STEP 4] ❌ {error_msg}", flush=True)
+            log.error(f"  [STEP 4] ❌ {error_msg}")
+            raise ValueError(error_msg)
+        
+        print(f"  [STEP 4] ✅ API key validated", flush=True)
+        log.info(f"  [STEP 4] ✅ API key validated")
+        
         # Embedding function that sends all texts at once
-        # embedding_function = get_embedding_function(
+        print(f"  [STEP 5] Creating embedding function:", flush=True)
+        print(f"    engine: {request.app.state.config.RAG_EMBEDDING_ENGINE}", flush=True)
+        print(f"    model: {request.app.state.config.RAG_EMBEDDING_MODEL}", flush=True)
+        print(f"    base_url: {base_url}", flush=True)
+        print(f"    batch_size: {request.app.state.config.RAG_EMBEDDING_BATCH_SIZE}", flush=True)
+        print(f"    api_key provided: {api_key_to_use is not None and len(api_key_to_use) > 0}", flush=True)
+        log.info(f"  [STEP 5] Creating embedding function:")
+        log.info(f"    engine: {request.app.state.config.RAG_EMBEDDING_ENGINE}")
+        log.info(f"    model: {request.app.state.config.RAG_EMBEDDING_MODEL}")
+        log.info(f"    base_url: {base_url}")
+        log.info(f"    batch_size: {request.app.state.config.RAG_EMBEDDING_BATCH_SIZE}")
+        log.info(f"    api_key provided: {api_key_to_use is not None and len(api_key_to_use) > 0}")
+        
         embedding_function = get_single_batch_embedding_function(
             request.app.state.config.RAG_EMBEDDING_ENGINE,
             request.app.state.config.RAG_EMBEDDING_MODEL,
             request.app.state.ef,
-            (
-                request.app.state.config.RAG_OPENAI_API_BASE_URL
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-                or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
-                else request.app.state.config.RAG_OLLAMA_BASE_URL
-            ),
-            (
-                user_api_key
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-                or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
-                else request.app.state.config.RAG_OLLAMA_API_KEY
-            ),
+            base_url,
+            api_key_to_use,
             request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         )
+        
+        print(f"  [STEP 5.1] Embedding function created:", flush=True)
+        print(f"    embedding_function is None: {embedding_function is None}", flush=True)
+        print(f"    embedding_function type: {type(embedding_function)}", flush=True)
+        log.info(f"  [STEP 5.1] Embedding function created:")
+        log.info(f"    embedding_function is None: {embedding_function is None}")
+        log.info(f"    embedding_function type: {type(embedding_function)}")
+        
+        if embedding_function is None:
+            error_msg = "Failed to create embedding function - get_single_batch_embedding_function returned None"
+            print(f"  [STEP 5.1] ❌ {error_msg}", flush=True)
+            log.error(f"  [STEP 5.1] ❌ {error_msg}")
+            raise ValueError(error_msg)
+        
+        print(f"  [STEP 5.1] ✅ Embedding function created successfully", flush=True)
+        log.info(f"  [STEP 5.1] ✅ Embedding function created successfully")
 
         # Process all text chunks in a single API call
-        log.info(f"Generating embeddings for {len(texts)} chunks in a single batch")
-        embeddings = embedding_function(
-            list(map(lambda x: x.replace("\n", " "), texts)), user=user
-        )
+        print(f"  [STEP 6] Generating embeddings for {len(texts)} chunks in a single batch", flush=True)
+        log.info(f"  [STEP 6] Generating embeddings for {len(texts)} chunks in a single batch")
+        
+        try:
+            embeddings = embedding_function(
+                list(map(lambda x: x.replace("\n", " "), texts)), user=user
+            )
+            
+            print(f"  [STEP 6.1] Embedding generation result:", flush=True)
+            print(f"    embeddings is None: {embeddings is None}", flush=True)
+            print(f"    embeddings type: {type(embeddings)}", flush=True)
+            print(f"    embeddings length: {len(embeddings) if embeddings else 0}", flush=True)
+            if embeddings and len(embeddings) > 0:
+                print(f"    first embedding length: {len(embeddings[0]) if embeddings[0] else 0}", flush=True)
+            log.info(f"  [STEP 6.1] Embedding generation result:")
+            log.info(f"    embeddings is None: {embeddings is None}")
+            log.info(f"    embeddings type: {type(embeddings)}")
+            log.info(f"    embeddings length: {len(embeddings) if embeddings else 0}")
+            
+            if not embeddings or len(embeddings) == 0:
+                error_msg = "Embedding generation returned empty result"
+                print(f"  [STEP 6.1] ❌ {error_msg}", flush=True)
+                log.error(f"  [STEP 6.1] ❌ {error_msg}")
+                raise ValueError(error_msg)
+            
+            if len(embeddings) != len(texts):
+                error_msg = f"Embedding count mismatch: expected {len(texts)}, got {len(embeddings)}"
+                print(f"  [STEP 6.1] ❌ {error_msg}", flush=True)
+                log.error(f"  [STEP 6.1] ❌ {error_msg}")
+                raise ValueError(error_msg)
+            
+            print(f"  [STEP 6.1] ✅ Embeddings generated successfully", flush=True)
+            log.info(f"  [STEP 6.1] ✅ Embeddings generated successfully")
+        except Exception as embed_error:
+            error_msg = f"Failed to generate embeddings: {embed_error}"
+            print(f"  [STEP 6] ❌ {error_msg}", flush=True)
+            log.error(f"  [STEP 6] ❌ {error_msg}", exc_info=True)
+            raise
 
+        print(f"  [STEP 7] Preparing items for vector DB insertion:", flush=True)
+        print(f"    collection_name: {collection_name}", flush=True)
+        print(f"    items count: {len(texts)}", flush=True)
+        log.info(f"  [STEP 7] Preparing items for vector DB insertion:")
+        log.info(f"    collection_name: {collection_name}, items count: {len(texts)}")
+        
         items = [
             {
                 "id": str(uuid.uuid4()),
@@ -980,11 +1191,27 @@ def save_docs_to_vector_db(
             }
             for idx, text in enumerate(texts)
         ]
+        
+        print(f"  [STEP 7.1] Items prepared, inserting into vector DB...", flush=True)
+        log.info(f"  [STEP 7.1] Items prepared, inserting into vector DB...")
 
-        VECTOR_DB_CLIENT.insert(
-            collection_name=collection_name,
-            items=items,
-        )
+        try:
+            VECTOR_DB_CLIENT.insert(
+                collection_name=collection_name,
+                items=items,
+            )
+            print(f"  [STEP 7.1] ✅ Successfully inserted {len(items)} items into collection: {collection_name}", flush=True)
+            log.info(f"  [STEP 7.1] ✅ Successfully inserted {len(items)} items into collection: {collection_name}")
+        except Exception as insert_error:
+            error_msg = f"Failed to insert into vector DB collection {collection_name}: {insert_error}"
+            print(f"  [STEP 7.1] ❌ {error_msg}", flush=True)
+            log.error(f"  [STEP 7.1] ❌ {error_msg}", exc_info=True)
+            raise
+
+        print(f"[EMBEDDING] ✅ Embeddings saved successfully", flush=True)
+        log.info(f"[EMBEDDING] ✅ Embeddings saved successfully")
+        print("=" * 80, flush=True)
+        log.info("=" * 80)
 
         return True
     except Exception as e:
@@ -1087,20 +1314,33 @@ def save_docs_to_multiple_collections(
         f"save_docs_to_multiple_collections: document {_get_docs_info(docs)} to collections {collections}"
     )
 
-    # Check if entries with the same hash (metadata.hash) already exist in the knowledge collection
+    # Check if entries with the same hash (metadata.hash) already exist in any collection (BUG #14 fix)
     if metadata and "hash" in metadata:
-        result = VECTOR_DB_CLIENT.query(
-            collection_name=collections[1],
-            filter={"hash": metadata["hash"]},
-        )
+        # Check all collections, not just collections[1]
+        for collection_name in collections:
+            result = VECTOR_DB_CLIENT.query(
+                collection_name=collection_name,
+                filter={"hash": metadata["hash"]},
+            )
 
-        if result is not None:
-            existing_doc_ids = result.ids[0]
-            if existing_doc_ids:
-                log.info(
-                    f"Document with hash {metadata['hash']} already exists in collection {collection_name}"
-                )
-                raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
+            if result is not None:
+                existing_doc_ids = result.ids[0]
+                if existing_doc_ids:
+                    error_msg = f"Document with hash {metadata['hash']} already exists in collection {collection_name}"
+                    print(f"[DUPLICATE CHECK] ❌ {error_msg}", flush=True)
+                    log.info(error_msg)
+                    raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
+
+    # BUG #8 fix: Validate docs are not empty before splitting
+    if len(docs) == 0:
+        error_msg = (
+            f"[Embedding Failed] No documents to process. "
+            f"collections={collections} | "
+            f"This usually means the file content extraction returned empty text. "
+            f"Check the '[Content Extraction ERROR]' log above for details."
+        )
+        log.error(error_msg)
+        raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
     if split:
         user_email, chunk_size, chunk_overlap = _get_user_chunk_settings(request, user)
@@ -1176,40 +1416,182 @@ def save_docs_to_multiple_collections(
                     log.info(f"Deleting existing collection {collection_name}")
 
         # Get user's API key for embeddings (per-admin key)
+        print("=" * 80, flush=True)
+        print("[EMBEDDING] Starting embedding generation in save_docs_to_multiple_collections", flush=True)
+        log.info("=" * 80)
+        log.info("[EMBEDDING] Starting embedding generation in save_docs_to_multiple_collections")
+        
         user_email = user.email if user else None
+        print(f"  [STEP 1] User context:", flush=True)
+        print(f"    user is None: {user is None}", flush=True)
+        print(f"    user_email: {user_email}", flush=True)
+        print(f"    collections: {collections}", flush=True)
+        log.info(f"  [STEP 1] User context: user is None={user is None}, user_email={user_email}, collections={collections}")
+        
+        print(f"  [STEP 2] Retrieving API key from config...", flush=True)
+        log.info(f"  [STEP 2] Retrieving API key from config...")
         user_api_key = (
             request.app.state.config.RAG_OPENAI_API_KEY.get(user_email)
             if user_email
             else request.app.state.config.RAG_OPENAI_API_KEY.default
         )
         
+        print(f"  [STEP 2.1] API key retrieval result:", flush=True)
+        print(f"    user_api_key is None: {user_api_key is None}", flush=True)
+        print(f"    user_api_key is empty: {user_api_key == '' if user_api_key else 'N/A'}", flush=True)
+        print(f"    user_api_key length: {len(user_api_key) if user_api_key else 0}", flush=True)
+        if user_api_key:
+            api_key_preview = user_api_key[-4:] if len(user_api_key) >= 4 else '***'
+            print(f"    user_api_key ends with: ...{api_key_preview}", flush=True)
+        log.info(f"  [STEP 2.1] API key retrieval result:")
+        log.info(f"    user_api_key is None: {user_api_key is None}")
+        log.info(f"    user_api_key is empty: {user_api_key == '' if user_api_key else 'N/A'}")
+        log.info(f"    user_api_key length: {len(user_api_key) if user_api_key else 0}")
+        
+        # CRITICAL BUG FIX: Validate API key before use
+        if not user_api_key or not user_api_key.strip():
+            error_msg = (
+                f"❌ CRITICAL BUG: No embedding API key found for user {user_email}. "
+                f"Cannot generate embeddings. "
+                f"Please ensure: 1) Admin has configured API key in Settings > Documents, "
+                f"2) User is in a group created by that admin, 3) API key is not None/empty"
+            )
+            print(f"  [STEP 2.2] ❌ {error_msg}", flush=True)
+            log.error(f"  [STEP 2.2] ❌ {error_msg}")
+            raise ValueError(error_msg)
+        
+        print(f"  [STEP 2.2] ✅ API key validated", flush=True)
+        log.info(f"  [STEP 2.2] ✅ API key validated")
+        
+        # Get base URL value - handle PersistentConfig objects properly
+        print(f"  [STEP 3] Getting base URL for embedding engine: {request.app.state.config.RAG_EMBEDDING_ENGINE}", flush=True)
+        log.info(f"  [STEP 3] Getting base URL for embedding engine: {request.app.state.config.RAG_EMBEDDING_ENGINE}")
+        
+        if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai" or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey":
+            base_url_config = request.app.state.config.RAG_OPENAI_API_BASE_URL
+            base_url = (
+                base_url_config.value
+                if hasattr(base_url_config, 'value')
+                else str(base_url_config)
+            )
+            print(f"  [STEP 3.1] Extracted base_url: {base_url}", flush=True)
+            log.info(f"  [STEP 3.1] Extracted base_url: {base_url}")
+            
+            # Fallback to default if empty (from config.py default)
+            if not base_url or base_url.strip() == "" or base_url == "None":
+                base_url = "https://ai-gateway.apps.cloud.rt.nyu.edu/v1"
+                print(f"  [STEP 3.2] ⚠️  Base URL was empty/None, using default: {base_url}", flush=True)
+                log.warning(f"  [STEP 3.2] Base URL was empty/None, using default: {base_url}")
+            else:
+                print(f"  [STEP 3.2] ✅ Using configured base URL: {base_url}", flush=True)
+                log.info(f"  [STEP 3.2] ✅ Using configured base URL: {base_url}")
+            
+            api_key_to_use = user_api_key
+            print(f"  [STEP 3.3] Using OpenAI/Portkey API key (user_api_key)", flush=True)
+            log.info(f"  [STEP 3.3] Using OpenAI/Portkey API key (user_api_key)")
+        else:
+            base_url_config = request.app.state.config.RAG_OLLAMA_BASE_URL
+            base_url = (
+                base_url_config.value
+                if hasattr(base_url_config, 'value')
+                else str(base_url_config)
+            )
+            api_key_to_use = request.app.state.config.RAG_OLLAMA_API_KEY
+            print(f"  [STEP 3.1] Using Ollama config: base_url={base_url}", flush=True)
+            log.info(f"  [STEP 3.1] Using Ollama config: base_url={base_url}")
+        
+        # CRITICAL BUG FIX: Validate API key before calling embedding function
+        print(f"  [STEP 4] Validating API key before embedding generation...", flush=True)
+        log.info(f"  [STEP 4] Validating API key before embedding generation...")
+        print(f"    api_key_to_use is None: {api_key_to_use is None}", flush=True)
+        print(f"    api_key_to_use is empty: {api_key_to_use == '' if api_key_to_use else 'N/A'}", flush=True)
+        print(f"    api_key_to_use length: {len(api_key_to_use) if api_key_to_use else 0}", flush=True)
+        log.info(f"    api_key_to_use is None: {api_key_to_use is None}")
+        log.info(f"    api_key_to_use is empty: {api_key_to_use == '' if api_key_to_use else 'N/A'}")
+        log.info(f"    api_key_to_use length: {len(api_key_to_use) if api_key_to_use else 0}")
+        
+        if not api_key_to_use or not api_key_to_use.strip():
+            error_msg = (
+                f"❌ CRITICAL BUG: API key is None or empty before embedding generation. "
+                f"Cannot generate embeddings. "
+                f"user_email={user_email}, engine={request.app.state.config.RAG_EMBEDDING_ENGINE}"
+            )
+            print(f"  [STEP 4] ❌ {error_msg}", flush=True)
+            log.error(f"  [STEP 4] ❌ {error_msg}")
+            raise ValueError(error_msg)
+        
+        print(f"  [STEP 4] ✅ API key validated", flush=True)
+        log.info(f"  [STEP 4] ✅ API key validated")
+        
         # Usage of get_embeddings_with_fallback
-        embeddings = get_embeddings_with_fallback(
-            request.app.state.config.RAG_EMBEDDING_ENGINE,
-            request.app.state.config.RAG_EMBEDDING_MODEL,
-            request.app.state.ef,
-            (
-                request.app.state.config.RAG_OPENAI_API_BASE_URL
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-                or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
-                else request.app.state.config.RAG_OLLAMA_BASE_URL
-            ),
-            (
-                user_api_key
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-                or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
-                else request.app.state.config.RAG_OLLAMA_API_KEY
-            ),
-            request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
-            list(map(lambda x: x.replace("\n", " "), texts)),
-            get_single_batch_embedding_function,  # Pass this function
-            get_embedding_function,  # Pass this function
-            user=user,
-        )
+        print(f"  [STEP 5] Calling get_embeddings_with_fallback:", flush=True)
+        print(f"    engine: {request.app.state.config.RAG_EMBEDDING_ENGINE}", flush=True)
+        print(f"    model: {request.app.state.config.RAG_EMBEDDING_MODEL}", flush=True)
+        print(f"    base_url: {base_url}", flush=True)
+        print(f"    batch_size: {request.app.state.config.RAG_EMBEDDING_BATCH_SIZE}", flush=True)
+        print(f"    texts count: {len(texts)}", flush=True)
+        print(f"    api_key provided: {api_key_to_use is not None and len(api_key_to_use) > 0}", flush=True)
+        log.info(f"  [STEP 5] Calling get_embeddings_with_fallback:")
+        log.info(f"    engine: {request.app.state.config.RAG_EMBEDDING_ENGINE}")
+        log.info(f"    model: {request.app.state.config.RAG_EMBEDDING_MODEL}")
+        log.info(f"    base_url: {base_url}")
+        log.info(f"    batch_size: {request.app.state.config.RAG_EMBEDDING_BATCH_SIZE}")
+        log.info(f"    texts count: {len(texts)}")
+        log.info(f"    api_key provided: {api_key_to_use is not None and len(api_key_to_use) > 0}")
+        
+        try:
+            embeddings = get_embeddings_with_fallback(
+                request.app.state.config.RAG_EMBEDDING_ENGINE,
+                request.app.state.config.RAG_EMBEDDING_MODEL,
+                request.app.state.ef,
+                base_url,
+                api_key_to_use,
+                request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+                list(map(lambda x: x.replace("\n", " "), texts)),
+                get_single_batch_embedding_function,  # Pass this function
+                get_embedding_function,  # Pass this function
+                user=user,
+            )
+            
+            print(f"  [STEP 5.1] Embedding generation result:", flush=True)
+            print(f"    embeddings is None: {embeddings is None}", flush=True)
+            print(f"    embeddings type: {type(embeddings)}", flush=True)
+            print(f"    embeddings length: {len(embeddings) if embeddings else 0}", flush=True)
+            if embeddings and len(embeddings) > 0:
+                print(f"    first embedding length: {len(embeddings[0]) if embeddings[0] else 0}", flush=True)
+            log.info(f"  [STEP 5.1] Embedding generation result:")
+            log.info(f"    embeddings is None: {embeddings is None}")
+            log.info(f"    embeddings type: {type(embeddings)}")
+            log.info(f"    embeddings length: {len(embeddings) if embeddings else 0}")
+            
+            if not embeddings or len(embeddings) == 0:
+                error_msg = "Embedding generation returned empty result"
+                print(f"  [STEP 5.1] ❌ {error_msg}", flush=True)
+                log.error(f"  [STEP 5.1] ❌ {error_msg}")
+                raise ValueError(error_msg)
+            
+            if len(embeddings) != len(texts):
+                error_msg = f"Embedding count mismatch: expected {len(texts)}, got {len(embeddings)}"
+                print(f"  [STEP 5.1] ❌ {error_msg}", flush=True)
+                log.error(f"  [STEP 5.1] ❌ {error_msg}")
+                raise ValueError(error_msg)
+            
+            print(f"  [STEP 5.1] ✅ Embeddings generated successfully", flush=True)
+            log.info(f"  [STEP 5.1] ✅ Embeddings generated successfully")
+        except Exception as embed_error:
+            error_msg = f"Failed to generate embeddings: {embed_error}"
+            print(f"  [STEP 5] ❌ {error_msg}", flush=True)
+            log.error(f"  [STEP 5] ❌ {error_msg}", exc_info=True)
+            raise
 
         # Insert embeddings into all collections
-        for collection_name in collections:
-            log.info(f"Adding embeddings to collection {collection_name}")
+        print(f"  [STEP 7] Inserting embeddings into {len(collections)} collection(s): {collections}", flush=True)
+        log.info(f"  [STEP 7] Inserting embeddings into {len(collections)} collection(s): {collections}")
+        
+        for idx, collection_name in enumerate(collections):
+            print(f"  [STEP 7.{idx+1}] Processing collection: {collection_name}", flush=True)
+            log.info(f"  [STEP 7.{idx+1}] Processing collection: {collection_name}")
+            
             items = [
                 {
                     "id": str(uuid.uuid4()),
@@ -1219,12 +1601,29 @@ def save_docs_to_multiple_collections(
                 }
                 for idx, text in enumerate(texts)
             ]
+            
+            print(f"    Preparing {len(items)} items for insertion", flush=True)
+            log.info(f"    Preparing {len(items)} items for insertion")
 
-            VECTOR_DB_CLIENT.insert(
-                collection_name=collection_name,
-                items=items,
-            )
+            try:
+                VECTOR_DB_CLIENT.insert(
+                    collection_name=collection_name,
+                    items=items,
+                )
+                print(f"  [STEP 7.{idx+1}] ✅ Successfully inserted into collection: {collection_name}", flush=True)
+                log.info(f"  [STEP 7.{idx+1}] ✅ Successfully inserted into collection: {collection_name}")
+            except Exception as insert_error:
+                error_msg = f"Failed to insert into collection {collection_name}: {insert_error}"
+                print(f"  [STEP 7.{idx+1}] ❌ {error_msg}", flush=True)
+                log.error(f"  [STEP 7.{idx+1}] ❌ {error_msg}", exc_info=True)
+                # BUG FIX: Don't continue if one collection fails - raise exception
+                raise ValueError(error_msg)
 
+        print(f"[EMBEDDING] ✅ All embeddings saved successfully", flush=True)
+        log.info(f"[EMBEDDING] ✅ All embeddings saved successfully")
+        print("=" * 80, flush=True)
+        log.info("=" * 80)
+        
         return True
     except Exception as e:
         log.exception(e)
@@ -1257,24 +1656,49 @@ def _process_file_sync(
         knowledge_id: Optional knowledge base ID
         user_id: User ID for logging
     """
+    print("=" * 80, flush=True)
+    print("[BACKGROUND TASK] Starting _process_file_sync", flush=True)
+    print(f"  file_id: {file_id}", flush=True)
+    print(f"  user_id: {user_id}", flush=True)
+    print(f"  collection_name: {collection_name}", flush=True)
+    print(f"  knowledge_id: {knowledge_id}", flush=True)
+    print(f"  content provided: {'Yes (' + str(len(content)) + ' chars)' if content else 'No'}", flush=True)
+    log.info("=" * 80)
+    log.info("[BACKGROUND TASK] Starting _process_file_sync")
+    log.info(f"  file_id: {file_id}, user_id: {user_id}, collection_name: {collection_name}, knowledge_id: {knowledge_id}")
+    
     try:
         # Get user object if user_id is provided
+        print(f"  [STEP 1] Retrieving user object...", flush=True)
+        log.info(f"  [STEP 1] Retrieving user object...")
         user = None
         if user_id:
             try:
                 user = Users.get_user_by_id(user_id)
                 if not user:
-                    log.warning(
+                    warning_msg = (
                         f"User {user_id} not found for file processing (file_id={file_id}), "
                         "processing without user context"
                     )
+                    print(f"  [STEP 1] ⚠️  {warning_msg}", flush=True)
+                    log.warning(warning_msg)
+                else:
+                    print(f"  [STEP 1] ✅ User retrieved: {user.email} (role: {user.role})", flush=True)
+                    log.info(f"  [STEP 1] ✅ User retrieved: {user.email} (role: {user.role})")
             except Exception as user_error:
-                log.warning(
+                warning_msg = (
                     f"Error retrieving user {user_id} for file processing (file_id={file_id}): {user_error}, "
                     "processing without user context"
                 )
+                print(f"  [STEP 1] ⚠️  {warning_msg}", flush=True)
+                log.warning(warning_msg)
+        else:
+            print(f"  [STEP 1] ⚠️  No user_id provided, processing without user context", flush=True)
+            log.warning(f"  [STEP 1] No user_id provided, processing without user context")
         
         # Update status to processing
+        print(f"  [STEP 2] Updating file status to 'processing'...", flush=True)
+        log.info(f"  [STEP 2] Updating file status to 'processing'...")
         Files.update_file_metadata_by_id(
             file_id,
             {
@@ -1282,11 +1706,16 @@ def _process_file_sync(
                 "processing_started_at": int(time.time()),
             },
         )
+        print(f"  [STEP 2] ✅ File status updated", flush=True)
+        log.info(f"  [STEP 2] ✅ File status updated")
         
+        print(f"  [STEP 3] Retrieving file object...", flush=True)
+        log.info(f"  [STEP 3] Retrieving file object...")
         file = Files.get_file_by_id(file_id)
         if not file:
-            error_msg = "File not found"
-            log.error(f"File {file_id} not found for processing (user_id={user_id})")
+            error_msg = f"File {file_id} not found for processing (user_id={user_id})"
+            print(f"  [STEP 3] ❌ {error_msg}", flush=True)
+            log.error(error_msg)
             try:
                 Files.update_file_metadata_by_id(
                     file_id,
@@ -1330,9 +1759,15 @@ def _process_file_sync(
             
             # First, check if file has already been processed and exists in vector DB
             if collection_name:
+                print(f"  [CACHE CHECK] collection_name provided: {collection_name}", flush=True)
+                log.info(f"  [CACHE CHECK] collection_name provided: {collection_name}")
+                # BUG FIX: Use collection_name instead of f"file-{file.id}" when provided
+                cache_collection = collection_name
+                print(f"  [CACHE CHECK] Querying collection: {cache_collection} (not file-{file.id})", flush=True)
+                log.info(f"  [CACHE CHECK] Querying collection: {cache_collection} (not file-{file.id})")
                 try:
                     result = VECTOR_DB_CLIENT.query(
-                        collection_name=f"file-{file.id}", filter={"file_id": file.id}
+                        collection_name=cache_collection, filter={"file_id": file.id}
                     )
                     
                     if result is not None and result.ids and len(result.ids) > 0 and len(result.ids[0]) > 0:
@@ -1402,11 +1837,11 @@ def _process_file_sync(
                         f"total_chars={total_chars}"
                     )
                     
-                    # Warn if extraction returned empty content
+                    # Fail early if extraction returned empty content (BUG #15 fix)
                     if total_chars == 0:
                         file_ext = file.filename.split(".")[-1].lower() if "." in file.filename else "unknown"
-                        log.warning(
-                            f"[Content Extraction WARNING] file_id={file.id} | filename={file.filename} | "
+                        error_msg = (
+                            f"[Content Extraction ERROR] file_id={file.id} | filename={file.filename} | "
                             f"No text content extracted! Possible reasons:\n"
                             f"  - Scanned image PDF (no OCR text layer)\n"
                             f"  - Protected/encrypted file\n"
@@ -1416,6 +1851,8 @@ def _process_file_sync(
                             f"  - For better extraction: Configure Tika server\n"
                             f"  - Current engine: {extraction_engine}"
                         )
+                        log.error(error_msg)
+                        raise ValueError(f"Content extraction returned empty text for file {file.filename}. {error_msg}")
 
                     docs = [
                         Document(
@@ -1455,14 +1892,23 @@ def _process_file_sync(
 
         hash = calculate_sha256_string(text_content)
         Files.update_file_hash_by_id(file.id, hash)
+        
+        print(f"  [STEP 4] Checking BYPASS_EMBEDDING_AND_RETRIEVAL flag...", flush=True)
+        log.info(f"  [STEP 4] Checking BYPASS_EMBEDDING_AND_RETRIEVAL flag...")
+        print(f"    BYPASS_EMBEDDING_AND_RETRIEVAL: {request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL}", flush=True)
+        log.info(f"    BYPASS_EMBEDDING_AND_RETRIEVAL: {request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL}")
 
         if not request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
+            print(f"  [STEP 4] ✅ Embedding and retrieval enabled, proceeding with embedding generation", flush=True)
+            log.info(f"  [STEP 4] ✅ Embedding and retrieval enabled, proceeding with embedding generation")
             try:
                 # If knowledge_id is provided, we're adding to both collections at once
                 if knowledge_id:
                     file_collection = f"file-{file.id}"
                     collections = [file_collection, knowledge_id]
-
+                    
+                    print(f"  [STEP 5] Knowledge ID provided, saving to multiple collections:", flush=True)
+                    print(f"    collections: {collections}", flush=True)
                     log.info(
                         f"Processing file file_id={file.id}, filename={file.filename} "
                         f"for both file collection and knowledge base: collections={collections}, "
@@ -1482,7 +1928,12 @@ def _process_file_sync(
                     )
 
                     # Use file collection name for file metadata
+                    print(f"  [STEP 6] Embedding save result: {result}", flush=True)
+                    log.info(f"  [STEP 6] Embedding save result: {result}")
+                    
                     if result:
+                        print(f"  [STEP 6] ✅ Embeddings saved successfully, updating file status to 'completed'", flush=True)
+                        log.info(f"  [STEP 6] ✅ Embeddings saved successfully, updating file status to 'completed'")
                         Files.update_file_metadata_by_id(
                             file.id,
                             {
@@ -1491,15 +1942,26 @@ def _process_file_sync(
                                 "processing_completed_at": int(time.time()),
                             },
                         )
+                        print(f"  [STEP 6.1] ✅ File status updated to 'completed'", flush=True)
+                        log.info(f"  [STEP 6.1] ✅ File status updated to 'completed'")
                     else:
+                        error_msg = "Failed to save to vector DB"
+                        print(f"  [STEP 6] ❌ {error_msg}, updating file status to 'error'", flush=True)
+                        log.error(f"  [STEP 6] ❌ {error_msg}, updating file status to 'error'")
                         Files.update_file_metadata_by_id(
                             file.id,
                             {
                                 "processing_status": "error",
-                                "processing_error": "Failed to save to vector DB",
+                                "processing_error": error_msg,
                             },
                         )
+                        print(f"  [STEP 6.1] ⚠️  File status updated to 'error'", flush=True)
+                        log.warning(f"  [STEP 6.1] File status updated to 'error'")
                 else:
+                    print(f"  [STEP 5] No knowledge ID, saving to single collection:", flush=True)
+                    print(f"    collection_name: {collection_name}", flush=True)
+                    log.info(f"  [STEP 5] No knowledge ID, saving to single collection: {collection_name}")
+                    
                     result = save_docs_to_vector_db(
                         request,
                         docs=docs,
@@ -1512,8 +1974,13 @@ def _process_file_sync(
                         add=(True if collection_name else False),
                         user=user,  # Use user object if available
                     )
+                    
+                    print(f"  [STEP 6] Embedding save result: {result}", flush=True)
+                    log.info(f"  [STEP 6] Embedding save result: {result}")
 
                     if result:
+                        print(f"  [STEP 6] ✅ Embeddings saved successfully, updating file status to 'completed'", flush=True)
+                        log.info(f"  [STEP 6] ✅ Embeddings saved successfully, updating file status to 'completed'")
                         Files.update_file_metadata_by_id(
                             file.id,
                             {
@@ -1549,6 +2016,8 @@ def _process_file_sync(
                     log.error(f"Failed to update file status after vector DB error: {update_error}")
         else:
             # Bypass embedding, just mark as completed
+            print(f"  [STEP 4] ⚠️  Embedding and retrieval bypassed (BYPASS_EMBEDDING_AND_RETRIEVAL=True)", flush=True)
+            log.info(f"  [STEP 4] Embedding and retrieval bypassed (BYPASS_EMBEDDING_AND_RETRIEVAL=True)")
             Files.update_file_metadata_by_id(
                 file.id,
                 {
@@ -1556,6 +2025,13 @@ def _process_file_sync(
                     "processing_completed_at": int(time.time()),
                 },
             )
+            print(f"  [STEP 4.1] ✅ File status updated to 'completed' (bypassed)", flush=True)
+            log.info(f"  [STEP 4.1] File status updated to 'completed' (bypassed)")
+        
+        print(f"[BACKGROUND TASK] ✅ File processing completed successfully", flush=True)
+        log.info(f"[BACKGROUND TASK] ✅ File processing completed successfully")
+        print("=" * 80, flush=True)
+        log.info("=" * 80)
 
     except Exception as e:
         # Consolidated error handling - log and update status
@@ -1743,7 +2219,8 @@ def process_file(
         current_status = meta.get("processing_status")
         
         # Check if already processing
-        if current_status in ["pending", "processing"]:
+        # CRITICAL FIX: Only skip if status is "processing" (job running), not "pending" (job queued)
+        if current_status == "processing":
             log.info(
                 f"File {form_data.file_id} is already {current_status} "
                 f"(Redis unavailable, using database check), "
@@ -1891,7 +2368,10 @@ def process_file(
             current_status = meta.get("processing_status")
             
             # Check if already processing (double-check after acquiring lock)
-            if current_status in ["pending", "processing"]:
+            # CRITICAL FIX: Only skip if status is "processing" (job running), not "pending" (job queued)
+            # "pending" means job is queued but not started - we should allow re-enqueueing if needed
+            # "processing" means job is currently running - we should skip to avoid duplicates
+            if current_status == "processing":
                 log.info(
                     f"File {form_data.file_id} status is {current_status} after acquiring lock, "
                     f"skipping duplicate processing request from user {user.id}"
@@ -1909,6 +2389,8 @@ def process_file(
                     "collection_name": meta.get("collection_name"),
                     "content": None,
                 }
+            # If status is "pending", we can proceed - it means job was queued but may have failed or needs re-enqueueing
+            # If status is None/"not_started"/"completed"/"error", we can also proceed
             
             # Set initial status (we have the lock, so this is safe)
             # Status update must succeed before we can proceed
@@ -1961,21 +2443,59 @@ def process_file(
     background_task_added = False
     
     # Get the user's embedding API key for the worker (per-admin scoped)
+    print("=" * 80, flush=True)
+    print("[PROCESS FILE] Starting file processing request", flush=True)
+    print(f"  file_id: {form_data.file_id}", flush=True)
+    print(f"  user.email: {user.email}", flush=True)
+    print(f"  user.id: {user.id}", flush=True)
+    print(f"  user.role: {user.role}", flush=True)
+    log.info("=" * 80)
+    log.info("[PROCESS FILE] Starting file processing request")
+    log.info(f"  file_id: {form_data.file_id}, user.email: {user.email}, user.id: {user.id}, user.role: {user.role}")
+    
     embedding_api_key = None
+    print(f"  [STEP 1] Checking embedding engine: {request.app.state.config.RAG_EMBEDDING_ENGINE}", flush=True)
+    log.info(f"  [STEP 1] Checking embedding engine: {request.app.state.config.RAG_EMBEDDING_ENGINE}")
+    
     if request.app.state.config.RAG_EMBEDDING_ENGINE in ["openai", "portkey"]:
+        print(f"  [STEP 1.1] Engine is OpenAI/Portkey, retrieving API key...", flush=True)
+        log.info(f"  [STEP 1.1] Engine is OpenAI/Portkey, retrieving API key...")
+        
         embedding_api_key = request.app.state.config.RAG_OPENAI_API_KEY.get(user.email)
-        if not embedding_api_key:
-            log.error(
-                f"[File Processing BLOCKED] No embedding API key configured for user {user.email}. "
+        
+        print(f"  [STEP 1.2] API key retrieval result:", flush=True)
+        print(f"    embedding_api_key is None: {embedding_api_key is None}", flush=True)
+        print(f"    embedding_api_key is empty: {embedding_api_key == '' if embedding_api_key else 'N/A'}", flush=True)
+        print(f"    embedding_api_key length: {len(embedding_api_key) if embedding_api_key else 0}", flush=True)
+        if embedding_api_key:
+            api_key_preview = embedding_api_key[-4:] if len(embedding_api_key) >= 4 else '***'
+            print(f"    embedding_api_key ends with: ...{api_key_preview}", flush=True)
+        log.info(f"  [STEP 1.2] API key retrieval result:")
+        log.info(f"    embedding_api_key is None: {embedding_api_key is None}")
+        log.info(f"    embedding_api_key is empty: {embedding_api_key == '' if embedding_api_key else 'N/A'}")
+        log.info(f"    embedding_api_key length: {len(embedding_api_key) if embedding_api_key else 0}")
+        
+        if not embedding_api_key or not embedding_api_key.strip():
+            error_msg = (
+                f"❌ CRITICAL BUG: No embedding API key configured for user {user.email}. "
                 f"File processing will fail without an API key. "
-                f"Please configure the embedding API key in Settings > Documents > Embedding Model Engine."
+                f"Please configure the embedding API key in Settings > Documents > Embedding Model Engine. "
+                f"If user is not admin, ensure user is in a group created by an admin who has configured the API key."
             )
+            print(f"  [STEP 1.3] ❌ {error_msg}", flush=True)
+            log.error(f"  [STEP 1.3] ❌ {error_msg}")
             # Return early with error - don't waste resources on processing that will fail
             return {
                 "status": False,
                 "file_id": form_data.file_id,
                 "error": "No embedding API key configured. Please configure in Settings > Documents.",
             }
+        
+        print(f"  [STEP 1.3] ✅ API key retrieved and validated", flush=True)
+        log.info(f"  [STEP 1.3] ✅ API key retrieved and validated")
+    else:
+        print(f"  [STEP 1.1] Engine is {request.app.state.config.RAG_EMBEDDING_ENGINE}, skipping OpenAI API key check", flush=True)
+        log.info(f"  [STEP 1.1] Engine is {request.app.state.config.RAG_EMBEDDING_ENGINE}, skipping OpenAI API key check")
     
     try:
         # Try to use job queue first if available

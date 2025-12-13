@@ -28,8 +28,8 @@ log = logging.getLogger(__name__)
 
 from rq import Worker, Queue, Connection
 from redis import Redis
+from redis.connection import ConnectionPool
 from open_webui.env import REDIS_URL, SRC_LOG_LEVELS, ENABLE_JOB_QUEUE
-from open_webui.socket.utils import get_redis_pool
 from open_webui.utils.job_queue import FILE_PROCESSING_QUEUE_NAME
 
 # Set log level from environment
@@ -107,14 +107,26 @@ def start_worker():
         # Get Redis connection pool
         log.info("Connecting to Redis...")
         try:
-            pool = get_redis_pool(REDIS_URL)
-            redis_conn = Redis(connection_pool=pool)
+            # For RQ workers, we need a connection with NO timeout for blocking operations
+            # RQ uses BRPOP which blocks indefinitely waiting for jobs
+            # CRITICAL: decode_responses=False because RQ stores binary job data (pickled)
+            # Using socket_timeout=None allows blocking operations to work properly
+            worker_pool = ConnectionPool.from_url(
+                REDIS_URL,
+                decode_responses=False,  # CRITICAL: RQ stores binary pickled job data
+                max_connections=10,  # Workers need fewer connections
+                retry_on_timeout=True,
+                socket_connect_timeout=10,  # Longer connect timeout
+                socket_timeout=None,  # CRITICAL: No timeout for blocking operations (BRPOP)
+                health_check_interval=30,
+            )
+            redis_conn = Redis(connection_pool=worker_pool)
             
-            # Test Redis connection
+            # Test Redis connection (ping works with decode_responses=False)
             redis_conn.ping()
             log.info("Redis connection established successfully")
             
-            # Test queue access
+            # Test queue access (RQ handles binary data correctly)
             test_queue = Queue(FILE_PROCESSING_QUEUE_NAME, connection=redis_conn)
             queue_length = len(test_queue)
             log.info(f"Queue '{FILE_PROCESSING_QUEUE_NAME}' accessible (current length: {queue_length})")

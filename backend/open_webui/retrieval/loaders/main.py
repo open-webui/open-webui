@@ -1,3 +1,4 @@
+import os
 import requests
 import logging
 import ftfy
@@ -125,18 +126,46 @@ class Loader:
     def load(
         self, filename: str, file_content_type: str, file_path: str
     ) -> list[Document]:
-        loader = self._get_loader(filename, file_content_type, file_path)
-        docs = loader.load()
+        log.info(f"[Loader.load] Starting extraction: filename={filename}, content_type={file_content_type}, file_path={file_path}")
+        log.info(f"[Loader.load] Engine: {self.engine}, kwargs: {list(self.kwargs.keys())}")
+        
+        # Check if file exists
+        if not os.path.exists(file_path):
+            log.error(f"[Loader.load] File does not exist: {file_path}")
+            raise FileNotFoundError(f"File not found: {file_path}")
+        
+        file_size = os.path.getsize(file_path)
+        log.info(f"[Loader.load] File exists, size: {file_size} bytes")
+        
+        try:
+            loader = self._get_loader(filename, file_content_type, file_path)
+            log.info(f"[Loader.load] Loader instance created: {type(loader).__name__}")
+            
+            docs = loader.load()
+            log.info(f"[Loader.load] loader.load() returned {len(docs)} document(s)")
+            
+            if len(docs) > 0:
+                total_chars = sum(len(doc.page_content) for doc in docs)
+                log.info(f"[Loader.load] Total characters extracted: {total_chars}")
+                log.info(f"[Loader.load] First doc preview: {docs[0].page_content[:200]}...")
+            else:
+                log.warning(f"[Loader.load] loader.load() returned 0 documents!")
+        except Exception as e:
+            log.error(f"[Loader.load] Error during extraction: {type(e).__name__}: {str(e)}", exc_info=True)
+            raise
 
-        return [
+        result = [
             Document(
                 page_content=ftfy.fix_text(doc.page_content), metadata=doc.metadata
             )
             for doc in docs
         ]
+        log.info(f"[Loader.load] Returning {len(result)} processed document(s)")
+        return result
 
     def _get_loader(self, filename: str, file_content_type: str, file_path: str):
-        file_ext = filename.split(".")[-1].lower()
+        file_ext = filename.split(".")[-1].lower() if "." in filename else ""
+        log.info(f"[Loader._get_loader] filename={filename}, file_ext={file_ext}, content_type={file_content_type}, engine={self.engine}")
 
         if self.engine == "tika" and self.kwargs.get("TIKA_SERVER_URL"):
             if file_ext in known_source_ext or (
@@ -172,8 +201,27 @@ class Loader:
             )
         else:
             if file_ext == "pdf":
+                extract_images = self.kwargs.get("PDF_EXTRACT_IMAGES", False)
+                log.info(f"[Loader._get_loader] Using PyPDFLoader for PDF: extract_images={extract_images}")
+                log.info(f"[Loader._get_loader] PDF file_path: {file_path}")
+                # Verify file exists and is readable
+                if os.path.exists(file_path):
+                    file_size = os.path.getsize(file_path)
+                    log.info(f"[Loader._get_loader] PDF file exists, size: {file_size} bytes")
+                    # Try to read first few bytes to verify it's a PDF
+                    try:
+                        with open(file_path, 'rb') as f:
+                            header = f.read(4)
+                            if header == b'%PDF':
+                                log.info(f"[Loader._get_loader] ✅ File appears to be a valid PDF (starts with %PDF)")
+                            else:
+                                log.warning(f"[Loader._get_loader] ⚠️  File does not start with %PDF header: {header}")
+                    except Exception as e:
+                        log.warning(f"[Loader._get_loader] ⚠️  Could not read PDF header: {e}")
+                else:
+                    log.error(f"[Loader._get_loader] ❌ PDF file does not exist: {file_path}")
                 loader = PyPDFLoader(
-                    file_path, extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES")
+                    file_path, extract_images=extract_images
                 )
             elif file_ext == "csv":
                 loader = CSVLoader(file_path)
