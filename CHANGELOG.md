@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.42] - 2025-12-12
+## [0.6.42] - 2025-12-14
 
 ### Added
 
@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📊 An experimental chat usage statistics endpoint (GET /api/v1/chats/stats/usage) was added with pagination support (50 chats per page) and comprehensive per-chat analytics including model usage counts, user and assistant message breakdowns, average response times calculated from message timestamps, average content lengths, and last activity timestamps; this endpoint remains experimental and not suitable for production use as it performs intensive calculations by processing entire message histories for each chat without caching. [Commit](https://github.com/open-webui/open-webui/commit/a7993f6f4e4591cd2aaa4718ece9e5623557d019)
 - 🚀 Models page search input performance was optimized with a 300ms debounce to reduce server load and improve responsiveness. [#19832](https://github.com/open-webui/open-webui/pull/19832)
 - 🔄 Various improvements were implemented across the frontend and backend to enhance performance, stability, and security.
-- 🌐 Translations for Danish, Portuguese (Brazil), Simplified Chinese, Traditional Chinese, Catalan, and Spanish were enhanced and expanded.
+- 🌐 Translations for German, Danish, Portuguese (Brazil), Simplified Chinese, Traditional Chinese, Catalan, and Spanish were enhanced and expanded.
 
 ### Fixed
 
@@ -54,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔴 Redis cluster compatibility issues with disabled KEYS command were resolved by replacing blocking KEYS operations with production-safe SCAN iterations. [#19871](https://github.com/open-webui/open-webui/pull/19871), [#15834](https://github.com/open-webui/open-webui/issues/15834)
 - 🔤 File attachment container layout issues when using RTL languages were resolved by applying chat direction settings to file containers across all message types. [#19891](https://github.com/open-webui/open-webui/pull/19891), [#19742](https://github.com/open-webui/open-webui/issues/19742)
 - 💥 UI crashes and white screen errors caused by null chat lists during loading or network failures were prevented by adding null safety checks to chat iteration in folder placeholders and archived chat modals. [#19898](https://github.com/open-webui/open-webui/pull/19898)
+- 🔃 Ollama model list now automatically refreshes after model deletion, preventing deleted models from persisting in the UI and being inadvertently re-downloaded during subsequent pull operations. [#19912](https://github.com/open-webui/open-webui/pull/19912)
 
 ### Changed
 
