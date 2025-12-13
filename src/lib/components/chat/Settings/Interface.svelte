@@ -61,7 +61,7 @@
 
 	let landingPageMode = '';
 	let chatBubble = true;
-	let llmChatBubble = true;
+	let llmChatBubble = false;
 	let chatDirection: 'LTR' | 'RTL' | 'auto' = 'auto';
 	let ctrlEnterToSend = false;
 	let copyFormatted = false;
