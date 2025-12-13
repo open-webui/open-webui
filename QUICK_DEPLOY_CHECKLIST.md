@@ -36,7 +36,7 @@ oc get statefulset open-webui -n rit-genai-naga-dev -o jsonpath='{.spec.template
 **No updates needed!** The deployment file is already configured with:
 - ✅ **Image**: `registry.cloud.rt.nyu.edu/rit-genai-poc/naga-open-webui:latest`
 - ✅ **DATABASE_URL**: Set directly (same as main deployment)
-- ✅ **REDIS_URL**: `redis://:DaSharedBrainsxDxD2020@redis.rit-genai-naga-dev.svc.cluster.local:6379/0`
+- ✅ **REDIS_URL**: `redis://:PASSWORD@redis.rit-genai-naga-dev.svc.cluster.local:6379/0` (Get password from `redis-auth` secret)
 - ✅ **PVC**: `open-webui`
 - ✅ **Namespace**: `rit-genai-naga-dev`
 - ✅ **Replicas**: 8
