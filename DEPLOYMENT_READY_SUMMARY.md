@@ -13,13 +13,13 @@ The RQ worker deployment file has been fully configured with all necessary value
 - ✅ **Command**: `python -m open_webui.workers.start_worker`
 
 ### Redis Configuration
-- ✅ **REDIS_URL**: `redis://:DaSharedBrainsxDxD2020@redis.rit-genai-naga-dev.svc.cluster.local:6379/0`
+- ✅ **REDIS_URL**: `redis://:PASSWORD@redis.rit-genai-naga-dev.svc.cluster.local:6379/0` (Get password from `redis-auth` secret)
 - ✅ **WEBSOCKET_REDIS_URL**: Same as REDIS_URL
 - ✅ **WEBSOCKET_MANAGER**: `redis`
 - ✅ **REDIS_MAX_CONNECTIONS**: `100`
 
 ### Database Configuration
-- ✅ **DATABASE_URL**: `postgresql://rit-genai-naga-dev-admin:isF%3CrB%5D6S0ml70%7CDi8%2AU%5B1K3@rit-genai-naga-dev-primary.rit-genai-naga-dev.svc:5432/pilotgenai_dev_pg?sslmode=require&sslcert=&sslkey=&sslrootcert=`
+- ✅ **DATABASE_URL**: `postgresql://USER:PASSWORD@rit-genai-naga-dev-primary.rit-genai-naga-dev.svc:5432/pilotgenai_dev_pg?sslmode=require&sslcert=&sslkey=&sslrootcert=` (Get from `database-secret` secret)
 - ✅ **DATABASE_POOL_SIZE**: `5` (per worker)
 - ✅ **DATABASE_POOL_MAX_OVERFLOW**: `2` (per worker)
 - ✅ **DATABASE_POOL_TIMEOUT**: `30`

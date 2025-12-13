@@ -29,8 +29,8 @@ oc get svc redis -n rit-genai-naga-dev
 - **Service Address**: `redis.rit-genai-naga-dev.svc.cluster.local:6379`
 - **Secret Name**: `redis-auth`
 - **Password Key**: `redis-password`
-- **Password Value**: `DaSharedBrainsxDxD2020` (from your deployment)
-- **REDIS_URL Format**: `redis://:DaSharedBrainsxDxD2020@redis.rit-genai-naga-dev.svc.cluster.local:6379/0`
+- **Password Value**: Get from secret: `oc get secret redis-auth -n rit-genai-naga-dev -o jsonpath='{.data.redis-password}' | base64 -d`
+- **REDIS_URL Format**: `redis://:PASSWORD@redis.rit-genai-naga-dev.svc.cluster.local:6379/0` (Replace PASSWORD with actual password from secret)
 
 **If Redis is not deployed, deploy it first:**
 ```bash
@@ -103,7 +103,7 @@ oc get deployment open-webui -n rit-genai-naga-dev -o jsonpath='{.spec.template.
 
 Before deploying, ensure you know:
 
-- ✅ **REDIS_URL**: `redis://:DaSharedBrainsxDxD2020@redis.rit-genai-naga-dev.svc.cluster.local:6379/0`
+- ✅ **REDIS_URL**: `redis://:PASSWORD@redis.rit-genai-naga-dev.svc.cluster.local:6379/0` (Get password from `redis-auth` secret)
 - ✅ **ENABLE_JOB_QUEUE**: Must be `"True"`
 - ⚠️ **DATABASE_URL**: Verify the secret name and key (see above)
 - ✅ **VECTOR_DB**: `"pgvector"` (or your vector DB type)
@@ -228,13 +228,14 @@ You must set `REDIS_URL` directly as a value (not from ConfigMap/Secret).
 
 ```yaml
 env:
-  # Redis (REQUIRED) - Set directly since redis-config doesn't contain REDIS_URL
+  # Redis (REQUIRED) - Get password from secret
+  # REDIS_PASSWORD=$(oc get secret redis-auth -n rit-genai-naga-dev -o jsonpath='{.data.redis-password}' | base64 -d)
   - name: REDIS_URL
-    value: "redis://:DaSharedBrainsxDxD2020@redis.rit-genai-naga-dev.svc.cluster.local:6379/0"
+    value: "redis://:PASSWORD@redis.rit-genai-naga-dev.svc.cluster.local:6379/0"  # Replace PASSWORD with actual password
   
   # WebSocket Redis (Optional but Recommended)
   - name: WEBSOCKET_REDIS_URL
-    value: "redis://:DaSharedBrainsxDxD2020@redis.rit-genai-naga-dev.svc.cluster.local:6379/0"
+    value: "redis://:PASSWORD@redis.rit-genai-naga-dev.svc.cluster.local:6379/0"  # Replace PASSWORD with actual password
   
   - name: WEBSOCKET_MANAGER
     value: "redis"
