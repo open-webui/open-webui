@@ -47,10 +47,15 @@ Improve `chat_image_generation_handler` robustness and make the final prompt use
 ### Testing (Manual)
 
 - Enabled **Settings → Tools → Image generation**.
-- Requested an image (e.g., “Draw a cat”).
+- Requested an image (e.g., “Draw a cat” / “生成一只小猫”).
 - Verified:
   - Image is generated and shown in the chat UI.
   - Model response acknowledges the image operation and does not contradict it (e.g., no “I can’t generate images” after generation).
+- Tested with:
+  - Model profile: `deepseek-v3.1:671b-cloud`
+  - Prompt: “生成一只小猫”
+  - Observed UI status: “Image created”
+  - Observed model response: acknowledged the image and provided a design explanation (no “cannot generate images” contradiction).
 - Tested error paths:
   - Triggered an image generation failure and confirmed no crash when `chat_id` is missing (no websocket emitter available).
 
