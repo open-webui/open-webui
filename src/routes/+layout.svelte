@@ -865,5 +865,6 @@
 			: 'light'}
 	richColors
 	position="top-right"
+	expand={!($settings?.notificationStacking ?? true)}
 	closeButton
 />

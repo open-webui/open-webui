@@ -40,6 +40,7 @@
 
 	let notificationSound = true;
 	let notificationSoundAlways = false;
+	let notificationStacking = true;
 
 	let highContrastMode = false;
 
@@ -244,6 +245,7 @@
 
 		notificationSound = $settings?.notificationSound ?? true;
 		notificationSoundAlways = $settings?.notificationSoundAlways ?? false;
+		notificationStacking = $settings?.notificationStacking ?? true;
 
 		iframeSandboxAllowSameOrigin = $settings?.iframeSandboxAllowSameOrigin ?? false;
 		iframeSandboxAllowForms = $settings?.iframeSandboxAllowForms ?? false;
@@ -486,6 +488,25 @@
 					</div>
 				</div>
 			{/if}
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="notification-stacking-label" class=" self-center text-xs">
+						{$i18n.t('Stack Notifications')}
+					</div>
+
+					<div class="flex items-center gap-2 p-1">
+						<Switch
+							ariaLabelledbyId="notification-stacking-label"
+							tooltip={true}
+							bind:state={notificationStacking}
+							on:change={() => {
+								saveSettings({ notificationStacking });
+							}}
+						/>
+					</div>
+				</div>
+			</div>
 
 			<div>
 				<div id="allow-user-location-label" class=" py-0.5 flex w-full justify-between">

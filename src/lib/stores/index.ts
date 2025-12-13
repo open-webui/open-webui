@@ -164,6 +164,7 @@ type Settings = {
 	expandDetails?: boolean;
 	notificationSound?: boolean;
 	notificationSoundAlways?: boolean;
+	notificationStacking?: boolean;
 	stylizedPdfExport?: boolean;
 	notifications?: any;
 	imageCompression?: boolean;
