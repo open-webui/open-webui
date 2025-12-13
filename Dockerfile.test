@@ -1,0 +1,26 @@
+FROM node:18-alpine
+
+# Install dependencies for testing
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    git
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Expose test port (if needed)
+EXPOSE 5173
+
+# Default command
+CMD ["npm", "run", "test:all"]
+

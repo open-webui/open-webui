@@ -97,6 +97,40 @@ export const SUPPORTED_FILE_EXTENSIONS = [
 
 export const PASTED_TEXT_CHARACTER_LIMIT = 1000;
 
+// Mermaid Scalability Configuration
+export const MERMAID_CONFIG = {
+	// Memory Cache (Fast Path)
+	MEMORY_CACHE_SIZE: 100,
+
+	// IndexedDB (Persistence)
+	INDEXEDDB_ENABLED: true,
+	INDEXEDDB_STORE_NAME: 'mermaid_cache',
+	INDEXEDDB_MAX_SIZE: 5 * 1024 * 1024, // 5MB
+	INDEXEDDB_TTL_DAYS: 7,
+
+	// Cross-Tab Sync
+	BROADCAST_CHANNEL_ENABLED: true,
+	BROADCAST_CHANNEL_NAME: 'mermaid-cache-sync',
+
+	// Performance
+	DEBOUNCE_DELAY: 300,
+	RENDER_TIMEOUT: 5000,
+	LAZY_LOAD_MARGIN: 100,
+	LAZY_LOAD_THRESHOLD: 0.1,
+
+	// Error Handling
+	MAX_RETRIES: 2,
+
+	// Monitoring
+	ENABLE_METRICS: true,
+	METRICS_LOG_INTERVAL: 100, // Log every 100 renders
+
+	// Performance Thresholds
+	SLOW_RENDER_WARNING_MS: 500,
+	LOW_CACHE_HIT_RATE: 0.5,
+	HIGH_ERROR_RATE: 0.05
+};
+
 // Source: https://kit.svelte.dev/docs/modules#$env-static-public
 // This feature, akin to $env/static/private, exclusively incorporates environment variables
 // that are prefixed with config.kit.env.publicPrefix (usually set to PUBLIC_).

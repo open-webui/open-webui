@@ -1,8 +1,4 @@
 <script lang="ts">
-	import mermaid from 'mermaid';
-
-	import { v4 as uuidv4 } from 'uuid';
-
 	import { getContext, onMount, tick, onDestroy } from 'svelte';
 	import { copyToClipboard } from '$lib/utils';
 
@@ -14,6 +10,16 @@
 	import { config } from '$lib/stores';
 	import { executeCode } from '$lib/apis/utils';
 	import { toast } from 'svelte-sonner';
+	import { mermaidService } from '$lib/services/mermaid.service';
+	import { mermaidStore } from '$lib/stores/mermaid.store';
+	import { MERMAID_CONFIG } from '$lib/constants';
+	import {
+		type MermaidError,
+		createMermaidError,
+		getUserMessage,
+		isRetryableError,
+		retryRender
+	} from '$lib/utils/mermaid-errors';
 
 	const i18n = getContext('i18n');
 
@@ -48,6 +54,13 @@
 	let _token = null;
 
 	let mermaidHtml = null;
+	let isVisible = false;
+	let intersectionObserver: IntersectionObserver | null = null;
+	let mermaidContainer: HTMLElement | null = null;
+	let hasRendered = false; // Track if diagram has been rendered
+	let renderError: MermaidError | null = null;
+	let retryCount = 0;
+	let showErrorDetails = false;
 
 	let highlightedCode = null;
 	let executing = false;
@@ -309,21 +322,120 @@
 	let debounceTimeout;
 
 	const drawMermaidDiagram = async () => {
+		// Skip if already rendered
+		if (hasRendered && !renderError) {
+			return;
+		}
+
+		// Clear previous error
+		renderError = null;
+
+		if (!mermaidService.isInitialized()) {
+			const error = createMermaidError('Service not initialized', code.substring(0, 50));
+			renderError = error;
+			mermaidStore.addError(error.type, error.message, error.codePreview);
+			console.log(`[Mermaid] CodeBlock: Service not initialized, using fallback for id=${id}`);
+			return;
+		}
+
+		console.log(`[Mermaid] CodeBlock: Checking cache for diagram id=${id}`);
+
+		// Get current theme
+		const theme = mermaidService.getTheme();
+
 		try {
-			if (await mermaid.parse(code)) {
-				const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
+			// Check cache (memory + IndexedDB)
+			const cachedSvg = await mermaidStore.getFromCache(code, theme);
+			if (cachedSvg) {
+				console.log(`[Mermaid] CodeBlock: Cache hit for id=${id}, using cached SVG`);
+				mermaidHtml = cachedSvg;
+				hasRendered = true;
+				renderError = null;
+				return;
+			}
+
+			console.log(`[Mermaid] CodeBlock: Cache miss for id=${id}, rendering...`);
+
+			// Render using service with retry logic
+			const startTime = performance.now();
+			const svg = await retryRender(
+				async () => {
+					return await mermaidService.render(code, theme);
+				},
+				MERMAID_CONFIG.MAX_RETRIES
+			);
+			const renderTime = performance.now() - startTime;
+
+			if (svg) {
 				mermaidHtml = svg;
+				hasRendered = true;
+				renderError = null;
+				retryCount = 0;
+				// Store in cache (memory + IndexedDB)
+				mermaidStore.setInCache(code, svg, theme);
+				// Record metrics
+				mermaidStore.recordRender(true, renderTime);
+				console.log(`[Mermaid] CodeBlock: Render successful for id=${id}, duration=${renderTime.toFixed(2)}ms`);
+			} else {
+				const error = createMermaidError('Render returned null', code.substring(0, 50));
+				renderError = error;
+				mermaidStore.recordRender(false, renderTime);
+				mermaidStore.addError(error.type, error.message, error.codePreview);
+				console.error(`[Mermaid] CodeBlock: Render failed for id=${id}`);
 			}
 		} catch (error) {
-			console.log('Error:', error);
+			const errorObj = error instanceof Error ? error : new Error(String(error));
+			const mermaidError = createMermaidError(errorObj, code.substring(0, 50));
+			renderError = mermaidError;
+			mermaidStore.addError(mermaidError.type, mermaidError.message, mermaidError.codePreview);
+			console.error(`[Mermaid] CodeBlock: Render error for id=${id}:`, errorObj);
 		}
 	};
 
+	const handleRetry = async () => {
+		if (retryCount >= MERMAID_CONFIG.MAX_RETRIES) {
+			console.log(`[Mermaid] Retry failed, showing fallback for id=${id}`);
+			return;
+		}
+
+		retryCount++;
+		console.log(`[Mermaid] Retry button clicked, attempt ${retryCount} for id=${id}`);
+		hasRendered = false; // Allow re-render
+		await drawMermaidDiagram();
+	};
+
+	const debouncedRender = () => {
+		if (debounceTimeout) {
+			clearTimeout(debounceTimeout);
+			console.log(`[Mermaid] Code change detected, resetting debounce timer for id=${id}`);
+		}
+
+		debounceTimeout = setTimeout(() => {
+			console.log(`[Mermaid] Debounce timeout reached, rendering diagram id=${id}`);
+			drawMermaidDiagram();
+			debounceTimeout = null;
+		}, MERMAID_CONFIG.DEBOUNCE_DELAY);
+	};
+
 	const render = async () => {
-		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
-			(async () => {
+		if (lang === 'mermaid' && code) {
+			// Check if streaming is complete (has closing backticks)
+			const rawContent = token?.raw ?? '';
+			const isComplete = rawContent.slice(-4).includes('```');
+
+			if (isComplete) {
+				// Streaming complete, render immediately
+				if (debounceTimeout) {
+					clearTimeout(debounceTimeout);
+					debounceTimeout = null;
+					console.log(`[Mermaid] Streaming complete, rendering immediately for id=${id}`);
+				}
 				await drawMermaidDiagram();
-			})();
+			} else {
+				// Still streaming, debounce
+				console.log(`[Mermaid] Streaming detected, debouncing render (${MERMAID_CONFIG.DEBOUNCE_DELAY}ms) for id=${id}`);
+				debouncedRender();
+			}
 		}
 	};
 
@@ -375,18 +487,55 @@
 		if (lang) {
 			onCode({ lang, code });
 		}
-		if (document.documentElement.classList.contains('dark')) {
-			mermaid.initialize({
-				startOnLoad: true,
-				theme: 'dark',
-				securityLevel: 'loose'
-			});
-		} else {
-			mermaid.initialize({
-				startOnLoad: true,
-				theme: 'default',
-				securityLevel: 'loose'
-			});
+		// Mermaid initialization is now handled globally in +layout.svelte
+
+		// Setup lazy loading for Mermaid diagrams
+		if (lang === 'mermaid' && browser) {
+			await tick(); // Wait for DOM to be ready
+
+			try {
+				// Find the container element by data attribute (more reliable)
+				mermaidContainer = document.querySelector(`[data-mermaid-id="${id}"]`) as HTMLElement;
+				if (!mermaidContainer) {
+					// Fallback to ID
+					mermaidContainer = document.getElementById(`mermaid-container-${id}`);
+				}
+
+				if (mermaidContainer && 'IntersectionObserver' in window) {
+					console.log(`[Mermaid] Lazy loading: Observer created for diagram id=${id}`);
+
+					intersectionObserver = new IntersectionObserver(
+						(entries) => {
+							for (const entry of entries) {
+								if (entry.isIntersecting) {
+									isVisible = true;
+									console.log(`[Mermaid] Lazy loading: Diagram visible, starting render (id: ${id})`);
+									drawMermaidDiagram();
+								} else {
+									isVisible = false;
+									console.log(`[Mermaid] Lazy loading: Diagram scrolled out of view (id: ${id})`);
+								}
+							}
+						},
+						{
+							rootMargin: `${MERMAID_CONFIG.LAZY_LOAD_MARGIN}px`,
+							threshold: MERMAID_CONFIG.LAZY_LOAD_THRESHOLD
+						}
+					);
+
+					intersectionObserver.observe(mermaidContainer);
+				} else {
+					// IntersectionObserver not available or element not found, render immediately
+					console.log(`[Mermaid] Lazy loading: IntersectionObserver unavailable, rendering immediately`);
+					isVisible = true;
+					drawMermaidDiagram();
+				}
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : String(error);
+				console.warn(`[Mermaid] Lazy loading: Error setting up observer: ${errorMessage}, rendering immediately`);
+				isVisible = true;
+				drawMermaidDiagram();
+			}
 		}
 	});
 
@@ -394,21 +543,64 @@
 		if (pyodideWorker) {
 			pyodideWorker.terminate();
 		}
+
+		// Cleanup IntersectionObserver
+		if (intersectionObserver) {
+			intersectionObserver.disconnect();
+			intersectionObserver = null;
+		}
+
+		// Clear debounce timeout
+		if (debounceTimeout) {
+			clearTimeout(debounceTimeout);
+			debounceTimeout = null;
+		}
 	});
 </script>
 
-<div>
+	<div>
 	<div class="relative {className} flex flex-col rounded-lg" dir="ltr">
 		{#if lang === 'mermaid'}
-			{#if mermaidHtml}
-				<SvgPanZoom
-					className=" border border-gray-100 dark:border-gray-850 rounded-lg max-h-fit overflow-hidden"
-					svg={mermaidHtml}
-					content={_token.text}
-				/>
-			{:else}
-				<pre class="mermaid">{code}</pre>
-			{/if}
+			<div id="mermaid-container-{id}" data-mermaid-id={id}>
+				{#if renderError}
+					<div class="mermaid-error border border-red-200 dark:border-red-800 rounded-lg p-4 bg-red-50 dark:bg-red-900/20">
+						<div class="flex items-start gap-2 mb-2">
+							<div class="error-icon text-red-500 dark:text-red-400 text-xl">⚠️</div>
+							<div class="flex-1">
+								<div class="error-message text-red-700 dark:text-red-300 font-medium mb-2">
+									{getUserMessage(renderError.type)}
+								</div>
+								{#if isRetryableError(renderError.type) && retryCount < MERMAID_CONFIG.MAX_RETRIES}
+									<button
+										class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition"
+										on:click={handleRetry}
+									>
+										Retry
+									</button>
+								{/if}
+							</div>
+						</div>
+						<details class="mt-2">
+							<summary class="cursor-pointer text-sm text-red-600 dark:text-red-400 hover:underline">
+								Show code
+							</summary>
+							<pre class="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs overflow-auto max-h-48"><code>{code}</code></pre>
+						</details>
+					</div>
+				{:else if mermaidHtml}
+					<SvgPanZoom
+						className=" border border-gray-100 dark:border-gray-850 rounded-lg max-h-fit overflow-hidden"
+						svg={mermaidHtml}
+						content={_token?.text || code}
+					/>
+				{:else if !isVisible}
+					<div class="border border-gray-100 dark:border-gray-850 rounded-lg p-4 text-center text-gray-500 dark:text-gray-400">
+						Loading diagram...
+					</div>
+				{:else}
+					<pre class="mermaid">{code}</pre>
+				{/if}
+			</div>
 		{:else}
 			<div class="text-text-300 absolute pl-4 py-1.5 text-xs font-medium dark:text-white">
 				{lang}

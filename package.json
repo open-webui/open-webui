@@ -19,6 +19,11 @@
 		"i18n:parse": "i18next --config i18next-parser.config.ts && prettier --write \"src/lib/i18n/**/*.{js,json}\"",
 		"cy:open": "cypress open",
 		"test:frontend": "vitest --passWithNoTests",
+		"test:unit": "vitest run src/lib --passWithNoTests",
+		"test:integration": "vitest run test/mermaid/integration.test.ts --passWithNoTests",
+		"test:e2e": "vitest run test/mermaid/e2e.test.ts --passWithNoTests",
+		"test:all": "npm run test:unit && npm run test:integration && npm run test:e2e",
+		"test:coverage": "vitest run --coverage",
 		"pyodide:fetch": "node scripts/prepare-pyodide.js"
 	},
 	"devDependencies": {
@@ -37,6 +42,7 @@
 		"eslint-plugin-cypress": "^3.4.0",
 		"eslint-plugin-svelte": "^2.43.0",
 		"i18next-parser": "^9.0.1",
+		"jsdom": "^27.0.1",
 		"postcss": "^8.4.31",
 		"prettier": "^3.5.3",
 		"prettier-plugin-svelte": "^3.2.6",
@@ -89,7 +95,7 @@
 		"katex": "^0.16.21",
 		"kokoro-js": "^1.1.1",
 		"marked": "^9.1.0",
-		"mermaid": "^10.9.3",
+		"mermaid": "11.12.2",
 		"paneforge": "^0.0.6",
 		"panzoom": "^9.4.3",
 		"prosemirror-commands": "^1.6.0",

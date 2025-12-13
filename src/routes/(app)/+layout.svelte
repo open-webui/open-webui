@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { onMount, tick, getContext } from 'svelte';
+	import { onMount, onDestroy, tick, getContext } from 'svelte';
 	import { openDB, deleteDB } from 'idb';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
-	import mermaid from 'mermaid';
+	import { mermaidService } from '$lib/services/mermaid.service';
+	import { mermaidStore } from '$lib/stores/mermaid.store';
 
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
@@ -247,14 +248,22 @@
 		loaded = true;
 	});
 
-	const checkForVersionUpdates = async () => {
-		version = await getVersionUpdates(localStorage.token).catch((error) => {
-			return {
-				current: WEBUI_VERSION,
-				latest: WEBUI_VERSION
-			};
-		});
-	};
+		const checkForVersionUpdates = async () => {
+			version = await getVersionUpdates(localStorage.token).catch((error) => {
+				return {
+					current: WEBUI_VERSION,
+					latest: WEBUI_VERSION
+				};
+			});
+		};
+
+	onDestroy(() => {
+		// Cleanup Mermaid service
+		if (browser && mermaidService) {
+			mermaidService.destroy();
+			console.log('[Mermaid] Global cleanup completed');
+		}
+	});
 </script>
 
 <svelte:head>

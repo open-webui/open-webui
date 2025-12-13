@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    volumes:
+      - .:/app
+      - /app/node_modules
+    working_dir: /app
+    environment:
+      - NODE_ENV=test
+      - CI=true
+    command: npm run test:all
+    networks:
+      - test-network
+
+  test-browser:
+    image: mcr.microsoft.com/playwright:v1.40.0-focal
+    volumes:
+      - .:/app
+      - /app/node_modules
+    working_dir: /app
+    environment:
+      - NODE_ENV=test
+      - CI=true
+    command: npm run test:e2e
+    networks:
+      - test-network
+    depends_on:
+      - test-runner
+
+networks:
+  test-network:
+    driver: bridge
+
