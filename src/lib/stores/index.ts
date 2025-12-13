@@ -49,6 +49,7 @@ export const TTSWorker = writable(null);
 
 export const chatId = writable('');
 export const chatTitle = writable('');
+export const selectedTextbookSection: Writable<{ id: string; title: string; subtitle: string } | null> = writable(null);
 
 export const channels = writable([]);
 export const chats = writable(null);

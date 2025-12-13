@@ -14,14 +14,14 @@
 <div>
 	<div class="flex flex-col w-full">
 		<div class="mb-1 flex justify-between">
-			<div class="text-xs text-gray-500">{title}</div>
+			<div class="text-xs text-gray-500 dark:text-gray-400">{title}</div>
 		</div>
 
 		<div class="flex items-center -mr-1">
 			<select
 				class="w-full py-1 text-sm rounded-lg bg-transparent {selectedModelId
 					? ''
-					: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+					: 'text-gray-500 dark:text-gray-400'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 				bind:value={selectedModelId}
 				on:change={() => {
 					if (selectedModelId && !modelIds.includes(selectedModelId)) {
@@ -62,7 +62,7 @@
 				{/each}
 			</div>
 		{:else}
-			<div class="text-gray-500 text-xs text-center py-2">
+			<div class="text-gray-500 dark:text-gray-400 text-xs text-center py-2">
 				{$i18n.t('No models selected')}
 			</div>
 		{/if}

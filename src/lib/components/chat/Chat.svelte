@@ -42,7 +42,8 @@
 		functions,
 		selectedFolder,
 		pinnedChats,
-		showEmbeds
+		showEmbeds,
+		selectedTextbookSection
 	} from '$lib/stores';
 
 	import {
@@ -161,18 +162,46 @@
 	let params = {};
 
 	// Chat Toolbar
+	let toolbarChapterId = '';
 	let toolbarTitle = '제10장. 벡터 적분법, 적분 정리 (Vector Integral Calculus. Integral Theorems)';
 	let toolbarSubtitle = '벡터장을 다양한 경로와 곡면에 대해 적분하고, 미분과 적분을 연결하는 중요한 정리들을 이해합니다.';
 	let toolbarProficiencyLevel = 'intermediate';
 	let toolbarResponseStyle = 'question_guidance';
 
-	// Update toolbar data when chat changes
+	// Conversion functions for API request
+	const getProficiencyLevelNumber = (level) => {
+		const map = { 'initial': 1, 'intermediate': 2, 'advanced': 3 };
+		return map[level] ?? 2;
+	};
+
+	const getResponseStyleNumber = (style) => {
+		const map = { 'question_guidance': 1, 'problem_bank': 2, 'detailed_lecture': 3 };
+		return map[style] ?? 1;
+	};
+
+	// Update toolbar data when chat changes or textbook section is selected
 	$: if (chat && !$temporaryChatEnabled) {
-		// Chat object에서 toolbar 데이터를 읽어옴 (현재는 더미 값 사용)
-		toolbarTitle = chat.chapter || '제10장. 벡터 적분법, 적분 정리 (Vector Integral Calculus. Integral Theorems)';
-		toolbarSubtitle = chat.subtitle || '벡터장을 다양한 경로와 곡면에 대해 적분하고, 미분과 적분을 연결하는 중요한 정리들을 이해합니다.';
-		toolbarProficiencyLevel = chat.proficiency_level || 'intermediate';
-		toolbarResponseStyle = chat.response_style || 'question_guidance';
+		const chatData = chat.chat || {};
+		// 우선순위: 1) selectedTextbookSection 스토어, 2) chat.chat 데이터, 3) 기본값
+		if ($selectedTextbookSection) {
+			toolbarChapterId = $selectedTextbookSection.id;
+			toolbarTitle = $selectedTextbookSection.title;
+			toolbarSubtitle = $selectedTextbookSection.subtitle;
+		} else {
+			toolbarChapterId = chatData.chapter_id || '';
+			toolbarTitle = chatData.chapter || '';
+			toolbarSubtitle = chatData.subtitle || '';
+		}
+		// proficiency_level과 response_style은 항상 chat 데이터에서 불러옴
+		toolbarProficiencyLevel = chatData.proficiency_level || 'intermediate';
+		toolbarResponseStyle = chatData.response_style || 'question_guidance';
+	}
+
+	// Update toolbar when textbook section is selected from sidebar (새 채팅일 때)
+	$: if ($selectedTextbookSection && !chat) {
+		toolbarChapterId = $selectedTextbookSection.id;
+		toolbarTitle = $selectedTextbookSection.title;
+		toolbarSubtitle = $selectedTextbookSection.subtitle;
 	}
 
 	$: if (chatIdProp) {
@@ -1938,17 +1967,16 @@
 				toolIds.push(toolId);
 			}
 		}
-
+		console.log("chapter_id:", toolbarChapterId);
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
 			{
 				stream: stream,
 				model: model.id,
 				messages: messages,
-				hyu:{
-				proficiency_level: toolbarProficiencyLevel,
-					response_style: toolbarResponseStyle,
-				},
+				chapter_id: toolbarChapterId || undefined,
+				proficiency_level: getProficiencyLevelNumber(toolbarProficiencyLevel),
+				response_style: getResponseStyleNumber(toolbarResponseStyle),
 				params: {
 					...$settings?.params,
 					...params,
@@ -2502,14 +2530,18 @@
 
 			<PaneGroup direction="horizontal" class="w-full h-full">
 				<Pane defaultSize={50} minSize={30} class="h-full flex relative max-w-full flex-col">
-					<!-- chat toolbar - only show for existing chats, not for new chats -->
-					{#if !$temporaryChatEnabled && chat}
-						<ChatToolbar
-							title={toolbarTitle}
-							subtitle={toolbarSubtitle}
-							bind:proficiencyLevel={toolbarProficiencyLevel}
-							bind:responseStyle={toolbarResponseStyle}
-						/>
+					<!-- chat toolbar - flex for chat view, absolute for placeholder view -->
+					{#if !$temporaryChatEnabled && ((chat && history.currentId) || $selectedTextbookSection)}
+						{@const hasMessages = ($settings?.landingPageMode === 'chat' && !$selectedFolder) || createMessagesList(history, history.currentId).length > 0}
+						<div class="{hasMessages ? 'shrink-0' : 'absolute top-0 left-0 right-0'} z-20 bg-white dark:bg-gray-900">
+							<ChatToolbar
+								title={chat?.chapter || $selectedTextbookSection ? toolbarTitle : ''}
+								subtitle={chat?.chapter || $selectedTextbookSection ? toolbarSubtitle : ''}
+								bind:proficiencyLevel={toolbarProficiencyLevel}
+								bind:responseStyle={toolbarResponseStyle}
+								hasChapter={!!(chat?.chapter || $selectedTextbookSection)}
+							/>
+						</div>
 					{/if}
 					<!-- chat toolbar end -->
 
@@ -2571,7 +2603,9 @@
 						}}
 					/> -->
 
-					<div class="flex flex-col flex-auto z-10 w-full @container overflow-auto">
+					<div class="relative flex flex-col flex-auto z-10 w-full @container overflow-auto">
+						
+
 						{#if ($settings?.landingPageMode === 'chat' && !$selectedFolder) || createMessagesList(history, history.currentId).length > 0}
 							<div
 								class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
@@ -2583,7 +2617,9 @@
 										messagesContainerElement.clientHeight + 5;
 								}}
 							>
+							<!-- Top fade gradient overlay -->
 								<div class=" h-full w-full flex flex-col">
+									
 									<Messages
 										chatId={$chatId}
 										bind:history

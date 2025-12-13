@@ -26,7 +26,8 @@
 		models,
 		selectedFolder,
 		WEBUI_NAME,
-		isInstructor
+		isInstructor,
+		selectedTextbookSection
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
@@ -99,6 +100,7 @@
 	let chatBookmarks = {};
 
 	// Textbook section states
+	let currentChapterId = '';
 	let currentTextbookTitle = '';
 	let currentTextbookSubtitle = '';
 
@@ -511,13 +513,22 @@
 
 	// Handle textbook subsection selection
 	const handleSubsectionSelect = async (event) => {
+		currentChapterId = event.detail.id;
 		currentTextbookTitle = event.detail.title;
 		currentTextbookSubtitle = event.detail.subtitle;
+
+		// Update store for ChatToolbar
+		selectedTextbookSection.set({
+			id: event.detail.id,
+			title: event.detail.title,
+			subtitle: event.detail.subtitle
+		});
 
 		// Update current chat with selected textbook section
 		if ($chatId) {
 			try {
 				await updateChatById(localStorage.token, $chatId, {
+					chapter_id: event.detail.id,
 					chapter: event.detail.title,
 					subtitle: event.detail.subtitle
 				});
@@ -525,6 +536,31 @@
 			} catch (error) {
 				toast.error('Failed to update chat with textbook section');
 				console.error('Error updating chat:', error);
+			}
+		}
+	};
+
+	// Handle textbook section clear (when clicking textbook card)
+	const handleSectionClear = async () => {
+		currentChapterId = '';
+		currentTextbookTitle = '';
+		currentTextbookSubtitle = '';
+
+		// Clear store for ChatToolbar
+		selectedTextbookSection.set(null);
+
+		// Update current chat to clear chapter info
+		if ($chatId) {
+			try {
+				await updateChatById(localStorage.token, $chatId, {
+					chapter_id: null,
+					chapter: null,
+					subtitle: null
+				});
+				console.log('Cleared chat chapter info');
+			} catch (error) {
+				toast.error('Failed to clear chat chapter info');
+				console.error('Error clearing chat chapter:', error);
 			}
 		}
 	};
@@ -1020,7 +1056,7 @@
 				<!-- Tab Content -->
 				{#if activeTab === 'textbook'}
 					<!-- Textbook Info Section -->
-					<TextbookInfo on:subsection-select={handleSubsectionSelect} />
+					<TextbookInfo on:subsection-select={handleSubsectionSelect} on:section-clear={handleSectionClear} />
 				{:else}
 					<!-- History Section -->
 					<div class="px-2 mt-0.5">

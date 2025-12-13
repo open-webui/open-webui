@@ -3,6 +3,7 @@
 	export let subtitle = '벡터장을 다양한 경로와 곡면에 대해 적분하고, 미분과 적분을 연결하는 중요한 정리들을 이해합니다.';
 	export let proficiencyLevel = 'intermediate';
 	export let responseStyle = 'question_guidance';
+	export let hasChapter = false;
 
 	let showProficiencyDropdown = false;
 	let showResponseStyleDropdown = false;
@@ -56,11 +57,15 @@
 		`w-4 h-4 transition-transform duration-200 text-[#1A1B1C] dark:text-[#FDFEFE] ${isOpen ? 'rotate-180' : ''}`;
 </script>
 
-<div class="w-full px-12 py-12 flex justify-between items-center gap-6 border-b border-gray-200 dark:border-gray-950">
+<div class="w-full px-12 py-12 flex justify-between items-center border-b border-gray-200 dark:border-gray-950 bg-gray-200/50 dark:bg-gray-900/50 backdrop-blur-xl">
 	<!-- Title and Subtitle Section (Left) -->
 	<div class="flex flex-col justify-start gap-1 flex-1 overflow-hidden">
-		<h2 class="font-semibold text-gray-900 dark:text-gray-100 leading-none text-title-4 mb-3 truncate">{title}</h2>
-		<p class="text-gray-800 dark:text-gray-400 leading-none text-caption truncate">{subtitle}</p>
+		{#if hasChapter}
+			<h2 class="font-semibold text-gray-900 dark:text-gray-100 leading-none text-title-4 mb-3 truncate">{title}</h2>
+			<p class="text-gray-800 dark:text-gray-400 text-caption truncate">{subtitle}</p>
+		{:else}
+			<p class="text-gray-500 dark:text-gray-500 text-caption">사이드바에서 학습할 챕터를 선택해주세요</p>
+		{/if}
 	</div>
 
 	<!-- Buttons Section (Right) -->

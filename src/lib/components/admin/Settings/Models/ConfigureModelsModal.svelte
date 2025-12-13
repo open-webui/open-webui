@@ -163,7 +163,7 @@
 											});
 									}}
 								>
-									<div class="text-xs text-gray-500">{$i18n.t('Reorder Models')}</div>
+									<div class="text-xs text-gray-500 dark:text-gray-400">{$i18n.t('Reorder Models')}</div>
 
 									{#if sortKey === 'model'}
 										<span class="font-normal self-center">
