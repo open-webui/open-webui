@@ -327,7 +327,7 @@ class RedisLock:
                     self.redis = redis.Redis(connection_pool=pool)
             else:
                 # Standard connection pool
-            self.redis = redis.Redis(connection_pool=pool)
+                self.redis = redis.Redis(connection_pool=pool)
         except (ValueError, Exception) as e:
             # If pool creation fails, set redis to None and log error
             log.error(
