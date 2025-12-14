@@ -281,7 +281,7 @@
 	    splitLargeChunks = source?.splitLargeChunks ?? SETTING_DEFAULTS.splitLargeChunks;
 	    scrollOnBranchChange = source?.scrollOnBranchChange ?? SETTING_DEFAULTS.scrollOnBranchChange;
 	    temporaryChatByDefault = source?.temporaryChatByDefault ?? SETTING_DEFAULTS.temporaryChatByDefault;
-	    chatDirection = (source?.chatDirection ?? SETTING_DEFAULTS.chatDirection)?.toLowerCase();
+	    chatDirection = source?.chatDirection ?? SETTING_DEFAULTS.chatDirection;
 	    userLocation = source?.userLocation ?? SETTING_DEFAULTS.userLocation;
 	    showChatTitleInTab = source?.showChatTitleInTab ?? SETTING_DEFAULTS.showChatTitleInTab;
 	    notificationSound = source?.notificationSound ?? SETTING_DEFAULTS.notificationSound;
