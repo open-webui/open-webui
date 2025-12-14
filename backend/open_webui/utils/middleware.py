@@ -517,6 +517,25 @@ async def chat_completion_tools_handler(
 async def chat_memory_handler(
     request: Request, form_data: dict, extra_params: dict, user
 ):
+    # Check if user wants to inject profile info
+    user_with_settings = Users.get_user_by_id(user.id)
+    profile_context = ""
+    if (
+        user_with_settings
+        and user_with_settings.settings
+        and user_with_settings.settings.ui.get("injectProfileInfo", False)
+    ):
+        profile_parts = []
+        if user_with_settings.name:
+            profile_parts.append(f"Name: {user_with_settings.name}")
+        if user_with_settings.bio:
+            profile_parts.append(f"Bio: {user_with_settings.bio}")
+        if user_with_settings.gender:
+            profile_parts.append(f"Gender: {user_with_settings.gender}")
+        
+        if profile_parts:
+            profile_context = "User profile information:\n" + "\n".join(profile_parts) + "\n\n"
+
     try:
         results = await query_memory(
             request,
@@ -546,9 +565,15 @@ async def chat_memory_handler(
 
                 user_context += f"{doc_idx + 1}. [{created_at_date}] {doc}\n"
 
-    form_data["messages"] = add_or_update_system_message(
-        f"User Context:\n{user_context}\n", form_data["messages"], append=True
-    )
+    # Combine profile context and memory context
+    combined_context = profile_context
+    if user_context:
+        combined_context += f"User Context:\n{user_context}"
+    
+    if combined_context:
+        form_data["messages"] = add_or_update_system_message(
+            combined_context, form_data["messages"], append=True
+        )
 
     return form_data
 

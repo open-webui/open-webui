@@ -20,7 +20,7 @@ from open_webui.models.folders import Folders
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
 from pydantic import BaseModel
 
 
@@ -287,7 +287,10 @@ class ChatCompletedForm(BaseModel):
 
 @router.post("/completed", response_model=Optional[bool])
 async def on_chat_completed(
-    request: Request, form_data: ChatCompletedForm, user=Depends(get_verified_user)
+    request: Request,
+    form_data: ChatCompletedForm,
+    background_tasks: BackgroundTasks,
+    user=Depends(get_verified_user),
 ):
     # This endpoint is called by the frontend after a chat is completed.
     # It is used to trigger post-chat processing, like automatic memory creation.
@@ -295,7 +298,7 @@ async def on_chat_completed(
     # This endpoint just needs to acknowledge the request and return True.
     # The actual processing will be done in the background.
 
-    await chat_completed(request, form_data.model_dump(), user)
+    background_tasks.add_task(chat_completed, request, form_data.model_dump(), user)
     return True
 
 

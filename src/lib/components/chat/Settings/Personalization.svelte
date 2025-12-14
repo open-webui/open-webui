@@ -5,6 +5,7 @@
 	import { toast } from 'svelte-sonner';
 	import ManageModal from './Personalization/ManageModal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Textarea from '$lib/components/common/Textarea.svelte';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -13,13 +14,21 @@
 
 	let showManageModal = false;
 
-	// Addons
+	// Memory Settings
 	let enableMemory = false;
+	let enableMemoryRecall = true;
+	let injectProfileInfo = false;
 	let enableAutomaticMemory = false;
+	let memoryExtractionPrompt = '';
+
+	const defaultMemoryExtractionPrompt = 'Extract key facts and user preferences...';
 
 	onMount(async () => {
 		enableMemory = $settings?.memory ?? false;
+		enableMemoryRecall = $settings?.memoryRecall ?? true;
+		injectProfileInfo = $settings?.injectProfileInfo ?? false;
 		enableAutomaticMemory = $settings?.automaticMemory ?? false;
+		memoryExtractionPrompt = $settings?.memoryExtractionPrompt ?? '';
 	});
 </script>
 
@@ -34,6 +43,7 @@
 >
 	<div class="py-1 overflow-y-scroll max-h-[28rem] md:max-h-full">
 		<div>
+			<!-- Memory Toggle -->
 			<div class="flex items-center justify-between mb-1">
 				<Tooltip
 					content={$i18n.t(
@@ -59,7 +69,7 @@
 		</div>
 
 		{#if enableMemory}
-			<div class="text-xs text-gray-600 dark:text-gray-400 mt-3">
+			<div class="text-xs text-gray-600 dark:text-gray-400 mt-1">
 				<div>
 					{$i18n.t(
 						"You can personalize your interactions with LLMs by adding memories through the 'Manage' button below, making them more helpful and tailored to you."
@@ -79,7 +89,46 @@
 				</button>
 			</div>
 
-			<div class="flex items-center justify-between mb-1 mt-3">
+			<!-- Active Memory Recall Toggle -->
+			<div class="flex items-center justify-between mt-4">
+				<div class="text-sm font-medium">
+					{$i18n.t('Active Memory Recall')}
+				</div>
+
+				<div class="">
+					<Switch
+						bind:state={enableMemoryRecall}
+						on:change={async () => {
+							saveSettings({ memoryRecall: enableMemoryRecall });
+						}}
+					/>
+				</div>
+			</div>
+
+			<!-- Inject Profile Info Toggle -->
+			<div class="flex items-center justify-between mt-3">
+				<Tooltip
+					content={$i18n.t(
+						'Include your account name, bio, and gender in chat context to help the model personalize responses.'
+					)}
+				>
+					<div class="text-sm font-medium">
+						{$i18n.t('Inject Profile Info')}
+					</div>
+				</Tooltip>
+
+				<div class="">
+					<Switch
+						bind:state={injectProfileInfo}
+						on:change={async () => {
+							saveSettings({ injectProfileInfo });
+						}}
+					/>
+				</div>
+			</div>
+
+			<!-- Automatic Memory Creation Toggle -->
+			<div class="flex items-center justify-between mt-3">
 				<div class="text-sm font-medium">
 					{$i18n.t('Automatic Memory Creation')}
 				</div>
@@ -93,8 +142,22 @@
 					/>
 				</div>
 			</div>
-		{/if}
 
+			{#if enableAutomaticMemory}
+				<div class="mt-2">
+					<div class="text-xs text-gray-600 dark:text-gray-400 mb-1.5">
+						{$i18n.t('Define the prompt logic used to extract memories from your conversations.')}
+					</div>
+					<Textarea
+						bind:value={memoryExtractionPrompt}
+						placeholder={$i18n.t('e.g. Extract key facts and preferences in third-person form...')}
+						on:change={() => {
+							saveSettings({ memoryExtractionPrompt });
+						}}
+					/>
+				</div>
+			{/if}
+		{/if}
 	</div>
 
 	<div class="flex justify-end text-sm font-medium">

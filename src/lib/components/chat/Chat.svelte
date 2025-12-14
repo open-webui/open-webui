@@ -1816,7 +1816,7 @@
 			}
 		}
 
-		if ($settings?.memory ?? false) {
+		if (($settings?.memory ?? false) && ($settings?.memoryRecall ?? true)) {
 			features = { ...features, memory: true };
 		}
 
