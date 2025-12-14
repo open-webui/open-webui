@@ -28,7 +28,6 @@
 
 	import {
 		convertHeicToJpeg,
-		compressImage,
 		createMessagesList,
 		extractContentFromFile,
 		extractCurlyBraceWords,
@@ -101,6 +100,8 @@
 
 	export let prompt = '';
 	export let files = [];
+	const canceledImageUploads = new Set<string>();
+	const imageUploadAbortControllers = new Map<string, AbortController>();
 
 	export let selectedToolIds = [];
 	export let selectedFilterIds = [];
@@ -116,6 +117,53 @@
 	let currentTrackedModel = '';
 	let userModifiedEffortForCurrentModel = false;
 	let preferencesLoaded = false;
+
+	const BASE_REASONING_EFFORTS = ['low', 'medium', 'high'];
+
+	const getModelReasoningConfig = (modelId: string) => {
+		const model = $models.find((m) => m.id === modelId);
+		const reasoning = model?.info?.meta?.reasoning;
+
+		return {
+			enabled: reasoning?.enabled ?? true,
+			extraEfforts: (reasoning?.extra_efforts ?? []).filter((e) => typeof e === 'string' && e)
+		};
+	};
+
+	const getAllowedEffortsForModel = (modelId: string) => {
+		const { enabled, extraEfforts } = getModelReasoningConfig(modelId);
+		if (!enabled) return [];
+		const extras = Array.from(new Set(extraEfforts));
+		return Array.from(new Set([...BASE_REASONING_EFFORTS, ...extras]));
+	};
+
+	const clampEffortToAllowed = (effort: string, allowedEfforts: string[]) => {
+		if (!allowedEfforts || allowedEfforts.length === 0) {
+			return null;
+		}
+
+		if (allowedEfforts.includes(effort)) {
+			return effort;
+		}
+
+		// Prefer medium if available; otherwise first allowed
+		return allowedEfforts.includes('medium') ? 'medium' : allowedEfforts[0];
+	};
+
+	let reasoningEnabledForCurrentModel = true;
+	let allowedReasoningEffortsForCurrentModel: string[] = BASE_REASONING_EFFORTS;
+	let showReasoningEffortSelector = false;
+
+	$: if (selectedModelIds.length === 1) {
+		allowedReasoningEffortsForCurrentModel = getAllowedEffortsForModel(selectedModelIds[0]);
+		reasoningEnabledForCurrentModel = allowedReasoningEffortsForCurrentModel.length > 0;
+		showReasoningEffortSelector = reasoningEnabledForCurrentModel;
+	} else {
+		// Multi-model chat: no per-model reasoning selection (would apply to all).
+		allowedReasoningEffortsForCurrentModel = [];
+		reasoningEnabledForCurrentModel = false;
+		showReasoningEffortSelector = false;
+	}
 
 	// Load reasoning effort preferences from localStorage
 	const loadReasoningEffortPreferences = () => {
@@ -150,27 +198,46 @@
 			currentTrackedModel = newModelId;
 			userModifiedEffortForCurrentModel = false;
 
+			const allowed = getAllowedEffortsForModel(newModelId);
+
 			if (shouldLoadStoredPreference) {
 				const newEffort = reasoningEffortByModel[newModelId] || 'medium';
-				reasoningEffort = newEffort;
+				reasoningEffort = clampEffortToAllowed(newEffort, allowed) ?? 'medium';
 			} else {
-				reasoningEffortByModel[newModelId] = reasoningEffort;
+				const clamped = clampEffortToAllowed(reasoningEffort, allowed) ?? 'medium';
+				reasoningEffort = clamped;
+				reasoningEffortByModel[newModelId] = clamped;
 				saveReasoningEffortPreferences();
 			}
 		}
 	}
 
+	// If model capabilities change (admin updates), ensure current selection is still valid.
+	$: if (selectedModelIds.length === 1 && preferencesLoaded) {
+		const modelId = selectedModelIds[0];
+		const allowed = getAllowedEffortsForModel(modelId);
+		const clamped = clampEffortToAllowed(reasoningEffort, allowed);
+		if (clamped && clamped !== reasoningEffort) {
+			reasoningEffort = clamped;
+			reasoningEffortByModel[modelId] = clamped;
+			saveReasoningEffortPreferences();
+		}
+	}
+
 	// Handle user changes to reasoning effort
 	const handleReasoningEffortChange = (event) => {
-		const newEffort = event.target.value;
-		reasoningEffort = newEffort;
-		userModifiedEffortForCurrentModel = true;
+		const requestedEffort = event.target.value;
 
 		const modelToUse =
 			currentTrackedModel || (selectedModelIds.length > 0 ? selectedModelIds[0] : null);
+		const allowed = modelToUse ? getAllowedEffortsForModel(modelToUse) : BASE_REASONING_EFFORTS;
+		const clamped = clampEffortToAllowed(requestedEffort, allowed) ?? 'medium';
+
+		reasoningEffort = clamped;
+		userModifiedEffortForCurrentModel = true;
 
 		if (modelToUse) {
-			reasoningEffortByModel[modelToUse] = newEffort;
+			reasoningEffortByModel[modelToUse] = clamped;
 			saveReasoningEffortPreferences();
 		}
 	};
@@ -205,7 +272,8 @@
 		imageGenerationEnabled,
 		webSearchEnabled,
 		codeInterpreterEnabled,
-		reasoning: { effort: reasoningEffort }
+		// Only include reasoning when the selected model is configured as a reasoning model.
+		...(showReasoningEffortSelector ? { reasoning: { effort: reasoningEffort } } : {})
 	});
 
 	const inputVariableHandler = async (text: string): Promise<string> => {
@@ -708,142 +776,161 @@
 		}
 	};
 
-	const inputFilesHandler = async (inputFiles) => {
-		console.log('Input files handler called with:', inputFiles);
+		const getFileExtension = (filename: string) => {
+			const dotIndex = filename.lastIndexOf('.');
+			return dotIndex === -1 ? '' : filename.slice(dotIndex).toLowerCase();
+		};
 
-		if (
-			($config?.file?.max_count ?? null) !== null &&
-			files.length + inputFiles.length > $config?.file?.max_count
-		) {
-			toast.error(
-				$i18n.t(`You can only chat with a maximum of {{maxCount}} file(s) at a time.`, {
-					maxCount: $config?.file?.max_count
-				})
+		const normalizeImageMimeType = (type: string) => {
+			const normalized = (type || '').toLowerCase();
+			if (normalized === 'image/jpg') return 'image/jpeg';
+			return normalized;
+		};
+
+		const inferImageMimeTypeFromExtension = (filename: string) => {
+			const ext = getFileExtension(filename || '');
+			switch (ext) {
+				case '.png':
+					return 'image/png';
+				case '.jpg':
+				case '.jpeg':
+					return 'image/jpeg';
+				case '.gif':
+					return 'image/gif';
+				case '.webp':
+					return 'image/webp';
+				default:
+					return null;
+			}
+		};
+
+		const isHeicLikeImage = (file: File) => {
+			const type = (file.type || '').toLowerCase();
+			const ext = getFileExtension(file.name || '');
+			return (
+				type === 'image/heic' ||
+				type === 'image/heif' ||
+				type === 'image/heic-sequence' ||
+				type === 'image/heif-sequence' ||
+				ext === '.heic' ||
+				ext === '.heif'
 			);
-			return;
-		}
+		};
 
-		inputFiles.forEach(async (file) => {
-			console.log('Processing file:', {
-				name: file.name,
-				type: file.type,
-				size: file.size,
-				extension: file.name.split('.').at(-1)
-			});
+		const isImageLikeFile = (file: File) => {
+			const type = normalizeImageMimeType(file.type || '');
+			if (
+				[
+					'image/png',
+					'image/jpeg',
+					'image/webp',
+					'image/gif',
+					'image/heic',
+					'image/heif',
+					'image/heic-sequence',
+					'image/heif-sequence'
+				].includes(type)
+			) {
+				return true;
+			}
+
+			const ext = getFileExtension(file.name || '');
+			return ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.heic', '.heif'].includes(ext);
+		};
+
+		const replaceExtension = (filename: string, newExtension: string) => {
+			const dotIndex = filename.lastIndexOf('.');
+			if (dotIndex === -1) return `${filename}${newExtension}`;
+			return `${filename.slice(0, dotIndex)}${newExtension}`;
+		};
+
+		const inputFilesHandler = async (inputFiles: File[] | FileList) => {
+			const inputFilesArray = Array.from(inputFiles ?? []);
+			console.log('Input files handler called with:', inputFilesArray);
 
 			if (
-				($config?.file?.max_size ?? null) !== null &&
-				file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
+				($config?.file?.max_count ?? null) !== null &&
+				files.length + inputFilesArray.length > ($config?.file?.max_count ?? 0)
 			) {
-				console.log('File exceeds max size limit:', {
-					fileSize: file.size,
-					maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
-				});
 				toast.error(
-					$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
-						maxSize: $config?.file?.max_size
+					$i18n.t(`You can only chat with a maximum of {{maxCount}} file(s) at a time.`, {
+						maxCount: $config?.file?.max_count
 					})
 				);
 				return;
 			}
 
-			if (file['type'].startsWith('image/')) {
+			const handleInputFile = async (file: File) => {
+				console.log('Processing file:', {
+					name: file.name,
+					type: file.type,
+					size: file.size,
+					extension: file.name.split('.').at(-1)
+				});
+
+				if (
+					($config?.file?.max_size ?? null) !== null &&
+					file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
+				) {
+					console.log('File exceeds max size limit:', {
+						fileSize: file.size,
+						maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
+					});
+					toast.error(
+						$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
+							maxSize: $config?.file?.max_size
+						})
+					);
+					return;
+				}
+
+				if (!isImageLikeFile(file)) {
+					await uploadFileHandler(file);
+					return;
+				}
+
 				if (effectiveVisionCapableModels.length === 0) {
 					toast.error($i18n.t('Selected model(s) do not support image inputs'));
 					return;
 				}
 
-				const compressImageHandler = async (imageUrl, settings = {}, config = {}) => {
-					// Quick shortcut so we don't do unnecessary work.
-					const settingsCompression = settings?.imageCompression ?? false;
-					const configWidth = config?.file?.image_compression?.width ?? null;
-					const configHeight = config?.file?.image_compression?.height ?? null;
-
-					// If neither settings nor config wants compression, return original URL.
-					if (!settingsCompression && !configWidth && !configHeight) {
-						return imageUrl;
-					}
-
-					// Default to null (no compression unless set)
-					let width = null;
-					let height = null;
-
-					// If user/settings want compression, pick their preferred size.
-					if (settingsCompression) {
-						width = settings?.imageCompressionSize?.width ?? null;
-						height = settings?.imageCompressionSize?.height ?? null;
-					}
-
-					// Apply config limits as an upper bound if any
-					if (configWidth && (width === null || width > configWidth)) {
-						width = configWidth;
-					}
-					if (configHeight && (height === null || height > configHeight)) {
-						height = configHeight;
-					}
-
-					// Do the compression if required
-					if (width || height) {
-						return await compressImage(imageUrl, width, height);
-					}
-					return imageUrl;
-				};
-
-				// Generate a unique ID for tracking this upload
 				const tempImageId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+				const abortController = new AbortController();
+				imageUploadAbortControllers.set(tempImageId, abortController);
 
-				// Create a low-res preview immediately using canvas
-				const createThumbnail = (file): Promise<string> => {
-					return new Promise((resolve) => {
-						const thumbReader = new FileReader();
-						thumbReader.onload = (e) => {
-							const img = document.createElement('img');
-							img.onload = () => {
-								const canvas = document.createElement('canvas');
-								const MAX_THUMB_SIZE = 100;
-								let width = img.width;
-								let height = img.height;
+				let fileToUpload: File = file;
 
-								if (width > height) {
-									if (width > MAX_THUMB_SIZE) {
-										height *= MAX_THUMB_SIZE / width;
-										width = MAX_THUMB_SIZE;
-									}
-								} else {
-									if (height > MAX_THUMB_SIZE) {
-										width *= MAX_THUMB_SIZE / height;
-										height = MAX_THUMB_SIZE;
-									}
-								}
+				if (!isHeicLikeImage(file)) {
+					const normalizedType = normalizeImageMimeType(file.type || '');
+					const inferredType = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(normalizedType)
+						? normalizedType
+						: inferImageMimeTypeFromExtension(file.name || '');
 
-								canvas.width = width;
-								canvas.height = height;
-								const ctx = canvas.getContext('2d');
-								ctx.drawImage(img, 0, 0, width, height);
-								resolve(canvas.toDataURL('image/jpeg', 0.5));
-							};
-							img.onerror = () => resolve('');
-							img.src = e.target.result as string;
-						};
-						thumbReader.onerror = () => resolve('');
-						thumbReader.readAsDataURL(file);
-					});
-				};
+					if (inferredType) {
+						const currentType = (fileToUpload.type || '').toLowerCase();
+						const fileName = fileToUpload.name || `image-${Date.now()}`;
+						fileToUpload =
+							currentType === inferredType
+								? fileToUpload
+								: new File([fileToUpload], fileName, {
+										type: inferredType,
+										lastModified: fileToUpload.lastModified
+									});
+					}
+				}
 
-				// Add placeholder with loading state and thumbnail preview
-				const thumbnailUrl = await createThumbnail(file);
+				let previewUrl = URL.createObjectURL(fileToUpload);
 				files = [
 					...files,
 					{
 						type: 'image',
-						url: thumbnailUrl,
+						url: previewUrl,
 						status: 'uploading',
 						progress: 0,
 						itemId: tempImageId
 					}
 				];
 
-				// Helper to update progress
 				const updateProgress = (progress: number) => {
 					const fileIndex = files.findIndex((f) => f.itemId === tempImageId);
 					if (fileIndex !== -1) {
@@ -852,50 +939,81 @@
 					}
 				};
 
-				let reader = new FileReader();
+				try {
+					if (isHeicLikeImage(file)) {
+						const converted = await convertHeicToJpeg(file);
+						const outputName = replaceExtension(file.name || 'image', '.jpg');
+						fileToUpload = new File([converted as BlobPart], outputName, {
+							type: 'image/jpeg',
+							lastModified: file.lastModified
+						});
 
-				// Track reading progress (0-80% of total)
-				reader.onprogress = (event) => {
-					if (event.lengthComputable) {
-						const readProgress = Math.round((event.loaded / event.total) * 80);
-						updateProgress(readProgress);
+						const jpegPreviewUrl = URL.createObjectURL(fileToUpload);
+						URL.revokeObjectURL(previewUrl);
+						previewUrl = jpegPreviewUrl;
+
+						const fileIndex = files.findIndex((f) => f.itemId === tempImageId);
+						if (fileIndex !== -1) {
+							files[fileIndex].url = previewUrl;
+							files = files;
+						}
 					}
-				};
 
-				reader.onload = async (event) => {
-					let imageUrl = event.target.result;
+					const uploadedFile = await uploadFile(localStorage.token, fileToUpload, null, {
+						process: false,
+						waitForProcessing: false,
+						onProgress: updateProgress,
+						signal: abortController.signal
+					});
 
-					// Reading complete, now compressing (80-100%)
-					updateProgress(85);
+					if (!uploadedFile) {
+						throw new Error('Failed to upload image');
+					}
 
-					imageUrl = await compressImageHandler(imageUrl, $settings, $config);
+					URL.revokeObjectURL(previewUrl);
 
-					updateProgress(95);
-
-					// Find and update the placeholder image
 					const fileIndex = files.findIndex((f) => f.itemId === tempImageId);
-					if (fileIndex !== -1) {
-						files[fileIndex] = {
-							type: 'image',
-							url: `${imageUrl}`,
-							status: 'uploaded',
-							progress: 100,
-							itemId: tempImageId
-						};
-						files = files;
+					if (fileIndex === -1 || canceledImageUploads.has(tempImageId)) {
+						try {
+							await deleteFileById(localStorage.token, uploadedFile.id);
+						} catch (err) {
+							console.error(err);
+						}
+						return;
 					}
-				};
-				reader.onerror = () => {
-					// Remove the placeholder on error
+
+					files[fileIndex] = {
+						type: 'image',
+						url: `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}/content`,
+						status: 'uploaded',
+						progress: 100,
+						itemId: tempImageId,
+						file: uploadedFile,
+						id: uploadedFile.id
+					};
+					files = files;
+				} catch (err: any) {
+					URL.revokeObjectURL(previewUrl);
+
+					const isAbortError = err?.name === 'AbortError';
+					if (isAbortError || canceledImageUploads.has(tempImageId)) {
+						files = files.filter((f) => f.itemId !== tempImageId);
+						return;
+					}
+
+					console.error(err);
 					files = files.filter((f) => f.itemId !== tempImageId);
-					toast.error($i18n.t('Failed to read image file'));
-				};
-				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
-			} else {
-				uploadFileHandler(file);
+					toast.error($i18n.t('Failed to upload image'));
+				} finally {
+					canceledImageUploads.delete(tempImageId);
+					imageUploadAbortControllers.delete(tempImageId);
+				}
+			};
+
+			for (const file of inputFilesArray) {
+				void handleInputFile(file);
 			}
-		});
-	};
+		};
 
 	const onDragOver = (e) => {
 		e.preventDefault();
@@ -1346,7 +1464,23 @@
 																: 'group-hover:opacity-100 opacity-0 transition-opacity'}"
 															type="button"
 															aria-label={$i18n.t('Remove file')}
-															on:click={() => {
+																on:click={() => {
+																	const fileToRemove = files[fileIdx];
+																	if (
+																		fileToRemove?.type === 'image' &&
+																		fileToRemove?.status === 'uploading' &&
+																		fileToRemove?.itemId
+																	) {
+																		canceledImageUploads.add(fileToRemove.itemId);
+																		imageUploadAbortControllers.get(fileToRemove.itemId)?.abort();
+																		imageUploadAbortControllers.delete(fileToRemove.itemId);
+																	}
+
+																	const url = fileToRemove?.url;
+																	if (typeof url === 'string' && url.startsWith('blob:')) {
+																		URL.revokeObjectURL(url);
+																}
+
 																files.splice(fileIdx, 1);
 																files = files;
 															}}
@@ -1539,20 +1673,11 @@
 															if (clipboardData && clipboardData.items) {
 																for (const item of clipboardData.items) {
 																	if (item.type.indexOf('image') !== -1) {
-																		const blob = item.getAsFile();
-																		const reader = new FileReader();
-
-																		reader.onload = function (e) {
-																			files = [
-																				...files,
-																				{
-																					type: 'image',
-																					url: `${e.target.result}`
-																				}
-																			];
-																		};
-
-																		reader.readAsDataURL(blob);
+																		const file = item.getAsFile();
+																		if (file) {
+																			await inputFilesHandler([file]);
+																			e.preventDefault();
+																		}
 																	} else if (item?.kind === 'file') {
 																		const file = item.getAsFile();
 																		if (file) {
@@ -1796,43 +1921,42 @@
 												{/if}
 											{/each}
 
-											<!-- Reasoning Effort Selector -->
-											<Tooltip content={'Reasoning Effort'} placement="top">
-												<div class="relative flex items-center">
-													<div
-														class="group p-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
-													>
-														<svg
-															xmlns="http://www.w3.org/2000/svg"
-															viewBox="0 0 24 24"
-															fill="none"
-															stroke="currentColor"
-															stroke-width="2"
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															class="size-4"
+											{#if showReasoningEffortSelector}
+												<!-- Reasoning Effort Selector -->
+												<Tooltip content={'Reasoning Effort'} placement="top">
+													<div class="relative flex items-center">
+														<div
+															class="group p-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
 														>
+															<svg
+																xmlns="http://www.w3.org/2000/svg"
+																viewBox="0 0 24 24"
+																fill="none"
+																stroke="currentColor"
+																stroke-width="2"
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																class="size-4"
+															>
 															<path
 																d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
 															/>
 														</svg>
-														<span class="text-xs font-medium"
-															>{reasoningEffort.charAt(0).toUpperCase() +
-																reasoningEffort.slice(1)}</span
-														>
+															<span class="text-xs font-medium">{reasoningEffort}</span>
 
-														<select
-															bind:value={reasoningEffort}
-															on:change={handleReasoningEffortChange}
-															class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-														>
-															<option value="low">Low</option>
-															<option value="medium">Medium</option>
-															<option value="high">High</option>
-														</select>
+															<select
+																bind:value={reasoningEffort}
+																on:change={handleReasoningEffortChange}
+																class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+															>
+																{#each allowedReasoningEffortsForCurrentModel as effort}
+																	<option value={effort}>{effort}</option>
+																{/each}
+															</select>
+														</div>
 													</div>
-												</div>
-											</Tooltip>
+												</Tooltip>
+											{/if}
 
 											{#if imageGenerationEnabled}
 												<Tooltip content={$i18n.t('Image')} placement="top">

@@ -51,12 +51,16 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access
 from open_webui.socket.main import process_token_usage
 from open_webui.models.chats import Chats
+from open_webui.models.files import Files
+from open_webui.storage.provider import Storage
 from open_webui.constants import TASKS
 from open_webui.utils.task import title_generation_template, tags_generation_template
 from open_webui.config import (
     DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE,
 )
+import base64
+import re
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])
@@ -67,6 +71,93 @@ log.setLevel(SRC_LOG_LEVELS["OPENAI"])
 # Utility functions
 #
 ##########################################
+
+SUPPORTED_IMAGE_MIME_TYPES = {
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+    "image/gif",
+}
+
+
+def normalize_image_mime_type(mime_type: Optional[str]) -> Optional[str]:
+    if not mime_type:
+        return None
+
+    normalized = mime_type.strip().lower()
+    # Strip any optional parameters (e.g. "image/jpeg; charset=binary")
+    normalized = normalized.split(";", 1)[0].strip()
+
+    if normalized == "image/jpg":
+        return "image/jpeg"
+    if normalized == "image/pjpeg":
+        return "image/jpeg"
+    if normalized == "image/x-png":
+        return "image/png"
+
+    return normalized
+
+
+def sniff_image_mime_type(image_data: bytes) -> Optional[str]:
+    if not image_data:
+        return None
+
+    if image_data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+
+    if image_data.startswith(b"GIF87a") or image_data.startswith(b"GIF89a"):
+        return "image/gif"
+
+    if len(image_data) >= 12 and image_data[:4] == b"RIFF" and image_data[8:12] == b"WEBP":
+        return "image/webp"
+
+    if image_data[:3] == b"\xff\xd8\xff":
+        return "image/jpeg"
+
+    return None
+
+
+def infer_image_mime_type_from_filename(filename: Optional[str]) -> Optional[str]:
+    if not filename:
+        return None
+
+    lower = filename.lower()
+
+    if lower.endswith(".png"):
+        return "image/png"
+    if lower.endswith(".jpg") or lower.endswith(".jpeg"):
+        return "image/jpeg"
+    if lower.endswith(".gif"):
+        return "image/gif"
+    if lower.endswith(".webp"):
+        return "image/webp"
+
+    return None
+
+
+def resolve_image_mime_type(
+    mime_type: Optional[str],
+    filename: Optional[str],
+    image_data: bytes,
+) -> str:
+    normalized = normalize_image_mime_type(mime_type)
+    if normalized in SUPPORTED_IMAGE_MIME_TYPES:
+        return normalized
+
+    sniffed = sniff_image_mime_type(image_data)
+    if sniffed:
+        return sniffed
+
+    inferred = infer_image_mime_type_from_filename(filename)
+    if inferred:
+        return inferred
+
+    # Preserve an explicit image/* content-type if present (even if unsupported by a provider)
+    if normalized and normalized.startswith("image/"):
+        return normalized
+
+    # Final fallback for providers that require an image/* type.
+    return "image/jpeg"
 
 
 async def send_get_request(url, key=None, user: UserModel = None):
@@ -872,6 +963,34 @@ async def generate_chat_completion(
 
     payload = {**form_data}
     metadata = payload.pop("metadata", None)
+
+    # Resolve image URLs to base64
+    if "messages" in payload:
+        for message in payload["messages"]:
+            if isinstance(message.get("content"), list):
+                for part in message["content"]:
+                    if part.get("type") == "image_url":
+                        url = part["image_url"]["url"]
+                        # Check if it's a local file URL (e.g. /api/v1/files/{id}/content)
+                        # We look for the file ID pattern
+                        match = re.search(r"/api/v1/files/([^/]+)/content", url)
+                        if match:
+                            file_id = match.group(1)
+                            file = Files.get_file_by_id(file_id)
+                            if file:
+                                try:
+                                    file_path = Storage.get_file(file.path)
+                                    with open(file_path, "rb") as f:
+                                        image_data = f.read()
+                                        base64_image = base64.b64encode(image_data).decode("utf-8")
+                                        mime_type = resolve_image_mime_type(
+                                            (file.meta or {}).get("content_type"),
+                                            getattr(file, "filename", None),
+                                            image_data,
+                                        )
+                                        part["image_url"]["url"] = f"data:{mime_type};base64,{base64_image}"
+                                except Exception as e:
+                                    log.error(f"Error resolving image URL {url}: {e}")
 
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)

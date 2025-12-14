@@ -34,6 +34,21 @@ class ModelParams(BaseModel):
     pass
 
 
+class ReasoningConfig(BaseModel):
+    """Per-model reasoning configuration.
+
+    Notes:
+    - `enabled` defaults to True when omitted (frontend treats missing as enabled).
+    - `extra_efforts` allows enabling additional effort strings supported by some providers.
+      (e.g. "none", "minimal", "xhigh")
+    """
+
+    enabled: Optional[bool] = None
+    extra_efforts: Optional[list[str]] = None
+
+    model_config = ConfigDict(extra="allow")
+
+
 # ModelMeta is a model for the data stored in the meta field of the Model table
 class ModelMeta(BaseModel):
     profile_image_url: Optional[str] = "/static/favicon.png"
@@ -44,6 +59,9 @@ class ModelMeta(BaseModel):
     """
 
     capabilities: Optional[dict] = None
+
+    # Optional per-model reasoning settings.
+    reasoning: Optional[ReasoningConfig] = None
 
     model_config = ConfigDict(extra="allow")
 

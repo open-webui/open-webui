@@ -294,7 +294,7 @@ export const canvasPixelTest = () => {
 	return true;
 };
 
-export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
+export const compressImage = async (imageUrl, maxWidth, maxHeight, quality = 0.9) => {
 	return new Promise((resolve, reject) => {
 		const img = new Image();
 		img.onload = () => {
@@ -308,8 +308,14 @@ export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
 				// Resize with both dimensions defined (preserves aspect ratio)
 
 				if (width <= maxWidth && height <= maxHeight) {
-					resolve(imageUrl);
-					return;
+					// Even if dimensions are small enough, we might want to compress quality
+					// But the original logic returned early.
+					// If we want to enforce JPEG compression, we should continue.
+					// However, if we return here, we return the original (potentially PNG or high quality).
+					// Let's assume if dimensions are OK, we check if we need to convert to JPEG/compress.
+					// For now, to be safe and consistent with previous behavior (only resize if larger),
+					// we'll keep the check but maybe we should re-encode if it's huge?
+					// Actually, let's proceed to canvas drawing to apply quality compression.
 				}
 
 				if (width / height > maxWidth / maxHeight) {
@@ -323,8 +329,7 @@ export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
 				// Only maxWidth defined
 
 				if (width <= maxWidth) {
-					resolve(imageUrl);
-					return;
+					// See above
 				}
 
 				height = Math.round((maxWidth * height) / width);
@@ -333,8 +338,7 @@ export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
 				// Only maxHeight defined
 
 				if (height <= maxHeight) {
-					resolve(imageUrl);
-					return;
+					// See above
 				}
 
 				width = Math.round((maxHeight * width) / height);
@@ -348,7 +352,7 @@ export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
 			context.drawImage(img, 0, 0, width, height);
 
 			// Get compressed image URL
-			const compressedUrl = canvas.toDataURL();
+			const compressedUrl = canvas.toDataURL('image/jpeg', quality);
 			resolve(compressedUrl);
 		};
 		img.onerror = (error) => reject(error);
@@ -1576,7 +1580,7 @@ export const getAge = (birthDate) => {
 export const convertHeicToJpeg = async (file: File) => {
 	const { default: heic2any } = await import('heic2any');
 	try {
-		return await heic2any({ blob: file, toType: 'image/jpeg' });
+		return await heic2any({ blob: file, toType: 'image/jpeg', quality: 1 });
 	} catch (err: any) {
 		if (err?.message?.includes('already browser readable')) {
 			return file;

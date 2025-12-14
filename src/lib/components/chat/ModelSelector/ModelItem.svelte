@@ -75,7 +75,11 @@
 
 		<div class="flex items-center gap-2">
 			<div class="flex items-center min-w-fit">
-				<Tooltip content={$user?.role === 'admin' ? (item?.value ?? '') : ''} placement="top-start">
+				<Tooltip
+					content={$user?.role === 'admin' ? (item?.value ?? '') : ''}
+					placement="top-start"
+					touch={!$mobile}
+				>
 					<img
 						src={item.model?.info?.meta?.profile_image_url ??
 							`${WEBUI_BASE_URL}/static/favicon.png`}
@@ -86,7 +90,7 @@
 			</div>
 
 			<div class="flex items-center">
-				<Tooltip content={`${item.label} (${item.value})`} placement="top-start">
+				<Tooltip content={`${item.label} (${item.value})`} placement="top-start" touch={!$mobile}>
 					<div class="line-clamp-1">
 						{item.label}
 					</div>
@@ -108,6 +112,7 @@
 										: ''
 								}`}
 								className="self-end"
+								touch={!$mobile}
 							>
 								<span class=" text-xs font-medium text-gray-600 dark:text-gray-400 line-clamp-1"
 									>{item.model.ollama?.details?.parameter_size ?? ''}</span
@@ -122,6 +127,7 @@
 									FROM_NOW: dayjs(item.model.ollama?.expires_at * 1000).fromNow()
 								})}`}
 								className="self-end"
+								touch={!$mobile}
 							>
 								<div class=" flex items-center">
 									<span class="relative flex size-2">
@@ -140,10 +146,10 @@
 
 				{#if (item?.model?.tags ?? []).length > 0}
 					{#key item.model.id}
-						<Tooltip elementId="tags-{item.model.id}">
+						<Tooltip elementId="tags-{item.model.id}" touch={!$mobile}>
 							<div slot="tooltip" id="tags-{item.model.id}">
 								{#each item.model?.tags.sort((a, b) => a.name.localeCompare(b.name)) as tag}
-									<Tooltip content={tag.name} className="flex-shrink-0">
+									<Tooltip content={tag.name} className="flex-shrink-0" touch={!$mobile}>
 										<div class=" text-xs font-medium rounded-sm uppercase text-white">
 											{tag.name}
 										</div>
@@ -159,7 +165,7 @@
 				{/if}
 
 				{#if item.model?.direct}
-					<Tooltip content={`${$i18n.t('Direct')}`}>
+					<Tooltip content={`${$i18n.t('Direct')}`} touch={!$mobile}>
 						<div class="translate-y-[1px]">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -176,7 +182,7 @@
 						</div>
 					</Tooltip>
 				{:else if item.model.connection_type === 'external'}
-					<Tooltip content={`${$i18n.t('External')}`}>
+					<Tooltip content={`${$i18n.t('External')}`} touch={!$mobile}>
 						<div class="translate-y-[1px]">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -204,6 +210,7 @@
 						content={`${marked.parse(
 							sanitizeResponseContent(item.model?.info?.meta?.description).replaceAll('\n', '<br>')
 						)}`}
+						touch={!$mobile}
 					>
 						<div class=" translate-y-[1px]">
 							<svg

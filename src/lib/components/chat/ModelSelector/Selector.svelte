@@ -361,7 +361,15 @@
 
 <DropdownMenu.Root
 	bind:open={show}
-	onOpenChange={async () => {
+	onOpenChange={async (open) => {
+		if (open) {
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
+		}
 		searchValue = '';
 		window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
 
@@ -382,12 +390,14 @@
 				? 'dark:placeholder-gray-100 placeholder-gray-800'
 				: 'placeholder-gray-400'}"
 			on:mouseenter={async () => {
-				models.set(
-					await getModels(
-						localStorage.token,
-						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-					)
-				);
+				if (!$mobile) {
+					models.set(
+						await getModels(
+							localStorage.token,
+							$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+						)
+					);
+				}
 			}}
 		>
 			{#if selectedModel}
@@ -520,7 +530,7 @@
 							{/if}
 
 							{#each tags as tag}
-								<Tooltip content={tag}>
+								<Tooltip content={tag} touch={!$mobile}>
 									<button
 										class="min-w-fit outline-none px-1.5 py-0.5 {selectedTag === tag
 											? ''
@@ -570,6 +580,7 @@
 							searchValue: searchValue
 						})}
 						placement="top-start"
+						touch={!$mobile}
 					>
 						<button
 							class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl cursor-pointer data-highlighted:bg-muted"
@@ -615,7 +626,7 @@
 						</div>
 
 						<div class="mr-2 ml-1 translate-y-0.5">
-							<Tooltip content={$i18n.t('Cancel')}>
+							<Tooltip content={$i18n.t('Cancel')} touch={!$mobile}>
 								<button
 									class="text-gray-800 dark:text-gray-100"
 									on:click={() => {

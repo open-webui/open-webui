@@ -1636,11 +1636,31 @@ export interface ModelConfig {
 	params: ModelParams;
 }
 
+export type ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
+export type ExtraReasoningEffort = Exclude<ReasoningEffort, 'low' | 'medium' | 'high'>;
+
+export interface ModelReasoningConfig {
+	/**
+	 * Whether this model should be treated as a reasoning model.
+	 *
+	 * If omitted, the UI will treat it as enabled for backward compatibility.
+	 */
+	enabled?: boolean;
+
+	/**
+	 * Extra reasoning effort strings supported by some providers/models.
+	 * Base efforts (low/medium/high) are assumed.
+	 */
+	extra_efforts?: ExtraReasoningEffort[];
+}
+
 export interface ModelMeta {
 	toolIds: never[];
 	description?: string;
 	capabilities?: object;
 	profile_image_url?: string;
+	/** Optional per-model reasoning settings */
+	reasoning?: ModelReasoningConfig;
 }
 
 export interface ModelParams {}

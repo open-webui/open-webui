@@ -179,6 +179,40 @@
 	// Reasoning effort tracking
 	let reasoning = { effort: 'medium' };
 
+	const BASE_REASONING_EFFORTS = ['low', 'medium', 'high'];
+	const EXTRA_REASONING_EFFORTS = ['none', 'minimal', 'xhigh'];
+
+	const getModelReasoningConfig = (modelId: string) => {
+		const model = $models.find((m) => m.id === modelId);
+		const reasoningConfig = model?.info?.meta?.reasoning;
+
+		return {
+			enabled: reasoningConfig?.enabled ?? true,
+			extraEfforts: (reasoningConfig?.extra_efforts ?? []).filter((e) => typeof e === 'string' && e)
+		};
+	};
+
+	const getAllowedReasoningEffortsForModel = (modelId: string) => {
+		const { enabled, extraEfforts } = getModelReasoningConfig(modelId);
+		if (!enabled) return [];
+		return Array.from(new Set([...BASE_REASONING_EFFORTS, ...extraEfforts]));
+	};
+
+	const clampEffortToAllowed = (effort: string, allowed: string[]) => {
+		if (!allowed || allowed.length === 0) return null;
+		if (allowed.includes(effort)) return effort;
+		return allowed.includes('medium') ? 'medium' : allowed[0];
+	};
+
+	const getEffectiveReasoningForModel = (modelId: string, desired: { effort: string } | null) => {
+		const allowed = getAllowedReasoningEffortsForModel(modelId);
+		if (allowed.length === 0) return null;
+		const desiredEffort = desired?.effort;
+		if (!desiredEffort) return null;
+		const clamped = clampEffortToAllowed(desiredEffort, allowed);
+		return clamped ? { effort: clamped } : null;
+	};
+
 	const fetchTokenUsage = async () => {
 		try {
 			const response = await fetch(`${WEBUI_BASE_URL}/api/usage/groups`, {
@@ -1046,7 +1080,7 @@
 
 		if ($page.url.searchParams.get('reasoning')) {
 			const reasoningParam = $page.url.searchParams.get('reasoning')?.toLowerCase();
-			if (reasoningParam === 'high' || reasoningParam === 'medium' || reasoningParam === 'low') {
+			if ([...BASE_REASONING_EFFORTS, ...EXTRA_REASONING_EFFORTS].includes(reasoningParam)) {
 				reasoning.effort = reasoningParam;
 			}
 		}
@@ -1233,23 +1267,23 @@
 
 		await tick();
 
-		if ($chatId == chatId) {
-			if (!$temporaryChatEnabled) {
-				chat = await updateChatById(localStorage.token, chatId, {
-					models: selectedModels,
+			if ($chatId == chatId) {
+				if (!$temporaryChatEnabled) {
+					chat = await updateChatById(localStorage.token, chatId, {
+						models: selectedModels,
 					messages: messages,
 					history: history,
 					params: params,
+					reasoning: reasoning,
 					files: chatFiles
 				});
-
 				currentChatPage.set(1);
-				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+					await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				}
 			}
-		}
 
-		taskIds = null;
-	};
+			taskIds = null;
+		};
 
 	const chatActionHandler = async (chatId, actionId, modelId, responseMessageId, event = null) => {
 		const messages = createMessagesList(history, responseMessageId);
@@ -1650,7 +1684,7 @@
 
 		if (
 			files.length > 0 &&
-			files.filter((file) => file.type !== 'image' && file.status === 'uploading').length > 0
+			files.filter((file) => file.status === 'uploading').length > 0
 		) {
 			toast.error(
 				$i18n.t(`Oops! There are files still uploading. Please wait for the upload to complete.`)

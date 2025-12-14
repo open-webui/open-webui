@@ -115,6 +115,10 @@ def process_uploaded_file(request, file, file_path, file_item, file_metadata, us
                 request.app.state.config.CONTENT_EXTRACTION_ENGINE == "external"
             ):
                 process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
+            else:
+                # Images/videos are stored for chat usage, but typically skip content extraction.
+                # Mark as completed so clients waiting on `/process/status` don't hang on `pending`.
+                Files.update_file_data_by_id(file_item.id, {"status": "completed"})
         else:
             log.info(
                 f"File type {file.content_type} is not provided, but trying to process anyway"
@@ -181,6 +185,28 @@ def upload_file_handler(
         # Remove the leading dot from the file extension
         file_extension = file_extension[1:] if file_extension else ""
 
+        content_type = file.content_type
+        if content_type:
+            content_type = content_type.split(";", 1)[0].strip().lower()
+            if content_type == "image/jpg":
+                content_type = "image/jpeg"
+            elif content_type == "image/pjpeg":
+                content_type = "image/jpeg"
+            elif content_type == "image/x-png":
+                content_type = "image/png"
+        if not content_type or content_type == "application/octet-stream":
+            inferred_content_type = {
+                "png": "image/png",
+                "jpg": "image/jpeg",
+                "jpeg": "image/jpeg",
+                "gif": "image/gif",
+                "webp": "image/webp",
+                "heic": "image/heic",
+                "heif": "image/heif",
+            }.get(file_extension.lower())
+            if inferred_content_type:
+                content_type = inferred_content_type
+
         if process and request.app.state.config.ALLOWED_FILE_EXTENSIONS:
             request.app.state.config.ALLOWED_FILE_EXTENSIONS = [
                 ext for ext in request.app.state.config.ALLOWED_FILE_EXTENSIONS if ext
@@ -221,7 +247,7 @@ def upload_file_handler(
                     },
                     "meta": {
                         "name": name,
-                        "content_type": file.content_type,
+                        "content_type": content_type,
                         "size": len(contents),
                         "data": file_metadata,
                     },

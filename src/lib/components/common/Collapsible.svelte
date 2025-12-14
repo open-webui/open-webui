@@ -61,6 +61,15 @@
 
 	$: onChange(open);
 
+	// Auto-expand reasoning blocks during streaming when setting is enabled
+	$: if (
+		attributes?.type === 'reasoning' &&
+		$settings?.autoExpandReasoningDuringStreaming
+	) {
+		// Expand while streaming, collapse when done
+		open = attributes?.done !== 'true';
+	}
+
 	const collapsibleId = uuidv4();
 
 	function parseJSONString(str) {

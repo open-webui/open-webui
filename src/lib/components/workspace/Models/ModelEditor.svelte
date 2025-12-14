@@ -19,6 +19,7 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import AccessControl from '../common/AccessControl.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import DefaultFiltersSelector from './DefaultFiltersSelector.svelte';
 	import DefaultFeatures from './DefaultFeatures.svelte';
@@ -108,6 +109,10 @@
 	let actionIds = [];
 	let accessControl = {};
 
+	// Reasoning model configuration (per-model)
+	let reasoningModelEnabled = true; // default to enabled
+	let extraReasoningEfforts: string[] = [];
+
 	const addUsage = (base_model_id) => {
 		const baseModel = $models.find((m) => m.id === base_model_id);
 
@@ -152,6 +157,25 @@
 
 		info.access_control = accessControl;
 		info.meta.capabilities = capabilities;
+
+		// Persist reasoning config
+		const normalizedExtraEfforts = Array.from(new Set(extraReasoningEfforts)).filter(Boolean);
+		if (!reasoningModelEnabled) {
+			info.meta.reasoning = {
+				enabled: false,
+				extra_efforts: normalizedExtraEfforts.length > 0 ? normalizedExtraEfforts : undefined
+			};
+		} else if (normalizedExtraEfforts.length > 0) {
+			info.meta.reasoning = {
+				enabled: true,
+				extra_efforts: normalizedExtraEfforts
+			};
+		} else {
+			// Default state (enabled + no extras): omit to preserve backward compatible defaults
+			if (info.meta.reasoning) {
+				delete info.meta.reasoning;
+			}
+		}
 
 		if (vision_preprocessor_model_id) {
 			info.meta.vision_preprocessor_model_id = vision_preprocessor_model_id;
@@ -297,6 +321,10 @@
 			filterIds = model?.meta?.filterIds ?? [];
 			defaultFilterIds = model?.meta?.defaultFilterIds ?? [];
 			actionIds = model?.meta?.actionIds ?? [];
+
+			// Load reasoning config (default enabled if omitted)
+			reasoningModelEnabled = model?.meta?.reasoning?.enabled ?? true;
+			extraReasoningEfforts = model?.meta?.reasoning?.extra_efforts ?? [];
 
 			capabilities = { ...capabilities, ...(model?.meta?.capabilities ?? {}) };
 			defaultFeatureIds = model?.meta?.defaultFeatureIds ?? [];
@@ -802,6 +830,48 @@
 
 					<div class="my-2">
 						<Capabilities bind:capabilities />
+					</div>
+
+					<div class="my-2">
+						<div class="px-4 py-3 bg-gray-50 dark:bg-gray-950 rounded-3xl">
+							<div class="flex w-full justify-between items-center">
+								<div class="self-center text-sm font-semibold">{$i18n.t('Reasoning')}</div>
+							</div>
+
+							<div class="mt-2 flex justify-between items-center">
+								<div class="text-xs font-semibold">{$i18n.t('Reasoning model')}</div>
+								<div class="pr-2">
+									<Switch bind:state={reasoningModelEnabled} />
+								</div>
+							</div>
+							<div class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+								{$i18n.t('Controls whether the chat UI should expose reasoning effort controls for this model.')}
+							</div>
+
+							<div class="mt-3">
+								<div class="text-xs font-semibold mb-1">{$i18n.t('Extra reasoning efforts')}</div>
+								<div class="text-xs text-gray-500 dark:text-gray-500 mb-2">
+									{$i18n.t('Enable additional effort values supported by some reasoning models (in addition to low/medium/high).')}
+								</div>
+
+								<div class="flex flex-wrap gap-3 text-xs">
+									<label class="flex items-center gap-2">
+										<input type="checkbox" value="none" disabled={!reasoningModelEnabled} bind:group={extraReasoningEfforts} />
+										<span>none</span>
+									</label>
+
+									<label class="flex items-center gap-2">
+										<input type="checkbox" value="minimal" disabled={!reasoningModelEnabled} bind:group={extraReasoningEfforts} />
+										<span>minimal</span>
+									</label>
+
+									<label class="flex items-center gap-2">
+										<input type="checkbox" value="xhigh" disabled={!reasoningModelEnabled} bind:group={extraReasoningEfforts} />
+										<span>xhigh</span>
+									</label>
+								</div>
+							</div>
+						</div>
 					</div>
 
 					{#if !capabilities.vision}
