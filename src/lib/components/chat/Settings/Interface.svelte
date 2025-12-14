@@ -19,9 +19,6 @@
 	// Allow passing custom settings object (for admin defaults modal)
 	export let initialSettings: any = null;
 
-	// Use either provided initialSettings or global $settings store
-	$: settingsSource = initialSettings ?? $settings;
-
 	let backgroundImageUrl = null;
 	let inputFiles = null;
 	let filesInputElement;
