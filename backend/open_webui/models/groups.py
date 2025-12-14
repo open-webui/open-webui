@@ -319,7 +319,6 @@ class GroupTable:
                     }
                 )
                 db.commit()
-
                 return self.get_group_by_id(id=id)
         except Exception as e:
             log.exception(e)
