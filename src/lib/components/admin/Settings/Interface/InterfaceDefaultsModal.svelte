@@ -36,19 +36,92 @@
 		}
 	};
 
+	// Transform frontend settings structure to backend schema
+	const transformToBackendSchema = (settings: any): object => {
+	    const result: Record<string, any> = {};
+	    
+	    // Map nested title.auto to flat titleAutoGenerate
+	    if (settings.title?.auto !== undefined) {
+	        result.titleAutoGenerate = settings.title.auto;
+	    }
+	    
+	    // Direct mappings (flat fields that match)
+	    const directFields = [
+	        'autoTags', 'autoFollowUps', 'highContrastMode', 'detectArtifacts',
+	        'responseAutoCopy', 'showUsername', 'showUpdateToast', 'showChangelog',
+	        'showEmojiInCall', 'voiceInterruption', 'displayMultiModelResponsesInTabs',
+	        'chatFadeStreamingText', 'richTextInput', 'showFormattingToolbar',
+	        'insertPromptAsRichText', 'promptAutocomplete', 'insertSuggestionPrompt',
+	        'keepFollowUpPrompts', 'insertFollowUpPrompt', 'regenerateMenu',
+	        'largeTextAsFile', 'copyFormatted', 'collapseCodeBlocks', 'expandDetails',
+	        'landingPageMode', 'chatBubble', 'widescreenMode', 'splitLargeChunks',
+	        'scrollOnBranchChange', 'temporaryChatByDefault', 'userLocation',
+	        'showChatTitleInTab', 'notificationSound', 'notificationSoundAlways',
+	        'iframeSandboxAllowSameOrigin', 'iframeSandboxAllowForms',
+	        'stylizedPdfExport', 'hapticFeedback', 'ctrlEnterToSend',
+	        'showFloatingActionButtons', 'imageCompression', 'imageCompressionInChannels',
+	        'textScale'
+	    ];
+	    
+	    for (const field of directFields) {
+	        if (settings[field] !== undefined) {
+	            result[field] = settings[field];
+	        }
+	    }
+	    
+	    // Handle chatDirection - normalize to lowercase
+	    if (settings.chatDirection !== undefined) {
+	        result.chatDirection = settings.chatDirection?.toLowerCase() ?? 'auto';
+	    }
+	    
+	    // Filter out null/undefined values
+	    return Object.fromEntries(
+	        Object.entries(result).filter(([_, v]) => v !== undefined && v !== null)
+	    );
+	};
+	
+	// Transform backend schema back to frontend settings structure
+	const transformToFrontendSchema = (defaults: any): object => {
+	    const result: Record<string, any> = { ...defaults };
+	    
+	    // Map flat titleAutoGenerate to nested title.auto
+	    if (defaults.titleAutoGenerate !== undefined) {
+	        result.title = { auto: defaults.titleAutoGenerate };
+	        delete result.titleAutoGenerate;
+	    }
+	    
+	    return result;
+	};
+	
+	const loadDefaults = async () => {
+	    loading = true;
+	    try {
+	        const defaults = await getInterfaceDefaults(localStorage.token);
+	        // Transform backend format to frontend format
+	        adminDefaults.set(transformToFrontendSchema(defaults));
+	    } catch (error) {
+	        console.error('Error loading interface defaults:', error);
+	        toast.error($i18n.t('Failed to load interface defaults'));
+	    } finally {
+	        loading = false;
+	    }
+	};
+	
 	const handleSave = async () => {
-		saving = true;
-		try {
-			const currentDefaults = $adminDefaults;
-			await setInterfaceDefaults(localStorage.token, currentDefaults);
-			toast.success($i18n.t('Interface defaults saved successfully'));
-			show = false;
-		} catch (error) {
-			console.error('Error saving interface defaults:', error);
-			toast.error($i18n.t('Failed to save interface defaults'));
-		} finally {
-			saving = false;
-		}
+	    saving = true;
+	    try {
+	        const currentDefaults = $adminDefaults;
+	        // Transform frontend format to backend format before sending
+	        const backendPayload = transformToBackendSchema(currentDefaults);
+	        await setInterfaceDefaults(localStorage.token, backendPayload);
+	        toast.success($i18n.t('Interface defaults saved successfully'));
+	        show = false;
+	    } catch (error) {
+	        console.error('Error saving interface defaults:', error);
+	        toast.error($i18n.t('Failed to save interface defaults'));
+	    } finally {
+	        saving = false;
+	    }
 	};
 
 	const handleCancel = () => {
