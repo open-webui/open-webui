@@ -485,9 +485,7 @@ export const setInterfaceDefaults = async (token: string, defaults: object) => {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
-			defaults: defaults
-		})
+		body: JSON.stringify(defaults)
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
