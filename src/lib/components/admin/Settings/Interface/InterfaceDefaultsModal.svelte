@@ -71,7 +71,7 @@
 	    
 	    // Handle chatDirection - normalize to lowercase
 	    if (settings.chatDirection !== undefined) {
-	        result.chatDirection = settings.chatDirection?.toLowerCase() ?? 'auto';
+	        result.chatDirection = settings.chatDirection ?? 'auto';
 	    }
 	    
 	    // Filter out null/undefined values
