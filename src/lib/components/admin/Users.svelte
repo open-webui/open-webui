@@ -12,18 +12,21 @@
 
 	const i18n = getContext('i18n');
 
-	let selectedTab;
 	let isAdmin = false;
 	let isGroupManager = false;
+	let loaded = false;
 
-	$: {
-		const pathParts = $page.url.pathname.split('/');
+	// Derive selectedTab from pathname - this is the single source of truth
+	$: selectedTab = deriveTabFromPathname($page.url.pathname);
+
+	function deriveTabFromPathname(pathname) {
+		const pathParts = pathname.split('/');
 		const tabFromPath = pathParts[pathParts.length - 1];
-		selectedTab = ['overview', 'groups'].includes(tabFromPath) ? tabFromPath : 'overview';
+		return ['overview', 'groups'].includes(tabFromPath) ? tabFromPath : 'overview';
 	}
 
-	$: if (selectedTab) {
-		// scroll to selectedTab
+	$: if (selectedTab && loaded) {
+		// scroll to selectedTab when it changes
 		scrollToTab(selectedTab);
 	}
 
@@ -33,8 +36,6 @@
 			tabElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
 		}
 	};
-
-	let loaded = false;
 
 	onMount(async () => {
 		isAdmin = $user?.role === 'admin';
@@ -51,8 +52,9 @@
 			}
 
 			// Group managers can only access the groups tab
-			// Use $page.url.pathname directly to avoid race condition with reactive selectedTab
-			if (!$page.url.pathname.includes('/admin/users/groups')) {
+			// Derive tab from current pathname to check access
+			const currentTab = deriveTabFromPathname($page.url.pathname);
+			if (currentTab !== 'groups') {
 				await goto('/admin/users/groups');
 				return;
 			}

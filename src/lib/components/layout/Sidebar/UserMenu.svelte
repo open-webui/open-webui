@@ -7,7 +7,7 @@
 	import { fade, slide } from 'svelte/transition';
 
 	import { getUsage } from '$lib/apis';
-	import { userSignOut } from '$lib/apis/auths';
+	import { getSessionUser, userSignOut } from '$lib/apis/auths';
 	import { getManagedGroups } from '$lib/apis/groups';
 
 	import { showSettings, mobile, showSidebar, showShortcuts, user } from '$lib/stores';

@@ -59,7 +59,10 @@
 		document.body.appendChild(modalElement);
 		focusTrap = FocusTrap.createFocusTrap(modalElement, {
 			allowOutsideClick: (e) => {
-				return e.target.closest('[data-sonner-toast]') !== null;
+				return (
+					e.target.closest('[data-sonner-toast]') !== null ||
+					e.target.closest('.modal-content') === null
+				);
 			}
 		});
 		focusTrap.activate();

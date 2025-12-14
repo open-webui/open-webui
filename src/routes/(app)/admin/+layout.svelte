@@ -12,32 +12,55 @@
 	const i18n = getContext('i18n');
 
 	let loaded = false;
-	let isGroupManager = false;
+	let managedGroups: any[] = [];
+	let accessChecked = false;
 
-	// Reactive statement to keep isAdmin in sync with user store
+	// Reactive statements to keep auth state in sync with user store
 	$: isAdmin = $user?.role === 'admin';
+	$: isGroupManager = managedGroups && managedGroups.length > 0;
 
-	onMount(async () => {
-		if (!isAdmin) {
-			// Check if user is a group manager
-			const managedGroups = await getManagedGroups(localStorage.token).catch(() => []);
-			isGroupManager = managedGroups && managedGroups.length > 0;
-			
-			if (isGroupManager) {
-				// Group managers can only access /admin/users/groups
-				if (!$page.url.pathname.includes('/admin/users/groups')) {
-					await goto('/admin/users/groups');
-					return;
-				}
-			} else {
-				// Neither admin nor group manager - redirect to home
-				await goto('/');
+	async function checkAccess() {
+		// Prevent multiple simultaneous access checks
+		if (accessChecked) return;
+
+		if (!$user) {
+			// User not loaded yet, wait for reactive statement to trigger
+			return;
+		}
+
+		accessChecked = true;
+
+		if ($user.role === 'admin') {
+			// Admin has full access
+			loaded = true;
+			return;
+		}
+
+		// Check if user is a group manager
+		managedGroups = await getManagedGroups(localStorage.token).catch(() => []);
+		const hasManagerAccess = managedGroups && managedGroups.length > 0;
+
+		if (hasManagerAccess) {
+			// Group managers can only access /admin/users/groups
+			if (!$page.url.pathname.includes('/admin/users/groups')) {
+				await goto('/admin/users/groups');
 				return;
 			}
+			loaded = true;
+		} else {
+			// Neither admin nor group manager - redirect to home
+			await goto('/');
 		}
-		
-		loaded = true;
+	}
+
+	onMount(() => {
+		checkAccess();
 	});
+
+	// Re-check access when user store becomes available
+	$: if ($user && !accessChecked) {
+		checkAccess();
+	}
 </script>
 
 <svelte:head>

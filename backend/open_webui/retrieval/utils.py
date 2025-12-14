@@ -1088,23 +1088,19 @@ async def get_sources_from_items(
                         or knowledge_base.user_id == user.id
                         or has_access(user.id, "read", knowledge_base.access_control)
                     ):
-
-                        file_ids = knowledge_base.data.get("file_ids", [])
+                        files = Knowledges.get_files_by_id(knowledge_base.id)
 
                         documents = []
                         metadatas = []
-                        for file_id in file_ids:
-                            file_object = Files.get_file_by_id(file_id)
-
-                            if file_object:
-                                documents.append(file_object.data.get("content", ""))
-                                metadatas.append(
-                                    {
-                                        "file_id": file_id,
-                                        "name": file_object.filename,
-                                        "source": file_object.filename,
-                                    }
-                                )
+                        for file in files:
+                            documents.append(file.data.get("content", ""))
+                            metadatas.append(
+                                {
+                                    "file_id": file.id,
+                                    "name": file.filename,
+                                    "source": file.filename,
+                                }
+                            )
 
                         query_result = {
                             "documents": [documents],

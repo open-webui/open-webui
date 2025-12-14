@@ -6,6 +6,8 @@
 	export let indeterminate = false;
 	export let disabled = false;
 
+	export let disabledClassName = 'opacity-50 cursor-not-allowed';
+
 	let _state = 'unchecked';
 
 	$: _state = state;
@@ -16,7 +18,7 @@
 	'unchecked'
 		? 'bg-black outline-black '
 		: 'hover:outline-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'} text-white transition-all rounded-sm inline-block w-3.5 h-3.5 relative {disabled
-		? 'opacity-50 cursor-not-allowed'
+		? disabledClassName
 		: ''}"
 	on:click={() => {
 		if (disabled) return;
