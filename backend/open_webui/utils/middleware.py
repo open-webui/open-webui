@@ -345,7 +345,7 @@ async def chat_completion_tools_handler(
     sources = []
 
     specs = [tool["spec"] for tool in tools.values()]
-    tools_specs = json.dumps(specs)
+    tools_specs = json.dumps(specs, ensure_ascii=False)
 
     if request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE != "":
         template = request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
