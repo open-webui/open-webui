@@ -155,15 +155,14 @@
 		tools.set(toolsData);
 	};
 
-	let previousTextScale = null;
-
-	$: {
-		const currentTextScale = $settings?.textScale ?? null;
-		const scaleToApply = currentTextScale === null ? 1 : currentTextScale;
-		if (scaleToApply !== previousTextScale) {
-			previousTextScale = scaleToApply;
-			setTextScale(scaleToApply);
-		}
+	// Reactive derivation (pure)
+	$: effectiveTextScale = $settings?.textScale ?? 1;
+	
+	// Side effect handler (separated)
+	$: applyTextScale(effectiveTextScale);
+	
+	function applyTextScale(scale: number) {
+	    setTextScale(scale);
 	}
 
 	onMount(async () => {
