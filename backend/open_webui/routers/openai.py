@@ -987,9 +987,11 @@ async def generate_chat_completion(
                 for part in message["content"]:
                     if part.get("type") == "image_url":
                         url = part["image_url"]["url"]
-                        # Check if it's a local file URL (e.g. /api/v1/files/{id}/content)
-                        # We look for the file ID pattern
-                        match = re.search(r"/api/v1/files/([^/]+)/content", url)
+                        # Check if it's a local file URL (e.g. /api/v1/files/{id} or /api/v1/files/{id}/content)
+                        # We look for the file ID pattern - match both with and without /content
+                        match = re.search(r"/api/v1/files/([^/]+)(?:/content)?(?:\?|$)", url)
+                        if not match:
+                            match = re.search(r"/api/v1/files/([a-f0-9-]+)", url)
                         if match:
                             file_id = match.group(1)
                             file = Files.get_file_by_id(file_id)
@@ -1020,7 +1022,11 @@ async def generate_chat_completion(
                             if filename.lower().endswith(".pdf"):
                                 has_pdf_files = True
 
-                            match = re.search(r"/api/v1/files/([^/]+)/content", file_data)
+                            # Match both /api/v1/files/{id} and /api/v1/files/{id}/content
+                            match = re.search(r"/api/v1/files/([^/]+)(?:/content)?(?:\?|$)", file_data)
+                            if not match:
+                                # Also try without query string (simpler match for /api/v1/files/{id})
+                                match = re.search(r"/api/v1/files/([a-f0-9-]+)", file_data)
                             if match:
                                 file_id = match.group(1)
                                 file = Files.get_file_by_id(file_id)
