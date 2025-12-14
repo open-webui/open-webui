@@ -9,6 +9,7 @@ from fastapi.responses import Response, StreamingResponse, FileResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func, cast, text
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm.attributes import flag_modified
 
 from open_webui.models.auths import Auths
 from open_webui.models.oauth_sessions import OAuthSessions
@@ -675,25 +676,23 @@ async def reset_all_users_interface_settings(user=Depends(get_admin_user)):
                 reset_count = 0
                 offset = 0
                 
-                while True:
-                    users_batch = (
-                        db.query(User)
-                        .filter(User.settings.isnot(None))
-                        .limit(BATCH_SIZE)
-                        .offset(offset)
-                        .all()
-                    )
+                user_ids = [
+                    u.id for u in db.query(User.id)
+                    .filter(User.settings.isnot(None))
+                    .all()
+                ]
+                
+                for i in range(0, len(user_ids), BATCH_SIZE):
+                    batch_ids = user_ids[i:i + BATCH_SIZE]
+                    users_batch = db.query(User).filter(User.id.in_(batch_ids)).all()
                     
-                    if not users_batch:
-                        break
-                        
                     for u in users_batch:
                         if u.settings and "ui" in u.settings:
                             u.settings = {**u.settings, "ui": {}}
+                            flag_modified(u, "settings")
                             reset_count += 1
                     
                     db.flush()
-                    offset += BATCH_SIZE
 
             db.commit()
 
