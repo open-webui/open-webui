@@ -113,21 +113,43 @@
 		show = false;
 	};
 
+	const DEFAULT_PERMISSIONS = {
+	    workspace: {
+	        models: true,
+	        knowledge: true,
+	        prompts: true,
+	        tools: true,
+	        folders: true,
+	        direct_tool_servers: false,
+	        web_search: true,
+	        image_generation: true,
+	        code_interpreter: true
+	    },
+	    sharing: { ... },
+	    chat: { ... },
+	    features: { ... },
+	    ui: {
+	        interface_settings: true
+	    }
+	};
+	
 	const init = () => {
-		if (group) {
-			name = group.name;
-      description = group.description;
-
-			// Load permissions and fill in any missing properties (including new ui.interface_settings)
-			const loadedPermissions = group?.permissions ?? {};
-
-			permissions = {
-				workspace: { ...permissions.workspace, ...loadedPermissions.workspace },
-				sharing: { ...permissions.sharing, ...loadedPermissions.sharing },
-				chat: { ...permissions.chat, ...loadedPermissions.chat },
-				features: { ...permissions.features, ...loadedPermissions.features },
-				ui: { ...permissions.ui, ...loadedPermissions.ui }
-			};
+	    if (group) {
+	        name = group.name;
+	        description = group.description;
+	        const loadedPermissions = group?.permissions ?? {};
+	        // Create fresh object from defaults, then overlay loaded values
+	        permissions = {
+	            workspace: { ...DEFAULT_PERMISSIONS.workspace, ...loadedPermissions.workspace },
+	            sharing: { ...DEFAULT_PERMISSIONS.sharing, ...loadedPermissions.sharing },
+	            chat: { ...DEFAULT_PERMISSIONS.chat, ...loadedPermissions.chat },
+	            features: { ...DEFAULT_PERMISSIONS.features, ...loadedPermissions.features },
+	            ui: { ...DEFAULT_PERMISSIONS.ui, ...loadedPermissions.ui }
+	        };
+	        data = group?.data ?? {};
+	        userCount = group?.member_count ?? 0;
+	    }
+	};
 
 			data = group?.data ?? {};
 
