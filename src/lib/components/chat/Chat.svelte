@@ -2216,10 +2216,10 @@
 				responses
 			);
 
-			if (res && (res as any).ok && (res as any).body && generating) {
+			if (res && res.ok && res.body && generating) {
 				generationController = controller as AbortController;
 				const textStream = await createOpenAITextStream(
-					(res as any).body,
+					res.body,
 					Boolean($settings?.splitLargeChunks ?? false)
 				);
 				for await (const update of textStream) {
