@@ -53,7 +53,7 @@
 	} from '$lib/utils';
 
 	import {
-		import { createNewChat,
+		createNewChat,
 		 	getAllTags,
 		 	getChatById,
 		 	getChatList,
