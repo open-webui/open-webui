@@ -646,38 +646,41 @@ async def reset_all_users_interface_settings(user=Depends(get_admin_user)):
     This is an irreversible operation that clears all custom user interface settings.
     Admin only.
     """
-    try:
-        reset_count = 0
-
-        # Single transaction for all updates (optimized for performance)
-        with get_db() as db:
-            # Get all users with settings in one query
-            users = db.query(User).filter(User.settings.isnot(None)).all()
-
-            for user_obj in users:
-                if user_obj.settings and isinstance(user_obj.settings, dict):
-                    if "ui" in user_obj.settings:
-                        # Clear ui settings (will force fallback to admin defaults)
-                        user_obj.settings["ui"] = {}
-                        # IMPORTANT: SQLAlchemy doesn't auto-detect changes to mutable JSON fields
-                        # We must explicitly mark the field as modified
-                        flag_modified(user_obj, "settings")
-                        db.add(user_obj)
-                        reset_count += 1
-
-            # Single commit for all changes
+    with get_db() as db:
+        try:
+            # Bulk update: clear ui settings for all users who have them
+            # This runs entirely in the database, no Python-side iteration
+            reset_count = (
+                db.query(User)
+                .filter(
+                    User.settings.isnot(None),
+                    User.settings.has_key("ui")
+                )
+                .update(
+                    {
+                        User.settings: func.jsonb_set(
+                            cast(User.settings, JSONB),
+                            "{ui}",
+                            cast("{}", JSONB)
+                        )
+                    },
+                    synchronize_session=False
+                )
+            )
             db.commit()
 
-        log.info(f"Reset interface settings for {reset_count} users by admin {user.id}")
+            log.info(f"Reset interface settings for {reset_count} users by admin {user.id}")
 
-        return {
-            "success": True,
-            "users_reset": reset_count,
-            "message": f"Successfully reset interface settings for {reset_count} users"
-        }
-    except Exception as e:
-        log.exception(f"Error resetting users' interface settings: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to reset users' interface settings"
-        )
+            return {
+                "success": True,
+                "users_reset": reset_count,
+                "message": f"Successfully reset interface settings for {reset_count} users"
+            }
+
+        except SQLAlchemyError as e:
+            db.rollback()
+            log.exception(f"Database error resetting interface settings: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Database error while resetting interface settings"
+            )
