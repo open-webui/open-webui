@@ -243,6 +243,8 @@ async def get_status(request: Request):
         "status": True,
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
         "CHUNK_OVERLAP": request.app.state.config.CHUNK_OVERLAP,
+        "CHUNK_MIN_SIZE": request.app.state.config.CHUNK_MIN_SIZE,
+        "ENABLE_MARKDOWN_HEADER_SPLITTING": request.app.state.config.ENABLE_MARKDOWN_HEADER_SPLITTING,
         "RAG_TEMPLATE": request.app.state.config.RAG_TEMPLATE,
         "RAG_EMBEDDING_ENGINE": request.app.state.config.RAG_EMBEDDING_ENGINE,
         "RAG_EMBEDDING_MODEL": request.app.state.config.RAG_EMBEDDING_MODEL,
@@ -483,8 +485,10 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "RAG_EXTERNAL_RERANKER_API_KEY": request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
         # Chunking settings
         "TEXT_SPLITTER": request.app.state.config.TEXT_SPLITTER,
+        "ENABLE_MARKDOWN_HEADER_SPLITTING": request.app.state.config.ENABLE_MARKDOWN_HEADER_SPLITTING,
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
         "CHUNK_OVERLAP": request.app.state.config.CHUNK_OVERLAP,
+        "CHUNK_MIN_SIZE": request.app.state.config.CHUNK_MIN_SIZE,
         # File upload settings
         "FILE_MAX_SIZE": request.app.state.config.FILE_MAX_SIZE,
         "FILE_MAX_COUNT": request.app.state.config.FILE_MAX_COUNT,
@@ -668,8 +672,10 @@ class ConfigForm(BaseModel):
 
     # Chunking settings
     TEXT_SPLITTER: Optional[str] = None
+    ENABLE_MARKDOWN_HEADER_SPLITTING: Optional[bool] = None
     CHUNK_SIZE: Optional[int] = None
     CHUNK_OVERLAP: Optional[int] = None
+    CHUNK_MIN_SIZE: Optional[int] = None
 
     # File upload settings
     FILE_MAX_SIZE: Optional[int] = None
@@ -959,6 +965,11 @@ async def update_rag_config(
         if form_data.TEXT_SPLITTER is not None
         else request.app.state.config.TEXT_SPLITTER
     )
+    request.app.state.config.ENABLE_MARKDOWN_HEADER_SPLITTING = (
+        form_data.ENABLE_MARKDOWN_HEADER_SPLITTING
+        if form_data.ENABLE_MARKDOWN_HEADER_SPLITTING is not None
+        else request.app.state.config.ENABLE_MARKDOWN_HEADER_SPLITTING
+    )
     request.app.state.config.CHUNK_SIZE = (
         form_data.CHUNK_SIZE
         if form_data.CHUNK_SIZE is not None
@@ -968,6 +979,11 @@ async def update_rag_config(
         form_data.CHUNK_OVERLAP
         if form_data.CHUNK_OVERLAP is not None
         else request.app.state.config.CHUNK_OVERLAP
+    )
+    request.app.state.config.CHUNK_MIN_SIZE = (
+        form_data.CHUNK_MIN_SIZE
+        if form_data.CHUNK_MIN_SIZE is not None
+        else request.app.state.config.CHUNK_MIN_SIZE
     )
 
     # File upload settings
@@ -1157,8 +1173,10 @@ async def update_rag_config(
         "RAG_EXTERNAL_RERANKER_API_KEY": request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
         # Chunking settings
         "TEXT_SPLITTER": request.app.state.config.TEXT_SPLITTER,
+        "ENABLE_MARKDOWN_HEADER_SPLITTING": request.app.state.config.ENABLE_MARKDOWN_HEADER_SPLITTING,
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
         "CHUNK_OVERLAP": request.app.state.config.CHUNK_OVERLAP,
+        "CHUNK_MIN_SIZE": request.app.state.config.CHUNK_MIN_SIZE,
         # File upload settings
         "FILE_MAX_SIZE": request.app.state.config.FILE_MAX_SIZE,
         "FILE_MAX_COUNT": request.app.state.config.FILE_MAX_COUNT,
@@ -1279,30 +1297,9 @@ def save_docs_to_vector_db(
                 raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
-        if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
-            text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=request.app.state.config.CHUNK_SIZE,
-                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
-                add_start_index=True,
-            )
-            docs = text_splitter.split_documents(docs)
-        elif request.app.state.config.TEXT_SPLITTER == "token":
-            log.info(
-                f"Using token text splitter: {request.app.state.config.TIKTOKEN_ENCODING_NAME}"
-            )
-
-            tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
-            text_splitter = TokenTextSplitter(
-                encoding_name=str(request.app.state.config.TIKTOKEN_ENCODING_NAME),
-                chunk_size=request.app.state.config.CHUNK_SIZE,
-                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
-                add_start_index=True,
-            )
-            docs = text_splitter.split_documents(docs)
-        elif request.app.state.config.TEXT_SPLITTER == "markdown_header":
-            log.info("Using markdown header text splitter")
-
-            # Define headers to split on - covering most common markdown header levels
+        # Stage 1: Optional markdown header preprocessing
+        if request.app.state.config.ENABLE_MARKDOWN_HEADER_SPLITTING:
+            log.info("Applying markdown header preprocessing")
             headers_to_split_on = [
                 ("#", "Header 1"),
                 ("##", "Header 2"),
@@ -1314,28 +1311,18 @@ def save_docs_to_vector_db(
 
             markdown_splitter = MarkdownHeaderTextSplitter(
                 headers_to_split_on=headers_to_split_on,
-                strip_headers=False,  # Keep headers in content for context
+                strip_headers=False,
             )
 
             md_split_docs = []
             for doc in docs:
                 md_header_splits = markdown_splitter.split_text(doc.page_content)
-                text_splitter = RecursiveCharacterTextSplitter(
-                    chunk_size=request.app.state.config.CHUNK_SIZE,
-                    chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
-                    add_start_index=True,
-                )
-                md_header_splits = text_splitter.split_documents(md_header_splits)
-
-                # Convert back to Document objects, preserving original metadata
+                # Preserve original metadata and add headings
                 for split_chunk in md_header_splits:
                     headings_list = []
-                    # Extract header values in order based on headers_to_split_on
                     for _, header_meta_key_name in headers_to_split_on:
                         if header_meta_key_name in split_chunk.metadata:
-                            headings_list.append(
-                                split_chunk.metadata[header_meta_key_name]
-                            )
+                            headings_list.append(split_chunk.metadata[header_meta_key_name])
 
                     md_split_docs.append(
                         Document(
@@ -1345,8 +1332,103 @@ def save_docs_to_vector_db(
                     )
 
             docs = md_split_docs
+
+            # Apply minimum chunk size merging if configured
+            min_size = request.app.state.config.CHUNK_MIN_SIZE
+            max_size = request.app.state.config.CHUNK_SIZE
+
+            if min_size > 0:
+                # Determine measurement function based on TEXT_SPLITTER mode
+                if request.app.state.config.TEXT_SPLITTER == "token":
+                    encoding = tiktoken.get_encoding(
+                        str(request.app.state.config.TIKTOKEN_ENCODING_NAME)
+                    )
+                    measure_fn = lambda text: len(encoding.encode(text))
+                else:
+                    measure_fn = len
+
+                merged_docs = []
+                doc_index = 0
+                while doc_index < len(docs):
+                    current_doc = docs[doc_index]
+                    current_size = measure_fn(current_doc.page_content)
+
+                    # If chunk meets minimum, keep it as is
+                    if current_size >= min_size:
+                        merged_docs.append(current_doc)
+                        doc_index += 1
+                        continue
+
+                    # Merge with subsequent chunks
+                    combined_content = current_doc.page_content
+                    combined_headings = list(current_doc.metadata.get("headings", []))
+                    merge_index = doc_index + 1
+
+                    while merge_index < len(docs):
+                        next_doc = docs[merge_index]
+                        next_content = next_doc.page_content
+                        next_headings = next_doc.metadata.get("headings", [])
+
+                        # Don't merge across source/file boundaries
+                        # Require both to have source/file_id AND match
+                        current_source = current_doc.metadata.get("source")
+                        next_source = next_doc.metadata.get("source")
+                        if current_source is None or next_source is None or current_source != next_source:
+                            break
+                        
+                        current_file_id = current_doc.metadata.get("file_id")
+                        next_file_id = next_doc.metadata.get("file_id")
+                        if current_file_id is None or next_file_id is None or current_file_id != next_file_id:
+                            break
+
+                        # Check if adding next chunk would exceed max
+                        test_content = combined_content + "\n\n" + next_content
+                        test_size = measure_fn(test_content)
+
+                        if test_size > max_size:
+                            break
+
+                        # Add the chunk
+                        combined_content = test_content
+                        combined_headings.extend(next_headings)
+                        merge_index += 1
+
+                        # Check if we've met the minimum
+                        if test_size >= min_size:
+                            break
+
+                    # Create merged document
+                    merged_docs.append(
+                        Document(
+                            page_content=combined_content,
+                            metadata={**current_doc.metadata, "headings": combined_headings},
+                        )
+                    )
+                    doc_index = merge_index
+
+                docs = merged_docs
+
+        # Stage 2: Apply character or token splitting
+        if request.app.state.config.TEXT_SPLITTER == "token":
+            log.info(
+                f"Using token text splitter: {request.app.state.config.TIKTOKEN_ENCODING_NAME}"
+            )
+            tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
+            text_splitter = TokenTextSplitter(
+                encoding_name=str(request.app.state.config.TIKTOKEN_ENCODING_NAME),
+                chunk_size=request.app.state.config.CHUNK_SIZE,
+                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
+                add_start_index=True,
+            )
+            docs = text_splitter.split_documents(docs)
         else:
-            raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
+            # Default to character splitting
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=request.app.state.config.CHUNK_SIZE,
+                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
+                add_start_index=True,
+            )
+            docs = text_splitter.split_documents(docs)
 
     if len(docs) == 0:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)

@@ -2821,6 +2821,17 @@ CHUNK_OVERLAP = PersistentConfig(
     "rag.chunk_overlap",
     int(os.environ.get("CHUNK_OVERLAP", "100")),
 )
+CHUNK_MIN_SIZE = PersistentConfig(
+    "CHUNK_MIN_SIZE",
+    "rag.chunk_min_size",
+    int(os.environ.get("CHUNK_MIN_SIZE", "0")),
+)
+
+ENABLE_MARKDOWN_HEADER_SPLITTING = PersistentConfig(
+    "ENABLE_MARKDOWN_HEADER_SPLITTING",
+    "rag.enable_markdown_header_splitting",
+    os.environ.get("ENABLE_MARKDOWN_HEADER_SPLITTING", "False").lower() == "true",
+)
 
 DEFAULT_RAG_TEMPLATE = """### Task:
 Respond to the user query using the provided context, incorporating inline citations in the format [id] **only when the <source> tag includes an explicit id attribute** (e.g., <source id="1">).

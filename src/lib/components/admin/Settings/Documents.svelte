@@ -728,10 +728,24 @@
 								>
 									<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
 									<option value="token">{$i18n.t('Token')} ({$i18n.t('Tiktoken')})</option>
-									<option value="markdown_header">{$i18n.t('Markdown (Header)')}</option>
 								</select>
 							</div>
 						</div>
+
+						<div class="  mb-2.5 flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">
+								<Tooltip
+									placement="top-start"
+									content={$i18n.t('Split documents by markdown headers before applying character/token splitting. Small chunks are merged to meet minimum size.')}
+								>
+									{$i18n.t('Markdown Header Splitting')}
+								</Tooltip>
+							</div>
+							<div class="flex items-center relative">
+								<Switch bind:state={RAGConfig.ENABLE_MARKDOWN_HEADER_SPLITTING} />
+							</div>
+						</div>
+
 
 						<div class="  mb-2.5 flex w-full justify-between">
 							<div class=" flex gap-1.5 w-full">
@@ -769,6 +783,31 @@
 								</div>
 							</div>
 						</div>
+
+						{#if RAGConfig.ENABLE_MARKDOWN_HEADER_SPLITTING}
+							<div class="  mb-2.5 flex w-full justify-between">
+								<div class="  w-full justify-between">
+									<div class="self-center text-xs font-medium min-w-fit mb-1">
+										<Tooltip
+											placement="top-start"
+											content={$i18n.t('Minimum chunk size (0 to disable). Small chunks from markdown header splits are merged until they meet this threshold.')}
+										>
+											{$i18n.t('Min Chunk Size')}
+										</Tooltip>
+									</div>
+									<div class="self-center">
+										<input
+											class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+											type="number"
+											placeholder={$i18n.t('Enter Min Chunk Size')}
+											bind:value={RAGConfig.CHUNK_MIN_SIZE}
+											autocomplete="off"
+											min="0"
+										/>
+									</div>
+								</div>
+							</div>
+						{/if}
 					{/if}
 				</div>
 
