@@ -376,11 +376,8 @@
 						<button
 							class="self-center p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 							on:click={() => {
-								if (textScale === null) {
-									textScale = 1;
-								}
-
-								setTextScaleHandler(Math.max(0.5, textScale - 0.1));
+								const current = textScale ?? 1;
+								setTextScaleHandler(Math.max(0.5, parseFloat((current - 0.1).toFixed(2))));
 							}}
 							type="button"
 							aria-label={$i18n.t('Decrease text scale')}
@@ -404,10 +401,10 @@
 
 						<button
 							class="self-center p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-              on:click={() => {
-                  textScale = Math.max(1, parseFloat((textScale - 0.1).toFixed(2)));
-                  setTextScaleHandler(textScale);
-                }}
+				              on:click={() => {
+								const current = textScale ?? 1;
+								setTextScaleHandler(Math.min(1.5, parseFloat((current + 0.1).toFixed(2))));
+							}}
 							type="button"
 							aria-label={$i18n.t('Increase text scale')}
 						>
@@ -416,10 +413,9 @@
 
 						<button
 							class="p-1 px-3 text-xs flex rounded-sm transition"
-              on:click={() => {
-                  textScale = Math.min(1.5, parseFloat((textScale + 0.1).toFixed(2)));
-                  setTextScaleHandler(textScale);
-                }}
+								on:click={() => {
+									setTextScaleHandler(1);
+								}}
 							type="button"
 						>
 							<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
