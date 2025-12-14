@@ -1298,6 +1298,8 @@ def save_docs_to_vector_db(
 
     if split:
         # Stage 1: Optional markdown header preprocessing
+        log.info(f"ENABLE_MARKDOWN_HEADER_SPLITTING = {request.app.state.config.ENABLE_MARKDOWN_HEADER_SPLITTING}")
+        log.info(f"CHUNK_MIN_SIZE = {request.app.state.config.CHUNK_MIN_SIZE}")
         if request.app.state.config.ENABLE_MARKDOWN_HEADER_SPLITTING:
             log.info("Applying markdown header preprocessing")
             headers_to_split_on = [
