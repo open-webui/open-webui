@@ -1670,9 +1670,20 @@ export const getCodeBlockContents = (content: string): object => {
  * @returns A new object with deep-merged properties
  */
 export const deepMerge = (target: any, source: any): any => {
-	// Handle null/undefined cases
-	if (!source) return target;
-	if (!target) return source;
+	// Handle null/undefined cases - distinguish between "not provided" and "explicitly null"
+	if (source === undefined) return target;
+	if (target === undefined) return source;
+	if (source === null || target === null) return source; // Explicit null takes precedence
+
+	// If either isn't an object, source wins
+	if (typeof source !== 'object' || typeof target !== 'object') {
+		return source;
+	}
+
+	// Both are objects (and not null)
+	if (Array.isArray(source) || Array.isArray(target)) {
+		return source; // Arrays are replaced, not merged
+	}
 
 	const result = { ...target };
 
@@ -1681,18 +1692,18 @@ export const deepMerge = (target: any, source: any): any => {
 			const sourceValue = source[key];
 			const targetValue = result[key];
 
-			// If both are objects (and not arrays), recursively merge
+			// Recursively merge if both are non-null objects
 			if (
-				sourceValue &&
+				sourceValue !== null &&
+				targetValue !== null &&
 				typeof sourceValue === 'object' &&
-				!Array.isArray(sourceValue) &&
-				targetValue &&
 				typeof targetValue === 'object' &&
+				!Array.isArray(sourceValue) &&
 				!Array.isArray(targetValue)
 			) {
 				result[key] = deepMerge(targetValue, sourceValue);
 			} else {
-				// Otherwise, source value takes precedence
+				// Source value takes precedence (including explicit null)
 				result[key] = sourceValue;
 			}
 		}
