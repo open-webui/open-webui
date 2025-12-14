@@ -598,9 +598,12 @@ class InterfaceDefaultsForm(BaseModel):
     @field_validator("chatDirection")
     @classmethod
     def validate_chat_direction(cls, v):
-        if v is not None and v not in ("auto", "ltr", "rtl"):
+        if v is None:
+            return v
+        normalized = v.lower()
+        if normalized not in ("auto", "ltr", "rtl"):
             raise ValueError("chatDirection must be 'auto', 'ltr', or 'rtl'")
-        return v
+        return normalized  # Return normalized lowercase value
 
     @field_validator("textScale")
     @classmethod
