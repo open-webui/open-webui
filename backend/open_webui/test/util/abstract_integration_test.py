@@ -26,17 +26,20 @@ class AbstractIntegrationTest:
     def create_url(self, path="", query_params=None):
         if self.BASE_PATH is None:
             raise Exception("BASE_PATH is not set")
-        parts = self.BASE_PATH.split("/")
-        parts = [part.strip() for part in parts if part.strip() != ""]
-        path_parts = path.split("/")
-        path_parts = [part.strip() for part in path_parts if part.strip() != ""]
+
+        base = self.BASE_PATH.rstrip("/")
+        if not path:
+            path = "/"
+        elif not path.startswith("/"):
+            path = f"/{path}"
+
         query_parts = ""
         if query_params:
             query_parts = "&".join(
                 [f"{key}={value}" for key, value in query_params.items()]
             )
             query_parts = f"?{query_parts}"
-        return "/".join(parts + path_parts) + query_parts
+        return f"{base}{path}" + query_parts
 
     @classmethod
     def setup_class(cls):
@@ -69,6 +72,14 @@ class AbstractPostgresTest(AbstractIntegrationTest):
     @classmethod
     def setup_class(cls):
         super().setup_class()
+        cls._owns_docker_container = False
+
+        # When running the full test suite, `conftest.py` provisions a shared
+        # Postgres container and sets DATABASE_URL before any app imports happen.
+        if os.environ.get("OPEN_WEBUI_TEST_MANAGED_POSTGRES") == "1":
+            cls.fast_api_client = get_fast_api_client()
+            return
+
         try:
             env_vars_postgres = {
                 "POSTGRES_USER": "user",
@@ -84,6 +95,7 @@ class AbstractPostgresTest(AbstractIntegrationTest):
                 ports={5432: ("0.0.0.0", 8081)},
                 command="postgres -c log_statement=all",
             )
+            cls._owns_docker_container = True
             time.sleep(0.5)
 
             database_url = cls._create_db_url(env_vars_postgres)
@@ -136,7 +148,18 @@ class AbstractPostgresTest(AbstractIntegrationTest):
     @classmethod
     def teardown_class(cls) -> None:
         super().teardown_class()
-        cls.docker_client.containers.get(cls.DOCKER_CONTAINER_NAME).remove(force=True)
+        if not getattr(cls, "_owns_docker_container", False):
+            return
+
+        docker_client = getattr(cls, "docker_client", None)
+        if docker_client is None:
+            return
+
+        try:
+            docker_client.containers.get(cls.DOCKER_CONTAINER_NAME).remove(force=True)
+        except Exception:
+            # Don't error-out the suite during cleanup.
+            return
 
     def teardown_method(self):
         from open_webui.internal.db import Session
@@ -156,6 +179,5 @@ class AbstractPostgresTest(AbstractIntegrationTest):
             "tag",
             '"user"',
         ]
-        for table in tables:
-            Session.execute(text(f"TRUNCATE TABLE {table}"))
+        Session.execute(text(f"TRUNCATE TABLE {', '.join(tables)} CASCADE"))
         Session.commit()

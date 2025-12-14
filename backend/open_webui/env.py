@@ -372,6 +372,18 @@ ENABLE_REALTIME_CHAT_SAVE = (
     os.environ.get("ENABLE_REALTIME_CHAT_SAVE", "False").lower() == "true"
 )
 
+WEBUI_CHAT_ENCRYPTION_DEFAULT = (
+    os.environ.get("WEBUI_CHAT_ENCRYPTION_DEFAULT", "False").lower() == "true"
+)
+
+WEBUI_CHAT_ENCRYPTION_REQUIRED = (
+    os.environ.get("WEBUI_CHAT_ENCRYPTION_REQUIRED", "False").lower() == "true"
+)
+
+WEBUI_CHAT_ENCRYPTION_ALLOW_LEGACY_READ = (
+    os.environ.get("WEBUI_CHAT_ENCRYPTION_ALLOW_LEGACY_READ", "True").lower() == "true"
+)
+
 ENABLE_QUERIES_CACHE = os.environ.get("ENABLE_QUERIES_CACHE", "False").lower() == "true"
 
 ####################################

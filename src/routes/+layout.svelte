@@ -55,7 +55,8 @@
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import { getUserSettings } from '$lib/apis/users';
+	import { getUserSettings, updateUserSettings } from '$lib/apis/users';
+	import { getOrCreateUMK } from '$lib/utils/crypto/envelope';
 	import dayjs from 'dayjs';
 	import { getChannels } from '$lib/apis/channels';
 
@@ -695,6 +696,27 @@
 					settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
 				}
 				setTextScale($settings?.textScale ?? 1);
+
+				try {
+					const policy = $config?.features?.chat_encryption ?? null;
+					const current = $settings?.chatEncryptionEnabled;
+					const shouldEnable =
+						(policy?.required ?? false) ||
+						((policy?.default ?? false) && typeof current === 'undefined');
+
+					if (shouldEnable && current !== true) {
+						const { fingerprint } = await getOrCreateUMK();
+						const updated = {
+							...$settings,
+							chatEncryptionEnabled: true,
+							chatEncryptionUmkFingerprint: fingerprint
+						};
+						settings.set(updated);
+						await updateUserSettings(localStorage.token, { ui: updated });
+					}
+				} catch (error) {
+					console.error('Error initializing chat encryption:', error);
+				}
 
 				// Set up the token expiry check
 				if (tokenTimer) {

@@ -4,6 +4,7 @@
 
 	import {
 		chats,
+		config,
 		user,
 		settings,
 		scrollPaginationEnabled,
@@ -17,17 +18,166 @@
 		getAllChats,
 		getChatList,
 		getPinnedChatList,
-		importChats
+		importChats,
+		updateChatById
 	} from '$lib/apis/chats';
-	import { getImportOrigin, convertOpenAIChats } from '$lib/utils';
+	import { copyToClipboard, getImportOrigin, convertOpenAIChats } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import ArchivedChatsModal from '$lib/components/layout/ArchivedChatsModal.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
+	import {
+		encryptChatContent,
+		exportRecoveryKey,
+		getOrCreateUMK,
+		importRecoveryKey
+	} from '$lib/utils/crypto/envelope';
 
 	const i18n = getContext('i18n');
 
 	export let saveSettings: Function;
+
+	let chatEncryptionEnabled = false;
+	$: encryptionPolicy = $config?.features?.chat_encryption ?? null;
+	$: encryptionRequired = encryptionPolicy?.required ?? false;
+	$: if (encryptionRequired) {
+		chatEncryptionEnabled = true;
+	}
+
+	onMount(() => {
+		chatEncryptionEnabled = encryptionRequired || ($settings?.chatEncryptionEnabled ?? false);
+	});
+
+	const enableChatEncryption = async () => {
+		const { fingerprint } = await getOrCreateUMK();
+		await saveSettings({ chatEncryptionEnabled: true, chatEncryptionUmkFingerprint: fingerprint });
+		chatEncryptionEnabled = true;
+	};
+
+	const disableChatEncryption = async () => {
+		await saveSettings({ chatEncryptionEnabled: false });
+		chatEncryptionEnabled = false;
+	};
+
+	const exportRecoveryKeyHandler = async () => {
+		try {
+			const key = await exportRecoveryKey();
+			copyToClipboard(key);
+			toast.success($i18n.t('Recovery key copied to clipboard'));
+		} catch (error) {
+			console.error(error);
+			toast.error($i18n.t('Failed to export recovery key'));
+		}
+	};
+
+	const importRecoveryKeyHandler = async () => {
+		const value = prompt($i18n.t('Paste your recovery key')) ?? '';
+		if (!value.trim()) return;
+
+		try {
+			const { fingerprint } = await importRecoveryKey(value);
+			await saveSettings({
+				chatEncryptionEnabled: true,
+				chatEncryptionUmkFingerprint: fingerprint
+			});
+			chatEncryptionEnabled = true;
+			toast.success($i18n.t('Recovery key imported'));
+		} catch (error) {
+			console.error(error);
+			toast.error($i18n.t('Failed to import recovery key'));
+		}
+	};
+
+	let encryptAllInProgress = false;
+	let encryptAllTotal = 0;
+	let encryptAllDone = 0;
+	let encryptAllErrors = 0;
+	let cancelEncryptAll = false;
+
+	const splitChatForEncryption = (plainChat: any, chatId: string) => {
+		const meta = {
+			id: chatId,
+			title: plainChat?.title ?? 'New Chat',
+			models: plainChat?.models ?? [],
+			timestamp: plainChat?.timestamp ?? Date.now()
+		};
+
+		const content = { ...(plainChat ?? {}) };
+		delete content.id;
+		delete content.title;
+		delete content.models;
+		delete content.timestamp;
+
+		return { meta, content };
+	};
+
+	const encryptAllChatsHandler = async () => {
+		if (encryptAllInProgress) return;
+		cancelEncryptAll = false;
+		encryptAllInProgress = true;
+		encryptAllTotal = 0;
+		encryptAllDone = 0;
+		encryptAllErrors = 0;
+
+		try {
+			const { key, fingerprint } = await getOrCreateUMK();
+			if (!encryptionRequired && !($settings?.chatEncryptionEnabled ?? false)) {
+				await saveSettings({
+					chatEncryptionEnabled: true,
+					chatEncryptionUmkFingerprint: fingerprint
+				});
+				chatEncryptionEnabled = true;
+			}
+
+			const allChats = await getAllChats(localStorage.token);
+			const legacyChats = (allChats ?? []).filter((c) => c?.chat && !c.chat?.enc);
+			encryptAllTotal = legacyChats.length;
+
+			for (const c of legacyChats) {
+				if (cancelEncryptAll) break;
+
+				try {
+					const plainChat = c.chat;
+					const { meta, content } = splitChatForEncryption(
+						{ ...plainChat, title: plainChat?.title ?? c.title ?? 'New Chat' },
+						c.id
+					);
+
+					const encrypted = await encryptChatContent(key, c.id, $user.id, content);
+					await updateChatById(localStorage.token, c.id, { enc: encrypted.enc, meta });
+					encryptAllDone += 1;
+				} catch (error) {
+					console.error(error);
+					encryptAllErrors += 1;
+				}
+			}
+
+			currentChatPage.set(1);
+			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+			pinnedChats.set(await getPinnedChatList(localStorage.token));
+			scrollPaginationEnabled.set(true);
+
+			if (cancelEncryptAll) {
+				toast.info($i18n.t('Encryption canceled'));
+			} else if (encryptAllErrors > 0) {
+				toast.warning(
+					$i18n.t('Encrypted {{done}} chats, {{errors}} failed', {
+						done: encryptAllDone,
+						errors: encryptAllErrors
+					})
+				);
+			} else {
+				toast.success(
+					$i18n.t('Encrypted {{count}} chats', {
+						count: encryptAllDone
+					})
+				);
+			}
+		} finally {
+			encryptAllInProgress = false;
+		}
+	};
 
 	// Chats
 	let importFiles;
@@ -193,6 +343,91 @@
 					</div>
 					<div class=" self-center text-sm font-medium">{$i18n.t('Export Chats')}</div>
 				</button>
+			{/if}
+		</div>
+
+		<hr class=" border-gray-100/30 dark:border-gray-850/30" />
+
+		<div class="flex flex-col space-y-2">
+			<div id="chat-encryption-label" class="py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs">{$i18n.t('Encrypt Chats')}</div>
+				<div class="flex items-center gap-2 p-1">
+					<Switch
+						ariaLabelledbyId="chat-encryption-label"
+						tooltip={encryptionRequired ? $i18n.t('Required') : true}
+						bind:state={chatEncryptionEnabled}
+						on:change={async (e) => {
+							if (encryptionRequired) {
+								chatEncryptionEnabled = true;
+								return;
+							}
+
+							if (e.detail) {
+								await enableChatEncryption();
+							} else {
+								await disableChatEncryption();
+							}
+						}}
+					/>
+				</div>
+			</div>
+
+			{#if chatEncryptionEnabled}
+				<div class="text-xs text-gray-500 dark:text-gray-400 px-3.5">
+					{$i18n.t(
+						'Encryption is stored in your browser. Export a recovery key to avoid data loss if you clear storage.'
+					)}
+				</div>
+
+				<div class="flex gap-2 px-3.5">
+					<button
+						class="flex-1 flex justify-center rounded-md py-2 px-3.5 hover:bg-gray-200 dark:hover:bg-gray-800 transition"
+						on:click={exportRecoveryKeyHandler}
+					>
+						<div class="self-center text-sm font-medium">
+							{$i18n.t('Export Recovery Key')}
+						</div>
+					</button>
+					<button
+						class="flex-1 flex justify-center rounded-md py-2 px-3.5 hover:bg-gray-200 dark:hover:bg-gray-800 transition"
+						on:click={importRecoveryKeyHandler}
+					>
+						<div class="self-center text-sm font-medium">
+							{$i18n.t('Import Recovery Key')}
+						</div>
+					</button>
+				</div>
+
+				<div class="flex flex-col gap-2 px-3.5">
+					<button
+						class="flex justify-center rounded-md py-2 px-3.5 hover:bg-gray-200 dark:hover:bg-gray-800 transition disabled:opacity-60 disabled:cursor-not-allowed"
+						on:click={encryptAllChatsHandler}
+						disabled={encryptAllInProgress}
+					>
+						<div class="self-center text-sm font-medium">
+							{encryptAllInProgress ? $i18n.t('Encrypting...') : $i18n.t('Encrypt All Chats')}
+						</div>
+					</button>
+
+					{#if encryptAllInProgress}
+						<div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+							<div>
+								{$i18n.t('Progress')}: {encryptAllDone}/{encryptAllTotal}
+								{#if encryptAllErrors > 0}
+									({$i18n.t('failed')}: {encryptAllErrors})
+								{/if}
+							</div>
+							<button
+								class="underline"
+								on:click={() => {
+									cancelEncryptAll = true;
+								}}
+							>
+								{$i18n.t('Cancel')}
+							</button>
+						</div>
+					{/if}
+				</div>
 			{/if}
 		</div>
 

@@ -5,10 +5,10 @@
 
 	import dayjs from 'dayjs';
 
-	import { settings, chatId, WEBUI_NAME, models, config } from '$lib/stores';
+	import { settings, chatId, WEBUI_NAME, models, config, user as sessionUser } from '$lib/stores';
 	import { convertMessagesToHistory, createMessagesList } from '$lib/utils';
 
-	import { getChatByShareId, cloneSharedChatById } from '$lib/apis/chats';
+	import { cloneSharedChatById, createNewChat, getChatByShareId } from '$lib/apis/chats';
 
 	import Messages from '$lib/components/chat/Messages.svelte';
 
@@ -16,8 +16,17 @@
 	import { getModels } from '$lib/apis';
 	import { toast } from 'svelte-sonner';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
+	import {
+		decryptSharePayload,
+		encryptChatContent,
+		getOrCreateUMK,
+		importShareKey
+	} from '$lib/utils/crypto/envelope';
+	import { v4 as uuidv4 } from 'uuid';
+	import { type Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 
-	const i18n = getContext('i18n');
+	const i18n: Writable<i18nType> = getContext('i18n');
 	dayjs.extend(localizedFormat);
 
 	let loaded = false;
@@ -31,9 +40,10 @@
 	let selectedModels = [''];
 
 	let chat = null;
-	let user = null;
+	let owner = null;
 
 	let title = '';
+	let timestamp: number | null = null;
 	let files = [];
 
 	let messages = [];
@@ -41,6 +51,12 @@
 		messages: {},
 		currentId: null
 	};
+
+	let encryptedShare = false;
+	let missingShareKey = false;
+	let shareDecryptError: string | null = null;
+	let decryptedShareChat = null;
+	let shareMeta = null;
 
 	$: messages = createMessagesList(history, history.currentId);
 
@@ -58,6 +74,32 @@
 	//////////////////////////
 	// Web functions
 	//////////////////////////
+
+	const getShareKeyFromHash = () => {
+		const hash = window.location.hash.startsWith('#')
+			? window.location.hash.slice(1)
+			: window.location.hash;
+		const params = new URLSearchParams(hash);
+		const key = params.get('k');
+		return key && key.trim() ? key.trim() : null;
+	};
+
+	const splitChatForEncryption = (plainChat: any, newChatId: string) => {
+		const meta = {
+			id: newChatId,
+			title: plainChat?.title ?? 'New Chat',
+			models: plainChat?.models ?? [],
+			timestamp: plainChat?.timestamp ?? Date.now()
+		};
+
+		const content = { ...(plainChat ?? {}) };
+		delete content.id;
+		delete content.title;
+		delete content.models;
+		delete content.timestamp;
+
+		return { meta, content };
+	};
 
 	const loadSharedChat = async () => {
 		const userSettings = await getUserSettings(localStorage.token).catch((error) => {
@@ -92,7 +134,7 @@
 		});
 
 		if (chat) {
-			user = await getUserById(localStorage.token, chat.user_id).catch((error) => {
+			owner = await getUserById(localStorage.token, chat.user_id).catch((error) => {
 				console.error(error);
 				return null;
 			});
@@ -100,17 +142,64 @@
 			const chatContent = chat.chat;
 
 			if (chatContent) {
-				console.log(chatContent);
+				encryptedShare = false;
+				missingShareKey = false;
+				shareDecryptError = null;
+				decryptedShareChat = null;
+				shareMeta = null;
 
-				selectedModels =
-					(chatContent?.models ?? undefined) !== undefined
-						? chatContent.models
-						: [chatContent.models ?? ''];
-				history =
-					(chatContent?.history ?? undefined) !== undefined
-						? chatContent.history
-						: convertMessagesToHistory(chatContent.messages);
-				title = chatContent.title;
+				if (typeof chatContent === 'object' && chatContent?.share) {
+					encryptedShare = true;
+					shareMeta = chatContent?.meta ?? null;
+
+					const keyB64Url = getShareKeyFromHash();
+					if (!keyB64Url) {
+						missingShareKey = true;
+						title = shareMeta?.title ?? chat.title ?? '';
+						timestamp = shareMeta?.timestamp ?? null;
+						selectedModels = shareMeta?.models ?? [''];
+						history = { messages: {}, currentId: null };
+						return true;
+					}
+
+					try {
+						const shareKey = await importShareKey(keyB64Url);
+						const decrypted = await decryptSharePayload(shareKey, chatContent.share, $chatId);
+						decryptedShareChat = decrypted;
+
+						selectedModels =
+							(decrypted?.models ?? undefined) !== undefined
+								? decrypted.models
+								: [decrypted?.models ?? ''];
+						history =
+							(decrypted?.history ?? undefined) !== undefined
+								? decrypted.history
+								: convertMessagesToHistory(decrypted.messages);
+						title = decrypted?.title ?? shareMeta?.title ?? '';
+						timestamp = decrypted?.timestamp ?? shareMeta?.timestamp ?? null;
+					} catch (error) {
+						console.error(error);
+						shareDecryptError = $i18n.t(
+							'Unable to decrypt this shared chat. Check that your link is complete.'
+						);
+						title = shareMeta?.title ?? chat.title ?? '';
+						timestamp = shareMeta?.timestamp ?? null;
+						selectedModels = shareMeta?.models ?? [''];
+						history = { messages: {}, currentId: null };
+						return true;
+					}
+				} else {
+					selectedModels =
+						(chatContent?.models ?? undefined) !== undefined
+							? chatContent.models
+							: [chatContent.models ?? ''];
+					history =
+						(chatContent?.history ?? undefined) !== undefined
+							? chatContent.history
+							: convertMessagesToHistory(chatContent.messages);
+					title = chatContent.title;
+					timestamp = chatContent?.timestamp ?? null;
+				}
 
 				autoScroll = true;
 				await tick();
@@ -129,6 +218,50 @@
 
 	const cloneSharedChat = async () => {
 		if (!chat) return;
+
+		if (encryptedShare) {
+			if (missingShareKey || shareDecryptError || !decryptedShareChat) {
+				toast.error($i18n.t('Missing decryption key for this shared chat'));
+				return;
+			}
+
+			const policy = $config?.features?.chat_encryption ?? null;
+			const encryptionEnabled =
+				(policy?.required ?? false) || ($settings?.chatEncryptionEnabled ?? false);
+
+			const newChatId = uuidv4();
+			const plainChat = {
+				...(decryptedShareChat ?? {}),
+				id: newChatId,
+				originalChatId: chat.id,
+				branchPointMessageId: decryptedShareChat?.history?.currentId ?? null,
+				title: $i18n.t('Clone of {{title}}', {
+					title: decryptedShareChat?.title ?? chat.title ?? ''
+				}),
+				timestamp: Date.now()
+			};
+
+			try {
+				const created = encryptionEnabled
+					? await (async () => {
+							if (!$sessionUser?.id) throw new Error('Missing session user');
+							const { key } = await getOrCreateUMK();
+							const { meta, content } = splitChatForEncryption(plainChat, newChatId);
+							const encrypted = await encryptChatContent(key, newChatId, $sessionUser.id, content);
+							return createNewChat(localStorage.token, { enc: encrypted.enc, meta }, null);
+						})()
+					: await createNewChat(localStorage.token, plainChat, null);
+
+				if (created) {
+					goto(`/c/${created.id}`);
+				}
+			} catch (error) {
+				console.error(error);
+				toast.error($i18n.t('Failed to clone shared chat'));
+			}
+
+			return;
+		}
 
 		const res = await cloneSharedChatById(localStorage.token, chat.id).catch((error) => {
 			toast.error(`${error}`);
@@ -167,7 +300,7 @@
 
 						<div class="flex text-sm justify-between items-center mt-1">
 							<div class="text-gray-400">
-								{dayjs(chat.chat.timestamp).format('LLL')}
+								{timestamp ? dayjs(timestamp).format('LLL') : ''}
 							</div>
 						</div>
 					</div>
@@ -175,21 +308,37 @@
 
 				<div class=" h-full w-full flex flex-col py-2">
 					<div class="w-full">
-						<Messages
-							className="h-full flex pt-4 pb-8 "
-							{user}
-							chatId={$chatId}
-							readOnly={true}
-							{selectedModels}
-							{processing}
-							bind:history
-							bind:messages
-							bind:autoScroll
-							bottomPadding={files.length > 0}
-							sendMessage={() => {}}
-							continueResponse={() => {}}
-							regenerateResponse={() => {}}
-						/>
+						{#if missingShareKey}
+							<div class="px-6 py-10 text-center text-gray-500 dark:text-gray-400">
+								<div class="text-lg font-medium mb-2">{$i18n.t('Missing decryption key')}</div>
+								<div class="text-sm">
+									{$i18n.t(
+										'This shared chat requires a decryption key in the URL fragment (#k=…). Ask the sender for the full link.'
+									)}
+								</div>
+							</div>
+						{:else if shareDecryptError}
+							<div class="px-6 py-10 text-center text-gray-500 dark:text-gray-400">
+								<div class="text-lg font-medium mb-2">{$i18n.t('Unable to decrypt')}</div>
+								<div class="text-sm">{shareDecryptError}</div>
+							</div>
+						{:else}
+							<Messages
+								className="h-full flex pt-4 pb-8 "
+								user={owner}
+								chatId={$chatId}
+								readOnly={true}
+								{selectedModels}
+								{processing}
+								bind:history
+								bind:messages
+								bind:autoScroll
+								bottomPadding={files.length > 0}
+								sendMessage={() => {}}
+								continueResponse={() => {}}
+								regenerateResponse={() => {}}
+							/>
+						{/if}
 					</div>
 				</div>
 			</div>
@@ -201,6 +350,7 @@
 					<button
 						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 						on:click={cloneSharedChat}
+						disabled={encryptedShare && (missingShareKey || shareDecryptError)}
 					>
 						{$i18n.t('Clone Chat')}
 					</button>

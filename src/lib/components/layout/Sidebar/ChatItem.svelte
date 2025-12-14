@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
 	import { onMount, getContext, createEventDispatcher, tick, onDestroy } from 'svelte';
@@ -9,6 +10,7 @@
 	import {
 		archiveChatById,
 		cloneChatById,
+		createNewChat,
 		deleteChatById,
 		getAllTags,
 		getChatById,
@@ -22,12 +24,15 @@
 		chatId,
 		chatTitle as _chatTitle,
 		chats,
+		config,
 		mobile,
 		pinnedChats,
+		settings,
 		showSidebar,
 		currentChatPage,
 		tags,
-		selectedFolder
+		selectedFolder,
+		user
 	} from '$lib/stores';
 
 	import ChatMenu from './ChatMenu.svelte';
@@ -42,6 +47,11 @@
 	import Document from '$lib/components/icons/Document.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 	import { generateTitle } from '$lib/apis';
+	import {
+		decryptChatContent,
+		encryptChatContent,
+		getOrCreateUMK
+	} from '$lib/utils/crypto/envelope';
 
 	export let className = '';
 
@@ -74,13 +84,71 @@
 
 	let chatTitle = title;
 
+	const isEncryptedChatPayload = (chatObj: any): chatObj is { enc: any; meta: any } =>
+		chatObj &&
+		typeof chatObj === 'object' &&
+		typeof chatObj.enc === 'object' &&
+		typeof chatObj.meta === 'object';
+
+	let umk: CryptoKey | null = null;
+	const ensureUMK = async () => {
+		if (umk) return umk;
+		const { key } = await getOrCreateUMK();
+		umk = key;
+		return key;
+	};
+
+	const splitChatForEncryption = (plainChat: any, chatId: string) => {
+		const meta = {
+			id: chatId,
+			title: plainChat?.title ?? 'New Chat',
+			models: plainChat?.models ?? [],
+			timestamp: plainChat?.timestamp ?? Date.now()
+		};
+
+		const content = { ...(plainChat ?? {}) };
+		delete content.id;
+		delete content.title;
+		delete content.models;
+		delete content.timestamp;
+
+		return { meta, content };
+	};
+
+	const getPlainChatContent = async (chatRecord: any) => {
+		const chatObj = chatRecord?.chat;
+		if (isEncryptedChatPayload(chatObj)) {
+			const key = await ensureUMK();
+			const decrypted = (await decryptChatContent(
+				key,
+				chatObj.enc,
+				chatRecord.id,
+				$user.id
+			)) as any;
+			return { ...chatObj.meta, ...decrypted };
+		}
+		return chatObj;
+	};
+
 	const editChatTitle = async (id, title) => {
 		if (title === '') {
 			toast.error($i18n.t('Title cannot be an empty string.'));
 		} else {
-			await updateChatById(localStorage.token, id, {
-				title: title
-			});
+			const currentChat = chat?.id === id ? chat : await getChatById(localStorage.token, id);
+			const chatObj = currentChat?.chat;
+
+			if (isEncryptedChatPayload(chatObj)) {
+				await updateChatById(localStorage.token, id, {
+					enc: chatObj.enc,
+					meta: {
+						...chatObj.meta,
+						id: chatObj.meta?.id ?? id,
+						title
+					}
+				});
+			} else {
+				await updateChatById(localStorage.token, id, { title });
+			}
 
 			if (id === $chatId) {
 				_chatTitle.set(title);
@@ -95,23 +163,75 @@
 	};
 
 	const cloneChatHandler = async (id) => {
-		const res = await cloneChatById(
-			localStorage.token,
-			id,
-			$i18n.t('Clone of {{TITLE}}', {
-				TITLE: title
-			})
-		).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
+		const policyRequired = $config?.features?.chat_encryption?.required ?? false;
+		const newTitle = $i18n.t('Clone of {{TITLE}}', { TITLE: title });
 
-		if (res) {
-			goto(`/c/${res.id}`);
+		let currentChat = chat?.id === id ? chat : null;
+		if (!currentChat) {
+			currentChat = await getChatById(localStorage.token, id).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+		}
 
-			currentChatPage.set(1);
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			await pinnedChats.set(await getPinnedChatList(localStorage.token));
+		if (!currentChat) return;
+
+		const storedChatObj = currentChat.chat;
+		const needsClientClone = policyRequired || isEncryptedChatPayload(storedChatObj);
+
+		if (!needsClientClone) {
+			const res = await cloneChatById(localStorage.token, id, newTitle).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+
+			if (res) {
+				goto(`/c/${res.id}`);
+
+				currentChatPage.set(1);
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				await pinnedChats.set(await getPinnedChatList(localStorage.token));
+			}
+			return;
+		}
+
+		try {
+			const plain = await getPlainChatContent(currentChat);
+			const newChatId = uuidv4();
+
+			const clonedPlain = {
+				...(plain ?? {}),
+				id: newChatId,
+				title: newTitle,
+				originalChatId: currentChat.id,
+				branchPointMessageId: plain?.history?.currentId ?? null,
+				timestamp: plain?.timestamp ?? Date.now()
+			};
+
+			const shouldEncrypt =
+				policyRequired ||
+				($settings?.chatEncryptionEnabled ?? false) ||
+				isEncryptedChatPayload(storedChatObj);
+
+			const res = shouldEncrypt
+				? await (async () => {
+						const key = await ensureUMK();
+						const { meta, content } = splitChatForEncryption(clonedPlain, newChatId);
+						const encrypted = await encryptChatContent(key, newChatId, $user.id, content);
+						return createNewChat(localStorage.token, { enc: encrypted.enc, meta }, null);
+					})()
+				: await createNewChat(localStorage.token, clonedPlain, null);
+
+			if (res) {
+				goto(`/c/${res.id}`);
+
+				currentChatPage.set(1);
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				await pinnedChats.set(await getPinnedChatList(localStorage.token));
+			}
+		} catch (error) {
+			console.error(error);
+			toast.error($i18n.t('Failed to clone chat'));
 		}
 	};
 
@@ -285,14 +405,17 @@
 			chat = await getChatById(localStorage.token, id);
 		}
 
-		const messages = (chat.chat?.messages ?? []).map((message) => {
+		const chatContent = await getPlainChatContent(chat);
+		const messages = (chatContent?.messages ?? []).map((message) => {
 			return {
 				role: message.role,
 				content: message.content
 			};
 		});
 
-		const model = chat.chat.models.at(0) ?? chat.models.at(0) ?? '';
+		const model = Array.isArray(chatContent?.models)
+			? (chatContent.models.at(0) ?? '')
+			: (chatContent?.models ?? '');
 
 		chatTitle = '';
 

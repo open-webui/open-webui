@@ -201,6 +201,8 @@ type Settings = {
 	splitLargeDeltas?: boolean;
 	chatDirection?: 'LTR' | 'RTL' | 'auto';
 	ctrlEnterToSend?: boolean;
+	chatEncryptionEnabled?: boolean;
+	chatEncryptionUmkFingerprint?: string | null;
 
 	system?: string;
 	seed?: number;
@@ -261,6 +263,11 @@ type Config = {
 	features: {
 		auth: boolean;
 		auth_trusted_header: boolean;
+		chat_encryption?: {
+			default: boolean;
+			required: boolean;
+			allow_legacy_read: boolean;
+		};
 		enable_api_keys: boolean;
 		enable_signup: boolean;
 		enable_login_form: boolean;

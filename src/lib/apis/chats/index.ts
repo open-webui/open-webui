@@ -773,7 +773,11 @@ export const cloneSharedChatById = async (token: string, id: string) => {
 	return res;
 };
 
-export const shareChatById = async (token: string, id: string) => {
+export const shareChatById = async (
+	token: string,
+	id: string,
+	body?: { share_id: string; share: object; meta?: object }
+) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/share`, {
@@ -782,7 +786,8 @@ export const shareChatById = async (token: string, id: string) => {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
-		}
+		},
+		...(body ? { body: JSON.stringify(body) } : {})
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

@@ -188,7 +188,9 @@ class TestChats(AbstractPostgresTest):
     def test_clone_chat_by_id(self):
         chat_id = self.chats.get_chats()[0].id
         with mock_webui_user(id="2"):
-            response = self.fast_api_client.get(self.create_url(f"/{chat_id}/clone"))
+            response = self.fast_api_client.post(
+                self.create_url(f"/{chat_id}/clone"), json={}
+            )
 
         assert response.status_code == 200
         data = response.json()
@@ -209,7 +211,7 @@ class TestChats(AbstractPostgresTest):
     def test_archive_chat_by_id(self):
         chat_id = self.chats.get_chats()[0].id
         with mock_webui_user(id="2"):
-            response = self.fast_api_client.get(self.create_url(f"/{chat_id}/archive"))
+            response = self.fast_api_client.post(self.create_url(f"/{chat_id}/archive"))
         assert response.status_code == 200
 
         chat = self.chats.get_chat_by_id(chat_id)
@@ -234,3 +236,112 @@ class TestChats(AbstractPostgresTest):
 
         chat = self.chats.get_chat_by_id(chat_id)
         assert chat.share_id is None
+
+    def test_encrypted_chat_rejects_plaintext_update(self):
+        from open_webui.models.chats import ChatForm
+
+        encrypted_chat = self.chats.insert_new_chat(
+            "2",
+            ChatForm(
+                **{
+                    "chat": {
+                        "enc": {"v": 1, "alg": "A256GCM"},
+                        "meta": {"title": "Encrypted Chat"},
+                    }
+                }
+            ),
+        )
+
+        with mock_webui_user(id="2"):
+            response = self.fast_api_client.post(
+                self.create_url(f"/{encrypted_chat.id}"),
+                json={"chat": {"title": "New title"}},
+            )
+
+        assert response.status_code == 409
+        assert response.json()["detail"] == "Chat is encrypted. Client must encrypt before saving."
+
+    def test_encrypted_chat_clone_requires_client(self):
+        from open_webui.models.chats import ChatForm
+
+        encrypted_chat = self.chats.insert_new_chat(
+            "2",
+            ChatForm(
+                **{
+                    "chat": {
+                        "enc": {"v": 1, "alg": "A256GCM"},
+                        "meta": {"title": "Encrypted Chat"},
+                    }
+                }
+            ),
+        )
+
+        with mock_webui_user(id="2"):
+            response = self.fast_api_client.post(
+                self.create_url(f"/{encrypted_chat.id}/clone"), json={}
+            )
+
+        assert response.status_code == 409
+        assert (
+            response.json()["detail"]
+            == "Encrypted chats cannot be cloned server-side. Client must decrypt and re-encrypt."
+        )
+
+    def test_encrypted_chat_share_requires_package(self):
+        from open_webui.models.chats import ChatForm
+
+        encrypted_chat = self.chats.insert_new_chat(
+            "2",
+            ChatForm(
+                **{
+                    "chat": {
+                        "enc": {"v": 1, "alg": "A256GCM"},
+                        "meta": {"title": "Encrypted Chat"},
+                    }
+                }
+            ),
+        )
+
+        with mock_webui_user(id="2"):
+            response = self.fast_api_client.post(
+                self.create_url(f"/{encrypted_chat.id}/share")
+            )
+
+        assert response.status_code == 409
+        assert (
+            response.json()["detail"]
+            == "Encrypted chats must be shared using a client-encrypted share package."
+        )
+
+    def test_share_package_can_be_saved(self):
+        from open_webui.models.chats import ChatForm
+
+        chat = self.chats.insert_new_chat(
+            "2",
+            ChatForm(
+                **{
+                    "chat": {
+                        "name": "chat-share",
+                        "history": {"currentId": "1", "messages": []},
+                    }
+                }
+            ),
+        )
+        share_id = str(uuid.uuid4())
+
+        with mock_webui_user(id="2"):
+            response = self.fast_api_client.post(
+                self.create_url(f"/{chat.id}/share"),
+                json={
+                    "share_id": share_id,
+                    "share": {"v": 1, "alg": "A256GCM", "iv": "AA", "ct": "BB", "aad": "CC"},
+                    "meta": {"title": "Shared title", "timestamp": 0, "models": []},
+                },
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == share_id
+        assert data["user_id"] == f"shared-{chat.id}"
+        assert data["chat"]["share"]["v"] == 1
+        assert data["chat"]["meta"]["title"] == "Shared title"

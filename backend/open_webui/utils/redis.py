@@ -15,6 +15,8 @@ from open_webui.env import (
 
 log = logging.getLogger(__name__)
 
+MAX_RETRY_COUNT = REDIS_SENTINEL_MAX_RETRY_COUNT
+
 
 _CONNECTION_CACHE = {}
 
@@ -38,7 +40,32 @@ class SentinelRedisProxy:
 
         FACTORY_METHODS = {"pipeline", "pubsub", "monitor", "client", "transaction"}
         if item in FACTORY_METHODS:
-            return orig_attr
+
+            def _wrapped_factory(*args, **kwargs):
+                for i in range(REDIS_SENTINEL_MAX_RETRY_COUNT):
+                    try:
+                        method = getattr(self._master(), item)
+                        return method(*args, **kwargs)
+                    except (
+                        redis.exceptions.ConnectionError,
+                        redis.exceptions.ReadOnlyError,
+                    ) as e:
+                        if i < REDIS_SENTINEL_MAX_RETRY_COUNT - 1:
+                            log.debug(
+                                "Redis sentinel fail-over (%s). Retry %s/%s",
+                                type(e).__name__,
+                                i + 1,
+                                REDIS_SENTINEL_MAX_RETRY_COUNT,
+                            )
+                            continue
+                        log.error(
+                            "Redis operation failed after %s retries: %s",
+                            REDIS_SENTINEL_MAX_RETRY_COUNT,
+                            e,
+                        )
+                        raise e from e
+
+            return _wrapped_factory
 
         if self._async_mode:
 

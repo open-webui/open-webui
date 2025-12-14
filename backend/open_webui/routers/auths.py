@@ -108,9 +108,20 @@ async def get_session_user(
     request: Request, response: Response, user=Depends(get_current_user)
 ):
 
+    token = None
+
     auth_header = request.headers.get("Authorization")
-    auth_token = get_http_authorization_cred(auth_header)
-    token = auth_token.credentials
+    if auth_header:
+        auth_token = get_http_authorization_cred(auth_header)
+        token = auth_token.credentials if auth_token else None
+    else:
+        token = request.cookies.get("token")
+
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.UNAUTHORIZED
+        )
+
     data = decode_token(token)
 
     expires_at = None
@@ -201,7 +212,7 @@ async def update_password(
 
         if user:
             try:
-                validate_password(form_data.password)
+                validate_password(form_data.new_password)
             except Exception as e:
                 raise HTTPException(400, detail=str(e))
             hashed = get_password_hash(form_data.new_password)

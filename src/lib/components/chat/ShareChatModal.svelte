@@ -1,10 +1,19 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
-	import { models, config } from '$lib/stores';
+	import { getContext } from 'svelte';
+	import { models, config, user } from '$lib/stores';
+	import { v4 as uuidv4 } from 'uuid';
+	import { type Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 
 	import { toast } from 'svelte-sonner';
 	import { deleteSharedChatById, getChatById, shareChatById } from '$lib/apis/chats';
 	import { copyToClipboard } from '$lib/utils';
+	import {
+		decryptChatContent,
+		encryptSharePayload,
+		generateShareKey,
+		getOrCreateUMK
+	} from '$lib/utils/crypto/envelope';
 
 	import Modal from '../common/Modal.svelte';
 	import Link from '../icons/Link.svelte';
@@ -14,22 +23,60 @@
 
 	let chat = null;
 	let shareUrl = null;
-	const i18n = getContext('i18n');
+	const i18n: Writable<i18nType> = getContext('i18n');
+
+	const getPlainChatForSharing = async (_chat) => {
+		if (!_chat?.chat) return null;
+
+		const storedChat = _chat.chat;
+		if (storedChat?.enc && storedChat?.meta) {
+			if (!$user?.id) {
+				throw new Error('Missing user context for decrypting chat');
+			}
+
+			const { key } = await getOrCreateUMK();
+			const decrypted = await decryptChatContent(key, storedChat.enc, chatId, $user.id);
+
+			const plain = { ...(storedChat.meta ?? {}), ...(decrypted ?? {}) };
+			plain.title = plain.title ?? _chat.title ?? $i18n.t('New Chat');
+			plain.timestamp = plain.timestamp ?? Date.now();
+			return plain;
+		}
+
+		const plain = { ...(storedChat ?? {}) };
+		plain.title = plain.title ?? _chat.title ?? $i18n.t('New Chat');
+		plain.timestamp = plain.timestamp ?? Date.now();
+		return plain;
+	};
 
 	const shareLocalChat = async () => {
-		const _chat = chat;
+		const shareId = chat?.share_id ?? uuidv4();
+		const plainChat = await getPlainChatForSharing(chat);
+		if (!plainChat) {
+			throw new Error('Missing chat content');
+		}
 
-		const sharedChat = await shareChatById(localStorage.token, chatId);
-		shareUrl = `${window.location.origin}/s/${sharedChat.id}`;
-		console.log(shareUrl);
+		const { key: shareKey, keyB64Url } = await generateShareKey();
+		const { share } = await encryptSharePayload(shareKey, shareId, plainChat);
+
+		const sharedChat = await shareChatById(localStorage.token, chatId, {
+			share_id: shareId,
+			share,
+			meta: {
+				title: plainChat.title,
+				timestamp: plainChat.timestamp,
+				models: plainChat.models ?? []
+			}
+		});
+
+		shareUrl = `${window.location.origin}/s/${sharedChat.id}#k=${keyB64Url}`;
 		chat = await getChatById(localStorage.token, chatId);
-
 		return shareUrl;
 	};
 
 	const shareChat = async () => {
-		const _chat = chat.chat;
-		console.log('share', _chat);
+		const _chat = await getPlainChatForSharing(chat);
+		if (!_chat) return;
 
 		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
 		const url = 'https://openwebui.com';
@@ -44,7 +91,7 @@
 					tab.postMessage(
 						JSON.stringify({
 							chat: _chat,
-							models: $models.filter((m) => _chat.models.includes(m.id))
+							models: $models.filter((m) => (_chat.models ?? []).includes(m.id))
 						}),
 						'*'
 					);
@@ -99,10 +146,11 @@
 			<div class="px-5 pt-4 pb-5 w-full flex flex-col justify-center">
 				<div class=" text-sm dark:text-gray-300 mb-1">
 					{#if chat.share_id}
-						<a href="/s/{chat.share_id}" target="_blank"
-							>{$i18n.t('You have shared this chat')}
-							<span class=" underline">{$i18n.t('before')}</span>.</a
-						>
+						{$i18n.t('You have shared this chat')}
+						<span class=" underline">{$i18n.t('before')}</span>.
+						{$i18n.t(
+							'Creating a new link will rotate the decryption key. Anyone with the full link can read the shared chat.'
+						)}
 						{$i18n.t('Click here to')}
 						<button
 							class="underline"
@@ -120,6 +168,17 @@
 						{$i18n.t(
 							"Messages you send after creating your link won't be shared. Users with the URL will be able to view the shared chat."
 						)}
+						<div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+							{$i18n.t(
+								'This link includes a decryption key in the URL fragment (#k=…). Anyone with the full link can read the chat.'
+							)}
+						</div>
+					{/if}
+
+					{#if chat?.chat?.enc}
+						<div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+							{$i18n.t('This chat will be decrypted in your browser to create the share link.')}
+						</div>
 					{/if}
 				</div>
 
@@ -144,37 +203,30 @@
 								type="button"
 								id="copy-and-share-chat-button"
 								on:click={async () => {
-									const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+									try {
+										const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
-									if (isSafari) {
-										// Oh, Safari, you're so special, let's give you some extra love and attention
-										console.log('isSafari');
+										if (isSafari) {
+											const getUrlPromise = async () => {
+												const url = await shareLocalChat();
+												return new Blob([url], { type: 'text/plain' });
+											};
 
-										const getUrlPromise = async () => {
-											const url = await shareLocalChat();
-											return new Blob([url], { type: 'text/plain' });
-										};
-
-										navigator.clipboard
-											.write([
+											await navigator.clipboard.write([
 												new ClipboardItem({
 													'text/plain': getUrlPromise()
 												})
-											])
-											.then(() => {
-												console.log('Async: Copying to clipboard was successful!');
-												return true;
-											})
-											.catch((error) => {
-												console.error('Async: Could not copy text: ', error);
-												return false;
-											});
-									} else {
-										copyToClipboard(await shareLocalChat());
-									}
+											]);
+										} else {
+											copyToClipboard(await shareLocalChat());
+										}
 
-									toast.success($i18n.t('Copied shared chat URL to clipboard!'));
-									show = false;
+										toast.success($i18n.t('Copied shared chat URL to clipboard!'));
+										show = false;
+									} catch (error) {
+										console.error(error);
+										toast.error($i18n.t('Failed to create share link'));
+									}
 								}}
 							>
 								<Link />

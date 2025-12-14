@@ -41,9 +41,13 @@
 		}
 
 		tags = await getTags();
-		await updateChatById(localStorage.token, chatId, {
-			tags: tags
-		});
+		try {
+			await updateChatById(localStorage.token, chatId, {
+				tags: tags
+			});
+		} catch (e) {
+			// Encrypted chats can't be updated server-side without a full encrypted payload.
+		}
 
 		await _tags.set(await getAllTags(localStorage.token));
 		dispatch('add', {
@@ -54,9 +58,13 @@
 	const deleteTag = async (tagName) => {
 		const res = await deleteTagById(localStorage.token, chatId, tagName);
 		tags = await getTags();
-		await updateChatById(localStorage.token, chatId, {
-			tags: tags
-		});
+		try {
+			await updateChatById(localStorage.token, chatId, {
+				tags: tags
+			});
+		} catch (e) {
+			// Encrypted chats can't be updated server-side without a full encrypted payload.
+		}
 
 		await _tags.set(await getAllTags(localStorage.token));
 		dispatch('delete', {

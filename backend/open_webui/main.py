@@ -69,6 +69,7 @@ from open_webui.socket.main import (
 )
 from open_webui.routers import (
     audio,
+    encryption,
     images,
     ollama,
     openai,
@@ -471,6 +472,9 @@ from open_webui.env import (
     EXTERNAL_PWA_MANIFEST_URL,
     AIOHTTP_CLIENT_SESSION_SSL,
     ENABLE_STAR_SESSIONS_MIDDLEWARE,
+    WEBUI_CHAT_ENCRYPTION_ALLOW_LEGACY_READ,
+    WEBUI_CHAT_ENCRYPTION_DEFAULT,
+    WEBUI_CHAT_ENCRYPTION_REQUIRED,
 )
 
 
@@ -1381,6 +1385,7 @@ app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 
 app.include_router(channels.router, prefix="/api/v1/channels", tags=["channels"])
 app.include_router(chats.router, prefix="/api/v1/chats", tags=["chats"])
+app.include_router(encryption.router, prefix="/api/v1/encryption", tags=["encryption"])
 app.include_router(notes.router, prefix="/api/v1/notes", tags=["notes"])
 
 
@@ -1837,6 +1842,11 @@ async def get_app_config(request: Request):
             "auth": WEBUI_AUTH,
             "auth_trusted_header": bool(app.state.AUTH_TRUSTED_EMAIL_HEADER),
             "enable_signup_password_confirmation": ENABLE_SIGNUP_PASSWORD_CONFIRMATION,
+            "chat_encryption": {
+                "default": WEBUI_CHAT_ENCRYPTION_DEFAULT,
+                "required": WEBUI_CHAT_ENCRYPTION_REQUIRED,
+                "allow_legacy_read": WEBUI_CHAT_ENCRYPTION_ALLOW_LEGACY_READ,
+            },
             "enable_ldap": app.state.config.ENABLE_LDAP,
             "enable_api_keys": app.state.config.ENABLE_API_KEYS,
             "enable_signup": app.state.config.ENABLE_SIGNUP,

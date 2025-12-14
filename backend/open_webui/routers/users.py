@@ -518,6 +518,8 @@ async def update_user_by_id(
                         detail=ERROR_MESSAGES.ACTION_PROHIBITED,
                     )
 
+    except HTTPException:
+        raise
     except Exception as e:
         log.error(f"Error checking primary admin status: {e}")
         raise HTTPException(

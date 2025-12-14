@@ -458,7 +458,7 @@ class TestSentinelRedisProxyCommands:
         assert mock_master.hget.call_count == 2
 
         # Verify both calls were made with same parameters
-        expected_calls = [(("test_hash", "field1"),), (("test_hash", "field1"),)]
+        expected_calls = [("test_hash", "field1"), ("test_hash", "field1")]
         actual_calls = [call.args for call in mock_master.hget.call_args_list]
         assert actual_calls == expected_calls
 
@@ -489,8 +489,8 @@ class TestSentinelRedisProxyCommands:
 
         # Verify both calls were made with same parameters
         expected_calls = [
-            (("test_hash", "field1", "value1"),),
-            (("test_hash", "field1", "value1"),),
+            ("test_hash", "field1", "value1"),
+            ("test_hash", "field1", "value1"),
         ]
         actual_calls = [call.args for call in mock_master.hset.call_args_list]
         assert actual_calls == expected_calls
@@ -522,7 +522,7 @@ class TestSentinelRedisProxyCommands:
         assert mock_master.hget.call_count == 2
 
         # Verify both calls were made with same parameters
-        expected_calls = [(("test_hash", "field1"),), (("test_hash", "field1"),)]
+        expected_calls = [("test_hash", "field1"), ("test_hash", "field1")]
         actual_calls = [call.args for call in mock_master.hget.call_args_list]
         assert actual_calls == expected_calls
 

@@ -7,7 +7,8 @@ from typing import Optional
 from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
 from open_webui.models.folders import Folders
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, WEBUI_CHAT_ENCRYPTION_REQUIRED
+from open_webui.utils.encryption import is_encrypted_chat
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, Index
@@ -164,18 +165,40 @@ class ChatTable:
 
         return changed
 
+    def _get_requested_chat_id(self, chat_obj: dict) -> Optional[str]:
+        candidate = chat_obj.get("id")
+        if not candidate and is_encrypted_chat(chat_obj):
+            candidate = chat_obj.get("meta", {}).get("id")
+        if not isinstance(candidate, str) or not candidate.strip():
+            return None
+
+        try:
+            return str(uuid.UUID(candidate))
+        except Exception:
+            return None
+
+    def _get_chat_title(self, chat_obj: dict) -> str:
+        if is_encrypted_chat(chat_obj):
+            title = chat_obj.get("meta", {}).get("title")
+            return (
+                self._clean_null_bytes(title) if isinstance(title, str) else "New Chat"
+            )
+
+        title = chat_obj.get("title")
+        return self._clean_null_bytes(title) if isinstance(title, str) else "New Chat"
+
     def insert_new_chat(self, user_id: str, form_data: ChatForm) -> Optional[ChatModel]:
         with get_db() as db:
-            id = str(uuid.uuid4())
+            requested_id = self._get_requested_chat_id(form_data.chat)
+            if requested_id and db.get(Chat, requested_id):
+                requested_id = None
+
+            id = requested_id or str(uuid.uuid4())
             chat = ChatModel(
                 **{
                     "id": id,
                     "user_id": user_id,
-                    "title": self._clean_null_bytes(
-                        form_data.chat["title"]
-                        if "title" in form_data.chat
-                        else "New Chat"
-                    ),
+                    "title": self._get_chat_title(form_data.chat),
                     "chat": self._clean_null_bytes(form_data.chat),
                     "folder_id": form_data.folder_id,
                     "created_at": int(time.time()),
@@ -197,9 +220,7 @@ class ChatTable:
             **{
                 "id": id,
                 "user_id": user_id,
-                "title": self._clean_null_bytes(
-                    form_data.chat["title"] if "title" in form_data.chat else "New Chat"
-                ),
+                "title": self._get_chat_title(form_data.chat),
                 "chat": self._clean_null_bytes(form_data.chat),
                 "meta": form_data.meta,
                 "pinned": form_data.pinned,
@@ -233,11 +254,7 @@ class ChatTable:
             with get_db() as db:
                 chat_item = db.get(Chat, id)
                 chat_item.chat = self._clean_null_bytes(chat)
-                chat_item.title = (
-                    self._clean_null_bytes(chat["title"])
-                    if "title" in chat
-                    else "New Chat"
-                )
+                chat_item.title = self._get_chat_title(chat)
 
                 chat_item.updated_at = int(time.time())
 
@@ -253,10 +270,17 @@ class ChatTable:
         if chat is None:
             return None
 
-        chat = chat.chat
-        chat["title"] = title
+        chat_obj = chat.chat
+        if is_encrypted_chat(chat_obj):
+            meta = (
+                chat_obj.get("meta") if isinstance(chat_obj.get("meta"), dict) else {}
+            )
+            meta["title"] = title
+            chat_obj["meta"] = meta
+        else:
+            chat_obj["title"] = title
 
-        return self.update_chat_by_id(id, chat)
+        return self.update_chat_by_id(id, chat_obj)
 
     def update_chat_tags_by_id(
         self, id: str, tags: list[str], user
@@ -283,12 +307,19 @@ class ChatTable:
         if chat is None:
             return None
 
-        return chat.chat.get("title", "New Chat")
+        chat_obj = chat.chat
+        if is_encrypted_chat(chat_obj):
+            title = chat_obj.get("meta", {}).get("title")
+            return title if isinstance(title, str) else "New Chat"
+        return chat_obj.get("title", "New Chat")
 
     def get_messages_map_by_chat_id(self, id: str) -> Optional[dict]:
         chat = self.get_chat_by_id(id)
         if chat is None:
             return None
+
+        if WEBUI_CHAT_ENCRYPTION_REQUIRED or is_encrypted_chat(chat.chat):
+            return {}
 
         return chat.chat.get("history", {}).get("messages", {}) or {}
 
@@ -299,20 +330,26 @@ class ChatTable:
         if chat is None:
             return None
 
+        if WEBUI_CHAT_ENCRYPTION_REQUIRED or is_encrypted_chat(chat.chat):
+            return {}
+
         return chat.chat.get("history", {}).get("messages", {}).get(message_id, {})
 
     def upsert_message_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, message: dict
     ) -> Optional[ChatModel]:
-        chat = self.get_chat_by_id(id)
-        if chat is None:
+        chat_model = self.get_chat_by_id(id)
+        if chat_model is None:
             return None
+
+        if WEBUI_CHAT_ENCRYPTION_REQUIRED or is_encrypted_chat(chat_model.chat):
+            return chat_model
 
         # Sanitize message content for null characters before upserting
         if isinstance(message.get("content"), str):
             message["content"] = message["content"].replace("\x00", "")
 
-        chat = chat.chat
+        chat = chat_model.chat
         history = chat.get("history", {})
 
         if message_id in history.get("messages", {}):
@@ -331,11 +368,14 @@ class ChatTable:
     def add_message_status_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, status: dict
     ) -> Optional[ChatModel]:
-        chat = self.get_chat_by_id(id)
-        if chat is None:
+        chat_model = self.get_chat_by_id(id)
+        if chat_model is None:
             return None
 
-        chat = chat.chat
+        if WEBUI_CHAT_ENCRYPTION_REQUIRED or is_encrypted_chat(chat_model.chat):
+            return chat_model
+
+        chat = chat_model.chat
         history = chat.get("history", {})
 
         if message_id in history.get("messages", {}):
@@ -349,11 +389,14 @@ class ChatTable:
     def add_message_files_by_id_and_message_id(
         self, id: str, message_id: str, files: list[dict]
     ) -> list[dict]:
-        chat = self.get_chat_by_id(id)
-        if chat is None:
+        chat_model = self.get_chat_by_id(id)
+        if chat_model is None:
             return None
 
-        chat = chat.chat
+        if WEBUI_CHAT_ENCRYPTION_REQUIRED or is_encrypted_chat(chat_model.chat):
+            return []
+
+        chat = chat_model.chat
         history = chat.get("history", {})
 
         message_files = []
@@ -401,6 +444,55 @@ class ChatTable:
             )
             db.commit()
             return shared_chat if (shared_result and result) else None
+
+    def insert_shared_chat_package_by_chat_id(
+        self, chat_id: str, share_id: str, shared_chat_payload: dict
+    ) -> Optional[ChatModel]:
+        try:
+            with get_db() as db:
+                chat = db.get(Chat, chat_id)
+                if chat is None:
+                    return None
+
+                # Replace any existing shared chat for this chat_id.
+                db.query(Chat).filter_by(user_id=f"shared-{chat_id}").delete()
+
+                shared_title = (
+                    shared_chat_payload.get("meta", {}).get("title")
+                    if isinstance(shared_chat_payload.get("meta"), dict)
+                    else None
+                )
+                if not isinstance(shared_title, str) or not shared_title.strip():
+                    shared_title = chat.title
+
+                shared_chat = ChatModel(
+                    **{
+                        "id": share_id,
+                        "user_id": f"shared-{chat_id}",
+                        "title": self._clean_null_bytes(shared_title),
+                        "chat": self._clean_null_bytes(shared_chat_payload),
+                        "meta": chat.meta,
+                        "pinned": chat.pinned,
+                        "folder_id": chat.folder_id,
+                        "created_at": chat.created_at,
+                        "updated_at": int(time.time()),
+                    }
+                )
+
+                shared_result = Chat(**shared_chat.model_dump())
+                db.add(shared_result)
+
+                db.query(Chat).filter_by(id=chat_id).update(
+                    {"share_id": shared_chat.id}
+                )
+                db.commit()
+                db.refresh(shared_result)
+
+                return (
+                    ChatModel.model_validate(shared_result) if shared_result else None
+                )
+        except Exception:
+            return None
 
     def update_shared_chat_by_chat_id(self, chat_id: str) -> Optional[ChatModel]:
         try:

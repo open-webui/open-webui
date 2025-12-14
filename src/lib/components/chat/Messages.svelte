@@ -60,6 +60,10 @@
 	export let messagesCount: number | null = 20;
 	let messagesLoading = false;
 
+	export let saveChat:
+		| ((chatId: string, patch: Record<string, unknown>) => Promise<unknown>)
+		| null = null;
+
 	const loadMoreMessages = async () => {
 		// scroll slightly down to disable continuous loading
 		const element = document.getElementById('messages-container');
@@ -103,10 +107,14 @@
 		if (!$temporaryChatEnabled) {
 			history = history;
 			await tick();
-			await updateChatById(localStorage.token, chatId, {
-				history: history,
-				messages: messages
-			});
+			if (saveChat) {
+				await saveChat(chatId, { history: history, messages: messages });
+			} else {
+				await updateChatById(localStorage.token, chatId, {
+					history: history,
+					messages: messages
+				});
+			}
 
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));

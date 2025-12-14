@@ -17,13 +17,18 @@ from open_webui.models.folders import Folders
 
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import (
+    SRC_LOG_LEVELS,
+    WEBUI_CHAT_ENCRYPTION_ALLOW_LEGACY_READ,
+    WEBUI_CHAT_ENCRYPTION_REQUIRED,
+)
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_permission
+from open_webui.utils.encryption import is_encrypted_chat
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -133,8 +138,15 @@ async def get_user_chat_list_by_user_id(
 @router.post("/new", response_model=Optional[ChatResponse])
 async def create_new_chat(form_data: ChatForm, user=Depends(get_verified_user)):
     try:
+        if WEBUI_CHAT_ENCRYPTION_REQUIRED and not is_encrypted_chat(form_data.chat):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Chat encryption is required by the system. Client must encrypt before saving.",
+            )
         chat = Chats.insert_new_chat(user.id, form_data)
         return ChatResponse(**chat.model_dump())
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -150,8 +162,17 @@ async def create_new_chat(form_data: ChatForm, user=Depends(get_verified_user)):
 @router.post("/import", response_model=list[ChatResponse])
 async def import_chats(form_data: ChatsImportForm, user=Depends(get_verified_user)):
     try:
+        if WEBUI_CHAT_ENCRYPTION_REQUIRED and any(
+            not is_encrypted_chat(chat.chat) for chat in form_data.chats
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Chat encryption is required by the system. Client must encrypt before saving.",
+            )
         chats = Chats.import_chats(user.id, form_data.chats)
         return chats
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -429,6 +450,15 @@ async def get_chat_by_id(id: str, user=Depends(get_verified_user)):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
 
     if chat:
+        if (
+            WEBUI_CHAT_ENCRYPTION_REQUIRED
+            and not WEBUI_CHAT_ENCRYPTION_ALLOW_LEGACY_READ
+            and not is_encrypted_chat(chat.chat)
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Legacy plaintext chats are not readable when chat encryption is required.",
+            )
         return ChatResponse(**chat.model_dump())
 
     else:
@@ -448,8 +478,26 @@ async def update_chat_by_id(
 ):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
-        updated_chat = {**chat.chat, **form_data.chat}
-        chat = Chats.update_chat_by_id(id, updated_chat)
+        existing_is_encrypted = is_encrypted_chat(chat.chat)
+        incoming_is_encrypted = is_encrypted_chat(form_data.chat)
+
+        if WEBUI_CHAT_ENCRYPTION_REQUIRED and not incoming_is_encrypted:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Chat encryption is required by the system. Client must encrypt before saving.",
+            )
+
+        if existing_is_encrypted and not incoming_is_encrypted:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Chat is encrypted. Client must encrypt before saving.",
+            )
+
+        if incoming_is_encrypted:
+            chat = Chats.update_chat_by_id(id, form_data.chat)
+        else:
+            updated_chat = {**chat.chat, **form_data.chat}
+            chat = Chats.update_chat_by_id(id, updated_chat)
         return ChatResponse(**chat.model_dump())
     else:
         raise HTTPException(
@@ -635,12 +683,23 @@ class CloneForm(BaseModel):
     title: Optional[str] = None
 
 
+class SharePackageForm(BaseModel):
+    share_id: str
+    share: dict
+    meta: Optional[dict] = {}
+
+
 @router.post("/{id}/clone", response_model=Optional[ChatResponse])
 async def clone_chat_by_id(
     form_data: CloneForm, id: str, user=Depends(get_verified_user)
 ):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
+        if WEBUI_CHAT_ENCRYPTION_REQUIRED or is_encrypted_chat(chat.chat):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Encrypted chats cannot be cloned server-side. Client must decrypt and re-encrypt.",
+            )
         updated_chat = {
             **chat.chat,
             "originalChatId": chat.id,
@@ -690,6 +749,19 @@ async def clone_shared_chat_by_id(id: str, user=Depends(get_verified_user)):
         chat = Chats.get_chat_by_share_id(id)
 
     if chat:
+        if (
+            WEBUI_CHAT_ENCRYPTION_REQUIRED
+            or is_encrypted_chat(chat.chat)
+            or (
+                isinstance(chat.chat, dict)
+                and isinstance(chat.chat.get("share"), dict)
+                and "ct" in chat.chat.get("share", {})
+            )
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Encrypted chats cannot be cloned server-side. Client must decrypt and re-encrypt.",
+            )
         updated_chat = {
             **chat.chat,
             "originalChatId": chat.id,
@@ -762,7 +834,12 @@ async def archive_chat_by_id(id: str, user=Depends(get_verified_user)):
 
 
 @router.post("/{id}/share", response_model=Optional[ChatResponse])
-async def share_chat_by_id(request: Request, id: str, user=Depends(get_verified_user)):
+async def share_chat_by_id(
+    request: Request,
+    id: str,
+    form_data: Optional[SharePackageForm] = None,
+    user=Depends(get_verified_user),
+):
     if (user.role != "admin") and (
         not has_permission(
             user.id, "chat.share", request.app.state.config.USER_PERMISSIONS
@@ -776,6 +853,27 @@ async def share_chat_by_id(request: Request, id: str, user=Depends(get_verified_
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
 
     if chat:
+        if form_data is not None:
+            shared_chat_payload = {
+                "share": form_data.share,
+                "meta": form_data.meta or {},
+            }
+            shared_chat = Chats.insert_shared_chat_package_by_chat_id(
+                chat.id, form_data.share_id, shared_chat_payload
+            )
+            if not shared_chat:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=ERROR_MESSAGES.DEFAULT(),
+                )
+            return ChatResponse(**shared_chat.model_dump())
+
+        if is_encrypted_chat(chat.chat):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Encrypted chats must be shared using a client-encrypted share package.",
+            )
+
         if chat.share_id:
             shared_chat = Chats.update_shared_chat_by_chat_id(chat.id)
             return ChatResponse(**shared_chat.model_dump())

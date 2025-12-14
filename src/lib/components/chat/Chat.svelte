@@ -56,6 +56,11 @@
 		getCodeBlockContents
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
+	import {
+		decryptChatContent,
+		encryptChatContent,
+		getOrCreateUMK
+	} from '$lib/utils/crypto/envelope';
 
 	import {
 		createNewChat,
@@ -152,6 +157,110 @@
 	};
 
 	let taskIds = null;
+
+	const isEncryptedChatPayload = (chatObj: any): chatObj is { enc: any; meta: any } =>
+		chatObj &&
+		typeof chatObj === 'object' &&
+		typeof chatObj.enc === 'object' &&
+		typeof chatObj.meta === 'object';
+
+	let chatEncryptedAtRest = false;
+	let showEncryptChatBanner = false;
+	let encryptingChat = false;
+
+	const getEncryptionPolicy = () => $config?.features?.chat_encryption ?? null;
+	$: encryptionRequired = getEncryptionPolicy()?.required ?? false;
+	$: encryptionDefault = getEncryptionPolicy()?.default ?? false;
+	$: allowLegacyRead = getEncryptionPolicy()?.allow_legacy_read ?? true;
+
+	$: encryptionEnabled = encryptionRequired || ($settings?.chatEncryptionEnabled ?? false);
+
+	let umk: CryptoKey | null = null;
+	let umkFingerprint: string | null = null;
+
+	const ensureUMK = async () => {
+		if (umk) {
+			return { key: umk, fingerprint: umkFingerprint };
+		}
+		const { key, fingerprint } = await getOrCreateUMK();
+		umk = key;
+		umkFingerprint = fingerprint;
+		return { key, fingerprint };
+	};
+
+	const splitChatForEncryption = (plainChat: any, chatId: string) => {
+		const meta = {
+			id: chatId,
+			title: plainChat?.title ?? get(chatTitle) ?? 'New Chat',
+			models: plainChat?.models ?? selectedModels,
+			timestamp: plainChat?.timestamp ?? Date.now()
+		};
+
+		const content = { ...(plainChat ?? {}) };
+		delete content.id;
+		delete content.title;
+		delete content.models;
+		delete content.timestamp;
+
+		return { meta, content };
+	};
+
+	const persistChatPatch = async (_chatId: string, patch: Record<string, unknown>) => {
+		if ($temporaryChatEnabled) return null;
+
+		const updatedPlainChat = {
+			...(chat?.chat ?? {}),
+			...patch,
+			title: get(chatTitle) ?? (chat?.chat?.title as string) ?? 'New Chat',
+			models: selectedModels
+		};
+
+		if (!encryptionEnabled && !chatEncryptedAtRest) {
+			const res = await updateChatById(localStorage.token, _chatId, patch);
+			if (res) {
+				chat = res;
+			}
+			return res;
+		}
+
+		const { key } = await ensureUMK();
+		const { meta, content } = splitChatForEncryption(updatedPlainChat, _chatId);
+		const encrypted = await encryptChatContent(key, _chatId, $user.id, content);
+
+		const res = await updateChatById(localStorage.token, _chatId, { enc: encrypted.enc, meta });
+
+		chatEncryptedAtRest = true;
+		showEncryptChatBanner = false;
+
+		if (res) {
+			chat = { ...res, chat: updatedPlainChat };
+		}
+
+		return res;
+	};
+
+	const encryptThisChatNow = async () => {
+		if (!chat?.id || !chat?.chat || encryptingChat) return;
+		if (!encryptionEnabled) return;
+		if (chatEncryptedAtRest) return;
+
+		encryptingChat = true;
+		try {
+			await persistChatPatch(chat.id, {
+				models: selectedModels,
+				history,
+				messages: createMessagesList(history, history.currentId),
+				params,
+				files: chatFiles
+			});
+			toast.success($i18n.t('Chat encrypted'));
+		} catch (error) {
+			console.error(error);
+			toast.error($i18n.t('Failed to encrypt chat'));
+		} finally {
+			encryptingChat = false;
+		}
+	};
 
 	// Chat Input
 	let prompt = '';
@@ -389,12 +498,15 @@
 					if (autoScroll) {
 						scrollToBottom('smooth');
 					}
+
+					if (!$temporaryChatEnabled && (chatEncryptedAtRest || encryptionEnabled)) {
+						await saveChatHandler($chatId, history);
+					}
 				} else if (type === 'chat:title') {
 					chatTitle.set(data);
 					currentChatPage.set(1);
 					await chats.set(await getChatList(localStorage.token, $currentChatPage));
 				} else if (type === 'chat:tags') {
-					chat = await getChatById(localStorage.token, $chatId);
 					allTags.set(await getAllTags(localStorage.token));
 				} else if (type === 'source' || type === 'citation') {
 					if (data?.type === 'code_execution') {
@@ -1080,9 +1192,32 @@
 				return [];
 			});
 
-			const chatContent = chat.chat;
+			let chatContent = chat.chat;
+
+			chatEncryptedAtRest = isEncryptedChatPayload(chatContent);
+			showEncryptChatBanner = !chatEncryptedAtRest && encryptionEnabled;
 
 			if (chatContent) {
+				if (chatEncryptedAtRest) {
+					try {
+						const { key } = await ensureUMK();
+						const decrypted = (await decryptChatContent(
+							key,
+							chatContent.enc,
+							chat.id,
+							$user.id
+						)) as any;
+						chatContent = { ...chatContent.meta, ...decrypted };
+						chat = { ...chat, chat: chatContent };
+					} catch (error) {
+						console.error(error);
+						toast.error(
+							$i18n.t('Unable to decrypt this chat. Import your recovery key to continue.')
+						);
+						return null;
+					}
+				}
+
 				console.log(chatContent);
 
 				selectedModels =
@@ -1126,6 +1261,10 @@
 				}
 
 				await tick();
+
+				if (!chatEncryptedAtRest && encryptionRequired && encryptionEnabled) {
+					await encryptThisChatNow();
+				}
 
 				return true;
 			} else {
@@ -1187,7 +1326,7 @@
 
 		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
-				chat = await updateChatById(localStorage.token, _chatId, {
+				chat = await persistChatPatch(_chatId, {
 					models: selectedModels,
 					messages: messages,
 					history: history,
@@ -1242,7 +1381,7 @@
 
 		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
-				chat = await updateChatById(localStorage.token, _chatId, {
+				chat = await persistChatPatch(_chatId, {
 					models: selectedModels,
 					messages: messages,
 					history: history,
@@ -2245,21 +2384,40 @@
 		let _chatId = $chatId;
 
 		if (!$temporaryChatEnabled) {
-			chat = await createNewChat(
-				localStorage.token,
-				{
-					id: _chatId,
-					title: $i18n.t('New Chat'),
-					models: selectedModels,
-					system: $settings.system ?? undefined,
-					params: params,
-					history: history,
-					messages: createMessagesList(history, history.currentId),
-					tags: [],
-					timestamp: Date.now()
-				},
-				$selectedFolder?.id
-			);
+			if (!_chatId) {
+				_chatId = uuidv4();
+			}
+
+			const plainChat = {
+				id: _chatId,
+				title: $i18n.t('New Chat'),
+				models: selectedModels,
+				system: $settings.system ?? undefined,
+				params: params,
+				history: history,
+				messages: createMessagesList(history, history.currentId),
+				tags: [],
+				timestamp: Date.now()
+			};
+
+			if (encryptionEnabled) {
+				const { key } = await ensureUMK();
+				const { meta, content } = splitChatForEncryption(plainChat, _chatId);
+				const encrypted = await encryptChatContent(key, _chatId, $user.id, content);
+				chat = await createNewChat(
+					localStorage.token,
+					{ enc: encrypted.enc, meta },
+					$selectedFolder?.id
+				);
+
+				if (chat) {
+					chat = { ...chat, chat: plainChat };
+					chatEncryptedAtRest = true;
+					showEncryptChatBanner = false;
+				}
+			} else {
+				chat = await createNewChat(localStorage.token, plainChat, $selectedFolder?.id);
+			}
 
 			_chatId = chat.id;
 			await chatId.set(_chatId);
@@ -2284,7 +2442,7 @@
 	const saveChatHandler = async (_chatId, history) => {
 		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
-				chat = await updateChatById(localStorage.token, _chatId, {
+				chat = await persistChatPatch(_chatId, {
 					models: selectedModels,
 					history: history,
 					messages: createMessagesList(history, history.currentId),
@@ -2436,18 +2594,24 @@
 								const title =
 									messages.find((m) => m.role === 'user')?.content ?? $i18n.t('New Chat');
 
-								const savedChat = await createNewChat(
-									localStorage.token,
-									{
-										id: uuidv4(),
-										title: title.length > 50 ? `${title.slice(0, 50)}...` : title,
-										models: selectedModels,
-										history: history,
-										messages: messages,
-										timestamp: Date.now()
-									},
-									null
-								);
+								const newChatId = uuidv4();
+								const plainChat = {
+									id: newChatId,
+									title: title.length > 50 ? `${title.slice(0, 50)}...` : title,
+									models: selectedModels,
+									history: history,
+									messages: messages,
+									timestamp: Date.now()
+								};
+
+								const savedChat = encryptionEnabled
+									? await (async () => {
+											const { key } = await ensureUMK();
+											const { meta, content } = splitChatForEncryption(plainChat, newChatId);
+											const encrypted = await encryptChatContent(key, newChatId, $user.id, content);
+											return createNewChat(localStorage.token, { enc: encrypted.enc, meta }, null);
+										})()
+									: await createNewChat(localStorage.token, plainChat, null);
 
 								if (savedChat) {
 									temporaryChatEnabled.set(false);
@@ -2463,6 +2627,33 @@
 							}
 						}}
 					/>
+
+					{#if showEncryptChatBanner}
+						<div class="px-3 pt-2 z-10">
+							<div
+								class="max-w-5xl mx-auto flex items-center justify-between gap-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 px-3 py-2 text-sm"
+							>
+								<div class="text-gray-700 dark:text-gray-200">
+									{#if encryptionRequired}
+										{$i18n.t(
+											'Chat encryption is required. Encrypt this chat to continue saving updates.'
+										)}
+									{:else}
+										{$i18n.t(
+											'This chat is not encrypted yet. Encrypt it to protect your chat logs at rest.'
+										)}
+									{/if}
+								</div>
+								<button
+									class="shrink-0 px-3 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full disabled:opacity-60 disabled:cursor-not-allowed"
+									on:click={encryptThisChatNow}
+									disabled={encryptingChat}
+								>
+									{encryptingChat ? $i18n.t('Encrypting...') : $i18n.t('Encrypt Now')}
+								</button>
+							</div>
+						</div>
+					{/if}
 
 					<div class="flex flex-col flex-auto z-10 w-full @container overflow-auto">
 						{#if ($settings?.landingPageMode === 'chat' && !$selectedFolder) || createMessagesList(history, history.currentId).length > 0}
@@ -2482,6 +2673,7 @@
 										bind:history
 										bind:autoScroll
 										bind:prompt
+										saveChat={persistChatPatch}
 										setInputText={(text) => {
 											messageInput?.setText(text);
 										}}

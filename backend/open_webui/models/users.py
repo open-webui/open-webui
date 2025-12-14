@@ -478,7 +478,9 @@ class UsersTable:
     def get_first_user(self) -> UserModel:
         try:
             with get_db() as db:
-                user = db.query(User).order_by(User.created_at).first()
+                # `created_at` is second-granularity; add a stable tie-breaker so
+                # "first user" is deterministic in tests and fast sign-up bursts.
+                user = db.query(User).order_by(User.created_at, User.id).first()
                 return UserModel.model_validate(user)
         except Exception:
             return None
