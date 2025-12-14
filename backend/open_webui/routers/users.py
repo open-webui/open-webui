@@ -674,7 +674,6 @@ async def reset_all_users_interface_settings(user=Depends(get_admin_user)):
                 # SQLite/MySQL: batch update with pagination to avoid memory exhaustion
                 BATCH_SIZE = 500
                 reset_count = 0
-                offset = 0
                 
                 user_ids = [
                     u.id for u in db.query(User.id)
