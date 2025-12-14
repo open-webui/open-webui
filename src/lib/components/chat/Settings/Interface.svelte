@@ -431,7 +431,6 @@
 							step="0.1"
 							value={textScale || 1}
 							on:input={(e) => {
-								console.log('Slider on:input fired, e.isTrusted:', e.isTrusted);
 								setTextScaleHandler(parseFloat(e.target.value));
 							}}
 							aria-label={$i18n.t('Text scale slider')}
