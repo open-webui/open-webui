@@ -1983,140 +1983,139 @@
 							}
 						}
 					}
-}
 
-// PDF Preprocessing for non-vision models
-const hasPdfs = createMessagesList(_history, parentId).some((message) =>
-	message.files?.some((file) =>
-		file.type === 'file' &&
-		(file.name?.toLowerCase().endsWith('.pdf') || file.file?.filename?.toLowerCase().endsWith('.pdf'))
-	)
-);
+					// PDF Preprocessing for non-vision models
+					const hasPdfs = createMessagesList(_history, parentId).some((message) =>
+						message.files?.some((file) =>
+							file.type === 'file' &&
+							(file.name?.toLowerCase().endsWith('.pdf') || file.file?.filename?.toLowerCase().endsWith('.pdf'))
+						)
+					);
 
-if (hasPdfs && !hasNativeVision && hasPreprocessor) {
-	const preprocessorId = model.info.meta.vision_preprocessor_model_id;
-	const preprocessorModel = $models.find((m) => m.id === preprocessorId);
-	if (!preprocessorModel) {
-		toast.error(`Vision preprocessor model not found: ${preprocessorId}`);
-	} else {
-		const userMessage = _history.messages[parentId];
-		const userPdfs = userMessage.files?.filter((f) =>
-			f.type === 'file' &&
-			(f.name?.toLowerCase().endsWith('.pdf') || f.file?.filename?.toLowerCase().endsWith('.pdf'))
-		) || [];
+					if (hasPdfs && !hasNativeVision && hasPreprocessor) {
+						const preprocessorId = model.info.meta.vision_preprocessor_model_id;
+						const preprocessorModel = $models.find((m) => m.id === preprocessorId);
+						if (!preprocessorModel) {
+							toast.error(`Vision preprocessor model not found: ${preprocessorId}`);
+						} else {
+							const userMessage = _history.messages[parentId];
+							const userPdfs = userMessage.files?.filter((f) =>
+								f.type === 'file' &&
+								(f.name?.toLowerCase().endsWith('.pdf') || f.file?.filename?.toLowerCase().endsWith('.pdf'))
+							) || [];
 
-		if (userPdfs.length > 0) {
-			let responseMessage = _history.messages[responseMessageId];
-			responseMessage.statusHistory = responseMessage.statusHistory || [];
-			responseMessage.statusHistory.push({
-				done: false,
-				action: '📄',
-				description: 'Preprocessing PDF with vision model...'
-			});
-			_history.messages[responseMessageId] = responseMessage;
-			history.messages[responseMessageId] = responseMessage;
-			history = { ...history };
+							if (userPdfs.length > 0) {
+								let responseMessage = _history.messages[responseMessageId];
+								responseMessage.statusHistory = responseMessage.statusHistory || [];
+								responseMessage.statusHistory.push({
+									done: false,
+									action: '📄',
+									description: 'Preprocessing PDF with vision model...'
+								});
+								_history.messages[responseMessageId] = responseMessage;
+								history.messages[responseMessageId] = responseMessage;
+								history = { ...history };
 
-			try {
-				// Convert all PDFs to images
-				let allPdfImages = [];
-				for (const pdfFile of userPdfs) {
-					const pdfUrl = pdfFile.url || `${WEBUI_API_BASE_URL}/files/${pdfFile.id}/content`;
-					try {
-						const pdfImages = await renderPdfToImageDataUrls(pdfUrl);
-						allPdfImages.push(...pdfImages.map((url, idx) => ({
-							url,
-							filename: `${pdfFile.name || pdfFile.file?.filename || 'document'}_page_${idx + 1}`
-						})));
-					} catch (pdfError) {
-						console.error(`Failed to render PDF ${pdfFile.name}:`, pdfError);
-						throw new Error(`Failed to render PDF: ${pdfFile.name || 'unknown'}`);
+								try {
+									// Convert all PDFs to images
+									let allPdfImages = [];
+									for (const pdfFile of userPdfs) {
+										const pdfUrl = pdfFile.url || `${WEBUI_API_BASE_URL}/files/${pdfFile.id}/content`;
+										try {
+											const pdfImages = await renderPdfToImageDataUrls(pdfUrl);
+											allPdfImages.push(...pdfImages.map((url, idx) => ({
+												url,
+												filename: `${pdfFile.name || pdfFile.file?.filename || 'document'}_page_${idx + 1}`
+											})));
+										} catch (pdfError) {
+											console.error(`Failed to render PDF ${pdfFile.name}:`, pdfError);
+											throw new Error(`Failed to render PDF: ${pdfFile.name || 'unknown'}`);
+										}
+									}
+
+									if (allPdfImages.length === 0) {
+										throw new Error('No pages could be extracted from PDF(s)');
+									}
+
+									const userContent = userMessage.content;
+									const visionPrompt = (
+										model.info.meta.vision_preprocessor_prompt ||
+										'Perform OCR on this image and describe its contents in the context of the user query: {query}'
+									).replace('{query}', userContent);
+
+									const visionMessages = [
+										{ role: 'system', content: visionPrompt },
+										{
+											role: 'user',
+											content: [
+												{ type: 'text', text: `I have uploaded ${allPdfImages.length} page(s) from PDF document(s). Please analyze them:\n\n${userContent}` },
+												...allPdfImages.map((img) => ({
+													type: 'image_url',
+													image_url: { url: img.url }
+												}))
+											]
+										}
+									];
+
+									const visionRes = await generateOpenAIChatCompletion(
+										localStorage.token,
+										{
+											model: preprocessorModel.id,
+											messages: visionMessages,
+											stream: false,
+											params: { max_tokens: 4096 }
+										},
+										`${WEBUI_BASE_URL}/api`
+									);
+
+									const visionResponse = visionRes.choices[0].message.content;
+
+									responseMessage = _history.messages[responseMessageId];
+									responseMessage.statusHistory.push({
+										done: true,
+										action: '📄',
+										description: `PDF analysis complete (${allPdfImages.length} pages)`,
+										vision_prompt: visionPrompt,
+										vision_response: visionResponse
+									});
+									_history.messages[responseMessageId] = responseMessage;
+									history.messages[responseMessageId] = responseMessage;
+
+									// Prepend PDF analysis to user content
+									userMessage.content = `[PDF Analysis (${allPdfImages.length} pages):\n${visionResponse}\n]\n\n${userMessage.content}`;
+									userMessage.pdf_processed = true;
+
+									_history.messages[parentId] = userMessage;
+									history.messages[parentId] = userMessage;
+									history = { ...history };
+
+									await saveChatHandler(_chatId, _history);
+								} catch (pdfError) {
+									console.error('PDF preprocessing failed:', pdfError);
+									
+									// Block message and show error
+									responseMessage = _history.messages[responseMessageId];
+									responseMessage.statusHistory.push({
+										done: true,
+										action: '📄❌',
+										description: `PDF preprocessing failed: ${pdfError.message}`
+									});
+									responseMessage.error = {
+										content: `PDF preprocessing failed: ${pdfError.message}\n\nThe selected model does not support vision natively, and PDF preprocessing could not be completed.`
+									};
+									responseMessage.done = true;
+									_history.messages[responseMessageId] = responseMessage;
+									history.messages[responseMessageId] = responseMessage;
+									history = { ...history };
+
+									await saveChatHandler(_chatId, _history);
+									return; // Stop processing this model
+								}
+							}
+						}
 					}
-				}
 
-				if (allPdfImages.length === 0) {
-					throw new Error('No pages could be extracted from PDF(s)');
-				}
-
-				const userContent = userMessage.content;
-				const visionPrompt = (
-					model.info.meta.vision_preprocessor_prompt ||
-					'Perform OCR on this image and describe its contents in the context of the user query: {query}'
-				).replace('{query}', userContent);
-
-				const visionMessages = [
-					{ role: 'system', content: visionPrompt },
-					{
-						role: 'user',
-						content: [
-							{ type: 'text', text: `I have uploaded ${allPdfImages.length} page(s) from PDF document(s). Please analyze them:\n\n${userContent}` },
-							...allPdfImages.map((img) => ({
-								type: 'image_url',
-								image_url: { url: img.url }
-							}))
-						]
-					}
-				];
-
-				const visionRes = await generateOpenAIChatCompletion(
-					localStorage.token,
-					{
-						model: preprocessorModel.id,
-						messages: visionMessages,
-						stream: false,
-						params: { max_tokens: 4096 }
-					},
-					`${WEBUI_BASE_URL}/api`
-				);
-
-				const visionResponse = visionRes.choices[0].message.content;
-
-				responseMessage = _history.messages[responseMessageId];
-				responseMessage.statusHistory.push({
-					done: true,
-					action: '📄',
-					description: `PDF analysis complete (${allPdfImages.length} pages)`,
-					vision_prompt: visionPrompt,
-					vision_response: visionResponse
-				});
-				_history.messages[responseMessageId] = responseMessage;
-				history.messages[responseMessageId] = responseMessage;
-
-				// Prepend PDF analysis to user content
-				userMessage.content = `[PDF Analysis (${allPdfImages.length} pages):\n${visionResponse}\n]\n\n${userMessage.content}`;
-				userMessage.pdf_processed = true;
-
-				_history.messages[parentId] = userMessage;
-				history.messages[parentId] = userMessage;
-				history = { ...history };
-
-				await saveChatHandler(_chatId, _history);
-			} catch (pdfError) {
-				console.error('PDF preprocessing failed:', pdfError);
-				
-				// Block message and show error
-				responseMessage = _history.messages[responseMessageId];
-				responseMessage.statusHistory.push({
-					done: true,
-					action: '📄❌',
-					description: `PDF preprocessing failed: ${pdfError.message}`
-				});
-				responseMessage.error = {
-					content: `PDF preprocessing failed: ${pdfError.message}\n\nThe selected model does not support vision natively, and PDF preprocessing could not be completed.`
-				};
-				responseMessage.done = true;
-				_history.messages[responseMessageId] = responseMessage;
-				history.messages[responseMessageId] = responseMessage;
-				history = { ...history };
-
-				await saveChatHandler(_chatId, _history);
-				return; // Stop processing this model
-			}
-		}
-	}
-}
-
-const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
+					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 					scrollToBottom();
 					await sendMessageSocket(
 						model,
