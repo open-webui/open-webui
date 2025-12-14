@@ -203,7 +203,7 @@
 			}}
 		>
 			<div class=" self-center mr-2">
-				<DocumentChartBar />
+				<ChartBar />
 			</div>
 			<div class=" self-center">{$i18n.t('Evaluations')}</div>
 		</button>
