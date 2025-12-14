@@ -6,17 +6,17 @@
 	import { updateUserInfo } from '$lib/apis/users';
 	import { getUserPosition } from '$lib/utils';
 	import { setTextScale } from '$lib/utils/text-scale';
-	import Switch from '$lib/components/common/Switch.svelte';
 	import Minus from '$lib/components/icons/Minus.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
 	import ManageFloatingActionButtonsModal from './Interface/ManageFloatingActionButtonsModal.svelte';
 	import ManageImageCompressionModal from './Interface/ManageImageCompressionModal.svelte';
+
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
 
 	export let saveSettings: Function;
-	// Allow passing custom settings object (for admin defaults modal)
 	export let initialSettings: any = null;
 
 	let backgroundImageUrl = null;
