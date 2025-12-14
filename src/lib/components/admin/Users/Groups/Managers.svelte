@@ -66,7 +66,7 @@
 		try {
 			await updateGroupManagers(localStorage.token, groupId, managerIds);
 			toast.success($i18n.t('Managers updated successfully'));
-				dispatch('managersUpdated', { managerIds });
+			dispatch('managersUpdated', { managerIds });
 		} catch (error) {
 			console.error('Error saving managers:', error);
 			toast.error($i18n.t('Failed to update managers'));
