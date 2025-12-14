@@ -61,6 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🛟 Model editor stability was improved with null safety checks for tools, functions, and file input operations, preventing crashes when stores are undefined or file objects are invalid. [#19939](https://github.com/open-webui/open-webui/pull/19939)
 - 🧩 Chat overview tab crashes caused by undefined model references were resolved by adding proper null checks when accessing deleted or ejected models. [#19935](https://github.com/open-webui/open-webui/pull/19935)
 - 🌄 The "COMFYUI_WORKFLOW_NODES" and "IMAGES_EDIT_COMFYUI_WORKFLOW_NODES" environment variables are now correctly loaded and parsed as JSON lists, and the configuration key name was corrected from "COMFYUI_WORKFLOW" to "COMFYUI_WORKFLOW_NODES". [#19918](https://github.com/open-webui/open-webui/pull/19918), [#19886](https://github.com/open-webui/open-webui/issues/19886)
+- 🗣️ MoA completion handling stability was improved with null safety checks for response objects, boolean casting for settings, and proper timeout type definitions. [#19921](https://github.com/open-webui/open-webui/pull/19921)
 
 ### Changed
 
