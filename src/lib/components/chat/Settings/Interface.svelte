@@ -200,91 +200,130 @@
 		saveSettings({ textScale });
 	};
 
-	// Load settings reactively when settingsSource changes
-	$: {
-		titleAutoGenerate = settingsSource?.title?.auto ?? true;
-		autoTags = settingsSource?.autoTags ?? true;
-		autoFollowUps = settingsSource?.autoFollowUps ?? true;
-
-		highContrastMode = settingsSource?.highContrastMode ?? false;
-
-		detectArtifacts = settingsSource?.detectArtifacts ?? true;
-		responseAutoCopy = settingsSource?.responseAutoCopy ?? false;
-
-		showUsername = settingsSource?.showUsername ?? false;
-		showUpdateToast = settingsSource?.showUpdateToast ?? true;
-		showChangelog = settingsSource?.showChangelog ?? true;
-
-		showEmojiInCall = settingsSource?.showEmojiInCall ?? false;
-		voiceInterruption = settingsSource?.voiceInterruption ?? false;
-
-		displayMultiModelResponsesInTabs = settingsSource?.displayMultiModelResponsesInTabs ?? false;
-		chatFadeStreamingText = settingsSource?.chatFadeStreamingText ?? true;
-
-		richTextInput = settingsSource?.richTextInput ?? true;
-		showFormattingToolbar = settingsSource?.showFormattingToolbar ?? false;
-		insertPromptAsRichText = settingsSource?.insertPromptAsRichText ?? false;
-		promptAutocomplete = settingsSource?.promptAutocomplete ?? false;
-
-		insertSuggestionPrompt = settingsSource?.insertSuggestionPrompt ?? false;
-		keepFollowUpPrompts = settingsSource?.keepFollowUpPrompts ?? false;
-		insertFollowUpPrompt = settingsSource?.insertFollowUpPrompt ?? false;
-
-		regenerateMenu = settingsSource?.regenerateMenu ?? true;
-
-		largeTextAsFile = settingsSource?.largeTextAsFile ?? false;
-		copyFormatted = settingsSource?.copyFormatted ?? false;
-
-		collapseCodeBlocks = settingsSource?.collapseCodeBlocks ?? false;
-		expandDetails = settingsSource?.expandDetails ?? false;
-
-		landingPageMode = settingsSource?.landingPageMode ?? '';
-		chatBubble = settingsSource?.chatBubble ?? true;
-		widescreenMode = settingsSource?.widescreenMode ?? false;
-		splitLargeChunks = settingsSource?.splitLargeChunks ?? false;
-		scrollOnBranchChange = settingsSource?.scrollOnBranchChange ?? true;
-
-		temporaryChatByDefault = settingsSource?.temporaryChatByDefault ?? false;
-		chatDirection = settingsSource?.chatDirection ?? 'auto';
-		userLocation = settingsSource?.userLocation ?? false;
-		showChatTitleInTab = settingsSource?.showChatTitleInTab ?? true;
-
-		notificationSound = settingsSource?.notificationSound ?? true;
-		notificationSoundAlways = settingsSource?.notificationSoundAlways ?? false;
-
-		iframeSandboxAllowSameOrigin = settingsSource?.iframeSandboxAllowSameOrigin ?? false;
-		iframeSandboxAllowForms = settingsSource?.iframeSandboxAllowForms ?? false;
-
-		stylizedPdfExport = settingsSource?.stylizedPdfExport ?? true;
-
-		hapticFeedback = settingsSource?.hapticFeedback ?? false;
-		ctrlEnterToSend = settingsSource?.ctrlEnterToSend ?? false;
-
-		showFloatingActionButtons = settingsSource?.showFloatingActionButtons ?? true;
-		floatingActionButtons = settingsSource?.floatingActionButtons ?? null;
-
-		imageCompression = settingsSource?.imageCompression ?? false;
-		imageCompressionSize = settingsSource?.imageCompressionSize ?? { width: '', height: '' };
-		imageCompressionInChannels = settingsSource?.imageCompressionInChannels ?? true;
-
-		defaultModelId = settingsSource?.models?.at(0) ?? '';
-		if ($config?.default_models) {
-			defaultModelId = $config.default_models.split(',')[0];
-		}
-
-		backgroundImageUrl = settingsSource?.backgroundImageUrl ?? null;
-		webSearch = settingsSource?.webSearch ?? null;
-
-		const newTextScale = settingsSource?.textScale ?? null;
-		if (newTextScale !== textScale) {
-			textScale = newTextScale;
-
-			const isAdminMode = initialSettings !== null;
-			if (!isAdminMode && textScale !== null) {
-				setTextScale(textScale);
-			}
-		}
+	const SETTING_DEFAULTS = {
+	    title: { auto: true },
+	    autoTags: true,
+	    autoFollowUps: true,
+	    highContrastMode: false,
+	    detectArtifacts: true,
+	    responseAutoCopy: false,
+	    showUsername: false,
+	    showUpdateToast: true,
+	    showChangelog: true,
+	    showEmojiInCall: false,
+	    voiceInterruption: false,
+	    displayMultiModelResponsesInTabs: false,
+	    chatFadeStreamingText: true,
+	    richTextInput: true,
+	    showFormattingToolbar: false,
+	    insertPromptAsRichText: false,
+	    promptAutocomplete: false,
+	    insertSuggestionPrompt: false,
+	    keepFollowUpPrompts: false,
+	    insertFollowUpPrompt: false,
+	    regenerateMenu: true,
+	    largeTextAsFile: false,
+	    copyFormatted: false,
+	    collapseCodeBlocks: false,
+	    expandDetails: false,
+	    landingPageMode: '',
+	    chatBubble: true,
+	    widescreenMode: false,
+	    splitLargeChunks: false,
+	    scrollOnBranchChange: true,
+	    temporaryChatByDefault: false,
+	    chatDirection: 'auto',
+	    userLocation: false,
+	    showChatTitleInTab: true,
+	    notificationSound: true,
+	    notificationSoundAlways: false,
+	    iframeSandboxAllowSameOrigin: false,
+	    iframeSandboxAllowForms: false,
+	    stylizedPdfExport: true,
+	    hapticFeedback: false,
+	    ctrlEnterToSend: false,
+	    showFloatingActionButtons: true,
+	    floatingActionButtons: null,
+	    imageCompression: false,
+	    imageCompressionSize: { width: '', height: '' },
+	    imageCompressionInChannels: true,
+	    backgroundImageUrl: null,
+	    webSearch: null,
+	    textScale: null
+	};
+	
+	function loadSettingsFromSource(source: any) {
+	    titleAutoGenerate = source?.title?.auto ?? SETTING_DEFAULTS.title.auto;
+	    autoTags = source?.autoTags ?? SETTING_DEFAULTS.autoTags;
+	    autoFollowUps = source?.autoFollowUps ?? SETTING_DEFAULTS.autoFollowUps;
+	    highContrastMode = source?.highContrastMode ?? SETTING_DEFAULTS.highContrastMode;
+	    detectArtifacts = source?.detectArtifacts ?? SETTING_DEFAULTS.detectArtifacts;
+	    responseAutoCopy = source?.responseAutoCopy ?? SETTING_DEFAULTS.responseAutoCopy;
+	    showUsername = source?.showUsername ?? SETTING_DEFAULTS.showUsername;
+	    showUpdateToast = source?.showUpdateToast ?? SETTING_DEFAULTS.showUpdateToast;
+	    showChangelog = source?.showChangelog ?? SETTING_DEFAULTS.showChangelog;
+	    showEmojiInCall = source?.showEmojiInCall ?? SETTING_DEFAULTS.showEmojiInCall;
+	    voiceInterruption = source?.voiceInterruption ?? SETTING_DEFAULTS.voiceInterruption;
+	    displayMultiModelResponsesInTabs = source?.displayMultiModelResponsesInTabs ?? SETTING_DEFAULTS.displayMultiModelResponsesInTabs;
+	    chatFadeStreamingText = source?.chatFadeStreamingText ?? SETTING_DEFAULTS.chatFadeStreamingText;
+	    richTextInput = source?.richTextInput ?? SETTING_DEFAULTS.richTextInput;
+	    showFormattingToolbar = source?.showFormattingToolbar ?? SETTING_DEFAULTS.showFormattingToolbar;
+	    insertPromptAsRichText = source?.insertPromptAsRichText ?? SETTING_DEFAULTS.insertPromptAsRichText;
+	    promptAutocomplete = source?.promptAutocomplete ?? SETTING_DEFAULTS.promptAutocomplete;
+	    insertSuggestionPrompt = source?.insertSuggestionPrompt ?? SETTING_DEFAULTS.insertSuggestionPrompt;
+	    keepFollowUpPrompts = source?.keepFollowUpPrompts ?? SETTING_DEFAULTS.keepFollowUpPrompts;
+	    insertFollowUpPrompt = source?.insertFollowUpPrompt ?? SETTING_DEFAULTS.insertFollowUpPrompt;
+	    regenerateMenu = source?.regenerateMenu ?? SETTING_DEFAULTS.regenerateMenu;
+	    largeTextAsFile = source?.largeTextAsFile ?? SETTING_DEFAULTS.largeTextAsFile;
+	    copyFormatted = source?.copyFormatted ?? SETTING_DEFAULTS.copyFormatted;
+	    collapseCodeBlocks = source?.collapseCodeBlocks ?? SETTING_DEFAULTS.collapseCodeBlocks;
+	    expandDetails = source?.expandDetails ?? SETTING_DEFAULTS.expandDetails;
+	    landingPageMode = source?.landingPageMode ?? SETTING_DEFAULTS.landingPageMode;
+	    chatBubble = source?.chatBubble ?? SETTING_DEFAULTS.chatBubble;
+	    widescreenMode = source?.widescreenMode ?? SETTING_DEFAULTS.widescreenMode;
+	    splitLargeChunks = source?.splitLargeChunks ?? SETTING_DEFAULTS.splitLargeChunks;
+	    scrollOnBranchChange = source?.scrollOnBranchChange ?? SETTING_DEFAULTS.scrollOnBranchChange;
+	    temporaryChatByDefault = source?.temporaryChatByDefault ?? SETTING_DEFAULTS.temporaryChatByDefault;
+	    chatDirection = source?.chatDirection ?? SETTING_DEFAULTS.chatDirection;
+	    userLocation = source?.userLocation ?? SETTING_DEFAULTS.userLocation;
+	    showChatTitleInTab = source?.showChatTitleInTab ?? SETTING_DEFAULTS.showChatTitleInTab;
+	    notificationSound = source?.notificationSound ?? SETTING_DEFAULTS.notificationSound;
+	    notificationSoundAlways = source?.notificationSoundAlways ?? SETTING_DEFAULTS.notificationSoundAlways;
+	    iframeSandboxAllowSameOrigin = source?.iframeSandboxAllowSameOrigin ?? SETTING_DEFAULTS.iframeSandboxAllowSameOrigin;
+	    iframeSandboxAllowForms = source?.iframeSandboxAllowForms ?? SETTING_DEFAULTS.iframeSandboxAllowForms;
+	    stylizedPdfExport = source?.stylizedPdfExport ?? SETTING_DEFAULTS.stylizedPdfExport;
+	    hapticFeedback = source?.hapticFeedback ?? SETTING_DEFAULTS.hapticFeedback;
+	    ctrlEnterToSend = source?.ctrlEnterToSend ?? SETTING_DEFAULTS.ctrlEnterToSend;
+	    showFloatingActionButtons = source?.showFloatingActionButtons ?? SETTING_DEFAULTS.showFloatingActionButtons;
+	    floatingActionButtons = source?.floatingActionButtons ?? SETTING_DEFAULTS.floatingActionButtons;
+	    imageCompression = source?.imageCompression ?? SETTING_DEFAULTS.imageCompression;
+	    imageCompressionSize = source?.imageCompressionSize ?? SETTING_DEFAULTS.imageCompressionSize;
+	    imageCompressionInChannels = source?.imageCompressionInChannels ?? SETTING_DEFAULTS.imageCompressionInChannels;
+	    backgroundImageUrl = source?.backgroundImageUrl ?? SETTING_DEFAULTS.backgroundImageUrl;
+	    webSearch = source?.webSearch ?? SETTING_DEFAULTS.webSearch;
+	    textScale = source?.textScale ?? SETTING_DEFAULTS.textScale;
+	
+	    defaultModelId = source?.models?.at(0) ?? '';
+	    if ($config?.default_models) {
+	        defaultModelId = $config.default_models.split(',')[0];
+	    }
 	}
+	
+	// For admin mode: reload when initialSettings changes
+	$: if (initialSettings !== null) {
+	    loadSettingsFromSource(initialSettings);
+	}
+	
+	// For user mode: apply text scale as side effect when settings change
+	$: if (initialSettings === null && $settings?.textScale !== undefined) {
+	    const scale = $settings.textScale ?? 1;
+	    setTextScale(scale);
+	}
+	
+	onMount(() => {
+	    // Initial load from appropriate source
+	    loadSettingsFromSource(initialSettings ?? $settings);
+	});
 </script>
 
 <ManageFloatingActionButtonsModal
