@@ -1433,17 +1433,18 @@ def save_docs_to_vector_db(
 
         if request.app.state.config.ENABLE_MARKDOWN_HEADER_SPLITTING:
             # Only split chunks that exceed the max size, preserve others
+            # Determine size measurement function
+            if request.app.state.config.TEXT_SPLITTER == "token":
+                encoding = tiktoken.get_encoding(
+                    str(request.app.state.config.TIKTOKEN_ENCODING_NAME)
+                )
+                get_size = lambda doc: len(encoding.encode(doc.page_content))
+            else:
+                get_size = lambda doc: len(doc.page_content)
+
             final_docs = []
             for doc in docs:
-                if request.app.state.config.TEXT_SPLITTER == "token":
-                    encoding = tiktoken.get_encoding(
-                        str(request.app.state.config.TIKTOKEN_ENCODING_NAME)
-                    )
-                    doc_size = len(encoding.encode(doc.page_content))
-                else:
-                    doc_size = len(doc.page_content)
-
-                if doc_size > request.app.state.config.CHUNK_SIZE:
+                if get_size(doc) > request.app.state.config.CHUNK_SIZE:
                     # Split this chunk and preserve metadata
                     split_docs = text_splitter.split_documents([doc])
                     # Preserve headings metadata for split chunks
