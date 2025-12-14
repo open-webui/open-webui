@@ -3,6 +3,7 @@ import copy
 from fastapi import APIRouter, Depends, Request, HTTPException
 from pydantic import BaseModel, ConfigDict
 import aiohttp
+import asyncio
 
 from typing import Optional
 
@@ -618,9 +619,8 @@ async def get_interface_defaults(user=Depends(get_verified_user)):
     Get global interface defaults for all users.
     Returns empty dict if no defaults are configured.
     """
-    config = get_config()
+    config = await asyncio.to_thread(get_config)
     return config.get("ui", {}).get("interface_defaults", {})
-
 
 @router.post("/interface/defaults", response_model=dict)
 async def set_interface_defaults(
@@ -630,15 +630,14 @@ async def set_interface_defaults(
     Set global interface defaults (admin only).
     These will be used as defaults for all users who haven't customized their settings.
     """
-    config = get_config()
+    config = await asyncio.to_thread(get_config)
 
     if "ui" not in config:
         config["ui"] = {}
 
-    # Only store non-None values (explicit settings)
     validated_defaults = {k: v for k, v in form_data.model_dump().items() if v is not None}
     config["ui"]["interface_defaults"] = validated_defaults
 
-    save_config(config)
+    await asyncio.to_thread(save_config, config)
 
     return config["ui"]["interface_defaults"]
