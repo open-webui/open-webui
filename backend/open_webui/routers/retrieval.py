@@ -1334,6 +1334,7 @@ def save_docs_to_vector_db(
                     )
 
             docs = md_split_docs
+            log.info(f"After markdown header split: {len(docs)} chunks")
 
             # Apply minimum chunk size merging if configured
             min_size = request.app.state.config.CHUNK_MIN_SIZE
@@ -1348,6 +1349,10 @@ def save_docs_to_vector_db(
                     measure_fn = lambda text: len(encoding.encode(text))
                 else:
                     measure_fn = len
+
+                # Debug: log first doc's metadata to see what's available
+                if docs:
+                    log.info(f"First doc metadata keys: {list(docs[0].metadata.keys())}")
 
                 merged_docs = []
                 doc_index = 0
@@ -1372,16 +1377,18 @@ def save_docs_to_vector_db(
                         next_headings = next_doc.metadata.get("headings", [])
 
                         # Don't merge across source/file boundaries
-                        # Require both to have source/file_id AND match
+                        # Require both to have source AND match (file_id is optional for web content)
                         current_source = current_doc.metadata.get("source")
                         next_source = next_doc.metadata.get("source")
                         if current_source is None or next_source is None or current_source != next_source:
                             break
-                        
+
+                        # Check file_id only if both have it
                         current_file_id = current_doc.metadata.get("file_id")
                         next_file_id = next_doc.metadata.get("file_id")
-                        if current_file_id is None or next_file_id is None or current_file_id != next_file_id:
-                            break
+                        if current_file_id is not None and next_file_id is not None:
+                            if current_file_id != next_file_id:
+                                break
 
                         # Check if adding next chunk would exceed max
                         test_content = combined_content + "\n\n" + next_content
@@ -1409,6 +1416,7 @@ def save_docs_to_vector_db(
                     doc_index = merge_index
 
                 docs = merged_docs
+                log.info(f"After merging: {len(docs)} chunks")
 
         # Stage 2: Apply character or token splitting
         # If markdown header splitting was used, only split chunks that exceed CHUNK_SIZE
