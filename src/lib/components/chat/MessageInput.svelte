@@ -41,12 +41,15 @@
 		getWeekday
 	} from '$lib/utils';
 	import { uploadFile } from '$lib/apis/files';
+	import type { ReasoningEffort } from '$lib/apis';
 	import { generateAutoCompletion } from '$lib/apis';
 	import { deleteFileById } from '$lib/apis/files';
 	import { getSessionUser } from '$lib/apis/auths';
 	import { getTools } from '$lib/apis/tools';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
+
+	import { BASE_REASONING_EFFORTS, orderReasoningEfforts } from '$lib/constants/reasoning';
 
 	import InputMenu from './MessageInput/InputMenu.svelte';
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
@@ -118,8 +121,6 @@
 	let userModifiedEffortForCurrentModel = false;
 	let preferencesLoaded = false;
 
-	const BASE_REASONING_EFFORTS = ['low', 'medium', 'high'];
-
 	const getModelReasoningConfig = (modelId: string) => {
 		const model = $models.find((m) => m.id === modelId);
 		const reasoning = model?.info?.meta?.reasoning;
@@ -134,7 +135,7 @@
 		const { enabled, extraEfforts } = getModelReasoningConfig(modelId);
 		if (!enabled) return [];
 		const extras = Array.from(new Set(extraEfforts));
-		return Array.from(new Set([...BASE_REASONING_EFFORTS, ...extras]));
+		return orderReasoningEfforts(Array.from(new Set([...BASE_REASONING_EFFORTS, ...extras])));
 	};
 
 	const clampEffortToAllowed = (effort: string, allowedEfforts: string[]) => {

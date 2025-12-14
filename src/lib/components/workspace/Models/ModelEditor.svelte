@@ -7,6 +7,7 @@
 
 	import { getTools } from '$lib/apis/tools';
 	import { getFunctions } from '$lib/apis/functions';
+	import { EXTRA_REASONING_EFFORTS } from '$lib/constants/reasoning';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
@@ -813,20 +814,17 @@
 								</div>
 
 								<div class="flex flex-wrap gap-3 text-xs">
-									<label class="flex items-center gap-2">
-										<input type="checkbox" value="none" disabled={!reasoningModelEnabled} bind:group={extraReasoningEfforts} />
-										<span>none</span>
-									</label>
-
-									<label class="flex items-center gap-2">
-										<input type="checkbox" value="minimal" disabled={!reasoningModelEnabled} bind:group={extraReasoningEfforts} />
-										<span>minimal</span>
-									</label>
-
-									<label class="flex items-center gap-2">
-										<input type="checkbox" value="xhigh" disabled={!reasoningModelEnabled} bind:group={extraReasoningEfforts} />
-										<span>xhigh</span>
-									</label>
+									{#each EXTRA_REASONING_EFFORTS as effort}
+										<label class="flex items-center gap-2">
+											<input
+												type="checkbox"
+												value={effort}
+												disabled={!reasoningModelEnabled}
+												bind:group={extraReasoningEfforts}
+											/>
+											<span>{effort}</span>
+										</label>
+									{/each}
 								</div>
 							</div>
 						</div>

@@ -53,28 +53,30 @@
 	} from '$lib/utils';
 
 	import {
-		createNewChat,
-		getAllTags,
-		getChatById,
-		getChatList,
-		getPinnedChatList,
-		getTagsById,
-		updateChatById,
-		updateChatFolderIdById
-	} from '$lib/apis/chats';
-	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
-	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
-	import { getAndUpdateUserLocation, getUserSettings, updateUserSettings } from '$lib/apis/users';
-	import {
-		chatCompleted,
-		generateQueries,
-		chatAction,
-		generateMoACompletion,
-		stopTask,
-		getTaskIdsByChatId
-	} from '$lib/apis';
-	import { getTools } from '$lib/apis/tools';
-	import { uploadFile } from '$lib/apis/files';
+		import { createNewChat,
+		 	getAllTags,
+		 	getChatById,
+		 	getChatList,
+		 	getPinnedChatList,
+		 	getTagsById,
+		 	updateChatById,
+		 	updateChatFolderIdById
+		 } from '$lib/apis/chats';
+		 import { generateOpenAIChatCompletion } from '$lib/apis/openai';
+		 import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
+		 import { getAndUpdateUserLocation, getUserSettings, updateUserSettings } from '$lib/apis/users';
+		 import {
+		 	chatCompleted,
+		 	generateQueries,
+		 	chatAction,
+		 	generateMoACompletion,
+		 	stopTask,
+		 	getTaskIdsByChatId
+		 } from '$lib/apis';
+		 import type { ReasoningEffort } from '$lib/apis';
+		 import { BASE_REASONING_EFFORTS, EXTRA_REASONING_EFFORTS, orderReasoningEfforts } from '$lib/constants/reasoning';
+		 import { getTools } from '$lib/apis/tools';
+		 import { uploadFile } from '$lib/apis/files';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 
 	import { fade } from 'svelte/transition';
@@ -180,9 +182,6 @@
 	// Reasoning effort tracking
 	let reasoning = { effort: 'medium' };
 
-	const BASE_REASONING_EFFORTS = ['low', 'medium', 'high'];
-	const EXTRA_REASONING_EFFORTS = ['none', 'minimal', 'xhigh'];
-
 	const getModelReasoningConfig = (modelId: string) => {
 		const model = $models.find((m) => m.id === modelId);
 		const reasoningConfig = model?.info?.meta?.reasoning;
@@ -196,7 +195,7 @@
 	const getAllowedReasoningEffortsForModel = (modelId: string) => {
 		const { enabled, extraEfforts } = getModelReasoningConfig(modelId);
 		if (!enabled) return [];
-		return Array.from(new Set([...BASE_REASONING_EFFORTS, ...extraEfforts]));
+		return orderReasoningEfforts(Array.from(new Set([...BASE_REASONING_EFFORTS, ...extraEfforts])));
 	};
 
 	const clampEffortToAllowed = (effort: string, allowed: string[]) => {
