@@ -47,7 +47,7 @@
 		if (pipeline && (pipeline?.valves ?? false)) {
 			for (const property in valves_spec.properties) {
 				if (valves_spec.properties[property]?.type === 'array') {
-					valves[property] = valves[property].split(',').map((v) => v.trim());
+					valves[property] = (valves[property] ?? '').split(',').map((v) => v.trim());
 				}
 			}
 

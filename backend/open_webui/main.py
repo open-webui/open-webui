@@ -209,6 +209,7 @@ from open_webui.config import (
     FIRECRAWL_API_KEY,
     WEB_LOADER_ENGINE,
     WEB_LOADER_CONCURRENT_REQUESTS,
+    WEB_LOADER_TIMEOUT,
     WHISPER_MODEL,
     WHISPER_VAD_FILTER,
     WHISPER_LANGUAGE,
@@ -926,6 +927,7 @@ app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS = WEB_SEARCH_CONCURRENT_REQUESTS
 
 app.state.config.WEB_LOADER_ENGINE = WEB_LOADER_ENGINE
 app.state.config.WEB_LOADER_CONCURRENT_REQUESTS = WEB_LOADER_CONCURRENT_REQUESTS
+app.state.config.WEB_LOADER_TIMEOUT = WEB_LOADER_TIMEOUT
 
 app.state.config.WEB_SEARCH_TRUST_ENV = WEB_SEARCH_TRUST_ENV
 app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
@@ -1035,6 +1037,7 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
         if app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
         else None
     ),
+    enable_async=app.state.config.ENABLE_ASYNC_EMBEDDING,
 )
 
 app.state.RERANKING_FUNCTION = get_reranking_function(

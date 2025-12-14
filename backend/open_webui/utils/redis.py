@@ -7,6 +7,7 @@ import redis
 
 from open_webui.env import (
     REDIS_CLUSTER,
+    REDIS_SOCKET_CONNECT_TIMEOUT,
     REDIS_SENTINEL_HOSTS,
     REDIS_SENTINEL_MAX_RETRY_COUNT,
     REDIS_SENTINEL_PORT,
@@ -189,6 +190,7 @@ def get_redis_connection(
                 username=redis_config["username"],
                 password=redis_config["password"],
                 decode_responses=decode_responses,
+                socket_connect_timeout=REDIS_SOCKET_CONNECT_TIMEOUT,
             )
             connection = SentinelRedisProxy(
                 sentinel,
@@ -215,6 +217,7 @@ def get_redis_connection(
                 username=redis_config["username"],
                 password=redis_config["password"],
                 decode_responses=decode_responses,
+                socket_connect_timeout=REDIS_SOCKET_CONNECT_TIMEOUT,
             )
             connection = SentinelRedisProxy(
                 sentinel,

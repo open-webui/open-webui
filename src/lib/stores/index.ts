@@ -75,6 +75,8 @@ export const settings: Writable<Settings> = writable({});
 
 export const audioQueue = writable(null);
 
+export const sidebarWidth = writable(260);
+
 export const showSidebar = writable(false);
 export const showSearch = writable(false);
 export const showSettings = writable(false);

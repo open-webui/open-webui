@@ -5,10 +5,10 @@ from open_webui.internal.db import Base, JSONField, get_db
 
 
 from open_webui.env import DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL
+
 from open_webui.models.chats import Chats
 from open_webui.models.groups import Groups, GroupMember
 from open_webui.models.channels import ChannelMember
-
 
 from open_webui.utils.misc import throttle
 
