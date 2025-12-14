@@ -597,20 +597,19 @@ class InterfaceDefaultsForm(BaseModel):
 
     @field_validator("chatDirection")
     @classmethod
-    def validate_chat_direction(cls, v):
-        if v is None:
-            return v
-        normalized = v.lower()
-        if normalized not in ("auto", "ltr", "rtl"):
+    def validate_chat_direction(cls, value):
+        if value is None:
+            return value
+        if value not in ("auto", "ltr", "rtl"):
             raise ValueError("chatDirection must be 'auto', 'ltr', or 'rtl'")
-        return normalized  # Return normalized lowercase value
+        return value
 
     @field_validator("textScale")
     @classmethod
-    def validate_text_scale(cls, v):
-        if v is not None and not (0.5 <= v <= 1.5):
+    def validate_text_scale(cls, value):
+        if value is not None and not (0.5 <= v <= 1.5):
             raise ValueError("textScale must be between 0.5 and 1.5")
-        return v
+        return value
 
     class Config:
         extra = "forbid"  # Reject unknown fields
