@@ -187,7 +187,6 @@
 	};
 
 	const setTextScaleHandler = (scale) => {
-		console.log('setTextScaleHandler called with scale:', scale, 'initialSettings:', initialSettings);
 		textScale = scale;
 
 		const isAdminMode = initialSettings !== null;
