@@ -93,6 +93,7 @@ from open_webui.routers import (
     users,
     utils,
     scim,
+    textbook,
 )
 
 from open_webui.routers.retrieval import (
@@ -542,7 +543,6 @@ class SPAStaticFiles(StaticFiles):
                     return await super().get_response("index.html", scope)
             else:
                 raise ex
-
 
 print(
     rf"""
@@ -1397,6 +1397,7 @@ app.include_router(
     evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"]
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
+app.include_router(textbook.router, prefix="/api/v1/textbook", tags=["textbook"])
 
 # SCIM 2.0 API for identity management
 if ENABLE_SCIM:
@@ -1571,6 +1572,11 @@ async def chat_completion(
         if model_info_params.get("reasoning_tags") is not None:
             reasoning_tags = model_info_params.get("reasoning_tags")
 
+        # Extract chat settings from form_data
+        chapter_id = form_data.pop("chapter_id", None)
+        proficiency_level = form_data.pop("proficiency_level", None)
+        response_style = form_data.pop("response_style", None)
+
         metadata = {
             "user_id": user.id,
             "chat_id": form_data.pop("chat_id", None),
@@ -1584,6 +1590,9 @@ async def chat_completion(
             "variables": form_data.get("variables", {}),
             "model": model,
             "direct": model_item.get("direct", False),
+            "chapter_id": chapter_id,
+            "proficiency_level": proficiency_level,
+            "response_style": response_style,
             "params": {
                 "stream_delta_chunk_size": stream_delta_chunk_size,
                 "reasoning_tags": reasoning_tags,
@@ -1597,6 +1606,16 @@ async def chat_completion(
                 ),
             },
         }
+
+        # Update chat settings if chat_id is available and any settings are provided
+        if metadata.get("chat_id") and not metadata["chat_id"].startswith("local:"):
+            if chapter_id is not None or proficiency_level is not None or response_style is not None:
+                Chats.update_chat_settings_by_id(
+                    metadata["chat_id"],
+                    chapter_id=chapter_id,
+                    proficiency_level=proficiency_level,
+                    response_style=response_style
+                )
 
         if metadata.get("chat_id") and (user and user.role != "admin"):
             if not metadata["chat_id"].startswith("local:"):

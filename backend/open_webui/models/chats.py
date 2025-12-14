@@ -40,6 +40,9 @@ class Chat(Base):
 
     meta = Column(JSON, server_default="{}")
     folder_id = Column(Text, nullable=True)
+    chapter_id = Column(Text, nullable=True)
+    proficiency_level = Column(BigInteger, nullable=True)  # 1=하, 2=중, 3=상
+    response_style = Column(BigInteger, nullable=True)
 
     __table_args__ = (
         # Performance indexes for common queries
@@ -73,6 +76,9 @@ class ChatModel(BaseModel):
 
     meta: dict = {}
     folder_id: Optional[str] = None
+    chapter_id: Optional[str] = None
+    proficiency_level: Optional[int] = None  # 1=하, 2=중, 3=상
+    response_style: Optional[int] = None
 
 
 ####################
@@ -83,6 +89,9 @@ class ChatModel(BaseModel):
 class ChatForm(BaseModel):
     chat: dict
     folder_id: Optional[str] = None
+    chapter_id: Optional[str] = None
+    proficiency_level: Optional[int] = None  # 1=하, 2=중, 3=상
+    response_style: Optional[int] = None
 
 
 class ChatImportForm(ChatForm):
@@ -90,6 +99,9 @@ class ChatImportForm(ChatForm):
     pinned: Optional[bool] = False
     created_at: Optional[int] = None
     updated_at: Optional[int] = None
+    chapter_id: Optional[str] = None
+    proficiency_level: Optional[int] = None
+    response_style: Optional[int] = None
 
 
 class ChatsImportForm(BaseModel):
@@ -117,6 +129,9 @@ class ChatResponse(BaseModel):
     pinned: Optional[bool] = False
     meta: dict = {}
     folder_id: Optional[str] = None
+    chapter_id: Optional[str] = None
+    proficiency_level: Optional[int] = None  # 1=하, 2=중, 3=상
+    response_style: Optional[int] = None
 
 
 class ChatTitleIdResponse(BaseModel):
@@ -178,6 +193,9 @@ class ChatTable:
                     ),
                     "chat": self._clean_null_bytes(form_data.chat),
                     "folder_id": form_data.folder_id,
+                    "chapter_id": form_data.chapter_id,
+                    "proficiency_level": form_data.proficiency_level,
+                    "response_style": form_data.response_style,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                 }
@@ -204,6 +222,9 @@ class ChatTable:
                 "meta": form_data.meta,
                 "pinned": form_data.pinned,
                 "folder_id": form_data.folder_id,
+                "chapter_id": form_data.chapter_id,
+                "proficiency_level": form_data.proficiency_level,
+                "response_style": form_data.response_style,
                 "created_at": (
                     form_data.created_at if form_data.created_at else int(time.time())
                 ),
@@ -384,6 +405,9 @@ class ChatTable:
                     "meta": chat.meta,
                     "pinned": chat.pinned,
                     "folder_id": chat.folder_id,
+                    "chapter_id": chat.chapter_id,
+                    "proficiency_level": chat.proficiency_level,
+                    "response_style": chat.response_style,
                     "created_at": chat.created_at,
                     "updated_at": int(time.time()),
                 }
@@ -418,6 +442,9 @@ class ChatTable:
                 shared_chat.meta = chat.meta
                 shared_chat.pinned = chat.pinned
                 shared_chat.folder_id = chat.folder_id
+                shared_chat.chapter_id = chat.chapter_id
+                shared_chat.proficiency_level = chat.proficiency_level
+                shared_chat.response_style = chat.response_style
                 shared_chat.updated_at = int(time.time())
                 db.commit()
                 db.refresh(shared_chat)
@@ -954,6 +981,47 @@ class ChatTable:
                 chat.folder_id = folder_id
                 chat.updated_at = int(time.time())
                 chat.pinned = False
+                db.commit()
+                db.refresh(chat)
+                return ChatModel.model_validate(chat)
+        except Exception:
+            return None
+
+    def update_chat_chapter_id_by_id(
+        self, id: str, chapter_id: Optional[str]
+    ) -> Optional[ChatModel]:
+        try:
+            with get_db() as db:
+                chat = db.get(Chat, id)
+                chat.chapter_id = chapter_id
+                chat.updated_at = int(time.time())
+                db.commit()
+                db.refresh(chat)
+                return ChatModel.model_validate(chat)
+        except Exception:
+            return None
+
+    def update_chat_settings_by_id(
+        self,
+        id: str,
+        chapter_id: Optional[str] = None,
+        proficiency_level: Optional[int] = None,
+        response_style: Optional[int] = None
+    ) -> Optional[ChatModel]:
+        """
+        Update chat settings (chapter_id, proficiency_level, response_style).
+        Only updates fields that are not None.
+        """
+        try:
+            with get_db() as db:
+                chat = db.get(Chat, id)
+                if chapter_id is not None:
+                    chat.chapter_id = chapter_id
+                if proficiency_level is not None:
+                    chat.proficiency_level = proficiency_level
+                if response_style is not None:
+                    chat.response_style = response_style
+                chat.updated_at = int(time.time())
                 db.commit()
                 db.refresh(chat)
                 return ChatModel.model_validate(chat)
