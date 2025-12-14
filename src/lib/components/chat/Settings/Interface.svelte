@@ -311,6 +311,11 @@
 	    loadSettingsFromSource(initialSettings);
 	}
 	
+	// For user mode: reload when $settings changes
+	$: if (initialSettings === null && $settings) {
+	    loadSettingsFromSource($settings);
+	}
+	
 	// For user mode: apply text scale as side effect when settings change
 	$: if (initialSettings === null && $settings?.textScale !== undefined) {
 	    const scale = $settings.textScale ?? 1;
