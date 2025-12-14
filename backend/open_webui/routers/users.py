@@ -7,10 +7,14 @@ import io
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import Response, StreamingResponse, FileResponse
 from pydantic import BaseModel, ConfigDict
+from sqlalchemy.orm.attributes import flag_modified
 
 
 from open_webui.models.auths import Auths
 from open_webui.models.oauth_sessions import OAuthSessions
+from open_webui.internal.db import get_db
+from open_webui.models.users import User
+
 
 from open_webui.models.groups import Groups
 from open_webui.models.chats import Chats
@@ -643,10 +647,6 @@ async def reset_all_users_interface_settings(user=Depends(get_admin_user)):
     Admin only.
     """
     try:
-        from open_webui.internal.db import get_db
-        from open_webui.models.users import User
-        from sqlalchemy.orm.attributes import flag_modified
-
         reset_count = 0
 
         # Single transaction for all updates (optimized for performance)
