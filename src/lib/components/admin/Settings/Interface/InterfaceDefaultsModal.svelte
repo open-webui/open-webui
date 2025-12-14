@@ -93,20 +93,6 @@
 	    return result;
 	};
 	
-	const loadDefaults = async () => {
-	    loading = true;
-	    try {
-	        const defaults = await getInterfaceDefaults(localStorage.token);
-	        // Transform backend format to frontend format
-	        adminDefaults.set(transformToFrontendSchema(defaults));
-	    } catch (error) {
-	        console.error('Error loading interface defaults:', error);
-	        toast.error($i18n.t('Failed to load interface defaults'));
-	    } finally {
-	        loading = false;
-	    }
-	};
-	
 	const handleSave = async () => {
 	    saving = true;
 	    try {
