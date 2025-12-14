@@ -1409,6 +1409,8 @@ def save_docs_to_vector_db(
                 docs = merged_docs
 
         # Stage 2: Apply character or token splitting
+        # If markdown header splitting was used, only split chunks that exceed CHUNK_SIZE
+        # Otherwise, split all documents as before
         if request.app.state.config.TEXT_SPLITTER == "token":
             log.info(
                 f"Using token text splitter: {request.app.state.config.TIKTOKEN_ENCODING_NAME}"
@@ -1420,7 +1422,6 @@ def save_docs_to_vector_db(
                 chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
                 add_start_index=True,
             )
-            docs = text_splitter.split_documents(docs)
         else:
             # Default to character splitting
             text_splitter = RecursiveCharacterTextSplitter(
@@ -1428,6 +1429,31 @@ def save_docs_to_vector_db(
                 chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
                 add_start_index=True,
             )
+
+        if request.app.state.config.ENABLE_MARKDOWN_HEADER_SPLITTING:
+            # Only split chunks that exceed the max size, preserve others
+            final_docs = []
+            for doc in docs:
+                if request.app.state.config.TEXT_SPLITTER == "token":
+                    encoding = tiktoken.get_encoding(
+                        str(request.app.state.config.TIKTOKEN_ENCODING_NAME)
+                    )
+                    doc_size = len(encoding.encode(doc.page_content))
+                else:
+                    doc_size = len(doc.page_content)
+
+                if doc_size > request.app.state.config.CHUNK_SIZE:
+                    # Split this chunk and preserve metadata
+                    split_docs = text_splitter.split_documents([doc])
+                    # Preserve headings metadata for split chunks
+                    for split_doc in split_docs:
+                        split_doc.metadata["headings"] = doc.metadata.get("headings", [])
+                    final_docs.extend(split_docs)
+                else:
+                    final_docs.append(doc)
+            docs = final_docs
+        else:
+            # No markdown header splitting - split all documents normally
             docs = text_splitter.split_documents(docs)
 
     if len(docs) == 0:
