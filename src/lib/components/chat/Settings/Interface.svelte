@@ -157,10 +157,10 @@
 
 	const toggleChangeChatDirection = async () => {
 		if (chatDirection === 'auto') {
-			chatDirection = 'LTR';
-		} else if (chatDirection === 'LTR') {
-			chatDirection = 'RTL';
-		} else if (chatDirection === 'RTL') {
+			chatDirection = 'ltr';
+		} else if (chatDirection === 'ltr') {
+			chatDirection = 'rtl';
+		} else if (chatDirection === 'rtl') {
 			chatDirection = 'auto';
 		}
 		saveSettings({ chatDirection });
@@ -630,9 +630,9 @@
 						type="button"
 					>
 						<span class="ml-2 self-center" id="chat-direction-mode">
-							{chatDirection === 'LTR'
+							{chatDirection === 'ltr'
 								? $i18n.t('LTR')
-								: chatDirection === 'RTL'
+								: chatDirection === 'rtl'
 									? $i18n.t('RTL')
 									: $i18n.t('Auto')}
 						</span>
