@@ -7,8 +7,8 @@ import io
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import Response, StreamingResponse, FileResponse
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy.orm.attributes import flag_modified
-
+from sqlalchemy import func, cast, text
+from sqlalchemy.exc import SQLAlchemyError
 
 from open_webui.models.auths import Auths
 from open_webui.models.oauth_sessions import OAuthSessions
@@ -648,25 +648,40 @@ async def reset_all_users_interface_settings(user=Depends(get_admin_user)):
     """
     with get_db() as db:
         try:
-            # Bulk update: clear ui settings for all users who have them
-            # This runs entirely in the database, no Python-side iteration
-            reset_count = (
-                db.query(User)
-                .filter(
-                    User.settings.isnot(None),
-                    User.settings.has_key("ui")
+            dialect = db.bind.dialect.name
+
+            if dialect == "postgresql":
+                from sqlalchemy.dialects.postgresql import JSONB
+                reset_count = (
+                    db.query(User)
+                    .filter(
+                        User.settings.isnot(None),
+                        User.settings.has_key("ui")
+                    )
+                    .update(
+                        {
+                            User.settings: func.jsonb_set(
+                                cast(User.settings, JSONB),
+                                "{ui}",
+                                cast("{}", JSONB)
+                            )
+                        },
+                        synchronize_session=False
+                    )
                 )
-                .update(
-                    {
-                        User.settings: func.jsonb_set(
-                            cast(User.settings, JSONB),
-                            "{ui}",
-                            cast("{}", JSONB)
-                        )
-                    },
-                    synchronize_session=False
+            else:
+                # SQLite/MySQL: iterate in Python
+                users_with_ui = (
+                    db.query(User)
+                    .filter(User.settings.isnot(None))
+                    .all()
                 )
-            )
+                reset_count = 0
+                for u in users_with_ui:
+                    if u.settings and "ui" in u.settings:
+                        u.settings = {**u.settings, "ui": {}}
+                        reset_count += 1
+
             db.commit()
 
             log.info(f"Reset interface settings for {reset_count} users by admin {user.id}")
