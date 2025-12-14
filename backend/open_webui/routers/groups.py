@@ -228,6 +228,18 @@ async def remove_users_from_group(
             detail="Group managers cannot remove themselves from the group",
         )
 
+    # Managers cannot remove other managers
+    if user.role != "admin" and form_data.user_ids:
+        # Get the list of manager user IDs for the group
+        group_managers = Groups.get_group_managers(id)
+        manager_ids = [manager.id for manager in group_managers]
+        # Exclude self (already checked above)
+        managers_to_remove = set(form_data.user_ids) & set(manager_ids)
+        if managers_to_remove:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Group managers cannot remove other managers from the group",
+            )
     try:
         group = Groups.remove_users_from_group(id, form_data.user_ids)
         if group:
