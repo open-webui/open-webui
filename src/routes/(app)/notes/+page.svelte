@@ -14,6 +14,7 @@
 	import Notes from '$lib/components/notes/Notes.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Sidebar from '$lib/components/icons/Sidebar.svelte';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	let loaded = false;
 
@@ -40,7 +41,7 @@
 {#if loaded}
 	<div
 		class=" flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
-			? 'md:max-w-[calc(100%-260px)]'
+			? 'md:max-w-[calc(100%-var(--sidebar-width))]'
 			: ''} max-w-full"
 	>
 		<nav class="   px-2 pt-1.5 backdrop-blur-xl w-full drag-region">
@@ -95,7 +96,7 @@
 								>
 									<div class=" self-center">
 										<img
-											src={$user?.profile_image_url}
+											src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
 											class="size-6 object-cover rounded-full"
 											alt="User profile"
 											draggable="false"
@@ -109,7 +110,7 @@
 			</div>
 		</nav>
 
-		<div class=" pb-1 flex-1 max-h-full overflow-y-auto @container">
+		<div class=" flex-1 max-h-full overflow-y-auto @container">
 			<Notes />
 		</div>
 	</div>

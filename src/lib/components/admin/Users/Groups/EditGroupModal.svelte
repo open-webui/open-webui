@@ -5,7 +5,7 @@
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
-	import Display from './Display.svelte';
+	import General from './General.svelte';
 	import Permissions from './Permissions.svelte';
 	import Users from './Users.svelte';
 	import UserPlusSolid from '$lib/components/icons/UserPlusSolid.svelte';
@@ -34,6 +34,7 @@
 
 	export let name = '';
 	export let description = '';
+	export let data = {};
 
 	export let permissions = {
 		workspace: {
@@ -49,10 +50,15 @@
 			tools_export: false
 		},
 		sharing: {
+			models: false,
 			public_models: false,
+			knowledge: false,
 			public_knowledge: false,
+			prompts: false,
 			public_prompts: false,
+			tools: false,
 			public_tools: false,
+			notes: false,
 			public_notes: false
 		},
 		chat: {
@@ -78,11 +84,13 @@
 		},
 		features: {
 			api_keys: false,
+			notes: true,
+			channels: true,
+			folders: true,
 			direct_tool_servers: false,
 			web_search: true,
-			image_generation: true,
-			code_interpreter: true,
-			notes: true
+      image_generation: true,
+			code_interpreter: true
 		},
 		ui: {
 			interface_settings: true
@@ -95,6 +103,7 @@
 		const group = {
 			name,
 			description,
+			data,
 			permissions
 		};
 
@@ -107,7 +116,7 @@
 	const init = () => {
 		if (group) {
 			name = group.name;
-			description = group.description;
+      description = group.description;
 
 			// Load permissions and fill in any missing properties (including new ui.interface_settings)
 			const loadedPermissions = group?.permissions ?? {};
@@ -119,6 +128,8 @@
 				features: { ...permissions.features, ...loadedPermissions.features },
 				ui: { ...permissions.ui, ...loadedPermissions.ui }
 			};
+
+			data = group?.data ?? {};
 
 			userCount = group?.member_count ?? 0;
 		}
@@ -251,9 +262,10 @@
 						<div class="flex-1 mt-1 lg:mt-1 lg:h-[30rem] lg:max-h-[30rem] flex flex-col">
 							<div class="w-full h-full overflow-y-auto scrollbar-hidden">
 								{#if selectedTab == 'general'}
-									<Display
+									<General
 										bind:name
 										bind:description
+										bind:data
 										{edit}
 										onDelete={() => {
 											showDeleteConfirmDialog = true;

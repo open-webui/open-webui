@@ -5,7 +5,14 @@ import logging
 
 import redis
 
-from open_webui.env import REDIS_SENTINEL_MAX_RETRY_COUNT
+from open_webui.env import (
+    REDIS_CLUSTER,
+    REDIS_SOCKET_CONNECT_TIMEOUT,
+    REDIS_SENTINEL_HOSTS,
+    REDIS_SENTINEL_MAX_RETRY_COUNT,
+    REDIS_SENTINEL_PORT,
+    REDIS_URL,
+)
 
 log = logging.getLogger(__name__)
 
@@ -108,6 +115,21 @@ def parse_redis_service_url(redis_url):
     }
 
 
+def get_redis_client(async_mode=False):
+    try:
+        return get_redis_connection(
+            redis_url=REDIS_URL,
+            redis_sentinels=get_sentinels_from_env(
+                REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT
+            ),
+            redis_cluster=REDIS_CLUSTER,
+            async_mode=async_mode,
+        )
+    except Exception as e:
+        log.debug(f"Failed to get Redis client: {e}")
+        return None
+
+
 def get_redis_connection(
     redis_url,
     redis_sentinels,
@@ -141,6 +163,7 @@ def get_redis_connection(
                 username=redis_config["username"],
                 password=redis_config["password"],
                 decode_responses=decode_responses,
+                socket_connect_timeout=REDIS_SOCKET_CONNECT_TIMEOUT,
             )
             connection = SentinelRedisProxy(
                 sentinel,
@@ -167,6 +190,7 @@ def get_redis_connection(
                 username=redis_config["username"],
                 password=redis_config["password"],
                 decode_responses=decode_responses,
+                socket_connect_timeout=REDIS_SOCKET_CONNECT_TIMEOUT,
             )
             connection = SentinelRedisProxy(
                 sentinel,

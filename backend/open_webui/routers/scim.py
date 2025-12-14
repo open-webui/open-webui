@@ -719,7 +719,7 @@ async def get_groups(
 ):
     """List SCIM Groups"""
     # Get all groups
-    groups_list = Groups.get_groups()
+    groups_list = Groups.get_all_groups()
 
     # Apply pagination
     total = len(groups_list)

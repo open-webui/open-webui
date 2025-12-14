@@ -111,7 +111,9 @@
 		if (channelSuggestions) {
 			// Add a dummy channel item
 			_channels = [
-				...$channels.map((c) => ({ type: 'channel', id: c.id, label: c.name, data: c }))
+				...$channels
+					.filter((c) => c?.type !== 'dm')
+					.map((c) => ({ type: 'channel', id: c.id, label: c.name, data: c }))
 			];
 		} else {
 			if (userSuggestions) {
@@ -171,8 +173,7 @@
 							</div>
 						{:else if item.type === 'model'}
 							<img
-								src={item?.data?.info?.meta?.profile_image_url ??
-									`${WEBUI_BASE_URL}/static/favicon.png`}
+								src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${item.id}&lang=${$i18n.language}`}
 								alt={item?.data?.name ?? item.id}
 								class="rounded-full size-5 items-center mr-2"
 							/>

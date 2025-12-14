@@ -36,7 +36,7 @@
 		removeDetails,
 		removeAllDetails
 	} from '$lib/utils';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
@@ -279,7 +279,7 @@
 				}
 
 				for (const [idx, sentence] of messageContentParts.entries()) {
-					const blob = await $TTSWorker
+					const url = await $TTSWorker
 						.generate({
 							text: sentence,
 							voice: $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice
@@ -292,8 +292,7 @@
 							loadingSpeech = false;
 						});
 
-					if (blob) {
-						const url = URL.createObjectURL(blob);
+					if (url && speaking) {
 						$audioQueue.enqueue(url);
 						loadingSpeech = false;
 					}
@@ -314,7 +313,7 @@
 						loadingSpeech = false;
 					});
 
-					if (res) {
+					if (res && speaking) {
 						const blob = await res.blob();
 						const url = URL.createObjectURL(blob);
 
@@ -627,10 +626,7 @@
 	>
 		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 hidden @lg:flex mt-1 `}>
 			<ProfileImage
-				src={model?.info?.meta?.profile_image_url ??
-					($i18n.language === 'dg-DG'
-						? `${WEBUI_BASE_URL}/doge.png`
-						: `${WEBUI_BASE_URL}/favicon.png`)}
+				src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model?.id}&lang=${$i18n.language}`}
 				className={'size-8 assistant-message-profile-image'}
 			/>
 		</div>
@@ -670,7 +666,10 @@
 						{/if}
 
 						{#if message?.files && message.files?.filter((f) => f.type === 'image').length > 0}
-							<div class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap">
+							<div
+								class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap"
+								dir={$settings?.chatDirection ?? 'auto'}
+							>
 								{#each message.files as file}
 									<div>
 										{#if file.type === 'image'}
@@ -800,11 +799,11 @@
 									onTaskClick={async (e) => {
 										console.log(e);
 									}}
-									onSourceClick={async (id, idx) => {
-										console.log(id, idx);
+									onSourceClick={async (id) => {
+										console.log(id);
 
 										if (citationsElement) {
-											citationsElement?.showSourceModal(idx - 1);
+											citationsElement?.showSourceModal(id);
 										}
 									}}
 									onAddMessages={({ modelId, parentId, messages }) => {
@@ -828,6 +827,7 @@
 								<Citations
 									bind:this={citationsElement}
 									id={message?.id}
+									{chatId}
 									sources={message?.sources ?? message?.citations}
 									{readOnly}
 								/>
@@ -1464,37 +1464,35 @@
 										{/if}
 									{/if}
 
-									{#if isLastMessage}
-										{#each model?.actions ?? [] as action}
-											<Tooltip content={action.name} placement="bottom">
-												<button
-													type="button"
-													aria-label={action.name}
-													class="{isLastMessage || ($settings?.highContrastMode ?? false)
-														? 'visible'
-														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
-													on:click={() => {
-														actionMessage(action.id, message);
-													}}
-												>
-													{#if action?.icon}
-														<div class="size-4">
-															<img
-																src={action.icon}
-																class="w-4 h-4 {action.icon.includes('svg')
-																	? 'dark:invert-[80%]'
-																	: ''}"
-																style="fill: currentColor;"
-																alt={action.name}
-															/>
-														</div>
-													{:else}
-														<Sparkles strokeWidth="2.1" className="size-4" />
-													{/if}
-												</button>
-											</Tooltip>
-										{/each}
-									{/if}
+									{#each model?.actions ?? [] as action}
+										<Tooltip content={action.name} placement="bottom">
+											<button
+												type="button"
+												aria-label={action.name}
+												class="{isLastMessage || ($settings?.highContrastMode ?? false)
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+												on:click={() => {
+													actionMessage(action.id, message);
+												}}
+											>
+												{#if action?.icon}
+													<div class="size-4">
+														<img
+															src={action.icon}
+															class="w-4 h-4 {action.icon.includes('svg')
+																? 'dark:invert-[80%]'
+																: ''}"
+															style="fill: currentColor;"
+															alt={action.name}
+														/>
+													</div>
+												{:else}
+													<Sparkles strokeWidth="2.1" className="size-4" />
+												{/if}
+											</button>
+										</Tooltip>
+									{/each}
 								{/if}
 							{/if}
 						{/if}

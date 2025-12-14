@@ -33,6 +33,7 @@ from open_webui.config import (
     PLAYWRIGHT_WS_URL,
     PLAYWRIGHT_TIMEOUT,
     WEB_LOADER_ENGINE,
+    WEB_LOADER_TIMEOUT,
     FIRECRAWL_API_BASE_URL,
     FIRECRAWL_API_KEY,
     TAVILY_API_KEY,
@@ -42,7 +43,7 @@ from open_webui.config import (
     WEB_FETCH_FILTER_LIST,
 )
 from open_webui.env import SRC_LOG_LEVELS
-
+from open_webui.utils.misc import is_string_allowed
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -57,39 +58,6 @@ def resolve_hostname(hostname):
     ipv6_addresses = [info[4][0] for info in addr_info if info[0] == socket.AF_INET6]
 
     return ipv4_addresses, ipv6_addresses
-
-
-def get_allow_block_lists(filter_list):
-    allow_list = []
-    block_list = []
-
-    if filter_list:
-        for d in filter_list:
-            if d.startswith("!"):
-                # Domains starting with "!" → blocked
-                block_list.append(d[1:])
-            else:
-                # Domains starting without "!" → allowed
-                allow_list.append(d)
-
-    return allow_list, block_list
-
-
-def is_string_allowed(string: str, filter_list: Optional[list[str]] = None) -> bool:
-    if not filter_list:
-        return True
-
-    allow_list, block_list = get_allow_block_lists(filter_list)
-    # If allow list is non-empty, require domain to match one of them
-    if allow_list:
-        if not any(string.endswith(allowed) for allowed in allow_list):
-            return False
-
-    # Block list always removes matches
-    if any(string.endswith(blocked) for blocked in block_list):
-        return False
-
-    return True
 
 
 def validate_url(url: Union[str, Sequence[str]]):
@@ -707,6 +675,20 @@ def get_web_loader(
 
     if WEB_LOADER_ENGINE.value == "" or WEB_LOADER_ENGINE.value == "safe_web":
         WebLoaderClass = SafeWebBaseLoader
+
+        request_kwargs = {}
+        if WEB_LOADER_TIMEOUT.value:
+            try:
+                timeout_value = float(WEB_LOADER_TIMEOUT.value)
+            except ValueError:
+                timeout_value = None
+
+            if timeout_value:
+                request_kwargs["timeout"] = timeout_value
+
+        if request_kwargs:
+            web_loader_args["requests_kwargs"] = request_kwargs
+
     if WEB_LOADER_ENGINE.value == "playwright":
         WebLoaderClass = SafePlaywrightURLLoader
         web_loader_args["playwright_timeout"] = PLAYWRIGHT_TIMEOUT.value

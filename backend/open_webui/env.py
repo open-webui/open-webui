@@ -8,6 +8,8 @@ import shutil
 from uuid import uuid4
 from pathlib import Path
 from cryptography.hazmat.primitives import serialization
+import re
+
 
 import markdown
 from bs4 import BeautifulSoup
@@ -135,6 +137,9 @@ else:
         PACKAGE_DATA = {"version": "0.0.0"}
 
 VERSION = PACKAGE_DATA["version"]
+
+
+DEPLOYMENT_ID = os.environ.get("DEPLOYMENT_ID", "")
 INSTANCE_ID = os.environ.get("INSTANCE_ID", str(uuid4()))
 
 
@@ -390,6 +395,13 @@ try:
 except ValueError:
     REDIS_SENTINEL_MAX_RETRY_COUNT = 2
 
+
+REDIS_SOCKET_CONNECT_TIMEOUT = os.environ.get("REDIS_SOCKET_CONNECT_TIMEOUT", "")
+try:
+    REDIS_SOCKET_CONNECT_TIMEOUT = float(REDIS_SOCKET_CONNECT_TIMEOUT)
+except ValueError:
+    REDIS_SOCKET_CONNECT_TIMEOUT = None
+
 ####################################
 # UVICORN WORKERS
 ####################################
@@ -424,6 +436,17 @@ WEBUI_AUTH_TRUSTED_NAME_HEADER = os.environ.get("WEBUI_AUTH_TRUSTED_NAME_HEADER"
 WEBUI_AUTH_TRUSTED_GROUPS_HEADER = os.environ.get(
     "WEBUI_AUTH_TRUSTED_GROUPS_HEADER", None
 )
+
+
+ENABLE_PASSWORD_VALIDATION = (
+    os.environ.get("ENABLE_PASSWORD_VALIDATION", "False").lower() == "true"
+)
+PASSWORD_VALIDATION_REGEX_PATTERN = os.environ.get(
+    "PASSWORD_VALIDATION_REGEX_PATTERN",
+    "^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$",
+)
+
+PASSWORD_VALIDATION_REGEX_PATTERN = re.compile(PASSWORD_VALIDATION_REGEX_PATTERN)
 
 
 BYPASS_MODEL_ACCESS_CONTROL = (
@@ -544,6 +567,11 @@ else:
 # CHAT
 ####################################
 
+ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION = (
+    os.environ.get("ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION", "False").lower()
+    == "true"
+)
+
 CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = os.environ.get(
     "CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE", "1"
 )
@@ -599,9 +627,16 @@ ENABLE_WEBSOCKET_SUPPORT = (
 WEBSOCKET_MANAGER = os.environ.get("WEBSOCKET_MANAGER", "")
 
 WEBSOCKET_REDIS_OPTIONS = os.environ.get("WEBSOCKET_REDIS_OPTIONS", "")
+
+
 if WEBSOCKET_REDIS_OPTIONS == "":
-    log.debug("No WEBSOCKET_REDIS_OPTIONS provided, defaulting to None")
-    WEBSOCKET_REDIS_OPTIONS = None
+    if REDIS_SOCKET_CONNECT_TIMEOUT:
+        WEBSOCKET_REDIS_OPTIONS = {
+            "socket_connect_timeout": REDIS_SOCKET_CONNECT_TIMEOUT
+        }
+    else:
+        log.debug("No WEBSOCKET_REDIS_OPTIONS provided, defaulting to None")
+        WEBSOCKET_REDIS_OPTIONS = None
 else:
     try:
         WEBSOCKET_REDIS_OPTIONS = json.loads(WEBSOCKET_REDIS_OPTIONS)

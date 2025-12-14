@@ -28,8 +28,10 @@ from open_webui.models.users import Users
 from open_webui.constants import ERROR_MESSAGES
 
 from open_webui.env import (
+    ENABLE_PASSWORD_VALIDATION,
     OFFLINE_MODE,
     LICENSE_BLOB,
+    PASSWORD_VALIDATION_REGEX_PATTERN,
     REDIS_KEY_PREFIX,
     pk,
     WEBUI_SECRET_KEY,
@@ -162,6 +164,20 @@ def get_password_hash(password: str) -> str:
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
+def validate_password(password: str) -> bool:
+    # The password passed to bcrypt must be 72 bytes or fewer. If it is longer, it will be truncated before hashing.
+    if len(password.encode("utf-8")) > 72:
+        raise Exception(
+            ERROR_MESSAGES.PASSWORD_TOO_LONG,
+        )
+
+    if ENABLE_PASSWORD_VALIDATION:
+        if not PASSWORD_VALIDATION_REGEX_PATTERN.match(password):
+            raise Exception(ERROR_MESSAGES.INVALID_PASSWORD())
+
+    return True
+
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash"""
     return (
@@ -219,7 +235,7 @@ async def invalidate_token(request, token):
         jti = decoded.get("jti")
         exp = decoded.get("exp")
 
-        if jti:
+        if jti and exp:
             ttl = exp - int(
                 datetime.now(UTC).timestamp()
             )  # Calculate time-to-live for the token
@@ -328,9 +344,7 @@ async def get_current_user(
                 # Refresh the user's last active timestamp asynchronously
                 # to prevent blocking the request
                 if background_tasks:
-                    background_tasks.add_task(
-                        Users.update_user_last_active_by_id, user.id
-                    )
+                    background_tasks.add_task(Users.update_last_active_by_id, user.id)
             return user
         else:
             raise HTTPException(
@@ -361,10 +375,13 @@ def get_current_user_by_api_key(request, api_key: str):
             detail=ERROR_MESSAGES.INVALID_TOKEN,
         )
 
-    if not request.state.enable_api_keys or not has_permission(
-        user.id,
-        "features.api_keys",
-        request.app.state.config.USER_PERMISSIONS,
+    if not request.state.enable_api_keys or (
+        user.role != "admin"
+        and not has_permission(
+            user.id,
+            "features.api_keys",
+            request.app.state.config.USER_PERMISSIONS,
+        )
     ):
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
@@ -378,8 +395,7 @@ def get_current_user_by_api_key(request, api_key: str):
         current_span.set_attribute("client.user.role", user.role)
         current_span.set_attribute("client.auth.type", "api_key")
 
-    Users.update_user_last_active_by_id(user.id)
-
+    Users.update_last_active_by_id(user.id)
     return user
 
 

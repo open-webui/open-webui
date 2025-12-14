@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { decode } from 'html-entities';
-	import DOMPurify from 'dompurify';
 	import { onMount, getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -21,7 +20,6 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
 
-	import Source from './Source.svelte';
 	import HtmlToken from './HTMLToken.svelte';
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
 
@@ -29,11 +27,14 @@
 	export let tokens: Token[];
 	export let top = true;
 	export let attributes = {};
+	export let sourceIds = [];
 
 	export let done = true;
 
 	export let save = false;
 	export let preview = false;
+
+	export let paragraphTag = 'p';
 
 	export let editCodeBlock = true;
 	export let topPadding = false;
@@ -89,13 +90,14 @@
 <!-- {JSON.stringify(tokens)} -->
 {#each tokens as token, tokenIdx (tokenIdx)}
 	{#if token.type === 'hr'}
-		<hr class=" border-gray-100 dark:border-gray-850" />
+		<hr class=" border-gray-100/30 dark:border-gray-850/30" />
 	{:else if token.type === 'heading'}
 		<svelte:element this={headerComponent(token.depth)} dir="auto">
 			<MarkdownInlineTokens
 				id={`${id}-${tokenIdx}-h`}
 				tokens={token.tokens}
 				{done}
+				{sourceIds}
 				{onSourceClick}
 			/>
 		</svelte:element>
@@ -111,7 +113,7 @@
 				{save}
 				{preview}
 				edit={editCodeBlock}
-				stickyButtonsClassName={topPadding ? 'top-7' : 'top-0'}
+				stickyButtonsClassName={topPadding ? 'top-10' : 'top-0'}
 				onSave={(value) => {
 					onSave({
 						raw: token.raw,
@@ -147,6 +149,7 @@
 												id={`${id}-${tokenIdx}-header-${headerIdx}`}
 												tokens={header.tokens}
 												{done}
+												{sourceIds}
 												{onSourceClick}
 											/>
 										</div>
@@ -172,6 +175,7 @@
 												id={`${id}-${tokenIdx}-row-${rowIdx}-${cellIdx}`}
 												tokens={cell.tokens}
 												{done}
+												{sourceIds}
 												{onSourceClick}
 											/>
 										</div>
@@ -189,7 +193,7 @@
 						class="p-1 rounded-lg bg-transparent transition"
 						on:click={(e) => {
 							e.stopPropagation();
-							copyToClipboard(token.raw.trim());
+							copyToClipboard(token.raw.trim(), null, $settings?.copyFormatted ?? false);
 						}}
 					>
 						<Clipboard className=" size-3.5" strokeWidth="1.5" />
@@ -221,6 +225,7 @@
 					{done}
 					{editCodeBlock}
 					{onTaskClick}
+					{sourceIds}
 					{onSourceClick}
 				/>
 			</blockquote>
@@ -255,6 +260,7 @@
 							{done}
 							{editCodeBlock}
 							{onTaskClick}
+							{sourceIds}
 							{onSourceClick}
 						/>
 					</li>
@@ -289,6 +295,7 @@
 									{done}
 									{editCodeBlock}
 									{onTaskClick}
+									{sourceIds}
 									{onSourceClick}
 								/>
 							</div>
@@ -300,6 +307,7 @@
 								{done}
 								{editCodeBlock}
 								{onTaskClick}
+								{sourceIds}
 								{onSourceClick}
 							/>
 						{/if}
@@ -323,6 +331,7 @@
 					{done}
 					{editCodeBlock}
 					{onTaskClick}
+					{sourceIds}
 					{onSourceClick}
 				/>
 			</div>
@@ -343,14 +352,27 @@
 			}}
 		></iframe>
 	{:else if token.type === 'paragraph'}
-		<p dir="auto">
-			<MarkdownInlineTokens
-				id={`${id}-${tokenIdx}-p`}
-				tokens={token.tokens ?? []}
-				{done}
-				{onSourceClick}
-			/>
-		</p>
+		{#if paragraphTag == 'span'}
+			<span dir="auto">
+				<MarkdownInlineTokens
+					id={`${id}-${tokenIdx}-p`}
+					tokens={token.tokens ?? []}
+					{done}
+					{sourceIds}
+					{onSourceClick}
+				/>
+			</span>
+		{:else}
+			<p dir="auto">
+				<MarkdownInlineTokens
+					id={`${id}-${tokenIdx}-p`}
+					tokens={token.tokens ?? []}
+					{done}
+					{sourceIds}
+					{onSourceClick}
+				/>
+			</p>
+		{/if}
 	{:else if token.type === 'text'}
 		{#if top}
 			<p>
@@ -359,6 +381,7 @@
 						id={`${id}-${tokenIdx}-t`}
 						tokens={token.tokens}
 						{done}
+						{sourceIds}
 						{onSourceClick}
 					/>
 				{:else}
@@ -370,6 +393,7 @@
 				id={`${id}-${tokenIdx}-p`}
 				tokens={token.tokens ?? []}
 				{done}
+				{sourceIds}
 				{onSourceClick}
 			/>
 		{:else}

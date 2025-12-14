@@ -17,7 +17,7 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 class File(Base):
     __tablename__ = "file"
-    id = Column(String, primary_key=True)
+    id = Column(String, primary_key=True, unique=True)
     user_id = Column(String)
     hash = Column(Text, nullable=True)
 
@@ -102,6 +102,11 @@ class FileUpdateForm(BaseModel):
     hash: Optional[str] = None
     data: Optional[dict] = None
     meta: Optional[dict] = None
+
+
+class FileListResponse(BaseModel):
+    items: list[FileModel]
+    total: int
 
 
 class FilesTable:
@@ -238,6 +243,7 @@ class FilesTable:
             try:
                 file = db.query(File).filter_by(id=id).first()
                 file.hash = hash
+                file.updated_at = int(time.time())
                 db.commit()
 
                 return FileModel.model_validate(file)
@@ -249,6 +255,7 @@ class FilesTable:
             try:
                 file = db.query(File).filter_by(id=id).first()
                 file.data = {**(file.data if file.data else {}), **data}
+                file.updated_at = int(time.time())
                 db.commit()
                 return FileModel.model_validate(file)
             except Exception as e:
@@ -260,6 +267,7 @@ class FilesTable:
             try:
                 file = db.query(File).filter_by(id=id).first()
                 file.meta = {**(file.meta if file.meta else {}), **meta}
+                file.updated_at = int(time.time())
                 db.commit()
                 return FileModel.model_validate(file)
             except Exception:

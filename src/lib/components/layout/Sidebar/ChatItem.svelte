@@ -213,10 +213,15 @@
 	};
 
 	const onClickOutside = (event) => {
-		if (confirmEdit && !event.target.closest(`#chat-title-input-${id}`)) {
-			confirmEdit = false;
-			ignoreBlur = false;
-			chatTitle = '';
+		if (!itemElement.contains(event.target)) {
+			if (confirmEdit) {
+				if (chatTitle !== title) {
+					editChatTitle(id, chatTitle);
+				}
+
+				confirmEdit = false;
+				chatTitle = '';
+			}
 		}
 	};
 
@@ -365,16 +370,6 @@
 				disabled={generating}
 				on:keydown={chatTitleInputKeydownHandler}
 				on:blur={async (e) => {
-					// check if target is generate button
-					if (ignoreBlur) {
-						ignoreBlur = false;
-
-						if (e.relatedTarget?.id === 'generate-title-button') {
-							generateTitleHandler();
-						}
-						return;
-					}
-
 					if (doubleClicked) {
 						e.preventDefault();
 						e.stopPropagation();
@@ -388,13 +383,6 @@
 						doubleClicked = false;
 						return;
 					}
-
-					if (chatTitle !== title) {
-						editChatTitle(id, chatTitle);
-					}
-
-					confirmEdit = false;
-					chatTitle = '';
 				}}
 			/>
 		</div>
@@ -473,8 +461,8 @@
 						class=" self-center dark:hover:text-white transition disabled:cursor-not-allowed"
 						id="generate-title-button"
 						disabled={generating}
-						on:mouseenter={() => {
-							ignoreBlur = true;
+						on:click={() => {
+							generateTitleHandler();
 						}}
 					>
 						<Sparkles strokeWidth="2" />

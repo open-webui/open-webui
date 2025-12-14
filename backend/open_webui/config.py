@@ -583,14 +583,16 @@ OAUTH_ROLES_CLAIM = PersistentConfig(
     os.environ.get("OAUTH_ROLES_CLAIM", "roles"),
 )
 
-SEP = os.environ.get("OAUTH_ROLES_SEPARATOR", ",")
+OAUTH_ROLES_SEPARATOR = os.environ.get("OAUTH_ROLES_SEPARATOR", ",")
 
 OAUTH_ALLOWED_ROLES = PersistentConfig(
     "OAUTH_ALLOWED_ROLES",
     "oauth.allowed_roles",
     [
         role.strip()
-        for role in os.environ.get("OAUTH_ALLOWED_ROLES", f"user{SEP}admin").split(SEP)
+        for role in os.environ.get(
+            "OAUTH_ALLOWED_ROLES", f"user{OAUTH_ROLES_SEPARATOR}admin"
+        ).split(OAUTH_ROLES_SEPARATOR)
         if role
     ],
 )
@@ -600,7 +602,9 @@ OAUTH_ADMIN_ROLES = PersistentConfig(
     "oauth.admin_roles",
     [
         role.strip()
-        for role in os.environ.get("OAUTH_ADMIN_ROLES", "admin").split(SEP)
+        for role in os.environ.get("OAUTH_ADMIN_ROLES", "admin").split(
+            OAUTH_ROLES_SEPARATOR
+        )
         if role
     ],
 )
@@ -618,6 +622,17 @@ OAUTH_UPDATE_PICTURE_ON_LOGIN = PersistentConfig(
     "OAUTH_UPDATE_PICTURE_ON_LOGIN",
     "oauth.update_picture_on_login",
     os.environ.get("OAUTH_UPDATE_PICTURE_ON_LOGIN", "False").lower() == "true",
+)
+
+OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID = (
+    os.environ.get("OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID", "False").lower()
+    == "true"
+)
+
+OAUTH_AUDIENCE = PersistentConfig(
+    "OAUTH_AUDIENCE",
+    "oauth.audience",
+    os.environ.get("OAUTH_AUDIENCE", ""),
 )
 
 
@@ -1203,6 +1218,12 @@ DEFAULT_USER_ROLE = PersistentConfig(
     os.getenv("DEFAULT_USER_ROLE", "pending"),
 )
 
+DEFAULT_GROUP_ID = PersistentConfig(
+    "DEFAULT_GROUP_ID",
+    "ui.default_group_id",
+    os.environ.get("DEFAULT_GROUP_ID", ""),
+)
+
 PENDING_USER_OVERLAY_TITLE = PersistentConfig(
     "PENDING_USER_OVERLAY_TITLE",
     "ui.pending_user_overlay_title",
@@ -1270,6 +1291,12 @@ USER_PERMISSIONS_WORKSPACE_TOOLS_EXPORT = (
     os.environ.get("USER_PERMISSIONS_WORKSPACE_TOOLS_EXPORT", "False").lower() == "true"
 )
 
+
+USER_PERMISSIONS_WORKSPACE_MODELS_ALLOW_SHARING = (
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_MODELS_ALLOW_SHARING", "False").lower()
+    == "true"
+)
+
 USER_PERMISSIONS_WORKSPACE_MODELS_ALLOW_PUBLIC_SHARING = (
     os.environ.get(
         "USER_PERMISSIONS_WORKSPACE_MODELS_ALLOW_PUBLIC_SHARING", "False"
@@ -1277,8 +1304,10 @@ USER_PERMISSIONS_WORKSPACE_MODELS_ALLOW_PUBLIC_SHARING = (
     == "true"
 )
 
-USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING = (
-    os.environ.get("USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING", "False").lower()
+USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ALLOW_SHARING = (
+    os.environ.get(
+        "USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ALLOW_SHARING", "False"
+    ).lower()
     == "true"
 )
 
@@ -1289,6 +1318,11 @@ USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ALLOW_PUBLIC_SHARING = (
     == "true"
 )
 
+USER_PERMISSIONS_WORKSPACE_PROMPTS_ALLOW_SHARING = (
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_PROMPTS_ALLOW_SHARING", "False").lower()
+    == "true"
+)
+
 USER_PERMISSIONS_WORKSPACE_PROMPTS_ALLOW_PUBLIC_SHARING = (
     os.environ.get(
         "USER_PERMISSIONS_WORKSPACE_PROMPTS_ALLOW_PUBLIC_SHARING", "False"
@@ -1296,10 +1330,27 @@ USER_PERMISSIONS_WORKSPACE_PROMPTS_ALLOW_PUBLIC_SHARING = (
     == "true"
 )
 
+
+USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_SHARING = (
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_SHARING", "False").lower()
+    == "true"
+)
+
 USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_PUBLIC_SHARING = (
     os.environ.get(
         "USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_PUBLIC_SHARING", "False"
     ).lower()
+    == "true"
+)
+
+
+USER_PERMISSIONS_NOTES_ALLOW_SHARING = (
+    os.environ.get("USER_PERMISSIONS_NOTES_ALLOW_SHARING", "False").lower()
+    == "true"
+)
+
+USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING = (
+    os.environ.get("USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING", "False").lower()
     == "true"
 )
 
@@ -1402,8 +1453,16 @@ USER_PERMISSIONS_FEATURES_CODE_INTERPRETER = (
     == "true"
 )
 
+USER_PERMISSIONS_FEATURES_FOLDERS = (
+    os.environ.get("USER_PERMISSIONS_FEATURES_FOLDERS", "True").lower() == "true"
+)
+
 USER_PERMISSIONS_FEATURES_NOTES = (
     os.environ.get("USER_PERMISSIONS_FEATURES_NOTES", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_FEATURES_CHANNELS = (
+    os.environ.get("USER_PERMISSIONS_FEATURES_CHANNELS", "True").lower() == "true"
 )
 
 USER_PERMISSIONS_FEATURES_API_KEYS = (
@@ -1425,10 +1484,15 @@ DEFAULT_USER_PERMISSIONS = {
         "tools_export": USER_PERMISSIONS_WORKSPACE_TOOLS_EXPORT,
     },
     "sharing": {
+        "models": USER_PERMISSIONS_WORKSPACE_MODELS_ALLOW_SHARING,
         "public_models": USER_PERMISSIONS_WORKSPACE_MODELS_ALLOW_PUBLIC_SHARING,
+        "knowledge": USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ALLOW_SHARING,
         "public_knowledge": USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ALLOW_PUBLIC_SHARING,
+        "prompts": USER_PERMISSIONS_WORKSPACE_PROMPTS_ALLOW_SHARING,
         "public_prompts": USER_PERMISSIONS_WORKSPACE_PROMPTS_ALLOW_PUBLIC_SHARING,
+        "tools": USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_SHARING,
         "public_tools": USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_PUBLIC_SHARING,
+        "notes": USER_PERMISSIONS_NOTES_ALLOW_SHARING,
         "public_notes": USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING,
     },
     "chat": {
@@ -1453,12 +1517,16 @@ DEFAULT_USER_PERMISSIONS = {
         "temporary_enforced": USER_PERMISSIONS_CHAT_TEMPORARY_ENFORCED,
     },
     "features": {
+        # General features
         "api_keys": USER_PERMISSIONS_FEATURES_API_KEYS,
+        "notes": USER_PERMISSIONS_FEATURES_NOTES,
+        "folders": USER_PERMISSIONS_FEATURES_FOLDERS,
+        "channels": USER_PERMISSIONS_FEATURES_CHANNELS,
         "direct_tool_servers": USER_PERMISSIONS_FEATURES_DIRECT_TOOL_SERVERS,
+        # Chat features
         "web_search": USER_PERMISSIONS_FEATURES_WEB_SEARCH,
         "image_generation": USER_PERMISSIONS_FEATURES_IMAGE_GENERATION,
         "code_interpreter": USER_PERMISSIONS_FEATURES_CODE_INTERPRETER,
-        "notes": USER_PERMISSIONS_FEATURES_NOTES,
     },
 }
 
@@ -1466,6 +1534,12 @@ USER_PERMISSIONS = PersistentConfig(
     "USER_PERMISSIONS",
     "user.permissions",
     DEFAULT_USER_PERMISSIONS,
+)
+
+ENABLE_FOLDERS = PersistentConfig(
+    "ENABLE_FOLDERS",
+    "folders.enable",
+    os.environ.get("ENABLE_FOLDERS", "True").lower() == "true",
 )
 
 ENABLE_CHANNELS = PersistentConfig(
@@ -2139,6 +2213,11 @@ ENABLE_QDRANT_MULTITENANCY_MODE = (
 )
 QDRANT_COLLECTION_PREFIX = os.environ.get("QDRANT_COLLECTION_PREFIX", "open-webui")
 
+WEAVIATE_HTTP_HOST = os.environ.get("WEAVIATE_HTTP_HOST", "")
+WEAVIATE_HTTP_PORT = int(os.environ.get("WEAVIATE_HTTP_PORT", "8080"))
+WEAVIATE_GRPC_PORT = int(os.environ.get("WEAVIATE_GRPC_PORT", "50051"))
+WEAVIATE_API_KEY = os.environ.get("WEAVIATE_API_KEY")
+
 # OpenSearch
 OPENSEARCH_URI = os.environ.get("OPENSEARCH_URI", "https://localhost:9200")
 OPENSEARCH_SSL = os.environ.get("OPENSEARCH_SSL", "true").lower() == "true"
@@ -2487,6 +2566,12 @@ DOCLING_SERVER_URL = PersistentConfig(
     os.getenv("DOCLING_SERVER_URL", "http://docling:5001"),
 )
 
+DOCLING_API_KEY = PersistentConfig(
+    "DOCLING_API_KEY",
+    "rag.docling_api_key",
+    os.getenv("DOCLING_API_KEY", ""),
+)
+
 docling_params = os.getenv("DOCLING_PARAMS", "")
 try:
     docling_params = json.loads(docling_params)
@@ -2499,88 +2584,6 @@ DOCLING_PARAMS = PersistentConfig(
     docling_params,
 )
 
-DOCLING_DO_OCR = PersistentConfig(
-    "DOCLING_DO_OCR",
-    "rag.docling_do_ocr",
-    os.getenv("DOCLING_DO_OCR", "True").lower() == "true",
-)
-
-DOCLING_FORCE_OCR = PersistentConfig(
-    "DOCLING_FORCE_OCR",
-    "rag.docling_force_ocr",
-    os.getenv("DOCLING_FORCE_OCR", "False").lower() == "true",
-)
-
-DOCLING_OCR_ENGINE = PersistentConfig(
-    "DOCLING_OCR_ENGINE",
-    "rag.docling_ocr_engine",
-    os.getenv("DOCLING_OCR_ENGINE", "tesseract"),
-)
-
-DOCLING_OCR_LANG = PersistentConfig(
-    "DOCLING_OCR_LANG",
-    "rag.docling_ocr_lang",
-    os.getenv("DOCLING_OCR_LANG", "eng,fra,deu,spa"),
-)
-
-DOCLING_PDF_BACKEND = PersistentConfig(
-    "DOCLING_PDF_BACKEND",
-    "rag.docling_pdf_backend",
-    os.getenv("DOCLING_PDF_BACKEND", "dlparse_v4"),
-)
-
-DOCLING_TABLE_MODE = PersistentConfig(
-    "DOCLING_TABLE_MODE",
-    "rag.docling_table_mode",
-    os.getenv("DOCLING_TABLE_MODE", "accurate"),
-)
-
-DOCLING_PIPELINE = PersistentConfig(
-    "DOCLING_PIPELINE",
-    "rag.docling_pipeline",
-    os.getenv("DOCLING_PIPELINE", "standard"),
-)
-
-DOCLING_DO_PICTURE_DESCRIPTION = PersistentConfig(
-    "DOCLING_DO_PICTURE_DESCRIPTION",
-    "rag.docling_do_picture_description",
-    os.getenv("DOCLING_DO_PICTURE_DESCRIPTION", "False").lower() == "true",
-)
-
-DOCLING_PICTURE_DESCRIPTION_MODE = PersistentConfig(
-    "DOCLING_PICTURE_DESCRIPTION_MODE",
-    "rag.docling_picture_description_mode",
-    os.getenv("DOCLING_PICTURE_DESCRIPTION_MODE", ""),
-)
-
-
-docling_picture_description_local = os.getenv("DOCLING_PICTURE_DESCRIPTION_LOCAL", "")
-try:
-    docling_picture_description_local = json.loads(docling_picture_description_local)
-except json.JSONDecodeError:
-    docling_picture_description_local = {}
-
-
-DOCLING_PICTURE_DESCRIPTION_LOCAL = PersistentConfig(
-    "DOCLING_PICTURE_DESCRIPTION_LOCAL",
-    "rag.docling_picture_description_local",
-    docling_picture_description_local,
-)
-
-docling_picture_description_api = os.getenv("DOCLING_PICTURE_DESCRIPTION_API", "")
-try:
-    docling_picture_description_api = json.loads(docling_picture_description_api)
-except json.JSONDecodeError:
-    docling_picture_description_api = {}
-
-
-DOCLING_PICTURE_DESCRIPTION_API = PersistentConfig(
-    "DOCLING_PICTURE_DESCRIPTION_API",
-    "rag.docling_picture_description_api",
-    docling_picture_description_api,
-)
-
-
 DOCUMENT_INTELLIGENCE_ENDPOINT = PersistentConfig(
     "DOCUMENT_INTELLIGENCE_ENDPOINT",
     "rag.document_intelligence_endpoint",
@@ -2591,6 +2594,12 @@ DOCUMENT_INTELLIGENCE_KEY = PersistentConfig(
     "DOCUMENT_INTELLIGENCE_KEY",
     "rag.document_intelligence_key",
     os.getenv("DOCUMENT_INTELLIGENCE_KEY", ""),
+)
+
+DOCUMENT_INTELLIGENCE_MODEL = PersistentConfig(
+    "DOCUMENT_INTELLIGENCE_MODEL",
+    "rag.document_intelligence_model",
+    os.getenv("DOCUMENT_INTELLIGENCE_MODEL", "prebuilt-layout"),
 )
 
 MISTRAL_OCR_API_BASE_URL = PersistentConfig(
@@ -2736,6 +2745,12 @@ RAG_EMBEDDING_BATCH_SIZE = PersistentConfig(
         os.environ.get("RAG_EMBEDDING_BATCH_SIZE")
         or os.environ.get("RAG_EMBEDDING_OPENAI_BATCH_SIZE", "1")
     ),
+)
+
+ENABLE_ASYNC_EMBEDDING = PersistentConfig(
+    "ENABLE_ASYNC_EMBEDDING",
+    "rag.enable_async_embedding",
+    os.environ.get("ENABLE_ASYNC_EMBEDDING", "True").lower() == "true",
 )
 
 RAG_EMBEDDING_QUERY_PREFIX = os.environ.get("RAG_EMBEDDING_QUERY_PREFIX", None)
@@ -2983,6 +2998,12 @@ WEB_LOADER_CONCURRENT_REQUESTS = PersistentConfig(
     "WEB_LOADER_CONCURRENT_REQUESTS",
     "rag.web.loader.concurrent_requests",
     int(os.getenv("WEB_LOADER_CONCURRENT_REQUESTS", "10")),
+)
+
+WEB_LOADER_TIMEOUT = PersistentConfig(
+    "WEB_LOADER_TIMEOUT",
+    "rag.web.loader.timeout",
+    os.getenv("WEB_LOADER_TIMEOUT", ""),
 )
 
 
@@ -3493,6 +3514,11 @@ IMAGES_GEMINI_ENDPOINT_METHOD = PersistentConfig(
     os.getenv("IMAGES_GEMINI_ENDPOINT_METHOD", ""),
 )
 
+ENABLE_IMAGE_EDIT = PersistentConfig(
+    "ENABLE_IMAGE_EDIT",
+    "images.edit.enable",
+    os.environ.get("ENABLE_IMAGE_EDIT", "").lower() == "true",
+)
 
 IMAGE_EDIT_ENGINE = PersistentConfig(
     "IMAGE_EDIT_ENGINE",

@@ -97,7 +97,7 @@
 				<div class="mb-3">
 					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">
@@ -746,7 +746,7 @@
 				<div class="mb-3">
 					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Loader')}</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">
@@ -767,6 +767,19 @@
 					</div>
 
 					{#if webConfig.WEB_LOADER_ENGINE === '' || webConfig.WEB_LOADER_ENGINE === 'safe_web'}
+						<div class="  mb-2.5 flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">
+								{$i18n.t('Timeout')}
+							</div>
+							<div class="flex items-center relative">
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('Timeout')}
+									bind:value={webConfig.WEB_LOADER_TIMEOUT}
+								/>
+							</div>
+						</div>
+
 						<div class="  mb-2.5 flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">
 								{$i18n.t('Verify SSL Certificate')}

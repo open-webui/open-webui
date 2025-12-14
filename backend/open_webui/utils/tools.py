@@ -34,6 +34,7 @@ from langchain_core.utils.function_calling import (
 )
 
 
+from open_webui.utils.misc import is_string_allowed
 from open_webui.models.tools import Tools
 from open_webui.models.users import UserModel
 from open_webui.utils.plugin import load_tool_module_by_id
@@ -149,8 +150,21 @@ async def get_tools(
                     )
 
                     specs = tool_server_data.get("specs", [])
+                    function_name_filter_list = tool_server_connection.get(
+                        "config", {}
+                    ).get("function_name_filter_list", "")
+
+                    if isinstance(function_name_filter_list, str):
+                        function_name_filter_list = function_name_filter_list.split(",")
+
                     for spec in specs:
                         function_name = spec["name"]
+                        if function_name_filter_list:
+                            if not is_string_allowed(
+                                function_name, function_name_filter_list
+                            ):
+                                # Skip this function
+                                continue
 
                         auth_type = tool_server_connection.get("auth_type", "bearer")
 

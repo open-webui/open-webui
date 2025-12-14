@@ -37,7 +37,8 @@
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import Eye from '$lib/components/icons/Eye.svelte';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { goto } from '$app/navigation';
 
 	let shiftKey = false;
 
@@ -200,6 +201,16 @@
 		}
 	};
 
+	const cloneHandler = async (model) => {
+		sessionStorage.model = JSON.stringify({
+			...model,
+			base_model_id: model.id,
+			id: `${model.id}-clone`,
+			name: `${model.name} (Clone)`
+		});
+		goto('/workspace/models/create');
+	};
+
 	const exportModelHandler = async (model) => {
 		let blob = new Blob([JSON.stringify([model])], {
 			type: 'application/json'
@@ -334,7 +345,7 @@
 										: 'opacity-50 dark:opacity-50'} "
 								>
 									<img
-										src={model?.meta?.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`}
+										src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}`}
 										alt="modelfile profile"
 										class=" rounded-full w-full h-auto object-cover"
 									/>
@@ -418,6 +429,9 @@
 									}}
 									copyLinkHandler={() => {
 										copyLinkHandler(model);
+									}}
+									cloneHandler={() => {
+										cloneHandler(model);
 									}}
 									onClose={() => {}}
 								>

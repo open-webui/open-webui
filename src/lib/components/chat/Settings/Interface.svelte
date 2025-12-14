@@ -404,13 +404,10 @@
 
 						<button
 							class="self-center p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-							on:click={() => {
-								if (textScale === null) {
-									textScale = 1;
-								}
-
-								setTextScaleHandler(Math.min(1.5, textScale + 0.1));
-							}}
+              on:click={() => {
+                  textScale = Math.max(1, parseFloat((textScale - 0.1).toFixed(2)));
+                  setTextScaleHandler(textScale);
+                }}
 							type="button"
 							aria-label={$i18n.t('Increase text scale')}
 						>
@@ -419,9 +416,10 @@
 
 						<button
 							class="p-1 px-3 text-xs flex rounded-sm transition"
-							on:click={() => {
-								setTextScaleHandler(1);
-							}}
+              on:click={() => {
+                  textScale = Math.min(1.5, parseFloat((textScale + 0.1).toFixed(2)));
+                  setTextScaleHandler(textScale);
+                }}
 							type="button"
 						>
 							<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
@@ -715,24 +713,26 @@
 				</div>
 			</div>
 
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div id="temp-chat-default-label" class=" self-center text-xs">
-						{$i18n.t('Temporary Chat by Default')}
-					</div>
+			{#if $user.role === 'admin' || $user?.permissions?.chat?.temporary}
+				<div>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div id="temp-chat-default-label" class=" self-center text-xs">
+							{$i18n.t('Temporary Chat by Default')}
+						</div>
 
-					<div class="flex items-center gap-2 p-1">
-						<Switch
-							ariaLabelledbyId="temp-chat-default-label"
-							tooltip={true}
-							bind:state={temporaryChatByDefault}
-							on:change={() => {
-								saveSettings({ temporaryChatByDefault });
-							}}
-						/>
+						<div class="flex items-center gap-2 p-1">
+							<Switch
+								ariaLabelledbyId="temp-chat-default-label"
+								tooltip={true}
+								bind:state={temporaryChatByDefault}
+								on:change={() => {
+									saveSettings({ temporaryChatByDefault });
+								}}
+							/>
+						</div>
 					</div>
 				</div>
-			</div>
+			{/if}
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">

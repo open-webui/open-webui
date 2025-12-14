@@ -453,6 +453,11 @@
 				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 			)
 		);
+
+		ollamaModels = await getOllamaModels(localStorage.token, urlIdx).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
 	};
 
 	const cancelUpdateModelHandler = async (model: string) => {
@@ -811,9 +816,8 @@
 								bind:value={deleteModelTag}
 								placeholder={$i18n.t('Select a model')}
 							>
-								{#if !deleteModelTag}
-									<option value="" disabled selected>{$i18n.t('Select a model')}</option>
-								{/if}
+								<option value="" disabled selected>{$i18n.t('Select a model')}</option>
+
 								{#each ollamaModels as model}
 									<option value={model.id} class="bg-gray-50 dark:bg-gray-700"
 										>{model.name + ' (' + (model.size / 1024 ** 3).toFixed(1) + ' GB)'}</option

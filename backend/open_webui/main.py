@@ -61,11 +61,11 @@ from open_webui.utils import logger
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
 from open_webui.utils.logger import start_logger
 from open_webui.socket.main import (
+    MODELS,
     app as socket_app,
     periodic_usage_pool_cleanup,
     get_event_emitter,
     get_models_in_use,
-    get_active_user_ids,
 )
 from open_webui.routers import (
     audio,
@@ -164,6 +164,7 @@ from open_webui.config import (
     IMAGES_GEMINI_API_BASE_URL,
     IMAGES_GEMINI_API_KEY,
     IMAGES_GEMINI_ENDPOINT_METHOD,
+    ENABLE_IMAGE_EDIT,
     IMAGE_EDIT_ENGINE,
     IMAGE_EDIT_MODEL,
     IMAGE_EDIT_SIZE,
@@ -207,6 +208,7 @@ from open_webui.config import (
     FIRECRAWL_API_KEY,
     WEB_LOADER_ENGINE,
     WEB_LOADER_CONCURRENT_REQUESTS,
+    WEB_LOADER_TIMEOUT,
     WHISPER_MODEL,
     WHISPER_VAD_FILTER,
     WHISPER_LANGUAGE,
@@ -229,6 +231,7 @@ from open_webui.config import (
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     RAG_EMBEDDING_ENGINE,
     RAG_EMBEDDING_BATCH_SIZE,
+    ENABLE_ASYNC_EMBEDDING,
     RAG_TOP_K,
     RAG_TOP_K_RERANKER,
     RAG_RELEVANCE_THRESHOLD,
@@ -267,20 +270,11 @@ from open_webui.config import (
     EXTERNAL_DOCUMENT_LOADER_API_KEY,
     TIKA_SERVER_URL,
     DOCLING_SERVER_URL,
+    DOCLING_API_KEY,
     DOCLING_PARAMS,
-    DOCLING_DO_OCR,
-    DOCLING_FORCE_OCR,
-    DOCLING_OCR_ENGINE,
-    DOCLING_OCR_LANG,
-    DOCLING_PDF_BACKEND,
-    DOCLING_TABLE_MODE,
-    DOCLING_PIPELINE,
-    DOCLING_DO_PICTURE_DESCRIPTION,
-    DOCLING_PICTURE_DESCRIPTION_MODE,
-    DOCLING_PICTURE_DESCRIPTION_LOCAL,
-    DOCLING_PICTURE_DESCRIPTION_API,
     DOCUMENT_INTELLIGENCE_ENDPOINT,
     DOCUMENT_INTELLIGENCE_KEY,
+    DOCUMENT_INTELLIGENCE_MODEL,
     MISTRAL_OCR_API_BASE_URL,
     MISTRAL_OCR_API_KEY,
     RAG_TEXT_SPLITTER,
@@ -360,6 +354,7 @@ from open_webui.config import (
     ENABLE_API_KEYS,
     ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS,
     API_KEYS_ALLOWED_ENDPOINTS,
+    ENABLE_FOLDERS,
     ENABLE_CHANNELS,
     ENABLE_NOTES,
     ENABLE_COMMUNITY_SHARING,
@@ -369,6 +364,7 @@ from open_webui.config import (
     BYPASS_ADMIN_ACCESS_CONTROL,
     USER_PERMISSIONS,
     DEFAULT_USER_ROLE,
+    DEFAULT_GROUP_ID,
     PENDING_USER_OVERLAY_CONTENT,
     PENDING_USER_OVERLAY_TITLE,
     DEFAULT_PROMPT_SUGGESTIONS,
@@ -454,6 +450,7 @@ from open_webui.env import (
     SAFE_MODE,
     SRC_LOG_LEVELS,
     VERSION,
+    DEPLOYMENT_ID,
     INSTANCE_ID,
     WEBUI_BUILD_HASH,
     WEBUI_SECRET_KEY,
@@ -761,6 +758,7 @@ app.state.config.MODEL_ORDER_LIST = MODEL_ORDER_LIST
 
 app.state.config.DEFAULT_PROMPT_SUGGESTIONS = DEFAULT_PROMPT_SUGGESTIONS
 app.state.config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
+app.state.config.DEFAULT_GROUP_ID = DEFAULT_GROUP_ID
 
 app.state.config.PENDING_USER_OVERLAY_CONTENT = PENDING_USER_OVERLAY_CONTENT
 app.state.config.PENDING_USER_OVERLAY_TITLE = PENDING_USER_OVERLAY_TITLE
@@ -772,6 +770,7 @@ app.state.config.WEBHOOK_URL = WEBHOOK_URL
 app.state.config.BANNERS = WEBUI_BANNERS
 
 
+app.state.config.ENABLE_FOLDERS = ENABLE_FOLDERS
 app.state.config.ENABLE_CHANNELS = ENABLE_CHANNELS
 app.state.config.ENABLE_NOTES = ENABLE_NOTES
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
@@ -870,20 +869,11 @@ app.state.config.EXTERNAL_DOCUMENT_LOADER_URL = EXTERNAL_DOCUMENT_LOADER_URL
 app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY = EXTERNAL_DOCUMENT_LOADER_API_KEY
 app.state.config.TIKA_SERVER_URL = TIKA_SERVER_URL
 app.state.config.DOCLING_SERVER_URL = DOCLING_SERVER_URL
+app.state.config.DOCLING_API_KEY = DOCLING_API_KEY
 app.state.config.DOCLING_PARAMS = DOCLING_PARAMS
-app.state.config.DOCLING_DO_OCR = DOCLING_DO_OCR
-app.state.config.DOCLING_FORCE_OCR = DOCLING_FORCE_OCR
-app.state.config.DOCLING_OCR_ENGINE = DOCLING_OCR_ENGINE
-app.state.config.DOCLING_OCR_LANG = DOCLING_OCR_LANG
-app.state.config.DOCLING_PDF_BACKEND = DOCLING_PDF_BACKEND
-app.state.config.DOCLING_TABLE_MODE = DOCLING_TABLE_MODE
-app.state.config.DOCLING_PIPELINE = DOCLING_PIPELINE
-app.state.config.DOCLING_DO_PICTURE_DESCRIPTION = DOCLING_DO_PICTURE_DESCRIPTION
-app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE = DOCLING_PICTURE_DESCRIPTION_MODE
-app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL = DOCLING_PICTURE_DESCRIPTION_LOCAL
-app.state.config.DOCLING_PICTURE_DESCRIPTION_API = DOCLING_PICTURE_DESCRIPTION_API
 app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT
 app.state.config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY
+app.state.config.DOCUMENT_INTELLIGENCE_MODEL = DOCUMENT_INTELLIGENCE_MODEL
 app.state.config.MISTRAL_OCR_API_BASE_URL = MISTRAL_OCR_API_BASE_URL
 app.state.config.MISTRAL_OCR_API_KEY = MISTRAL_OCR_API_KEY
 app.state.config.MINERU_API_MODE = MINERU_API_MODE
@@ -900,6 +890,7 @@ app.state.config.CHUNK_OVERLAP = CHUNK_OVERLAP
 app.state.config.RAG_EMBEDDING_ENGINE = RAG_EMBEDDING_ENGINE
 app.state.config.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL
 app.state.config.RAG_EMBEDDING_BATCH_SIZE = RAG_EMBEDDING_BATCH_SIZE
+app.state.config.ENABLE_ASYNC_EMBEDDING = ENABLE_ASYNC_EMBEDDING
 
 app.state.config.RAG_RERANKING_ENGINE = RAG_RERANKING_ENGINE
 app.state.config.RAG_RERANKING_MODEL = RAG_RERANKING_MODEL
@@ -932,6 +923,7 @@ app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS = WEB_SEARCH_CONCURRENT_REQUESTS
 
 app.state.config.WEB_LOADER_ENGINE = WEB_LOADER_ENGINE
 app.state.config.WEB_LOADER_CONCURRENT_REQUESTS = WEB_LOADER_CONCURRENT_REQUESTS
+app.state.config.WEB_LOADER_TIMEOUT = WEB_LOADER_TIMEOUT
 
 app.state.config.WEB_SEARCH_TRUST_ENV = WEB_SEARCH_TRUST_ENV
 app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
@@ -994,9 +986,7 @@ app.state.YOUTUBE_LOADER_TRANSLATION = None
 
 try:
     app.state.ef = get_ef(
-        app.state.config.RAG_EMBEDDING_ENGINE,
-        app.state.config.RAG_EMBEDDING_MODEL,
-        RAG_EMBEDDING_MODEL_AUTO_UPDATE,
+        app.state.config.RAG_EMBEDDING_ENGINE, app.state.config.RAG_EMBEDDING_MODEL
     )
     if (
         app.state.config.ENABLE_RAG_HYBRID_SEARCH
@@ -1007,7 +997,6 @@ try:
             app.state.config.RAG_RERANKING_MODEL,
             app.state.config.RAG_EXTERNAL_RERANKER_URL,
             app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
-            RAG_RERANKING_MODEL_AUTO_UPDATE,
         )
     else:
         app.state.rf = None
@@ -1044,6 +1033,7 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
         if app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
         else None
     ),
+    enable_async=app.state.config.ENABLE_ASYNC_EMBEDDING,
 )
 
 app.state.RERANKING_FUNCTION = get_reranking_function(
@@ -1115,6 +1105,7 @@ app.state.config.COMFYUI_WORKFLOW = COMFYUI_WORKFLOW
 app.state.config.COMFYUI_WORKFLOW_NODES = COMFYUI_WORKFLOW_NODES
 
 
+app.state.config.ENABLE_IMAGE_EDIT = ENABLE_IMAGE_EDIT
 app.state.config.IMAGE_EDIT_ENGINE = IMAGE_EDIT_ENGINE
 app.state.config.IMAGE_EDIT_MODEL = IMAGE_EDIT_MODEL
 app.state.config.IMAGE_EDIT_SIZE = IMAGE_EDIT_SIZE
@@ -1228,7 +1219,7 @@ app.state.config.VOICE_MODE_PROMPT_TEMPLATE = VOICE_MODE_PROMPT_TEMPLATE
 #
 ########################################
 
-app.state.MODELS = {}
+app.state.MODELS = MODELS
 
 # Add the middleware to the app
 if ENABLE_COMPRESSION_MIDDLEWARE:
@@ -1449,6 +1440,10 @@ async def get_models(
         if "pipeline" in model and model["pipeline"].get("type", None) == "filter":
             continue
 
+        # Remove profile image URL to reduce payload size
+        if model.get("info", {}).get("meta", {}).get("profile_image_url"):
+            model["info"]["meta"].pop("profile_image_url", None)
+
         try:
             model_tags = [
                 tag.get("name")
@@ -1584,6 +1579,7 @@ async def chat_completion(
             "user_id": user.id,
             "chat_id": form_data.pop("chat_id", None),
             "message_id": form_data.pop("id", None),
+            "parent_message_id": form_data.pop("parent_id", None),
             "session_id": form_data.pop("session_id", None),
             "filter_ids": form_data.pop("filter_ids", []),
             "tool_ids": form_data.get("tool_ids", None),
@@ -1640,6 +1636,7 @@ async def chat_completion(
                             metadata["chat_id"],
                             metadata["message_id"],
                             {
+                                "parentId": metadata.get("parent_message_id", None),
                                 "model": model_id,
                             },
                         )
@@ -1672,6 +1669,7 @@ async def chat_completion(
                             metadata["chat_id"],
                             metadata["message_id"],
                             {
+                                "parentId": metadata.get("parent_message_id", None),
                                 "error": {"content": str(e)},
                             },
                         )
@@ -1851,6 +1849,7 @@ async def get_app_config(request: Request):
             **(
                 {
                     "enable_direct_connections": app.state.config.ENABLE_DIRECT_CONNECTIONS,
+                    "enable_folders": app.state.config.ENABLE_FOLDERS,
                     "enable_channels": app.state.config.ENABLE_CHANNELS,
                     "enable_notes": app.state.config.ENABLE_NOTES,
                     "enable_web_search": app.state.config.ENABLE_WEB_SEARCH,
@@ -1983,6 +1982,7 @@ async def update_webhook_url(form_data: UrlForm, user=Depends(get_admin_user)):
 async def get_app_version():
     return {
         "version": VERSION,
+        "deployment_id": DEPLOYMENT_ID,
     }
 
 
@@ -2022,7 +2022,10 @@ async def get_current_usage(user=Depends(get_verified_user)):
     This is an experimental endpoint and subject to change.
     """
     try:
-        return {"model_ids": get_models_in_use(), "user_ids": get_active_user_ids()}
+        return {
+            "model_ids": get_models_in_use(),
+            "user_count": Users.get_active_user_count(),
+        }
     except Exception as e:
         log.error(f"Error getting usage statistics: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
@@ -2085,7 +2088,7 @@ except Exception as e:
     )
 
 
-async def register_client(self, request, client_id: str) -> bool:
+async def register_client(request, client_id: str) -> bool:
     server_type, server_id = client_id.split(":", 1)
 
     connection = None

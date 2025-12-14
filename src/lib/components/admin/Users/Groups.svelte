@@ -100,16 +100,20 @@
 	<EditGroupModal
 		bind:show={showAddGroupModal}
 		edit={false}
+		tabs={['general', 'permissions']}
 		permissions={defaultPermissions}
 		onSubmit={addGroupHandler}
 	/>
 
 	<div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
-		<div class="flex md:self-center text-lg font-medium px-0.5">
-			{$i18n.t('Groups')}
-			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
+		<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2 shrink-0">
+			<div>
+				{$i18n.t('Groups')}
+			</div>
 
-			<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{groups.length}</span>
+			<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+				{groups.length}
+			</div>
 		</div>
 
 		<div class="flex gap-1">
@@ -166,13 +170,13 @@
 			</div>
 		{:else}
 			<div>
-				<div class=" flex items-center gap-3 justify-between text-xs uppercase px-1 font-semibold">
+				<div class=" flex items-center gap-3 justify-between text-xs uppercase px-1 font-medium">
 					<div class="w-full basis-3/5">{$i18n.t('Group')}</div>
 
 					<div class="w-full basis-2/5 text-right">{$i18n.t('Users')}</div>
 				</div>
 
-				<hr class="mt-1.5 border-gray-100 dark:border-gray-850" />
+				<hr class="mt-1.5 border-gray-100/30 dark:border-gray-850/30" />
 
 				{#each filteredGroups as group}
 					<div class="my-2">
@@ -182,7 +186,7 @@
 			</div>
 		{/if}
 
-		<hr class="mb-2 border-gray-100 dark:border-gray-850" />
+		<hr class="mb-2 border-gray-100/30 dark:border-gray-850/30" />
 
 		<EditGroupModal
 			bind:show={showDefaultPermissionsModal}
