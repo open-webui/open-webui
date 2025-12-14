@@ -8,6 +8,7 @@
 	import General from './General.svelte';
 	import Permissions from './Permissions.svelte';
 	import Users from './Users.svelte';
+	import { DEFAULT_USER_PERMISSIONS } from '$lib/constants/permissions';
 	import UserPlusSolid from '$lib/components/icons/UserPlusSolid.svelte';
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -112,67 +113,6 @@
 		loading = false;
 		show = false;
 	};
-
-	const DEFAULT_PERMISSIONS = {
-		workspace: {
-			models: false,
-			knowledge: false,
-			prompts: false,
-			tools: false,
-			models_import: false,
-			models_export: false,
-			prompts_import: false,
-			prompts_export: false,
-			tools_import: false,
-			tools_export: false
-		},
-		sharing: {
-			models: false,
-			public_models: false,
-			knowledge: false,
-			public_knowledge: false,
-			prompts: false,
-			public_prompts: false,
-			tools: false,
-			public_tools: false,
-			notes: false,
-			public_notes: false
-		},
-		chat: {
-			controls: true,
-			valves: true,
-			system_prompt: true,
-			params: true,
-			file_upload: true,
-			delete: true,
-			delete_message: true,
-			continue_response: true,
-			regenerate_response: true,
-			rate_response: true,
-			edit: true,
-			share: true,
-			export: true,
-			stt: true,
-			tts: true,
-			call: true,
-			multiple_models: true,
-			temporary: true,
-			temporary_enforced: false
-		},
-		features: {
-			api_keys: false,
-			notes: true,
-			channels: true,
-			folders: true,
-			direct_tool_servers: false,
-			web_search: true,
-			image_generation: true,
-			code_interpreter: true
-		},
-		ui: {
-			interface_settings: true
-		}
-	};
 	
 	const init = () => {
 	    if (group) {
@@ -181,11 +121,11 @@
 	        const loadedPermissions = group?.permissions ?? {};
 	        // Create fresh object from defaults, then overlay loaded values
 	        permissions = {
-	            workspace: { ...DEFAULT_PERMISSIONS.workspace, ...loadedPermissions.workspace },
-	            sharing: { ...DEFAULT_PERMISSIONS.sharing, ...loadedPermissions.sharing },
-	            chat: { ...DEFAULT_PERMISSIONS.chat, ...loadedPermissions.chat },
-	            features: { ...DEFAULT_PERMISSIONS.features, ...loadedPermissions.features },
-	            ui: { ...DEFAULT_PERMISSIONS.ui, ...loadedPermissions.ui }
+	            workspace: { ...DEFAULT_USER_PERMISSIONS.workspace, ...loadedPermissions.workspace },
+	            sharing: { ...DEFAULT_USER_PERMISSIONS.sharing, ...loadedPermissions.sharing },
+	            chat: { ...DEFAULT_USER_PERMISSIONS.chat, ...loadedPermissions.chat },
+	            features: { ...DEFAULT_USER_PERMISSIONS.features, ...loadedPermissions.features },
+	            ui: { ...DEFAULT_USER_PERMISSIONS.ui, ...loadedPermissions.ui }
 	        };
 	        data = group?.data ?? {};
 	        userCount = group?.member_count ?? 0;
