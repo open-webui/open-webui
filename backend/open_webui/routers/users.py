@@ -17,7 +17,6 @@ from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.internal.db import get_db
 from open_webui.models.users import User
 
-
 from open_webui.models.groups import Groups
 from open_webui.models.chats import Chats
 from open_webui.models.users import (
