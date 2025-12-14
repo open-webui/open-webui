@@ -748,65 +748,66 @@
 
 
 						<div class="  mb-2.5 flex w-full justify-between">
-							<div class=" flex gap-1.5 w-full">
-								<div class="  w-full justify-between">
-									<div class="self-center text-xs font-medium min-w-fit mb-1">
-										{$i18n.t('Chunk Size')}
-									</div>
-									<div class="self-center">
-										<input
-											class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-											type="number"
-											placeholder={$i18n.t('Enter Chunk Size')}
-											bind:value={RAGConfig.CHUNK_SIZE}
-											autocomplete="off"
-											min="0"
-										/>
-									</div>
-								</div>
-
+						<div class=" flex gap-1.5 w-full">
+							{#if RAGConfig.ENABLE_MARKDOWN_HEADER_SPLITTING}
 								<div class="w-full">
-									<div class=" self-center text-xs font-medium min-w-fit mb-1">
-										{$i18n.t('Chunk Overlap')}
+									<div class="self-center text-xs font-medium min-w-fit mb-1">
+										<Tooltip
+											placement="top-start"
+											content={$i18n.t('Minimum chunk size (0 to disable). Small chunks from markdown header splits are merged until they meet this threshold.')}
+										>
+											{$i18n.t('Min Chunk Size')}
+										</Tooltip>
 									</div>
-
 									<div class="self-center">
 										<input
 											class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											type="number"
-											placeholder={$i18n.t('Enter Chunk Overlap')}
-											bind:value={RAGConfig.CHUNK_OVERLAP}
+											placeholder={$i18n.t('Enter Min Size')}
+											bind:value={RAGConfig.CHUNK_MIN_SIZE}
 											autocomplete="off"
 											min="0"
 										/>
 									</div>
 								</div>
+							{/if}
 
-								{#if RAGConfig.ENABLE_MARKDOWN_HEADER_SPLITTING}
-									<div class="w-full">
-										<div class="self-center text-xs font-medium min-w-fit mb-1">
-											<Tooltip
-												placement="top-start"
-												content={$i18n.t('Minimum chunk size (0 to disable). Small chunks from markdown header splits are merged until they meet this threshold.')}
-											>
-												{$i18n.t('Min Chunk Size')}
-											</Tooltip>
-										</div>
-										<div class="self-center">
-											<input
-												class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-												type="number"
-												placeholder={$i18n.t('Enter Min Size')}
-												bind:value={RAGConfig.CHUNK_MIN_SIZE}
-												autocomplete="off"
-												min="0"
-											/>
-										</div>
-									</div>
-								{/if}
+							<div class="  w-full justify-between">
+								<div class="self-center text-xs font-medium min-w-fit mb-1">
+									{$i18n.t('Chunk Size')}
+								</div>
+								<div class="self-center">
+									<input
+										class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										type="number"
+										placeholder={$i18n.t('Enter Chunk Size')}
+										bind:value={RAGConfig.CHUNK_SIZE}
+										autocomplete="off"
+										min="0"
+									/>
+								</div>
+							</div>
+
+							<div class="w-full">
+								<div class=" self-center text-xs font-medium min-w-fit mb-1">
+									{$i18n.t('Chunk Overlap')}
+								</div>
+
+								<div class="self-center">
+									<input
+										class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										type="number"
+										placeholder={$i18n.t('Enter Chunk Overlap')}
+										bind:value={RAGConfig.CHUNK_OVERLAP}
+										autocomplete="off"
+										min="0"
+									/>
+								</div>
 							</div>
 						</div>
-					{/if}
+					</div>
+				{/if}
+
 				</div>
 
 				{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
