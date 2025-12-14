@@ -306,13 +306,15 @@
 	    }
 	}
 	
+	let settingsLoaded = false;
+	
 	// For admin mode: reload when initialSettings changes
 	$: if (initialSettings !== null) {
 	    loadSettingsFromSource(initialSettings);
 	}
 	
-	// For user mode: apply text scale as side effect (but don't reload all settings)
-	$: if (initialSettings === null && $settings?.textScale !== undefined) {
+	// For user mode: apply text scale as side effect only after initial load
+	$: if (initialSettings === null && settingsLoaded && $settings?.textScale !== undefined) {
 	    const scale = $settings.textScale ?? 1;
 	    setTextScale(scale);
 	}
@@ -320,6 +322,7 @@
 	onMount(() => {
 	    // Initial load from appropriate source
 	    loadSettingsFromSource(initialSettings ?? $settings);
+	    settingsLoaded = true;
 	});
 </script>
 
