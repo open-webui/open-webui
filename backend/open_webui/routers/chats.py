@@ -459,6 +459,28 @@ async def update_chat_by_id(
 
 
 ############################
+# UpdateChatChapterById
+############################
+class ChapterForm(BaseModel):
+    chapter_id: Optional[str] = None
+
+
+@router.post("/{id}/chapter", response_model=Optional[ChatResponse])
+async def update_chat_chapter_by_id(
+    id: str, form_data: ChapterForm, user=Depends(get_verified_user)
+):
+    chat = Chats.get_chat_by_id_and_user_id(id, user.id)
+    if chat:
+        chat = Chats.update_chat_chapter_id_by_id(id, form_data.chapter_id)
+        return ChatResponse(**chat.model_dump())
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+
+############################
 # UpdateChatMessageById
 ############################
 class MessageForm(BaseModel):
