@@ -1,27 +1,31 @@
 <script lang="ts">
 	import { config, models, settings, user } from '$lib/stores';
-	import { createEventDispatcher, onMount, onDestroy, getContext } from 'svelte';
+	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { updateUserInfo } from '$lib/apis/users';
 	import { getUserPosition } from '$lib/utils';
 	import { setTextScale } from '$lib/utils/text-scale';
-
+	import Switch from '$lib/components/common/Switch.svelte';
 	import Minus from '$lib/components/icons/Minus.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
-	import Switch from '$lib/components/common/Switch.svelte';
 	import ManageFloatingActionButtonsModal from './Interface/ManageFloatingActionButtonsModal.svelte';
 	import ManageImageCompressionModal from './Interface/ManageImageCompressionModal.svelte';
-
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
 
 	export let saveSettings: Function;
+	// Allow passing custom settings object (for admin defaults modal)
+	export let initialSettings: any = null;
+
+	// Use either provided initialSettings or global $settings store
+	$: settingsSource = initialSettings ?? $settings;
 
 	let backgroundImageUrl = null;
 	let inputFiles = null;
 	let filesInputElement;
+	let textScale = null;
 
 	// Addons
 	let titleAutoGenerate = true;
@@ -99,8 +103,6 @@
 
 	let showManageFloatingActionButtonsModal = false;
 	let showManageImageCompressionModal = false;
-
-	let textScale = null;
 
 	const toggleLandingPageMode = async () => {
 		landingPageMode = landingPageMode === '' ? 'chat' : '';
@@ -185,8 +187,13 @@
 	};
 
 	const setTextScaleHandler = (scale) => {
+		console.log('setTextScaleHandler called with scale:', scale, 'initialSettings:', initialSettings);
 		textScale = scale;
-		setTextScale(textScale);
+
+		const isAdminMode = initialSettings !== null;
+		if (!isAdminMode) {
+			setTextScale(textScale);
+		}
 
 		if (textScale === 1) {
 			textScale = null;
@@ -194,82 +201,91 @@
 		saveSettings({ textScale });
 	};
 
-	onMount(async () => {
-		titleAutoGenerate = $settings?.title?.auto ?? true;
-		autoTags = $settings?.autoTags ?? true;
-		autoFollowUps = $settings?.autoFollowUps ?? true;
+	// Load settings reactively when settingsSource changes
+	$: {
+		titleAutoGenerate = settingsSource?.title?.auto ?? true;
+		autoTags = settingsSource?.autoTags ?? true;
+		autoFollowUps = settingsSource?.autoFollowUps ?? true;
 
-		highContrastMode = $settings?.highContrastMode ?? false;
+		highContrastMode = settingsSource?.highContrastMode ?? false;
 
-		detectArtifacts = $settings?.detectArtifacts ?? true;
-		responseAutoCopy = $settings?.responseAutoCopy ?? false;
+		detectArtifacts = settingsSource?.detectArtifacts ?? true;
+		responseAutoCopy = settingsSource?.responseAutoCopy ?? false;
 
-		showUsername = $settings?.showUsername ?? false;
-		showUpdateToast = $settings?.showUpdateToast ?? true;
-		showChangelog = $settings?.showChangelog ?? true;
+		showUsername = settingsSource?.showUsername ?? false;
+		showUpdateToast = settingsSource?.showUpdateToast ?? true;
+		showChangelog = settingsSource?.showChangelog ?? true;
 
-		showEmojiInCall = $settings?.showEmojiInCall ?? false;
-		voiceInterruption = $settings?.voiceInterruption ?? false;
+		showEmojiInCall = settingsSource?.showEmojiInCall ?? false;
+		voiceInterruption = settingsSource?.voiceInterruption ?? false;
 
-		displayMultiModelResponsesInTabs = $settings?.displayMultiModelResponsesInTabs ?? false;
-		chatFadeStreamingText = $settings?.chatFadeStreamingText ?? true;
+		displayMultiModelResponsesInTabs = settingsSource?.displayMultiModelResponsesInTabs ?? false;
+		chatFadeStreamingText = settingsSource?.chatFadeStreamingText ?? true;
 
-		richTextInput = $settings?.richTextInput ?? true;
-		showFormattingToolbar = $settings?.showFormattingToolbar ?? false;
-		insertPromptAsRichText = $settings?.insertPromptAsRichText ?? false;
-		promptAutocomplete = $settings?.promptAutocomplete ?? false;
+		richTextInput = settingsSource?.richTextInput ?? true;
+		showFormattingToolbar = settingsSource?.showFormattingToolbar ?? false;
+		insertPromptAsRichText = settingsSource?.insertPromptAsRichText ?? false;
+		promptAutocomplete = settingsSource?.promptAutocomplete ?? false;
 
-		insertSuggestionPrompt = $settings?.insertSuggestionPrompt ?? false;
-		keepFollowUpPrompts = $settings?.keepFollowUpPrompts ?? false;
-		insertFollowUpPrompt = $settings?.insertFollowUpPrompt ?? false;
+		insertSuggestionPrompt = settingsSource?.insertSuggestionPrompt ?? false;
+		keepFollowUpPrompts = settingsSource?.keepFollowUpPrompts ?? false;
+		insertFollowUpPrompt = settingsSource?.insertFollowUpPrompt ?? false;
 
-		regenerateMenu = $settings?.regenerateMenu ?? true;
+		regenerateMenu = settingsSource?.regenerateMenu ?? true;
 
-		largeTextAsFile = $settings?.largeTextAsFile ?? false;
-		copyFormatted = $settings?.copyFormatted ?? false;
+		largeTextAsFile = settingsSource?.largeTextAsFile ?? false;
+		copyFormatted = settingsSource?.copyFormatted ?? false;
 
-		collapseCodeBlocks = $settings?.collapseCodeBlocks ?? false;
-		expandDetails = $settings?.expandDetails ?? false;
+		collapseCodeBlocks = settingsSource?.collapseCodeBlocks ?? false;
+		expandDetails = settingsSource?.expandDetails ?? false;
 
-		landingPageMode = $settings?.landingPageMode ?? '';
-		chatBubble = $settings?.chatBubble ?? true;
-		widescreenMode = $settings?.widescreenMode ?? false;
-		splitLargeChunks = $settings?.splitLargeChunks ?? false;
-		scrollOnBranchChange = $settings?.scrollOnBranchChange ?? true;
+		landingPageMode = settingsSource?.landingPageMode ?? '';
+		chatBubble = settingsSource?.chatBubble ?? true;
+		widescreenMode = settingsSource?.widescreenMode ?? false;
+		splitLargeChunks = settingsSource?.splitLargeChunks ?? false;
+		scrollOnBranchChange = settingsSource?.scrollOnBranchChange ?? true;
 
-		temporaryChatByDefault = $settings?.temporaryChatByDefault ?? false;
-		chatDirection = $settings?.chatDirection ?? 'auto';
-		userLocation = $settings?.userLocation ?? false;
-		showChatTitleInTab = $settings?.showChatTitleInTab ?? true;
+		temporaryChatByDefault = settingsSource?.temporaryChatByDefault ?? false;
+		chatDirection = settingsSource?.chatDirection ?? 'auto';
+		userLocation = settingsSource?.userLocation ?? false;
+		showChatTitleInTab = settingsSource?.showChatTitleInTab ?? true;
 
-		notificationSound = $settings?.notificationSound ?? true;
-		notificationSoundAlways = $settings?.notificationSoundAlways ?? false;
+		notificationSound = settingsSource?.notificationSound ?? true;
+		notificationSoundAlways = settingsSource?.notificationSoundAlways ?? false;
 
-		iframeSandboxAllowSameOrigin = $settings?.iframeSandboxAllowSameOrigin ?? false;
-		iframeSandboxAllowForms = $settings?.iframeSandboxAllowForms ?? false;
+		iframeSandboxAllowSameOrigin = settingsSource?.iframeSandboxAllowSameOrigin ?? false;
+		iframeSandboxAllowForms = settingsSource?.iframeSandboxAllowForms ?? false;
 
-		stylizedPdfExport = $settings?.stylizedPdfExport ?? true;
+		stylizedPdfExport = settingsSource?.stylizedPdfExport ?? true;
 
-		hapticFeedback = $settings?.hapticFeedback ?? false;
-		ctrlEnterToSend = $settings?.ctrlEnterToSend ?? false;
+		hapticFeedback = settingsSource?.hapticFeedback ?? false;
+		ctrlEnterToSend = settingsSource?.ctrlEnterToSend ?? false;
 
-		showFloatingActionButtons = $settings?.showFloatingActionButtons ?? true;
-		floatingActionButtons = $settings?.floatingActionButtons ?? null;
+		showFloatingActionButtons = settingsSource?.showFloatingActionButtons ?? true;
+		floatingActionButtons = settingsSource?.floatingActionButtons ?? null;
 
-		imageCompression = $settings?.imageCompression ?? false;
-		imageCompressionSize = $settings?.imageCompressionSize ?? { width: '', height: '' };
-		imageCompressionInChannels = $settings?.imageCompressionInChannels ?? true;
+		imageCompression = settingsSource?.imageCompression ?? false;
+		imageCompressionSize = settingsSource?.imageCompressionSize ?? { width: '', height: '' };
+		imageCompressionInChannels = settingsSource?.imageCompressionInChannels ?? true;
 
-		defaultModelId = $settings?.models?.at(0) ?? '';
+		defaultModelId = settingsSource?.models?.at(0) ?? '';
 		if ($config?.default_models) {
 			defaultModelId = $config.default_models.split(',')[0];
 		}
 
-		backgroundImageUrl = $settings?.backgroundImageUrl ?? null;
-		webSearch = $settings?.webSearch ?? null;
+		backgroundImageUrl = settingsSource?.backgroundImageUrl ?? null;
+		webSearch = settingsSource?.webSearch ?? null;
 
-		textScale = $settings?.textScale ?? null;
-	});
+		const newTextScale = settingsSource?.textScale ?? null;
+		if (newTextScale !== textScale) {
+			textScale = newTextScale;
+
+			const isAdminMode = initialSettings !== null;
+			if (!isAdminMode && textScale !== null) {
+				setTextScale(textScale);
+			}
+		}
+	}
 </script>
 
 <ManageFloatingActionButtonsModal
@@ -330,86 +346,6 @@
 			<h1 class=" mb-2 text-sm font-medium">{$i18n.t('UI')}</h1>
 
 			<div>
-				<div class="py-0.5 flex w-full justify-between">
-					<label id="ui-scale-label" class=" self-center text-xs" for="ui-scale-slider">
-						{$i18n.t('UI Scale')}
-					</label>
-
-					<div class="flex items-center gap-2 p-1">
-						<button
-							class="text-xs"
-							aria-live="polite"
-							type="button"
-							on:click={() => {
-								if (textScale === null) {
-									textScale = 1;
-								} else {
-									textScale = null;
-									setTextScaleHandler(1);
-								}
-							}}
-						>
-							{#if textScale === null}
-								<span>{$i18n.t('Default')}</span>
-							{:else}
-								<span>{textScale}x</span>
-							{/if}
-						</button>
-					</div>
-				</div>
-
-				{#if textScale !== null}
-					<div class=" flex items-center gap-2 px-1 pb-1">
-						<button
-							type="button"
-							class="rounded-lg p-1 transition outline-gray-200 hover:bg-gray-100 dark:outline-gray-700 dark:hover:bg-gray-800"
-							on:click={() => {
-								textScale = Math.max(1, parseFloat((textScale - 0.1).toFixed(2)));
-								setTextScaleHandler(textScale);
-							}}
-							aria-labelledby="ui-scale-label"
-							aria-label={$i18n.t('Decrease UI Scale')}
-						>
-							<Minus className="h-3.5 w-3.5" />
-						</button>
-
-						<div class="flex-1 flex items-center">
-							<input
-								id="ui-scale-slider"
-								class="w-full"
-								type="range"
-								min="1"
-								max="1.5"
-								step={0.01}
-								bind:value={textScale}
-								on:change={() => {
-									setTextScaleHandler(textScale);
-								}}
-								aria-labelledby="ui-scale-label"
-								aria-valuemin="1"
-								aria-valuemax="1.5"
-								aria-valuenow={textScale}
-								aria-valuetext={`${textScale}x`}
-							/>
-						</div>
-
-						<button
-							type="button"
-							class="rounded-lg p-1 transition outline-gray-200 hover:bg-gray-100 dark:outline-gray-700 dark:hover:bg-gray-800"
-							on:click={() => {
-								textScale = Math.min(1.5, parseFloat((textScale + 0.1).toFixed(2)));
-								setTextScaleHandler(textScale);
-							}}
-							aria-labelledby="ui-scale-label"
-							aria-label={$i18n.t('Increase UI Scale')}
-						>
-							<Plus className="h-3.5 w-3.5" />
-						</button>
-					</div>
-				{/if}
-			</div>
-
-			<div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div id="high-contrast-mode-label" class=" self-center text-xs">
 						{$i18n.t('High Contrast Mode')} ({$i18n.t('Beta')})
@@ -424,6 +360,70 @@
 								saveSettings({ highContrastMode });
 							}}
 						/>
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Text Scale')}
+					</div>
+				</div>
+
+				<div class="flex justify-between items-center text-xs">
+					<div class="flex items-center justify-between w-full gap-3">
+						<button
+							class="self-center p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+							on:click={() => {
+								if (textScale === null) {
+									textScale = 1;
+								}
+
+								setTextScaleHandler(Math.max(0.5, textScale - 0.1));
+							}}
+							type="button"
+							aria-label={$i18n.t('Decrease text scale')}
+						>
+							<Minus className="size-3" />
+						</button>
+
+						<input
+							class="w-full h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+							type="range"
+							min="0.5"
+							max="1.5"
+							step="0.1"
+							value={textScale || 1}
+							on:input={(e) => {
+								console.log('Slider on:input fired, e.isTrusted:', e.isTrusted);
+								setTextScaleHandler(parseFloat(e.target.value));
+							}}
+							aria-label={$i18n.t('Text scale slider')}
+						/>
+
+						<button
+							class="self-center p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+              on:click={() => {
+                  textScale = Math.max(1, parseFloat((textScale - 0.1).toFixed(2)));
+                  setTextScaleHandler(textScale);
+                }}
+							type="button"
+							aria-label={$i18n.t('Increase text scale')}
+						>
+							<Plus className="size-3" />
+						</button>
+
+						<button
+							class="p-1 px-3 text-xs flex rounded-sm transition"
+              on:click={() => {
+                  textScale = Math.min(1.5, parseFloat((textScale + 0.1).toFixed(2)));
+                  setTextScaleHandler(textScale);
+                }}
+							type="button"
+						>
+							<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
+						</button>
 					</div>
 				</div>
 			</div>
