@@ -294,7 +294,7 @@ export const canvasPixelTest = () => {
 	return true;
 };
 
-export const compressImage = async (imageUrl, maxWidth, maxHeight, quality = 0.9) => {
+export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
 	return new Promise((resolve, reject) => {
 		const img = new Image();
 		img.onload = () => {
@@ -308,14 +308,8 @@ export const compressImage = async (imageUrl, maxWidth, maxHeight, quality = 0.9
 				// Resize with both dimensions defined (preserves aspect ratio)
 
 				if (width <= maxWidth && height <= maxHeight) {
-					// Even if dimensions are small enough, we might want to compress quality
-					// But the original logic returned early.
-					// If we want to enforce JPEG compression, we should continue.
-					// However, if we return here, we return the original (potentially PNG or high quality).
-					// Let's assume if dimensions are OK, we check if we need to convert to JPEG/compress.
-					// For now, to be safe and consistent with previous behavior (only resize if larger),
-					// we'll keep the check but maybe we should re-encode if it's huge?
-					// Actually, let's proceed to canvas drawing to apply quality compression.
+					resolve(imageUrl);
+					return;
 				}
 
 				if (width / height > maxWidth / maxHeight) {
@@ -329,7 +323,8 @@ export const compressImage = async (imageUrl, maxWidth, maxHeight, quality = 0.9
 				// Only maxWidth defined
 
 				if (width <= maxWidth) {
-					// See above
+					resolve(imageUrl);
+					return;
 				}
 
 				height = Math.round((maxWidth * height) / width);
@@ -338,7 +333,8 @@ export const compressImage = async (imageUrl, maxWidth, maxHeight, quality = 0.9
 				// Only maxHeight defined
 
 				if (height <= maxHeight) {
-					// See above
+					resolve(imageUrl);
+					return;
 				}
 
 				width = Math.round((maxHeight * width) / height);
@@ -352,7 +348,7 @@ export const compressImage = async (imageUrl, maxWidth, maxHeight, quality = 0.9
 			context.drawImage(img, 0, 0, width, height);
 
 			// Get compressed image URL
-			const compressedUrl = canvas.toDataURL('image/jpeg', quality);
+			const compressedUrl = canvas.toDataURL();
 			resolve(compressedUrl);
 		};
 		img.onerror = (error) => reject(error);
@@ -1490,12 +1486,70 @@ async function ensurePDFjsLoaded() {
 	if (!window.pdfjsLib) {
 		const pdfjs = await import('pdfjs-dist');
 		pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
-		if (!window.pdfjsLib) {
-			throw new Error('pdfjsLib is required for PDF extraction');
-		}
+		window.pdfjsLib = pdfjs;
 	}
 	return window.pdfjsLib;
 }
+
+export type RenderPdfToImageDataUrlsOptions = {
+	maxPages?: number;
+	scale?: number;
+};
+
+export const renderPdfToImageDataUrls = async (
+	pdfData: ArrayBuffer,
+	options: RenderPdfToImageDataUrlsOptions = {}
+) => {
+	const pdfjsLib = await ensurePDFjsLoaded();
+
+	const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+	const totalPages: number = pdf.numPages;
+
+	const maxPages = Math.max(1, options.maxPages ?? totalPages);
+	const renderedPages = Math.min(totalPages, maxPages);
+	const scale = options.scale ?? 1.25;
+
+	const images: string[] = [];
+
+	for (let pageNum = 1; pageNum <= renderedPages; pageNum++) {
+		const page = await pdf.getPage(pageNum);
+		const viewport = page.getViewport({ scale });
+
+		const canvas = document.createElement('canvas');
+		const context = canvas.getContext('2d');
+		if (!context) {
+			throw new Error('Failed to render PDF page: canvas context unavailable');
+		}
+
+		canvas.width = Math.ceil(viewport.width);
+		canvas.height = Math.ceil(viewport.height);
+
+		const renderTask = page.render({ canvasContext: context, viewport });
+		await renderTask.promise;
+
+		images.push(canvas.toDataURL('image/png'));
+
+		try {
+			page.cleanup?.();
+		} catch {
+			// ignore
+		}
+	}
+
+	try {
+		pdf.cleanup?.();
+	} catch {
+		// ignore
+	}
+
+	try {
+		await pdf.destroy?.();
+	} catch {
+		// ignore
+	}
+
+	return { totalPages, renderedPages, images };
+};
 
 export const extractContentFromFile = async (file: File) => {
 	// Known text file extensions for extra fallback

@@ -33,7 +33,6 @@ from langchain_text_splitters import MarkdownHeaderTextSplitter
 from langchain_core.documents import Document
 
 from open_webui.models.files import FileModel, Files
-from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
 
 
@@ -1926,7 +1925,6 @@ def delete_entries_from_collection(form_data: DeleteForm, user=Depends(get_admin
 @router.post("/reset/db")
 def reset_vector_db(user=Depends(get_admin_user)):
     VECTOR_DB_CLIENT.reset()
-    Knowledges.delete_all_knowledge()
 
 
 @router.post("/reset/uploads")

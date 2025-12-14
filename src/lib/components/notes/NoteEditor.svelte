@@ -378,7 +378,6 @@ ${content}
 			id: null,
 			url: '',
 			name: file.name,
-			collection_name: '',
 			status: 'uploading',
 			size: file.size,
 			error: '',
@@ -417,8 +416,7 @@ ${content}
 			if (uploadedFile) {
 				console.log('File upload completed:', {
 					id: uploadedFile.id,
-					name: fileItem.name,
-					collection: uploadedFile?.meta?.collection_name
+					name: fileItem.name
 				});
 
 				if (uploadedFile.error) {
@@ -429,8 +427,6 @@ ${content}
 				fileItem.status = 'uploaded';
 				fileItem.file = uploadedFile;
 				fileItem.id = uploadedFile.id;
-				fileItem.collection_name =
-					uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
 
 				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
 

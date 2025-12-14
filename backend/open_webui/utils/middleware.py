@@ -16,7 +16,6 @@ import re
 import ast
 
 from uuid import uuid4
-from concurrent.futures import ThreadPoolExecutor
 
 
 from fastapi import Request, HTTPException
@@ -69,9 +68,6 @@ from open_webui.models.users import UserModel
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 
-from open_webui.retrieval.utils import get_sources_from_items
-
-
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.task import (
     get_task_model_id,
@@ -101,7 +97,6 @@ from open_webui.utils.filter import (
 from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.utils.payload import apply_system_prompt_to_body
 from open_webui.utils.mcp.client import MCPClient
-from open_webui.utils.reasoning import extract_reasoning_content
 
 
 from open_webui.config import (
@@ -821,130 +816,6 @@ async def chat_image_generation_handler(
     return form_data
 
 
-async def chat_completion_files_handler(
-    request: Request, body: dict, extra_params: dict, user: UserModel
-) -> tuple[dict, dict[str, list]]:
-    __event_emitter__ = extra_params["__event_emitter__"]
-    sources = []
-
-    if files := body.get("metadata", {}).get("files", None):
-        # Check if all files are in full context mode
-        all_full_context = all(item.get("context") == "full" for item in files)
-
-        queries = []
-        if not all_full_context:
-            try:
-                queries_response = await generate_queries(
-                    request,
-                    {
-                        "model": body["model"],
-                        "messages": body["messages"],
-                        "type": "retrieval",
-                    },
-                    user,
-                )
-                queries_response = queries_response["choices"][0]["message"]["content"]
-
-                try:
-                    bracket_start = queries_response.find("{")
-                    bracket_end = queries_response.rfind("}") + 1
-
-                    if bracket_start == -1 or bracket_end == -1:
-                        raise Exception("No JSON object found in the response")
-
-                    queries_response = queries_response[bracket_start:bracket_end]
-                    queries_response = json.loads(queries_response)
-                except Exception as e:
-                    queries_response = {"queries": [queries_response]}
-
-                queries = queries_response.get("queries", [])
-            except:
-                pass
-
-            await __event_emitter__(
-                {
-                    "type": "status",
-                    "data": {
-                        "action": "queries_generated",
-                        "queries": queries,
-                        "done": False,
-                    },
-                }
-            )
-
-        if len(queries) == 0:
-            queries = [get_last_user_message(body["messages"])]
-
-        try:
-            # Offload get_sources_from_items to a separate thread
-            loop = asyncio.get_running_loop()
-            with ThreadPoolExecutor() as executor:
-                sources = await loop.run_in_executor(
-                    executor,
-                    lambda: get_sources_from_items(
-                        request=request,
-                        items=files,
-                        queries=queries,
-                        embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
-                            query, prefix=prefix, user=user
-                        ),
-                        k=request.app.state.config.TOP_K,
-                        reranking_function=(
-                            (
-                                lambda sentences: request.app.state.RERANKING_FUNCTION(
-                                    sentences, user=user
-                                )
-                            )
-                            if request.app.state.RERANKING_FUNCTION
-                            else None
-                        ),
-                        k_reranker=request.app.state.config.TOP_K_RERANKER,
-                        r=request.app.state.config.RELEVANCE_THRESHOLD,
-                        hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
-                        hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
-                        full_context=all_full_context
-                        or request.app.state.config.RAG_FULL_CONTEXT,
-                        user=user,
-                    ),
-                )
-        except Exception as e:
-            log.exception(e)
-
-        log.debug(f"rag_contexts:sources: {sources}")
-
-        unique_ids = set()
-        for source in sources or []:
-            if not source or len(source.keys()) == 0:
-                continue
-
-            documents = source.get("document") or []
-            metadatas = source.get("metadata") or []
-            src_info = source.get("source") or {}
-
-            for index, _ in enumerate(documents):
-                metadata = metadatas[index] if index < len(metadatas) else None
-                _id = (
-                    (metadata or {}).get("source")
-                    or (src_info or {}).get("id")
-                    or "N/A"
-                )
-                unique_ids.add(_id)
-
-        sources_count = len(unique_ids)
-        await __event_emitter__(
-            {
-                "type": "status",
-                "data": {
-                    "action": "sources_retrieved",
-                    "count": sources_count,
-                    "done": True,
-                },
-            }
-        )
-
-    return body, {"sources": sources}
-
-
 def apply_params_to_form_data(form_data, model):
     params = form_data.pop("params", {})
     custom_params = params.pop("custom_params", {})
@@ -1090,53 +961,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     form_data = apply_system_prompt_to_body(
                         folder.data["system_prompt"], form_data, metadata, user
                     )
-                if "files" in folder.data:
-                    form_data["files"] = [
-                        *folder.data["files"],
-                        *form_data.get("files", []),
-                    ]
-
-    # Model "Knowledge" handling
-    user_message = get_last_user_message(form_data["messages"])
-    model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", False)
-
-    if model_knowledge:
-        await event_emitter(
-            {
-                "type": "status",
-                "data": {
-                    "action": "knowledge_search",
-                    "query": user_message,
-                    "done": False,
-                },
-            }
-        )
-
-        knowledge_files = []
-        for item in model_knowledge:
-            if item.get("collection_name"):
-                knowledge_files.append(
-                    {
-                        "id": item.get("collection_name"),
-                        "name": item.get("name"),
-                        "legacy": True,
-                    }
-                )
-            elif item.get("collection_names"):
-                knowledge_files.append(
-                    {
-                        "name": item.get("name"),
-                        "type": "collection",
-                        "collection_names": item.get("collection_names"),
-                        "legacy": True,
-                    }
-                )
-            else:
-                knowledge_files.append(item)
-
-        files = form_data.get("files", [])
-        files.extend(knowledge_files)
-        form_data["files"] = files
+                # Folder-level file attachments / knowledge have been removed.
+                pass
 
     variables = form_data.pop("variables", None)
 
@@ -1243,37 +1069,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 form_data["messages"],
             )
 
-    # tool_ids already popped earlier for web search auto-enable
-    files = form_data.pop("files", None)
-
     prompt = get_last_user_message(form_data["messages"])
-    # TODO: re-enable URL extraction from prompt
-    # urls = []
-    # if prompt and len(prompt or "") < 500 and (not files or len(files) == 0):
-    #     urls = extract_urls(prompt)
-
-    if files:
-        if not files:
-            files = []
-
-        for file_item in files:
-            if file_item.get("type", "file") == "folder":
-                # Get folder files
-                folder_id = file_item.get("id", None)
-                if folder_id:
-                    folder = Folders.get_folder_by_id_and_user_id(folder_id, user.id)
-                    if folder and folder.data and "files" in folder.data:
-                        files = [f for f in files if f.get("id", None) != folder_id]
-                        files = [*files, *folder.data["files"]]
-
-        # files = [*files, *[{"type": "url", "url": url, "name": url} for url in urls]]
-        # Remove duplicate files based on their content
-        files = list({json.dumps(f, sort_keys=True): f for f in files}.values())
 
     metadata = {
         **metadata,
         "tool_ids": tool_ids,
-        "files": files,
     }
     form_data["metadata"] = metadata
 
@@ -1430,14 +1230,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             except Exception as e:
                 log.exception(e)
 
-    try:
-        form_data, flags = await chat_completion_files_handler(
-            request, form_data, extra_params, user
-        )
-        sources.extend(flags.get("sources", []))
-    except Exception as e:
-        log.exception(e)
-
     # If context is not empty, insert it into the messages
     if len(sources) > 0:
         context_string = ""
@@ -1489,19 +1281,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     if len(sources) > 0:
         events.append({"sources": sources})
-
-    if model_knowledge:
-        await event_emitter(
-            {
-                "type": "status",
-                "data": {
-                    "action": "knowledge_search",
-                    "query": user_message,
-                    "done": True,
-                    "hidden": True,
-                },
-            }
-        )
 
     return form_data, metadata, events
 
@@ -2625,9 +2404,18 @@ async def process_chat_response(
 
                                     value = delta.get("content")
 
-                                    reasoning_content = extract_reasoning_content(
-                                        delta, delta_reasoning_details
+                                    reasoning_content = (
+                                        delta.get("reasoning_content")
+                                        or delta.get("reasoning")
+                                        or delta.get("thinking")
                                     )
+
+                                    if delta_reasoning_details:
+                                        for detail in delta_reasoning_details:
+                                            if detail.get("type") == "reasoning.text":
+                                                reasoning_content = (
+                                                    reasoning_content or ""
+                                                ) + detail.get("text", "")
 
                                     if reasoning_content:
                                         if (

@@ -5,13 +5,10 @@
 	import { fade } from 'svelte/transition';
 
 	import ChatList from './ChatList.svelte';
-	import FolderKnowledge from './FolderKnowledge.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { getChatListByFolderId } from '$lib/apis/chats';
 
 	export let folder = null;
-
-	let selectedTab = 'chats';
 
 	let chats = null;
 	let page = 1;
@@ -67,16 +64,12 @@
 	</div> -->
 
 	<div class="">
-		{#if selectedTab === 'knowledge'}
-			<FolderKnowledge />
-		{:else if selectedTab === 'chats'}
-			{#if chats !== null}
-				<ChatList {chats} />
-			{:else}
-				<div class="py-10">
-					<Spinner />
-				</div>
-			{/if}
+		{#if chats !== null}
+			<ChatList {chats} />
+		{:else}
+			<div class="py-10">
+				<Spinner />
+			</div>
 		{/if}
 	</div>
 </div>

@@ -147,14 +147,12 @@ async def get_user_permissisions(request: Request, user=Depends(get_verified_use
 ############################
 class WorkspacePermissions(BaseModel):
     models: bool = False
-    knowledge: bool = False
     prompts: bool = False
     tools: bool = False
 
 
 class SharingPermissions(BaseModel):
     public_models: bool = True
-    public_knowledge: bool = True
     public_prompts: bool = True
     public_tools: bool = True
     public_notes: bool = True

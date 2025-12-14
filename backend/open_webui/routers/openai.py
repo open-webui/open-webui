@@ -160,6 +160,20 @@ def resolve_image_mime_type(
     return "image/jpeg"
 
 
+def user_can_read_file(file, user: UserModel) -> bool:
+    if not file or not user:
+        return False
+
+    if getattr(file, "user_id", None) == user.id or user.role == "admin":
+        return True
+
+    access_control = getattr(file, "access_control", None)
+    if access_control:
+        return has_access(user.id, type="read", access_control=access_control)
+
+    return False
+
+
 async def send_get_request(url, key=None, user: UserModel = None):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
     try:
@@ -964,6 +978,8 @@ async def generate_chat_completion(
     payload = {**form_data}
     metadata = payload.pop("metadata", None)
 
+    has_pdf_files = False
+
     # Resolve image URLs to base64
     if "messages" in payload:
         for message in payload["messages"]:
@@ -977,7 +993,7 @@ async def generate_chat_completion(
                         if match:
                             file_id = match.group(1)
                             file = Files.get_file_by_id(file_id)
-                            if file:
+                            if file and user_can_read_file(file, user):
                                 try:
                                     file_path = Storage.get_file(file.path)
                                     with open(file_path, "rb") as f:
@@ -991,6 +1007,71 @@ async def generate_chat_completion(
                                         part["image_url"]["url"] = f"data:{mime_type};base64,{base64_image}"
                                 except Exception as e:
                                     log.error(f"Error resolving image URL {url}: {e}")
+                    elif part.get("type") == "file":
+                        file_obj = part.get("file") or {}
+                        file_data = file_obj.get("file_data")
+                        filename = file_obj.get("filename") or ""
+
+                        if isinstance(file_data, str):
+                            if file_data.startswith("data:application/pdf"):
+                                has_pdf_files = True
+                            if file_data.lower().endswith(".pdf"):
+                                has_pdf_files = True
+                            if filename.lower().endswith(".pdf"):
+                                has_pdf_files = True
+
+                            match = re.search(r"/api/v1/files/([^/]+)/content", file_data)
+                            if match:
+                                file_id = match.group(1)
+                                file = Files.get_file_by_id(file_id)
+                                if file and user_can_read_file(file, user):
+                                    try:
+                                        file_path = Storage.get_file(file.path)
+                                        with open(file_path, "rb") as f:
+                                            raw = f.read()
+
+                                        base64_file = base64.b64encode(raw).decode(
+                                            "utf-8"
+                                        )
+
+                                        content_type = (
+                                            (file.meta or {}).get("content_type")
+                                            or "application/octet-stream"
+                                        )
+                                        if isinstance(content_type, str):
+                                            content_type = (
+                                                content_type.split(";", 1)[0]
+                                                .strip()
+                                                .lower()
+                                            )
+                                        else:
+                                            content_type = "application/octet-stream"
+
+                                        is_pdf = (
+                                            content_type == "application/pdf"
+                                            or (file.filename or "")
+                                            .lower()
+                                            .endswith(".pdf")
+                                            or filename.lower().endswith(".pdf")
+                                        )
+                                        if is_pdf:
+                                            has_pdf_files = True
+                                            content_type = "application/pdf"
+
+                                        file_obj["file_data"] = (
+                                            f"data:{content_type};base64,{base64_file}"
+                                        )
+                                        file_obj["filename"] = (
+                                            filename
+                                            or file.filename
+                                            or (file.meta or {}).get("name")
+                                            or "file"
+                                        )
+                                        part["file"] = file_obj
+                                    except Exception as e:
+                                        log.error(
+                                            f"Error resolving file URL {file_data}: {e}"
+                                        )
 
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
@@ -1061,6 +1142,30 @@ async def generate_chat_completion(
 
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
+
+    # OpenRouter PDF inputs: prefer native file processing for vision-capable models.
+    if has_pdf_files and "openrouter.ai" in url:
+        plugins = payload.get("plugins")
+        if not isinstance(plugins, list):
+            plugins = []
+
+        file_parser_plugin = None
+        for plugin in plugins:
+            if isinstance(plugin, dict) and plugin.get("id") == "file-parser":
+                file_parser_plugin = plugin
+                break
+
+        if file_parser_plugin is None:
+            file_parser_plugin = {"id": "file-parser"}
+            plugins.append(file_parser_plugin)
+
+        pdf_plugin_config = file_parser_plugin.get("pdf")
+        if not isinstance(pdf_plugin_config, dict):
+            pdf_plugin_config = {}
+
+        pdf_plugin_config["engine"] = "native"
+        file_parser_plugin["pdf"] = pdf_plugin_config
+        payload["plugins"] = plugins
 
         # Always prioritize frontend 'reasoning' object over model 'reasoning_effort'
     # reasoning_effort is deprecated in favor of reasoning object

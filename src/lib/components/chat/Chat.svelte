@@ -11,7 +11,7 @@
 
 	import { get, type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import {
 		chatId,
@@ -48,7 +48,8 @@
 		createMessagesList,
 		getPromptVariables,
 		processDetails,
-		removeAllDetails
+		removeAllDetails,
+		renderPdfToImageDataUrls
 	} from '$lib/utils';
 
 	import {
@@ -781,7 +782,6 @@
 			id: null,
 			url: fileData.url,
 			name: fileData.name,
-			collection_name: '',
 			status: 'uploading',
 			error: '',
 			itemId: tempItemId,
@@ -868,7 +868,6 @@
 			fileItem.file = uploadedFile;
 			fileItem.id = uploadedFile.id;
 			fileItem.size = file.size;
-			fileItem.collection_name = uploadedFile?.meta?.collection_name;
 			fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
 
 			files = files;
@@ -890,7 +889,6 @@
 		const fileItem = {
 			type: 'text',
 			name: url,
-			collection_name: '',
 			status: 'uploading',
 			url: url,
 			error: ''
@@ -902,7 +900,6 @@
 
 			if (res) {
 				fileItem.status = 'uploaded';
-				fileItem.collection_name = res.collection_name;
 				fileItem.file = {
 					...res.file,
 					...fileItem.file
@@ -923,7 +920,6 @@
 		const fileItem = {
 			type: 'text',
 			name: url,
-			collection_name: '',
 			status: 'uploading',
 			context: 'full',
 			url: url,
@@ -936,7 +932,6 @@
 
 			if (res) {
 				fileItem.status = 'uploaded';
-				fileItem.collection_name = res.collection_name;
 				fileItem.file = {
 					...res.file,
 					...fileItem.file
@@ -1267,23 +1262,24 @@
 
 		await tick();
 
-			if ($chatId == chatId) {
-				if (!$temporaryChatEnabled) {
-					chat = await updateChatById(localStorage.token, chatId, {
-						models: selectedModels,
+		if ($chatId == chatId) {
+			if (!$temporaryChatEnabled) {
+				chat = await updateChatById(localStorage.token, chatId, {
+					models: selectedModels,
 					messages: messages,
 					history: history,
 					params: params,
 					reasoning: reasoning,
 					files: chatFiles
 				});
-				currentChatPage.set(1);
-					await chats.set(await getChatList(localStorage.token, $currentChatPage));
-				}
-			}
 
-			taskIds = null;
-		};
+				currentChatPage.set(1);
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+			}
+		}
+
+		taskIds = null;
+	};
 
 	const chatActionHandler = async (chatId, actionId, modelId, responseMessageId, event = null) => {
 		const messages = createMessagesList(history, responseMessageId);
@@ -1473,7 +1469,8 @@
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
-		const { id, done, choices, content, sources, selected_model_id, error, usage } = data;
+		const { id, done, choices, content, sources, selected_model_id, error, usage, reasoning_details } =
+			data;
 
 		if (error) {
 			await handleOpenAIError(error, message);
@@ -1557,6 +1554,11 @@
 					}
 				}
 			}
+		}
+
+		// Some backends may only attach final `reasoning_details` on the done event (no `choices` deltas).
+		if (Array.isArray(reasoning_details) && reasoning_details.length > 0) {
+			message.reasoning_details = reasoning_details;
 		}
 
 		if (content) {
@@ -1981,9 +1983,140 @@
 							}
 						}
 					}
+}
 
-					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
+// PDF Preprocessing for non-vision models
+const hasPdfs = createMessagesList(_history, parentId).some((message) =>
+	message.files?.some((file) =>
+		file.type === 'file' &&
+		(file.name?.toLowerCase().endsWith('.pdf') || file.file?.filename?.toLowerCase().endsWith('.pdf'))
+	)
+);
 
+if (hasPdfs && !hasNativeVision && hasPreprocessor) {
+	const preprocessorId = model.info.meta.vision_preprocessor_model_id;
+	const preprocessorModel = $models.find((m) => m.id === preprocessorId);
+	if (!preprocessorModel) {
+		toast.error(`Vision preprocessor model not found: ${preprocessorId}`);
+	} else {
+		const userMessage = _history.messages[parentId];
+		const userPdfs = userMessage.files?.filter((f) =>
+			f.type === 'file' &&
+			(f.name?.toLowerCase().endsWith('.pdf') || f.file?.filename?.toLowerCase().endsWith('.pdf'))
+		) || [];
+
+		if (userPdfs.length > 0) {
+			let responseMessage = _history.messages[responseMessageId];
+			responseMessage.statusHistory = responseMessage.statusHistory || [];
+			responseMessage.statusHistory.push({
+				done: false,
+				action: '📄',
+				description: 'Preprocessing PDF with vision model...'
+			});
+			_history.messages[responseMessageId] = responseMessage;
+			history.messages[responseMessageId] = responseMessage;
+			history = { ...history };
+
+			try {
+				// Convert all PDFs to images
+				let allPdfImages = [];
+				for (const pdfFile of userPdfs) {
+					const pdfUrl = pdfFile.url || `${WEBUI_API_BASE_URL}/files/${pdfFile.id}/content`;
+					try {
+						const pdfImages = await renderPdfToImageDataUrls(pdfUrl);
+						allPdfImages.push(...pdfImages.map((url, idx) => ({
+							url,
+							filename: `${pdfFile.name || pdfFile.file?.filename || 'document'}_page_${idx + 1}`
+						})));
+					} catch (pdfError) {
+						console.error(`Failed to render PDF ${pdfFile.name}:`, pdfError);
+						throw new Error(`Failed to render PDF: ${pdfFile.name || 'unknown'}`);
+					}
+				}
+
+				if (allPdfImages.length === 0) {
+					throw new Error('No pages could be extracted from PDF(s)');
+				}
+
+				const userContent = userMessage.content;
+				const visionPrompt = (
+					model.info.meta.vision_preprocessor_prompt ||
+					'Perform OCR on this image and describe its contents in the context of the user query: {query}'
+				).replace('{query}', userContent);
+
+				const visionMessages = [
+					{ role: 'system', content: visionPrompt },
+					{
+						role: 'user',
+						content: [
+							{ type: 'text', text: `I have uploaded ${allPdfImages.length} page(s) from PDF document(s). Please analyze them:\n\n${userContent}` },
+							...allPdfImages.map((img) => ({
+								type: 'image_url',
+								image_url: { url: img.url }
+							}))
+						]
+					}
+				];
+
+				const visionRes = await generateOpenAIChatCompletion(
+					localStorage.token,
+					{
+						model: preprocessorModel.id,
+						messages: visionMessages,
+						stream: false,
+						params: { max_tokens: 4096 }
+					},
+					`${WEBUI_BASE_URL}/api`
+				);
+
+				const visionResponse = visionRes.choices[0].message.content;
+
+				responseMessage = _history.messages[responseMessageId];
+				responseMessage.statusHistory.push({
+					done: true,
+					action: '📄',
+					description: `PDF analysis complete (${allPdfImages.length} pages)`,
+					vision_prompt: visionPrompt,
+					vision_response: visionResponse
+				});
+				_history.messages[responseMessageId] = responseMessage;
+				history.messages[responseMessageId] = responseMessage;
+
+				// Prepend PDF analysis to user content
+				userMessage.content = `[PDF Analysis (${allPdfImages.length} pages):\n${visionResponse}\n]\n\n${userMessage.content}`;
+				userMessage.pdf_processed = true;
+
+				_history.messages[parentId] = userMessage;
+				history.messages[parentId] = userMessage;
+				history = { ...history };
+
+				await saveChatHandler(_chatId, _history);
+			} catch (pdfError) {
+				console.error('PDF preprocessing failed:', pdfError);
+				
+				// Block message and show error
+				responseMessage = _history.messages[responseMessageId];
+				responseMessage.statusHistory.push({
+					done: true,
+					action: '📄❌',
+					description: `PDF preprocessing failed: ${pdfError.message}`
+				});
+				responseMessage.error = {
+					content: `PDF preprocessing failed: ${pdfError.message}\n\nThe selected model does not support vision natively, and PDF preprocessing could not be completed.`
+				};
+				responseMessage.done = true;
+				_history.messages[responseMessageId] = responseMessage;
+				history.messages[responseMessageId] = responseMessage;
+				history = { ...history };
+
+				await saveChatHandler(_chatId, _history);
+				return; // Stop processing this model
+			}
+		}
+	}
+}
+
+const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 					scrollToBottom();
 					await sendMessageSocket(
 						model,
@@ -2129,7 +2262,13 @@
 					}
 				}
 
-				if (hasImages && isUser && modelSupportsVision) {
+				// Check if message has PDF files
+				const hasPdfFiles = message.files?.some((file) =>
+					file.type === 'file' &&
+					(file.name?.toLowerCase().endsWith('.pdf') || file.file?.filename?.toLowerCase().endsWith('.pdf'))
+				);
+
+				if ((hasImages || hasPdfFiles) && isUser && modelSupportsVision) {
 					return {
 						role: message.role,
 						content: [
@@ -2137,12 +2276,26 @@
 								type: 'text',
 								text: message?.merged?.content ?? message.content
 							},
+							// Add image content parts
 							...message.files
 								.filter((file) => file.type === 'image')
 								.map((file) => ({
 									type: 'image_url',
 									image_url: {
 										url: file.url
+									}
+								})),
+							// Add PDF file content parts for OpenRouter native processing
+							...message.files
+								.filter((file) =>
+									file.type === 'file' &&
+									(file.name?.toLowerCase().endsWith('.pdf') || file.file?.filename?.toLowerCase().endsWith('.pdf'))
+								)
+								.map((file) => ({
+									type: 'file',
+									file: {
+										filename: file.name || file.file?.filename || 'document.pdf',
+										file_data: file.url || `${WEBUI_API_BASE_URL}/files/${file.id}/content`
 									}
 								}))
 						]
@@ -2313,12 +2466,6 @@
 			content: $i18n.t(`Uh-oh! There was an issue with the response.`) + '\n' + errorMessage
 		};
 		responseMessage.done = true;
-
-		if (responseMessage.statusHistory) {
-			responseMessage.statusHistory = responseMessage.statusHistory.filter(
-				(status) => status.action !== 'knowledge_search'
-			);
-		}
 
 		history.messages[responseMessage.id] = responseMessage;
 	};

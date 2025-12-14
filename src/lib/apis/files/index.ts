@@ -1,10 +1,6 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
-import { splitStream } from '$lib/utils';
 
 export type UploadFileOptions = {
-	process?: boolean;
-	processInBackground?: boolean;
-	waitForProcessing?: boolean;
 	onProgress?: (progress: number) => void;
 	signal?: AbortSignal;
 };
@@ -101,14 +97,6 @@ export const uploadFile = async (
 	metadata?: object | null,
 	options: UploadFileOptions = {}
 ) => {
-	const process = options.process ?? true;
-	const processInBackground = options.processInBackground ?? true;
-	const waitForProcessing = options.waitForProcessing ?? true;
-
-	const queryParams = new URLSearchParams();
-	queryParams.set('process', String(process));
-	queryParams.set('process_in_background', String(processInBackground));
-
 	const data = new FormData();
 	data.append('file', file);
 	if (metadata) {
@@ -117,7 +105,7 @@ export const uploadFile = async (
 
 	let error = null;
 
-	const uploadUrl = `${WEBUI_API_BASE_URL}/files/?${queryParams.toString()}`;
+	const uploadUrl = `${WEBUI_API_BASE_URL}/files/`;
 
 	const res = options.onProgress
 		? await uploadFileWithProgress(token, uploadUrl, data, options.onProgress, options.signal).catch((err) => {
@@ -143,75 +131,6 @@ export const uploadFile = async (
 					console.error(err);
 					return null;
 				});
-
-	if (error) {
-		throw error;
-	}
-
-	if (res && process && waitForProcessing) {
-		const status = await getFileProcessStatus(token, res.id);
-
-		if (status && status.ok) {
-			const reader = status.body
-				.pipeThrough(new TextDecoderStream())
-				.pipeThrough(splitStream('\n'))
-				.getReader();
-
-			while (true) {
-				const { value, done } = await reader.read();
-				if (done) {
-					break;
-				}
-
-				try {
-					let lines = value.split('\n');
-
-					for (const line of lines) {
-						if (line !== '') {
-							console.log(line);
-							if (line === 'data: [DONE]') {
-								console.log(line);
-							} else {
-								let data = JSON.parse(line.replace(/^data: /, ''));
-								console.log(data);
-
-								if (data?.error) {
-									console.error(data.error);
-									res.error = data.error;
-								}
-							}
-						}
-					}
-				} catch (error) {
-					console.log(error);
-				}
-			}
-		}
-	}
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getFileProcessStatus = async (token: string, id: string) => {
-	const queryParams = new URLSearchParams();
-	queryParams.append('stream', 'true');
-
-	let error = null;
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/${id}/process/status?${queryParams}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	}).catch((err) => {
-		error = err.detail;
-		console.error(err);
-		return null;
-	});
 
 	if (error) {
 		throw error;

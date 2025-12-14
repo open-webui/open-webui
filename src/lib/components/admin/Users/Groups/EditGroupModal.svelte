@@ -34,19 +34,17 @@
 	export let name = '';
 	export let description = '';
 
-	export let permissions = {
-		workspace: {
-			models: false,
-			knowledge: false,
-			prompts: false,
-			tools: false
-		},
-		sharing: {
-			public_models: false,
-			public_knowledge: false,
-			public_prompts: false,
-			public_tools: false
-		},
+		export let permissions = {
+			workspace: {
+				models: false,
+				prompts: false,
+				tools: false
+			},
+			sharing: {
+				public_models: false,
+				public_prompts: false,
+				public_tools: false
+			},
 		chat: {
 			controls: true,
 			valves: true,

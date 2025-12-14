@@ -17,7 +17,6 @@ from open_webui.models.folders import (
 )
 from open_webui.models.chats import Chats
 from open_webui.models.files import Files
-from open_webui.models.knowledge import Knowledges
 
 
 from open_webui.config import UPLOAD_DIR
@@ -70,10 +69,8 @@ async def get_folders(user=Depends(get_verified_user)):
                         ):
                             valid_files.append(file)
                     elif file.get("type") == "collection":
-                        if Knowledges.check_access_by_user_id(
-                            file.get("id"), user.id, "read"
-                        ):
-                            valid_files.append(file)
+                        # Knowledge-base collections have been removed; drop any legacy references.
+                        continue
                     else:
                         valid_files.append(file)
 

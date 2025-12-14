@@ -20,7 +20,6 @@ from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 
 from open_webui.models.users import UserModel
 from open_webui.models.files import Files
-from open_webui.models.knowledge import Knowledges
 
 from open_webui.models.chats import Chats
 from open_webui.models.notes import Notes
@@ -668,46 +667,8 @@ def get_sources_from_items(
                     collection_names.append(f"file-{item['id']}")
 
         elif item.get("type") == "collection":
-            if (
-                item.get("context") == "full"
-                or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
-            ):
-                # Manual Full Mode Toggle for Collection
-                knowledge_base = Knowledges.get_knowledge_by_id(item.get("id"))
-
-                if knowledge_base and (
-                    user.role == "admin"
-                    or knowledge_base.user_id == user.id
-                    or has_access(user.id, "read", knowledge_base.access_control)
-                ):
-
-                    file_ids = knowledge_base.data.get("file_ids", [])
-
-                    documents = []
-                    metadatas = []
-                    for file_id in file_ids:
-                        file_object = Files.get_file_by_id(file_id)
-
-                        if file_object:
-                            documents.append(file_object.data.get("content", ""))
-                            metadatas.append(
-                                {
-                                    "file_id": file_id,
-                                    "name": file_object.filename,
-                                    "source": file_object.filename,
-                                }
-                            )
-
-                    query_result = {
-                        "documents": [documents],
-                        "metadatas": [metadatas],
-                    }
-            else:
-                # Fallback to collection names
-                if item.get("legacy"):
-                    collection_names = item.get("collection_names", [])
-                else:
-                    collection_names.append(item["id"])
+            # Knowledge-base collections have been removed; ignore legacy references.
+            continue
 
         elif item.get("docs"):
             # BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL

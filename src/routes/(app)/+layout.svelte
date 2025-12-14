@@ -5,16 +5,15 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
-	import { fade } from 'svelte/transition';
+		import { goto } from '$app/navigation';
+		import { page } from '$app/stores';
+		import { fade } from 'svelte/transition';
 
-	import { getKnowledgeBases } from '$lib/apis/knowledge';
-	import { getFunctions } from '$lib/apis/functions';
-	import { getModels, getToolServersData, getVersionUpdates } from '$lib/apis';
-	import { getAllTags } from '$lib/apis/chats';
-	import { getPrompts } from '$lib/apis/prompts';
-	import { getTools } from '$lib/apis/tools';
+		import { getFunctions } from '$lib/apis/functions';
+		import { getModels, getToolServersData, getVersionUpdates } from '$lib/apis';
+		import { getAllTags } from '$lib/apis/chats';
+		import { getPrompts } from '$lib/apis/prompts';
+		import { getTools } from '$lib/apis/tools';
 	import { getBanners } from '$lib/apis/configs';
 	import { getUserSettings } from '$lib/apis/users';
 
@@ -24,13 +23,12 @@
 	import {
 		config,
 		user,
-		settings,
-		models,
-		prompts,
-		knowledge,
-		tools,
-		functions,
-		tags,
+			settings,
+			models,
+			prompts,
+			tools,
+			functions,
+			tags,
 		banners,
 		showSettings,
 		showShortcuts,

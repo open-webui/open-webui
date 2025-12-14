@@ -826,45 +826,45 @@
 					</div>
 				</div>
 			</div>
-<div>
-		<div class=" py-0.5 flex w-full justify-between">
-			<div id="always-expand-label" class=" self-center text-xs">
-				{$i18n.t('Always Expand Details')}
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="always-expand-label" class=" self-center text-xs">
+						{$i18n.t('Always Expand Details')}
+					</div>
+
+					<div class="flex items-center gap-2 p-1">
+						<Switch
+							ariaLabelledbyId="always-expand-label"
+							tooltip={true}
+							bind:state={expandDetails}
+							on:change={() => {
+								saveSettings({ expandDetails });
+							}}
+						/>
+					</div>
+				</div>
 			</div>
 
-			<div class="flex items-center gap-2 p-1">
-				<Switch
-					ariaLabelledbyId="always-expand-label"
-					tooltip={true}
-					bind:state={expandDetails}
-					on:change={() => {
-						saveSettings({ expandDetails });
-					}}
-				/>
-			</div>
-		</div>
-	</div>
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="auto-expand-reasoning-streaming-label" class=" self-center text-xs">
+						{$i18n.t('Auto-Expand Reasoning During Streaming')}
+					</div>
 
-	<div>
-		<div class=" py-0.5 flex w-full justify-between">
-			<div id="auto-expand-reasoning-streaming-label" class=" self-center text-xs">
-				{$i18n.t('Auto-Expand Reasoning During Streaming')}
+					<div class="flex items-center gap-2 p-1">
+						<Switch
+							ariaLabelledbyId="auto-expand-reasoning-streaming-label"
+							tooltip={true}
+							bind:state={autoExpandReasoningDuringStreaming}
+							on:change={() => {
+								saveSettings({ autoExpandReasoningDuringStreaming });
+							}}
+						/>
+					</div>
+				</div>
 			</div>
 
-			<div class="flex items-center gap-2 p-1">
-				<Switch
-					ariaLabelledbyId="auto-expand-reasoning-streaming-label"
-					tooltip={true}
-					bind:state={autoExpandReasoningDuringStreaming}
-					on:change={() => {
-						saveSettings({ autoExpandReasoningDuringStreaming });
-					}}
-				/>
-			</div>
-		</div>
-	</div>
-
-	<div>
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div id="keep-followup-prompts-label" class=" self-center text-xs">

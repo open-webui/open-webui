@@ -57,7 +57,6 @@ export const selectedFolder = writable(null);
 export const models: Writable<Model[]> = writable([]);
 
 export const prompts: Writable<null | Prompt[]> = writable(null);
-export const knowledge: Writable<null | Document[]> = writable(null);
 export const tools = writable(null);
 export const functions = writable(null);
 
@@ -230,13 +229,6 @@ type Prompt = {
 	title: string;
 	content: string;
 	timestamp: number;
-};
-
-type Document = {
-	collection_name: string;
-	filename: string;
-	name: string;
-	title: string;
 };
 
 type Config = {

@@ -685,12 +685,11 @@
 			type: 'file',
 			file: '',
 			id: null,
-			url: '',
-			name: file.name,
-			collection_name: '',
-			status: 'uploading',
-			size: file.size,
-			error: '',
+				url: '',
+				name: file.name,
+				status: 'uploading',
+				size: file.size,
+				error: '',
 			itemId: tempItemId,
 			...(fullContext ? { context: 'full' } : {})
 		};
@@ -715,15 +714,14 @@
 					};
 				}
 
-				// During the file upload, file content is automatically extracted.
+				// Upload as a chat attachment (no background content extraction / RAG ingestion).
 				const uploadedFile = await uploadFile(localStorage.token, file, metadata);
 
-				if (uploadedFile) {
-					console.log('File upload completed:', {
-						id: uploadedFile.id,
-						name: fileItem.name,
-						collection: uploadedFile?.meta?.collection_name
-					});
+					if (uploadedFile) {
+						console.log('File upload completed:', {
+							id: uploadedFile.id,
+							name: fileItem.name
+						});
 
 					if (uploadedFile.error) {
 						console.warn('File upload warning:', uploadedFile.error);
@@ -733,8 +731,6 @@
 					fileItem.status = 'uploaded';
 					fileItem.file = uploadedFile;
 					fileItem.id = uploadedFile.id;
-					fileItem.collection_name =
-						uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
 					fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
 
 					files = files;
@@ -960,8 +956,6 @@
 					}
 
 					const uploadedFile = await uploadFile(localStorage.token, fileToUpload, null, {
-						process: false,
-						waitForProcessing: false,
 						onProgress: updateProgress,
 						signal: abortController.signal
 					});

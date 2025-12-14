@@ -6,7 +6,6 @@ from fnmatch import fnmatch
 from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
-import asyncio
 
 from fastapi import (
     BackgroundTasks,
@@ -24,7 +23,6 @@ from fastapi import (
 from fastapi.responses import FileResponse, StreamingResponse
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 
 from open_webui.models.users import Users
 from open_webui.models.files import (
@@ -33,12 +31,8 @@ from open_webui.models.files import (
     FileModelResponse,
     Files,
 )
-from open_webui.models.knowledge import Knowledges
-
-from open_webui.routers.knowledge import get_knowledge, get_knowledge_list
-from open_webui.routers.retrieval import ProcessFileForm, process_file
-from open_webui.routers.audio import transcribe
 from open_webui.storage.provider import Storage
+from open_webui.utils.access_control import has_access
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from pydantic import BaseModel
 
@@ -49,7 +43,7 @@ router = APIRouter()
 
 
 ############################
-# Check if the current user has access to a file through any knowledge bases the user may be in.
+# Check if the current user has access to a file (owner/admin/access_control).
 ############################
 
 
@@ -65,75 +59,19 @@ def has_access_to_file(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    has_access = False
-    knowledge_base_id = file.meta.get("collection_name") if file.meta else None
+    if file.user_id == user.id or user.role == "admin":
+        return True
 
-    if knowledge_base_id:
-        knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(
-            user.id, access_type
-        )
-        for knowledge_base in knowledge_bases:
-            if knowledge_base.id == knowledge_base_id:
-                has_access = True
-                break
+    access_control = getattr(file, "access_control", None)
+    if access_control:
+        return has_access(user.id, type=access_type, access_control=access_control)
 
-    return has_access
+    return False
 
 
 ############################
 # Upload File
 ############################
-
-
-def process_uploaded_file(request, file, file_path, file_item, file_metadata, user):
-    try:
-        if file.content_type:
-            stt_supported_content_types = getattr(
-                request.app.state.config, "STT_SUPPORTED_CONTENT_TYPES", []
-            )
-
-            if any(
-                fnmatch(file.content_type, content_type)
-                for content_type in (
-                    stt_supported_content_types
-                    if stt_supported_content_types
-                    and any(t.strip() for t in stt_supported_content_types)
-                    else ["audio/*", "video/webm"]
-                )
-            ):
-                file_path = Storage.get_file(file_path)
-                result = transcribe(request, file_path, file_metadata)
-
-                process_file(
-                    request,
-                    ProcessFileForm(
-                        file_id=file_item.id, content=result.get("text", "")
-                    ),
-                    user=user,
-                )
-            elif (not file.content_type.startswith(("image/", "video/"))) or (
-                request.app.state.config.CONTENT_EXTRACTION_ENGINE == "external"
-            ):
-                process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
-            else:
-                # Images/videos are stored for chat usage, but typically skip content extraction.
-                # Mark as completed so clients waiting on `/process/status` don't hang on `pending`.
-                Files.update_file_data_by_id(file_item.id, {"status": "completed"})
-        else:
-            log.info(
-                f"File type {file.content_type} is not provided, but trying to process anyway"
-            )
-            process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
-    except Exception as e:
-        log.error(f"Error processing file: {file_item.id}")
-        Files.update_file_data_by_id(
-            file_item.id,
-            {
-                "status": "failed",
-                "error": str(e.detail) if hasattr(e, "detail") else str(e),
-            },
-        )
-
 
 @router.post("/", response_model=FileModelResponse)
 def upload_file(
@@ -207,7 +145,7 @@ def upload_file_handler(
             if inferred_content_type:
                 content_type = inferred_content_type
 
-        if process and request.app.state.config.ALLOWED_FILE_EXTENSIONS:
+        if request.app.state.config.ALLOWED_FILE_EXTENSIONS:
             request.app.state.config.ALLOWED_FILE_EXTENSIONS = [
                 ext for ext in request.app.state.config.ALLOWED_FILE_EXTENSIONS if ext
             ]
@@ -243,7 +181,7 @@ def upload_file_handler(
                     "filename": name,
                     "path": file_path,
                     "data": {
-                        **({"status": "pending"} if process else {}),
+                        "status": "completed",
                     },
                     "meta": {
                         "name": name,
@@ -255,36 +193,13 @@ def upload_file_handler(
             ),
         )
 
-        if process:
-            if background_tasks and process_in_background:
-                background_tasks.add_task(
-                    process_uploaded_file,
-                    request,
-                    file,
-                    file_path,
-                    file_item,
-                    file_metadata,
-                    user,
-                )
-                return {"status": True, **file_item.model_dump()}
-            else:
-                process_uploaded_file(
-                    request,
-                    file,
-                    file_path,
-                    file_item,
-                    file_metadata,
-                    user,
-                )
-                return {"status": True, **file_item.model_dump()}
-        else:
-            if file_item:
-                return file_item
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.DEFAULT("Error uploading file"),
-                )
+        if file_item:
+            return {"status": True, **file_item.model_dump()}
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT("Error uploading file"),
+        )
 
     except Exception as e:
         log.exception(e)
@@ -367,7 +282,6 @@ async def delete_all_files(user=Depends(get_admin_user)):
     if result:
         try:
             Storage.delete_all_files()
-            VECTOR_DB_CLIENT.reset()
         except Exception as e:
             log.exception(e)
             log.error("Error deleting files")
@@ -404,136 +318,6 @@ async def get_file_by_id(id: str, user=Depends(get_verified_user)):
         or has_access_to_file(id, "read", user)
     ):
         return file
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-
-@router.get("/{id}/process/status")
-async def get_file_process_status(
-    id: str, stream: bool = Query(False), user=Depends(get_verified_user)
-):
-    file = Files.get_file_by_id(id)
-
-    if not file:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    if (
-        file.user_id == user.id
-        or user.role == "admin"
-        or has_access_to_file(id, "read", user)
-    ):
-        if stream:
-            MAX_FILE_PROCESSING_DURATION = 3600 * 2
-
-            async def event_stream(file_item):
-                if file_item:
-                    for _ in range(MAX_FILE_PROCESSING_DURATION):
-                        file_item = Files.get_file_by_id(file_item.id)
-                        if file_item:
-                            data = file_item.model_dump().get("data", {})
-                            status = data.get("status")
-
-                            if status:
-                                event = {"status": status}
-                                if status == "failed":
-                                    event["error"] = data.get("error")
-
-                                yield f"data: {json.dumps(event)}\n\n"
-                                if status in ("completed", "failed"):
-                                    break
-                            else:
-                                # Legacy
-                                break
-
-                        await asyncio.sleep(0.5)
-                else:
-                    yield f"data: {json.dumps({'status': 'not_found'})}\n\n"
-
-            return StreamingResponse(
-                event_stream(file),
-                media_type="text/event-stream",
-            )
-        else:
-            return {"status": file.data.get("status", "pending")}
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-
-############################
-# Get File Data Content By Id
-############################
-
-
-@router.get("/{id}/data/content")
-async def get_file_data_content_by_id(id: str, user=Depends(get_verified_user)):
-    file = Files.get_file_by_id(id)
-
-    if not file:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    if (
-        file.user_id == user.id
-        or user.role == "admin"
-        or has_access_to_file(id, "read", user)
-    ):
-        return {"content": file.data.get("content", "")}
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-
-############################
-# Update File Data Content By Id
-############################
-
-
-class ContentForm(BaseModel):
-    content: str
-
-
-@router.post("/{id}/data/content/update")
-async def update_file_data_content_by_id(
-    request: Request, id: str, form_data: ContentForm, user=Depends(get_verified_user)
-):
-    file = Files.get_file_by_id(id)
-
-    if not file:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    if (
-        file.user_id == user.id
-        or user.role == "admin"
-        or has_access_to_file(id, "write", user)
-    ):
-        try:
-            process_file(
-                request,
-                ProcessFileForm(file_id=id, content=form_data.content),
-                user=user,
-            )
-            file = Files.get_file_by_id(id=id)
-        except Exception as e:
-            log.exception(e)
-            log.error(f"Error processing file: {file.id}")
-
-        return {"content": file.data.get("content", "")}
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -747,7 +531,6 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
         if result:
             try:
                 Storage.delete_file(file.path)
-                VECTOR_DB_CLIENT.delete(collection_name=f"file-{id}")
             except Exception as e:
                 log.exception(e)
                 log.error("Error deleting files")

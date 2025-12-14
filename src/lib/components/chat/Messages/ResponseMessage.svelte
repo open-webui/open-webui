@@ -43,7 +43,6 @@
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	import Error from './Error.svelte';
-	import Citations from './Citations.svelte';
 	import CodeExecutions from './CodeExecutions.svelte';
 	import ContentRenderer from './ContentRenderer.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
@@ -146,9 +145,8 @@
 	export let editCodeBlock = true;
 	export let topPadding = false;
 
-	let citationsElement: HTMLDivElement;
-	let buttonsContainerElement: HTMLDivElement;
-	let showDeleteConfirm = false;
+		let buttonsContainerElement: HTMLDivElement;
+		let showDeleteConfirm = false;
 
 	let model = null;
 	$: model = $models.find((m) => m.id === message.model);
@@ -779,20 +777,13 @@
 										done={($settings?.chatFadeStreamingText ?? true)
 											? (message?.done ?? false)
 											: true}
-										{model}
-										onTaskClick={async (e) => {
-											console.log(e);
-										}}
-										onSourceClick={async (id, idx) => {
-											console.log(id, idx);
-
-											if (citationsElement) {
-												citationsElement?.showSourceModal(idx - 1);
-											}
-										}}
-										onAddMessages={({ modelId, parentId, messages }) => {
-											addMessages({ modelId, parentId, messages });
-										}}
+											{model}
+											onTaskClick={async (e) => {
+												console.log(e);
+											}}
+											onAddMessages={({ modelId, parentId, messages }) => {
+												addMessages({ modelId, parentId, messages });
+											}}
 										onSave={({ raw, oldContent, newContent }) => {
 											history.messages[message.id].content = history.messages[
 												message.id
@@ -803,22 +794,13 @@
 									/>
 								{/if}
 
-								{#if message?.error}
-									<Error content={message?.error?.content ?? message.content} />
-								{/if}
+									{#if message?.error}
+										<Error content={message?.error?.content ?? message.content} />
+									{/if}
 
-								{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}
-									<Citations
-										bind:this={citationsElement}
-										id={message?.id}
-										sources={message?.sources ?? message?.citations}
-										{readOnly}
-									/>
-								{/if}
-
-								{#if message.code_executions}
-									<CodeExecutions codeExecutions={message.code_executions} />
-								{/if}
+									{#if message.code_executions}
+										<CodeExecutions codeExecutions={message.code_executions} />
+									{/if}
 							</div>
 						{/if}
 					</div>

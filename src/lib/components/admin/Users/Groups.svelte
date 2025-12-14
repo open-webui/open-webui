@@ -7,7 +7,7 @@
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 
-	import { WEBUI_NAME, config, user, showSidebar, knowledge } from '$lib/stores';
+		import { WEBUI_NAME, config, user, showSidebar } from '$lib/stores';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';

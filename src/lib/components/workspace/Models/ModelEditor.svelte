@@ -2,16 +2,14 @@
 	import { toast } from 'svelte-sonner';
 
 	import { onMount, getContext, tick } from 'svelte';
-	import { models, tools, functions, knowledge as knowledgeCollections, user } from '$lib/stores';
+	import { models, tools, functions, user } from '$lib/stores';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import { getTools } from '$lib/apis/tools';
 	import { getFunctions } from '$lib/apis/functions';
-	import { getKnowledgeBases } from '$lib/apis/knowledge';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
-	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
 	import ToolsSelector from '$lib/components/workspace/Models/ToolsSelector.svelte';
 	import FiltersSelector from '$lib/components/workspace/Models/FiltersSelector.svelte';
 	import ActionsSelector from '$lib/components/workspace/Models/ActionsSelector.svelte';
@@ -83,7 +81,6 @@
 		system: ''
 	};
 
-	let knowledge = [];
 	let toolIds = [];
 
 	let filterIds = [];
@@ -139,24 +136,17 @@
 			return;
 		}
 
-		if (name === '') {
-			toast.error($i18n.t('Model Name is required.'));
-			loading = false;
+			if (name === '') {
+				toast.error($i18n.t('Model Name is required.'));
+				loading = false;
 
-			return;
-		}
+				return;
+			}
 
-		if (knowledge.some((item) => item.status === 'uploading')) {
-			toast.error($i18n.t('Please wait until all files are uploaded.'));
-			loading = false;
+			info.params = { ...info.params, ...params };
 
-			return;
-		}
-
-		info.params = { ...info.params, ...params };
-
-		info.access_control = accessControl;
-		info.meta.capabilities = capabilities;
+			info.access_control = accessControl;
+			info.meta.capabilities = capabilities;
 
 		// Persist reasoning config
 		const normalizedExtraEfforts = Array.from(new Set(extraReasoningEfforts)).filter(Boolean);
@@ -188,23 +178,15 @@
 			delete info.meta.vision_preprocessor_prompt;
 		}
 
-		if (enableDescription) {
-			info.meta.description = info.meta.description.trim() === '' ? null : info.meta.description;
-		} else {
-			info.meta.description = null;
-		}
-
-		if (knowledge.length > 0) {
-			info.meta.knowledge = knowledge;
-		} else {
-			if (info.meta.knowledge) {
-				delete info.meta.knowledge;
+			if (enableDescription) {
+				info.meta.description = info.meta.description.trim() === '' ? null : info.meta.description;
+			} else {
+				info.meta.description = null;
 			}
-		}
 
-		if (toolIds.length > 0) {
-			info.meta.toolIds = toolIds;
-		} else {
+			if (toolIds.length > 0) {
+				info.meta.toolIds = toolIds;
+			} else {
 			if (info.meta.toolIds) {
 				delete info.meta.toolIds;
 			}
@@ -256,14 +238,13 @@
 		success = false;
 	};
 
-	onMount(async () => {
-		await tools.set(await getTools(localStorage.token));
-		await functions.set(await getFunctions(localStorage.token));
-		await knowledgeCollections.set([...(await getKnowledgeBases(localStorage.token))]);
+		onMount(async () => {
+			await tools.set(await getTools(localStorage.token));
+			await functions.set(await getFunctions(localStorage.token));
 
-		// Scroll to top 'workspace-container' element
-		const workspaceContainer = document.getElementById('workspace-container');
-		if (workspaceContainer) {
+			// Scroll to top 'workspace-container' element
+			const workspaceContainer = document.getElementById('workspace-container');
+			if (workspaceContainer) {
 			workspaceContainer.scrollTop = 0;
 		}
 
@@ -298,29 +279,10 @@
 					)
 				: null;
 
-			knowledge = (model?.meta?.knowledge ?? []).map((item) => {
-				if (item?.collection_name && item?.type !== 'file') {
-					return {
-						id: item.collection_name,
-						name: item.name,
-						legacy: true
-					};
-				} else if (item?.collection_names) {
-					return {
-						name: item.name,
-						type: 'collection',
-						collection_names: item.collection_names,
-						legacy: true
-					};
-				} else {
-					return item;
-				}
-			});
-
-			toolIds = model?.meta?.toolIds ?? [];
-			filterIds = model?.meta?.filterIds ?? [];
-			defaultFilterIds = model?.meta?.defaultFilterIds ?? [];
-			actionIds = model?.meta?.actionIds ?? [];
+				toolIds = model?.meta?.toolIds ?? [];
+				filterIds = model?.meta?.filterIds ?? [];
+				defaultFilterIds = model?.meta?.defaultFilterIds ?? [];
+				actionIds = model?.meta?.actionIds ?? [];
 
 			// Load reasoning config (default enabled if omitted)
 			reasoningModelEnabled = model?.meta?.reasoning?.enabled ?? true;
@@ -786,15 +748,11 @@
 						{/if}
 					</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-1.5" />
+						<hr class=" border-gray-100 dark:border-gray-850 my-1.5" />
 
-					<div class="my-2">
-						<Knowledge bind:selectedItems={knowledge} />
-					</div>
-
-					<div class="my-2">
-						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
-					</div>
+						<div class="my-2">
+							<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
+						</div>
 
 					<div class="my-2">
 						<FiltersSelector

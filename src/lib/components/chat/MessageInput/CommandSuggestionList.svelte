@@ -1,11 +1,9 @@
 <script lang="ts">
-	import { knowledge, prompts } from '$lib/stores';
+	import { prompts } from '$lib/stores';
 
 	import { getPrompts } from '$lib/apis/prompts';
-	import { getKnowledgeBases } from '$lib/apis/knowledge';
 
 	import Prompts from './Commands/Prompts.svelte';
-	import Knowledge from './Commands/Knowledge.svelte';
 	import Models from './Commands/Models.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
@@ -25,14 +23,7 @@
 
 	const init = async () => {
 		loading = true;
-		await Promise.all([
-			(async () => {
-				prompts.set(await getPrompts(localStorage.token));
-			})(),
-			(async () => {
-				knowledge.set(await getKnowledgeBases(localStorage.token));
-			})()
-		]);
+		await prompts.set(await getPrompts(localStorage.token));
 		loading = false;
 	};
 
@@ -83,10 +74,10 @@
 	id="suggestions-container"
 >
 	<div class="overflow-y-auto scrollbar-thin max-h-60">
-		{#if !loading}
-			{#if char === '/'}
-				<Prompts
-					bind:this={suggestionElement}
+			{#if !loading}
+				{#if char === '/'}
+					<Prompts
+						bind:this={suggestionElement}
 					{query}
 					bind:filteredItems
 					prompts={$prompts ?? []}
@@ -96,45 +87,12 @@
 						if (type === 'prompt') {
 							insertTextHandler(data.content);
 						}
-					}}
-				/>
-			{:else if char === '#'}
-				<Knowledge
-					bind:this={suggestionElement}
-					{query}
-					bind:filteredItems
-					knowledge={$knowledge ?? []}
-					onSelect={(e) => {
-						const { type, data } = e;
-
-						if (type === 'knowledge') {
-							insertTextHandler('');
-
-							onUpload({
-								type: 'file',
-								data: data
-							});
-						} else if (type === 'youtube') {
-							insertTextHandler('');
-
-							onUpload({
-								type: 'youtube',
-								data: data
-							});
-						} else if (type === 'web') {
-							insertTextHandler('');
-
-							onUpload({
-								type: 'web',
-								data: data
-							});
-						}
-					}}
-				/>
-			{:else if char === '@'}
-				<Models
-					bind:this={suggestionElement}
-					{query}
+						}}
+					/>
+				{:else if char === '@'}
+					<Models
+						bind:this={suggestionElement}
+						{query}
 					bind:filteredItems
 					onSelect={(e) => {
 						const { type, data } = e;
