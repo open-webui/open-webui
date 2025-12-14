@@ -1298,10 +1298,7 @@ def save_docs_to_vector_db(
 
     if split:
         # Stage 1: Optional markdown header preprocessing
-        log.info(f"ENABLE_MARKDOWN_HEADER_SPLITTING = {request.app.state.config.ENABLE_MARKDOWN_HEADER_SPLITTING}")
-        log.info(f"CHUNK_MIN_SIZE = {request.app.state.config.CHUNK_MIN_SIZE}")
         if request.app.state.config.ENABLE_MARKDOWN_HEADER_SPLITTING:
-            log.info("Applying markdown header preprocessing")
             headers_to_split_on = [
                 ("#", "Header 1"),
                 ("##", "Header 2"),
@@ -1334,7 +1331,6 @@ def save_docs_to_vector_db(
                     )
 
             docs = md_split_docs
-            log.info(f"After markdown header split: {len(docs)} chunks")
 
             # Apply minimum chunk size merging if configured
             min_size = request.app.state.config.CHUNK_MIN_SIZE
@@ -1349,10 +1345,6 @@ def save_docs_to_vector_db(
                     measure_fn = lambda text: len(encoding.encode(text))
                 else:
                     measure_fn = len
-
-                # Debug: log first doc's metadata to see what's available
-                if docs:
-                    log.info(f"First doc metadata keys: {list(docs[0].metadata.keys())}")
 
                 merged_docs = []
                 doc_index = 0
@@ -1416,7 +1408,6 @@ def save_docs_to_vector_db(
                     doc_index = merge_index
 
                 docs = merged_docs
-                log.info(f"After merging: {len(docs)} chunks")
 
         # Stage 2: Apply character or token splitting
         # If markdown header splitting was used, only split chunks that exceed CHUNK_SIZE
