@@ -113,7 +113,7 @@
 		loading = false;
 		show = false;
 	};
-	
+
 	const init = () => {
 	    if (group) {
 	        name = group.name;
@@ -130,12 +130,6 @@
 	        data = group?.data ?? {};
 	        userCount = group?.member_count ?? 0;
 	    }
-	};
-
-			data = group?.data ?? {};
-
-			userCount = group?.member_count ?? 0;
-		}
 	};
 
 	$: {
