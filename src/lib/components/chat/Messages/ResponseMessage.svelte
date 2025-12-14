@@ -279,7 +279,7 @@
 				}
 
 				for (const [idx, sentence] of messageContentParts.entries()) {
-					const blob = await $TTSWorker
+					const url = await $TTSWorker
 						.generate({
 							text: sentence,
 							voice: $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice
@@ -292,8 +292,7 @@
 							loadingSpeech = false;
 						});
 
-					if (blob) {
-						const url = URL.createObjectURL(blob);
+					if (url && speaking) {
 						$audioQueue.enqueue(url);
 						loadingSpeech = false;
 					}
@@ -314,7 +313,7 @@
 						loadingSpeech = false;
 					});
 
-					if (res) {
+					if (res && speaking) {
 						const blob = await res.blob();
 						const url = URL.createObjectURL(blob);
 
@@ -797,11 +796,11 @@
 									onTaskClick={async (e) => {
 										console.log(e);
 									}}
-									onSourceClick={async (id, idx) => {
-										console.log(id, idx);
+									onSourceClick={async (id) => {
+										console.log(id);
 
 										if (citationsElement) {
-											citationsElement?.showSourceModal(idx - 1);
+											citationsElement?.showSourceModal(id);
 										}
 									}}
 									onAddMessages={({ modelId, parentId, messages }) => {

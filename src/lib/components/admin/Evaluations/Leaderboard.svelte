@@ -387,7 +387,7 @@
 				: ''}"
 		>
 			<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
-				<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850">
+				<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850/30">
 					<th
 						scope="col"
 						class="px-2.5 py-2 cursor-pointer select-none w-3"
@@ -530,7 +530,7 @@
 							{model.rating}
 						</td>
 
-						<td class=" px-3 py-1.5 text-right font-semibold text-green-500">
+						<td class=" px-3 py-1.5 text-right font-medium text-green-500">
 							<div class=" w-10">
 								{#if model.stats.won === '-'}
 									-
@@ -543,7 +543,7 @@
 							</div>
 						</td>
 
-						<td class="px-3 py-1.5 text-right font-semibold text-red-500">
+						<td class="px-3 py-1.5 text-right font-medium text-red-500">
 							<div class=" w-10">
 								{#if model.stats.lost === '-'}
 									-

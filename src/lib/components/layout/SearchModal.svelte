@@ -291,7 +291,7 @@
 			/>
 		</div>
 
-		<!-- <hr class="border-gray-50 dark:border-gray-850 my-1" /> -->
+		<!-- <hr class="border-gray-50 dark:border-gray-850/30 my-1" /> -->
 
 		<div class="flex px-4 pb-1">
 			<div
@@ -328,7 +328,7 @@
 				{/each}
 
 				{#if chatList}
-					<hr class="border-gray-50 dark:border-gray-850 my-3" />
+					<hr class="border-gray-50 dark:border-gray-850/30 my-3" />
 
 					{#if chatList.length === 0}
 						<div class="text-xs text-gray-500 dark:text-gray-400 text-center px-5 py-4">
@@ -389,14 +389,16 @@
 							</div>
 
 							<div class=" pl-3 shrink-0 text-gray-500 dark:text-gray-400 text-xs">
-								{$i18n.t(dayjs(chat?.updated_at * 1000).calendar(null, {
-												sameDay: '[Today]',
-												nextDay: '[Tomorrow]',
-												nextWeek: 'dddd',
-												lastDay: '[Yesterday]',
-												lastWeek: '[Last] dddd',
-												sameElse: 'L' // use localized format, otherwise dayjs.calendar() defaults to DD/MM/YYYY
-											}))}
+								{$i18n.t(
+									dayjs(chat?.updated_at * 1000).calendar(null, {
+										sameDay: '[Today]',
+										nextDay: '[Tomorrow]',
+										nextWeek: 'dddd',
+										lastDay: '[Yesterday]',
+										lastWeek: '[Last] dddd',
+										sameElse: 'L' // use localized format, otherwise dayjs.calendar() defaults to DD/MM/YYYY
+									})
+								)}
 							</div>
 						</a>
 					{/each}

@@ -468,7 +468,7 @@
 				}
 
 				if ($settings.audio?.tts?.engine === 'browser-kokoro') {
-					const blob = await $TTSWorker
+					const url = await $TTSWorker
 						.generate({
 							text: content,
 							voice: $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice
@@ -478,8 +478,8 @@
 							toast.error(`${error}`);
 						});
 
-					if (blob) {
-						audioCache.set(content, new Audio(blob));
+					if (url) {
+						audioCache.set(content, new Audio(url));
 					}
 				} else if ($config.audio.tts.engine !== '') {
 					const res = await synthesizeOpenAISpeech(

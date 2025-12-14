@@ -147,11 +147,11 @@ async def create_new_chat(form_data: ChatForm, user=Depends(get_verified_user)):
 ############################
 
 
-@router.post("/import", response_model=Optional[ChatResponse])
+@router.post("/import", response_model=list[ChatResponse])
 async def import_chats(form_data: ChatsImportForm, user=Depends(get_verified_user)):
     try:
         chats = Chats.import_chats(user.id, form_data.chats)
-        return [ChatResponse(**chat.model_dump()) for chat in chats]
+        return chats
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -218,7 +218,7 @@ async def get_chat_list_by_folder_id(
     folder_id: str, page: Optional[int] = 1, user=Depends(get_verified_user)
 ):
     try:
-        limit = 60
+        limit = 10
         skip = (page - 1) * limit
 
         return [
@@ -648,19 +648,28 @@ async def clone_chat_by_id(
             "title": form_data.title if form_data.title else f"Clone of {chat.title}",
         }
 
-        chat = Chats.import_chat(
+        chats = Chats.import_chats(
             user.id,
-            ChatImportForm(
-                **{
-                    "chat": updated_chat,
-                    "meta": chat.meta,
-                    "pinned": chat.pinned,
-                    "folder_id": chat.folder_id,
-                }
-            ),
+            [
+                ChatImportForm(
+                    **{
+                        "chat": updated_chat,
+                        "meta": chat.meta,
+                        "pinned": chat.pinned,
+                        "folder_id": chat.folder_id,
+                    }
+                )
+            ],
         )
 
-        return ChatResponse(**chat.model_dump())
+        if chats:
+            chat = chats[0]
+            return ChatResponse(**chat.model_dump())
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=ERROR_MESSAGES.DEFAULT(),
+            )
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
@@ -688,18 +697,28 @@ async def clone_shared_chat_by_id(id: str, user=Depends(get_verified_user)):
             "title": f"Clone of {chat.title}",
         }
 
-        chat = Chats.import_chat(
+        chats = Chats.import_chats(
             user.id,
-            ChatImportForm(
-                **{
-                    "chat": updated_chat,
-                    "meta": chat.meta,
-                    "pinned": chat.pinned,
-                    "folder_id": chat.folder_id,
-                }
-            ),
+            [
+                ChatImportForm(
+                    **{
+                        "chat": updated_chat,
+                        "meta": chat.meta,
+                        "pinned": chat.pinned,
+                        "folder_id": chat.folder_id,
+                    }
+                )
+            ],
         )
-        return ChatResponse(**chat.model_dump())
+
+        if chats:
+            chat = chats[0]
+            return ChatResponse(**chat.model_dump())
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=ERROR_MESSAGES.DEFAULT(),
+            )
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()

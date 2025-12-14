@@ -17,6 +17,7 @@
 		createNewModel,
 		deleteModelById,
 		getModelItems as getWorkspaceModels,
+		getModelTags,
 		toggleModelById,
 		updateModelById
 	} from '$lib/apis/models';
@@ -41,6 +42,7 @@
 	import Eye from '../icons/Eye.svelte';
 	import ViewSelector from './common/ViewSelector.svelte';
 	import TagSelector from './common/TagSelector.svelte';
+	import Pagination from '../common/Pagination.svelte';
 
 	let shiftKey = false;
 
@@ -50,41 +52,61 @@
 
 	let loaded = false;
 
-	let models = [];
-	let tags = [];
-
-	let viewOption = '';
-	let selectedTag = '';
-
-	let filteredModels = [];
-	let selectedModel = null;
-
 	let showModelDeleteConfirm = false;
 
-	let group_ids = [];
+	let selectedModel = null;
 
-	$: if (models && query !== undefined && selectedTag !== undefined && viewOption !== undefined) {
-		setFilteredModels();
-	}
+	let groupIds = [];
 
-	const setFilteredModels = async () => {
-		filteredModels = models.filter((m) => {
-			if (query === '' && selectedTag === '' && viewOption === '') return true;
-			const lowerQuery = query.toLowerCase();
-			return (
-				((m.name || '').toLowerCase().includes(lowerQuery) ||
-					(m.user?.name || '').toLowerCase().includes(lowerQuery) || // Search by user name
-					(m.user?.email || '').toLowerCase().includes(lowerQuery)) && // Search by user email
-				(selectedTag === '' ||
-					m?.meta?.tags?.some((tag) => tag.name.toLowerCase() === selectedTag.toLowerCase())) &&
-				(viewOption === '' ||
-					(viewOption === 'created' && m.user_id === $user?.id) ||
-					(viewOption === 'shared' && m.user_id !== $user?.id))
-			);
-		});
-	};
+	let tags = [];
+	let selectedTag = '';
 
 	let query = '';
+	let viewOption = '';
+
+	let page = 1;
+	let models = null;
+	let total = null;
+
+	$: if (
+		page !== undefined &&
+		query !== undefined &&
+		selectedTag !== undefined &&
+		viewOption !== undefined
+	) {
+		getModelList();
+	}
+
+	const getModelList = async () => {
+		try {
+			const res = await getWorkspaceModels(
+				localStorage.token,
+				query,
+				viewOption,
+				selectedTag,
+				null,
+				null,
+				page
+			).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+
+			if (res) {
+				models = res.items;
+				total = res.total;
+
+				// get tags
+				tags = await getModelTags(localStorage.token).catch((error) => {
+					toast.error(`${error}`);
+					return [];
+				});
+			}
+		} catch (err) {
+			console.error(err);
+		}
+	};
+
 	const deleteModelHandler = async (model) => {
 		const res = await deleteModelById(localStorage.token, model.id).catch((e) => {
 			toast.error(`${e}`);
@@ -93,6 +115,9 @@
 
 		if (res) {
 			toast.success($i18n.t(`Deleted {{name}}`, { name: model.id }));
+
+			page = 1;
+			getModelList();
 		}
 
 		await _models.set(
@@ -101,7 +126,6 @@
 				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 			)
 		);
-		models = await getWorkspaceModels(localStorage.token);
 	};
 
 	const cloneModelHandler = async (model) => {
@@ -148,6 +172,9 @@
 					status: model.meta.hidden ? 'hidden' : 'visible'
 				})
 			);
+
+			page = 1;
+			getModelList();
 		}
 
 		await _models.set(
@@ -156,7 +183,6 @@
 				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 			)
 		);
-		models = await getWorkspaceModels(localStorage.token);
 	};
 
 	const copyLinkHandler = async (model) => {
@@ -184,26 +210,13 @@
 		saveAs(blob, `${model.id}-${Date.now()}.json`);
 	};
 
-	const setTags = () => {
-		if (models) {
-			tags = models
-				.filter((model) => !(model?.meta?.hidden ?? false))
-				.flatMap((model) => model?.meta?.tags ?? [])
-				.map((tag) => tag.name);
-
-			// Remove duplicates and sort
-			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
-		}
-	};
-
 	onMount(async () => {
 		viewOption = localStorage.workspaceViewOption ?? '';
+		page = 1;
 
-		models = await getWorkspaceModels(localStorage.token);
 		let groups = await getGroups(localStorage.token);
-		group_ids = groups.map((group) => group.id);
+		groupIds = groups.map((group) => group.id);
 
-		setTags();
 		loaded = true;
 
 		const onKeyDown = (event) => {
@@ -261,8 +274,9 @@
 
 				let reader = new FileReader();
 				reader.onload = async (event) => {
+					let savedModels = [];
 					try {
-						let savedModels = JSON.parse(event.target.result);
+						savedModels = JSON.parse(event.target.result);
 						console.log(savedModels);
 					} catch (e) {
 						toast.error($i18n.t('Invalid JSON file'));
@@ -273,16 +287,19 @@
 						if (model?.info ?? false) {
 							if ($_models.find((m) => m.id === model.id)) {
 								await updateModelById(localStorage.token, model.id, model.info).catch((error) => {
+									toast.error(`${error}`);
 									return null;
 								});
 							} else {
 								await createNewModel(localStorage.token, model.info).catch((error) => {
+									toast.error(`${error}`);
 									return null;
 								});
 							}
 						} else {
 							if (model?.id && model?.name) {
 								await createNewModel(localStorage.token, model).catch((error) => {
+									toast.error(`${error}`);
 									return null;
 								});
 							}
@@ -295,7 +312,9 @@
 							$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 						)
 					);
-					models = await getWorkspaceModels(localStorage.token);
+
+					page = 1;
+					getModelList();
 				};
 
 				reader.readAsText(importFiles[0]);
@@ -308,7 +327,7 @@
 				</div>
 
 				<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
-					{filteredModels.length}
+					{total}
 				</div>
 			</div>
 
@@ -326,7 +345,7 @@
 					</button>
 				{/if}
 
-				{#if models.length && ($user?.role === 'admin' || $user?.permissions?.workspace?.models_export)}
+				{#if total && ($user?.role === 'admin' || $user?.permissions?.workspace?.models_export)}
 					<button
 						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
 						on:click={async () => {
@@ -351,7 +370,7 @@
 	</div>
 
 	<div
-		class="py-2 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-850"
+		class="py-2 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100/30 dark:border-gray-850/30"
 	>
 		<div class="px-3.5 flex flex-1 items-center w-full space-x-2 py-0.5 pb-2">
 			<div class="flex flex-1 items-center">
@@ -396,9 +415,7 @@
 					bind:value={viewOption}
 					onChange={async (value) => {
 						localStorage.workspaceViewOption = value;
-
 						await tick();
-						setTags();
 					}}
 				/>
 
@@ -413,9 +430,9 @@
 			</div>
 		</div>
 
-		{#if (filteredModels ?? []).length !== 0}
+		{#if (models ?? []).length !== 0}
 			<div class=" px-3 my-2 gap-1 lg:gap-2 grid lg:grid-cols-2" id="model-list">
-				{#each filteredModels as model (model.id)}
+				{#each models as model (model.id)}
 					<!-- svelte-ignore a11y_no_static_element_interactions -->
 					<!-- svelte-ignore a11y_click_events_have_key_events -->
 					<div
@@ -425,7 +442,7 @@
 							if (
 								$user?.role === 'admin' ||
 								model.user_id === $user?.id ||
-								model.access_control.write.group_ids.some((wg) => group_ids.includes(wg))
+								model.access_control.write.group_ids.some((wg) => groupIds.includes(wg))
 							) {
 								goto(`/workspace/models/edit?id=${encodeURIComponent(model.id)}`);
 							}
@@ -454,7 +471,7 @@
 										<div class="flex items-center justify-between w-full">
 											<Tooltip content={model.name} className=" w-fit" placement="top-start">
 												<a
-													class=" font-semibold line-clamp-1 hover:underline capitalize"
+													class=" font-medium line-clamp-1 hover:underline capitalize"
 													href={`/?models=${encodeURIComponent(model.id)}`}
 												>
 													{model.name}
@@ -607,6 +624,10 @@
 					</div>
 				{/each}
 			</div>
+
+			{#if total > 30}
+				<Pagination bind:page count={total} perPage={30} />
+			{/if}
 		{:else}
 			<div class=" w-full h-full flex flex-col justify-center items-center my-16 mb-24">
 				<div class="max-w-md text-center">
@@ -632,7 +653,7 @@
 				target="_blank"
 			>
 				<div class=" self-center">
-					<div class=" font-semibold line-clamp-1">{$i18n.t('Discover a model')}</div>
+					<div class=" font-medium line-clamp-1">{$i18n.t('Discover a model')}</div>
 					<div class=" text-sm line-clamp-1">
 						{$i18n.t('Discover, download, and explore model presets')}
 					</div>

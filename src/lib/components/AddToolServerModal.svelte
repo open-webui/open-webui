@@ -48,6 +48,7 @@
 	let headers = '';
 	let placeholders: string[] = [];
 
+	let functionNameFilterList = '';
 	let accessControl = {};
 
 	let id = '';
@@ -287,6 +288,7 @@
 				headers = JSON.stringify(_headers, null, 2);
 			} catch (error) {
 				toast.error($i18n.t('Headers must be a valid JSON object'));
+				loading = false;
 				return;
 			}
 		}
@@ -306,7 +308,7 @@
 			placeholders: placeholders.length > 0 ? placeholders : undefined,
 			config: {
 				enable: enable,
-
+				function_name_filter_list: functionNameFilterList,
 				access_control: accessControl
 			},
 			info: {
@@ -337,9 +339,11 @@
 		id = '';
 		name = '';
 		description = '';
+
 		oauthClientInfo = null;
 
 		enable = true;
+		functionNameFilterList = '';
 		accessControl = null;
 	};
 
@@ -364,6 +368,7 @@
 			oauthClientInfo = connection.info?.oauth_client_info ?? null;
 
 			enable = connection.config?.enable ?? true;
+			functionNameFilterList = connection.config?.function_name_filter_list ?? '';
 			accessControl = connection.config?.access_control ?? null;
 		}
 	};
@@ -535,7 +540,7 @@
 										<div class="flex-shrink-0 self-start">
 											<select
 												id="select-bearer-or-session"
-												class={`w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+												class={`dark:bg-gray-900 w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 												bind:value={spec_type}
 											>
 												<option value="url">{$i18n.t('URL')}</option>
@@ -645,7 +650,7 @@
 									<div class="flex-shrink-0 self-start">
 										<select
 											id="select-bearer-or-session"
-											class={`w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											class={`dark:bg-gray-900 w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 											bind:value={auth_type}
 										>
 											<option value="none">{$i18n.t('None')}</option>
@@ -858,12 +863,29 @@
 								</div>
 							</div>
 
+							<div class="flex flex-col w-full mt-2">
+								<label
+									for="function-name-filter-list"
+									class={`mb-1 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100 placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 text-gray-500'}`}
+									>{$i18n.t('Function Name Filter List')}</label
+								>
+
+								<div class="flex-1">
+									<input
+										id="function-name-filter-list"
+										class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+										type="text"
+										bind:value={functionNameFilterList}
+										placeholder={$i18n.t('Enter function name filter list (e.g. func1, !func2)')}
+										autocomplete="off"
+									/>
+								</div>
+							</div>
+
 							<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 
-							<div class="my-2 -mx-2">
-								<div class="px-4 py-3 bg-gray-50 dark:bg-gray-950 rounded-3xl">
-									<AccessControl bind:accessControl />
-								</div>
+							<div class="my-2">
+								<AccessControl bind:accessControl />
 							</div>
 						{/if}
 					</div>

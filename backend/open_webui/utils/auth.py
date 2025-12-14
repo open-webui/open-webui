@@ -235,7 +235,7 @@ async def invalidate_token(request, token):
         jti = decoded.get("jti")
         exp = decoded.get("exp")
 
-        if jti:
+        if jti and exp:
             ttl = exp - int(
                 datetime.now(UTC).timestamp()
             )  # Calculate time-to-live for the token
@@ -344,9 +344,7 @@ async def get_current_user(
                 # Refresh the user's last active timestamp asynchronously
                 # to prevent blocking the request
                 if background_tasks:
-                    background_tasks.add_task(
-                        Users.update_user_last_active_by_id, user.id
-                    )
+                    background_tasks.add_task(Users.update_last_active_by_id, user.id)
             return user
         else:
             raise HTTPException(
@@ -377,10 +375,13 @@ def get_current_user_by_api_key(request, api_key: str):
             detail=ERROR_MESSAGES.INVALID_TOKEN,
         )
 
-    if not request.state.enable_api_keys or not has_permission(
-        user.id,
-        "features.api_keys",
-        request.app.state.config.USER_PERMISSIONS,
+    if not request.state.enable_api_keys or (
+        user.role != "admin"
+        and not has_permission(
+            user.id,
+            "features.api_keys",
+            request.app.state.config.USER_PERMISSIONS,
+        )
     ):
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
@@ -394,8 +395,7 @@ def get_current_user_by_api_key(request, api_key: str):
         current_span.set_attribute("client.user.role", user.role)
         current_span.set_attribute("client.auth.type", "api_key")
 
-    Users.update_user_last_active_by_id(user.id)
-
+    Users.update_last_active_by_id(user.id)
     return user
 
 

@@ -186,7 +186,7 @@
 				class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full"
 			>
 				<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
-					<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850">
+					<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850/30">
 						<th
 							scope="col"
 							class="px-2.5 py-2 cursor-pointer select-none w-3"
@@ -288,7 +288,7 @@
 							class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850/50 transition"
 							on:click={() => openFeedbackModal(feedback)}
 						>
-							<td class=" py-0.5 text-right font-semibold">
+							<td class=" py-0.5 text-right font-medium">
 								<div class="flex justify-center">
 									<Tooltip content={feedback?.user?.name}>
 										<div class="shrink-0">
@@ -306,7 +306,7 @@
 								<div class="flex flex-col items-start gap-0.5 h-full">
 									<div class="flex flex-col h-full">
 										{#if feedback.data?.sibling_model_ids}
-											<div class="font-semibold text-gray-600 dark:text-gray-400 flex-1">
+											<div class="font-medium text-gray-600 dark:text-gray-400 flex-1">
 												{feedback.data?.model_id}
 											</div>
 
@@ -352,7 +352,7 @@
 								{dayjs(feedback.updated_at * 1000).fromNow()}
 							</td>
 
-							<td class=" px-3 py-1 text-right font-semibold" on:click={(e) => e.stopPropagation()}>
+							<td class=" px-3 py-1 text-right font-medium" on:click={(e) => e.stopPropagation()}>
 								<FeedbackMenu
 									on:delete={(e) => {
 										deleteFeedbackHandler(feedback.id);

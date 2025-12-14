@@ -172,7 +172,7 @@
 		}}
 	>
 		<div class=" text-sm text-gray-500 truncate">
-			{$i18n.t('This will delete')} <span class="  font-semibold">{deletePrompt.command}</span>.
+			{$i18n.t('This will delete')} <span class="  font-medium">{deletePrompt.command}</span>.
 		</div>
 	</DeleteConfirmDialog>
 
@@ -266,7 +266,7 @@
 	</div>
 
 	<div
-		class="py-2 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-850"
+		class="py-2 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100/30 dark:border-gray-850/30"
 	>
 		<div class=" flex w-full space-x-2 py-0.5 px-3.5 pb-2">
 			<div class="flex flex-1">
@@ -417,7 +417,7 @@
 				target="_blank"
 			>
 				<div class=" self-center">
-					<div class=" font-semibold line-clamp-1">{$i18n.t('Discover a prompt')}</div>
+					<div class=" font-medium line-clamp-1">{$i18n.t('Discover a prompt')}</div>
 					<div class=" text-sm line-clamp-1">
 						{$i18n.t('Discover, download, and explore custom prompts')}
 					</div>

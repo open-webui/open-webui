@@ -711,7 +711,7 @@
 			bind:show={showAccessControlModal}
 			bind:accessControl={knowledge.access_control}
 			share={$user?.permissions?.sharing?.knowledge || $user?.role === 'admin'}
-			sharePublic={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}
+			sharePu={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}
 			onChange={() => {
 				changeDebounceHandler();
 			}}
@@ -724,7 +724,7 @@
 						<div class="w-full">
 							<input
 								type="text"
-								class="text-left w-full font-semibold text-2xl font-primary bg-transparent outline-hidden"
+								class="text-left w-full font-medium text-2xl font-primary bg-transparent outline-hidden"
 								bind:value={knowledge.name}
 								placeholder={$i18n.t('Knowledge Name')}
 								on:input={() => {

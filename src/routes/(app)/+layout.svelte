@@ -9,11 +9,7 @@
 	import { page } from '$app/stores';
 	import { fade } from 'svelte/transition';
 
-	import { getKnowledgeBases } from '$lib/apis/knowledge';
-	import { getFunctions } from '$lib/apis/functions';
 	import { getModels, getToolServersData, getVersionUpdates } from '$lib/apis';
-	import { getAllTags } from '$lib/apis/chats';
-	import { getPrompts } from '$lib/apis/prompts';
 	import { getTools } from '$lib/apis/tools';
 	import { getBanners } from '$lib/apis/configs';
 	import { getUserSettings } from '$lib/apis/users';
@@ -341,7 +337,7 @@
 										{$i18n.t(
 											"Saving chat logs directly to your browser's storage is no longer supported. Please take a moment to download and delete your chat logs by clicking the button below. Don't worry, you can easily re-import your chat logs to the backend through"
 										)}
-										<span class="font-semibold dark:text-white"
+										<span class="font-medium dark:text-white"
 											>{$i18n.t('Settings')} > {$i18n.t('Chats')} > {$i18n.t('Import Chats')}</span
 										>. {$i18n.t(
 											'This ensures that your valuable conversations are securely saved to your backend database. Thank you!'

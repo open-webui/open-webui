@@ -1,10 +1,13 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 type ChannelForm = {
+	type?: string;
 	name: string;
+	is_private?: boolean;
 	data?: object;
 	meta?: object;
 	access_control?: object;
+	user_ids?: string[];
 };
 
 export const createNewChannel = async (token: string = '', channel: ChannelForm) => {
@@ -80,6 +83,209 @@ export const getChannelById = async (token: string = '', channel_id: string) => 
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getDMChannelByUserId = async (token: string = '', user_id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/users/${user_id}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getChannelMembersById = async (
+	token: string,
+	channel_id: string,
+	query?: string,
+	orderBy?: string,
+	direction?: string,
+	page = 1
+) => {
+	let error = null;
+	let res = null;
+
+	const searchParams = new URLSearchParams();
+
+	searchParams.set('page', `${page}`);
+
+	if (query) {
+		searchParams.set('query', query);
+	}
+
+	if (orderBy) {
+		searchParams.set('order_by', orderBy);
+	}
+
+	if (direction) {
+		searchParams.set('direction', direction);
+	}
+
+	res = await fetch(
+		`${WEBUI_API_BASE_URL}/channels/${channel_id}/members?${searchParams.toString()}`,
+		{
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`
+			}
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const updateChannelMemberActiveStatusById = async (
+	token: string = '',
+	channel_id: string,
+	is_active: boolean
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/members/active`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ is_active })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+type UpdateMembersForm = {
+	user_ids?: string[];
+	group_ids?: string[];
+};
+
+export const addMembersById = async (
+	token: string = '',
+	channel_id: string,
+	formData: UpdateMembersForm
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/update/members/add`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ ...formData })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+type RemoveMembersForm = {
+	user_ids?: string[];
+	group_ids?: string[];
+};
+
+export const removeMembersById = async (
+	token: string = '',
+	channel_id: string,
+	formData: RemoveMembersForm
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/update/members/remove`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ ...formData })
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -207,6 +413,44 @@ export const getChannelMessages = async (
 	return res;
 };
 
+export const getChannelPinnedMessages = async (
+	token: string = '',
+	channel_id: string,
+	page: number = 1
+) => {
+	let error = null;
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/pinned?page=${page}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const getChannelThreadMessages = async (
 	token: string = '',
 	channel_id: string,
@@ -248,6 +492,7 @@ export const getChannelThreadMessages = async (
 };
 
 type MessageForm = {
+	temp_id?: string;
 	reply_to_id?: string;
 	parent_id?: string;
 	content: string;
@@ -267,6 +512,46 @@ export const sendMessage = async (token: string = '', channel_id: string, messag
 		},
 		body: JSON.stringify({ ...message })
 	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const pinMessage = async (
+	token: string = '',
+	channel_id: string,
+	message_id: string,
+	is_pinned: boolean
+) => {
+	let error = null;
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/pin`,
+		{
+			method: 'POST',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			},
+			body: JSON.stringify({ is_pinned })
+		}
+	)
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
