@@ -115,21 +115,21 @@
 	};
 
 	const init = () => {
-	    if (group) {
-	        name = group.name;
-	        description = group.description;
-	        const loadedPermissions = group?.permissions ?? {};
-	        // Create fresh object from defaults, then overlay loaded values
-	        permissions = {
-	            workspace: { ...DEFAULT_USER_PERMISSIONS.workspace, ...loadedPermissions.workspace },
-	            sharing: { ...DEFAULT_USER_PERMISSIONS.sharing, ...loadedPermissions.sharing },
-	            chat: { ...DEFAULT_USER_PERMISSIONS.chat, ...loadedPermissions.chat },
-	            features: { ...DEFAULT_USER_PERMISSIONS.features, ...loadedPermissions.features },
-	            ui: { ...DEFAULT_USER_PERMISSIONS.ui, ...loadedPermissions.ui }
-	        };
-	        data = group?.data ?? {};
-	        userCount = group?.member_count ?? 0;
-	    }
+		if (group) {
+			name = group.name;
+			description = group.description;
+			const loadedPermissions = group?.permissions ?? {};
+			// Create fresh object from defaults, then overlay loaded values
+			permissions = {
+				workspace: { ...DEFAULT_USER_PERMISSIONS.workspace, ...loadedPermissions.workspace },
+				sharing: { ...DEFAULT_USER_PERMISSIONS.sharing, ...loadedPermissions.sharing },
+				chat: { ...DEFAULT_USER_PERMISSIONS.chat, ...loadedPermissions.chat },
+				features: { ...DEFAULT_USER_PERMISSIONS.features, ...loadedPermissions.features },
+				ui: { ...DEFAULT_USER_PERMISSIONS.ui, ...loadedPermissions.ui }
+			};
+			data = group?.data ?? {};
+			userCount = group?.member_count ?? 0;
+		}
 	};
 
 	$: {
