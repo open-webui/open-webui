@@ -670,17 +670,30 @@ async def reset_all_users_interface_settings(user=Depends(get_admin_user)):
                     )
                 )
             else:
-                # SQLite/MySQL: iterate in Python
-                users_with_ui = (
-                    db.query(User)
-                    .filter(User.settings.isnot(None))
-                    .all()
-                )
+                # SQLite/MySQL: batch update with pagination to avoid memory exhaustion
+                BATCH_SIZE = 500
                 reset_count = 0
-                for u in users_with_ui:
-                    if u.settings and "ui" in u.settings:
-                        u.settings = {**u.settings, "ui": {}}
-                        reset_count += 1
+                offset = 0
+                
+                while True:
+                    users_batch = (
+                        db.query(User)
+                        .filter(User.settings.isnot(None))
+                        .limit(BATCH_SIZE)
+                        .offset(offset)
+                        .all()
+                    )
+                    
+                    if not users_batch:
+                        break
+                        
+                    for u in users_batch:
+                        if u.settings and "ui" in u.settings:
+                            u.settings = {**u.settings, "ui": {}}
+                            reset_count += 1
+                    
+                    db.flush()
+                    offset += BATCH_SIZE
 
             db.commit()
 
