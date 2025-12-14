@@ -28,6 +28,10 @@
 		on:change={(e) => {
 			value = e.target.value;
 		}}
+		on:input={(e) => {
+			value = e.target.value;
+		}}
+		on:keydown
 		autocomplete="off"
 	/>
 	<button
