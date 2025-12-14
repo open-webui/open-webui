@@ -607,7 +607,7 @@ class InterfaceDefaultsForm(BaseModel):
     @field_validator("textScale")
     @classmethod
     def validate_text_scale(cls, value):
-        if value is not None and not (0.5 <= v <= 1.5):
+        if value is not None and not (0.5 <= value <= 1.5):
             raise ValueError("textScale must be between 0.5 and 1.5")
         return value
 
