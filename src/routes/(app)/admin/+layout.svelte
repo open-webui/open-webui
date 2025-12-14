@@ -12,12 +12,12 @@
 	const i18n = getContext('i18n');
 
 	let loaded = false;
-	let isAdmin = false;
 	let isGroupManager = false;
 
+	// Reactive statement to keep isAdmin in sync with user store
+	$: isAdmin = $user?.role === 'admin';
+
 	onMount(async () => {
-		isAdmin = $user?.role === 'admin';
-		
 		if (!isAdmin) {
 			// Check if user is a group manager
 			const managedGroups = await getManagedGroups(localStorage.token).catch(() => []);

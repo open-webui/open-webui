@@ -231,9 +231,8 @@ async def remove_users_from_group(
     # Managers cannot remove other managers
     if user.role != "admin" and form_data.user_ids:
         # Get the list of manager user IDs for the group
-        group_managers = Groups.get_group_managers(id)
-        manager_ids = [manager.id for manager in group_managers]
-        # Exclude self (already checked above)
+        manager_ids = Groups.get_group_manager_ids_by_id(id)
+        # Check if any of the users to remove are managers
         managers_to_remove = set(form_data.user_ids) & set(manager_ids)
         if managers_to_remove:
             raise HTTPException(

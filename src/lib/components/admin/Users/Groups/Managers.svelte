@@ -49,6 +49,9 @@
 	};
 
 	const toggleManager = async (userId: string) => {
+		// Store previous state for rollback on error
+		const previousManagerIds = [...managerIds];
+		
 		if (managerIds.includes(userId)) {
 			managerIds = managerIds.filter((id) => id !== userId);
 		} else {
@@ -56,22 +59,29 @@
 		}
 
 		// Auto-save when toggling
-		await saveManagers();
+		const success = await saveManagers();
+		if (!success) {
+			// Rollback on failure
+			managerIds = previousManagerIds;
+		}
 	};
 
-	const saveManagers = async () => {
-		if (!groupId) return;
+	const saveManagers = async (): Promise<boolean> => {
+		if (!groupId) return false;
 
 		saving = true;
 		try {
 			await updateGroupManagers(localStorage.token, groupId, managerIds);
 			toast.success($i18n.t('Managers updated successfully'));
 			dispatch('managersUpdated', { managerIds });
+			return true;
 		} catch (error) {
 			console.error('Error saving managers:', error);
 			toast.error($i18n.t('Failed to update managers'));
+			return false;
+		} finally {
+			saving = false;
 		}
-		saving = false;
 	};
 
 	onMount(() => {

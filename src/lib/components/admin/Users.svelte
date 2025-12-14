@@ -51,7 +51,8 @@
 			}
 
 			// Group managers can only access the groups tab
-			if (selectedTab !== 'groups') {
+			// Use $page.url.pathname directly to avoid race condition with reactive selectedTab
+			if (!$page.url.pathname.includes('/admin/users/groups')) {
 				await goto('/admin/users/groups');
 				return;
 			}
