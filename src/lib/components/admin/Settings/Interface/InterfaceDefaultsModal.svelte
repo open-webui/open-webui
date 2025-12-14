@@ -2,6 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount } from 'svelte';
 	import { writable } from 'svelte/store';
+    import { deepMerge } from '$lib/utils';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import { getInterfaceDefaults, setInterfaceDefaults } from '$lib/apis/configs';
 	import InterfaceSettings from '$lib/components/chat/Settings/Interface.svelte';
@@ -17,13 +18,9 @@
 	let adminDefaults = writable({});
 
 	// Custom saveSettings function that updates local adminDefaults instead of user settings
+	// Uses deepMerge to properly handle nested objects like title.auto, imageCompressionSize, etc.
 	const saveAdminSettings = async (updates: object) => {
-		adminDefaults.update((current) => {
-			return {
-				...current,
-				...updates
-			};
-		});
+	    adminDefaults.update((current) => deepMerge(current, updates));
 	};
 
 	const loadDefaults = async () => {
