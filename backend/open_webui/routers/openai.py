@@ -1043,10 +1043,13 @@ async def generate_chat_completion(
                             parts_to_remove.append(part_idx)
                 
                 # Remove failed images in reverse order to preserve indices
-                for idx in reversed(parts_to_remove):
-                    removed_part = message["content"].pop(idx)
-                    log.debug(f"Removed image part at index {idx}")
-                    elif part.get("type") == "file":
+                for remove_idx in reversed(parts_to_remove):
+                    message["content"].pop(remove_idx)
+                    log.debug(f"Removed image part at index {remove_idx}")
+                
+                # Process file parts (separate loop after image processing)
+                for part in message["content"]:
+                    if part.get("type") == "file":
                         file_obj = part.get("file") or {}
                         file_data = file_obj.get("file_data")
                         filename = file_obj.get("filename") or ""
