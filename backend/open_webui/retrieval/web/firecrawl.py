@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 from open_webui.env import SRC_LOG_LEVELS
@@ -15,7 +15,7 @@ def search_firecrawl(
     query: str,
     count: int,
     filter_list: Optional[List[str]] = None,
-    timeout: int = 2000,  # timeout in ms. 2000ms == 2 secs
+    search_args: Dict[str, Any] = {},
 ) -> List[SearchResult]:
     try:
         from firecrawl import FirecrawlApp
@@ -25,7 +25,7 @@ def search_firecrawl(
             query=query,
             limit=count,
             ignore_invalid_urls=True,
-            timeout=timeout,
+            **search_args,
         )
         results = response.web
         if filter_list:
