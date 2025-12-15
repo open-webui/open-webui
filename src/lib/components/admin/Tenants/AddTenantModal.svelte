@@ -4,7 +4,7 @@
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-import { createTenant } from '$lib/apis/tenants';
+	import { createTenant } from '$lib/apis/tenants';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -13,9 +13,17 @@ import { createTenant } from '$lib/apis/tenants';
 
 	let loading = false;
 	let name = '';
+	let tableName = '';
+	let systemConfigClientName = '';
 
-	$: if (show) {
-		name = '';
+	let previousShow = false;
+	$: {
+		if (show && !previousShow) {
+			name = '';
+			tableName = '';
+			systemConfigClientName = '';
+		}
+		previousShow = show;
 	}
 
 	const submitHandler = async () => {
@@ -32,7 +40,11 @@ import { createTenant } from '$lib/apis/tenants';
 
 		loading = true;
 		try {
-			await createTenant(localStorage.token, trimmed);
+			await createTenant(localStorage.token, {
+				name: trimmed,
+				table_name: tableName.trim() || undefined,
+				system_config_client_name: systemConfigClientName.trim() || undefined
+			});
 			toast.success($i18n.t('Tenant created'));
 			dispatch('save');
 			show = false;
@@ -75,6 +87,30 @@ import { createTenant } from '$lib/apis/tenants';
 					placeholder={$i18n.t('Enter tenant name')}
 					bind:value={name}
 					required
+				/>
+			</div>
+
+			<div class="flex flex-col space-y-1">
+				<label class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+					{$i18n.t('Table Name')}
+				</label>
+				<input
+					class="rounded-xl border border-gray-200 bg-transparent px-3 py-2 text-sm text-gray-900 outline-hidden focus:border-blue-500 dark:border-gray-700 dark:text-gray-100"
+					type="text"
+					placeholder={$i18n.t('Enter table name')}
+					bind:value={tableName}
+				/>
+			</div>
+
+			<div class="flex flex-col space-y-1">
+				<label class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+					{$i18n.t('System Config Client Name')}
+				</label>
+				<input
+					class="rounded-xl border border-gray-200 bg-transparent px-3 py-2 text-sm text-gray-900 outline-hidden focus:border-blue-500 dark:border-gray-700 dark:text-gray-100"
+					type="text"
+					placeholder={$i18n.t('Enter client name')}
+					bind:value={systemConfigClientName}
 				/>
 			</div>
 

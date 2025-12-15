@@ -4,23 +4,37 @@
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import { toast } from 'svelte-sonner';
 
-import Modal from '$lib/components/common/Modal.svelte';
-import Files from '$lib/components/upload/Files.svelte';
-import { uploadTenantPrompt, type TenantInfo } from '$lib/apis/tenants';
+	import Modal from '$lib/components/common/Modal.svelte';
+	import Files from '$lib/components/upload/Files.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
+import { uploadTenantPrompt, type TenantInfo, updateTenant, type TenantUpdatePayload } from '$lib/apis/tenants';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 	dayjs.extend(localizedFormat);
 
 	export let show = false;
-export let tenant: TenantInfo | null = null;
+	export let tenant: TenantInfo | null = null;
 
 	let uploading = false;
+	let saving = false;
 	let selectedFile: File | null = null;
 	let fileInput: HTMLInputElement | null = null;
-let filesComponent: { refresh?: () => void } | null = null;
+	let filesComponent: { refresh?: () => void } | null = null;
+	let tableName = '';
+	let systemConfigClientName = '';
+	let initializedTenantId: string | null = null;
 
 	$: promptsPath = tenant ? `${tenant.s3_bucket}/prompts` : null;
+	$: if (!show) {
+		tableName = '';
+		systemConfigClientName = '';
+		initializedTenantId = null;
+	} else if (tenant && tenant.id !== initializedTenantId) {
+		tableName = tenant.table_name ?? '';
+		systemConfigClientName = tenant.system_config_client_name ?? '';
+		initializedTenantId = tenant.id;
+	}
 
 	const closeModal = () => {
 		show = false;
@@ -79,6 +93,46 @@ let filesComponent: { refresh?: () => void } | null = null;
 		if (!timestamp) return '—';
 		return dayjs(timestamp * 1000).format('LLL');
 	};
+
+	const saveTenantDetails = async () => {
+		if (!tenant) {
+			toast.error($i18n.t('Select a tenant first.'));
+			return;
+		}
+		if (typeof localStorage === 'undefined' || !localStorage.token) {
+			toast.error($i18n.t('You must be signed in for this action.'));
+			return;
+		}
+
+		const trimmedTableName = tableName.trim();
+		const trimmedClientName = systemConfigClientName.trim();
+		const changes: TenantUpdatePayload = {};
+
+		if (trimmedTableName !== (tenant.table_name ?? '')) {
+			changes.table_name = trimmedTableName;
+		}
+		if (trimmedClientName !== (tenant.system_config_client_name ?? '')) {
+			changes.system_config_client_name = trimmedClientName;
+		}
+
+		if (Object.keys(changes).length === 0) {
+			toast.info($i18n.t('No changes to save.'));
+			return;
+		}
+
+		saving = true;
+		try {
+			const updated = await updateTenant(localStorage.token, tenant.id, changes);
+			tenant = updated;
+			toast.success($i18n.t('Tenant updated'));
+			dispatch('updated');
+		} catch (error) {
+			const message = typeof error === 'string' ? error : (error?.detail ?? 'Failed to update tenant.');
+			toast.error(message);
+		} finally {
+			saving = false;
+		}
+	};
 </script>
 
 <Modal size="lg" bind:show>
@@ -116,6 +170,55 @@ let filesComponent: { refresh?: () => void } | null = null;
 					</span>
 					<span class="font-mono text-xs sm:text-sm text-gray-900 dark:text-gray-100">{tenant.s3_bucket}</span>
 				</div>
+			</div>
+
+			<div class="rounded-2xl border border-gray-100 bg-white/70 p-4 dark:border-gray-800 dark:bg-gray-900/60">
+				<h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">{$i18n.t('Tenant Configuration')}</h3>
+				<form
+					class="mt-3 space-y-3"
+					on:submit|preventDefault={() => {
+						saveTenantDetails();
+					}}
+				>
+					<div class="flex flex-col space-y-1">
+						<label class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+							{$i18n.t('Table Name')}
+						</label>
+						<input
+							class="rounded-xl border border-gray-200 bg-transparent px-3 py-2 text-sm text-gray-900 outline-hidden focus:border-blue-500 dark:border-gray-700 dark:text-gray-100"
+							type="text"
+							placeholder={$i18n.t('Enter table name')}
+							bind:value={tableName}
+						/>
+					</div>
+
+					<div class="flex flex-col space-y-1">
+						<label class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+							{$i18n.t('System Config Client Name')}
+						</label>
+						<input
+							class="rounded-xl border border-gray-200 bg-transparent px-3 py-2 text-sm text-gray-900 outline-hidden focus:border-blue-500 dark:border-gray-700 dark:text-gray-100"
+							type="text"
+							placeholder={$i18n.t('Enter client name')}
+							bind:value={systemConfigClientName}
+						/>
+					</div>
+
+					<div class="flex justify-end">
+						<button
+							class="inline-flex items-center rounded-full bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-black dark:hover:bg-gray-100"
+							type="submit"
+							disabled={saving}
+						>
+							{$i18n.t('Save')}
+							{#if saving}
+								<span class="ml-2">
+									<Spinner className="size-4" />
+								</span>
+							{/if}
+						</button>
+					</div>
+				</form>
 			</div>
 
 			<div class="rounded-2xl border border-gray-100 bg-white/70 p-4 text-sm text-gray-600 dark:border-gray-800 dark:bg-gray-900/60 dark:text-gray-300">

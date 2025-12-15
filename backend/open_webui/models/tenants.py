@@ -14,6 +14,8 @@ class Tenant(Base):
     id = Column(String, primary_key=True)
     name = Column(String, unique=True, nullable=False)
     s3_bucket = Column(String, unique=True, nullable=False)
+    table_name = Column(String(255), nullable=True)
+    system_config_client_name = Column(String(255), nullable=True)
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
@@ -23,6 +25,8 @@ class TenantModel(BaseModel):
     id: str
     name: str
     s3_bucket: str
+    table_name: Optional[str] = None
+    system_config_client_name: Optional[str] = None
     created_at: int
     updated_at: int
 
@@ -32,11 +36,15 @@ class TenantModel(BaseModel):
 class TenantForm(BaseModel):
     name: str
     s3_bucket: Optional[str] = None
+    table_name: Optional[str] = None
+    system_config_client_name: Optional[str] = None
 
 
 class TenantUpdateForm(BaseModel):
     name: Optional[str] = None
     s3_bucket: Optional[str] = None
+    table_name: Optional[str] = None
+    system_config_client_name: Optional[str] = None
 
 
 class TenantsTable:
@@ -54,6 +62,8 @@ class TenantsTable:
                     "id": str(uuid.uuid4()),
                     "name": form_data.name,
                     "s3_bucket": bucket_name,
+                    "table_name": form_data.table_name,
+                    "system_config_client_name": form_data.system_config_client_name,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                 }
@@ -88,6 +98,12 @@ class TenantsTable:
                 update_payload["name"] = form_data.name
             if form_data.s3_bucket is not None:
                 update_payload["s3_bucket"] = form_data.s3_bucket
+            if form_data.table_name is not None:
+                update_payload["table_name"] = form_data.table_name
+            if form_data.system_config_client_name is not None:
+                update_payload["system_config_client_name"] = (
+                    form_data.system_config_client_name
+                )
             if not update_payload:
                 return self.get_tenant_by_id(tenant_id)
 

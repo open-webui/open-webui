@@ -4,9 +4,24 @@ export type TenantInfo = {
 	id: string;
 	name: string;
 	s3_bucket: string;
+	table_name?: string | null;
+	system_config_client_name?: string | null;
 	created_at?: number;
 	updated_at?: number;
 };
+
+export type TenantCreatePayload = {
+	name: string;
+	table_name?: string | null;
+	system_config_client_name?: string | null;
+};
+
+export type TenantUpdatePayload = Partial<{
+	name: string;
+	s3_bucket: string;
+	table_name: string | null;
+	system_config_client_name: string | null;
+}>;
 
 export type TenantPromptFile = {
 	key: string;
@@ -50,7 +65,7 @@ export const getTenants = async (token: string): Promise<TenantInfo[]> => {
 
 export const getUploadTenants = getTenants;
 
-export const createTenant = async (token: string, name: string): Promise<TenantInfo> => {
+export const createTenant = async (token: string, payload: TenantCreatePayload): Promise<TenantInfo> => {
 	let error: string | null = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/tenants`, {
@@ -59,7 +74,7 @@ export const createTenant = async (token: string, name: string): Promise<TenantI
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({ name })
+		body: JSON.stringify(payload)
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -73,6 +88,38 @@ export const createTenant = async (token: string, name: string): Promise<TenantI
 
 	if (error || !res) {
 		throw error ?? 'Failed to create tenant.';
+	}
+
+	return res;
+};
+
+export const updateTenant = async (
+	token: string,
+	tenantId: string,
+	payload: TenantUpdatePayload
+): Promise<TenantInfo> => {
+	let error: string | null = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/tenants/${tenantId}`, {
+		method: 'PATCH',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(payload)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err?.detail ?? 'Failed to update tenant.';
+			return null;
+		});
+
+	if (error || !res) {
+		throw error ?? 'Failed to update tenant.';
 	}
 
 	return res;
