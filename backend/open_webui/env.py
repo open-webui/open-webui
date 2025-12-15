@@ -605,15 +605,19 @@ except ValueError:
     WEBSOCKET_MAX_MESSAGE_SIZE = 10000000  # 10MB default
 
 
+# AIOHTTP_CLIENT_TIMEOUT: Set to None for infinite timeout (recommended for image/file processing)
+# Set to a number of seconds to limit the timeout
 AIOHTTP_CLIENT_TIMEOUT = os.environ.get("AIOHTTP_CLIENT_TIMEOUT", "")
 
 if AIOHTTP_CLIENT_TIMEOUT == "":
+    # Default to None (infinite timeout) for better handling of large files and images
     AIOHTTP_CLIENT_TIMEOUT = None
 else:
     try:
         AIOHTTP_CLIENT_TIMEOUT = int(AIOHTTP_CLIENT_TIMEOUT)
     except Exception:
-        AIOHTTP_CLIENT_TIMEOUT = 300
+        # If parsing fails, default to infinite timeout instead of 300
+        AIOHTTP_CLIENT_TIMEOUT = None
 
 
 AIOHTTP_CLIENT_SESSION_SSL = (
