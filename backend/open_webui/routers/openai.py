@@ -959,6 +959,15 @@ async def generate_chat_completion(
                 else:
                     return PlainTextResponse(status_code=r.status, content=response)
 
+            # Capture CO2 measurement from response headers if present
+            if isinstance(response, dict):
+                co2_header = r.headers.get("x-energy-measurement-g-co2")
+                if co2_header:
+                    try:
+                        response["co2Consumption"] = float(co2_header)
+                    except (ValueError, TypeError):
+                        log.debug(f"Invalid CO2 header value: {co2_header}")
+
             return response
     except Exception as e:
         log.exception(e)

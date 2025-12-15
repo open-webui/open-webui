@@ -1884,14 +1884,20 @@ async def process_chat_response(
 
                             title = Chats.get_chat_title_by_id(metadata["chat_id"])
 
+                            completion_data = {
+                                "done": True,
+                                "content": content,
+                                "title": title,
+                            }
+
+                            # Add CO2 consumption if available in response_data
+                            if "co2Consumption" in response_data:
+                                completion_data["co2Consumption"] = response_data["co2Consumption"]
+
                             await event_emitter(
                                 {
                                     "type": "chat:completion",
-                                    "data": {
-                                        "done": True,
-                                        "content": content,
-                                        "title": title,
-                                    },
+                                    "data": completion_data,
                                 }
                             )
 
