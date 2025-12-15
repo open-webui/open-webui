@@ -268,6 +268,31 @@ async def create_new_chat(form_data: ChatForm, user=Depends(get_verified_user)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
         )
+    
+
+############################
+# CreateNewChatForUserWithId
+############################
+
+
+@router.post("/new/{user_id}", response_model=Optional[ChatResponse])
+async def create_new_chat_for_user_with_id(
+    form_data: ChatForm, user_id: str, user=Depends(get_admin_user)
+):
+    if not ENABLE_ADMIN_CHAT_ACCESS:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    try:
+        chat = Chats.insert_new_chat(user_id, form_data)
+        return ChatResponse(**chat.model_dump())
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
 
 
 ############################
