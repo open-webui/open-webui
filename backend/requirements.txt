@@ -61,9 +61,9 @@ einops==0.8.1
 
 ftfy==6.3.1
 chardet==5.2.0
-pypdf==6.4.1
+pypdf==6.4.2
 fpdf2==2.8.5
-pymdown-extensions==10.19
+pymdown-extensions==10.19.1
 docx2txt==0.9
 python-pptx==1.0.2
 unstructured==0.18.21
@@ -137,7 +137,7 @@ pytest-docker~=3.2.5
 ldap3==2.9.1
 
 ## Firecrawl
-firecrawl-py==4.10.5
+firecrawl-py==4.11.0
 
 ## Trace
 opentelemetry-api==1.39.1
