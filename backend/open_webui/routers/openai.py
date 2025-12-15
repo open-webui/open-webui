@@ -981,12 +981,21 @@ async def generate_chat_completion(
     has_pdf_files = False
 
     # Resolve image URLs to base64
+    # IMPORTANT: Local file URLs (like /api/v1/files/{id}/content) MUST be converted to base64
+    # because external providers like OpenRouter cannot access them. If conversion fails,
+    # we must either remove the image or raise an error to prevent hanging requests.
     if "messages" in payload:
         for message in payload["messages"]:
             if isinstance(message.get("content"), list):
-                for part in message["content"]:
+                parts_to_remove = []
+                for part_idx, part in enumerate(message["content"]):
                     if part.get("type") == "image_url":
                         url = part["image_url"]["url"]
+                        
+                        # Skip if already a data URL (base64)
+                        if url.startswith("data:"):
+                            continue
+                            
                         # Check if it's a local file URL (e.g. /api/v1/files/{id} or /api/v1/files/{id}/content)
                         # We look for the file ID pattern - match both with and without /content
                         match = re.search(r"/api/v1/files/([^/]+)(?:/content)?(?:\?|$)", url)
@@ -994,21 +1003,49 @@ async def generate_chat_completion(
                             match = re.search(r"/api/v1/files/([a-f0-9-]+)", url)
                         if match:
                             file_id = match.group(1)
+                            log.debug(f"Resolving local file URL to base64: file_id={file_id}")
                             file = Files.get_file_by_id(file_id)
-                            if file and user_can_read_file(file, user):
-                                try:
-                                    file_path = Storage.get_file(file.path)
-                                    with open(file_path, "rb") as f:
-                                        image_data = f.read()
-                                        base64_image = base64.b64encode(image_data).decode("utf-8")
-                                        mime_type = resolve_image_mime_type(
-                                            (file.meta or {}).get("content_type"),
-                                            getattr(file, "filename", None),
-                                            image_data,
-                                        )
-                                        part["image_url"]["url"] = f"data:{mime_type};base64,{base64_image}"
-                                except Exception as e:
-                                    log.error(f"Error resolving image URL {url}: {e}")
+                            if not file:
+                                log.warning(f"File not found in database: {file_id}. Removing image from message.")
+                                parts_to_remove.append(part_idx)
+                                continue
+                            if not user_can_read_file(file, user):
+                                log.warning(f"User {user.id} does not have permission to read file {file_id}. Removing image from message.")
+                                parts_to_remove.append(part_idx)
+                                continue
+                            try:
+                                file_path = Storage.get_file(file.path)
+                                log.debug(f"Reading file from storage: {file_path}")
+                                with open(file_path, "rb") as f:
+                                    image_data = f.read()
+                                    if not image_data:
+                                        log.warning(f"File is empty: {file_path}. Removing image from message.")
+                                        parts_to_remove.append(part_idx)
+                                        continue
+                                    base64_image = base64.b64encode(image_data).decode("utf-8")
+                                    mime_type = resolve_image_mime_type(
+                                        (file.meta or {}).get("content_type"),
+                                        getattr(file, "filename", None),
+                                        image_data,
+                                    )
+                                    part["image_url"]["url"] = f"data:{mime_type};base64,{base64_image}"
+                                    log.debug(f"Successfully converted image to base64: mime_type={mime_type}, size={len(image_data)} bytes")
+                            except FileNotFoundError as e:
+                                log.error(f"File not found on disk: {file_path}. Removing image from message. Error: {e}")
+                                parts_to_remove.append(part_idx)
+                            except Exception as e:
+                                log.error(f"Error resolving image URL {url}: {e}. Removing image from message.")
+                                parts_to_remove.append(part_idx)
+                        # If it's a non-local URL (http/https), keep it as-is - provider may be able to fetch it
+                        elif not url.startswith(("http://", "https://")):
+                            # Unknown URL format that's not a public URL - remove to prevent issues
+                            log.warning(f"Unknown image URL format (not data:, http:, https:, or local file): {url[:100]}. Removing image from message.")
+                            parts_to_remove.append(part_idx)
+                
+                # Remove failed images in reverse order to preserve indices
+                for idx in reversed(parts_to_remove):
+                    removed_part = message["content"].pop(idx)
+                    log.debug(f"Removed image part at index {idx}")
                     elif part.get("type") == "file":
                         file_obj = part.get("file") or {}
                         file_data = file_obj.get("file_data")
