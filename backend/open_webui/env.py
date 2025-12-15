@@ -486,6 +486,10 @@ ENABLE_COMPRESSION_MIDDLEWARE = (
     os.environ.get("ENABLE_COMPRESSION_MIDDLEWARE", "True").lower() == "true"
 )
 
+ENABLE_SAFETY_IDENTIFIER = (
+    os.environ.get("ENABLE_SAFETY_IDENTIFIER", "False").lower() == "true"
+)
+
 ####################################
 # OAUTH Configuration
 ####################################

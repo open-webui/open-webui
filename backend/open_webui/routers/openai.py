@@ -31,6 +31,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     BYPASS_MODEL_ACCESS_CONTROL,
+    ENABLE_SAFETY_IDENTIFIER,
 )
 from open_webui.models.users import UserModel
 
@@ -875,7 +876,8 @@ async def generate_chat_completion(
             "role": user.role,
         }
 
-    payload["safety_identifier"] = generate_safety_identifier(user.id)
+    if ENABLE_SAFETY_IDENTIFIER:
+        payload["safety_identifier"] = generate_safety_identifier(user.id)
 
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
