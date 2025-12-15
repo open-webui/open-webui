@@ -66,10 +66,10 @@ class TestLocalStorageProvider:
 
     def test_upload_file(self, monkeypatch, tmp_path):
         upload_dir = mock_upload_dir(monkeypatch, tmp_path)
-        contents, file_path = self.Storage.upload_file(self.file_bytesio, self.filename)
+        size, file_path = self.Storage.upload_file(self.file_bytesio, self.filename)
         assert (upload_dir / self.filename).exists()
         assert (upload_dir / self.filename).read_bytes() == self.file_content
-        assert contents == self.file_content
+        assert size == len(self.file_content)
         assert file_path == str(upload_dir / self.filename)
         with pytest.raises(ValueError):
             self.Storage.upload_file(self.file_bytesio_empty, self.filename)
@@ -116,7 +116,7 @@ class TestS3StorageProvider:
         with pytest.raises(Exception):
             self.Storage.upload_file(io.BytesIO(self.file_content), self.filename)
         self.s3_client.create_bucket(Bucket=self.Storage.bucket_name)
-        contents, s3_file_path = self.Storage.upload_file(
+        size, s3_file_path = self.Storage.upload_file(
             io.BytesIO(self.file_content), self.filename
         )
         object = self.s3_client.Object(self.Storage.bucket_name, self.filename)
@@ -124,7 +124,7 @@ class TestS3StorageProvider:
         # local checks
         assert (upload_dir / self.filename).exists()
         assert (upload_dir / self.filename).read_bytes() == self.file_content
-        assert contents == self.file_content
+        assert size == len(self.file_content)
         assert s3_file_path == "s3://" + self.Storage.bucket_name + "/" + self.filename
         with pytest.raises(ValueError):
             self.Storage.upload_file(self.file_bytesio_empty, self.filename)
@@ -132,7 +132,7 @@ class TestS3StorageProvider:
     def test_get_file(self, monkeypatch, tmp_path):
         upload_dir = mock_upload_dir(monkeypatch, tmp_path)
         self.s3_client.create_bucket(Bucket=self.Storage.bucket_name)
-        contents, s3_file_path = self.Storage.upload_file(
+        _, s3_file_path = self.Storage.upload_file(
             io.BytesIO(self.file_content), self.filename
         )
         file_path = self.Storage.get_file(s3_file_path)
@@ -142,7 +142,7 @@ class TestS3StorageProvider:
     def test_delete_file(self, monkeypatch, tmp_path):
         upload_dir = mock_upload_dir(monkeypatch, tmp_path)
         self.s3_client.create_bucket(Bucket=self.Storage.bucket_name)
-        contents, s3_file_path = self.Storage.upload_file(
+        _, s3_file_path = self.Storage.upload_file(
             io.BytesIO(self.file_content), self.filename
         )
         assert (upload_dir / self.filename).exists()
@@ -229,7 +229,7 @@ class TestGCSStorageProvider:
         with pytest.raises(Exception):
             self.Storage.bucket = monkeypatch(self.Storage, "bucket", None)
             self.Storage.upload_file(io.BytesIO(self.file_content), self.filename)
-        contents, gcs_file_path = self.Storage.upload_file(
+        size, gcs_file_path = self.Storage.upload_file(
             io.BytesIO(self.file_content), self.filename
         )
         object = self.Storage.bucket.get_blob(self.filename)
@@ -237,7 +237,7 @@ class TestGCSStorageProvider:
         # local checks
         assert (upload_dir / self.filename).exists()
         assert (upload_dir / self.filename).read_bytes() == self.file_content
-        assert contents == self.file_content
+        assert size == len(self.file_content)
         assert gcs_file_path == "gs://" + self.Storage.bucket_name + "/" + self.filename
         # test error if file is empty
         with pytest.raises(ValueError):
@@ -245,7 +245,7 @@ class TestGCSStorageProvider:
 
     def test_get_file(self, monkeypatch, tmp_path, setup):
         upload_dir = mock_upload_dir(monkeypatch, tmp_path)
-        contents, gcs_file_path = self.Storage.upload_file(
+        _, gcs_file_path = self.Storage.upload_file(
             io.BytesIO(self.file_content), self.filename
         )
         file_path = self.Storage.get_file(gcs_file_path)
@@ -254,7 +254,7 @@ class TestGCSStorageProvider:
 
     def test_delete_file(self, monkeypatch, tmp_path, setup):
         upload_dir = mock_upload_dir(monkeypatch, tmp_path)
-        contents, gcs_file_path = self.Storage.upload_file(
+        _, gcs_file_path = self.Storage.upload_file(
             io.BytesIO(self.file_content), self.filename
         )
         # ensure that local directory has the uploaded file as well
@@ -348,16 +348,16 @@ class TestAzureStorageProvider:
         # Reset side effect and create container
         self.Storage.container_client.get_blob_client.side_effect = None
         self.Storage.create_container()
-        contents, azure_file_path = self.Storage.upload_file(
+        size, azure_file_path = self.Storage.upload_file(
             io.BytesIO(self.file_content), self.filename
         )
 
         # Assertions
         self.Storage.container_client.get_blob_client.assert_called_with(self.filename)
-        self.Storage.container_client.get_blob_client().upload_blob.assert_called_once_with(
-            self.file_content, overwrite=True
-        )
-        assert contents == self.file_content
+        self.Storage.container_client.get_blob_client().upload_blob.assert_called_once()
+        _, kwargs = self.Storage.container_client.get_blob_client().upload_blob.call_args
+        assert kwargs.get("overwrite") is True
+        assert size == len(self.file_content)
         assert (
             azure_file_path
             == f"https://myaccount.blob.core.windows.net/{self.Storage.container_name}/{self.filename}"

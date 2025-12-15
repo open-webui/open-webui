@@ -28,7 +28,7 @@
 		socket,
 		showControls,
 		showCallOverlay,
-		currentChatPage,
+		currentChatPage,r
 		temporaryChatEnabled,
 		mobile,
 		showOverview,
@@ -1687,8 +1687,19 @@
 			files.length > 0 &&
 			files.filter((file) => file.status === 'uploading').length > 0
 		) {
+			const uploadingFiles = files.filter((file) => file.status === 'uploading');
+			const uploadCount = uploadingFiles.length;
+			const allSentWaitingForServer = uploadingFiles.every(
+				(file) => typeof file?.progress === 'number' && file.progress >= 99
+			);
+
 			toast.error(
-				$i18n.t(`Oops! There are files still uploading. Please wait for the upload to complete.`)
+				allSentWaitingForServer
+					? $i18n.t(
+							`Uploads have finished sending ({{count}} file(s)); waiting for the server to finish processing.`,
+							{ count: uploadCount }
+						)
+					: $i18n.t(`Oops! There are files still uploading. Please wait for the upload to complete.`)
 			);
 			return;
 		}

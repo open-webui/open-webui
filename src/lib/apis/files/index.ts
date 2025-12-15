@@ -45,7 +45,9 @@ const uploadFileWithProgress = async (
 		};
 
 		xhr.open('POST', url, true);
-		xhr.responseType = 'json';
+		// Note: Do NOT set xhr.responseType = 'json' as it causes issues on iOS Safari
+		// where accessing xhr.responseText throws InvalidStateError.
+		// Instead, we parse the response text manually.
 		xhr.setRequestHeader('Accept', 'application/json');
 		xhr.setRequestHeader('authorization', `Bearer ${token}`);
 
@@ -70,9 +72,25 @@ const uploadFileWithProgress = async (
 			if (signal) signal.removeEventListener('abort', abortHandler);
 			const status = xhr.status;
 
-			const responseText = xhr.responseText || '';
-			const parsedResponseText = responseText ? tryParseJson(responseText) : null;
-			const response = xhr.response ?? parsedResponseText ?? null;
+			// Parse response - use responseText since we're not setting responseType
+			let response: any = null;
+			try {
+				const responseText = xhr.responseText || '';
+				if (responseText) {
+					response = tryParseJson(responseText);
+				}
+			} catch (e) {
+				// On some browsers/environments, accessing responseText might fail
+				// In that case, try xhr.response as fallback
+				try {
+					response = xhr.response;
+					if (typeof response === 'string') {
+						response = tryParseJson(response);
+					}
+				} catch {
+					// Ignore fallback errors
+				}
+			}
 
 			if (status >= 200 && status < 300) {
 				if (response && typeof response === 'object') {
@@ -80,10 +98,7 @@ const uploadFileWithProgress = async (
 					return;
 				}
 
-				error =
-					typeof responseText === 'string' && responseText.trim()
-						? `Upload succeeded but the response was not valid JSON: ${responseText}`
-						: 'Upload succeeded but the server returned an empty response';
+				error = 'Upload succeeded but the server returned an invalid response';
 				resolve(null);
 				return;
 			}

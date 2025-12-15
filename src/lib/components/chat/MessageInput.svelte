@@ -976,7 +976,9 @@
 				const updateProgress = (progress: number) => {
 					const fileIndex = files.findIndex((f) => f.itemId === tempImageId);
 					if (fileIndex !== -1) {
-						files[fileIndex].progress = progress;
+						// Upload progress can reach 100% before the server responds (e.g. remote storage),
+						// so cap at 99% until we actually mark the file as uploaded.
+						files[fileIndex].progress = Math.max(0, Math.min(99, progress));
 						files = files;
 					}
 				};
@@ -1522,7 +1524,7 @@
 													<div class="absolute top-1.5 right-1.5 flex gap-1">
 														<button
 															class="p-1.5 bg-white/90 hover:bg-white text-gray-700 rounded-full shadow-sm {($settings?.highContrastMode ??
-															false)
+															false) || $mobile || file.status === 'uploading'
 																? ''
 																: 'group-hover:opacity-100 opacity-0 transition-opacity'}"
 															type="button"

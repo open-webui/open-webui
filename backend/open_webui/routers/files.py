@@ -170,7 +170,7 @@ def upload_file_handler(
         id = str(uuid.uuid4())
         name = filename
         filename = f"{id}_{filename}"
-        contents, file_path = Storage.upload_file(
+        size, file_path = Storage.upload_file(
             file.file,
             filename,
             {
@@ -194,7 +194,7 @@ def upload_file_handler(
                     "meta": {
                         "name": name,
                         "content_type": content_type,
-                        "size": len(contents),
+                        "size": size,
                         "data": file_metadata,
                     },
                 }

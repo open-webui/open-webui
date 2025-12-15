@@ -3,6 +3,7 @@ import shutil
 import json
 import logging
 import re
+from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import BinaryIO, Tuple, Dict
 
@@ -48,7 +49,7 @@ class StorageProvider(ABC):
     @abstractmethod
     def upload_file(
         self, file: BinaryIO, filename: str, tags: Dict[str, str]
-    ) -> Tuple[bytes, str]:
+    ) -> Tuple[int, str]:
         pass
 
     @abstractmethod
@@ -64,14 +65,24 @@ class LocalStorageProvider(StorageProvider):
     @staticmethod
     def upload_file(
         file: BinaryIO, filename: str, tags: Dict[str, str]
-    ) -> Tuple[bytes, str]:
-        contents = file.read()
-        if not contents:
-            raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
+    ) -> Tuple[int, str]:
         file_path = f"{UPLOAD_DIR}/{filename}"
-        with open(file_path, "wb") as f:
-            f.write(contents)
-        return contents, file_path
+        Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
+
+        try:
+            file.seek(0)
+        except Exception:
+            # Some file-like objects may not be seekable.
+            pass
+
+        with open(file_path, "wb") as out_file:
+            shutil.copyfileobj(file, out_file)
+
+        size = os.path.getsize(file_path)
+        if size <= 0:
+            raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
+
+        return size, file_path
 
     @staticmethod
     def get_file(file_path: str) -> str:
@@ -147,9 +158,9 @@ class S3StorageProvider(StorageProvider):
 
     def upload_file(
         self, file: BinaryIO, filename: str, tags: Dict[str, str]
-    ) -> Tuple[bytes, str]:
+    ) -> Tuple[int, str]:
         """Handles uploading of the file to S3 storage."""
-        _, file_path = LocalStorageProvider.upload_file(file, filename, tags)
+        size, file_path = LocalStorageProvider.upload_file(file, filename, tags)
         s3_key = os.path.join(self.key_prefix, filename)
         try:
             self.s3_client.upload_file(file_path, self.bucket_name, s3_key)
@@ -168,10 +179,7 @@ class S3StorageProvider(StorageProvider):
                     Key=s3_key,
                     Tagging=tagging,
                 )
-            return (
-                open(file_path, "rb").read(),
-                f"s3://{self.bucket_name}/{s3_key}",
-            )
+            return size, f"s3://{self.bucket_name}/{s3_key}"
         except ClientError as e:
             raise RuntimeError(f"Error uploading file to S3: {e}")
 
@@ -240,13 +248,13 @@ class GCSStorageProvider(StorageProvider):
 
     def upload_file(
         self, file: BinaryIO, filename: str, tags: Dict[str, str]
-    ) -> Tuple[bytes, str]:
+    ) -> Tuple[int, str]:
         """Handles uploading of the file to GCS storage."""
-        contents, file_path = LocalStorageProvider.upload_file(file, filename, tags)
+        size, file_path = LocalStorageProvider.upload_file(file, filename, tags)
         try:
             blob = self.bucket.blob(filename)
             blob.upload_from_filename(file_path)
-            return contents, "gs://" + self.bucket_name + "/" + filename
+            return size, "gs://" + self.bucket_name + "/" + filename
         except GoogleCloudError as e:
             raise RuntimeError(f"Error uploading file to GCS: {e}")
 
@@ -312,13 +320,14 @@ class AzureStorageProvider(StorageProvider):
 
     def upload_file(
         self, file: BinaryIO, filename: str, tags: Dict[str, str]
-    ) -> Tuple[bytes, str]:
+    ) -> Tuple[int, str]:
         """Handles uploading of the file to Azure Blob Storage."""
-        contents, file_path = LocalStorageProvider.upload_file(file, filename, tags)
+        size, file_path = LocalStorageProvider.upload_file(file, filename, tags)
         try:
             blob_client = self.container_client.get_blob_client(filename)
-            blob_client.upload_blob(contents, overwrite=True)
-            return contents, f"{self.endpoint}/{self.container_name}/{filename}"
+            with open(file_path, "rb") as data:
+                blob_client.upload_blob(data, overwrite=True)
+            return size, f"{self.endpoint}/{self.container_name}/{filename}"
         except Exception as e:
             raise RuntimeError(f"Error uploading file to Azure Blob Storage: {e}")
 
