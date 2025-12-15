@@ -15,13 +15,17 @@ def search_firecrawl(
     query: str,
     count: int,
     filter_list: Optional[List[str]] = None,
+    timeout: int = 120,  # timeout in ms. 120ms taken from scraping example : https://docs.firecrawl.dev/sdks/python
 ) -> List[SearchResult]:
     try:
         from firecrawl import FirecrawlApp
 
         firecrawl = FirecrawlApp(api_key=firecrawl_api_key, api_url=firecrawl_url)
         response = firecrawl.search(
-            query=query, limit=count, ignore_invalid_urls=True, timeout=count * 3
+            query=query,
+            limit=count,
+            ignore_invalid_urls=True,
+            timeout=timeout,
         )
         results = response.web
         if filter_list:

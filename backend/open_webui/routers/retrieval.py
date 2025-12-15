@@ -543,6 +543,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "PLAYWRIGHT_TIMEOUT": request.app.state.config.PLAYWRIGHT_TIMEOUT,
             "FIRECRAWL_API_KEY": request.app.state.config.FIRECRAWL_API_KEY,
             "FIRECRAWL_API_BASE_URL": request.app.state.config.FIRECRAWL_API_BASE_URL,
+            "FIRECRAWL_TIMEOUT": request.app.state.config.FIRECRAWL_TIMEOUT,
             "TAVILY_EXTRACT_DEPTH": request.app.state.config.TAVILY_EXTRACT_DEPTH,
             "EXTERNAL_WEB_SEARCH_URL": request.app.state.config.EXTERNAL_WEB_SEARCH_URL,
             "EXTERNAL_WEB_SEARCH_API_KEY": request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY,
@@ -603,6 +604,7 @@ class WebConfig(BaseModel):
     PLAYWRIGHT_TIMEOUT: Optional[int] = None
     FIRECRAWL_API_KEY: Optional[str] = None
     FIRECRAWL_API_BASE_URL: Optional[str] = None
+    FIRECRAWL_TIMEOUT: Optional[int] = None
     TAVILY_EXTRACT_DEPTH: Optional[str] = None
     EXTERNAL_WEB_SEARCH_URL: Optional[str] = None
     EXTERNAL_WEB_SEARCH_API_KEY: Optional[str] = None
@@ -1087,6 +1089,7 @@ async def update_rag_config(
         request.app.state.config.FIRECRAWL_API_BASE_URL = (
             form_data.web.FIRECRAWL_API_BASE_URL
         )
+        request.app.state.config.FIRECRAWL_TIMEOUT = form_data.web.FIRECRAWL_TIMEOUT
         request.app.state.config.EXTERNAL_WEB_SEARCH_URL = (
             form_data.web.EXTERNAL_WEB_SEARCH_URL
         )
@@ -1220,6 +1223,7 @@ async def update_rag_config(
             "PLAYWRIGHT_TIMEOUT": request.app.state.config.PLAYWRIGHT_TIMEOUT,
             "FIRECRAWL_API_KEY": request.app.state.config.FIRECRAWL_API_KEY,
             "FIRECRAWL_API_BASE_URL": request.app.state.config.FIRECRAWL_API_BASE_URL,
+            "FIRECRAWL_TIMEOUT": request.app.state.config.FIRECRAWL_TIMEOUT,
             "TAVILY_EXTRACT_DEPTH": request.app.state.config.TAVILY_EXTRACT_DEPTH,
             "EXTERNAL_WEB_SEARCH_URL": request.app.state.config.EXTERNAL_WEB_SEARCH_URL,
             "EXTERNAL_WEB_SEARCH_API_KEY": request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY,
@@ -2050,6 +2054,7 @@ def search_web(
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            timeout=request.app.state.config.FIRECRAWL_TIMEOUT,
         )
     elif engine == "external":
         return search_external(

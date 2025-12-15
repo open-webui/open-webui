@@ -3255,6 +3255,14 @@ FIRECRAWL_API_BASE_URL = PersistentConfig(
     os.environ.get("FIRECRAWL_API_BASE_URL", "https://api.firecrawl.dev"),
 )
 
+FIRECRAWL_TIMEOUT = PersistentConfig(
+    "FIRECRAWL_TIMEOUT",
+    "rag.web.loader.firecrawl_timeout",
+    int(
+        os.environ.get("FIRECRAWL_TIMEOUT", 120)
+    ),  # timeout in ms. 120ms taken from scraping example : https://docs.firecrawl.dev/sdks/python
+)
+
 EXTERNAL_WEB_SEARCH_URL = PersistentConfig(
     "EXTERNAL_WEB_SEARCH_URL",
     "rag.web.search.external_web_search_url",

@@ -629,6 +629,19 @@
 										bind:value={webConfig.FIRECRAWL_API_KEY}
 									/>
 								</div>
+
+								<div class="  mb-2.5 flex w-full justify-between">
+									<div class=" self-left text-xs font-medium">
+										{$i18n.t('Timeout (ms)')}
+									</div>
+									<div class="flex items-center relative">
+										<input
+											class="flex-1 w-full text-sm bg-transparent outline-hidden"
+											placeholder={$i18n.t('Timeout (ms)')}
+											bind:value={webConfig.FIRECRAWL_TIMEOUT}
+										/>
+									</div>
+								</div>								
 							</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'ddgs' || webConfig.WEB_SEARCH_ENGINE === 'duckduckgo'}
 							<div class="w-full mb-2.5">
