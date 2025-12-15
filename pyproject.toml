@@ -69,9 +69,9 @@ dependencies = [
 
     "ftfy==6.3.1",
     "chardet==5.2.0",
-    "pypdf==6.4.1",
+    "pypdf==6.4.2",
     "fpdf2==2.8.5",
-    "pymdown-extensions==10.19",
+    "pymdown-extensions==10.19.1",
     "docx2txt==0.9",
     "python-pptx==1.0.2",
     "unstructured==0.18.21",
@@ -155,7 +155,7 @@ all = [
     "oracledb==3.4.1",
     "colbert-ai==0.2.22",
 
-    "firecrawl-py==4.10.5",
+    "firecrawl-py==4.11.0",
     "azure-search-documents==11.6.0",
 ]
 
