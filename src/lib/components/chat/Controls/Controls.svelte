@@ -23,6 +23,7 @@
 		<h2 class=" text-lg font-medium self-center font-primary">{$i18n.t('Chat Controls')}</h2>
 		<button
 			class="self-center"
+			aria-label="Close"
 			on:click={() => {
 				dispatch('close');
 			}}
