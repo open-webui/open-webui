@@ -21,6 +21,7 @@ from fastapi import (
 )
 
 from fastapi.responses import FileResponse, StreamingResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -121,7 +122,7 @@ def upload_file_handler(
 
         file_extension = os.path.splitext(filename)[1]
         # Remove the leading dot from the file extension
-        file_extension = file_extension[1:] if file_extension else ""
+        file_extension = file_extension[1:].lower() if file_extension else ""
 
         content_type = file.content_type
         if content_type:
@@ -146,11 +147,18 @@ def upload_file_handler(
                 content_type = inferred_content_type
 
         if request.app.state.config.ALLOWED_FILE_EXTENSIONS:
-            request.app.state.config.ALLOWED_FILE_EXTENSIONS = [
-                ext for ext in request.app.state.config.ALLOWED_FILE_EXTENSIONS if ext
+            allowed_extensions = [
+                ext.lower().lstrip(".")
+                for ext in request.app.state.config.ALLOWED_FILE_EXTENSIONS
+                if ext
             ]
 
-            if file_extension not in request.app.state.config.ALLOWED_FILE_EXTENSIONS:
+            if "jpeg" in allowed_extensions and "jpg" not in allowed_extensions:
+                allowed_extensions.append("jpg")
+            if "jpg" in allowed_extensions and "jpeg" not in allowed_extensions:
+                allowed_extensions.append("jpeg")
+
+            if file_extension not in allowed_extensions:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT(
@@ -201,6 +209,8 @@ def upload_file_handler(
             detail=ERROR_MESSAGES.DEFAULT("Error uploading file"),
         )
 
+    except (HTTPException, StarletteHTTPException):
+        raise
     except Exception as e:
         log.exception(e)
         raise HTTPException(

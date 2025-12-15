@@ -857,6 +857,53 @@
 				return;
 			}
 
+			const maxSizeMb = $config?.file?.max_size ?? null;
+			const maxSizeBytes = maxSizeMb !== null ? maxSizeMb * 1024 * 1024 : null;
+
+			const getErrorText = (err: any) => {
+				const truncate = (text: string, maxLength = 500) =>
+					text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
+
+				if (!err) return null;
+
+				let text: string | null = null;
+
+				if (typeof err === 'string') {
+					text = err;
+				} else if (typeof err?.detail === 'string') {
+					text = err.detail;
+				} else if (typeof err?.message === 'string') {
+					text = err.message;
+				} else {
+					const detail = err?.detail;
+					if (detail && typeof detail === 'object') {
+						if (typeof detail.message === 'string') text = detail.message;
+						else if (typeof detail.error === 'string') text = detail.error;
+						else {
+							try {
+								text = JSON.stringify(detail);
+							} catch {
+								// ignore
+							}
+						}
+					}
+
+					if (text === null) {
+						try {
+							text = JSON.stringify(err);
+						} catch {
+							// ignore
+						}
+					}
+
+					if (text === null) {
+						text = String(err);
+					}
+				}
+
+				return text ? truncate(text) : null;
+			};
+
 			const handleInputFile = async (file: File) => {
 				console.log('Processing file:', {
 					name: file.name,
@@ -865,23 +912,21 @@
 					extension: file.name.split('.').at(-1)
 				});
 
-				if (
-					($config?.file?.max_size ?? null) !== null &&
-					file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
-				) {
-					console.log('File exceeds max size limit:', {
-						fileSize: file.size,
-						maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
-					});
-					toast.error(
-						$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
-							maxSize: $config?.file?.max_size
-						})
-					);
-					return;
-				}
+				const isImageLike = isImageLikeFile(file);
+				if (!isImageLike) {
+					if (maxSizeBytes !== null && file.size > maxSizeBytes) {
+						console.log('File exceeds max size limit:', {
+							fileSize: file.size,
+							maxSize: maxSizeBytes
+						});
+						toast.error(
+							$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
+								maxSize: maxSizeMb
+							})
+						);
+						return;
+					}
 
-				if (!isImageLikeFile(file)) {
 					await uploadFileHandler(file);
 					return;
 				}
@@ -938,7 +983,17 @@
 
 				try {
 					if (isHeicLikeImage(file)) {
-						const converted = await convertHeicToJpeg(file);
+						let converted: any;
+						try {
+							converted = await convertHeicToJpeg(file, { quality: 0.92 });
+						} catch (conversionErr) {
+							const conversionText = getErrorText(conversionErr);
+							throw new Error(
+								conversionText
+									? `HEIC/HEIF conversion failed: ${conversionText}`
+									: 'HEIC/HEIF conversion failed'
+							);
+						}
 						const outputName = replaceExtension(file.name || 'image', '.jpg');
 						fileToUpload = new File([converted as BlobPart], outputName, {
 							type: 'image/jpeg',
@@ -962,7 +1017,7 @@
 					});
 
 					if (!uploadedFile) {
-						throw new Error('Failed to upload image');
+						throw new Error('Upload failed: server returned an empty response');
 					}
 
 					URL.revokeObjectURL(previewUrl);
@@ -998,16 +1053,29 @@
 
 					console.error(err);
 					files = files.filter((f) => f.itemId !== tempImageId);
-					toast.error($i18n.t('Failed to upload image'));
+					const errorText = getErrorText(err);
+					const name = file?.name || 'image';
+					toast.error(
+						errorText ? `${name}: ${errorText}` : `${name}: ${$i18n.t('Failed to upload image')}`
+					);
 				} finally {
 					canceledImageUploads.delete(tempImageId);
 					imageUploadAbortControllers.delete(tempImageId);
 				}
 			};
 
-			for (const file of inputFilesArray) {
-				void handleInputFile(file);
-			}
+			const maxConcurrentUploads = $mobile ? 2 : 4;
+			const queue = [...inputFilesArray];
+			const workers = Array.from({ length: Math.min(maxConcurrentUploads, queue.length) }, async () => {
+				while (queue.length > 0) {
+					const nextFile = queue.shift();
+					if (nextFile) {
+						await handleInputFile(nextFile);
+					}
+				}
+			});
+
+			void Promise.all(workers);
 		};
 
 	const onDragOver = (e) => {

@@ -5,6 +5,26 @@ export type UploadFileOptions = {
 	signal?: AbortSignal;
 };
 
+const tryParseJson = (text: string) => {
+	try {
+		return JSON.parse(text);
+	} catch {
+		return null;
+	}
+};
+
+const coerceToString = (value: any) => {
+	if (typeof value === 'string') return value;
+	if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+	if (value instanceof Error) return value.message || String(value);
+	if (value === null || value === undefined) return '';
+	try {
+		return JSON.stringify(value);
+	} catch {
+		return String(value);
+	}
+};
+
 const uploadFileWithProgress = async (
 	token: string,
 	url: string,
@@ -48,24 +68,41 @@ const uploadFileWithProgress = async (
 
 		xhr.onload = () => {
 			if (signal) signal.removeEventListener('abort', abortHandler);
-			if (xhr.status >= 200 && xhr.status < 300) {
-				resolve(xhr.response ?? null);
+			const status = xhr.status;
+
+			const responseText = xhr.responseText || '';
+			const parsedResponseText = responseText ? tryParseJson(responseText) : null;
+			const response = xhr.response ?? parsedResponseText ?? null;
+
+			if (status >= 200 && status < 300) {
+				if (response && typeof response === 'object') {
+					resolve(response);
+					return;
+				}
+
+				error =
+					typeof responseText === 'string' && responseText.trim()
+						? `Upload succeeded but the response was not valid JSON: ${responseText}`
+						: 'Upload succeeded but the server returned an empty response';
+				resolve(null);
 				return;
 			}
 
-			const response = xhr.response;
-			if (response?.detail) {
-				error = response.detail;
+			let message: any = null;
+			if (typeof response === 'string' && response) {
+				message = response;
+			} else if (response?.detail) {
+				message = response.detail;
 			} else if (response?.message) {
-				error = response.message;
-			} else if (typeof response === 'string' && response) {
-				error = response;
+				message = response.message;
 			} else if (xhr.statusText) {
-				error = xhr.statusText;
+				message = xhr.statusText;
 			} else {
-				error = `Upload failed with status ${xhr.status}`;
+				message = `Upload failed with status ${status}`;
 			}
 
+			const messageText = coerceToString(message) || `Upload failed with status ${status}`;
+			error = status ? `HTTP ${status}: ${messageText}` : messageText;
 			resolve(null);
 		};
 
@@ -127,7 +164,7 @@ export const uploadFile = async (
 					return res.json();
 				})
 				.catch((err) => {
-					error = err.detail || err.message;
+					error = err?.detail ?? err?.message ?? err;
 					console.error(err);
 					return null;
 				});

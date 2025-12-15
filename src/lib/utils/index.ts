@@ -1631,16 +1631,177 @@ export const getAge = (birthDate) => {
 	return age.toString();
 };
 
-export const convertHeicToJpeg = async (file: File) => {
-	const { default: heic2any } = await import('heic2any');
-	try {
-		return await heic2any({ blob: file, toType: 'image/jpeg', quality: 1 });
-	} catch (err: any) {
-		if (err?.message?.includes('already browser readable')) {
-			return file;
-		}
-		throw err;
+export type ConvertHeicToJpegOptions = {
+	quality?: number;
+	maxWidth?: number | null;
+	maxHeight?: number | null;
+};
+
+const clampNumber = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+const dataUrlToBlob = (dataUrl: string) => {
+	const [header, base64] = dataUrl.split(',', 2);
+	const mimeMatch = header?.match(/data:(.*?)(?:;base64)?$/i);
+	const mimeType = mimeMatch?.[1] || 'application/octet-stream';
+
+	const binary = atob(base64 || '');
+	const bytes = new Uint8Array(binary.length);
+	for (let i = 0; i < binary.length; i++) {
+		bytes[i] = binary.charCodeAt(i);
 	}
+	return new Blob([bytes], { type: mimeType });
+};
+
+const canvasToBlob = async (canvas: HTMLCanvasElement, mimeType: string, quality?: number) => {
+	if (canvas.toBlob) {
+		const blob = await new Promise<Blob | null>((resolve) =>
+			canvas.toBlob((result) => resolve(result), mimeType, quality)
+		);
+		if (blob) return blob;
+	}
+
+	return dataUrlToBlob(canvas.toDataURL(mimeType, quality));
+};
+
+const loadImageElementFromBlob = async (blob: Blob) => {
+	const url = URL.createObjectURL(blob);
+	try {
+		const img = new Image();
+		img.decoding = 'async';
+		const loaded = new Promise<void>((resolve, reject) => {
+			img.onload = () => resolve();
+			img.onerror = () => reject(new Error('Failed to load image'));
+		});
+
+		img.src = url;
+
+		if (img.decode) {
+			await img.decode().catch(() => loaded);
+		} else {
+			await loaded;
+		}
+		return img;
+	} finally {
+		URL.revokeObjectURL(url);
+	}
+};
+
+const getContainedDimensions = (
+	sourceWidth: number,
+	sourceHeight: number,
+	maxWidth: number | null,
+	maxHeight: number | null
+) => {
+	if (!maxWidth && !maxHeight) {
+		return { width: sourceWidth, height: sourceHeight };
+	}
+
+	const widthScale = maxWidth ? maxWidth / sourceWidth : 1;
+	const heightScale = maxHeight ? maxHeight / sourceHeight : 1;
+	const scale = Math.min(widthScale, heightScale, 1);
+
+	return {
+		width: Math.max(1, Math.round(sourceWidth * scale)),
+		height: Math.max(1, Math.round(sourceHeight * scale))
+	};
+};
+
+const rasterizeBlobToJpeg = async (
+	blob: Blob,
+	{
+		quality,
+		maxWidth,
+		maxHeight
+	}: { quality: number; maxWidth: number | null; maxHeight: number | null }
+) => {
+	if (typeof document === 'undefined') {
+		throw new Error('Image conversion is only supported in the browser');
+	}
+
+	let bitmap: ImageBitmap | null = null;
+	try {
+		if (typeof createImageBitmap === 'function') {
+			try {
+				bitmap = await createImageBitmap(blob, {
+					imageOrientation: 'from-image'
+				} as ImageBitmapOptions);
+			} catch {
+				bitmap = await createImageBitmap(blob).catch(() => null);
+			}
+
+			if (bitmap) {
+				const { width, height } = getContainedDimensions(bitmap.width, bitmap.height, maxWidth, maxHeight);
+				const canvas = document.createElement('canvas');
+				canvas.width = width;
+				canvas.height = height;
+
+				const ctx = canvas.getContext('2d');
+				if (!ctx) {
+					throw new Error('Canvas is not supported in this browser');
+				}
+				ctx.imageSmoothingEnabled = true;
+				ctx.imageSmoothingQuality = 'high';
+				ctx.drawImage(bitmap, 0, 0, width, height);
+				return await canvasToBlob(canvas, 'image/jpeg', quality);
+			}
+		}
+
+		const img = await loadImageElementFromBlob(blob);
+		const { width, height } = getContainedDimensions(img.naturalWidth, img.naturalHeight, maxWidth, maxHeight);
+		const canvas = document.createElement('canvas');
+		canvas.width = width;
+		canvas.height = height;
+
+		const ctx = canvas.getContext('2d');
+		if (!ctx) {
+			throw new Error('Canvas is not supported in this browser');
+		}
+		ctx.imageSmoothingEnabled = true;
+		ctx.imageSmoothingQuality = 'high';
+		ctx.drawImage(img, 0, 0, width, height);
+		return await canvasToBlob(canvas, 'image/jpeg', quality);
+	} finally {
+		try {
+			bitmap?.close();
+		} catch {
+			// Ignore cleanup errors
+		}
+	}
+};
+
+export const convertHeicToJpeg = async (file: File, options: ConvertHeicToJpegOptions = {}) => {
+	const quality = clampNumber(
+		typeof options.quality === 'number' ? options.quality : 0.92,
+		0.1,
+		1
+	);
+	const maxWidth = options.maxWidth ?? null;
+	const maxHeight = options.maxHeight ?? null;
+
+	// Fast path: if the browser can decode the input, re-encode via canvas (works on iOS Safari).
+	try {
+		return await rasterizeBlobToJpeg(file, { quality, maxWidth, maxHeight });
+	} catch {
+		// Fall back to WASM-based conversion if the browser cannot decode HEIC/HEIF.
+	}
+
+	const { default: heic2any } = await import('heic2any');
+	const result = await heic2any({ blob: file, toType: 'image/jpeg', quality });
+	const blob = Array.isArray(result) ? result[0] : result;
+
+	if (!(blob instanceof Blob)) {
+		throw new Error('HEIC conversion failed: invalid output');
+	}
+
+	if (maxWidth || maxHeight) {
+		try {
+			return await rasterizeBlobToJpeg(blob, { quality, maxWidth, maxHeight });
+		} catch {
+			// If resize/re-encode fails, return the converted blob as-is.
+		}
+	}
+
+	return blob;
 };
 
 export const decodeString = (str: string) => {
