@@ -15,7 +15,7 @@ def search_firecrawl(
     query: str,
     count: int,
     filter_list: Optional[List[str]] = None,
-    timeout: int = 120,  # timeout in ms. 120ms taken from scraping example : https://docs.firecrawl.dev/sdks/python
+    timeout: int = 2000,  # timeout in ms. 2000ms == 2 secs
 ) -> List[SearchResult]:
     try:
         from firecrawl import FirecrawlApp
