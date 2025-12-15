@@ -28,7 +28,7 @@
 		socket,
 		showControls,
 		showCallOverlay,
-		currentChatPage,r
+		currentChatPage,
 		temporaryChatEnabled,
 		mobile,
 		showOverview,
