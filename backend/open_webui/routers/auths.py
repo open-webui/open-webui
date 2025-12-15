@@ -4,6 +4,8 @@ import time
 import datetime
 import logging
 from aiohttp import ClientSession
+import urllib
+
 
 from open_webui.models.auths import (
     AddUserForm,
@@ -15,9 +17,13 @@ from open_webui.models.auths import (
     SigninResponse,
     SignupForm,
     UpdatePasswordForm,
-    UserResponse,
 )
-from open_webui.models.users import Users, UpdateProfileForm
+from open_webui.models.users import (
+    UserProfileImageResponse,
+    Users,
+    UpdateProfileForm,
+    UserStatus,
+)
 from open_webui.models.groups import Groups
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.config import load_oauth_providers
@@ -36,12 +42,20 @@ from open_webui.env import (
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse, Response, JSONResponse
-from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_LDAP
+from open_webui.config import (
+    OPENID_PROVIDER_URL,
+    ENABLE_OAUTH_SIGNUP,
+    ENABLE_LDAP,
+    ENABLE_PASSWORD_AUTH,
+)
 from pydantic import BaseModel
 
 from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.auth import (
+    validate_password,
+    verify_password,
     decode_token,
+    invalidate_token,
     create_api_key,
     create_token,
     get_admin_user,
@@ -51,7 +65,12 @@ from open_webui.utils.auth import (
     get_http_authorization_cred,
 )
 from open_webui.utils.webhook import post_webhook
-from open_webui.utils.access_control import get_permissions
+from open_webui.utils.access_control import get_permissions, has_permission
+from open_webui.utils.groups import apply_default_group_assignment
+
+from open_webui.utils.redis import get_redis_client
+from open_webui.utils.rate_limit import RateLimiter
+
 
 from typing import Optional, List
 
@@ -65,17 +84,21 @@ router = APIRouter()
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
+signin_rate_limiter = RateLimiter(
+    redis_client=get_redis_client(), limit=5 * 3, window=60 * 3
+)
+
 ############################
 # GetSessionUser
 ############################
 
 
-class SessionUserResponse(Token, UserResponse):
+class SessionUserResponse(Token, UserProfileImageResponse):
     expires_at: Optional[int] = None
     permissions: Optional[dict] = None
 
 
-class SessionUserInfoResponse(SessionUserResponse):
+class SessionUserInfoResponse(SessionUserResponse, UserStatus):
     bio: Optional[str] = None
     gender: Optional[str] = None
     date_of_birth: Optional[datetime.date] = None
@@ -132,6 +155,9 @@ async def get_session_user(
         "bio": user.bio,
         "gender": user.gender,
         "date_of_birth": user.date_of_birth,
+        "status_emoji": user.status_emoji,
+        "status_message": user.status_message,
+        "status_expires_at": user.status_expires_at,
         "permissions": user_permissions,
     }
 
@@ -141,7 +167,7 @@ async def get_session_user(
 ############################
 
 
-@router.post("/update/profile", response_model=UserResponse)
+@router.post("/update/profile", response_model=UserProfileImageResponse)
 async def update_profile(
     form_data: UpdateProfileForm, session_user=Depends(get_verified_user)
 ):
@@ -170,13 +196,19 @@ async def update_password(
     if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
         raise HTTPException(400, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
     if session_user:
-        user = Auths.authenticate_user(session_user.email, form_data.password)
+        user = Auths.authenticate_user(
+            session_user.email, lambda pw: verify_password(form_data.password, pw)
+        )
 
         if user:
+            try:
+                validate_password(form_data.password)
+            except Exception as e:
+                raise HTTPException(400, detail=str(e))
             hashed = get_password_hash(form_data.new_password)
             return Auths.update_user_password_by_id(user.id, hashed)
         else:
-            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_PASSWORD)
+            raise HTTPException(400, detail=ERROR_MESSAGES.INCORRECT_PASSWORD)
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
@@ -186,7 +218,17 @@ async def update_password(
 ############################
 @router.post("/ldap", response_model=SessionUserResponse)
 async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
-    ENABLE_LDAP = request.app.state.config.ENABLE_LDAP
+    # Security checks FIRST - before loading any config
+    if not request.app.state.config.ENABLE_LDAP:
+        raise HTTPException(400, detail="LDAP authentication is not enabled")
+
+    if not ENABLE_PASSWORD_AUTH:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+        )
+
+    # NOW load LDAP config variables
     LDAP_SERVER_LABEL = request.app.state.config.LDAP_SERVER_LABEL
     LDAP_SERVER_HOST = request.app.state.config.LDAP_SERVER_HOST
     LDAP_SERVER_PORT = request.app.state.config.LDAP_SERVER_PORT
@@ -206,9 +248,6 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
         if request.app.state.config.LDAP_CIPHERS
         else "ALL"
     )
-
-    if not ENABLE_LDAP:
-        raise HTTPException(400, detail="LDAP authentication is not enabled")
 
     try:
         tls = Tls(
@@ -250,13 +289,11 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             f"{LDAP_ATTRIBUTE_FOR_MAIL}",
             "cn",
         ]
-
         if ENABLE_LDAP_GROUP_MANAGEMENT:
             search_attributes.append(f"{LDAP_ATTRIBUTE_FOR_GROUPS}")
             log.info(
                 f"LDAP Group Management enabled. Adding {LDAP_ATTRIBUTE_FOR_GROUPS} to search attributes"
             )
-
         log.info(f"LDAP search attributes: {search_attributes}")
 
         search_success = connection_app.search(
@@ -264,15 +301,22 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             search_filter=f"(&({LDAP_ATTRIBUTE_FOR_USERNAME}={escape_filter_chars(form_data.user.lower())}){LDAP_SEARCH_FILTERS})",
             attributes=search_attributes,
         )
-
         if not search_success or not connection_app.entries:
             raise HTTPException(400, detail="User not found in the LDAP server")
 
         entry = connection_app.entries[0]
-        username = str(entry[f"{LDAP_ATTRIBUTE_FOR_USERNAME}"]).lower()
+        entry_username = entry[f"{LDAP_ATTRIBUTE_FOR_USERNAME}"].value
         email = entry[
             f"{LDAP_ATTRIBUTE_FOR_MAIL}"
         ].value  # retrieve the Attribute value
+
+        username_list = []  # list of usernames from LDAP attribute
+        if isinstance(entry_username, list):
+            username_list = [str(name).lower() for name in entry_username]
+        else:
+            username_list = [str(entry_username).lower()]
+
+        # TODO: support multiple emails if LDAP returns a list
         if not email:
             raise HTTPException(400, "User does not have a valid email address.")
         elif isinstance(email, str):
@@ -282,13 +326,13 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
         else:
             email = str(email).lower()
 
-        cn = str(entry["cn"])
-        user_dn = entry.entry_dn
+        cn = str(entry["cn"])  # common name
+        user_dn = entry.entry_dn  # user distinguished name
 
         user_groups = []
         if ENABLE_LDAP_GROUP_MANAGEMENT and LDAP_ATTRIBUTE_FOR_GROUPS in entry:
             group_dns = entry[LDAP_ATTRIBUTE_FOR_GROUPS]
-            log.info(f"LDAP raw group DNs for user {username}: {group_dns}")
+            log.info(f"LDAP raw group DNs for user {username_list}: {group_dns}")
 
             if group_dns:
                 log.info(f"LDAP group_dns original: {group_dns}")
@@ -339,16 +383,16 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                         )
 
                 log.info(
-                    f"LDAP groups for user {username}: {user_groups} (total: {len(user_groups)})"
+                    f"LDAP groups for user {username_list}: {user_groups} (total: {len(user_groups)})"
                 )
             else:
-                log.info(f"No groups found for user {username}")
+                log.info(f"No groups found for user {username_list}")
         elif ENABLE_LDAP_GROUP_MANAGEMENT:
             log.warning(
                 f"LDAP Group Management enabled but {LDAP_ATTRIBUTE_FOR_GROUPS} attribute not found in user entry"
             )
 
-        if username == form_data.user.lower():
+        if username_list and form_data.user.lower() in username_list:
             connection_user = Connection(
                 server,
                 user_dn,
@@ -379,6 +423,11 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                         raise HTTPException(
                             500, detail=ERROR_MESSAGES.CREATE_USER_ERROR
                         )
+
+                    apply_default_group_assignment(
+                        request.app.state.config.DEFAULT_GROUP_ID,
+                        user.id,
+                    )
 
                 except HTTPException:
                     raise
@@ -428,7 +477,6 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                 ):
                     if ENABLE_LDAP_GROUP_CREATION:
                         Groups.create_groups_by_group_names(user.id, user_groups)
-
                     try:
                         Groups.sync_groups_by_group_names(user.id, user_groups)
                         log.info(
@@ -464,6 +512,12 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 
 @router.post("/signin", response_model=SessionUserResponse)
 async def signin(request: Request, response: Response, form_data: SigninForm):
+    if not ENABLE_PASSWORD_AUTH:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+        )
+
     if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
         if WEBUI_AUTH_TRUSTED_EMAIL_HEADER not in request.headers:
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_TRUSTED_HEADER)
@@ -473,6 +527,10 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 
         if WEBUI_AUTH_TRUSTED_NAME_HEADER:
             name = request.headers.get(WEBUI_AUTH_TRUSTED_NAME_HEADER, email)
+            try:
+                name = urllib.parse.unquote(name, encoding="utf-8")
+            except Exception as e:
+                pass
 
         if not Users.get_user_by_email(email.lower()):
             await signup(
@@ -496,7 +554,9 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
         admin_password = "admin"
 
         if Users.get_user_by_email(admin_email.lower()):
-            user = Auths.authenticate_user(admin_email.lower(), admin_password)
+            user = Auths.authenticate_user(
+                admin_email.lower(), lambda pw: verify_password(admin_password, pw)
+            )
         else:
             if Users.has_users():
                 raise HTTPException(400, detail=ERROR_MESSAGES.EXISTING_USERS)
@@ -507,8 +567,16 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
                 SignupForm(email=admin_email, password=admin_password, name="User"),
             )
 
-            user = Auths.authenticate_user(admin_email.lower(), admin_password)
+            user = Auths.authenticate_user(
+                admin_email.lower(), lambda pw: verify_password(admin_password, pw)
+            )
     else:
+        if signin_rate_limiter.is_limited(form_data.email.lower()):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
+            )
+
         password_bytes = form_data.password.encode("utf-8")
         if len(password_bytes) > 72:
             # TODO: Implement other hashing algorithms that support longer passwords
@@ -518,7 +586,9 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             # decode safely — ignore incomplete UTF-8 sequences
             form_data.password = password_bytes.decode("utf-8", errors="ignore")
 
-        user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
+        user = Auths.authenticate_user(
+            form_data.email.lower(), lambda pw: verify_password(form_data.password, pw)
+        )
 
     if user:
 
@@ -600,16 +670,14 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
     try:
-        role = "admin" if not has_users else request.app.state.config.DEFAULT_USER_ROLE
-
-        # The password passed to bcrypt must be 72 bytes or fewer. If it is longer, it will be truncated before hashing.
-        if len(form_data.password.encode("utf-8")) > 72:
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.PASSWORD_TOO_LONG,
-            )
+        try:
+            validate_password(form_data.password)
+        except Exception as e:
+            raise HTTPException(400, detail=str(e))
 
         hashed = get_password_hash(form_data.password)
+
+        role = "admin" if not has_users else request.app.state.config.DEFAULT_USER_ROLE
         user = Auths.insert_new_auth(
             form_data.email.lower(),
             hashed,
@@ -665,6 +733,11 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 # Disable signup after the first user is created
                 request.app.state.config.ENABLE_SIGNUP = False
 
+            apply_default_group_assignment(
+                request.app.state.config.DEFAULT_GROUP_ID,
+                user.id,
+            )
+
             return {
                 "token": token,
                 "token_type": "Bearer",
@@ -685,6 +758,19 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 
 @router.get("/signout")
 async def signout(request: Request, response: Response):
+
+    # get auth token from headers or cookies
+    token = None
+    auth_header = request.headers.get("Authorization")
+    if auth_header:
+        auth_cred = get_http_authorization_cred(auth_header)
+        token = auth_cred.credentials
+    else:
+        token = request.cookies.get("token")
+
+    if token:
+        await invalidate_token(request, token)
+
     response.delete_cookie("token")
     response.delete_cookie("oui-session")
     response.delete_cookie("oauth_id_token")
@@ -755,7 +841,9 @@ async def signout(request: Request, response: Response):
 
 
 @router.post("/add", response_model=SigninResponse)
-async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
+async def add_user(
+    request: Request, form_data: AddUserForm, user=Depends(get_admin_user)
+):
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
@@ -765,6 +853,11 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
     try:
+        try:
+            validate_password(form_data.password)
+        except Exception as e:
+            raise HTTPException(400, detail=str(e))
+
         hashed = get_password_hash(form_data.password)
         user = Auths.insert_new_auth(
             form_data.email.lower(),
@@ -775,6 +868,11 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
         )
 
         if user:
+            apply_default_group_assignment(
+                request.app.state.config.DEFAULT_GROUP_ID,
+                user.id,
+            )
+
             token = create_token(data={"id": user.id})
             return {
                 "token": token,
@@ -836,13 +934,15 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
         "WEBUI_URL": request.app.state.config.WEBUI_URL,
         "ENABLE_SIGNUP": request.app.state.config.ENABLE_SIGNUP,
-        "ENABLE_API_KEY": request.app.state.config.ENABLE_API_KEY,
-        "ENABLE_API_KEY_ENDPOINT_RESTRICTIONS": request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS,
-        "API_KEY_ALLOWED_ENDPOINTS": request.app.state.config.API_KEY_ALLOWED_ENDPOINTS,
+        "ENABLE_API_KEYS": request.app.state.config.ENABLE_API_KEYS,
+        "ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS": request.app.state.config.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS,
+        "API_KEYS_ALLOWED_ENDPOINTS": request.app.state.config.API_KEYS_ALLOWED_ENDPOINTS,
         "DEFAULT_USER_ROLE": request.app.state.config.DEFAULT_USER_ROLE,
+        "DEFAULT_GROUP_ID": request.app.state.config.DEFAULT_GROUP_ID,
         "JWT_EXPIRES_IN": request.app.state.config.JWT_EXPIRES_IN,
         "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
+        "ENABLE_FOLDERS": request.app.state.config.ENABLE_FOLDERS,
         "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
         "ENABLE_NOTES": request.app.state.config.ENABLE_NOTES,
         "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
@@ -876,13 +976,15 @@ class AdminConfig(BaseModel):
     SHOW_ADMIN_DETAILS: bool
     WEBUI_URL: str
     ENABLE_SIGNUP: bool
-    ENABLE_API_KEY: bool
-    ENABLE_API_KEY_ENDPOINT_RESTRICTIONS: bool
-    API_KEY_ALLOWED_ENDPOINTS: str
+    ENABLE_API_KEYS: bool
+    ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS: bool
+    API_KEYS_ALLOWED_ENDPOINTS: str
     DEFAULT_USER_ROLE: str
+    DEFAULT_GROUP_ID: str
     JWT_EXPIRES_IN: str
     ENABLE_COMMUNITY_SHARING: bool
     ENABLE_MESSAGE_RATING: bool
+    ENABLE_FOLDERS: bool
     ENABLE_CHANNELS: bool
     ENABLE_NOTES: bool
     ENABLE_USER_WEBHOOKS: bool
@@ -917,15 +1019,24 @@ async def update_admin_config(
     request.app.state.config.SHOW_ADMIN_DETAILS = form_data.SHOW_ADMIN_DETAILS
     request.app.state.config.WEBUI_URL = form_data.WEBUI_URL
     request.app.state.config.ENABLE_SIGNUP = form_data.ENABLE_SIGNUP
-    request.app.state.config.ENABLE_API_KEY = form_data.ENABLE_API_KEY
-    request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS = (
-        form_data.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS
+
+    request.app.state.config.ENABLE_API_KEYS = form_data.ENABLE_API_KEYS
+    request.app.state.config.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS = (
+        form_data.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS
     )
-    request.app.state.config.API_KEY_ALLOWED_ENDPOINTS = (
-        form_data.API_KEY_ALLOWED_ENDPOINTS
+    request.app.state.config.API_KEYS_ALLOWED_ENDPOINTS = (
+        form_data.API_KEYS_ALLOWED_ENDPOINTS
     )
 
-    # Validate and set JWT_EXPIRES_IN
+    request.app.state.config.ENABLE_FOLDERS = form_data.ENABLE_FOLDERS
+    request.app.state.config.ENABLE_CHANNELS = form_data.ENABLE_CHANNELS
+    request.app.state.config.ENABLE_NOTES = form_data.ENABLE_NOTES
+
+    if form_data.DEFAULT_USER_ROLE in ["pending", "user", "admin"]:
+        request.app.state.config.DEFAULT_USER_ROLE = form_data.DEFAULT_USER_ROLE
+
+    request.app.state.config.DEFAULT_GROUP_ID = form_data.DEFAULT_GROUP_ID
+
     pattern = r"^(-1|0|(-?\d+(\.\d+)?)(ms|s|m|h|d|w))$"
     if re.match(pattern, form_data.JWT_EXPIRES_IN):
         request.app.state.config.JWT_EXPIRES_IN = form_data.JWT_EXPIRES_IN
@@ -988,13 +1099,15 @@ async def update_admin_config(
         "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
         "WEBUI_URL": request.app.state.config.WEBUI_URL,
         "ENABLE_SIGNUP": request.app.state.config.ENABLE_SIGNUP,
-        "ENABLE_API_KEY": request.app.state.config.ENABLE_API_KEY,
-        "ENABLE_API_KEY_ENDPOINT_RESTRICTIONS": request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS,
-        "API_KEY_ALLOWED_ENDPOINTS": request.app.state.config.API_KEY_ALLOWED_ENDPOINTS,
+        "ENABLE_API_KEYS": request.app.state.config.ENABLE_API_KEYS,
+        "ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS": request.app.state.config.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS,
+        "API_KEYS_ALLOWED_ENDPOINTS": request.app.state.config.API_KEYS_ALLOWED_ENDPOINTS,
         "DEFAULT_USER_ROLE": request.app.state.config.DEFAULT_USER_ROLE,
+        "DEFAULT_GROUP_ID": request.app.state.config.DEFAULT_GROUP_ID,
         "JWT_EXPIRES_IN": request.app.state.config.JWT_EXPIRES_IN,
         "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
+        "ENABLE_FOLDERS": request.app.state.config.ENABLE_FOLDERS,
         "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
         "ENABLE_NOTES": request.app.state.config.ENABLE_NOTES,
         "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
@@ -1134,9 +1247,11 @@ async def update_ldap_config(
 # create api key
 @router.post("/api_key", response_model=ApiKey)
 async def generate_api_key(request: Request, user=Depends(get_current_user)):
-    if not request.app.state.config.ENABLE_API_KEY:
+    if not request.app.state.config.ENABLE_API_KEYS or not has_permission(
+        user.id, "features.api_keys", request.app.state.config.USER_PERMISSIONS
+    ):
         raise HTTPException(
-            status.HTTP_403_FORBIDDEN,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.API_KEY_CREATION_NOT_ALLOWED,
         )
 
@@ -1154,8 +1269,7 @@ async def generate_api_key(request: Request, user=Depends(get_current_user)):
 # delete api key
 @router.delete("/api_key", response_model=bool)
 async def delete_api_key(user=Depends(get_current_user)):
-    success = Users.update_user_api_key_by_id(user.id, None)
-    return success
+    return Users.delete_user_api_key_by_id(user.id)
 
 
 # get api key

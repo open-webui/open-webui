@@ -144,6 +144,7 @@ class ToolServerConnection(BaseModel):
     path: str
     type: Optional[str] = "openapi"  # openapi, mcp
     auth_type: Optional[str]
+    headers: Optional[dict | str] = None
     key: Optional[str]
     config: Optional[dict]
 
@@ -270,17 +271,25 @@ async def verify_tool_servers_config(
                     elif form_data.auth_type == "session":
                         token = request.state.token.credentials
                     elif form_data.auth_type == "system_oauth":
+                        oauth_token = None
                         try:
                             if request.cookies.get("oauth_session_id", None):
-                                token = await request.app.state.oauth_manager.get_oauth_token(
+                                oauth_token = await request.app.state.oauth_manager.get_oauth_token(
                                     user.id,
                                     request.cookies.get("oauth_session_id", None),
                                 )
+
+                                if oauth_token:
+                                    token = oauth_token.get("access_token", "")
                         except Exception as e:
                             pass
-
                     if token:
                         headers = {"Authorization": f"Bearer {token}"}
+
+                    if form_data.headers and isinstance(form_data.headers, dict):
+                        if headers is None:
+                            headers = {}
+                        headers.update(form_data.headers)
 
                     await client.connect(form_data.url, headers=headers)
                     specs = await client.list_tool_specs()
@@ -299,6 +308,7 @@ async def verify_tool_servers_config(
                         await client.disconnect()
         else:  # openapi
             token = None
+            headers = None
             if form_data.auth_type == "bearer":
                 token = form_data.key
             elif form_data.auth_type == "session":
@@ -306,15 +316,29 @@ async def verify_tool_servers_config(
             elif form_data.auth_type == "system_oauth":
                 try:
                     if request.cookies.get("oauth_session_id", None):
-                        token = await request.app.state.oauth_manager.get_oauth_token(
-                            user.id,
-                            request.cookies.get("oauth_session_id", None),
+                        oauth_token = (
+                            await request.app.state.oauth_manager.get_oauth_token(
+                                user.id,
+                                request.cookies.get("oauth_session_id", None),
+                            )
                         )
+
+                        if oauth_token:
+                            token = oauth_token.get("access_token", "")
+
                 except Exception as e:
                     pass
 
+            if token:
+                headers = {"Authorization": f"Bearer {token}"}
+
+            if form_data.headers and isinstance(form_data.headers, dict):
+                if headers is None:
+                    headers = {}
+                headers.update(form_data.headers)
+
             url = get_tool_server_url(form_data.url, form_data.path)
-            return await get_tool_server_data(token, url)
+            return await get_tool_server_data(url, headers=headers)
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -439,6 +463,7 @@ async def set_code_execution_config(
 ############################
 class ModelsConfigForm(BaseModel):
     DEFAULT_MODELS: Optional[str]
+    DEFAULT_PINNED_MODELS: Optional[str]
     MODEL_ORDER_LIST: Optional[list[str]]
 
 
@@ -446,6 +471,7 @@ class ModelsConfigForm(BaseModel):
 async def get_models_config(request: Request, user=Depends(get_admin_user)):
     return {
         "DEFAULT_MODELS": request.app.state.config.DEFAULT_MODELS,
+        "DEFAULT_PINNED_MODELS": request.app.state.config.DEFAULT_PINNED_MODELS,
         "MODEL_ORDER_LIST": request.app.state.config.MODEL_ORDER_LIST,
     }
 
@@ -455,9 +481,11 @@ async def set_models_config(
     request: Request, form_data: ModelsConfigForm, user=Depends(get_admin_user)
 ):
     request.app.state.config.DEFAULT_MODELS = form_data.DEFAULT_MODELS
+    request.app.state.config.DEFAULT_PINNED_MODELS = form_data.DEFAULT_PINNED_MODELS
     request.app.state.config.MODEL_ORDER_LIST = form_data.MODEL_ORDER_LIST
     return {
         "DEFAULT_MODELS": request.app.state.config.DEFAULT_MODELS,
+        "DEFAULT_PINNED_MODELS": request.app.state.config.DEFAULT_PINNED_MODELS,
         "MODEL_ORDER_LIST": request.app.state.config.MODEL_ORDER_LIST,
     }
 

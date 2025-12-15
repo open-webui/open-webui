@@ -272,14 +272,6 @@
 										}}
 									>
 										<div class="flex items-center gap-1.5">
-											<!-- <ProfileImage
-												src={model?.info?.meta?.profile_image_url ??
-													($i18n.language === 'dg-DG'
-														? `${WEBUI_BASE_URL}/doge.png`
-														: `${WEBUI_BASE_URL}/favicon.png`)}
-												className={'size-5 assistant-message-profile-image'}
-											/> -->
-
 											<div class="-translate-y-[1px]">
 												{model ? `${model.name}` : history.messages[_messageId]?.model}
 											</div>
@@ -344,7 +336,7 @@
 								? `bg-gray-50 dark:bg-gray-850 border-gray-100 dark:border-gray-800 border-2 ${
 										$mobile ? 'min-w-full' : 'min-w-80'
 									}`
-								: `border-gray-100 dark:border-gray-850 border-dashed ${
+								: `border-gray-100/30 dark:border-gray-850/30 border-dashed ${
 										$mobile ? 'min-w-full' : 'min-w-80'
 									}`} transition-all p-5 rounded-2xl"
 							on:click={async () => {

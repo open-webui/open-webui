@@ -3,8 +3,6 @@ pnpm-lock.yaml
 package-lock.json
 yarn.lock
 
-kubernetes/
-
 # Copy of .gitignore
 .DS_Store
 node_modules

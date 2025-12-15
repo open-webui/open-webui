@@ -172,7 +172,7 @@
 		}}
 	>
 		<div class=" text-sm text-gray-500 truncate">
-			{$i18n.t('This will delete')} <span class="  font-semibold">{deletePrompt.command}</span>.
+			{$i18n.t('This will delete')} <span class="  font-medium">{deletePrompt.command}</span>.
 		</div>
 	</DeleteConfirmDialog>
 
@@ -225,7 +225,7 @@
 			</div>
 
 			<div class="flex w-full justify-end gap-1.5">
-				{#if $user?.role === 'admin'}
+				{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts_import}
 					<button
 						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
 						on:click={() => {
@@ -236,22 +236,22 @@
 							{$i18n.t('Import')}
 						</div>
 					</button>
+				{/if}
 
-					{#if prompts.length}
-						<button
-							class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
-							on:click={async () => {
-								let blob = new Blob([JSON.stringify(prompts)], {
-									type: 'application/json'
-								});
-								saveAs(blob, `prompts-export-${Date.now()}.json`);
-							}}
-						>
-							<div class=" self-center font-medium line-clamp-1">
-								{$i18n.t('Export')}
-							</div>
-						</button>
-					{/if}
+				{#if prompts.length && ($user?.role === 'admin' || $user?.permissions?.workspace?.prompts_export)}
+					<button
+						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+						on:click={async () => {
+							let blob = new Blob([JSON.stringify(prompts)], {
+								type: 'application/json'
+							});
+							saveAs(blob, `prompts-export-${Date.now()}.json`);
+						}}
+					>
+						<div class=" self-center font-medium line-clamp-1">
+							{$i18n.t('Export')}
+						</div>
+					</button>
 				{/if}
 				<a
 					class=" px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-medium text-sm flex items-center"
@@ -266,7 +266,7 @@
 	</div>
 
 	<div
-		class="py-2 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-850"
+		class="py-2 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100/30 dark:border-gray-850/30"
 	>
 		<div class=" flex w-full space-x-2 py-0.5 px-3.5 pb-2">
 			<div class="flex flex-1">
@@ -417,7 +417,7 @@
 				target="_blank"
 			>
 				<div class=" self-center">
-					<div class=" font-semibold line-clamp-1">{$i18n.t('Discover a prompt')}</div>
+					<div class=" font-medium line-clamp-1">{$i18n.t('Discover a prompt')}</div>
 					<div class=" text-sm line-clamp-1">
 						{$i18n.t('Discover, download, and explore custom prompts')}
 					</div>

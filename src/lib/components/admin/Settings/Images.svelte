@@ -62,15 +62,21 @@
 		}
 	];
 
+	let showComfyUIEditWorkflowEditor = false;
 	let REQUIRED_EDIT_WORKFLOW_NODES = [
 		{
+			type: 'image',
+			key: 'image',
+			node_ids: ''
+		},
+		{
 			type: 'prompt',
-			key: 'text',
+			key: 'prompt',
 			node_ids: ''
 		},
 		{
 			type: 'model',
-			key: 'ckpt_name',
+			key: 'unet_name',
 			node_ids: ''
 		},
 		{
@@ -106,32 +112,41 @@
 			config.ENABLE_IMAGE_GENERATION = false;
 
 			return null;
-		} else if (config.IMAGE_GENERATION_ENGINE === 'openai' && config.OPENAI_API_KEY === '') {
+		} else if (config.IMAGE_GENERATION_ENGINE === 'openai' && config.IMAGES_OPENAI_API_KEY === '') {
 			toast.error($i18n.t('OpenAI API Key is required.'));
 			config.ENABLE_IMAGE_GENERATION = false;
 
 			return null;
-		} else if (config.IMAGE_GENERATION_ENGINE === 'gemini' && config.GEMINI_API_KEY === '') {
+		} else if (config.IMAGE_GENERATION_ENGINE === 'gemini' && config.IMAGES_GEMINI_API_KEY === '') {
 			toast.error($i18n.t('Gemini API Key is required.'));
 			config.ENABLE_IMAGE_GENERATION = false;
 
 			return null;
 		}
 
-		const res = await updateConfig(localStorage.token, config).catch((error) => {
+		const res = await updateConfig(localStorage.token, {
+			...config,
+			AUTOMATIC1111_PARAMS:
+				typeof config.AUTOMATIC1111_PARAMS === 'string' && config.AUTOMATIC1111_PARAMS.trim() !== ''
+					? JSON.parse(config.AUTOMATIC1111_PARAMS)
+					: {},
+			IMAGES_OPENAI_API_PARAMS:
+				typeof config.IMAGES_OPENAI_API_PARAMS === 'string' &&
+				config.IMAGES_OPENAI_API_PARAMS.trim() !== ''
+					? JSON.parse(config.IMAGES_OPENAI_API_PARAMS)
+					: {}
+		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
 
 		if (res) {
-			config = res;
-
-			if (config.ENABLE_IMAGE_GENERATION) {
+			if (res.ENABLE_IMAGE_GENERATION) {
 				backendConfig.set(await getBackendConfig());
 				getModels();
 			}
 
-			return config;
+			return res;
 		}
 
 		return null;
@@ -157,10 +172,25 @@
 				loading = false;
 				return;
 			}
+
+			config.COMFYUI_WORKFLOW_NODES = REQUIRED_WORKFLOW_NODES.map((node) => {
+				return {
+					type: node.type,
+					key: node.key,
+					node_ids:
+						node.node_ids.trim() === '' ? [] : node.node_ids.split(',').map((id) => id.trim())
+				};
+			});
 		}
 
-		if (config?.COMFYUI_WORKFLOW) {
-			config.COMFYUI_WORKFLOW_NODES = REQUIRED_WORKFLOW_NODES.map((node) => {
+		if (config?.IMAGES_EDIT_COMFYUI_WORKFLOW) {
+			if (!validateJSON(config?.IMAGES_EDIT_COMFYUI_WORKFLOW)) {
+				toast.error($i18n.t('Invalid JSON format for ComfyUI Edit Workflow.'));
+				loading = false;
+				return;
+			}
+
+			config.IMAGES_EDIT_COMFYUI_WORKFLOW_NODES = REQUIRED_EDIT_WORKFLOW_NODES.map((node) => {
 				return {
 					type: node.type,
 					key: node.key,
@@ -211,6 +241,40 @@
 					node_ids: typeof n.node_ids === 'string' ? n.node_ids : n.node_ids.join(',')
 				};
 			});
+
+			if (config.IMAGES_EDIT_COMFYUI_WORKFLOW) {
+				try {
+					config.IMAGES_EDIT_COMFYUI_WORKFLOW = JSON.stringify(
+						JSON.parse(config.IMAGES_EDIT_COMFYUI_WORKFLOW),
+						null,
+						2
+					);
+				} catch (e) {
+					console.error(e);
+				}
+			}
+
+			config.IMAGES_OPENAI_API_PARAMS =
+				typeof config.IMAGES_OPENAI_API_PARAMS === 'object'
+					? JSON.stringify(config.IMAGES_OPENAI_API_PARAMS ?? {}, null, 2)
+					: config.IMAGES_OPENAI_API_PARAMS;
+
+			config.AUTOMATIC1111_PARAMS =
+				typeof config.AUTOMATIC1111_PARAMS === 'object'
+					? JSON.stringify(config.AUTOMATIC1111_PARAMS ?? {}, null, 2)
+					: config.AUTOMATIC1111_PARAMS;
+
+			REQUIRED_EDIT_WORKFLOW_NODES = REQUIRED_EDIT_WORKFLOW_NODES.map((node) => {
+				const n =
+					config.IMAGES_EDIT_COMFYUI_WORKFLOW_NODES.find((n) => n.type === node.type) ?? node;
+				console.debug(n);
+
+				return {
+					type: n.type,
+					key: n.key,
+					node_ids: typeof n.node_ids === 'string' ? n.node_ids : n.node_ids.join(',')
+				};
+			});
 		}
 	});
 </script>
@@ -227,7 +291,7 @@
 				<div class="mb-3">
 					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="mb-2.5">
 						<div class="flex w-full justify-between items-center">
@@ -245,7 +309,7 @@
 				<div class="mb-3">
 					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Create Image')}</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					{#if config.ENABLE_IMAGE_GENERATION}
 						<div class="mb-2.5">
@@ -408,6 +472,26 @@
 											bind:value={config.IMAGES_OPENAI_API_VERSION}
 										/>
 									</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="mb-2.5">
+							<div class="flex w-full justify-between items-center">
+								<div class="text-xs pr-2 shrink-0">
+									<div class="">
+										{$i18n.t('Additional Parameters')}
+									</div>
+								</div>
+							</div>
+							<div class="mt-1.5 flex w-full">
+								<div class="flex-1 mr-2">
+									<Textarea
+										className="rounded-lg w-full py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={config.IMAGES_OPENAI_API_PARAMS}
+										placeholder={$i18n.t('Enter additional parameters in JSON format')}
+										minSize={100}
+									/>
 								</div>
 							</div>
 						</div>
@@ -798,29 +882,21 @@
 				<div class="mb-3">
 					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Edit Image')}</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="mb-2.5">
 						<div class="flex w-full justify-between items-center">
 							<div class="text-xs pr-2">
 								<div class="">
-									{$i18n.t('Image Edit Engine')}
+									{$i18n.t('Image Edit')}
 								</div>
 							</div>
 
-							<select
-								class=" dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-								bind:value={config.IMAGE_EDIT_ENGINE}
-								placeholder={$i18n.t('Select Engine')}
-							>
-								<option value="openai">{$i18n.t('Default (Open AI)')}</option>
-								<!-- <option value="comfyui">{$i18n.t('ComfyUI')}</option> -->
-								<option value="gemini">{$i18n.t('Gemini')}</option>
-							</select>
+							<Switch bind:state={config.ENABLE_IMAGE_EDIT} />
 						</div>
 					</div>
 
-					{#if config.ENABLE_IMAGE_GENERATION}
+					{#if config?.ENABLE_IMAGE_GENERATION && config?.ENABLE_IMAGE_EDIT}
 						<div class="mb-2.5">
 							<div class="flex w-full justify-between items-center">
 								<div class="text-xs pr-2">
@@ -835,7 +911,6 @@
 										class="text-right text-sm bg-transparent outline-hidden max-w-full w-52"
 										bind:value={config.IMAGE_EDIT_MODEL}
 										placeholder={$i18n.t('Select a model')}
-										required
 									/>
 
 									<datalist id="model-list">
@@ -865,6 +940,26 @@
 							</div>
 						</div>
 					{/if}
+
+					<div class="mb-2.5">
+						<div class="flex w-full justify-between items-center">
+							<div class="text-xs pr-2">
+								<div class="">
+									{$i18n.t('Image Edit Engine')}
+								</div>
+							</div>
+
+							<select
+								class=" dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+								bind:value={config.IMAGE_EDIT_ENGINE}
+								placeholder={$i18n.t('Select Engine')}
+							>
+								<option value="openai">{$i18n.t('Default (Open AI)')}</option>
+								<option value="comfyui">{$i18n.t('ComfyUI')}</option>
+								<option value="gemini">{$i18n.t('Gemini')}</option>
+							</select>
+						</div>
+					</div>
 
 					{#if config?.IMAGE_EDIT_ENGINE === 'openai'}
 						<div class="mb-2.5">
@@ -1032,7 +1127,7 @@
 												aria-label={$i18n.t('Edit workflow.json content')}
 												on:click={() => {
 													// open code editor modal
-													showComfyUIWorkflowEditor = true;
+													showComfyUIEditWorkflowEditor = true;
 												}}
 											>
 												{$i18n.t('Edit')}
@@ -1057,7 +1152,7 @@
 
 							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
 								<CodeEditorModal
-									bind:show={showComfyUIWorkflowEditor}
+									bind:show={showComfyUIEditWorkflowEditor}
 									value={config.IMAGES_EDIT_COMFYUI_WORKFLOW}
 									lang="json"
 									onChange={(e) => {
@@ -1086,7 +1181,7 @@
 										<div class="flex w-full flex-col">
 											<div class="shrink-0">
 												<div class=" capitalize line-clamp-1 w-20 text-gray-400 dark:text-gray-500">
-													{node.type}{node.type === 'prompt' ? '*' : ''}
+													{node.type}{['prompt', 'image'].includes(node.type) ? '*' : ''}
 												</div>
 											</div>
 
@@ -1126,7 +1221,7 @@
 								</div>
 							</div>
 						{/if}
-					{:else if config?.IMAGE_GENERATION_ENGINE === 'gemini'}
+					{:else if config?.IMAGE_EDIT_ENGINE === 'gemini'}
 						<div class="mb-2.5">
 							<div class="flex w-full justify-between items-center">
 								<div class="text-xs pr-2 shrink-0">

@@ -14,7 +14,7 @@ import fnmatch
 import time
 import secrets
 from cryptography.fernet import Fernet
-
+from typing import Literal
 
 import aiohttp
 from authlib.integrations.starlette_client import OAuth
@@ -42,6 +42,8 @@ from open_webui.config import (
     ENABLE_OAUTH_GROUP_MANAGEMENT,
     ENABLE_OAUTH_GROUP_CREATION,
     OAUTH_BLOCKED_GROUPS,
+    OAUTH_GROUPS_SEPARATOR,
+    OAUTH_ROLES_SEPARATOR,
     OAUTH_ROLES_CLAIM,
     OAUTH_SUB_CLAIM,
     OAUTH_GROUPS_CLAIM,
@@ -52,6 +54,8 @@ from open_webui.config import (
     OAUTH_ADMIN_ROLES,
     OAUTH_ALLOWED_DOMAINS,
     OAUTH_UPDATE_PICTURE_ON_LOGIN,
+    OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID,
+    OAUTH_AUDIENCE,
     WEBHOOK_URL,
     JWT_EXPIRES_IN,
     OAUTH_CLIENT_ID,
@@ -73,13 +77,21 @@ from open_webui.env import (
 from open_webui.utils.misc import parse_duration
 from open_webui.utils.auth import get_password_hash, create_token
 from open_webui.utils.webhook import post_webhook
+from open_webui.utils.groups import apply_default_group_assignment
 
 from mcp.shared.auth import (
-    OAuthClientMetadata,
+    OAuthClientMetadata as MCPOAuthClientMetadata,
     OAuthMetadata,
 )
 
 from authlib.oauth2.rfc6749.errors import OAuth2Error
+
+
+class OAuthClientMetadata(MCPOAuthClientMetadata):
+    token_endpoint_auth_method: Literal[
+        "none", "client_secret_basic", "client_secret_post"
+    ] = "client_secret_post"
+    pass
 
 
 class OAuthClientInformationFull(OAuthClientMetadata):
@@ -123,6 +135,7 @@ auth_manager_config.OAUTH_CLIENT_SECRET = OAUTH_CLIENT_SECRET
 auth_manager_config.OAUTH_PROVIDER_NAME = OAUTH_PROVIDER_NAME
 auth_manager_config.OPENID_PROVIDER_URL = OPENID_PROVIDER_URL
 auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN = OAUTH_UPDATE_PICTURE_ON_LOGIN
+auth_manager_config.OAUTH_AUDIENCE = OAUTH_AUDIENCE
 
 
 FERNET = None
@@ -245,23 +258,32 @@ def get_parsed_and_base_url(server_url) -> tuple[urllib.parse.ParseResult, str]:
 def get_discovery_urls(server_url) -> list[str]:
     parsed, base_url = get_parsed_and_base_url(server_url)
 
-    urls = [
-        urllib.parse.urljoin(base_url, "/.well-known/oauth-authorization-server"),
-        urllib.parse.urljoin(base_url, "/.well-known/openid-configuration"),
-    ]
+    urls = []
 
     if parsed.path and parsed.path != "/":
-        urls.append(
-            urllib.parse.urljoin(
-                base_url,
-                f"/.well-known/oauth-authorization-server{parsed.path.rstrip('/')}",
-            )
+        # Generate discovery URLs based on https://modelcontextprotocol.io/specification/draft/basic/authorization#authorization-server-metadata-discovery
+        tenant = parsed.path.rstrip("/")
+        urls.extend(
+            [
+                urllib.parse.urljoin(
+                    base_url,
+                    f"/.well-known/oauth-authorization-server{tenant}",
+                ),
+                urllib.parse.urljoin(
+                    base_url, f"/.well-known/openid-configuration{tenant}"
+                ),
+                urllib.parse.urljoin(
+                    base_url, f"{tenant}/.well-known/openid-configuration"
+                ),
+            ]
         )
-        urls.append(
-            urllib.parse.urljoin(
-                base_url, f"/.well-known/openid-configuration{parsed.path.rstrip('/')}"
-            )
-        )
+
+    urls.extend(
+        [
+            urllib.parse.urljoin(base_url, "/.well-known/oauth-authorization-server"),
+            urllib.parse.urljoin(base_url, "/.well-known/openid-configuration"),
+        ]
+    )
 
     return urls
 
@@ -287,7 +309,6 @@ async def get_oauth_client_info_with_dynamic_client_registration(
             redirect_uris=[f"{redirect_base_url}/oauth/clients/{client_id}/callback"],
             grant_types=["authorization_code", "refresh_token"],
             response_types=["code"],
-            token_endpoint_auth_method="client_secret_post",
         )
 
         # Attempt to fetch OAuth server metadata to get registration endpoint & scopes
@@ -310,6 +331,17 @@ async def get_oauth_client_info_with_dynamic_client_registration(
                                 oauth_client_metadata.scope = " ".join(
                                     oauth_server_metadata.scopes_supported
                                 )
+
+                            if (
+                                oauth_server_metadata.token_endpoint_auth_methods_supported
+                                and oauth_client_metadata.token_endpoint_auth_method
+                                not in oauth_server_metadata.token_endpoint_auth_methods_supported
+                            ):
+                                # Pick the first supported method from the server
+                                oauth_client_metadata.token_endpoint_auth_method = oauth_server_metadata.token_endpoint_auth_methods_supported[
+                                    0
+                                ]
+
                             break
                         except Exception as e:
                             log.error(f"Error parsing OAuth metadata from {url}: {e}")
@@ -337,6 +369,13 @@ async def get_oauth_client_info_with_dynamic_client_registration(
                     registration_response_json = (
                         await oauth_client_registration_response.json()
                     )
+
+                    # The mcp package requires optional unset values to be None. If an empty string is passed, it gets validated and fails.
+                    # This replaces all empty strings with None.
+                    registration_response_json = {
+                        k: (None if v == "" else v)
+                        for k, v in registration_response_json.items()
+                    }
                     oauth_client_info = OAuthClientInformationFull.model_validate(
                         {
                             **registration_response_json,
@@ -381,9 +420,20 @@ class OAuthClientManager:
             "name": client_id,
             "client_id": oauth_client_info.client_id,
             "client_secret": oauth_client_info.client_secret,
-            "client_kwargs": (
-                {"scope": oauth_client_info.scope} if oauth_client_info.scope else {}
-            ),
+            "client_kwargs": {
+                **(
+                    {"scope": oauth_client_info.scope}
+                    if oauth_client_info.scope
+                    else {}
+                ),
+                **(
+                    {
+                        "token_endpoint_auth_method": oauth_client_info.token_endpoint_auth_method
+                    }
+                    if oauth_client_info.token_endpoint_auth_method
+                    else {}
+                ),
+            },
             "server_metadata_url": (
                 oauth_client_info.issuer if oauth_client_info.issuer else None
             ),
@@ -408,6 +458,50 @@ class OAuthClientManager:
             "client_info": oauth_client_info,
         }
         return self.clients[client_id]
+
+    def ensure_client_from_config(self, client_id):
+        """
+        Lazy-load an OAuth client from the current TOOL_SERVER_CONNECTIONS
+        config if it hasn't been registered on this node yet.
+        """
+        if client_id in self.clients:
+            return self.clients[client_id]["client"]
+
+        try:
+            connections = getattr(self.app.state.config, "TOOL_SERVER_CONNECTIONS", [])
+        except Exception:
+            connections = []
+
+        for connection in connections or []:
+            if connection.get("type", "openapi") != "mcp":
+                continue
+            if connection.get("auth_type", "none") != "oauth_2.1":
+                continue
+
+            server_id = connection.get("info", {}).get("id")
+            if not server_id:
+                continue
+
+            expected_client_id = f"mcp:{server_id}"
+            if client_id != expected_client_id:
+                continue
+
+            oauth_client_info = connection.get("info", {}).get("oauth_client_info", "")
+            if not oauth_client_info:
+                continue
+
+            try:
+                oauth_client_info = decrypt_data(oauth_client_info)
+                return self.add_client(
+                    expected_client_id, OAuthClientInformationFull(**oauth_client_info)
+                )["client"]
+            except Exception as e:
+                log.error(
+                    f"Failed to lazily add OAuth client {expected_client_id} from config: {e}"
+                )
+                continue
+
+        return None
 
     def remove_client(self, client_id):
         if client_id in self.clients:
@@ -676,10 +770,13 @@ class OAuthClientManager:
             return None
 
     async def handle_authorize(self, request, client_id: str) -> RedirectResponse:
-        client = self.get_client(client_id)
+        client = self.get_client(client_id) or self.ensure_client_from_config(client_id)
         if client is None:
             raise HTTPException(404)
         client_info = self.get_client_info(client_id)
+        if client_info is None:
+            # ensure_client_from_config registers client_info too
+            client_info = self.get_client_info(client_id)
         if client_info is None:
             raise HTTPException(404)
 
@@ -690,23 +787,24 @@ class OAuthClientManager:
         return await client.authorize_redirect(request, redirect_uri_str)
 
     async def handle_callback(self, request, client_id: str, user_id: str, response):
-        client = self.get_client(client_id)
+        client = self.get_client(client_id) or self.ensure_client_from_config(client_id)
         if client is None:
             raise HTTPException(404)
 
         error_message = None
         try:
             client_info = self.get_client_info(client_id)
-            token_params = {}
+
+            auth_params = {}
             if (
                 client_info
                 and hasattr(client_info, "client_id")
                 and hasattr(client_info, "client_secret")
             ):
-                token_params["client_id"] = client_info.client_id
-                token_params["client_secret"] = client_info.client_secret
+                auth_params["client_id"] = client_info.client_id
+                auth_params["client_secret"] = client_info.client_secret
 
-            token = await client.authorize_access_token(request, **token_params)
+            token = await client.authorize_access_token(request, **auth_params)
             if token:
                 try:
                     # Add timestamp for tracking
@@ -1005,11 +1103,21 @@ class OAuthManager:
                 for nested_claim in nested_claims:
                     claim_data = claim_data.get(nested_claim, {})
 
+                # Try flat claim structure as alternative
+                if not claim_data:
+                    claim_data = user_data.get(oauth_claim, {})
+
                 oauth_roles = []
 
                 if isinstance(claim_data, list):
                     oauth_roles = claim_data
-                if isinstance(claim_data, str) or isinstance(claim_data, int):
+                elif isinstance(claim_data, str):
+                    # Split by the configured separator if present
+                    if OAUTH_ROLES_SEPARATOR and OAUTH_ROLES_SEPARATOR in claim_data:
+                        oauth_roles = claim_data.split(OAUTH_ROLES_SEPARATOR)
+                    else:
+                        oauth_roles = [claim_data]
+                elif isinstance(claim_data, int):
                     oauth_roles = [str(claim_data)]
 
             log.debug(f"Oauth Roles claim: {oauth_claim}")
@@ -1063,12 +1171,16 @@ class OAuthManager:
             if isinstance(claim_data, list):
                 user_oauth_groups = claim_data
             elif isinstance(claim_data, str):
-                user_oauth_groups = [claim_data]
+                # Split by the configured separator if present
+                if OAUTH_GROUPS_SEPARATOR in claim_data:
+                    user_oauth_groups = claim_data.split(OAUTH_GROUPS_SEPARATOR)
+                else:
+                    user_oauth_groups = [claim_data]
             else:
                 user_oauth_groups = []
 
         user_current_groups: list[GroupModel] = Groups.get_groups_by_member_id(user.id)
-        all_available_groups: list[GroupModel] = Groups.get_groups()
+        all_available_groups: list[GroupModel] = Groups.get_all_groups()
 
         # Create groups if they don't exist and creation is enabled
         if auth_manager_config.ENABLE_OAUTH_GROUP_CREATION:
@@ -1112,7 +1224,7 @@ class OAuthManager:
 
             # Refresh the list of all available groups if any were created
             if groups_created:
-                all_available_groups = Groups.get_groups()
+                all_available_groups = Groups.get_all_groups()
                 log.debug("Refreshed list of all available groups after creation.")
 
         log.debug(f"Oauth Groups claim: {oauth_claim}")
@@ -1133,23 +1245,21 @@ class OAuthManager:
                 log.debug(
                     f"Removing user from group {group_model.name} as it is no longer in their oauth groups"
                 )
-
-                user_ids = group_model.user_ids
-                user_ids = [i for i in user_ids if i != user.id]
+                Groups.remove_users_from_group(group_model.id, [user.id])
 
                 # In case a group is created, but perms are never assigned to the group by hitting "save"
                 group_permissions = group_model.permissions
                 if not group_permissions:
                     group_permissions = default_permissions
 
-                update_form = GroupUpdateForm(
-                    name=group_model.name,
-                    description=group_model.description,
-                    permissions=group_permissions,
-                    user_ids=user_ids,
-                )
                 Groups.update_group_by_id(
-                    id=group_model.id, form_data=update_form, overwrite=False
+                    id=group_model.id,
+                    form_data=GroupUpdateForm(
+                        name=group_model.name,
+                        description=group_model.description,
+                        permissions=group_permissions,
+                    ),
+                    overwrite=False,
                 )
 
         # Add user to new groups
@@ -1165,22 +1275,21 @@ class OAuthManager:
                     f"Adding user to group {group_model.name} as it was found in their oauth groups"
                 )
 
-                user_ids = group_model.user_ids
-                user_ids.append(user.id)
+                Groups.add_users_to_group(group_model.id, [user.id])
 
                 # In case a group is created, but perms are never assigned to the group by hitting "save"
                 group_permissions = group_model.permissions
                 if not group_permissions:
                     group_permissions = default_permissions
 
-                update_form = GroupUpdateForm(
-                    name=group_model.name,
-                    description=group_model.description,
-                    permissions=group_permissions,
-                    user_ids=user_ids,
-                )
                 Groups.update_group_by_id(
-                    id=group_model.id, form_data=update_form, overwrite=False
+                    id=group_model.id,
+                    form_data=GroupUpdateForm(
+                        name=group_model.name,
+                        description=group_model.description,
+                        permissions=group_permissions,
+                    ),
+                    overwrite=False,
                 )
 
     async def _process_picture_url(
@@ -1238,7 +1347,12 @@ class OAuthManager:
         client = self.get_client(provider)
         if client is None:
             raise HTTPException(404)
-        return await client.authorize_redirect(request, redirect_uri)
+        
+        kwargs = {}
+        if (auth_manager_config.OAUTH_AUDIENCE):
+            kwargs["audience"] = auth_manager_config.OAUTH_AUDIENCE
+
+        return await client.authorize_redirect(request, redirect_uri, **kwargs)
 
     async def handle_callback(self, request, provider, response):
         if provider not in OAUTH_PROVIDERS:
@@ -1247,8 +1361,18 @@ class OAuthManager:
         error_message = None
         try:
             client = self.get_client(provider)
+
+            auth_params = {}
+
+            if client:
+                if (
+                    hasattr(client, "client_id")
+                    and OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID
+                ):
+                    auth_params["client_id"] = client.client_id
+
             try:
-                token = await client.authorize_access_token(request)
+                token = await client.authorize_access_token(request, **auth_params)
             except Exception as e:
                 detailed_error = _build_oauth_callback_error_message(e)
                 log.warning(
@@ -1287,7 +1411,10 @@ class OAuthManager:
                 log.warning(f"OAuth callback failed, sub is missing: {user_data}")
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
-            provider_sub = f"{provider}@{sub}"
+            oauth_data = {}
+            oauth_data[provider] = {
+                "sub": sub,
+            }
 
             # Email extraction
             email_claim = auth_manager_config.OAUTH_EMAIL_CLAIM
@@ -1334,12 +1461,12 @@ class OAuthManager:
                         log.warning(f"Error fetching GitHub email: {e}")
                         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
                 elif ENABLE_OAUTH_EMAIL_FALLBACK:
-                    email = f"{provider_sub}.local"
+                    email = f"{provider}@{sub}.local"
                 else:
                     log.warning(f"OAuth callback failed, email is missing: {user_data}")
                     raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
-            email = email.lower()
 
+            email = email.lower()
             # If allowed domains are configured, check if the email domain is in the list
             if (
                 "*" not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
@@ -1352,7 +1479,7 @@ class OAuthManager:
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
             # Check if the user exists
-            user = Users.get_user_by_oauth_sub(provider_sub)
+            user = Users.get_user_by_oauth_sub(provider, sub)
             if not user:
                 # If the user does not exist, check if merging is enabled
                 if auth_manager_config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL:
@@ -1360,12 +1487,15 @@ class OAuthManager:
                     user = Users.get_user_by_email(email)
                     if user:
                         # Update the user with the new oauth sub
-                        Users.update_user_oauth_sub_by_id(user.id, provider_sub)
+                        Users.update_user_oauth_by_id(user.id, provider, sub)
 
             if user:
                 determined_role = self.get_user_role(user, user_data)
                 if user.role != determined_role:
                     Users.update_user_role_by_id(user.id, determined_role)
+                    # Update the user object in memory as well,
+                    # to avoid problems with the ENABLE_OAUTH_GROUP_MANAGEMENT check below
+                    user.role = determined_role
                 # Update profile picture if enabled and different from current
                 if auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN:
                     picture_claim = auth_manager_config.OAUTH_PICTURE_CLAIM
@@ -1416,7 +1546,7 @@ class OAuthManager:
                         name=name,
                         profile_image_url=picture_url,
                         role=self.get_user_role(None, user_data),
-                        oauth_sub=provider_sub,
+                        oauth=oauth_data,
                     )
 
                     if auth_manager_config.WEBHOOK_URL:
@@ -1430,6 +1560,12 @@ class OAuthManager:
                                 "user": user.model_dump_json(exclude_none=True),
                             },
                         )
+
+                    apply_default_group_assignment(
+                        request.app.state.config.DEFAULT_GROUP_ID,
+                        user.id,
+                    )
+
                 else:
                     raise HTTPException(
                         status.HTTP_403_FORBIDDEN,

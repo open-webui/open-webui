@@ -30,8 +30,33 @@
 	font-display: swap;
 }
 
+/* --app-text-scale is updated via the UI Scale slider (Interface.svelte) */
+:root {
+	--app-text-scale: 1;
+}
+
 html {
 	word-break: break-word;
+	/* font-size scales the entire document via the same UI control */
+	font-size: calc(1rem * var(--app-text-scale, 1));
+}
+
+#sidebar-chat-item {
+	/* sidebar item sizing scales for the chat list entries */
+	min-height: calc(32px * var(--app-text-scale, 1));
+	padding-inline: calc(11px * var(--app-text-scale, 1));
+	padding-block: calc(6px * var(--app-text-scale, 1));
+}
+
+#sidebar-chat-item div[dir='auto'] {
+	/* chat title line height follows the text scale */
+	height: calc(20px * var(--app-text-scale, 1));
+	line-height: calc(20px * var(--app-text-scale, 1));
+}
+
+#sidebar-chat-item input {
+	/* editing state input height is kept in sync */
+	min-height: calc(20px * var(--app-text-scale, 1));
 }
 
 code {
@@ -612,7 +637,7 @@ input[type='number'] {
 
 .tiptap th,
 .tiptap td {
-	@apply px-3 py-1.5 border border-gray-100 dark:border-gray-850;
+	@apply px-3 py-1.5 border border-gray-100/30 dark:border-gray-850/30;
 }
 
 .tiptap th {
@@ -777,4 +802,8 @@ body {
 .pm-li-drop-outdent {
 	position: relative;
 	z-index: 0;
+}
+
+#note-content-container .ProseMirror {
+	padding-bottom: 2rem; /* space for the bottom toolbar */
 }

@@ -32,6 +32,11 @@ from open_webui.env import (
     WEBSOCKET_SENTINEL_PORT,
     WEBSOCKET_SENTINEL_HOSTS,
     REDIS_KEY_PREFIX,
+    WEBSOCKET_REDIS_OPTIONS,
+    WEBSOCKET_SERVER_PING_TIMEOUT,
+    WEBSOCKET_SERVER_PING_INTERVAL,
+    WEBSOCKET_SERVER_LOGGING,
+    WEBSOCKET_SERVER_ENGINEIO_LOGGING,
 )
 from open_webui.utils.auth import decode_token
 from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
@@ -53,30 +58,44 @@ log.setLevel(SRC_LOG_LEVELS["SOCKET"])
 
 REDIS = None
 
+# Configure CORS for Socket.IO
+SOCKETIO_CORS_ORIGINS = "*" if CORS_ALLOW_ORIGIN == ["*"] else CORS_ALLOW_ORIGIN
+
 if WEBSOCKET_MANAGER == "redis":
     if WEBSOCKET_SENTINEL_HOSTS:
         mgr = socketio.AsyncRedisManager(
             get_sentinel_url_from_env(
                 WEBSOCKET_REDIS_URL, WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT
-            )
+            ),
+            redis_options=WEBSOCKET_REDIS_OPTIONS,
         )
     else:
-        mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL)
+        mgr = socketio.AsyncRedisManager(
+            WEBSOCKET_REDIS_URL, redis_options=WEBSOCKET_REDIS_OPTIONS
+        )
     sio = socketio.AsyncServer(
-        cors_allowed_origins=CORS_ALLOW_ORIGIN,
+        cors_allowed_origins=SOCKETIO_CORS_ORIGINS,
         async_mode="asgi",
         transports=(["websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
         allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
         always_connect=True,
         client_manager=mgr,
+        logger=WEBSOCKET_SERVER_LOGGING,
+        ping_interval=WEBSOCKET_SERVER_PING_INTERVAL,
+        ping_timeout=WEBSOCKET_SERVER_PING_TIMEOUT,
+        engineio_logger=WEBSOCKET_SERVER_ENGINEIO_LOGGING,
     )
 else:
     sio = socketio.AsyncServer(
-        cors_allowed_origins=CORS_ALLOW_ORIGIN,
+        cors_allowed_origins=SOCKETIO_CORS_ORIGINS,
         async_mode="asgi",
         transports=(["websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
         allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
         always_connect=True,
+        logger=WEBSOCKET_SERVER_LOGGING,
+        ping_interval=WEBSOCKET_SERVER_PING_INTERVAL,
+        ping_timeout=WEBSOCKET_SERVER_PING_TIMEOUT,
+        engineio_logger=WEBSOCKET_SERVER_ENGINEIO_LOGGING,
     )
 
 
@@ -99,14 +118,16 @@ if WEBSOCKET_MANAGER == "redis":
     redis_sentinels = get_sentinels_from_env(
         WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT
     )
-    SESSION_POOL = RedisDict(
-        f"{REDIS_KEY_PREFIX}:session_pool",
+
+    MODELS = RedisDict(
+        f"{REDIS_KEY_PREFIX}:models",
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=redis_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
     )
-    USER_POOL = RedisDict(
-        f"{REDIS_KEY_PREFIX}:user_pool",
+
+    SESSION_POOL = RedisDict(
+        f"{REDIS_KEY_PREFIX}:session_pool",
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=redis_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
@@ -129,8 +150,9 @@ if WEBSOCKET_MANAGER == "redis":
     renew_func = clean_up_lock.renew_lock
     release_func = clean_up_lock.release_lock
 else:
+    MODELS = {}
+
     SESSION_POOL = {}
-    USER_POOL = {}
     USAGE_POOL = {}
 
     aquire_func = release_func = renew_func = lambda: True
@@ -206,16 +228,6 @@ def get_models_in_use():
     return models_in_use
 
 
-def get_active_user_ids():
-    """Get the list of active user IDs."""
-    return list(USER_POOL.keys())
-
-
-def get_user_active_status(user_id):
-    """Check if a user is currently active."""
-    return user_id in USER_POOL
-
-
 def get_user_id_from_session_pool(sid):
     user = SESSION_POOL.get(sid)
     if user:
@@ -241,10 +253,36 @@ def get_user_ids_from_room(room):
     return active_user_ids
 
 
-def get_active_status_by_user_id(user_id):
-    if user_id in USER_POOL:
-        return True
-    return False
+async def emit_to_users(event: str, data: dict, user_ids: list[str]):
+    """
+    Send a message to specific users using their user:{id} rooms.
+
+    Args:
+        event (str): The event name to emit.
+        data (dict): The payload/data to send.
+        user_ids (list[str]): The target users' IDs.
+    """
+    try:
+        for user_id in user_ids:
+            await sio.emit(event, data, room=f"user:{user_id}")
+    except Exception as e:
+        log.debug(f"Failed to emit event {event} to users {user_ids}: {e}")
+
+
+async def enter_room_for_users(room: str, user_ids: list[str]):
+    """
+    Make all sessions of a user join a specific room.
+    Args:
+        room (str): The room to join.
+        user_ids (list[str]): The target user's IDs.
+    """
+    try:
+        for user_id in user_ids:
+            session_ids = get_session_ids_from_room(f"user:{user_id}")
+            for sid in session_ids:
+                await sio.enter_room(sid, room)
+    except Exception as e:
+        log.debug(f"Failed to make users {user_ids} join room {room}: {e}")
 
 
 @sio.on("usage")
@@ -274,10 +312,7 @@ async def connect(sid, environ, auth):
             SESSION_POOL[sid] = user.model_dump(
                 exclude=["date_of_birth", "bio", "gender"]
             )
-            if user.id in USER_POOL:
-                USER_POOL[user.id] = USER_POOL[user.id] + [sid]
-            else:
-                USER_POOL[user.id] = [sid]
+            await sio.enter_room(sid, f"user:{user.id}")
 
 
 @sio.on("user-join")
@@ -295,18 +330,32 @@ async def user_join(sid, data):
     if not user:
         return
 
-    SESSION_POOL[sid] = user.model_dump(exclude=["date_of_birth", "bio", "gender"])
-    if user.id in USER_POOL:
-        USER_POOL[user.id] = USER_POOL[user.id] + [sid]
-    else:
-        USER_POOL[user.id] = [sid]
+    SESSION_POOL[sid] = user.model_dump(
+        exclude=[
+            "profile_image_url",
+            "profile_banner_image_url",
+            "date_of_birth",
+            "bio",
+            "gender",
+        ]
+    )
+
+    await sio.enter_room(sid, f"user:{user.id}")
 
     # Join all the channels
     channels = Channels.get_channels_by_user_id(user.id)
     log.debug(f"{channels=}")
     for channel in channels:
         await sio.enter_room(sid, f"channel:{channel.id}")
+
     return {"id": user.id, "name": user.name}
+
+
+@sio.on("heartbeat")
+async def heartbeat(sid, data):
+    user = SESSION_POOL.get(sid)
+    if user:
+        Users.update_last_active_by_id(user["id"])
 
 
 @sio.on("join-channels")
@@ -376,6 +425,11 @@ async def channel_events(sid, data):
     event_data = data["data"]
     event_type = event_data["type"]
 
+    user = SESSION_POOL.get(sid)
+
+    if not user:
+        return
+
     if event_type == "typing":
         await sio.emit(
             "events:channel",
@@ -383,10 +437,12 @@ async def channel_events(sid, data):
                 "channel_id": data["channel_id"],
                 "message_id": data.get("message_id", None),
                 "data": event_data,
-                "user": UserNameResponse(**SESSION_POOL[sid]).model_dump(),
+                "user": UserNameResponse(**user).model_dump(),
             },
             room=room,
         )
+    elif event_type == "last_read_at":
+        Channels.update_member_last_read_at(data["channel_id"], user["id"])
 
 
 @sio.on("ydoc:document:join")
@@ -630,13 +686,6 @@ async def disconnect(sid):
     if sid in SESSION_POOL:
         user = SESSION_POOL[sid]
         del SESSION_POOL[sid]
-
-        user_id = user["id"]
-        USER_POOL[user_id] = [_sid for _sid in USER_POOL[user_id] if _sid != sid]
-
-        if len(USER_POOL[user_id]) == 0:
-            del USER_POOL[user_id]
-
         await YDOC_MANAGER.remove_user_from_all_documents(sid)
     else:
         pass
@@ -646,40 +695,24 @@ async def disconnect(sid):
 def get_event_emitter(request_info, update_db=True):
     async def __event_emitter__(event_data):
         user_id = request_info["user_id"]
+        chat_id = request_info["chat_id"]
+        message_id = request_info["message_id"]
 
-        session_ids = list(
-            set(
-                USER_POOL.get(user_id, [])
-                + (
-                    [request_info.get("session_id")]
-                    if request_info.get("session_id")
-                    else []
-                )
-            )
+        await sio.emit(
+            "events",
+            {
+                "chat_id": chat_id,
+                "message_id": message_id,
+                "data": event_data,
+            },
+            room=f"user:{user_id}",
         )
-
-        chat_id = request_info.get("chat_id", None)
-        message_id = request_info.get("message_id", None)
-
-        emit_tasks = [
-            sio.emit(
-                "events",
-                {
-                    "chat_id": chat_id,
-                    "message_id": message_id,
-                    "data": event_data,
-                },
-                to=session_id,
-            )
-            for session_id in session_ids
-        ]
-
-        await asyncio.gather(*emit_tasks)
         if (
             update_db
             and message_id
             and not request_info.get("chat_id", "").startswith("local:")
         ):
+
             if "type" in event_data and event_data["type"] == "status":
                 Chats.add_message_status_to_chat_by_id_and_message_id(
                     request_info["chat_id"],
@@ -769,7 +802,14 @@ def get_event_emitter(request_info, update_db=True):
                         },
                     )
 
-    return __event_emitter__
+    if (
+        "user_id" in request_info
+        and "chat_id" in request_info
+        and "message_id" in request_info
+    ):
+        return __event_emitter__
+    else:
+        return None
 
 
 def get_event_call(request_info):
@@ -785,7 +825,14 @@ def get_event_call(request_info):
         )
         return response
 
-    return __event_caller__
+    if (
+        "session_id" in request_info
+        and "chat_id" in request_info
+        and "message_id" in request_info
+    ):
+        return __event_caller__
+    else:
+        return None
 
 
 get_event_caller = get_event_call
