@@ -453,8 +453,8 @@ BYPASS_MODEL_ACCESS_CONTROL = (
     os.environ.get("BYPASS_MODEL_ACCESS_CONTROL", "False").lower() == "true"
 )
 
-ENABLE_MODEL_FALLBACK = (
-    os.environ.get("ENABLE_MODEL_FALLBACK", "False").lower() == "true"
+ENABLE_CUSTOM_MODEL_FALLBACK = (
+    os.environ.get("ENABLE_CUSTOM_MODEL_FALLBACK", "False").lower() == "true"
 )
 
 WEBUI_AUTH_SIGNOUT_REDIRECT_URL = os.environ.get(

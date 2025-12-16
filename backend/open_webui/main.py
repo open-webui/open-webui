@@ -466,7 +466,7 @@ from open_webui.env import (
     ENABLE_COMPRESSION_MIDDLEWARE,
     ENABLE_WEBSOCKET_SUPPORT,
     BYPASS_MODEL_ACCESS_CONTROL,
-    ENABLE_MODEL_FALLBACK,
+    ENABLE_CUSTOM_MODEL_FALLBACK,
     RESET_CONFIG_ON_START,
     ENABLE_VERSION_UPDATE_CHECK,
     ENABLE_OTEL,
@@ -1540,7 +1540,7 @@ async def chat_completion(
 
             # Try fallback to default model for custom models if base model not found
             if (
-                ENABLE_MODEL_FALLBACK
+                ENABLE_CUSTOM_MODEL_FALLBACK
                 and model_id not in request.app.state.MODELS
                 and model_info
                 and model_info.base_model_id

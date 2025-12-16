@@ -64,7 +64,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
     BYPASS_MODEL_ACCESS_CONTROL,
-    ENABLE_MODEL_FALLBACK,
+    ENABLE_CUSTOM_MODEL_FALLBACK,
 )
 from open_webui.constants import ERROR_MESSAGES
 
@@ -1315,7 +1315,7 @@ async def generate_chat_completion(
 
     # Try fallback to default model for custom models if base model not found
     if (
-        ENABLE_MODEL_FALLBACK
+        ENABLE_CUSTOM_MODEL_FALLBACK
         and url_idx is None
         and payload["model"] not in request.app.state.OLLAMA_MODELS
         and model_info
