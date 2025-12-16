@@ -28,7 +28,11 @@ from pydantic import BaseModel
 import tiktoken
 
 
-from langchain_text_splitters import RecursiveCharacterTextSplitter, TokenTextSplitter, MarkdownHeaderTextSplitter
+from langchain_text_splitters import (
+    RecursiveCharacterTextSplitter,
+    TokenTextSplitter,
+    MarkdownHeaderTextSplitter,
+)
 from langchain_core.documents import Document
 
 from open_webui.models.files import FileModel, FileUpdateForm, Files
