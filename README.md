@@ -8,22 +8,50 @@
 
 ----
 
-This project is a fork of the Open WebUI user interface, specifically diverging from its v0.6.5 version.
+# Open WebUI (Fork – v0.6.5)
 
-It was forked around April 14, 2025, from the official Open WebUI GitHub repository. We've built upon that solid foundation to MCP tool focus or key improvements [e.g., add specific commercial features, enhance performance, adjust the UI for particular workflows, etc.].
+This project is a fork of the Open WebUI user interface, based on
+Open WebUI version v0.6.5.
 
-License
-This project continues to be licensed under the BSD 3-Clause License, which was the license for the original Open WebUI v0.6.5. This allows for broad use, modification, and distribution, including for commercial purposes, as long as the original copyright and disclaimer are retained.
+The fork was created around April 14, 2025, from the official
+Open WebUI GitHub repository. It builds upon the original Open WebUI
+foundation and introduces additional modifications and enhancements,
+with a focus on MCP tool integration and other targeted improvements
+(e.g., commercial features, performance optimizations, and workflow-
+specific UI adjustments).
 
-For the full terms, please see the LICENSE file in this repository.
+## License
 
-Copyright
-Original portions Copyright (c) 2023-2025 Timothy Jaeryang Baek.
-Additional modifications and contributions Copyright (c) 2025 DataR Tech. Co. LTD. (Roger Hsu).
+The original Open WebUI v0.6.5 codebase is licensed under the
+BSD 3-Clause License.
+
+This repository contains both:
+- Third-party open source components licensed under the BSD 3-Clause License
+- Additional proprietary modifications and contributions made by DataR Tech. Co. LTD.
+
+Use, redistribution, and modification of the portions of this software
+licensed under the BSD 3-Clause License are governed by the terms of that
+license. All other portions are subject to separate proprietary terms.
+
+For full license details:
+- See the `LICENSE` file for the BSD 3-Clause License
+- See the `THIRD_PARTY_LICENSES` file for third-party notices and
+  proprietary attribution
+
+## Copyright
+
+Original Open WebUI portions:
+Copyright (c) 2023–2025 Timothy Jaeryang Baek
+
+Additional modifications and contributions:
+Copyright (c) 2025 DataR Tech. Co. LTD.
 All rights reserved.
 
-Acknowledgments
-We extend our sincere gratitude to Timothy Jaeryang Baek and all the contributors to the original Open WebUI project for their outstanding work and dedication to the open-source community.
+## Acknowledgments
+
+We sincerely thank Timothy Jaeryang Baek and all contributors to the
+original Open WebUI project for their outstanding work and contributions
+to the open-source community.
 
 ----
 
