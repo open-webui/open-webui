@@ -7,6 +7,7 @@ import zipfile
 from typing import List, Optional
 from langchain_core.documents import Document
 from fastapi import HTTPException, status
+from open_webui.env import MINERU_API_TIMEOUT
 
 log = logging.getLogger(__name__)
 
@@ -101,7 +102,7 @@ class MinerULoader:
                     f"{self.api_url}/file_parse",
                     data=form_data,
                     files=files,
-                    timeout=300,  # 5 minute timeout for large documents
+                    timeout=MINERU_API_TIMEOUT,  # Configurable
                 )
                 response.raise_for_status()
 
