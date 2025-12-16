@@ -497,7 +497,7 @@
 
 			if (!updatedMessage.annotation?.tags) {
 				// attempt to generate tags
-				const tags = await generateTags(localStorage.token, message.model, messages, chatId).catch(
+				const tags = await generateTags(localStorage.token, "", messages, chatId).catch(
 					(error) => {
 						console.error(error);
 						return [];

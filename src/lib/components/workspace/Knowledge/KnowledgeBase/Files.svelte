@@ -23,17 +23,17 @@
 				name={file?.name ?? file?.meta?.name}
 				type="file"
 				size={file?.size ?? file?.meta?.size ?? ''}
-				loading={file.status === 'uploading'}
+				loading={file.status === 'uploading' || file.status === 'processing'}
 				dismissible
 				on:click={() => {
-					if (file.status === 'uploading') {
+					if (file.status === 'uploading' || file.status === 'processing') {
 						return;
 					}
 
 					dispatch('click', file.id);
 				}}
 				on:dismiss={() => {
-					if (file.status === 'uploading') {
+					if (file.status === 'uploading' || file.status === 'processing') {
 						return;
 					}
 

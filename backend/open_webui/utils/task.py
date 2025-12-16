@@ -16,19 +16,26 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-def get_task_model_id(
-    default_model_id: str, task_model: str, task_model_external: str, models
-) -> str:
-    # Set the task model
-    task_model_id = default_model_id
-    # Check if the user has a custom task model and use that model
-    if models[task_model_id].get("owned_by") == "ollama":
-        if task_model and task_model in models:
-            task_model_id = task_model
+def get_task_model_id(models: dict) -> Optional[str]:
+    """
+    Get the Gemini 2.5 Flash Lite model ID for task execution.
+    Returns None if model is not available (tasks should be disabled).
+    
+    Args:
+        models: Dictionary of model_id -> model info
+        
+    Returns:
+        The Gemini Flash Lite model ID if found, None otherwise
+    """
+    from open_webui.routers.tasks import find_gemini_flash_lite_model
+    
+    task_model_id = find_gemini_flash_lite_model(models)
+    
+    if task_model_id:
+        log.debug(f"Found task model (Gemini Flash Lite): {task_model_id}")
     else:
-        if task_model_external and task_model_external in models:
-            task_model_id = task_model_external
-
+        log.debug("Gemini Flash Lite model not found for task execution")
+    
     return task_model_id
 
 

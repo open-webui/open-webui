@@ -23,6 +23,7 @@
 	let taskConfig = {
 		TASK_MODEL: '',
 		TASK_MODEL_EXTERNAL: '',
+		TASK_MODEL_ID: '',
 		ENABLE_TITLE_GENERATION: true,
 		TITLE_GENERATION_PROMPT_TEMPLATE: '',
 		IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE: '',
@@ -99,49 +100,29 @@
 					</Tooltip>
 				</div>
 
-				<div class=" mb-2.5 flex w-full gap-2">
-					<div class="flex-1">
-						<div class=" text-xs mb-1">{$i18n.t('Local Models')}</div>
-						<select
-							aria-label="Local Models"
-							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-							bind:value={taskConfig.TASK_MODEL}
-							placeholder={$i18n.t('Select a model')}
-						>
-							<option value="" selected>{$i18n.t('Current Model')}</option>
-							{#each $models.filter((m) => m.owned_by === 'ollama') as model}
-								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
-									{model.name}
-								</option>
-							{/each}
-						</select>
-					</div>
-
-					<div class="flex-1">
-						<div class=" text-xs mb-1">{$i18n.t('External Models')}</div>
-						<select
-							aria-label="External Models"
-							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-							bind:value={taskConfig.TASK_MODEL_EXTERNAL}
-							placeholder={$i18n.t('Select a model')}
-							disabled={!taskConfig.HAS_TASK_MODEL_ACCESS}
-						>
-							<option value="" selected>{$i18n.t('Current Model')}</option>
-							{#each $models as model}
-								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
-									{model.name}
-								</option>
-							{/each}
-						</select>
-						{#if !taskConfig.HAS_TASK_MODEL_ACCESS}
-							<div class="text-xs text-red-500 dark:text-red-400 mt-1">
-								Task features require access to Gemini 2.5 Flash Lite model
-							</div>
+				<div class="mb-2.5 flex w-full items-center justify-between">
+					<div class="text-xs font-medium">{$i18n.t('Task Model')}</div>
+					<div class="text-xs" class:text-gray-500={!taskConfig.HAS_TASK_MODEL_ACCESS}>
+						{#if taskConfig.HAS_TASK_MODEL_ACCESS && taskConfig.TASK_MODEL_ID}
+							{taskConfig.TASK_MODEL_ID}
+						{:else}
+							{$i18n.t('Not Available')}
 						{/if}
 					</div>
 				</div>
+				{#if !taskConfig.HAS_TASK_MODEL_ACCESS}
+					<div class="text-xs text-red-500 dark:text-red-400 mt-1 mb-2.5">
+						Task features require access to Gemini 2.5 Flash Lite model
+					</div>
+				{/if}
 
 				<div class="mb-2.5 flex w-full items-center justify-between">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Title Generation')}
+					</div>
+
+					<Switch bind:state={taskConfig.ENABLE_TITLE_GENERATION} disabled={!taskConfig.HAS_TASK_MODEL_ACCESS} />
+				</div>
 					<div class=" self-center text-xs font-medium">
 						{$i18n.t('Title Generation')}
 					</div>

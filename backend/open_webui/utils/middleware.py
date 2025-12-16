@@ -45,6 +45,7 @@ from open_webui.routers.tasks import (
     generate_title,
     generate_image_prompt,
     generate_chat_tags,
+    find_gemini_flash_lite_model,
 )
 from open_webui.routers.retrieval import process_web_search, SearchForm
 from open_webui.routers.images import image_generations, GenerateImageForm
@@ -907,12 +908,23 @@ async def process_chat_response(
             messages = get_message_list(message_map, message.get("id"))
 
             if tasks and messages:
+                # Get available models and find Gemini Flash Lite before running tasks
+                from open_webui.utils.models import get_all_models
+                models_list = await get_all_models(request, user)
+                models = {model["id"]: model for model in models_list}
+                task_model_id = find_gemini_flash_lite_model(models)
+                
+                # If Gemini Flash Lite is not available, skip all background tasks
+                if not task_model_id:
+                    log.debug(f"Gemini Flash Lite not available for user {user.email}, skipping background tasks")
+                    return  # Exit early, don't run any tasks
+                
                 if TASKS.TITLE_GENERATION in tasks:
                     if tasks[TASKS.TITLE_GENERATION]:
                         res = await generate_title(
                             request,
                             {
-                                "model": message["model"],
+                                # Remove "model" key - task endpoint will find Gemini Flash Lite directly
                                 "messages": messages,
                                 "chat_id": metadata["chat_id"],
                             },
@@ -967,7 +979,7 @@ async def process_chat_response(
                     res = await generate_chat_tags(
                         request,
                         {
-                            "model": message["model"],
+                            # Remove "model" key - task endpoint will find Gemini Flash Lite directly
                             "messages": messages,
                             "chat_id": metadata["chat_id"],
                         },

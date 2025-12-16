@@ -24,7 +24,6 @@ from open_webui.utils.filter import (
     get_sorted_filter_ids,
     process_filter_functions,
 )
-from open_webui.utils.task import get_task_model_id
 
 from open_webui.config import (
     DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE,
@@ -309,7 +308,7 @@ async def update_task_config(
     # Return updated config (same logic as get_task_config)
     task_model_external = request.app.state.config.TASK_MODEL_EXTERNAL.get(user.email)
     if has_task_model_access and (not task_model_external or task_model_external == ""):
-        task_model_external = REQUIRED_TASK_MODEL_ID
+        task_model_external = found_model_id if found_model_id else PREFERRED_TASK_MODEL_ID
     
     enable_title_generation = request.app.state.config.ENABLE_TITLE_GENERATION.get(user.email) if has_task_model_access else False
     enable_tags_generation = request.app.state.config.ENABLE_TAGS_GENERATION.get(user.email) if has_task_model_access else False
@@ -363,22 +362,21 @@ async def generate_title(
             content={"detail": "Title generation is disabled"},
         )
 
-    model_id = form_data["model"]
-    if model_id not in models:
+    # Find Gemini Flash Lite model directly (ignore chat model from form_data)
+    task_model_id = find_gemini_flash_lite_model(models)
+    if task_model_id is None:
+        log.warning(f"Title generation requires Gemini 2.5 Flash Lite model which is not available for user {user.email}")
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"detail": "Title generation requires Gemini 2.5 Flash Lite model which is not available"},
+        )
+    
+    if task_model_id not in models:
+        log.error(f"Gemini Flash Lite model {task_model_id} not found in available models for user {user.email}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Model not found",
+            detail="Gemini Flash Lite model not found in available models",
         )
-
-    # Check if the user has a custom task model
-    # If the user has a custom task model, use that model
-    # Use per-admin TASK_MODEL_EXTERNAL (inherits from group admin)
-    task_model_id = get_task_model_id(
-        model_id,
-        request.app.state.config.TASK_MODEL,
-        request.app.state.config.TASK_MODEL_EXTERNAL.get(user.email),
-        models,
-    )
 
     log.debug(
         f"generating chat title using model {task_model_id} for user {user.email} "
@@ -472,22 +470,21 @@ async def generate_chat_tags(
             content={"detail": "Tags generation is disabled"},
         )
 
-    model_id = form_data["model"]
-    if model_id not in models:
+    # Find Gemini Flash Lite model directly (ignore chat model from form_data)
+    task_model_id = find_gemini_flash_lite_model(models)
+    if task_model_id is None:
+        log.warning(f"Tags generation requires Gemini 2.5 Flash Lite model which is not available for user {user.email}")
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"detail": "Tags generation requires Gemini 2.5 Flash Lite model which is not available"},
+        )
+    
+    if task_model_id not in models:
+        log.error(f"Gemini Flash Lite model {task_model_id} not found in available models for user {user.email}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Model not found",
+            detail="Gemini Flash Lite model not found in available models",
         )
-
-    # Check if the user has a custom task model
-    # If the user has a custom task model, use that model
-    # Use per-admin TASK_MODEL_EXTERNAL (inherits from group admin)
-    task_model_id = get_task_model_id(
-        model_id,
-        request.app.state.config.TASK_MODEL,
-        request.app.state.config.TASK_MODEL_EXTERNAL.get(user.email),
-        models,
-    )
 
     log.debug(
         f"generating chat tags using model {task_model_id} for user {user.email} "
@@ -640,22 +637,21 @@ async def generate_queries(
                 detail=f"Query generation is disabled",
             )
 
-    model_id = form_data["model"]
-    if model_id not in models:
+    # Find Gemini Flash Lite model directly (ignore chat model from form_data)
+    task_model_id = find_gemini_flash_lite_model(models)
+    if task_model_id is None:
+        log.warning(f"Query generation requires Gemini 2.5 Flash Lite model which is not available for user {user.email}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Query generation requires Gemini 2.5 Flash Lite model which is not available",
+        )
+    
+    if task_model_id not in models:
+        log.error(f"Gemini Flash Lite model {task_model_id} not found in available models for user {user.email}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Model not found",
+            detail="Gemini Flash Lite model not found in available models",
         )
-
-    # Check if the user has a custom task model
-    # If the user has a custom task model, use that model
-    # Use per-admin TASK_MODEL_EXTERNAL (inherits from group admin)
-    task_model_id = get_task_model_id(
-        model_id,
-        request.app.state.config.TASK_MODEL,
-        request.app.state.config.TASK_MODEL_EXTERNAL.get(user.email),
-        models,
-    )
 
     log.debug(
         f"generating {type} queries using model {task_model_id} for user {user.email}"
@@ -720,10 +716,10 @@ async def generate_autocompletion(
     
     # Check per-admin config (inherits from group admin if user is in a group)
     if not request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION.get(user.email):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Autocompletion generation is disabled",
-        )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Autocompletion generation is disabled",
+            )
 
     type = form_data.get("type")
     prompt = form_data.get("prompt")
@@ -739,22 +735,21 @@ async def generate_autocompletion(
                 detail=f"Input prompt exceeds maximum length of {request.app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH}",
             )
 
-    model_id = form_data["model"]
-    if model_id not in models:
+    # Find Gemini Flash Lite model directly (ignore chat model from form_data)
+    task_model_id = find_gemini_flash_lite_model(models)
+    if task_model_id is None:
+        log.warning(f"Autocompletion generation requires Gemini 2.5 Flash Lite model which is not available for user {user.email}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Autocompletion generation requires Gemini 2.5 Flash Lite model which is not available",
+        )
+    
+    if task_model_id not in models:
+        log.error(f"Gemini Flash Lite model {task_model_id} not found in available models for user {user.email}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Model not found",
+            detail="Gemini Flash Lite model not found in available models",
         )
-
-    # Check if the user has a custom task model
-    # If the user has a custom task model, use that model
-    # Use per-admin TASK_MODEL_EXTERNAL (inherits from group admin)
-    task_model_id = get_task_model_id(
-        model_id,
-        request.app.state.config.TASK_MODEL,
-        request.app.state.config.TASK_MODEL_EXTERNAL.get(user.email),
-        models,
-    )
 
     log.debug(
         f"generating autocompletion using model {task_model_id} for user {user.email}"
@@ -807,24 +802,25 @@ async def generate_emoji(
             request.state.model["id"]: request.state.model,
         }
     else:
-        models = request.app.state.MODELS
+        from open_webui.utils.models import get_all_models
+        models_list = await get_all_models(request, user)
+        models = {model["id"]: model for model in models_list}
 
-    model_id = form_data["model"]
-    if model_id not in models:
+    # Find Gemini Flash Lite model directly (ignore chat model from form_data)
+    task_model_id = find_gemini_flash_lite_model(models)
+    if task_model_id is None:
+        log.warning(f"Emoji generation requires Gemini 2.5 Flash Lite model which is not available for user {user.email}")
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"detail": "Emoji generation requires Gemini 2.5 Flash Lite model which is not available"},
+        )
+    
+    if task_model_id not in models:
+        log.error(f"Gemini Flash Lite model {task_model_id} not found in available models for user {user.email}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Model not found",
+            detail="Gemini Flash Lite model not found in available models",
         )
-
-    # Check if the user has a custom task model
-    # If the user has a custom task model, use that model
-    # Use per-admin TASK_MODEL_EXTERNAL (inherits from group admin)
-    task_model_id = get_task_model_id(
-        model_id,
-        request.app.state.config.TASK_MODEL,
-        request.app.state.config.TASK_MODEL_EXTERNAL.get(user.email),
-        models,
-    )
 
     log.debug(f"generating emoji using model {task_model_id} for user {user.email} ")
 
@@ -883,25 +879,25 @@ async def generate_moa_response(
             request.state.model["id"]: request.state.model,
         }
     else:
-        models = request.app.state.MODELS
+        from open_webui.utils.models import get_all_models
+        models_list = await get_all_models(request, user)
+        models = {model["id"]: model for model in models_list}
 
-    model_id = form_data["model"]
-
-    if model_id not in models:
+    # Find Gemini Flash Lite model directly (ignore chat model from form_data)
+    task_model_id = find_gemini_flash_lite_model(models)
+    if task_model_id is None:
+        log.warning(f"MOA response generation requires Gemini 2.5 Flash Lite model which is not available for user {user.email}")
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"detail": "MOA response generation requires Gemini 2.5 Flash Lite model which is not available"},
+        )
+    
+    if task_model_id not in models:
+        log.error(f"Gemini Flash Lite model {task_model_id} not found in available models for user {user.email}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Model not found",
+            detail="Gemini Flash Lite model not found in available models",
         )
-
-    # Check if the user has a custom task model
-    # If the user has a custom task model, use that model
-    # Use per-admin TASK_MODEL_EXTERNAL (inherits from group admin)
-    task_model_id = get_task_model_id(
-        model_id,
-        request.app.state.config.TASK_MODEL,
-        request.app.state.config.TASK_MODEL_EXTERNAL.get(user.email),
-        models,
-    )
 
     log.debug(f"generating MOA model {task_model_id} for user {user.email} ")
 

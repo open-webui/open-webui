@@ -9,6 +9,33 @@
 9. Embeddings virtual keys need to be set by the admins themselves NOT the default one.
 10. Make the app more suitable for distributed multi-replica environment managed by kubernetes. When I developed, it was good for single pod systems but now that we are scaling, I am not sure what i can do to make the app more distributed friednly and also multi-replica friendly. List down the things based on your understnading of the codebase all the things I could do to make it more scale-friendly.
 11. Multi replica for redis
+12 Data consistency — cache invalidation (CRITICAL)
+Why: Stale cache can show incorrect roles/settings after changes.
+Tasks:
+Implement cache invalidation on user role changes
+Invalidate cache on group membership changes
+Invalidate cache on admin config changes (API keys, virtual keys, settings)
+Add cache invalidation hooks in all update/delete operations
+Impact: Ensures cache reflects current database state.
+Files to update:
+backend/open_webui/utils/cache.py — add invalidation methods
+backend/open_webui/models/users.py — add invalidation on role/group updates
+backend/open_webui/routers/users.py — call invalidation on changes
+
+13. Security — RBAC for Functions/Pipes (CRITICAL)
+Why: Security gap — admins can access functions created by other admins.
+Tasks:
+Add access_control column to Function table (database migration)
+Update Functions.get_functions() to use three-tier RBAC (owner/direct/group)
+Fix pipe access bug — regular users currently see all pipes
+Add execution-time RBAC checks in generate_function_chat_completion() and chat_action()
+Impact: Prevents unauthorized access to functions/pipes across admin boundaries.
+
+14. Migration issue (HIGH)
+Issue: Alembic migration error — database at revision that doesn't exist.
+Tasks:
+Add bridge migration for 817da597db81 OR manually stamp database
+Review migration error handling in backend/open_webui/config.py
 
 MINOR:
 1. Auto completion should be DISABLED for all. Chat title generator should need to be set to gemini flash 2.5 lite as default if available, else no auto completion. 
@@ -147,3 +174,69 @@ MINOR:
 - `check_model_access()` doesn't work for pipes (they're not in Models table)
 - Expected behavior: Admin A creates Function → only Admin A and users in Admin A's groups (if granted) can see/use it. Admin B cannot see or use it.
 - This matches the pattern used by Tools, Prompts, Models, and Knowledge resources
+
+
+
+
+
+
+
+File deletion implementation status
+Implemented
+Centralized cleanup utility (backend/open_webui/utils/file_cleanup.py):
+cleanup_file_completely() — full deletion
+cleanup_file_from_knowledge_only() — partial removal from one knowledge base
+Cleanup steps in cleanup_file_completely():
+Removes from all knowledge collections (vector DB) — line 98-106
+Removes from knowledge base metadata (file_ids lists) — line 110-135
+Deletes file-specific collection (file-{file_id}) — line 137-150
+Deletes from SQL database — line 152-165
+Deletes physical file from storage — line 167-182
+Endpoints using cleanup:
+POST /{id}/file/remove (knowledge.py:633) — calls cleanup functions
+DELETE /{id} (files.py:532) — calls cleanup_file_completely()
+Storage deletion:
+LocalStorageProvider.delete_file() — deletes from UPLOAD_DIR/uploads/
+Works with S3, GCS, Azure storage providers
+Potential issues
+Path handling in LocalStorageProvider.delete_file() (line 76-83):
+   filename = file_path.split("/")[-1]   file_path = f"{UPLOAD_DIR}/{filename}"
+Assumes the stored path is just a filename
+If file.path is a full path, this may not match the actual file location
+Should verify: does file.path contain the full path or just the filename?
+Error handling:
+Errors are logged but don't fail the operation
+If physical file deletion fails, the function still returns success if SQL/vector DB deletion succeeded
+This is acceptable, but worth noting
+Multi-knowledge-base handling:
+Correctly handles files in multiple knowledge bases
+If file is only in one KB → complete cleanup
+If file is in multiple KBs → only removes from the specified KB
+Verification needed
+Check what format file.path uses:
+If it's just a filename → current implementation works
+If it's a full path → may need to adjust LocalStorageProvider.delete_file()
+Recommendation
+The implementation looks complete. To verify:
+Check the format of file.path in the database
+Test file deletion end-to-end:
+Delete a file from a knowledge collection
+Verify it's removed from vector DB
+Verify it's removed from SQL
+Verify the physical file is deleted from UPLOAD_DIR
+Conclusion
+The TODO item appears complete. The cleanup utility covers:
+Vector DB (knowledge collections + file-specific collections)
+SQL database
+Physical file storage
+Knowledge base metadata
+The only potential gap is the path handling in LocalStorageProvider.delete_file() if file.path is stored as a full path rather than just a filename.
+Should I check the actual format of file.path in your database or test the deletion flow?
+
+
+
+
+
+1. oetl
+2. cache and redis invalidation of data
+3. deplyo langfuse and data editatble ui liek directus
