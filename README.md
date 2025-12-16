@@ -240,24 +240,3 @@ export HF_HUB_OFFLINE=1
 
 Discover upcoming features on our roadmap in the [issues](https://github.com/Datar-Tech/open-webui/issues).
 
-## License 📜
-
-This project is licensed under the [BSD-3-Clause License](LICENSE) - see the [LICENSE](LICENSE) file for details. 📄
-
-
-
- * Copyright (c) 2023-2025 Timothy Jaeryang Baek
- * Copyright (c) 2025 DataR Tech. Co. LTD. (Roger Hsu)
- *
- * Licensed under the BSD 3-Clause License (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://github.com/Datar-Tech/open-webui/blob/main/LICENSE
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- 
