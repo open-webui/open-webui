@@ -24,7 +24,7 @@ port = "/dev/ttyUSB3"
 # port = '/dev/ttyUSB2'
 baudrate = "921600"
 # baudrate = '115200'
-exe_path = "/usr/bin/tsi/v0.1.1*/bin/"
+exe_path = "/usr/bin/tsi/bin/"
 
 DEFAULT_MODEL = "TinyLlama:latest"
 DEFAULT_BACKEND = "tSavorite"
