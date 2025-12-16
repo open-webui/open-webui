@@ -31,6 +31,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     BYPASS_MODEL_ACCESS_CONTROL,
+    ENABLE_MODEL_FALLBACK,
 )
 from open_webui.models.users import UserModel
 
@@ -849,7 +850,12 @@ async def generate_chat_completion(
 
     if model:
         idx = model["urlIdx"]
-    elif model_info and model_info.base_model_id and request.app.state.config.DEFAULT_MODELS:
+    elif (
+        ENABLE_MODEL_FALLBACK
+        and model_info
+        and model_info.base_model_id
+        and request.app.state.config.DEFAULT_MODELS
+    ):
         # Try fallback to default model for custom models
         fallback_model_id = request.app.state.config.DEFAULT_MODELS.split(",")[0].strip()
         fallback_model = request.app.state.OPENAI_MODELS.get(fallback_model_id)
