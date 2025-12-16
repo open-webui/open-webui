@@ -115,9 +115,50 @@ docker exec <container-name> python /app/prune/prune.py --days 90 --dry-run
 ```
 
 **Important Notes:**
-- All environment variables are automatically inherited from the container
+- Environment variables are automatically inherited from the container **if properly configured**
 - No additional dependencies needed (already in container)
 - Data persists in your Docker volumes
+
+**Required Environment Variables:**
+
+⚠️ **IMPORTANT:** The prune script requires a **properly configured** Open WebUI container to function. If you get "*Required environment variable not found*" error, your Open WebUI container is not configured correctly.
+
+**Required variables:**
+- `WEBUI_SECRET_KEY` - Secret key for Open WebUI (required)
+- `DATABASE_URL` - Database connection string (required)
+- `DATA_DIR` - Data directory path (optional, default: `/app/backend/data`)
+- `VECTOR_DB` - Vector database type if using RAG (optional)
+
+**How to properly configure your Open WebUI container:**
+
+Using docker-compose.yml (recommended):
+```yaml
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    volumes:
+      - open-webui:/app/backend/data
+      - ./prune:/app/prune
+    environment:
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+      - DATABASE_URL=sqlite:////app/backend/data/webui.db
+      - DATA_DIR=/app/backend/data
+    ports:
+      - "3000:8080"
+```
+
+Or using docker run:
+```bash
+docker run -d \
+  -e WEBUI_SECRET_KEY="your-secret-key" \
+  -e DATABASE_URL="sqlite:////app/backend/data/webui.db" \
+  -e DATA_DIR="/app/backend/data" \
+  -v open-webui:/app/backend/data \
+  -v ./prune:/app/prune \
+  -p 3000:8080 \
+  --name open-webui \
+  ghcr.io/open-webui/open-webui:main
+```
 
 ### Method 3: Pip Installation
 
