@@ -188,6 +188,9 @@ docker run -d --network=host -v open-webui:/app/backend/data -e OLLAMA_BASE_URL=
 
 ### Keeping Your Docker Installation Up-to-Date
 
+> [!WARNING]
+> The original Watchtower project hasn't received updates in over two years and fails with Docker version 29.0.0 or newer due to API version incompatibility. Check the Automated Update Tools section of our Updating Guide available in our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/updating).
+
 In case you want to update your local Docker installation to the latest version, you can do it with [Watchtower](https://containrrr.dev/watchtower/):
 
 ```bash
