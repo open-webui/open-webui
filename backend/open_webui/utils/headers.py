@@ -4,7 +4,7 @@ from urllib.parse import quote
 from open_webui.env import WEBUI_SECRET_KEY
 
 
-def generate_safety_identifier(user_id: str) -> str:
+def include_safety_identifier(user_id: str) -> str:
     salted_value = f"{WEBUI_SECRET_KEY}{user_id}".encode('utf-8')
     hash_object = hashlib.sha256(salted_value)
     return hash_object.hexdigest()
