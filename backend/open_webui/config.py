@@ -2536,6 +2536,8 @@ MINERU_PARAMS = PersistentConfig(
     mineru_params,
 )
 
+MINERU_API_TIMEOUT = int(os.getenv("MINERU_API_TIMEOUT", "300"))
+
 EXTERNAL_DOCUMENT_LOADER_URL = PersistentConfig(
     "EXTERNAL_DOCUMENT_LOADER_URL",
     "rag.external_document_loader_url",
