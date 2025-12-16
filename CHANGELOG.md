@@ -62,6 +62,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🧩 Chat overview tab crashes caused by undefined model references were resolved by adding proper null checks when accessing deleted or ejected models. [#19935](https://github.com/open-webui/open-webui/pull/19935)
 - 🌄 The "COMFYUI_WORKFLOW_NODES" and "IMAGES_EDIT_COMFYUI_WORKFLOW_NODES" environment variables are now correctly loaded and parsed as JSON lists, and the configuration key name was corrected from "COMFYUI_WORKFLOW" to "COMFYUI_WORKFLOW_NODES". [#19918](https://github.com/open-webui/open-webui/pull/19918), [#19886](https://github.com/open-webui/open-webui/issues/19886)
 - 🗣️ MoA completion handling stability was improved with null safety checks for response objects, boolean casting for settings, and proper timeout type definitions. [#19921](https://github.com/open-webui/open-webui/pull/19921)
+- ⚙️ Chat functionality failures caused by empty logit_bias parameter values are now prevented by properly handling empty strings in the parameter parsing middleware. [#19982](https://github.com/open-webui/open-webui/issues/19982)
+- 🔏 Administrators can now delete read-only knowledge bases from deleted users, resolving permission issues that previously prevented cleanup of orphaned read-only content. [Commit](https://github.com/open-webui/open-webui/commit/59d6eb2badf46f9c2b1e879484ac33432915b575)
+- 💾 Cloned prompts and tools now correctly preserve their access control settings instead of being reset to null, preventing unintended visibility changes when duplicating private or restricted items. [#19960](https://github.com/open-webui/open-webui/pull/19960), [#19360](https://github.com/open-webui/open-webui/issues/19360)
+- 📝 Channel name length is now limited to 128 characters with validation to prevent display issues caused by excessively long names. [Commit](https://github.com/open-webui/open-webui/commit/f509f5542dde384d34402f6df763f49a06bea109)
 
 ### Changed
 
