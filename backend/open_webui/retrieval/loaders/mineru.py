@@ -301,7 +301,7 @@ class MinerULoader:
                 response = requests.put(
                     upload_url,
                     data=f,
-                    timeout=300,  # 5 minute timeout for large files
+                    timeout=MINERU_API_TIMEOUT, # Configurable
                 )
                 response.raise_for_status()
         except FileNotFoundError:
