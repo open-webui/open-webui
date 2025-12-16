@@ -153,6 +153,34 @@
 
 	let taskIds = null;
 
+	// Avatar state helper -> loader.js
+	type AvatarState = 'thinking' | 'talking' | 'idle';
+
+	const setAvatarState = (state: AvatarState) => {
+		if (typeof window === 'undefined') return;
+
+		const w = window as any;
+
+		try {
+			if (state === 'thinking') {
+				w.setThinking?.(); // provided by loader.js
+			} else if (state === 'talking') {
+				w.setTalking?.(); // provided by loader.js
+			} else {
+				w.clearAvatarState?.(); // provided by loader.js
+			}
+		} catch (e) {
+			console.error('[avatar]', 'failed to set state', state, e);
+		}
+
+		// Also emit a DOM event in case you ever prefer an event-driven bridge
+		try {
+			window.dispatchEvent(new CustomEvent('avatar:state', { detail: { state } }));
+		} catch {
+			// ignore
+		}
+	};
+
 	// Chat Input
 	let prompt = '';
 	let chatFiles = [];
@@ -1404,6 +1432,9 @@
 			if (choices[0]?.message?.content) {
 				// Non-stream response
 				message.content += choices[0]?.message?.content;
+
+				// We have visible content -> avatar should be "talking"
+				setAvatarState('talking');
 			} else {
 				// Stream response
 				let value = choices[0]?.delta?.content ?? '';
@@ -1411,6 +1442,9 @@
 					console.log('Empty response');
 				} else {
 					message.content += value;
+
+					// As tokens stream in, avatar is "talking"
+					setAvatarState('talking');
 
 					if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 						navigator.vibrate(5);
@@ -1445,6 +1479,9 @@
 		if (content) {
 			// REALTIME_CHAT_SAVE is disabled
 			message.content = content;
+
+			// Non-stream full content -> treat as "talking" once
+			setAvatarState('talking');
 
 			if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 				navigator.vibrate(5);
@@ -1487,6 +1524,9 @@
 
 		if (done) {
 			message.done = true;
+
+			// Response completed -> back to idle
+			setAvatarState('idle');
 
 			if ($settings.responseAutoCopy) {
 				copyToClipboard(message.content);
@@ -1955,9 +1995,7 @@
 
 				session_id: $socket?.id,
 				chat_id: $chatId,
-
 				id: responseMessageId,
-				parent_id: userMessage?.id ?? null,
 
 				background_tasks: {
 					...(!$temporaryChatEnabled &&
@@ -2059,6 +2097,9 @@
 		};
 		responseMessage.done = true;
 
+		// Error terminates the reply -> ensure avatar is idle
+		setAvatarState('idle');
+
 		if (responseMessage.statusHistory) {
 			responseMessage.statusHistory = responseMessage.statusHistory.filter(
 				(status) => status.action !== 'knowledge_search'
@@ -2097,6 +2138,9 @@
 			generationController?.abort();
 			generationController = null;
 		}
+
+		// Manual stop -> idle
+		setAvatarState('idle');
 	};
 
 	const submitMessage = async (parentId, prompt) => {
@@ -2129,6 +2173,9 @@
 			scrollToBottom();
 		}
 
+		// New request kicked off -> model is now "thinking"
+		setAvatarState('thinking');
+
 		await sendMessage(history, userMessageId);
 	};
 
@@ -2141,6 +2188,9 @@
 			if (autoScroll) {
 				scrollToBottom();
 			}
+
+			// Regeneration behaves like a fresh request
+			setAvatarState('thinking');
 
 			await sendMessage(history, userMessage.id, {
 				...(suggestionPrompt
@@ -2179,6 +2229,9 @@
 				.at(0);
 
 			if (model) {
+				// Continuing is also a new generation
+				setAvatarState('thinking');
+
 				await sendMessageSocket(
 					model,
 					createMessagesList(history, responseMessage.id),

@@ -1,0 +1,770 @@
+/*
+ * Tennessee Tech retro / CRT theme for Open WebUI
+ * Global (no .theme prefix).
+ * All overrides are visual only.
+ */
+
+/* --------------------------------------------------------------------------
+ * Palette & base
+ * -------------------------------------------------------------------------- */
+
+:root {
+  --ttu-primary: #582c83;      /* official TTU purple */
+  --ttu-accent:  #ffd100;      /* TTU gold */
+  --secondary: var(--ttu-accent);
+  /* Darker purples – you set these to match TTU purple */
+  --bg-0: #582c83;             /* page background */
+  --bg-1: #582c83;             /* outer chat shell / sidebar */
+  --bg-2: #582c83;             /* inner panels */
+  --bg-3: #31004f;             /* bubble / code block panels */
+
+  --crt-scanline: rgba(255, 255, 255, 0.09);
+  --crt-vignette: rgba(0, 0, 0, 0.6);
+  --text-main: #ffffff;
+  --font-heading: 'Press Start 2P', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-body: 'IBM DOS Japan', 'Press Start 2P', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Optional pixel font – safe to leave if not present */
+@font-face {
+  font-family: 'Press Start 2P';
+  src:
+    local('Press Start 2P'),
+    url('fonts/PressStart2P-Regular.woff2') format('woff2'),
+    url('/static/fonts/PressStart2P-Regular.woff2') format('woff2'),
+    url('fonts/PressStart2P-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM DOS Japan';
+  src:
+    local('IBM DOS Japan'),
+    url('fonts/IBM_DOS-Japan.woff2') format('woff2'),
+    url('/static/fonts/IBM_DOS-Japan.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+body {
+  background-color: var(--bg-0);
+  color: var(--text-main);
+  font-family: var(--font-body) !important;
+  text-shadow: none; /* keep text crisp; CRT effect goes on backgrounds instead */
+}
+
+body,
+body *:not(code):not(pre):not(kbd):not(svg):not(path) {
+  font-family: var(--font-body) !important;
+}
+
+/* Preserve the pixel font for headings and hero-scale text */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.heading-font,
+.font-primary,
+.font-heading,
+.text-xl,
+.text-2xl,
+.text-3xl,
+.text-4xl,
+.text-5xl,
+.text-6xl,
+.lg\:text-xl,
+.lg\:text-2xl,
+.lg\:text-3xl,
+.lg\:text-4xl,
+.xl\:text-3xl,
+.xl\:text-4xl,
+.xl\:text-5xl,
+.xl\:text-6xl,
+#i1e88XIZhY > div.h-full.flex.relative.max-w-full.flex-col > div > div > div > div.w-full.text-3xl.text-gray-800.dark\:text-gray-100.text-center.flex.items-center.gap-4.font-primary > div > div.flex.flex-row.justify-center.gap-3.\@sm\:gap-3\.5.w-fit.px-5.max-w-xl,
+#message-3d0a49b3-22fa-4bad-bc68-3dca65d8e97b > div.flex-auto.w-0.pl-1.relative > div.self-center.font-semibold.line-clamp-1.flex.gap-1.items-center,
+body > div.modal.fixed.top-0.right-0.left-0.bottom-0.bg-black\/30.dark\:bg-black\/60.w-full.h-screen.max-h-\[100dvh\].p-3.flex.justify-center.z-9999.overflow-y-auto.overscroll-contain.svelte-1vr5p4p > div > div > div.flex.justify-between.dark\:text-gray-300.px-4.md\:px-4\.5.pt-4\.5.pb-0\.5.md\:pb-2\.5 > div {
+  font-family: var(--font-heading) !important;
+}
+/* --------------------------------------------------------------------------
+ * CRT-style treatment for the main chat area
+ * -------------------------------------------------------------------------- */
+
+/* #chat-container exists in stock Chat.svelte */
+#chat-container {
+position: relative;
+background-color: var(--bg-1);
+color: var(--text-main);
+box-shadow: 0 0 24px rgba(88, 44, 131, 0.7);
+overflow: hidden;  /* contain CRT overlays */
+}
+
+/* Scanlines */
+#chat-container::before {
+content: "";
+position: absolute;
+inset: 0;
+pointer-events: none;
+background-image: repeating-linear-gradient(
+  0deg,
+  rgba(255, 255, 255, 0.07),
+                                            rgba(255, 255, 255, 0.07) 1px,
+                                            transparent 1px,
+                                            transparent 3px
+);
+mix-blend-mode: screen;
+z-index: 0;
+}
+
+/* Vignette */
+#chat-container::after {
+content: "";
+position: absolute;
+inset: 0;
+pointer-events: none;
+background: radial-gradient(
+  ellipse at center,
+  transparent 0%,
+  rgba(0, 0, 0, 0.4) 50%,
+                            var(--crt-vignette) 100%
+);
+z-index: 0;
+}
+
+/* Ensure inner content sits above the overlays */
+#chat-container > * {
+position: relative;
+z-index: 1;
+}
+
+/* Scrollbars to match the palette */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--ttu-primary);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-track {
+  background-color: var(--bg-0);
+}
+
+/* --------------------------------------------------------------------------
+ * Panels & general backgrounds
+ * -------------------------------------------------------------------------- */
+
+/* These utilities show up all over the main content & sidebars.
+ * Override their backgrounds to your purple. */
+
+.bg-gray-900,
+.dark\:bg-gray-900,
+.bg-gray-950,
+.dark\:bg-gray-950 {
+  background-color: var(--bg-1) !important;
+}
+
+.bg-white.dark\:bg-gray-800,
+.bg-gray-50.dark\:bg-gray-850,
+.bg-gray-100.dark\:bg-gray-800 {
+  background-color: var(--bg-2) !important;
+}
+
+/* Sidebar base */
+#sidebar {
+background-color: var(--bg-1) !important;
+border-right: 1px solid rgba(255, 255, 255, 0.05);
+font-size: 0.65rem; /* global sidebar size */
+}
+
+
+/* Sidebar top-level buttons (New Chat, Search, Notes, Workspace…) */
+#sidebar > button {
+background-color: transparent !important;
+color: var(--text-main) !important;
+font-size: 0.6rem;
+box-shadow: none !important;
+}
+#sidebar > button:hover {
+box-shadow: none !important; }
+/* kill the black shadow *
+ *
+ *
+ * / ** Sidebar chat titles (class: w-full  relative group) – shrink slightly */
+#sidebar .w-full.relative.group55 {
+font-size: 0.6rem;
+
+}
+
+
+/* --------------------------------------------------------------------------
+ * Message bubbles (assistant + user)
+ * -------------------------------------------------------------------------- */
+
+/* Based on your DOM:
+ * wrapper:  .response-content-container.w-full.flex.flex-col.relative
+ * bubble:   div.rounded-3xl.max-w-[90%]...
+ */
+.response-content-container .rounded-3xl {
+  background-color: var(--bg-3) !important;     /* deep purple */
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-main) !important;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin: 4px 0;
+  box-shadow: 0 0 12px rgba(88, 44, 131, 0.8);
+
+  position: relative;
+  overflow: hidden;
+
+  /* subtle scanlines just on the bubble */
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.04),
+                                              rgba(255, 255, 255, 0.04) 1px,
+                                              transparent 1px,
+                                              transparent 3px
+  );
+}
+
+/* Root message card – light separator */
+div[id^="message-"] {
+  margin: 8px 0;
+  padding: 4px 2px;
+  border-left: 2px solid rgba(88, 44, 131, 0.4);
+}
+
+/* --------------------------------------------------------------------------
+ * Text / links / inputs / buttons
+ * -------------------------------------------------------------------------- */
+
+a,
+button {
+  transition: all 0.15s ease-out;
+}
+a:hover,
+button:hover {
+  color: var(--ttu-accent)
+}
+
+/* Inputs */
+textarea,
+input[type="text"] {
+  background-color: rgba(20, 13, 40, 0.95);
+  border: 2px solid var(--bg-3);
+  border-radius: 6px;
+  padding: 8px;
+  color: var(--text-main);
+  font-family: inherit;
+  text-shadow: none;
+  resize: none;
+}
+textarea:focus,
+input[type="text"]:focus {
+  outline: 2px solid var(--ttu-primary);
+}
+
+/* Send button – #send-message-button */
+#send-message-button {
+background-color: var(--ttu-accent);
+color: #1a1030;
+border-radius: 999px;
+padding-inline: 0.9rem;
+padding-block: 0.45rem;
+font-weight: 700;
+box-shadow: 0 0 8px rgba(255, 209, 0, 0.5);
+}
+#send-message-button:hover {
+background-color: #ffe34a;
+box-shadow: 0 0 14px rgba(255, 209, 0, 0.9);
+}
+
+/* Stop button (rounded full, p-1.5 inside message-input-container) */
+#message-input-container button.bg-white.rounded-full.p-1\.5 {
+background-color: var(--bg-3);
+color: var(--ttu-accent);
+box-shadow: 0 0 8px rgba(88, 44, 131, 0.7);
+}
+#message-input-container button.bg-white.rounded-full.p-1\.5:hover {
+box-shadow: 0 0 14px rgba(88, 44, 131, 0.9);
+}
+
+/* Active tool button –t from your DevTools selector */
+#message-input-container
+> div.flex.justify-between.mt-0\.5.mb-2\.5.mx-0\.5.max-w-full
+> div.ml-1.self-end.flex.items-center.flex-1.max-w-\[80\%\]
+> div.ml-1.flex.gap-1\.5
+> div:nth-child(2)
+> button {
+  background-color: var(--ttu-accent) !important;
+  color: #1a1030 !important;
+  border-radius: 999px;
+  box-shadow: 0 0 8px rgba(255, 209, 0, 0.6);
+}
+#message-input-container
+> div.flex.justify-between.mt-0\.5.mb-2\.5.mx-0\.5.max-w-full
+> div.ml-1.self-end.flex.items-center.flex-1.max-w-\[80\%\]
+> div.ml-1.flex.gap-1\.5
+> div:nth-child(2)
+> button:hover {
+  box-shadow: 0 0 14px rgba(255, 209, 0, 0.9);
+}
+
+/* --------------------------------------------------------------------------
+ * Avatar next to the input (CSS-only streaming detection)
+ * -------------------------------------------------------------------------- */
+
+/* Confirmed from your screenshot */
+#message-input-container {
+  position: relative;
+  padding-left: 128px; /* reserve space for larger avatar on desktop */
+  overflow: visible !important;   /* contain avatar bleed */
+}
+
+/* Idle avatar (still PNG) */
+#message-input-container::before {
+  content: "";
+  position: absolute;
+  left: -12px;
+  bottom: 8px;
+  width: 158px;
+  height: 158px;
+  background-image: url('talk_idle.png'); /* default idle */
+  background-color: transparent;
+  background-blend-mode: screen;
+  background-size: contain;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  border-radius: 0;
+  box-shadow: 0 0px 0px rgba(0, 0, 0, 0.5);
+  overflow: visible;
+  z-index: 2;
+}
+
+/* NEW: thinking state (model running, no visible scroll) */
+body.avatar-thinking #message-input-container::before {
+  background-image: url('thinking.gif');
+  /* optional subtle idle motion; drop this if you want it dead still */
+  animation: avatar-thinking 1.2s ease-in-out infinite;
+}
+
+/* Talking state (tokens scrolling) – you already had this */
+body.avatar-talking #message-input-container::before {
+  background-image: url('talk_loop.gif');
+  animation: avatar-bounce 0.95s ease-in-out infinite;
+}
+
+/* Let the avatar bleed outside the chat shell while active */
+body.avatar-thinking #chat-container,
+body.avatar-talking #chat-container,
+body.avatar-thinking #chat-input-container,
+body.avatar-talking #chat-input-container {
+  overflow: visible !important;
+}
+
+/* Talking bounce */
+@keyframes avatar-bounce {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+/* Optional: gentler breathing for thinking */
+@keyframes avatar-thinking {
+  0%, 100% { transform: translateY(0);   opacity: 0.9; }
+  50%      { transform: translateY(-2px); opacity: 1; }
+}
+
+/* Mobile tweaks for avatar size */
+@media (max-width: 640px) {
+  #message-input-container {
+    padding-left: 96px;
+  }
+  #message-input-container::before {
+    width: 84px;
+    height: 84px;
+    left: 8px;
+    bottom: 6px;
+  }
+}
+
+
+/* --------------------------------------------------------------------------
+ * Code blocks / response panels
+ * -------------------------------------------------------------------------- */
+
+#response-content-container > div:nth-child(1) > div:nth-child(3) > div {
+background-color: #1a0030 !important;
+border-radius: 8px;
+padding: 10px 12px;
+border: 1px solid rgba(255, 255, 255, 0.12);
+color: var(--text-main);
+position: relative;
+overflow: hidden;
+}
+
+/* CRT overlay just for the code panel */
+#response-content-container > div:nth-child(1) > div:nth-child(3) > div::before {
+content: "";
+position: absolute;
+inset: 0;
+pointer-events: none;
+background-image: repeating-linear-gradient(
+  0deg,
+  rgba(255, 255, 255, 0.08),
+                                            rgba(255, 255, 255, 0.08) 1px,
+                                            transparent 1px,
+                                            transparent 3px
+);
+mix-blend-mode: screen;
+}
+
+#response-content-container > div:nth-child(1) > div:nth-child(3) > div::after {
+content: "";
+position: absolute;
+inset: 0;
+pointer-events: none;
+background: radial-gradient(
+  ellipse at center,
+  transparent 0%,
+  rgba(0, 0, 0, 0.35) 100%
+);
+}
+
+/* --------------------------------------------------------------------------
+ * Tooltips / aria-label popovers
+ * -------------------------------------------------------------------------- */
+
+/* Most tooltip libs use role="tooltip" */
+[role="tooltip"] {
+  background-color: #6b3f9f !important;
+  color: var(--text-main) !important;
+  border-radius: 6px;
+  padding: 4px 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
+}
+
+/* --------------------------------------------------------------------------
+ * New chat hero & misc labels
+ * -------------------------------------------------------------------------- */
+
+/* Big model name line – make the highlighted span gold */
+#IDn6kdoGPx .text-3xl span {
+color: var(--ttu-accent);
+}
+
+/* Hero descriptive paragraph */
+#IDn6kdoGPx .mx-auto.max-w-2xl.font-primary.mt-2 {
+font-family: var(--font-heading);
+color: var(--text-main);
+}
+
+/* That entire hero section should use the pixel font */
+#IDn6kdoGPx .font-primary {
+font-family: var(--font-heading);
+}
+
+/* Chat input hint / helper text under the box */
+#chat-input-container > div {
+font-family: var(--font-body);
+color: var(--text-main);
+}
+
+/* Sidebar “Open WebUI / model” name */
+#sidebar-webui-name {
+font-family: var(--font-heading);
+color: var(--text-main);
+}
+
+/* Sidebar “Chats” label row */
+#sidebar > div > div.relative.flex.flex-col.flex-1.overflow-y-auto.scrollbar-hidden.pt-3.pb-3 > div.pb-1\.5 {
+font-family: var(--font-body);
+color: var(--text-main);
+font-size: 1rem !important;
+}
+
+/* Any misc header with that hashed id you gave */
+#nPaENcSZSm > div > div.self-center.font-medium {
+font-family: var(--font-heading);
+color: var(--text-main);
+}
+
+/* --------------------------------------------------------------------------
+ * Misc
+ * -------------------------------------------------------------------------- */
+
+::selection {
+  background-color: var(--ttu-accent);
+  color: #1a1030;
+}
+
+#sidebar a,
+#sidebar .flex.items-center {
+box-shadow: none !important;
+font-size: .6rem;
+
+}
+#sidebar a:hover,
+#sidebar .flex.items-center:hover {
+box-shadow: none !important;
+}
+
+
+/* Sidebar scanlines */
+#sidebar::before {
+content: "";
+position: absolute;
+inset: 0;
+pointer-events: none;
+background-image: repeating-linear-gradient(
+  0deg,
+  rgba(255, 255, 255, 0.05),
+                                            rgba(255, 255, 255, 0.05) 1px,
+                                            transparent 1px,
+                                            transparent 3px
+);
+mix-blend-mode: screen;
+opacity: 0.;
+z-index: 0;
+}
+
+/* Sidebar vignette */
+#sidebar::after {
+content: "";
+position: absolute;
+inset: 0;
+pointer-events: none;
+background: radial-gradient(
+  ellipse at center,
+  transparent 0%,
+  rgba(0, 0, 0, 0.25) 55%,
+                            rgba(0, 0, 0, 0.55) 100%
+);
+z-index: 0;
+}
+
+/* Make actual sidebar content sit above the overlays */
+#sidebar > * {
+position: relative;
+z-index: 1;
+
+}
+
+#sidebar a.group {
+background-color: transparent !important;
+color: var(--text-main) !important;
+font-size: 0.65rem;
+border-radius: 0.75rem;
+box-shadow: none !important;
+}
+
+/* Kill the gray/black hover and use our own */
+#sidebar a.group:hover,
+#sidebar .hover\:bg-gray-100:hover,
+#sidebar .dark\:hover\:bg-gray-900:hover {
+ background-color: var(--ttu-accent)!important; /* your darker purple */
+color: var(--ttu-primary) !important;
+box-shadow: none !important;
+
+}
+
+
+#mx-5 {font-size: .6rem !important;}
+
+/* Sidebar chat item - base state */
+a#sidebar-chat-item {
+  background-color: transparent;
+  color: var(--text-main);
+  transition: background-color 0.15s ease, color 0.15s ease;
+  background-image: none !important;
+  border-radius: 0.75rem !important;
+}
+
+/* Sidebar chat item - hover state */
+a#sidebar-chat-item:hover {
+  background-color: var(--secondary);
+  color: var(--bg-1);
+  background-image: none !important;
+  border-radius: 0.75rem !important;
+}
+
+/* Sidebar quick actions (New Chat, Search, Notes, Workspace) */
+#sidebar-new-chat-button,
+#sidebar-search-button,
+#sidebar-notes-button,
+#sidebar-workspace-button {
+  background: none !important;
+  background-color: transparent !important;
+  color: var(--text-main) !important;
+  box-shadow: none !important;
+  font-size: 0.65rem !important;
+  line-height: 1.1 !important;
+  align-items: center !important;
+  gap: 0.6rem !important;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  background-image: none !important;
+  border-radius: 1rem !important;
+  display: flex !important;
+  width: 100% !important;
+}
+
+#sidebar-new-chat-button:hover,
+#sidebar-search-button:hover,
+#sidebar-notes-button:hover,
+#sidebar-workspace-button:hover {
+  background-color: var(--secondary) !important;
+  color: var(--bg-1) !important;
+  background-image: none !important;
+  border-radius: 1rem !important;
+}
+
+#sidebar-new-chat-button:hover *,
+#sidebar-new-chat-button:focus-visible * {
+  color: inherit !important;
+}
+/* Ensure the New Chat anchor behaves like the button quick-actions */
+#sidebar-new-chat-button {
+  padding: 0.5rem 0.625rem !important; /* matches px-2.5 py-2 */
+}
+
+/* Prevent hidden placeholder button from affecting layout */
+#sidebar-new-chat-button.hidden {
+  display: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: auto !important;
+}
+
+/* Remove gradient on chat item menu */
+#sidebar-chat-item-menu {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Kill any sidebar linear-gradient overlays (e.g., group-hover menu strips) */
+#sidebar .bg-linear-to-l,
+#sidebar .bg-linear-to-l:hover,
+#sidebar .group:hover .bg-linear-to-l,
+#sidebar .from-gray-100,
+#sidebar .from-gray-950,
+#sidebar .to-transparent {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+/* Collapsed sidebar: remove hover fill on toggle + icons */
+#sidebar .cursor-\[e-resize\] .hover\:bg-gray-100:hover,
+#sidebar .cursor-\[e-resize\] .dark\:hover\:bg-gray-850:hover,
+#sidebar .cursor-\[e-resize\] .group:hover {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Collapsed sidebar root: kill hover backgrounds on container + items */
+#sidebar.hover\:bg-gray-50\/50:hover,
+#sidebar.dark\:hover\:bg-gray-950\/50:hover,
+#sidebar .hover\:bg-gray-50\/50:hover,
+#sidebar .dark\:hover\:bg-gray-950\/50:hover {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  color: var(--secondary);
+}
+
+#sidebar a .pb-1\.5,
+#sidebar button .pb-1\.5 {
+font-size: 0.65rem;
+line-height: 1.1;
+white-space: nowrap;
+}
+
+.sidebar-new-chat-button {
+  font-size: .6rem !important;
+  
+}
+
+#sidebar .pb-1\.5,
+#sidebar .pb-1\.5 .text-sm {
+font-size: 0.65rem !important;
+line-height: 1.1;
+white-space: nowrap;
+}
+
+/* Double font size in the three requested sidebar sections */
+#sidebar > div > div.relative.flex.flex-col.flex-1.overflow-y-auto.scrollbar-hidden.pt-3.pb-3 > div:nth-child(3),
+#sidebar > div > div.relative.flex.flex-col.flex-1.overflow-y-auto.scrollbar-hidden.pt-3.pb-3 > div:nth-child(2),
+#sidebar > div > div.px-1\.5.pt-1\.5.pb-2.sticky.bottom-0.z-10.-mt-3.sidebar,
+#sidebar > div > div.relative.flex.flex-col.flex-1.overflow-y-auto.scrollbar-hidden.pt-3.pb-3 > div:nth-child(3) *,
+#sidebar > div > div.relative.flex.flex-col.flex-1.overflow-y-auto.scrollbar-hidden.pt-3.pb-3 > div:nth-child(2) *,
+#sidebar > div > div.px-1\.5.pt-1\.5.pb-2.sticky.bottom-0.z-10.-mt-3.sidebar * {
+  font-size: medium !important;
+}
+
+/* Shrink keyboard shortcut hint inside sidebar quick actions */
+#sidebar .hidden.md\:flex.items-center.self-center.text-xs.text-gray-400.dark\:text-gray-600.group-hover\:visible.invisible,
+#sidebar .hidden.md\:flex.items-center.self-center.text-xs.text-gray-400.dark\:text-gray-600.group-hover\:visible.invisible span {
+  font-size: 0.45rem !important;
+  letter-spacing: 0.02em;
+}
+
+/* Suggestion cards (waterfall list) – reduce text sizes */
+.waterfall .font-medium {
+  font-size: 0.95rem !important;
+  line-height: 1.1 !important;
+}
+.waterfall .text-xs {
+  font-size: 0.95rem !important;
+  line-height: 1.05 !important;
+}
+
+/* Actions / history list panel – reduce header and rows */
+.flex.px-4.pb-1 .w-full.text-xs {
+  font-size: 0.95rem !important;
+  line-height: 1.1 !important;
+}
+.flex.px-4.pb-1 .w-full.flex.items-center.rounded-xl.text-sm,
+.flex.px-4.pb-1 .w-full.flex.justify-between.items-center.rounded-xl.text-sm,
+.flex.px-4.pb-1 .w-full.flex.justify-center.py-4.text-xs {
+  font-size: 0.95rem !important;
+  line-height: 1.15 !important;
+}
+.flex.px-4.pb-1 .w-full.flex.justify-between.items-center.rounded-xl.text-sm .text-xs,
+.flex.px-4.pb-1 .w-full.flex.justify-center.py-4.text-xs .size-4,
+.flex.px-4.pb-1 .w-full.flex.justify-center.py-4.text-xs div {
+  font-size: 0.95rem !important;
+  line-height: 1.05 !important;
+}
+
+/* Chat input field – reduce font size inside the editor */
+#chat-input-container,
+#chat-input-container .ProseMirror,
+#chat-input-container .ProseMirror p,
+#chat-input-container .ProseMirror li {
+  font-size: 0.95rem !important;
+  line-height: 1.15 !important;
+}
+
+/* Reduce font size and recolor content in main wrapper area */
+.h-full.flex.pt-8,
+.h-full.flex.pt-8 * {
+  font-size: 0.95rem !important;
+  line-height: 1.2 !important;
+  color: var(--text-main) !important;
+}
+
+/* Square off non-profile icons that default to rounded */
+img.rounded-full,
+.rounded-full img {
+  border-radius: 0 !important;
+}
+
+/* Preserve rounded corners for account/profile imagery */
+#nsmc0QIF_H > div > div > img,
+#TYs64vQjLG > div > div > img,
+img[alt*="profile" i],
+img[alt*="account" i] {
+  border-radius: 999px !important;
+}
