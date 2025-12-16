@@ -361,3 +361,18 @@ quick_health_check.sh
 .local-deployment/
 # Exported configurations from OpenShift (may contain sensitive data)
 .local-deployment/exported-from-openshift/
+
+# PyMuPDF performance testing files (local testing only)
+pymupdftest.py
+PYMUPDF_PERFORMANCE_ANALYSIS.md
+images/
+
+# Documentation and test files (local only, not for version control)
+DEPENDENCIES_CLEANUP.md
+DEPENDENCIES_REMOVED.md
+REDIS_DEVELOPMENT_TIMELINE.md
+REDIS_OPENSHIFT_DEPLOYMENT_DOCUMENTATION.md
+TEST_FINAL_SUMMARY.md
+TEST_RESULTS.md
+TEST_SUMMARY.md
+llm_portkey.py
