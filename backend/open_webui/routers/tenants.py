@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from open_webui.config import STORAGE_PROVIDER, S3_BUCKET_NAME
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.models.tenants import Tenants, TenantForm
+from open_webui.models.tenants import Tenants, TenantForm, TenantUpdateForm
 from open_webui.models.users import Users
 from open_webui.services.s3 import (
     get_s3_client,
@@ -28,6 +28,8 @@ class TenantInfo(BaseModel):
     id: str
     name: str
     s3_bucket: str
+    table_name: Optional[str] = None
+    system_config_client_name: Optional[str] = None
     created_at: Optional[int] = None
     updated_at: Optional[int] = None
 
@@ -65,6 +67,33 @@ def create_tenant(form_data: TenantForm, admin=Depends(get_admin_user)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to create tenant.",
         )
+    return TenantInfo(**tenant.model_dump())
+
+
+@router.patch("/{tenant_id}", response_model=TenantInfo)
+def update_tenant(tenant_id: str, form_data: TenantUpdateForm, admin=Depends(get_admin_user)):
+    existing = Tenants.get_tenant_by_id(tenant_id)
+    if not existing:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tenant not found.",
+        )
+
+    try:
+        tenant = Tenants.update_tenant(tenant_id, form_data)
+    except Exception as exc:
+        log.exception("Failed to update tenant: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to update tenant.",
+        )
+
+    if not tenant:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No fields to update.",
+        )
+
     return TenantInfo(**tenant.model_dump())
 
 

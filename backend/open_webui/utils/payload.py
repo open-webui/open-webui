@@ -286,24 +286,24 @@ def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
 
     return ollama_messages
 
-def _get_tenant_bucket_by_id(tenant_id: str) -> str:
+def _get_tenant_info_by_id(tenant_id: str) -> str:
     tenant = Tenants.get_tenant_by_id(tenant_id)
     if not tenant or not tenant.s3_bucket:
         raise HTTPException(
             status_code=400,
             detail="Tenant storage configuration missing.",
         )
-    return tenant.s3_bucket
+    return tenant.s3_bucket, tenant.table_name, tenant.system_config_client_name
 
 
-def _get_tenant_bucket_for_user(user: UserModel) -> str:
+def _get_tenant_info_for_user(user: UserModel) -> str:
     if not getattr(user, "tenant_id", None):
         raise HTTPException(
             status_code=400,
             detail="User is not associated with a tenant.",
         )
 
-    return _get_tenant_bucket_by_id(user.tenant_id)
+    return _get_tenant_info_by_id(user.tenant_id)
 
 
 def convert_payload_openai_to_luxor(openai_payload: dict, user: Optional[UserModel]) -> dict:
@@ -347,16 +347,18 @@ def convert_payload_openai_to_luxor(openai_payload: dict, user: Optional[UserMod
         
         log.info(f"Get Tenant Bucket By Override Id {override_tenant_id}")
 
-        tenant_bucket = _get_tenant_bucket_by_id(override_tenant_id)
+        tenant_bucket, table_name, system_config_client_name  = _get_tenant_info_by_id(override_tenant_id)
     else:
         log.info(f"Get Tenant Bucket By User {user}")
 
-        tenant_bucket = _get_tenant_bucket_for_user(user)
+        tenant_bucket, table_name, system_config_client_name = _get_tenant_info_for_user(user)
 
     messages = openai_payload.get("messages")
     luxor_payload["messages"] = messages
     luxor_payload["bucket"] = S3_BUCKET_NAME
     luxor_payload["tenant"] = tenant_bucket
+    luxor_payload["table_name"] = table_name
+    luxor_payload["system_config_client_name"] = system_config_client_name
     luxor_payload["user"] = user.id
     luxor_payload["model"] = model_id or "luxor:latest"
     luxor_payload["task"] = openai_payload.get("task") or "generate-completion"
