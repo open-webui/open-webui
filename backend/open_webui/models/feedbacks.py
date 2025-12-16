@@ -114,6 +114,10 @@ class FeedbackListResponse(BaseModel):
     total: int
 
 
+class FeedbackIdResponse(BaseModel):
+    id: str
+
+
 class FeedbackTable:
     def insert_new_feedback(
         self, user_id: str, form_data: FeedbackForm
@@ -237,6 +241,37 @@ class FeedbackTable:
                 .order_by(Feedback.updated_at.desc())
                 .all()
             ]
+
+    def get_all_feedback_ids(self) -> list[str]:
+        with get_db() as db:
+            ids = (
+                db.query(Feedback.id)
+                .order_by(Feedback.updated_at.desc())
+                .all()
+            )
+            return [feedback_id for feedback_id, in ids]
+
+    def get_all_feedbacks_with_users(self) -> list[dict]:
+        """
+        Get all feedbacks with their associated user data in a single query.
+        Returns a list of dictionaries with 'feedback' and 'user' keys.
+        """
+        try:
+            with get_db() as db:
+                query = (
+                    db.query(Feedback, User)
+                    .outerjoin(User, Feedback.user_id == User.id)
+                    .all()
+                )
+
+            result = []
+            for feedback, user in query:
+                result.append({"feedback": feedback, "user": user})
+
+            return result
+        except Exception as e:
+            log.exception(f"Error getting all feedbacks with users: {e}")
+            return []
 
     def get_feedbacks_by_type(self, type: str) -> list[FeedbackModel]:
         with get_db() as db:

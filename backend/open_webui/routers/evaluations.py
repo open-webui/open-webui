@@ -9,6 +9,7 @@ from open_webui.models.feedbacks import (
     FeedbackForm,
     FeedbackUserResponse,
     FeedbackListResponse,
+    FeedbackIdResponse,
     Feedbacks,
 )
 
@@ -58,10 +59,14 @@ async def update_config(
     }
 
 
-@router.get("/feedbacks/all", response_model=list[FeedbackResponse])
-async def get_all_feedbacks(user=Depends(get_admin_user)):
-    feedbacks = Feedbacks.get_all_feedbacks()
-    return feedbacks
+@router.get("/feedbacks/all", response_model=list[FeedbackResponse] | list[FeedbackIdResponse])
+async def get_all_feedbacks(
+    ids_only: bool = False, user=Depends(get_admin_user)
+):
+    if ids_only:
+        return [FeedbackIdResponse(id=feedback_id) for feedback_id in Feedbacks.get_all_feedback_ids()]
+
+    return Feedbacks.get_all_feedbacks()
 
 
 @router.delete("/feedbacks/all")
