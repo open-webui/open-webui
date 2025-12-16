@@ -1534,11 +1534,31 @@ async def chat_completion(
     metadata = {}
     try:
         if not model_item.get("direct", False):
+            # Get model info first to check if it's a custom model
+            model_info = Models.get_model_by_id(model_id)
+
+            # Try fallback to default model for custom models if base model not found
+            if (
+                model_id not in request.app.state.MODELS
+                and model_info
+                and model_info.base_model_id
+                and request.app.state.config.DEFAULT_MODELS
+            ):
+                fallback_model_id = request.app.state.config.DEFAULT_MODELS.split(",")[0].strip()
+
+                if fallback_model_id in request.app.state.MODELS:
+                    log.warning(
+                        f"Base model '{model_info.base_model_id}' not found for custom model '{model_id}'. "
+                        f"Falling back to default model '{fallback_model_id}'."
+                    )
+                    model_id = fallback_model_id
+                    form_data["model"] = fallback_model_id
+                    model_info = Models.get_model_by_id(fallback_model_id)
+
             if model_id not in request.app.state.MODELS:
                 raise Exception("Model not found")
 
             model = request.app.state.MODELS[model_id]
-            model_info = Models.get_model_by_id(model_id)
 
             # Check if user has access to the model
             if not BYPASS_MODEL_ACCESS_CONTROL and (

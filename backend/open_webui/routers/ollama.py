@@ -1312,6 +1312,25 @@ async def generate_chat_completion(
     if ":" not in payload["model"]:
         payload["model"] = f"{payload['model']}:latest"
 
+    # Try fallback to default model for custom models if base model not found
+    if (
+        url_idx is None
+        and payload["model"] not in request.app.state.OLLAMA_MODELS
+        and model_info
+        and model_info.base_model_id
+        and request.app.state.config.DEFAULT_MODELS
+    ):
+        fallback_model_id = request.app.state.config.DEFAULT_MODELS.split(",")[0].strip()
+        if ":" not in fallback_model_id:
+            fallback_model_id = f"{fallback_model_id}:latest"
+
+        if fallback_model_id in request.app.state.OLLAMA_MODELS:
+            log.warning(
+                f"Base model '{model_info.base_model_id}' not found for custom model '{model_id}'. "
+                f"Falling back to default model '{fallback_model_id}'."
+            )
+            payload["model"] = fallback_model_id
+
     url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
     api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
         str(url_idx),

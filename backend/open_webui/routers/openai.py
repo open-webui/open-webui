@@ -846,13 +846,27 @@ async def generate_chat_completion(
 
     await get_all_models(request, user=user)
     model = request.app.state.OPENAI_MODELS.get(model_id)
+
     if model:
         idx = model["urlIdx"]
-    else:
-        raise HTTPException(
-            status_code=404,
-            detail="Model not found",
+    elif model_info and model_info.base_model_id and request.app.state.config.DEFAULT_MODELS:
+        # Try fallback to default model for custom models
+        fallback_model_id = request.app.state.config.DEFAULT_MODELS.split(",")[0].strip()
+        fallback_model = request.app.state.OPENAI_MODELS.get(fallback_model_id)
+
+        if not fallback_model:
+            raise HTTPException(status_code=404, detail="Model not found")
+
+        log.warning(
+            f"Base model '{model_info.base_model_id}' not found for custom model '{form_data.get('model')}'. "
+            f"Falling back to default model '{fallback_model_id}'."
         )
+        payload["model"] = fallback_model_id
+        model_id = fallback_model_id
+        model = fallback_model
+        idx = model["urlIdx"]
+    else:
+        raise HTTPException(status_code=404, detail="Model not found")
 
     # Get the API config for the model
     api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
