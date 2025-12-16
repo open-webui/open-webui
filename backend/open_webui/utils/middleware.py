@@ -1100,9 +1100,10 @@ def apply_params_to_form_data(form_data, model):
 
         if "logit_bias" in params and params["logit_bias"] is not None:
             try:
-                form_data["logit_bias"] = json.loads(
-                    convert_logit_bias_input_to_json(params["logit_bias"])
-                )
+                logit_bias = convert_logit_bias_input_to_json(params["logit_bias"])
+
+                if logit_bias:
+                    form_data["logit_bias"] = json.loads(logit_bias)
             except Exception as e:
                 log.exception(f"Error parsing logit_bias: {e}")
 
