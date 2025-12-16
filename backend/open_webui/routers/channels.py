@@ -74,14 +74,13 @@ router = APIRouter()
 ############################
 
 
-async def get_enabled_channels(request: Request):
+def check_channels_access(request: Request):
     """Dependency to ensure channels are globally enabled."""
     if not request.app.state.config.ENABLE_CHANNELS:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Channels are not enabled",
         )
-    return True
 
 
 ############################
@@ -102,7 +101,7 @@ async def get_channels(
     request: Request,
     user=Depends(get_verified_user),
 ):
-    await get_enabled_channels(request)
+    check_channels_access(request)
     if user.role != "admin" and not has_permission(
         user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
     ):
@@ -158,7 +157,7 @@ async def get_all_channels(
     request: Request,
     user=Depends(get_verified_user),
 ):
-    await get_enabled_channels(request)
+    check_channels_access(request)
     if user.role == "admin":
         return Channels.get_channels()
     return Channels.get_channels_by_user_id(user.id)
@@ -175,7 +174,7 @@ async def get_dm_channel_by_user_id(
     user_id: str,
     user=Depends(get_verified_user),
 ):
-    await get_enabled_channels(request)
+    check_channels_access(request)
     if user.role != "admin" and not has_permission(
         user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
     ):
@@ -247,7 +246,7 @@ async def create_new_channel(
     form_data: CreateChannelForm,
     user=Depends(get_verified_user),
 ):
-    await get_enabled_channels(request)
+    check_channels_access(request)
     if user.role != "admin" and not has_permission(
         user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
     ):
@@ -331,7 +330,7 @@ async def get_channel_by_id(
     id: str,
     user=Depends(get_verified_user),
 ):
-    await get_enabled_channels(request)
+    check_channels_access(request)
     channel = Channels.get_channel_by_id(id)
     if not channel:
         raise HTTPException(
@@ -426,7 +425,7 @@ async def get_channel_members_by_id(
     page: Optional[int] = 1,
     user=Depends(get_verified_user),
 ):
-    await get_enabled_channels(request)
+    check_channels_access(request)
 
     channel = Channels.get_channel_by_id(id)
     if not channel:
@@ -514,7 +513,7 @@ async def update_is_active_member_by_id_and_user_id(
     form_data: UpdateActiveMemberForm,
     user=Depends(get_verified_user),
 ):
-    await get_enabled_channels(request)
+    check_channels_access(request)
     channel = Channels.get_channel_by_id(id)
     if not channel:
         raise HTTPException(
@@ -547,7 +546,7 @@ async def add_members_by_id(
     form_data: UpdateMembersForm,
     user=Depends(get_verified_user),
 ):
-    await get_enabled_channels(request)
+    check_channels_access(request)
     if user.role != "admin" and not has_permission(
         user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
     ):
@@ -596,7 +595,7 @@ async def remove_members_by_id(
     form_data: RemoveMembersForm,
     user=Depends(get_verified_user),
 ):
-    await get_enabled_channels(request)
+    check_channels_access(request)
     if user.role != "admin" and not has_permission(
         user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
     ):
@@ -639,7 +638,7 @@ async def update_channel_by_id(
     form_data: ChannelForm,
     user=Depends(get_verified_user),
 ):
-    await get_enabled_channels(request)
+    check_channels_access(request)
     if user.role != "admin" and not has_permission(
         user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
     ):
@@ -680,7 +679,7 @@ async def delete_channel_by_id(
     id: str,
     user=Depends(get_verified_user),
 ):
-    await get_enabled_channels(request)
+    check_channels_access(request)
     if user.role != "admin" and not has_permission(
         user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
     ):
@@ -736,7 +735,7 @@ async def get_channel_messages(
     limit: int = 50,
     user=Depends(get_verified_user),
 ):
-    await get_enabled_channels(request)
+    check_channels_access(request)
     channel = Channels.get_channel_by_id(id)
     if not channel:
         raise HTTPException(
@@ -803,7 +802,7 @@ async def get_pinned_channel_messages(
     page: int = 1,
     user=Depends(get_verified_user),
 ):
-    await get_enabled_channels(request)
+    check_channels_access(request)
     channel = Channels.get_channel_by_id(id)
     if not channel:
         raise HTTPException(
@@ -1147,7 +1146,7 @@ async def post_new_message(
     background_tasks: BackgroundTasks,
     user=Depends(get_verified_user),
 ):
-    await get_enabled_channels(request)
+    check_channels_access(request)
 
     try:
         message, channel = await new_message_handler(request, id, form_data, user)
@@ -1197,7 +1196,7 @@ async def get_channel_message(
     message_id: str,
     user=Depends(get_verified_user),
 ):
-    await get_enabled_channels(request)
+    check_channels_access(request)
     channel = Channels.get_channel_by_id(id)
     if not channel:
         raise HTTPException(
@@ -1250,7 +1249,7 @@ async def get_channel_message_data(
     message_id: str,
     user=Depends(get_verified_user),
 ):
-    await get_enabled_channels(request)
+    check_channels_access(request)
     channel = Channels.get_channel_by_id(id)
     if not channel:
         raise HTTPException(
@@ -1303,7 +1302,7 @@ async def pin_channel_message(
     form_data: PinMessageForm,
     user=Depends(get_verified_user),
 ):
-    await get_enabled_channels(request)
+    check_channels_access(request)
     channel = Channels.get_channel_by_id(id)
     if not channel:
         raise HTTPException(
@@ -1368,7 +1367,7 @@ async def get_channel_thread_messages(
     limit: int = 50,
     user=Depends(get_verified_user),
 ):
-    await get_enabled_channels(request)
+    check_channels_access(request)
     channel = Channels.get_channel_by_id(id)
     if not channel:
         raise HTTPException(
@@ -1427,7 +1426,7 @@ async def update_message_by_id(
     form_data: MessageForm,
     user=Depends(get_verified_user),
 ):
-    await get_enabled_channels(request)
+    check_channels_access(request)
     channel = Channels.get_channel_by_id(id)
     if not channel:
         raise HTTPException(
@@ -1507,7 +1506,7 @@ async def add_reaction_to_message(
     form_data: ReactionForm,
     user=Depends(get_verified_user),
 ):
-    await get_enabled_channels(request)
+    check_channels_access(request)
     channel = Channels.get_channel_by_id(id)
     if not channel:
         raise HTTPException(
@@ -1581,7 +1580,7 @@ async def remove_reaction_by_id_and_user_id_and_name(
     form_data: ReactionForm,
     user=Depends(get_verified_user),
 ):
-    await get_enabled_channels(request)
+    check_channels_access(request)
     channel = Channels.get_channel_by_id(id)
     if not channel:
         raise HTTPException(
@@ -1657,7 +1656,7 @@ async def delete_message_by_id(
     message_id: str,
     user=Depends(get_verified_user),
 ):
-    await get_enabled_channels(request)
+    check_channels_access(request)
     channel = Channels.get_channel_by_id(id)
     if not channel:
         raise HTTPException(
