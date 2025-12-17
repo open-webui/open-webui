@@ -24,7 +24,6 @@ from open_webui.models.users import UserModel
 from open_webui.models.files import Files
 from open_webui.models.knowledge import Knowledges
 
-from open_webui.models.chats import Chats
 from open_webui.models.notes import Notes
 
 from open_webui.retrieval.vector.main import GetResult
@@ -995,6 +994,8 @@ async def get_sources_from_items(
 
         elif item.get("type") == "chat":
             # Chat Attached
+            from open_webui.models.chats import Chats
+
             chat = Chats.get_chat_by_id(item.get("id"))
 
             if chat and (user.role == "admin" or chat.user_id == user.id):
