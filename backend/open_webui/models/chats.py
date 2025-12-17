@@ -7,7 +7,8 @@ from typing import Optional
 from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
 from open_webui.models.folders import Folders
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, ENABLE_CHAT_INPUT_BASE64_IMAGE_URL_CONVERSION
+from open_webui.utils.files import convert_message_content_images
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, Index
@@ -206,6 +207,33 @@ class ChatTable:
                 changed = True
 
         return changed
+
+    def _convert_chat_images(self, request, chat_data, user):
+        if not ENABLE_CHAT_INPUT_BASE64_IMAGE_URL_CONVERSION:
+            return chat_data
+
+        if not isinstance(chat_data, dict):
+            return chat_data
+
+        def convert_message(message):
+            if not isinstance(message, dict) or "content" not in message:
+                return
+            try:
+                message["content"] = convert_message_content_images(
+                    request, message["content"], {"source": "chat"}, user
+                )
+            except Exception as e:
+                log.exception(f"Error converting images: {e}")
+
+        for message in chat_data.get("messages", []):
+            convert_message(message)
+
+        history_messages = chat_data.get("history", {}).get("messages", {})
+        if isinstance(history_messages, dict):
+            for message in history_messages.values():
+                convert_message(message)
+
+        return chat_data
 
     def insert_new_chat(self, user_id: str, form_data: ChatForm) -> Optional[ChatModel]:
         with get_db() as db:

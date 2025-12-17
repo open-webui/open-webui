@@ -259,8 +259,11 @@ async def get_user_chat_list_by_user_id(
 
 
 @router.post("/new", response_model=Optional[ChatResponse])
-async def create_new_chat(form_data: ChatForm, user=Depends(get_verified_user)):
+async def create_new_chat(
+    request: Request, form_data: ChatForm, user=Depends(get_verified_user)
+):
     try:
+        form_data.chat = Chats._convert_chat_images(request, form_data.chat, user)
         chat = Chats.insert_new_chat(user.id, form_data)
         return ChatResponse(**chat.model_dump())
     except Exception as e:
@@ -276,8 +279,12 @@ async def create_new_chat(form_data: ChatForm, user=Depends(get_verified_user)):
 
 
 @router.post("/import", response_model=list[ChatResponse])
-async def import_chats(form_data: ChatsImportForm, user=Depends(get_verified_user)):
+async def import_chats(
+    request: Request, form_data: ChatsImportForm, user=Depends(get_verified_user)
+):
     try:
+        for chat_form in form_data.chats:
+            chat_form.chat = Chats._convert_chat_images(request, chat_form.chat, user)
         chats = Chats.import_chats(user.id, form_data.chats)
         return chats
     except Exception as e:
@@ -572,18 +579,19 @@ async def get_chat_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.post("/{id}", response_model=Optional[ChatResponse])
 async def update_chat_by_id(
-    id: str, form_data: ChatForm, user=Depends(get_verified_user)
+    request: Request, id: str, form_data: ChatForm, user=Depends(get_verified_user)
 ):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
-    if chat:
-        updated_chat = {**chat.chat, **form_data.chat}
-        chat = Chats.update_chat_by_id(id, updated_chat)
-        return ChatResponse(**chat.model_dump())
-    else:
+    if not chat:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
+
+    updated_chat = {**chat.chat, **form_data.chat}
+    converted_chat = Chats._convert_chat_images(request, updated_chat, user)
+    chat = Chats.update_chat_by_id(id, converted_chat)
+    return ChatResponse(**chat.model_dump())
 
 
 ############################

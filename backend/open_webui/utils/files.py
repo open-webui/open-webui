@@ -119,6 +119,35 @@ def get_file_url_from_base64(request, base64_file_string, metadata, user):
     return None
 
 
+def convert_message_content_images(request, message_content, metadata, user):
+    if message_content is None:
+        return message_content
+
+    if isinstance(message_content, str):
+        return convert_markdown_base64_images(request, message_content, metadata, user)
+
+    if not isinstance(message_content, list):
+        return message_content
+
+    converted_content = []
+    for item in message_content:
+        if not isinstance(item, dict) or item.get("type") != "image_url":
+            converted_content.append(item)
+            continue
+
+        url = item.get("image_url", {}).get("url", "")
+        if url and url.startswith("data:image/") and len(url) > 1024:
+            file_url = get_image_url_from_base64(request, url, metadata, user)
+            if file_url:
+                item = {
+                    **item,
+                    "image_url": {**item.get("image_url", {}), "url": file_url},
+                }
+
+        converted_content.append(item)
+    return converted_content
+
+
 def get_image_base64_from_file_id(id: str) -> Optional[str]:
     file = Files.get_file_by_id(id)
     if not file:
