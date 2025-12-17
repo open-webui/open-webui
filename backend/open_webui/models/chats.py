@@ -8,7 +8,7 @@ from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
 from open_webui.models.folders import Folders
 from open_webui.env import SRC_LOG_LEVELS, ENABLE_CHAT_INPUT_BASE64_IMAGE_URL_CONVERSION
-from open_webui.utils.files import convert_message_content_images
+from open_webui.utils.files import convert_message_content_images, get_image_url_from_base64
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, Index
@@ -216,12 +216,25 @@ class ChatTable:
             return chat_data
 
         def convert_message(message):
-            if not isinstance(message, dict) or "content" not in message:
+            if not isinstance(message, dict):
                 return
             try:
-                message["content"] = convert_message_content_images(
-                    request, message["content"], {"source": "chat"}, user
-                )
+                if "content" in message:
+                    message["content"] = convert_message_content_images(
+                        request, message["content"], {"source": "chat"}, user
+                    )
+
+                if "files" in message and isinstance(message["files"], list):
+                    for file_item in message["files"]:
+                        if not isinstance(file_item, dict):
+                            continue
+                        url = file_item.get("url", "")
+                        if url and url.startswith("data:image/") and len(url) > 1024:
+                            file_url = get_image_url_from_base64(
+                                request, url, {"source": "chat"}, user
+                            )
+                            if file_url:
+                                file_item["url"] = file_url
             except Exception as e:
                 log.exception(f"Error converting images: {e}")
 
