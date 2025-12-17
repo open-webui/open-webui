@@ -426,8 +426,12 @@ async def get_all_models(request: Request, user: UserModel = None):
 async def get_filtered_models(models, user):
     # Filter models based on user access control
     filtered_models = []
+
+    model_ids = [model["model"] for model in models.get("models", [])]
+    models_access_control = Models.get_models_access_control_by_ids(model_ids)
+
     for model in models.get("models", []):
-        model_info = Models.get_model_by_id(model["model"])
+        model_info = models_access_control.get(model["model"])
         if model_info:
             if user.id == model_info.user_id or has_access(
                 user.id, type="read", access_control=model_info.access_control

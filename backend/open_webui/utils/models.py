@@ -369,6 +369,15 @@ def get_filtered_models(models, user):
     ) and not BYPASS_MODEL_ACCESS_CONTROL:
         filtered_models = []
         user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
+
+        # Batch fetch access control info for all non-arena models
+        non_arena_model_ids = [
+            model["id"] for model in models if not model.get("arena")
+        ]
+        models_access_control = Models.get_models_access_control_by_ids(
+            non_arena_model_ids
+        )
+
         for model in models:
             if model.get("arena"):
                 if has_access(
@@ -382,7 +391,7 @@ def get_filtered_models(models, user):
                     filtered_models.append(model)
                 continue
 
-            model_info = Models.get_model_by_id(model["id"])
+            model_info = models_access_control.get(model["id"])
             if model_info:
                 if (
                     (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)

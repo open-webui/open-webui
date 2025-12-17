@@ -135,6 +135,14 @@ class ModelResponse(ModelModel):
     pass
 
 
+class ModelAccessControl(BaseModel):
+    id: str
+    user_id: str
+    access_control: Optional[dict] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ModelListResponse(BaseModel):
     items: list[ModelUserResponse]
     total: int
@@ -358,6 +366,30 @@ class ModelsTable:
                 return ModelModel.model_validate(model)
         except Exception:
             return None
+
+    def get_models_access_control_by_ids(
+        self, ids: list[str]
+    ) -> dict[str, ModelAccessControl]:
+        if not ids:
+            return {}
+        try:
+            with get_db() as db:
+                models = (
+                    db.query(Model.id, Model.user_id, Model.access_control)
+                    .filter(Model.id.in_(ids))
+                    .all()
+                )
+                return {
+                    model.id: ModelAccessControl(
+                        id=model.id,
+                        user_id=model.user_id,
+                        access_control=model.access_control,
+                    )
+                    for model in models
+                }
+        except Exception as e:
+            log.exception(f"Failed to batch fetch models access control: {e}")
+            return {}
 
     def toggle_model_by_id(self, id: str) -> Optional[ModelModel]:
         with get_db() as db:
