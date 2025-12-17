@@ -1889,11 +1889,7 @@ async def process_chat_response(
                                 "content": content,
                                 "title": title,
                             }
-
-                            # Add CO2 consumption if available in response_data
-                            if "co2Consumption" in response_data:
-                                completion_data["co2Consumption"] = response_data["co2Consumption"]
-
+                            
                             # Add provider_specific_fields if available in response message
                             provider_specific_fields = choices[0].get("message", {}).get("provider_specific_fields")
                             if provider_specific_fields:

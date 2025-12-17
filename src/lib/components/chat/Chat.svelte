@@ -1390,7 +1390,7 @@
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
-		const { id, done, choices, content, sources, selected_model_id, error, usage, co2Consumption, provider_specific_fields } = data;
+		const { id, done, choices, content, sources, selected_model_id, error, usage, provider_specific_fields } = data;
 
 		if (error) {
 			await handleOpenAIError(error, message);
@@ -1481,10 +1481,6 @@
 
 		if (usage) {
 			message.usage = usage;
-		}
-
-		if (co2Consumption !== undefined) {
-			message.co2Consumption = co2Consumption;
 		}
 
 		if (provider_specific_fields) {
