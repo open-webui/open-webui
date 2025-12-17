@@ -4,6 +4,7 @@ import mimetypes
 import os
 import shutil
 import asyncio
+import torch
 
 import re
 import uuid
@@ -187,7 +188,9 @@ def get_rf(
                         trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
                         backend=SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
                         model_kwargs=SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
-                    )
+                        activation_fn=torch.nn.Sigmoid(),
+                        )
+
                 except Exception as e:
                     log.error(f"CrossEncoder: {e}")
                     raise Exception(ERROR_MESSAGES.DEFAULT("CrossEncoder error"))
@@ -311,8 +314,6 @@ def unload_embedding_model(request: Request):
 
         gc.collect()
         if DEVICE_TYPE == "cuda":
-            import torch
-
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
 
@@ -892,7 +893,6 @@ async def update_rag_config(
 
         gc.collect()
         if DEVICE_TYPE == "cuda":
-            import torch
 
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
