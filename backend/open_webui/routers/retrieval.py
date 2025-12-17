@@ -4,7 +4,6 @@ import mimetypes
 import os
 import shutil
 import asyncio
-import torch
 
 import re
 import uuid
@@ -180,6 +179,7 @@ def get_rf(
                     raise Exception(ERROR_MESSAGES.DEFAULT(e))
             else:
                 import sentence_transformers
+                import torch
 
                 try:
                     rf = sentence_transformers.CrossEncoder(
@@ -314,6 +314,8 @@ def unload_embedding_model(request: Request):
 
         gc.collect()
         if DEVICE_TYPE == "cuda":
+            import torch
+
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
 
@@ -893,6 +895,7 @@ async def update_rag_config(
 
         gc.collect()
         if DEVICE_TYPE == "cuda":
+            import torch
 
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
