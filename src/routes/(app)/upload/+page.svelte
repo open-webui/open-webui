@@ -35,6 +35,7 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 	let publicCount: number = 0;
 	let privateCount: number = 0;
 	let isPrivate = (typeof visibility !== 'undefined') ? (visibility === 'private') : true;
+	let filesRefreshKey = 0;
 
 	const loadTenants = async () => {
 		if (
@@ -131,6 +132,7 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 				fileInput.value = '';
 			}
 			await refreshCounts();
+			filesRefreshKey += 1;
 		} catch (err) {
 			const message = typeof err === 'string' ? err : (err?.detail ?? 'Failed to upload file.');
 			toast.error(message);
@@ -218,7 +220,7 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 		: null;
 	
 	$: tabs = [
-		{ id: 'all', label: `All` },
+		{ id: 'all', label: `All (${publicCount + privateCount})` },
 		{ id: 'public', label: `Teams (${publicCount})` },
 		{ id: 'private', label: `Personal (${privateCount})` }
 	];
@@ -670,6 +672,7 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 						? (selectedTenantId ?? $user?.tenant_id ?? null)
 						: undefined}
 					tenantBucket={tenantBucket}
+					refreshKey={filesRefreshKey}
 					on:filesChanged={() => refreshCounts()}
 				/>
 			{:else}
@@ -687,6 +690,7 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 						? (selectedTenantId ?? $user?.tenant_id ?? null)
 						: undefined}
 					tenantBucket={tenantBucket}
+					refreshKey={filesRefreshKey}
 					on:filesChanged={() => refreshCounts()}
 				/>
 			{:else}
@@ -704,6 +708,7 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 						? (selectedTenantId ?? $user?.tenant_id ?? null)
 						: undefined}
 					tenantBucket={tenantBucket}
+					refreshKey={filesRefreshKey}
 					on:filesChanged={() => refreshCounts()}
 				/>
 			{:else}

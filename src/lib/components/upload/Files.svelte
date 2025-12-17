@@ -11,12 +11,14 @@
 	export let tenantBucket: string | null = null;
 	export let useTenantPromptApi: boolean = false;
 	export let paths: string[] | null = null;
+	export let refreshKey: number | null = null;
 
 	let files: StoredFile[] = [];
 	let loading = false;
 	let error: string | null = null;
 	let lastParams = '';
 	let deletingKey: string | null = null;
+	let _lastRefreshKey: number | null = null;
 
 	const dispatch = createEventDispatcher();
 
@@ -184,6 +186,12 @@
 			loading = false;
 		}
 	};
+
+	$: if (typeof refreshKey !== 'undefined' && refreshKey !== null && refreshKey !== _lastRefreshKey) {
+		_lastRefreshKey = refreshKey;
+		// Call loadFiles() to refresh the list
+		loadFiles();
+	}
 
 	$: paramsKey = (() => {
 		if (paths && paths.length > 0) {
