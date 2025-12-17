@@ -113,6 +113,7 @@
 		};
 		annotation?: { type: string; rating: number };
 		co2Consumption?: number;
+		provider_specific_fields?: Record<string, unknown>;
 	}
 
 	export let chatId = '';
@@ -849,6 +850,22 @@
 
 							{#if message.code_executions}
 								<CodeExecutions codeExecutions={message.code_executions} />
+							{/if}
+
+							{#if message.provider_specific_fields}
+								<div class="mt-2 p-3 bg-gray-50 dark:bg-gray-850 rounded-lg">
+									<div class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+										Provider Specific Fields
+									</div>
+									<div class="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+										{#each Object.entries(message.provider_specific_fields) as [key, value]}
+											<div class="flex flex-wrap gap-1">
+												<span class="font-medium">{key}:</span>
+												<span class="break-all">{JSON.stringify(value)}</span>
+											</div>
+										{/each}
+									</div>
+								</div>
 							{/if}
 						</div>
 					</div>

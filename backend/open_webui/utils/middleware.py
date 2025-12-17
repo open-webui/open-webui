@@ -1894,6 +1894,11 @@ async def process_chat_response(
                             if "co2Consumption" in response_data:
                                 completion_data["co2Consumption"] = response_data["co2Consumption"]
 
+                            # Add provider_specific_fields if available in response message
+                            provider_specific_fields = choices[0].get("message", {}).get("provider_specific_fields")
+                            if provider_specific_fields:
+                                completion_data["provider_specific_fields"] = provider_specific_fields
+
                             await event_emitter(
                                 {
                                     "type": "chat:completion",
@@ -2404,6 +2409,7 @@ async def process_chat_response(
                     "content": content,
                 }
             ]
+            accumulated_provider_fields = None
 
             reasoning_tags_param = metadata.get("params", {}).get("reasoning_tags")
             DETECT_REASONING_TAGS = reasoning_tags_param is not False
@@ -2444,6 +2450,7 @@ async def process_chat_response(
                 async def stream_body_handler(response, form_data):
                     nonlocal content
                     nonlocal content_blocks
+                    nonlocal accumulated_provider_fields
 
                     response_tool_calls = []
 
@@ -2553,6 +2560,14 @@ async def process_chat_response(
 
                                     delta = choices[0].get("delta", {})
                                     delta_tool_calls = delta.get("tool_calls", None)
+
+                                    provider_specific_fields = delta.get("provider_specific_fields", None)
+
+                                    if provider_specific_fields:
+                                        # Accumulate provider_specific_fields (merge with existing if present)
+                                        if accumulated_provider_fields is None:
+                                            accumulated_provider_fields = {}
+                                        accumulated_provider_fields.update(provider_specific_fields)
 
                                     if delta_tool_calls:
                                         for delta_tool_call in delta_tool_calls:
@@ -2757,6 +2772,9 @@ async def process_chat_response(
                                                     content_blocks
                                                 ),
                                             }
+
+                                        if accumulated_provider_fields:
+                                            data["provider_specific_fields"] = accumulated_provider_fields
 
                                 if delta:
                                     delta_count += 1
@@ -3195,6 +3213,9 @@ async def process_chat_response(
                     "content": serialize_content_blocks(content_blocks),
                     "title": title,
                 }
+
+                if accumulated_provider_fields:
+                    data["provider_specific_fields"] = accumulated_provider_fields
 
                 if not ENABLE_REALTIME_CHAT_SAVE:
                     # Save message in the database
