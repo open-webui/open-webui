@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7-ccv2-1.11.0] - 2025-12-17
+
+### Added
+
+- **📜 Docling Support**: Added advanced document loading support.
+- **📈 OpenTelemetry Metrics Service**: Introduced OpenTelemetry metrics service for improved observability.
+- **🔧 Group Access Toggle**: Added group access toggle to MCP.
+- **⏳ Bulk Chat Deletion**: Added a loading indicator when deleting chats in bulk.
+- **🛠️ Static Analysis**: Integrated static analysis into builds and CI.
+
+### Changed
+
+- **🗑️ Chat Disposition Logic**: Adjusted to consider chats not used in the last 30 days rather than those created in the last 30 days.
+- **🎨 MCP Settings Colors**: Updated MCP settings to use common colors.
+- **🎨 Domain Settings Page Colors**: Revised domains setting page to use common colors.
+- **⚙️ CrewAI Dependency**: Added MCP support dependency to CrewAI.
+
+### Fixed
+
+- **📏 Admin Settings Header**: Corrected the admin settings header height.
+- **🖥️ Web Search Settings Spacing**: Fixed a missing space between the toggle switch on the web search settings page.
+- **🌗 Contrast in Dark Mode**: Improved the contrast of toggle controls in dark mode.
+- **♿ Accessibility Enhancements**: Fixed various accessibility ARIA attributes.
+- **🔄 Async Cleanup**: Resolved missing async in cleanup file vectors.
+- **🖲️ Toggle State Display**: Fixed model activation toggles to properly display the actual state.
+- **⏳ Connection Timeout**: Increased Qdrant timeout to mitigate transient connection errors.
+
+### Removed
+
+- **🗑️ Cypress Testing Framework**: Removed unused Cypress testing framework.
+
+## [0.5.7-ccv2-1.10.0] - 2025-12-08
+
+### Added
+
+- **🔗 MCP to Sharepoint**: Implemented MCP to SharePoint to enhance document accessibility.
+
 ## [0.5.7-ccv2-1.9.0] - 2025-11-05
 
 ### Added
