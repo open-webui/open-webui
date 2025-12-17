@@ -210,13 +210,10 @@ class ChatTable:
 
     def _convert_chat_images(self, request, chat_data, user):
         if not ENABLE_CHAT_INPUT_BASE64_IMAGE_URL_CONVERSION:
-            log.info("Base64 image conversion disabled via env var")
             return chat_data
 
         if not isinstance(chat_data, dict):
             return chat_data
-
-        log.info(f"Converting chat images for user {user.id}")
 
         def convert_message(message):
             if not isinstance(message, dict):
@@ -228,24 +225,16 @@ class ChatTable:
                     )
 
                 if "files" in message and isinstance(message["files"], list):
-                    log.info(f"Found files array with {len(message['files'])} items in message {message.get('id', 'unknown')}")
-                    for idx, file_item in enumerate(message["files"]):
+                    for file_item in message["files"]:
                         if not isinstance(file_item, dict):
                             continue
                         url = file_item.get("url", "")
-                        log.info(f"File {idx}: type={file_item.get('type')}, url_length={len(url)}, is_base64={url.startswith('data:image/')}")
                         if url and url.startswith("data:image/") and len(url) > 1024:
-                            log.info(f"Converting base64 image in file {idx}")
                             file_url = get_image_url_from_base64(
                                 request, url, {"source": "chat"}, user
                             )
                             if file_url:
-                                log.info(f"Successfully converted to: {file_url}")
                                 file_item["url"] = file_url
-                            else:
-                                log.warning(f"Conversion returned empty URL for file {idx}")
-                        elif url and url.startswith("data:image/"):
-                            log.info(f"Skipping conversion - image too small ({len(url)} bytes)")
             except Exception as e:
                 log.exception(f"Error converting images: {e}")
 
