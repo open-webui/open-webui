@@ -4,7 +4,7 @@ from typing import Optional
 
 
 from open_webui.utils.misc import get_message_list
-from open_webui.socket.main import get_event_emitter
+from open_webui.socket.main import get_event_emitter, emit_to_users
 from open_webui.models.chats import (
     ChatForm,
     ChatImportForm,
@@ -282,6 +282,35 @@ async def create_new_chat_for_user_with_id(
     if user.role == "admin" and ENABLE_ADMIN_CHAT_ACCESS:
         try:
             chat = Chats.insert_new_chat(user_id, form_data)
+
+            await emit_to_users(
+                event="events",
+                data={
+                    "chat_id": chat.id,
+                    "data": {
+                        "type": "chat:title",
+                        "data": None
+                    }
+                },
+                user_ids=[user_id],
+            )
+
+            await emit_to_users(
+                event="events",
+                data={
+                    "chat_id": chat.id,
+                    "data": {
+                        "type": "chat:completion",
+                        "data": {
+                            "done": True,
+                            "title": "New chat created",
+                            "content": "An admin created a new chat for you"
+                        }
+                    }
+                },
+                user_ids=[user_id],
+            )
+
             return ChatResponse(**chat.model_dump())
         except Exception as e:
             log.exception(e)
