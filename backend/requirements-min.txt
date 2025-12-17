@@ -4,10 +4,10 @@
 fastapi==0.124.4
 uvicorn[standard]==0.37.0
 pydantic==2.12.5
-python-multipart==0.0.20
+python-multipart==0.0.21
 itsdangerous==2.2.0
 
-python-socketio==5.15.0
+python-socketio==5.15.1
 python-jose==3.5.0
 cryptography
 bcrypt==5.0.0
