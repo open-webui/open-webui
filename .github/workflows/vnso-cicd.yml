@@ -74,6 +74,11 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_KEY }} # Private Key SSH
+
+          # --- THÊM DÒNG NÀY ---
+          command_timeout: 120m 
+          # ---------------------
+
           port: ${{ secrets.VPS_PORT || 22 }}
           envs: GHCR_PAT,USERNAME
           script: |
