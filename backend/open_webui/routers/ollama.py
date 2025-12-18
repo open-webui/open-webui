@@ -1163,30 +1163,30 @@ async def generate_chat_completion(
             model_id = payload["model"]
             model_info = Models.get_model_by_id(model_id)
 
-    if model_info:
-        if model_info.base_model_id:
-            payload["model"] = model_info.base_model_id
+            if model_info:
+                if model_info.base_model_id:
+                    payload["model"] = model_info.base_model_id
 
-        params = model_info.params.model_dump()
+                params = model_info.params.model_dump()
 
-        if params:
-            if payload.get("options") is None:
-                payload["options"] = {}
+                if params:
+                    if payload.get("options") is None:
+                        payload["options"] = {}
 
-            payload["options"] = apply_model_params_to_body_ollama(
-                params, payload["options"]
-            )
-            payload = apply_model_system_prompt_to_body(params, payload, metadata, user)
+                    payload["options"] = apply_model_params_to_body_ollama(
+                        params, payload["options"]
+                    )
+                    payload = apply_model_system_prompt_to_body(params, payload, metadata, user)
 
-        # Check if user has access to the model
-        if not bypass_filter and user.role == "user":
-            if not (
-                user.id == model_info.user_id
-                or has_access(
-                    user.id, type="read", access_control=model_info.access_control
-                )
-            ):
-                raise HTTPException(
+                # Check if user has access to the model
+                if not bypass_filter and user.role == "user":
+                    if not (
+                        user.id == model_info.user_id
+                        or has_access(
+                            user.id, type="read", access_control=model_info.access_control
+                        )
+                    ):
+                        raise HTTPException(
                     status_code=403,
                     detail="Model not found",
                 )
