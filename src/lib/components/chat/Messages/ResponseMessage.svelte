@@ -836,14 +836,26 @@
 
 							{#if message.provider_specific_fields}
 								<div class="mt-2 p-3 bg-gray-50 dark:bg-gray-850 rounded-lg">
-									<div class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-										Provider Specific Fields
-									</div>
 									<div class="text-xs text-gray-600 dark:text-gray-400 space-y-1">
 										{#each Object.entries(message.provider_specific_fields) as [key, value]}
 											<div class="flex flex-wrap gap-1">
-												<span class="font-medium">{key}:</span>
-												<span class="break-all">{JSON.stringify(value)}</span>
+												{#if key === 'energy_measurements' && typeof value === 'object' && value !== null}
+													<div class="flex flex-col gap-1">
+														<span class="font-medium">Energy Measurements:</span>
+														{#if value['x-energy-measurement-seconds'] !== undefined}
+															<span class="ml-2">Time: {Number(value['x-energy-measurement-seconds']).toFixed(3)} s</span>
+														{/if}
+														{#if value['x-energy-measurement-wh'] !== undefined}
+															<span class="ml-2">Energy: {Number(value['x-energy-measurement-wh']).toFixed(6)} Wh</span>
+														{/if}
+														{#if value['x-energy-measurement-g-co2'] !== undefined}
+															<span class="ml-2">CO₂: {Number(value['x-energy-measurement-g-co2']).toFixed(6)} g</span>
+														{/if}
+													</div>
+												{:else}
+													<span class="font-medium">{key}:</span>
+													<span class="break-all">{JSON.stringify(value)}</span>
+												{/if}
 											</div>
 										{/each}
 									</div>

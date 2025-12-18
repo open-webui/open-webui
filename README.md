@@ -1,3 +1,20 @@
+# Open WebUI with energy measurement 
+
+This fork displays energy measurements if they were sent from the OpenAI compatible server as provider specific field of the form:
+
+```
+ energy_measurements: {
+  "x-energy-measurement-seconds":0.4023776054382324,
+  "x-energy-measurement-wh":0.002508996114031308,
+  "x-energy-measurement-g-co2":0.0016607697617762875
+}
+```
+
+## Preview
+
+![Open WebUI with energy measurement](static/screen_energy.png)
+
+
 # Open WebUI 👋
 
 ![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
