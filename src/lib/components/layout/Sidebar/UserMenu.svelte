@@ -59,13 +59,14 @@
 		}
 	};
 
-	// Determine if user can see active user count based on role and config
-	$: canSeeActiveUserCount =
-		$config?.features?.enable_public_active_users_count || role === 'admin';
+	const handleDropdownChange = (state: boolean) => {
+		dispatch('change', state);
 
-	$: if (show && canSeeActiveUserCount) {
-		getUsageInfo();
-	}
+		// Fetch usage info when dropdown opens, if user has permission
+		if (state && ($config?.features?.enable_public_active_users_count || role === 'admin')) {
+			getUsageInfo();
+		}
+	};
 </script>
 
 <ShortcutsModal bind:show={$showShortcuts} />
@@ -79,9 +80,7 @@
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <DropdownMenu.Root
 	bind:open={show}
-	onOpenChange={(state) => {
-		dispatch('change', state);
-	}}
+	onOpenChange={handleDropdownChange}
 >
 	<DropdownMenu.Trigger>
 		<slot />
@@ -356,7 +355,7 @@
 				<div class=" self-center truncate">{$i18n.t('Sign Out')}</div>
 			</DropdownMenu.Item>
 
-			{#if showActiveUsers && canSeeActiveUserCount && usage}
+			{#if showActiveUsers && ($config?.features?.enable_public_active_users_count || role === 'admin') && usage}
 				{#if usage?.user_count}
 					<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
 
@@ -368,7 +367,7 @@
 						<div
 							class="flex rounded-xl py-1 px-3 text-xs gap-2.5 items-center"
 							on:mouseenter={() => {
-								if (canSeeActiveUserCount) {
+								if ($config?.features?.enable_public_active_users_count || role === 'admin') {
 									getUsageInfo();
 								}
 							}}
