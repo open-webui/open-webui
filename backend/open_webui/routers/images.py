@@ -196,12 +196,12 @@ async def update_config(
     set_image_model(request, form_data.IMAGE_GENERATION_MODEL)
     if (
         form_data.IMAGE_SIZE == "auto"
-        and form_data.IMAGE_GENERATION_MODEL != "gpt-image-1"
+        and form_data.IMAGE_GENERATION_MODEL not in ["gpt-image-1", "gpt-image-1.5"]
     ):
         raise HTTPException(
             status_code=400,
             detail=ERROR_MESSAGES.INCORRECT_FORMAT(
-                "  (auto is only allowed with gpt-image-1)."
+                "  (auto is only allowed with gpt-image-1 and gpt-image-1.5)."
             ),
         )
 
@@ -380,6 +380,7 @@ def get_models(request: Request, user=Depends(get_verified_user)):
                 {"id": "dall-e-2", "name": "DALL·E 2"},
                 {"id": "dall-e-3", "name": "DALL·E 3"},
                 {"id": "gpt-image-1", "name": "GPT-IMAGE 1"},
+                {"id": "gpt-image-1.5", "name": "GPT-IMAGE 1.5"},
             ]
         elif request.app.state.config.IMAGE_GENERATION_ENGINE == "gemini":
             return [
@@ -522,7 +523,7 @@ async def image_generations(
 ):
     # if IMAGE_SIZE = 'auto', default WidthxHeight to the 512x512 default
     # This is only relevant when the user has set IMAGE_SIZE to 'auto' with an
-    # image model other than gpt-image-1, which is warned about on settings save
+    # image model other than gpt-image-1 or gpt-image-1.5, which is warned about on settings save
 
     size = "512x512"
     if (
@@ -564,7 +565,7 @@ async def image_generations(
                 ),
                 **(
                     {}
-                    if "gpt-image-1" in request.app.state.config.IMAGE_GENERATION_MODEL
+                    if request.app.state.config.IMAGE_GENERATION_MODEL in ["gpt-image-1", "gpt-image-1.5"]
                     else {"response_format": "b64_json"}
                 ),
                 **(
@@ -867,7 +868,7 @@ async def image_edits(
                 **({"size": size} if size else {}),
                 **(
                     {}
-                    if "gpt-image-1" in request.app.state.config.IMAGE_EDIT_MODEL
+                    if request.app.state.config.IMAGE_EDIT_MODEL in ["gpt-image-1", "gpt-image-1.5"]
                     else {"response_format": "b64_json"}
                 ),
             }
