@@ -248,9 +248,9 @@ def initialize_otel() -> bool:
             trace.set_tracer_provider(tracer_provider)
             
             # Create MeterProvider for metrics
-            # Note: PeriodicExportingMetricReader takes exporter as first positional argument
+            # Note: PeriodicExportingMetricReader takes 'exporter' as keyword argument
             metric_reader = PeriodicExportingMetricReader(
-                metric_exporter,
+                exporter=metric_exporter,
                 export_interval_millis=60000,  # Export metrics every 60 seconds
             )
             meter_provider = MeterProvider(
