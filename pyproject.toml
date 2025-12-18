@@ -97,6 +97,14 @@ dependencies = [
     "langfuse==2.44.0",
     "youtube-transcript-api==0.6.3",
     "pytube==15.0.0",
+    # OpenTelemetry dependencies
+    "opentelemetry-api>=1.29.0",
+    "opentelemetry-sdk>=1.29.0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.15.0",
+    "opentelemetry-instrumentation-fastapi>=0.50b0",
+    "opentelemetry-instrumentation-requests>=0.50b0",
+    "opentelemetry-instrumentation-redis>=0.50b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.50b0",
 
     "extract_msg",
     "pydub",

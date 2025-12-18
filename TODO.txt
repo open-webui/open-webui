@@ -239,4 +239,4 @@ Should I check the actual format of file.path in your database or test the delet
 
 1. oetl
 2. cache and redis invalidation of data
-3. deplyo langfuse and data editatble ui liek directus
+3. deplyo langfuse and data editatble ui like directus

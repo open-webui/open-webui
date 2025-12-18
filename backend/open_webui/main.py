@@ -504,6 +504,19 @@ def ensure_chat_group_id_column():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     start_logger()
+    
+    # Initialize OpenTelemetry (Phase 1)
+    try:
+        from open_webui.utils.otel_config import initialize_otel, shutdown_otel
+        otel_initialized = initialize_otel()
+        if otel_initialized:
+            log.info("OpenTelemetry initialized successfully")
+        else:
+            log.debug("OpenTelemetry not initialized (disabled or misconfigured)")
+    except Exception as e:
+        # Don't crash if OTEL fails - log and continue
+        log.warning(f"OpenTelemetry initialization failed: {e}", exc_info=True)
+    
     if RESET_CONFIG_ON_START:
         reset_config()
 
@@ -559,8 +572,15 @@ async def lifespan(app: FastAPI):
                 log.warning(f"Failed to copy KaTeX fonts from node_modules: {e}")
     except Exception as e:
         log.debug(f"KaTeX font cache init failed: {e}")
-        
+    
     yield
+    
+    # Shutdown OpenTelemetry (flush remaining spans/metrics)
+    try:
+        from open_webui.utils.otel_config import shutdown_otel
+        shutdown_otel()
+    except Exception as e:
+        log.warning(f"OpenTelemetry shutdown failed: {e}", exc_info=True)
 
 
 app = FastAPI(

@@ -558,3 +558,41 @@ AUDIT_EXCLUDED_PATHS = os.getenv("AUDIT_EXCLUDED_PATHS", "/chats,/chat,/folders"
 )
 AUDIT_EXCLUDED_PATHS = [path.strip() for path in AUDIT_EXCLUDED_PATHS]
 AUDIT_EXCLUDED_PATHS = [path.lstrip("/") for path in AUDIT_EXCLUDED_PATHS]
+
+####################################
+# OPENTELEMETRY CONFIGURATION
+####################################
+
+# OpenTelemetry master switch
+OTEL_ENABLED = os.environ.get("OTEL_ENABLED", "false").lower() == "true"
+
+# Service identification
+OTEL_SERVICE_NAME = os.environ.get("OTEL_SERVICE_NAME", "open-webui")
+OTEL_SERVICE_VERSION = VERSION  # Use existing VERSION from package.json
+
+# OTLP exporter configuration (defaults to sidecar pattern)
+OTEL_EXPORTER_OTLP_ENDPOINT = os.environ.get(
+    "OTEL_EXPORTER_OTLP_ENDPOINT",
+    "http://localhost:4317"  # Standard OTEL Collector sidecar port
+)
+OTEL_EXPORTER_OTLP_PROTOCOL = os.environ.get(
+    "OTEL_EXPORTER_OTLP_PROTOCOL",
+    "grpc"
+).lower()
+
+# Sampling configuration
+OTEL_TRACES_SAMPLER = os.environ.get("OTEL_TRACES_SAMPLER", "parentbased_traceidratio")
+try:
+    OTEL_TRACES_SAMPLER_ARG = float(os.environ.get("OTEL_TRACES_SAMPLER_ARG", "1.0"))
+    if OTEL_TRACES_SAMPLER_ARG < 0.0 or OTEL_TRACES_SAMPLER_ARG > 1.0:
+        log.warning(
+            f"OTEL_TRACES_SAMPLER_ARG={OTEL_TRACES_SAMPLER_ARG} is out of range [0.0, 1.0], using default 1.0"
+        )
+        OTEL_TRACES_SAMPLER_ARG = 1.0
+except (ValueError, TypeError) as e:
+    log.warning(f"Invalid OTEL_TRACES_SAMPLER_ARG value: {e}. Using default 1.0")
+    OTEL_TRACES_SAMPLER_ARG = 1.0
+
+# Exporter configuration
+OTEL_LOGS_EXPORTER = os.environ.get("OTEL_LOGS_EXPORTER", "none")  # We use Loguru
+OTEL_METRICS_EXPORTER = os.environ.get("OTEL_METRICS_EXPORTER", "otlp")
