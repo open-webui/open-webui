@@ -367,7 +367,13 @@ def instrument_fastapi(app) -> bool:
             log.info("Instrumenting FastAPI application...")
             
             # Configure excluded paths
+            # OpenTelemetry expects a comma-separated string, not a list
             excluded_urls = OTEL_INSTRUMENTATION_FASTAPI_EXCLUDED_PATHS
+            if excluded_urls:
+                if isinstance(excluded_urls, list):
+                    excluded_urls = ",".join(excluded_urls)
+                elif not isinstance(excluded_urls, str):
+                    excluded_urls = str(excluded_urls)
             
             # Instrument FastAPI app
             # FastAPIInstrumentor.instrument() is idempotent by default
