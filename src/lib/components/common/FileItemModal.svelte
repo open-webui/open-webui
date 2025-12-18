@@ -51,8 +51,12 @@
 		item?.meta?.content_type === 'application/vnd.ms-excel' ||
 		item?.meta?.content_type ===
 			'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+		item?.meta?.content_type === 'text/csv' ||
+		item?.meta?.content_type === 'application/csv' ||
 		(item?.name &&
-			(item.name.toLowerCase().endsWith('.xls') || item.name.toLowerCase().endsWith('.xlsx')));
+			(item.name.toLowerCase().endsWith('.xls') ||
+				item.name.toLowerCase().endsWith('.xlsx') ||
+				item.name.toLowerCase().endsWith('.csv')));
 
 	const loadExcelContent = async () => {
 		try {
@@ -76,8 +80,8 @@
 				renderExcelSheet();
 			}
 		} catch (error) {
-			console.error('Error loading Excel file:', error);
-			excelError = 'Failed to load Excel file. Please try downloading it instead.';
+			console.error('Error loading Excel/CSV file:', error);
+			excelError = 'Failed to load Excel/CSV file. Please try downloading it instead.';
 		}
 	};
 
