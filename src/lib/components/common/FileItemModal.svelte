@@ -5,6 +5,9 @@
 	import { getKnowledgeById } from '$lib/apis/knowledge';
 	import * as XLSX from 'xlsx';
 
+	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
+	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
+
 	const i18n = getContext('i18n');
 
 	import Modal from './Modal.svelte';
@@ -38,6 +41,33 @@
 	$: isPDF =
 		item?.meta?.content_type === 'application/pdf' ||
 		(item?.name && item?.name.toLowerCase().endsWith('.pdf'));
+
+	$: isMarkdown =
+		item?.meta?.content_type === 'text/markdown' ||
+		(item?.name && item?.name.toLowerCase().endsWith('.md'));
+
+	$: isCode =
+		item?.name &&
+		(item.name.toLowerCase().endsWith('.py') ||
+			item.name.toLowerCase().endsWith('.js') ||
+			item.name.toLowerCase().endsWith('.ts') ||
+			item.name.toLowerCase().endsWith('.java') ||
+			item.name.toLowerCase().endsWith('.html') ||
+			item.name.toLowerCase().endsWith('.css') ||
+			item.name.toLowerCase().endsWith('.json') ||
+			item.name.toLowerCase().endsWith('.cpp') ||
+			item.name.toLowerCase().endsWith('.c') ||
+			item.name.toLowerCase().endsWith('.h') ||
+			item.name.toLowerCase().endsWith('.sh') ||
+			item.name.toLowerCase().endsWith('.bash') ||
+			item.name.toLowerCase().endsWith('.yaml') ||
+			item.name.toLowerCase().endsWith('.yml') ||
+			item.name.toLowerCase().endsWith('.xml') ||
+			item.name.toLowerCase().endsWith('.sql') ||
+			item.name.toLowerCase().endsWith('.go') ||
+			item.name.toLowerCase().endsWith('.rs') ||
+			item.name.toLowerCase().endsWith('.php') ||
+			item.name.toLowerCase().endsWith('.rb'));
 
 	$: isAudio =
 		(item?.meta?.content_type ?? '').startsWith('audio/') ||
@@ -360,9 +390,26 @@
 					{/if}
 
 					{#if item?.file?.data}
-						<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
-							{(item?.file?.data?.content ?? '').trim() || 'No content'}
-						</div>
+						{#if isMarkdown}
+							<div class="max-h-[60vh] overflow-scroll scrollbar-hidden text-sm prose dark:prose-invert max-w-full">
+								<Markdown content={item.file.data.content} id="markdown-viewer" />
+							</div>
+						{:else if isCode}
+							<div class="max-h-[60vh] overflow-scroll scrollbar-hidden text-sm relative">
+								<CodeBlock
+									code={item.file.data.content}
+									lang={item.name.split('.').pop()}
+									token={null}
+									edit={false}
+									run={false}
+									save={false}
+								/>
+							</div>
+						{:else}
+							<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
+								{(item?.file?.data?.content ?? '').trim() || 'No content'}
+							</div>
+						{/if}
 					{/if}
 				{/if}
 			{:else}
