@@ -9,7 +9,7 @@
 	import { getUsage } from '$lib/apis';
 	import { getSessionUser, userSignOut } from '$lib/apis/auths';
 
-	import { showSettings, mobile, showSidebar, showShortcuts, user } from '$lib/stores';
+	import { showSettings, mobile, showSidebar, showShortcuts, user, config } from '$lib/stores';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
@@ -59,7 +59,11 @@
 		}
 	};
 
-	$: if (show) {
+	// Determine if user can see active user count based on role and config
+	$: canSeeActiveUserCount =
+		$config?.features?.enable_public_active_users_count || role === 'admin';
+
+	$: if (show && canSeeActiveUserCount) {
 		getUsageInfo();
 	}
 </script>
@@ -352,7 +356,7 @@
 				<div class=" self-center truncate">{$i18n.t('Sign Out')}</div>
 			</DropdownMenu.Item>
 
-			{#if showActiveUsers && usage}
+			{#if showActiveUsers && canSeeActiveUserCount && usage}
 				{#if usage?.user_count}
 					<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
 
@@ -364,7 +368,9 @@
 						<div
 							class="flex rounded-xl py-1 px-3 text-xs gap-2.5 items-center"
 							on:mouseenter={() => {
-								getUsageInfo();
+								if (canSeeActiveUserCount) {
+									getUsageInfo();
+								}
 							}}
 						>
 							<div class=" flex items-center">
