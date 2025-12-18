@@ -52,6 +52,7 @@
 						on:change={async () => {
 							saveSettings({ memory: enableMemory });
 						}}
+						aria-label={$i18n.t('Enable Memory Feature')}
 					/>
 				</div>
 			</div>
