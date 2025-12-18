@@ -663,36 +663,36 @@ async def generate_chat_completion(
                         detail="Model not found",
                     )
 
-    await get_all_models(request, user=user)
-    model = request.app.state.OPENAI_MODELS.get(model_id)
-    if model:
-        idx = model["urlIdx"]
-    else:
-        raise HTTPException(
-            status_code=404,
-            detail="Model not found",
-        )
+            await get_all_models(request, user=user)
+            model = request.app.state.OPENAI_MODELS.get(model_id)
+            if model:
+                idx = model["urlIdx"]
+            else:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Model not found",
+                )
 
-    # Get the API config for the model
-    api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
-        str(idx),
-        request.app.state.config.OPENAI_API_CONFIGS.get(
-            request.app.state.config.OPENAI_API_BASE_URLS[idx], {}
-        ),  # Legacy support
-    )
+            # Get the API config for the model
+            api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
+                str(idx),
+                request.app.state.config.OPENAI_API_CONFIGS.get(
+                    request.app.state.config.OPENAI_API_BASE_URLS[idx], {}
+                ),  # Legacy support
+            )
 
-    prefix_id = api_config.get("prefix_id", None)
-    if prefix_id:
-        payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
+            prefix_id = api_config.get("prefix_id", None)
+            if prefix_id:
+                payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
 
-    # Add user info to the payload if the model is a pipeline
-    if "pipeline" in model and model.get("pipeline"):
-        payload["user"] = {
-            "name": user.name,
-            "id": user.id,
-            "email": user.email,
-            "role": user.role,
-        }
+            # Add user info to the payload if the model is a pipeline
+            if "pipeline" in model and model.get("pipeline"):
+                payload["user"] = {
+                    "name": user.name,
+                    "id": user.id,
+                    "email": user.email,
+                    "role": user.role,
+                }
 
             url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
             key = request.app.state.config.OPENAI_API_KEYS[idx]
@@ -724,37 +724,37 @@ async def generate_chat_completion(
             response = None
 
             try:
-        session = aiohttp.ClientSession(
-            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
-        )
+                session = aiohttp.ClientSession(
+                    trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+                )
 
-        r = await session.request(
-            method="POST",
-            url=f"{url}/chat/completions",
-            data=payload,
-            headers={
-                "Authorization": f"Bearer {key}",
-                "Content-Type": "application/json",
-                **(
-                    {
-                        "HTTP-Referer": "https://openwebui.com/",
-                        "X-Title": "Open WebUI",
-                    }
-                    if "openrouter.ai" in url
-                    else {}
-                ),
-                **(
-                    {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
-                    }
-                    if ENABLE_FORWARD_USER_INFO_HEADERS
-                    else {}
-                ),
-            },
-        )
+                r = await session.request(
+                    method="POST",
+                    url=f"{url}/chat/completions",
+                    data=payload,
+                    headers={
+                        "Authorization": f"Bearer {key}",
+                        "Content-Type": "application/json",
+                        **(
+                            {
+                                "HTTP-Referer": "https://openwebui.com/",
+                                "X-Title": "Open WebUI",
+                            }
+                            if "openrouter.ai" in url
+                            else {}
+                        ),
+                        **(
+                            {
+                                "X-OpenWebUI-User-Name": user.name,
+                                "X-OpenWebUI-User-Id": user.id,
+                                "X-OpenWebUI-User-Email": user.email,
+                                "X-OpenWebUI-User-Role": user.role,
+                            }
+                            if ENABLE_FORWARD_USER_INFO_HEADERS
+                            else {}
+                        ),
+                    },
+                )
 
                 # Check if response is SSE
                 if "text/event-stream" in r.headers.get("Content-Type", ""):
