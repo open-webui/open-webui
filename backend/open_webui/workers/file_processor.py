@@ -66,6 +66,31 @@ from open_webui.config import (
 )
 from open_webui.retrieval.utils import get_embedding_function
 
+# OpenTelemetry instrumentation (conditional import)
+try:
+    from open_webui.utils.otel_instrumentation import (
+        trace_span,
+        add_span_event,
+        set_span_attribute,
+    )
+    from open_webui.utils.otel_config import is_otel_enabled
+    OTEL_AVAILABLE = True
+except ImportError:
+    OTEL_AVAILABLE = False
+    # Create no-op functions if OTEL not available
+    def trace_span(*args, **kwargs):
+        from contextlib import contextmanager
+        @contextmanager
+        def _noop():
+            yield None
+        return _noop()
+    def add_span_event(*args, **kwargs):
+        pass
+    def set_span_attribute(*args, **kwargs):
+        pass
+    def is_otel_enabled():
+        return False
+
 log = logging.getLogger(__name__)
 # Ensure logger is configured for worker process - use INFO level to capture all detailed logs
 log.setLevel(logging.INFO)
@@ -438,6 +463,7 @@ def process_file_job(
     knowledge_id: Optional[str] = None,
     user_id: Optional[str] = None,
     embedding_api_key: Optional[str] = None,
+    _otel_trace_context: Optional[dict] = None,
 ) -> dict:
     """
     Process a file job. This function is called by RQ workers.
@@ -449,239 +475,279 @@ def process_file_job(
         knowledge_id: Optional knowledge base ID
         user_id: User ID who initiated the processing
         embedding_api_key: API key for embedding service (per-user, from admin config)
+        _otel_trace_context: Optional trace context for distributed tracing (internal use)
         
     Returns:
         Dictionary with processing result
     """
     start_time = time.time()
     
-    # Initialize request to None so it's accessible in finally block for cleanup
-    request = None
-    
-    # Force flush stdout/stderr to ensure logs are written immediately
-    sys.stdout.flush()
-    sys.stderr.flush()
-    
-    # Use both logging and print to ensure visibility (print goes directly to stdout)
-    print("=" * 80, flush=True)
-    print(f"[JOB START] Processing file job: file_id={file_id}", flush=True)
-    log.info("=" * 80)
-    log.info(f"[JOB START] Processing file job: file_id={file_id}")
-    sys.stdout.flush()  # Flush after each critical log to ensure visibility
-    print(f"  INPUT PARAMETERS:", flush=True)
-    print(f"    file_id={file_id}", flush=True)
-    print(f"    user_id={user_id}", flush=True)
-    print(f"    collection_name={collection_name}", flush=True)
-    print(f"    knowledge_id={knowledge_id}", flush=True)
-    print(f"    content={'PROVIDED (' + str(len(content)) + ' chars)' if content else 'None'}", flush=True)
-    print(f"    embedding_api_key={'PROVIDED (' + str(len(embedding_api_key)) + ' chars, ends with ...' + embedding_api_key[-4:] + ')' if embedding_api_key else 'None'}", flush=True)
-    print(f"  START_TIME={start_time}", flush=True)
-    log.info(f"  INPUT PARAMETERS:")
-    log.info(f"    file_id={file_id}")
-    log.info(f"    user_id={user_id}")
-    log.info(f"    collection_name={collection_name}")
-    log.info(f"    knowledge_id={knowledge_id}")
-    log.info(f"    content={'PROVIDED (' + str(len(content)) + ' chars)' if content else 'None'}")
-    log.info(f"    embedding_api_key={'PROVIDED (' + str(len(embedding_api_key)) + ' chars, ends with ...' + embedding_api_key[-4:] + ')' if embedding_api_key else 'None'}")
-    log.info(f"  START_TIME={start_time}")
-    sys.stdout.flush()
-    
-    # Create mock request object for compatibility with existing code
-    # Pass the embedding_api_key so it can initialize the embedding function per-job
-    print(f"[STEP 1] Initializing MockRequest and embedding function...", flush=True)
-    log.info(f"[STEP 1] Initializing MockRequest and embedding function...")
-    try:
-        print(f"  [STEP 1.1] Creating MockRequest with embedding_api_key={'PROVIDED' if embedding_api_key else 'None'}", flush=True)
-        log.info(f"  [STEP 1.1] Creating MockRequest with embedding_api_key={'PROVIDED' if embedding_api_key else 'None'}")
-        request = MockRequest(embedding_api_key=embedding_api_key)
-        print(f"  [STEP 1.1] ✅ MockRequest created successfully", flush=True)
-        print(f"    request.app.state.config.RAG_EMBEDDING_ENGINE={request.app.state.config.RAG_EMBEDDING_ENGINE}", flush=True)
-        print(f"    request.app.state.config.RAG_EMBEDDING_MODEL={request.app.state.config.RAG_EMBEDDING_MODEL}", flush=True)
-        print(f"    request.app.state.ef={'SET' if request.app.state.ef is not None else 'None (OK for API engines)'}", flush=True)
-        log.info(f"  [STEP 1.1] ✅ MockRequest created successfully")
-        log.info(f"    request.app.state.config.RAG_EMBEDDING_ENGINE={request.app.state.config.RAG_EMBEDDING_ENGINE}")
-        log.info(f"    request.app.state.config.RAG_EMBEDDING_MODEL={request.app.state.config.RAG_EMBEDDING_MODEL}")
-        log.info(f"    request.app.state.ef={'SET' if request.app.state.ef is not None else 'None (OK for API engines)'}")
-        sys.stdout.flush()
-        
-        # CRITICAL: Validate API key BEFORE initialization
-        print(f"  [STEP 1.2] Validating embedding API key...", flush=True)
-        log.info(f"  [STEP 1.2] Validating embedding API key...")
-        print(f"    embedding_api_key is None: {embedding_api_key is None}", flush=True)
-        print(f"    embedding_api_key is empty: {embedding_api_key == '' if embedding_api_key else 'N/A'}", flush=True)
-        print(f"    embedding_api_key length: {len(embedding_api_key) if embedding_api_key else 0}", flush=True)
-        log.info(f"    embedding_api_key is None: {embedding_api_key is None}")
-        log.info(f"    embedding_api_key is empty: {embedding_api_key == '' if embedding_api_key else 'N/A'}")
-        log.info(f"    embedding_api_key length: {len(embedding_api_key) if embedding_api_key else 0}")
-        
-        if not embedding_api_key or not embedding_api_key.strip():
-            error_msg = (
-                f"❌ CRITICAL BUG: No embedding API key provided in job for file_id={file_id}! "
-                f"This will cause embedding generation to fail. "
-                f"The API key should have been retrieved from admin config and passed to the job. "
-                f"Please check: 1) Admin has configured API key in Settings > Documents, "
-                f"2) User is in a group created by that admin, 3) API key was passed to enqueue_file_processing_job()"
-            )
-            print(f"  [STEP 1.2] ❌ {error_msg}", flush=True)
-            log.error(f"  [STEP 1.2] ❌ {error_msg}")
-            raise ValueError(error_msg)
-        
-        print(f"  [STEP 1.2] ✅ API key validation passed", flush=True)
-        log.info(f"  [STEP 1.2] ✅ API key validation passed")
-        
-        # CRITICAL: Initialize EMBEDDING_FUNCTION per-job with the correct per-user/per-admin API key
-        # This ensures RBAC-protected API keys are used (each admin has their own key)
-        print(f"  [STEP 1.3] Initializing EMBEDDING_FUNCTION with per-job API key...", flush=True)
-        log.info(f"  [STEP 1.3] Initializing EMBEDDING_FUNCTION with per-job API key...")
-        
+    # Restore trace context from job metadata if available
+    # This enables distributed tracing across process boundaries (main app → RQ worker)
+    context_token = None
+    if OTEL_AVAILABLE and is_otel_enabled() and _otel_trace_context:
         try:
-            request.app.state.initialize_embedding_function(embedding_api_key=embedding_api_key)
+            from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
+            from opentelemetry import context, trace
             
-            if request.app.state.EMBEDDING_FUNCTION is None:
-                error_msg = (
-                    f"❌ CRITICAL BUG: EMBEDDING_FUNCTION is None after initialization for file_id={file_id}. "
-                    f"This will cause embedding generation to fail. "
-                    f"Check: 1) API key is valid, 2) Base URL is correct, 3) Embedding model is configured"
-                )
-                print(f"  [STEP 1.3] ❌ {error_msg}", flush=True)
-                log.error(f"  [STEP 1.3] ❌ {error_msg}")
-                raise ValueError(error_msg)
-            else:
-                print(f"  [STEP 1.3] ✅ EMBEDDING_FUNCTION initialized successfully", flush=True)
-                print(f"    Function type: {type(request.app.state.EMBEDDING_FUNCTION)}", flush=True)
-                log.info(f"  [STEP 1.3] ✅ EMBEDDING_FUNCTION initialized successfully")
-                log.info(f"    Function type: {type(request.app.state.EMBEDDING_FUNCTION)}")
-        except ValueError as ve:
-            # Re-raise validation errors
-            raise
-        except Exception as init_error:
-            error_msg = f"Failed to initialize EMBEDDING_FUNCTION: {init_error}"
-            print(f"  [STEP 1.3] ❌ {error_msg}", flush=True)
-            log.error(f"  [STEP 1.3] ❌ {error_msg}", exc_info=True)
-            raise
-        sys.stdout.flush()
-    except Exception as init_error:
-        print(f"  [STEP 1] ❌ Failed to initialize MockRequest for file_id={file_id}: {init_error}", flush=True)
-        log.error(f"  [STEP 1] ❌ Failed to initialize MockRequest for file_id={file_id}: {init_error}", exc_info=True)
-        sys.stdout.flush()
-        raise
+            # Extract trace context from job metadata
+            propagator = TraceContextTextMapPropagator()
+            extracted_context = propagator.extract(_otel_trace_context)
+            
+            # Attach the extracted context to this worker process
+            context_token = context.attach(extracted_context)
+            log.debug(f"Restored trace context for job processing: file_id={file_id}")
+        except Exception as trace_error:
+            log.debug(f"Failed to restore trace context: {trace_error}")
+            context_token = None
     
     try:
-        # Get user object if user_id is provided
-        print(f"[STEP 2] Retrieving user and updating file status...", flush=True)
-        log.info(f"[STEP 2] Retrieving user and updating file status...")
-        user = None
-        if user_id:
-            print(f"  [STEP 2.1] user_id provided, retrieving user from database...", flush=True)
-            log.info(f"  [STEP 2.1] user_id provided, retrieving user from database...")
-            try:
-                user = Users.get_user_by_id(user_id)
-                print(f"  [STEP 2.1] Users.get_user_by_id({user_id}) returned: {user.email if user else 'None'}", flush=True)
-                log.info(f"  [STEP 2.1] Users.get_user_by_id({user_id}) returned: {user.email if user else 'None'}")
-                if not user:
-                    log.warning(
-                        f"  [STEP 2.1] ⚠️  User {user_id} not found for file processing (file_id={file_id}), "
-                        "processing without user context"
-                    )
-                else:
-                    log.info(f"  [STEP 2.1] ✅ Retrieved user: email={user.email} | id={user.id} | role={user.role}")
-                    
-                    # CRITICAL: Set the user's API key in the config for save_docs_to_vector_db
-                    # This ensures RBAC-protected API keys are used (each admin has their own key)
-                    # Users inherit from their group admin's key
-                    if embedding_api_key and user.email:
-                        log.info(f"  [STEP 2.2] Setting user's API key in config (RBAC-protected)...")
-                        try:
-                            # Update the config with the user's API key to ensure consistency
-                            # This is important because save_docs_to_vector_db retrieves the key from config
-                            if request.app.state.config.RAG_EMBEDDING_ENGINE in ["openai", "portkey"]:
-                                # Set the user's API key in the config cache (RBAC-protected)
-                                request.app.state.config.RAG_OPENAI_API_KEY.set(user.email, embedding_api_key)
-                                log.info(f"  [STEP 2.2] ✅ Set user's API key in config for {user.email} (RBAC-protected)")
-                            else:
-                                log.info(f"  [STEP 2.2] Skipped (engine is {request.app.state.config.RAG_EMBEDDING_ENGINE}, not openai/portkey)")
-                        except Exception as config_update_error:
-                            # Non-critical - the key is already passed and will be used as fallback
-                            log.warning(f"  [STEP 2.2] ⚠️  Could not update config with user API key: {config_update_error}")
-            except Exception as user_error:
-                log.warning(
-                    f"  [STEP 2.1] ⚠️  Error retrieving user {user_id} for file processing (file_id={file_id}): {user_error}, "
-                    "processing without user context", exc_info=True
-                )
-        else:
-            log.info(f"  [STEP 2.1] No user_id provided, processing without user context")
+        # Generate job_id_str for instrumentation
+        job_id_str = f"file_processing_{file_id}"
         
-        # Update status to processing
-        log.info(f"  [STEP 2.3] Updating file status to 'processing'...")
-        processing_start_time = int(time.time())
-        Files.update_file_metadata_by_id(
-            file_id,
-            {
-                "processing_status": "processing",
-                "processing_started_at": processing_start_time,
+        # Create OTEL span for job processing (linked to parent via trace context if available)
+        with trace_span(
+            name="job.process",
+            attributes={
+                "job.id": job_id_str,
+                "job.file_id": file_id,
+                "job.user_id": str(user_id) if user_id else None,
+                "job.knowledge_id": knowledge_id,
+                "job.collection_name": collection_name,
+                "job.has_trace_context": bool(_otel_trace_context),
             },
-        )
-        log.info(f"  [STEP 2.3] ✅ File status updated: processing_status=processing, processing_started_at={processing_start_time}")
-        
-        print(f"[STEP 3] Retrieving file from database...", flush=True)
-        log.info(f"[STEP 3] Retrieving file from database...")
-        file = Files.get_file_by_id(file_id)
-        print(f"  [STEP 3] Files.get_file_by_id({file_id}) returned: {'File object' if file else 'None'}", flush=True)
-        log.info(f"  [STEP 3] Files.get_file_by_id({file_id}) returned: {'File object' if file else 'None'}")
-        sys.stdout.flush()
-        if not file:
-            error_msg = "File not found"
-            log.error(f"[JOB ERROR] File {file_id} not found for processing (user_id={user_id})")
+        ) as span:
             try:
-                Files.update_file_metadata_by_id(
-                    file_id,
-                    {
-                        "processing_status": "error",
-                        "processing_error": error_msg,
-                    },
-                )
-            except Exception as update_error:
-                log.error(f"Failed to update file status: {update_error}")
-            return {"status": "error", "error": error_msg}
+                add_span_event("job.started", {"file_id": file_id})
+                
+                # Initialize request to None so it's accessible in finally block for cleanup
+                request = None
+                
+                # Force flush stdout/stderr to ensure logs are written immediately
+                sys.stdout.flush()
+                sys.stderr.flush()
+                
+                # Use both logging and print to ensure visibility (print goes directly to stdout)
+                print("=" * 80, flush=True)
+                print(f"[JOB START] Processing file job: file_id={file_id}", flush=True)
+                log.info("=" * 80)
+                log.info(f"[JOB START] Processing file job: file_id={file_id}")
+                sys.stdout.flush()  # Flush after each critical log to ensure visibility
+                print(f"  INPUT PARAMETERS:", flush=True)
+                print(f"    file_id={file_id}", flush=True)
+                print(f"    user_id={user_id}", flush=True)
+                print(f"    collection_name={collection_name}", flush=True)
+                print(f"    knowledge_id={knowledge_id}", flush=True)
+                print(f"    content={'PROVIDED (' + str(len(content)) + ' chars)' if content else 'None'}", flush=True)
+                print(f"    embedding_api_key={'PROVIDED (' + str(len(embedding_api_key)) + ' chars, ends with ...' + embedding_api_key[-4:] + ')' if embedding_api_key else 'None'}", flush=True)
+                print(f"  START_TIME={start_time}", flush=True)
+                log.info(f"  INPUT PARAMETERS:")
+                log.info(f"    file_id={file_id}")
+                log.info(f"    user_id={user_id}")
+                log.info(f"    collection_name={collection_name}")
+                log.info(f"    knowledge_id={knowledge_id}")
+                log.info(f"    content={'PROVIDED (' + str(len(content)) + ' chars)' if content else 'None'}")
+                log.info(f"    embedding_api_key={'PROVIDED (' + str(len(embedding_api_key)) + ' chars, ends with ...' + embedding_api_key[-4:] + ')' if embedding_api_key else 'None'}")
+                log.info(f"  START_TIME={start_time}")
+                sys.stdout.flush()
+                
+                # Create mock request object for compatibility with existing code
+                # Pass the embedding_api_key so it can initialize the embedding function per-job
+                print(f"[STEP 1] Initializing MockRequest and embedding function...", flush=True)
+                log.info(f"[STEP 1] Initializing MockRequest and embedding function...")
+                try:
+                    print(f"  [STEP 1.1] Creating MockRequest with embedding_api_key={'PROVIDED' if embedding_api_key else 'None'}", flush=True)
+                    log.info(f"  [STEP 1.1] Creating MockRequest with embedding_api_key={'PROVIDED' if embedding_api_key else 'None'}")
+                    request = MockRequest(embedding_api_key=embedding_api_key)
+                    print(f"  [STEP 1.1] ✅ MockRequest created successfully", flush=True)
+                    print(f"    request.app.state.config.RAG_EMBEDDING_ENGINE={request.app.state.config.RAG_EMBEDDING_ENGINE}", flush=True)
+                    print(f"    request.app.state.config.RAG_EMBEDDING_MODEL={request.app.state.config.RAG_EMBEDDING_MODEL}", flush=True)
+                    print(f"    request.app.state.ef={'SET' if request.app.state.ef is not None else 'None (OK for API engines)'}", flush=True)
+                    log.info(f"  [STEP 1.1] ✅ MockRequest created successfully")
+                    log.info(f"    request.app.state.config.RAG_EMBEDDING_ENGINE={request.app.state.config.RAG_EMBEDDING_ENGINE}")
+                    log.info(f"    request.app.state.config.RAG_EMBEDDING_MODEL={request.app.state.config.RAG_EMBEDDING_MODEL}")
+                    log.info(f"    request.app.state.ef={'SET' if request.app.state.ef is not None else 'None (OK for API engines)'}")
+                    sys.stdout.flush()
+                    
+                    # CRITICAL: Validate API key BEFORE initialization
+                    print(f"  [STEP 1.2] Validating embedding API key...", flush=True)
+                    log.info(f"  [STEP 1.2] Validating embedding API key...")
+                    print(f"    embedding_api_key is None: {embedding_api_key is None}", flush=True)
+                    print(f"    embedding_api_key is empty: {embedding_api_key == '' if embedding_api_key else 'N/A'}", flush=True)
+                    print(f"    embedding_api_key length: {len(embedding_api_key) if embedding_api_key else 0}", flush=True)
+                    log.info(f"    embedding_api_key is None: {embedding_api_key is None}")
+                    log.info(f"    embedding_api_key is empty: {embedding_api_key == '' if embedding_api_key else 'N/A'}")
+                    log.info(f"    embedding_api_key length: {len(embedding_api_key) if embedding_api_key else 0}")
+                    
+                    if not embedding_api_key or not embedding_api_key.strip():
+                        error_msg = (
+                            f"❌ CRITICAL BUG: No embedding API key provided in job for file_id={file_id}! "
+                            f"This will cause embedding generation to fail. "
+                            f"The API key should have been retrieved from admin config and passed to the job. "
+                            f"Please check: 1) Admin has configured API key in Settings > Documents, "
+                            f"2) User is in a group created by that admin, 3) API key was passed to enqueue_file_processing_job()"
+                        )
+                        print(f"  [STEP 1.2] ❌ {error_msg}", flush=True)
+                        log.error(f"  [STEP 1.2] ❌ {error_msg}")
+                        raise ValueError(error_msg)
+                    
+                    print(f"  [STEP 1.2] ✅ API key validation passed", flush=True)
+                    log.info(f"  [STEP 1.2] ✅ API key validation passed")
+                    
+                    # CRITICAL: Initialize EMBEDDING_FUNCTION per-job with the correct per-user/per-admin API key
+                    # This ensures RBAC-protected API keys are used (each admin has their own key)
+                    print(f"  [STEP 1.3] Initializing EMBEDDING_FUNCTION with per-job API key...", flush=True)
+                    log.info(f"  [STEP 1.3] Initializing EMBEDDING_FUNCTION with per-job API key...")
+                    
+                    try:
+                        request.app.state.initialize_embedding_function(embedding_api_key=embedding_api_key)
+                        
+                        if request.app.state.EMBEDDING_FUNCTION is None:
+                            error_msg = (
+                                f"❌ CRITICAL BUG: EMBEDDING_FUNCTION is None after initialization for file_id={file_id}. "
+                                f"This will cause embedding generation to fail. "
+                                f"Check: 1) API key is valid, 2) Base URL is correct, 3) Embedding model is configured"
+                            )
+                            print(f"  [STEP 1.3] ❌ {error_msg}", flush=True)
+                            log.error(f"  [STEP 1.3] ❌ {error_msg}")
+                            raise ValueError(error_msg)
+                        else:
+                            print(f"  [STEP 1.3] ✅ EMBEDDING_FUNCTION initialized successfully", flush=True)
+                            print(f"    Function type: {type(request.app.state.EMBEDDING_FUNCTION)}", flush=True)
+                            log.info(f"  [STEP 1.3] ✅ EMBEDDING_FUNCTION initialized successfully")
+                            log.info(f"    Function type: {type(request.app.state.EMBEDDING_FUNCTION)}")
+                    except ValueError as ve:
+                        # Re-raise validation errors
+                        raise
+                    except Exception as init_error:
+                        error_msg = f"Failed to initialize EMBEDDING_FUNCTION: {init_error}"
+                        print(f"  [STEP 1.3] ❌ {error_msg}", flush=True)
+                        log.error(f"  [STEP 1.3] ❌ {error_msg}", exc_info=True)
+                        raise
+                    sys.stdout.flush()
+                except Exception as init_error:
+                    print(f"  [STEP 1] ❌ Failed to initialize MockRequest for file_id={file_id}: {init_error}", flush=True)
+                    log.error(f"  [STEP 1] ❌ Failed to initialize MockRequest for file_id={file_id}: {init_error}", exc_info=True)
+                    sys.stdout.flush()
+                    raise
+                
+                try:
+                    # Get user object if user_id is provided
+                    print(f"[STEP 2] Retrieving user and updating file status...", flush=True)
+                    log.info(f"[STEP 2] Retrieving user and updating file status...")
+                    user = None
+                    if user_id:
+                        print(f"  [STEP 2.1] user_id provided, retrieving user from database...", flush=True)
+                        log.info(f"  [STEP 2.1] user_id provided, retrieving user from database...")
+                        try:
+                            user = Users.get_user_by_id(user_id)
+                            print(f"  [STEP 2.1] Users.get_user_by_id({user_id}) returned: {user.email if user else 'None'}", flush=True)
+                            log.info(f"  [STEP 2.1] Users.get_user_by_id({user_id}) returned: {user.email if user else 'None'}")
+                            if not user:
+                                log.warning(
+                                    f"  [STEP 2.1] ⚠️  User {user_id} not found for file processing (file_id={file_id}), "
+                                    "processing without user context"
+                                )
+                            else:
+                                log.info(f"  [STEP 2.1] ✅ Retrieved user: email={user.email} | id={user.id} | role={user.role}")
+                                
+                                # CRITICAL: Set the user's API key in the config for save_docs_to_vector_db
+                                # This ensures RBAC-protected API keys are used (each admin has their own key)
+                                # Users inherit from their group admin's key
+                                if embedding_api_key and user.email:
+                                    log.info(f"  [STEP 2.2] Setting user's API key in config (RBAC-protected)...")
+                                    try:
+                                        # Update the config with the user's API key to ensure consistency
+                                        # This is important because save_docs_to_vector_db retrieves the key from config
+                                        if request.app.state.config.RAG_EMBEDDING_ENGINE in ["openai", "portkey"]:
+                                            # Set the user's API key in the config cache (RBAC-protected)
+                                            request.app.state.config.RAG_OPENAI_API_KEY.set(user.email, embedding_api_key)
+                                            log.info(f"  [STEP 2.2] ✅ Set user's API key in config for {user.email} (RBAC-protected)")
+                                        else:
+                                            log.info(f"  [STEP 2.2] Skipped (engine is {request.app.state.config.RAG_EMBEDDING_ENGINE}, not openai/portkey)")
+                                    except Exception as config_update_error:
+                                        # Non-critical - the key is already passed and will be used as fallback
+                                        log.warning(f"  [STEP 2.2] ⚠️  Could not update config with user API key: {config_update_error}")
+                        except Exception as user_error:
+                            log.warning(
+                                f"  [STEP 2.1] ⚠️  Error retrieving user {user_id} for file processing (file_id={file_id}): {user_error}, "
+                                "processing without user context", exc_info=True
+                            )
+                    else:
+                        log.info(f"  [STEP 2.1] No user_id provided, processing without user context")
+                    
+                    # Update status to processing
+                    log.info(f"  [STEP 2.3] Updating file status to 'processing'...")
+                    processing_start_time = int(time.time())
+                    Files.update_file_metadata_by_id(
+                        file_id,
+                        {
+                            "processing_status": "processing",
+                            "processing_started_at": processing_start_time,
+                        },
+                    )
+                    log.info(f"  [STEP 2.3] ✅ File status updated: processing_status=processing, processing_started_at={processing_start_time}")
+                    
+                    print(f"[STEP 3] Retrieving file from database...", flush=True)
+                    log.info(f"[STEP 3] Retrieving file from database...")
+                    file = Files.get_file_by_id(file_id)
+                    print(f"  [STEP 3] Files.get_file_by_id({file_id}) returned: {'File object' if file else 'None'}", flush=True)
+                    log.info(f"  [STEP 3] Files.get_file_by_id({file_id}) returned: {'File object' if file else 'None'}")
+                    sys.stdout.flush()
+                    if not file:
+                        error_msg = "File not found"
+                        log.error(f"[JOB ERROR] File {file_id} not found for processing (user_id={user_id})")
+                        add_span_event("job.file.not_found", {"file_id": file_id})
+                        try:
+                            Files.update_file_metadata_by_id(
+                                file_id,
+                                {
+                                    "processing_status": "error",
+                                    "processing_error": error_msg,
+                                },
+                            )
+                        except Exception as update_error:
+                            log.error(f"Failed to update file status: {update_error}")
+                        return {"status": "error", "error": error_msg}
 
-        print(f"  [STEP 3] ✅ File found:", flush=True)
-        print(f"    filename={file.filename}", flush=True)
-        print(f"    content_type={file.meta.get('content_type')}", flush=True)
-        print(f"    file.path={file.path}", flush=True)
-        print(f"    file.id={file.id}", flush=True)
-        print(f"    file.user_id={file.user_id}", flush=True)
-        print(f"    file.data.keys()={list(file.data.keys()) if file.data else 'None'}", flush=True)
-        print(f"    file.meta.keys()={list(file.meta.keys()) if file.meta else 'None'}", flush=True)
-        log.info(f"  [STEP 3] ✅ File found:")
-        log.info(f"    filename={file.filename}")
-        log.info(f"    content_type={file.meta.get('content_type')}")
-        log.info(f"    file.path={file.path}")
-        log.info(f"    file.id={file.id}")
-        log.info(f"    file.user_id={file.user_id}")
-        log.info(f"    file.data.keys()={list(file.data.keys()) if file.data else 'None'}")
-        log.info(f"    file.meta.keys()={list(file.meta.keys()) if file.meta else 'None'}")
-        sys.stdout.flush()
+                        print(f"  [STEP 3] ✅ File found:", flush=True)
+                        print(f"    filename={file.filename}", flush=True)
+                        print(f"    content_type={file.meta.get('content_type')}", flush=True)
+                        print(f"    file.path={file.path}", flush=True)
+                        print(f"    file.id={file.id}", flush=True)
+                        print(f"    file.user_id={file.user_id}", flush=True)
+                        print(f"    file.data.keys()={list(file.data.keys()) if file.data else 'None'}", flush=True)
+                        print(f"    file.meta.keys()={list(file.meta.keys()) if file.meta else 'None'}", flush=True)
+                        log.info(f"  [STEP 3] ✅ File found:")
+                        log.info(f"    filename={file.filename}")
+                        log.info(f"    content_type={file.meta.get('content_type')}")
+                        log.info(f"    file.path={file.path}")
+                        log.info(f"    file.id={file.id}")
+                        log.info(f"    file.user_id={file.user_id}")
+                        log.info(f"    file.data.keys()={list(file.data.keys()) if file.data else 'None'}")
+                        log.info(f"    file.meta.keys()={list(file.meta.keys()) if file.meta else 'None'}")
+                        sys.stdout.flush()
 
-        print(f"[STEP 4] Determining processing path...", flush=True)
-        log.info(f"[STEP 4] Determining processing path...")
-        # Determine the collection name for vector DB storage (always needed for saving)
-        # But don't use it to determine processing path - that depends on how file was uploaded
-        vector_collection_name = collection_name if collection_name else f"file-{file.id}"
-        print(f"  [STEP 4.1] Processing path determination:", flush=True)
-        print(f"    collection_name (from params)={collection_name}", flush=True)
-        print(f"    vector_collection_name (for storage)={vector_collection_name}", flush=True)
-        print(f"    content is not None: {content is not None}", flush=True)
-        log.info(f"  [STEP 4.1] Processing path determination:")
-        log.info(f"    collection_name (from params)={collection_name}")
-        log.info(f"    vector_collection_name (for storage)={vector_collection_name}")
-        log.info(f"    content is not None: {content is not None}")
-        sys.stdout.flush()
+                    print(f"[STEP 4] Determining processing path...", flush=True)
+                    log.info(f"[STEP 4] Determining processing path...")
+                    # Determine the collection name for vector DB storage (always needed for saving)
+                    # But don't use it to determine processing path - that depends on how file was uploaded
+                    vector_collection_name = collection_name if collection_name else f"file-{file.id}"
+                    print(f"  [STEP 4.1] Processing path determination:", flush=True)
+                    print(f"    collection_name (from params)={collection_name}", flush=True)
+                    print(f"    vector_collection_name (for storage)={vector_collection_name}", flush=True)
+                    print(f"    content is not None: {content is not None}", flush=True)
+                    log.info(f"  [STEP 4.1] Processing path determination:")
+                    log.info(f"    collection_name (from params)={collection_name}")
+                    log.info(f"    vector_collection_name (for storage)={vector_collection_name}")
+                    log.info(f"    content is not None: {content is not None}")
+                    sys.stdout.flush()
 
-        log.info(f"  [STEP 4.2] Checking processing path:")
-        log.info(f"    content is not None: {content is not None}")
-        log.info(f"    collection_name is not None: {collection_name is not None}")
-        
-        if content:
+                    log.info(f"  [STEP 4.2] Checking processing path:")
+                    log.info(f"    content is not None: {content is not None}")
+                    log.info(f"    collection_name is not None: {collection_name is not None}")
+                    
+                    if content:
             print(f"  [STEP 4.2] ✅ Taking path: content provided (pre-extracted text)", flush=True)
             log.info(f"  [STEP 4.2] ✅ Taking path: content provided (pre-extracted text)")
             # Update the content in the file
@@ -816,6 +882,12 @@ def process_file_job(
                                 non_empty_docs = [doc for doc in docs if doc.page_content.strip()]
                                 print(f"    Extraction results: total_chars={total_chars}, non_empty_docs={len(non_empty_docs)}", flush=True)
                                 log.info(f"    Extraction results: total_chars={total_chars}, non_empty_docs={len(non_empty_docs)}")
+                                
+                                # Add event for file extraction
+                                add_span_event("job.file.extracted", {
+                                    "content_length": total_chars,
+                                    "document.count": len(docs),
+                                })
                                 
                                 # Create documents with metadata
                                 docs = [
@@ -1283,6 +1355,7 @@ def process_file_job(
                     # Use file collection name for file metadata
                     if result:
                         log.info(f"  [STEP 9.1] ✅ Successfully saved to vector DB")
+                        add_span_event("job.embedding.completed", {"status": "success", "collection_name": file_collection})
                         Files.update_file_metadata_by_id(
                             file.id,
                             {
@@ -1371,74 +1444,95 @@ def process_file_job(
             )
             log.info(f"  [STEP 9] ✅ File metadata updated: status=completed (bypassed embedding)")
 
-        elapsed_time = time.time() - start_time
-        log.info("=" * 80)
-        log.info(f"[JOB SUCCESS] File processing completed successfully")
-        log.info(f"  file_id={file_id}")
-        log.info(f"  collection_name={collection_name}")
-        log.info(f"  elapsed_time={elapsed_time:.2f}s")
-        log.info(f"  END_TIME={time.time()}")
-        log.info("=" * 80)
+            elapsed_time = time.time() - start_time
+            log.info("=" * 80)
+            log.info(f"[JOB SUCCESS] File processing completed successfully")
+            log.info(f"  file_id={file_id}")
+            log.info(f"  collection_name={collection_name}")
+            log.info(f"  elapsed_time={elapsed_time:.2f}s")
+            log.info(f"  END_TIME={time.time()}")
+            log.info("=" * 80)
+            
+            add_span_event("job.completed", {
+                "duration_ms": int(elapsed_time * 1000),
+                "file_id": file_id,
+            })
+            if span:
+                set_span_attribute("job.duration_ms", int(elapsed_time * 1000))
 
-        return {
-            "status": "success",
-            "file_id": file_id,
-            "collection_name": collection_name,
-            "elapsed_time": elapsed_time,
-        }
+            return {
+                "status": "success",
+                "file_id": file_id,
+                "collection_name": collection_name,
+                "elapsed_time": elapsed_time,
+            }
 
-    except Exception as e:
-        # Consolidated error handling - log and update status
-        elapsed_time = time.time() - start_time
-        error_msg = str(e)
-        log.error("=" * 80)
-        log.error(f"[JOB FAILED] Error in file processing job")
-        log.error(f"  file_id={file_id}")
-        log.error(f"  user_id={user_id}")
-        log.error(f"  elapsed_time={elapsed_time:.2f}s")
-        log.error(f"  error_type={type(e).__name__}")
-        log.error(f"  error_message={error_msg}")
-        log.error(f"  END_TIME={time.time()}")
-        log.error("=" * 80)
-        log.error(f"Full traceback:", exc_info=True)
-        
-        # Update file status to error
-        try:
-            Files.update_file_metadata_by_id(
-                file_id,
-                {
-                    "processing_status": "error",
-                    "processing_error": error_msg,
-                },
-            )
-        except Exception as update_error:
-            # If we can't update status, log it but don't fail
-            log.error(
-                f"Failed to update file status after processing error for file_id={file_id}: {update_error}"
-            )
-        
-        # Re-raise the exception so RQ knows the job failed and can retry
-        raise
-    
-    finally:
-        # CRITICAL: Clean up resources to prevent leaks
-        # This block executes regardless of whether the job succeeded or failed
-        # 1. Clean up database session registry (scoped_session cleanup)
-        try:
-            Session.remove()
-            log.debug("Cleaned up database session registry (Session.remove())")
-        except Exception as session_cleanup_error:
-            # Log but don't fail - cleanup errors shouldn't break the job result
-            log.warning(f"Error cleaning up database session registry: {session_cleanup_error}")
-        
-        # 2. Clean up per-job embedding function to free resources
-        # Note: ef and rf are reused across jobs, so we don't clean those up
-        try:
-            if request is not None and hasattr(request, 'app') and hasattr(request.app, 'state'):
-                if hasattr(request.app.state, 'EMBEDDING_FUNCTION'):
-                    request.app.state.EMBEDDING_FUNCTION = None
-                    log.debug("Cleaned up per-job EMBEDDING_FUNCTION")
-        except Exception as embedding_cleanup_error:
-            # Log but don't fail - cleanup errors shouldn't break the job result
-            log.warning(f"Error cleaning up embedding function: {embedding_cleanup_error}")
+        except Exception as e:
+            # Consolidated error handling - log and update status
+            elapsed_time = time.time() - start_time
+            error_msg = str(e)
+            log.error("=" * 80)
+            log.error(f"[JOB FAILED] Error in file processing job")
+            log.error(f"  file_id={file_id}")
+            log.error(f"  user_id={user_id}")
+            log.error(f"  elapsed_time={elapsed_time:.2f}s")
+            log.error(f"  error_type={type(e).__name__}")
+            log.error(f"  error_message={error_msg}")
+            log.error(f"  END_TIME={time.time()}")
+            log.error("=" * 80)
+            log.error(f"Full traceback:", exc_info=True)
+            
+            add_span_event("job.failed", {
+                "error.type": type(e).__name__,
+                "error.message": error_msg[:200],
+                "duration_ms": int(elapsed_time * 1000),
+            })
+            
+            # Update file status to error
+            try:
+                Files.update_file_metadata_by_id(
+                    file_id,
+                    {
+                        "processing_status": "error",
+                        "processing_error": error_msg,
+                    },
+                )
+            except Exception as update_error:
+                # If we can't update status, log it but don't fail
+                log.error(
+                    f"Failed to update file status after processing error for file_id={file_id}: {update_error}"
+                )
+            
+            # Re-raise the exception so RQ knows the job failed and can retry
+            raise
+        finally:
+            # CRITICAL: Clean up resources to prevent leaks
+            # This block executes regardless of whether the job succeeded or failed
+            # 1. Clean up database session registry (scoped_session cleanup)
+            try:
+                Session.remove()
+                log.debug("Cleaned up database session registry (Session.remove())")
+            except Exception as session_cleanup_error:
+                # Log but don't fail - cleanup errors shouldn't break the job result
+                log.warning(f"Error cleaning up database session registry: {session_cleanup_error}")
+            
+            # 2. Clean up per-job embedding function to free resources
+            # Note: ef and rf are reused across jobs, so we don't clean those up
+            try:
+                if request is not None and hasattr(request, 'app') and hasattr(request.app, 'state'):
+                    if hasattr(request.app.state, 'EMBEDDING_FUNCTION'):
+                        request.app.state.EMBEDDING_FUNCTION = None
+                        log.debug("Cleaned up per-job EMBEDDING_FUNCTION")
+            except Exception as embedding_cleanup_error:
+                # Log but don't fail - cleanup errors shouldn't break the job result
+                log.warning(f"Error cleaning up embedding function: {embedding_cleanup_error}")
+            
+            # Detach trace context if it was attached
+            if context_token is not None:
+                try:
+                    from opentelemetry import context
+                    context.detach(context_token)
+                    log.debug(f"Detached trace context for job: file_id={file_id}")
+                except Exception as detach_error:
+                    log.debug(f"Failed to detach trace context: {detach_error}")
 

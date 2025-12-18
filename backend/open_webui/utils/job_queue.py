@@ -33,6 +33,31 @@ from open_webui.env import (
 )
 from open_webui.socket.utils import get_redis_pool
 
+# OpenTelemetry instrumentation (conditional import)
+try:
+    from open_webui.utils.otel_instrumentation import (
+        trace_span,
+        add_span_event,
+        set_span_attribute,
+    )
+    from open_webui.utils.otel_config import is_otel_enabled
+    OTEL_AVAILABLE = True
+except ImportError:
+    OTEL_AVAILABLE = False
+    # Create no-op functions if OTEL not available
+    def trace_span(*args, **kwargs):
+        from contextlib import contextmanager
+        @contextmanager
+        def _noop():
+            yield None
+        return _noop()
+    def add_span_event(*args, **kwargs):
+        pass
+    def set_span_attribute(*args, **kwargs):
+        pass
+    def is_otel_enabled():
+        return False
+
 log = logging.getLogger(__name__)
 
 # Queue name for file processing jobs
@@ -210,6 +235,24 @@ def enqueue_file_processing_job(
             # Job doesn't exist or fetch failed - this is fine, we'll create a new one
             log.debug(f"Job {job_id_str} does not exist or could not be fetched: {fetch_error}")
         
+        # Extract trace context from current span for propagation to worker process
+        trace_context = {}
+        if OTEL_AVAILABLE and is_otel_enabled():
+            try:
+                from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
+                from opentelemetry import trace
+                
+                # Get current span context
+                current_span = trace.get_current_span()
+                if current_span and current_span.get_span_context().is_valid:
+                    # Extract trace context into a dictionary
+                    propagator = TraceContextTextMapPropagator()
+                    propagator.inject(trace_context)
+                    log.debug(f"Extracted trace context for job enqueueing: {trace_context}")
+            except Exception as trace_error:
+                log.debug(f"Failed to extract trace context: {trace_error}")
+                trace_context = {}
+        
         # Prepare job arguments (serializable data only)
         job_kwargs = {
             "file_id": file_id,
@@ -220,46 +263,66 @@ def enqueue_file_processing_job(
             "embedding_api_key": embedding_api_key,
         }
         
-        # Enqueue job with retry logic
-        # Import here to avoid circular imports
-        from open_webui.workers.file_processor import process_file_job
+        # Add trace context to job metadata if available
+        if trace_context:
+            job_kwargs["_otel_trace_context"] = trace_context
         
-        # Try to enqueue the job
-        # RQ may raise an exception if job_id already exists (race condition)
-        try:
-            job = queue.enqueue(
-                process_file_job,
-                **job_kwargs,
-                job_timeout=job_timeout,
-                retry=Retry(max=MAX_RETRIES, interval=RETRY_DELAY),
-                job_id=job_id_str,
-                result_ttl=JOB_RESULT_TTL,  # Configurable TTL for job results
-                failure_ttl=JOB_FAILURE_TTL,  # Configurable TTL for failed job info
-            )
-        except Exception as enqueue_error:
-            # Handle case where job was created between our check and enqueue (race condition)
-            error_str = str(enqueue_error).lower()
-            if "already exists" in error_str or "duplicate" in error_str:
-                log.info(
-                    f"Job {job_id_str} was created by another process (race condition) "
-                    f"for file_id={file_id}, fetching existing job"
+        # Create OTEL span for job enqueueing
+        with trace_span(
+            name="job.enqueue",
+            attributes={
+                "job.id": job_id_str,
+                "job.file_id": file_id,
+                "job.queue_name": FILE_PROCESSING_QUEUE_NAME,
+                "job.timeout": job_timeout,
+                "job.has_trace_context": bool(trace_context),
+            },
+        ) as span:
+            # Enqueue job with retry logic
+            # Import here to avoid circular imports
+            from open_webui.workers.file_processor import process_file_job
+        
+            # Try to enqueue the job
+            # RQ may raise an exception if job_id already exists (race condition)
+            try:
+                job = queue.enqueue(
+                    process_file_job,
+                    **job_kwargs,
+                    job_timeout=job_timeout,
+                    retry=Retry(max=MAX_RETRIES, interval=RETRY_DELAY),
+                    job_id=job_id_str,
+                    result_ttl=JOB_RESULT_TTL,  # Configurable TTL for job results
+                    failure_ttl=JOB_FAILURE_TTL,  # Configurable TTL for failed job info
                 )
-                try:
-                    existing_job = Job.fetch(job_id_str, connection=queue.connection)
-                    if existing_job:
-                        return existing_job.id
-                except Exception as fetch_error:
-                    log.warning(f"Failed to fetch existing job {job_id_str}: {fetch_error}")
-            
-            # Re-raise if it's not a duplicate job error
-            raise
-        
-        log.info(
-            f"Enqueued file processing job: job_id={job.id}, file_id={file_id}, "
-            f"queue={FILE_PROCESSING_QUEUE_NAME}"
-        )
-        
-        return job.id
+                add_span_event("job.enqueued", {"job_id": job.id, "file_id": file_id})
+                log.info(
+                    f"Enqueued file processing job: job_id={job.id}, file_id={file_id}, "
+                    f"queue={FILE_PROCESSING_QUEUE_NAME}"
+                )
+                return job.id
+            except Exception as enqueue_error:
+                # Handle case where job was created between our check and enqueue (race condition)
+                error_str = str(enqueue_error).lower()
+                if "already exists" in error_str or "duplicate" in error_str:
+                    log.info(
+                        f"Job {job_id_str} was created by another process (race condition) "
+                        f"for file_id={file_id}, fetching existing job"
+                    )
+                    try:
+                        existing_job = Job.fetch(job_id_str, connection=queue.connection)
+                        if existing_job:
+                            add_span_event("job.enqueued", {"job_id": existing_job.id, "file_id": file_id, "note": "existing_job"})
+                            return existing_job.id
+                    except Exception as fetch_error:
+                        log.warning(f"Failed to fetch existing job {job_id_str}: {fetch_error}")
+                
+                # Log error event
+                add_span_event("job.enqueue.failed", {
+                    "error.type": type(enqueue_error).__name__,
+                    "error.message": str(enqueue_error)[:200],
+                })
+                # Re-raise if it's not a duplicate job error
+                raise
     except Exception as e:
         log.error(f"Failed to enqueue file processing job for file_id={file_id}: {e}", exc_info=True)
         return None

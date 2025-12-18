@@ -105,6 +105,28 @@ from open_webui.env import (
 )
 from open_webui.constants import ERROR_MESSAGES
 
+# OpenTelemetry instrumentation (conditional import)
+try:
+    from open_webui.utils.otel_instrumentation import (
+        trace_span,
+        add_span_event,
+        set_span_attribute,
+    )
+    OTEL_AVAILABLE = True
+except ImportError:
+    OTEL_AVAILABLE = False
+    # Create no-op functions if OTEL not available
+    def trace_span(*args, **kwargs):
+        from contextlib import contextmanager
+        @contextmanager
+        def _noop():
+            yield None
+        return _noop()
+    def add_span_event(*args, **kwargs):
+        pass
+    def set_span_attribute(*args, **kwargs):
+        pass
+
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
@@ -930,31 +952,42 @@ def save_docs_to_vector_db(
         f"save_docs_to_vector_db: document {_get_docs_info(docs)} {collection_name}"
     )
 
-    # Check if entries with the same hash (metadata.hash) already exist
-    if metadata and "hash" in metadata:
-        result = VECTOR_DB_CLIENT.query(
-            collection_name=collection_name,
-            filter={"hash": metadata["hash"]},
-        )
+    # Create OTEL span for embedding generation and vector DB insertion
+    with trace_span(
+        name="file.embedding.save",
+        attributes={
+            "collection.name": collection_name,
+            "document.count": len(docs),
+            "embedding.engine": request.app.state.config.RAG_EMBEDDING_ENGINE if request and hasattr(request.app.state, 'config') else None,
+            "embedding.model": request.app.state.config.RAG_EMBEDDING_MODEL if request and hasattr(request.app.state, 'config') else None,
+        },
+    ) as span:
+        try:
+            # Check if entries with the same hash (metadata.hash) already exist
+            if metadata and "hash" in metadata:
+                result = VECTOR_DB_CLIENT.query(
+                    collection_name=collection_name,
+                    filter={"hash": metadata["hash"]},
+                )
 
-        if result is not None:
-            existing_doc_ids = result.ids[0]
-            if existing_doc_ids:
-                log.info(f"Document with hash {metadata['hash']} already exists")
-                raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
+                if result is not None:
+                    existing_doc_ids = result.ids[0]
+                    if existing_doc_ids:
+                        log.info(f"Document with hash {metadata['hash']} already exists")
+                        raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
-    # BUG #8 fix: Validate docs are not empty before splitting
-    if len(docs) == 0:
-        error_msg = (
-            f"[Embedding Failed] No documents to process. "
-            f"collection_name={collection_name} | "
-            f"This usually means the file content extraction returned empty text. "
-            f"Check the '[Content Extraction ERROR]' log above for details."
-        )
-        log.error(error_msg)
-        raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
+            # BUG #8 fix: Validate docs are not empty before splitting
+            if len(docs) == 0:
+                error_msg = (
+                    f"[Embedding Failed] No documents to process. "
+                    f"collection_name={collection_name} | "
+                    f"This usually means the file content extraction returned empty text. "
+                    f"Check the '[Content Extraction ERROR]' log above for details."
+                )
+                log.error(error_msg)
+                raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
-    if split:
+            if split:
         user_email, chunk_size, chunk_overlap = _get_user_chunk_settings(request, user)
         log.info(f"[Splitting] user={user_email or 'background'} | chunk_size={chunk_size} | chunk_overlap={chunk_overlap}")
 
@@ -979,45 +1012,48 @@ def save_docs_to_vector_db(
         else:
             raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
 
-        docs = text_splitter.split_documents(docs)
+                docs = text_splitter.split_documents(docs)
+                add_span_event("embedding.split.completed", {"chunk.count": len(docs)})
+                if span:
+                    set_span_attribute("chunk.count", len(docs))
 
-    if len(docs) == 0:
-        # Provide detailed error for debugging empty content issues
-        log.error(
-            f"[Embedding Failed] No content to embed after text splitting. "
-            f"collection_name={collection_name} | "
-            f"This usually means the file content extraction returned empty text. "
-            f"Check the '[Content Extraction WARNING]' log above for details and suggestions."
-        )
-        raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
+            if len(docs) == 0:
+                # Provide detailed error for debugging empty content issues
+                log.error(
+                    f"[Embedding Failed] No content to embed after text splitting. "
+                    f"collection_name={collection_name} | "
+                    f"This usually means the file content extraction returned empty text. "
+                    f"Check the '[Content Extraction WARNING]' log above for details and suggestions."
+                )
+                raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
-    texts = [doc.page_content for doc in docs]
-    metadatas = [
-        {
-            **doc.metadata,
-            **(metadata if metadata else {}),
-            "embedding_config": json.dumps(
+            texts = [doc.page_content for doc in docs]
+            metadatas = [
                 {
-                    "engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
-                    "model": request.app.state.config.RAG_EMBEDDING_MODEL,
+                    **doc.metadata,
+                    **(metadata if metadata else {}),
+                    "embedding_config": json.dumps(
+                        {
+                            "engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
+                            "model": request.app.state.config.RAG_EMBEDDING_MODEL,
+                        }
+                    ),
                 }
-            ),
-        }
-        for doc in docs
-    ]
+                for doc in docs
+            ]
 
-    # ChromaDB does not like datetime formats
-    # for meta-data so convert them to string.
-    for metadata in metadatas:
-        for key, value in metadata.items():
-            if (
-                isinstance(value, datetime)
-                or isinstance(value, list)
-                or isinstance(value, dict)
-            ):
-                metadata[key] = str(value)
+            # ChromaDB does not like datetime formats
+            # for meta-data so convert them to string.
+            for metadata in metadatas:
+                for key, value in metadata.items():
+                    if (
+                        isinstance(value, datetime)
+                        or isinstance(value, list)
+                        or isinstance(value, dict)
+                    ):
+                        metadata[key] = str(value)
 
-    try:
+            try:
         if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
             log.info(f"collection {collection_name} already exists")
 
@@ -1136,14 +1172,16 @@ def save_docs_to_vector_db(
         print(f"  [STEP 5.1] ✅ Embedding function created successfully", flush=True)
         log.info(f"  [STEP 5.1] ✅ Embedding function created successfully")
 
-        # Process all text chunks in a single API call
-        print(f"  [STEP 6] Generating embeddings for {len(texts)} chunks in a single batch", flush=True)
-        log.info(f"  [STEP 6] Generating embeddings for {len(texts)} chunks in a single batch")
-        
-        try:
-            embeddings = embedding_function(
-                list(map(lambda x: x.replace("\n", " "), texts)), user=user
-            )
+            # Process all text chunks in a single API call
+            print(f"  [STEP 6] Generating embeddings for {len(texts)} chunks in a single batch", flush=True)
+            log.info(f"  [STEP 6] Generating embeddings for {len(texts)} chunks in a single batch")
+            
+            add_span_event("embedding.generation.started", {"text.count": len(texts)})
+            
+            try:
+                embeddings = embedding_function(
+                    list(map(lambda x: x.replace("\n", " "), texts)), user=user
+                )
             
             print(f"  [STEP 6.1] Embedding generation result:", flush=True)
             print(f"    embeddings is None: {embeddings is None}", flush=True)
@@ -1168,15 +1206,20 @@ def save_docs_to_vector_db(
                 log.error(f"  [STEP 6.1] ❌ {error_msg}")
                 raise ValueError(error_msg)
             
-            print(f"  [STEP 6.1] ✅ Embeddings generated successfully", flush=True)
-            log.info(f"  [STEP 6.1] ✅ Embeddings generated successfully")
-        except Exception as embed_error:
-            error_msg = f"Failed to generate embeddings: {embed_error}"
-            print(f"  [STEP 6] ❌ {error_msg}", flush=True)
-            log.error(f"  [STEP 6] ❌ {error_msg}", exc_info=True)
-            raise
+                print(f"  [STEP 6.1] ✅ Embeddings generated successfully", flush=True)
+                log.info(f"  [STEP 6.1] ✅ Embeddings generated successfully")
+                add_span_event("embedding.generation.completed", {"embedding.count": len(embeddings) if embeddings else 0})
+            except Exception as embed_error:
+                error_msg = f"Failed to generate embeddings: {embed_error}"
+                print(f"  [STEP 6] ❌ {error_msg}", flush=True)
+                log.error(f"  [STEP 6] ❌ {error_msg}", exc_info=True)
+                add_span_event("embedding.generation.failed", {
+                    "error.type": type(embed_error).__name__,
+                    "error.message": str(embed_error)[:200],
+                })
+                raise
 
-        print(f"  [STEP 7] Preparing items for vector DB insertion:", flush=True)
+            print(f"  [STEP 7] Preparing items for vector DB insertion:", flush=True)
         print(f"    collection_name: {collection_name}", flush=True)
         print(f"    items count: {len(texts)}", flush=True)
         log.info(f"  [STEP 7] Preparing items for vector DB insertion:")
@@ -1192,31 +1235,42 @@ def save_docs_to_vector_db(
             for idx, text in enumerate(texts)
         ]
         
-        print(f"  [STEP 7.1] Items prepared, inserting into vector DB...", flush=True)
-        log.info(f"  [STEP 7.1] Items prepared, inserting into vector DB...")
+            print(f"  [STEP 7.1] Items prepared, inserting into vector DB...", flush=True)
+            log.info(f"  [STEP 7.1] Items prepared, inserting into vector DB...")
 
-        try:
-            VECTOR_DB_CLIENT.insert(
-                collection_name=collection_name,
-                items=items,
-            )
-            print(f"  [STEP 7.1] ✅ Successfully inserted {len(items)} items into collection: {collection_name}", flush=True)
-            log.info(f"  [STEP 7.1] ✅ Successfully inserted {len(items)} items into collection: {collection_name}")
-        except Exception as insert_error:
-            error_msg = f"Failed to insert into vector DB collection {collection_name}: {insert_error}"
-            print(f"  [STEP 7.1] ❌ {error_msg}", flush=True)
-            log.error(f"  [STEP 7.1] ❌ {error_msg}", exc_info=True)
-            raise
+            add_span_event("vector_db.insert.started", {"item.count": len(items)})
 
-        print(f"[EMBEDDING] ✅ Embeddings saved successfully", flush=True)
-        log.info(f"[EMBEDDING] ✅ Embeddings saved successfully")
-        print("=" * 80, flush=True)
-        log.info("=" * 80)
+            try:
+                VECTOR_DB_CLIENT.insert(
+                    collection_name=collection_name,
+                    items=items,
+                )
+                print(f"  [STEP 7.1] ✅ Successfully inserted {len(items)} items into collection: {collection_name}", flush=True)
+                log.info(f"  [STEP 7.1] ✅ Successfully inserted {len(items)} items into collection: {collection_name}")
+                add_span_event("vector_db.insert.completed", {"item.count": len(items)})
+            except Exception as insert_error:
+                error_msg = f"Failed to insert into vector DB collection {collection_name}: {insert_error}"
+                print(f"  [STEP 7.1] ❌ {error_msg}", flush=True)
+                log.error(f"  [STEP 7.1] ❌ {error_msg}", exc_info=True)
+                add_span_event("vector_db.insert.failed", {
+                    "error.type": type(insert_error).__name__,
+                    "error.message": str(insert_error)[:200],
+                })
+                raise
 
-        return True
-    except Exception as e:
-        log.exception(e)
-        raise e
+            print(f"[EMBEDDING] ✅ Embeddings saved successfully", flush=True)
+            log.info(f"[EMBEDDING] ✅ Embeddings saved successfully")
+            print("=" * 80, flush=True)
+            log.info("=" * 80)
+
+            return True
+        except Exception as e:
+            log.exception(e)
+            add_span_event("file.embedding.save.error", {
+                "error.type": type(e).__name__,
+                "error.message": str(e)[:200],
+            })
+            raise e
 
 
 import logging
@@ -1245,40 +1299,79 @@ def get_embeddings_with_fallback(
     Returns:
         list[list[float]]: List of embeddings for the input texts.
     """
-    # First, try single batch embedding function
-    try:
-        logging.info(f"Generating embeddings for {len(texts)} chunks in a single batch")
-        single_batch_func = get_single_batch_embedding_function(
-            embedding_engine,
-            embedding_model,
-            embedding_function,
-            url,
-            key,
-            embedding_batch_size,
-            backoff=False,
-        )
+    # Create OTEL span for embedding API calls
+    with trace_span(
+        name="file.embedding.generate",
+        attributes={
+            "embedding.engine": embedding_engine,
+            "embedding.model": embedding_model,
+            "text.count": len(texts),
+            "embedding.batch_size": embedding_batch_size,
+        },
+    ) as span:
+        try:
+            # First, try single batch embedding function
+            logging.info(f"Generating embeddings for {len(texts)} chunks in a single batch")
+            add_span_event("embedding.api.request", {"method": "single_batch"})
+            
+            single_batch_func = get_single_batch_embedding_function(
+                embedding_engine,
+                embedding_model,
+                embedding_function,
+                url,
+                key,
+                embedding_batch_size,
+                backoff=False,
+            )
 
-        # Explicitly try to generate embeddings with the single batch function
-        return single_batch_func(texts, user)
+            # Explicitly try to generate embeddings with the single batch function
+            result = single_batch_func(texts, user)
+            add_span_event("embedding.api.response", {
+                "status": "success",
+                "method": "single_batch",
+                "embedding.count": len(result) if result else 0,
+            })
+            return result
 
-    except Exception as e:
-        # Log the specific error from single batch attempt
-        logging.warning(f"Single batch embedding failed. Error: {str(e)}")
-        logging.warning(f"Falling back to batched embedding function")
+        except Exception as e:
+            # Log the specific error from single batch attempt
+            logging.warning(f"Single batch embedding failed. Error: {str(e)}")
+            logging.warning(f"Falling back to batched embedding function")
+            
+            # Set fallback attribute
+            if span:
+                set_span_attribute("embedding.fallback_used", True)
+            add_span_event("embedding.api.fallback", {
+                "error.type": type(e).__name__,
+                "error.message": str(e)[:200],
+            })
 
-        # Fallback to the original get_embedding_function
-        fallback_func = get_embedding_function(
-            embedding_engine,
-            embedding_model,
-            embedding_function,
-            url,
-            key,
-            embedding_batch_size,
-            backoff=True,
-        )
+            # Fallback to the original get_embedding_function
+            fallback_func = get_embedding_function(
+                embedding_engine,
+                embedding_model,
+                embedding_function,
+                url,
+                key,
+                embedding_batch_size,
+                backoff=True,
+            )
 
-        # Return the result from the fallback function
-        return fallback_func(texts, user)
+            # Return the result from the fallback function
+            try:
+                result = fallback_func(texts, user)
+                add_span_event("embedding.api.response", {
+                    "status": "success",
+                    "method": "fallback",
+                    "embedding.count": len(result) if result else 0,
+                })
+                return result
+            except Exception as fallback_error:
+                add_span_event("embedding.api.fallback_failed", {
+                    "error.type": type(fallback_error).__name__,
+                    "error.message": str(fallback_error)[:200],
+                })
+                raise
 
 
 def save_docs_to_multiple_collections(

@@ -75,8 +75,23 @@ class AuditLogger:
         log_level: str = "INFO",
         extra: Optional[dict] = None,
     ):
+        # Extract trace_id from current OTEL span for log-trace correlation
+        trace_id = None
+        try:
+            from opentelemetry import trace
+            current_span = trace.get_current_span()
+            if current_span and current_span.get_span_context().is_valid:
+                span_context = current_span.get_span_context()
+                trace_id = format(span_context.trace_id, "032x")  # 32 hex chars
+        except Exception:
+            pass  # OTEL not available or no active span
 
         entry = asdict(audit_entry)
+
+        if extra is None:
+            extra = {}
+        if trace_id:
+            extra["trace_id"] = trace_id
 
         if extra:
             entry["extra"] = extra

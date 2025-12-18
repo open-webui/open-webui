@@ -36,12 +36,32 @@ def stdout_format(record: "Record") -> str:
     Generates a formatted string for log records that are output to the console. This format includes a timestamp, log level, source location (module, function, and line), the log message, and any extra data (serialized as JSON).
     
     Timestamps are displayed in NYC timezone (America/New_York).
+    Includes trace_id and span_id from OpenTelemetry context for log-trace correlation.
 
     Parameters:
     record (Record): A Loguru record that contains logging details including time, level, name, function, line, message, and any extra context.
     Returns:
     str: A formatted log string intended for stdout.
     """
+    # Extract trace context from current OTEL span
+    trace_id = None
+    span_id = None
+    try:
+        from opentelemetry import trace
+        current_span = trace.get_current_span()
+        if current_span and current_span.get_span_context().is_valid:
+            span_context = current_span.get_span_context()
+            trace_id = format(span_context.trace_id, "032x")  # 32 hex chars
+            span_id = format(span_context.span_id, "016x")  # 16 hex chars
+    except Exception:
+        pass  # OTEL not available or no active span
+    
+    # Add trace_id and span_id to record extra
+    if trace_id:
+        record["extra"]["trace_id"] = trace_id
+    if span_id:
+        record["extra"]["span_id"] = span_id
+    
     # Convert time to NYC timezone and format it
     nyc_time = record["time"].astimezone(NYC_TIMEZONE)
     time_str = nyc_time.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
@@ -49,9 +69,18 @@ def stdout_format(record: "Record") -> str:
     tz_abbr = "EST" if nyc_time.utcoffset().total_seconds() == -18000 else "EDT"
     
     record["extra"]["extra_json"] = json.dumps(record["extra"])
+    
+    # Build trace correlation string
+    trace_correlation = ""
+    if trace_id:
+        trace_correlation = f"<yellow>trace_id={trace_id}</yellow> | "
+    if span_id:
+        trace_correlation += f"<yellow>span_id={span_id}</yellow> | "
+    
     return (
         f"<green>{time_str} {tz_abbr}</green> | "
         "<level>{level: <8}</level> | "
+        f"{trace_correlation}"
         "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
         "<level>{message}</level> - {extra[extra_json]}"
         "\n{exception}"

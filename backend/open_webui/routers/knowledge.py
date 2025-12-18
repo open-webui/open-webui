@@ -34,6 +34,27 @@ from open_webui.utils.super_admin import is_super_admin
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.models import Models, ModelForm
 
+# OpenTelemetry instrumentation (conditional import)
+try:
+    from open_webui.utils.otel_instrumentation import (
+        trace_span_async,
+        add_span_event,
+        set_span_attribute,
+    )
+    OTEL_AVAILABLE = True
+except ImportError:
+    OTEL_AVAILABLE = False
+    # Create no-op functions if OTEL not available
+    async def trace_span_async(*args, **kwargs):
+        from contextlib import asynccontextmanager
+        @asynccontextmanager
+        async def _noop():
+            yield None
+        return _noop()
+    def add_span_event(*args, **kwargs):
+        pass
+    def set_span_attribute(*args, **kwargs):
+        pass
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -369,7 +390,7 @@ class KnowledgeFileIdForm(BaseModel):
 
 
 @router.post("/{id}/file/add", response_model=Optional[KnowledgeFilesResponse])
-def add_file_to_knowledge_by_id(
+async def add_file_to_knowledge_by_id(
     request: Request,
     id: str,
     background_tasks: BackgroundTasks,
@@ -400,154 +421,185 @@ def add_file_to_knowledge_by_id(
         )
 
     log.info(f"file.content_type: {file.content_type}")
-    try:
+    
+    # Generate file_id early for instrumentation
+    unsanitized_filename = file.filename
+    filename = os.path.basename(unsanitized_filename)
+    file_id = str(uuid.uuid4())
+    name = filename
+    
+    # Create OTEL span for file upload
+    async with trace_span_async(
+        name="file.upload",
+        attributes={
+            "file.id": file_id,
+            "file.name": name,
+            "file.content_type": file.content_type,
+            "knowledge.id": id,
+            "user.id": str(user.id) if user else None,
+        },
+    ) as span:
+        try:
+            add_span_event("file.upload.started", {"file_id": file_id, "filename": name})
+            
+            filename = f"{file_id}_{filename}"
+            contents, file_path = Storage.upload_file(file.file, filename)
+            
+            # Update span with file size after upload
+            if span:
+                set_span_attribute("file.size", len(contents))
+            
+            add_span_event("file.upload.stored", {"file_path": file_path, "file_size": len(contents)})
 
-        unsanitized_filename = file.filename
-        filename = os.path.basename(unsanitized_filename)
-
-        # replace filename with uuid
-        file_id = str(uuid.uuid4())
-        name = filename
-        filename = f"{file_id}_{filename}"
-        contents, file_path = Storage.upload_file(file.file, filename)
-
-        file_item = Files.insert_new_file(
-            user.id,
-            FileForm(
-                **{
-                    "id": file_id,
-                    "filename": name,
-                    "path": file_path,
-                    "meta": {
-                        "name": name,
-                        "content_type": file.content_type,
-                        "size": len(contents),
-                        "data": file_metadata,
-                    },
-                }
-            ),
-        )
-
-        # Process file in background
-        # Use job queue if available (distributed processing), otherwise use BackgroundTasks
-        if background_tasks or is_job_queue_available():
-            try:
-                if file.content_type in [
-                    "audio/mpeg",
-                    "audio/wav",
-                    "audio/ogg",
-                    "audio/x-m4a",
-                ]:
-                    # For audio files, transcribe first (this is quick), then process in background
-                    file_path = Storage.get_file(file_path)
-                    result = transcribe(request, file_path, user)
-                    process_file(
-                        request,
-                        ProcessFileForm(file_id=file_id, content=result.get("text", "")),
-                        user=user,
-                        knowledge_id=id,  # Pass knowledge_id for single embedding
-                        background_tasks=background_tasks,
-                    )
-                else:
-                    # Process the file for both file and knowledge collections in background
-                    # process_file will use job queue if available, otherwise BackgroundTasks
-                    process_file(
-                        request,
-                        ProcessFileForm(file_id=file_id),
-                        user=user,
-                        knowledge_id=id,  # Pass knowledge_id for single embedding
-                        background_tasks=background_tasks,
-                    )
-            except Exception as e:
-                log.exception(e)
-                log.error(f"Error starting background processing for file: {file_id}")
-                # Mark file as error since background task failed to start
-                try:
-                    Files.update_file_metadata_by_id(
-                        file_id,
-                        {
-                            "processing_status": "error",
-                            "processing_error": f"Failed to start background processing: {str(e)}",
+            file_item = Files.insert_new_file(
+                user.id,
+                FileForm(
+                    **{
+                        "id": file_id,
+                        "filename": name,
+                        "path": file_path,
+                        "meta": {
+                            "name": name,
+                            "content_type": file.content_type,
+                            "size": len(contents),
+                            "data": file_metadata,
                         },
-                    )
-                except Exception as update_error:
-                    log.exception(f"Failed to update file status after background task error: {update_error}")
-                # Continue anyway - file is uploaded, user can retry processing manually
-        
-        # Get file item to return
-        file_item = Files.get_file_by_id(id=file_id)
-
-        # Update knowledge base metadata
-        # Note: File is added to knowledge base immediately, but processing happens in background.
-        # The file will have processing_status="pending" or "processing" until embeddings are generated.
-        # This is acceptable - the file appears in the knowledge base UI but may not be ready for use
-        # until processing completes. Frontend should check processing_status before using files.
-        if file_item:
-            # Re-fetch knowledge to get latest state (avoid race conditions)
-            knowledge = Knowledges.get_knowledge_by_id(id=id)
-            if not knowledge:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.NOT_FOUND,
-                )
-            
-            log.info(f"Adding file {file_id} to knowledge {id} by user {user.id} (email: {user.email})")
-            log.info(f"Knowledge owner: {knowledge.user_id}, current data: {knowledge.data}")
-            
-            # Ensure data is initialized properly
-            data = knowledge.data if knowledge.data is not None else {}
-            if not isinstance(data, dict):
-                data = {}
-            file_ids = data.get("file_ids", [])
-            if not isinstance(file_ids, list):
-                file_ids = []
-
-            # Add file_id if not already present (avoid duplicates)
-            if file_id not in file_ids:
-                file_ids.append(file_id)
-            data["file_ids"] = file_ids
-
-            log.info(f"Updating knowledge {id} with data: {data}")
-
-            # Update knowledge base with new file_ids
-            updated_knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
-
-            if not updated_knowledge:
-                log.error(f"Failed to update knowledge {id} with file {file_id} for user {user.id} (email: {user.email})")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Failed to update knowledge base metadata. File was uploaded but may not appear in the UI.",
-                )
-            
-            log.info(f"Update returned knowledge {id} with data: {updated_knowledge.data}")
-            
-            # Verify the update succeeded by checking file_id is in the response
-            if updated_knowledge.data and file_id in updated_knowledge.data.get("file_ids", []):
-                files = Files.get_files_by_ids(updated_knowledge.data.get("file_ids", []))
-
-                log.info(f"Successfully updated knowledge {id}: file {file_id} is in file_ids list")
-                return KnowledgeFilesResponse(
-                    **updated_knowledge.model_dump(),
-                    files=files,
-                )
-            else:
-                log.error(f"File {file_id} not found in updated knowledge {id} data. Updated data: {updated_knowledge.data}")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="File was uploaded but failed to update knowledge base metadata.",
-                )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("Error uploading file"),
+                    }
+                ),
             )
 
-    except Exception as e:
-        log.exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
-        )
+            # Process file in background
+            # Use job queue if available (distributed processing), otherwise use BackgroundTasks
+            job_id = None
+            if background_tasks or is_job_queue_available():
+                try:
+                    if file.content_type in [
+                        "audio/mpeg",
+                        "audio/wav",
+                        "audio/ogg",
+                        "audio/x-m4a",
+                    ]:
+                        # For audio files, transcribe first (this is quick), then process in background
+                        file_path_for_transcribe = Storage.get_file(file_path)
+                        result = transcribe(request, file_path_for_transcribe, user)
+                        # Note: process_file may return job_id if using job queue
+                        process_file(
+                            request,
+                            ProcessFileForm(file_id=file_id, content=result.get("text", "")),
+                            user=user,
+                            knowledge_id=id,  # Pass knowledge_id for single embedding
+                            background_tasks=background_tasks,
+                        )
+                    else:
+                        # Process the file for both file and knowledge collections in background
+                        # process_file will use job queue if available, otherwise BackgroundTasks
+                        process_file(
+                            request,
+                            ProcessFileForm(file_id=file_id),
+                            user=user,
+                            knowledge_id=id,  # Pass knowledge_id for single embedding
+                            background_tasks=background_tasks,
+                        )
+                    add_span_event("file.upload.queued", {"file_id": file_id})
+                except Exception as e:
+                    log.exception(e)
+                    log.error(f"Error starting background processing for file: {file_id}")
+                    add_span_event("file.upload.queue_failed", {
+                        "file_id": file_id,
+                        "error": str(e)[:200]
+                    })
+                    # Mark file as error since background task failed to start
+                    try:
+                        Files.update_file_metadata_by_id(
+                            file_id,
+                            {
+                                "processing_status": "error",
+                                "processing_error": f"Failed to start background processing: {str(e)}",
+                            },
+                        )
+                    except Exception as update_error:
+                        log.exception(f"Failed to update file status after background task error: {update_error}")
+                    # Continue anyway - file is uploaded, user can retry processing manually
+            
+            # Get file item to return
+            file_item = Files.get_file_by_id(id=file_id)
+
+            # Update knowledge base metadata
+            # Note: File is added to knowledge base immediately, but processing happens in background.
+            # The file will have processing_status="pending" or "processing" until embeddings are generated.
+            # This is acceptable - the file appears in the knowledge base UI but may not be ready for use
+            # until processing completes. Frontend should check processing_status before using files.
+            if file_item:
+                # Re-fetch knowledge to get latest state (avoid race conditions)
+                knowledge = Knowledges.get_knowledge_by_id(id=id)
+                if not knowledge:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=ERROR_MESSAGES.NOT_FOUND,
+                    )
+                
+                log.info(f"Adding file {file_id} to knowledge {id} by user {user.id} (email: {user.email})")
+                log.info(f"Knowledge owner: {knowledge.user_id}, current data: {knowledge.data}")
+                
+                # Ensure data is initialized properly
+                data = knowledge.data if knowledge.data is not None else {}
+                if not isinstance(data, dict):
+                    data = {}
+                file_ids = data.get("file_ids", [])
+                if not isinstance(file_ids, list):
+                    file_ids = []
+
+                # Add file_id if not already present (avoid duplicates)
+                if file_id not in file_ids:
+                    file_ids.append(file_id)
+                data["file_ids"] = file_ids
+
+                log.info(f"Updating knowledge {id} with data: {data}")
+
+                # Update knowledge base with new file_ids
+                updated_knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
+
+                if not updated_knowledge:
+                    log.error(f"Failed to update knowledge {id} with file {file_id} for user {user.id} (email: {user.email})")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Failed to update knowledge base metadata. File was uploaded but may not appear in the UI.",
+                    )
+                
+                log.info(f"Update returned knowledge {id} with data: {updated_knowledge.data}")
+                
+                # Verify the update succeeded by checking file_id is in the response
+                if updated_knowledge.data and file_id in updated_knowledge.data.get("file_ids", []):
+                    files = Files.get_files_by_ids(updated_knowledge.data.get("file_ids", []))
+
+                    log.info(f"Successfully updated knowledge {id}: file {file_id} is in file_ids list")
+                    add_span_event("file.upload.completed", {"file_id": file_id, "knowledge_id": id})
+                    return KnowledgeFilesResponse(
+                        **updated_knowledge.model_dump(),
+                        files=files,
+                    )
+                else:
+                    log.error(f"File {file_id} not found in updated knowledge {id} data. Updated data: {updated_knowledge.data}")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="File was uploaded but failed to update knowledge base metadata.",
+                    )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT("Error uploading file"),
+                )
+
+        except Exception as e:
+            log.exception(e)
+            add_span_event("file.upload.error", {
+                "error.type": type(e).__name__,
+                "error.message": str(e)[:200],
+            })
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT(e),
+            )
 
 
 @router.post("/{id}/file/update", response_model=Optional[KnowledgeFilesResponse])

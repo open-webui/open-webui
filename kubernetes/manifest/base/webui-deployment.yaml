@@ -33,11 +33,59 @@ spec:
         # Example: "email1@nyu.edu,email2@nyu.edu,email3@nyu.edu"
         - name: SUPER_ADMIN_EMAILS
           value: "sm11538@nyu.edu,ms15138@nyu.edu,mb484@nyu.edu,cg4532@nyu.edu,ht2490@nyu.edu,ps5226@nyu.edu"
+        # OpenTelemetry Configuration
+        - name: OTEL_ENABLED
+          value: "true"
+        - name: OTEL_SERVICE_NAME
+          value: "open-webui"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://localhost:4317"  # Sidecar collector on localhost
+        - name: OTEL_EXPORTER_OTLP_PROTOCOL
+          value: "grpc"
+        - name: OTEL_TRACES_SAMPLER
+          value: "parentbased_traceidratio"
+        - name: OTEL_TRACES_SAMPLER_ARG
+          value: "0.1"  # 10% sampling for high traffic
+        - name: OTEL_METRICS_EXPORTER
+          value: "otlp"
         tty: true
         volumeMounts:
         - name: webui-volume
           mountPath: /app/backend/data
+      # OTEL Collector sidecar container
+      - name: otel-collector
+        image: otel/opentelemetry-collector:latest
+        command: ["/otelcol", "--config=/etc/otel-collector-config/otel-collector-config.yaml"]
+        env:
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://tempo-distributor.openshift-observability.svc.cluster.local:4317"  # OpenShift Observe endpoint
+          # Update this to your actual OpenShift Observe endpoint
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "200m"
+            memory: "512Mi"
+        volumeMounts:
+        - name: otel-collector-config
+          mountPath: /etc/otel-collector-config
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8888
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8888
+          initialDelaySeconds: 5
+          periodSeconds: 5
       volumes:
       - name: webui-volume
         persistentVolumeClaim:
-          claimName: open-webui-pvc          
+          claimName: open-webui-pvc
+      - name: otel-collector-config
+        configMap:
+          name: otel-collector-config          
