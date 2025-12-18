@@ -505,12 +505,34 @@ def ensure_chat_group_id_column():
 async def lifespan(app: FastAPI):
     start_logger()
     
-    # Initialize OpenTelemetry (Phase 1)
+    # Initialize OpenTelemetry SDK (Phase 1)
+    otel_initialized = False
     try:
-        from open_webui.utils.otel_config import initialize_otel, shutdown_otel
+        from open_webui.utils.otel_config import (
+            initialize_otel,
+            shutdown_otel,
+            instrument_fastapi,
+            instrument_requests,
+        )
         otel_initialized = initialize_otel()
         if otel_initialized:
-            log.info("OpenTelemetry initialized successfully")
+            log.info("OpenTelemetry SDK initialized successfully")
+            
+            # Instrument FastAPI (after app is created)
+            try:
+                fastapi_instrumented = instrument_fastapi(app)
+                if fastapi_instrumented:
+                    log.info("FastAPI auto-instrumentation enabled")
+            except Exception as e:
+                log.warning(f"FastAPI instrumentation failed: {e}", exc_info=True)
+            
+            # Instrument requests library
+            try:
+                requests_instrumented = instrument_requests()
+                if requests_instrumented:
+                    log.info("Requests library auto-instrumentation enabled")
+            except Exception as e:
+                log.warning(f"Requests instrumentation failed: {e}", exc_info=True)
         else:
             log.debug("OpenTelemetry not initialized (disabled or misconfigured)")
     except Exception as e:
@@ -576,11 +598,12 @@ async def lifespan(app: FastAPI):
     yield
     
     # Shutdown OpenTelemetry (flush remaining spans/metrics)
-    try:
-        from open_webui.utils.otel_config import shutdown_otel
-        shutdown_otel()
-    except Exception as e:
-        log.warning(f"OpenTelemetry shutdown failed: {e}", exc_info=True)
+    if otel_initialized:
+        try:
+            from open_webui.utils.otel_config import shutdown_otel
+            shutdown_otel()
+        except Exception as e:
+            log.warning(f"OpenTelemetry shutdown failed: {e}", exc_info=True)
 
 
 app = FastAPI(

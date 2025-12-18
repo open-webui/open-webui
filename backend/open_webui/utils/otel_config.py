@@ -315,3 +315,140 @@ def shutdown_otel() -> None:
         
     except Exception as e:
         log.warning(f"Error during OpenTelemetry shutdown: {e}", exc_info=True)
+
+
+# Thread-safe instrumentation flags
+_fastapi_instrumented = False
+_fastapi_instrument_lock = threading.Lock()
+_requests_instrumented = False
+_requests_instrument_lock = threading.Lock()
+
+
+def instrument_fastapi(app) -> bool:
+    """
+    Instrument FastAPI application for automatic tracing.
+    
+    This function automatically creates spans for all HTTP requests to FastAPI endpoints.
+    It captures request method, path, status code, and duration.
+    
+    Args:
+        app: FastAPI application instance
+        
+    Returns:
+        bool: True if instrumentation succeeded, False otherwise
+    """
+    global _fastapi_instrumented
+    
+    # Early return if OTEL is disabled
+    if not is_otel_enabled():
+        log.debug("FastAPI instrumentation skipped (OTEL disabled)")
+        return False
+    
+    # Check if instrumentation is explicitly disabled
+    from open_webui.env import OTEL_INSTRUMENTATION_FASTAPI_ENABLED
+    if not OTEL_INSTRUMENTATION_FASTAPI_ENABLED:
+        log.debug("FastAPI instrumentation disabled via OTEL_INSTRUMENTATION_FASTAPI_ENABLED")
+        return False
+    
+    # Thread-safe check for already instrumented
+    with _fastapi_instrument_lock:
+        if _fastapi_instrumented:
+            log.debug("FastAPI already instrumented, skipping")
+            return True
+        
+        try:
+            from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+            from open_webui.env import (
+                OTEL_INSTRUMENTATION_FASTAPI_EXCLUDED_PATHS,
+                OTEL_INSTRUMENTATION_FASTAPI_CAPTURE_HEADERS,
+            )
+            
+            log.info("Instrumenting FastAPI application...")
+            
+            # Configure excluded paths
+            excluded_urls = OTEL_INSTRUMENTATION_FASTAPI_EXCLUDED_PATHS
+            
+            # Instrument FastAPI app
+            # FastAPIInstrumentor.instrument() is idempotent by default
+            FastAPIInstrumentor.instrument_app(
+                app,
+                excluded_urls=excluded_urls if excluded_urls else None,
+                # Don't capture headers by default (sensitive data)
+                # Can be configured via OTEL_INSTRUMENTATION_FASTAPI_CAPTURE_HEADERS if needed
+            )
+            
+            _fastapi_instrumented = True
+            log.info(
+                f"FastAPI auto-instrumentation enabled "
+                f"(excluded paths: {excluded_urls if excluded_urls else 'none'})"
+            )
+            return True
+            
+        except ImportError as e:
+            log.warning(
+                f"FastAPI instrumentation package not available: {e}. "
+                f"Install with: pip install opentelemetry-instrumentation-fastapi"
+            )
+            return False
+        except Exception as e:
+            log.warning(
+                f"FastAPI instrumentation failed: {e}",
+                exc_info=True,
+            )
+            return False
+
+
+def instrument_requests() -> bool:
+    """
+    Instrument requests library for automatic HTTP tracing.
+    
+    This function automatically creates spans for all HTTP calls made using
+    the requests library. Spans are linked as children of parent FastAPI spans.
+    
+    Returns:
+        bool: True if instrumentation succeeded, False otherwise
+    """
+    global _requests_instrumented
+    
+    # Early return if OTEL is disabled
+    if not is_otel_enabled():
+        log.debug("Requests instrumentation skipped (OTEL disabled)")
+        return False
+    
+    # Check if instrumentation is explicitly disabled
+    from open_webui.env import OTEL_INSTRUMENTATION_REQUESTS_ENABLED
+    if not OTEL_INSTRUMENTATION_REQUESTS_ENABLED:
+        log.debug("Requests instrumentation disabled via OTEL_INSTRUMENTATION_REQUESTS_ENABLED")
+        return False
+    
+    # Thread-safe check for already instrumented
+    with _requests_instrument_lock:
+        if _requests_instrumented:
+            log.debug("Requests library already instrumented, skipping")
+            return True
+        
+        try:
+            from opentelemetry.instrumentation.requests import RequestsInstrumentor
+            
+            log.info("Instrumenting requests library...")
+            
+            # Instrument requests library
+            # RequestsInstrumentor.instrument() is idempotent by default
+            RequestsInstrumentor().instrument()
+            
+            _requests_instrumented = True
+            log.info("Requests library auto-instrumentation enabled")
+            return True
+            
+        except ImportError as e:
+            log.warning(
+                f"Requests instrumentation package not available: {e}. "
+                f"Install with: pip install opentelemetry-instrumentation-requests"
+            )
+            return False
+        except Exception as e:
+            log.warning(
+                f"Requests instrumentation failed: {e}",
+                exc_info=True,
+            )
+            return False

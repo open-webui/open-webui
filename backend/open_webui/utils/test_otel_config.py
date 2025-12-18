@@ -313,3 +313,250 @@ class TestOTELConfig:
         mock_tracer_provider.shutdown.assert_called_once()
         mock_meter_provider.shutdown.assert_called_once()
         assert otel_config._otel_initialized is False
+
+
+class TestOTELInstrumentation:
+    """Test OpenTelemetry instrumentation functions."""
+    
+    def test_instrument_fastapi_disabled_when_otel_disabled(self):
+        """Test that FastAPI instrumentation is skipped when OTEL is disabled."""
+        with patch.dict(os.environ, {"OTEL_ENABLED": "false"}, clear=False):
+            import importlib
+            import open_webui.utils.otel_config as otel_config
+            importlib.reload(otel_config)
+            
+            # Reset instrumentation flag
+            otel_config._fastapi_instrumented = False
+            
+            # Mock FastAPI app
+            mock_app = MagicMock()
+            
+            result = otel_config.instrument_fastapi(mock_app)
+            
+            assert result is False
+            assert otel_config._fastapi_instrumented is False
+    
+    def test_instrument_fastapi_disabled_when_config_disabled(self):
+        """Test that FastAPI instrumentation is skipped when explicitly disabled."""
+        with patch.dict(
+            os.environ,
+            {
+                "OTEL_ENABLED": "true",
+                "OTEL_INSTRUMENTATION_FASTAPI_ENABLED": "false",
+            },
+            clear=False,
+        ):
+            import importlib
+            import open_webui.utils.otel_config as otel_config
+            importlib.reload(otel_config)
+            
+            # Reset instrumentation flag
+            otel_config._fastapi_instrumented = False
+            
+            mock_app = MagicMock()
+            
+            result = otel_config.instrument_fastapi(mock_app)
+            
+            assert result is False
+    
+    @patch("opentelemetry.instrumentation.fastapi.FastAPIInstrumentor.instrument_app")
+    def test_instrument_fastapi_success(self, mock_instrument):
+        """Test successful FastAPI instrumentation."""
+        with patch.dict(
+            os.environ,
+            {
+                "OTEL_ENABLED": "true",
+                "OTEL_INSTRUMENTATION_FASTAPI_ENABLED": "true",
+            },
+            clear=False,
+        ):
+            import importlib
+            import open_webui.utils.otel_config as otel_config
+            importlib.reload(otel_config)
+            
+            # Reset instrumentation flag
+            otel_config._fastapi_instrumented = False
+            
+            mock_app = MagicMock()
+            
+            result = otel_config.instrument_fastapi(mock_app)
+            
+            assert result is True
+            assert otel_config._fastapi_instrumented is True
+            mock_instrument.assert_called_once()
+    
+    def test_instrument_fastapi_idempotent(self):
+        """Test that FastAPI instrumentation is idempotent."""
+        with patch.dict(
+            os.environ,
+            {
+                "OTEL_ENABLED": "true",
+                "OTEL_INSTRUMENTATION_FASTAPI_ENABLED": "true",
+            },
+            clear=False,
+        ):
+            import importlib
+            import open_webui.utils.otel_config as otel_config
+            importlib.reload(otel_config)
+            
+            # Reset instrumentation flag
+            otel_config._fastapi_instrumented = False
+            
+            mock_app = MagicMock()
+            
+            with patch("opentelemetry.instrumentation.fastapi.FastAPIInstrumentor.instrument_app"):
+                # First call
+                result1 = otel_config.instrument_fastapi(mock_app)
+                assert result1 is True
+                
+                # Second call (should be idempotent)
+                result2 = otel_config.instrument_fastapi(mock_app)
+                assert result2 is True
+                
+                # Should only instrument once
+                assert otel_config._fastapi_instrumented is True
+    
+    def test_instrument_fastapi_import_error(self):
+        """Test graceful handling of missing FastAPI instrumentation package."""
+        with patch.dict(
+            os.environ,
+            {
+                "OTEL_ENABLED": "true",
+                "OTEL_INSTRUMENTATION_FASTAPI_ENABLED": "true",
+            },
+            clear=False,
+        ):
+            import importlib
+            import open_webui.utils.otel_config as otel_config
+            importlib.reload(otel_config)
+            
+            # Reset instrumentation flag
+            otel_config._fastapi_instrumented = False
+            
+            mock_app = MagicMock()
+            
+            # Mock ImportError
+            with patch("builtins.__import__", side_effect=ImportError("No module named 'opentelemetry.instrumentation.fastapi'")):
+                result = otel_config.instrument_fastapi(mock_app)
+                
+                assert result is False
+                assert otel_config._fastapi_instrumented is False
+    
+    def test_instrument_requests_disabled_when_otel_disabled(self):
+        """Test that requests instrumentation is skipped when OTEL is disabled."""
+        with patch.dict(os.environ, {"OTEL_ENABLED": "false"}, clear=False):
+            import importlib
+            import open_webui.utils.otel_config as otel_config
+            importlib.reload(otel_config)
+            
+            # Reset instrumentation flag
+            otel_config._requests_instrumented = False
+            
+            result = otel_config.instrument_requests()
+            
+            assert result is False
+            assert otel_config._requests_instrumented is False
+    
+    def test_instrument_requests_disabled_when_config_disabled(self):
+        """Test that requests instrumentation is skipped when explicitly disabled."""
+        with patch.dict(
+            os.environ,
+            {
+                "OTEL_ENABLED": "true",
+                "OTEL_INSTRUMENTATION_REQUESTS_ENABLED": "false",
+            },
+            clear=False,
+        ):
+            import importlib
+            import open_webui.utils.otel_config as otel_config
+            importlib.reload(otel_config)
+            
+            # Reset instrumentation flag
+            otel_config._requests_instrumented = False
+            
+            result = otel_config.instrument_requests()
+            
+            assert result is False
+    
+    @patch("opentelemetry.instrumentation.requests.RequestsInstrumentor")
+    def test_instrument_requests_success(self, mock_instrumentor_class):
+        """Test successful requests instrumentation."""
+        with patch.dict(
+            os.environ,
+            {
+                "OTEL_ENABLED": "true",
+                "OTEL_INSTRUMENTATION_REQUESTS_ENABLED": "true",
+            },
+            clear=False,
+        ):
+            import importlib
+            import open_webui.utils.otel_config as otel_config
+            importlib.reload(otel_config)
+            
+            # Reset instrumentation flag
+            otel_config._requests_instrumented = False
+            
+            mock_instrumentor = MagicMock()
+            mock_instrumentor_class.return_value = mock_instrumentor
+            
+            result = otel_config.instrument_requests()
+            
+            assert result is True
+            assert otel_config._requests_instrumented is True
+            mock_instrumentor.instrument.assert_called_once()
+    
+    def test_instrument_requests_idempotent(self):
+        """Test that requests instrumentation is idempotent."""
+        with patch.dict(
+            os.environ,
+            {
+                "OTEL_ENABLED": "true",
+                "OTEL_INSTRUMENTATION_REQUESTS_ENABLED": "true",
+            },
+            clear=False,
+        ):
+            import importlib
+            import open_webui.utils.otel_config as otel_config
+            importlib.reload(otel_config)
+            
+            # Reset instrumentation flag
+            otel_config._requests_instrumented = False
+            
+            with patch("opentelemetry.instrumentation.requests.RequestsInstrumentor") as mock_instrumentor_class:
+                mock_instrumentor = MagicMock()
+                mock_instrumentor_class.return_value = mock_instrumentor
+                
+                # First call
+                result1 = otel_config.instrument_requests()
+                assert result1 is True
+                
+                # Second call (should be idempotent)
+                result2 = otel_config.instrument_requests()
+                assert result2 is True
+                
+                # Should only instrument once
+                assert otel_config._requests_instrumented is True
+    
+    def test_instrument_requests_import_error(self):
+        """Test graceful handling of missing requests instrumentation package."""
+        with patch.dict(
+            os.environ,
+            {
+                "OTEL_ENABLED": "true",
+                "OTEL_INSTRUMENTATION_REQUESTS_ENABLED": "true",
+            },
+            clear=False,
+        ):
+            import importlib
+            import open_webui.utils.otel_config as otel_config
+            importlib.reload(otel_config)
+            
+            # Reset instrumentation flag
+            otel_config._requests_instrumented = False
+            
+            # Mock ImportError
+            with patch("builtins.__import__", side_effect=ImportError("No module named 'opentelemetry.instrumentation.requests'")):
+                result = otel_config.instrument_requests()
+                
+                assert result is False
+                assert otel_config._requests_instrumented is False

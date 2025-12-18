@@ -596,3 +596,30 @@ except (ValueError, TypeError) as e:
 # Exporter configuration
 OTEL_LOGS_EXPORTER = os.environ.get("OTEL_LOGS_EXPORTER", "none")  # We use Loguru
 OTEL_METRICS_EXPORTER = os.environ.get("OTEL_METRICS_EXPORTER", "otlp")
+
+# OpenTelemetry Instrumentation Configuration
+OTEL_INSTRUMENTATION_FASTAPI_ENABLED = os.environ.get(
+    "OTEL_INSTRUMENTATION_FASTAPI_ENABLED", "true"
+).lower() == "true"
+
+OTEL_INSTRUMENTATION_REQUESTS_ENABLED = os.environ.get(
+    "OTEL_INSTRUMENTATION_REQUESTS_ENABLED", "true"
+).lower() == "true"
+
+# Exclude paths from FastAPI instrumentation (comma-separated)
+OTEL_INSTRUMENTATION_FASTAPI_EXCLUDED_PATHS = [
+    path.strip()
+    for path in os.environ.get(
+        "OTEL_INSTRUMENTATION_FASTAPI_EXCLUDED_PATHS", "/health,/health/db,/static"
+    ).split(",")
+    if path.strip()
+]
+
+# Capture request/response headers (comma-separated, empty = none)
+OTEL_INSTRUMENTATION_FASTAPI_CAPTURE_HEADERS = [
+    header.strip()
+    for header in os.environ.get(
+        "OTEL_INSTRUMENTATION_FASTAPI_CAPTURE_HEADERS", ""
+    ).split(",")
+    if header.strip()
+]
