@@ -33,11 +33,13 @@ async def send_post_request(
         session = aiohttp.ClientSession(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
         )
+        api_key = os.environ.get("RAG_MASTER_API_KEY", "")
         r = await session.post(
             url,
             data=payload,
             headers={
                 "Content-Type": "application/json",
+                "x-api-key": api_key,
             },
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
         )
