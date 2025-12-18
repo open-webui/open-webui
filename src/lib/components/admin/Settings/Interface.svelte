@@ -123,12 +123,6 @@
 
 					<Switch bind:state={taskConfig.ENABLE_TITLE_GENERATION} disabled={!taskConfig.HAS_TASK_MODEL_ACCESS} />
 				</div>
-					<div class=" self-center text-xs font-medium">
-						{$i18n.t('Title Generation')}
-					</div>
-
-					<Switch bind:state={taskConfig.ENABLE_TITLE_GENERATION} disabled={!taskConfig.HAS_TASK_MODEL_ACCESS} />
-				</div>
 
 				{#if taskConfig.ENABLE_TITLE_GENERATION}
 					<div class="mb-2.5">
