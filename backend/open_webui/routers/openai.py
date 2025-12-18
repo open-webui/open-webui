@@ -31,6 +31,30 @@ from open_webui.models.users import UserModel
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import ENV, SRC_LOG_LEVELS
 
+# OpenTelemetry instrumentation helpers
+try:
+    from open_webui.utils.otel_instrumentation import (
+        trace_span_async,
+        add_span_event,
+        set_span_attribute,
+    )
+    from opentelemetry.trace import SpanKind
+    OTEL_AVAILABLE = True
+except ImportError:
+    OTEL_AVAILABLE = False
+    # Create no-op functions if OTEL not available
+    async def trace_span_async(*args, **kwargs):
+        from contextlib import asynccontextmanager
+        @asynccontextmanager
+        async def _noop():
+            yield None
+        return _noop()
+    def add_span_event(*args, **kwargs):
+        pass
+    def set_span_attribute(*args, **kwargs):
+        pass
+    SpanKind = None
+
 
 from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
@@ -580,16 +604,35 @@ async def generate_chat_completion(
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
 ):
-    if BYPASS_MODEL_ACCESS_CONTROL:
-        bypass_filter = True
+    # Extract model info for instrumentation
+    model_id = form_data.get("model", "unknown")
+    api_base_url = None
+    
+    # Create span for OpenAI API call
+    async with trace_span_async(
+        name="llm.openai.chat_completion",
+        attributes={
+            "llm.provider": "openai",
+            "llm.model": model_id,
+        },
+        kind=SpanKind.CLIENT if OTEL_AVAILABLE and SpanKind else None,
+    ) as span:
+        try:
+            # Add event: API request started
+            add_span_event("llm.api.request", {
+                "model": model_id,
+            })
+            
+            if BYPASS_MODEL_ACCESS_CONTROL:
+                bypass_filter = True
 
-    idx = 0
+            idx = 0
 
-    payload = {**form_data}
-    metadata = payload.pop("metadata", None)
+            payload = {**form_data}
+            metadata = payload.pop("metadata", None)
 
-    model_id = form_data.get("model")
-    model_info = Models.get_model_by_id(model_id)
+            model_id = form_data.get("model")
+            model_info = Models.get_model_by_id(model_id)
 
     # Check model info and override the payload
     if model_info:
@@ -651,31 +694,36 @@ async def generate_chat_completion(
             "role": user.role,
         }
 
-    url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
-    key = request.app.state.config.OPENAI_API_KEYS[idx]
+            url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
+            key = request.app.state.config.OPENAI_API_KEYS[idx]
+            api_base_url = url
+            
+            # Set API base URL attribute
+            if span:
+                set_span_attribute("llm.api_base", url)
 
-    # Fix: o1,o3 does not support the "max_tokens" parameter, Modify "max_tokens" to "max_completion_tokens"
-    is_o1_o3 = payload["model"].lower().startswith(("o1", "o3-"))
-    if is_o1_o3:
-        payload = openai_o1_o3_handler(payload)
-    elif "api.openai.com" not in url:
-        # Remove "max_completion_tokens" from the payload for backward compatibility
-        if "max_completion_tokens" in payload:
-            payload["max_tokens"] = payload["max_completion_tokens"]
-            del payload["max_completion_tokens"]
+            # Fix: o1,o3 does not support the "max_tokens" parameter, Modify "max_tokens" to "max_completion_tokens"
+            is_o1_o3 = payload["model"].lower().startswith(("o1", "o3-"))
+            if is_o1_o3:
+                payload = openai_o1_o3_handler(payload)
+            elif "api.openai.com" not in url:
+                # Remove "max_completion_tokens" from the payload for backward compatibility
+                if "max_completion_tokens" in payload:
+                    payload["max_tokens"] = payload["max_completion_tokens"]
+                    del payload["max_completion_tokens"]
 
-    if "max_tokens" in payload and "max_completion_tokens" in payload:
-        del payload["max_tokens"]
+            if "max_tokens" in payload and "max_completion_tokens" in payload:
+                del payload["max_tokens"]
 
-    # Convert the modified body back to JSON
-    payload = json.dumps(payload)
+            # Convert the modified body back to JSON
+            payload = json.dumps(payload)
 
-    r = None
-    session = None
-    streaming = False
-    response = None
+            r = None
+            session = None
+            streaming = False
+            response = None
 
-    try:
+            try:
         session = aiohttp.ClientSession(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
         )
@@ -708,45 +756,80 @@ async def generate_chat_completion(
             },
         )
 
-        # Check if response is SSE
-        if "text/event-stream" in r.headers.get("Content-Type", ""):
-            streaming = True
-            return StreamingResponse(
-                r.content,
-                status_code=r.status,
-                headers=dict(r.headers),
-                background=BackgroundTask(
-                    cleanup_response, response=r, session=session
-                ),
-            )
-        else:
-            try:
-                response = await r.json()
+                # Check if response is SSE
+                if "text/event-stream" in r.headers.get("Content-Type", ""):
+                    streaming = True
+                    # Add event: API response (streaming)
+                    add_span_event("llm.api.response", {
+                        "streaming": True,
+                    })
+                    
+                    return StreamingResponse(
+                        r.content,
+                        status_code=r.status,
+                        headers=dict(r.headers),
+                        background=BackgroundTask(
+                            cleanup_response, response=r, session=session
+                        ),
+                    )
+                else:
+                    try:
+                        response = await r.json()
+                    except Exception as e:
+                        log.error(e)
+                        response = await r.text()
+
+                    r.raise_for_status()
+                    
+                    # Extract usage info if available
+                    if isinstance(response, dict) and "usage" in response:
+                        usage = response["usage"]
+                        if span:
+                            set_span_attribute("llm.usage.input_tokens", usage.get("prompt_tokens"))
+                            set_span_attribute("llm.usage.output_tokens", usage.get("completion_tokens"))
+                            set_span_attribute("llm.usage.total_tokens", usage.get("total_tokens"))
+                    
+                    # Add event: API response (non-streaming)
+                    add_span_event("llm.api.response", {
+                        "streaming": False,
+                        "has_usage": "usage" in response if isinstance(response, dict) else False,
+                    })
+                    
+                    return response
             except Exception as e:
-                log.error(e)
-                response = await r.text()
+                log.exception(e)
+                
+                # Add event: API error
+                add_span_event("llm.api.error", {
+                    "error.type": type(e).__name__,
+                    "error.message": str(e)[:200],
+                })
 
-            r.raise_for_status()
-            return response
-    except Exception as e:
-        log.exception(e)
+                detail = None
+                if isinstance(response, dict):
+                    if "error" in response:
+                        detail = f"{response['error']['message'] if 'message' in response['error'] else response['error']}"
+                elif isinstance(response, str):
+                    detail = response
 
-        detail = None
-        if isinstance(response, dict):
-            if "error" in response:
-                detail = f"{response['error']['message'] if 'message' in response['error'] else response['error']}"
-        elif isinstance(response, str):
-            detail = response
-
-        raise HTTPException(
-            status_code=r.status if r else 500,
-            detail=detail if detail else "Open WebUI: Server Connection Error",
-        )
-    finally:
-        if not streaming and session:
-            if r:
-                r.close()
-            await session.close()
+                raise HTTPException(
+                    status_code=r.status if r else 500,
+                    detail=detail if detail else "Open WebUI: Server Connection Error",
+                )
+            finally:
+                if not streaming and session:
+                    if r:
+                        r.close()
+                    await session.close()
+        except Exception as e:
+            # Add event: LLM error
+            add_span_event("llm.error", {
+                "error.type": type(e).__name__,
+                "error.message": str(e)[:200],
+            })
+            
+            # Re-raise exception (span status will be set by trace_span_async)
+            raise
 
 
 @router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])

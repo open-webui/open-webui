@@ -60,6 +60,30 @@ from open_webui.env import (
 )
 from open_webui.constants import ERROR_MESSAGES
 
+# OpenTelemetry instrumentation helpers
+try:
+    from open_webui.utils.otel_instrumentation import (
+        trace_span_async,
+        add_span_event,
+        set_span_attribute,
+    )
+    from opentelemetry.trace import SpanKind
+    OTEL_AVAILABLE = True
+except ImportError:
+    OTEL_AVAILABLE = False
+    # Create no-op functions if OTEL not available
+    async def trace_span_async(*args, **kwargs):
+        from contextlib import asynccontextmanager
+        @asynccontextmanager
+        async def _noop():
+            yield None
+        return _noop()
+    def add_span_event(*args, **kwargs):
+        pass
+    def set_span_attribute(*args, **kwargs):
+        pass
+    SpanKind = None
+
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OLLAMA"])
 
@@ -1098,25 +1122,46 @@ async def generate_chat_completion(
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
 ):
-    if BYPASS_MODEL_ACCESS_CONTROL:
-        bypass_filter = True
+    # Extract model info for instrumentation
+    model_id = form_data.get("model", "unknown")
+    is_streaming = form_data.get("stream", True)
+    
+    # Create span for Ollama API call
+    async with trace_span_async(
+        name="llm.ollama.chat_completion",
+        attributes={
+            "llm.provider": "ollama",
+            "llm.model": model_id,
+            "llm.stream": is_streaming,
+        },
+        kind=SpanKind.CLIENT if OTEL_AVAILABLE and SpanKind else None,
+    ) as span:
+        try:
+            # Add event: API request started
+            add_span_event("llm.api.request", {
+                "model": model_id,
+                "provider": "ollama",
+            })
+            
+            if BYPASS_MODEL_ACCESS_CONTROL:
+                bypass_filter = True
 
-    metadata = form_data.pop("metadata", None)
-    try:
-        form_data = GenerateChatCompletionForm(**form_data)
-    except Exception as e:
-        log.exception(e)
-        raise HTTPException(
-            status_code=400,
-            detail=str(e),
-        )
+            metadata = form_data.pop("metadata", None)
+            try:
+                form_data = GenerateChatCompletionForm(**form_data)
+            except Exception as e:
+                log.exception(e)
+                raise HTTPException(
+                    status_code=400,
+                    detail=str(e),
+                )
 
-    payload = {**form_data.model_dump(exclude_none=True)}
-    if "metadata" in payload:
-        del payload["metadata"]
+            payload = {**form_data.model_dump(exclude_none=True)}
+            if "metadata" in payload:
+                del payload["metadata"]
 
-    model_id = payload["model"]
-    model_info = Models.get_model_by_id(model_id)
+            model_id = payload["model"]
+            model_info = Models.get_model_by_id(model_id)
 
     if model_info:
         if model_info.base_model_id:
@@ -1152,27 +1197,51 @@ async def generate_chat_completion(
                 detail="Model not found",
             )
 
-    if ":" not in payload["model"]:
-        payload["model"] = f"{payload['model']}:latest"
+            if ":" not in payload["model"]:
+                payload["model"] = f"{payload['model']}:latest"
 
-    url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
-    api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
-        str(url_idx),
-        request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
-    )
+            url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
+            
+            # Set API base URL attribute
+            if span:
+                set_span_attribute("llm.api_base", url)
+            
+            api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+                str(url_idx),
+                request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
+            )
 
-    prefix_id = api_config.get("prefix_id", None)
-    if prefix_id:
-        payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
+            prefix_id = api_config.get("prefix_id", None)
+            if prefix_id:
+                payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
 
-    return await send_post_request(
-        url=f"{url}/api/chat",
-        payload=json.dumps(payload),
-        stream=form_data.stream,
-        key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
-        content_type="application/x-ndjson",
-        user=user,
-    )
+            response = await send_post_request(
+                url=f"{url}/api/chat",
+                payload=json.dumps(payload),
+                stream=form_data.stream,
+                key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
+                content_type="application/x-ndjson",
+                user=user,
+            )
+            
+            # Add event: API response received
+            add_span_event("llm.api.response", {
+                "streaming": is_streaming,
+                "provider": "ollama",
+            })
+            
+            return response
+            
+        except Exception as e:
+            # Add event: API error
+            add_span_event("llm.api.error", {
+                "error.type": type(e).__name__,
+                "error.message": str(e)[:200],
+                "provider": "ollama",
+            })
+            
+            # Re-raise exception (span status will be set by trace_span_async)
+            raise
 
 
 # TODO: we should update this part once Ollama supports other types

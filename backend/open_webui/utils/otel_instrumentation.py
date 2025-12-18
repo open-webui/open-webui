@@ -1,0 +1,403 @@
+"""
+OpenTelemetry Manual Instrumentation Helper Utilities
+
+This module provides reusable utilities for manual instrumentation:
+- Context managers for creating spans (sync and async)
+- Decorators for automatic function tracing
+- Helpers for adding events and setting span status
+
+All utilities are designed to be:
+- Thread-safe and async-safe
+- Context-aware (automatically link to parent spans)
+- Production-ready (proper error handling)
+- High-performance (minimal overhead)
+"""
+
+import functools
+import inspect
+import logging
+from contextlib import asynccontextmanager, contextmanager
+from typing import Any, Callable, Dict, Optional
+
+log = logging.getLogger(__name__)
+
+
+def _get_tracer():
+    """
+    Get the current OTEL tracer.
+    
+    Returns:
+        Tracer: OpenTelemetry tracer instance or None if OTEL is not initialized
+    """
+    try:
+        from opentelemetry import trace
+        return trace.get_tracer(__name__)
+    except Exception:
+        return None
+
+
+def _get_current_span():
+    """
+    Get the current active span from context.
+    
+    Returns:
+        Span: Current active span or None if no active span
+    """
+    try:
+        from opentelemetry import trace
+        return trace.get_current_span()
+    except Exception:
+        return None
+
+
+@contextmanager
+def trace_span(
+    name: str,
+    attributes: Optional[Dict[str, Any]] = None,
+    kind: Optional[Any] = None,
+):
+    """
+    Context manager for creating OpenTelemetry spans in synchronous code.
+    
+    Automatically links to parent span from context, handles errors, and sets status.
+    Works in both sync and async contexts (though async code should use trace_span_async).
+    
+    Args:
+        name: Span name (e.g., "llm.chat_completion")
+        attributes: Dictionary of span attributes (e.g., {"llm.model": "gpt-4"})
+        kind: SpanKind (SERVER, CLIENT, INTERNAL, etc.) - optional
+    
+    Yields:
+        Span: OpenTelemetry span object (can be used to set additional attributes)
+    
+    Example:
+        with trace_span("file.upload", {"file.name": "doc.pdf"}) as span:
+            # Your code here
+            span.set_attribute("file.size", 1024)
+    """
+    tracer = _get_tracer()
+    if not tracer:
+        # OTEL not initialized, yield None and continue
+        yield None
+        return
+    
+    try:
+        from opentelemetry.trace import SpanKind, Status, StatusCode
+        
+        # Determine span kind
+        span_kind = kind if kind is not None else SpanKind.INTERNAL
+        
+        # Use start_as_current_span for proper context propagation
+        # This ensures the span is set in the current context (contextvars)
+        # which is critical for async/distributed systems
+        from opentelemetry import trace
+        
+        # Start span as current span (automatically links to parent from context)
+        with tracer.start_as_current_span(name, kind=span_kind, end_on_exit=False) as span:
+            # Set attributes if provided (filter None values first for performance)
+            if attributes:
+                filtered_attrs = {k: v for k, v in attributes.items() if v is not None}
+                for key, value in filtered_attrs.items():
+                    try:
+                        span.set_attribute(key, value)
+                    except Exception as e:
+                        log.debug(f"Failed to set span attribute {key}: {e}")
+            
+            try:
+                yield span
+                # Set status to OK if no exception
+                span.set_status(Status(StatusCode.OK))
+            except Exception as e:
+                # Set status to ERROR on exception
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                # Record exception
+                span.record_exception(e)
+                # Re-raise exception
+                raise
+            finally:
+                # End span (always called, even on exception)
+                # Note: end_on_exit=False means we must call end() manually
+                span.end()
+            
+    except Exception as e:
+        # If span creation fails, log but don't crash
+        log.warning(f"Failed to create span '{name}': {e}", exc_info=True)
+        yield None
+
+
+@asynccontextmanager
+async def trace_span_async(
+    name: str,
+    attributes: Optional[Dict[str, Any]] = None,
+    kind: Optional[Any] = None,
+):
+    """
+    Async context manager for creating OpenTelemetry spans in asynchronous code.
+    
+    Same as trace_span but async-compatible. Use this for async functions.
+    
+    Args:
+        name: Span name (e.g., "llm.chat_completion")
+        attributes: Dictionary of span attributes
+        kind: SpanKind (optional)
+    
+    Yields:
+        Span: OpenTelemetry span object
+    
+    Example:
+        async with trace_span_async("llm.call", {"llm.model": "gpt-4"}) as span:
+            response = await make_llm_call()
+            span.set_attribute("llm.tokens", response.tokens)
+    """
+    tracer = _get_tracer()
+    if not tracer:
+        # OTEL not initialized, yield None and continue
+        yield None
+        return
+    
+    try:
+        from opentelemetry.trace import SpanKind, Status, StatusCode
+        
+        # Determine span kind
+        span_kind = kind if kind is not None else SpanKind.INTERNAL
+        
+        # Use start_as_current_span for proper async context propagation
+        # This uses contextvars which are async-safe and work in distributed systems
+        # The span is automatically set in the current context
+        from opentelemetry import trace
+        
+        # Start span as current span (automatically links to parent from context)
+        # end_on_exit=False because we manage span lifecycle manually
+        with tracer.start_as_current_span(name, kind=span_kind, end_on_exit=False) as span:
+            # Set attributes if provided (filter None values first for performance)
+            if attributes:
+                filtered_attrs = {k: v for k, v in attributes.items() if v is not None}
+                for key, value in filtered_attrs.items():
+                    try:
+                        span.set_attribute(key, value)
+                    except Exception as e:
+                        log.debug(f"Failed to set span attribute {key}: {e}")
+            
+            try:
+                yield span
+                # Set status to OK if no exception
+                span.set_status(Status(StatusCode.OK))
+            except Exception as e:
+                # Set status to ERROR on exception
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                # Record exception
+                span.record_exception(e)
+                # Re-raise exception
+                raise
+            finally:
+                # End span (always called, even on exception)
+                # Note: end_on_exit=False means we must call end() manually
+                span.end()
+            
+    except Exception as e:
+        # If span creation fails, log but don't crash
+        log.warning(f"Failed to create span '{name}': {e}", exc_info=True)
+        yield None
+
+
+def trace_function(
+    span_name: Optional[str] = None,
+    capture_args: bool = False,
+    capture_result: bool = False,
+):
+    """
+    Decorator to automatically trace function execution.
+    
+    Creates a span for the function, optionally capturing arguments and return value.
+    Works for both sync and async functions.
+    
+    Args:
+        span_name: Custom span name (defaults to function name)
+        capture_args: Whether to capture function arguments as span attributes
+        capture_result: Whether to capture return value as span event (not recommended for large objects)
+    
+    Returns:
+        Decorated function
+    
+    Example:
+        @trace_function(span_name="llm.call", capture_args=True)
+        async def generate_chat_completion(model, messages):
+            ...
+    """
+    def decorator(func: Callable) -> Callable:
+        # Determine if function is async
+        is_async = inspect.iscoroutinefunction(func)
+        
+        # Determine span name
+        name = span_name or f"{func.__module__}.{func.__name__}"
+        
+        if is_async:
+            @functools.wraps(func)
+            async def async_wrapper(*args, **kwargs):
+                # Build attributes
+                attributes = {}
+                if capture_args:
+                    # Capture function arguments (be careful with sensitive data)
+                    sig = inspect.signature(func)
+                    bound_args = sig.bind(*args, **kwargs)
+                    bound_args.apply_defaults()
+                    
+                    for param_name, param_value in bound_args.arguments.items():
+                        # Skip sensitive parameters
+                        if param_name in ("password", "api_key", "token", "secret"):
+                            continue
+                        # Convert to string, truncate if too long
+                        try:
+                            value_str = str(param_value)
+                            if len(value_str) > 200:
+                                value_str = value_str[:200] + "..."
+                            attributes[f"function.arg.{param_name}"] = value_str
+                        except Exception:
+                            pass
+                
+                # Create span
+                async with trace_span_async(name, attributes=attributes) as span:
+                    try:
+                        result = await func(*args, **kwargs)
+                        
+                        if capture_result and span:
+                            # Add result as event (not attribute, to avoid large payloads)
+                            try:
+                                result_str = str(result)
+                                if len(result_str) > 200:
+                                    result_str = result_str[:200] + "..."
+                                span.add_event("function.result", {"result": result_str})
+                            except Exception:
+                                pass
+                        
+                        return result
+                    except Exception as e:
+                        # Error handling is done in trace_span_async
+                        raise
+        else:
+            @functools.wraps(func)
+            def sync_wrapper(*args, **kwargs):
+                # Build attributes
+                attributes = {}
+                if capture_args:
+                    sig = inspect.signature(func)
+                    bound_args = sig.bind(*args, **kwargs)
+                    bound_args.apply_defaults()
+                    
+                    for param_name, param_value in bound_args.arguments.items():
+                        if param_name in ("password", "api_key", "token", "secret"):
+                            continue
+                        try:
+                            value_str = str(param_value)
+                            if len(value_str) > 200:
+                                value_str = value_str[:200] + "..."
+                            attributes[f"function.arg.{param_name}"] = value_str
+                        except Exception:
+                            pass
+                
+                # Create span
+                with trace_span(name, attributes=attributes) as span:
+                    try:
+                        result = func(*args, **kwargs)
+                        
+                        if capture_result and span:
+                            try:
+                                result_str = str(result)
+                                if len(result_str) > 200:
+                                    result_str = result_str[:200] + "..."
+                                span.add_event("function.result", {"result": result_str})
+                            except Exception:
+                                pass
+                        
+                        return result
+                    except Exception as e:
+                        # Error handling is done in trace_span
+                        raise
+        
+        return async_wrapper if is_async else sync_wrapper
+    
+    return decorator
+
+
+def add_span_event(name: str, attributes: Optional[Dict[str, Any]] = None):
+    """
+    Add an event to the current active span.
+    
+    Events are lightweight and useful for marking milestones in span execution.
+    
+    Args:
+        name: Event name (e.g., "llm.request", "file.uploaded")
+        attributes: Optional dictionary of event attributes
+    
+    Example:
+        add_span_event("llm.request", {"model": "gpt-4", "message_count": 5})
+    """
+    span = _get_current_span()
+    if not span:
+        # No active span, silently skip
+        return
+    
+    try:
+        if attributes:
+            # Filter out None values
+            filtered_attrs = {k: v for k, v in attributes.items() if v is not None}
+            span.add_event(name, attributes=filtered_attrs if filtered_attrs else None)
+        else:
+            span.add_event(name)
+    except Exception as e:
+        log.debug(f"Failed to add span event '{name}': {e}")
+
+
+def set_span_status(status: Any, description: Optional[str] = None):
+    """
+    Set status on the current active span.
+    
+    Args:
+        status: Status object (Status(StatusCode.OK) or Status(StatusCode.ERROR, description))
+        description: Optional status description (if status is StatusCode enum, not Status object)
+    
+    Example:
+        from opentelemetry.trace import Status, StatusCode
+        set_span_status(Status(StatusCode.OK))
+        set_span_status(Status(StatusCode.ERROR, "API call failed"))
+    """
+    span = _get_current_span()
+    if not span:
+        # No active span, silently skip
+        return
+    
+    try:
+        # Handle both Status object and StatusCode enum
+        from opentelemetry.trace import Status, StatusCode
+        
+        if isinstance(status, Status):
+            span.set_status(status)
+        elif isinstance(status, StatusCode):
+            span.set_status(Status(status, description))
+        else:
+            log.warning(f"Invalid status type: {type(status)}")
+    except Exception as e:
+        log.debug(f"Failed to set span status: {e}")
+
+
+def set_span_attribute(key: str, value: Any):
+    """
+    Set an attribute on the current active span.
+    
+    Args:
+        key: Attribute key (e.g., "llm.tokens", "file.size")
+        value: Attribute value (must be a primitive type: str, int, float, bool, or list of these)
+    
+    Example:
+        set_span_attribute("llm.usage.total_tokens", 150)
+    """
+    span = _get_current_span()
+    if not span:
+        # No active span, silently skip
+        return
+    
+    try:
+        if value is not None:
+            span.set_attribute(key, value)
+    except Exception as e:
+        log.debug(f"Failed to set span attribute '{key}': {e}")
