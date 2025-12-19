@@ -66,7 +66,7 @@
 	import Sidebar from '../icons/Sidebar.svelte';
 	import PinnedModelList from './Sidebar/PinnedModelList.svelte';
 	import Note from '../icons/Note.svelte';
-	import { slide } from 'svelte/transition';
+	import { slide, fly } from 'svelte/transition';
 	import HotkeyHint from '../common/HotkeyHint.svelte';
 	import Bookmark from '../icons/Bookmark.svelte';
 	import BookmarkSolid from '../icons/BookmarkSolid.svelte';
@@ -343,12 +343,18 @@
 	function checkDirection() {
 		const screenWidth = window.innerWidth;
 		const swipeDistance = Math.abs(touchend.screenX - touchstart.screenX);
-		if (touchstart.clientX < 40 && swipeDistance >= screenWidth / 8) {
+
+		// 오른쪽 가장자리에서 시작하는 스와이프 (열기)
+		if (touchstart.clientX > screenWidth - 40 && swipeDistance >= screenWidth / 8) {
 			if (touchend.screenX < touchstart.screenX) {
-				showSidebar.set(false);
+				showSidebar.set(true); // 왼쪽으로 스와이프하면 열기
 			}
+		}
+
+		// 사이드바가 열려있을 때 오른쪽으로 스와이프하면 닫기
+		if ($showSidebar && swipeDistance >= screenWidth / 8) {
 			if (touchend.screenX > touchstart.screenX) {
-				showSidebar.set(true);
+				showSidebar.set(false);
 			}
 		}
 	}
@@ -608,11 +614,47 @@
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 
+<!-- Mobile Top Nav Bar (when sidebar closed) -->
+{#if $mobile && !$showSidebar}
+	<div
+		class="fixed top-0 left-0 right-0 h-[60px] z-40 flex items-center justify-between px-4
+			bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl
+			border-b border-gray-200/50 dark:border-gray-800/50"
+	>
+		<!-- Logo + Title -->
+		<a
+			href="/"
+			class="flex items-center gap-2"
+			on:click={newChatHandler}
+		>
+			<HYULogo36 />
+			<span class="text-sm font-medium text-gray-900 dark:text-white font-primary">HYU AI Tutoring Assistant</span>
+		</a>
+		<!-- Menu Button -->
+		<button
+			on:click={() => showSidebar.set(true)}
+			class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-700 dark:text-gray-300"
+			aria-label="Open menu"
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke-width="1.5"
+				stroke="currentColor"
+				class="size-6"
+			>
+				<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+			</svg>
+		</button>
+	</div>
+{/if}
+
 {#if $showSidebar}
 	<div
 		class=" {$isApp
 			? ' ml-[4.5rem] md:ml-0'
-			: ''} fixed md:hidden z-40 top-0 right-0 left-0 bottom-0 bg-black/60 w-full min-h-screen h-screen flex justify-center overflow-hidden overscroll-contain"
+			: ''} fixed md:hidden z-40 top-0 right-0 left-0 bottom-0 bg-white/30 dark:bg-gray-900/30 backdrop-blur-md w-full min-h-screen h-screen flex justify-center overflow-hidden overscroll-contain"
 		on:mousedown={() => {
 			showSidebar.set(!$showSidebar);
 		}}
@@ -712,9 +754,9 @@
 			? `${$mobile ? 'bg-gray-50 dark:bg-gray-950' : 'bg-gray-50 dark:bg-gray-950' } z-50`
 			: ' bg-transparent z-0 '} {$isApp
 			? `ml-[4.5rem] md:ml-0 `
-			: ' transition-all duration-300 '} shrink-0 text-gray-50 text-sm fixed top-0 left-0 overflow-x-hidden
+			: ' transition-all duration-300 '} shrink-0 text-gray-50 text-sm fixed top-0 {$mobile ? 'right-0' : 'left-0'} overflow-x-hidden
         "
-		transition:slide={{ duration: 250, axis: 'x' }}
+		transition:fly={{ duration: 250, x: $mobile ? 260 : -260 }}
 		data-state={$showSidebar}
 	>
 		<div

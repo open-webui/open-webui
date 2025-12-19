@@ -90,6 +90,7 @@
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/chat/Navbar.svelte';
 	import ChatToolbar from '$lib/components/chat/ChatToolbar.svelte';
+	import MobileChatToolbar from '$lib/components/chat/MobileChatToolbar.svelte';
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
@@ -2533,15 +2534,29 @@
 					<!-- chat toolbar - flex for chat view, absolute for placeholder view -->
 					{#if !$temporaryChatEnabled && ((chat && history.currentId) || $selectedTextbookSection)}
 						{@const hasMessages = ($settings?.landingPageMode === 'chat' && !$selectedFolder) || createMessagesList(history, history.currentId).length > 0}
-						<div class="{hasMessages ? 'shrink-0' : 'absolute top-0 left-0 right-0'} z-20 bg-white dark:bg-gray-900">
-							<ChatToolbar
-								title={chat?.chapter || $selectedTextbookSection ? toolbarTitle : ''}
-								subtitle={chat?.chapter || $selectedTextbookSection ? toolbarSubtitle : ''}
-								bind:proficiencyLevel={toolbarProficiencyLevel}
-								bind:responseStyle={toolbarResponseStyle}
-								hasChapter={!!(chat?.chapter || $selectedTextbookSection)}
-							/>
-						</div>
+						{#if $mobile}
+							<!-- Mobile: Collapsible dropdown toolbar -->
+							<div class="{hasMessages ? 'shrink-0' : 'absolute top-0 left-0 right-0'} z-20">
+								<MobileChatToolbar
+									title={chat?.chapter || $selectedTextbookSection ? toolbarTitle : ''}
+									subtitle={chat?.chapter || $selectedTextbookSection ? toolbarSubtitle : ''}
+									bind:proficiencyLevel={toolbarProficiencyLevel}
+									bind:responseStyle={toolbarResponseStyle}
+									hasChapter={!!(chat?.chapter || $selectedTextbookSection)}
+								/>
+							</div>
+						{:else}
+							<!-- Desktop: Full toolbar -->
+							<div class="{hasMessages ? 'shrink-0' : 'absolute top-0 left-0 right-0'} z-20 bg-white dark:bg-gray-900">
+								<ChatToolbar
+									title={chat?.chapter || $selectedTextbookSection ? toolbarTitle : ''}
+									subtitle={chat?.chapter || $selectedTextbookSection ? toolbarSubtitle : ''}
+									bind:proficiencyLevel={toolbarProficiencyLevel}
+									bind:responseStyle={toolbarResponseStyle}
+									hasChapter={!!(chat?.chapter || $selectedTextbookSection)}
+								/>
+							</div>
+						{/if}
 					{/if}
 					<!-- chat toolbar end -->
 
@@ -2603,7 +2618,7 @@
 						}}
 					/> -->
 
-					<div class="relative flex flex-col flex-auto z-10 w-full @container overflow-auto">
+					<div class="relative flex flex-col flex-auto z-10 w-full @container overflow-y-auto">
 						
 
 						{#if ($settings?.landingPageMode === 'chat' && !$selectedFolder) || createMessagesList(history, history.currentId).length > 0}
@@ -2700,7 +2715,7 @@
 								</div>
 							</div>
 						{:else}
-							<div class="flex items-center h-full">
+							<div class="flex items-center h-full flex-1 w-full">
 								<Placeholder
 									{history}
 									{selectedModels}

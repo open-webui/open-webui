@@ -2,7 +2,7 @@
 	import Fuse from 'fuse.js';
 	import Bolt from '$lib/components/icons/Bolt.svelte';
 	import { onMount, getContext } from 'svelte';
-	import { settings, WEBUI_NAME } from '$lib/stores';
+	import { settings, WEBUI_NAME, mobile } from '$lib/stores';
 	import { WEBUI_VERSION } from '$lib/constants';
 
 	const i18n = getContext('i18n');
@@ -88,12 +88,15 @@
 
 <div class="w-full py-4">
 	{#if filteredPrompts.length > 0}
-		<div role="list" class="flex gap-4 overflow-x-auto pb-2 scrollbar-thin {className} px-12 pb-4">
+		<div role="list" class="{$mobile
+			? 'flex flex-col gap-4 px-4'
+			: 'flex flex-row gap-4 overflow-x-auto scrollbar-thin px-12 pb-4'} {className}">
 			{#each filteredPrompts as prompt, idx (prompt.id || `${prompt.content}-${idx}`)}
 				<div
-					class="waterfall box-border flex flex-col items-start p-5 gap-4 min-w-[270px] w-[270px]
+					class="waterfall box-border flex flex-col items-start p-5 gap-4
+						{$mobile ? 'w-full' : 'min-w-[270px] w-[270px]'}
 						bg-[rgba(253,254,254,0.7)] dark:bg-[rgba(39,40,44,0.5)]
-						shadow-lg rounded-2xl"
+						shadow-lg rounded-2xl backdrop-blur-[20px]"
 					style="animation-delay: {idx * 60}ms"
 				>
 					<!-- Date Info -->
