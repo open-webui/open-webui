@@ -2454,6 +2454,27 @@ async def process_files_batch(
     for file in form_data.files:
         try:
             text_content = file.data.get("content", "")
+            hash = calculate_sha256_string(text_content)
+
+            # Check if duplicates exist
+            result = VECTOR_DB_CLIENT.query(
+                collection_name=collection_name,
+                filter={"hash": hash},
+            )
+
+            if result is not None:
+                existing_doc_ids = result.ids[0]
+                if existing_doc_ids:
+                    log.info(f"Document with hash {hash} already exists")
+                    file_errors.append(
+                        BatchProcessFilesResult(
+                            file_id=file.id,
+                            status="failed",
+                            error=ERROR_MESSAGES.DUPLICATE_CONTENT,
+                        )
+                    )
+                    continue
+
             docs: List[Document] = [
                 Document(
                     page_content=text_content.replace("<br/>", "\n"),
@@ -2463,6 +2484,7 @@ async def process_files_batch(
                         "created_by": file.user_id,
                         "file_id": file.id,
                         "source": file.filename,
+                        "hash": hash,
                     },
                 )
             ]
@@ -2471,7 +2493,7 @@ async def process_files_batch(
 
             file_updates.append(
                 FileUpdateForm(
-                    hash=calculate_sha256_string(text_content),
+                    hash=hash,
                     data={"content": text_content},
                 )
             )
