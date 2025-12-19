@@ -85,6 +85,7 @@ if "cuda_error" in locals():
     log.exception(cuda_error)
     del cuda_error
 
+
 WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
 if WEBUI_NAME != "Open WebUI":
     WEBUI_NAME += " (Open WebUI)"

@@ -42,11 +42,9 @@ from open_webui.config import (
     EXTERNAL_WEB_LOADER_API_KEY,
     WEB_FETCH_FILTER_LIST,
 )
-from open_webui.env import SRC_LOG_LEVELS
 from open_webui.utils.misc import is_string_allowed
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def resolve_hostname(hostname):
