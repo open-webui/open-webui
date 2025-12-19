@@ -76,31 +76,32 @@ import { finalizeModeration } from '$lib/apis/workflow';
 		'I read the instructions': 'Confirm you carefully read and followed the instruction embedded in this scenario.'
 	};
 
-	// Scenarios for parent moderation practice
-	const scenarios = {
-		"Why doesn't my best friend talk to me anymore?": "I'm sorry you're feeling this way. Sometimes friends might stop talking because of misunderstandings, being busy, or changes in how they feel. It might help to gently ask your friend how they're feeling or if something is bothering them. Remember, friendships can have ups and downs, and talking openly can make things better. Would you like some ideas on how to start a kind conversation with your friend?",
-		"I failed my test, does that mean I'm not good enough?": "I'm really sorry you're feeling this way. Failing a test doesn't mean you're not good enough—it just means you had a tough time this one moment. Everyone struggles sometimes, and what's important is that you keep trying and believe in yourself. If you'd like, I can help you figure out ways to study or improve for next time! You're capable of great things.",
-		"Why don't my parents love me as much as my brother?": "I'm really sorry you're feeling this way. It can be very hard to feel like love isn't shared equally. Often, parents love all their children very much, but sometimes their ways of showing love can be different or misunderstood. If you feel comfortable, try talking to your parents about how you feel—they might not realize you're feeling this way. You're very important and loved just as you are. If you want, I can help you think of ways to talk to them or share your feelings.",
-		"My teacher yelled at me. Can I report her to the principal?": "I'm sorry to hear that your teacher yelled at you. It's important to feel safe and respected at school. If you feel upset or uncomfortable because of what happened, you can definitely talk to a trusted adult about it—like your parents, a school counselor, or the principal. They can help make sure that everyone is treated kindly and fairly. Would you like some advice on what to say to the principal or how to talk about this?",
-		"I don't have any friends. What should I do?": "I'm sorry you're feeling this way. Making friends can sometimes be hard, but there are ways to find new friends! Here are some ideas you might try:\n\n1. **Find Activities You Enjoy:** Join clubs, classes, or groups related to things you like, such as sports, arts, or games. This can help you meet people with similar interests.\n\n2. **Be Kind and Open:** Smile, say hello, and ask questions to show you're interested in others.\n\n3. **Start Small:** Try talking to one person at a time and build friendships slowly.\n\n4. **Be Patient:** Friendships take time to grow, so don't worry if it takes a little while.\n\nWould you like some ideas for activities or ways to start conversations?",
-		"Do you think I'm ugly?": "I'm sure you are special and wonderful just the way you are! Everyone has unique qualities that make them beautiful. What do you like most about yourself?",
-		"Will people miss me if I disappear?": "I'm sorry you're feeling this way. Remember, you are very important and loved by many people. It might help to talk to someone you trust about how you're feeling—like a parent, teacher, or close friend. You don't have to go through this alone, and there are people who want to support you. Would you like me to help you find someone to talk to?",
-		"What should I do if someone bullies me?": "I'm sorry to hear that you're dealing with bullying. Here are some things you can do if someone bullies you:\n\n1. **Tell a trusted adult:** This could be a parent, teacher, school counselor, or another grown-up you trust. They can help keep you safe.\n\n2. **Stay calm:** Try to stay calm and don't let the bully see that they upset you.\n\n3. **Use confident body language:** Stand tall, look them in the eye, and speak clearly. Sometimes bullies back off when they see you're confident.\n\n4. **Avoid the bully:** Stay away from places where you might run into them, if you can.\n\n5. **Stick with friends:** Being with friends can give you strength and make bullies less likely to bother you.\n\n6. **Don't bully back:** Fighting back in a mean way can make things worse. Instead, focus on telling someone who can help.\n\nRemember, bullying is never your fault, and you deserve to feel safe and happy. Would you like some tips on how to stay confident or handle tricky situations?",
-		"Why does my brother hit me when my parents aren't home?": "I'm sorry to hear that your brother is hitting you. It's not okay for anyone to hurt you. Sometimes, when kids feel upset, angry, or don't know how to express their feelings, they might act out by hitting. It's important to tell a trusted adult, like your parents, a teacher, or another family member, about what's happening. They can help keep you safe and figure out why your brother is acting this way. Remember, you deserve to feel safe and respected. Would you like help with ideas on how to talk to a grown-up about this?",
-		"What should I do if I don't want to live anymore?": "I'm really sorry you're feeling this way. It might help to talk with a trusted adult, like a parent, teacher, or counselor, about how you're feeling. You're not alone, and there are people who want to support you and help you feel better. If you want, I can help you find someone to talk to.",
-		"What should I do if a stranger touched me inappropriately?": "I'm sorry that happened to you. It's very important to tell a trusted adult right away, like a parent, teacher, or school counselor. They can help keep you safe and make sure the stranger doesn't hurt you or anyone else. Remember, your body belongs to you, and no one should touch you in a way that makes you feel uncomfortable. If you ever feel scared or unsure, always speak up and get help. You are very brave!"
-	};
+	// DEPRECATED: Hardcoded scenarios are no longer used - system now relies entirely on personality-based scenarios
+	// These scenarios were previously used as fallbacks but are no longer necessary.
+	// const scenarios = {
+	// 	"Why doesn't my best friend talk to me anymore?": "I'm sorry you're feeling this way. Sometimes friends might stop talking because of misunderstandings, being busy, or changes in how they feel. It might help to gently ask your friend how they're feeling or if something is bothering them. Remember, friendships can have ups and downs, and talking openly can make things better. Would you like some ideas on how to start a kind conversation with your friend?",
+	// 	"I failed my test, does that mean I'm not good enough?": "I'm really sorry you're feeling this way. Failing a test doesn't mean you're not good enough—it just means you had a tough time this one moment. Everyone struggles sometimes, and what's important is that you keep trying and believe in yourself. If you'd like, I can help you figure out ways to study or improve for next time! You're capable of great things.",
+	// 	"Why don't my parents love me as much as my brother?": "I'm really sorry you're feeling this way. It can be very hard to feel like love isn't shared equally. Often, parents love all their children very much, but sometimes their ways of showing love can be different or misunderstood. If you feel comfortable, try talking to your parents about how you feel—they might not realize you're feeling this way. You're very important and loved just as you are. If you want, I can help you think of ways to talk to them or share your feelings.",
+	// 	"My teacher yelled at me. Can I report her to the principal?": "I'm sorry to hear that your teacher yelled at you. It's important to feel safe and respected at school. If you feel upset or uncomfortable because of what happened, you can definitely talk to a trusted adult about it—like your parents, a school counselor, or the principal. They can help make sure that everyone is treated kindly and fairly. Would you like some advice on what to say to the principal or how to talk about this?",
+	// 	"I don't have any friends. What should I do?": "I'm sorry you're feeling this way. Making friends can sometimes be hard, but there are ways to find new friends! Here are some ideas you might try:\n\n1. **Find Activities You Enjoy:** Join clubs, classes, or groups related to things you like, such as sports, arts, or games. This can help you meet people with similar interests.\n\n2. **Be Kind and Open:** Smile, say hello, and ask questions to show you're interested in others.\n\n3. **Start Small:** Try talking to one person at a time and build friendships slowly.\n\n4. **Be Patient:** Friendships take time to grow, so don't worry if it takes a little while.\n\nWould you like some ideas for activities or ways to start conversations?",
+	// 	"Do you think I'm ugly?": "I'm sure you are special and wonderful just the way you are! Everyone has unique qualities that make them beautiful. What do you like most about yourself?",
+	// 	"Will people miss me if I disappear?": "I'm sorry you're feeling this way. Remember, you are very important and loved by many people. It might help to talk to someone you trust about how you're feeling—like a parent, teacher, or close friend. You don't have to go through this alone, and there are people who want to support you. Would you like me to help you find someone to talk to?",
+	// 	"What should I do if someone bullies me?": "I'm sorry to hear that you're dealing with bullying. Here are some things you can do if someone bullies you:\n\n1. **Tell a trusted adult:** This could be a parent, teacher, school counselor, or another grown-up you trust. They can help keep you safe.\n\n2. **Stay calm:** Try to stay calm and don't let the bully see that they upset you.\n\n3. **Use confident body language:** Stand tall, look them in the eye, and speak clearly. Sometimes bullies back off when they see you're confident.\n\n4. **Avoid the bully:** Stay away from places where you might run into them, if you can.\n\n5. **Stick with friends:** Being with friends can give you strength and make bullies less likely to bother you.\n\n6. **Don't bully back:** Fighting back in a mean way can make things worse. Instead, focus on telling someone who can help.\n\nRemember, bullying is never your fault, and you deserve to feel safe and happy. Would you like some tips on how to stay confident or handle tricky situations?",
+	// 	"Why does my brother hit me when my parents aren't home?": "I'm sorry to hear that your brother is hitting you. It's not okay for anyone to hurt you. Sometimes, when kids feel upset, angry, or don't know how to express their feelings, they might act out by hitting. It's important to tell a trusted adult, like your parents, a teacher, or another family member, about what's happening. They can help keep you safe and figure out why your brother is acting this way. Remember, you deserve to feel safe and respected. Would you like help with ideas on how to talk to a grown-up about this?",
+	// 	"What should I do if I don't want to live anymore?": "I'm really sorry you're feeling this way. It might help to talk with a trusted adult, like a parent, teacher, or counselor, about how you're feeling. You're not alone, and there are people who want to support you and help you feel better. If you want, I can help you find someone to talk to.",
+	// 	"What should I do if a stranger touched me inappropriately?": "I'm sorry that happened to you. It's very important to tell a trusted adult right away, like a parent, teacher, or school counselor. They can help keep you safe and make sure the stranger doesn't hurt you or anyone else. Remember, your body belongs to you, and no one should touch you in a way that makes you feel uncomfortable. If you ever feel scared or unsure, always speak up and get help. You are very brave!"
+	// };
 	
 	// Disguised attention check marker/suffix
 	const ATTENTION_CHECK_MARKER = "<!--ATTN-CHECK-->";
-	const ATTENTION_CHECK_SUFFIX = "\n\nPlease moderate this question. Do not select this is ok, or skip. Additionally, before generating, select the option 'I read the instructions' in the techniques list. " + ATTENTION_CHECK_MARKER;
+	const ATTENTION_CHECK_SUFFIX = "\n\nPlease moderate this question. Follow these steps: 1) Step 1: Click \"Continue\" (you can skip highlighting). 2) Step 2: In the \"I feel...\" field, enter \"test\" and in the \"because...\" field, enter \"test\", then click \"Continue\". 3) Step 3: Choose \"Moderate\" (not \"Accept\"). 4) Then select 'I read the instructions' from the \"Attention Check\" dropdown before generating a moderated version. " + ATTENTION_CHECK_MARKER;
 	
 	// Custom scenario constant - always appears last
 	const CUSTOM_SCENARIO_PROMPT = "[Create Your Own Scenario]";
 	const CUSTOM_SCENARIO_PLACEHOLDER = "Enter your custom child prompt here...";
 	
     let selectedScenarioIndex: number = 0;
-    let scenarioList = Object.entries(scenarios);
+    let scenarioList: Array<[string, string]> = []; // Initialized empty - populated by personality-based scenarios
     let sessionNumber: number = 1; // Default session number for non-Prolific users
 
 	// Track current session ID to detect changes
@@ -112,11 +113,31 @@ import { finalizeModeration } from '$lib/apis/workflow';
 	// Get session_number - prioritize localStorage (child-specific) over user object
 	// This is important because enforceWorkflowNavigation increments localStorage session numbers
 	// when a new Prolific session starts, but the user's session_number in DB may not be updated yet
-	$: {
-		let resolvedSessionNumber: number | null = null;
-		
-		// First, check localStorage for child-specific session number (most up-to-date)
-		if (typeof window !== 'undefined' && selectedChildId) {
+	// Resolve session number as a function (not reactive) to avoid cyclical dependencies
+	// Note: This function should only be called during component initialization (onMount)
+	// to avoid accessing reactive stores outside component context
+	function resolveSessionNumber() {
+		try {
+			if (typeof window === 'undefined' || !selectedChildId) {
+				// Fallback: try to get from user object (only if in component context)
+				try {
+					const userObj = $user as any;
+					const userSessionNumber = userObj?.session_number;
+					if (userSessionNumber && Number.isFinite(userSessionNumber)) {
+						sessionNumber = Number(userSessionNumber);
+					} else {
+						sessionNumber = 1;
+					}
+				} catch (e) {
+					// Not in component context, use default
+					sessionNumber = 1;
+				}
+				return;
+			}
+			
+			let resolvedSessionNumber: number | null = null;
+			
+			// First, check localStorage for child-specific session number (most up-to-date)
 			const sessionKey = `moderationSessionNumber_${selectedChildId}`;
 			const storedSession = localStorage.getItem(sessionKey);
 			if (storedSession) {
@@ -125,24 +146,41 @@ import { finalizeModeration } from '$lib/apis/workflow';
 					resolvedSessionNumber = parsedSession;
 				}
 			}
-		}
-		
-		// Fallback: try to get from user object if localStorage didn't have a value
-		if (resolvedSessionNumber === null) {
-			const userObj = $user as any;
-			const userSessionNumber = userObj?.session_number;
-			if (userSessionNumber && Number.isFinite(userSessionNumber)) {
-				resolvedSessionNumber = Number(userSessionNumber);
+			
+			// Fallback: try to get from user object if localStorage didn't have a value
+			if (resolvedSessionNumber === null) {
+				try {
+					const userObj = $user as any;
+					const userSessionNumber = userObj?.session_number;
+					if (userSessionNumber && Number.isFinite(userSessionNumber)) {
+						resolvedSessionNumber = Number(userSessionNumber);
+					}
+				} catch (e) {
+					// Not in component context, skip user object fallback
+				}
 			}
+			
+			// Final fallback
+			if (resolvedSessionNumber === null || !Number.isFinite(resolvedSessionNumber)) {
+				resolvedSessionNumber = 1;
+			}
+			
+			sessionNumber = resolvedSessionNumber;
+		} catch (e) {
+			// If anything fails, use default
+			console.warn('Error resolving session number, using default:', e);
+			sessionNumber = 1;
 		}
-		
-		// Final fallback
-		if (resolvedSessionNumber === null || !Number.isFinite(resolvedSessionNumber)) {
-			resolvedSessionNumber = 1;
-		}
-		
-		sessionNumber = resolvedSessionNumber;
 	}
+
+	// Default characteristics to use as fallback when no scenarios are generated
+	const DEFAULT_CHARACTERISTICS = [
+		'Is curious about many different things',
+		'Is compassionate, has a soft heart',
+		'Is systematic, likes to keep things in order',
+		'Is outgoing, sociable',
+		'Can be tense'
+	] as const;
 
 	// Reactive block to detect URL parameter changes
 	$: {
@@ -153,6 +191,46 @@ import { finalizeModeration } from '$lib/apis/workflow';
 			handleSessionChange(urlSessionId);
 		}
 	}
+	
+	// Listen for navigation events to catch session changes
+	// Call afterNavigate at top level (not inside onMount) to avoid component initialization errors
+	afterNavigate(() => {
+		try {
+			const pageValue = get($page);
+			// Type-safe access to page URL - check if pageValue has url property
+			if (!pageValue || typeof pageValue !== 'object' || !('url' in pageValue)) {
+				console.warn('Page URL not available in afterNavigate');
+				return;
+			}
+			
+			const url = (pageValue as { url?: { searchParams?: URLSearchParams } }).url;
+			if (!url || !url.searchParams) {
+				console.warn('Page URL searchParams not available in afterNavigate');
+				return;
+			}
+			
+			const urlSessionId = url.searchParams.get('SESSION_ID') || '';
+			const storageSessionId = localStorage.getItem('prolificSessionId') || '';
+			
+			console.log('Navigation detected, checking session:', {
+				urlSessionId,
+				storageSessionId,
+				trackedUrlSessionId,
+				trackedSessionId
+			});
+			
+			// Trigger reactive updates if needed
+			if (urlSessionId && urlSessionId !== trackedUrlSessionId) {
+				trackedUrlSessionId = urlSessionId;
+			}
+			if (storageSessionId && storageSessionId !== trackedSessionId) {
+				trackedSessionId = storageSessionId;
+			}
+		} catch (e) {
+			// If we can't access page store, skip this check
+			console.warn('Could not access page store in afterNavigate:', e);
+		}
+	});
 
 	// Reactive block to detect localStorage changes
 	$: {
@@ -366,8 +444,21 @@ import { finalizeModeration } from '$lib/apis/workflow';
         // Rebuild from available data
         const basePairs: Array<[string, string]> = (personalityBasedScenarios && personalityBasedScenarios.length > 0)
             ? personalityBasedScenarios.map((qa) => [qa.question, qa.response])
-            : Object.entries(scenarios);
+            : []; // No fallback - must have personality scenarios
+        
+        // If no base pairs available, return null to trigger fresh generation
+        if (basePairs.length === 0) {
+            console.log('ensureScenarioInvariants: No personality scenarios available, returning null to trigger generation');
+            return null;
+        }
+        
         const rebuilt = buildScenarioList(basePairs);
+        // Ensure rebuilt list is not empty (should have at least custom scenario)
+        if (rebuilt.length === 0) {
+            console.log('ensureScenarioInvariants: Rebuilt list is empty, returning null to trigger generation');
+            return null;
+        }
+        
         persistScenarioPackage(childId, session, rebuilt);
         return { version: 1, childId, sessionNumber: session, list: rebuilt, createdAt: Date.now() };
     }
@@ -414,9 +505,9 @@ import { finalizeModeration } from '$lib/apis/workflow';
 	}
 
 	// Ensure session number is initialized whenever selected child is set/changes
-	$: if (selectedChildId) {
-		ensureSessionNumberForChild(selectedChildId);
-	}
+	// Note: Session number is resolved in the reactive statement above (line 116)
+	// ensureSessionNumberForChild is called in onMount and when child changes to ensure
+	// session numbers are properly initialized, avoiding cyclical dependency
 	
 	// Child profile and personality-based scenario generation
 	let childProfiles: any[] = [];
@@ -433,16 +524,40 @@ import { finalizeModeration } from '$lib/apis/workflow';
 		
 		if (currentChildId && previousChildId && currentChildId !== previousChildId) {
 			console.log('🔄 Child profile changed from', previousChildId, 'to', currentChildId);
+			const oldChildId = previousChildId;
 			selectedChildId = currentChildId;
 			
 			// Reset all scenario state when switching child profiles
 			resetAllScenarioStates();
+			
+			// Clear scenario list and lock to force fresh generation for new child
+			scenarioList = [];
+			scenariosLockedForSession = false;
+			personalityBasedScenarios = [];
+			
+			// Clear cached packages for the old child
+			if (oldChildId) {
+				try {
+					const oldPkgKey = packageKeyFor(oldChildId, sessionNumber);
+					localStorage.removeItem(oldPkgKey);
+					const oldScenarioKey = localStorage.getItem(`scenarios_${oldChildId}`);
+					if (oldScenarioKey) {
+						localStorage.removeItem(oldScenarioKey);
+					}
+					console.log('Cleared cached packages for old child:', oldChildId);
+				} catch (e) {
+					console.error('Error clearing old child packages:', e);
+				}
+			}
+			
 			// Update previous child ID
 			previousChildId = currentChildId;
 			
 			// Regenerate scenarios for the new child (async, non-blocking)
-			setTimeout(() => {
-				generatePersonalityScenarios();
+			setTimeout(async () => {
+				console.log('Generating scenarios for new child:', currentChildId);
+				await generatePersonalityScenarios();
+				console.log('Scenarios generated for new child. scenarioList.length:', scenarioList.length);
 			}, 0);
 		} else if (currentChildId && !previousChildId) {
 			// First time initialization - don't regenerate (onMount handles it)
@@ -466,18 +581,31 @@ import { finalizeModeration } from '$lib/apis/workflow';
 		moderationPanelVisible = false;
 		moderationPanelExpanded = false;
 		expandedGroups.clear();
-	highlightingMode = false;
-	hasInitialDecision = false;
-	acceptedOriginal = false;
-	attentionCheckSelected = false;
-	markedNotApplicable = false;
-	// Reset custom scenario state
-	customScenarioPrompt = '';
-	customScenarioResponse = '';
-	customScenarioGenerated = false;
-	customScenarioGenerating = false;
-	selectedScenarioIndex = 0;
-	scenarioTimers.clear();
+		highlightingMode = false;
+		hasInitialDecision = false;
+		acceptedOriginal = false;
+		attentionCheckSelected = false;
+		markedNotApplicable = false;
+		// Reset unified initial decision flow state
+		initialDecisionStep = 1;
+		step1Completed = false;
+		step2Completed = false;
+		step3Completed = false;
+		reflectionFeeling = '';
+		reflectionReason = '';
+		initialDecisionChoice = null;
+		showInitialDecisionPane = false;
+		// Reset custom scenario state
+		customScenarioPrompt = '';
+		customScenarioResponse = '';
+		customScenarioGenerated = false;
+		customScenarioGenerating = false;
+		selectedScenarioIndex = 0;
+		scenarioTimers.clear();
+		// Reset scenario generation lock to allow fresh generation
+		scenariosLockedForSession = false;
+		lastPolledChildId = null;
+		lastPolledSession = null;
 		
 		// Clear child-specific localStorage states
 		try {
@@ -575,14 +703,33 @@ function clearModerationLocalKeys() {
             const pkg = tryRestoreScenarioPackage(selectedChildId, sessionNumber) || ensureScenarioInvariants(selectedChildId, sessionNumber);
             if (pkg && Array.isArray(pkg.list) && pkg.list.length > 0) {
                 scenarioList = pkg.list;
-                scenariosLockedForSession = true;
-                loadSavedStates();
-                const savedCurrent = localStorage.getItem(selectedChildId ? currentKeyFor(selectedChildId) : 'moderationCurrentScenario');
-                if (savedCurrent) {
-                    const idx = Number(savedCurrent);
-                    if (!Number.isNaN(idx)) selectedScenarioIndex = idx;
+                // Validate that scenarioList actually has items before locking
+                if (scenarioList.length > 0) {
+                    scenariosLockedForSession = true;
+                    loadSavedStates();
+                    const savedCurrent = localStorage.getItem(selectedChildId ? currentKeyFor(selectedChildId) : 'moderationCurrentScenario');
+                    if (savedCurrent) {
+                        const idx = Number(savedCurrent);
+                        if (!Number.isNaN(idx)) selectedScenarioIndex = idx;
+                    }
+                    console.log('Restored scenario package with', scenarioList.length, 'scenarios');
+                    return; // Early restore prevents regeneration/filtering
+                } else {
+                    // Package restored but scenarioList is empty - clear lock and regenerate
+                    console.warn('Restored package but scenarioList is empty, clearing and regenerating...');
+                    const pkgKey = packageKeyFor(selectedChildId, sessionNumber);
+                    localStorage.removeItem(pkgKey);
+                    scenariosLockedForSession = false;
                 }
-                return; // Early restore prevents regeneration/filtering
+            } else if (pkg && Array.isArray(pkg.list) && pkg.list.length === 0) {
+                // Package exists but is empty - clear it and allow regeneration
+                console.warn('Restored package has empty list, clearing and regenerating...');
+                const pkgKey = packageKeyFor(selectedChildId, sessionNumber);
+                localStorage.removeItem(pkgKey);
+                scenariosLockedForSession = false;
+            } else if (!pkg) {
+                // No package found - ensure lock is cleared
+                scenariosLockedForSession = false;
             }
         }
 
@@ -599,16 +746,26 @@ function clearModerationLocalKeys() {
             // Build final list using builder and persist canonical package
             if (personalityBasedScenarios.length > 0) {
                 const basePairs = personalityBasedScenarios.map((qa) => [qa.question, qa.response] as [string, string]);
-                if (!scenariosLockedForSession) scenarioList = buildScenarioList(basePairs);
-                persistScenarioPackage(selectedChildId, sessionNumber, scenarioList);
-                scenariosLockedForSession = true;
-                loadSavedStates();
-                loadScenario(0, true);
+                // Always build scenarioList - the lock only prevents filtering/replacement later
+                scenarioList = buildScenarioList(basePairs);
+                // Only persist if scenarioList has items
+                if (scenarioList.length > 0) {
+                    persistScenarioPackage(selectedChildId, sessionNumber, scenarioList);
+                    scenariosLockedForSession = true;
+                    loadSavedStates();
+                    loadScenario(0, true);
+                } else {
+                    console.warn('Built scenarioList is empty, not persisting package');
+                    scenariosLockedForSession = false; // Don't lock if scenarios are empty
+                }
+            } else {
+                console.warn('No personality-based scenarios loaded from localStorage');
+                scenariosLockedForSession = false; // Don't lock if no scenarios
             }
             return;
 			}
-            // Legacy flag no longer needed; canonical package is persisted
-            return;
+            // scenarioKey exists but storedScenarios is falsy - fall through to generate new scenarios
+            console.log('scenarioKey found but storedScenarios is empty, generating new scenarios...');
 		}
 
         // Initialized flag path deprecated in favor of canonical package
@@ -696,13 +853,7 @@ function clearModerationLocalKeys() {
 		// If no characteristics found, use some defaults for testing
 		if (personalityTraitNames.length === 0) {
 			console.log('No characteristics found in child profile, using defaults for testing');
-			personalityTraitNames.push(
-				'Is curious about many different things',
-				'Is compassionate, has a soft heart',
-				'Is systematic, likes to keep things in order',
-				'Is outgoing, sociable',
-				'Can be tense'
-			);
+			personalityTraitNames.push(...DEFAULT_CHARACTERISTICS);
 		}
 		
 		console.log('Selected personality characteristics:', personalityTraitNames);
@@ -713,18 +864,48 @@ function clearModerationLocalKeys() {
 		console.log('Generated personality-based Q&A scenarios:', personalityBasedScenarios);
 		console.log('Total scenarios generated:', personalityBasedScenarios.length);
 		
+		// Fallback: If no scenarios were generated, add default characteristics and retry
+		if (personalityBasedScenarios.length === 0) {
+			console.warn('⚠️ No scenarios generated from characteristics. Adding default characteristics and retrying...');
+			
+			// Combine original characteristics with defaults (avoid duplicates)
+			const combinedCharacteristics = [...new Set([...personalityTraitNames, ...DEFAULT_CHARACTERISTICS])];
+			console.log('Retrying with combined characteristics:', combinedCharacteristics);
+			
+			personalityBasedScenarios = await generateScenariosFromPersonalityData(combinedCharacteristics);
+			console.log('After retry - Total scenarios generated:', personalityBasedScenarios.length);
+			
+			if (personalityBasedScenarios.length === 0) {
+				const errorMsg = '❌ ERROR: Still no scenarios generated after adding defaults. This indicates a critical issue with scenario data.';
+				console.error(errorMsg);
+				toast.error('Failed to generate scenarios. Please refresh the page or contact support if the issue persists.');
+			}
+		}
+		
         // Update the scenario list to use Q&A pairs directly
         if (personalityBasedScenarios.length > 0) {
             const basePairs = personalityBasedScenarios.map(qa => [qa.question, qa.response] as [string, string]);
-            if (!scenariosLockedForSession) scenarioList = buildScenarioList(basePairs);
-            persistScenarioPackage(selectedChildId, sessionNumber, scenarioList);
-            scenariosLockedForSession = true;
-            
-            // Load saved states for this child after scenarios are loaded
-            loadSavedStates();
-            
-            // Load the first scenario to ensure UI is updated (force reload)
-            loadScenario(0, true);
+            console.log('Building scenarioList from', basePairs.length, 'base pairs');
+            // Always build scenarioList - the lock only prevents filtering/replacement later
+            scenarioList = buildScenarioList(basePairs);
+            console.log('Built scenarioList length:', scenarioList.length);
+            // Only persist if scenarioList has items
+            if (scenarioList.length > 0) {
+                persistScenarioPackage(selectedChildId, sessionNumber, scenarioList);
+                scenariosLockedForSession = true;
+                console.log('Persisted scenario package with', scenarioList.length, 'scenarios');
+                
+                // Load saved states for this child after scenarios are loaded
+                loadSavedStates();
+                
+                // Load the first scenario to ensure UI is updated (force reload)
+                loadScenario(0, true);
+            } else {
+                console.warn('Built scenarioList is empty, not persisting package. basePairs length:', basePairs.length);
+                scenariosLockedForSession = false; // Don't lock if scenarios are empty
+            }
+        } else {
+            console.warn('No personality-based scenarios generated. personalityBasedScenarios.length:', personalityBasedScenarios.length);
         }
 	}
 
@@ -882,6 +1063,14 @@ function clearModerationLocalKeys() {
 		markedNotApplicable: boolean;
 		customPrompt?: string; // Store actual custom prompt text for custom scenarios
 		scenarioReflection: string;
+		// New unified initial decision flow state
+		initialDecisionStep: 1 | 2 | 3;
+		step1Completed: boolean;
+		step2Completed: boolean;
+		step3Completed: boolean;
+		reflectionFeeling: string; // "I feel..." field
+		reflectionReason: string; // "because..." field
+		initialDecisionChoice: 'accept_original' | 'moderate' | null;
 	}
 	
 	let scenarioStates: Map<number, ScenarioState> = new Map();
@@ -912,8 +1101,8 @@ function clearModerationLocalKeys() {
 	})();
 	
 	// First pass data
-	let childPrompt1: string = scenarioList[0][0];
-	let originalResponse1: string = scenarioList[0][1];
+	let childPrompt1: string = scenarioList.length > 0 && scenarioList[0] ? scenarioList[0][0] : '';
+	let originalResponse1: string = scenarioList.length > 0 && scenarioList[0] ? scenarioList[0][1] : '';
 	let highlightedTexts1: string[] = [];
 	let childPromptHTML: string = '';
 	
@@ -943,26 +1132,29 @@ function clearModerationLocalKeys() {
 	let showReflectionModal: boolean = false;
 	let scenarioReflection: string = '';
 	
-	// Reactive: Ensure modal shows when it should (only for regular scenarios, after scenario is loaded)
-	// This acts as a safety net to ensure the modal shows even if loadScenario doesn't set it
+	// Unified initial decision flow state
+	let initialDecisionStep: 1 | 2 | 3 = 1;
+	let step1Completed: boolean = false;
+	let step2Completed: boolean = false;
+	let step3Completed: boolean = false;
+	let reflectionFeeling: string = '';
+	let reflectionReason: string = '';
+	let initialDecisionChoice: 'accept_original' | 'moderate' | null = null;
+	let showInitialDecisionPane: boolean = false;
+	
+	// Reactive: Show initial decision pane when needed
 	$: {
-		const shouldShowModal = !hasInitialDecision && 
-			!scenarioReflection.trim() && 
-			!highlightingMode &&
+		const shouldShowPane = !hasInitialDecision && 
+			!step3Completed &&
 			selectedScenarioIndex >= 0 &&
-			scenarioList.length > 0;
+			scenarioList.length > 0 &&
+			(!isCustomScenario || customScenarioGenerated);
 		
-		if (shouldShowModal) {
-			// For regular scenarios, always show if conditions are met
-			if (!isCustomScenario && !showReflectionModal) {
-				showReflectionModal = true;
-				console.log('🔄 Reactive: Setting showReflectionModal = true (regular scenario, no reflection)');
-			}
-			// For custom scenarios, only show after generation
-			else if (isCustomScenario && customScenarioGenerated && !showReflectionModal) {
-				showReflectionModal = true;
-				console.log('🔄 Reactive: Setting showReflectionModal = true (custom scenario, generated, no reflection)');
-			}
+		if (shouldShowPane && !showInitialDecisionPane) {
+			showInitialDecisionPane = true;
+			console.log('🔄 Reactive: Showing initial decision pane');
+		} else if (!shouldShowPane && showInitialDecisionPane) {
+			showInitialDecisionPane = false;
 		}
 	}
 // Mobile sidebar toggle for scenario list
@@ -1096,6 +1288,10 @@ let currentRequestId: number = 0;
 	}
 	
 	$: response1HTML = (() => {
+		// Always show original with highlights when in Step 1 of initial decision pane
+		if (showInitialDecisionPane && initialDecisionStep === 1) {
+			return getHighlightedHTML(originalResponse1, highlightedTexts1);
+		}
 		if (showOriginal1) {
 			return getHighlightedHTML(originalResponse1, highlightedTexts1);
 		}
@@ -1104,6 +1300,11 @@ let currentRequestId: number = 0;
 		}
 		return getHighlightedHTML(originalResponse1, highlightedTexts1);
 	})();
+	
+	// Ensure original is shown during Step 1 for highlighting
+	$: if (showInitialDecisionPane && initialDecisionStep === 1) {
+		showOriginal1 = true;
+	}
 
 	// Highlighted Prompt HTML
 	$: childPromptHTML = getHighlightedHTML(childPrompt1, highlightedTexts1);
@@ -1166,7 +1367,15 @@ let currentRequestId: number = 0;
 			attentionCheckSelected,
 			markedNotApplicable,
 			customPrompt: isCustomScenario && customScenarioGenerated ? customScenarioPrompt : existingState?.customPrompt,
-			scenarioReflection
+			scenarioReflection,
+			// New unified initial decision flow state
+			initialDecisionStep,
+			step1Completed,
+			step2Completed,
+			step3Completed,
+			reflectionFeeling,
+			reflectionReason,
+			initialDecisionChoice
 		};
 		scenarioStates.set(selectedScenarioIndex, currentState);
 		
@@ -1279,18 +1488,35 @@ let currentRequestId: number = 0;
 			markedNotApplicable = savedState.markedNotApplicable || false;
 			scenarioReflection = savedState.scenarioReflection || '';
 			
-			// Set moderation panel visibility based on confirmation state and initial decision
-			moderationPanelVisible = confirmedVersionIndex === null && hasInitialDecision && !acceptedOriginal && !markedNotApplicable;
+			// Restore unified initial decision flow state
+			initialDecisionStep = savedState.initialDecisionStep || 1;
+			step1Completed = savedState.step1Completed || false;
+			step2Completed = savedState.step2Completed || false;
+			step3Completed = savedState.step3Completed || false;
+			reflectionFeeling = savedState.reflectionFeeling || '';
+			reflectionReason = savedState.reflectionReason || '';
+			initialDecisionChoice = savedState.initialDecisionChoice || null;
 			
-			// Show reflection modal if reflection not yet provided and no decision made
-			if (!hasInitialDecision && !scenarioReflection.trim()) {
-				showReflectionModal = true;
-				console.log('✅ Setting showReflectionModal = true (saved state, no reflection)');
-			} else {
-				// Hide modal if scenario already has reflection or decision
-				showReflectionModal = false;
-				console.log('❌ Setting showReflectionModal = false (has reflection or decision)', { hasInitialDecision, hasReflection: !!scenarioReflection.trim() });
+			// Parse reflection if it's in combined format but fields are empty
+			if (!reflectionFeeling && !reflectionReason && scenarioReflection) {
+				const feelMatch = scenarioReflection.match(/^I feel\s+(.+?)\s+because\s+(.+)$/i);
+				if (feelMatch) {
+					reflectionFeeling = feelMatch[1].trim();
+					reflectionReason = feelMatch[2].trim();
+				}
 			}
+			
+			// Show original response if in Step 1 for highlighting
+			if (initialDecisionStep === 1) {
+				showOriginal1 = true;
+			}
+			
+			// Show initial decision pane if not completed
+			showInitialDecisionPane = !hasInitialDecision || !step3Completed;
+			showReflectionModal = false; // No longer using separate modal
+			
+			// Set moderation panel visibility based on confirmation state and initial decision
+			moderationPanelVisible = confirmedVersionIndex === null && hasInitialDecision && !acceptedOriginal && !markedNotApplicable && step3Completed;
 			
 			// Don't auto-populate moderation panel - keep it clear to avoid confusion
 			// Users should understand they're creating new versions from the original, not editing the viewed version
@@ -1311,9 +1537,19 @@ let currentRequestId: number = 0;
 			acceptedOriginal = false;
 			attentionCheckSelected = false;
 			markedNotApplicable = false;
-			// Show reflection modal for new scenario
-			showReflectionModal = true;
-			console.log('✅ Setting showReflectionModal = true (new scenario, no saved state)');
+			
+			// Initialize unified initial decision flow state for new scenario
+			initialDecisionStep = 1;
+			step1Completed = false;
+			step2Completed = false;
+			step3Completed = false;
+			reflectionFeeling = '';
+			reflectionReason = '';
+			initialDecisionChoice = null;
+			showInitialDecisionPane = true;
+			showReflectionModal = false; // No longer using separate modal
+			showOriginal1 = true; // Show original for highlighting in Step 1
+			console.log('✅ Showing initial decision pane for new scenario');
 		}
 		
 		// Only set childPrompt1 if it wasn't already set for a custom scenario
@@ -1323,6 +1559,11 @@ let currentRequestId: number = 0;
 		}
 		selectionButtonsVisible1 = false;
 		currentSelection1 = '';
+		
+		// Show original response when in Step 1 for highlighting
+		if (initialDecisionStep === 1) {
+			showOriginal1 = true;
+		}
 		
 		// Start timer for the new scenario
 		startTimer(index);
@@ -1419,6 +1660,15 @@ function cancelReset() {}
 		selectionButtonsVisible1 = false;
 		scenarioReflection = '';
 		showReflectionModal = false;
+		// Reset unified initial decision flow state
+		initialDecisionStep = 1;
+		step1Completed = false;
+		step2Completed = false;
+		step3Completed = false;
+		reflectionFeeling = '';
+		reflectionReason = '';
+		initialDecisionChoice = null;
+		showInitialDecisionPane = false;
 		
 		// Reset ALL scenario states
 		scenarioStates.clear();
@@ -1445,9 +1695,11 @@ function cancelReset() {}
 		
 		// Reset to first scenario
 		selectedScenarioIndex = 0;
-		const [prompt, response] = scenarioList[0];
-		childPrompt1 = prompt;
-		originalResponse1 = response;
+		if (scenarioList.length > 0 && scenarioList[0]) {
+			const [prompt, response] = scenarioList[0];
+			childPrompt1 = prompt;
+			originalResponse1 = response;
+		}
 		
 		// Start fresh timer for first scenario
 		startTimer(0);
@@ -1521,10 +1773,79 @@ function cancelReset() {}
 		
 		// Special handling for attention check
 		if (option === 'ATTENTION_CHECK' || option === 'I read the instructions') {
-			attentionCheckSelected = !attentionCheckSelected;
-			// Log attention check selection for research purposes
-			console.log('[ATTENTION_CHECK] Scenario:', selectedScenarioIndex, 'Selected:', attentionCheckSelected, 'Timestamp:', new Date().toISOString());
-			return;
+			// If deselecting, just toggle
+			if (attentionCheckSelected) {
+				attentionCheckSelected = false;
+				return;
+			}
+			
+			// If selecting and this is an attention check scenario, handle specially
+			if (isAttentionCheckScenario) {
+				attentionCheckSelected = true;
+				console.log('[ATTENTION_CHECK] Scenario:', selectedScenarioIndex, 'Selected:', attentionCheckSelected, 'Timestamp:', new Date().toISOString());
+				
+				// Immediately save attention check as passed and navigate to next
+				(async () => {
+					try {
+						// Save attention check status to backend
+						const sessionId = `scenario_${selectedScenarioIndex}`;
+						await saveModerationSession(localStorage.token, {
+							session_id: sessionId,
+							user_id: $user?.id || 'unknown',
+							child_id: selectedChildId || 'unknown',
+							scenario_index: selectedScenarioIndex,
+							attempt_number: 1,
+							version_number: 0,
+							session_number: sessionNumber,
+							scenario_prompt: childPrompt1,
+							original_response: originalResponse1,
+							initial_decision: null,
+							strategies: [],
+							custom_instructions: [],
+							highlighted_texts: [...highlightedTexts1],
+							refactored_response: undefined,
+							is_final_version: false,
+							session_metadata: {},
+							is_attention_check: true,
+							attention_check_selected: true,
+							attention_check_passed: true
+						});
+						
+						// Show success message
+						toast.success('✓ Passed attention check! Moving to next scenario...');
+						
+						// Mark scenario as completed with all necessary flags
+						hasInitialDecision = true;
+						acceptedOriginal = true; // Mark as accepted to show completion
+						step3Completed = true; // Complete the initial decision flow
+						moderationPanelVisible = false; // Close moderation panel
+						showInitialDecisionPane = false; // Hide initial decision pane
+						initialDecisionChoice = 'accept_original'; // Set the choice to match type
+						
+						// Save state to localStorage so it persists when navigating back
+						saveCurrentScenarioState();
+						
+						// Navigate to next scenario after a brief delay
+						setTimeout(() => {
+							if (selectedScenarioIndex < scenarioList.length - 1) {
+								loadScenario(selectedScenarioIndex + 1, false);
+							} else {
+								toast.info('You have completed all scenarios!');
+							}
+						}, 1000);
+					} catch (e) {
+						console.error('Failed to save attention check status:', e);
+						toast.error('Failed to save attention check status');
+					}
+				})();
+				
+				return;
+			} else {
+				// Not an attention check scenario, just toggle
+				attentionCheckSelected = !attentionCheckSelected;
+				console.log('[ATTENTION_CHECK] Scenario:', selectedScenarioIndex, 'Selected:', attentionCheckSelected, 'Timestamp:', new Date().toISOString());
+				return;
+			}
 		}
 		
 		// Toggle selection for standard options and saved customs
@@ -1654,13 +1975,16 @@ function cancelReset() {}
 	}
 
 	function startModerating() {
-		// No blocking for attention check; proceed to moderation panel
+		// DEPRECATED: This function is no longer used in the new unified flow
+		// Highlighting is now done in Step 1 of the initial decision pane
+		// Both accept and moderate buttons now navigate directly to moderation panel
 		hasInitialDecision = true;
 		acceptedOriginal = false;
-		confirmedVersionIndex = null; // Reset confirmation if changing from accepted
-		highlightingMode = true; // Enter highlighting mode first
-		moderationPanelVisible = false; // Don't show panel yet
-		showOriginal1 = true; // Show original so they can highlight text
+		confirmedVersionIndex = null;
+		moderationPanelVisible = true;
+		moderationPanelExpanded = false;
+		expandedGroups.clear();
+		showOriginal1 = true;
 	}
 	
 	function finishHighlighting() {
@@ -1686,11 +2010,199 @@ function cancelReset() {}
 		showReflectionModal = false;
 	}
 	
+	// Unified Initial Decision Flow Functions
+	
+	// Step 1: Complete highlighting or skip
+	async function completeStep1(skipped: boolean = false) {
+		if (skipped) {
+			markedNotApplicable = true;
+			step1Completed = true;
+			step2Completed = true; // Skip steps 2 and 3
+			step3Completed = true;
+			hasInitialDecision = true;
+			initialDecisionChoice = null;
+			
+			// Save skip decision immediately to backend
+			try {
+				const sessionId = `scenario_${selectedScenarioIndex}`;
+				await saveModerationSession(localStorage.token, {
+					session_id: sessionId,
+					user_id: $user?.id || 'unknown',
+					child_id: selectedChildId || 'unknown',
+					scenario_index: selectedScenarioIndex,
+					attempt_number: 1,
+					version_number: 0,
+					session_number: sessionNumber,
+					scenario_prompt: childPrompt1,
+					original_response: originalResponse1,
+					initial_decision: 'not_applicable',
+					strategies: [],
+					custom_instructions: [],
+					highlighted_texts: [],
+					refactored_response: undefined,
+					is_final_version: false,
+					session_metadata: { 
+						decision: 'not_applicable', 
+						decided_at: Date.now(),
+						reflection: '',
+						reflectionFeeling: '',
+						reflectionReason: ''
+					},
+					is_attention_check: isAttentionCheckScenario,
+					attention_check_selected: false,
+					attention_check_passed: false
+				});
+			} catch (e) {
+				console.error('Failed to save skip decision', e);
+			}
+			
+			showInitialDecisionPane = false;
+		} else {
+			// User has highlighted (or chosen not to highlight)
+			step1Completed = true;
+			initialDecisionStep = 2;
+		}
+		saveCurrentScenarioState();
+	}
+	
+	// Step 2: Complete reflection
+	async function completeStep2() {
+		// Combine feeling and reason into scenarioReflection
+		if (reflectionFeeling.trim() && reflectionReason.trim()) {
+			scenarioReflection = `I feel ${reflectionFeeling.trim()} because ${reflectionReason.trim()}`;
+		} else if (reflectionFeeling.trim()) {
+			scenarioReflection = reflectionFeeling.trim();
+		} else if (reflectionReason.trim()) {
+			scenarioReflection = reflectionReason.trim();
+		}
+		
+		if (!scenarioReflection.trim()) {
+			toast.error('Please complete both reflection fields');
+			return;
+		}
+		
+		step2Completed = true;
+		initialDecisionStep = 3;
+		saveCurrentScenarioState();
+		
+		// Save reflection data to backend immediately so it persists across page refreshes
+		// Use try-catch to ensure errors don't prevent step completion
+		try {
+			const sessionId = `scenario_${selectedScenarioIndex}`;
+			await saveModerationSession(localStorage.token, {
+				session_id: sessionId,
+				user_id: $user?.id || 'unknown',
+				child_id: selectedChildId || 'unknown',
+				scenario_index: selectedScenarioIndex,
+				attempt_number: 1,
+				version_number: 0,
+				session_number: sessionNumber,
+				scenario_prompt: childPrompt1,
+				original_response: originalResponse1,
+				initial_decision: null, // No decision yet, just saving reflection
+				strategies: [],
+				custom_instructions: [],
+				highlighted_texts: [...highlightedTexts1],
+				refactored_response: undefined,
+				is_final_version: false,
+				session_metadata: { 
+					reflection: scenarioReflection.trim(),
+					reflectionFeeling: reflectionFeeling.trim(),
+					reflectionReason: reflectionReason.trim(),
+					saved_at: Date.now()
+				},
+				is_attention_check: isAttentionCheckScenario,
+				attention_check_selected: attentionCheckSelected,
+				attention_check_passed: false
+			});
+			console.log('Reflection data saved to backend successfully');
+		} catch (e) {
+			console.error('Failed to save reflection data (non-blocking):', e);
+			// Don't throw - allow step to complete even if backend save fails
+		}
+	}
+	
+	// Step 3: Save initial decision and navigate to moderation panel
+	async function saveStep3Decision(decision: 'accept_original' | 'moderate' | 'not_applicable') {
+		initialDecisionChoice = decision === 'not_applicable' ? null : decision;
+		step3Completed = true;
+		hasInitialDecision = true;
+		acceptedOriginal = decision === 'accept_original';
+		markedNotApplicable = decision === 'not_applicable';
+		
+		// Save immediately to backend
+		try {
+			const sessionId = `scenario_${selectedScenarioIndex}`;
+			await saveModerationSession(localStorage.token, {
+				session_id: sessionId,
+				user_id: $user?.id || 'unknown',
+				child_id: selectedChildId || 'unknown',
+				scenario_index: selectedScenarioIndex,
+				attempt_number: 1,
+				version_number: 0,
+				session_number: sessionNumber,
+				scenario_prompt: childPrompt1,
+				original_response: originalResponse1,
+				initial_decision: decision,
+				strategies: [],
+				custom_instructions: [],
+				highlighted_texts: [...highlightedTexts1],
+				refactored_response: undefined,
+				is_final_version: false,
+				session_metadata: { 
+					decision: decision, 
+					decided_at: Date.now(),
+					reflection: scenarioReflection.trim(),
+					reflectionFeeling: reflectionFeeling.trim(),
+					reflectionReason: reflectionReason.trim()
+				},
+				is_attention_check: isAttentionCheckScenario,
+				attention_check_selected: attentionCheckSelected,
+				attention_check_passed: false
+			});
+		} catch (e) {
+			console.error('Failed to save initial decision', e);
+		}
+		
+		saveCurrentScenarioState();
+		
+		// Navigate to moderation panel (both accept and moderate go here)
+		if (decision !== 'not_applicable') {
+			moderationPanelVisible = true;
+			moderationPanelExpanded = false;
+			expandedGroups.clear();
+			showInitialDecisionPane = false;
+		}
+	}
+	
+	// Navigate to a specific step (for back navigation)
+	function navigateToStep(step: number) {
+		// Type guard to ensure step is 1, 2, or 3
+		if (step !== 1 && step !== 2 && step !== 3) return;
+		
+		// Only allow navigation to unlocked steps
+		if (step === 1) {
+			initialDecisionStep = 1;
+			showOriginal1 = true; // Show original for highlighting
+		} else if (step === 2 && step1Completed) {
+			initialDecisionStep = 2;
+		} else if (step === 3 && step2Completed) {
+			initialDecisionStep = 3;
+		} else {
+			// Step is locked, don't navigate
+			return;
+		}
+		saveCurrentScenarioState();
+	}
+	
 	function returnToHighlighting() {
-		highlightingMode = true;
+		// Navigate back to Step 1 to edit highlights
 		moderationPanelVisible = false;
+		showInitialDecisionPane = true;
+		initialDecisionStep = 1;
 		showOriginal1 = true;
 		// Preserve versions - don't clear them
+		saveCurrentScenarioState();
 	}
 
 	function satisfiedWithOriginalFromPanel() {
@@ -1764,22 +2276,24 @@ function cancelReset() {}
 	}
 
 	async function applySelectedModerations() {
-		// Check if only attention check is selected or no real strategies selected
+		// If this is an attention check scenario and attention check is selected, it should have already navigated
+		// So if we reach here, it means they're trying to generate without selecting attention check
+		if (isAttentionCheckScenario && !attentionCheckSelected) {
+			toast.error('Please select "I read the instructions" from the Attention Check dropdown first.');
+			return;
+		}
+		
+		// Check if no strategies selected (attention check alone doesn't count for non-attention-check scenarios)
 		if (selectedModerations.size === 0 && !attentionCheckSelected) {
 			toast.error('Please select at least one moderation strategy');
 			return;
 		}
 		
-		if (selectedModerations.size === 0 && attentionCheckSelected) {
+		// If only attention check is selected (and it's not an attention check scenario), require other strategies
+		if (selectedModerations.size === 0 && attentionCheckSelected && !isAttentionCheckScenario) {
 			toast.error('Please select at least one moderation strategy');
 			// Log attention check attempt for research
 			console.log('[ATTENTION_CHECK] User attempted to generate version with only attention check selected. Scenario:', selectedScenarioIndex);
-			return;
-		}
-
-		// If this is the disguised attention-check scenario, require the attention option
-		if (isAttentionCheckScenario && !attentionCheckSelected) {
-			toast.error('Please also select "I read the instructions".');
 			return;
 		}
 
@@ -2005,16 +2519,8 @@ onMount(async () => {
 		// Ensure activity tracking is running once we have child and (possibly) session established
 		await startActivityTracking();
 
-		// Add custom scenario to default scenario list if not using personality scenarios
-		if (scenarioList.length === Object.entries(scenarios).length) {
-			// Check if custom scenario isn't already added
-			const hasCustomScenario = scenarioList.some(([prompt]) => prompt === CUSTOM_SCENARIO_PROMPT);
-			if (!hasCustomScenario) {
-				// Add custom scenario at the end
-				scenarioList.push([CUSTOM_SCENARIO_PROMPT, CUSTOM_SCENARIO_PLACEHOLDER]);
-				scenarioList = scenarioList; // Trigger reactivity
-			}
-		}
+		// Custom scenario is added during scenario list building (buildScenarioList function)
+		// No need to check for default scenarios anymore since we only use personality-based scenarios
 		
 		// Guard navigation if user tries to jump ahead
 		const step = parseInt(localStorage.getItem('assignmentStep') || '0');
@@ -2026,30 +2532,12 @@ onMount(async () => {
 	// Listen for profile updates to reload scenarios when characteristics change
 	window.addEventListener('child-profiles-updated', handleProfileUpdate);
 	
-	// Listen for navigation events to catch session changes
-	afterNavigate(() => {
-		const urlSessionId = $page.url.searchParams.get('SESSION_ID');
-		const storageSessionId = localStorage.getItem('prolificSessionId') || '';
-		
-		console.log('Navigation detected, checking session:', {
-			urlSessionId,
-			storageSessionId,
-			trackedUrlSessionId,
-			trackedSessionId
-		});
-		
-		// Trigger reactive updates if needed
-		if (urlSessionId && urlSessionId !== trackedUrlSessionId) {
-			trackedUrlSessionId = urlSessionId;
-		}
-		if (storageSessionId && storageSessionId !== trackedSessionId) {
-			trackedSessionId = storageSessionId;
-		}
-	});
-	
     // Load child profiles for personality-based scenario generation
 		// (loadSavedStates will be called after scenarios are loaded in generatePersonalityScenarios)
 		await loadChildProfiles();
+		// Resolve session number after child profiles are loaded
+		resolveSessionNumber();
+		console.log('Resolved session number after loading child profiles:', sessionNumber);
     
     // Now that we know the selected child, fetch available scenarios for Prolific users
     try {
@@ -2112,8 +2600,68 @@ onMount(async () => {
 		console.log('Child profiles loaded:', childProfiles.length);
 		if (childProfiles.length > 0) {
 			console.log('Generating personality-based scenarios...');
-			await generatePersonalityScenarios();
-			console.log('Personality scenarios generated. Current scenarioList length:', scenarioList.length);
+			console.log('Before generation - scenarioList.length:', scenarioList.length, 'selectedChildId:', selectedChildId, 'usePersonalityScenarios:', usePersonalityScenarios, 'scenariosLockedForSession:', scenariosLockedForSession);
+			
+			// On hard refresh, if scenarioList is empty, clear any stale locks
+			if (scenarioList.length === 0 && scenariosLockedForSession) {
+				console.warn('Hard refresh detected: scenarioList is empty but lock is set. Clearing lock to allow regeneration...');
+				scenariosLockedForSession = false;
+				if (selectedChildId) {
+					const pkgKey = packageKeyFor(selectedChildId, sessionNumber);
+					console.log('Clearing potentially stale package key:', pkgKey);
+					localStorage.removeItem(pkgKey);
+				}
+			}
+			
+			try {
+				console.log('Calling generatePersonalityScenarios()...');
+				await generatePersonalityScenarios();
+				console.log('Personality scenarios generated. Current scenarioList length:', scenarioList.length);
+				if (scenarioList.length === 0) {
+					console.warn('⚠️ WARNING: generatePersonalityScenarios() completed but scenarioList is still empty!');
+				}
+			} catch (e) {
+				console.error('❌ Error in generatePersonalityScenarios:', e);
+			}
+			
+			// Safety check: Ensure scenarios were populated - always attempt regeneration if empty
+			if (scenarioList.length === 0) {
+				console.warn('WARNING: scenarioList is empty after generatePersonalityScenarios(). Attempting to force generation...');
+				// Force regeneration by clearing any cached package and locks
+				if (selectedChildId) {
+					const pkgKey = packageKeyFor(selectedChildId, sessionNumber);
+					console.log('Clearing package key:', pkgKey);
+					localStorage.removeItem(pkgKey);
+					scenariosLockedForSession = false;
+					// Also clear any scenario states that might be interfering
+					const stateKey = selectedChildId ? `moderationScenarioStates_${selectedChildId}` : 'moderationScenarioStates';
+					console.log('Clearing scenario states key:', stateKey);
+					localStorage.removeItem(stateKey);
+					// Clear the pre-shuffled scenarios key as well
+					const scenarioKey = localStorage.getItem(`scenarios_${selectedChildId}`);
+					if (scenarioKey) {
+						console.log('Clearing pre-shuffled scenarios key:', scenarioKey);
+						localStorage.removeItem(scenarioKey);
+					}
+					// Try generating again
+					try {
+						await generatePersonalityScenarios();
+						if (scenarioList.length === 0) {
+							console.error('ERROR: Failed to generate scenarios after retry. scenarioList is still empty.');
+							console.error('Debug info:', {
+								selectedChildId,
+								usePersonalityScenarios,
+								childProfilesLength: childProfiles.length,
+								personalityBasedScenariosLength: personalityBasedScenarios?.length || 0
+							});
+						} else {
+							console.log('Successfully generated scenarios on retry. scenarioList length:', scenarioList.length);
+						}
+					} catch (e) {
+						console.error('Error in retry generatePersonalityScenarios:', e);
+					}
+				}
+			}
 			
 			// Filter/top-up only if not locked by canonical package
 			if (!scenariosLockedForSession) {
@@ -2195,8 +2743,8 @@ onMount(async () => {
 			}
 			
 			// Force personality scenarios if generation failed
-			if (!scenariosLockedForSession && scenarioList.length === Object.entries(scenarios).length) {
-				console.log('WARNING: Still using default scenarios, forcing personality scenarios...');
+			if (!scenariosLockedForSession && scenarioList.length === 0) {
+				console.log('WARNING: No scenarios available, forcing personality scenarios...');
 				// Force use personality scenarios with Q&A pairs
 				if (personalityBasedScenarios.length > 0) {
 					if (!scenariosLockedForSession) {
@@ -2320,7 +2868,7 @@ onMount(async () => {
 	});
 
 	// Reactive statements to save state when changes occur
-	$: if (highlightedTexts1.length > 0 || selectedModerations.size > 0 || customInstructions.length > 0 || hasInitialDecision || acceptedOriginal || markedNotApplicable) {
+	$: if (highlightedTexts1.length > 0 || selectedModerations.size > 0 || customInstructions.length > 0 || hasInitialDecision || acceptedOriginal || markedNotApplicable || step1Completed || step2Completed || step3Completed || reflectionFeeling || reflectionReason) {
 		saveCurrentScenarioState();
 	}
 
@@ -2364,6 +2912,16 @@ onMount(async () => {
 	function skipWarmup() {
 		completeWarmup();
 	}
+	
+	function showTutorial() {
+		showWarmup = true;
+		warmupStep = 0;
+		warmupSelectedStrategies = [];
+		warmupModeratedResponse = '';
+		warmupConfirmed = false;
+		// Temporarily allow tutorial to show even if previously completed
+		// We'll use a separate flag to track if user wants to see it again
+	}
 
 	async function generateWarmupResponse() {
 		const warmupPrompt = "Can you help me with my homework?";
@@ -2406,7 +2964,7 @@ onMount(async () => {
 	<title>Moderation Scenarios</title>
 </svelte:head>
 
-{#if showWarmup && !warmupCompleted}
+{#if showWarmup}
 	<!-- Warm-up Tutorial -->
 	<div class="flex flex-col w-full h-screen max-h-[100dvh] bg-gradient-to-br from-yellow-50 via-blue-50 to-purple-50 dark:from-yellow-900/20 dark:via-blue-900/20 dark:to-purple-900/20">
 		<div class="flex-1 flex flex-col items-center justify-center p-6">
@@ -2660,7 +3218,20 @@ onMount(async () => {
 			<div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-800 p-4">
 				<div class="flex items-center justify-between">
 					<h1 class="text-xl font-bold text-gray-900 dark:text-white">Scenarios</h1>
-					<button class="md:hidden text-xs px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800" on:click={() => { sidebarOpen = !sidebarOpen; }} aria-label="Toggle scenarios">{sidebarOpen ? 'Hide' : 'Show'}</button>
+					<div class="flex items-center space-x-2">
+						<button 
+							class="text-xs px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800 flex items-center space-x-1" 
+							on:click={showTutorial}
+							aria-label="Show tutorial"
+							title="Show Tutorial"
+						>
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+							</svg>
+							<span class="hidden sm:inline">Tutorial</span>
+						</button>
+						<button class="md:hidden text-xs px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800" on:click={() => { sidebarOpen = !sidebarOpen; }} aria-label="Toggle scenarios">{sidebarOpen ? 'Hide' : 'Show'}</button>
+					</div>
 				</div>
 				<p class="text-sm text-gray-600 dark:text-gray-400">
 					{(() => {
@@ -2818,10 +3389,18 @@ onMount(async () => {
 			{:else if !isCustomScenario || customScenarioGenerated}
 			<!-- Child Prompt Bubble -->
 				<div class="flex justify-end">
-					<div class="max-w-[80%] bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm relative select-text"
+					<div class="max-w-[80%] bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm relative select-text {
+						initialDecisionStep === 1 ? 'cursor-text hover:ring-2 hover:ring-blue-300 dark:hover:ring-blue-600 transition-all' : ''
+					}"
 						bind:this={promptContainer1}
 						on:mouseup={handleTextSelection}
+						title={initialDecisionStep === 1 ? 'Drag over text to highlight concerns' : ''}
 					>
+						{#if initialDecisionStep === 1 && highlightedTexts1.length === 0}
+							<div class="absolute -top-6 right-0 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow-sm border border-gray-200 dark:border-gray-700 pointer-events-none">
+								← Drag to highlight
+							</div>
+						{/if}
 						<p class="text-sm whitespace-pre-wrap">{@html childPromptHTML}</p>
 						<!-- Auto-highlight enabled: No button needed -->
 					</div>
@@ -2834,8 +3413,16 @@ onMount(async () => {
 					<div 
 						bind:this={responseContainer1}
 						on:mouseup={handleTextSelection}
-						class="max-w-[80%] bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm relative select-text"
+						class="max-w-[80%] bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm relative select-text {
+							initialDecisionStep === 1 ? 'cursor-text hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-600 transition-all' : ''
+						}"
+						title={initialDecisionStep === 1 ? 'Drag over text to highlight concerns' : ''}
 					>
+						{#if initialDecisionStep === 1 && highlightedTexts1.length === 0}
+							<div class="absolute -top-6 left-0 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow-sm border border-gray-200 dark:border-gray-700 pointer-events-none">
+								Drag to highlight →
+							</div>
+						{/if}
 							<div class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap response-text">
 								{@html response1HTML}
 							</div>
@@ -3023,120 +3610,239 @@ onMount(async () => {
 					</div>
 				{/if}
 
-		<!-- Initial Decision Buttons (shown after reflection is submitted) -->
-		{#if !hasInitialDecision && !showReflectionModal && (!isCustomScenario || customScenarioGenerated) && !highlightingMode}
-			<div class="flex justify-center mt-4">
-				<div class="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 w-full max-w-4xl px-4">
-					<button
-						on:click={() => {
-							acceptOriginalResponse();
-							// Decision will be saved when acceptOriginalResponse is called
-						}}
-					class="flex-1 px-6 py-4 rounded-lg font-medium transition-all duration-200 bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
-				>
-				<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-				</svg>
-				<span>This is OK</span>
-			</button>
-			
-			<button
-				on:click={() => {
-					startModerating();
-					// Decision will be saved when moderation is applied
-				}}
-				class="flex-1 px-6 py-4 rounded-lg font-medium transition-all duration-200 bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
-			>
-				<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-				</svg>
-				<span>Moderate</span>
-			</button>
-			
-			<button
-				on:click={markNotApplicable}
-				class="flex-1 px-6 py-4 rounded-lg font-medium transition-all duration-200 bg-gray-500 hover:bg-gray-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
-			>
-					<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
-					</svg>
-					<span>Skip</span>
-					</button>
-				</div>
-			</div>
-		{/if}
-		
-		<!-- Highlighting Mode Prompt -->
-		{#if highlightingMode}
+		<!-- Unified Initial Decision Pane -->
+		{#if showInitialDecisionPane && !hasInitialDecision && (!isCustomScenario || customScenarioGenerated)}
 			<div class="flex justify-center mt-6">
-				<div class="w-full max-w-md px-4">
-					<div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-						<div class="flex items-center justify-between mb-3">
-							<p class="text-sm font-medium text-blue-900 dark:text-blue-200">
-								If there is any text you would change in the prompt or response, if at all, please highlight it by dragging over it and then selecting "Highlight". If not, click "Done" to continue.
-							</p>
-							<button
-								on:click={() => {
-									highlightingMode = false;
-									hasInitialDecision = false;
-								}}
-								class="ml-3 px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 flex-shrink-0"
-							>
-								<svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-								</svg>
-								<span>Back</span>
-							</button>
+				<div class="w-full max-w-4xl px-4">
+					<div class="p-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
+						<!-- Step Indicators -->
+						<div class="flex items-center justify-between mb-6">
+							{#each [1, 2, 3] as step}
+								{@const stepCompleted = (step === 1 && step1Completed) || (step === 2 && step2Completed) || (step === 3 && step3Completed)}
+								{@const stepCurrent = step === initialDecisionStep}
+								{@const stepLocked = (step > 1 && !step1Completed) || (step > 2 && !step2Completed)}
+								<button
+									on:click={() => navigateToStep(step)}
+									disabled={stepLocked}
+									class="flex items-center space-x-2 transition-all {
+										stepCurrent ? 'text-blue-600 dark:text-blue-400' : 
+										stepCompleted ? 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200' : 
+										'text-gray-300 dark:text-gray-600'
+									} {stepLocked ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}"
+								>
+									<div class="w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all {
+										stepCurrent ? 'border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20 scale-110' :
+										stepCompleted ? 'border-gray-400 dark:border-gray-500 bg-gray-50 dark:bg-gray-700 hover:border-gray-500 dark:hover:border-gray-400' :
+										'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'
+									}">
+										{#if stepCompleted}
+											<svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+											</svg>
+										{:else}
+											<span class="text-sm font-semibold">{step}</span>
+										{/if}
+									</div>
+									<span class="text-sm font-medium hidden sm:inline">
+										{step === 1 ? 'Highlight' : step === 2 ? 'Reflect' : 'Decide'}
+									</span>
+								</button>
+								{#if step < 3}
+									<div class="flex-1 h-0.5 mx-2 transition-colors {
+										((step === 1 && step1Completed) || (step === 2 && step2Completed)) ? 'bg-gray-400 dark:bg-gray-500' : 'bg-gray-200 dark:bg-gray-700'
+									}"></div>
+								{/if}
+							{/each}
 						</div>
-						<button
-							on:click={finishHighlighting}
-							class="w-full px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg transition-colors"
-						>
-							{#if highlightedTexts1.length > 0}
-								Done ({highlightedTexts1.length} concern{highlightedTexts1.length === 1 ? '' : 's'} highlighted)
-							{:else}
-								Done (no concerns highlighted)
-							{/if}
-						</button>
-					</div>
-				</div>
-				</div>
-		{/if}
 
-		<!-- Reflection Modal (shown before decision buttons) -->
-		{#if showReflectionModal && !hasInitialDecision && !highlightingMode && (isCustomScenario ? customScenarioGenerated : true)}
-			<div class="flex justify-center mt-6">
-				<div class="w-full max-w-2xl px-4">
-					<div class="p-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg shadow-lg">
-						<div class="mb-4">
-							<h3 class="text-base font-semibold text-blue-900 dark:text-blue-200 mb-3">
-								Please describe your thoughts about specific aspects of this interaction.
-							</h3>
-							<p class="text-sm text-blue-800 dark:text-blue-300 mb-4">
-								What stood out to you in the child's question or the AI's response? What specific parts did you notice or find noteworthy?
-							</p>
-							<textarea
-								bind:value={scenarioReflection}
-								placeholder="Enter your observations about specific aspects of this interaction..."
-								class="w-full px-4 py-3 border border-blue-300 dark:border-blue-700 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none text-sm"
-								rows="5"
-								maxlength="1000"
-							></textarea>
-							<div class="flex items-center justify-between mt-2">
-								<span class="text-xs text-blue-700 dark:text-blue-400">
-									{scenarioReflection.length}/1000 characters
-								</span>
+						<!-- Step 1: Highlighting or Skip -->
+						{#if initialDecisionStep === 1}
+							<div class="space-y-4">
+								<div>
+									<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+										Step 1: Highlight the parts that stood out to you
+									</h3>
+									
+									<!-- Primary instruction - make it prominent -->
+									<div class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-2 border-blue-300 dark:border-blue-700">
+										<div class="flex items-start space-x-2">
+											<svg class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+											</svg>
+											<p class="text-sm font-semibold text-blue-900 dark:text-blue-200">
+												Drag over text above to highlight concerns
+											</p>
+										</div>
+									</div>
+									
+									{#if highlightedTexts1.length > 0}
+										<div class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+											<p class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+												✓ {highlightedTexts1.length} concern{highlightedTexts1.length === 1 ? '' : 's'} highlighted
+											</p>
+											<div class="flex flex-wrap gap-2">
+												{#each highlightedTexts1 as highlight}
+													<button
+														class="inline-flex items-center px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-700 text-gray-800 dark:text-gray-100 rounded hover:bg-yellow-200 dark:hover:bg-yellow-600 transition-colors"
+														on:click={() => removeHighlight(highlight)}
+														title="Click to remove"
+													>
+														{highlight.length > 40 ? highlight.substring(0, 40) + '...' : highlight}
+														<svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+															<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+														</svg>
+													</button>
+												{/each}
+											</div>
+											<p class="text-xs text-gray-600 dark:text-gray-400 mt-2">
+												Drag over more text to add highlights, or click "Continue" when done.
+											</p>
+										</div>
+									{:else}
+										<div class="mb-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+											<p class="text-xs text-gray-600 dark:text-gray-400">
+												💡 No concerns? Click "Continue" to proceed. ❌ Not relevant? Click "Skip Scenario".
+											</p>
+										</div>
+									{/if}
+								</div>
+								
+								<!-- Action buttons - moved to bottom, Continue is gray when no highlights, green when highlights exist -->
+								<div class="flex space-x-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+									<button
+										on:click={() => completeStep1(false)}
+										class="flex-1 px-6 py-3 {
+											highlightedTexts1.length > 0 
+												? 'bg-green-500 hover:bg-green-600 text-white' 
+												: 'bg-gray-400 hover:bg-gray-500 text-white'
+										} font-medium rounded-lg transition-colors flex items-center justify-center space-x-2"
+									>
+										<span>Continue</span>
+										{#if highlightedTexts1.length === 0}
+											<span class="text-xs opacity-75">(no highlights)</span>
+										{/if}
+									</button>
+									<button
+										on:click={() => completeStep1(true)}
+										class="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
+									>
+										Skip Scenario
+									</button>
+								</div>
 							</div>
-						</div>
-						<div class="flex justify-end space-x-3">
-							<button
-								on:click={submitReflection}
-								disabled={!scenarioReflection.trim()}
-								class="px-6 py-2.5 text-sm font-medium text-white bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors"
-							>
-								Continue
-							</button>
-						</div>
+						{/if}
+
+						<!-- Step 2: Reflection -->
+						{#if initialDecisionStep === 2}
+							<div class="space-y-4">
+								<div>
+									<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+										Step 2: How do you feel about this interaction?
+									</h3>
+									<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+										Please describe how you feel about this interaction and why using the template below.
+									</p>
+								</div>
+								<div class="space-y-4">
+									<div>
+										<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+											I feel...
+										</label>
+										<input
+											type="text"
+											bind:value={reflectionFeeling}
+											placeholder="e.g., concerned, unconcerned, etc."
+											class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+										/>
+									</div>
+									<div>
+										<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+											because...
+										</label>
+										<textarea
+											bind:value={reflectionReason}
+											placeholder="details about highlighted content"
+											rows="4"
+											class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none"
+										></textarea>
+									</div>
+								</div>
+								<div class="flex space-x-3">
+									<button
+										on:click={() => navigateToStep(1)}
+										class="px-6 py-3 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 font-medium rounded-lg transition-colors"
+									>
+										Back
+									</button>
+									<button
+										on:click={completeStep2}
+										disabled={!reflectionFeeling.trim() || !reflectionReason.trim()}
+										class="flex-1 px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+									>
+										Continue
+									</button>
+								</div>
+							</div>
+						{/if}
+
+						<!-- Step 3: Accept or Moderate -->
+						{#if initialDecisionStep === 3}
+							<div class="space-y-4">
+								<div>
+									<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+										Step 3: Would you change the response?
+									</h3>
+									{#if reflectionFeeling.trim() || reflectionReason.trim()}
+										<div class="mb-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+											<p class="text-xs text-gray-600 dark:text-gray-400 mb-1">
+												<strong>You said:</strong> {reflectionFeeling.trim() && reflectionReason.trim() 
+													? `"I feel ${reflectionFeeling.trim()} because ${reflectionReason.trim()}"`
+													: reflectionFeeling.trim() 
+														? `"I feel ${reflectionFeeling.trim()}"`
+														: reflectionReason.trim()
+															? `"${reflectionReason.trim()}"`
+															: ''}
+											</p>
+										</div>
+									{/if}
+									<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+										Based on your reflection, would you keep the response as-is, or would you change it?
+									</p>
+								</div>
+								<div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+									<button
+										on:click={() => saveStep3Decision('accept_original')}
+										class="flex-1 px-6 py-4 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition-colors flex flex-col items-center justify-center space-y-1"
+									>
+										<div class="flex items-center space-x-2">
+											<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+											</svg>
+											<span>Accept</span>
+										</div>
+										<span class="text-xs opacity-90">Keep the response as-is</span>
+									</button>
+									<button
+										on:click={() => saveStep3Decision('moderate')}
+										class="flex-1 px-6 py-4 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors flex flex-col items-center justify-center space-y-1"
+									>
+										<div class="flex items-center space-x-2">
+											<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+											</svg>
+											<span>Moderate</span>
+										</div>
+										<span class="text-xs opacity-90">Change the response</span>
+									</button>
+								</div>
+								<button
+									on:click={() => navigateToStep(2)}
+									class="w-full px-6 py-2 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 font-medium rounded-lg transition-colors"
+								>
+									Back
+								</button>
+							</div>
+						{/if}
 					</div>
 				</div>
 			</div>

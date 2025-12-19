@@ -1,4 +1,5 @@
 import logging
+import os
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional, List
@@ -53,10 +54,16 @@ async def apply_moderation(
             if isinstance(keys, list) and len(keys) > 0:
                 api_key = keys[0]  # Use the first API key
         
+        # Fallback to environment variable if not found in config
+        if not api_key:
+            api_key = os.environ.get("OPENAI_API_KEY", "")
+            if api_key:
+                log.info("Using OpenAI API key from environment variable")
+        
         if not api_key:
             raise HTTPException(
                 status_code=500, 
-                detail="OpenAI API key not configured. Please configure it in Admin Settings > Connections."
+                detail="OpenAI API key not configured. Please configure it in Admin Settings > Connections or set OPENAI_API_KEY environment variable."
             )
         
         # Call the moderation utility function with new parameters
@@ -107,10 +114,16 @@ async def generate_followup(
             if isinstance(keys, list) and len(keys) > 0:
                 api_key = keys[0]  # Use the first API key
         
+        # Fallback to environment variable if not found in config
+        if not api_key:
+            api_key = os.environ.get("OPENAI_API_KEY", "")
+            if api_key:
+                log.info("Using OpenAI API key from environment variable")
+        
         if not api_key:
             raise HTTPException(
                 status_code=500, 
-                detail="OpenAI API key not configured. Please configure it in Admin Settings > Connections."
+                detail="OpenAI API key not configured. Please configure it in Admin Settings > Connections or set OPENAI_API_KEY environment variable."
             )
         
         # Generate follow-up prompt
