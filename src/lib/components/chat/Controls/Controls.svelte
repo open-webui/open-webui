@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createEventDispatcher, getContext } from 'svelte';
+	import { createEventDispatcher, getContext, onMount } from 'svelte';
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
@@ -9,12 +9,23 @@
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 
-	import { user, settings } from '$lib/stores';
+	import { user, settings, prompts } from '$lib/stores';
+	import { getPrompts } from '$lib/apis/prompts';
+
 	export let models = [];
 	export let chatFiles = [];
-	export let params = {};
+	export let params: any = {};
 
 	let showValves = false;
+
+	onMount(async () => {
+		if (!$prompts) {
+			const res = await getPrompts(localStorage.token);
+			if (res) {
+				prompts.set(res);
+			}
+		}
+	});
 </script>
 
 <div class=" dark:text-white">
@@ -76,6 +87,29 @@
 			{#if $user?.role === 'admin' || ($user?.permissions.chat?.system_prompt ?? true)}
 				<Collapsible title={$i18n.t('System Prompt')} open={true} buttonClassName="w-full">
 					<div class="" slot="content">
+						{#if $prompts}
+							<div class="flex flex-col gap-1 mb-2">
+								<div class="text-xs text-gray-500">{$i18n.t('Load from Library')}</div>
+								<select
+									class="w-full text-xs bg-transparent border border-gray-100 dark:border-gray-800 rounded-lg p-1.5 outline-hidden"
+									on:change={(e) => {
+										const target = e.target as HTMLSelectElement;
+										const selectedPrompt = $prompts.find((p) => p.command === target.value);
+										if (selectedPrompt) {
+											params.system = selectedPrompt.content;
+										}
+										target.value = ''; // Reset selection
+									}}
+								>
+									<option value="" disabled selected>{$i18n.t('Select a prompt')}</option>
+									{#each $prompts.filter((p) => p.command.includes('system') || true) as prompt}
+										<option value={prompt.command} class="bg-gray-100 dark:bg-gray-700"
+											>{prompt.title} ({prompt.command})</option
+										>
+									{/each}
+								</select>
+							</div>
+						{/if}
 						<textarea
 							bind:value={params.system}
 							class="w-full text-xs outline-hidden resize-vertical {$settings.highContrastMode
