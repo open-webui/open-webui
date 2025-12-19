@@ -53,8 +53,6 @@ from open_webui.utils.headers import include_user_info_headers
 
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["OPENAI"])
-
 
 ##########################################
 #
