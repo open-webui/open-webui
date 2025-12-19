@@ -149,7 +149,7 @@ async def chat_completion_tools_handler(
     task_model_id = get_task_model_id(
         body["model"],
         request.app.state.config.TASK_MODEL,
-        request.app.state.config.TASK_MODEL_EXTERNAL,
+        request.app.state.config.TASK_MODEL_EXTERNAL.get(user.email),
         models,
     )
 
@@ -681,7 +681,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
     task_model_id = get_task_model_id(
         form_data["model"],
         request.app.state.config.TASK_MODEL,
-        request.app.state.config.TASK_MODEL_EXTERNAL,
+        request.app.state.config.TASK_MODEL_EXTERNAL.get(user.email),
         models,
     )
 

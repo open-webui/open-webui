@@ -16,19 +16,44 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-def get_task_model_id(models: dict) -> Optional[str]:
+def get_task_model_id(
+    model_id: str,
+    task_model: Optional[str],
+    task_model_external: Optional[str],
+    models: dict
+) -> Optional[str]:
     """
-    Get the Gemini 2.5 Flash Lite model ID for task execution.
-    Returns None if model is not available (tasks should be disabled).
+    Get the task model ID for task execution.
+    Priority: task_model_external > task_model > find Gemini Flash Lite in models
     
     Args:
+        model_id: The chat model ID being used (for reference)
+        task_model: The configured global TASK_MODEL
+        task_model_external: The per-user TASK_MODEL_EXTERNAL (can be None or empty string)
         models: Dictionary of model_id -> model info
         
     Returns:
-        The Gemini Flash Lite model ID if found, None otherwise
+        The task model ID if found, None otherwise
     """
     from open_webui.routers.tasks import find_gemini_flash_lite_model
     
+    # Priority 1: Use per-user external task model if set
+    if task_model_external and task_model_external.strip():
+        if task_model_external in models:
+            log.debug(f"Using per-user task model: {task_model_external}")
+            return task_model_external
+        else:
+            log.warning(f"Per-user task model '{task_model_external}' not found in available models")
+    
+    # Priority 2: Use global task model if set
+    if task_model and task_model.strip():
+        if task_model in models:
+            log.debug(f"Using global task model: {task_model}")
+            return task_model
+        else:
+            log.warning(f"Global task model '{task_model}' not found in available models")
+    
+    # Priority 3: Fall back to finding Gemini Flash Lite model
     task_model_id = find_gemini_flash_lite_model(models)
     
     if task_model_id:
