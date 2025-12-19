@@ -1,7 +1,16 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
-	import { slide } from 'svelte/transition';
+	import { slide, fly } from 'svelte/transition';
+	import { goto } from '$app/navigation';
+	import { mobile, user, theme } from '$lib/stores';
+	import { userSignOut } from '$lib/apis/auths';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import HYULogo36 from '$lib/components/icons/HYULogo36.svelte';
+	import DashboardToggleSwitch from '$lib/components/dashboard/DashboardToggleSwitch.svelte';
 	const i18n = getContext('i18n');
+
+	// Mobile sidebar state
+	let showMobileSidebar = false;
 
 	// Expand/collapse state for concept cards
 	let expandedCards = { 0: true }; // First card expanded by default
@@ -115,33 +124,162 @@
 		}))
 	})) ?? [];
 
-	// Reusable styles for concept cards
-	const conceptCardBase = `box-border flex flex-col items-start px-9 py-7 w-full
-		bg-[rgba(253,254,254,0.7)] dark:bg-[rgba(39,40,44,0.5)]
-		shadow-[4px_4px_20px_rgba(0,0,0,0.1)] backdrop-blur-[20px]
-		rounded-[20px] transition-all duration-200 cursor-pointer
-		hover:shadow-[6px_6px_24px_rgba(0,0,0,0.15)]`;
+	// Glass card base style
+	const glassCard = `bg-white/70 dark:bg-gray-900/50 shadow-lg backdrop-blur-xl rounded-[20px]`;
 
-	const conceptCardExpanded = `${conceptCardBase} gap-6`;
-	const conceptCardCollapsed = `${conceptCardBase} gap-0.5`;
+	// Reusable styles for concept cards
+	$: conceptCardBase = `box-border flex flex-col items-start w-full
+		${glassCard} transition-all duration-200 cursor-pointer
+		hover:shadow-xl
+		${$mobile ? 'p-5' : 'px-9 py-7'}`;
+
+	$: conceptCardExpanded = `${conceptCardBase} ${$mobile ? 'gap-5' : 'gap-6'}`;
+	$: conceptCardCollapsed = `${conceptCardBase} gap-2`;
 
 	// Reusable styles for stat cards
-	const statCard = `box-border flex flex-col items-start px-9 py-7 gap-0.5
-		w-[300px] h-[120px]
-		bg-[rgba(253,254,254,0.7)] dark:bg-[rgba(39,40,44,0.5)]
-		shadow-[4px_4px_20px_rgba(0,0,0,0.1)] backdrop-blur-[20px]
-		rounded-[20px] flex-none flex-grow-0`;
+	$: statCard = `box-border flex flex-col items-start gap-2
+		${glassCard}
+		${$mobile ? 'w-full p-5' : 'w-[300px] h-[120px] px-9 py-7'}`;
 </script>
 
-<div class="w-full h-full flex flex-col items-center p-8">
+<!-- Mobile Top Nav Bar -->
+{#if $mobile}
+	<div
+		class="fixed top-0 left-0 right-0 h-[60px] z-40 flex items-center justify-between px-4
+			bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl
+			border-b border-gray-200/50 dark:border-gray-800/50"
+	>
+		<!-- Logo + Title -->
+		<a href="/" class="flex items-center gap-2">
+			<HYULogo36 />
+			<span class="text-sm font-medium text-gray-900 dark:text-white font-primary">HYU AI 대시보드</span>
+		</a>
+		<!-- Menu Button -->
+		<button
+			on:click={() => (showMobileSidebar = true)}
+			class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-700 dark:text-gray-300"
+			aria-label="Open menu"
+		>
+			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+				<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+			</svg>
+		</button>
+	</div>
+{/if}
+
+<!-- Mobile Sidebar Backdrop -->
+{#if $mobile && showMobileSidebar}
+	<div
+		class="fixed z-40 top-0 right-0 left-0 bottom-0 bg-white/30 dark:bg-gray-900/30 backdrop-blur-md w-full min-h-screen h-screen"
+		on:mousedown={() => (showMobileSidebar = false)}
+		on:keydown={(e) => e.key === 'Escape' && (showMobileSidebar = false)}
+		role="button"
+		tabindex="0"
+	/>
+{/if}
+
+<!-- Mobile Sidebar -->
+{#if $mobile && showMobileSidebar}
+	<div
+		class="fixed top-0 right-0 z-50 h-screen w-[280px] bg-white dark:bg-gray-950 flex flex-col justify-between"
+		transition:fly={{ duration: 250, x: 280 }}
+	>
+		<!-- Top Section -->
+		<div class="flex flex-col p-5 gap-5">
+			<!-- User Info + Close Button -->
+			<div class="flex flex-row justify-between items-center">
+				<!-- User -->
+				<div class="flex flex-row items-center gap-3">
+					<!-- Avatar -->
+					<img
+						src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
+						class="w-10 h-10 rounded-full object-cover"
+						alt="프로필 이미지"
+					/>
+					<!-- Name & Role -->
+					<div class="flex flex-col">
+						<span class="text-body-4-medium text-gray-950 dark:text-white">{$user?.name ?? '사용자'}</span>
+						<span class="text-caption text-gray-700">{$user?.role === 'admin' ? '관리자' : $user?.role === 'instructor' ? '교수' : '학생'}</span>
+					</div>
+				</div>
+				<!-- Close Button -->
+				<button
+					on:click={() => (showMobileSidebar = false)}
+					class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-950 dark:text-white"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+					</svg>
+				</button>
+			</div>
+
+			<!-- Mode Toggle -->
+			<DashboardToggleSwitch activeMode="dashboard" />
+		</div>
+
+		<!-- Bottom Section -->
+		<div class="flex flex-col p-5 gap-3">
+			<!-- Dark Mode Toggle -->
+			<button
+				class="flex flex-row items-center gap-2 px-1 py-1 rounded-full bg-white/50 dark:bg-gray-800/50 w-fit"
+				on:click={() => {
+					if ($theme === 'dark') {
+						theme.set('light');
+						localStorage.setItem('theme', 'light');
+					} else {
+						theme.set('dark');
+						localStorage.setItem('theme', 'dark');
+					}
+				}}
+			>
+				<div class="w-7 h-7 rounded-full {$theme === 'dark' ? 'bg-gray-900' : 'bg-gray-200'} flex items-center justify-center shadow-lg">
+					{#if $theme === 'dark'}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-white">
+							<path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z" clip-rule="evenodd" />
+						</svg>
+					{:else}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-gray-700">
+							<path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061-1.06l-1.591 1.59a.75.75 0 001.06 1.061l1.591-1.59zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 7.757a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591z" />
+						</svg>
+					{/if}
+				</div>
+				<span class="text-caption text-gray-950 dark:text-white pr-2">{$theme === 'dark' ? '다크 모드' : '라이트 모드'}</span>
+			</button>
+
+			<!-- Help -->
+			<button class="flex flex-row items-center gap-2 p-1 text-gray-950 dark:text-white">
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+					<path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm11.378-3.917c-.89-.777-2.366-.777-3.255 0a.75.75 0 01-.988-1.129c1.454-1.272 3.776-1.272 5.23 0 1.513 1.324 1.513 3.518 0 4.842a3.75 3.75 0 01-.837.552c-.676.328-1.028.774-1.028 1.152v.75a.75.75 0 01-1.5 0v-.75c0-1.279 1.06-2.107 1.875-2.502.182-.088.351-.199.503-.331.83-.727.83-1.857 0-2.584zM12 18a.75.75 0 100-1.5.75.75 0 000 1.5z" clip-rule="evenodd" />
+				</svg>
+				<span class="text-caption">도움말</span>
+			</button>
+
+			<!-- Logout -->
+			<button
+				class="flex flex-row items-center gap-2 p-1 text-gray-950 dark:text-white"
+				on:click={async () => {
+					await userSignOut();
+					goto('/auth');
+				}}
+			>
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+					<path fill-rule="evenodd" d="M7.5 3.75A1.5 1.5 0 006 5.25v13.5a1.5 1.5 0 001.5 1.5h6a1.5 1.5 0 001.5-1.5V15a.75.75 0 011.5 0v3.75a3 3 0 01-3 3h-6a3 3 0 01-3-3V5.25a3 3 0 013-3h6a3 3 0 013 3V9A.75.75 0 0115 9V5.25a1.5 1.5 0 00-1.5-1.5h-6zm10.72 4.72a.75.75 0 011.06 0l3 3a.75.75 0 010 1.06l-3 3a.75.75 0 11-1.06-1.06l1.72-1.72H9a.75.75 0 010-1.5h10.94l-1.72-1.72a.75.75 0 010-1.06z" clip-rule="evenodd" />
+				</svg>
+				<span class="text-caption">로그아웃</span>
+			</button>
+		</div>
+	</div>
+{/if}
+
+<div class="w-full h-full flex flex-col items-center {$mobile ? 'px-4 pt-[76px] pb-8' : 'p-8'}">
 	<!-- 현황 분석 Section -->
 	<div class="flex flex-col justify-center items-start gap-5 w-full max-w-[920px]">
 		<!-- Section Title -->
-		<h2 class="text-title-1 text-gray-950 dark:text-gray-50 tracking-[-0.02em]">현황 분석</h2>
+		<h2 class="{$mobile ? 'text-title-4' : 'text-title-1'} text-gray-950 dark:text-gray-50 tracking-[-0.02em]">현황 분석</h2>
 
 		<!-- Cards Container -->
 		{#if loading}
-			<div class="flex flex-row justify-between items-center gap-5 w-full">
+			<div class="flex {$mobile ? 'flex-col gap-5' : 'flex-row justify-between items-center gap-5'} w-full">
 				{#each [1, 2, 3] as _}
 					<div class="{statCard} animate-pulse">
 						<div class="w-5 h-5 bg-gray-200 dark:bg-gray-700 rounded"></div>
@@ -153,7 +291,7 @@
 				{/each}
 			</div>
 		{:else}
-			<div class="flex flex-row justify-between items-center gap-5 w-full">
+			<div class="flex {$mobile ? 'flex-col gap-5' : 'flex-row justify-between items-center gap-5'} w-full">
 				<!-- Card 1: 주간 활성 사용자 수 -->
 				<div class={statCard}>
 					<div class="flex flex-row justify-between items-center w-full">
@@ -183,13 +321,13 @@
 								/>
 							</g>
 						</svg>
-						<span class="text-caption {stats.weeklyActiveUsers.increased >= 0 ? 'text-[#34BE89]' : 'text-[#DB576D]'}">
-							{stats.weeklyActiveUsers.increased >= 0 ? '+' : ''}{stats.weeklyActiveUsers.increased}
+						<span class="text-caption {stats.weeklyActiveUsers.increased >= 0 ? 'text-emerald-500' : 'text-rose-500'}">
+							{stats.weeklyActiveUsers.increased >= 0 ? '+' : ''} 이번 주 {Math.abs(stats.weeklyActiveUsers.increased)}명 {stats.weeklyActiveUsers.increased >= 0 ? '증가' : '감소'}
 						</span>
 					</div>
 					<div class="flex flex-row justify-between items-center w-full">
 						<span class="text-body-3 text-gray-950 dark:text-gray-50">{stats.weeklyActiveUsers.label}</span>
-						<span class="text-title-1 text-gray-950 dark:text-gray-50 tracking-[-0.02em]">{stats.weeklyActiveUsers.value}</span>
+						<span class="{$mobile ? 'text-title-4' : 'text-title-1'} text-gray-950 dark:text-gray-50 tracking-[-0.02em]">{stats.weeklyActiveUsers.value}</span>
 					</div>
 				</div>
 
@@ -222,13 +360,13 @@
 								/>
 							</g>
 						</svg>
-						<span class="text-caption {stats.totalConversations.increased >= 0 ? 'text-[#34BE89]' : 'text-[#DB576D]'}">
-							{stats.totalConversations.increased >= 0 ? '+' : ''}{stats.totalConversations.increased}
+						<span class="text-caption {stats.totalConversations.increased >= 0 ? 'text-emerald-500' : 'text-rose-500'}">
+							{stats.totalConversations.increased >= 0 ? '+' : ''} 이번 주 {Math.abs(stats.totalConversations.increased)}개 {stats.totalConversations.increased >= 0 ? '증가' : '감소'}
 						</span>
 					</div>
 					<div class="flex flex-row justify-between items-center w-full">
 						<span class="text-body-3 text-gray-950 dark:text-gray-50">{stats.totalConversations.label}</span>
-						<span class="text-title-1 text-gray-950 dark:text-gray-50 tracking-[-0.02em]">{stats.totalConversations.value}</span>
+						<span class="{$mobile ? 'text-title-4' : 'text-title-1'} text-gray-950 dark:text-gray-50 tracking-[-0.02em]">{stats.totalConversations.value}</span>
 					</div>
 				</div>
 
@@ -261,13 +399,13 @@
 								/>
 							</g>
 						</svg>
-						<span class="text-caption {stats.aiTutorQuestions.increased >= 0 ? 'text-[#34BE89]' : 'text-[#DB576D]'}">
-							{stats.aiTutorQuestions.increased >= 0 ? '+' : ''}{stats.aiTutorQuestions.increased}
+						<span class="text-caption {stats.aiTutorQuestions.increased >= 0 ? 'text-emerald-500' : 'text-rose-500'}">
+							{stats.aiTutorQuestions.increased >= 0 ? '+' : ''} 이번 주 {Math.abs(stats.aiTutorQuestions.increased)}개 {stats.aiTutorQuestions.increased >= 0 ? '증가' : '감소'}
 						</span>
 					</div>
 					<div class="flex flex-row justify-between items-center w-full">
 						<span class="text-body-3 text-gray-950 dark:text-gray-50">{stats.aiTutorQuestions.label}</span>
-						<span class="text-title-1 text-gray-950 dark:text-gray-50 tracking-[-0.02em]">{stats.aiTutorQuestions.value}</span>
+						<span class="{$mobile ? 'text-title-4' : 'text-title-1'} text-gray-950 dark:text-gray-50 tracking-[-0.02em]">{stats.aiTutorQuestions.value}</span>
 					</div>
 				</div>
 			</div>
@@ -275,9 +413,9 @@
 	</div>
 
 	<!-- 자주 묻는 개념 Section -->
-	<div class="flex flex-col justify-center items-start gap-5 w-full max-w-[920px] mt-10">
+	<div class="flex flex-col justify-center items-start gap-5 w-full max-w-[920px] {$mobile ? 'mt-8' : 'mt-10'}">
 		<!-- Section Title -->
-		<h2 class="text-title-1 text-gray-950 dark:text-gray-50 tracking-[-0.02em]">자주 묻는 개념</h2>
+		<h2 class="{$mobile ? 'text-title-4' : 'text-title-1'} text-gray-950 dark:text-gray-50 tracking-[-0.02em]">자주 묻는 개념</h2>
 
 		<!-- Concept Cards -->
 		{#if loading}
@@ -308,27 +446,27 @@
 				<!-- Header Row -->
 				<div class="flex flex-row justify-between items-center w-full">
 					<!-- Left: Title and Chapter -->
-					<div class="flex flex-col items-start gap-2">
+					<div class="flex flex-col items-start {$mobile ? 'gap-3' : 'gap-2'}">
 						<span class="text-body-3 text-gray-950 dark:text-gray-50">{concept.title}</span>
 						<div class="flex flex-row items-center gap-1">
 							<!-- Book Icon -->
-							<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-gray-500">
 								<mask id="mask_book_{concept.id}" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="20" height="20">
-									<rect width="20" height="20" fill="#D9D9D9"/>
+									<rect width="20" height="20" fill="currentColor"/>
 								</mask>
 								<g mask="url(#mask_book_{concept.id})">
-									<path d="M6.5 14C5.80556 14 5.18056 14.1319 4.625 14.3958C4.06944 14.6597 3.58333 15.0139 3.16667 15.4583V5.08333C3.58333 4.75 4.04861 4.47917 4.5625 4.27083C5.07639 4.0625 5.69444 3.95833 6.41667 3.95833C6.97222 3.95833 7.51042 4.02431 8.03125 4.15625C8.55208 4.28819 9.04167 4.47222 9.5 4.70833V14.3958C9.09722 14.1736 8.67361 14.0035 8.22917 13.8854C7.78472 13.7674 7.15278 13.7083 6.33333 13.7083L6.5 14ZM10.5 14.3958V4.70833C10.9583 4.47222 11.4479 4.28819 11.9688 4.15625C12.4896 4.02431 13.0278 3.95833 13.5833 3.95833C14.3056 3.95833 14.9236 4.0625 15.4375 4.27083C15.9514 4.47917 16.4167 4.75 16.8333 5.08333V15.4583C16.4167 15.0139 15.9306 14.6597 15.375 14.3958C14.8194 14.1319 14.1944 14 13.5 14L13.6667 13.7083C12.8472 13.7083 12.2153 13.7674 11.7708 13.8854C11.3264 14.0035 10.9028 14.1736 10.5 14.3958ZM10 16.7083C9.41667 16.2361 8.77778 15.8681 8.08333 15.6042C7.38889 15.3403 6.63889 15.2083 5.83333 15.2083C5.30556 15.2083 4.79167 15.2778 4.29167 15.4167C3.79167 15.5556 3.31944 15.75 2.875 16C2.59722 16.1528 2.32292 16.1424 2.05208 15.9688C1.78125 15.7951 1.64583 15.5556 1.64583 15.25V4.875C1.64583 4.70833 1.69097 4.55208 1.78125 4.40625C1.87153 4.26042 1.99306 4.15278 2.14583 4.08333C2.70139 3.77778 3.29167 3.54167 3.91667 3.375C4.54167 3.20833 5.18056 3.125 5.83333 3.125C6.61111 3.125 7.36806 3.22917 8.10417 3.4375C8.84028 3.64583 9.5 3.95833 10.0833 4.375C10.6667 3.95833 11.3194 3.64583 12.0417 3.4375C12.7639 3.22917 13.5139 3.125 14.2917 3.125C14.9444 3.125 15.5833 3.20833 16.2083 3.375C16.8333 3.54167 17.4236 3.77778 17.9792 4.08333C18.1319 4.15278 18.2535 4.26042 18.3438 4.40625C18.434 4.55208 18.4792 4.70833 18.4792 4.875V15.25C18.4792 15.5556 18.3403 15.7951 18.0625 15.9688C17.7847 16.1424 17.5139 16.1528 17.25 16C16.8056 15.75 16.3333 15.5556 15.8333 15.4167C15.3333 15.2778 14.8194 15.2083 14.2917 15.2083C13.4861 15.2083 12.7361 15.3403 12.0417 15.6042C11.3472 15.8681 10.7083 16.2361 10.125 16.7083H10Z" fill="#8D96AD"/>
+									<path d="M6.5 14C5.80556 14 5.18056 14.1319 4.625 14.3958C4.06944 14.6597 3.58333 15.0139 3.16667 15.4583V5.08333C3.58333 4.75 4.04861 4.47917 4.5625 4.27083C5.07639 4.0625 5.69444 3.95833 6.41667 3.95833C6.97222 3.95833 7.51042 4.02431 8.03125 4.15625C8.55208 4.28819 9.04167 4.47222 9.5 4.70833V14.3958C9.09722 14.1736 8.67361 14.0035 8.22917 13.8854C7.78472 13.7674 7.15278 13.7083 6.33333 13.7083L6.5 14ZM10.5 14.3958V4.70833C10.9583 4.47222 11.4479 4.28819 11.9688 4.15625C12.4896 4.02431 13.0278 3.95833 13.5833 3.95833C14.3056 3.95833 14.9236 4.0625 15.4375 4.27083C15.9514 4.47917 16.4167 4.75 16.8333 5.08333V15.4583C16.4167 15.0139 15.9306 14.6597 15.375 14.3958C14.8194 14.1319 14.1944 14 13.5 14L13.6667 13.7083C12.8472 13.7083 12.2153 13.7674 11.7708 13.8854C11.3264 14.0035 10.9028 14.1736 10.5 14.3958ZM10 16.7083C9.41667 16.2361 8.77778 15.8681 8.08333 15.6042C7.38889 15.3403 6.63889 15.2083 5.83333 15.2083C5.30556 15.2083 4.79167 15.2778 4.29167 15.4167C3.79167 15.5556 3.31944 15.75 2.875 16C2.59722 16.1528 2.32292 16.1424 2.05208 15.9688C1.78125 15.7951 1.64583 15.5556 1.64583 15.25V4.875C1.64583 4.70833 1.69097 4.55208 1.78125 4.40625C1.87153 4.26042 1.99306 4.15278 2.14583 4.08333C2.70139 3.77778 3.29167 3.54167 3.91667 3.375C4.54167 3.20833 5.18056 3.125 5.83333 3.125C6.61111 3.125 7.36806 3.22917 8.10417 3.4375C8.84028 3.64583 9.5 3.95833 10.0833 4.375C10.6667 3.95833 11.3194 3.64583 12.0417 3.4375C12.7639 3.22917 13.5139 3.125 14.2917 3.125C14.9444 3.125 15.5833 3.20833 16.2083 3.375C16.8333 3.54167 17.4236 3.77778 17.9792 4.08333C18.1319 4.15278 18.2535 4.26042 18.3438 4.40625C18.434 4.55208 18.4792 4.70833 18.4792 4.875V15.25C18.4792 15.5556 18.3403 15.7951 18.0625 15.9688C17.7847 16.1424 17.5139 16.1528 17.25 16C16.8056 15.75 16.3333 15.5556 15.8333 15.4167C15.3333 15.2778 14.8194 15.2083 14.2917 15.2083C13.4861 15.2083 12.7361 15.3403 12.0417 15.6042C11.3472 15.8681 10.7083 16.2361 10.125 16.7083H10Z" fill="currentColor"/>
 								</g>
 							</svg>
-							<span class="text-caption text-[#8D96AD]">{concept.chapter}</span>
+							<span class="text-caption text-gray-500">{concept.chapter}</span>
 						</div>
 					</div>
 
 					<!-- Right: Question Count and Chevron -->
 					<div class="flex flex-row items-center gap-4">
 						<div class="flex flex-row items-center gap-1">
-							<span class="text-body-3 text-[#596172]">질문</span>
-							<span class="text-title-1 text-gray-950 dark:text-gray-50 tracking-[-0.02em]">{concept.questionCount}</span>
+							<span class="text-body-3 text-gray-700">질문</span>
+							<span class="{$mobile ? 'text-title-4' : 'text-title-1'} text-gray-950 dark:text-gray-50 tracking-[-0.02em]">{concept.questionCount}</span>
 						</div>
 						<!-- Chevron Icon -->
 						<svg
@@ -346,16 +484,16 @@
 
 				<!-- Expandable Content -->
 				{#if expandedCards[concept.id]}
-					<div transition:slide={{ duration: 200 }} class="flex flex-col gap-6 w-full">
+					<div transition:slide={{ duration: 200 }} class="flex flex-col {$mobile ? 'gap-3' : 'gap-6'} w-full">
 						<!-- Divider -->
-						<div class="w-full h-0 border-t border-[rgba(206,212,229,0.2)]"></div>
+						<div class="w-full h-0 border-t border-gray-200/20 dark:border-gray-700/30"></div>
 
 						<!-- Questions List -->
 						<div class="flex flex-col items-start gap-2 w-full">
 							{#each concept.questions as question}
-								<div class="flex flex-row justify-between items-center w-full">
-									<span class="text-body-4 text-gray-950 dark:text-gray-50 text-left">{question.text}</span>
-									<span class="text-body-3 text-[#596172] shrink-0">{question.author}</span>
+								<div class="flex flex-row justify-between items-center w-full gap-4">
+									<span class="text-body-4 text-gray-950 dark:text-gray-50 text-left flex-1">{question.text}</span>
+									<span class="text-body-4 text-gray-700 shrink-0">{question.author}</span>
 								</div>
 							{/each}
 						</div>

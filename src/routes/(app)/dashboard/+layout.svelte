@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { WEBUI_NAME, user } from '$lib/stores';
+	import { WEBUI_NAME, user, mobile } from '$lib/stores';
 	import { isInstructor } from '$lib/stores';
 	import DashboardTopNav from '$lib/components/dashboard/DashboardTopNav.svelte';
 
@@ -25,7 +25,9 @@
 
 {#if loaded}
 	<div class="flex flex-col h-screen max-h-[100dvh] w-full">
-		<DashboardTopNav />
+		{#if !$mobile}
+			<DashboardTopNav />
+		{/if}
 
 		<div class="flex-1 max-h-full overflow-y-auto">
 			<slot />

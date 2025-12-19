@@ -354,7 +354,7 @@
 							>
 								<Badge
 									type={user.role === 'admin' ? 'info' : user.role === 'user' ? 'success' : 'muted'}
-									content={$i18n.t(user.role)}
+									content={user.role === "professor" ? '교수' : $i18n.t(user.role)}
 								/>
 							</button>
 						</td>

@@ -145,6 +145,7 @@
 											>
 												<option value="admin">{$i18n.t('Admin')}</option>
 												<option value="user">{$i18n.t('User')}</option>
+												<option value="professor">{$i18n.t('교수')}</option>
 												<option value="pending">{$i18n.t('Pending')}</option>
 											</select>
 										</div>
