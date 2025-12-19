@@ -220,8 +220,9 @@
 	};
 
 	onMount(async () => {
-		await tools.set(await getTools(localStorage.token));
-		await functions.set(await getFunctions(localStorage.token));
+		await tools.set(await getTools(localStorage.token, true));
+		await functions.set(await getFunctions(localStorage.token, true));
+		await knowledgeCollections.set([...(await getKnowledgeBases(localStorage.token, true))]);
 
 		// Scroll to top 'workspace-container' element
 		const workspaceContainer = document.getElementById('workspace-container');

@@ -31,10 +31,15 @@ export const createNewFunction = async (token: string, func: object) => {
 	return res;
 };
 
-export const getFunctions = async (token: string = '') => {
+export const getFunctions = async (token: string = '', refresh: boolean = false) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/functions/`, {
+	const searchParams = new URLSearchParams();
+	if (refresh) {
+		searchParams.append('refresh', 'true');
+	}
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/functions/?${searchParams.toString()}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',

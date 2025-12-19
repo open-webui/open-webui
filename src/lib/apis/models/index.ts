@@ -118,10 +118,15 @@ export const importModels = async (token: string, models: object[]) => {
 	return res;
 };
 
-export const getBaseModels = async (token: string = '') => {
+export const getBaseModels = async (token: string = '', refresh: boolean = false) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/models/base`, {
+	const searchParams = new URLSearchParams();
+	if (refresh) {
+		searchParams.append('refresh', 'true');
+	}
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/base?${searchParams.toString()}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',

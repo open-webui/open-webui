@@ -23,7 +23,7 @@
 		if ($user?.role === 'admin') {
 			await Promise.all([
 				(async () => {
-					ollamaConfig = await getOllamaConfig(localStorage.token);
+					ollamaConfig = await getOllamaConfig(localStorage.token, true);
 				})()
 			]);
 

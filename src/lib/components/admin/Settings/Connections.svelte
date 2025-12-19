@@ -143,13 +143,13 @@
 
 			await Promise.all([
 				(async () => {
-					ollamaConfig = await getOllamaConfig(localStorage.token);
+					ollamaConfig = await getOllamaConfig(localStorage.token, true);
 				})(),
 				(async () => {
-					openaiConfig = await getOpenAIConfig(localStorage.token);
+					openaiConfig = await getOpenAIConfig(localStorage.token, true);
 				})(),
 				(async () => {
-					connectionsConfig = await getConnectionsConfig(localStorage.token);
+					connectionsConfig = await getConnectionsConfig(localStorage.token, true);
 				})()
 			]);
 
@@ -177,7 +177,7 @@
 					if (!(OPENAI_API_CONFIGS[idx]?.enable ?? true)) {
 						return;
 					}
-					const res = await getOpenAIModels(localStorage.token, idx);
+					const res = await getOpenAIModels(localStorage.token, idx, true);
 					if (res.pipelines) {
 						pipelineUrls[url] = true;
 					}

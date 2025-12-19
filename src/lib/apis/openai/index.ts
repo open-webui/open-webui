@@ -1,9 +1,14 @@
 import { OPENAI_API_BASE_URL, WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
-export const getOpenAIConfig = async (token: string = '') => {
+export const getOpenAIConfig = async (token: string = '', refresh: boolean = false) => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/config`, {
+	const searchParams = new URLSearchParams();
+	if (refresh) {
+		searchParams.append('refresh', 'true');
+	}
+
+	const res = await fetch(`${OPENAI_API_BASE_URL}/config?${searchParams.toString()}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -235,11 +240,16 @@ export const getOpenAIModelsDirect = async (url: string, key: string) => {
 	return res;
 };
 
-export const getOpenAIModels = async (token: string, urlIdx?: number) => {
+export const getOpenAIModels = async (token: string, urlIdx?: number, refresh: boolean = false) => {
 	let error = null;
 
+	const searchParams = new URLSearchParams();
+	if (refresh) {
+		searchParams.append('refresh', 'true');
+	}
+
 	const res = await fetch(
-		`${OPENAI_API_BASE_URL}/models${typeof urlIdx === 'number' ? `/${urlIdx}` : ''}`,
+		`${OPENAI_API_BASE_URL}/models${typeof urlIdx === 'number' ? `/${urlIdx}` : ''}?${searchParams.toString()}`,
 		{
 			method: 'GET',
 			headers: {

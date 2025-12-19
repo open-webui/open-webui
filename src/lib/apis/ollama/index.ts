@@ -30,10 +30,15 @@ export const verifyOllamaConnection = async (token: string = '', connection: dic
 	return res;
 };
 
-export const getOllamaConfig = async (token: string = '') => {
+export const getOllamaConfig = async (token: string = '', refresh: boolean = false) => {
 	let error = null;
 
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/config`, {
+	const searchParams = new URLSearchParams();
+	if (refresh) {
+		searchParams.append('refresh', 'true');
+	}
+
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/config?${searchParams.toString()}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',

@@ -58,10 +58,15 @@ export const exportConfig = async (token: string) => {
 	return res;
 };
 
-export const getConnectionsConfig = async (token: string) => {
+export const getConnectionsConfig = async (token: string, refresh: boolean = false) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/connections`, {
+	const searchParams = new URLSearchParams();
+	if (refresh) {
+		searchParams.append('refresh', 'true');
+	}
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/connections?${searchParams.toString()}`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -305,10 +310,15 @@ export const setCodeExecutionConfig = async (token: string, config: object) => {
 	return res;
 };
 
-export const getModelsConfig = async (token: string) => {
+export const getModelsConfig = async (token: string, refresh: boolean = false) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/models`, {
+	const searchParams = new URLSearchParams();
+	if (refresh) {
+		searchParams.append('refresh', 'true');
+	}
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/models?${searchParams.toString()}`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
