@@ -275,6 +275,9 @@ importers:
       y-prosemirror:
         specifier: ^1.3.7
         version: 1.3.7(prosemirror-model@1.25.4)(prosemirror-state@1.4.4)(prosemirror-view@1.41.4)(y-protocols@1.0.7(yjs@13.6.28))(yjs@13.6.28)
+      y-protocols:
+        specifier: ^1.0.7
+        version: 1.0.7(yjs@13.6.28)
       yaml:
         specifier: ^2.7.1
         version: 2.8.2
