@@ -45,7 +45,7 @@ COPY package.json pnpm-lock.yaml ./
 # 3. Cài đặt thư viện bằng pnpm
 RUN pnpm install --frozen-lockfile
 
-RUN pnpm ci --force
+# RUN pnpm ci --force
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
