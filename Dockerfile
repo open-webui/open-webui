@@ -32,15 +32,24 @@ ARG BUILD_HASH
 
 WORKDIR /app
 
+# 1. Cài đặt pnpm
+RUN npm install -g pnpm
+
 # to store git revision in build
 RUN apk add --no-cache git
 
-COPY package.json package-lock.json ./
-RUN npm ci --force
+#COPY package.json package-lock.json ./
+# 2. Copy file định nghĩa thư viện (thay package-lock bằng pnpm-lock)
+COPY package.json pnpm-lock.yaml ./
+
+# 3. Cài đặt thư viện bằng pnpm
+RUN pnpm install --frozen-lockfile
+
+RUN pnpm ci --force
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
-RUN npm run build
+RUN pnpm run build
 
 ######## WebUI backend ########
 FROM python:3.11.14-slim-bookworm AS base
