@@ -20,9 +20,15 @@ importers:
       '@codemirror/language-data':
         specifier: ^6.5.1
         version: 6.5.2
+      '@codemirror/state':
+        specifier: ^6.5.2
+        version: 6.5.2
       '@codemirror/theme-one-dark':
         specifier: ^6.1.2
         version: 6.1.3
+      '@codemirror/view':
+        specifier: ^6.39.4
+        version: 6.39.4
       '@floating-ui/dom':
         specifier: ^1.7.2
         version: 1.7.4
