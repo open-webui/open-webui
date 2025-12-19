@@ -11,15 +11,30 @@ importers:
       '@azure/msal-browser':
         specifier: ^4.5.0
         version: 4.27.0
+      '@codemirror/autocomplete':
+        specifier: ^6.20.0
+        version: 6.20.0
+      '@codemirror/commands':
+        specifier: ^6.10.1
+        version: 6.10.1
       '@codemirror/lang-javascript':
         specifier: ^6.2.2
         version: 6.2.4
       '@codemirror/lang-python':
         specifier: ^6.1.6
         version: 6.2.1
+      '@codemirror/language':
+        specifier: ^6.11.3
+        version: 6.11.3
       '@codemirror/language-data':
         specifier: ^6.5.1
         version: 6.5.2
+      '@codemirror/lint':
+        specifier: ^6.9.2
+        version: 6.9.2
+      '@codemirror/search':
+        specifier: ^6.5.11
+        version: 6.5.11
       '@codemirror/state':
         specifier: ^6.5.2
         version: 6.5.2
