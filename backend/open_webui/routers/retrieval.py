@@ -1,14 +1,12 @@
 import json
 import logging
-import mimetypes
 import os
 import shutil
 import time
 
 import uuid
 from datetime import datetime
-from pathlib import Path
-from typing import Any, Callable, Iterator, List, Optional, Sequence, Union
+from typing import Any, Callable, List, Optional
 from uuid import UUID
 
 from fastapi import (
@@ -27,7 +25,6 @@ from open_webui.utils.job_queue import (
     enqueue_file_processing_job,
     is_job_queue_available,
 )
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 import tiktoken
@@ -41,9 +38,7 @@ from open_webui.models.knowledge import Knowledges
 from open_webui.models.users import Users
 from open_webui.storage.provider import Storage
 from open_webui.env import REDIS_URL
-from open_webui.socket.utils import RedisLock, get_redis_pool
-import redis
-from redis.exceptions import ConnectionError, TimeoutError, RedisError
+from open_webui.socket.utils import RedisLock
 
 
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
@@ -185,7 +180,7 @@ def get_rf(
                     device=DEVICE_TYPE,
                     trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
                 )
-            except:
+            except Exception:
                 log.error("CrossEncoder error")
                 raise Exception(ERROR_MESSAGES.DEFAULT("CrossEncoder error"))
     return rf
@@ -646,8 +641,6 @@ async def update_rag_config(
     
     if form_data.RAG_FULL_CONTEXT is not None:
         request.app.state.config.RAG_FULL_CONTEXT.set(user.email,form_data.RAG_FULL_CONTEXT)
-    else:
-        request.app.state.config.RAG_FULL_CONTEXT.get(user.email)
     
 
     request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL = (
@@ -882,7 +875,9 @@ async def update_query_settings(
     request: Request, form_data: QuerySettingsForm, user=Depends(get_admin_user)
 ):
     request.app.state.config.RAG_TEMPLATE.set(user.email,form_data.template)
-    request.app.state.config.TOP_K.set(user.email, form_data.k) if form_data.k else 4
+    # Only update TOP_K if explicitly provided - otherwise keep existing value (defaults to 10)
+    if form_data.k is not None:
+        request.app.state.config.TOP_K.set(user.email, form_data.k)
     request.app.state.config.RELEVANCE_THRESHOLD = form_data.r if form_data.r else 1
 
     if form_data.hybrid is not None:
@@ -1681,18 +1676,18 @@ def save_docs_to_multiple_collections(
         print(f"  [STEP 7] Inserting embeddings into {len(collections)} collection(s): {collections}", flush=True)
         log.info(f"  [STEP 7] Inserting embeddings into {len(collections)} collection(s): {collections}")
         
-        for idx, collection_name in enumerate(collections):
-            print(f"  [STEP 7.{idx+1}] Processing collection: {collection_name}", flush=True)
-            log.info(f"  [STEP 7.{idx+1}] Processing collection: {collection_name}")
+        for col_idx, collection_name in enumerate(collections):
+            print(f"  [STEP 7.{col_idx+1}] Processing collection: {collection_name}", flush=True)
+            log.info(f"  [STEP 7.{col_idx+1}] Processing collection: {collection_name}")
             
             items = [
                 {
                     "id": str(uuid.uuid4()),
                     "text": text,
-                    "vector": embeddings[idx],
-                    "metadata": metadatas[idx],
+                    "vector": embeddings[text_idx],
+                    "metadata": metadatas[text_idx],
                 }
-                for idx, text in enumerate(texts)
+                for text_idx, text in enumerate(texts)
             ]
             
             print(f"    Preparing {len(items)} items for insertion", flush=True)
@@ -1703,12 +1698,12 @@ def save_docs_to_multiple_collections(
                     collection_name=collection_name,
                     items=items,
                 )
-                print(f"  [STEP 7.{idx+1}] ✅ Successfully inserted into collection: {collection_name}", flush=True)
-                log.info(f"  [STEP 7.{idx+1}] ✅ Successfully inserted into collection: {collection_name}")
+                print(f"  [STEP 7.{col_idx+1}] ✅ Successfully inserted into collection: {collection_name}", flush=True)
+                log.info(f"  [STEP 7.{col_idx+1}] ✅ Successfully inserted into collection: {collection_name}")
             except Exception as insert_error:
                 error_msg = f"Failed to insert into collection {collection_name}: {insert_error}"
-                print(f"  [STEP 7.{idx+1}] ❌ {error_msg}", flush=True)
-                log.error(f"  [STEP 7.{idx+1}] ❌ {error_msg}", exc_info=True)
+                print(f"  [STEP 7.{col_idx+1}] ❌ {error_msg}", flush=True)
+                log.error(f"  [STEP 7.{col_idx+1}] ❌ {error_msg}", exc_info=True)
                 # BUG FIX: Don't continue if one collection fails - raise exception
                 raise ValueError(error_msg)
 
@@ -1828,8 +1823,8 @@ def _process_file_sync(
             # Update the content in the file
             try:
                 VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
-            except:
-                # Audio file upload pipeline
+            except Exception:
+                # Audio file upload pipeline - ignore deletion errors
                 pass
 
             docs = [
@@ -2231,7 +2226,7 @@ def process_file(
                 timeout_secs=lock_timeout,
             )
             # Try to acquire lock - distinguish between "lock held" vs "Redis unavailable" (BUG #2 fix)
-            lock_acquired = processing_lock.aquire_lock()
+            lock_acquired = processing_lock.acquire_lock()
             
             if not lock_acquired:
                 # Check if Redis is actually available by testing connection
@@ -2950,7 +2945,7 @@ def search_web(request: Request, engine: str, query: str, email: str) -> list[Se
             request.app.state.config.RAG_WEB_SEARCH_WEBSITE_BLOCKLIST.get(email),
         )
     elif engine == "tavily":
-        if request.app.state.config.TAVILY_API_KEY:
+        if request.app.state.config.TAVILY_API_KEY.get(email):
             return search_tavily(
                 request.app.state.config.TAVILY_API_KEY.get(email),
                 query,

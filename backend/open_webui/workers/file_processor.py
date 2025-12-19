@@ -9,7 +9,6 @@ import logging
 import os
 import sys
 import time
-import traceback
 from typing import Optional
 
 # Ensure logging is configured for worker process
@@ -28,9 +27,8 @@ if not logging.root.handlers:
 
 from langchain_core.documents import Document
 
-from open_webui.models.files import FileModel, Files
+from open_webui.models.files import Files
 from open_webui.models.users import Users
-from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.retrieval.loaders.main import Loader
@@ -533,7 +531,7 @@ def process_file_job(
                         # Update the content in the file
                         try:
                             VECTOR_DB_CLIENT.delete_collection(collection_name=vector_collection_name)
-                        except:
+                        except Exception:
                             # Audio file upload pipeline - ignore deletion errors
                             pass
 
@@ -560,19 +558,171 @@ def process_file_job(
                         )
 
                         if result is not None and result.ids and len(result.ids) > 0 and len(result.ids[0]) > 0:
-                            docs = [
-                                Document(
-                                    page_content=result.documents[0][idx],
-                                    metadata=result.metadatas[0][idx],
-                                )
-                                for idx, id in enumerate(result.ids[0])
-                            ]
+                            # File already processed - extract from vector DB
+                            try:
+                                # Safely access result structure
+                                if (hasattr(result, 'documents') and result.documents and 
+                                    hasattr(result, 'metadatas') and result.metadatas and
+                                    len(result.documents) > 0 and len(result.metadatas) > 0 and
+                                    len(result.documents[0]) == len(result.metadatas[0]) == len(result.ids[0])):
+                                    docs = [
+                                        Document(
+                                            page_content=result.documents[0][idx],
+                                            metadata=result.metadatas[0][idx],
+                                        )
+                                        for idx, id in enumerate(result.ids[0])
+                                    ]
+                                    # CRITICAL: Set text_content from extracted documents
+                                    text_content = " ".join([doc.page_content for doc in docs])
+                                else:
+                                    # Result structure is invalid - fall through to extraction
+                                    log.warning(f"Invalid result structure for file_id={file.id}, falling back to extraction")
+                                    docs = None
+                                    text_content = None
+                            except (IndexError, AttributeError, TypeError) as result_error:
+                                log.warning(f"Error accessing result structure for file_id={file.id}: {result_error}, falling back to extraction", exc_info=True)
+                                docs = None
+                                text_content = None
+                            
+                            # If extraction from vector DB failed, fall through to file extraction
+                            if docs is None:
+                                file_content = file.data.get("content", "") if file.data else ""
+                                
+                                # If file.data has no content, extract from file system
+                                if not file_content or len(file_content.strip()) == 0:
+                                    # Extract content from file system (same logic as the else branch)
+                                    file_path = file.path
+                                    if file_path:
+                                        try:
+                                            file_path = Storage.get_file(file_path)
+                                            if file_path and os.path.exists(file_path):
+                                                # Extract using Loader
+                                                # Safely get config values with defaults
+                                                # Use hasattr() first because AppConfig.__getattr__ raises KeyError for missing keys
+                                                extraction_engine_val = (getattr(request.app.state.config, 'CONTENT_EXTRACTION_ENGINE', None) if hasattr(request.app.state.config, 'CONTENT_EXTRACTION_ENGINE') else None) or os.environ.get('CONTENT_EXTRACTION_ENGINE', '') or "default (PyPDF)"
+                                                
+                                                # Only access engine-specific config if that engine is actually being used
+                                                tika_url_val = None
+                                                doc_intel_endpoint_val = None
+                                                doc_intel_key_val = None
+                                                
+                                                if extraction_engine_val and extraction_engine_val.lower() == 'tika':
+                                                    tika_url_val = (getattr(request.app.state.config, 'TIKA_SERVER_URL', None) if hasattr(request.app.state.config, 'TIKA_SERVER_URL') else None) or os.environ.get('TIKA_SERVER_URL', '')
+                                                elif extraction_engine_val and extraction_engine_val.lower() == 'document_intelligence':
+                                                    doc_intel_endpoint_val = (getattr(request.app.state.config, 'DOCUMENT_INTELLIGENCE_ENDPOINT', None) if hasattr(request.app.state.config, 'DOCUMENT_INTELLIGENCE_ENDPOINT') else None) or os.environ.get('DOCUMENT_INTELLIGENCE_ENDPOINT', '')
+                                                    doc_intel_key_val = (getattr(request.app.state.config, 'DOCUMENT_INTELLIGENCE_KEY', None) if hasattr(request.app.state.config, 'DOCUMENT_INTELLIGENCE_KEY') else None) or os.environ.get('DOCUMENT_INTELLIGENCE_KEY', '')
+                                                
+                                                pdf_extract_images_val = getattr(request.app.state.config, 'PDF_EXTRACT_IMAGES', False) if hasattr(request.app.state.config, 'PDF_EXTRACT_IMAGES') else False
+                                                
+                                                loader = Loader(
+                                                    engine=extraction_engine_val,
+                                                    TIKA_SERVER_URL=tika_url_val if tika_url_val else None,
+                                                    PDF_EXTRACT_IMAGES=pdf_extract_images_val,
+                                                    DOCUMENT_INTELLIGENCE_ENDPOINT=doc_intel_endpoint_val if doc_intel_endpoint_val else None,
+                                                    DOCUMENT_INTELLIGENCE_KEY=doc_intel_key_val if doc_intel_key_val else None,
+                                                )
+                                                try:
+                                                    docs = loader.load(
+                                                        file.filename, file.meta.get("content_type"), file_path
+                                                    )
+                                                except Exception as load_error:
+                                                    log.error(f"loader.load() failed in knowledge collection path: {load_error}", exc_info=True)
+                                                    docs = []
+                                                
+                                                # Log extraction results
+                                                total_chars = sum(len(doc.page_content) for doc in docs) if docs else 0
+                                                non_empty_docs = [doc for doc in docs if doc.page_content.strip()] if docs else []
+                                                
+                                                # Add event for file extraction
+                                                add_span_event("job.file.extracted", {
+                                                    "content_length": total_chars,
+                                                    "document.count": len(docs),
+                                                })
+                                                
+                                                # Create documents with metadata
+                                                docs = [
+                                                    Document(
+                                                        page_content=doc.page_content,
+                                                        metadata={
+                                                            **doc.metadata,
+                                                            "name": file.filename,
+                                                            "created_by": file.user_id,
+                                                            "file_id": file.id,
+                                                            "source": file.filename,
+                                                        },
+                                                    )
+                                                    for doc in docs
+                                                ]
+                                                text_content = " ".join([doc.page_content for doc in docs])
+                                            else:
+                                                log.warning(f"File path is None or does not exist, using empty content")
+                                                docs = [
+                                                    Document(
+                                                        page_content="",
+                                                        metadata={
+                                                            **file.meta,
+                                                            "name": file.filename,
+                                                            "created_by": file.user_id,
+                                                            "file_id": file.id,
+                                                            "source": file.filename,
+                                                        },
+                                                    )
+                                                ]
+                                                text_content = ""
+                                        except Exception as storage_error:
+                                            print(f"    ❌ Failed to get file from storage: {storage_error}", flush=True)
+                                            log.error(f"    ❌ Failed to get file from storage: {storage_error}", exc_info=True)
+                                            docs = [
+                                                Document(
+                                                    page_content="",
+                                                    metadata={
+                                                        **file.meta,
+                                                        "name": file.filename,
+                                                        "created_by": file.user_id,
+                                                        "file_id": file.id,
+                                                        "source": file.filename,
+                                                    },
+                                                )
+                                            ]
+                                            text_content = ""
+                                    else:
+                                        print(f"    file.path is None, using empty content", flush=True)
+                                        log.warning(f"    file.path is None, using empty content")
+                                        docs = [
+                                            Document(
+                                                page_content="",
+                                                metadata={
+                                                    **file.meta,
+                                                    "name": file.filename,
+                                                    "created_by": file.user_id,
+                                                    "file_id": file.id,
+                                                    "source": file.filename,
+                                                },
+                                            )
+                                        ]
+                                        text_content = ""
+                                else:
+                                    # Use content from file.data
+                                    docs = [
+                                        Document(
+                                            page_content=file_content,
+                                            metadata={
+                                                **file.meta,
+                                                "name": file.filename,
+                                                "created_by": file.user_id,
+                                                "file_id": file.id,
+                                                "source": file.filename,
+                                            },
+                                        )
+                                    ]
+                                    text_content = file_content
                         else:
-                            file_content = file.data.get("content", "")
+                            # File not found in vector DB - extract from file system
+                            file_content = file.data.get("content", "") if file.data else ""
                             
                             # If file.data has no content, extract from file system
                             if not file_content or len(file_content.strip()) == 0:
-                                # Extract content from file system (same logic as the else branch)
+                                # Extract content from file system
                                 file_path = file.path
                                 if file_path:
                                     try:
@@ -603,13 +753,17 @@ def process_file_job(
                                                 DOCUMENT_INTELLIGENCE_ENDPOINT=doc_intel_endpoint_val if doc_intel_endpoint_val else None,
                                                 DOCUMENT_INTELLIGENCE_KEY=doc_intel_key_val if doc_intel_key_val else None,
                                             )
-                                            docs = loader.load(
-                                                file.filename, file.meta.get("content_type"), file_path
-                                            )
+                                            try:
+                                                docs = loader.load(
+                                                    file.filename, file.meta.get("content_type"), file_path
+                                                )
+                                            except Exception as load_error:
+                                                log.error(f"loader.load() failed in knowledge collection path: {load_error}", exc_info=True)
+                                                docs = []
                                             
                                             # Log extraction results
-                                            total_chars = sum(len(doc.page_content) for doc in docs)
-                                            non_empty_docs = [doc for doc in docs if doc.page_content.strip()]
+                                            total_chars = sum(len(doc.page_content) for doc in docs) if docs else 0
+                                            non_empty_docs = [doc for doc in docs if doc.page_content.strip()] if docs else []
                                             
                                             # Add event for file extraction
                                             add_span_event("job.file.extracted", {
@@ -679,9 +833,25 @@ def process_file_job(
                                         )
                                     ]
                                     text_content = ""
+                            else:
+                                # Use content from file.data
+                                docs = [
+                                    Document(
+                                        page_content=file_content,
+                                        metadata={
+                                            **file.meta,
+                                            "name": file.filename,
+                                            "created_by": file.user_id,
+                                            "file_id": file.id,
+                                            "source": file.filename,
+                                        },
+                                    )
+                                ]
+                                text_content = file_content
                         sys.stdout.flush()
                     else:
                         # Use content from file.data
+                        file_content = file.data.get("content", "") if file.data else ""
                         print(f"  [STEP 5.2.2] Using content from file.data ({len(file_content)} chars)", flush=True)
                         log.info(f"  [STEP 5.2.2] Using content from file.data ({len(file_content)} chars)")
                         docs = [
@@ -698,129 +868,13 @@ def process_file_job(
                         ]
                         text_content = file_content
 
-                    if 'text_content' not in locals():
-                        text_content = file.data.get("content", "")
-                    # Set collection_name for vector DB storage
+                    # Ensure text_content is defined (defensive check)
+                    if 'text_content' not in locals() or text_content is None:
+                        text_content = file.data.get("content", "") if file.data else ""
+                    
+                    # Set collection_name for vector DB storage (ensure it's always set)
                     if not collection_name:
                         collection_name = vector_collection_name
-                    else:
-                        # Direct upload via chat (no collection_name, no content) - extract from file system
-                        # Set collection_name for vector DB storage
-                        collection_name = vector_collection_name
-                        # Process the file and save the content
-                        file_path = file.path
-                        if file_path:
-                            try:
-                                file_path = Storage.get_file(file_path)
-                            except Exception as storage_error:
-                                log.error(f"Failed to get file from storage: {storage_error}", exc_info=True)
-                                file_path = None
-                            
-                            if file_path and os.path.exists(file_path):
-                                # Safely get config values with defaults
-                                # Use hasattr() first because AppConfig.__getattr__ raises KeyError for missing keys
-                                extraction_engine_val = (getattr(request.app.state.config, 'CONTENT_EXTRACTION_ENGINE', None) if hasattr(request.app.state.config, 'CONTENT_EXTRACTION_ENGINE') else None) or os.environ.get('CONTENT_EXTRACTION_ENGINE', '') or "default (PyPDF)"
-                                
-                                # Only access engine-specific config if that engine is actually being used
-                                tika_url_val = None
-                                doc_intel_endpoint_val = None
-                                doc_intel_key_val = None
-                                
-                                if extraction_engine_val and extraction_engine_val.lower() == 'tika':
-                                    tika_url_val = (getattr(request.app.state.config, 'TIKA_SERVER_URL', None) if hasattr(request.app.state.config, 'TIKA_SERVER_URL') else None) or os.environ.get('TIKA_SERVER_URL', '')
-                                elif extraction_engine_val and extraction_engine_val.lower() == 'document_intelligence':
-                                    doc_intel_endpoint_val = (getattr(request.app.state.config, 'DOCUMENT_INTELLIGENCE_ENDPOINT', None) if hasattr(request.app.state.config, 'DOCUMENT_INTELLIGENCE_ENDPOINT') else None) or os.environ.get('DOCUMENT_INTELLIGENCE_ENDPOINT', '')
-                                    doc_intel_key_val = (getattr(request.app.state.config, 'DOCUMENT_INTELLIGENCE_KEY', None) if hasattr(request.app.state.config, 'DOCUMENT_INTELLIGENCE_KEY') else None) or os.environ.get('DOCUMENT_INTELLIGENCE_KEY', '')
-                                
-                                pdf_extract_images_val = getattr(request.app.state.config, 'PDF_EXTRACT_IMAGES', False) if hasattr(request.app.state.config, 'PDF_EXTRACT_IMAGES') else False
-                                
-                                loader = Loader(
-                                    engine=extraction_engine_val,
-                                    TIKA_SERVER_URL=tika_url_val if tika_url_val else None,
-                                    PDF_EXTRACT_IMAGES=pdf_extract_images_val,
-                                    DOCUMENT_INTELLIGENCE_ENDPOINT=doc_intel_endpoint_val if doc_intel_endpoint_val else None,
-                                    DOCUMENT_INTELLIGENCE_KEY=doc_intel_key_val if doc_intel_key_val else None,
-                                )
-                                try:
-                                    docs = loader.load(
-                                        file.filename, file.meta.get("content_type"), file_path
-                                    )
-                                except Exception as load_error:
-                                    log.error(f"loader.load() failed: {load_error}", exc_info=True)
-                                    docs = []
-                                
-                                # Log extraction results for debugging
-                                total_chars = sum(len(doc.page_content) for doc in docs) if docs else 0
-                                non_empty_docs = [doc for doc in docs if doc.page_content.strip()] if docs else []
-                                if len(docs) == 0:
-                                    log.warning(f"No documents returned from loader.load() for file_id={file.id}")
-                                log.info(
-                                    f"[Content Extraction Result] file_id={file.id} | "
-                                    f"pages_extracted={len(docs)} | non_empty_pages={len(non_empty_docs)} | "
-                                    f"total_chars={total_chars}"
-                                )
-                                
-                                # BUG #15 fix: Fail early if extraction returned empty content
-                                if total_chars == 0:
-                                    error_msg = (
-                                        f"[Content Extraction ERROR] file_id={file.id} | filename={file.filename} | "
-                                        f"No text content extracted! Possible reasons:\n"
-                                        f"  - Scanned image PDF (no OCR text layer)\n"
-                                        f"  - Protected/encrypted file\n"
-                                        f"  - Unsupported encoding\n"
-                                        f"  Suggestions:\n"
-                                        f"  - For scanned PDFs: Enable Document Intelligence (Azure OCR) in Settings > Documents\n"
-                                        f"  - For better extraction: Configure Tika server\n"
-                                        f"  - Current engine: {extraction_engine_val}"
-                                    )
-                                    log.error(error_msg)
-                                    # Update file status to error
-                                    Files.update_file_metadata_by_id(
-                                        file.id,
-                                        {
-                                            "processing_status": "error",
-                                            "processing_error": error_msg,
-                                        },
-                                    )
-                                    raise ValueError(f"Content extraction returned empty text for file {file.filename}. {error_msg}")
-
-                                # Create Document objects with metadata
-                                docs_with_metadata = []
-                                for idx, doc in enumerate(docs):
-                                    if not hasattr(doc, 'page_content'):
-                                        log.warning(f"Doc[{idx}] has no page_content attribute, skipping")
-                                        continue
-                                    doc_metadata = getattr(doc, 'metadata', {}) or {}
-                                    new_doc = Document(
-                                        page_content=doc.page_content,
-                                        metadata={
-                                            **doc_metadata,
-                                            "name": file.filename,
-                                            "created_by": file.user_id,
-                                            "file_id": file.id,
-                                            "source": file.filename,
-                                        },
-                                    )
-                                    docs_with_metadata.append(new_doc)
-                                
-                                docs = docs_with_metadata
-                                text_content = " ".join([doc.page_content for doc in docs if hasattr(doc, 'page_content')])
-                            else:
-                                # No file path - use empty content (should not happen normally)
-                                log.warning(f"[Content Extraction] file_id={file.id} | No file path available, using empty content")
-                                docs = [
-                                    Document(
-                                        page_content=file.data.get("content", ""),
-                                        metadata={
-                                            **file.meta,
-                                            "name": file.filename,
-                                            "created_by": file.user_id,
-                                            "file_id": file.id,
-                                            "source": file.filename,
-                                        },
-                                    )
-                                ]
-                                text_content = " ".join([doc.page_content for doc in docs])
                 except Exception as e:
                     # Consolidated error handling - log and update status
                     elapsed_time = time.time() - start_time
