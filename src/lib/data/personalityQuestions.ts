@@ -53,6 +53,16 @@ export async function loadAllPersonalityData() {
 	return cachedData;
 }
 
+// Normalize apostrophes and quotes to handle encoding mismatches
+// Converts curly quotes (U+2019, U+2018, U+201C, U+201D) to straight quotes (U+0027, U+0022)
+function normalizeQuotes(str: string): string {
+	return str
+		.replace(/'/g, "'")  // Right single quotation mark (U+2019) → straight apostrophe
+		.replace(/'/g, "'")  // Left single quotation mark (U+2018) → straight apostrophe
+		.replace(/"/g, '"')  // Left double quotation mark (U+201C) → straight quote
+		.replace(/"/g, '"');  // Right double quotation mark (U+201D) → straight quote
+}
+
 // Function to generate scenarios (Q&A pairs) from personality questions data
 export async function generateScenariosFromPersonalityData(
 	selectedCharacteristics: string[]
@@ -69,6 +79,10 @@ export async function generateScenariosFromPersonalityData(
 	
 	// For each selected characteristic, find Q&A pairs across all traits
 	for (const charName of selectedCharacteristics) {
+		const normalizedCharName = normalizeQuotes(charName);
+		let found = false;
+		let searchedTraits: string[] = [];
+		
 		// Search through all personality traits for the characteristic
 		const allTraits = [
 			{ name: 'agreeableness', data: personalityData.agreeableness },
@@ -79,16 +93,44 @@ export async function generateScenariosFromPersonalityData(
 		];
 		
 		for (const trait of allTraits) {
-			if (trait.data && trait.data[charName]) {
-				// Extract Q&A pairs for this characteristic
-				const qaPairs = Object.entries(trait.data[charName]).map(([question, response]) => ({
-					question,
-					response
-				}));
+			searchedTraits.push(trait.name);
+			
+			if (trait.data) {
+				// Try exact match first
+				if (trait.data[charName]) {
+					const qaPairs = Object.entries(trait.data[charName]).map(([question, response]) => ({
+						question,
+						response
+					}));
+					
+					allScenarios.push(...qaPairs);
+					found = true;
+					console.log(`✓ Found characteristic "${charName}" in ${trait.name} (exact match): ${qaPairs.length} scenarios`);
+					break;
+				}
 				
-				allScenarios.push(...qaPairs);
-				break; // Found the characteristic, move to next
+				// Try normalized match (handles apostrophe encoding mismatches)
+				for (const jsonKey of Object.keys(trait.data)) {
+					const normalizedJsonKey = normalizeQuotes(jsonKey);
+					if (normalizedJsonKey === normalizedCharName) {
+						const qaPairs = Object.entries(trait.data[jsonKey]).map(([question, response]) => ({
+							question,
+							response
+						}));
+						
+						allScenarios.push(...qaPairs);
+						found = true;
+						console.log(`✓ Found characteristic "${charName}" in ${trait.name} (normalized match, JSON key: "${jsonKey}"): ${qaPairs.length} scenarios`);
+						break;
+					}
+				}
+				
+				if (found) break;
 			}
+		}
+		
+		if (!found) {
+			console.warn(`✗ Characteristic "${charName}" not found in any trait. Searched: ${searchedTraits.join(', ')}`);
 		}
 	}
 	
