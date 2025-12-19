@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi.responses import JSONResponse
 
 from pydantic import BaseModel
 from typing import Optional
@@ -15,15 +15,12 @@ from open_webui.utils.task import (
     tags_generation_template,
     emoji_generation_template,
     moa_response_generation_template,
+    get_task_model_id,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.constants import TASKS
 
 from open_webui.routers.pipelines import process_pipeline_inlet_filter
-from open_webui.utils.filter import (
-    get_sorted_filter_ids,
-    process_filter_functions,
-)
 
 from open_webui.config import (
     DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE,
@@ -716,10 +713,10 @@ async def generate_autocompletion(
     
     # Check per-admin config (inherits from group admin if user is in a group)
     if not request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION.get(user.email):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Autocompletion generation is disabled",
-            )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Autocompletion generation is disabled",
+        )
 
     type = form_data.get("type")
     prompt = form_data.get("prompt")
