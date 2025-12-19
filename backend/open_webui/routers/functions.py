@@ -38,7 +38,7 @@ async def get_functions(user=Depends(get_verified_user)):
 
 
 @router.get("/export", response_model=list[FunctionModel])
-async def get_functions(user=Depends(get_admin_user)):
+async def export_functions(user=Depends(get_admin_user)):
     return Functions.get_functions(user.email)
 
 
