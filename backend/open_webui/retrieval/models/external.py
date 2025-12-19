@@ -19,10 +19,12 @@ class ExternalReranker(BaseReranker):
         api_key: str,
         url: str = "http://localhost:8080/v1/rerank",
         model: str = "reranker",
+        timeout: int = 120,
     ):
         self.api_key = api_key
         self.url = url
         self.model = model
+        self.timeout = timeout
 
     def predict(
         self, sentences: List[Tuple[str, str]], user=None
@@ -53,6 +55,7 @@ class ExternalReranker(BaseReranker):
                 f"{self.url}",
                 headers=headers,
                 json=payload,
+                timeout=self.timeout,
             )
 
             r.raise_for_status()
