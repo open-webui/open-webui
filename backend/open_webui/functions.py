@@ -93,6 +93,10 @@ def get_function_module_by_id(request: Request, pipe_id: str):
 
 
 async def get_function_models(request, user: UserModel = None):
+    # Defensive check: return empty list if user is None
+    if user is None:
+        return []
+    
     pipes = Functions.get_functions_by_type("pipe", active_only=True)
     pipe_models = []
 
