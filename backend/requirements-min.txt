@@ -1,13 +1,13 @@
 # Minimal requirements for backend to run
 # WIP: use this as a reference to build a minimal docker image
 
-fastapi==0.124.4
+fastapi==0.125.0
 uvicorn[standard]==0.37.0
 pydantic==2.12.5
-python-multipart==0.0.20
+python-multipart==0.0.21
 itsdangerous==2.2.0
 
-python-socketio==5.15.0
+python-socketio==5.15.1
 python-jose==3.5.0
 cryptography
 bcrypt==5.0.0
@@ -38,7 +38,7 @@ RestrictedPython==8.1
 loguru==0.7.3
 asgiref==3.11.0
 
-mcp==1.23.1
+mcp==1.25.0
 openai
 
 langchain==0.3.27

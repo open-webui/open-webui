@@ -9,7 +9,6 @@ from open_webui.env import (
     OPEN_WEBUI_DIR,
     DATABASE_URL,
     DATABASE_SCHEMA,
-    SRC_LOG_LEVELS,
     DATABASE_POOL_MAX_OVERFLOW,
     DATABASE_POOL_RECYCLE,
     DATABASE_POOL_SIZE,
@@ -25,7 +24,6 @@ from sqlalchemy.sql.type_api import _T
 from typing_extensions import Self
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["DB"])
 
 
 class JSONField(types.TypeDecorator):
