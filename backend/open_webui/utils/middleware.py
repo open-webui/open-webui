@@ -110,7 +110,6 @@ from open_webui.config import (
     CODE_INTERPRETER_BLOCKED_MODULES,
 )
 from open_webui.env import (
-    SRC_LOG_LEVELS,
     GLOBAL_LOG_LEVEL,
     ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION,
     CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE,
@@ -124,7 +123,6 @@ from open_webui.constants import TASKS
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 DEFAULT_REASONING_TAGS = [

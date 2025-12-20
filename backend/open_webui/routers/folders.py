@@ -21,7 +21,6 @@ from open_webui.models.knowledge import Knowledges
 
 
 from open_webui.config import UPLOAD_DIR
-from open_webui.env import SRC_LOG_LEVELS
 from open_webui.constants import ERROR_MESSAGES
 
 
@@ -34,7 +33,6 @@ from open_webui.utils.access_control import has_permission
 
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 
 router = APIRouter()
