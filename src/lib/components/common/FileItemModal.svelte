@@ -136,6 +136,7 @@
 	}
 
 	const loadContent = async () => {
+		selectedTab = '';
 		if (item?.type === 'collection') {
 			loading = true;
 
@@ -347,7 +348,32 @@
 							{(item?.file?.data?.content ?? '').trim() || 'No content'}
 						</div>
 					{/if}
-				{:else if isExcel}
+			{:else if isExcel}
+				<div
+					class="flex mb-2.5 scrollbar-none overflow-x-auto w-full border-b border-gray-50 dark:border-gray-850/30 text-center text-sm font-medium bg-transparent dark:text-gray-200"
+				>
+					<button
+						class="min-w-fit py-1.5 px-4 border-b {selectedTab === ''
+							? ' '
+							: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+						type="button"
+						on:click={() => {
+							selectedTab = '';
+						}}>{$i18n.t('Content')}</button
+					>
+
+					<button
+						class="min-w-fit py-1.5 px-4 border-b {selectedTab === 'preview'
+							? ' '
+							: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+						type="button"
+						on:click={() => {
+							selectedTab = 'preview';
+						}}>{$i18n.t('Preview')}</button
+					>
+				</div>
+
+				{#if selectedTab === 'preview'}
 					{#if excelError}
 						<div class="text-red-500 text-sm p-4">
 							{excelError}
@@ -380,22 +406,93 @@
 						{/if}
 					{/if}
 				{:else}
-					{#if isAudio}
-						<audio
-							src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
-							class="w-full border-0 rounded-lg mb-2"
-							controls
-							playsinline
-						/>
-					{/if}
+					<div
+						class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap"
+					>
+						{(item?.file?.data?.content ?? '').trim() || 'No content'}
+					</div>
+				{/if}
+			{:else}
+				{#if isAudio}
+					<audio
+						src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
+						class="w-full border-0 rounded-lg mb-2"
+						controls
+						playsinline
+					/>
+				{/if}
 
-					{#if item?.file?.data}
-						{#if isMarkdown}
-							<div class="max-h-[60vh] overflow-scroll scrollbar-hidden text-sm prose dark:prose-invert max-w-full">
-								<Markdown content={item.file.data.content} id="markdown-viewer" />
+				{#if item?.file?.data}
+					{#if isMarkdown}
+						<div
+							class="flex mb-2.5 scrollbar-none overflow-x-auto w-full border-b border-gray-50 dark:border-gray-850/30 text-center text-sm font-medium bg-transparent dark:text-gray-200"
+						>
+							<button
+								class="min-w-fit py-1.5 px-4 border-b {selectedTab === ''
+									? ' '
+									: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								type="button"
+								on:click={() => {
+									selectedTab = '';
+								}}>{$i18n.t('Content')}</button
+							>
+
+							<button
+								class="min-w-fit py-1.5 px-4 border-b {selectedTab === 'preview'
+									? ' '
+									: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								type="button"
+								on:click={() => {
+									selectedTab = 'preview';
+								}}>{$i18n.t('Preview')}</button
+							>
+						</div>
+
+						{#if selectedTab === 'preview'}
+							<div
+								class="max-h-[60vh] overflow-scroll scrollbar-hidden text-sm prose dark:prose-invert max-w-full"
+							>
+								<Markdown
+									content={item.file.data.content}
+									id="markdown-viewer"
+								/>
 							</div>
-						{:else if isCode}
-							<div class="max-h-[60vh] overflow-scroll scrollbar-hidden text-sm relative">
+						{:else}
+							<div
+								class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap"
+							>
+								{(item?.file?.data?.content ?? '').trim() || 'No content'}
+							</div>
+						{/if}
+					{:else if isCode}
+						<div
+							class="flex mb-2.5 scrollbar-none overflow-x-auto w-full border-b border-gray-50 dark:border-gray-850/30 text-center text-sm font-medium bg-transparent dark:text-gray-200"
+						>
+							<button
+								class="min-w-fit py-1.5 px-4 border-b {selectedTab === ''
+									? ' '
+									: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								type="button"
+								on:click={() => {
+									selectedTab = '';
+								}}>{$i18n.t('Content')}</button
+							>
+
+							<button
+								class="min-w-fit py-1.5 px-4 border-b {selectedTab === 'preview'
+									? ' '
+									: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								type="button"
+								on:click={() => {
+									selectedTab = 'preview';
+								}}>{$i18n.t('Preview')}</button
+							>
+						</div>
+
+						{#if selectedTab === 'preview'}
+							<div
+								class="max-h-[60vh] overflow-scroll scrollbar-hidden text-sm relative"
+							>
 								<CodeBlock
 									code={item.file.data.content}
 									lang={item.name.split('.').pop()}
@@ -406,11 +503,20 @@
 								/>
 							</div>
 						{:else}
-							<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
+							<div
+								class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap"
+							>
 								{(item?.file?.data?.content ?? '').trim() || 'No content'}
 							</div>
 						{/if}
+					{:else}
+						<div
+							class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap"
+						>
+							{(item?.file?.data?.content ?? '').trim() || 'No content'}
+						</div>
 					{/if}
+				{/if}
 				{/if}
 			{:else}
 				<div class="flex items-center justify-center py-6">
