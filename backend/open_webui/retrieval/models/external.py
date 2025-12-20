@@ -19,7 +19,7 @@ class ExternalReranker(BaseReranker):
         api_key: str,
         url: str = "http://localhost:8080/v1/rerank",
         model: str = "reranker",
-        timeout: int = 120,
+        timeout: Optional[int] = None,
     ):
         self.api_key = api_key
         self.url = url

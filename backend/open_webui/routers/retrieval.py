@@ -148,10 +148,12 @@ def get_rf(
     reranking_model: Optional[str] = None,
     external_reranker_url: str = "",
     external_reranker_api_key: str = "",
-    external_reranker_timeout: int = 120,
+    external_reranker_timeout: str = "",
     auto_update: bool = RAG_RERANKING_MODEL_AUTO_UPDATE,
 ):
     rf = None
+    # Convert timeout string to int or None (system default)
+    timeout_value = int(external_reranker_timeout) if external_reranker_timeout else None
     if reranking_model:
         if any(model in reranking_model for model in ["jinaai/jina-colbert-v2"]):
             try:
@@ -174,7 +176,7 @@ def get_rf(
                         url=external_reranker_url,
                         api_key=external_reranker_api_key,
                         model=reranking_model,
-                        timeout=external_reranker_timeout,
+                        timeout=timeout_value,
                     )
                 except Exception as e:
                     log.error(f"ExternalReranking: {e}")
@@ -668,7 +670,7 @@ class ConfigForm(BaseModel):
     RAG_RERANKING_ENGINE: Optional[str] = None
     RAG_EXTERNAL_RERANKER_URL: Optional[str] = None
     RAG_EXTERNAL_RERANKER_API_KEY: Optional[str] = None
-    RAG_EXTERNAL_RERANKER_TIMEOUT: Optional[int] = None
+    RAG_EXTERNAL_RERANKER_TIMEOUT: Optional[str] = None
 
     # Chunking settings
     TEXT_SPLITTER: Optional[str] = None
