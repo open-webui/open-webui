@@ -74,7 +74,7 @@ def get_session_user_chat_list(
 @router.delete("/", response_model=bool)
 async def delete_all_user_chats(request: Request, user=Depends(get_verified_user)):
 
-    if user.role == "user" and not has_permission(
+    if user.role in {"user", "professor"} and not has_permission(
         user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS
     ):
         raise HTTPException(
@@ -378,7 +378,7 @@ async def get_shared_chat_by_id(share_id: str, user=Depends(get_verified_user)):
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if user.role == "user" or (user.role == "admin" and not ENABLE_ADMIN_CHAT_ACCESS):
+    if user.role in {"user", "professor"} or (user.role == "admin" and not ENABLE_ADMIN_CHAT_ACCESS):
         chat = Chats.get_chat_by_share_id(share_id)
     elif user.role == "admin" and ENABLE_ADMIN_CHAT_ACCESS:
         chat = Chats.get_chat_by_id(share_id)

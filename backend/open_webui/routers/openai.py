@@ -621,7 +621,7 @@ async def get_models(
                 error_detail = f"Unexpected error: {str(e)}"
                 raise HTTPException(status_code=500, detail=error_detail)
 
-    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
+    if user.role in {"user", "professor"} and not BYPASS_MODEL_ACCESS_CONTROL:
         models["data"] = await get_filtered_models(models, user)
 
     return models
@@ -826,7 +826,7 @@ async def generate_chat_completion(
             payload = apply_system_prompt_to_body(system, payload, metadata, user)
 
         # Check if user has access to the model
-        if not bypass_filter and user.role == "user":
+        if not bypass_filter and user.role in {"user", "professor"}:
             if not (
                 user.id == model_info.user_id
                 or has_access(
@@ -938,10 +938,16 @@ async def generate_chat_completion(
         # Check if response is SSE
         if "text/event-stream" in r.headers.get("Content-Type", ""):
             streaming = True
+            # Filter out encoding headers to prevent ERR_CONTENT_DECODING_FAILED
+            # aiohttp already handles decompression, so we shouldn't pass these headers
+            filtered_headers = {
+                k: v for k, v in r.headers.items()
+                if k.lower() not in ('content-encoding', 'transfer-encoding', 'content-length')
+            }
             return StreamingResponse(
                 stream_chunks_handler(r.content),
                 status_code=r.status,
-                headers=dict(r.headers),
+                headers=filtered_headers,
                 background=BackgroundTask(
                     cleanup_response, response=r, session=session
                 ),

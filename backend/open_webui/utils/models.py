@@ -353,7 +353,7 @@ def check_model_access(user, model):
 def get_filtered_models(models, user):
     # Filter out models that the user does not have access to
     if (
-        user.role == "user"
+        user.role in {"user", "professor"}
         or (user.role == "admin" and not BYPASS_ADMIN_ACCESS_CONTROL)
     ) and not BYPASS_MODEL_ACCESS_CONTROL:
         filtered_models = []

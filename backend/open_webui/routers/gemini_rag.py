@@ -1,0 +1,430 @@
+"""
+Gemini File Search RAG API 라우터
+
+챕터별 PDF 파일을 관리하고 RAG 쿼리를 수행하는 엔드포인트를 제공합니다.
+"""
+
+import logging
+import os
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
+from pydantic import BaseModel
+
+from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.gemini_rag import get_gemini_rag_service, GeminiRAGService
+from open_webui.env import SRC_LOG_LEVELS
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+router = APIRouter()
+
+
+# ============================================================
+# Pydantic 모델
+# ============================================================
+
+class StoreCreateRequest(BaseModel):
+    display_name: str
+
+
+class StoreResponse(BaseModel):
+    name: str
+    display_name: str
+    success: bool = True
+    error: Optional[str] = None
+
+
+class StoreListResponse(BaseModel):
+    stores: List[dict]
+
+
+class FileUploadResponse(BaseModel):
+    success: bool
+    operation_name: Optional[str] = None
+    done: Optional[bool] = None
+    error: Optional[str] = None
+
+
+class RAGQueryRequest(BaseModel):
+    question: str
+    store_names: List[str]
+    model: str = "gemini-2.5-flash"
+    temperature: float = 0.2
+    system_instruction: Optional[str] = None
+
+
+class RAGQueryResponse(BaseModel):
+    success: bool
+    text: Optional[str] = None
+    citations: List[dict] = []
+    model: Optional[str] = None
+    error: Optional[str] = None
+
+
+class ChapterStoreMapping(BaseModel):
+    chapter_id: str
+    store_name: str
+    display_name: str
+
+
+# ============================================================
+# 챕터-Store 매핑 관리 (메모리 저장, 추후 DB로 이동 가능)
+# ============================================================
+
+# 챕터 ID와 Store 이름 매핑 (기본값 포함)
+_chapter_store_mapping: dict = {
+    "ode-1": {
+        "store_name": "fileSearchStores/7xo1gnj2yixo-78e03spq507w",
+        "display_name": "1계 상미분방정식"
+    }
+}
+
+
+def get_gemini_api_key(request: Request) -> Optional[str]:
+    """
+    OpenAI 설정에서 Gemini API 키를 찾아서 반환
+    generativelanguage.googleapis.com URL에 해당하는 키를 찾음
+    """
+    try:
+        base_urls = request.app.state.config.OPENAI_API_BASE_URLS
+        api_keys = request.app.state.config.OPENAI_API_KEYS
+
+        for idx, url in enumerate(base_urls):
+            if "generativelanguage.googleapis.com" in url:
+                if idx < len(api_keys) and api_keys[idx]:
+                    return api_keys[idx]
+        return None
+    except Exception:
+        return None
+
+
+def get_rag_service(request: Request) -> GeminiRAGService:
+    """RAG 서비스 인스턴스 반환"""
+    api_key = get_gemini_api_key(request)
+    if not api_key:
+        raise HTTPException(
+            status_code=500,
+            detail="Gemini API key not found. Please configure Gemini in OpenAI settings."
+        )
+    return get_gemini_rag_service(api_key)
+
+
+# ============================================================
+# Store 관리 엔드포인트
+# ============================================================
+
+@router.post("/stores", response_model=StoreResponse)
+async def create_store(
+    request: Request,
+    body: StoreCreateRequest,
+    user=Depends(get_admin_user)
+):
+    """
+    새로운 File Search Store(코퍼스) 생성 (관리자 전용)
+
+    - **display_name**: Store 표시 이름 (예: "Chapter 1 - ODEs")
+    """
+    service = get_rag_service(request)
+    result = service.create_store(body.display_name)
+
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error", "Failed to create store"))
+
+    return StoreResponse(
+        name=result["name"],
+        display_name=body.display_name,
+        success=True
+    )
+
+
+@router.get("/stores", response_model=StoreListResponse)
+async def list_stores(
+    request: Request,
+    user=Depends(get_admin_user)
+):
+    """
+    모든 Store 목록 조회 (관리자 전용)
+    """
+    service = get_rag_service(request)
+    stores = service.list_stores()
+    return StoreListResponse(stores=stores)
+
+
+@router.get("/stores/{store_name}")
+async def get_store(
+    store_name: str,
+    request: Request,
+    user=Depends(get_admin_user)
+):
+    """
+    특정 Store 정보 조회 (관리자 전용)
+    """
+    service = get_rag_service(request)
+    store = service.get_store("fileSearchStores/"+store_name)
+
+    if not store:
+        raise HTTPException(status_code=404, detail="Store not found")
+
+    return store
+
+
+@router.delete("/stores/{store_name}")
+async def delete_store(
+    store_name: str,
+    request: Request,
+    user=Depends(get_admin_user)
+):
+    """
+    Store 삭제 (관리자 전용)
+
+    - **store_name**: Store ID (fileSearchStores/ prefix 없이)
+    """
+    service = get_rag_service(request)
+    full_store_name = f"fileSearchStores/{store_name}"
+    success = service.delete_store(full_store_name)
+
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to delete store")
+
+    # 매핑에서도 제거
+    global _chapter_store_mapping
+    _chapter_store_mapping = {
+        k: v for k, v in _chapter_store_mapping.items()
+        if v != full_store_name
+    }
+
+    return {"success": True, "message": f"Deleted store: {full_store_name}"}
+
+
+# ============================================================
+# 파일 업로드 엔드포인트
+# ============================================================
+
+@router.post("/stores/{store_name}/upload", response_model=FileUploadResponse)
+async def upload_file_to_store(
+    store_name: str,
+    request: Request,
+    file: UploadFile = File(...),
+    max_tokens_per_chunk: int = Form(default=400),
+    max_overlap_tokens: int = Form(default=40),
+    user=Depends(get_admin_user)
+):
+    """
+    파일을 Store에 업로드 (관리자 전용)
+
+    - **store_name**: 대상 Store ID (fileSearchStores/ prefix 없이)
+    - **file**: 업로드할 파일 (PDF 등)
+    - **max_tokens_per_chunk**: 청크당 최대 토큰 수 (기본: 400)
+    - **max_overlap_tokens**: 청크 간 오버랩 토큰 수 (기본: 40)
+    """
+    service = get_rag_service(request)
+
+    # store_name에 prefix 추가
+    full_store_name = f"fileSearchStores/{store_name}"
+
+    # 파일 읽기
+    file_content = await file.read()
+    file_name = file.filename or "uploaded_file.pdf"
+
+    result = service.upload_file_bytes(
+        file_content=file_content,
+        file_name=file_name,
+        store_name=full_store_name,
+        max_tokens_per_chunk=max_tokens_per_chunk,
+        max_overlap_tokens=max_overlap_tokens,
+        wait_for_completion=True
+    )
+
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error", "Failed to upload file"))
+
+    return FileUploadResponse(**result)
+
+
+class FileListResponse(BaseModel):
+    files: List[dict]
+    store_name: str
+
+
+@router.get("/stores/{store_name}/files", response_model=FileListResponse)
+async def list_files_in_store(
+    store_name: str,
+    request: Request,
+    user=Depends(get_admin_user)
+):
+    """
+    Store 내 파일 목록 조회 (관리자 전용)
+
+    - **store_name**: Store ID (fileSearchStores/ prefix 없이)
+    """
+    api_key = get_gemini_api_key(request)
+    service = get_rag_service(request)
+    full_store_name = f"fileSearchStores/{store_name}"
+    files = service.list_files(full_store_name, api_key=api_key)
+    return FileListResponse(files=files, store_name=full_store_name)
+
+
+# ============================================================
+# 챕터-Store 매핑 엔드포인트
+# ============================================================
+
+@router.post("/chapter-mapping")
+async def set_chapter_store_mapping(
+    mapping: ChapterStoreMapping,
+    user=Depends(get_admin_user)
+):
+    """
+    챕터 ID와 Store 매핑 설정 (관리자 전용)
+
+    - **chapter_id**: 챕터 ID (예: "ode-1")
+    - **store_name**: Store 이름
+    - **display_name**: 표시 이름
+    """
+    global _chapter_store_mapping
+    _chapter_store_mapping[mapping.chapter_id] = {
+        "store_name": mapping.store_name,
+        "display_name": mapping.display_name
+    }
+    return {"success": True, "mapping": mapping}
+
+
+@router.get("/chapter-mapping")
+async def get_chapter_store_mappings(
+    user=Depends(get_verified_user)
+):
+    """
+    모든 챕터-Store 매핑 조회
+    """
+    return {"mappings": _chapter_store_mapping}
+
+
+@router.get("/chapter-mapping/{chapter_id}")
+async def get_chapter_store_mapping(
+    chapter_id: str,
+    user=Depends(get_verified_user)
+):
+    """
+    특정 챕터의 Store 매핑 조회
+    """
+    if chapter_id not in _chapter_store_mapping:
+        raise HTTPException(status_code=404, detail="Chapter mapping not found")
+
+    return _chapter_store_mapping[chapter_id]
+
+
+@router.delete("/chapter-mapping/{chapter_id}")
+async def delete_chapter_store_mapping(
+    chapter_id: str,
+    user=Depends(get_admin_user)
+):
+    """
+    챕터-Store 매핑 삭제 (관리자 전용)
+    """
+    global _chapter_store_mapping
+    if chapter_id in _chapter_store_mapping:
+        del _chapter_store_mapping[chapter_id]
+        return {"success": True, "message": f"Deleted mapping for {chapter_id}"}
+    raise HTTPException(status_code=404, detail="Chapter mapping not found")
+
+
+# ============================================================
+# RAG 쿼리 엔드포인트
+# ============================================================
+
+@router.post("/query", response_model=RAGQueryResponse)
+async def query_rag(
+    request: Request,
+    body: RAGQueryRequest,
+    user=Depends(get_verified_user)
+):
+    """
+    RAG 쿼리 실행 (문서 검색 + 응답 생성)
+
+    - **question**: 질문 내용
+    - **store_names**: 검색할 Store 이름 목록
+    - **model**: 사용할 Gemini 모델 (기본: gemini-2.5-flash)
+    - **temperature**: 응답 다양성 (0.0 ~ 1.0, 기본: 0.2)
+    - **system_instruction**: 시스템 지시사항 (선택)
+    """
+    service = get_rag_service(request)
+
+    result = service.query(
+        question=body.question,
+        store_names=body.store_names,
+        model=body.model,
+        temperature=body.temperature,
+        system_instruction=body.system_instruction
+    )
+
+    return RAGQueryResponse(**result)
+
+
+@router.post("/query/by-chapter", response_model=RAGQueryResponse)
+async def query_rag_by_chapter(
+    request: Request,
+    chapter_id: str,
+    question: str,
+    model: str = "gemini-2.5-flash",
+    temperature: float = 0.2,
+    system_instruction: Optional[str] = None,
+    user=Depends(get_verified_user)
+):
+    """
+    챕터 ID로 RAG 쿼리 실행
+
+    - **chapter_id**: 챕터 ID (예: "ode-1")
+    - **question**: 질문 내용
+    - **model**: 사용할 Gemini 모델
+    - **temperature**: 응답 다양성
+    - **system_instruction**: 시스템 지시사항 (선택)
+    """
+    if chapter_id not in _chapter_store_mapping:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No RAG store configured for chapter: {chapter_id}"
+        )
+
+    store_name = _chapter_store_mapping[chapter_id]["store_name"]
+    service = get_rag_service(request)
+
+    result = service.query(
+        question=question,
+        store_names=[store_name],
+        model=model,
+        temperature=temperature,
+        system_instruction=system_instruction
+    )
+
+    return RAGQueryResponse(**result)
+
+
+# ============================================================
+# 헬스 체크
+# ============================================================
+
+@router.get("/health")
+async def health_check(request: Request):
+    """
+    Gemini RAG 서비스 헬스 체크
+    """
+    api_key = get_gemini_api_key(request)
+    if not api_key:
+        return {
+            "status": "error",
+            "message": "Gemini API key not found. Please configure Gemini in OpenAI settings."
+        }
+
+    try:
+        service = get_rag_service(request)
+        stores = service.list_stores()
+        return {
+            "status": "ok",
+            "store_count": len(stores),
+            "chapter_mappings": len(_chapter_store_mapping)
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e)
+        }

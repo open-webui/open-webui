@@ -1035,6 +1035,12 @@ OPENAI_API_BASE_URL = os.environ.get("OPENAI_API_BASE_URL", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_API_BASE_URL = os.environ.get("GEMINI_API_BASE_URL", "")
 
+# Gemini RAG API Key (PersistentConfig for admin settings)
+GEMINI_RAG_API_KEY = PersistentConfig(
+    "GEMINI_RAG_API_KEY",
+    "gemini.rag.api_key",
+    os.getenv("GEMINI_RAG_API_KEY", GEMINI_API_KEY),
+)
 
 if OPENAI_API_BASE_URL == "":
     OPENAI_API_BASE_URL = "https://api.openai.com/v1"
