@@ -11,7 +11,6 @@ import { finalizeModeration } from '$lib/apis/workflow';
 	import { getAvailableScenarios, getCurrentSession } from '$lib/apis/prolific';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import { toggleTheme, getEffectiveTheme } from '$lib/utils/theme';
 	import { getQuestionsForCharacteristics, loadPersonalityDataFromJSON, generateScenariosFromJSON } from '$lib/data/personalityTraits';
 	import { generateScenariosFromPersonalityData } from '$lib/data/personalityQuestions';
 	import { childProfileSync } from '$lib/services/childProfileSync';
@@ -483,7 +482,6 @@ import { finalizeModeration } from '$lib/apis/workflow';
 	}
 	
 	// Reactive statement to get effective theme
-	$: effectiveTheme = getEffectiveTheme();
 
 	async function ensureSessionNumberForChild(childId: string) {
 		try {
@@ -3155,7 +3153,7 @@ onMount(async () => {
 			? 'md:max-w-[calc(100%-260px)]'
 			: ''} max-w-full"
 	>
-	<nav class="px-2.5 pt-1 backdrop-blur-xl w-full drag-region border-b border-gray-200 dark:border-gray-800">
+	<nav class="px-2.5 pt-1.5 pb-2 backdrop-blur-xl w-full drag-region bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
 		<div class="flex items-center">
 			<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
 				<button
@@ -3187,26 +3185,32 @@ onMount(async () => {
 			
 			<!-- Controls -->
 			<div class="flex items-center space-x-3 {!sidebarOpen ? 'max-md:hidden' : ''}">
-				<!-- Theme Toggle Button -->
-				<button
-					class="flex cursor-pointer px-3 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition-all duration-200 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-					on:click={() => {
-						toggleTheme();
-					}}
-					aria-label={effectiveTheme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-				>
-					<div class="m-auto self-center">
-						{#if effectiveTheme === 'dark'}
-							<svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-								<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+				<!-- Navigation Buttons -->
+				<div class="flex items-center space-x-2">
+					<!-- Previous Task Button -->
+					<button
+						on:click={() => goto('/kids/profile')}
+						class="px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+					>
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+						</svg>
+						<span>Previous Task</span>
+					</button>
+					
+					<!-- Next Task Button -->
+					{#if typeof window !== 'undefined' && parseInt(localStorage.getItem('assignmentStep') || '0') >= 3}
+						<button
+							on:click={() => goto('/exit-survey')}
+							class="px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-2 bg-blue-500 hover:bg-blue-600 text-white"
+						>
+							<span>Next Task</span>
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
 							</svg>
-						{:else}
-							<svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-								<path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-							</svg>
-						{/if}
-					</div>
-				</button>
+						</button>
+					{/if}
+				</div>
 			</div>
 		</div>
 		</div>

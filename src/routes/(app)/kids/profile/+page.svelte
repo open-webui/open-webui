@@ -345,6 +345,24 @@ let parentLLMMonitoringLevel: string = '';
 			selectedChildIndex = childProfiles.length - 1;
 			showForm = true;
 			
+			// Automatically select the newly created child for questions
+			const newChildId = newChild.id;
+			if (newChildId) {
+				childSelectedForQuestions = selectedChildIndex;
+				await childProfileSync.setCurrentChildId(newChildId);
+				localStorage.setItem('selectedChildForQuestions', newChildId.toString());
+				
+				// Unlock Step 2
+				localStorage.setItem('assignmentStep', '2');
+				localStorage.setItem('moderationScenariosAccessed', 'true');
+				localStorage.setItem('unlock_moderation', 'true');
+				window.dispatchEvent(new Event('storage'));
+				window.dispatchEvent(new Event('workflow-updated'));
+				
+				// Show confirmation modal after creating profile
+				showConfirmationModal = true;
+			}
+			
 			// Dispatch event to notify sidebar of child profile changes
 			window.dispatchEvent(new CustomEvent('child-profiles-updated'));
 			
@@ -387,6 +405,17 @@ let parentLLMMonitoringLevel: string = '';
 		if (childId) {
 			await childProfileSync.setCurrentChildId(childId);
 			console.log('Selected child profile:', childId);
+			
+			// Set this child as selected for questions (same as selectChildForQuestions)
+			childSelectedForQuestions = index;
+			localStorage.setItem('selectedChildForQuestions', childId.toString());
+			
+			// Unlock Step 2 (but don't show modal yet - that happens after save)
+			localStorage.setItem('assignmentStep', '2');
+			localStorage.setItem('moderationScenariosAccessed', 'true');
+			localStorage.setItem('unlock_moderation', 'true');
+			window.dispatchEvent(new Event('storage'));
+			window.dispatchEvent(new Event('workflow-updated'));
 		}
 	}
 
@@ -401,9 +430,21 @@ let parentLLMMonitoringLevel: string = '';
 				childProfiles = [];
 			}
 			
-			// Autoselect first profile if profiles exist
+			// Check for currently selected child from user settings
 			if (childProfiles.length > 0) {
-				selectedChildIndex = 0;
+				const currentChildId = childProfileSync.getCurrentChildId();
+				if (currentChildId) {
+					const index = childProfiles.findIndex(c => c.id === currentChildId);
+					if (index !== -1) {
+						selectedChildIndex = index;
+					} else {
+						// Current child ID doesn't exist in profiles, use first available
+						selectedChildIndex = 0;
+					}
+				} else {
+					// No current child selected, use first available
+					selectedChildIndex = 0;
+				}
 				hydrateFormFromSelectedChild();
 				showForm = false; // Don't show form initially, wait for Edit click
 				isProfileCompleted = true; // Profile exists
@@ -484,6 +525,9 @@ let parentLLMMonitoringLevel: string = '';
 					childProfiles = [...childProfiles, newChild];
 					selectedChildIndex = childProfiles.length - 1;
 				}
+				
+				// Set the new profile as the current selected profile
+				await childProfileSync.setCurrentChildId(newChild.id);
 			} else {
 				// Apply current form to selected child
 				applyFormToSelectedChild();
@@ -551,6 +595,11 @@ let parentLLMMonitoringLevel: string = '';
 		isEditing = false;
 		showForm = false;
 		isProfileCompleted = true;
+		
+		// If a child is selected for questions, show confirmation modal
+		if (childSelectedForQuestions >= 0 && childSelectedForQuestions < childProfiles.length) {
+			showConfirmationModal = true;
+		}
 		} catch (error) {
 			console.error('Failed to save child profile:', error);
 			toast.error('Failed to save child profile');
@@ -619,6 +668,25 @@ let parentLLMMonitoringLevel: string = '';
 			goto('/assignment-instructions');
 			return;
 		}
+		
+			// Wait for user store to be loaded with settings
+			const waitForUser = () => {
+				return new Promise<void>((resolve) => {
+					const currentUser = get(user);
+					if (currentUser && currentUser.id && currentUser.settings) {
+						resolve();
+						return;
+					}
+					const unsubscribe = user.subscribe((userData) => {
+						if (userData && userData.id && userData.settings) {
+							unsubscribe();
+							resolve();
+						}
+					});
+				});
+			};
+			
+			await waitForUser();
 			await loadChildProfile();
 			
 			// Check if child has been selected for questions
@@ -671,7 +739,7 @@ let parentLLMMonitoringLevel: string = '';
 		? 'md:max-w-[calc(100%-260px)]'
 		: ''} max-w-full"
 >
-	<nav class="px-2.5 pt-1 backdrop-blur-xl w-full drag-region">
+	<nav class="px-2.5 pt-1.5 pb-2 backdrop-blur-xl w-full drag-region bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
 		<div class="flex items-center justify-between">
 			<div class="flex items-center">
 				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
@@ -851,25 +919,6 @@ let parentLLMMonitoringLevel: string = '';
 				</div>
 			</div>
 			
-		</div>
-
-		<!-- Page-level action: Select for questions (below profile info) -->
-		<div class="flex justify-end mt-6">
-			{#if childSelectedForQuestions === -1}
-				<button
-					type="button"
-					on:click={() => selectChildForQuestions(selectedChildIndex)}
-					class="px-6 py-3 text-sm rounded-lg font-medium transition-colors bg-green-500 hover:bg-green-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-					aria-label="Select current profile for questions"
-					disabled={selectedChildIndex === -1}
-				>
-					Select for questions
-				</button>
-			{:else}
-				<div class="px-4 py-2 text-sm bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-lg font-medium">
-					Selected ✓
-				</div>
-			{/if}
 		</div>
 		{/if}
 

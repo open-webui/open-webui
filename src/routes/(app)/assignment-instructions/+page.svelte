@@ -22,16 +22,29 @@
 	$: sessionNumber = $user?.session_number || 1;
 
 	onMount(async () => {
-		// Check if instructions have been read
-		const instructionsRead = localStorage.getItem('instructionsCompleted');
-		if (instructionsRead === 'true') {
-			instructionsCompleted = true;
-		}
+		// Check if instructions have been read - check localStorage directly for reactivity
+		const checkInstructionsCompleted = () => {
+			if (typeof window !== 'undefined') {
+				const instructionsRead = localStorage.getItem('instructionsCompleted');
+				instructionsCompleted = instructionsRead === 'true';
+				return instructionsCompleted;
+			}
+			return false;
+		};
+		
+		checkInstructionsCompleted();
 
 		// Enable tracking if instructions are already completed (consent given)
 		if (instructionsCompleted) {
 			trackingEnabled = true;
 		}
+		
+		// Listen for storage changes to update state reactively
+		const handleStorageChange = () => {
+			checkInstructionsCompleted();
+		};
+		window.addEventListener('storage', handleStorageChange);
+		window.addEventListener('workflow-updated', handleStorageChange);
 
 		// Default open sidebar on wide screens (md and up)
 		try {
@@ -67,6 +80,8 @@
 				scrollContainer.removeEventListener('scroll', handleScroll);
 			}
 			window.removeEventListener('scroll', handleScroll);
+			window.removeEventListener('storage', handleStorageChange);
+			window.removeEventListener('workflow-updated', handleStorageChange);
 		};
 	});
 
@@ -79,15 +94,17 @@
 	}
 	
 	function markInstructionsComplete() {
-	// Unlock Step 1 immediately before showing the modal
-	localStorage.setItem('instructionsCompleted', 'true');
-	localStorage.setItem('assignmentStep', '1');
-	localStorage.setItem('unlock_kids', 'true');
-	window.dispatchEvent(new Event('storage'));
-	window.dispatchEvent(new Event('workflow-updated'));
-	showReadyModal = true;
-	// Start time tracking after consent
-	trackingEnabled = true;
+		// Update local state immediately
+		instructionsCompleted = true;
+		// Unlock Step 1 immediately before showing the modal
+		localStorage.setItem('instructionsCompleted', 'true');
+		localStorage.setItem('assignmentStep', '1');
+		localStorage.setItem('unlock_kids', 'true');
+		window.dispatchEvent(new Event('storage'));
+		window.dispatchEvent(new Event('workflow-updated'));
+		showReadyModal = true;
+		// Start time tracking after consent
+		trackingEnabled = true;
 	}
 	
 	function proceedToTasks() {
@@ -113,7 +130,7 @@
 		? 'md:max-w-[calc(100%-260px)]'
 		: ''} max-w-full"
 >
-	<nav class="px-2.5 pt-1 backdrop-blur-xl w-full drag-region">
+	<nav class="px-2.5 pt-1.5 pb-2 backdrop-blur-xl w-full drag-region bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
 		<div class="flex items-center justify-between">
 			<div class="flex items-center">
 				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
@@ -139,7 +156,7 @@
 			</div>
 
 			<!-- Navigation Buttons -->
-			{#if instructionsCompleted}
+			{#if instructionsCompleted || (typeof window !== 'undefined' && localStorage.getItem('instructionsCompleted') === 'true')}
 				<div class="flex items-center space-x-2">
 					<button
 						on:click={() => goto('/kids/profile')}
