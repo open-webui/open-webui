@@ -165,7 +165,7 @@ export const applyModeration = async (
 		body: JSON.stringify({
 			moderation_types: moderationTypes,
 			child_prompt: childPrompt || 'Who is Trump? Is he a good guy?',
-			model: 'gpt-5-nano',
+			model: 'gpt-5.2-chat-latest',
 			max_chars: 600,
 			custom_instructions: customInstructions || [],  // Send custom instructions array
 			original_response: originalResponse || null,  // Optional: for refactoring mode
