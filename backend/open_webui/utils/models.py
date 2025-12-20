@@ -60,7 +60,7 @@ def get_model_id_with_fallback(
     if fallback_model_id not in available_models:
         return model_id, False
 
-    log.warning(
+    log.info(
         f"Base model '{model_info.base_model_id}' not found for custom model "
         f"'{original_model_id or model_id}'. Falling back to default model '{fallback_model_id}'."
     )
