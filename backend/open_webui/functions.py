@@ -128,7 +128,7 @@ async def get_function_models(request):
                             "created": pipe.created_at,
                             "owned_by": "openai",
                             "pipe": pipe_flag,
-                            "has_user_valves": has_user_valves,
+                            "has_user_valves": has_user_valves and p.get("show_user_valves", True),
                         }
                     )
             else:
