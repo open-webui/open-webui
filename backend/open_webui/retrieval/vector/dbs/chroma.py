@@ -24,10 +24,8 @@ from open_webui.config import (
     CHROMA_CLIENT_AUTH_PROVIDER,
     CHROMA_CLIENT_AUTH_CREDENTIALS,
 )
-from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 class ChromaClient(VectorDBBase):

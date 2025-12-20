@@ -3,12 +3,10 @@ import time
 from typing import Optional
 
 from open_webui.internal.db import Base, JSONField, get_db
-from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, JSON
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 ####################
 # Files DB Schema
@@ -83,7 +81,7 @@ class FileModelResponse(BaseModel):
 class FileMetadataResponse(BaseModel):
     id: str
     hash: Optional[str] = None
-    meta: dict
+    meta: Optional[dict] = None
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
 

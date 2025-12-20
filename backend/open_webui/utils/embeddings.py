@@ -6,7 +6,7 @@ from fastapi import Request
 from open_webui.models.users import UserModel
 from open_webui.models.models import Models
 from open_webui.utils.models import check_model_access
-from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL
+from open_webui.env import GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL
 
 from open_webui.routers.openai import embeddings as openai_embeddings
 from open_webui.routers.ollama import (
@@ -20,7 +20,6 @@ from open_webui.utils.response import convert_embedding_response_ollama_to_opena
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 async def generate_embeddings(

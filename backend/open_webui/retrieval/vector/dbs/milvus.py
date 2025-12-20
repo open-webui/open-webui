@@ -25,10 +25,8 @@ from open_webui.config import (
     MILVUS_DISKANN_MAX_DEGREE,
     MILVUS_DISKANN_SEARCH_LIST_SIZE,
 )
-from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 class MilvusClient(VectorDBBase):
