@@ -94,6 +94,7 @@ from open_webui.routers import (
     utils,
     scim,
     textbook,
+    gemini_rag,
 )
 
 from open_webui.routers.retrieval import (
@@ -120,6 +121,8 @@ from open_webui.config import (
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     OPENAI_API_CONFIGS,
+    # Gemini RAG
+    GEMINI_RAG_API_KEY,
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
     # Model list
@@ -690,6 +693,14 @@ app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
 app.state.config.OPENAI_API_CONFIGS = OPENAI_API_CONFIGS
 
 app.state.OPENAI_MODELS = {}
+
+########################################
+#
+# GEMINI RAG
+#
+########################################
+
+app.state.config.GEMINI_RAG_API_KEY = GEMINI_RAG_API_KEY
 
 ########################################
 #
@@ -1398,6 +1409,7 @@ app.include_router(
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 app.include_router(textbook.router, prefix="/api/v1/textbook", tags=["textbook"])
+app.include_router(gemini_rag.router, prefix="/api/v1/gemini-rag", tags=["gemini-rag"])
 
 # SCIM 2.0 API for identity management
 if ENABLE_SCIM:
@@ -1940,7 +1952,7 @@ async def get_app_config(request: Request):
                     else {}
                 ),
             }
-            if user is not None and (user.role in ["admin", "user"])
+            if user is not None and (user.role in ["admin", "user", "professor"])
             else {
                 **(
                     {

@@ -56,6 +56,7 @@ from open_webui.routers.pipelines import (
     process_pipeline_outlet_filter,
 )
 from open_webui.routers.memories import query_memory, QueryMemoryForm
+from open_webui.routers.gemini_rag import _chapter_store_mapping, get_rag_service
 
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.files import (
@@ -1226,6 +1227,80 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         files = form_data.get("files", [])
         files.extend(knowledge_files)
         form_data["files"] = files
+
+    # Chapter-based Gemini RAG handling
+    chapter_id = metadata.get("chapter_id")
+    if chapter_id and chapter_id in _chapter_store_mapping:
+        try:
+            await event_emitter(
+                {
+                    "type": "status",
+                    "data": {
+                        "action": "gemini_rag_search",
+                        "query": user_message,
+                        "chapter_id": chapter_id,
+                        "done": False,
+                    },
+                }
+            )
+
+            store_info = _chapter_store_mapping[chapter_id]
+            store_name = store_info["store_name"]
+
+            # Get RAG context from Gemini
+            try:
+                rag_service = get_rag_service(request)
+                rag_result = rag_service.query(
+                    question=user_message,
+                    store_names=[store_name],
+                    model="gemini-2.5-flash",
+                    temperature=0.2
+                )
+
+                if rag_result.get("success") and rag_result.get("text"):
+                    # Add RAG context to system prompt
+                    rag_context = f"""
+[교재 참고 자료]
+다음은 '{store_info.get('display_name', chapter_id)}' 챕터의 관련 내용입니다:
+
+{rag_result['text']}
+
+위 참고 자료를 바탕으로 학생의 질문에 답변해주세요. 참고 자료의 내용을 활용하되, 필요한 경우 추가 설명을 제공하세요.
+"""
+                    form_data = apply_system_prompt_to_body(
+                        rag_context, form_data, metadata, user
+                    )
+
+                    # Add citations to sources if available
+                    if rag_result.get("citations"):
+                        for citation in rag_result["citations"]:
+                            sources.append({
+                                "source": {
+                                    "name": f"Gemini RAG: {store_info.get('display_name', chapter_id)}",
+                                    "url": citation.get("source", ""),
+                                },
+                                "document": [],
+                                "metadata": [{"chapter_id": chapter_id}],
+                            })
+
+                    log.info(f"Gemini RAG context added for chapter: {chapter_id}")
+
+            except Exception as e:
+                log.error(f"Gemini RAG query failed: {e}")
+
+            await event_emitter(
+                {
+                    "type": "status",
+                    "data": {
+                        "action": "gemini_rag_search",
+                        "query": user_message,
+                        "chapter_id": chapter_id,
+                        "done": True,
+                    },
+                }
+            )
+        except Exception as e:
+            log.error(f"Gemini RAG handling error: {e}")
 
     variables = form_data.pop("variables", None)
 
