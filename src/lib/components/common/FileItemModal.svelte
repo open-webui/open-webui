@@ -246,7 +246,7 @@
 
 						{#if item?.file?.data?.content}
 							<div class="capitalize shrink-0">
-								{#if isExcel && rowCount > 0}
+								{#if isExcel && rowCount > 0 && selectedTab === 'preview'}
 									{$i18n.t('{{COUNT}} Rows', {
 										COUNT: rowCount
 									})}
