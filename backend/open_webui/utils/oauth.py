@@ -1318,9 +1318,9 @@ class OAuthManager:
         client = self.get_client(provider)
         if client is None:
             raise HTTPException(404)
-        
+
         kwargs = {}
-        if (auth_manager_config.OAUTH_AUDIENCE):
+        if auth_manager_config.OAUTH_AUDIENCE:
             kwargs["audience"] = auth_manager_config.OAUTH_AUDIENCE
 
         return await client.authorize_redirect(request, redirect_uri, **kwargs)
