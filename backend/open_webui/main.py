@@ -473,6 +473,7 @@ from open_webui.env import (
     EXTERNAL_PWA_MANIFEST_URL,
     AIOHTTP_CLIENT_SESSION_SSL,
     ENABLE_STAR_SESSIONS_MIDDLEWARE,
+    ENABLE_PUBLIC_ACTIVE_USERS_COUNT,
 )
 
 
@@ -1848,6 +1849,7 @@ async def get_app_config(request: Request):
             "enable_login_form": app.state.config.ENABLE_LOGIN_FORM,
             "enable_websocket": ENABLE_WEBSOCKET_SUPPORT,
             "enable_version_update_check": ENABLE_VERSION_UPDATE_CHECK,
+            "enable_public_active_users_count": ENABLE_PUBLIC_ACTIVE_USERS_COUNT,
             **(
                 {
                     "enable_direct_connections": app.state.config.ENABLE_DIRECT_CONNECTIONS,
@@ -2024,10 +2026,19 @@ async def get_current_usage(user=Depends(get_verified_user)):
     This is an experimental endpoint and subject to change.
     """
     try:
+        # If public visibility is disabled, only allow admins to access this endpoint
+        if not ENABLE_PUBLIC_ACTIVE_USERS_COUNT and user.role != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied. Only administrators can view usage statistics.",
+            )
+
         return {
             "model_ids": get_models_in_use(),
             "user_count": Users.get_active_user_count(),
         }
+    except HTTPException:
+        raise
     except Exception as e:
         log.error(f"Error getting usage statistics: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
