@@ -4,12 +4,10 @@ from typing import Optional
 
 from open_webui.internal.db import Base, get_db
 from open_webui.models.users import UserModel, UserProfileImageResponse, Users
-from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel
 from sqlalchemy import Boolean, Column, String, Text
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 ####################
 # DB MODEL
