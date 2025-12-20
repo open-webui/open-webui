@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.42] - 2025-12-16
+## [0.6.42] - 2025-12-20
 
 ### Added
 
@@ -26,17 +26,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 👥 User profile previews now display group membership information for easier identification of user roles and permissions. [Commit](https://github.com/open-webui/open-webui/commit/2b1a29d44bde9fbc20ff9f0a5ded1ce8ded9d90d)
 - 🔐 LDAP authentication now supports user entries with multiple username attributes, correctly handling cases where the username field contains a list of values. [Commit](https://github.com/open-webui/open-webui/commit/379f888c9dc6dce21c3ef7a1fc455258aff993dc), [#19878](https://github.com/open-webui/open-webui/issues/19878)
 - 🌍 The "SEARXNG_LANGUAGE" environment variable now allows configuring search language for SearXNG queries, replacing the hardcoded "en-US" default with a configurable setting that defaults to "all". [#19909](https://github.com/open-webui/open-webui/pull/19909)
+- 👨‍👩‍👧‍👦 The "ENABLE_PUBLIC_ACTIVE_USERS_COUNT" environment variable now allows restricting active user count visibility to administrators, reducing backend load and addressing privacy concerns in large deployments. [#20027](https://github.com/open-webui/open-webui/pull/20027), [#13026](https://github.com/open-webui/open-webui/issues/13026)
 - 🔑 The "OAUTH_AUDIENCE" environment variable now allows OAuth providers to specify audience parameters for JWT access token generation. [#19768](https://github.com/open-webui/open-webui/pull/19768)
 - ⏰ The "REDIS_SOCKET_CONNECT_TIMEOUT" environment variable now allows configuring socket connection timeouts for Redis and Sentinel connections, addressing potential failover and responsiveness issues in distributed deployments. [#19799](https://github.com/open-webui/open-webui/pull/19799), [Docs:#882](https://github.com/open-webui/docs/pull/882)
 - ⏱️ The "WEB_LOADER_TIMEOUT" environment variable now allows configuring request timeouts for SafeWebBaseLoader operations. [#19804](https://github.com/open-webui/open-webui/pull/19804), [#19734](https://github.com/open-webui/open-webui/issues/19734)
 - 📊 An experimental chat usage statistics endpoint (GET /api/v1/chats/stats/usage) was added with pagination support (50 chats per page) and comprehensive per-chat analytics including model usage counts, user and assistant message breakdowns, average response times calculated from message timestamps, average content lengths, and last activity timestamps; this endpoint remains experimental and not suitable for production use as it performs intensive calculations by processing entire message histories for each chat without caching. [Commit](https://github.com/open-webui/open-webui/commit/a7993f6f4e4591cd2aaa4718ece9e5623557d019)
 - 🚀 Models page search input performance was optimized with a 300ms debounce to reduce server load and improve responsiveness. [#19832](https://github.com/open-webui/open-webui/pull/19832)
 - 🔄 Various improvements were implemented across the frontend and backend to enhance performance, stability, and security.
-- 🌐 Translations for German, Danish, Finnish, Portuguese (Brazil), Simplified Chinese, Traditional Chinese, Catalan, and Spanish were enhanced and expanded.
+- 🌐 Translations for German, Danish, Finnish, Korean, Portuguese (Brazil), Simplified Chinese, Traditional Chinese, Catalan, and Spanish were enhanced and expanded.
 
 ### Fixed
 
-- 👤 User list popup display in the admin panel was fixed to correctly track user identity when sorting or filtering changes the list order, preventing popups from showing incorrect user information. [Commit](https://github.com/open-webui/open-webui/commit/ae47101dc6aef2c7d8ae0d843985341fff820057) [#20046](https://github.com/open-webui/open-webui/issues/20046)
+- 👤 User list popup display in the admin panel was fixed to correctly track user identity when sorting or filtering changes the list order, preventing popups from showing incorrect user information. [Commit](https://github.com/open-webui/open-webui/commit/ae47101dc6aef2c7d8ae0d843985341fff820057), [#20046](https://github.com/open-webui/open-webui/issues/20046)
 - 🛡️ Chat loading failures when channels permissions were disabled are now prevented through graceful error handling. [Commit](https://github.com/open-webui/open-webui/commit/5c2df97f04cce5cb7087d288f816f91a739688c1)
 - 💭 Text loss in the explanation feature when using the "CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE" environment variable was resolved by correcting newline handling in streaming responses. [#19829](https://github.com/open-webui/open-webui/pull/19829)
 - 🔒 Temporary chat permission enforcement now correctly prevents users from enabling the feature through personal settings when disabled in default or group permissions. [#19785](https://github.com/open-webui/open-webui/issues/19785)
