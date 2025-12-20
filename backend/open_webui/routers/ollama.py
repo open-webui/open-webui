@@ -483,7 +483,7 @@ async def get_ollama_tags(
                 detail=detail if detail else "Open WebUI: Server Connection Error",
             )
 
-    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
+    if user.role in {"user", "professor"} and not BYPASS_MODEL_ACCESS_CONTROL:
         models["models"] = await get_filtered_models(models, user)
 
     return models
@@ -1293,7 +1293,7 @@ async def generate_chat_completion(
             payload = apply_system_prompt_to_body(system, payload, metadata, user)
 
         # Check if user has access to the model
-        if not bypass_filter and user.role == "user":
+        if not bypass_filter and user.role in {"user", "professor"}:
             if not (
                 user.id == model_info.user_id
                 or has_access(
@@ -1399,7 +1399,7 @@ async def generate_openai_completion(
             payload = apply_model_params_to_body_openai(params, payload)
 
         # Check if user has access to the model
-        if user.role == "user":
+        if user.role in {"user", "professor"}:
             if not (
                 user.id == model_info.user_id
                 or has_access(
@@ -1482,7 +1482,7 @@ async def generate_openai_chat_completion(
             payload = apply_system_prompt_to_body(system, payload, metadata, user)
 
         # Check if user has access to the model
-        if user.role == "user":
+        if user.role in {"user", "professor"}:
             if not (
                 user.id == model_info.user_id
                 or has_access(
@@ -1577,7 +1577,7 @@ async def get_openai_models(
                 detail=error_detail,
             )
 
-    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
+    if user.role in {"user", "professor"} and not BYPASS_MODEL_ACCESS_CONTROL:
         # Filter models based on user access control
         filtered_models = []
         for model in models:
