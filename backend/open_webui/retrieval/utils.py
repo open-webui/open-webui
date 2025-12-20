@@ -1279,7 +1279,7 @@ class RerankCompressor(BaseDocumentCompressor):
 
         scores = None
         if reranking:
-            scores = self.reranking_function(query, documents)
+            scores = await asyncio.to_thread(self.reranking_function, query, documents)
         else:
             from sentence_transformers import util
 

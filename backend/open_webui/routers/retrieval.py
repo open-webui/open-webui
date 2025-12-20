@@ -146,9 +146,12 @@ def get_rf(
     reranking_model: Optional[str] = None,
     external_reranker_url: str = "",
     external_reranker_api_key: str = "",
+    external_reranker_timeout: str = "",
     auto_update: bool = RAG_RERANKING_MODEL_AUTO_UPDATE,
 ):
     rf = None
+    # Convert timeout string to int or None (system default)
+    timeout_value = int(external_reranker_timeout) if external_reranker_timeout else None
     if reranking_model:
         if any(model in reranking_model for model in ["jinaai/jina-colbert-v2"]):
             try:
@@ -171,6 +174,7 @@ def get_rf(
                         url=external_reranker_url,
                         api_key=external_reranker_api_key,
                         model=reranking_model,
+                        timeout=timeout_value,
                     )
                 except Exception as e:
                     log.error(f"ExternalReranking: {e}")
@@ -480,6 +484,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "RAG_RERANKING_ENGINE": request.app.state.config.RAG_RERANKING_ENGINE,
         "RAG_EXTERNAL_RERANKER_URL": request.app.state.config.RAG_EXTERNAL_RERANKER_URL,
         "RAG_EXTERNAL_RERANKER_API_KEY": request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
+        "RAG_EXTERNAL_RERANKER_TIMEOUT": request.app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT,
         # Chunking settings
         "TEXT_SPLITTER": request.app.state.config.TEXT_SPLITTER,
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
@@ -667,6 +672,7 @@ class ConfigForm(BaseModel):
     RAG_RERANKING_ENGINE: Optional[str] = None
     RAG_EXTERNAL_RERANKER_URL: Optional[str] = None
     RAG_EXTERNAL_RERANKER_API_KEY: Optional[str] = None
+    RAG_EXTERNAL_RERANKER_TIMEOUT: Optional[str] = None
 
     # Chunking settings
     TEXT_SPLITTER: Optional[str] = None
@@ -923,6 +929,12 @@ async def update_rag_config(
         else request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY
     )
 
+    request.app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT = (
+        form_data.RAG_EXTERNAL_RERANKER_TIMEOUT
+        if form_data.RAG_EXTERNAL_RERANKER_TIMEOUT is not None
+        else request.app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT
+    )
+
     log.info(
         f"Updating reranking model: {request.app.state.config.RAG_RERANKING_MODEL} to {form_data.RAG_RERANKING_MODEL}"
     )
@@ -943,6 +955,7 @@ async def update_rag_config(
                     request.app.state.config.RAG_RERANKING_MODEL,
                     request.app.state.config.RAG_EXTERNAL_RERANKER_URL,
                     request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
+                    request.app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT,
                 )
 
                 request.app.state.RERANKING_FUNCTION = get_reranking_function(
@@ -1164,6 +1177,7 @@ async def update_rag_config(
         "RAG_RERANKING_ENGINE": request.app.state.config.RAG_RERANKING_ENGINE,
         "RAG_EXTERNAL_RERANKER_URL": request.app.state.config.RAG_EXTERNAL_RERANKER_URL,
         "RAG_EXTERNAL_RERANKER_API_KEY": request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
+        "RAG_EXTERNAL_RERANKER_TIMEOUT": request.app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT,
         # Chunking settings
         "TEXT_SPLITTER": request.app.state.config.TEXT_SPLITTER,
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,

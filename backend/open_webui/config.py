@@ -2802,6 +2802,12 @@ RAG_EXTERNAL_RERANKER_API_KEY = PersistentConfig(
     os.environ.get("RAG_EXTERNAL_RERANKER_API_KEY", ""),
 )
 
+RAG_EXTERNAL_RERANKER_TIMEOUT = PersistentConfig(
+    "RAG_EXTERNAL_RERANKER_TIMEOUT",
+    "rag.external_reranker_timeout",
+    os.environ.get("RAG_EXTERNAL_RERANKER_TIMEOUT", ""),
+)
+
 
 RAG_TEXT_SPLITTER = PersistentConfig(
     "RAG_TEXT_SPLITTER",
