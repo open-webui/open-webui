@@ -466,7 +466,6 @@ from open_webui.env import (
     ENABLE_COMPRESSION_MIDDLEWARE,
     ENABLE_WEBSOCKET_SUPPORT,
     BYPASS_MODEL_ACCESS_CONTROL,
-    ENABLE_CUSTOM_MODEL_FALLBACK,
     RESET_CONFIG_ON_START,
     ENABLE_VERSION_UPDATE_CHECK,
     ENABLE_OTEL,
@@ -481,6 +480,7 @@ from open_webui.utils.models import (
     get_all_base_models,
     check_model_access,
     get_filtered_models,
+    get_model_id_with_fallback,
 )
 from open_webui.utils.chat import (
     generate_chat_completion as chat_completion_handler,
@@ -1535,27 +1535,18 @@ async def chat_completion(
     metadata = {}
     try:
         if not model_item.get("direct", False):
-            # Get model info first to check if it's a custom model
             model_info = Models.get_model_by_id(model_id)
 
-            # Try fallback to default model for custom models if base model not found
-            if (
-                ENABLE_CUSTOM_MODEL_FALLBACK
-                and model_id not in request.app.state.MODELS
-                and model_info
-                and model_info.base_model_id
-                and request.app.state.config.DEFAULT_MODELS
-            ):
-                fallback_model_id = request.app.state.config.DEFAULT_MODELS.split(",")[0].strip()
-
-                if fallback_model_id in request.app.state.MODELS:
-                    log.warning(
-                        f"Base model '{model_info.base_model_id}' not found for custom model '{model_id}'. "
-                        f"Falling back to default model '{fallback_model_id}'."
-                    )
-                    model_id = fallback_model_id
-                    form_data["model"] = fallback_model_id
-                    model_info = Models.get_model_by_id(fallback_model_id)
+            fallback_id, did_fallback = get_model_id_with_fallback(
+                model_id,
+                model_info,
+                request.app.state.MODELS,
+                request.app.state.config.DEFAULT_MODELS,
+            )
+            if did_fallback:
+                model_id = fallback_id
+                form_data["model"] = fallback_id
+                model_info = Models.get_model_by_id(fallback_id)
 
             if model_id not in request.app.state.MODELS:
                 raise Exception("Model not found")

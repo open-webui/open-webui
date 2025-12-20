@@ -64,8 +64,8 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
     BYPASS_MODEL_ACCESS_CONTROL,
-    ENABLE_CUSTOM_MODEL_FALLBACK,
 )
+from open_webui.utils.models import get_model_id_with_fallback
 from open_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
@@ -1314,24 +1314,20 @@ async def generate_chat_completion(
         payload["model"] = f"{payload['model']}:latest"
 
     # Try fallback to default model for custom models if base model not found
-    if (
-        ENABLE_CUSTOM_MODEL_FALLBACK
-        and url_idx is None
-        and payload["model"] not in request.app.state.OLLAMA_MODELS
-        and model_info
-        and model_info.base_model_id
-        and request.app.state.config.DEFAULT_MODELS
-    ):
-        fallback_model_id = request.app.state.config.DEFAULT_MODELS.split(",")[0].strip()
-        if ":" not in fallback_model_id:
-            fallback_model_id = f"{fallback_model_id}:latest"
+    if url_idx is None and payload["model"] not in request.app.state.OLLAMA_MODELS:
+        fallback_model_id = request.app.state.config.DEFAULT_MODELS or ""
+        if fallback_model_id and ":" not in fallback_model_id.split(",")[0].strip():
+            fallback_model_id = f"{fallback_model_id.split(',')[0].strip()}:latest"
 
-        if fallback_model_id in request.app.state.OLLAMA_MODELS:
-            log.warning(
-                f"Base model '{model_info.base_model_id}' not found for custom model '{model_id}'. "
-                f"Falling back to default model '{fallback_model_id}'."
-            )
-            payload["model"] = fallback_model_id
+        fallback_id, did_fallback = get_model_id_with_fallback(
+            payload["model"],
+            model_info,
+            request.app.state.OLLAMA_MODELS,
+            fallback_model_id,
+            original_model_id=model_id,
+        )
+        if did_fallback:
+            payload["model"] = fallback_id
 
     url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
     api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(

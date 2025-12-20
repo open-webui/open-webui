@@ -28,13 +28,43 @@ from open_webui.config import (
     DEFAULT_ARENA_MODEL,
 )
 
-from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
+from open_webui.env import (
+    BYPASS_MODEL_ACCESS_CONTROL,
+    ENABLE_CUSTOM_MODEL_FALLBACK,
+    GLOBAL_LOG_LEVEL,
+)
 from open_webui.models.users import UserModel
 
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+
+def get_model_id_with_fallback(
+    model_id: str,
+    model_info,
+    available_models: dict,
+    default_models: str,
+    original_model_id: str = None,
+) -> tuple[str, bool]:
+    if not ENABLE_CUSTOM_MODEL_FALLBACK:
+        return model_id, False
+
+    if model_id in available_models:
+        return model_id, False
+
+    if not model_info or not model_info.base_model_id or not default_models:
+        return model_id, False
+
+    fallback_model_id = default_models.split(",")[0].strip()
+    if fallback_model_id not in available_models:
+        return model_id, False
+
+    log.warning(
+        f"Base model '{model_info.base_model_id}' not found for custom model "
+        f"'{original_model_id or model_id}'. Falling back to default model '{fallback_model_id}'."
+    )
+    return fallback_model_id, True
 
 
 async def fetch_ollama_models(request: Request, user: UserModel = None):
