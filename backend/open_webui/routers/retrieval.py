@@ -473,6 +473,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "MINERU_API_MODE": request.app.state.config.MINERU_API_MODE,
         "MINERU_API_URL": request.app.state.config.MINERU_API_URL,
         "MINERU_API_KEY": request.app.state.config.MINERU_API_KEY,
+        "MINERU_API_TIMEOUT": request.app.state.config.MINERU_API_TIMEOUT,
         "MINERU_PARAMS": request.app.state.config.MINERU_PARAMS,
         # Reranking settings
         "RAG_RERANKING_MODEL": request.app.state.config.RAG_RERANKING_MODEL,
@@ -658,6 +659,7 @@ class ConfigForm(BaseModel):
     MINERU_API_MODE: Optional[str] = None
     MINERU_API_URL: Optional[str] = None
     MINERU_API_KEY: Optional[str] = None
+    MINERU_API_TIMEOUT: Optional[str] = None
     MINERU_PARAMS: Optional[dict] = None
 
     # Reranking settings
@@ -878,6 +880,11 @@ async def update_rag_config(
         form_data.MINERU_API_KEY
         if form_data.MINERU_API_KEY is not None
         else request.app.state.config.MINERU_API_KEY
+    )
+    request.app.state.config.MINERU_API_TIMEOUT = (
+        form_data.MINERU_API_TIMEOUT
+        if form_data.MINERU_API_TIMEOUT is not None
+        else request.app.state.config.MINERU_API_TIMEOUT
     )
     request.app.state.config.MINERU_PARAMS = (
         form_data.MINERU_PARAMS
@@ -1150,6 +1157,7 @@ async def update_rag_config(
         "MINERU_API_MODE": request.app.state.config.MINERU_API_MODE,
         "MINERU_API_URL": request.app.state.config.MINERU_API_URL,
         "MINERU_API_KEY": request.app.state.config.MINERU_API_KEY,
+        "MINERU_API_TIMEOUT": request.app.state.config.MINERU_API_TIMEOUT,
         "MINERU_PARAMS": request.app.state.config.MINERU_PARAMS,
         # Reranking settings
         "RAG_RERANKING_MODEL": request.app.state.config.RAG_RERANKING_MODEL,
@@ -1565,6 +1573,7 @@ def process_file(
                         MINERU_API_MODE=request.app.state.config.MINERU_API_MODE,
                         MINERU_API_URL=request.app.state.config.MINERU_API_URL,
                         MINERU_API_KEY=request.app.state.config.MINERU_API_KEY,
+                        MINERU_API_TIMEOUT=request.app.state.config.MINERU_API_TIMEOUT,
                         MINERU_PARAMS=request.app.state.config.MINERU_PARAMS,
                     )
                     docs = loader.load(

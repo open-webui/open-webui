@@ -337,6 +337,7 @@ class Loader:
                 api_url=self.kwargs.get("MINERU_API_URL", "http://localhost:8000"),
                 api_key=self.kwargs.get("MINERU_API_KEY", ""),
                 params=self.kwargs.get("MINERU_PARAMS", {}),
+                timeout=int(self.kwargs.get("MINERU_API_TIMEOUT", 300)),
             )
         elif (
             self.engine == "mistral_ocr"
