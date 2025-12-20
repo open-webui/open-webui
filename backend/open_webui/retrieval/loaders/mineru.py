@@ -26,7 +26,7 @@ class MinerULoader:
         api_url: str = "http://localhost:8000",
         api_key: str = "",
         params: dict = None,
-        timeout: int = 300,
+        timeout: Optional[int] = 300,
     ):
         self.file_path = file_path
         self.api_mode = api_mode.lower()
@@ -103,7 +103,7 @@ class MinerULoader:
                     f"{self.api_url}/file_parse",
                     data=form_data,
                     files=files,
-                    timeout=self.timeout,  # 5 minute timeout for large documents
+                    timeout=self.timeout,
                 )
                 response.raise_for_status()
 
@@ -302,7 +302,7 @@ class MinerULoader:
                 response = requests.put(
                     upload_url,
                     data=f,
-                    timeout=self.timeout,  # 5 minute timeout for large files
+                    timeout=self.timeout,
                 )
                 response.raise_for_status()
         except FileNotFoundError:

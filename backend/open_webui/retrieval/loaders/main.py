@@ -331,13 +331,21 @@ class Loader:
         elif self.engine == "mineru" and file_ext in [
             "pdf"
         ]:  # MinerU currently only supports PDF
+
+            mineru_timeout = self.kwargs.get("MINERU_API_TIMEOUT", 300)
+            if mineru_timeout:
+                try:
+                    mineru_timeout = int(mineru_timeout)
+                except ValueError:
+                    mineru_timeout = 300
+
             loader = MinerULoader(
                 file_path=file_path,
                 api_mode=self.kwargs.get("MINERU_API_MODE", "local"),
                 api_url=self.kwargs.get("MINERU_API_URL", "http://localhost:8000"),
                 api_key=self.kwargs.get("MINERU_API_KEY", ""),
                 params=self.kwargs.get("MINERU_PARAMS", {}),
-                timeout=int(self.kwargs.get("MINERU_API_TIMEOUT", 300)),
+                timeout=mineru_timeout,
             )
         elif (
             self.engine == "mistral_ocr"
