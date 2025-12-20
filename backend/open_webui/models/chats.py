@@ -7,7 +7,7 @@ from typing import Optional
 from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
 from open_webui.models.folders import Folders
-from open_webui.env import SRC_LOG_LEVELS, ENABLE_CHAT_INPUT_BASE64_IMAGE_URL_CONVERSION
+from open_webui.env import ENABLE_CHAT_INPUT_BASE64_IMAGE_URL_CONVERSION
 from open_webui.utils.files import convert_message_content_images, get_image_url_from_base64
 
 from pydantic import BaseModel, ConfigDict
@@ -21,7 +21,6 @@ from sqlalchemy.sql.expression import bindparam
 ####################
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 
 class Chat(Base):

@@ -234,7 +234,8 @@
 												</div>
 											{/if}
 										</div>
-										{#if item?.write_access}
+
+										{#if item?.write_access || $user?.role === 'admin'}
 											<div class="flex items-center gap-2">
 												<div class=" flex self-center">
 													<ItemMenu
