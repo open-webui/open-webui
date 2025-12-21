@@ -2994,7 +2994,7 @@ WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(
 WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
     "WEB_SEARCH_CONCURRENT_REQUESTS",
     "rag.web.search.concurrent_requests",
-    int(os.getenv("WEB_SEARCH_CONCURRENT_REQUESTS", "10")),
+    int(os.getenv("WEB_SEARCH_CONCURRENT_REQUESTS", "0")),
 )
 
 
