@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.42] - 2025-12-20
+## [0.6.42] - 2025-12-21
 
 ### Added
 
@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - ⚡ External reranker operations were optimized to prevent event loop blocking by offloading synchronous HTTP requests to a thread pool using asyncio.to_thread(), eliminating application freezes during RAG reranking queries. [#20049](https://github.com/open-webui/open-webui/pull/20049), [#19900](https://github.com/open-webui/open-webui/issues/19900)
+- 🧠 Image generation and editing operations are now visible to the LLM via system context injection, allowing text-only models to acknowledge operations and provide context-aware responses instead of claiming they cannot generate images. [Commit](https://github.com/open-webui/open-webui/commit/28b2fca)
 - 💭 Text loss in the explanation feature when using the "CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE" environment variable was resolved by correcting newline handling in streaming responses. [#19829](https://github.com/open-webui/open-webui/pull/19829)
 - 📚 Knowledge base batch file addition failures caused by Pydantic validation errors are now prevented by making the meta field optional in file metadata responses, allowing files without metadata to be processed correctly. [#20022](https://github.com/open-webui/open-webui/pull/20022), [#14220](https://github.com/open-webui/open-webui/issues/14220)
 - 🛡️ Chat loading failures when channels permissions were disabled are now prevented through graceful error handling. [Commit](https://github.com/open-webui/open-webui/commit/5c2df97f04cce5cb7087d288f816f91a739688c1)
@@ -51,20 +52,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🧩 Chat overview tab crashes caused by undefined model references were resolved by adding proper null checks when accessing deleted or ejected models. [#19935](https://github.com/open-webui/open-webui/pull/19935)
 - 🚫 Channel API endpoint access is now correctly blocked when channels are globally disabled, preventing users with channel permissions from accessing channel data via API requests when the feature is turned off in admin settings. [#19957](https://github.com/open-webui/open-webui/pull/19957), [#19914](https://github.com/open-webui/open-webui/issues/19914)
 - 👤 User list popup display in the admin panel was fixed to correctly track user identity when sorting or filtering changes the list order, preventing popups from showing incorrect user information. [Commit](https://github.com/open-webui/open-webui/commit/ae47101dc6aef2c7d8ae0d843985341fff820057), [#20046](https://github.com/open-webui/open-webui/issues/20046)
+- 👥 User selection in the "Edit User Group" modal now preserves pagination position, allowing administrators to select multiple users across pages without resetting to page 1. [#19959](https://github.com/open-webui/open-webui/pull/19959)
+- 📸 Model avatar images now update immediately in the admin models list through proper Cache-Control headers, eliminating the need for manual cache clearing. [#19959](https://github.com/open-webui/open-webui/pull/19959)
 - 🔒 Temporary chat permission enforcement now correctly prevents users from enabling the feature through personal settings when disabled in default or group permissions. [#19785](https://github.com/open-webui/open-webui/issues/19785)
 - 🎨 Image editing with reference images now correctly uses both previously generated images and newly uploaded reference images. [Commit](https://github.com/open-webui/open-webui/commit/bcd50ed8f1b7387fd700538ae0d74fc72f3c53d0)
+- 🧠 Image generation and editing operations are now visible to the LLM via system context injection, allowing text-only models to acknowledge operations and provide context-aware responses instead of claiming they cannot generate images. [Commit](https://github.com/open-webui/open-webui/commit/28b2fca)
 - 📑 Source citation rendering errors when citation syntax appeared in user messages or contexts without source data were resolved. [Commit](https://github.com/open-webui/open-webui/commit/3c8f1cf8e58d52e86375634b0381374298b1b4f3)
+- 📄 DOCX file parsing now works correctly in temporary chats through client-side text extraction, preventing raw data from being displayed. [Commit](https://github.com/open-webui/open-webui/commit/6993b0b40b10af8cdbe6626702cc94080fff9e22)
 - 🔧 Pipeline settings save failures when valve properties contain null values are now handled correctly. [#19791](https://github.com/open-webui/open-webui/pull/19791)
+- ⚙️ Invalid PASSWORD_VALIDATION_REGEX_PATTERN configurations no longer cause startup warnings, with automatic fallback to the default pattern when regex compilation fails. [#20058](https://github.com/open-webui/open-webui/pull/20058)
+- 🎯 The DefaultFiltersSelector component in model settings now correctly displays when only global toggleable filters are present, enabling per-model default configuration. [#20066](https://github.com/open-webui/open-webui/pull/20066)
 - 🎤 Audio file upload failures caused by MIME type matching issues with spacing variations and codec parameters were resolved by implementing proper MIME type parsing. [#17771](https://github.com/open-webui/open-webui/pull/17771), [#17761](https://github.com/open-webui/open-webui/issues/17761)
 - ⌨️ Regenerate response keyboard shortcut now only activates when chat input is selected, preventing unintended regeneration when modals are open or other UI elements are focused. [#19875](https://github.com/open-webui/open-webui/pull/19875)
 - 📋 Log truncation issues in Docker deployments during application crashes were resolved by disabling Python stdio buffering, ensuring complete diagnostic output is captured. [#19844](https://github.com/open-webui/open-webui/issues/19844)
 - 🔴 Redis cluster compatibility issues with disabled KEYS command were resolved by replacing blocking KEYS operations with production-safe SCAN iterations. [#19871](https://github.com/open-webui/open-webui/pull/19871), [#15834](https://github.com/open-webui/open-webui/issues/15834)
+- 👥 User selection in the "Edit User Group" modal now preserves pagination position, allowing administrators to select multiple users across pages without resetting to page 1. [#19959](https://github.com/open-webui/open-webui/pull/19959)
+- 📸 Model avatar images now update immediately in the admin models list through proper Cache-Control headers, eliminating the need for manual cache clearing. [#19959](https://github.com/open-webui/open-webui/pull/19959)
 - 🔤 File attachment container layout issues when using RTL languages were resolved by applying chat direction settings to file containers across all message types. [#19891](https://github.com/open-webui/open-webui/pull/19891), [#19742](https://github.com/open-webui/open-webui/issues/19742)
 - 🔃 Ollama model list now automatically refreshes after model deletion, preventing deleted models from persisting in the UI and being inadvertently re-downloaded during subsequent pull operations. [#19912](https://github.com/open-webui/open-webui/pull/19912)
 - 🌐 Ollama Cloud web search now correctly applies domain filtering to search results. [Commit](https://github.com/open-webui/open-webui/commit/d4bd938a77c22409a1643c058b937a06e07baca9)
 - 🔓 MCP OAuth 2.1 tool servers now work correctly in multi-node deployments through lazy registration of OAuth clients from shared configuration, eliminating 404 errors when load balancers route requests to nodes that didn't process the original config update. [#19902](https://github.com/open-webui/open-webui/pull/19902)
 - 📜 Tool specification serialization now preserves non-ASCII characters including Chinese text, improving LLM comprehension and tool selection accuracy by avoiding Unicode escape sequences. [#19942](https://github.com/open-webui/open-webui/pull/19942)
 - 🛟 Model editor stability was improved with null safety checks for tools, functions, and file input operations, preventing crashes when stores are undefined or file objects are invalid. [#19939](https://github.com/open-webui/open-webui/pull/19939)
+- 🎯 The DefaultFiltersSelector component in model settings now correctly displays when only global toggleable filters are present, enabling per-model default configuration. [#20066](https://github.com/open-webui/open-webui/pull/20066)
 - 🗣️ MoA completion handling stability was improved with null safety checks for response objects, boolean casting for settings, and proper timeout type definitions. [#19921](https://github.com/open-webui/open-webui/pull/19921)
 - ⚙️ Chat functionality failures caused by empty logit_bias parameter values are now prevented by properly handling empty strings in the parameter parsing middleware. [#19982](https://github.com/open-webui/open-webui/issues/19982)
 - 🔏 Administrators can now delete read-only knowledge bases from deleted users, resolving permission issues that previously prevented cleanup of orphaned read-only content. [Commit](https://github.com/open-webui/open-webui/commit/59d6eb2badf46f9c2b1e879484ac33432915b575)
@@ -76,6 +86,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🧮 The "ENABLE_ASYNC_EMBEDDING" environment variable is now correctly applied to embedding operations when configured exclusively via environment variables. [#19748](https://github.com/open-webui/open-webui/pull/19748)
 - 🌄 The "COMFYUI_WORKFLOW_NODES" and "IMAGES_EDIT_COMFYUI_WORKFLOW_NODES" environment variables are now correctly loaded and parsed as JSON lists, and the configuration key name was corrected from "COMFYUI_WORKFLOW" to "COMFYUI_WORKFLOW_NODES". [#19918](https://github.com/open-webui/open-webui/pull/19918), [#19886](https://github.com/open-webui/open-webui/issues/19886)
 - 📝 Channel name length is now limited to 128 characters with validation to prevent display issues caused by excessively long names. [Commit](https://github.com/open-webui/open-webui/commit/f509f5542dde384d34402f6df763f49a06bea109)
+- ⚙️ Invalid PASSWORD_VALIDATION_REGEX_PATTERN configurations no longer cause startup warnings, with automatic fallback to the default pattern when regex compilation fails. [#20058](https://github.com/open-webui/open-webui/pull/20058)
 - 🔎 Bocha search with filter list functionality now works correctly by returning results as a list instead of a dictionary wrapper, ensuring compatibility with result filtering operations. [Commit](https://github.com/open-webui/open-webui/commit/b5bd8704fe1672da839bb3be6210d7cb494797ce), [#19733](https://github.com/open-webui/open-webui/issues/19733)
 
 ### Changed
