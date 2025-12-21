@@ -425,7 +425,13 @@ PASSWORD_VALIDATION_REGEX_PATTERN = os.environ.get(
     "^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$",
 )
 
-PASSWORD_VALIDATION_REGEX_PATTERN = re.compile(PASSWORD_VALIDATION_REGEX_PATTERN)
+try:
+    PASSWORD_VALIDATION_REGEX_PATTERN = re.compile(PASSWORD_VALIDATION_REGEX_PATTERN)
+except Exception as e:
+    log.error(f"Invalid PASSWORD_VALIDATION_REGEX_PATTERN: {e}")
+    PASSWORD_VALIDATION_REGEX_PATTERN = re.compile(
+        "^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$"
+    )
 
 
 BYPASS_MODEL_ACCESS_CONTROL = (
