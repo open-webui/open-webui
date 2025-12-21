@@ -6,8 +6,6 @@ import uuid
 
 from open_webui.internal.db import Base, get_db
 
-from open_webui.env import SRC_LOG_LEVELS
-
 from open_webui.models.files import (
     File,
     FileModel,
@@ -35,7 +33,6 @@ from open_webui.utils.db.access_control import has_permission
 
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 ####################
 # Knowledge DB Schema

@@ -894,10 +894,10 @@
 					{#if knowledge?.write_access}
 						<div>
 							<AddContentMenu
-								on:upload={(e) => {
-									if (e.detail.type === 'directory') {
+								onUpload={(data) => {
+									if (data.type === 'directory') {
 										uploadDirectoryHandler();
-									} else if (e.detail.type === 'text') {
+									} else if (data.type === 'text') {
 										showAddTextContentModal = true;
 									} else if (e.detail.type === 'web') {
 										uploadWebBatchHandler(e.detail.data);
@@ -905,7 +905,7 @@
 										document.getElementById('files-input').click();
 									}
 								}}
-								on:sync={(e) => {
+								onSync={() => {
 									showSyncConfirmModal = true;
 								}}
 							/>

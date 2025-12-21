@@ -58,7 +58,6 @@ from open_webui.config import (
 )
 from open_webui.env import (
     ENV,
-    SRC_LOG_LEVELS,
     MODELS_CACHE_TTL,
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
@@ -68,7 +67,6 @@ from open_webui.env import (
 from open_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["OLLAMA"])
 
 
 ##########################################

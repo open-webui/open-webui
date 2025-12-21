@@ -106,19 +106,6 @@
 	let actionIds = [];
 	let accessControl = {};
 
-	const addUsage = (base_model_id) => {
-		const baseModel = $models.find((m) => m.id === base_model_id);
-
-		if (baseModel) {
-			if (baseModel.owned_by === 'openai') {
-				capabilities.usage = baseModel?.meta?.capabilities?.usage ?? false;
-			} else {
-				delete capabilities.usage;
-			}
-			capabilities = capabilities;
-		}
-	};
-
 	const submitHandler = async () => {
 		loading = true;
 
@@ -361,7 +348,7 @@
 			on:change={() => {
 				let reader = new FileReader();
 				reader.onload = (event) => {
-					let originalImageUrl = `${event.target.result}`;
+					let originalImageUrl = `${event.target?.result}`;
 
 					const img = new Image();
 					img.src = originalImageUrl;
@@ -409,12 +396,12 @@
 					inputFiles &&
 					inputFiles.length > 0 &&
 					['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/svg+xml'].includes(
-						inputFiles[0]['type']
+						(inputFiles[0] as any)?.['type']
 					)
 				) {
 					reader.readAsDataURL(inputFiles[0]);
 				} else {
-					console.log(`Unsupported File Type '${inputFiles[0]['type']}'.`);
+					console.log(`Unsupported File Type '${(inputFiles[0] as any)?.['type']}'.`);
 					inputFiles = null;
 				}
 			}}
@@ -547,9 +534,6 @@
 										class="dark:bg-gray-900 text-sm w-full bg-transparent outline-hidden"
 										placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
 										bind:value={info.base_model_id}
-										on:change={(e) => {
-											addUsage(e.target.value);
-										}}
 										required
 									>
 										<option value={null} class=" text-gray-900"
@@ -713,44 +697,42 @@
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="my-2">
-						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
+						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools ?? []} />
 					</div>
 
-					{#if $functions.filter((func) => func.type === 'filter').length > 0 || $functions.filter((func) => func.type === 'action').length > 0}
+					{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0 || ($functions ?? []).filter((func) => func.type === 'action').length > 0}
 						<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
-						{#if $functions.filter((func) => func.type === 'filter').length > 0}
+						{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0}
 							<div class="my-2">
 								<FiltersSelector
 									bind:selectedFilterIds={filterIds}
-									filters={$functions.filter((func) => func.type === 'filter')}
+									filters={($functions ?? []).filter((func) => func.type === 'filter')}
 								/>
 							</div>
 
-							{#if filterIds.length > 0}
-								{@const toggleableFilters = $functions.filter(
-									(func) =>
-										func.type === 'filter' &&
-										(filterIds.includes(func.id) || func?.is_global) &&
-										func?.meta?.toggle
-								)}
+							{@const toggleableFilters = $functions.filter(
+								(func) =>
+									func.type === 'filter' &&
+									(filterIds.includes(func.id) || func?.is_global) &&
+									func?.meta?.toggle
+							)}
 
-								{#if toggleableFilters.length > 0}
-									<div class="my-2">
-										<DefaultFiltersSelector
-											bind:selectedFilterIds={defaultFilterIds}
-											filters={toggleableFilters}
-										/>
-									</div>
-								{/if}
+							{#if toggleableFilters.length > 0}
+								<div class="my-2">
+									<DefaultFiltersSelector
+										bind:selectedFilterIds={defaultFilterIds}
+										filters={toggleableFilters}
+									/>
+								</div>
 							{/if}
 						{/if}
 
-						{#if $functions.filter((func) => func.type === 'action').length > 0}
+						{#if ($functions ?? []).filter((func) => func.type === 'action').length > 0}
 							<div class="my-2">
 								<ActionsSelector
 									bind:selectedActionIds={actionIds}
-									actions={$functions.filter((func) => func.type === 'action')}
+									actions={($functions ?? []).filter((func) => func.type === 'action')}
 								/>
 							</div>
 						{/if}
