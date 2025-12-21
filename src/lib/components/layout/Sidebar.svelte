@@ -82,6 +82,12 @@
 
 	let showCreateFolderModal = false;
 
+	let pinnedModels = [];
+
+	let showPinnedModels = false;
+	let showChannels = false;
+	let showFolders = false;
+
 	let folders = {};
 	let folderRegistry = {};
 
@@ -178,6 +184,7 @@
 		if (res) {
 			// newFolderId = res.id;
 			await initFolders();
+			showFolders = true;
 		}
 	};
 
@@ -464,6 +471,12 @@
 					}
 					await initChatList();
 				}
+			}),
+			settings.subscribe((value) => {
+				if (pinnedModels != value?.pinnedModels ?? []) {
+					pinnedModels = value?.pinnedModels ?? [];
+					showPinnedModels = pinnedModels.length > 0;
+				}
 			})
 		];
 
@@ -579,7 +592,7 @@
 			$socket.emit('join-channels', { auth: { token: $user?.token } });
 			await initChannels();
 			showCreateChannel = false;
-
+			showChannels = true;
 			goto(`/channels/${res.id}`);
 		}
 	}}
@@ -1006,6 +1019,7 @@
 				{#if ($models ?? []).length > 0 && (($settings?.pinnedModels ?? []).length > 0 || $config?.default_pinned_models)}
 					<Folder
 						id="sidebar-models"
+						bind:open={showPinnedModels}
 						className="px-2 mt-0.5"
 						name={$i18n.t('Models')}
 						chevron={false}
@@ -1018,6 +1032,7 @@
 				{#if $config?.features?.enable_channels && ($user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true))}
 					<Folder
 						id="sidebar-channels"
+						bind:open={showChannels}
 						className="px-2 mt-0.5"
 						name={$i18n.t('Channels')}
 						chevron={false}
@@ -1052,6 +1067,7 @@
 				{#if $config?.features?.enable_folders && ($user?.role === 'admin' || ($user?.permissions?.features?.folders ?? true))}
 					<Folder
 						id="sidebar-folders"
+						bind:open={showFolders}
 						className="px-2 mt-0.5"
 						name={$i18n.t('Folders')}
 						chevron={false}
