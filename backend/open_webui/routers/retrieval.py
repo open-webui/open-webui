@@ -122,6 +122,31 @@ except ImportError:
     def set_span_attribute(*args, **kwargs):
         pass
 
+# Safe wrapper functions that NEVER fail - OTEL is monitoring only, must not affect task execution
+def safe_add_span_event(event_name, attributes=None):
+    """Safely add span event - never fails, even if OTEL is broken"""
+    try:
+        add_span_event(event_name, attributes)
+    except Exception as e:
+        log.debug(f"OTEL add_span_event failed (non-critical): {e}")
+
+def safe_set_span_attribute(span, key, value):
+    """Safely set span attribute - never fails, even if OTEL is broken"""
+    try:
+        if span:
+            set_span_attribute(span, key, value)
+    except Exception as e:
+        log.debug(f"OTEL set_span_attribute failed (non-critical): {e}")
+
+def safe_trace_span(*args, **kwargs):
+    """Safely create trace span - never fails, even if OTEL is broken"""
+    try:
+        return trace_span(*args, **kwargs)
+    except Exception as e:
+        log.debug(f"OTEL trace_span failed (non-critical), using nullcontext: {e}")
+        from contextlib import nullcontext
+        return nullcontext(enter_result=None)
+
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
@@ -948,7 +973,8 @@ def save_docs_to_vector_db(
     )
 
     # Create OTEL span for embedding generation and vector DB insertion
-    with trace_span(
+    # CRITICAL: Use safe_trace_span to ensure OTEL failures never prevent embedding
+    with safe_trace_span(
         name="file.embedding.save",
         attributes={
             "collection.name": collection_name,
@@ -1008,9 +1034,8 @@ def save_docs_to_vector_db(
                     raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
 
                 docs = text_splitter.split_documents(docs)
-                add_span_event("embedding.split.completed", {"chunk.count": len(docs)})
-                if span:
-                    set_span_attribute("chunk.count", len(docs))
+                safe_add_span_event("embedding.split.completed", {"chunk.count": len(docs)})
+                safe_set_span_attribute(span, "chunk.count", len(docs))
 
             if len(docs) == 0:
                 # Provide detailed error for debugging empty content issues
@@ -1171,7 +1196,7 @@ def save_docs_to_vector_db(
                 print(f"  [STEP 6] Generating embeddings for {len(texts)} chunks in a single batch", flush=True)
                 log.info(f"  [STEP 6] Generating embeddings for {len(texts)} chunks in a single batch")
                 
-                add_span_event("embedding.generation.started", {"text.count": len(texts)})
+                safe_add_span_event("embedding.generation.started", {"text.count": len(texts)})
                 
                 try:
                     embeddings = embedding_function(
@@ -1203,12 +1228,12 @@ def save_docs_to_vector_db(
                     
                     print(f"  [STEP 6.1] ✅ Embeddings generated successfully", flush=True)
                     log.info(f"  [STEP 6.1] ✅ Embeddings generated successfully")
-                    add_span_event("embedding.generation.completed", {"embedding.count": len(embeddings) if embeddings else 0})
+                    safe_add_span_event("embedding.generation.completed", {"embedding.count": len(embeddings) if embeddings else 0})
                 except Exception as embed_error:
                     error_msg = f"Failed to generate embeddings: {embed_error}"
                     print(f"  [STEP 6] ❌ {error_msg}", flush=True)
                     log.error(f"  [STEP 6] ❌ {error_msg}", exc_info=True)
-                    add_span_event("embedding.generation.failed", {
+                    safe_add_span_event("embedding.generation.failed", {
                         "error.type": type(embed_error).__name__,
                         "error.message": str(embed_error)[:200],
                     })
@@ -1233,7 +1258,7 @@ def save_docs_to_vector_db(
                 print(f"  [STEP 7.1] Items prepared, inserting into vector DB...", flush=True)
                 log.info(f"  [STEP 7.1] Items prepared, inserting into vector DB...")
 
-                add_span_event("vector_db.insert.started", {"item.count": len(items)})
+                safe_add_span_event("vector_db.insert.started", {"item.count": len(items)})
 
                 try:
                     VECTOR_DB_CLIENT.insert(
@@ -1242,12 +1267,12 @@ def save_docs_to_vector_db(
                     )
                     print(f"  [STEP 7.1] ✅ Successfully inserted {len(items)} items into collection: {collection_name}", flush=True)
                     log.info(f"  [STEP 7.1] ✅ Successfully inserted {len(items)} items into collection: {collection_name}")
-                    add_span_event("vector_db.insert.completed", {"item.count": len(items)})
+                    safe_add_span_event("vector_db.insert.completed", {"item.count": len(items)})
                 except Exception as insert_error:
                     error_msg = f"Failed to insert into vector DB collection {collection_name}: {insert_error}"
                     print(f"  [STEP 7.1] ❌ {error_msg}", flush=True)
                     log.error(f"  [STEP 7.1] ❌ {error_msg}", exc_info=True)
-                    add_span_event("vector_db.insert.failed", {
+                    safe_add_span_event("vector_db.insert.failed", {
                         "error.type": type(insert_error).__name__,
                         "error.message": str(insert_error)[:200],
                     })
@@ -1261,14 +1286,14 @@ def save_docs_to_vector_db(
                 return True
             except Exception as e:
                 log.exception(e)
-                add_span_event("file.embedding.save.error", {
+                safe_add_span_event("file.embedding.save.error", {
                     "error.type": type(e).__name__,
                     "error.message": str(e)[:200],
                 })
                 raise e
         except Exception as e:
             log.exception(e)
-            add_span_event("file.embedding.save.error", {
+            safe_add_span_event("file.embedding.save.error", {
                 "error.type": type(e).__name__,
                 "error.message": str(e)[:200],
             })
@@ -1295,7 +1320,8 @@ def get_embeddings_with_fallback(
         list[list[float]]: List of embeddings for the input texts.
     """
     # Create OTEL span for embedding API calls
-    with trace_span(
+    # CRITICAL: Use safe_trace_span to ensure OTEL failures never prevent embedding generation
+    with safe_trace_span(
         name="file.embedding.generate",
         attributes={
             "embedding.engine": embedding_engine,
@@ -1307,7 +1333,7 @@ def get_embeddings_with_fallback(
         try:
             # First, try single batch embedding function
             logging.info(f"Generating embeddings for {len(texts)} chunks in a single batch")
-            add_span_event("embedding.api.request", {"method": "single_batch"})
+            safe_add_span_event("embedding.api.request", {"method": "single_batch"})
             
             single_batch_func = get_single_batch_embedding_function(
                 embedding_engine,
@@ -1321,7 +1347,7 @@ def get_embeddings_with_fallback(
 
             # Explicitly try to generate embeddings with the single batch function
             result = single_batch_func(texts, user)
-            add_span_event("embedding.api.response", {
+            safe_add_span_event("embedding.api.response", {
                 "status": "success",
                 "method": "single_batch",
                 "embedding.count": len(result) if result else 0,
@@ -1334,9 +1360,8 @@ def get_embeddings_with_fallback(
             logging.warning(f"Falling back to batched embedding function")
             
             # Set fallback attribute
-            if span:
-                set_span_attribute("embedding.fallback_used", True)
-            add_span_event("embedding.api.fallback", {
+            safe_set_span_attribute(span, "embedding.fallback_used", True)
+            safe_add_span_event("embedding.api.fallback", {
                 "error.type": type(e).__name__,
                 "error.message": str(e)[:200],
             })
@@ -1355,14 +1380,14 @@ def get_embeddings_with_fallback(
             # Return the result from the fallback function
             try:
                 result = fallback_func(texts, user)
-                add_span_event("embedding.api.response", {
+                safe_add_span_event("embedding.api.response", {
                     "status": "success",
                     "method": "fallback",
                     "embedding.count": len(result) if result else 0,
                 })
                 return result
             except Exception as fallback_error:
-                add_span_event("embedding.api.fallback_failed", {
+                safe_add_span_event("embedding.api.fallback_failed", {
                     "error.type": type(fallback_error).__name__,
                     "error.message": str(fallback_error)[:200],
                 })

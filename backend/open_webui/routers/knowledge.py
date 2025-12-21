@@ -49,7 +49,11 @@ except ImportError:
         from contextlib import asynccontextmanager
         @asynccontextmanager
         async def _noop():
-            yield None
+            try:
+                yield None
+            except Exception:
+                # Properly handle exceptions in async generator
+                pass
         return _noop()
     def add_span_event(*args, **kwargs):
         pass
@@ -58,6 +62,37 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
+
+# Safe wrapper functions that NEVER fail - OTEL is monitoring only, must not affect task execution
+def safe_add_span_event(event_name, attributes=None):
+    """Safely add span event - never fails, even if OTEL is broken"""
+    try:
+        add_span_event(event_name, attributes)
+    except Exception as e:
+        log.debug(f"OTEL add_span_event failed (non-critical): {e}")
+
+def safe_set_span_attribute(span, key, value):
+    """Safely set span attribute - never fails, even if OTEL is broken"""
+    try:
+        if span:
+            set_span_attribute(span, key, value)
+    except Exception as e:
+        log.debug(f"OTEL set_span_attribute failed (non-critical): {e}")
+
+async def safe_trace_span_async(*args, **kwargs):
+    """Safely create async trace span - never fails, even if OTEL is broken"""
+    try:
+        return await trace_span_async(*args, **kwargs)
+    except Exception as e:
+        log.debug(f"OTEL trace_span_async failed (non-critical), using nullcontext: {e}")
+        from contextlib import asynccontextmanager
+        @asynccontextmanager
+        async def _noop():
+            try:
+                yield None
+            except Exception:
+                pass
+        return _noop()
 
 router = APIRouter()
 
@@ -429,7 +464,8 @@ async def add_file_to_knowledge_by_id(
     name = filename
     
     # Create OTEL span for file upload
-    async with trace_span_async(
+    # CRITICAL: Use safe_trace_span_async to ensure OTEL failures never prevent file uploads
+    async with safe_trace_span_async(
         name="file.upload",
         attributes={
             "file.id": file_id,
@@ -440,16 +476,15 @@ async def add_file_to_knowledge_by_id(
         },
     ) as span:
         try:
-            add_span_event("file.upload.started", {"file_id": file_id, "filename": name})
+            safe_add_span_event("file.upload.started", {"file_id": file_id, "filename": name})
             
             filename = f"{file_id}_{filename}"
             contents, file_path = Storage.upload_file(file.file, filename)
             
             # Update span with file size after upload
-            if span:
-                set_span_attribute("file.size", len(contents))
+            safe_set_span_attribute(span, "file.size", len(contents))
             
-            add_span_event("file.upload.stored", {"file_path": file_path, "file_size": len(contents)})
+            safe_add_span_event("file.upload.stored", {"file_path": file_path, "file_size": len(contents)})
 
             file_item = Files.insert_new_file(
                 user.id,
@@ -500,11 +535,11 @@ async def add_file_to_knowledge_by_id(
                             knowledge_id=id,  # Pass knowledge_id for single embedding
                             background_tasks=background_tasks,
                         )
-                    add_span_event("file.upload.queued", {"file_id": file_id})
+                    safe_add_span_event("file.upload.queued", {"file_id": file_id})
                 except Exception as e:
                     log.exception(e)
                     log.error(f"Error starting background processing for file: {file_id}")
-                    add_span_event("file.upload.queue_failed", {
+                    safe_add_span_event("file.upload.queue_failed", {
                         "file_id": file_id,
                         "error": str(e)[:200]
                     })
@@ -573,7 +608,7 @@ async def add_file_to_knowledge_by_id(
                     files = Files.get_files_by_ids(updated_knowledge.data.get("file_ids", []))
 
                     log.info(f"Successfully updated knowledge {id}: file {file_id} is in file_ids list")
-                    add_span_event("file.upload.completed", {"file_id": file_id, "knowledge_id": id})
+                    safe_add_span_event("file.upload.completed", {"file_id": file_id, "knowledge_id": id})
                     return KnowledgeFilesResponse(
                         **updated_knowledge.model_dump(),
                         files=files,
@@ -592,7 +627,7 @@ async def add_file_to_knowledge_by_id(
 
         except Exception as e:
             log.exception(e)
-            add_span_event("file.upload.error", {
+            safe_add_span_event("file.upload.error", {
                 "error.type": type(e).__name__,
                 "error.message": str(e)[:200],
             })

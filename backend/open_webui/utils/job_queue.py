@@ -46,17 +46,32 @@ except ImportError:
     OTEL_AVAILABLE = False
     # Create no-op functions if OTEL not available
     def trace_span(*args, **kwargs):
-        from contextlib import contextmanager
-        @contextmanager
-        def _noop():
-            yield None
-        return _noop()
+        from contextlib import nullcontext
+        # Use nullcontext which properly handles exceptions
+        return nullcontext(enter_result=None)
     def add_span_event(*args, **kwargs):
         pass
     def set_span_attribute(*args, **kwargs):
         pass
     def is_otel_enabled():
         return False
+
+# Safe wrapper functions that NEVER fail - OTEL is monitoring only, must not affect task execution
+def safe_add_span_event(event_name, attributes=None):
+    """Safely add span event - never fails, even if OTEL is broken"""
+    try:
+        add_span_event(event_name, attributes)
+    except Exception as e:
+        log.debug(f"OTEL add_span_event failed (non-critical): {e}")
+
+def safe_trace_span(*args, **kwargs):
+    """Safely create trace span - never fails, even if OTEL is broken"""
+    try:
+        return trace_span(*args, **kwargs)
+    except Exception as e:
+        log.debug(f"OTEL trace_span failed (non-critical), using nullcontext: {e}")
+        from contextlib import nullcontext
+        return nullcontext(enter_result=None)
 
 log = logging.getLogger(__name__)
 
@@ -268,7 +283,8 @@ def enqueue_file_processing_job(
             job_kwargs["_otel_trace_context"] = trace_context
         
         # Create OTEL span for job enqueueing
-        with trace_span(
+        # CRITICAL: Use safe_trace_span to ensure OTEL failures never prevent job enqueueing
+        with safe_trace_span(
             name="job.enqueue",
             attributes={
                 "job.id": job_id_str,
@@ -294,7 +310,7 @@ def enqueue_file_processing_job(
                     result_ttl=JOB_RESULT_TTL,  # Configurable TTL for job results
                     failure_ttl=JOB_FAILURE_TTL,  # Configurable TTL for failed job info
                 )
-                add_span_event("job.enqueued", {"job_id": job.id, "file_id": file_id})
+                safe_add_span_event("job.enqueued", {"job_id": job.id, "file_id": file_id})
                 log.info(
                     f"Enqueued file processing job: job_id={job.id}, file_id={file_id}, "
                     f"queue={FILE_PROCESSING_QUEUE_NAME}"
@@ -311,13 +327,13 @@ def enqueue_file_processing_job(
                     try:
                         existing_job = Job.fetch(job_id_str, connection=queue.connection)
                         if existing_job:
-                            add_span_event("job.enqueued", {"job_id": existing_job.id, "file_id": file_id, "note": "existing_job"})
+                            safe_add_span_event("job.enqueued", {"job_id": existing_job.id, "file_id": file_id, "note": "existing_job"})
                             return existing_job.id
                     except Exception as fetch_error:
                         log.warning(f"Failed to fetch existing job {job_id_str}: {fetch_error}")
                 
                 # Log error event
-                add_span_event("job.enqueue.failed", {
+                safe_add_span_event("job.enqueue.failed", {
                     "error.type": type(enqueue_error).__name__,
                     "error.message": str(enqueue_error)[:200],
                 })

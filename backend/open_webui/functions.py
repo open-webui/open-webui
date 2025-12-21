@@ -52,7 +52,11 @@ except ImportError:
         from contextlib import asynccontextmanager
         @asynccontextmanager
         async def _noop():
-            yield None
+            try:
+                yield None
+            except Exception:
+                # Properly handle exceptions in async generator
+                pass
         return _noop()
     def add_span_event(*args, **kwargs):
         pass
@@ -76,6 +80,29 @@ from open_webui.utils.payload import (
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+# Safe wrapper functions that NEVER fail - OTEL is monitoring only, must not affect task execution
+def safe_add_span_event(event_name, attributes=None):
+    """Safely add span event - never fails, even if OTEL is broken"""
+    try:
+        add_span_event(event_name, attributes)
+    except Exception as e:
+        log.debug(f"OTEL add_span_event failed (non-critical): {e}")
+
+async def safe_trace_span_async(*args, **kwargs):
+    """Safely create async trace span - never fails, even if OTEL is broken"""
+    try:
+        return await trace_span_async(*args, **kwargs)
+    except Exception as e:
+        log.debug(f"OTEL trace_span_async failed (non-critical), using nullcontext: {e}")
+        from contextlib import asynccontextmanager
+        @asynccontextmanager
+        async def _noop():
+            try:
+                yield None
+            except Exception:
+                pass
+        return _noop()
 
 
 def get_function_module_by_id(request: Request, pipe_id: str):
@@ -178,7 +205,8 @@ async def generate_function_chat_completion(
     is_streaming = form_data.get("stream", False)
     
     # Create span for function/pipe chat completion
-    async with trace_span_async(
+    # CRITICAL: Use safe_trace_span_async to ensure OTEL failures never prevent function execution
+    async with safe_trace_span_async(
         name="llm.function.chat_completion",
         attributes={
             "llm.provider": "function",
@@ -190,7 +218,7 @@ async def generate_function_chat_completion(
     ) as span:
         try:
             # Add event: Function/pipe request started
-            add_span_event("llm.function.request", {
+            safe_add_span_event("llm.function.request", {
                 "function_id": pipe_id,
                 "model": model_id,
             })
@@ -360,7 +388,7 @@ async def generate_function_chat_completion(
                         yield "data: [DONE]"
 
                 # Add event: Function response (streaming)
-                add_span_event("llm.function.response", {
+                safe_add_span_event("llm.function.response", {
                     "status": "success",
                     "streaming": True,
                 })
@@ -376,14 +404,14 @@ async def generate_function_chat_completion(
 
                 if isinstance(res, StreamingResponse) or isinstance(res, dict):
                     # Add event: Function response (non-streaming)
-                    add_span_event("llm.function.response", {
+                    safe_add_span_event("llm.function.response", {
                         "status": "success",
                         "streaming": False,
                     })
                     return res
                 if isinstance(res, BaseModel):
                     # Add event: Function response (non-streaming)
-                    add_span_event("llm.function.response", {
+                    safe_add_span_event("llm.function.response", {
                         "status": "success",
                         "streaming": False,
                     })
@@ -392,7 +420,7 @@ async def generate_function_chat_completion(
                 message = await get_message_content(res)
                 
                 # Add event: Function response (non-streaming)
-                add_span_event("llm.function.response", {
+                safe_add_span_event("llm.function.response", {
                     "status": "success",
                     "streaming": False,
                 })
@@ -401,7 +429,7 @@ async def generate_function_chat_completion(
             
         except Exception as e:
             # Add event: Function error
-            add_span_event("llm.function.error", {
+            safe_add_span_event("llm.function.error", {
                 "error.type": type(e).__name__,
                 "error.message": str(e)[:200],
                 "function_id": pipe_id,

@@ -77,17 +77,40 @@ except ImportError:
     OTEL_AVAILABLE = False
     # Create no-op functions if OTEL not available
     def trace_span(*args, **kwargs):
-        from contextlib import contextmanager
-        @contextmanager
-        def _noop():
-            yield None
-        return _noop()
+        from contextlib import nullcontext
+        # Use nullcontext which properly handles exceptions
+        return nullcontext(enter_result=None)
     def add_span_event(*args, **kwargs):
         pass
     def set_span_attribute(*args, **kwargs):
         pass
     def is_otel_enabled():
         return False
+
+# Safe wrapper functions that NEVER fail - OTEL is monitoring only, must not affect task execution
+def safe_add_span_event(event_name, attributes=None):
+    """Safely add span event - never fails, even if OTEL is broken"""
+    try:
+        add_span_event(event_name, attributes)
+    except Exception as e:
+        log.debug(f"OTEL add_span_event failed (non-critical): {e}")
+
+def safe_set_span_attribute(span, key, value):
+    """Safely set span attribute - never fails, even if OTEL is broken"""
+    try:
+        if span:
+            set_span_attribute(span, key, value)
+    except Exception as e:
+        log.debug(f"OTEL set_span_attribute failed (non-critical): {e}")
+
+def safe_trace_span(*args, **kwargs):
+    """Safely create trace span - never fails, even if OTEL is broken"""
+    try:
+        return trace_span(*args, **kwargs)
+    except Exception as e:
+        log.debug(f"OTEL trace_span failed (non-critical), using nullcontext: {e}")
+        from contextlib import nullcontext
+        return nullcontext(enter_result=None)
 
 log = logging.getLogger(__name__)
 # Ensure logger is configured for worker process - use INFO level to capture all detailed logs
@@ -409,7 +432,8 @@ def process_file_job(
         job_id_str = f"file_processing_{file_id}"
         
         # Create OTEL span for job processing (linked to parent via trace context if available)
-        with trace_span(
+        # CRITICAL: Use safe_trace_span to ensure OTEL failures never prevent task completion
+        with safe_trace_span(
             name="job.process",
             attributes={
                 "job.id": job_id_str,
@@ -421,7 +445,7 @@ def process_file_job(
             },
         ) as span:
             try:
-                add_span_event("job.started", {"file_id": file_id})
+                safe_add_span_event("job.started", {"file_id": file_id})
                 
                 # Initialize request to None so it's accessible in finally block for cleanup
                 request = None
@@ -510,7 +534,7 @@ def process_file_job(
                     if not file:
                         error_msg = "File not found"
                         log.error(f"File {file_id} not found for processing (user_id={user_id})")
-                        add_span_event("job.file.not_found", {"file_id": file_id})
+                        safe_add_span_event("job.file.not_found", {"file_id": file_id})
                         try:
                             Files.update_file_metadata_by_id(
                                 file_id,
@@ -634,7 +658,7 @@ def process_file_job(
                                                 non_empty_docs = [doc for doc in docs if doc.page_content.strip()] if docs else []
                                                 
                                                 # Add event for file extraction
-                                                add_span_event("job.file.extracted", {
+                                                safe_add_span_event("job.file.extracted", {
                                                     "content_length": total_chars,
                                                     "document.count": len(docs),
                                                 })
@@ -766,7 +790,7 @@ def process_file_job(
                                             non_empty_docs = [doc for doc in docs if doc.page_content.strip()] if docs else []
                                             
                                             # Add event for file extraction
-                                            add_span_event("job.file.extracted", {
+                                            safe_add_span_event("job.file.extracted", {
                                                 "content_length": total_chars,
                                                 "document.count": len(docs),
                                             })
@@ -890,7 +914,7 @@ def process_file_job(
                     log.error("=" * 80)
                     log.error(f"Full traceback:", exc_info=True)
                     
-                    add_span_event("job.failed", {
+                    safe_add_span_event("job.failed", {
                         "error.type": type(e).__name__,
                         "error.message": error_msg[:200],
                         "duration_ms": int(elapsed_time * 1000),
@@ -975,7 +999,7 @@ def process_file_job(
 
                             # Use file collection name for file metadata
                             if result:
-                                add_span_event("job.embedding.completed", {"status": "success", "collection_name": file_collection})
+                                safe_add_span_event("job.embedding.completed", {"status": "success", "collection_name": file_collection})
                                 Files.update_file_metadata_by_id(
                                     file.id,
                                     {
@@ -1053,12 +1077,11 @@ def process_file_job(
                     )
 
                 elapsed_time = time.time() - start_time
-                add_span_event("job.completed", {
+                safe_add_span_event("job.completed", {
                     "duration_ms": int(elapsed_time * 1000),
                     "file_id": file_id,
                 })
-                if span:
-                    set_span_attribute("job.duration_ms", int(elapsed_time * 1000))
+                safe_set_span_attribute(span, "job.duration_ms", int(elapsed_time * 1000))
 
                 return {
                     "status": "success",
@@ -1080,7 +1103,7 @@ def process_file_job(
             exc_info=True
         )
         
-        add_span_event("job.failed", {
+        safe_add_span_event("job.failed", {
             "error.type": type(e).__name__,
             "error.message": error_msg[:200],
             "duration_ms": int(elapsed_time * 1000),

@@ -70,7 +70,11 @@ except ImportError:
         from contextlib import asynccontextmanager
         @asynccontextmanager
         async def _noop():
-            yield None
+            try:
+                yield None
+            except Exception:
+                # Properly handle exceptions in async generator
+                pass
         return _noop()
     def add_span_event(*args, **kwargs):
         pass
@@ -84,6 +88,29 @@ except ImportError:
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+# Safe wrapper functions that NEVER fail - OTEL is monitoring only, must not affect task execution
+def safe_add_span_event(event_name, attributes=None):
+    """Safely add span event - never fails, even if OTEL is broken"""
+    try:
+        add_span_event(event_name, attributes)
+    except Exception as e:
+        log.debug(f"OTEL add_span_event failed (non-critical): {e}")
+
+async def safe_trace_span_async(*args, **kwargs):
+    """Safely create async trace span - never fails, even if OTEL is broken"""
+    try:
+        return await trace_span_async(*args, **kwargs)
+    except Exception as e:
+        log.debug(f"OTEL trace_span_async failed (non-critical), using nullcontext: {e}")
+        from contextlib import asynccontextmanager
+        @asynccontextmanager
+        async def _noop():
+            try:
+                yield None
+            except Exception:
+                pass
+        return _noop()
 
 
 async def generate_direct_chat_completion(
@@ -101,7 +128,8 @@ async def generate_direct_chat_completion(
     is_streaming = form_data.get("stream", False)
     
     # Create span for direct chat completion
-    async with trace_span_async(
+    # CRITICAL: Use safe_trace_span_async to ensure OTEL failures never prevent chat completion
+    async with safe_trace_span_async(
         name="llm.direct_chat_completion",
         attributes={
             "llm.model": model_id,
@@ -115,7 +143,7 @@ async def generate_direct_chat_completion(
     ) as span:
         try:
             # Add event: Direct LLM request started
-            add_span_event("llm.direct.request", {
+            safe_add_span_event("llm.direct.request", {
                 "model": model_id,
                 "message_count": len(form_data.get("messages", [])),
             })
@@ -188,7 +216,7 @@ async def generate_direct_chat_completion(
                     )
                     
                     # Add event: Direct LLM response received (streaming)
-                    add_span_event("llm.direct.response", {
+                    safe_add_span_event("llm.direct.response", {
                         "status": "success",
                         "streaming": True,
                     })
@@ -213,7 +241,7 @@ async def generate_direct_chat_completion(
                     raise Exception(res["error"])
 
                 # Add event: Direct LLM response received (non-streaming)
-                add_span_event("llm.direct.response", {
+                safe_add_span_event("llm.direct.response", {
                     "status": "success",
                     "streaming": False,
                 })
@@ -222,7 +250,7 @@ async def generate_direct_chat_completion(
             
         except Exception as e:
             # Add event: Direct LLM error
-            add_span_event("llm.direct.error", {
+            safe_add_span_event("llm.direct.error", {
                 "error.type": type(e).__name__,
                 "error.message": str(e)[:200],
             })
@@ -246,7 +274,8 @@ async def generate_chat_completion(
     is_streaming = form_data.get("stream", False)
     
     # Create span for LLM chat completion
-    async with trace_span_async(
+    # CRITICAL: Use safe_trace_span_async to ensure OTEL failures never prevent chat completion
+    async with safe_trace_span_async(
         name="llm.chat_completion",
         attributes={
             "llm.model": model_id,
@@ -261,7 +290,7 @@ async def generate_chat_completion(
     ) as span:
         try:
             # Add event: LLM request started
-            add_span_event("llm.request", {
+            safe_add_span_event("llm.request", {
                 "model": model_id,
                 "message_count": len(form_data.get("messages", [])),
             })
@@ -382,7 +411,7 @@ async def generate_chat_completion(
                     )
             
             # Add event: LLM response received
-            add_span_event("llm.response", {
+            safe_add_span_event("llm.response", {
                 "status": "success",
             })
             
@@ -390,7 +419,7 @@ async def generate_chat_completion(
             
         except Exception as e:
             # Add event: LLM error
-            add_span_event("llm.error", {
+            safe_add_span_event("llm.error", {
                 "error.type": type(e).__name__,
                 "error.message": str(e)[:200],  # Truncate long error messages
             })

@@ -76,7 +76,11 @@ except ImportError:
         from contextlib import asynccontextmanager
         @asynccontextmanager
         async def _noop():
-            yield None
+            try:
+                yield None
+            except Exception:
+                # Properly handle exceptions in async generator
+                pass
         return _noop()
     def add_span_event(*args, **kwargs):
         pass
@@ -86,6 +90,37 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OLLAMA"])
+
+# Safe wrapper functions that NEVER fail - OTEL is monitoring only, must not affect task execution
+def safe_add_span_event(event_name, attributes=None):
+    """Safely add span event - never fails, even if OTEL is broken"""
+    try:
+        add_span_event(event_name, attributes)
+    except Exception as e:
+        log.debug(f"OTEL add_span_event failed (non-critical): {e}")
+
+def safe_set_span_attribute(span, key, value):
+    """Safely set span attribute - never fails, even if OTEL is broken"""
+    try:
+        if span:
+            set_span_attribute(span, key, value)
+    except Exception as e:
+        log.debug(f"OTEL set_span_attribute failed (non-critical): {e}")
+
+async def safe_trace_span_async(*args, **kwargs):
+    """Safely create async trace span - never fails, even if OTEL is broken"""
+    try:
+        return await trace_span_async(*args, **kwargs)
+    except Exception as e:
+        log.debug(f"OTEL trace_span_async failed (non-critical), using nullcontext: {e}")
+        from contextlib import asynccontextmanager
+        @asynccontextmanager
+        async def _noop():
+            try:
+                yield None
+            except Exception:
+                pass
+        return _noop()
 
 
 ##########################################
@@ -1127,7 +1162,8 @@ async def generate_chat_completion(
     is_streaming = form_data.get("stream", True)
     
     # Create span for Ollama API call
-    async with trace_span_async(
+    # CRITICAL: Use safe_trace_span_async to ensure OTEL failures never prevent API calls
+    async with safe_trace_span_async(
         name="llm.ollama.chat_completion",
         attributes={
             "llm.provider": "ollama",
@@ -1138,7 +1174,7 @@ async def generate_chat_completion(
     ) as span:
         try:
             # Add event: API request started
-            add_span_event("llm.api.request", {
+            safe_add_span_event("llm.api.request", {
                 "model": model_id,
                 "provider": "ollama",
             })
@@ -1203,8 +1239,7 @@ async def generate_chat_completion(
             url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
             
             # Set API base URL attribute
-            if span:
-                set_span_attribute("llm.api_base", url)
+            safe_set_span_attribute(span, "llm.api_base", url)
             
             api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
                 str(url_idx),
@@ -1225,7 +1260,7 @@ async def generate_chat_completion(
             )
             
             # Add event: API response received
-            add_span_event("llm.api.response", {
+            safe_add_span_event("llm.api.response", {
                 "streaming": is_streaming,
                 "provider": "ollama",
             })
@@ -1234,7 +1269,7 @@ async def generate_chat_completion(
             
         except Exception as e:
             # Add event: API error
-            add_span_event("llm.api.error", {
+            safe_add_span_event("llm.api.error", {
                 "error.type": type(e).__name__,
                 "error.message": str(e)[:200],
                 "provider": "ollama",

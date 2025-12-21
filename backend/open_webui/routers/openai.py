@@ -47,13 +47,48 @@ except ImportError:
         from contextlib import asynccontextmanager
         @asynccontextmanager
         async def _noop():
-            yield None
+            try:
+                yield None
+            except Exception:
+                # Properly handle exceptions in async generator
+                pass
         return _noop()
     def add_span_event(*args, **kwargs):
         pass
     def set_span_attribute(*args, **kwargs):
         pass
     SpanKind = None
+
+# Safe wrapper functions that NEVER fail - OTEL is monitoring only, must not affect task execution
+def safe_add_span_event(event_name, attributes=None):
+    """Safely add span event - never fails, even if OTEL is broken"""
+    try:
+        add_span_event(event_name, attributes)
+    except Exception as e:
+        log.debug(f"OTEL add_span_event failed (non-critical): {e}")
+
+def safe_set_span_attribute(span, key, value):
+    """Safely set span attribute - never fails, even if OTEL is broken"""
+    try:
+        if span:
+            set_span_attribute(span, key, value)
+    except Exception as e:
+        log.debug(f"OTEL set_span_attribute failed (non-critical): {e}")
+
+async def safe_trace_span_async(*args, **kwargs):
+    """Safely create async trace span - never fails, even if OTEL is broken"""
+    try:
+        return await trace_span_async(*args, **kwargs)
+    except Exception as e:
+        log.debug(f"OTEL trace_span_async failed (non-critical), using nullcontext: {e}")
+        from contextlib import asynccontextmanager
+        @asynccontextmanager
+        async def _noop():
+            try:
+                yield None
+            except Exception:
+                pass
+        return _noop()
 
 
 from open_webui.utils.payload import (
@@ -609,7 +644,8 @@ async def generate_chat_completion(
     api_base_url = None
     
     # Create span for OpenAI API call
-    async with trace_span_async(
+    # CRITICAL: Use safe_trace_span_async to ensure OTEL failures never prevent API calls
+    async with safe_trace_span_async(
         name="llm.openai.chat_completion",
         attributes={
             "llm.provider": "openai",
@@ -619,7 +655,7 @@ async def generate_chat_completion(
     ) as span:
         try:
             # Add event: API request started
-            add_span_event("llm.api.request", {
+            safe_add_span_event("llm.api.request", {
                 "model": model_id,
             })
             
@@ -699,8 +735,7 @@ async def generate_chat_completion(
             api_base_url = url
             
             # Set API base URL attribute
-            if span:
-                set_span_attribute("llm.api_base", url)
+            safe_set_span_attribute(span, "llm.api_base", url)
 
             # Fix: o1,o3 does not support the "max_tokens" parameter, Modify "max_tokens" to "max_completion_tokens"
             is_o1_o3 = payload["model"].lower().startswith(("o1", "o3-"))
@@ -760,7 +795,7 @@ async def generate_chat_completion(
                 if "text/event-stream" in r.headers.get("Content-Type", ""):
                     streaming = True
                     # Add event: API response (streaming)
-                    add_span_event("llm.api.response", {
+                    safe_add_span_event("llm.api.response", {
                         "streaming": True,
                     })
                     
@@ -784,13 +819,12 @@ async def generate_chat_completion(
                     # Extract usage info if available
                     if isinstance(response, dict) and "usage" in response:
                         usage = response["usage"]
-                        if span:
-                            set_span_attribute("llm.usage.input_tokens", usage.get("prompt_tokens"))
-                            set_span_attribute("llm.usage.output_tokens", usage.get("completion_tokens"))
-                            set_span_attribute("llm.usage.total_tokens", usage.get("total_tokens"))
+                        safe_set_span_attribute(span, "llm.usage.input_tokens", usage.get("prompt_tokens"))
+                        safe_set_span_attribute(span, "llm.usage.output_tokens", usage.get("completion_tokens"))
+                        safe_set_span_attribute(span, "llm.usage.total_tokens", usage.get("total_tokens"))
                     
                     # Add event: API response (non-streaming)
-                    add_span_event("llm.api.response", {
+                    safe_add_span_event("llm.api.response", {
                         "streaming": False,
                         "has_usage": "usage" in response if isinstance(response, dict) else False,
                     })
@@ -800,7 +834,7 @@ async def generate_chat_completion(
                 log.exception(e)
                 
                 # Add event: API error
-                add_span_event("llm.api.error", {
+                safe_add_span_event("llm.api.error", {
                     "error.type": type(e).__name__,
                     "error.message": str(e)[:200],
                 })
@@ -823,7 +857,7 @@ async def generate_chat_completion(
                     await session.close()
         except Exception as e:
             # Add event: LLM error
-            add_span_event("llm.error", {
+            safe_add_span_event("llm.error", {
                 "error.type": type(e).__name__,
                 "error.message": str(e)[:200],
             })
