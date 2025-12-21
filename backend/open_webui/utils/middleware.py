@@ -799,6 +799,10 @@ async def chat_image_generation_handler(
             images = await image_edits(
                 request=request,
                 form_data=EditImageForm(**{"prompt": prompt, "image": input_images}),
+                metadata={
+                    "chat_id": metadata.get("chat_id", None),
+                    "message_id": metadata.get("message_id", None),
+                },
                 user=user,
             )
 
@@ -824,7 +828,7 @@ async def chat_image_generation_handler(
                 }
             )
 
-            system_message_content = "<context>The requested image has been created and is now being shown to the user. Let them know that it has been generated.</context>"
+            system_message_content = "<context>The requested image has been edited and created and is now being shown to the user. Let them know that it has been generated.</context>"
         except Exception as e:
             log.debug(e)
 
@@ -883,6 +887,10 @@ async def chat_image_generation_handler(
             images = await image_generations(
                 request=request,
                 form_data=CreateImageForm(**{"prompt": prompt}),
+                metadata={
+                    "chat_id": metadata.get("chat_id", None),
+                    "message_id": metadata.get("message_id", None),
+                },
                 user=user,
             )
 
@@ -2737,7 +2745,17 @@ async def process_chat_response(
 
                                         if ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION:
                                             value = convert_markdown_base64_images(
-                                                request, value, metadata, user
+                                                request,
+                                                value,
+                                                {
+                                                    "chat_id": metadata.get(
+                                                        "chat_id", None
+                                                    ),
+                                                    "message_id": metadata.get(
+                                                        "message_id", None
+                                                    ),
+                                                },
+                                                user,
                                             )
 
                                         content = f"{content}{value}"

@@ -14,6 +14,8 @@ from typing import Optional
 from pathlib import Path
 
 from open_webui.storage.provider import Storage
+
+from open_webui.models.chats import Chats
 from open_webui.models.files import Files
 from open_webui.routers.files import upload_file_handler
 
@@ -65,13 +67,14 @@ def get_image_url_from_base64(request, base64_image_string, metadata, user):
         # Extract base64 image data from the line
         image_data, content_type = get_image_data(base64_image_string)
         if image_data is not None:
-            image_url = upload_image(
+            _, image_url = upload_image(
                 request,
                 image_data,
                 content_type,
                 metadata,
                 user,
             )
+
         return image_url
     return None
 
