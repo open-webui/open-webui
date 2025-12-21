@@ -2122,7 +2122,6 @@ async def process_web_search(
                     )
 
             search_tasks = [search_with_limit(query) for query in form_data.queries]
-            search_results = await asyncio.gather(*search_tasks)
         else:
             # Unlimited parallel execution (previous behavior)
             search_tasks = [
@@ -2135,7 +2134,8 @@ async def process_web_search(
                 )
                 for query in form_data.queries
             ]
-            search_results = await asyncio.gather(*search_tasks)
+
+        search_results = await asyncio.gather(*search_tasks)
 
         for result in search_results:
             if result:
