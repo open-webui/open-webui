@@ -152,7 +152,14 @@ async def trace_span_async(
     tracer = _get_tracer()
     if not tracer:
         # OTEL not initialized, yield None and continue
-        yield None
+        try:
+            yield None
+        except GeneratorExit:
+            # Properly handle generator exit
+            raise
+        except Exception:
+            # If exception is thrown into generator, re-raise to propagate
+            raise
         return
     
     try:
@@ -197,7 +204,14 @@ async def trace_span_async(
     except Exception as e:
         # If span creation fails, log but don't crash
         log.warning(f"Failed to create span '{name}': {e}", exc_info=True)
-        yield None
+        try:
+            yield None
+        except GeneratorExit:
+            # Properly handle generator exit
+            raise
+        except Exception:
+            # If exception is thrown into generator, re-raise to propagate
+            raise
 
 
 def trace_function(

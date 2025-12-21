@@ -73,9 +73,13 @@ except ImportError:
         async def _noop():
             try:
                 yield None
+            except GeneratorExit:
+                # Properly handle generator exit
+                raise
             except Exception:
-                # Properly handle exceptions in async generator
-                pass
+                # Properly handle exceptions thrown into generator - must re-raise or return
+                # Re-raising ensures the exception propagates correctly
+                raise
         return _noop()
     def add_span_event(*args, **kwargs):
         pass
@@ -113,8 +117,13 @@ def safe_trace_span_async(*args, **kwargs):
         async def _noop():
             try:
                 yield None
+            except GeneratorExit:
+                # Properly handle generator exit
+                raise
             except Exception:
-                pass
+                # Properly handle exceptions thrown into generator - must re-raise or return
+                # Re-raising ensures the exception propagates correctly
+                raise
         return _noop()
 
 
