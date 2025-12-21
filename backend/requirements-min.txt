@@ -1,7 +1,7 @@
 # Minimal requirements for backend to run
 # WIP: use this as a reference to build a minimal docker image
 
-fastapi==0.125.0
+fastapi==0.126.0
 uvicorn[standard]==0.37.0
 pydantic==2.12.5
 python-multipart==0.0.21
