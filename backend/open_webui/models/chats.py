@@ -7,6 +7,7 @@ from typing import Optional
 from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
 from open_webui.models.folders import Folders
+from open_webui.utils.misc import sanitize_data_for_db, sanitize_text_for_db
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, Index
@@ -169,18 +170,8 @@ class ChatUsageStatsListResponse(BaseModel):
 
 class ChatTable:
     def _clean_null_bytes(self, obj):
-        """
-        Recursively remove actual null bytes (\x00) and unicode escape \\u0000
-        from strings inside dict/list structures.
-        Safe for JSON objects.
-        """
-        if isinstance(obj, str):
-            return obj.replace("\x00", "").replace("\u0000", "")
-        elif isinstance(obj, dict):
-            return {k: self._clean_null_bytes(v) for k, v in obj.items()}
-        elif isinstance(obj, list):
-            return [self._clean_null_bytes(v) for v in obj]
-        return obj
+        """Recursively remove null bytes from strings in dict/list structures."""
+        return sanitize_data_for_db(obj)
 
     def _sanitize_chat_row(self, chat_item):
         """
@@ -351,7 +342,7 @@ class ChatTable:
 
         # Sanitize message content for null characters before upserting
         if isinstance(message.get("content"), str):
-            message["content"] = message["content"].replace("\x00", "")
+            message["content"] = sanitize_text_for_db(message["content"])
 
         chat = chat.chat
         history = chat.get("history", {})
@@ -771,7 +762,7 @@ class ChatTable:
         """
         Filters chats based on a search query using Python, allowing pagination using skip and limit.
         """
-        search_text = search_text.replace("\u0000", "").lower().strip()
+        search_text = sanitize_text_for_db(search_text).lower().strip()
 
         if not search_text:
             return self.get_chat_list_by_user_id(
