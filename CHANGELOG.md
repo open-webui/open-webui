@@ -106,6 +106,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🗑️ Legacy knowledge base support for deprecated document collections and tag-based collections was removed; users with pre-knowledge base documents must migrate to the current knowledge base system as legacy items will no longer appear in selectors or command menus. [Commit](https://github.com/open-webui/open-webui/commit/a934dc997ed67a036dd7975e380f8036c447d3ed)
 - 🔨 Source-level log environment variables (AUDIO_LOG_LEVEL, CONFIG_LOG_LEVEL, MODELS_LOG_LEVEL, etc.) were removed as they provided limited configuration options and added significant complexity across 100+ files; the GLOBAL_LOG_LEVEL environment variable, which already took precedence over source-level settings, now serves as the exclusive logging configuration method. [#20045](https://github.com/open-webui/open-webui/pull/20045)
 - 🐍 LangChain was upgraded to version 1.2.0, representing a major dependency update and significant progress toward Python 3.13 compatibility while improving RAG pipeline functionality for document loading and retrieval operations. [#19991](https://github.com/open-webui/open-webui/pull/19991)
+
 ## [0.6.41] - 2025-12-02
 
 ### Added
