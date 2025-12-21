@@ -16,6 +16,7 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
+	export let knowledge = null;
 	export let selectedFileId = null;
 	export let files = [];
 
@@ -24,7 +25,7 @@
 </script>
 
 <div class=" max-h-full flex flex-col w-full gap-[0.5px]">
-	{#each files as file (file?.id ?? file?.tempId)}
+	{#each files as file (file?.id ?? file?.itemId ?? file?.tempId)}
 		<div
 			class=" flex cursor-pointer w-full px-1.5 py-0.5 bg-transparent dark:hover:bg-gray-850/50 hover:bg-white rounded-xl transition {selectedFileId
 				? ''
@@ -42,54 +43,63 @@
 					<div class="flex gap-2 items-center line-clamp-1">
 						<div class="shrink-0">
 							{#if file?.status !== 'uploading'}
-								<DocumentPage className="size-3" />
+								<DocumentPage className="size-3.5" />
 							{:else}
-								<Spinner className="size-3" />
+								<Spinner className="size-3.5" />
 							{/if}
 						</div>
 
-						<div class="line-clamp-1">
+						<div class="line-clamp-1 text-sm">
 							{file?.name ?? file?.meta?.name}
-							<span class="text-xs text-gray-500">{formatFileSize(file?.meta?.size)}</span>
+							{#if file?.meta?.size}
+								<span class="text-xs text-gray-500">{formatFileSize(file?.meta?.size)}</span>
+							{/if}
 						</div>
 					</div>
 				</div>
 
 				<div class="flex items-center gap-2 shrink-0">
-					<Tooltip content={dayjs(file.updated_at * 1000).format('LLLL')}>
-						<div>
-							{dayjs(file.updated_at * 1000).fromNow()}
-						</div>
-					</Tooltip>
-					<Tooltip
-						content={file?.user?.email ?? $i18n.t('Deleted User')}
-						className="flex shrink-0"
-						placement="top-start"
-					>
-						<div class="shrink-0 text-gray-500">
-							{$i18n.t('By {{name}}', {
-								name: capitalizeFirstLetter(
-									file?.user?.name ?? file?.user?.email ?? $i18n.t('Deleted User')
-								)
-							})}
-						</div>
-					</Tooltip>
+					{#if file?.updated_at}
+						<Tooltip content={dayjs(file.updated_at * 1000).format('LLLL')}>
+							<div>
+								{dayjs(file.updated_at * 1000).fromNow()}
+							</div>
+						</Tooltip>
+					{/if}
+
+					{#if file?.user}
+						<Tooltip
+							content={file?.user?.email ?? $i18n.t('Deleted User')}
+							className="flex shrink-0"
+							placement="top-start"
+						>
+							<div class="shrink-0 text-gray-500">
+								{$i18n.t('By {{name}}', {
+									name: capitalizeFirstLetter(
+										file?.user?.name ?? file?.user?.email ?? $i18n.t('Deleted User')
+									)
+								})}
+							</div>
+						</Tooltip>
+					{/if}
 				</div>
 			</button>
 
-			<div class="flex items-center">
-				<Tooltip content={$i18n.t('Delete')}>
-					<button
-						class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-						type="button"
-						on:click={() => {
-							onDelete(file?.id ?? file?.tempId);
-						}}
-					>
-						<XMark />
-					</button>
-				</Tooltip>
-			</div>
+			{#if knowledge?.write_access}
+				<div class="flex items-center">
+					<Tooltip content={$i18n.t('Delete')}>
+						<button
+							class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+							type="button"
+							on:click={() => {
+								onDelete(file?.id ?? file?.tempId);
+							}}
+						>
+							<XMark />
+						</button>
+					</Tooltip>
+				</div>
+			{/if}
 		</div>
 	{/each}
 </div>

@@ -9,7 +9,6 @@ from open_webui.env import (
     OPEN_WEBUI_DIR,
     DATABASE_URL,
     DATABASE_SCHEMA,
-    SRC_LOG_LEVELS,
     DATABASE_POOL_MAX_OVERFLOW,
     DATABASE_POOL_RECYCLE,
     DATABASE_POOL_SIZE,
@@ -25,7 +24,6 @@ from sqlalchemy.sql.type_api import _T
 from typing_extensions import Self
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["DB"])
 
 
 class JSONField(types.TypeDecorator):
@@ -92,8 +90,6 @@ if SQLALCHEMY_DATABASE_URL.startswith("sqlite+sqlcipher://"):
 
     # Extract database path from SQLCipher URL
     db_path = SQLALCHEMY_DATABASE_URL.replace("sqlite+sqlcipher://", "")
-    if db_path.startswith("/"):
-        db_path = db_path[1:]  # Remove leading slash for relative paths
 
     # Create a custom creator function that uses sqlcipher3
     def create_sqlcipher_connection():

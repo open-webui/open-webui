@@ -327,10 +327,21 @@ export const processYoutubeVideo = async (token: string, url: string) => {
 	return res;
 };
 
-export const processWeb = async (token: string, collection_name: string, url: string) => {
+export const processWeb = async (
+	token: string,
+	collection_name: string,
+	url: string,
+	process: boolean = true
+) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/process/web`, {
+	const searchParams = new URLSearchParams();
+
+	if (!process) {
+		searchParams.append('process', 'false');
+	}
+
+	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/process/web?${searchParams.toString()}`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',

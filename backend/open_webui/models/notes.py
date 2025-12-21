@@ -255,7 +255,9 @@ class NoteTable:
                     query = query.filter(
                         or_(
                             Note.title.ilike(f"%{query_key}%"),
-                            Note.data["content"]["md"].ilike(f"%{query_key}%"),
+                            cast(Note.data["content"]["md"], Text).ilike(
+                                f"%{query_key}%"
+                            ),
                         )
                     )
 

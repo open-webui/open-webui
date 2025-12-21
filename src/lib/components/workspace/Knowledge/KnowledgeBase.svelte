@@ -27,13 +27,14 @@
 	import {
 		addFileToKnowledgeById,
 		getKnowledgeById,
-		getKnowledgeBases,
 		removeFileFromKnowledgeById,
 		updateFileFromKnowledgeById,
 		updateKnowledgeById,
 		syncFilesToKnowledgeByIdBatch
 	} from '$lib/apis/knowledge';
-	import { blobToFile } from '$lib/utils';
+	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
+
+	import { blobToFile, isYoutubeUrl } from '$lib/utils';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Files from './KnowledgeBase/Files.svelte';
@@ -51,13 +52,16 @@
 	import FilesOverlay from '$lib/components/chat/MessageInput/FilesOverlay.svelte';
 	import DropdownOptions from '$lib/components/common/DropdownOptions.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
+	import AttachWebpageModal from '$lib/components/chat/MessageInput/AttachWebpageModal.svelte';
 
 	let largeScreen = true;
 
 	let pane;
 	let showSidepanel = true;
 
+	let showAddWebpageModal = false;
 	let showAddTextContentModal = false;
+
 	let showSyncConfirmModal = false;
 	let showAccessControlModal = false;
 
@@ -168,6 +172,82 @@
 		return file;
 	};
 
+	const uploadWeb = async (urls) => {
+		if (!Array.isArray(urls)) {
+			urls = [urls];
+		}
+
+		const newFileItems = urls.map((url) => ({
+			type: 'file',
+			file: '',
+			id: null,
+			url: url,
+			name: url,
+			size: null,
+			status: 'uploading',
+			error: '',
+			itemId: uuidv4()
+		}));
+
+		// Display all items at once
+		fileItems = [...newFileItems, ...(fileItems ?? [])];
+
+		for (const fileItem of newFileItems) {
+			try {
+				console.log(fileItem);
+				const res = await processWeb(localStorage.token, '', fileItem.url, false).catch((e) => {
+					console.error('Error processing web URL:', e);
+					return null;
+				});
+
+				if (res) {
+					console.log(res);
+					const file = createFileFromText(
+						// Use URL as filename, sanitized
+						fileItem.url
+							.replace(/[^a-z0-9]/gi, '_')
+							.toLowerCase()
+							.slice(0, 50),
+						res.content
+					);
+
+					const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
+						toast.error(`${e}`);
+						return null;
+					});
+
+					if (uploadedFile) {
+						console.log(uploadedFile);
+						fileItems = fileItems.map((item) => {
+							if (item.itemId === fileItem.itemId) {
+								item.id = uploadedFile.id;
+							}
+							return item;
+						});
+
+						if (uploadedFile.error) {
+							console.warn('File upload warning:', uploadedFile.error);
+							toast.warning(uploadedFile.error);
+							fileItems = fileItems.filter((file) => file.id !== uploadedFile.id);
+						} else {
+							await addFileHandler(uploadedFile.id);
+						}
+					} else {
+						toast.error($i18n.t('Failed to upload file.'));
+					}
+				} else {
+					// remove the item from fileItems
+					fileItems = fileItems.filter((item) => item.itemId !== fileItem.itemId);
+					toast.error($i18n.t('Failed to process URL: {{url}}', { url: fileItem.url }));
+				}
+			} catch (e) {
+				// remove the item from fileItems
+				fileItems = fileItems.filter((item) => item.itemId !== fileItem.itemId);
+				toast.error(`${e}`);
+			}
+		}
+	};
+
 	const uploadFileHandler = async (file) => {
 		// When syncing a directory, remember each file's relative name used on upload.
 		if (syncMode) {
@@ -180,7 +260,6 @@
 			}
 		}
 
-		const tempItemId = uuidv4();
 		const fileItem = {
 			type: 'file',
 			file: '',
@@ -190,7 +269,7 @@
 			size: file.size,
 			status: 'uploading',
 			error: '',
-			itemId: tempItemId
+			itemId: uuidv4()
 		};
 
 		if (fileItem.size == 0) {
@@ -210,18 +289,18 @@
 			return;
 		}
 
-		fileItems = [...(fileItems ?? []), fileItem];
+		fileItems = [fileItem, ...(fileItems ?? [])];
 		try {
-			// If the file is an audio file, provide the language for STT.
-			let metadata = null;
-			if (
-				(file.type.startsWith('audio/') || file.type.startsWith('video/')) &&
+			let metadata = {
+				knowledge_id: knowledge.id,
+				// If the file is an audio file, provide the language for STT.
+				...((file.type.startsWith('audio/') || file.type.startsWith('video/')) &&
 				$settings?.audio?.stt?.language
-			) {
-				metadata = {
-					language: $settings?.audio?.stt?.language
-				};
-			}
+					? {
+							language: $settings?.audio?.stt?.language
+						}
+					: {})
+			};
 
 			const uploadedFile = await uploadFile(localStorage.token, file, metadata).catch((e) => {
 				toast.error(`${e}`);
@@ -233,9 +312,6 @@
 					if (item.itemId === tempItemId) {
 						item.id = uploadedFile.id;
 					}
-
-					// Remove temporary item id
-					delete item.itemId;
 					return item;
 				});
 				if (uploadedFile.error) {
@@ -479,16 +555,14 @@
 	};
 
 	const addFileHandler = async (fileId) => {
-		const updatedKnowledge = await addFileToKnowledgeById(localStorage.token, id, fileId).catch(
-			(e) => {
-				toast.error(`${e}`);
-				return null;
-			}
-		);
+		const res = await addFileToKnowledgeById(localStorage.token, id, fileId).catch((e) => {
+			toast.error(`${e}`);
+			return null;
+		});
 
-		if (updatedKnowledge) {
-			knowledge = updatedKnowledge;
+		if (res) {
 			toast.success($i18n.t('File added successfully.'));
+			init();
 		} else {
 			toast.error($i18n.t('Failed to add file.'));
 			fileItems = fileItems.filter((file) => file.id !== fileId);
@@ -516,12 +590,14 @@
 		try {
 
 			// Remove from knowledge base only
-			const updatedKnowledge = await removeFileFromKnowledgeById(localStorage.token, id, fileId);
+			const res = await removeFileFromKnowledgeById(localStorage.token, id, fileId);
+			console.log('Knowledge base updated:', res);
 
 
 			if (updatedKnowledge) {
 				knowledge = updatedKnowledge;
 				toast.success($i18n.t('File removed successfully.'));
+				await init();
 			}
 		} catch (e) {
 			console.error('Error in deleteFileHandler:', e);
@@ -588,7 +664,6 @@
 
 			if (res) {
 				toast.success($i18n.t('Knowledge updated successfully'));
-				_knowledge.set(await getKnowledgeBases(localStorage.token));
 			}
 		}, 1000);
 	};
@@ -619,6 +694,11 @@
 	const onDrop = async (e) => {
 		e.preventDefault();
 		dragged = false;
+
+		if (!knowledge?.write_access) {
+			toast.error($i18n.t('You do not have permission to upload files to this knowledge base.'));
+			return;
+		}
 
 		const handleUploadingFileFolder = (items) => {
 			for (const item of items) {
@@ -747,6 +827,13 @@
 	}}
 />
 
+<AttachWebpageModal
+	bind:show={showAddWebpageModal}
+	onSubmit={async (e) => {
+		uploadWeb(e.data);
+	}}
+/>
+
 <AddTextContentModal
 	bind:show={showAddTextContentModal}
 	on:submit={(e) => {
@@ -801,37 +888,45 @@
 								class="text-left w-full font-medium text-lg font-primary bg-transparent outline-hidden flex-1"
 								bind:value={knowledge.name}
 								placeholder={$i18n.t('Knowledge Name')}
+								disabled={!knowledge?.write_access}
 								on:input={() => {
 									changeDebounceHandler();
 								}}
 							/>
 
 							<div class="shrink-0 mr-2.5">
-								{#if (knowledge?.files ?? []).length}
+								{#if fileItemsTotal}
 									<div class="text-xs text-gray-500">
-										{$i18n.t('{{count}} files', {
-											count: (knowledge?.files ?? []).length
+										<!-- {$i18n.t('{{COUNT}} files')} -->
+										{$i18n.t('{{COUNT}} files', {
+											COUNT: fileItemsTotal
 										})}
 									</div>
 								{/if}
 							</div>
 						</div>
 
-						<div class="self-center shrink-0">
-							<button
-								class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
-								type="button"
-								on:click={() => {
-									showAccessControlModal = true;
-								}}
-							>
-								<LockClosed strokeWidth="2.5" className="size-3.5" />
+						{#if knowledge?.write_access}
+							<div class="self-center shrink-0">
+								<button
+									class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
+									type="button"
+									on:click={() => {
+										showAccessControlModal = true;
+									}}
+								>
+									<LockClosed strokeWidth="2.5" className="size-3.5" />
 
-								<div class="text-sm font-medium shrink-0">
-									{$i18n.t('Access')}
-								</div>
-							</button>
-						</div>
+									<div class="text-sm font-medium shrink-0">
+										{$i18n.t('Access')}
+									</div>
+								</button>
+							</div>
+						{:else}
+							<div class="text-xs shrink-0 text-gray-500">
+								{$i18n.t('Read Only')}
+							</div>
+						{/if}
 					</div>
 
 					<div class="flex w-full">
@@ -840,6 +935,7 @@
 							class="text-left text-xs w-full text-gray-500 bg-transparent outline-hidden"
 							bind:value={knowledge.description}
 							placeholder={$i18n.t('Knowledge Description')}
+							disabled={!knowledge?.write_access}
 							on:input={() => {
 								changeDebounceHandler();
 							}}
@@ -866,22 +962,26 @@
 						}}
 					/>
 
-					<div>
-						<AddContentMenu
-							on:upload={(e) => {
-								if (e.detail.type === 'directory') {
-									uploadDirectoryHandler();
-								} else if (e.detail.type === 'text') {
-									showAddTextContentModal = true;
-								} else {
-									document.getElementById('files-input').click();
-								}
-							}}
-							on:sync={(e) => {
-								showSyncConfirmModal = true;
-							}}
-						/>
-					</div>
+					{#if knowledge?.write_access}
+						<div>
+							<AddContentMenu
+								onUpload={(data) => {
+									if (data.type === 'directory') {
+										uploadDirectoryHandler();
+									} else if (data.type === 'web') {
+										showAddWebpageModal = true;
+									} else if (data.type === 'text') {
+										showAddTextContentModal = true;
+									} else {
+										document.getElementById('files-input').click();
+									}
+								}}
+								onSync={() => {
+									showSyncConfirmModal = true;
+								}}
+							/>
+						</div>
+					{/if}
 				</div>
 			</div>
 
@@ -950,6 +1050,7 @@
 									<div class=" flex overflow-y-auto h-full w-full scrollbar-hidden text-xs">
 										<Files
 											files={fileItems}
+											{knowledge}
 											{selectedFileId}
 											onClick={(fileId) => {
 												selectedFileId = fileId;
@@ -1013,22 +1114,24 @@
 											{selectedFile?.meta?.name}
 										</div>
 
-										<div>
-											<button
-												class="flex self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-												disabled={isSaving}
-												on:click={() => {
-													updateFileContentHandler();
-												}}
-											>
-												{$i18n.t('Save')}
-												{#if isSaving}
-													<div class="ml-2 self-center">
-														<Spinner />
-													</div>
-												{/if}
-											</button>
-										</div>
+										{#if knowledge?.write_access}
+											<div>
+												<button
+													class="flex self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+													disabled={isSaving}
+													on:click={() => {
+														updateFileContentHandler();
+													}}
+												>
+													{$i18n.t('Save')}
+													{#if isSaving}
+														<div class="ml-2 self-center">
+															<Spinner />
+														</div>
+													{/if}
+												</button>
+											</div>
+										{/if}
 									</div>
 
 						{#if filteredItems.length > 0}
@@ -1055,6 +1158,7 @@
 										<textarea
 											class="w-full h-full text-sm outline-none resize-none px-3 py-2"
 											bind:value={selectedFileContent}
+											disabled={!knowledge?.write_access}
 											placeholder={$i18n.t('Add content here')}
 										/>
 									{/key}

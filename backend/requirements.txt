@@ -1,16 +1,16 @@
-fastapi==0.124.0
+fastapi==0.126.0
 uvicorn[standard]==0.37.0
 pydantic==2.12.5
-python-multipart==0.0.20
+python-multipart==0.0.21
 itsdangerous==2.2.0
 
-python-socketio==5.15.0
+python-socketio==5.15.1
 python-jose==3.5.0
 cryptography
 bcrypt==5.0.0
 argon2-cffi==25.1.0
 PyJWT[crypto]==2.10.1
-authlib==1.6.5
+authlib==1.6.6
 
 requests==2.32.5
 aiohttp==3.13.2
@@ -20,8 +20,9 @@ aiofiles
 starlette-compress==1.6.1
 httpx[socks,http2,zstd,cli,brotli]==0.28.1
 starsessions[redis]==2.2.1
+python-mimeparse==2.0.0
 
-sqlalchemy==2.0.44
+sqlalchemy==2.0.45
 alembic==1.17.2
 peewee==3.18.3
 peewee-migrate==1.14.3
@@ -37,32 +38,34 @@ asgiref==3.11.0
 
 # AI libraries
 tiktoken
-mcp==1.23.3
+mcp==1.25.0
 
 openai
 anthropic
-google-genai==1.54.0
-google-generativeai==0.8.5
+google-genai==1.56.0
+google-generativeai==0.8.6
 
-langchain==0.3.27
-langchain-community==0.3.29
+langchain==1.2.0
+langchain-community==0.4.1
+langchain-classic==1.0.0
+langchain-text-splitters==1.1.0
 
 fake-useragent==2.2.0
-chromadb==1.3.5
-weaviate-client==4.18.3
+chromadb==1.3.7
+weaviate-client==4.19.0
 opensearch-py==3.1.0
 
 transformers==4.57.3
-sentence-transformers==5.1.2
+sentence-transformers==5.2.0
 accelerate
 pyarrow==20.0.0 # fix: pin pyarrow version to 20 for rpi compatibility #15897
 einops==0.8.1 
 
 ftfy==6.3.1
 chardet==5.2.0
-pypdf==6.4.1
+pypdf==6.5.0
 fpdf2==2.8.5
-pymdown-extensions==10.18
+pymdown-extensions==10.19.1
 docx2txt==0.9
 python-pptx==1.0.2
 unstructured==0.18.21
@@ -92,7 +95,7 @@ youtube-transcript-api==1.2.3
 pytube==15.0.0
 
 pydub
-ddgs==9.9.3
+ddgs==9.10.0
 
 azure-ai-documentintelligence==1.0.2
 azure-identity==1.25.1
@@ -113,10 +116,10 @@ psycopg2-binary==2.9.11
 pgvector==0.4.2
 
 PyMySQL==1.1.2
-boto3==1.42.5
+boto3==1.42.14
 
 pymilvus==2.6.5
-qdrant-client==1.16.1
+qdrant-client==1.16.2
 playwright==1.57.0 # Caution: version must match docker-compose.playwright.yaml - Update the docker-compose.yaml if necessary
 elasticsearch==9.2.0
 pinecone==6.0.2
@@ -136,17 +139,17 @@ pytest-docker~=3.2.5
 ldap3==2.9.1
 
 ## Firecrawl
-firecrawl-py==4.10.4
+firecrawl-py==4.12.0
 
 ## Trace
-opentelemetry-api==1.39.0
-opentelemetry-sdk==1.39.0
-opentelemetry-exporter-otlp==1.39.0
-opentelemetry-instrumentation==0.60b0
-opentelemetry-instrumentation-fastapi==0.60b0
-opentelemetry-instrumentation-sqlalchemy==0.60b0
-opentelemetry-instrumentation-redis==0.60b0
-opentelemetry-instrumentation-requests==0.60b0
-opentelemetry-instrumentation-logging==0.60b0
-opentelemetry-instrumentation-httpx==0.60b0
-opentelemetry-instrumentation-aiohttp-client==0.60b0
+opentelemetry-api==1.39.1
+opentelemetry-sdk==1.39.1
+opentelemetry-exporter-otlp==1.39.1
+opentelemetry-instrumentation==0.60b1
+opentelemetry-instrumentation-fastapi==0.60b1
+opentelemetry-instrumentation-sqlalchemy==0.60b1
+opentelemetry-instrumentation-redis==0.60b1
+opentelemetry-instrumentation-requests==0.60b1
+opentelemetry-instrumentation-logging==0.60b1
+opentelemetry-instrumentation-httpx==0.60b1
+opentelemetry-instrumentation-aiohttp-client==0.60b1

@@ -339,7 +339,7 @@
 				</tr>
 			</thead>
 			<tbody class="">
-				{#each users as user, userIdx}
+				{#each users as user, userIdx (user.id)}
 					<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
 						<td class="px-3 py-1 min-w-[7rem] w-28">
 							<button
