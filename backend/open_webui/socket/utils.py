@@ -191,7 +191,9 @@ class YdocManager:
     async def remove_user_from_all_documents(self, user_id: str):
         if self._redis:
             keys = []
-            async for key in self._redis.scan_iter(match=f"{self._redis_key_prefix}:*", count=100):
+            async for key in self._redis.scan_iter(
+                match=f"{self._redis_key_prefix}:*", count=100
+            ):
                 keys.append(key)
             for key in keys:
                 if key.endswith(":users"):

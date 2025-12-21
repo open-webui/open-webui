@@ -1,9 +1,12 @@
 <script lang="ts">
+	import * as XLSX from 'xlsx';
+
 	import { getContext, onMount, tick } from 'svelte';
+
 	import { formatFileSize, getLineCount } from '$lib/utils';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { getKnowledgeById } from '$lib/apis/knowledge';
-	import * as XLSX from 'xlsx';
+	import { getFileById } from '$lib/apis/files';
 
 	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
@@ -17,18 +20,17 @@
 	import Tooltip from './Tooltip.svelte';
 	import dayjs from 'dayjs';
 	import Spinner from './Spinner.svelte';
-	import { getFileById } from '$lib/apis/files';
 
 	export let item;
 	export let show = false;
 	export let edit = false;
 
 	let enableFullContent = false;
+	let loading = false;
 
-	let isPdf = false;
+	let isPDF = false;
 	let isAudio = false;
 	let isExcel = false;
-	let loading = false;
 
 	let selectedTab = '';
 	let excelWorkbook: XLSX.WorkBook | null = null;
@@ -129,7 +131,6 @@
 			header: ''
 		});
 	};
-
 
 	$: if (selectedSheet && excelWorkbook) {
 		renderExcelSheet();
@@ -312,7 +313,9 @@
 							</div>
 						{/each}
 					</div>
-				{:else if isPDF}
+				{/if}
+
+				{#if isAudio || isPDF || isExcel || isCode || isMarkdown}
 					<div
 						class="flex mb-2.5 scrollbar-none overflow-x-auto w-full border-b border-gray-50 dark:border-gray-850/30 text-center text-sm font-medium bg-transparent dark:text-gray-200"
 					>
@@ -336,187 +339,86 @@
 							}}>{$i18n.t('Preview')}</button
 						>
 					</div>
+				{/if}
 
-					{#if selectedTab === 'preview'}
+				{#if selectedTab === ''}
+					{#if item?.file?.data}
+						<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
+							{(item?.file?.data?.content ?? '').trim() || 'No content'}
+						</div>
+					{:else if item?.content}
+						<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
+							{(item?.content ?? '').trim() || 'No content'}
+						</div>
+					{/if}
+				{:else if selectedTab === 'preview'}
+					{#if isAudio}
+						<audio
+							src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
+							class="w-full border-0 rounded-lg mb-2"
+							controls
+							playsinline
+						/>
+					{:else if isPDF}
 						<iframe
 							title={item?.name}
 							src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
 							class="w-full h-[70vh] border-0 rounded-lg"
 						/>
+					{:else if isExcel}
+						{#if excelError}
+							<div class="text-red-500 text-sm p-4">
+								{excelError}
+							</div>
+						{:else}
+							{#if excelSheetNames.length > 1}
+								<div
+									class="flex mb-2.5 scrollbar-none overflow-x-auto w-full border-b border-gray-50 dark:border-gray-850/30 text-center text-sm font-medium bg-transparent dark:text-gray-200"
+								>
+									{#each excelSheetNames as sheetName}
+										<button
+											class="min-w-fit py-1.5 px-4 border-b {selectedSheet === sheetName
+												? ' '
+												: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+											type="button"
+											on:click={() => {
+												selectedSheet = sheetName;
+											}}>{sheetName}</button
+										>
+									{/each}
+								</div>
+							{/if}
+
+							{#if excelHtml}
+								<div class="excel-table-container overflow-auto max-h-[60vh]">
+									{@html excelHtml}
+								</div>
+							{:else}
+								<div class="text-gray-500 text-sm p-4">No content available</div>
+							{/if}
+						{/if}
+					{:else if isCode}
+						<div class="max-h-[60vh] overflow-scroll scrollbar-hidden text-sm relative">
+							<CodeBlock
+								code={item.file.data.content}
+								lang={item.name.split('.').pop()}
+								token={null}
+								edit={false}
+								run={false}
+								save={false}
+							/>
+						</div>
+					{:else if isMarkdown}
+						<div
+							class="max-h-[60vh] overflow-scroll scrollbar-hidden text-sm prose dark:prose-invert max-w-full"
+						>
+							<Markdown content={item.file.data.content} id="markdown-viewer" />
+						</div>
 					{:else}
 						<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
 							{(item?.file?.data?.content ?? '').trim() || 'No content'}
 						</div>
 					{/if}
-			{:else if isExcel}
-				<div
-					class="flex mb-2.5 scrollbar-none overflow-x-auto w-full border-b border-gray-50 dark:border-gray-850/30 text-center text-sm font-medium bg-transparent dark:text-gray-200"
-				>
-					<button
-						class="min-w-fit py-1.5 px-4 border-b {selectedTab === ''
-							? ' '
-							: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-						type="button"
-						on:click={() => {
-							selectedTab = '';
-						}}>{$i18n.t('Content')}</button
-					>
-
-					<button
-						class="min-w-fit py-1.5 px-4 border-b {selectedTab === 'preview'
-							? ' '
-							: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-						type="button"
-						on:click={() => {
-							selectedTab = 'preview';
-						}}>{$i18n.t('Preview')}</button
-					>
-				</div>
-
-				{#if selectedTab === 'preview'}
-					{#if excelError}
-						<div class="text-red-500 text-sm p-4">
-							{excelError}
-						</div>
-					{:else}
-						{#if excelSheetNames.length > 1}
-							<div
-								class="flex mb-2.5 scrollbar-none overflow-x-auto w-full border-b border-gray-50 dark:border-gray-850/30 text-center text-sm font-medium bg-transparent dark:text-gray-200"
-							>
-								{#each excelSheetNames as sheetName}
-									<button
-										class="min-w-fit py-1.5 px-4 border-b {selectedSheet === sheetName
-											? ' '
-											: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-										type="button"
-										on:click={() => {
-											selectedSheet = sheetName;
-										}}>{sheetName}</button
-									>
-								{/each}
-							</div>
-						{/if}
-
-						{#if excelHtml}
-							<div class="excel-table-container overflow-auto max-h-[60vh]">
-								{@html excelHtml}
-							</div>
-						{:else}
-							<div class="text-gray-500 text-sm p-4">No content available</div>
-						{/if}
-					{/if}
-				{:else}
-					<div
-						class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap"
-					>
-						{(item?.file?.data?.content ?? '').trim() || 'No content'}
-					</div>
-				{/if}
-			{:else}
-				{#if isAudio}
-					<audio
-						src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
-						class="w-full border-0 rounded-lg mb-2"
-						controls
-						playsinline
-					/>
-				{/if}
-
-				{#if item?.file?.data}
-					{#if isMarkdown}
-						<div
-							class="flex mb-2.5 scrollbar-none overflow-x-auto w-full border-b border-gray-50 dark:border-gray-850/30 text-center text-sm font-medium bg-transparent dark:text-gray-200"
-						>
-							<button
-								class="min-w-fit py-1.5 px-4 border-b {selectedTab === ''
-									? ' '
-									: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-								type="button"
-								on:click={() => {
-									selectedTab = '';
-								}}>{$i18n.t('Content')}</button
-							>
-
-							<button
-								class="min-w-fit py-1.5 px-4 border-b {selectedTab === 'preview'
-									? ' '
-									: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-								type="button"
-								on:click={() => {
-									selectedTab = 'preview';
-								}}>{$i18n.t('Preview')}</button
-							>
-						</div>
-
-						{#if selectedTab === 'preview'}
-							<div
-								class="max-h-[60vh] overflow-scroll scrollbar-hidden text-sm prose dark:prose-invert max-w-full"
-							>
-								<Markdown
-									content={item.file.data.content}
-									id="markdown-viewer"
-								/>
-							</div>
-						{:else}
-							<div
-								class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap"
-							>
-								{(item?.file?.data?.content ?? '').trim() || 'No content'}
-							</div>
-						{/if}
-					{:else if isCode}
-						<div
-							class="flex mb-2.5 scrollbar-none overflow-x-auto w-full border-b border-gray-50 dark:border-gray-850/30 text-center text-sm font-medium bg-transparent dark:text-gray-200"
-						>
-							<button
-								class="min-w-fit py-1.5 px-4 border-b {selectedTab === ''
-									? ' '
-									: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-								type="button"
-								on:click={() => {
-									selectedTab = '';
-								}}>{$i18n.t('Content')}</button
-							>
-
-							<button
-								class="min-w-fit py-1.5 px-4 border-b {selectedTab === 'preview'
-									? ' '
-									: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-								type="button"
-								on:click={() => {
-									selectedTab = 'preview';
-								}}>{$i18n.t('Preview')}</button
-							>
-						</div>
-
-						{#if selectedTab === 'preview'}
-							<div
-								class="max-h-[60vh] overflow-scroll scrollbar-hidden text-sm relative"
-							>
-								<CodeBlock
-									code={item.file.data.content}
-									lang={item.name.split('.').pop()}
-									token={null}
-									edit={false}
-									run={false}
-									save={false}
-								/>
-							</div>
-						{:else}
-							<div
-								class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap"
-							>
-								{(item?.file?.data?.content ?? '').trim() || 'No content'}
-							</div>
-						{/if}
-					{:else}
-						<div
-							class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap"
-						>
-							{(item?.file?.data?.content ?? '').trim() || 'No content'}
-						</div>
-					{/if}
-				{/if}
 				{/if}
 			{:else}
 				<div class="flex items-center justify-center py-6">

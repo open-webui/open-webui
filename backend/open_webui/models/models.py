@@ -357,6 +357,14 @@ class ModelsTable:
         except Exception:
             return None
 
+    def get_models_by_ids(self, ids: list[str]) -> list[ModelModel]:
+        try:
+            with get_db() as db:
+                models = db.query(Model).filter(Model.id.in_(ids)).all()
+                return [ModelModel.model_validate(model) for model in models]
+        except Exception:
+            return []
+
     def toggle_model_by_id(self, id: str) -> Optional[ModelModel]:
         with get_db() as db:
             try:

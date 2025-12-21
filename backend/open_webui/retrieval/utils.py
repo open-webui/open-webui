@@ -12,7 +12,10 @@ import re
 
 from urllib.parse import quote
 from huggingface_hub import snapshot_download
-from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriever
+from langchain_classic.retrievers import (
+    ContextualCompressionRetriever,
+    EnsembleRetriever,
+)
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 
@@ -1280,7 +1283,7 @@ class RerankCompressor(BaseDocumentCompressor):
 
         scores = None
         if reranking:
-            scores = self.reranking_function(query, documents)
+            scores = await asyncio.to_thread(self.reranking_function, query, documents)
         else:
             from sentence_transformers import util
 

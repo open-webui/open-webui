@@ -106,19 +106,6 @@
 	let actionIds = [];
 	let accessControl = {};
 
-	const addUsage = (base_model_id) => {
-		const baseModel = $models.find((m) => m.id === base_model_id);
-
-		if (baseModel) {
-			if (baseModel.owned_by === 'openai') {
-				capabilities.usage = baseModel?.meta?.capabilities?.usage ?? false;
-			} else {
-				delete capabilities.usage;
-			}
-			capabilities = capabilities;
-		}
-	};
-
 	const submitHandler = async () => {
 		loading = true;
 
@@ -547,9 +534,6 @@
 										class="dark:bg-gray-900 text-sm w-full bg-transparent outline-hidden"
 										placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
 										bind:value={info.base_model_id}
-										on:change={(e) => {
-											addUsage(e.target.value);
-										}}
 										required
 									>
 										<option value={null} class=" text-gray-900"
@@ -727,22 +711,20 @@
 								/>
 							</div>
 
-							{#if filterIds.length > 0}
-								{@const toggleableFilters = ($functions ?? []).filter(
-									(func) =>
-										func.type === 'filter' &&
-										(filterIds.includes(func.id) || func?.is_global) &&
-										func?.meta?.toggle
-								)}
+							{@const toggleableFilters = $functions.filter(
+								(func) =>
+									func.type === 'filter' &&
+									(filterIds.includes(func.id) || func?.is_global) &&
+									func?.meta?.toggle
+							)}
 
-								{#if toggleableFilters.length > 0}
-									<div class="my-2">
-										<DefaultFiltersSelector
-											bind:selectedFilterIds={defaultFilterIds}
-											filters={toggleableFilters}
-										/>
-									</div>
-								{/if}
+							{#if toggleableFilters.length > 0}
+								<div class="my-2">
+									<DefaultFiltersSelector
+										bind:selectedFilterIds={defaultFilterIds}
+										filters={toggleableFilters}
+									/>
+								</div>
 							{/if}
 						{/if}
 
