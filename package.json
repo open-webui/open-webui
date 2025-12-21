@@ -142,6 +142,7 @@
 		"vega-lite": "^6.4.1",
 		"vite-plugin-static-copy": "^2.2.0",
 		"xlsx": "^0.18.5",
+		"y-protocols": "^1.0.7",
 		"y-prosemirror": "^1.3.7",
 		"yaml": "^2.7.1",
 		"yjs": "^13.6.27"
