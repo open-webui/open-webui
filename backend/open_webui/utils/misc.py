@@ -378,7 +378,7 @@ def sanitize_text_for_db(text: str) -> str:
     if not isinstance(text, str):
         return text
     # Remove null bytes
-    text = text.replace("\x00", "").replace("\u0000", "")
+    text = text.replace("\x00", "")
     # Remove invalid UTF-8 surrogate characters that can cause encoding errors
     # This handles cases where binary data or encoding issues introduced surrogates
     try:
