@@ -152,13 +152,18 @@ async def trace_span_async(
     tracer = _get_tracer()
     if not tracer:
         # OTEL not initialized, yield None and continue
+        log.debug(f"[trace_span_async] OTEL not initialized, using no-op for span '{name}'")
         try:
+            log.debug(f"[trace_span_async] Generator entering (no-op mode) for span '{name}'")
             yield None
-        except GeneratorExit:
+            log.debug(f"[trace_span_async] Generator exiting normally (no-op mode) for span '{name}'")
+        except GeneratorExit as ge:
             # Properly handle generator exit
+            log.debug(f"[trace_span_async] GeneratorExit caught (no-op mode) for span '{name}': {ge}")
             raise
-        except Exception:
+        except Exception as e:
             # If exception is thrown into generator, re-raise to propagate
+            log.warning(f"[trace_span_async] Exception thrown into generator (no-op mode) for span '{name}': {type(e).__name__}: {e}", exc_info=True)
             raise
         return
     
@@ -186,30 +191,52 @@ async def trace_span_async(
                         log.debug(f"Failed to set span attribute {key}: {e}")
             
             try:
+                log.debug(f"[trace_span_async] Generator entering (OTEL active) for span '{name}', span_id={getattr(span, 'context', {}).get('span_id', 'unknown')}")
                 yield span
                 # Set status to OK if no exception
                 span.set_status(Status(StatusCode.OK))
+                log.debug(f"[trace_span_async] Generator exiting normally (OTEL active) for span '{name}'")
+            except GeneratorExit as ge:
+                log.debug(f"[trace_span_async] GeneratorExit caught (OTEL active) for span '{name}': {ge}")
+                # Set status before exiting
+                try:
+                    span.set_status(Status(StatusCode.ERROR, "GeneratorExit"))
+                except Exception:
+                    pass
+                raise
             except Exception as e:
                 # Set status to ERROR on exception
-                span.set_status(Status(StatusCode.ERROR, str(e)))
-                # Record exception
-                span.record_exception(e)
+                log.warning(f"[trace_span_async] Exception in span context (OTEL active) for span '{name}': {type(e).__name__}: {e}", exc_info=True)
+                try:
+                    span.set_status(Status(StatusCode.ERROR, str(e)))
+                    # Record exception
+                    span.record_exception(e)
+                except Exception as span_error:
+                    log.debug(f"[trace_span_async] Failed to set span error status for '{name}': {span_error}")
                 # Re-raise exception
                 raise
             finally:
                 # End span (always called, even on exception)
                 # Note: end_on_exit=False means we must call end() manually
-                span.end()
+                try:
+                    span.end()
+                    log.debug(f"[trace_span_async] Span ended (OTEL active) for span '{name}'")
+                except Exception as end_error:
+                    log.debug(f"[trace_span_async] Error ending span '{name}': {end_error}")
             
     except Exception as e:
         # If span creation fails, log but don't crash
-        log.warning(f"Failed to create span '{name}': {e}", exc_info=True)
+        log.warning(f"[trace_span_async] Failed to create span '{name}': {type(e).__name__}: {e}", exc_info=True)
         try:
+            log.debug(f"[trace_span_async] Generator entering (fallback mode) for span '{name}'")
             yield None
-        except GeneratorExit:
+            log.debug(f"[trace_span_async] Generator exiting normally (fallback mode) for span '{name}'")
+        except GeneratorExit as ge:
+            log.debug(f"[trace_span_async] GeneratorExit caught (fallback mode) for span '{name}': {ge}")
             # Properly handle generator exit
             raise
-        except Exception:
+        except Exception as gen_exc:
+            log.warning(f"[trace_span_async] Exception thrown into generator (fallback mode) for span '{name}': {type(gen_exc).__name__}: {gen_exc}", exc_info=True)
             # If exception is thrown into generator, re-raise to propagate
             raise
 

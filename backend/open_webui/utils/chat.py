@@ -68,15 +68,20 @@ except ImportError:
     # Create no-op functions if OTEL not available
     # NOTE: Must be regular function (not async def) to match @asynccontextmanager signature
     def trace_span_async(*args, **kwargs):
+        span_name = kwargs.get('name', args[0] if args else 'unknown')
         from contextlib import asynccontextmanager
         @asynccontextmanager
         async def _noop():
             try:
+                log.debug(f"[trace_span_async] Generator entering (OTEL unavailable, no-op) for span '{span_name}'")
                 yield None
-            except GeneratorExit:
+                log.debug(f"[trace_span_async] Generator exiting normally (OTEL unavailable, no-op) for span '{span_name}'")
+            except GeneratorExit as ge:
+                log.debug(f"[trace_span_async] GeneratorExit caught (OTEL unavailable, no-op) for span '{span_name}': {ge}")
                 # Properly handle generator exit
                 raise
-            except Exception:
+            except Exception as e:
+                log.warning(f"[trace_span_async] Exception thrown into generator (OTEL unavailable, no-op) for span '{span_name}': {type(e).__name__}: {e}", exc_info=True)
                 # Properly handle exceptions thrown into generator - must re-raise or return
                 # Re-raising ensures the exception propagates correctly
                 raise
@@ -108,19 +113,25 @@ def safe_trace_span_async(*args, **kwargs):
     Returns an async context manager (same signature as trace_span_async).
     Can be used with: async with safe_trace_span_async(...) as span:
     """
+    span_name = kwargs.get('name', args[0] if args else 'unknown')
     try:
+        log.debug(f"[safe_trace_span_async] Attempting to create span '{span_name}'")
         return trace_span_async(*args, **kwargs)  # Returns async context manager, not a coroutine
     except Exception as e:
-        log.debug(f"OTEL trace_span_async failed (non-critical), using nullcontext: {e}")
+        log.warning(f"[safe_trace_span_async] OTEL trace_span_async failed (non-critical) for span '{span_name}': {type(e).__name__}: {e}", exc_info=True)
         from contextlib import asynccontextmanager
         @asynccontextmanager
         async def _noop():
             try:
+                log.debug(f"[safe_trace_span_async] Generator entering (safe fallback) for span '{span_name}'")
                 yield None
-            except GeneratorExit:
+                log.debug(f"[safe_trace_span_async] Generator exiting normally (safe fallback) for span '{span_name}'")
+            except GeneratorExit as ge:
+                log.debug(f"[safe_trace_span_async] GeneratorExit caught (safe fallback) for span '{span_name}': {ge}")
                 # Properly handle generator exit
                 raise
-            except Exception:
+            except Exception as gen_exc:
+                log.warning(f"[safe_trace_span_async] Exception thrown into generator (safe fallback) for span '{span_name}': {type(gen_exc).__name__}: {gen_exc}", exc_info=True)
                 # Properly handle exceptions thrown into generator - must re-raise or return
                 # Re-raising ensures the exception propagates correctly
                 raise
