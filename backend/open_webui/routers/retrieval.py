@@ -2226,7 +2226,7 @@ def process_file(
                 timeout_secs=lock_timeout,
             )
             # Try to acquire lock - distinguish between "lock held" vs "Redis unavailable" (BUG #2 fix)
-            lock_acquired = processing_lock.acquire_lock()
+            lock_acquired = processing_lock.aquire_lock()
             
             if not lock_acquired:
                 # Check if Redis is actually available by testing connection
@@ -2343,11 +2343,12 @@ def process_file(
             with get_db() as db:
                 if is_postgresql:
                     # PostgreSQL: Use JSONB functions for atomic update
+                    # Cast meta to jsonb first (meta column is JSON type, but jsonb_set requires jsonb)
                     result = db.execute(
                         text("""
                             UPDATE file 
                             SET meta = jsonb_set(
-                                COALESCE(meta, '{}'::jsonb),
+                                COALESCE(meta::jsonb, '{}'::jsonb),
                                 '{processing_status}',
                                 '"pending"',
                                 true
@@ -2572,6 +2573,14 @@ def process_file(
             )
             print(f"  [STEP 1.3] ❌ {error_msg}", flush=True)
             log.error(f"  [STEP 1.3] ❌ {error_msg}")
+            # Release lock before returning (lock was acquired earlier if Redis was available)
+            if processing_lock and lock_acquired and not lock_released:
+                try:
+                    processing_lock.release_lock()
+                    lock_released = True
+                    log.debug(f"Released file processing lock for file_id={form_data.file_id} (API key missing)")
+                except Exception as release_error:
+                    log.error(f"Failed to release lock after API key check failure: {release_error}")
             # Return early with error - don't waste resources on processing that will fail
             return {
                 "status": False,
@@ -2650,25 +2659,32 @@ def process_file(
         # This ensures no race condition can occur
         # Only release if we have the lock and haven't released it yet
         if processing_lock and lock_acquired and not lock_released:
-            # Only release if status was successfully updated
-            # AND either job was enqueued OR background task was added
-            if status_update_succeeded and (job_enqueued or background_task_added):
+            # Release lock if task was successfully created (job enqueued OR background task added)
+            # Even if status update failed, we should release the lock because:
+            # 1. The task will update status to "processing" when it starts
+            # 2. Holding the lock prevents other requests from processing the same file
+            # 3. The task is already enqueued, so we don't need the lock anymore
+            if job_enqueued or background_task_added:
                 try:
                     processing_lock.release_lock()
                     lock_released = True
                     log.debug(
                         f"Released file processing lock for file_id={form_data.file_id} "
                         f"after successful task creation (job_enqueued={job_enqueued}, "
-                        f"background_task_added={background_task_added})"
+                        f"background_task_added={background_task_added}, "
+                        f"status_update_succeeded={status_update_succeeded})"
                     )
                 except Exception as release_error:
                     log.error(f"Failed to release lock after task creation: {release_error}")
             elif not status_update_succeeded:
+                # Status update failed AND no task was created - don't release lock
+                # This prevents another request from trying to process the same file
                 log.warning(
-                    f"Lock NOT released for file_id={form_data.file_id} due to status update failure. "
-                    "Lock will expire after timeout."
+                    f"Lock NOT released for file_id={form_data.file_id} due to status update failure "
+                    f"and no task was created. Lock will expire after timeout to prevent deadlock."
                 )
-            elif not (job_enqueued or background_task_added):
+            else:
+                # No task was created - don't release lock to prevent duplicate processing
                 log.warning(
                     f"Lock NOT released for file_id={form_data.file_id} due to task creation failure. "
                     "Lock will expire after timeout."
