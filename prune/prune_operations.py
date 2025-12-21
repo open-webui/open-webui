@@ -50,7 +50,7 @@ def retry_on_db_lock(func: Callable, max_retries: int = 3, base_delay: float = 0
 # Import Open WebUI modules using compatibility layer (handles pip/docker/git installs)
 try:
     from prune_imports import (
-        Users, Chat, Chats, Message, Files, Notes, Prompts, Models,
+        Users, Chat, Chats, ChatFile, Message, Files, Notes, Prompts, Models,
         Knowledges, Functions, Tools, Folder, Folders, get_db, CACHE_DIR
     )
 except ImportError as e:
@@ -364,6 +364,34 @@ def get_active_file_ids(knowledge_bases=None) -> Set[str]:
 
         chat_count = retry_on_db_lock(scan_chats)
         log.debug(f"Scanned {chat_count} chats for file references")
+
+        # Scan chat_file table for file references
+        # Note: Since v0.6.41+, chat files are stored in dedicated chat_file junction table.
+        # We scan both the chat.chat JSON (legacy) and chat_file table (new) to ensure completeness.
+        try:
+            with get_db() as db:
+                stmt = select(ChatFile.file_id)
+                # SQLAlchemy 2.0+ compatibility
+                try:
+                    result = db.execute(stmt.execution_options(stream_results=True))
+                except AttributeError:
+                    result = db.execution_options(stream_results=True).execute(stmt)
+
+                chat_file_count = 0
+                while True:
+                    rows = result.fetchmany(1000)
+                    if not rows:
+                        break
+
+                    for (file_id,) in rows:
+                        chat_file_count += 1
+                        if file_id and file_id in all_file_ids:
+                            active_file_ids.add(file_id)
+
+                log.debug(f"Scanned {chat_file_count} chat_file entries for file references")
+        except Exception as e:
+            # chat_file table might not exist in older database versions
+            log.debug(f"Error scanning chat_file table (table may not exist yet): {e}")
 
         # Scan folders for file references
         # Stream folders using Core SELECT to avoid ORM overhead
