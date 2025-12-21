@@ -2103,22 +2103,16 @@ async def process_web_search(
             f"trying to web search with {request.app.state.config.WEB_SEARCH_ENGINE, form_data.queries}"
         )
 
-        # Use semaphore to limit concurrent requests based on WEB_SEARCH_CONCURRENT_REQUESTS
-        # Set to 1 for sequential execution (rate-limited APIs like Brave free tier)
-        concurrent_limit = request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS or 10
-        semaphore = asyncio.Semaphore(concurrent_limit)
-
-        async def search_with_limit(query):
-            async with semaphore:
-                return await run_in_threadpool(
-                    search_web,
-                    request,
-                    request.app.state.config.WEB_SEARCH_ENGINE,
-                    query,
-                    user,
-                )
-
-        search_tasks = [search_with_limit(query) for query in form_data.queries]
+        search_tasks = [
+            run_in_threadpool(
+                search_web,
+                request,
+                request.app.state.config.WEB_SEARCH_ENGINE,
+                query,
+                user,
+            )
+            for query in form_data.queries
+        ]
         search_results = await asyncio.gather(*search_tasks)
 
         for result in search_results:
