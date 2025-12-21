@@ -14,6 +14,7 @@ from typing import Iterator, List, Optional, Sequence, Union
 from fastapi import (
     Depends,
     FastAPI,
+    Query,
     File,
     Form,
     HTTPException,
@@ -28,8 +29,11 @@ from pydantic import BaseModel
 import tiktoken
 
 
-from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
-from langchain_text_splitters import MarkdownHeaderTextSplitter
+from langchain_text_splitters import (
+    RecursiveCharacterTextSplitter,
+    TokenTextSplitter,
+    MarkdownHeaderTextSplitter,
+)
 from langchain_core.documents import Document
 
 from open_webui.models.files import FileModel, FileUpdateForm, Files
@@ -84,6 +88,7 @@ from open_webui.retrieval.utils import (
 from open_webui.retrieval.vector.utils import filter_metadata
 from open_webui.utils.misc import (
     calculate_sha256_string,
+    sanitize_text_for_db,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
 
@@ -99,7 +104,6 @@ from open_webui.config import (
     RAG_EMBEDDING_QUERY_PREFIX,
 )
 from open_webui.env import (
-    SRC_LOG_LEVELS,
     DEVICE_TYPE,
     DOCKER,
     SENTENCE_TRANSFORMERS_BACKEND,
@@ -111,7 +115,6 @@ from open_webui.env import (
 from open_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 ##########################################
 #
@@ -148,9 +151,14 @@ def get_rf(
     reranking_model: Optional[str] = None,
     external_reranker_url: str = "",
     external_reranker_api_key: str = "",
+    external_reranker_timeout: str = "",
     auto_update: bool = RAG_RERANKING_MODEL_AUTO_UPDATE,
 ):
     rf = None
+    # Convert timeout string to int or None (system default)
+    timeout_value = (
+        int(external_reranker_timeout) if external_reranker_timeout else None
+    )
     if reranking_model:
         if any(model in reranking_model for model in ["jinaai/jina-colbert-v2"]):
             try:
@@ -173,6 +181,7 @@ def get_rf(
                         url=external_reranker_url,
                         api_key=external_reranker_api_key,
                         model=reranking_model,
+                        timeout=timeout_value,
                     )
                 except Exception as e:
                     log.error(f"ExternalReranking: {e}")
@@ -475,12 +484,14 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "MINERU_API_MODE": request.app.state.config.MINERU_API_MODE,
         "MINERU_API_URL": request.app.state.config.MINERU_API_URL,
         "MINERU_API_KEY": request.app.state.config.MINERU_API_KEY,
+        "MINERU_API_TIMEOUT": request.app.state.config.MINERU_API_TIMEOUT,
         "MINERU_PARAMS": request.app.state.config.MINERU_PARAMS,
         # Reranking settings
         "RAG_RERANKING_MODEL": request.app.state.config.RAG_RERANKING_MODEL,
         "RAG_RERANKING_ENGINE": request.app.state.config.RAG_RERANKING_ENGINE,
         "RAG_EXTERNAL_RERANKER_URL": request.app.state.config.RAG_EXTERNAL_RERANKER_URL,
         "RAG_EXTERNAL_RERANKER_API_KEY": request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
+        "RAG_EXTERNAL_RERANKER_TIMEOUT": request.app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT,
         # Chunking settings
         "TEXT_SPLITTER": request.app.state.config.TEXT_SPLITTER,
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
@@ -507,6 +518,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "BYPASS_WEB_SEARCH_WEB_LOADER": request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER,
             "OLLAMA_CLOUD_WEB_SEARCH_API_KEY": request.app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY,
             "SEARXNG_QUERY_URL": request.app.state.config.SEARXNG_QUERY_URL,
+            "SEARXNG_LANGUAGE": request.app.state.config.SEARXNG_LANGUAGE,
             "YACY_QUERY_URL": request.app.state.config.YACY_QUERY_URL,
             "YACY_USERNAME": request.app.state.config.YACY_USERNAME,
             "YACY_PASSWORD": request.app.state.config.YACY_PASSWORD,
@@ -536,6 +548,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "SOUGOU_API_SID": request.app.state.config.SOUGOU_API_SID,
             "SOUGOU_API_SK": request.app.state.config.SOUGOU_API_SK,
             "WEB_LOADER_ENGINE": request.app.state.config.WEB_LOADER_ENGINE,
+            "WEB_LOADER_TIMEOUT": request.app.state.config.WEB_LOADER_TIMEOUT,
             "ENABLE_WEB_LOADER_SSL_VERIFICATION": request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
             "PLAYWRIGHT_WS_URL": request.app.state.config.PLAYWRIGHT_WS_URL,
             "PLAYWRIGHT_TIMEOUT": request.app.state.config.PLAYWRIGHT_TIMEOUT,
@@ -565,6 +578,7 @@ class WebConfig(BaseModel):
     BYPASS_WEB_SEARCH_WEB_LOADER: Optional[bool] = None
     OLLAMA_CLOUD_WEB_SEARCH_API_KEY: Optional[str] = None
     SEARXNG_QUERY_URL: Optional[str] = None
+    SEARXNG_LANGUAGE: Optional[str] = None
     YACY_QUERY_URL: Optional[str] = None
     YACY_USERNAME: Optional[str] = None
     YACY_PASSWORD: Optional[str] = None
@@ -594,6 +608,7 @@ class WebConfig(BaseModel):
     SOUGOU_API_SID: Optional[str] = None
     SOUGOU_API_SK: Optional[str] = None
     WEB_LOADER_ENGINE: Optional[str] = None
+    WEB_LOADER_TIMEOUT: Optional[str] = None
     ENABLE_WEB_LOADER_SSL_VERIFICATION: Optional[bool] = None
     PLAYWRIGHT_WS_URL: Optional[str] = None
     PLAYWRIGHT_TIMEOUT: Optional[int] = None
@@ -656,6 +671,7 @@ class ConfigForm(BaseModel):
     MINERU_API_MODE: Optional[str] = None
     MINERU_API_URL: Optional[str] = None
     MINERU_API_KEY: Optional[str] = None
+    MINERU_API_TIMEOUT: Optional[str] = None
     MINERU_PARAMS: Optional[dict] = None
 
     # Reranking settings
@@ -663,6 +679,7 @@ class ConfigForm(BaseModel):
     RAG_RERANKING_ENGINE: Optional[str] = None
     RAG_EXTERNAL_RERANKER_URL: Optional[str] = None
     RAG_EXTERNAL_RERANKER_API_KEY: Optional[str] = None
+    RAG_EXTERNAL_RERANKER_TIMEOUT: Optional[str] = None
 
     # Chunking settings
     TEXT_SPLITTER: Optional[str] = None
@@ -877,6 +894,11 @@ async def update_rag_config(
         if form_data.MINERU_API_KEY is not None
         else request.app.state.config.MINERU_API_KEY
     )
+    request.app.state.config.MINERU_API_TIMEOUT = (
+        form_data.MINERU_API_TIMEOUT
+        if form_data.MINERU_API_TIMEOUT is not None
+        else request.app.state.config.MINERU_API_TIMEOUT
+    )
     request.app.state.config.MINERU_PARAMS = (
         form_data.MINERU_PARAMS
         if form_data.MINERU_PARAMS is not None
@@ -914,6 +936,12 @@ async def update_rag_config(
         else request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY
     )
 
+    request.app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT = (
+        form_data.RAG_EXTERNAL_RERANKER_TIMEOUT
+        if form_data.RAG_EXTERNAL_RERANKER_TIMEOUT is not None
+        else request.app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT
+    )
+
     log.info(
         f"Updating reranking model: {request.app.state.config.RAG_RERANKING_MODEL} to {form_data.RAG_RERANKING_MODEL}"
     )
@@ -934,6 +962,7 @@ async def update_rag_config(
                     request.app.state.config.RAG_RERANKING_MODEL,
                     request.app.state.config.RAG_EXTERNAL_RERANKER_URL,
                     request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
+                    request.app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT,
                 )
 
                 request.app.state.RERANKING_FUNCTION = get_reranking_function(
@@ -1024,6 +1053,7 @@ async def update_rag_config(
             form_data.web.OLLAMA_CLOUD_WEB_SEARCH_API_KEY
         )
         request.app.state.config.SEARXNG_QUERY_URL = form_data.web.SEARXNG_QUERY_URL
+        request.app.state.config.SEARXNG_LANGUAGE = form_data.web.SEARXNG_LANGUAGE
         request.app.state.config.YACY_QUERY_URL = form_data.web.YACY_QUERY_URL
         request.app.state.config.YACY_USERNAME = form_data.web.YACY_USERNAME
         request.app.state.config.YACY_PASSWORD = form_data.web.YACY_PASSWORD
@@ -1071,6 +1101,8 @@ async def update_rag_config(
 
         # Web loader settings
         request.app.state.config.WEB_LOADER_ENGINE = form_data.web.WEB_LOADER_ENGINE
+        request.app.state.config.WEB_LOADER_TIMEOUT = form_data.web.WEB_LOADER_TIMEOUT
+
         request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION = (
             form_data.web.ENABLE_WEB_LOADER_SSL_VERIFICATION
         )
@@ -1145,12 +1177,14 @@ async def update_rag_config(
         "MINERU_API_MODE": request.app.state.config.MINERU_API_MODE,
         "MINERU_API_URL": request.app.state.config.MINERU_API_URL,
         "MINERU_API_KEY": request.app.state.config.MINERU_API_KEY,
+        "MINERU_API_TIMEOUT": request.app.state.config.MINERU_API_TIMEOUT,
         "MINERU_PARAMS": request.app.state.config.MINERU_PARAMS,
         # Reranking settings
         "RAG_RERANKING_MODEL": request.app.state.config.RAG_RERANKING_MODEL,
         "RAG_RERANKING_ENGINE": request.app.state.config.RAG_RERANKING_ENGINE,
         "RAG_EXTERNAL_RERANKER_URL": request.app.state.config.RAG_EXTERNAL_RERANKER_URL,
         "RAG_EXTERNAL_RERANKER_API_KEY": request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
+        "RAG_EXTERNAL_RERANKER_TIMEOUT": request.app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT,
         # Chunking settings
         "TEXT_SPLITTER": request.app.state.config.TEXT_SPLITTER,
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
@@ -1177,6 +1211,7 @@ async def update_rag_config(
             "BYPASS_WEB_SEARCH_WEB_LOADER": request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER,
             "OLLAMA_CLOUD_WEB_SEARCH_API_KEY": request.app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY,
             "SEARXNG_QUERY_URL": request.app.state.config.SEARXNG_QUERY_URL,
+            "SEARXNG_LANGUAGE": request.app.state.config.SEARXNG_LANGUAGE,
             "YACY_QUERY_URL": request.app.state.config.YACY_QUERY_URL,
             "YACY_USERNAME": request.app.state.config.YACY_USERNAME,
             "YACY_PASSWORD": request.app.state.config.YACY_PASSWORD,
@@ -1206,6 +1241,7 @@ async def update_rag_config(
             "SOUGOU_API_SID": request.app.state.config.SOUGOU_API_SID,
             "SOUGOU_API_SK": request.app.state.config.SOUGOU_API_SK,
             "WEB_LOADER_ENGINE": request.app.state.config.WEB_LOADER_ENGINE,
+            "WEB_LOADER_TIMEOUT": request.app.state.config.WEB_LOADER_TIMEOUT,
             "ENABLE_WEB_LOADER_SSL_VERIFICATION": request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
             "PLAYWRIGHT_WS_URL": request.app.state.config.PLAYWRIGHT_WS_URL,
             "PLAYWRIGHT_TIMEOUT": request.app.state.config.PLAYWRIGHT_TIMEOUT,
@@ -1346,7 +1382,7 @@ def save_docs_to_vector_db(
     if len(docs) == 0:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
-    texts = [doc.page_content for doc in docs]
+    texts = [sanitize_text_for_db(doc.page_content) for doc in docs]
     metadatas = [
         {
             **doc.metadata,
@@ -1401,6 +1437,7 @@ def save_docs_to_vector_db(
                 if request.app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
                 else None
             ),
+            enable_async=request.app.state.config.ENABLE_ASYNC_EMBEDDING,
         )
 
         # Run async embedding in sync context
@@ -1557,6 +1594,7 @@ def process_file(
                         MINERU_API_MODE=request.app.state.config.MINERU_API_MODE,
                         MINERU_API_URL=request.app.state.config.MINERU_API_URL,
                         MINERU_API_KEY=request.app.state.config.MINERU_API_KEY,
+                        MINERU_API_TIMEOUT=request.app.state.config.MINERU_API_TIMEOUT,
                         MINERU_PARAMS=request.app.state.config.MINERU_PARAMS,
                     )
                     docs = loader.load(
@@ -1715,44 +1753,53 @@ async def process_text(
 @router.post("/process/youtube")
 @router.post("/process/web")
 async def process_web(
-    request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)
+    request: Request,
+    form_data: ProcessUrlForm,
+    process: bool = Query(True, description="Whether to process and save the content"),
+    user=Depends(get_verified_user),
 ):
     try:
-        collection_name = form_data.collection_name
-        if not collection_name:
-            collection_name = calculate_sha256_string(form_data.url)[:63]
-
         content, docs = await run_in_threadpool(
             get_content_from_url, request, form_data.url
         )
         log.debug(f"text_content: {content}")
 
-        if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
-            await run_in_threadpool(
-                save_docs_to_vector_db,
-                request,
-                docs,
-                collection_name,
-                overwrite=True,
-                user=user,
-            )
-        else:
-            collection_name = None
+        if process:
+            collection_name = form_data.collection_name
+            if not collection_name:
+                collection_name = calculate_sha256_string(form_data.url)[:63]
 
-        return {
-            "status": True,
-            "collection_name": collection_name,
-            "filename": form_data.url,
-            "file": {
-                "data": {
-                    "content": content,
+            if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
+                await run_in_threadpool(
+                    save_docs_to_vector_db,
+                    request,
+                    docs,
+                    collection_name,
+                    overwrite=True,
+                    user=user,
+                )
+            else:
+                collection_name = None
+
+            return {
+                "status": True,
+                "collection_name": collection_name,
+                "filename": form_data.url,
+                "file": {
+                    "data": {
+                        "content": content,
+                    },
+                    "meta": {
+                        "name": form_data.url,
+                        "source": form_data.url,
+                    },
                 },
-                "meta": {
-                    "name": form_data.url,
-                    "source": form_data.url,
-                },
-            },
-        }
+            }
+        else:
+            return {
+                "status": True,
+                "content": content,
+            }
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -1809,11 +1856,13 @@ def search_web(
             raise Exception("No PERPLEXITY_API_KEY found in environment variables")
     elif engine == "searxng":
         if request.app.state.config.SEARXNG_QUERY_URL:
+            searxng_kwargs = {"language": request.app.state.config.SEARXNG_LANGUAGE}
             return search_searxng(
                 request.app.state.config.SEARXNG_QUERY_URL,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                **searxng_kwargs,
             )
         else:
             raise Exception("No SEARXNG_QUERY_URL found in environment variables")
@@ -2066,16 +2115,38 @@ async def process_web_search(
             f"trying to web search with {request.app.state.config.WEB_SEARCH_ENGINE, form_data.queries}"
         )
 
-        search_tasks = [
-            run_in_threadpool(
-                search_web,
-                request,
-                request.app.state.config.WEB_SEARCH_ENGINE,
-                query,
-                user,
-            )
-            for query in form_data.queries
-        ]
+        # Use semaphore to limit concurrent requests based on WEB_SEARCH_CONCURRENT_REQUESTS
+        # 0 or None = unlimited (previous behavior), positive number = limited concurrency
+        # Set to 1 for sequential execution (rate-limited APIs like Brave free tier)
+        concurrent_limit = request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS
+
+        if concurrent_limit:
+            # Limited concurrency with semaphore
+            semaphore = asyncio.Semaphore(concurrent_limit)
+
+            async def search_with_limit(query):
+                async with semaphore:
+                    return await run_in_threadpool(
+                        search_web,
+                        request,
+                        request.app.state.config.WEB_SEARCH_ENGINE,
+                        query,
+                        user,
+                    )
+
+            search_tasks = [search_with_limit(query) for query in form_data.queries]
+        else:
+            # Unlimited parallel execution (previous behavior)
+            search_tasks = [
+                run_in_threadpool(
+                    search_web,
+                    request,
+                    request.app.state.config.WEB_SEARCH_ENGINE,
+                    query,
+                    user,
+                )
+                for query in form_data.queries
+            ]
 
         search_results = await asyncio.gather(*search_tasks)
 

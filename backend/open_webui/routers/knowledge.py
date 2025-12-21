@@ -4,7 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from fastapi.concurrency import run_in_threadpool
 import logging
 
+from open_webui.models.groups import Groups
 from open_webui.models.knowledge import (
+    KnowledgeFileListResponse,
     Knowledges,
     KnowledgeForm,
     KnowledgeResponse,
@@ -25,13 +27,11 @@ from open_webui.utils.auth import get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
 
 
-from open_webui.env import SRC_LOG_LEVELS
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.models.models import Models, ModelForm
 
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
 
@@ -39,41 +39,115 @@ router = APIRouter()
 # getKnowledgeBases
 ############################
 
-
-@router.get("/", response_model=list[KnowledgeUserResponse])
-async def get_knowledge(user=Depends(get_verified_user)):
-    # Return knowledge bases with read access
-    knowledge_bases = []
-    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
-        knowledge_bases = Knowledges.get_knowledge_bases()
-    else:
-        knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "read")
-
-    return [
-        KnowledgeUserResponse(
-            **knowledge_base.model_dump(),
-            files=Knowledges.get_file_metadatas_by_id(knowledge_base.id),
-        )
-        for knowledge_base in knowledge_bases
-    ]
+PAGE_ITEM_COUNT = 30
 
 
-@router.get("/list", response_model=list[KnowledgeUserResponse])
-async def get_knowledge_list(user=Depends(get_verified_user)):
-    # Return knowledge bases with write access
-    knowledge_bases = []
-    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
-        knowledge_bases = Knowledges.get_knowledge_bases()
-    else:
-        knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "write")
+class KnowledgeAccessResponse(KnowledgeUserResponse):
+    write_access: Optional[bool] = False
 
-    return [
-        KnowledgeUserResponse(
-            **knowledge_base.model_dump(),
-            files=Knowledges.get_file_metadatas_by_id(knowledge_base.id),
-        )
-        for knowledge_base in knowledge_bases
-    ]
+
+class KnowledgeAccessListResponse(BaseModel):
+    items: list[KnowledgeAccessResponse]
+    total: int
+
+
+@router.get("/", response_model=KnowledgeAccessListResponse)
+async def get_knowledge_bases(page: Optional[int] = 1, user=Depends(get_verified_user)):
+    page = max(page, 1)
+    limit = PAGE_ITEM_COUNT
+    skip = (page - 1) * limit
+
+    filter = {}
+    if not user.role == "admin" or not BYPASS_ADMIN_ACCESS_CONTROL:
+        groups = Groups.get_groups_by_member_id(user.id)
+        if groups:
+            filter["group_ids"] = [group.id for group in groups]
+
+        filter["user_id"] = user.id
+
+    result = Knowledges.search_knowledge_bases(
+        user.id, filter=filter, skip=skip, limit=limit
+    )
+
+    return KnowledgeAccessListResponse(
+        items=[
+            KnowledgeAccessResponse(
+                **knowledge_base.model_dump(),
+                write_access=(
+                    user.id == knowledge_base.user_id
+                    or has_access(user.id, "write", knowledge_base.access_control)
+                ),
+            )
+            for knowledge_base in result.items
+        ],
+        total=result.total,
+    )
+
+
+@router.get("/search", response_model=KnowledgeAccessListResponse)
+async def search_knowledge_bases(
+    query: Optional[str] = None,
+    view_option: Optional[str] = None,
+    page: Optional[int] = 1,
+    user=Depends(get_verified_user),
+):
+    page = max(page, 1)
+    limit = PAGE_ITEM_COUNT
+    skip = (page - 1) * limit
+
+    filter = {}
+    if query:
+        filter["query"] = query
+    if view_option:
+        filter["view_option"] = view_option
+
+    if not user.role == "admin" or not BYPASS_ADMIN_ACCESS_CONTROL:
+        groups = Groups.get_groups_by_member_id(user.id)
+        if groups:
+            filter["group_ids"] = [group.id for group in groups]
+
+        filter["user_id"] = user.id
+
+    result = Knowledges.search_knowledge_bases(
+        user.id, filter=filter, skip=skip, limit=limit
+    )
+
+    return KnowledgeAccessListResponse(
+        items=[
+            KnowledgeAccessResponse(
+                **knowledge_base.model_dump(),
+                write_access=(
+                    user.id == knowledge_base.user_id
+                    or has_access(user.id, "write", knowledge_base.access_control)
+                ),
+            )
+            for knowledge_base in result.items
+        ],
+        total=result.total,
+    )
+
+
+@router.get("/search/files", response_model=KnowledgeFileListResponse)
+async def search_knowledge_files(
+    query: Optional[str] = None,
+    page: Optional[int] = 1,
+    user=Depends(get_verified_user),
+):
+    page = max(page, 1)
+    limit = PAGE_ITEM_COUNT
+    skip = (page - 1) * limit
+
+    filter = {}
+    if query:
+        filter["query"] = query
+
+    groups = Groups.get_groups_by_member_id(user.id)
+    if groups:
+        filter["group_ids"] = [group.id for group in groups]
+
+    filter["user_id"] = user.id
+
+    return Knowledges.search_knowledge_files(filter=filter, skip=skip, limit=limit)
 
 
 ############################
@@ -185,7 +259,8 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
 
 
 class KnowledgeFilesResponse(KnowledgeResponse):
-    files: list[FileMetadataResponse]
+    files: Optional[list[FileMetadataResponse]] = None
+    write_access: Optional[bool] = False
 
 
 @router.get("/{id}", response_model=Optional[KnowledgeFilesResponse])
@@ -201,7 +276,10 @@ async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 
             return KnowledgeFilesResponse(
                 **knowledge.model_dump(),
-                files=Knowledges.get_file_metadatas_by_id(knowledge.id),
+                write_access=(
+                    user.id == knowledge.user_id
+                    or has_access(user.id, "write", knowledge.access_control)
+                ),
             )
     else:
         raise HTTPException(
@@ -265,6 +343,59 @@ async def update_knowledge_by_id(
 
 
 ############################
+# GetKnowledgeFilesById
+############################
+
+
+@router.get("/{id}/files", response_model=KnowledgeFileListResponse)
+async def get_knowledge_files_by_id(
+    id: str,
+    query: Optional[str] = None,
+    view_option: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
+    page: Optional[int] = 1,
+    user=Depends(get_verified_user),
+):
+
+    knowledge = Knowledges.get_knowledge_by_id(id=id)
+    if not knowledge:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if not (
+        user.role == "admin"
+        or knowledge.user_id == user.id
+        or has_access(user.id, "read", knowledge.access_control)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    page = max(page, 1)
+
+    limit = 30
+    skip = (page - 1) * limit
+
+    filter = {}
+    if query:
+        filter["query"] = query
+    if view_option:
+        filter["view_option"] = view_option
+    if order_by:
+        filter["order_by"] = order_by
+    if direction:
+        filter["direction"] = direction
+
+    return Knowledges.search_files_by_id(
+        id, user.id, filter=filter, skip=skip, limit=limit
+    )
+
+
+############################
 # AddFileToKnowledge
 ############################
 
@@ -309,17 +440,17 @@ def add_file_to_knowledge_by_id(
             detail=ERROR_MESSAGES.FILE_NOT_PROCESSED,
         )
 
-    # Add file to knowledge base
-    Knowledges.add_file_to_knowledge_by_id(
-        knowledge_id=id, file_id=form_data.file_id, user_id=user.id
-    )
-
     # Add content to the vector database
     try:
         process_file(
             request,
             ProcessFileForm(file_id=form_data.file_id, collection_name=id),
             user=user,
+        )
+
+        # Add file to knowledge base
+        Knowledges.add_file_to_knowledge_by_id(
+            knowledge_id=id, file_id=form_data.file_id, user_id=user.id
         )
     except Exception as e:
         log.debug(e)

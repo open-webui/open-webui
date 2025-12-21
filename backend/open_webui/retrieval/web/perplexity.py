@@ -3,7 +3,6 @@ from typing import Optional, Literal
 import requests
 
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
-from open_webui.env import SRC_LOG_LEVELS
 
 MODELS = Literal[
     "sonar",
@@ -16,7 +15,6 @@ SEARCH_CONTEXT_USAGE_LEVELS = Literal["low", "medium", "high"]
 
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def search_perplexity(

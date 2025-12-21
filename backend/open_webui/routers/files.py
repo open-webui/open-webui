@@ -24,9 +24,9 @@ from fastapi import (
 from fastapi.responses import FileResponse, StreamingResponse
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SRC_LOG_LEVELS
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 
+from open_webui.models.channels import Channels
 from open_webui.models.users import Users
 from open_webui.models.files import (
     FileForm,
@@ -34,11 +34,11 @@ from open_webui.models.files import (
     FileModelResponse,
     Files,
 )
+from open_webui.models.chats import Chats
 from open_webui.models.knowledge import Knowledges
 from open_webui.models.groups import Groups
 
 
-from open_webui.routers.knowledge import get_knowledge, get_knowledge_list
 from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.routers.audio import transcribe
 
@@ -47,11 +47,10 @@ from open_webui.storage.provider import Storage
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access
-
+from open_webui.utils.misc import strict_match_mime_type
 from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
 
@@ -73,9 +72,9 @@ def has_access_to_file(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
+    # Check if the file is associated with any knowledge bases the user has access to
     knowledge_bases = Knowledges.get_knowledges_by_file_id(file_id)
     user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
-
     for knowledge_base in knowledge_bases:
         if knowledge_base.user_id == user.id or has_access(
             user.id, access_type, knowledge_base.access_control, user_group_ids
@@ -91,6 +90,17 @@ def has_access_to_file(
             if knowledge_base.id == knowledge_base_id:
                 return True
 
+    # Check if the file is associated with any channels the user has access to
+    channels = Channels.get_channels_by_file_id_and_user_id(file_id, user.id)
+    if access_type == "read" and channels:
+        return True
+
+    # Check if the file is associated with any chats the user has access to
+    # TODO: Granular access control for chats
+    chats = Chats.get_shared_chats_by_file_id(file_id)
+    if chats:
+        return True
+
     return False
 
 
@@ -104,17 +114,9 @@ def process_uploaded_file(request, file, file_path, file_item, file_metadata, us
         if file.content_type:
             stt_supported_content_types = getattr(
                 request.app.state.config, "STT_SUPPORTED_CONTENT_TYPES", []
-            )
+            ) or ["audio/*", "video/webm"]
 
-            if any(
-                fnmatch(file.content_type, content_type)
-                for content_type in (
-                    stt_supported_content_types
-                    if stt_supported_content_types
-                    and any(t.strip() for t in stt_supported_content_types)
-                    else ["audio/*", "video/webm"]
-                )
-            ):
+            if strict_match_mime_type(stt_supported_content_types, file.content_type):
                 file_path = Storage.get_file(file_path)
                 result = transcribe(request, file_path, file_metadata, user)
 
@@ -138,6 +140,7 @@ def process_uploaded_file(request, file, file_path, file_item, file_metadata, us
                 f"File type {file.content_type} is not provided, but trying to process anyway"
             )
             process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
+
     except Exception as e:
         log.error(f"Error processing file: {file_item.id}")
         Files.update_file_data_by_id(
@@ -179,7 +182,7 @@ def upload_file_handler(
     user=Depends(get_verified_user),
     background_tasks: Optional[BackgroundTasks] = None,
 ):
-    log.info(f"file.content_type: {file.content_type}")
+    log.info(f"file.content_type: {file.content_type} {process}")
 
     if isinstance(metadata, str):
         try:
@@ -246,6 +249,13 @@ def upload_file_handler(
                 }
             ),
         )
+
+        if "channel_id" in file_metadata:
+            channel = Channels.get_channel_by_id_and_user_id(
+                file_metadata["channel_id"], user.id
+            )
+            if channel:
+                Channels.add_file_to_channel_by_id(channel.id, file_item.id, user.id)
 
         if process:
             if background_tasks and process_in_background:

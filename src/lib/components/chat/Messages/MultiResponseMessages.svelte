@@ -250,7 +250,7 @@
 							class="flex gap-2 scrollbar-none overflow-x-auto w-fit text-center font-medium bg-transparent pt-1 text-sm"
 						>
 							{#each Object.keys(groupedMessageIds) as modelIdx}
-								{#if groupedMessageIdsIdx[modelIdx] !== undefined && groupedMessageIds[modelIdx].messageIds.length > 0}
+								{#if groupedMessageIdsIdx[modelIdx] !== undefined && (groupedMessageIds[modelIdx]?.messageIds ?? []).length > 0}
 									<!-- svelte-ignore a11y-no-static-element-interactions -->
 									<!-- svelte-ignore a11y-click-events-have-key-events -->
 
@@ -283,16 +283,12 @@
 					</div>
 
 					{#if selectedModelIdx !== null}
-						{@const _messageId =
-							groupedMessageIds[selectedModelIdx].messageIds[
-								groupedMessageIdsIdx[selectedModelIdx]
-							]}
 						{#key history.currentId}
 							{#if message}
 								<ResponseMessage
 									{chatId}
 									{history}
-									messageId={_messageId}
+									messageId={message?.id}
 									{selectedModels}
 									isLastMessage={true}
 									siblings={groupedMessageIds[selectedModelIdx].messageIds}
