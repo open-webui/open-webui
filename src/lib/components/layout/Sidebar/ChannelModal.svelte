@@ -55,6 +55,12 @@
 
 	const submitHandler = async () => {
 		loading = true;
+		if (name.length > 128) {
+			toast.error($i18n.t('Channel name must be less than 128 characters'));
+			loading = false;
+			return;
+		}
+
 		await onSubmit({
 			type: type,
 			name: name.replace(/\s/g, '-'),
@@ -210,6 +216,7 @@
 								placeholder={`${$i18n.t('new-channel')}`}
 								autocomplete="off"
 								required={type !== 'dm'}
+								max="100"
 							/>
 						</div>
 					</div>

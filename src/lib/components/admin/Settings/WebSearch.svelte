@@ -189,7 +189,7 @@
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'searxng'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-left text-xs font-medium mb-1">
 										{$i18n.t('Searxng Query URL')}
 									</div>
 
@@ -205,6 +205,25 @@
 											/>
 										</div>
 									</div>
+							</div>
+							<div class="mb-2.5 flex w-full flex-col">
+
+									<div class=" self-left text-xs font-medium mb-1">
+										{$i18n.t('Searxng search language (all, en, es, de, fr, etc.)')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="text"
+												placeholder={$i18n.t('Enter Searxng search language')}
+												bind:value={webConfig.SEARXNG_LANGUAGE}
+												autocomplete="off"
+												required
+											/>
+										</div>
+									</div>									
 								</div>
 							</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'yacy'}

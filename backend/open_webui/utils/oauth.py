@@ -101,11 +101,10 @@ class OAuthClientInformationFull(OAuthClientMetadata):
     server_metadata: Optional[OAuthMetadata] = None  # Fetched from the OAuth server
 
 
-from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
+from open_webui.env import GLOBAL_LOG_LEVEL
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["OAUTH"])
 
 auth_manager_config = AppConfig()
 auth_manager_config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
@@ -451,6 +450,50 @@ class OAuthClientManager:
         }
         return self.clients[client_id]
 
+    def ensure_client_from_config(self, client_id):
+        """
+        Lazy-load an OAuth client from the current TOOL_SERVER_CONNECTIONS
+        config if it hasn't been registered on this node yet.
+        """
+        if client_id in self.clients:
+            return self.clients[client_id]["client"]
+
+        try:
+            connections = getattr(self.app.state.config, "TOOL_SERVER_CONNECTIONS", [])
+        except Exception:
+            connections = []
+
+        for connection in connections or []:
+            if connection.get("type", "openapi") != "mcp":
+                continue
+            if connection.get("auth_type", "none") != "oauth_2.1":
+                continue
+
+            server_id = connection.get("info", {}).get("id")
+            if not server_id:
+                continue
+
+            expected_client_id = f"mcp:{server_id}"
+            if client_id != expected_client_id:
+                continue
+
+            oauth_client_info = connection.get("info", {}).get("oauth_client_info", "")
+            if not oauth_client_info:
+                continue
+
+            try:
+                oauth_client_info = decrypt_data(oauth_client_info)
+                return self.add_client(
+                    expected_client_id, OAuthClientInformationFull(**oauth_client_info)
+                )["client"]
+            except Exception as e:
+                log.error(
+                    f"Failed to lazily add OAuth client {expected_client_id} from config: {e}"
+                )
+                continue
+
+        return None
+
     def remove_client(self, client_id):
         if client_id in self.clients:
             del self.clients[client_id]
@@ -718,10 +761,13 @@ class OAuthClientManager:
             return None
 
     async def handle_authorize(self, request, client_id: str) -> RedirectResponse:
-        client = self.get_client(client_id)
+        client = self.get_client(client_id) or self.ensure_client_from_config(client_id)
         if client is None:
             raise HTTPException(404)
         client_info = self.get_client_info(client_id)
+        if client_info is None:
+            # ensure_client_from_config registers client_info too
+            client_info = self.get_client_info(client_id)
         if client_info is None:
             raise HTTPException(404)
 
@@ -732,7 +778,7 @@ class OAuthClientManager:
         return await client.authorize_redirect(request, redirect_uri_str)
 
     async def handle_callback(self, request, client_id: str, user_id: str, response):
-        client = self.get_client(client_id)
+        client = self.get_client(client_id) or self.ensure_client_from_config(client_id)
         if client is None:
             raise HTTPException(404)
 
@@ -1272,9 +1318,9 @@ class OAuthManager:
         client = self.get_client(provider)
         if client is None:
             raise HTTPException(404)
-        
+
         kwargs = {}
-        if (auth_manager_config.OAUTH_AUDIENCE):
+        if auth_manager_config.OAUTH_AUDIENCE:
             kwargs["audience"] = auth_manager_config.OAUTH_AUDIENCE
 
         return await client.authorize_redirect(request, redirect_uri, **kwargs)

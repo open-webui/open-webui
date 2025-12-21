@@ -35,7 +35,6 @@ from open_webui.env import (
 from open_webui.models.users import UserModel
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SRC_LOG_LEVELS
 
 
 from open_webui.utils.payload import (
@@ -53,7 +52,6 @@ from open_webui.utils.headers import include_user_info_headers
 
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["OPENAI"])
 
 
 ##########################################
@@ -891,10 +889,11 @@ async def generate_chat_completion(
         del payload["max_tokens"]
 
     # Convert the modified body back to JSON
-    if "logit_bias" in payload:
-        payload["logit_bias"] = json.loads(
-            convert_logit_bias_input_to_json(payload["logit_bias"])
-        )
+    if "logit_bias" in payload and payload["logit_bias"]:
+        logit_bias = convert_logit_bias_input_to_json(payload["logit_bias"])
+
+        if logit_bias:
+            payload["logit_bias"] = json.loads(logit_bias)
 
     headers, cookies = await get_headers_and_cookies(
         request, url, key, api_config, metadata, user=user

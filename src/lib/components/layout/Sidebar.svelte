@@ -455,7 +455,13 @@
 				}
 
 				if (value) {
-					await initChannels();
+					// Only fetch channels if the feature is enabled and user has permission
+					if (
+						$config?.features?.enable_channels &&
+						($user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true))
+					) {
+						await initChannels();
+					}
 					await initChatList();
 				}
 			})
