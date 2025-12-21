@@ -28,11 +28,7 @@ from open_webui.config import (
     DEFAULT_ARENA_MODEL,
 )
 
-from open_webui.env import (
-    BYPASS_MODEL_ACCESS_CONTROL,
-    ENABLE_CUSTOM_MODEL_FALLBACK,
-    GLOBAL_LOG_LEVEL,
-)
+from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL, ENABLE_CUSTOM_MODEL_FALLBACK
 from open_webui.models.users import UserModel
 
 
@@ -65,6 +61,44 @@ def get_model_id_with_fallback(
         f"'{original_model_id or model_id}'. Falling back to default model '{fallback_model_id}'."
     )
     return fallback_model_id, True
+
+
+def get_fallback_model_id(
+    model_info,
+    available_models: dict,
+    default_models_config: str,
+    add_latest_tag: bool = False,
+) -> str | None:
+    """
+    Get fallback model ID for custom models when base model is not found.
+
+    Args:
+        model_info: Custom model info object with base_model_id attribute
+        available_models: Dictionary of available models to check against
+        default_models_config: Comma-separated string of default models
+        add_latest_tag: Whether to add :latest tag for Ollama models
+
+    Returns:
+        Fallback model ID if applicable and available, None otherwise
+    """
+    if not ENABLE_CUSTOM_MODEL_FALLBACK:
+        return None
+
+    if not model_info or not model_info.base_model_id:
+        return None
+
+    if not default_models_config:
+        return None
+
+    fallback_model_id = default_models_config.split(",")[0].strip()
+
+    if add_latest_tag and ":" not in fallback_model_id:
+        fallback_model_id = f"{fallback_model_id}:latest"
+
+    if fallback_model_id not in available_models:
+        return None
+
+    return fallback_model_id
 
 
 async def fetch_ollama_models(request: Request, user: UserModel = None):

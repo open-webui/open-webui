@@ -50,6 +50,7 @@ from open_webui.utils.misc import (
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access
 from open_webui.utils.headers import include_user_info_headers
+from open_webui.utils.models import get_fallback_model_id
 
 
 log = logging.getLogger(__name__)
@@ -846,15 +847,12 @@ async def generate_chat_completion(
     await get_all_models(request, user=user)
     model = request.app.state.OPENAI_MODELS.get(model_id)
 
-    if model:
-        idx = model["urlIdx"]
-    else:
-        fallback_id, did_fallback = get_model_id_with_fallback(
-            model_id,
+    if not model:
+        # Try fallback to default model for custom models
+        fallback_model_id = get_fallback_model_id(
             model_info,
             request.app.state.OPENAI_MODELS,
             request.app.state.config.DEFAULT_MODELS,
-            original_model_id=form_data.get("model"),
         )
         if did_fallback:
             model = request.app.state.OPENAI_MODELS.get(fallback_id)
@@ -865,6 +863,19 @@ async def generate_chat_completion(
 
         if not model:
             raise HTTPException(status_code=404, detail="Model not found")
+
+        if fallback_model_id:
+            log.warning(
+                f"Base model '{model_info.base_model_id}' not found for custom model '{form_data.get('model')}'. "
+                f"Falling back to default model '{fallback_model_id}'."
+            )
+            payload["model"] = fallback_model_id
+            model_id = fallback_model_id
+            model = request.app.state.OPENAI_MODELS[fallback_model_id]
+        else:
+            raise HTTPException(status_code=404, detail="Model not found")
+
+    idx = model["urlIdx"]
 
     # Get the API config for the model
     api_config = request.app.state.config.OPENAI_API_CONFIGS.get(

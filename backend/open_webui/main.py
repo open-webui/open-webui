@@ -483,7 +483,7 @@ from open_webui.utils.models import (
     get_all_base_models,
     check_model_access,
     get_filtered_models,
-    get_model_id_with_fallback,
+    get_fallback_model_id,
 )
 from open_webui.utils.chat import (
     generate_chat_completion as chat_completion_handler,
@@ -1541,21 +1541,27 @@ async def chat_completion(
     metadata = {}
     try:
         if not model_item.get("direct", False):
+            # Get model info first to check if it's a custom model
             model_info = Models.get_model_by_id(model_id)
 
-            fallback_id, did_fallback = get_model_id_with_fallback(
-                model_id,
-                model_info,
-                request.app.state.MODELS,
-                request.app.state.config.DEFAULT_MODELS,
-            )
-            if did_fallback:
-                model_id = fallback_id
-                form_data["model"] = fallback_id
-                model_info = Models.get_model_by_id(fallback_id)
-
+            # Try fallback to default model for custom models if base model not found
             if model_id not in request.app.state.MODELS:
-                raise Exception("Model not found")
+                fallback_model_id = get_fallback_model_id(
+                    model_info,
+                    request.app.state.MODELS,
+                    request.app.state.config.DEFAULT_MODELS,
+                )
+
+                if fallback_model_id:
+                    log.warning(
+                        f"Base model '{model_info.base_model_id}' not found for custom model '{model_id}'. "
+                        f"Falling back to default model '{fallback_model_id}'."
+                    )
+                    model_id = fallback_model_id
+                    form_data["model"] = fallback_model_id
+                    model_info = Models.get_model_by_id(fallback_model_id)
+                else:
+                    raise Exception("Model not found")
 
             model = request.app.state.MODELS[model_id]
 
