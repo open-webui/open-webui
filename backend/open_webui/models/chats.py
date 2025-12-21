@@ -1337,5 +1337,17 @@ class ChatTable:
         except Exception:
             return False
 
+    def get_shared_chats_by_file_id(self, file_id: str) -> list[ChatModel]:
+        with get_db() as db:
+            # Join Chat and ChatFile tables to get shared chats associated with the file_id
+            all_chats = (
+                db.query(Chat)
+                .join(ChatFile, Chat.id == ChatFile.chat_id)
+                .filter(ChatFile.file_id == file_id, Chat.share_id.isnot(None))
+                .all()
+            )
+
+            return [ChatModel.model_validate(chat) for chat in all_chats]
+
 
 Chats = ChatTable()
