@@ -1604,7 +1604,7 @@
 			..._files.filter(
 				(item) =>
 					['doc', 'text', 'note', 'chat', 'folder', 'collection'].includes(item.type) ||
-					(item.type === 'file' && !item?.content_type?.startsWith('image/'))
+					(item.type === 'file' && !(item?.content_type ?? '').startsWith('image/'))
 			)
 		);
 		chatFiles = chatFiles.filter(
@@ -1831,7 +1831,7 @@
 			...(userMessage?.files ?? []).filter(
 				(item) =>
 					['doc', 'text', 'note', 'chat', 'collection'].includes(item.type) ||
-					(item.type === 'file' && !item?.content_type.startsWith('image/'))
+					(item.type === 'file' && !(item?.content_type ?? '').startsWith('image/'))
 			)
 		);
 		// Remove duplicates
