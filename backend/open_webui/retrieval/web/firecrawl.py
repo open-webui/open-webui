@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 
@@ -13,10 +13,24 @@ def search_firecrawl(
     query: str,
     count: int,
     filter_list: Optional[List[str]] = None,
+    timeout: Optional[Union[str, int]] = None,
     search_args: Dict[str, Any] = {},
 ) -> List[SearchResult]:
     try:
         from firecrawl import FirecrawlApp
+
+        if timeout is not None and timeout != "" and timeout != " ":
+            try:
+                timeout = int(timeout)
+            except ValueError:
+                log.exception(
+                    f"Cannot parse into integer FIRECRAWL_TIMEOUT : {timeout}"
+                )
+                timeout = None
+        else:
+            timeout = None
+
+        search_args = {"timeout": timeout}
 
         firecrawl = FirecrawlApp(api_key=firecrawl_api_key, api_url=firecrawl_url)
         response = firecrawl.search(

@@ -2072,25 +2072,14 @@ def search_web(
                 "No SOUGOU_API_SID or SOUGOU_API_SK found in environment variables"
             )
     elif engine == "firecrawl":
-        firecrawl_search_args = {}
-        fc_timeout = request.app.state.config.FIRECRAWL_TIMEOUT
-        if fc_timeout is not None and fc_timeout != "":
-            try:
-                timeout_value = int(request.app.state.config.FIRECRAWL_TIMEOUT)
-                firecrawl_search_args = {"timeout": timeout_value}
-            except ValueError:
-                log.exception(
-                    f"Cannot parse into integer FIRECRAWL_TIMEOUT : {fc_timeout}"
-                )
-                pass
-
         return search_firecrawl(
             request.app.state.config.FIRECRAWL_API_BASE_URL,
             request.app.state.config.FIRECRAWL_API_KEY,
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
-            firecrawl_search_args,
+            timeout=request.app.state.config.FIRECRAWL_TIMEOUT,
+            search_args={},
         )
     elif engine == "external":
         return search_external(
