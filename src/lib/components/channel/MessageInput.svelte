@@ -334,8 +334,9 @@
 
 			// Convert the canvas to a Base64 image URL
 			const imageUrl = canvas.toDataURL('image/png');
-			// Add the captured image to the files array to render it
-			files = [...files, { type: 'image', url: imageUrl }];
+			const blob = await (await fetch(imageUrl)).blob();
+			const file = new File([blob], `screen-capture-${Date.now()}.png`, { type: 'image/png' });
+			inputFilesHandler([file]);
 			// Clean memory: Clear video srcObject
 			video.srcObject = null;
 		} catch (error) {
