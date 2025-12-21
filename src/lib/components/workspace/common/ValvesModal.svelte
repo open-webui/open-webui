@@ -142,7 +142,7 @@
 
 			loading = false;
 		} catch (e) {
-			toast.error(`Error fetching valves`);
+			toast.error($i18n.t('Error fetching valves'));
 			show = false;
 		}
 	};

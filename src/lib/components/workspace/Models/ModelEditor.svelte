@@ -431,13 +431,13 @@
 									{#if info.meta.profile_image_url}
 										<img
 											src={info.meta.profile_image_url}
-											alt="model profile"
+											alt={$i18n.t('Model profile')}
 											class="rounded-xl size-60 object-cover shrink-0"
 										/>
 									{:else}
 										<img
 											src="{WEBUI_BASE_URL}/static/favicon.png"
-											alt="model profile"
+											alt={$i18n.t('Model profile')}
 											class=" rounded-xl size-60 object-cover shrink-0"
 										/>
 									{/if}

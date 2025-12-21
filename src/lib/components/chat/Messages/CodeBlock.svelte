@@ -599,7 +599,11 @@
 										<div class="flex flex-col gap-2">
 											{#each files as file}
 												{#if file.type.startsWith('image')}
-													<img src={file.data} alt="Output" class=" w-full max-w-[36rem]" />
+													<img
+														src={file.data}
+														alt={$i18n.t('Output')}
+														class=" w-full max-w-[36rem]"
+													/>
 												{/if}
 											{/each}
 										</div>

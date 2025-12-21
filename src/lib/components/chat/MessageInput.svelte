@@ -1126,7 +1126,7 @@
 									<div class="flex items-center justify-between w-full">
 										<div class="pl-[1px] flex items-center gap-2 text-sm dark:text-gray-500">
 											<img
-												alt="model profile"
+												alt={$i18n.t('Model profile')}
 												class="size-3.5 max-w-[28px] object-cover rounded-full"
 												src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${$models.find((model) => model.id === atSelectedModel.id).id}&lang=${$i18n.language}`}
 											/>
@@ -1259,7 +1259,7 @@
 												<button
 													type="button"
 													class="p-1 rounded-lg hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
-													aria-label="Expand input"
+													aria-label={$i18n.t('Expand input')}
 													on:click={async () => {
 														showInputModal = true;
 													}}
@@ -1569,7 +1569,7 @@
 											>
 												<button
 													class="translate-y-[0.5px] px-1 flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg self-center transition"
-													aria-label="Available Tools"
+													aria-label={$i18n.t('Available Tools')}
 													type="button"
 													on:click={() => {
 														showTools = !showTools;
@@ -1761,7 +1761,7 @@
 															toast.error($i18n.t('Permission denied when accessing microphone'));
 														}
 													}}
-													aria-label="Voice Input"
+													aria-label={$i18n.t('Voice Input')}
 												>
 													<svg
 														xmlns="http://www.w3.org/2000/svg"

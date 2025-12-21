@@ -231,7 +231,7 @@
 								<img
 									src={profileImageUrl}
 									class="size-16 rounded-full object-cover shrink-0"
-									alt="Profile"
+									alt={$i18n.t('Profile')}
 								/>
 
 								<div

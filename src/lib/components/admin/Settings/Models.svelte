@@ -346,7 +346,7 @@
 								>
 									<img
 										src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}`}
-										alt="modelfile profile"
+										alt={$i18n.t('Modelfile profile')}
 										class=" rounded-full w-full h-auto object-cover"
 									/>
 								</div>

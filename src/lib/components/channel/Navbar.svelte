@@ -139,7 +139,7 @@
 					<Tooltip content={$i18n.t('Pinned Messages')}>
 						<button
 							class=" flex cursor-pointer py-1.5 px-1.5 border dark:border-gray-850 border-gray-50 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							aria-label="Pinned Messages"
+							aria-label={$i18n.t('Pinned Messages')}
 							type="button"
 							on:click={() => {
 								showChannelPinnedMessagesModal = true;
@@ -155,7 +155,7 @@
 						<Tooltip content={$i18n.t('Users')}>
 							<button
 								class=" flex cursor-pointer py-1 px-1.5 border dark:border-gray-850 border-gray-50 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-								aria-label="User Count"
+								aria-label={$i18n.t('User Count')}
 								type="button"
 								on:click={() => {
 									showChannelInfoModal = true;
@@ -186,13 +186,13 @@
 					>
 						<button
 							class="select-none flex rounded-xl p-1.5 w-full hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							aria-label="User Menu"
+							aria-label={$i18n.t('User menu')}
 						>
 							<div class=" self-center">
 								<img
 									src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
 									class="size-6 object-cover rounded-full"
-									alt="User profile"
+									alt={$i18n.t('User profile')}
 									draggable="false"
 								/>
 							</div>

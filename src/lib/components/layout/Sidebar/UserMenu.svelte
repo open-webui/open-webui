@@ -97,7 +97,7 @@
 						<img
 							src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
 							class=" size-10 object-cover rounded-full"
-							alt="profile"
+							alt={$i18n.t('Profile')}
 						/>
 					</div>
 

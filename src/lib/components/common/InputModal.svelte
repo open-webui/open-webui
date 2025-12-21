@@ -32,7 +32,7 @@
 			</div>
 			<button
 				class="self-center"
-				aria-label="Close"
+				aria-label={$i18n.t('Close')}
 				onclick={() => {
 					show = false;
 					onClose();

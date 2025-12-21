@@ -107,7 +107,7 @@
 											</td>
 											<td class="px-3 py-1">
 												<div class="flex justify-end w-full">
-													<Tooltip content="Edit">
+													<Tooltip content={$i18n.t('Edit')}>
 														<button
 															class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 															on:click={() => {
@@ -132,7 +132,7 @@
 														</button>
 													</Tooltip>
 
-													<Tooltip content="Delete">
+													<Tooltip content={$i18n.t('Delete')}>
 														<button
 															class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 															on:click={async () => {

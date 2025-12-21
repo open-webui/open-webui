@@ -69,7 +69,7 @@
 	on:click={() => {
 		initNewChat();
 	}}
-	aria-label="New Chat"
+	aria-label={$i18n.t('New Chat')}
 />
 
 <nav
@@ -178,7 +178,7 @@
 								on:click={() => {
 									initNewChat();
 								}}
-								aria-label="New Chat"
+								aria-label={$i18n.t('New Chat')}
 							>
 								<div class=" m-auto self-center">
 									<ChatPlus className=" size-4.5" strokeWidth="1.5" />
@@ -217,7 +217,7 @@
 								on:click={async () => {
 									await showControls.set(!$showControls);
 								}}
-								aria-label="Controls"
+								aria-label={$i18n.t('Controls')}
 							>
 								<div class=" m-auto self-center">
 									<Knobs className=" size-5" strokeWidth="1" />
