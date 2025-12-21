@@ -189,7 +189,7 @@
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'searxng'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-left text-xs font-medium mb-1">
 										{$i18n.t('Searxng Query URL')}
 									</div>
 
@@ -200,6 +200,24 @@
 												type="text"
 												placeholder={$i18n.t('Enter Searxng Query URL')}
 												bind:value={webConfig.SEARXNG_QUERY_URL}
+												autocomplete="off"
+												required
+											/>
+										</div>
+									</div>
+								</div>
+								<div class="mb-2.5 flex w-full flex-col">
+									<div class=" self-left text-xs font-medium mb-1">
+										{$i18n.t('Searxng search language (all, en, es, de, fr, etc.)')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="text"
+												placeholder={$i18n.t('Enter Searxng search language')}
+												bind:value={webConfig.SEARXNG_LANGUAGE}
 												autocomplete="off"
 												required
 											/>
@@ -611,19 +629,6 @@
 									/>
 								</div>
 							</div>
-						{:else if webConfig.WEB_SEARCH_ENGINE === 'ddgs' || webConfig.WEB_SEARCH_ENGINE === 'duckduckgo'}
-							<div class="w-full mb-2.5">
-								<div class=" self-center text-xs font-medium mb-1">
-									{$i18n.t('Concurrent Requests')}
-								</div>
-
-								<input
-									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-									placeholder={$i18n.t('Concurrent Requests')}
-									bind:value={webConfig.WEB_SEARCH_CONCURRENT_REQUESTS}
-									required
-								/>
-							</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'external'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
@@ -671,6 +676,27 @@
 										placeholder={$i18n.t('Search Result Count')}
 										bind:value={webConfig.WEB_SEARCH_RESULT_COUNT}
 										required
+									/>
+								</div>
+
+								<div class="w-full">
+									<div class=" self-center text-xs font-medium mb-1">
+										<Tooltip
+											content={$i18n.t(
+												'Limit concurrent search queries. 0 = unlimited (default). Set to 1 for sequential execution (recommended for APIs with strict rate limits like Brave free tier).'
+											)}
+											placement="top-start"
+										>
+											{$i18n.t('Concurrent Requests')}
+										</Tooltip>
+									</div>
+
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										placeholder={$i18n.t('Concurrent Requests')}
+										bind:value={webConfig.WEB_SEARCH_CONCURRENT_REQUESTS}
+										type="number"
+										min="0"
 									/>
 								</div>
 							</div>
@@ -767,6 +793,19 @@
 					</div>
 
 					{#if webConfig.WEB_LOADER_ENGINE === '' || webConfig.WEB_LOADER_ENGINE === 'safe_web'}
+						<div class="  mb-2.5 flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">
+								{$i18n.t('Timeout')}
+							</div>
+							<div class="flex items-center relative">
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('Timeout')}
+									bind:value={webConfig.WEB_LOADER_TIMEOUT}
+								/>
+							</div>
+						</div>
+
 						<div class="  mb-2.5 flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">
 								{$i18n.t('Verify SSL Certificate')}

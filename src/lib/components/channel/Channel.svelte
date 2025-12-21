@@ -290,7 +290,7 @@
 
 <div
 	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
-		? 'md:max-w-[calc(100%-260px)]'
+		? 'md:max-w-[calc(100%-var(--sidebar-width))]'
 		: ''} w-full max-w-full flex flex-col"
 	id="channel-container"
 >
@@ -365,6 +365,7 @@
 						bind:chatInputElement
 						bind:replyToMessage
 						{typingUsers}
+						{channel}
 						userSuggestions={true}
 						channelSuggestions={true}
 						disabled={!channel?.write_access}

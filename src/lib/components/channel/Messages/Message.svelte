@@ -17,6 +17,7 @@
 
 	import { settings, user, shortCodesToEmojis } from '$lib/stores';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { getMessageData } from '$lib/apis/channels';
 
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
@@ -42,6 +43,8 @@
 	export let className = '';
 
 	export let message;
+	export let channel;
+
 	export let showUserProfile = true;
 	export let thread = false;
 
@@ -61,6 +64,21 @@
 	let edit = false;
 	let editedContent = null;
 	let showDeleteConfirmDialog = false;
+
+	const loadMessageData = async () => {
+		if (message && message?.data) {
+			const res = await getMessageData(localStorage.token, channel?.id, message.id);
+			if (res) {
+				message.data = res;
+			}
+		}
+	};
+
+	onMount(async () => {
+		if (message && message?.data) {
+			await loadMessageData();
+		}
+	});
 </script>
 
 <ConfirmDialog
@@ -314,12 +332,26 @@
 					</Name>
 				{/if}
 
-				{#if (message?.data?.files ?? []).length > 0}
-					<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
+				{#if message?.data === true}
+					<!-- loading indicator -->
+					<div class=" my-2">
+						<Skeleton />
+					</div>
+				{:else if (message?.data?.files ?? []).length > 0}
+					<div
+						class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap"
+						dir={$settings?.chatDirection ?? 'auto'}
+					>
 						{#each message?.data?.files as file}
+							{@const fileUrl =
+								file.url.startsWith('data') || file.url.startsWith('http')
+									? file.url
+									: `${WEBUI_API_BASE_URL}/files/${file.url}${file?.content_type ? '/content' : ''}`}
 							<div>
-								{#if file.type === 'image'}
-									<Image src={file.url} alt={file.name} imageClassName=" max-h-96 rounded-lg" />
+								{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
+									<Image src={fileUrl} alt={file.name} imageClassName=" max-h-96 rounded-lg" />
+								{:else if file.type === 'video' || (file?.content_type ?? '').startsWith('video/')}
+									<video src={fileUrl} controls class=" max-h-96 rounded-lg"></video>
 								{:else}
 									<FileItem
 										item={file}

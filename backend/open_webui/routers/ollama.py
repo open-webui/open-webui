@@ -58,7 +58,6 @@ from open_webui.config import (
 )
 from open_webui.env import (
     ENV,
-    SRC_LOG_LEVELS,
     MODELS_CACHE_TTL,
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
@@ -68,7 +67,6 @@ from open_webui.env import (
 from open_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["OLLAMA"])
 
 
 ##########################################
@@ -1280,7 +1278,12 @@ async def generate_chat_completion(
 
     if model_info:
         if model_info.base_model_id:
-            payload["model"] = model_info.base_model_id
+            base_model_id = (
+                request.base_model_id
+                if hasattr(request, "base_model_id")
+                else model_info.base_model_id
+            )  # Use request's base_model_id if available
+            payload["model"] = base_model_id
 
         params = model_info.params.model_dump()
 

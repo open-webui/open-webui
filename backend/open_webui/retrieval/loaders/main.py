@@ -30,11 +30,10 @@ from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
 from open_webui.retrieval.loaders.mineru import MinerULoader
 
 
-from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
+from open_webui.env import GLOBAL_LOG_LEVEL
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 known_source_ext = [
     "go",
@@ -144,19 +143,17 @@ class DoclingLoader:
         with open(self.file_path, "rb") as f:
             headers = {}
             if self.api_key:
-                headers["Authorization"] = f"Bearer {self.api_key}"
-
-            files = {
-                "files": (
-                    self.file_path,
-                    f,
-                    self.mime_type or "application/octet-stream",
-                )
-            }
+                headers["X-Api-Key"] = f"Bearer {self.api_key}"
 
             r = requests.post(
                 f"{self.url}/v1/convert/file",
-                files=files,
+                files={
+                    "files": (
+                        self.file_path,
+                        f,
+                        self.mime_type or "application/octet-stream",
+                    )
+                },
                 data={
                     "image_export_mode": "placeholder",
                     **self.params,
@@ -334,12 +331,21 @@ class Loader:
         elif self.engine == "mineru" and file_ext in [
             "pdf"
         ]:  # MinerU currently only supports PDF
+
+            mineru_timeout = self.kwargs.get("MINERU_API_TIMEOUT", 300)
+            if mineru_timeout:
+                try:
+                    mineru_timeout = int(mineru_timeout)
+                except ValueError:
+                    mineru_timeout = 300
+
             loader = MinerULoader(
                 file_path=file_path,
                 api_mode=self.kwargs.get("MINERU_API_MODE", "local"),
                 api_url=self.kwargs.get("MINERU_API_URL", "http://localhost:8000"),
                 api_key=self.kwargs.get("MINERU_API_KEY", ""),
                 params=self.kwargs.get("MINERU_PARAMS", {}),
+                timeout=mineru_timeout,
             )
         elif (
             self.engine == "mistral_ocr"

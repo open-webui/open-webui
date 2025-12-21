@@ -1,19 +1,21 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import Fuse from 'fuse.js';
-
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	dayjs.extend(relativeTime);
 
 	import { tick, getContext, onMount, onDestroy } from 'svelte';
-	import { removeLastWordFromString, isValidHttpUrl, isYoutubeUrl } from '$lib/utils';
+
+	import { folders } from '$lib/stores';
+	import { getFolders } from '$lib/apis/folders';
+	import { searchKnowledgeBases, searchKnowledgeFiles } from '$lib/apis/knowledge';
+	import { removeLastWordFromString, isValidHttpUrl, isYoutubeUrl, decodeString } from '$lib/utils';
+
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import DocumentPage from '$lib/components/icons/DocumentPage.svelte';
 	import Database from '$lib/components/icons/Database.svelte';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 	import Youtube from '$lib/components/icons/Youtube.svelte';
-	import { folders } from '$lib/stores';
 	import Folder from '$lib/components/icons/Folder.svelte';
 
 	const i18n = getContext('i18n');
@@ -21,35 +23,24 @@
 	export let query = '';
 	export let onSelect = (e) => {};
 
-	export let knowledge = [];
-
 	let selectedIdx = 0;
-
 	let items = [];
-	let fuse = null;
 
 	export let filteredItems = [];
-	$: if (fuse) {
-		filteredItems = [
-			...(query
-				? fuse.search(query).map((e) => {
-						return e.item;
-					})
-				: items),
-
-			...(query.startsWith('http')
-				? isYoutubeUrl(query)
-					? [{ type: 'youtube', name: query, description: query }]
-					: [
-							{
-								type: 'web',
-								name: query,
-								description: query
-							}
-						]
-				: [])
-		];
-	}
+	$: filteredItems = [
+		...(query.startsWith('http')
+			? isYoutubeUrl(query)
+				? [{ type: 'youtube', name: query, description: query }]
+				: [
+						{
+							type: 'web',
+							name: query,
+							description: query
+						}
+					]
+			: []),
+		...items
+	];
 
 	$: if (query) {
 		selectedIdx = 0;
@@ -71,105 +62,70 @@
 			item.click();
 		}
 	};
-	const decodeString = (str: string) => {
-		try {
-			return decodeURIComponent(str);
-		} catch (e) {
-			return str;
+
+	let folderItems = [];
+	let knowledgeItems = [];
+	let fileItems = [];
+
+	$: items = [...folderItems, ...knowledgeItems, ...fileItems];
+
+	$: if (query !== null) {
+		getItems();
+	}
+
+	const getItems = () => {
+		getFolderItems();
+		getKnowledgeItems();
+		getKnowledgeFileItems();
+	};
+
+	const getFolderItems = async () => {
+		folderItems = $folders
+			.map((folder) => ({
+				...folder,
+				type: 'folder',
+				description: $i18n.t('Folder'),
+				title: folder.name
+			}))
+			.filter((folder) => folder.name.toLowerCase().includes(query.toLowerCase()));
+	};
+
+	const getKnowledgeItems = async () => {
+		const res = await searchKnowledgeBases(localStorage.token, query).catch(() => {
+			return null;
+		});
+
+		if (res) {
+			knowledgeItems = res.items.map((item) => {
+				return {
+					...item,
+					type: 'collection'
+				};
+			});
+		}
+	};
+
+	const getKnowledgeFileItems = async () => {
+		const res = await searchKnowledgeFiles(localStorage.token, query).catch(() => {
+			return null;
+		});
+
+		if (res) {
+			fileItems = res.items.map((item) => {
+				return {
+					...item,
+					type: 'file',
+					name: item.filename,
+					description: item.collection ? item.collection.name : ''
+				};
+			});
 		}
 	};
 
 	onMount(async () => {
-		let legacy_documents = knowledge
-			.filter((item) => item?.meta?.document)
-			.map((item) => ({
-				...item,
-				type: 'file'
-			}));
-
-		let legacy_collections =
-			legacy_documents.length > 0
-				? [
-						{
-							name: 'All Documents',
-							legacy: true,
-							type: 'collection',
-							description: 'Deprecated (legacy collection), please create a new knowledge base.',
-							title: $i18n.t('All Documents'),
-							collection_names: legacy_documents.map((item) => item.id)
-						},
-
-						...legacy_documents
-							.reduce((a, item) => {
-								return [...new Set([...a, ...(item?.meta?.tags ?? []).map((tag) => tag.name)])];
-							}, [])
-							.map((tag) => ({
-								name: tag,
-								legacy: true,
-								type: 'collection',
-								description: 'Deprecated (legacy collection), please create a new knowledge base.',
-								collection_names: legacy_documents
-									.filter((item) => (item?.meta?.tags ?? []).map((tag) => tag.name).includes(tag))
-									.map((item) => item.id)
-							}))
-					]
-				: [];
-
-		let collections = knowledge
-			.filter((item) => !item?.meta?.document)
-			.map((item) => ({
-				...item,
-				type: 'collection'
-			}));
-
-		let collection_files =
-			knowledge.length > 0
-				? [
-						...knowledge
-							.reduce((a, item) => {
-								return [
-									...new Set([
-										...a,
-										...(item?.files ?? []).map((file) => ({
-											...file,
-											collection: { name: item.name, description: item.description } // DO NOT REMOVE, USED IN FILE DESCRIPTION/ATTACHMENT
-										}))
-									])
-								];
-							}, [])
-							.map((file) => ({
-								...file,
-								name: file?.meta?.name,
-								description: `${file?.collection?.description}`,
-								knowledge: true, // DO NOT REMOVE, USED TO INDICATE KNOWLEDGE BASE FILE
-								type: 'file'
-							}))
-					]
-				: [];
-
-		let folder_items = $folders.map((folder) => ({
-			...folder,
-			type: 'folder',
-			description: $i18n.t('Folder'),
-			title: folder.name
-		}));
-
-		items = [
-			...folder_items,
-			...collections,
-			...collection_files,
-			...legacy_collections,
-			...legacy_documents
-		].map((item) => {
-			return {
-				...item,
-				...(item?.legacy || item?.meta?.legacy || item?.meta?.document ? { legacy: true } : {})
-			};
-		});
-
-		fuse = new Fuse(items, {
-			keys: ['name', 'description']
-		});
+		if ($folders === null) {
+			await folders.set(await getFolders(localStorage.token));
+		}
 
 		await tick();
 	});
@@ -189,12 +145,20 @@
 	});
 </script>
 
-<div class="px-2 text-xs text-gray-500 py-1">
-	{$i18n.t('Knowledge')}
-</div>
-
 {#if filteredItems.length > 0 || query.startsWith('http')}
 	{#each filteredItems as item, idx}
+		{#if idx === 0 || item?.type !== items[idx - 1]?.type}
+			<div class="px-2 text-xs text-gray-500 py-1">
+				{#if item?.type === 'folder'}
+					{$i18n.t('Folders')}
+				{:else if item?.type === 'collection'}
+					{$i18n.t('Collections')}
+				{:else if item?.type === 'file'}
+					{$i18n.t('Files')}
+				{/if}
+			</div>
+		{/if}
+
 		{#if !['youtube', 'web'].includes(item.type)}
 			<button
 				class=" px-2 py-1 rounded-xl w-full text-left flex justify-between items-center {idx ===
@@ -252,7 +216,7 @@
 			on:click={() => {
 				if (isValidHttpUrl(query)) {
 					onSelect({
-						type: 'youtube',
+						type: 'web',
 						data: query
 					});
 				} else {

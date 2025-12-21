@@ -667,11 +667,18 @@
 							</div>
 
 							<div class="flex w-full mt-2">
-								<SensitiveInput
-									placeholder={$i18n.t('Enter MinerU API Key')}
-									bind:value={RAGConfig.MINERU_API_KEY}
-									required={false}
-								/>
+								<div class="flex-1 flex justify-between">
+									<div class="self-center text-xs font-medium">
+										{$i18n.t('API Timeout')}
+									</div>
+									<input
+										class="w-16 text-sm bg-transparent outline-hidden text-right"
+										type="number"
+										min="1"
+										bind:value={RAGConfig.MINERU_API_TIMEOUT}
+										placeholder="60"
+									/>
+								</div>
 							</div>
 
 							<!-- Parameters -->

@@ -28,7 +28,7 @@ from open_webui.models.users import (
 )
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SRC_LOG_LEVELS, STATIC_DIR
+from open_webui.env import STATIC_DIR
 
 
 from open_webui.utils.auth import (
@@ -41,7 +41,6 @@ from open_webui.utils.access_control import get_permissions, has_permission
 
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
 
@@ -391,6 +390,7 @@ async def update_user_info_by_session_user(
 class UserActiveResponse(UserStatus):
     name: str
     profile_image_url: Optional[str] = None
+    groups: Optional[list] = []
 
     is_active: bool
     model_config = ConfigDict(extra="allow")
@@ -412,11 +412,12 @@ async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
             )
 
     user = Users.get_user_by_id(user_id)
-
     if user:
+        groups = Groups.get_groups_by_member_id(user_id)
         return UserActiveResponse(
             **{
                 **user.model_dump(),
+                "groups": [{"id": group.id, "name": group.name} for group in groups],
                 "is_active": Users.is_user_active(user_id),
             }
         )

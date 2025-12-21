@@ -5,11 +5,15 @@ from typing import Optional
 import uuid
 
 from open_webui.internal.db import Base, get_db
-from open_webui.env import SRC_LOG_LEVELS
 
-from open_webui.models.files import File, FileModel, FileMetadataResponse
+from open_webui.models.files import (
+    File,
+    FileModel,
+    FileMetadataResponse,
+    FileModelResponse,
+)
 from open_webui.models.groups import Groups
-from open_webui.models.users import Users, UserResponse
+from open_webui.models.users import User, UserModel, Users, UserResponse
 
 
 from pydantic import BaseModel, ConfigDict
@@ -21,12 +25,14 @@ from sqlalchemy import (
     Text,
     JSON,
     UniqueConstraint,
+    or_,
 )
 
 from open_webui.utils.access_control import has_access
+from open_webui.utils.db.access_control import has_permission
+
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 ####################
 # Knowledge DB Schema
@@ -126,13 +132,27 @@ class KnowledgeResponse(KnowledgeModel):
 
 
 class KnowledgeUserResponse(KnowledgeUserModel):
-    files: Optional[list[FileMetadataResponse | dict]] = None
+    pass
 
 
 class KnowledgeForm(BaseModel):
     name: str
     description: str
     access_control: Optional[dict] = None
+
+
+class FileUserResponse(FileModelResponse):
+    user: Optional[UserResponse] = None
+
+
+class KnowledgeListResponse(BaseModel):
+    items: list[KnowledgeUserModel]
+    total: int
+
+
+class KnowledgeFileListResponse(BaseModel):
+    items: list[FileUserResponse]
+    total: int
 
 
 class KnowledgeTable:
@@ -162,12 +182,13 @@ class KnowledgeTable:
             except Exception:
                 return None
 
-    def get_knowledge_bases(self) -> list[KnowledgeUserModel]:
+    def get_knowledge_bases(
+        self, skip: int = 0, limit: int = 30
+    ) -> list[KnowledgeUserModel]:
         with get_db() as db:
             all_knowledge = (
                 db.query(Knowledge).order_by(Knowledge.updated_at.desc()).all()
             )
-
             user_ids = list(set(knowledge.user_id for knowledge in all_knowledge))
 
             users = Users.get_users_by_user_ids(user_ids) if user_ids else []
@@ -185,6 +206,126 @@ class KnowledgeTable:
                     )
                 )
             return knowledge_bases
+
+    def search_knowledge_bases(
+        self, user_id: str, filter: dict, skip: int = 0, limit: int = 30
+    ) -> KnowledgeListResponse:
+        try:
+            with get_db() as db:
+                query = db.query(Knowledge, User).outerjoin(
+                    User, User.id == Knowledge.user_id
+                )
+
+                if filter:
+                    query_key = filter.get("query")
+                    if query_key:
+                        query = query.filter(
+                            or_(
+                                Knowledge.name.ilike(f"%{query_key}%"),
+                                Knowledge.description.ilike(f"%{query_key}%"),
+                            )
+                        )
+
+                    view_option = filter.get("view_option")
+                    if view_option == "created":
+                        query = query.filter(Knowledge.user_id == user_id)
+                    elif view_option == "shared":
+                        query = query.filter(Knowledge.user_id != user_id)
+
+                    query = has_permission(db, Knowledge, query, filter)
+
+                query = query.order_by(Knowledge.updated_at.desc())
+
+                total = query.count()
+                if skip:
+                    query = query.offset(skip)
+                if limit:
+                    query = query.limit(limit)
+
+                items = query.all()
+
+                knowledge_bases = []
+                for knowledge_base, user in items:
+                    knowledge_bases.append(
+                        KnowledgeUserModel.model_validate(
+                            {
+                                **KnowledgeModel.model_validate(
+                                    knowledge_base
+                                ).model_dump(),
+                                "user": (
+                                    UserModel.model_validate(user).model_dump()
+                                    if user
+                                    else None
+                                ),
+                            }
+                        )
+                    )
+
+                return KnowledgeListResponse(items=knowledge_bases, total=total)
+        except Exception as e:
+            print(e)
+            return KnowledgeListResponse(items=[], total=0)
+
+    def search_knowledge_files(
+        self, filter: dict, skip: int = 0, limit: int = 30
+    ) -> KnowledgeFileListResponse:
+        """
+        Scalable version: search files across all knowledge bases the user has
+        READ access to, without loading all KBs or using large IN() lists.
+        """
+        try:
+            with get_db() as db:
+                # Base query: join Knowledge → KnowledgeFile → File
+                query = (
+                    db.query(File, User)
+                    .join(KnowledgeFile, File.id == KnowledgeFile.file_id)
+                    .join(Knowledge, KnowledgeFile.knowledge_id == Knowledge.id)
+                    .outerjoin(User, User.id == KnowledgeFile.user_id)
+                )
+
+                # Apply access-control directly to the joined query
+                # This makes the database handle filtering, even with 10k+ KBs
+                query = has_permission(db, Knowledge, query, filter)
+
+                # Apply filename search
+                if filter:
+                    q = filter.get("query")
+                    if q:
+                        query = query.filter(File.filename.ilike(f"%{q}%"))
+
+                # Order by file changes
+                query = query.order_by(File.updated_at.desc())
+
+                # Count before pagination
+                total = query.count()
+
+                if skip:
+                    query = query.offset(skip)
+                if limit:
+                    query = query.limit(limit)
+
+                rows = query.all()
+
+                items = []
+                for file, user in rows:
+                    items.append(
+                        FileUserResponse(
+                            **FileModel.model_validate(file).model_dump(),
+                            user=(
+                                UserResponse(
+                                    **UserModel.model_validate(user).model_dump()
+                                )
+                                if user
+                                else None
+                            ),
+                        )
+                    )
+
+                return KnowledgeFileListResponse(items=items, total=total)
+
+        except Exception as e:
+            print("search_knowledge_files error:", e)
+            return KnowledgeFileListResponse(items=[], total=0)
 
     def check_access_by_user_id(self, id, user_id, permission="write") -> bool:
         knowledge = self.get_knowledge_by_id(id)
@@ -217,6 +358,21 @@ class KnowledgeTable:
         except Exception:
             return None
 
+    def get_knowledge_by_id_and_user_id(
+        self, id: str, user_id: str
+    ) -> Optional[KnowledgeModel]:
+        knowledge = self.get_knowledge_by_id(id)
+        if not knowledge:
+            return None
+
+        if knowledge.user_id == user_id:
+            return knowledge
+
+        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user_id)}
+        if has_access(user_id, "write", knowledge.access_control, user_group_ids):
+            return knowledge
+        return None
+
     def get_knowledges_by_file_id(self, file_id: str) -> list[KnowledgeModel]:
         try:
             with get_db() as db:
@@ -231,6 +387,88 @@ class KnowledgeTable:
                 ]
         except Exception:
             return []
+
+    def search_files_by_id(
+        self,
+        knowledge_id: str,
+        user_id: str,
+        filter: dict,
+        skip: int = 0,
+        limit: int = 30,
+    ) -> KnowledgeFileListResponse:
+        try:
+            with get_db() as db:
+                query = (
+                    db.query(File, User)
+                    .join(KnowledgeFile, File.id == KnowledgeFile.file_id)
+                    .outerjoin(User, User.id == KnowledgeFile.user_id)
+                    .filter(KnowledgeFile.knowledge_id == knowledge_id)
+                )
+
+                if filter:
+                    query_key = filter.get("query")
+                    if query_key:
+                        query = query.filter(or_(File.filename.ilike(f"%{query_key}%")))
+
+                    view_option = filter.get("view_option")
+                    if view_option == "created":
+                        query = query.filter(KnowledgeFile.user_id == user_id)
+                    elif view_option == "shared":
+                        query = query.filter(KnowledgeFile.user_id != user_id)
+
+                    order_by = filter.get("order_by")
+                    direction = filter.get("direction")
+
+                    if order_by == "name":
+                        if direction == "asc":
+                            query = query.order_by(File.filename.asc())
+                        else:
+                            query = query.order_by(File.filename.desc())
+                    elif order_by == "created_at":
+                        if direction == "asc":
+                            query = query.order_by(File.created_at.asc())
+                        else:
+                            query = query.order_by(File.created_at.desc())
+                    elif order_by == "updated_at":
+                        if direction == "asc":
+                            query = query.order_by(File.updated_at.asc())
+                        else:
+                            query = query.order_by(File.updated_at.desc())
+                    else:
+                        query = query.order_by(File.updated_at.desc())
+
+                else:
+                    query = query.order_by(File.updated_at.desc())
+
+                # Count BEFORE pagination
+                total = query.count()
+
+                if skip:
+                    query = query.offset(skip)
+                if limit:
+                    query = query.limit(limit)
+
+                items = query.all()
+
+                files = []
+                for file, user in items:
+                    files.append(
+                        FileUserResponse(
+                            **FileModel.model_validate(file).model_dump(),
+                            user=(
+                                UserResponse(
+                                    **UserModel.model_validate(user).model_dump()
+                                )
+                                if user
+                                else None
+                            ),
+                        )
+                    )
+
+                return KnowledgeFileListResponse(items=files, total=total)
+        except Exception as e:
+            print(e)
+            return KnowledgeFileListResponse(items=[], total=0)
 
     def get_files_by_id(self, knowledge_id: str) -> list[FileModel]:
         try:
