@@ -377,12 +377,14 @@ def sanitize_text_for_db(text: str) -> str:
     """Remove null bytes and invalid UTF-8 surrogates from text for PostgreSQL storage."""
     if not isinstance(text, str):
         return text
-    # Remove null bytes - PostgreSQL cannot store \x00 in text fields
-    text = text.replace("\x00", "")
+    # Remove null bytes
+    text = text.replace("\x00", "").replace("\u0000", "")
     # Remove invalid UTF-8 surrogate characters that can cause encoding errors
     # This handles cases where binary data or encoding issues introduced surrogates
     try:
-        text = text.encode("utf-8", errors="surrogatepass").decode("utf-8", errors="ignore")
+        text = text.encode("utf-8", errors="surrogatepass").decode(
+            "utf-8", errors="ignore"
+        )
     except (UnicodeEncodeError, UnicodeDecodeError):
         pass
     return text
