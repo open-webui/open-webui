@@ -538,6 +538,10 @@ if LICENSE_PUBLIC_KEY:
 # MODELS
 ####################################
 
+ENABLE_CUSTOM_MODEL_FALLBACK = (
+    os.environ.get("ENABLE_CUSTOM_MODEL_FALLBACK", "False").lower() == "true"
+)
+
 MODELS_CACHE_TTL = os.environ.get("MODELS_CACHE_TTL", "1")
 if MODELS_CACHE_TTL == "":
     MODELS_CACHE_TTL = None

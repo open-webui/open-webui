@@ -439,6 +439,7 @@ from open_webui.config import (
     reset_config,
 )
 from open_webui.env import (
+    ENABLE_CUSTOM_MODEL_FALLBACK,
     LICENSE_KEY,
     AUDIT_EXCLUDED_PATHS,
     AUDIT_LOG_LEVEL,
@@ -1539,6 +1540,7 @@ async def chat_completion(
 
     metadata = {}
     try:
+        model_info = None
         if not model_item.get("direct", False):
             if model_id not in request.app.state.MODELS:
                 raise Exception("Model not found")
@@ -1556,7 +1558,6 @@ async def chat_completion(
                     raise e
         else:
             model = model_item
-            model_info = None
 
             request.state.direct = True
             request.state.model = model
@@ -1564,6 +1565,26 @@ async def chat_completion(
         model_info_params = (
             model_info.params.model_dump() if model_info and model_info.params else {}
         )
+
+        # Check base model existence for custom models
+        if model_info_params.get("base_model_id"):
+            base_model_id = model_info_params.get("base_model_id")
+            if base_model_id not in request.app.state.MODELS:
+                if ENABLE_CUSTOM_MODEL_FALLBACK:
+                    default_models = (
+                        request.app.state.config.DEFAULT_MODELS or ""
+                    ).split(",")
+
+                    fallback_model_id = (
+                        default_models[0].strip() if default_models[0] else None
+                    )
+
+                    if fallback_model_id:
+                        request.base_model_id = fallback_model_id
+                    else:
+                        raise Exception("Model not found")
+                else:
+                    raise Exception("Model not found")
 
         # Chat Params
         stream_delta_chunk_size = form_data.get("params", {}).get(
