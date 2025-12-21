@@ -2113,6 +2113,7 @@ async def process_web_search(
             )
             for query in form_data.queries
         ]
+
         search_results = await asyncio.gather(*search_tasks)
 
         for result in search_results:
