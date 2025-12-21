@@ -93,6 +93,7 @@
 
 	const i18n = getContext('i18n');
 
+	export let onUpload: Function = (e) => {};
 	export let onChange: Function = () => {};
 
 	export let createMessagePair: Function;

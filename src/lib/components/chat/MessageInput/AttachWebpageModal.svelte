@@ -15,11 +15,13 @@
 	let url = '';
 
 	const submitHandler = () => {
-		const urls = url
+		let urls = url
 			.split('\n')
 			.map((u) => u.trim())
 			.filter((u) => u !== '')
 			.filter((u) => isValidHttpUrl(u));
+
+		urls = [...new Set(urls)];
 
 		if (urls.length === 0) {
 			toast.error($i18n.t('Please enter a valid URL.'));

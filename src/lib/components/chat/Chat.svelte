@@ -779,9 +779,6 @@
 			urls = [urls];
 		}
 
-		// deduplicate URLs
-		urls = [...new Set(urls)];
-
 		// Create file items first
 		const fileItems = urls.map((url) => ({
 			type: 'text',
@@ -796,7 +793,6 @@
 		// Display all items at once
 		files = [...files, ...fileItems];
 
-		// Process sequentially (NOT parallel)
 		for (const fileItem of fileItems) {
 			try {
 				const res = isYoutubeUrl(fileItem.url)
@@ -811,14 +807,12 @@
 						...fileItem.file
 					};
 				}
+
+				files = [...files];
 			} catch (e) {
-				fileItem.status = 'error';
-				fileItem.error = String(e);
+				files = files.filter((f) => f.name !== url);
 				toast.error(`${e}`);
 			}
-
-			// Force UI reactivity after each file finishes
-			files = [...files];
 		}
 	};
 

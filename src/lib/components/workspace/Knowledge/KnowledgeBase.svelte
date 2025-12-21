@@ -33,7 +33,9 @@
 		updateKnowledgeById,
 		searchKnowledgeFilesById
 	} from '$lib/apis/knowledge';
-	import { blobToFile } from '$lib/utils';
+	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
+
+	import { blobToFile, isYoutubeUrl } from '$lib/utils';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Files from './KnowledgeBase/Files.svelte';
@@ -169,10 +171,85 @@
 		return file;
 	};
 
+	const uploadWeb = async (urls) => {
+		if (!Array.isArray(urls)) {
+			urls = [urls];
+		}
+
+		const newFileItems = urls.map((url) => ({
+			type: 'file',
+			file: '',
+			id: null,
+			url: url,
+			name: url,
+			size: null,
+			status: 'uploading',
+			error: '',
+			itemId: uuidv4()
+		}));
+
+		// Display all items at once
+		fileItems = [...newFileItems, ...(fileItems ?? [])];
+
+		for (const fileItem of newFileItems) {
+			try {
+				console.log(fileItem);
+				const res = await processWeb(localStorage.token, '', fileItem.url, false).catch((e) => {
+					console.error('Error processing web URL:', e);
+					return null;
+				});
+
+				if (res) {
+					console.log(res);
+					const file = createFileFromText(
+						// Use URL as filename, sanitized
+						fileItem.url
+							.replace(/[^a-z0-9]/gi, '_')
+							.toLowerCase()
+							.slice(0, 50),
+						res.content
+					);
+
+					const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
+						toast.error(`${e}`);
+						return null;
+					});
+
+					if (uploadedFile) {
+						console.log(uploadedFile);
+						fileItems = fileItems.map((item) => {
+							if (item.itemId === fileItem.itemId) {
+								item.id = uploadedFile.id;
+							}
+							return item;
+						});
+
+						if (uploadedFile.error) {
+							console.warn('File upload warning:', uploadedFile.error);
+							toast.warning(uploadedFile.error);
+							fileItems = fileItems.filter((file) => file.id !== uploadedFile.id);
+						} else {
+							await addFileHandler(uploadedFile.id);
+						}
+					} else {
+						toast.error($i18n.t('Failed to upload file.'));
+					}
+				} else {
+					// remove the item from fileItems
+					fileItems = fileItems.filter((item) => item.itemId !== fileItem.itemId);
+					toast.error($i18n.t('Failed to process URL: {{url}}', { url: fileItem.url }));
+				}
+			} catch (e) {
+				// remove the item from fileItems
+				fileItems = fileItems.filter((item) => item.itemId !== fileItem.itemId);
+				toast.error(`${e}`);
+			}
+		}
+	};
+
 	const uploadFileHandler = async (file) => {
 		console.log(file);
 
-		const tempItemId = uuidv4();
 		const fileItem = {
 			type: 'file',
 			file: '',
@@ -182,7 +259,7 @@
 			size: file.size,
 			status: 'uploading',
 			error: '',
-			itemId: tempItemId
+			itemId: uuidv4()
 		};
 
 		if (fileItem.size == 0) {
@@ -206,7 +283,7 @@
 			return;
 		}
 
-		fileItems = [...(fileItems ?? []), fileItem];
+		fileItems = [fileItem, ...(fileItems ?? [])];
 		try {
 			let metadata = {
 				knowledge_id: knowledge.id,
@@ -227,12 +304,9 @@
 			if (uploadedFile) {
 				console.log(uploadedFile);
 				fileItems = fileItems.map((item) => {
-					if (item.itemId === tempItemId) {
+					if (item.itemId === fileItem.itemId) {
 						item.id = uploadedFile.id;
 					}
-
-					// Remove temporary item id
-					delete item.itemId;
 					return item;
 				});
 
@@ -701,8 +775,8 @@
 
 <AttachWebpageModal
 	bind:show={showAddWebpageModal}
-	onSubmit={async (data) => {
-		console.log(data);
+	onSubmit={async (e) => {
+		uploadWeb(e.data);
 	}}
 />
 

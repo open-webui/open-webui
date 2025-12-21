@@ -14,6 +14,7 @@ from typing import Iterator, List, Optional, Sequence, Union
 from fastapi import (
     Depends,
     FastAPI,
+    Query,
     File,
     Form,
     HTTPException,
@@ -155,7 +156,9 @@ def get_rf(
 ):
     rf = None
     # Convert timeout string to int or None (system default)
-    timeout_value = int(external_reranker_timeout) if external_reranker_timeout else None
+    timeout_value = (
+        int(external_reranker_timeout) if external_reranker_timeout else None
+    )
     if reranking_model:
         if any(model in reranking_model for model in ["jinaai/jina-colbert-v2"]):
             try:
@@ -1750,44 +1753,53 @@ async def process_text(
 @router.post("/process/youtube")
 @router.post("/process/web")
 async def process_web(
-    request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)
+    request: Request,
+    form_data: ProcessUrlForm,
+    process: bool = Query(True, description="Whether to process and save the content"),
+    user=Depends(get_verified_user),
 ):
     try:
-        collection_name = form_data.collection_name
-        if not collection_name:
-            collection_name = calculate_sha256_string(form_data.url)[:63]
-
         content, docs = await run_in_threadpool(
             get_content_from_url, request, form_data.url
         )
         log.debug(f"text_content: {content}")
 
-        if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
-            await run_in_threadpool(
-                save_docs_to_vector_db,
-                request,
-                docs,
-                collection_name,
-                overwrite=True,
-                user=user,
-            )
-        else:
-            collection_name = None
+        if process:
+            collection_name = form_data.collection_name
+            if not collection_name:
+                collection_name = calculate_sha256_string(form_data.url)[:63]
 
-        return {
-            "status": True,
-            "collection_name": collection_name,
-            "filename": form_data.url,
-            "file": {
-                "data": {
-                    "content": content,
+            if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
+                await run_in_threadpool(
+                    save_docs_to_vector_db,
+                    request,
+                    docs,
+                    collection_name,
+                    overwrite=True,
+                    user=user,
+                )
+            else:
+                collection_name = None
+
+            return {
+                "status": True,
+                "collection_name": collection_name,
+                "filename": form_data.url,
+                "file": {
+                    "data": {
+                        "content": content,
+                    },
+                    "meta": {
+                        "name": form_data.url,
+                        "source": form_data.url,
+                    },
                 },
-                "meta": {
-                    "name": form_data.url,
-                    "source": form_data.url,
-                },
-            },
-        }
+            }
+        else:
+            return {
+                "status": True,
+                "content": content,
+            }
     except Exception as e:
         log.exception(e)
         raise HTTPException(
