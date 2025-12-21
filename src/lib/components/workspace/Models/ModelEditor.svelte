@@ -727,22 +727,20 @@
 								/>
 							</div>
 
-							{#if filterIds.length > 0}
-								{@const toggleableFilters = ($functions ?? []).filter(
-									(func) =>
-										func.type === 'filter' &&
-										(filterIds.includes(func.id) || func?.is_global) &&
-										func?.meta?.toggle
-								)}
+							{@const toggleableFilters = $functions.filter(
+								(func) =>
+									func.type === 'filter' &&
+									(filterIds.includes(func.id) || func?.is_global) &&
+									func?.meta?.toggle
+							)}
 
-								{#if toggleableFilters.length > 0}
-									<div class="my-2">
-										<DefaultFiltersSelector
-											bind:selectedFilterIds={defaultFilterIds}
-											filters={toggleableFilters}
-										/>
-									</div>
-								{/if}
+							{#if toggleableFilters.length > 0}
+								<div class="my-2">
+									<DefaultFiltersSelector
+										bind:selectedFilterIds={defaultFilterIds}
+										filters={toggleableFilters}
+									/>
+								</div>
 							{/if}
 						{/if}
 
