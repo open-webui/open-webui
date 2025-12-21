@@ -197,7 +197,11 @@
 							on:click|preventDefault={() => {
 								if (!isPDF && item.url) {
 									window.open(
-										item.type === 'file' ? `${item.url}/content` : `${item.url}`,
+										item.type === 'file'
+											? item?.url?.startsWith('http')
+												? item.url
+												: `${WEBUI_API_BASE_URL}/files/${item.url}/content`
+											: item.url,
 										'_blank'
 									);
 								}

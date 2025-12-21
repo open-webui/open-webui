@@ -116,7 +116,6 @@
 				// Check for known image types
 				for (const type of item.types) {
 					if (type.startsWith('image/')) {
-						// get as file
 						const blob = await item.getType(type);
 						const file = new File([blob], `clipboard-image.${type.split('/')[1]}`, {
 							type: type
@@ -486,7 +485,7 @@
 				fileItem.collection_name =
 					uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
 				fileItem.content_type = uploadedFile.meta?.content_type || uploadedFile.content_type;
-				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+				fileItem.url = `${uploadedFile.id}`;
 
 				files = files;
 			} else {
@@ -802,10 +801,14 @@
 								<div class="mx-2 mt-2.5 -mb-1 flex flex-wrap gap-2">
 									{#each files as file, fileIdx}
 										{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
+											{@const fileUrl =
+												file.url.startsWith('data') || file.url.startsWith('http')
+													? file.url
+													: `${WEBUI_API_BASE_URL}/files/${file.url}${file?.content_type ? '/content' : ''}`}
 											<div class=" relative group">
 												<div class="relative">
 													<Image
-														src={`${file.url}${file?.content_type ? '/content' : ''}`}
+														src={fileUrl}
 														alt=""
 														imageClassName=" size-10 rounded-xl object-cover"
 													/>
@@ -928,8 +931,7 @@
 													for (const item of clipboardData.items) {
 														const file = item.getAsFile();
 														if (file) {
-															const _files = [file];
-															await inputFilesHandler(_files);
+															await inputFilesHandler([file]);
 															e.preventDefault();
 														}
 													}

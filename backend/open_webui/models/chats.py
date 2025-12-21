@@ -10,7 +10,17 @@ from open_webui.models.folders import Folders
 from open_webui.utils.misc import sanitize_data_for_db, sanitize_text_for_db
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, Index
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Column,
+    ForeignKey,
+    String,
+    Text,
+    JSON,
+    Index,
+    UniqueConstraint,
+)
 from sqlalchemy import or_, func, select, and_, text
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import bindparam
@@ -72,6 +82,38 @@ class ChatModel(BaseModel):
 
     meta: dict = {}
     folder_id: Optional[str] = None
+
+
+class ChatFile(Base):
+    __tablename__ = "chat_file"
+
+    id = Column(Text, unique=True, primary_key=True)
+    user_id = Column(Text, nullable=False)
+
+    chat_id = Column(Text, ForeignKey("chat.id", ondelete="CASCADE"), nullable=False)
+    message_id = Column(Text, nullable=True)
+    file_id = Column(Text, ForeignKey("file.id", ondelete="CASCADE"), nullable=False)
+
+    created_at = Column(BigInteger, nullable=False)
+    updated_at = Column(BigInteger, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("chat_id", "file_id", name="uq_chat_file_chat_file"),
+    )
+
+
+class ChatFileModel(BaseModel):
+    id: str
+    user_id: str
+
+    chat_id: str
+    message_id: Optional[str] = None
+    file_id: str
+
+    created_at: int
+    updated_at: int
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 ####################
@@ -1215,6 +1257,82 @@ class ChatTable:
                 db.query(Chat).filter(Chat.user_id.in_(shared_chat_ids)).delete()
                 db.commit()
 
+                return True
+        except Exception:
+            return False
+
+    def insert_chat_files(
+        self, chat_id: str, message_id: str, file_ids: list[str], user_id: str
+    ) -> Optional[list[ChatFileModel]]:
+        if not file_ids:
+            return None
+
+        chat_message_file_ids = [
+            item.id
+            for item in self.get_chat_files_by_chat_id_and_message_id(
+                chat_id, message_id
+            )
+        ]
+        # Remove duplicates and existing file_ids
+        file_ids = list(
+            set(
+                [
+                    file_id
+                    for file_id in file_ids
+                    if file_id and file_id not in chat_message_file_ids
+                ]
+            )
+        )
+        if not file_ids:
+            return None
+
+        try:
+            with get_db() as db:
+                now = int(time.time())
+
+                chat_files = [
+                    ChatFileModel(
+                        id=str(uuid.uuid4()),
+                        user_id=user_id,
+                        chat_id=chat_id,
+                        message_id=message_id,
+                        file_id=file_id,
+                        created_at=now,
+                        updated_at=now,
+                    )
+                    for file_id in file_ids
+                ]
+
+                results = [
+                    ChatFile(**chat_file.model_dump()) for chat_file in chat_files
+                ]
+
+                db.add_all(results)
+                db.commit()
+
+                return chat_files
+        except Exception:
+            return None
+
+    def get_chat_files_by_chat_id_and_message_id(
+        self, chat_id: str, message_id: str
+    ) -> list[ChatFileModel]:
+        with get_db() as db:
+            all_chat_files = (
+                db.query(ChatFile)
+                .filter_by(chat_id=chat_id, message_id=message_id)
+                .order_by(ChatFile.created_at.asc())
+                .all()
+            )
+            return [
+                ChatFileModel.model_validate(chat_file) for chat_file in all_chat_files
+            ]
+
+    def delete_chat_file(self, chat_id: str, file_id: str) -> bool:
+        try:
+            with get_db() as db:
+                db.query(ChatFile).filter_by(chat_id=chat_id, file_id=file_id).delete()
+                db.commit()
                 return True
         except Exception:
             return False

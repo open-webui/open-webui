@@ -22,9 +22,41 @@ import base64
 import io
 import re
 
+import requests
 
 BASE64_IMAGE_URL_PREFIX = re.compile(r"data:image/\w+;base64,", re.IGNORECASE)
 MARKDOWN_IMAGE_URL_PATTERN = re.compile(r"!\[(.*?)\]\((.+?)\)", re.IGNORECASE)
+
+
+def get_image_base64_from_url(url: str) -> Optional[str]:
+    try:
+        if url.startswith("http"):
+            # Download the image from the URL
+            response = requests.get(url)
+            response.raise_for_status()
+            image_data = response.content
+            encoded_string = base64.b64encode(image_data).decode("utf-8")
+            content_type = response.headers.get("Content-Type", "image/png")
+            return f"data:{content_type};base64,{encoded_string}"
+        else:
+            file = Files.get_file_by_id(url)
+
+            if not file:
+                return None
+
+            file_path = Storage.get_file(file.path)
+            file_path = Path(file_path)
+
+            if file_path.is_file():
+                with open(file_path, "rb") as image_file:
+                    encoded_string = base64.b64encode(image_file.read()).decode("utf-8")
+                    content_type, _ = mimetypes.guess_type(file_path.name)
+                    return f"data:{content_type};base64,{encoded_string}"
+            else:
+                return None
+
+    except Exception as e:
+        return None
 
 
 def get_image_url_from_base64(request, base64_image_string, metadata, user):

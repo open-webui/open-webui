@@ -1606,6 +1606,7 @@ async def chat_completion(
             "user_id": user.id,
             "chat_id": form_data.pop("chat_id", None),
             "message_id": form_data.pop("id", None),
+            "parent_message": form_data.pop("parent_message", None),
             "parent_message_id": form_data.pop("parent_id", None),
             "session_id": form_data.pop("session_id", None),
             "filter_ids": form_data.pop("filter_ids", []),
@@ -1630,14 +1631,37 @@ async def chat_completion(
             },
         }
 
-        if metadata.get("chat_id") and (user and user.role != "admin"):
-            if not metadata["chat_id"].startswith("local:"):
+        if metadata.get("chat_id") and user:
+            if not metadata["chat_id"].startswith(
+                "local:"
+            ):  # temporary chats are not stored
+
+                # Verify chat ownership
                 chat = Chats.get_chat_by_id_and_user_id(metadata["chat_id"], user.id)
-                if chat is None:
+                if chat is None and user.role != "admin":  # admins can access any chat
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
                         detail=ERROR_MESSAGES.DEFAULT(),
                     )
+
+                # Insert chat files from parent message if any
+                parent_message = metadata.get("parent_message", {})
+                parent_message_files = parent_message.get("files", [])
+                if parent_message_files:
+                    try:
+                        Chats.insert_chat_files(
+                            metadata["chat_id"],
+                            parent_message.get("id"),
+                            [
+                                file_item.get("id")
+                                for file_item in parent_message_files
+                                if file_item.get("type") == "file"
+                            ],
+                            user.id,
+                        )
+                    except Exception as e:
+                        log.debug(f"Error inserting chat files: {e}")
+                        pass
 
         request.state.metadata = metadata
         form_data["metadata"] = metadata

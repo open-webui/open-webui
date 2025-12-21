@@ -60,6 +60,7 @@ from open_webui.utils.webhook import post_webhook
 from open_webui.utils.files import (
     convert_markdown_base64_images,
     get_file_url_from_base64,
+    get_image_base64_from_url,
     get_image_url_from_base64,
 )
 
@@ -1108,6 +1109,45 @@ def apply_params_to_form_data(form_data, model):
     return form_data
 
 
+async def convert_url_images_to_base64(form_data):
+    messages = form_data.get("messages", [])
+
+    for message in messages:
+        content = message.get("content")
+        if not isinstance(content, list):
+            continue
+
+        new_content = []
+
+        for item in content:
+            if not isinstance(item, dict) or item.get("type") != "image_url":
+                new_content.append(item)
+                continue
+
+            image_url = item.get("image_url", {}).get("url", "")
+            if image_url.startswith("data:image/"):
+                new_content.append(item)
+                continue
+
+            try:
+                base64_data = await asyncio.to_thread(
+                    get_image_base64_from_url, image_url
+                )
+                new_content.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": base64_data},
+                    }
+                )
+            except Exception as e:
+                log.debug(f"Error converting image URL to base64: {e}")
+                new_content.append(item)
+
+        message["content"] = new_content
+
+    return form_data
+
+
 async def process_chat_payload(request, form_data, user, metadata, model):
     # Pipeline Inlet -> Filter Inlet -> Chat Memory -> Chat Web Search -> Chat Image Generation
     # -> Chat Code Interpreter (Form Data Update) -> (Default) Chat Tools Function Calling
@@ -1124,6 +1164,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             )  # Required to handle system prompt variables
         except:
             pass
+
+    form_data = await convert_url_images_to_base64(form_data)
 
     event_emitter = get_event_emitter(metadata)
     event_caller = get_event_call(metadata)

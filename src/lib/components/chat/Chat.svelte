@@ -759,7 +759,7 @@
 			fileItem.id = uploadedFile.id;
 			fileItem.size = file.size;
 			fileItem.collection_name = uploadedFile?.meta?.collection_name;
-			fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+			fileItem.url = `${uploadedFile.id}`;
 
 			files = files;
 			toast.success($i18n.t('File uploaded successfully'));
@@ -1601,8 +1601,10 @@
 		const _files = JSON.parse(JSON.stringify(files));
 
 		chatFiles.push(
-			..._files.filter((item) =>
-				['doc', 'text', 'file', 'note', 'chat', 'folder', 'collection'].includes(item.type)
+			..._files.filter(
+				(item) =>
+					['doc', 'text', 'note', 'chat', 'folder', 'collection'].includes(item.type) ||
+					(item.type === 'file' && !item?.content_type?.startsWith('image/'))
 			)
 		);
 		chatFiles = chatFiles.filter(
@@ -1730,7 +1732,9 @@
 				if (model) {
 					// If there are image files, check if model is vision capable
 					const hasImages = createMessagesList(_history, parentId).some((message) =>
-						message.files?.some((file) => file.type === 'image')
+						message.files?.some(
+							(file) => file.type === 'image' || file?.content_type?.startsWith('image/')
+						)
 					);
 
 					if (hasImages && !(model.info?.meta?.capabilities?.vision ?? true)) {
@@ -1824,8 +1828,10 @@
 
 		let files = JSON.parse(JSON.stringify(chatFiles));
 		files.push(
-			...(userMessage?.files ?? []).filter((item) =>
-				['doc', 'text', 'file', 'note', 'chat', 'collection'].includes(item.type)
+			...(userMessage?.files ?? []).filter(
+				(item) =>
+					['doc', 'text', 'note', 'chat', 'collection'].includes(item.type) ||
+					(item.type === 'file' && !item?.content_type.startsWith('image/'))
 			)
 		);
 		// Remove duplicates
@@ -1872,30 +1878,33 @@
 		].filter((message) => message);
 
 		messages = messages
-			.map((message, idx, arr) => ({
-				role: message.role,
-				...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
-				message.role === 'user'
-					? {
-							content: [
-								{
-									type: 'text',
-									text: message?.merged?.content ?? message.content
-								},
-								...message.files
-									.filter((file) => file.type === 'image')
-									.map((file) => ({
+			.map((message, idx, arr) => {
+				const imageFiles = (message?.files ?? []).filter(
+					(file) => file.type === 'image' || (file?.content_type ?? '').startsWith('image/')
+				);
+
+				return {
+					role: message.role,
+					...(message.role === 'user' && imageFiles.length > 0
+						? {
+								content: [
+									{
+										type: 'text',
+										text: message?.merged?.content ?? message.content
+									},
+									...imageFiles.map((file) => ({
 										type: 'image_url',
 										image_url: {
 											url: file.url
 										}
 									}))
-							]
-						}
-					: {
-							content: message?.merged?.content ?? message.content
-						})
-			}))
+								]
+							}
+						: {
+								content: message?.merged?.content ?? message.content
+							})
+				};
+			})
 			.filter((message) => message?.role === 'user' || message?.content?.trim());
 
 		const toolIds = [];
@@ -1950,6 +1959,7 @@
 
 				id: responseMessageId,
 				parent_id: userMessage?.id ?? null,
+				parent_message: userMessage,
 
 				background_tasks: {
 					...(!$temporaryChatEnabled &&

@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { createEventDispatcher, getContext } from 'svelte';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
+
 	import { formatFileSize } from '$lib/utils';
 	import { settings } from '$lib/stores';
 
@@ -60,7 +62,11 @@
 		} else {
 			if (url) {
 				if (type === 'file') {
-					window.open(`${url}/content`, '_blank').focus();
+					if (url.startsWith('http')) {
+						window.open(`${url}/content`, '_blank').focus();
+					} else {
+						window.open(`${WEBUI_API_BASE_URL}/files/${url}/content`, '_blank').focus();
+					}
 				} else {
 					window.open(`${url}`, '_blank').focus();
 				}
