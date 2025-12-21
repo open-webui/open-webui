@@ -48,7 +48,8 @@ try:
 except ImportError:
     OTEL_AVAILABLE = False
     # Create no-op functions if OTEL not available
-    async def trace_span_async(*args, **kwargs):
+    # NOTE: Must be regular function (not async def) to match @asynccontextmanager signature
+    def trace_span_async(*args, **kwargs):
         from contextlib import asynccontextmanager
         @asynccontextmanager
         async def _noop():
@@ -89,10 +90,14 @@ def safe_add_span_event(event_name, attributes=None):
     except Exception as e:
         log.debug(f"OTEL add_span_event failed (non-critical): {e}")
 
-async def safe_trace_span_async(*args, **kwargs):
-    """Safely create async trace span - never fails, even if OTEL is broken"""
+def safe_trace_span_async(*args, **kwargs):
+    """Safely create async trace span - never fails, even if OTEL is broken
+    
+    Returns an async context manager (same signature as trace_span_async).
+    Can be used with: async with safe_trace_span_async(...) as span:
+    """
     try:
-        return await trace_span_async(*args, **kwargs)
+        return trace_span_async(*args, **kwargs)  # Returns async context manager, not a coroutine
     except Exception as e:
         log.debug(f"OTEL trace_span_async failed (non-critical), using nullcontext: {e}")
         from contextlib import asynccontextmanager
@@ -362,30 +367,59 @@ async def generate_function_chat_completion(
                             yield f"data: {json.dumps(res)}\n\n"
                             return
 
+                        # Process different response types
+                        if isinstance(res, str):
+                            message = openai_chat_chunk_message_template(form_data["model"], res)
+                            yield f"data: {json.dumps(message)}\n\n"
+                            # Send finish message for string responses
+                            finish_message = openai_chat_chunk_message_template(
+                                form_data["model"], ""
+                            )
+                            finish_message["choices"][0]["finish_reason"] = "stop"
+                            yield f"data: {json.dumps(finish_message)}\n\n"
+                            yield "data: [DONE]"
+                            return
+
+                        if isinstance(res, Iterator):
+                            for line in res:
+                                yield process_line(form_data, line)
+                            # Send finish message for Iterator responses
+                            finish_message = openai_chat_chunk_message_template(
+                                form_data["model"], ""
+                            )
+                            finish_message["choices"][0]["finish_reason"] = "stop"
+                            yield f"data: {json.dumps(finish_message)}\n\n"
+                            yield "data: [DONE]"
+                            return
+
+                        if isinstance(res, AsyncGenerator):
+                            async for line in res:
+                                yield process_line(form_data, line)
+                            # Send finish message for AsyncGenerator responses
+                            finish_message = openai_chat_chunk_message_template(
+                                form_data["model"], ""
+                            )
+                            finish_message["choices"][0]["finish_reason"] = "stop"
+                            yield f"data: {json.dumps(finish_message)}\n\n"
+                            yield "data: [DONE]"
+                            return
+
+                        if isinstance(res, Generator):
+                            for line in res:
+                                yield process_line(form_data, line)
+                            # Send finish message for Generator responses
+                            finish_message = openai_chat_chunk_message_template(
+                                form_data["model"], ""
+                            )
+                            finish_message["choices"][0]["finish_reason"] = "stop"
+                            yield f"data: {json.dumps(finish_message)}\n\n"
+                            yield "data: [DONE]"
+                            return
+
                     except Exception as e:
-                        log.error(f"Error: {e}")
+                        log.error(f"Error in stream_content: {e}")
                         yield f"data: {json.dumps({'error': {'detail':str(e)}})}\n\n"
                         return
-
-                    if isinstance(res, str):
-                        message = openai_chat_chunk_message_template(form_data["model"], res)
-                        yield f"data: {json.dumps(message)}\n\n"
-
-                    if isinstance(res, Iterator):
-                        for line in res:
-                            yield process_line(form_data, line)
-
-                    if isinstance(res, AsyncGenerator):
-                        async for line in res:
-                            yield process_line(form_data, line)
-
-                    if isinstance(res, str) or isinstance(res, Generator):
-                        finish_message = openai_chat_chunk_message_template(
-                            form_data["model"], ""
-                        )
-                        finish_message["choices"][0]["finish_reason"] = "stop"
-                        yield f"data: {json.dumps(finish_message)}\n\n"
-                        yield "data: [DONE]"
 
                 # Add event: Function response (streaming)
                 safe_add_span_event("llm.function.response", {

@@ -255,25 +255,31 @@ def trace_function(
                         except Exception:
                             pass
                 
-                # Create span
-                async with trace_span_async(name, attributes=attributes) as span:
-                    try:
-                        result = await func(*args, **kwargs)
-                        
-                        if capture_result and span:
-                            # Add result as event (not attribute, to avoid large payloads)
-                            try:
-                                result_str = str(result)
-                                if len(result_str) > 200:
-                                    result_str = result_str[:200] + "..."
-                                span.add_event("function.result", {"result": result_str})
-                            except Exception:
-                                pass
-                        
-                        return result
-                    except Exception as e:
-                        # Error handling is done in trace_span_async
-                        raise
+                # Create span - use try/except to ensure OTEL failures don't break the function
+                try:
+                    async with trace_span_async(name, attributes=attributes) as span:
+                        try:
+                            result = await func(*args, **kwargs)
+                            
+                            if capture_result and span:
+                                # Add result as event (not attribute, to avoid large payloads)
+                                try:
+                                    result_str = str(result)
+                                    if len(result_str) > 200:
+                                        result_str = result_str[:200] + "..."
+                                    span.add_event("function.result", {"result": result_str})
+                                except Exception:
+                                    pass
+                            
+                            return result
+                        except Exception as e:
+                            # Error handling is done in trace_span_async
+                            raise
+                except Exception as otel_error:
+                    # If OTEL fails, log but don't break the function
+                    log.debug(f"OTEL span creation failed in decorator (non-critical): {otel_error}")
+                    # Execute function without tracing
+                    return await func(*args, **kwargs)
         else:
             @functools.wraps(func)
             def sync_wrapper(*args, **kwargs):
@@ -295,24 +301,30 @@ def trace_function(
                         except Exception:
                             pass
                 
-                # Create span
-                with trace_span(name, attributes=attributes) as span:
-                    try:
-                        result = func(*args, **kwargs)
-                        
-                        if capture_result and span:
-                            try:
-                                result_str = str(result)
-                                if len(result_str) > 200:
-                                    result_str = result_str[:200] + "..."
-                                span.add_event("function.result", {"result": result_str})
-                            except Exception:
-                                pass
-                        
-                        return result
-                    except Exception as e:
-                        # Error handling is done in trace_span
-                        raise
+                # Create span - use try/except to ensure OTEL failures don't break the function
+                try:
+                    with trace_span(name, attributes=attributes) as span:
+                        try:
+                            result = func(*args, **kwargs)
+                            
+                            if capture_result and span:
+                                try:
+                                    result_str = str(result)
+                                    if len(result_str) > 200:
+                                        result_str = result_str[:200] + "..."
+                                    span.add_event("function.result", {"result": result_str})
+                                except Exception:
+                                    pass
+                            
+                            return result
+                        except Exception as e:
+                            # Error handling is done in trace_span
+                            raise
+                except Exception as otel_error:
+                    # If OTEL fails, log but don't break the function
+                    log.debug(f"OTEL span creation failed in decorator (non-critical): {otel_error}")
+                    # Execute function without tracing
+                    return func(*args, **kwargs)
         
         return async_wrapper if is_async else sync_wrapper
     
@@ -341,7 +353,11 @@ def add_span_event(name: str, attributes: Optional[Dict[str, Any]] = None):
         if attributes:
             # Filter out None values
             filtered_attrs = {k: v for k, v in attributes.items() if v is not None}
-            span.add_event(name, attributes=filtered_attrs if filtered_attrs else None)
+            if filtered_attrs:
+                span.add_event(name, attributes=filtered_attrs)
+            else:
+                # No valid attributes after filtering, add event without attributes
+                span.add_event(name)
         else:
             span.add_event(name)
     except Exception as e:

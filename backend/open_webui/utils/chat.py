@@ -66,7 +66,8 @@ try:
 except ImportError:
     OTEL_AVAILABLE = False
     # Create no-op functions if OTEL not available
-    async def trace_span_async(*args, **kwargs):
+    # NOTE: Must be regular function (not async def) to match @asynccontextmanager signature
+    def trace_span_async(*args, **kwargs):
         from contextlib import asynccontextmanager
         @asynccontextmanager
         async def _noop():
@@ -97,10 +98,14 @@ def safe_add_span_event(event_name, attributes=None):
     except Exception as e:
         log.debug(f"OTEL add_span_event failed (non-critical): {e}")
 
-async def safe_trace_span_async(*args, **kwargs):
-    """Safely create async trace span - never fails, even if OTEL is broken"""
+def safe_trace_span_async(*args, **kwargs):
+    """Safely create async trace span - never fails, even if OTEL is broken
+    
+    Returns an async context manager (same signature as trace_span_async).
+    Can be used with: async with safe_trace_span_async(...) as span:
+    """
     try:
-        return await trace_span_async(*args, **kwargs)
+        return trace_span_async(*args, **kwargs)  # Returns async context manager, not a coroutine
     except Exception as e:
         log.debug(f"OTEL trace_span_async failed (non-critical), using nullcontext: {e}")
         from contextlib import asynccontextmanager
@@ -452,7 +457,8 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
     try:
         data = await process_pipeline_outlet_filter(request, data, user, models)
     except Exception as e:
-        return Exception(f"Error: {e}")
+        log.error(f"Error in chat_completed: {e}")
+        raise Exception(f"Error: {e}")
 
     metadata = {
         "chat_id": data["chat_id"],
@@ -485,7 +491,8 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
         )
         return result
     except Exception as e:
-        return Exception(f"Error: {e}")
+        log.error(f"Error in chat_completed filter processing: {e}")
+        raise Exception(f"Error: {e}")
 
 
 async def chat_action(request: Request, action_id: str, form_data: dict, user: Any):
@@ -590,6 +597,7 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
                 data = action(**params)
 
         except Exception as e:
-            return Exception(f"Error: {e}")
+            log.error(f"Error in chat_action: {e}")
+            raise Exception(f"Error: {e}")
 
     return data
