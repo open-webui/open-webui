@@ -15,6 +15,7 @@ dayjs.extend(localizedFormat);
 
 import { TTS_RESPONSE_SPLIT } from '$lib/types';
 
+import mammoth from 'mammoth';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
 
 import { marked } from 'marked';
@@ -1519,12 +1520,26 @@ export const extractContentFromFile = async (file: File) => {
 		});
 	}
 
+	async function extractDocxText(file: File) {
+		const arrayBuffer = await file.arrayBuffer();
+		const result = await mammoth.extractRawText({ arrayBuffer });
+		return result.value; // plain text
+	}
+
 	const type = file.type || '';
 	const ext = getExtension(file.name);
 
 	// PDF check
 	if (type === 'application/pdf' || ext === '.pdf') {
 		return await extractPdfText(file);
+	}
+
+	// DOCX check
+	if (
+		type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+		ext === '.docx'
+	) {
+		return await extractDocxText(file);
 	}
 
 	// Text check (plain or common text-based)
