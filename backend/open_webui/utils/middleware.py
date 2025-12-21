@@ -756,10 +756,10 @@ async def chat_image_generation_handler(
 ):
     metadata = extra_params.get("__metadata__", {})
     chat_id = metadata.get("chat_id", None)
-    if not chat_id:
-        return form_data
+    __event_emitter__ = extra_params.get("__event_emitter__", None)
 
-    __event_emitter__ = extra_params["__event_emitter__"]
+    if not chat_id or not isinstance(chat_id, str) or not __event_emitter__:
+        return form_data
 
     if chat_id.startswith("local:"):
         message_list = form_data.get("messages", [])
