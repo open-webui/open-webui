@@ -216,7 +216,7 @@
 			on:click={() => {
 				if (isValidHttpUrl(query)) {
 					onSelect({
-						type: 'youtube',
+						type: 'web',
 						data: query
 					});
 				} else {

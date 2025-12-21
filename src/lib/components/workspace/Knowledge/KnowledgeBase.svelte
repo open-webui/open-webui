@@ -51,13 +51,16 @@
 	import FilesOverlay from '$lib/components/chat/MessageInput/FilesOverlay.svelte';
 	import DropdownOptions from '$lib/components/common/DropdownOptions.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
+	import AttachWebpageModal from '$lib/components/chat/MessageInput/AttachWebpageModal.svelte';
 
 	let largeScreen = true;
 
 	let pane;
 	let showSidepanel = true;
 
+	let showAddWebpageModal = false;
 	let showAddTextContentModal = false;
+
 	let showSyncConfirmModal = false;
 	let showAccessControlModal = false;
 
@@ -696,6 +699,13 @@
 	}}
 />
 
+<AttachWebpageModal
+	bind:show={showAddWebpageModal}
+	onSubmit={async (data) => {
+		console.log(data);
+	}}
+/>
+
 <AddTextContentModal
 	bind:show={showAddTextContentModal}
 	on:submit={(e) => {
@@ -829,6 +839,8 @@
 								onUpload={(data) => {
 									if (data.type === 'directory') {
 										uploadDirectoryHandler();
+									} else if (data.type === 'web') {
+										showAddWebpageModal = true;
 									} else if (data.type === 'text') {
 										showAddTextContentModal = true;
 									} else {

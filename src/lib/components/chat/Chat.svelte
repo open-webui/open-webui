@@ -53,7 +53,8 @@
 		getPromptVariables,
 		processDetails,
 		removeAllDetails,
-		getCodeBlockContents
+		getCodeBlockContents,
+		isYoutubeUrl
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
 
@@ -773,69 +774,61 @@
 		}
 	};
 
-	const uploadWeb = async (url) => {
-		console.log(url);
-
-		const fileItem = {
-			type: 'text',
-			name: url,
-			collection_name: '',
-			status: 'uploading',
-			url: url,
-			error: ''
-		};
-
-		try {
-			files = [...files, fileItem];
-			const res = await processWeb(localStorage.token, '', url);
-
-			if (res) {
-				fileItem.status = 'uploaded';
-				fileItem.collection_name = res.collection_name;
-				fileItem.file = {
-					...res.file,
-					...fileItem.file
-				};
-
-				files = files;
-			}
-		} catch (e) {
-			// Remove the failed doc from the files array
-			files = files.filter((f) => f.name !== url);
-			toast.error(JSON.stringify(e));
+	const uploadWeb = async (urls) => {
+		if (!Array.isArray(urls)) {
+			urls = [urls];
 		}
-	};
 
-	const uploadYoutubeTranscription = async (url) => {
-		console.log(url);
+		// deduplicate URLs
+		urls = [...new Set(urls)];
 
-		const fileItem = {
+		// Create file items first
+		const fileItems = urls.map((url) => ({
 			type: 'text',
 			name: url,
 			collection_name: '',
 			status: 'uploading',
 			context: 'full',
-			url: url,
+			url,
 			error: ''
-		};
+		}));
 
-		try {
-			files = [...files, fileItem];
-			const res = await processYoutubeVideo(localStorage.token, url);
+		// Display all items at once
+		files = [...files, ...fileItems];
 
-			if (res) {
-				fileItem.status = 'uploaded';
-				fileItem.collection_name = res.collection_name;
-				fileItem.file = {
-					...res.file,
-					...fileItem.file
-				};
-				files = files;
+		// Process sequentially (NOT parallel)
+		for (const fileItem of fileItems) {
+			try {
+				const res = isYoutubeUrl(fileItem.url)
+					? await processYoutubeVideo(localStorage.token, fileItem.url)
+					: await processWeb(localStorage.token, '', fileItem.url);
+
+				if (res) {
+					fileItem.status = 'uploaded';
+					fileItem.collection_name = res.collection_name;
+					fileItem.file = {
+						...res.file,
+						...fileItem.file
+					};
+				}
+			} catch (e) {
+				fileItem.status = 'error';
+				fileItem.error = String(e);
+				toast.error(`${e}`);
 			}
-		} catch (e) {
-			// Remove the failed doc from the files array
-			files = files.filter((f) => f.name !== url);
-			toast.error(`${e}`);
+
+			// Force UI reactivity after each file finishes
+			files = [...files];
+		}
+	};
+
+	const onUpload = async (event) => {
+		const { type, data } = event;
+
+		if (type === 'google-drive') {
+			await uploadGoogleDriveFile(data);
+		} else if (type === 'web') {
+			await uploadWeb(data);
 		}
 	};
 
@@ -1010,9 +1003,7 @@
 		params = {};
 
 		if ($page.url.searchParams.get('youtube')) {
-			uploadYoutubeTranscription(
-				`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`
-			);
+			await uploadWeb(`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`);
 		}
 
 		if ($page.url.searchParams.get('load-url')) {
@@ -2532,20 +2523,10 @@
 									{generating}
 									{stopResponse}
 									{createMessagePair}
+									{onUpload}
 									onChange={(data) => {
 										if (!$temporaryChatEnabled) {
 											saveDraft(data, $chatId);
-										}
-									}}
-									on:upload={async (e) => {
-										const { type, data } = e.detail;
-
-										if (type === 'web') {
-											await uploadWeb(data);
-										} else if (type === 'youtube') {
-											await uploadYoutubeTranscription(data);
-										} else if (type === 'google-drive') {
-											await uploadGoogleDriveFile(data);
 										}
 									}}
 									on:submit={async (e) => {
@@ -2584,18 +2565,10 @@
 									{stopResponse}
 									{createMessagePair}
 									{onSelect}
+									{onUpload}
 									onChange={(data) => {
 										if (!$temporaryChatEnabled) {
 											saveDraft(data);
-										}
-									}}
-									on:upload={async (e) => {
-										const { type, data } = e.detail;
-
-										if (type === 'web') {
-											await uploadWeb(data);
-										} else if (type === 'youtube') {
-											await uploadYoutubeTranscription(data);
 										}
 									}}
 									on:submit={async (e) => {
