@@ -28,7 +28,7 @@ from open_webui.config import (
     DEFAULT_ARENA_MODEL,
 )
 
-from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL, ENABLE_CUSTOM_MODEL_FALLBACK
+from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, GLOBAL_LOG_LEVEL, ENABLE_CUSTOM_MODEL_FALLBACK
 from open_webui.models.users import UserModel
 
 
