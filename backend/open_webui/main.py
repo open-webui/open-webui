@@ -228,6 +228,7 @@ from open_webui.config import (
     RAG_RERANKING_MODEL,
     RAG_EXTERNAL_RERANKER_URL,
     RAG_EXTERNAL_RERANKER_API_KEY,
+    RAG_EXTERNAL_RERANKER_TIMEOUT,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     RAG_EMBEDDING_ENGINE,
@@ -265,6 +266,7 @@ from open_webui.config import (
     MINERU_API_MODE,
     MINERU_API_URL,
     MINERU_API_KEY,
+    MINERU_API_TIMEOUT,
     MINERU_PARAMS,
     DATALAB_MARKER_USE_LLM,
     EXTERNAL_DOCUMENT_LOADER_URL,
@@ -450,7 +452,6 @@ from open_webui.env import (
     GLOBAL_LOG_LEVEL,
     MAX_BODY_LOG_SIZE,
     SAFE_MODE,
-    SRC_LOG_LEVELS,
     VERSION,
     DEPLOYMENT_ID,
     INSTANCE_ID,
@@ -474,6 +475,7 @@ from open_webui.env import (
     EXTERNAL_PWA_MANIFEST_URL,
     AIOHTTP_CLIENT_SESSION_SSL,
     ENABLE_STAR_SESSIONS_MIDDLEWARE,
+    ENABLE_PUBLIC_ACTIVE_USERS_COUNT,
 )
 
 
@@ -531,7 +533,6 @@ if SAFE_MODE:
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 class SPAStaticFiles(StaticFiles):
@@ -881,6 +882,7 @@ app.state.config.MISTRAL_OCR_API_KEY = MISTRAL_OCR_API_KEY
 app.state.config.MINERU_API_MODE = MINERU_API_MODE
 app.state.config.MINERU_API_URL = MINERU_API_URL
 app.state.config.MINERU_API_KEY = MINERU_API_KEY
+app.state.config.MINERU_API_TIMEOUT = MINERU_API_TIMEOUT
 app.state.config.MINERU_PARAMS = MINERU_PARAMS
 
 app.state.config.TEXT_SPLITTER = RAG_TEXT_SPLITTER
@@ -898,6 +900,7 @@ app.state.config.RAG_RERANKING_ENGINE = RAG_RERANKING_ENGINE
 app.state.config.RAG_RERANKING_MODEL = RAG_RERANKING_MODEL
 app.state.config.RAG_EXTERNAL_RERANKER_URL = RAG_EXTERNAL_RERANKER_URL
 app.state.config.RAG_EXTERNAL_RERANKER_API_KEY = RAG_EXTERNAL_RERANKER_API_KEY
+app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT = RAG_EXTERNAL_RERANKER_TIMEOUT
 
 app.state.config.RAG_TEMPLATE = RAG_TEMPLATE
 
@@ -1001,6 +1004,7 @@ try:
             app.state.config.RAG_RERANKING_MODEL,
             app.state.config.RAG_EXTERNAL_RERANKER_URL,
             app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
+            app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT,
         )
     else:
         app.state.rf = None
@@ -1850,6 +1854,7 @@ async def get_app_config(request: Request):
             "enable_login_form": app.state.config.ENABLE_LOGIN_FORM,
             "enable_websocket": ENABLE_WEBSOCKET_SUPPORT,
             "enable_version_update_check": ENABLE_VERSION_UPDATE_CHECK,
+            "enable_public_active_users_count": ENABLE_PUBLIC_ACTIVE_USERS_COUNT,
             **(
                 {
                     "enable_direct_connections": app.state.config.ENABLE_DIRECT_CONNECTIONS,
@@ -2026,10 +2031,19 @@ async def get_current_usage(user=Depends(get_verified_user)):
     This is an experimental endpoint and subject to change.
     """
     try:
+        # If public visibility is disabled, only allow admins to access this endpoint
+        if not ENABLE_PUBLIC_ACTIVE_USERS_COUNT and user.role != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied. Only administrators can view usage statistics.",
+            )
+
         return {
             "model_ids": get_models_in_use(),
             "user_count": Users.get_active_user_count(),
         }
+    except HTTPException:
+        raise
     except Exception as e:
         log.error(f"Error getting usage statistics: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")

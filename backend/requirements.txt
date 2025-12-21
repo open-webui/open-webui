@@ -1,10 +1,10 @@
-fastapi==0.124.4
+fastapi==0.125.0
 uvicorn[standard]==0.37.0
 pydantic==2.12.5
-python-multipart==0.0.20
+python-multipart==0.0.21
 itsdangerous==2.2.0
 
-python-socketio==5.15.0
+python-socketio==5.15.1
 python-jose==3.5.0
 cryptography
 bcrypt==5.0.0
@@ -38,19 +38,21 @@ asgiref==3.11.0
 
 # AI libraries
 tiktoken
-mcp==1.24.0
+mcp==1.25.0
 
 openai
 anthropic
-google-genai==1.55.0
-google-generativeai==0.8.5
+google-genai==1.56.0
+google-generativeai==0.8.6
 
-langchain==0.3.27
-langchain-community==0.3.29
+langchain==1.2.0
+langchain-community==0.4.1
+langchain-classic==1.0.0
+langchain-text-splitters==1.1.0
 
 fake-useragent==2.2.0
 chromadb==1.3.7
-weaviate-client==4.18.3
+weaviate-client==4.19.0
 opensearch-py==3.1.0
 
 transformers==4.57.3
@@ -93,7 +95,7 @@ youtube-transcript-api==1.2.3
 pytube==15.0.0
 
 pydub
-ddgs==9.9.3
+ddgs==9.10.0
 
 azure-ai-documentintelligence==1.0.2
 azure-identity==1.25.1
@@ -114,7 +116,7 @@ psycopg2-binary==2.9.11
 pgvector==0.4.2
 
 PyMySQL==1.1.2
-boto3==1.42.9
+boto3==1.42.13
 
 pymilvus==2.6.5
 qdrant-client==1.16.2
@@ -137,7 +139,7 @@ pytest-docker~=3.2.5
 ldap3==2.9.1
 
 ## Firecrawl
-firecrawl-py==4.11.0
+firecrawl-py==4.12.0
 
 ## Trace
 opentelemetry-api==1.39.1

@@ -6,13 +6,13 @@ authors = [
 ]
 license = { file = "LICENSE" }
 dependencies = [
-    "fastapi==0.124.4",
+    "fastapi==0.125.0",
     "uvicorn[standard]==0.37.0",
     "pydantic==2.12.5",
-    "python-multipart==0.0.20",
+    "python-multipart==0.0.21",
     "itsdangerous==2.2.0",
 
-    "python-socketio==5.15.0",
+    "python-socketio==5.15.1",
     "python-jose==3.5.0",
     "cryptography",
     "bcrypt==5.0.0",
@@ -45,12 +45,12 @@ dependencies = [
     "asgiref==3.11.0",
 
     "tiktoken",
-    "mcp==1.24.0",
+    "mcp==1.25.0",
 
     "openai",
     "anthropic",
-    "google-genai==1.55.0",
-    "google-generativeai==0.8.5",
+    "google-genai==1.56.0",
+    "google-generativeai==0.8.6",
 
     "langchain==0.3.27",
     "langchain-community==0.3.29",
@@ -59,7 +59,7 @@ dependencies = [
     "chromadb==1.3.7",
     "opensearch-py==3.1.0",
     "PyMySQL==1.1.2",
-    "boto3==1.42.9",
+    "boto3==1.42.13",
     
     "transformers==4.57.3",
     "sentence-transformers==5.2.0",
@@ -102,7 +102,7 @@ dependencies = [
     "pytube==15.0.0",
 
     "pydub",
-    "ddgs==9.9.3",
+    "ddgs==9.10.0",
 
     "google-api-python-client",
     "google-auth-httplib2",
@@ -149,13 +149,13 @@ all = [
 
     "qdrant-client==1.16.2",
     "pymilvus==2.6.4",
-    "weaviate-client==4.18.3",
+    "weaviate-client==4.19.0",
     "pymilvus==2.6.5",
     "pinecone==6.0.2",
     "oracledb==3.4.1",
     "colbert-ai==0.2.22",
 
-    "firecrawl-py==4.11.0",
+    "firecrawl-py==4.12.0",
     "azure-search-documents==11.6.0",
 ]
 

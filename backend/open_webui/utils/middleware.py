@@ -110,7 +110,6 @@ from open_webui.config import (
     CODE_INTERPRETER_BLOCKED_MODULES,
 )
 from open_webui.env import (
-    SRC_LOG_LEVELS,
     GLOBAL_LOG_LEVEL,
     ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION,
     CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE,
@@ -124,7 +123,6 @@ from open_webui.constants import TASKS
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 DEFAULT_REASONING_TAGS = [
@@ -1100,9 +1098,10 @@ def apply_params_to_form_data(form_data, model):
 
         if "logit_bias" in params and params["logit_bias"] is not None:
             try:
-                form_data["logit_bias"] = json.loads(
-                    convert_logit_bias_input_to_json(params["logit_bias"])
-                )
+                logit_bias = convert_logit_bias_input_to_json(params["logit_bias"])
+
+                if logit_bias:
+                    form_data["logit_bias"] = json.loads(logit_bias)
             except Exception as e:
                 log.exception(f"Error parsing logit_bias: {e}")
 

@@ -51,7 +51,6 @@ from open_webui.config import (
     PGVECTOR_USE_HALFVEC,
 )
 
-from open_webui.env import SRC_LOG_LEVELS
 
 VECTOR_LENGTH = PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH
 USE_HALFVEC = PGVECTOR_USE_HALFVEC
@@ -61,7 +60,6 @@ VECTOR_OPCLASS = "halfvec_cosine_ops" if USE_HALFVEC else "vector_cosine_ops"
 Base = declarative_base()
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def pgcrypto_encrypt(val, key):
