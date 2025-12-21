@@ -87,6 +87,7 @@ from open_webui.retrieval.utils import (
 from open_webui.retrieval.vector.utils import filter_metadata
 from open_webui.utils.misc import (
     calculate_sha256_string,
+    sanitize_text_for_db,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
 
@@ -1378,7 +1379,7 @@ def save_docs_to_vector_db(
     if len(docs) == 0:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
-    texts = [doc.page_content for doc in docs]
+    texts = [sanitize_text_for_db(doc.page_content) for doc in docs]
     metadatas = [
         {
             **doc.metadata,
