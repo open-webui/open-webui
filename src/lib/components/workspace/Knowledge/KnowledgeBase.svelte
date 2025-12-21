@@ -843,8 +843,9 @@
 							<div class="shrink-0 mr-2.5">
 								{#if fileItemsTotal}
 									<div class="text-xs text-gray-500">
-										{$i18n.t('{{count}} files', {
-											count: fileItemsTotal
+										<!-- {$i18n.t('{{COUNT}} files')} -->
+										{$i18n.t('{{COUNT}} files', {
+											COUNT: fileItemsTotal
 										})}
 									</div>
 								{/if}

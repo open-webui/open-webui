@@ -91,7 +91,6 @@ if SQLALCHEMY_DATABASE_URL.startswith("sqlite+sqlcipher://"):
     # Extract database path from SQLCipher URL
     db_path = SQLALCHEMY_DATABASE_URL.replace("sqlite+sqlcipher://", "")
 
-
     # Create a custom creator function that uses sqlcipher3
     def create_sqlcipher_connection():
         import sqlcipher3

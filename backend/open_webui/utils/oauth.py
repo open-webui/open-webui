@@ -795,15 +795,17 @@ class OAuthClientManager:
             # Passing them again causes Authlib to concatenate them (e.g., "ID1,ID1"),
             # which results in 401 errors from the token endpoint. (Fix for #19823)
             token = await client.authorize_access_token(request)
-            
+
             # Validate that we received a proper token response
             # If token exchange failed (e.g., 401), we may get an error response instead
             if token and not token.get("access_token"):
-                error_desc = token.get("error_description", token.get("error", "Unknown error"))
+                error_desc = token.get(
+                    "error_description", token.get("error", "Unknown error")
+                )
                 error_message = f"Token exchange failed: {error_desc}"
                 log.error(f"Invalid token response for client_id {client_id}: {token}")
                 token = None
-            
+
             if token:
                 try:
                     # Add timestamp for tracking

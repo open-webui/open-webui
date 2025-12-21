@@ -55,7 +55,6 @@ def register_connection(db_url):
         # Convert sqlite+sqlcipher:///path/to/db.sqlite to /path/to/db.sqlite
         db_path = db_url.replace("sqlite+sqlcipher://", "")
 
-
         # Use Peewee's native SqlCipherDatabase with encryption
         db = SqlCipherDatabase(db_path, passphrase=database_password)
         db.autoconnect = True

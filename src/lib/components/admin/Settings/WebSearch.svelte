@@ -205,9 +205,8 @@
 											/>
 										</div>
 									</div>
-							</div>
-							<div class="mb-2.5 flex w-full flex-col">
-
+								</div>
+								<div class="mb-2.5 flex w-full flex-col">
 									<div class=" self-left text-xs font-medium mb-1">
 										{$i18n.t('Searxng search language (all, en, es, de, fr, etc.)')}
 									</div>
@@ -223,7 +222,7 @@
 												required
 											/>
 										</div>
-									</div>									
+									</div>
 								</div>
 							</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'yacy'}
@@ -682,7 +681,12 @@
 
 								<div class="w-full">
 									<div class=" self-center text-xs font-medium mb-1">
-										<Tooltip content={$i18n.t('Limit concurrent search queries. 0 = unlimited (default). Set to 1 for sequential execution (recommended for APIs with strict rate limits like Brave free tier).')} placement="top-start">
+										<Tooltip
+											content={$i18n.t(
+												'Limit concurrent search queries. 0 = unlimited (default). Set to 1 for sequential execution (recommended for APIs with strict rate limits like Brave free tier).'
+											)}
+											placement="top-start"
+										>
 											{$i18n.t('Concurrent Requests')}
 										</Tooltip>
 									</div>
