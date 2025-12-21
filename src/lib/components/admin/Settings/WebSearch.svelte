@@ -682,7 +682,7 @@
 
 								<div class="w-full">
 									<div class=" self-center text-xs font-medium mb-1">
-										<Tooltip content={$i18n.t('Maximum number of concurrent search queries. Set to 1 for sequential execution (recommended for APIs with strict rate limits like Brave free tier).')} placement="top-start">
+										<Tooltip content={$i18n.t('Limit concurrent search queries. 0 = unlimited (default). Set to 1 for sequential execution (recommended for APIs with strict rate limits like Brave free tier).')} placement="top-start">
 											{$i18n.t('Concurrent Requests')}
 										</Tooltip>
 									</div>
@@ -692,8 +692,7 @@
 										placeholder={$i18n.t('Concurrent Requests')}
 										bind:value={webConfig.WEB_SEARCH_CONCURRENT_REQUESTS}
 										type="number"
-										min="1"
-										required
+										min="0"
 									/>
 								</div>
 							</div>
