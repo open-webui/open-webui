@@ -136,11 +136,21 @@ export async function generateScenariosFromPersonalityData(
 	
 	console.log(`Generated ${allScenarios.length} total scenarios from ${selectedCharacteristics.length} characteristics`);
 	
-	// Shuffle the scenarios
+	// Shuffle the scenarios to ensure diversity
 	const shuffled = allScenarios.sort(() => Math.random() - 0.5);
 	
-	// Return 10 random scenarios (or all if less than 10)
-	return shuffled.slice(0, 10);
+	// ============================================================================
+	// SCENARIO LIMIT CONFIGURATION
+	// ============================================================================
+	// To change the number of scenarios returned, update the number below.
+	// Current limit: 5 scenarios
+	// 
+	// This is the total limit on scenarios returned. The function collects ALL Q&A pairs
+	// for each selected characteristic, shuffles them, and returns the first N to ensure
+	// users get diverse scenarios from their selected personality characteristics.
+	// ============================================================================
+	const SCENARIO_LIMIT = 5; // <-- UPDATE THIS NUMBER TO CHANGE SCENARIO LIMIT
+	return shuffled.slice(0, SCENARIO_LIMIT);
 }
 
 // Legacy function for compatibility - returns only questions
