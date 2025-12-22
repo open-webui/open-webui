@@ -56,7 +56,8 @@ from open_webui.routers.pipelines import (
     process_pipeline_outlet_filter,
 )
 from open_webui.routers.memories import query_memory, QueryMemoryForm
-from open_webui.routers.gemini_rag import _chapter_store_mapping, get_rag_service
+from open_webui.routers.gemini_rag import get_rag_service
+from open_webui.models.textbooks import TextbookChapters
 
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.files import (
@@ -1230,7 +1231,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     # Chapter-based Gemini RAG handling
     chapter_id = metadata.get("chapter_id")
-    if chapter_id and chapter_id in _chapter_store_mapping:
+    store_name = TextbookChapters.get_rag_store(chapter_id) if chapter_id else None
+    if chapter_id and store_name:
+        # Get chapter info for display name
+        chapter_info = TextbookChapters.get_by_id(chapter_id)
+        display_name = chapter_info.title if chapter_info else chapter_id
+
         try:
             await event_emitter(
                 {
@@ -1243,9 +1249,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     },
                 }
             )
-
-            store_info = _chapter_store_mapping[chapter_id]
-            store_name = store_info["store_name"]
 
             # Get RAG context from Gemini
             try:
@@ -1261,7 +1264,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     # Add RAG context to system prompt
                     rag_context = f"""
 [교재 참고 자료]
-다음은 '{store_info.get('display_name', chapter_id)}' 챕터의 관련 내용입니다:
+다음은 '{display_name}' 챕터의 관련 내용입니다:
 
 {rag_result['text']}
 
@@ -1276,7 +1279,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         for citation in rag_result["citations"]:
                             sources.append({
                                 "source": {
-                                    "name": f"Gemini RAG: {store_info.get('display_name', chapter_id)}",
+                                    "name": f"Gemini RAG: {display_name}",
                                     "url": citation.get("source", ""),
                                 },
                                 "document": [],
@@ -1900,35 +1903,41 @@ async def process_chat_response(
 
     # Non-streaming response
     if not isinstance(response, StreamingResponse):
-        if event_emitter:
-            try:
-                if isinstance(response, dict) or isinstance(response, JSONResponse):
-                    if isinstance(response, list) and len(response) == 1:
-                        # If the response is a single-item list, unwrap it #17213
-                        response = response[0]
+        # Check if we can save to DB (need chat_id and message_id)
+        can_save_to_db = (
+            metadata.get("chat_id")
+            and metadata.get("message_id")
+            and not metadata.get("chat_id", "").startswith("local:")
+        )
+        try:
+            if isinstance(response, dict) or isinstance(response, JSONResponse):
+                if isinstance(response, list) and len(response) == 1:
+                    # If the response is a single-item list, unwrap it #17213
+                    response = response[0]
 
-                    if isinstance(response, JSONResponse) and isinstance(
-                        response.body, bytes
-                    ):
-                        try:
-                            response_data = json.loads(
-                                response.body.decode("utf-8", "replace")
-                            )
-                        except json.JSONDecodeError:
-                            response_data = {
-                                "error": {"detail": "Invalid JSON response"}
-                            }
+                if isinstance(response, JSONResponse) and isinstance(
+                    response.body, bytes
+                ):
+                    try:
+                        response_data = json.loads(
+                            response.body.decode("utf-8", "replace")
+                        )
+                    except json.JSONDecodeError:
+                        response_data = {
+                            "error": {"detail": "Invalid JSON response"}
+                        }
+                else:
+                    response_data = response
+
+                if "error" in response_data:
+                    error = response_data.get("error")
+
+                    if isinstance(error, dict):
+                        error = error.get("detail", error)
                     else:
-                        response_data = response
+                        error = str(error)
 
-                    if "error" in response_data:
-                        error = response_data.get("error")
-
-                        if isinstance(error, dict):
-                            error = error.get("detail", error)
-                        else:
-                            error = str(error)
-
+                    if can_save_to_db:
                         Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata["chat_id"],
                             metadata["message_id"],
@@ -1936,28 +1945,29 @@ async def process_chat_response(
                                 "error": {"content": error},
                             },
                         )
-                        if isinstance(error, str) or isinstance(error, dict):
-                            await event_emitter(
-                                {
-                                    "type": "chat:message:error",
-                                    "data": {"error": {"content": error}},
-                                }
-                            )
-
-                    if "selected_model_id" in response_data:
-                        Chats.upsert_message_to_chat_by_id_and_message_id(
-                            metadata["chat_id"],
-                            metadata["message_id"],
+                    if event_emitter and (isinstance(error, str) or isinstance(error, dict)):
+                        await event_emitter(
                             {
-                                "selectedModelId": response_data["selected_model_id"],
-                            },
+                                "type": "chat:message:error",
+                                "data": {"error": {"content": error}},
+                            }
                         )
 
-                    choices = response_data.get("choices", [])
-                    if choices and choices[0].get("message", {}).get("content"):
-                        content = response_data["choices"][0]["message"]["content"]
+                if "selected_model_id" in response_data and can_save_to_db:
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata["chat_id"],
+                        metadata["message_id"],
+                        {
+                            "selectedModelId": response_data["selected_model_id"],
+                        },
+                    )
 
-                        if content:
+                choices = response_data.get("choices", [])
+                if choices and choices[0].get("message", {}).get("content"):
+                    content = response_data["choices"][0]["message"]["content"]
+
+                    if content:
+                        if event_emitter:
                             await event_emitter(
                                 {
                                     "type": "chat:completion",
@@ -1965,8 +1975,9 @@ async def process_chat_response(
                                 }
                             )
 
-                            title = Chats.get_chat_title_by_id(metadata["chat_id"])
+                        title = Chats.get_chat_title_by_id(metadata["chat_id"]) if can_save_to_db else "New Chat"
 
+                        if event_emitter:
                             await event_emitter(
                                 {
                                     "type": "chat:completion",
@@ -1978,7 +1989,8 @@ async def process_chat_response(
                                 }
                             )
 
-                            # Save message in the database
+                        # Save message in the database (regardless of event_emitter)
+                        if can_save_to_db:
                             Chats.upsert_message_to_chat_by_id_and_message_id(
                                 metadata["chat_id"],
                                 metadata["message_id"],
@@ -1988,23 +2000,23 @@ async def process_chat_response(
                                 },
                             )
 
-                            # Send a webhook notification if the user is not active
-                            if not get_active_status_by_user_id(user.id):
-                                webhook_url = Users.get_user_webhook_url_by_id(user.id)
-                                if webhook_url:
-                                    await post_webhook(
-                                        request.app.state.WEBUI_NAME,
-                                        webhook_url,
-                                        f"{title} - {request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}\n\n{content}",
-                                        {
-                                            "action": "chat",
-                                            "message": content,
-                                            "title": title,
-                                            "url": f"{request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}",
-                                        },
-                                    )
+                        # Send a webhook notification if the user is not active
+                        if not get_active_status_by_user_id(user.id):
+                            webhook_url = Users.get_user_webhook_url_by_id(user.id)
+                            if webhook_url:
+                                await post_webhook(
+                                    request.app.state.WEBUI_NAME,
+                                    webhook_url,
+                                    f"{title} - {request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}\n\n{content}",
+                                    {
+                                        "action": "chat",
+                                        "message": content,
+                                        "title": title,
+                                        "url": f"{request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}",
+                                    },
+                                )
 
-                            await background_tasks_handler()
+                        await background_tasks_handler()
 
                     if events and isinstance(events, list):
                         extra_response = {}
@@ -2019,35 +2031,34 @@ async def process_chat_response(
                             **response_data,
                         }
 
-                    if isinstance(response, dict):
-                        response = response_data
-                    if isinstance(response, JSONResponse):
-                        response = JSONResponse(
-                            content=response_data,
-                            headers=response.headers,
-                            status_code=response.status_code,
-                        )
+                if isinstance(response, dict):
+                    response = response_data
+                if isinstance(response, JSONResponse):
+                    response = JSONResponse(
+                        content=response_data,
+                        headers=response.headers,
+                        status_code=response.status_code,
+                    )
 
-            except Exception as e:
-                log.debug(f"Error occurred while processing request: {e}")
-                pass
+        except Exception as e:
+            log.debug(f"Error occurred while processing request: {e}")
+            pass
 
-            return response
-        else:
-            if events and isinstance(events, list) and isinstance(response, dict):
-                extra_response = {}
-                for event in events:
-                    if isinstance(event, dict):
-                        extra_response.update(event)
-                    else:
-                        extra_response[event] = True
+        # Handle events for non-streaming response
+        if events and isinstance(events, list) and isinstance(response, dict):
+            extra_response = {}
+            for event in events:
+                if isinstance(event, dict):
+                    extra_response.update(event)
+                else:
+                    extra_response[event] = True
 
-                response = {
-                    **extra_response,
-                    **response,
-                }
+            response = {
+                **extra_response,
+                **response,
+            }
 
-            return response
+        return response
 
     # Non standard response
     if not any(
