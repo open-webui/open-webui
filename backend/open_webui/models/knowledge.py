@@ -485,9 +485,17 @@ class KnowledgeTable:
 
     def get_file_metadatas_by_id(self, knowledge_id: str) -> list[FileMetadataResponse]:
         try:
-            with get_db() as db:
-                files = self.get_files_by_id(knowledge_id)
-                return [FileMetadataResponse(**file.model_dump()) for file in files]
+            files = self.get_files_by_id(knowledge_id)
+            return [
+                FileMetadataResponse(
+                    id=file.id,
+                    hash=file.hash,
+                    meta=file.meta,
+                    created_at=file.created_at or 0,
+                    updated_at=file.updated_at or 0,
+                )
+                for file in files
+            ]
         except Exception:
             return []
 
