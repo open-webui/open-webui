@@ -182,14 +182,20 @@ class GroupTable:
                             and_(Group.data.isnot(None), json_share == False)
                         )
             groups = query.order_by(Group.updated_at.desc()).all()
+            
+            # Batch load member counts to avoid N+1 queries
+            group_models = [GroupModel.model_validate(group) for group in groups]
+            group_ids = [group.id for group in group_models]
+            member_counts = self.get_member_counts_by_group_ids(group_ids)
+            
             return [
                 GroupResponse.model_validate(
                     {
-                        **GroupModel.model_validate(group).model_dump(),
-                        "member_count": self.get_group_member_count_by_id(group.id),
+                        **group.model_dump(),
+                        "member_count": member_counts.get(group.id, 0),
                     }
                 )
-                for group in groups
+                for group in group_models
             ]
 
     def search_groups(
@@ -218,13 +224,18 @@ class GroupTable:
             query = query.order_by(Group.updated_at.desc())
             groups = query.offset(skip).limit(limit).all()
 
+            # Batch load member counts to avoid N+1 queries
+            group_models = [GroupModel.model_validate(group) for group in groups]
+            group_ids = [group.id for group in group_models]
+            member_counts = self.get_member_counts_by_group_ids(group_ids)
+
             return {
                 "items": [
                     GroupResponse.model_validate(
-                        **GroupModel.model_validate(group).model_dump(),
-                        member_count=self.get_group_member_count_by_id(group.id),
+                        **group.model_dump(),
+                        member_count=member_counts.get(group.id, 0),
                     )
-                    for group in groups
+                    for group in group_models
                 ],
                 "total": total,
             }
@@ -239,6 +250,49 @@ class GroupTable:
                 .order_by(Group.updated_at.desc())
                 .all()
             ]
+
+    def get_group_ids_by_member_ids(self, user_ids: list[str]) -> dict[str, list[str]]:
+        """Batch load group IDs for multiple users to avoid N+1 queries.
+        Returns dict mapping user_id -> list of group_ids."""
+        if not user_ids:
+            return {}
+
+        with get_db() as db:
+            memberships = (
+                db.query(GroupMember.user_id, GroupMember.group_id)
+                .filter(GroupMember.user_id.in_(user_ids))
+                .all()
+            )
+
+            # Initialize result dict with empty lists for all user_ids
+            result: dict[str, list[str]] = {user_id: [] for user_id in user_ids}
+            for user_id, group_id in memberships:
+                result[user_id].append(group_id)
+
+            return result
+
+    def get_groups_by_member_ids(self, user_ids: list[str]) -> dict[str, list[GroupModel]]:
+        """Batch load full group objects for multiple users to avoid N+1 queries.
+        Returns dict mapping user_id -> list of GroupModel."""
+        if not user_ids:
+            return {}
+
+        with get_db() as db:
+            # Query all groups and their memberships for the given users
+            results = (
+                db.query(GroupMember.user_id, Group)
+                .join(Group, GroupMember.group_id == Group.id)
+                .filter(GroupMember.user_id.in_(user_ids))
+                .order_by(Group.updated_at.desc())
+                .all()
+            )
+
+            # Initialize result dict with empty lists for all user_ids
+            groups_by_user: dict[str, list[GroupModel]] = {user_id: [] for user_id in user_ids}
+            for user_id, group in results:
+                groups_by_user[user_id].append(GroupModel.model_validate(group))
+
+            return groups_by_user
 
     def get_group_by_id(self, id: str) -> Optional[GroupModel]:
         try:
@@ -305,6 +359,28 @@ class GroupTable:
                 .scalar()
             )
             return count if count else 0
+
+    def get_member_counts_by_group_ids(self, group_ids: list[str]) -> dict[str, int]:
+        """Batch load member counts for multiple groups to avoid N+1 queries.
+        Returns dict mapping group_id -> member count."""
+        if not group_ids:
+            return {}
+
+        with get_db() as db:
+            # Query member counts for all groups in one query using GROUP BY
+            counts = (
+                db.query(GroupMember.group_id, func.count(GroupMember.user_id))
+                .filter(GroupMember.group_id.in_(group_ids))
+                .group_by(GroupMember.group_id)
+                .all()
+            )
+
+            # Initialize result dict with 0 for all group_ids
+            result: dict[str, int] = {group_id: 0 for group_id in group_ids}
+            for group_id, count in counts:
+                result[group_id] = count
+
+            return result
 
     def update_group_by_id(
         self, id: str, form_data: GroupUpdateForm, overwrite: bool = False

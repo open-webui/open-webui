@@ -80,14 +80,16 @@ async def get_users(
     users = result["users"]
     total = result["total"]
 
+    # Batch load group IDs for all users to avoid N+1 queries
+    user_ids = [user.id for user in users]
+    user_group_ids_map = Groups.get_group_ids_by_member_ids(user_ids)
+
     return {
         "users": [
             UserGroupIdsModel(
                 **{
                     **user.model_dump(),
-                    "group_ids": [
-                        group.id for group in Groups.get_groups_by_member_id(user.id)
-                    ],
+                    "group_ids": user_group_ids_map.get(user.id, []),
                 }
             )
             for user in users

@@ -298,15 +298,24 @@ def get_scim_auth(
         )
 
 
-def user_to_scim(user: UserModel, request: Request) -> SCIMUser:
-    """Convert internal User model to SCIM User"""
+def user_to_scim(user: UserModel, request: Request, user_groups: Optional[list] = None) -> SCIMUser:
+    """Convert internal User model to SCIM User
+    
+    Args:
+        user: User model to convert
+        request: FastAPI request object
+        user_groups: Optional pre-fetched list of GroupModel objects for this user.
+                     If None, will fetch from database (causes N+1 if called in a loop).
+    """
     # Parse display name into name components
     name_parts = user.name.split(" ", 1) if user.name else ["", ""]
     given_name = name_parts[0] if name_parts else ""
     family_name = name_parts[1] if len(name_parts) > 1 else ""
 
-    # Get user's groups
-    user_groups = Groups.get_groups_by_member_id(user.id)
+    # Get user's groups (use pre-fetched if available, otherwise query)
+    if user_groups is None:
+        user_groups = Groups.get_groups_by_member_id(user.id)
+    
     groups = [
         {
             "value": group.id,
@@ -347,26 +356,54 @@ def user_to_scim(user: UserModel, request: Request) -> SCIMUser:
     )
 
 
-def group_to_scim(group: GroupModel, request: Request) -> SCIMGroup:
-    """Convert internal Group model to SCIM Group"""
-    member_ids = Groups.get_group_user_ids_by_id(group.id)
-    members = []
+def users_to_scim(users: list[UserModel], request: Request) -> list[SCIMUser]:
+    """Batch convert multiple User models to SCIM Users.
+    Avoids N+1 queries by pre-fetching all group memberships."""
+    if not users:
+        return []
+    
+    # Batch load groups for all users in one query
+    user_ids = [user.id for user in users]
+    groups_by_user = Groups.get_groups_by_member_ids(user_ids)
+    
+    # Convert each user with their pre-fetched groups
+    return [
+        user_to_scim(user, request, user_groups=groups_by_user.get(user.id, []))
+        for user in users
+    ]
 
-    for user_id in member_ids:
-        user = Users.get_user_by_id(user_id)
-        if user:
-            members.append(
-                SCIMGroupMember(
-                    value=user.id,
-                    ref=f"{request.base_url}api/v1/scim/v2/Users/{user.id}",
-                    display=user.name,
-                )
-            )
+
+def group_to_scim(group: GroupModel, request: Request, members: Optional[list[UserModel]] = None) -> SCIMGroup:
+    """Convert internal Group model to SCIM Group
+    
+    Args:
+        group: Group model to convert
+        request: FastAPI request object
+        members: Optional pre-fetched list of UserModel objects for this group.
+                 If None, will fetch from database (causes N+1 if called in a loop).
+    """
+    # Get group members (use pre-fetched if available, otherwise query)
+    if members is None:
+        member_ids = Groups.get_group_user_ids_by_id(group.id)
+        members = []
+        for user_id in member_ids:
+            user = Users.get_user_by_id(user_id)
+            if user:
+                members.append(user)
+    
+    scim_members = [
+        SCIMGroupMember(
+            value=user.id,
+            ref=f"{request.base_url}api/v1/scim/v2/Users/{user.id}",
+            display=user.name,
+        )
+        for user in members
+    ]
 
     return SCIMGroup(
         id=group.id,
         displayName=group.name,
-        members=members,
+        members=scim_members,
         meta=SCIMMeta(
             resourceType=SCIM_RESOURCE_TYPE_GROUP,
             created=datetime.fromtimestamp(
@@ -378,6 +415,36 @@ def group_to_scim(group: GroupModel, request: Request) -> SCIMGroup:
             location=f"{request.base_url}api/v1/scim/v2/Groups/{group.id}",
         ),
     )
+
+
+def groups_to_scim(groups: list[GroupModel], request: Request) -> list[SCIMGroup]:
+    """Batch convert multiple Group models to SCIM Groups.
+    Avoids N+1 queries by pre-fetching all group members."""
+    if not groups:
+        return []
+    
+    # Batch load member IDs for all groups in one query
+    group_ids = [group.id for group in groups]
+    group_member_ids_map = Groups.get_group_user_ids_by_ids(group_ids)
+    
+    # Collect all unique user IDs across all groups
+    all_user_ids = set()
+    for member_ids in group_member_ids_map.values():
+        if member_ids:
+            all_user_ids.update(member_ids)
+    
+    # Batch load all users in one query
+    users_list = Users.get_users_by_user_ids(list(all_user_ids)) if all_user_ids else []
+    users_by_id = {user.id: user for user in users_list}
+    
+    # Convert each group with their pre-fetched members
+    scim_groups = []
+    for group in groups:
+        member_ids = group_member_ids_map.get(group.id, [])
+        members = [users_by_id[user_id] for user_id in member_ids if user_id in users_by_id]
+        scim_groups.append(group_to_scim(group, request, members=members))
+    
+    return scim_groups
 
 
 # SCIM Service Provider Config
@@ -508,8 +575,8 @@ async def get_users(
         users_list = response["users"]
         total = response["total"]
 
-    # Convert to SCIM format
-    scim_users = [user_to_scim(user, request) for user in users_list]
+    # Convert to SCIM format (batch to avoid N+1 queries)
+    scim_users = users_to_scim(users_list, request)
 
     return SCIMListResponse(
         totalResults=total,
@@ -727,8 +794,8 @@ async def get_groups(
     end = start + count
     paginated_groups = groups_list[start:end]
 
-    # Convert to SCIM format
-    scim_groups = [group_to_scim(group, request) for group in paginated_groups]
+    # Convert to SCIM format (batch to avoid N+1 queries)
+    scim_groups = groups_to_scim(paginated_groups, request)
 
     return SCIMListResponse(
         totalResults=total,
