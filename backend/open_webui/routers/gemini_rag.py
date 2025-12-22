@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.gemini_rag import get_gemini_rag_service, GeminiRAGService
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.models.textbooks import TextbookChapters
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
@@ -69,16 +70,9 @@ class ChapterStoreMapping(BaseModel):
 
 
 # ============================================================
-# 챕터-Store 매핑 관리 (메모리 저장, 추후 DB로 이동 가능)
+# 챕터-Store 매핑 관리 (DB 연동)
 # ============================================================
-
-# 챕터 ID와 Store 이름 매핑 (기본값 포함)
-_chapter_store_mapping: dict = {
-    "ode-1": {
-        "store_name": "fileSearchStores/7xo1gnj2yixo-78e03spq507w",
-        "display_name": "1계 상미분방정식"
-    }
-}
+# 매핑은 TextbookChapter.rag_store_name 필드에 저장됨
 
 
 def get_gemini_api_key(request: Request) -> Optional[str]:
@@ -187,14 +181,14 @@ async def delete_store(
     if not success:
         raise HTTPException(status_code=500, detail="Failed to delete store")
 
-    # 매핑에서도 제거
-    global _chapter_store_mapping
-    _chapter_store_mapping = {
-        k: v for k, v in _chapter_store_mapping.items()
-        if v != full_store_name
-    }
+    # DB에서 해당 Store를 사용하는 챕터들의 매핑 제거
+    cleared_chapters = TextbookChapters.clear_rag_store_by_name(full_store_name)
 
-    return {"success": True, "message": f"Deleted store: {full_store_name}"}
+    return {
+        "success": True,
+        "message": f"Deleted store: {full_store_name}",
+        "cleared_chapter_mappings": cleared_chapters
+    }
 
 
 # ============================================================
@@ -266,7 +260,7 @@ async def list_files_in_store(
 
 
 # ============================================================
-# 챕터-Store 매핑 엔드포인트
+# 챕터-Store 매핑 엔드포인트 (DB 연동)
 # ============================================================
 
 @router.post("/chapter-mapping")
@@ -277,16 +271,22 @@ async def set_chapter_store_mapping(
     """
     챕터 ID와 Store 매핑 설정 (관리자 전용)
 
-    - **chapter_id**: 챕터 ID (예: "ode-1")
-    - **store_name**: Store 이름
-    - **display_name**: 표시 이름
+    - **chapter_id**: 챕터 ID (예: "ch-1")
+    - **store_name**: Store 이름 (예: "fileSearchStores/xxx")
+    - **display_name**: 표시 이름 (무시됨, 챕터 제목 사용)
     """
-    global _chapter_store_mapping
-    _chapter_store_mapping[mapping.chapter_id] = {
-        "store_name": mapping.store_name,
-        "display_name": mapping.display_name
+    chapter = TextbookChapters.set_rag_store(mapping.chapter_id, mapping.store_name)
+    if not chapter:
+        raise HTTPException(status_code=404, detail=f"Chapter not found: {mapping.chapter_id}")
+
+    return {
+        "success": True,
+        "mapping": {
+            "chapter_id": chapter.id,
+            "store_name": chapter.rag_store_name,
+            "display_name": chapter.title
+        }
     }
-    return {"success": True, "mapping": mapping}
 
 
 @router.get("/chapter-mapping")
@@ -294,9 +294,10 @@ async def get_chapter_store_mappings(
     user=Depends(get_verified_user)
 ):
     """
-    모든 챕터-Store 매핑 조회
+    모든 챕터-Store 매핑 조회 (store가 설정된 챕터만)
     """
-    return {"mappings": _chapter_store_mapping}
+    mappings = TextbookChapters.get_all_rag_store_mappings()
+    return {"mappings": mappings}
 
 
 @router.get("/chapter-mapping/{chapter_id}")
@@ -307,10 +308,17 @@ async def get_chapter_store_mapping(
     """
     특정 챕터의 Store 매핑 조회
     """
-    if chapter_id not in _chapter_store_mapping:
-        raise HTTPException(status_code=404, detail="Chapter mapping not found")
+    chapter = TextbookChapters.get_by_id(chapter_id)
+    if not chapter:
+        raise HTTPException(status_code=404, detail="Chapter not found")
 
-    return _chapter_store_mapping[chapter_id]
+    if not chapter.rag_store_name:
+        raise HTTPException(status_code=404, detail="No RAG store configured for this chapter")
+
+    return {
+        "store_name": chapter.rag_store_name,
+        "display_name": chapter.title
+    }
 
 
 @router.delete("/chapter-mapping/{chapter_id}")
@@ -321,11 +329,11 @@ async def delete_chapter_store_mapping(
     """
     챕터-Store 매핑 삭제 (관리자 전용)
     """
-    global _chapter_store_mapping
-    if chapter_id in _chapter_store_mapping:
-        del _chapter_store_mapping[chapter_id]
-        return {"success": True, "message": f"Deleted mapping for {chapter_id}"}
-    raise HTTPException(status_code=404, detail="Chapter mapping not found")
+    chapter = TextbookChapters.set_rag_store(chapter_id, None)
+    if not chapter:
+        raise HTTPException(status_code=404, detail="Chapter not found")
+
+    return {"success": True, "message": f"Deleted RAG store mapping for {chapter_id}"}
 
 
 # ============================================================
@@ -373,19 +381,19 @@ async def query_rag_by_chapter(
     """
     챕터 ID로 RAG 쿼리 실행
 
-    - **chapter_id**: 챕터 ID (예: "ode-1")
+    - **chapter_id**: 챕터 ID (예: "ch-1")
     - **question**: 질문 내용
     - **model**: 사용할 Gemini 모델
     - **temperature**: 응답 다양성
     - **system_instruction**: 시스템 지시사항 (선택)
     """
-    if chapter_id not in _chapter_store_mapping:
+    store_name = TextbookChapters.get_rag_store(chapter_id)
+    if not store_name:
         raise HTTPException(
             status_code=404,
             detail=f"No RAG store configured for chapter: {chapter_id}"
         )
 
-    store_name = _chapter_store_mapping[chapter_id]["store_name"]
     service = get_rag_service(request)
 
     result = service.query(
@@ -418,10 +426,11 @@ async def health_check(request: Request):
     try:
         service = get_rag_service(request)
         stores = service.list_stores()
+        mappings = TextbookChapters.get_all_rag_store_mappings()
         return {
             "status": "ok",
             "store_count": len(stores),
-            "chapter_mappings": len(_chapter_store_mapping)
+            "chapter_mappings": len(mappings)
         }
     except Exception as e:
         return {
