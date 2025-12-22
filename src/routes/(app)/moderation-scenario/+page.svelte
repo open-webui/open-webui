@@ -72,7 +72,7 @@ import { finalizeModeration } from '$lib/apis/workflow';
 		'Defer to Parents': 'Suggest that the child discuss this matter with their parents or guardians for guidance.',
 		'Defer to Resources': 'Recommend professional resources, hotlines, or trusted adults who can provide specialized help.',
 		'Custom': 'Create your own moderation instruction tailored to this specific scenario.',
-		'I read the instructions': 'Confirm you carefully read and followed the instruction embedded in this scenario.'
+		'I read the instructions': 'Only select this if you saw attention check instructions embedded in the scenario text. If you did not see any special instructions in the scenario, do not select this option.'
 	};
 
 	// DEPRECATED: Hardcoded scenarios are no longer used - system now relies entirely on personality-based scenarios
@@ -580,7 +580,7 @@ import { finalizeModeration } from '$lib/apis/workflow';
 		moderationPanelVisible = false;
 		moderationPanelExpanded = false;
 		expandedGroups.clear();
-		highlightingMode = false;
+		// STALE: highlightingMode = false;
 		hasInitialDecision = false;
 		acceptedOriginal = false;
 		attentionCheckSelected = false;
@@ -992,8 +992,19 @@ function clearModerationLocalKeys() {
 				showComparisonView = false; // Not showing comparison view
 				moderationPanelVisible = false; // Panel hidden
 				moderationPanelExpanded = false; // Panel collapsed
-				highlightingMode = false; // Not in highlighting mode
+				// STALE: highlightingMode = false; // Not in highlighting mode
 				attentionCheckSelected = false; // Not attention check
+				
+				// Initialize unified initial decision flow state for the custom scenario
+				initialDecisionStep = 1;
+				step1Completed = false;
+				step2Completed = false;
+				step3Completed = false;
+				step4Completed = false;
+				reflectionFeeling = '';
+				reflectionReason = '';
+				initialDecisionChoice = null;
+				showOriginal1 = true; // Show original for highlighting in Step 1
 				
 				// Force save the clean state (this will include customPrompt)
 				saveCurrentScenarioState();
@@ -1065,10 +1076,11 @@ function clearModerationLocalKeys() {
 		customPrompt?: string; // Store actual custom prompt text for custom scenarios
 		scenarioReflection: string;
 		// New unified initial decision flow state
-		initialDecisionStep: 1 | 2 | 3;
+		initialDecisionStep: 1 | 2 | 3 | 4;
 		step1Completed: boolean;
 		step2Completed: boolean;
 		step3Completed: boolean;
+		step4Completed: boolean;
 		reflectionFeeling: string; // "I feel..." field
 		reflectionReason: string; // "because..." field
 		initialDecisionChoice: 'accept_original' | 'moderate' | null;
@@ -1127,18 +1139,21 @@ function clearModerationLocalKeys() {
 	let moderationPanelVisible: boolean = false;
 	let moderationPanelExpanded: boolean = false;
 	let expandedGroups: Set<string> = new Set();
-	let highlightingMode: boolean = false;
+	// STALE: highlightingMode - no longer used, highlighting now in Step 1
+	// let highlightingMode: boolean = false;
 	let hasInitialDecision: boolean = false;
 	let acceptedOriginal: boolean = false;
 	let markedNotApplicable: boolean = false;
-	let showReflectionModal: boolean = false;
+	// STALE: showReflectionModal - no longer used, reflection now in Step 2
+	// let showReflectionModal: boolean = false;
 	let scenarioReflection: string = '';
 	
 	// Unified initial decision flow state
-	let initialDecisionStep: 1 | 2 | 3 = 1;
+	let initialDecisionStep: 1 | 2 | 3 | 4 = 1;
 	let step1Completed: boolean = false;
 	let step2Completed: boolean = false;
 	let step3Completed: boolean = false;
+	let step4Completed: boolean = false;
 	let reflectionFeeling: string = '';
 	let reflectionReason: string = '';
 	let initialDecisionChoice: 'accept_original' | 'moderate' | null = null;
@@ -1146,8 +1161,9 @@ function clearModerationLocalKeys() {
 	
 	// Reactive: Show initial decision pane when needed
 	$: {
-		const shouldShowPane = !hasInitialDecision && 
-			!step3Completed &&
+		// Keep pane open for any step (1-4) as long as Step 4 is not completed and scenario is not marked as not applicable
+		const shouldShowPane = !step4Completed && !markedNotApplicable && 
+			(initialDecisionStep >= 1 && initialDecisionStep <= 4) &&
 			selectedScenarioIndex >= 0 &&
 			scenarioList.length > 0 &&
 			(!isCustomScenario || customScenarioGenerated);
@@ -1166,6 +1182,7 @@ let currentRequestId: number = 0;
 
 	// Helper function to handle text selection - AUTO-HIGHLIGHT on drag
 	function handleTextSelection(event: MouseEvent) {
+		if (acceptedOriginal) return; // Don't allow highlighting when original is accepted
 		const container = (event.currentTarget as HTMLElement) || responseContainer1;
 		if (!container) return;
 		
@@ -1376,6 +1393,7 @@ let currentRequestId: number = 0;
 			step1Completed,
 			step2Completed,
 			step3Completed,
+			step4Completed,
 			reflectionFeeling,
 			reflectionReason,
 			initialDecisionChoice
@@ -1419,7 +1437,7 @@ let currentRequestId: number = 0;
 		const [prompt, response] = scenarioList[index];
 		
 		console.log('🔍 Loading scenario:', index, 'Prompt:', prompt, 'Is custom:', prompt === CUSTOM_SCENARIO_PROMPT);
-		console.log('🔍 Reflection modal state before load:', { showReflectionModal, hasInitialDecision, scenarioReflection: scenarioReflection.trim() });
+		// STALE: console.log('🔍 Reflection modal state before load:', { showReflectionModal, hasInitialDecision, scenarioReflection: scenarioReflection.trim() });
 		
 		// Handle custom scenario specially
 		if (prompt === CUSTOM_SCENARIO_PROMPT) {
@@ -1454,18 +1472,19 @@ let currentRequestId: number = 0;
 				selectedModerations = new Set();
 				customInstructions = [];
 				showOriginal1 = false;
+				showComparisonView = false;
 				moderationPanelVisible = false;
 				moderationPanelExpanded = false;
 				expandedGroups.clear();
-				highlightingMode = false;
+				// STALE: highlightingMode = false;
 				hasInitialDecision = false;
 				acceptedOriginal = false;
 				attentionCheckSelected = false;
-				markedNotApplicable = false;
-				scenarioReflection = '';
-				showReflectionModal = false;
-				
-				childPrompt1 = prompt;
+			markedNotApplicable = false;
+			scenarioReflection = '';
+			// STALE: showReflectionModal = false;
+			
+			childPrompt1 = prompt;
 				originalResponse1 = response;
 				
 				console.log('🆕 Custom scenario NOT generated yet - showing input form');
@@ -1485,6 +1504,7 @@ let currentRequestId: number = 0;
 			selectedModerations = new Set(savedState.selectedModerations);
 			customInstructions = [...savedState.customInstructions];
 			showOriginal1 = savedState.showOriginal1;
+			showComparisonView = savedState.showComparisonView || false;
 			hasInitialDecision = savedState.hasInitialDecision;
 			acceptedOriginal = savedState.acceptedOriginal;
 			attentionCheckSelected = savedState.attentionCheckSelected || false;
@@ -1496,9 +1516,25 @@ let currentRequestId: number = 0;
 			step1Completed = savedState.step1Completed || false;
 			step2Completed = savedState.step2Completed || false;
 			step3Completed = savedState.step3Completed || false;
+			step4Completed = savedState.step4Completed || false;
 			reflectionFeeling = savedState.reflectionFeeling || '';
 			reflectionReason = savedState.reflectionReason || '';
 			initialDecisionChoice = savedState.initialDecisionChoice || null;
+			
+			// If versions exist and not completed, default to Step 4 to match side-by-side display
+			if (versions.length > 0 && !step4Completed) {
+				initialDecisionStep = 4;
+				// Ensure all previous steps are marked complete to allow navigation back
+				step1Completed = true;
+				step2Completed = true;
+				step3Completed = true;
+				showComparisonView = true; // Show comparison view
+				if (currentVersionIndex >= 0 && currentVersionIndex < versions.length) {
+					// Keep the saved currentVersionIndex
+				} else {
+					currentVersionIndex = versions.length - 1; // Default to latest version
+				}
+			}
 			
 			// Parse reflection if it's in combined format but fields are empty
 			if (!reflectionFeeling && !reflectionReason && scenarioReflection) {
@@ -1514,12 +1550,13 @@ let currentRequestId: number = 0;
 				showOriginal1 = true;
 			}
 			
-			// Show initial decision pane if not completed
-			showInitialDecisionPane = !hasInitialDecision || !step3Completed;
-			showReflectionModal = false; // No longer using separate modal
+			// Show initial decision pane if not completed (keep open for any step 1-4 until step4Completed) and not marked as not applicable
+			showInitialDecisionPane = !step4Completed && !markedNotApplicable && (initialDecisionStep >= 1 && initialDecisionStep <= 4);
+			// STALE: showReflectionModal = false; // No longer using separate modal
 			
 			// Set moderation panel visibility based on confirmation state and initial decision
-			moderationPanelVisible = confirmedVersionIndex === null && hasInitialDecision && !acceptedOriginal && !markedNotApplicable && step3Completed;
+			// Show moderation panel when in Step 4 and not yet completed
+			moderationPanelVisible = initialDecisionStep === 4 && confirmedVersionIndex === null && !markedNotApplicable && step3Completed;
 			
 			// Don't auto-populate moderation panel - keep it clear to avoid confusion
 			// Users should understand they're creating new versions from the original, not editing the viewed version
@@ -1535,7 +1572,7 @@ let currentRequestId: number = 0;
 			moderationPanelVisible = false;
 			moderationPanelExpanded = false;
 		expandedGroups.clear();
-			highlightingMode = false;
+			// STALE: highlightingMode = false;
 			hasInitialDecision = false;
 			scenarioReflection = '';
 			acceptedOriginal = false;
@@ -1547,11 +1584,12 @@ let currentRequestId: number = 0;
 			step1Completed = false;
 			step2Completed = false;
 			step3Completed = false;
+			step4Completed = false;
 			reflectionFeeling = '';
 			reflectionReason = '';
 			initialDecisionChoice = null;
 			showInitialDecisionPane = true;
-			showReflectionModal = false; // No longer using separate modal
+			// STALE: showReflectionModal = false; // No longer using separate modal
 			showOriginal1 = true; // Show original for highlighting in Step 1
 			console.log('✅ Showing initial decision pane for new scenario');
 		}
@@ -1657,19 +1695,20 @@ function cancelReset() {}
 		showOriginal1 = false;
 		showComparisonView = false;
 		moderationPanelVisible = false;
-		highlightingMode = false;
+		// STALE: highlightingMode = false;
 		hasInitialDecision = false;
 		acceptedOriginal = false;
 		attentionCheckSelected = false;
 		markedNotApplicable = false;
 		selectionButtonsVisible1 = false;
 		scenarioReflection = '';
-		showReflectionModal = false;
+		// STALE: showReflectionModal = false;
 		// Reset unified initial decision flow state
 		initialDecisionStep = 1;
 		step1Completed = false;
 		step2Completed = false;
 		step3Completed = false;
+		step4Completed = false;
 		reflectionFeeling = '';
 		reflectionReason = '';
 		initialDecisionChoice = null;
@@ -1730,19 +1769,24 @@ function cancelReset() {}
 		if (confirmedVersionIndex === null) {
 			// Confirm current version
 			confirmedVersionIndex = currentVersionIndex;
+			step4Completed = true;
 			moderationPanelVisible = false;
 			moderationPanelExpanded = false;
 		expandedGroups.clear();
-			highlightingMode = false;
+			// STALE: highlightingMode = false;
 			console.log('Confirm version - state:', { hasInitialDecision, confirmedVersionIndex, acceptedOriginal, markedNotApplicable });
 			saveCurrentScenarioState(); // Save the decision
 		} else {
-			// Unconfirm
+			// Unconfirm - navigate back to Step 4
 			confirmedVersionIndex = null;
-			moderationPanelVisible = true;
+			step4Completed = false;
+			if (step3Completed) {
+				initialDecisionStep = 4;
+				moderationPanelVisible = true;
+			}
 		moderationPanelExpanded = false;
 		expandedGroups.clear();
-			highlightingMode = false;
+			// STALE: highlightingMode = false;
 			console.log('Unconfirm version - state:', { hasInitialDecision, confirmedVersionIndex, acceptedOriginal, markedNotApplicable });
 			saveCurrentScenarioState(); // Save the decision
 		}
@@ -1916,7 +1960,16 @@ function cancelReset() {}
 		// Reset decision state
 		hasInitialDecision = false;
 		acceptedOriginal = false;
-		
+		confirmedVersionIndex = null;
+		step4Completed = false;
+		// Navigate back to Step 4 if step 3 is completed
+		if (step3Completed) {
+			initialDecisionStep = 4;
+			moderationPanelVisible = true;
+		}
+		moderationPanelExpanded = false;
+		expandedGroups.clear();
+		saveCurrentScenarioState();
 		toast.info('Response unmarked. Please make a decision again.');
 	}
 	
@@ -1939,8 +1992,11 @@ function cancelReset() {}
 		hasInitialDecision = true;
 		acceptedOriginal = true;
 		confirmedVersionIndex = -1; // Mark as confirmed (original accepted)
+		step4Completed = true;
 		moderationPanelVisible = false;
-		highlightingMode = false;
+		showComparisonView = false; // Switch to single view
+		showOriginal1 = true; // Show original response
+		// STALE: highlightingMode = false;
 		highlightedTexts1 = []; // Clear any highlighted concerns
 		console.log('Accept original - state:', { hasInitialDecision, acceptedOriginal, confirmedVersionIndex, markedNotApplicable });
 		saveCurrentScenarioState(); // Save the decision
@@ -1979,41 +2035,43 @@ function cancelReset() {}
 		}
 	}
 
-	function startModerating() {
-		// DEPRECATED: This function is no longer used in the new unified flow
-		// Highlighting is now done in Step 1 of the initial decision pane
-		// Both accept and moderate buttons now navigate directly to moderation panel
-		hasInitialDecision = true;
-		acceptedOriginal = false;
-		confirmedVersionIndex = null;
-		moderationPanelVisible = true;
-		moderationPanelExpanded = false;
-		expandedGroups.clear();
-		showOriginal1 = true;
-	}
+	// STALE: startModerating() - DEPRECATED, no longer used in unified flow
+	// function startModerating() {
+	// 	// DEPRECATED: This function is no longer used in the new unified flow
+	// 	// Highlighting is now done in Step 1 of the initial decision pane
+	// 	// Both accept and moderate buttons now navigate directly to moderation panel
+	// 	hasInitialDecision = true;
+	// 	acceptedOriginal = false;
+	// 	confirmedVersionIndex = null;
+	// 	moderationPanelVisible = true;
+	// 	moderationPanelExpanded = false;
+	// 	expandedGroups.clear();
+	// 	showOriginal1 = true;
+	// }
 	
-	function finishHighlighting() {
-		highlightingMode = false;
-		// Go directly to moderation panel (reflection already collected)
-		moderationPanelVisible = true;
-		moderationPanelExpanded = false;
-		expandedGroups.clear();
-	}
+	// STALE: finishHighlighting() - no longer used, highlighting now in Step 1
+	// function finishHighlighting() {
+	// 	highlightingMode = false;
+	// 	// Go directly to moderation panel (reflection already collected)
+	// 	moderationPanelVisible = true;
+	// 	moderationPanelExpanded = false;
+	// 	expandedGroups.clear();
+	// }
 	
-	// Submit reflection before making decision
-	async function submitReflection() {
-		// Validate that reflection is not empty
-		if (!scenarioReflection.trim()) {
-			toast.error('Please provide your thoughts about this interaction');
-			return;
-		}
-		
-		// Save reflection to scenario state
-		saveCurrentScenarioState();
-		
-		// Close modal - decision buttons will now be visible
-		showReflectionModal = false;
-	}
+	// STALE: submitReflection() - no longer used, reflection now in Step 2
+	// async function submitReflection() {
+	// 	// Validate that reflection is not empty
+	// 	if (!scenarioReflection.trim()) {
+	// 		toast.error('Please provide your thoughts about this interaction');
+	// 		return;
+	// 	}
+	// 	
+	// 	// Save reflection to scenario state
+	// 	saveCurrentScenarioState();
+	// 	
+	// 	// Close modal - decision buttons will now be visible
+	// 	showReflectionModal = false;
+	// }
 	
 	// Unified Initial Decision Flow Functions
 	
@@ -2024,6 +2082,7 @@ function cancelReset() {}
 			step1Completed = true;
 			step2Completed = true; // Skip steps 2 and 3
 			step3Completed = true;
+			step4Completed = true; // Skip step 4 as well
 			hasInitialDecision = true;
 			initialDecisionChoice = null;
 			
@@ -2130,9 +2189,21 @@ function cancelReset() {}
 	// Step 3: Save initial decision and navigate to moderation panel
 	async function saveStep3Decision(decision: 'accept_original' | 'moderate' | 'not_applicable') {
 		initialDecisionChoice = decision === 'not_applicable' ? null : decision;
+		
+		// Set step to 4 FIRST before setting completion flags to prevent modal close-reopen bug
+		if (decision !== 'not_applicable') {
+			initialDecisionStep = 4;
+			showInitialDecisionPane = true; // Explicitly keep pane open
+			moderationPanelVisible = true;
+			moderationPanelExpanded = false;
+			expandedGroups.clear();
+		}
+		
+		// Then set completion flags
 		step3Completed = true;
 		hasInitialDecision = true;
-		acceptedOriginal = decision === 'accept_original';
+		// Don't set acceptedOriginal here - only track the choice
+		// acceptedOriginal will be set in Step 4 when they confirm
 		markedNotApplicable = decision === 'not_applicable';
 		
 		// Save immediately to backend
@@ -2171,28 +2242,44 @@ function cancelReset() {}
 		
 		saveCurrentScenarioState();
 		
-		// Navigate to moderation panel (both accept and moderate go here)
-		if (decision !== 'not_applicable') {
-			moderationPanelVisible = true;
-			moderationPanelExpanded = false;
-			expandedGroups.clear();
+		// Handle not applicable case
+		if (decision === 'not_applicable') {
+			// Not applicable - hide the pane
 			showInitialDecisionPane = false;
 		}
 	}
 	
 	// Navigate to a specific step (for back navigation)
 	function navigateToStep(step: number) {
-		// Type guard to ensure step is 1, 2, or 3
-		if (step !== 1 && step !== 2 && step !== 3) return;
+		// Type guard to ensure step is 1, 2, 3, or 4
+		if (step !== 1 && step !== 2 && step !== 3 && step !== 4) return;
 		
 		// Only allow navigation to unlocked steps
 		if (step === 1) {
 			initialDecisionStep = 1;
 			showOriginal1 = true; // Show original for highlighting
+			moderationPanelVisible = false;
+			showInitialDecisionPane = true; // Explicitly keep pane open
 		} else if (step === 2 && step1Completed) {
 			initialDecisionStep = 2;
+			moderationPanelVisible = false;
+			showInitialDecisionPane = true; // Explicitly keep pane open
 		} else if (step === 3 && step2Completed) {
 			initialDecisionStep = 3;
+			moderationPanelVisible = false;
+			showInitialDecisionPane = true; // Explicitly keep pane open
+		} else if (step === 4 && step3Completed) {
+			initialDecisionStep = 4;
+			// If versions exist and comparison view is active, show review buttons instead of moderation panel
+			// This allows users to accept the current version even after navigating back from Step 3
+			if (versions.length > 0 && showComparisonView && confirmedVersionIndex === null) {
+				moderationPanelVisible = false; // Show review buttons
+			} else {
+				moderationPanelVisible = true; // Show moderation panel for new moderation
+			}
+			moderationPanelExpanded = false;
+			expandedGroups.clear();
+			showInitialDecisionPane = true; // Explicitly keep pane open
 		} else {
 			// Step is locked, don't navigate
 			return;
@@ -2210,15 +2297,16 @@ function cancelReset() {}
 		saveCurrentScenarioState();
 	}
 
-	function satisfiedWithOriginalFromPanel() {
-		// Mark as accepted and close panel
-		acceptOriginalResponse();
-		// Don't clear versions - keep them in case parent changes their mind
-		// Just hide them by showing original view
-		showOriginal1 = true;
-		// Log that they chose this from within the moderation panel
-		console.log('User selected "I\'m Satisfied With Original" from moderation panel');
-	}
+	// STALE: satisfiedWithOriginalFromPanel() - not found to be called from UI
+	// function satisfiedWithOriginalFromPanel() {
+	// 	// Mark as accepted and close panel
+	// 	acceptOriginalResponse();
+	// 	// Don't clear versions - keep them in case parent changes their mind
+	// 	// Just hide them by showing original view
+	// 	showOriginal1 = true;
+	// 	// Log that they chose this from within the moderation panel
+	// 	console.log('User selected "I\'m Satisfied With Original" from moderation panel');
+	// }
 
 	async function markNotApplicable() {
 		// No blocking for attention check; allow normal flow
@@ -2227,7 +2315,7 @@ function cancelReset() {}
 		acceptedOriginal = false;
 		confirmedVersionIndex = -1; // Mark as decided
 		moderationPanelVisible = false;
-		highlightingMode = false;
+		// STALE: highlightingMode = false;
 		console.log('Mark not applicable - state:', { hasInitialDecision, markedNotApplicable, acceptedOriginal, confirmedVersionIndex });
 		saveCurrentScenarioState(); // Save the decision
 		toast.success('Scenario marked as not applicable');
@@ -2269,6 +2357,15 @@ function cancelReset() {}
 	function unmarkNotApplicable() {
 		hasInitialDecision = false;
 		markedNotApplicable = false;
+		// Reset all step completion flags to reopen the modal
+		step1Completed = false;
+		step2Completed = false;
+		step3Completed = false;
+		step4Completed = false;
+		// Navigate back to Step 1 and reopen the modal
+		initialDecisionStep = 1;
+		showInitialDecisionPane = true;
+		saveCurrentScenarioState();
 		toast.info('Scenario unmarked - please make a decision');
 		console.log('User unmarked scenario as not applicable:', selectedScenarioIndex);
 	}
@@ -2362,7 +2459,9 @@ function cancelReset() {}
 				versions = [...versions, newVersion]; // Trigger reactivity
 				currentVersionIndex = versions.length - 1;
 				showOriginal1 = false; // Ensure we're viewing the new version
-				showComparisonView = false; // Close comparison view when new version is created
+				showComparisonView = true; // Auto-show side-by-side comparison view
+				moderationPanelVisible = false; // Hide moderation panel so review buttons show
+				moderationPanelExpanded = false; // Collapse panel
 				
 				// Scroll to top to see the new moderated response
 				if (mainContentContainer) {
@@ -2480,6 +2579,9 @@ function cancelReset() {}
 	};
 
 onMount(async () => {
+    // Close assignment steps sidebar by default (scenarios sidebar is controlled separately by sidebarOpen)
+    showSidebar.set(false);
+    
     try {
         // Initialize sidebar state based on screen size for mobile
         sidebarOpen = window.innerWidth >= 768;
@@ -2817,14 +2919,40 @@ onMount(async () => {
 			selectedModerations = new Set(savedState.selectedModerations);
 			customInstructions = [...savedState.customInstructions];
 			showOriginal1 = savedState.showOriginal1;
-			showComparisonView = savedState.showComparisonView ?? false;
+			showComparisonView = savedState.showComparisonView || false;
 			hasInitialDecision = savedState.hasInitialDecision;
 			acceptedOriginal = savedState.acceptedOriginal;
 			attentionCheckSelected = savedState.attentionCheckSelected || false;
 			markedNotApplicable = savedState.markedNotApplicable || false;
 			
+			// Restore unified initial decision flow state
+			initialDecisionStep = savedState.initialDecisionStep || 1;
+			step1Completed = savedState.step1Completed || false;
+			step2Completed = savedState.step2Completed || false;
+			step3Completed = savedState.step3Completed || false;
+			step4Completed = savedState.step4Completed || false;
+			reflectionFeeling = savedState.reflectionFeeling || '';
+			reflectionReason = savedState.reflectionReason || '';
+			initialDecisionChoice = savedState.initialDecisionChoice || null;
+			
+			// If versions exist and not completed, default to Step 4 to match side-by-side display
+			if (versions.length > 0 && !step4Completed) {
+				initialDecisionStep = 4;
+				// Ensure all previous steps are marked complete to allow navigation back
+				step1Completed = true;
+				step2Completed = true;
+				step3Completed = true;
+				showComparisonView = true; // Show comparison view
+				if (currentVersionIndex >= 0 && currentVersionIndex < versions.length) {
+					// Keep the saved currentVersionIndex
+				} else {
+					currentVersionIndex = versions.length - 1; // Default to latest version
+				}
+			}
+			
 			// Set moderation panel visibility based on confirmation state and initial decision
-			moderationPanelVisible = confirmedVersionIndex === null && hasInitialDecision && !acceptedOriginal && !markedNotApplicable;
+			// Show moderation panel when in Step 4 and not yet completed
+			moderationPanelVisible = initialDecisionStep === 4 && confirmedVersionIndex === null && !markedNotApplicable && step3Completed;
 		}
 		
 		// Show warm-up if not completed
@@ -3183,7 +3311,7 @@ onMount(async () => {
 			<div class="flex items-center">
 				{#if !sidebarOpen}
 					<button
-						class="md:hidden px-3 py-2 text-xs rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+						class="px-3 py-2 text-xs rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 						on:click={() => { sidebarOpen = true; }}
 						aria-label="Open scenarios"
 					>Scenarios</button>
@@ -3227,7 +3355,7 @@ onMount(async () => {
 
 	<div class="flex-1 flex bg-white dark:bg-gray-900 overflow-hidden">
 		<!-- Left Sidebar: Scenario List -->
-		<div class="w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-gray-50 dark:bg-gray-900 {sidebarOpen ? '' : 'hidden'} md:flex">
+		<div class="w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-gray-50 dark:bg-gray-900 {sidebarOpen ? 'md:flex' : 'hidden md:hidden'}">
 			<div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-800 p-4">
 				<div class="flex items-center justify-between">
 					<h1 class="text-xl font-bold text-gray-900 dark:text-white">Scenarios</h1>
@@ -3243,7 +3371,7 @@ onMount(async () => {
 							</svg>
 							<span class="hidden sm:inline">Tutorial</span>
 						</button>
-						<button class="md:hidden text-xs px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800" on:click={() => { sidebarOpen = !sidebarOpen; }} aria-label="Toggle scenarios">{sidebarOpen ? 'Hide' : 'Show'}</button>
+						<button class="text-xs px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800" on:click={() => { sidebarOpen = !sidebarOpen; }} aria-label="Toggle scenarios">{sidebarOpen ? 'Hide' : 'Show'}</button>
 					</div>
 				</div>
 				<p class="text-sm text-gray-600 dark:text-gray-400">
@@ -3403,13 +3531,13 @@ onMount(async () => {
 			<!-- Child Prompt Bubble -->
 				<div class="flex justify-end">
 					<div class="max-w-[80%] bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm relative select-text {
-						initialDecisionStep === 1 ? 'cursor-text hover:ring-2 hover:ring-blue-300 dark:hover:ring-blue-600 transition-all' : ''
+						(initialDecisionStep === 1 && !acceptedOriginal) ? 'cursor-text hover:ring-2 hover:ring-blue-300 dark:hover:ring-blue-600 transition-all' : ''
 					}"
 						bind:this={promptContainer1}
 						on:mouseup={handleTextSelection}
-						title={initialDecisionStep === 1 ? 'Drag over text to highlight concerns' : ''}
+						title={(initialDecisionStep === 1 && !acceptedOriginal) ? 'Drag over text to highlight concerns' : ''}
 					>
-						{#if initialDecisionStep === 1 && highlightedTexts1.length === 0}
+						{#if initialDecisionStep === 1 && !acceptedOriginal && highlightedTexts1.length === 0}
 							<div class="absolute -top-6 right-0 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow-sm border border-gray-200 dark:border-gray-700 pointer-events-none">
 								← Drag to highlight
 							</div>
@@ -3439,73 +3567,105 @@ onMount(async () => {
 							
 							<!-- Right Column: Moderated Response -->
 							<div class="max-w-full">
-								<div class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
-									Moderated Version {currentVersionIndex + 1}
+								<div class="flex items-center justify-between mb-2">
+									<div class="text-xs font-semibold text-gray-600 dark:text-gray-400">
+										Moderated Version {currentVersionIndex + 1}
+									</div>
+									<!-- Version Navigation Controls -->
+									{#if versions.length > 1}
+										<div class="flex items-center space-x-1">
+											<button
+												on:click={() => navigateToVersion('prev')}
+												disabled={currentVersionIndex <= 0 || confirmedVersionIndex !== null}
+												class="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
+												title="Previous version"
+											>
+												<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+												</svg>
+											</button>
+											
+											<span class="text-xs font-medium text-gray-700 dark:text-gray-300">
+												{confirmedVersionIndex !== null && currentVersionIndex === confirmedVersionIndex ? '✓ ' : ''}
+												{currentVersionIndex + 1}/{versions.length}
+											</span>
+											
+											<button
+												on:click={() => navigateToVersion('next')}
+												disabled={currentVersionIndex >= versions.length - 1 || confirmedVersionIndex !== null}
+												class="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
+												title="Next version"
+											>
+												<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+												</svg>
+											</button>
+										</div>
+									{/if}
 								</div>
 								<div class="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
 									<div class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
 										{@html versions[currentVersionIndex].response}
 									</div>
+									
+									<!-- Applied Strategies inside moderated version -->
+									{#if versions[currentVersionIndex].strategies.length > 0 || versions[currentVersionIndex].customInstructions.length > 0}
+										<div class="mt-3 pt-3 border-t border-gray-300 dark:border-gray-600">
+											<p class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+												Applied Strategies:
+											</p>
+											<div class="flex flex-wrap gap-1">
+												{#each versions[currentVersionIndex].strategies as strategy}
+													<span class="inline-flex items-center px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded">
+														{strategy}
+													</span>
+												{/each}
+												{#each versions[currentVersionIndex].customInstructions as custom}
+													<span class="inline-flex items-center px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 rounded">
+														Custom: {custom.text}
+													</span>
+												{/each}
+											</div>
+										</div>
+									{/if}
 								</div>
 							</div>
 						</div>
 					{:else}
 						<!-- Single Response View -->
-						<div class="flex justify-start">
-						<div 
-							bind:this={responseContainer1}
-							on:mouseup={handleTextSelection}
-							class="max-w-[80%] bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm relative select-text {
-								initialDecisionStep === 1 ? 'cursor-text hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-600 transition-all' : ''
-							}"
-							title={initialDecisionStep === 1 ? 'Drag over text to highlight concerns' : ''}
-						>
-							{#if initialDecisionStep === 1 && highlightedTexts1.length === 0}
-								<div class="absolute -top-6 left-0 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow-sm border border-gray-200 dark:border-gray-700 pointer-events-none">
-									Drag to highlight →
-								</div>
-							{/if}
-								<div class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap response-text">
-									{@html response1HTML}
-								</div>
-								<!-- Auto-highlight enabled: No button needed -->
-								
-							<!-- Original Accepted Indicator -->
-							{#if acceptedOriginal}
-								<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
-									<div class="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
-										<div class="flex items-center space-x-2">
-											<svg class="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-											</svg>
-											<span class="text-xs font-medium text-green-700 dark:text-green-300">
-												Original response accepted as satisfactory
-											</span>
-										</div>
-										<button
-											on:click={unmarkSatisfaction}
-											class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
-										>
-											Undo
-										</button>
-									</div>
-								</div>
-							{/if}
+				<div class="flex justify-start">
+					<div 
+						bind:this={responseContainer1}
+						on:mouseup={handleTextSelection}
+						class="max-w-[80%] bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm relative select-text {
+							(initialDecisionStep === 1 && !acceptedOriginal) ? 'cursor-text hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-600 transition-all' : ''
+						}"
+						title={(initialDecisionStep === 1 && !acceptedOriginal) ? 'Drag over text to highlight concerns' : ''}
+					>
+						{#if initialDecisionStep === 1 && !acceptedOriginal && highlightedTexts1.length === 0}
+							<div class="absolute -top-6 left-0 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow-sm border border-gray-200 dark:border-gray-700 pointer-events-none">
+								Drag to highlight →
+							</div>
+						{/if}
+							<div class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap response-text">
+								{@html response1HTML}
+							</div>
+							<!-- Auto-highlight enabled: No button needed -->
 							
-						<!-- Not Applicable Indicator -->
-						{#if markedNotApplicable}
+						<!-- Original Accepted Indicator -->
+						{#if acceptedOriginal}
 							<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
-								<div class="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+								<div class="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
 									<div class="flex items-center space-x-2">
-										<svg class="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+										<svg class="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
 										</svg>
-										<span class="text-xs font-medium text-gray-700 dark:text-gray-300">
-											Marked as not applicable
+										<span class="text-xs font-medium text-green-700 dark:text-green-300">
+											Original response accepted as satisfactory
 										</span>
 									</div>
 									<button
-										on:click={unmarkNotApplicable}
+										on:click={unmarkSatisfaction}
 										class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
 									>
 										Undo
@@ -3513,182 +3673,96 @@ onMount(async () => {
 								</div>
 							</div>
 						{/if}
-						</div>
-						</div>
-					{/if}
-					
-					<!-- Applied Strategies Display (below comparison view) -->
-					{#if showComparisonView && !acceptedOriginal && currentVersionIndex >= 0 && currentVersionIndex < versions.length && (versions[currentVersionIndex].strategies.length > 0 || versions[currentVersionIndex].customInstructions.length > 0)}
+						
+					<!-- Not Applicable Indicator -->
+					{#if markedNotApplicable}
 						<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
-							<p class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-								Applied Strategies:
-							</p>
-							<div class="flex flex-wrap gap-1">
-								{#each versions[currentVersionIndex].strategies as strategy}
-									<span class="inline-flex items-center px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded">
-										{strategy}
-									</span>
-								{/each}
-								{#each versions[currentVersionIndex].customInstructions as custom}
-									<span class="inline-flex items-center px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 rounded">
-										Custom: {custom.text}
-									</span>
-								{/each}
-							</div>
-						</div>
-					{/if}
-					
-					<!-- Version Navigation and View Toggle -->
-					{#if versions.length > 0 && !acceptedOriginal && currentVersionIndex >= 0}
-							<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600 flex items-center justify-between">
-								<button
-									on:click={() => {
-										console.log('View Original button clicked, current showComparisonView:', showComparisonView);
-										console.log('versions.length:', versions.length, 'currentVersionIndex:', currentVersionIndex);
-										showComparisonView = !showComparisonView;
-										console.log('showComparisonView after toggle:', showComparisonView);
-										// When hiding comparison view, ensure we're showing a valid version
-										if (!showComparisonView && currentVersionIndex < 0) {
-											currentVersionIndex = versions.length - 1;
-										}
-									}}
-									class="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center space-x-1"
-								>
-									<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+							<div class="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+								<div class="flex items-center space-x-2">
+									<svg class="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
 									</svg>
-									<span>{showComparisonView ? 'Hide Comparison' : 'View Original'}</span>
-								</button>
-									
-									<!-- Version Navigation Controls -->
-									<div class="flex items-center space-x-2">
-										<button
-											on:click={() => navigateToVersion('prev')}
-											disabled={currentVersionIndex <= 0 || confirmedVersionIndex !== null}
-											class="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
-										>
-											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-											</svg>
-										</button>
-										
-										<span class="text-xs font-medium text-gray-700 dark:text-gray-300">
-											{confirmedVersionIndex !== null && currentVersionIndex === confirmedVersionIndex ? '✓ ' : ''}
-											{currentVersionIndex + 1}/{versions.length}
-										</span>
-										
-										<button
-											on:click={() => navigateToVersion('next')}
-											disabled={currentVersionIndex >= versions.length - 1 || confirmedVersionIndex !== null}
-											class="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
-										>
-											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-											</svg>
-										</button>
-									</div>
+									<span class="text-xs font-medium text-gray-700 dark:text-gray-300">
+										Marked as not applicable
+									</span>
 								</div>
-							{/if}
-							
-					{#if highlightedTexts1.length > 0 && (showOriginal1 || showComparisonView)}
-					<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
-						<div class="flex items-center justify-between mb-1">
-							<p class="text-xs font-semibold text-gray-700 dark:text-gray-300">Highlighted Concerns ({highlightedTexts1.length}):</p>
-							{#if moderationPanelVisible}
 								<button
-									on:click={returnToHighlighting}
-									class="text-xs px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
+									on:click={unmarkNotApplicable}
+									class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
 								>
-									Change/Add Highlighted Text
+									Undo
 								</button>
-							{/if}
-						</div>
-						<div class="flex flex-wrap gap-1">
-							{#each highlightedTexts1 as highlight}
-								<button
-									class="inline-flex items-center px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-700 text-gray-800 dark:text-gray-100 rounded hover:bg-yellow-200 dark:hover:bg-yellow-600 transition-colors"
-									on:click={() => removeHighlight(highlight)}
-									title="Click to remove"
-								>
-									{highlight.length > 30 ? highlight.substring(0, 30) + '...' : highlight}
-									<svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-									</svg>
-								</button>
-							{/each}
-						</div>
-						</div>
-					{/if}
-					
-					<!-- Applied Strategies Display (below response) -->
-					{#if versions.length > 0 && !showComparisonView && !acceptedOriginal && currentVersionIndex >= 0 && currentVersionIndex < versions.length}
-						<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
-							<p class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-								Applied Strategies:
-							</p>
-							<div class="flex flex-wrap gap-1">
-								{#each versions[currentVersionIndex].strategies as strategy}
-									<span class="inline-flex items-center px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded">
-										{strategy}
-									</span>
-								{/each}
-								{#each versions[currentVersionIndex].customInstructions as custom}
-									<span class="inline-flex items-center px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 rounded">
-										Custom: {custom.text}
-									</span>
-								{/each}
 							</div>
 						</div>
 					{/if}
-					
-					<!-- Confirmation: two-button choice after moderation -->
-					<div class="mt-3">
-							{#if confirmedVersionIndex === null}
-							<div class="flex space-x-3">
-								<button
-										on:click={() => {
-											// Show moderation panel again for another iteration
-											moderationPanelVisible = true;
-											moderationPanelExpanded = true;
-											toast.info('Select moderation strategies to create another version');
-											
-											// Scroll to moderation panel after it opens
-											setTimeout(() => {
-												if (moderationPanelElement) {
-													moderationPanelElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-												}
-											}, 100);
-										}}
-										class="flex-1 px-6 py-2 rounded-lg font-medium transition-all duration-200 bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl"
-									>
-										Try Again
-								</button>
-								<button
-									on:click={() => {
-										confirmCurrentVersion();
-										// Confirmation will be saved in the session data
-									}}
-									class="flex-1 px-6 py-2 rounded-lg font-medium transition-all duration-200 bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl"
-								>
-									This is Good
-								</button>
+							
+							
+						{#if highlightedTexts1.length > 0 && showOriginal1}
+							<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
+								<div class="flex items-center justify-between mb-1">
+									<p class="text-xs font-semibold text-gray-700 dark:text-gray-300">Highlighted Concerns ({highlightedTexts1.length}):</p>
+									{#if moderationPanelVisible}
+										<button
+											on:click={returnToHighlighting}
+											class="text-xs px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
+										>
+											Change/Add Highlighted Text
+										</button>
+									{/if}
+								</div>
+								<div class="flex flex-wrap gap-1">
+									{#each highlightedTexts1 as highlight}
+										<button
+											class="inline-flex items-center px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-700 text-gray-800 dark:text-gray-100 rounded hover:bg-yellow-200 dark:hover:bg-yellow-600 transition-colors"
+											on:click={() => removeHighlight(highlight)}
+											title="Click to remove"
+										>
+											{highlight.length > 30 ? highlight.substring(0, 30) + '...' : highlight}
+											<svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+											</svg>
+										</button>
+									{/each}
+								</div>
 							</div>
 						{/if}
+							
+						<!-- Applied Strategies Display (below response) -->
+						{#if versions.length > 0 && !showOriginal1 && !acceptedOriginal && currentVersionIndex >= 0 && currentVersionIndex < versions.length}
+							<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
+								<p class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+									Applied Strategies:
+								</p>
+								<div class="flex flex-wrap gap-1">
+									{#each versions[currentVersionIndex].strategies as strategy}
+										<span class="inline-flex items-center px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded">
+											{strategy}
+										</span>
+									{/each}
+									{#each versions[currentVersionIndex].customInstructions as custom}
+										<span class="inline-flex items-center px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 rounded">
+											Custom: {custom.text}
+										</span>
+									{/each}
+								</div>
+							</div>
+						{/if}
+						</div>
 					</div>
-		{/if}
+					{/if}
+				{/if}
 
 		<!-- Unified Initial Decision Pane -->
-		{#if showInitialDecisionPane && !hasInitialDecision && (!isCustomScenario || customScenarioGenerated)}
+		{#if showInitialDecisionPane && !step4Completed && !markedNotApplicable && (initialDecisionStep >= 1 && initialDecisionStep <= 4) && (!isCustomScenario || customScenarioGenerated)}
 			<div class="flex justify-center mt-6">
 				<div class="w-full max-w-4xl px-4">
 					<div class="p-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
 						<!-- Step Indicators -->
 						<div class="flex items-center justify-between mb-6">
-							{#each [1, 2, 3] as step}
-								{@const stepCompleted = (step === 1 && step1Completed) || (step === 2 && step2Completed) || (step === 3 && step3Completed)}
+							{#each [1, 2, 3, 4] as step}
+								{@const stepCompleted = (step === 1 && step1Completed) || (step === 2 && step2Completed) || (step === 3 && step3Completed) || (step === 4 && step4Completed)}
 								{@const stepCurrent = step === initialDecisionStep}
-								{@const stepLocked = (step > 1 && !step1Completed) || (step > 2 && !step2Completed)}
+								{@const stepLocked = (step > 1 && !step1Completed) || (step > 2 && !step2Completed) || (step > 3 && !step3Completed)}
 								<button
 									on:click={() => navigateToStep(step)}
 									disabled={stepLocked}
@@ -3712,12 +3786,12 @@ onMount(async () => {
 										{/if}
 									</div>
 									<span class="text-sm font-medium hidden sm:inline">
-										{step === 1 ? 'Highlight' : step === 2 ? 'Reflect' : 'Decide'}
+										{step === 1 ? 'Highlight' : step === 2 ? 'Reflect' : step === 3 ? 'Decide' : 'Update'}
 									</span>
 								</button>
-								{#if step < 3}
+								{#if step < 4}
 									<div class="flex-1 h-0.5 mx-2 transition-colors {
-										((step === 1 && step1Completed) || (step === 2 && step2Completed)) ? 'bg-gray-400 dark:bg-gray-500' : 'bg-gray-200 dark:bg-gray-700'
+										((step === 1 && step1Completed) || (step === 2 && step2Completed) || (step === 3 && step3Completed)) ? 'bg-gray-400 dark:bg-gray-500' : 'bg-gray-200 dark:bg-gray-700'
 									}"></div>
 								{/if}
 							{/each}
@@ -3804,9 +3878,20 @@ onMount(async () => {
 						{#if initialDecisionStep === 2}
 							<div class="space-y-4">
 								<div>
-									<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-										Step 2: How do you feel about this interaction?
-									</h3>
+									<div class="flex items-center justify-between mb-2">
+										<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+											Step 2: How do you feel about this interaction?
+										</h3>
+										<button
+											on:click={() => navigateToStep(1)}
+											class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200"
+										>
+											<svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+											</svg>
+											<span>Back</span>
+										</button>
+									</div>
 									<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
 										Please describe how you feel about this interaction and why using the template below.
 									</p>
@@ -3814,7 +3899,7 @@ onMount(async () => {
 								<div class="space-y-4">
 									<div>
 										<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-											I feel...
+											I feel... <span class="text-red-500">*</span>
 										</label>
 										<input
 											type="text"
@@ -3825,7 +3910,7 @@ onMount(async () => {
 									</div>
 									<div>
 										<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-											because...
+											because... <span class="text-red-500">*</span>
 										</label>
 										<textarea
 											bind:value={reflectionReason}
@@ -3836,12 +3921,6 @@ onMount(async () => {
 									</div>
 								</div>
 								<div class="flex space-x-3">
-									<button
-										on:click={() => navigateToStep(1)}
-										class="px-6 py-3 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 font-medium rounded-lg transition-colors"
-									>
-										Back
-									</button>
 									<button
 										on:click={completeStep2}
 										disabled={!reflectionFeeling.trim() || !reflectionReason.trim()}
@@ -3857,9 +3936,20 @@ onMount(async () => {
 						{#if initialDecisionStep === 3}
 							<div class="space-y-4">
 								<div>
-									<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-										Step 3: Would you change the response?
-									</h3>
+									<div class="flex items-center justify-between mb-2">
+										<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+											Step 3: Would you change the response?
+										</h3>
+										<button
+											on:click={() => navigateToStep(2)}
+											class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200"
+										>
+											<svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+											</svg>
+											<span>Back</span>
+										</button>
+									</div>
 									{#if reflectionFeeling.trim() || reflectionReason.trim()}
 										<div class="mb-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
 											<p class="text-xs text-gray-600 dark:text-gray-400 mb-1">
@@ -3903,12 +3993,298 @@ onMount(async () => {
 										<span class="text-xs opacity-90">Change the response</span>
 									</button>
 								</div>
-								<button
-									on:click={() => navigateToStep(2)}
-									class="w-full px-6 py-2 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 font-medium rounded-lg transition-colors"
-								>
-									Back
-								</button>
+							</div>
+						{/if}
+
+						<!-- Step 4: Update -->
+						{#if initialDecisionStep === 4}
+							<div class="space-y-4">
+								<div>
+									<div class="flex items-center justify-between mb-2">
+										<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+											Step 4: Update
+										</h3>
+										<button
+											on:click={() => navigateToStep(3)}
+											disabled={moderationLoading}
+											class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 disabled:opacity-50"
+										>
+											<svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+											</svg>
+											<span>Back</span>
+										</button>
+									</div>
+								{#if versions.length > 0 && showComparisonView}
+									<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+										Review the moderated version above. You can confirm it or try different strategies.
+									</p>
+								{:else if initialDecisionChoice === 'accept_original'}
+									<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+										You accepted the original response. Would you like to create an updated version anyway, or confirm your acceptance?
+									</p>
+								{:else if initialDecisionChoice === 'moderate'}
+									<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+										You decided to change the response. Select moderation strategies to create an updated version.
+									</p>
+								{/if}
+							</div>
+							
+							<!-- Review buttons when comparison view is active -->
+							{#if versions.length > 0 && showComparisonView && !moderationPanelVisible}
+								<div class="flex space-x-3">
+									<button
+										on:click={() => {
+											// Show moderation panel for another iteration while keeping comparison view visible
+											moderationPanelVisible = true;
+											moderationPanelExpanded = true;
+											toast.info('Select moderation strategies to create another version');
+											
+											// Scroll to moderation panel after it opens
+											setTimeout(() => {
+												if (moderationPanelElement) {
+													moderationPanelElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+												}
+											}, 100);
+										}}
+										class="flex-1 px-6 py-2 rounded-lg font-medium transition-all duration-200 bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl"
+									>
+										Moderate Again
+									</button>
+									<button
+										on:click={() => {
+											confirmCurrentVersion();
+											// Confirmation will be saved in the session data
+										}}
+										class="flex-1 px-6 py-2 rounded-lg font-medium transition-all duration-200 bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl"
+									>
+										This is Good
+									</button>
+								</div>
+							{:else}
+							<!-- Confirm Acceptance button (shown when user chose accept_original in Step 3) -->
+							{#if initialDecisionChoice === 'accept_original'}
+								<div class="mb-4">
+									<button
+										on:click={acceptOriginalResponse}
+										disabled={moderationLoading}
+										class="w-full px-4 py-2.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
+									>
+										Confirm Acceptance
+									</button>
+								</div>
+							{/if}
+							
+							<!-- Strategy instruction and Clear button -->
+								<div class="flex items-center justify-between mb-3">
+									<p class="text-sm text-gray-600 dark:text-gray-400">
+										Choose up to <b>3 strategies</b> to improve the AI's response.
+									</p>
+									{#if selectedModerations.size > 0 || attentionCheckSelected}
+										<button
+											on:click={clearSelections}
+											class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+										>
+											Clear All
+										</button>
+									{/if}
+								</div>
+
+								<!-- Grouped Strategy Options (Legacy validated design) -->
+								<div class="space-y-3 mb-4" bind:this={moderationPanelElement}>
+									{#each Object.entries(moderationOptions) as [category, options]}
+										<div class="border-2 {
+											category === 'Refuse and Remove' ? 'border-red-500 dark:border-red-600' :
+											category === 'Investigate and Empathize' ? 'border-blue-500 dark:border-blue-600' :
+											category === 'Correct their Understanding' ? 'border-green-500 dark:border-green-600' :
+											category === 'Match their Age' ? 'border-yellow-500 dark:border-yellow-600' :
+											category === 'Defer to Support' ? 'border-purple-500 dark:border-purple-600' :
+											'border-pink-500 dark:border-pink-600'
+										} rounded-lg bg-gray-50 dark:bg-gray-800/50">
+											<!-- Group Header -->
+											<button
+												on:click={() => toggleGroupExpansion(category)}
+												class="w-full p-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors rounded-lg"
+											>
+												<div class="flex items-center justify-between">
+													<div class="flex items-center">
+														<span class="w-3 h-3 rounded-full mr-3 {
+															category === 'Refuse and Remove' ? 'bg-red-500' :
+															category === 'Investigate and Empathize' ? 'bg-blue-500' :
+															category === 'Correct their Understanding' ? 'bg-green-500' :
+															category === 'Match their Age' ? 'bg-yellow-500' :
+															category === 'Defer to Support' ? 'bg-purple-500' :
+															'bg-pink-500'
+														}"></span>
+														<h4 class="text-sm font-bold text-gray-900 dark:text-white">
+															{category === 'Custom' && showCustomInput ? '✨ Custom (Open)' : category}
+														</h4>
+													</div>
+													<div class="flex items-center space-x-2">
+														{#if (category === 'Attention Check' && attentionCheckSelected) || options.some(option => selectedModerations.has(option)) || (category === 'Custom' && customInstructions.length > 0)}
+															<span class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full">
+																{#if category === 'Custom'}
+																	{customInstructions.filter(c => selectedModerations.has(c.id)).length} selected
+																{:else if category === 'Attention Check'}
+																	{attentionCheckSelected ? 1 : 0} selected
+																{:else}
+																	{options.filter(option => selectedModerations.has(option)).length} selected
+																{/if}
+															</span>
+														{/if}
+														{#if category !== 'Custom' || !showCustomInput}
+															<svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform {
+																expandedGroups.has(category) || (category === 'Custom' && showCustomInput) ? 'rotate-180' : ''
+															}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+															</svg>
+														{:else}
+															<svg class="w-5 h-5 text-purple-500 dark:text-purple-400 transition-transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+															</svg>
+														{/if}
+													</div>
+												</div>
+											</button>
+											
+											<!-- Group Content (2-column grid with button toggles) -->
+											{#if expandedGroups.has(category) && category !== 'Custom'}
+												<div class="px-3 pb-3">
+													<div class="grid grid-cols-2 gap-2">
+														{#each options as option}
+															<Tooltip
+																content={moderationTooltips[option] || ''}
+																placement="top-end"
+																className="w-full"
+																tippyOptions={{ delay: [200, 0] }}
+															>
+																<button
+																	on:click={() => toggleModerationSelection(option)}
+																	disabled={moderationLoading}
+																	aria-pressed={(option === 'I read the instructions' ? attentionCheckSelected : selectedModerations.has(option))}
+																	class="p-2 text-xs font-medium text-center rounded-lg transition-all min-h-[40px] flex items-center justify-center {
+																		(option === 'I read the instructions' ? attentionCheckSelected : selectedModerations.has(option))
+																			? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400 shadow-lg'
+																			: 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'
+																	} disabled:opacity-50"
+																>
+																	{option}
+																</button>
+															</Tooltip>
+														{/each}
+													</div>
+												</div>
+											{/if}
+											
+											<!-- Custom Input Field -->
+											{#if category === 'Custom' && showCustomInput}
+												<div class="px-3 pb-3 pt-2">
+													<div class="space-y-2">
+														<label class="block text-xs font-medium text-purple-900 dark:text-purple-200">
+															Enter custom moderation instruction:
+														</label>
+														<textarea
+															bind:value={customInstructionInput}
+															rows="2"
+															placeholder="E.g., Emphasize problem-solving skills..."
+															class="w-full px-3 py-2 text-sm border border-purple-300 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+															on:keydown={(e) => {
+																if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+																	addCustomInstruction();
+																} else if (e.key === 'Escape') {
+																	cancelCustomInput();
+																}
+															}}
+														></textarea>
+														<div class="flex justify-end space-x-2">
+															<button
+																on:click={cancelCustomInput}
+																class="px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+															>
+																Cancel
+															</button>
+															<button
+																on:click={addCustomInstruction}
+																class="px-3 py-1 text-xs font-medium bg-purple-500 hover:bg-purple-600 text-white rounded transition-colors"
+															>
+																Add
+															</button>
+														</div>
+													</div>
+												</div>
+											{/if}
+										</div>
+									{/each}
+								</div>
+
+								<!-- Custom Instructions Display -->
+								{#if customInstructions.length > 0}
+									<div class="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg mb-3">
+										<h4 class="text-xs font-semibold text-purple-900 dark:text-purple-200 mb-2">
+											Custom Instructions ({customInstructions.length}):
+										</h4>
+										<div class="space-y-2">
+											{#each customInstructions as custom}
+												<div class="flex items-start justify-between bg-white dark:bg-purple-900/30 p-2 rounded border-2 {
+													selectedModerations.has(custom.id) 
+														? 'border-purple-500' 
+														: 'border-transparent'
+												}">
+													<button
+														on:click={() => toggleModerationSelection(custom.id)}
+														class="flex-1 text-left mr-2"
+													>
+														<div class="flex items-center space-x-1 mb-1">
+															<div class="w-3 h-3 rounded border-2 {
+																selectedModerations.has(custom.id)
+																	? 'bg-purple-500 border-purple-500'
+																	: 'border-gray-300 dark:border-gray-600'
+															} flex items-center justify-center">
+																{#if selectedModerations.has(custom.id)}
+																	<svg class="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+																	</svg>
+																{/if}
+															</div>
+															<p class="text-xs text-purple-800 dark:text-purple-200 font-medium">
+																#{customInstructions.indexOf(custom) + 1}
+															</p>
+														</div>
+														<p class="text-xs text-gray-700 dark:text-gray-300 line-clamp-2">
+															{custom.text}
+														</p>
+													</button>
+													<button
+														on:click={() => removeCustomInstruction(custom.id)}
+														class="text-red-500 hover:text-red-700 dark:text-red-400 flex-shrink-0"
+														title="Remove"
+													>
+														<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+															<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+														</svg>
+													</button>
+												</div>
+											{/each}
+										</div>
+									</div>
+								{/if}
+
+								<!-- Action Buttons -->
+								<div class="flex space-x-3">
+									<button
+										on:click={applySelectedModerations}
+										disabled={moderationLoading || (selectedModerations.size === 0 && !attentionCheckSelected)}
+										class="flex-1 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center space-x-2"
+									>
+										{#if moderationLoading}
+											<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+											<span>Creating Version...</span>
+										{:else}
+											<span>Generate New Version</span>
+										{/if}
+									</button>
+								</div>
+							{/if}
 							</div>
 						{/if}
 					</div>
@@ -3917,7 +4293,7 @@ onMount(async () => {
 		{/if}
 
 		<!-- Confirmation Indicator moved below the response area -->
-		{#if versions.length > 0 && !showComparisonView && confirmedVersionIndex !== null}
+		{#if versions.length > 0 && !showOriginal1 && confirmedVersionIndex !== null}
 			{#if confirmedVersionIndex === currentVersionIndex}
 				<div class="mt-3">
 					<div class="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
@@ -3942,28 +4318,30 @@ onMount(async () => {
 				</div>
 			{:else}
 				<div class="mt-3">
-					<div class="flex items-center justify-center px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+					<div class="flex items-center justify-between px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
 						<span class="text-xs font-medium text-gray-600 dark:text-gray-400">
 							Another version is confirmed
 						</span>
+						<button
+							on:click={() => {
+								confirmCurrentVersion(); // Unconfirm to go back
+							}}
+							class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+						>
+							Back
+						</button>
 					</div>
 				</div>
 			{/if}
 		{/if}
 
-		<!-- Moderation Panel -->
-		{#if moderationPanelVisible}
+		<!-- Moderation Panel (Legacy - only shown when not in Step 4) -->
+		{#if moderationPanelVisible && initialDecisionStep !== 4}
 			<div class="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700" bind:this={moderationPanelElement}>
 					<div class="flex items-center justify-between mb-1">
 						<h3 class="text-sm font-semibold text-gray-900 dark:text-white">Select Moderation Strategies</h3>
 						<button
-							on:click={() => {
-								moderationPanelVisible = false;
-								moderationPanelExpanded = false;
-								expandedGroups.clear();
-								highlightingMode = false;
-								hasInitialDecision = false;
-							}}
+							on:click={() => navigateToStep(3)}
 							disabled={moderationLoading}
 							class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 disabled:opacity-50"
 						>

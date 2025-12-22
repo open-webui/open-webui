@@ -3,6 +3,11 @@ import { defineConfig } from 'vite';
 
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 
+// Get backend port from environment variable, default to 8080
+const BACKEND_PORT = process.env.BACKEND_PORT || '8080';
+const BACKEND_HOST = process.env.BACKEND_HOST || 'localhost';
+const backendUrl = `http://${BACKEND_HOST}:${BACKEND_PORT}`;
+
 export default defineConfig({
 	plugins: [
 		sveltekit(),
@@ -19,22 +24,22 @@ export default defineConfig({
 	server: {
 		proxy: {
 			'/api': {
-				target: 'http://localhost:8080',
+				target: backendUrl,
 				changeOrigin: true,
 				secure: false
 			},
 			'/ollama': {
-				target: 'http://localhost:8080',
+				target: backendUrl,
 				changeOrigin: true,
 				secure: false
 			},
 			'/openai': {
-				target: 'http://localhost:8080',
+				target: backendUrl,
 				changeOrigin: true,
 				secure: false
 			},
 			'/ws': {
-				target: 'http://localhost:8080',
+				target: backendUrl,
 				changeOrigin: true,
 				secure: false,
 				ws: true

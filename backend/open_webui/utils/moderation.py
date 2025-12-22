@@ -34,7 +34,7 @@ async def multi_moderations_openai(
     original_response: str = None,
     highlighted_texts: List[str] = None,
     api_key: str = None,
-    model: str = "gpt-5-nano",
+    model: str = "gpt-5.2-chat-latest",
     max_chars: int = 600,
     custom_instructions: List[str] = None,
     child_age: str = None,
@@ -185,7 +185,7 @@ async def generate_second_pass_prompt(
     initial_prompt: str,
     initial_response: str,
     api_key: str = None,
-    model: str = "gpt-5-nano",
+    model: str = "gpt-5.2-chat-latest",
 ) -> str:
     """
     Generate a realistic follow-up question a child might ask based on
