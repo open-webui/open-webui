@@ -56,6 +56,43 @@
 			return str;
 		}
 	};
+
+	const createTextFragment = (text: string) => {
+		if (!text) return '';
+		const normalized = text.trim().replace(/\s+/g, ' ');
+		const words = normalized.split(' ').filter(w => {
+			// Filter out empty strings, URLs, and emojis
+			if (w.length === 0) return false;
+			if (w.includes('http://') || w.includes('https://')) return false;
+			if (/[\u{1F300}-\u{1F9FF}]/u.test(w)) return false;
+			return true;
+		});
+		if (words.length === 0) return '';
+		
+		// Create fragment using first and last word after removing punctuation
+		const firstWord = words[0].replace(/[^\w]/g, '');
+		const lastWord = words[words.length - 1].replace(/[^\w]/g, '');
+		const fragment = words.length === 1 ? firstWord : `${firstWord},${lastWord}`;
+		
+		return fragment;
+	};
+
+	const getSnippetUrl = (document: any) => {
+		if (!document?.metadata?.file_id && !document?.source?.url?.includes('http')) {
+			return null;
+		}
+		
+		const baseUrl = document?.metadata?.file_id
+			? `${WEBUI_API_BASE_URL}/files/${document?.metadata?.file_id}/content${document?.metadata?.page !== undefined ? `#page=${document.metadata.page + 1}` : ''}`
+			: document?.source?.url?.includes('http')
+				? document.source.url
+				: null;
+		
+		if (!baseUrl || !document?.document) return null;
+
+		const snippet = createTextFragment(document.document);
+		return `${baseUrl}#:~:text=${snippet}`;
+	};
 </script>
 
 <Modal size="lg" bind:show>
@@ -157,6 +194,35 @@
 										({$i18n.t('page')}
 										{document.metadata.page + 1})
 									</span>
+								{/if}
+
+								{#if getSnippetUrl(document)}
+									<Tooltip
+										className="w-fit"
+										content={$i18n.t('Show snippet in source')}
+										placement="top-start"
+										tippyOptions={{ duration: [500, 0] }}
+									>
+										<a
+											href={getSnippetUrl(document)}
+											target="_blank"
+											class="px-1.5 py-0.5 rounded-sm font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition text-xs flex items-center gap-1"
+										>
+											<span>{$i18n.t('Show Snippet')}</span>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 16 16"
+												fill="currentColor"
+												class="size-4"
+											>
+												<path
+													fill-rule="evenodd"
+													d="M4.22 11.78a.75.75 0 0 1 0-1.06L9.44 5.5H5.75a.75.75 0 0 1 0-1.5h5.5a.75.75 0 0 1 .75.75v5.5a.75.75 0 0 1-1.5 0V6.56l-5.22 5.22a.75.75 0 0 1-1.06 0Z"
+													clip-rule="evenodd"
+												/>
+											</svg>
+										</a>
+									</Tooltip>
 								{/if}
 							</div>
 
