@@ -53,7 +53,7 @@
 			await tick();
 			liveRegionText = '';
 			setTimeout(() => {
-				liveRegionText = `${$i18n.t('Active Users')}: ${$activeUserIds?.length}`;
+				liveRegionText = `${$i18n.t('Connected Users')}: ${$activeUserIds?.length}`;
 			}, 40);
 		}
 	}}
@@ -238,7 +238,7 @@
 
 						<div class=" ">
 							<span class="">
-								{$i18n.t('Active Users')}:
+								{$i18n.t('Connected Users')}:
 							</span>
 							<span class=" font-semibold">
 								{$activeUserIds?.length}

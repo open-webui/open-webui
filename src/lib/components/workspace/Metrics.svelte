@@ -23,6 +23,7 @@
 	} from '$lib/apis/metrics';
 	import { Chart, registerables } from 'chart.js';
 	import { user } from '$lib/stores';
+	import QuestionMarkCircle from '$lib/components/icons/QuestionMarkCircle.svelte';
 
 	// Replace date-fns with native date formatting
 	function formatDate(date) {
@@ -1124,7 +1125,7 @@
 							</h5>
 							<h4 class="text-3xl font-bold text-blue-700 dark:text-blue-400">{dailyUsers}</h4>
 							<div class="text-sm text-gray-600 dark:text-gray-400 mt-2">
-								{$i18n.t('Number of users active in the last 24 hours')}
+								{$i18n.t('Number of users that have sent at least one prompt in the last 24 hours')}
 							</div>
 						</div>
 					</div>
@@ -1140,9 +1141,27 @@
 					</div>
 					<div class="grid grid-cols-1 gap-6 mb-6">
 						<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
-							<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-								{$i18n.t('Daily Active Users Over Time')}
-							</h5>
+							<div class="flex items-center">
+								<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200">
+									{$i18n.t('Daily Active Users Over Time')}
+								</h5>
+								<div class="relative inline-flex group">
+									<span
+										class="inline-flex items-center justify-center rounded-full p-1 text-gray-600 hover:text-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:text-white cursor-help"
+									>
+										<QuestionMarkCircle className="w-4 h-4" strokeWidth="2" />
+									</span>
+
+									<!-- Tooltip -->
+									<span
+										id="usersOverTimeChart-tooltip"
+										role="tooltip"
+										class="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:block group-focus-within:block bg-gray-700 text-white text-sm px-2 py-1 rounded whitespace-nowrap shadow-lg"
+									>
+										{$i18n.t('Number of users that have sent at least one prompt')}
+									</span>
+								</div>
+							</div>
 							<div class="h-80">
 								<canvas id="usersOverTimeChart"></canvas>
 							</div>
