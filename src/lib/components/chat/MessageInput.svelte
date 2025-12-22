@@ -731,10 +731,20 @@
 						imageUrl = await compressImageHandler(imageUrl, $settings, $config);
 					}
 
-					const blob = await (await fetch(imageUrl)).blob();
-					const compressedFile = new File([blob], file.name, { type: file.type });
+					if ($temporaryChatEnabled) {
+						files = [
+							...files,
+							{
+								type: 'image',
+								url: imageUrl
+							}
+						];
+					} else {
+						const blob = await (await fetch(imageUrl)).blob();
+						const compressedFile = new File([blob], file.name, { type: file.type });
 
-					uploadFileHandler(compressedFile, false);
+						uploadFileHandler(compressedFile, false);
+					}
 				};
 
 				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
