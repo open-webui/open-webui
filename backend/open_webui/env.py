@@ -797,6 +797,12 @@ try:
 except ValueError:
     MAX_BODY_LOG_SIZE = 2048
 
+# Whether to enable audit logs to stdout (default: False)
+AUDIT_ENABLE_STDOUT = os.getenv("AUDIT_ENABLE_STDOUT", "False").lower() == "true"
+
+# Whether to enable audit logs to file (default: True)
+AUDIT_ENABLE_FILE = os.getenv("AUDIT_ENABLE_FILE", "True").lower() == "true"
+
 # Comma separated list for urls to exclude from audit
 AUDIT_EXCLUDED_PATHS = os.getenv("AUDIT_EXCLUDED_PATHS", "/chats,/chat,/folders").split(
     ","

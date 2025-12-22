@@ -10,6 +10,8 @@ from open_webui.env import (
     AUDIT_LOG_FILE_ROTATION_SIZE,
     AUDIT_LOG_LEVEL,
     AUDIT_LOGS_FILE_PATH,
+    AUDIT_ENABLE_STDOUT,
+    AUDIT_ENABLE_FILE,
     GLOBAL_LOG_LEVEL,
     ENABLE_OTEL,
     ENABLE_OTEL_LOGS,
@@ -117,22 +119,31 @@ def start_logger():
     """
     Initializes and configures Loguru's logger with distinct handlers:
 
-    A console (stdout) handler for general log messages (excluding those marked as auditable).
-    An optional file handler for audit logs if audit logging is enabled.
-    Additionally, this function reconfigures Python’s standard logging to route through Loguru and adjusts logging levels for Uvicorn.
-
-    Parameters:
-    enable_audit_logging (bool): Determines whether audit-specific log entries should be recorded to file.
+    A console (stdout) handler for general log messages.
+    Optional handlers for audit logs based on AUDIT_ENABLE_STDOUT and AUDIT_ENABLE_FILE settings.
+    Additionally, this function reconfigures Python's standard logging to route through Loguru and adjusts logging levels for Uvicorn.
     """
     logger.remove()
 
-    logger.add(
-        sys.stdout,
-        level=GLOBAL_LOG_LEVEL,
-        format=stdout_format,
-        filter=lambda record: "auditable" not in record["extra"],
-    )
-    if AUDIT_LOG_LEVEL != "NONE":
+    # Add stdout handler for general logs (exclude auditable if AUDIT_ENABLE_STDOUT is False)
+    if AUDIT_ENABLE_STDOUT:
+        # Include all logs including auditable in stdout
+        logger.add(
+            sys.stdout,
+            level=GLOBAL_LOG_LEVEL,
+            format=stdout_format,
+        )
+    else:
+        # Exclude auditable logs from stdout
+        logger.add(
+            sys.stdout,
+            level=GLOBAL_LOG_LEVEL,
+            format=stdout_format,
+            filter=lambda record: "auditable" not in record["extra"],
+        )
+
+    # Add file handler for audit logs if enabled
+    if AUDIT_LOG_LEVEL != "NONE" and AUDIT_ENABLE_FILE:
         try:
             logger.add(
                 AUDIT_LOGS_FILE_PATH,
