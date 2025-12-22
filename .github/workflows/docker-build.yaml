@@ -59,7 +59,12 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
           flavor: |
             latest=${{ github.ref == 'refs/heads/main' }}
-
+      - name: Clean up local cache until the last 2 weeks
+        run: |
+          echo "Cleaning up Docker cache..."
+          docker buildx prune --filter type=local --filter until=336h --force
+          echo "Overall disk usage on the cache volume:"
+          df -h /var/lib/docker/cache
       - name: Build Docker image (latest)
         uses: docker/build-push-action@v5
         id: build
