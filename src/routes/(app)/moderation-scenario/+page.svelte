@@ -2876,7 +2876,8 @@ onMount(async () => {
 			markedNotApplicable = savedState.markedNotApplicable || false;
 			
 			// Set moderation panel visibility based on confirmation state and initial decision
-			moderationPanelVisible = confirmedVersionIndex === null && hasInitialDecision && !acceptedOriginal && !markedNotApplicable;
+			// Show moderation panel when in Step 4 and not yet completed
+			moderationPanelVisible = initialDecisionStep === 4 && confirmedVersionIndex === null && !markedNotApplicable && step3Completed;
 		}
 		
 		// Show warm-up if not completed
