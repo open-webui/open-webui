@@ -248,16 +248,18 @@
 					📹 Tutorial Videos Available
 				</h3>
 				<p class="text-blue-700 dark:text-blue-300 mb-3">
-					Each task page includes a help button (ℹ️) in the top-right corner that opens a tutorial video specific to that task:
+					Each task page includes a help button in the top-right corner that opens a tutorial video specific to that task.
 				</p>
-				<ul class="list-disc list-inside space-y-2 text-blue-700 dark:text-blue-300 text-sm">
-					<li><strong>Task 1 - Child Profile:</strong> Learn how to create and manage child profiles</li>
-					<li><strong>Task 2 - Moderation Scenarios:</strong> Understand how to review and moderate AI responses</li>
-					<li><strong>Task 3 - Exit Survey:</strong> Complete the survey with confidence</li>
-				</ul>
-				<p class="text-blue-700 dark:text-blue-300 mt-3 text-sm">
-					Look for the help button (ℹ️) in the navigation bar of each task page to access the tutorial videos.
-				</p>
+				<div class="flex items-center gap-2">
+					<span class="text-blue-700 dark:text-blue-300 text-sm">Example:</span>
+					<button
+						on:click|preventDefault|stopPropagation
+						class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+						aria-label="Help button example (non-functional)"
+					>
+						Help
+					</button>
+				</div>
 			</div>
 
 			<!-- Important Notes -->

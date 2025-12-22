@@ -9,6 +9,7 @@
 	import type { ChildProfile } from '$lib/apis/child-profiles';
 	import { toast } from 'svelte-sonner';
 	import { personalityTraits, type PersonalityTrait, type SubCharacteristic } from '$lib/data/personalityTraits';
+	import { generateScenariosFromPersonalityData } from '$lib/data/personalityQuestions';
 	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
 	import VideoModal from '$lib/components/common/VideoModal.svelte';
 
@@ -28,6 +29,11 @@ let isOnlyChild: string = '';
 let childHasAIUse: string = '';
 let childAIUseContexts: string[] = [];
 let parentLLMMonitoringLevel: string = '';
+
+// "Other" text fields for additional information
+let childGenderOther: string = '';
+let childAIUseContextsOther: string = '';
+let parentLLMMonitoringOther: string = '';
 	
 	// Personality traits system - Updated to support multiple traits
 	let expandedTraits: Set<string> = new Set(); // Track which traits are expanded
@@ -147,35 +153,137 @@ let parentLLMMonitoringLevel: string = '';
 	function hydrateFormFromSelectedChild() {
 		ensureAtLeastOneChild();
 		const sel = childProfiles[selectedChildIndex];
+		
+		// Debug: Log the selected child data to verify survey fields are present
+		console.log('Hydrating form from child profile:', {
+			id: sel?.id,
+			name: sel?.name,
+			is_only_child: (sel as any)?.is_only_child,
+			child_has_ai_use: (sel as any)?.child_has_ai_use,
+			parent_llm_monitoring_level: (sel as any)?.parent_llm_monitoring_level,
+			child_ai_use_contexts: (sel as any)?.child_ai_use_contexts
+		});
+		
 		childName = sel?.name || '';
 		childAge = sel?.child_age || '';
-		childGender = sel?.child_gender || '';
-		childCharacteristics = sel?.child_characteristics || '';
+		
+		// Handle gender - check if it's stored as "Other: [text]" format (legacy) or separate field
+		const genderValue = sel?.child_gender || '';
+		if (genderValue.startsWith('Other: ')) {
+			// Legacy format - parse it
+			childGender = 'Other';
+			childGenderOther = genderValue.substring('Other: '.length);
+		} else if (genderValue === 'Other') {
+			// New format - use separate field
+			childGender = 'Other';
+			childGenderOther = (sel as any)?.child_gender_other || '';
+		} else {
+			childGender = genderValue;
+			childGenderOther = (sel as any)?.child_gender_other || '';
+		}
 
 	// Research fields (optional if older profiles lack them)
-	isOnlyChild = typeof (sel as any)?.is_only_child === 'boolean' ? ((sel as any).is_only_child ? 'yes' : 'no') : '';
+	// Handle is_only_child - convert boolean to string for radio buttons
+	if (typeof (sel as any)?.is_only_child === 'boolean') {
+		isOnlyChild = (sel as any).is_only_child ? 'yes' : 'no';
+	} else {
+		isOnlyChild = '';
+	}
+	
+	// Handle child_has_ai_use
 	childHasAIUse = (sel as any)?.child_has_ai_use || '';
-	childAIUseContexts = Array.isArray((sel as any)?.child_ai_use_contexts) ? (sel as any).child_ai_use_contexts : [];
-	parentLLMMonitoringLevel = (sel as any)?.parent_llm_monitoring_level || '';
+	
+	// Handle child_ai_use_contexts - ensure it's an array
+	const contexts = (sel as any)?.child_ai_use_contexts;
+	if (Array.isArray(contexts)) {
+		childAIUseContexts = contexts;
+	} else if (contexts) {
+		// If it's a string or other type, try to parse it
+		childAIUseContexts = [];
+	} else {
+		childAIUseContexts = [];
+	}
+	
+	// Handle monitoring level
+	const monitoringValue = (sel as any)?.parent_llm_monitoring_level;
+	if (monitoringValue) {
+		parentLLMMonitoringLevel = monitoringValue;
+	} else {
+		parentLLMMonitoringLevel = '';
+	}
+	
+	// Load "Other" text fields
+	childAIUseContextsOther = (sel as any)?.child_ai_use_contexts_other || '';
+	parentLLMMonitoringOther = (sel as any)?.parent_llm_monitoring_other || '';
 		
 		// Parse personality traits from stored characteristics
 		if (sel?.child_characteristics) {
-			// Try to parse personality data from the characteristics field
 			const characteristics = sel.child_characteristics;
 			
-			// Check if this contains personality data (has the format we use)
-			if (characteristics.includes('Selected characteristics:') && characteristics.includes('Additional characteristics:')) {
+			// Check if this contains our format: "Trait: char1, char2\n\nAdditional characteristics:\ntext"
+			if (characteristics.includes('Additional characteristics:')) {
 				// Extract the additional characteristics part (after "Additional characteristics:")
 				const additionalStart = characteristics.indexOf('Additional characteristics:');
 				if (additionalStart !== -1) {
 					childCharacteristics = characteristics.substring(additionalStart + 'Additional characteristics:'.length).trim();
+					
+					// Extract personality traits part (before "Additional characteristics:")
+					const personalityPart = characteristics.substring(0, additionalStart).trim();
+					
+					// Parse trait lines: "Trait: char1, char2\nTrait2: char3, char4"
+					if (personalityPart) {
+						const traitLines = personalityPart.split('\n');
+						const restoredIds: string[] = [];
+						
+						for (const line of traitLines) {
+							// Format: "Trait: char1, char2"
+							const match = line.match(/^([^:]+):\s*(.+)$/);
+							if (match) {
+								const traitName = match[1].trim();
+								const charNames = match[2].split(',').map(c => c.trim()).filter(c => c);
+								
+								// Find the trait by name
+								const trait = personalityTraits.find(t => t.name === traitName);
+								if (trait) {
+									// Match characteristic names to IDs
+									for (const charName of charNames) {
+										const subChar = trait.subCharacteristics.find(sc => sc.name === charName);
+										if (subChar) {
+											restoredIds.push(subChar.id);
+										}
+									}
+								}
+							}
+						}
+						
+						// Restore selected characteristics
+						selectedSubCharacteristics = restoredIds;
+						
+						// Expand traits that have selected characteristics
+						for (const trait of personalityTraits) {
+							if (trait.subCharacteristics.some(sc => restoredIds.includes(sc.id))) {
+								expandedTraits.add(trait.id);
+							}
+						}
+					} else {
+						selectedSubCharacteristics = [];
+						expandedTraits = new Set();
+					}
+				} else {
+					// No "Additional characteristics:" found, treat whole thing as additional
+					childCharacteristics = characteristics;
+					selectedSubCharacteristics = [];
+					expandedTraits = new Set();
 				}
 			} else {
 				// If it doesn't contain our format, treat the whole thing as additional characteristics
 				childCharacteristics = characteristics;
+				selectedSubCharacteristics = [];
+				expandedTraits = new Set();
 			}
-			
-			// Reset personality selection for now (we could parse this back in the future)
+		} else {
+			// No characteristics field, reset everything
+			childCharacteristics = '';
 			selectedSubCharacteristics = [];
 			expandedTraits = new Set();
 		}
@@ -202,6 +310,11 @@ let parentLLMMonitoringLevel: string = '';
 	(sel as any).child_has_ai_use = childHasAIUse || null;
 	(sel as any).child_ai_use_contexts = childAIUseContexts || [];
 	(sel as any).parent_llm_monitoring_level = parentLLMMonitoringLevel || null;
+	
+	// Attach "Other" text fields
+	(sel as any).child_gender_other = childGenderOther || null;
+	(sel as any).child_ai_use_contexts_other = childAIUseContextsOther || null;
+	(sel as any).parent_llm_monitoring_other = parentLLMMonitoringOther || null;
 	}
 
 	async function deleteChild(index: number) {
@@ -256,6 +369,9 @@ let parentLLMMonitoringLevel: string = '';
 	childHasAIUse = '';
 	childAIUseContexts = [];
 	parentLLMMonitoringLevel = '';
+	childGenderOther = '';
+	childAIUseContextsOther = '';
+	parentLLMMonitoringOther = '';
 		showForm = true;
 		isEditing = true; // Set editing mode
 		// Set selected index to -1 to indicate we're creating a new profile
@@ -334,13 +450,16 @@ let parentLLMMonitoringLevel: string = '';
 			const newChild = await childProfileSync.createChildProfile({
 				name: childName,
 				child_age: childAge,
-				child_gender: childGender,
+				child_gender: childGender === 'Other' ? 'Other' : childGender,
 				child_characteristics: combinedCharacteristics,
 				is_only_child: isOnlyChild === 'yes',
 				child_has_ai_use: childHasAIUse as any,
 				child_ai_use_contexts: childAIUseContexts,
-				parent_llm_monitoring_level: parentLLMMonitoringLevel as any
-			});
+				parent_llm_monitoring_level: parentLLMMonitoringLevel as any,
+				child_gender_other: childGenderOther || undefined,
+				child_ai_use_contexts_other: childAIUseContextsOther || undefined,
+				parent_llm_monitoring_other: parentLLMMonitoringOther || undefined
+			} as any);
 			
 			// Store the scenario key in localStorage with the child's ID
 			localStorage.setItem(`scenarios_${newChild.id}`, scenarioKey);
@@ -372,7 +491,15 @@ let parentLLMMonitoringLevel: string = '';
 			toast.success('Child profile created successfully!');
 		} catch (error) {
 			console.error('Failed to create child profile:', error);
-			toast.error('Failed to create child profile');
+			// Extract error message for user display
+			let errorMessage = 'Failed to create child profile';
+			if (error instanceof Error) {
+				errorMessage = error.message;
+			} else if (error && typeof error === 'object' && 'detail' in error) {
+					const detail = (error as any).detail;
+				errorMessage = typeof detail === 'string' ? detail : errorMessage;
+			}
+			toast.error(errorMessage);
 		}
 	}
 
@@ -495,8 +622,16 @@ let parentLLMMonitoringLevel: string = '';
 				toast.error('Please select at least one context of AI use');
 				return;
 			}
+			if (childHasAIUse === 'yes' && childAIUseContexts.includes('other') && !childAIUseContextsOther.trim()) {
+				toast.error('Please specify the context of AI use');
+				return;
+			}
 			if (!parentLLMMonitoringLevel) {
 				toast.error("Please indicate how you've monitored or adjusted this child's AI use");
+				return;
+			}
+			if (parentLLMMonitoringLevel === 'other' && !parentLLMMonitoringOther.trim()) {
+				toast.error('Please specify how you have monitored or adjusted your child\'s AI use');
 				return;
 			}
 
@@ -516,13 +651,16 @@ let parentLLMMonitoringLevel: string = '';
 			const newChild = await childProfileSync.createChildProfile({
 					name: childName,
 					child_age: childAge,
-					child_gender: childGender,
+					child_gender: childGender === 'Other' ? 'Other' : childGender,
 					child_characteristics: combinedCharacteristics,
 				is_only_child: isOnlyChild === 'yes',
 				child_has_ai_use: childHasAIUse as any,
 				child_ai_use_contexts: childAIUseContexts,
-				parent_llm_monitoring_level: parentLLMMonitoringLevel as any
-				});
+				parent_llm_monitoring_level: parentLLMMonitoringLevel as any,
+				child_gender_other: childGenderOther || undefined,
+				child_ai_use_contexts_other: childAIUseContextsOther || undefined,
+				parent_llm_monitoring_other: parentLLMMonitoringOther || undefined
+				} as any);
 				if (childProfiles.length === 0) {
 					childProfiles = [newChild];
 					selectedChildIndex = 0;
@@ -576,8 +714,17 @@ let parentLLMMonitoringLevel: string = '';
 						is_only_child: isOnlyChild === 'yes',
 						child_has_ai_use: childHasAIUse as any,
 						child_ai_use_contexts: childAIUseContexts,
-						parent_llm_monitoring_level: parentLLMMonitoringLevel as any
-					});
+						parent_llm_monitoring_level: parentLLMMonitoringLevel as any,
+						child_gender_other: childGenderOther || undefined,
+						child_ai_use_contexts_other: childAIUseContextsOther || undefined,
+						parent_llm_monitoring_other: parentLLMMonitoringOther || undefined
+					} as any);
+					
+					// Update childSelectedForQuestions to show the green checkmark on the saved profile
+					childSelectedForQuestions = selectedChildIndex;
+					
+					// Keep backend in sync by setting the current child ID
+					await childProfileSync.setCurrentChildId(selectedChild.id);
 				}
 			}
 			
@@ -607,7 +754,15 @@ let parentLLMMonitoringLevel: string = '';
 		}
 		} catch (error) {
 			console.error('Failed to save child profile:', error);
-			toast.error('Failed to save child profile');
+			// Extract error message for user display
+			let errorMessage = 'Failed to save child profile';
+			if (error instanceof Error) {
+				errorMessage = error.message;
+			} else if (error && typeof error === 'object' && 'detail' in error) {
+				const detail = (error as any).detail;
+				errorMessage = typeof detail === 'string' ? detail : errorMessage;
+			}
+			toast.error(errorMessage);
 		}
 	}
 
@@ -622,8 +777,14 @@ let parentLLMMonitoringLevel: string = '';
 	}
 
 	function startEditing() {
-		isEditing = true;
-		showForm = true;
+		// Ensure we have a valid selected child index before editing
+		if (selectedChildIndex >= 0 && selectedChildIndex < childProfiles.length) {
+			hydrateFormFromSelectedChild();
+			isEditing = true;
+			showForm = true;
+		} else {
+			console.warn('Cannot start editing: no valid child selected');
+		}
 	}
 
 	async function selectChildForQuestions(index: number) {
@@ -983,8 +1144,18 @@ let parentLLMMonitoringLevel: string = '';
 							<option value="Male">Male</option>
 							<option value="Female">Female</option>
 							<option value="Non-binary">Non-binary</option>
+							<option value="Other">Other</option>
 							<option value="Prefer not to say">Prefer not to say</option>
 						</select>
+						{#if childGender === 'Other'}
+							<input
+								type="text"
+								bind:value={childGenderOther}
+								placeholder="Please specify the gender"
+								class="w-full mt-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+								required
+							/>
+						{/if}
 					</div>
 
 					<!-- Personality Traits Selection - Multi-Trait Support -->
@@ -1129,6 +1300,15 @@ let parentLLMMonitoringLevel: string = '';
 							<label class="flex items-center"><input type="checkbox" bind:group={childAIUseContexts} value="personal_advice" class="mr-3" />For advice on personal or social issues</label>
 							<label class="flex items-center"><input type="checkbox" bind:group={childAIUseContexts} value="other" class="mr-3" />Other</label>
 						</div>
+						{#if childAIUseContexts.includes('other')}
+							<input
+								type="text"
+								bind:value={childAIUseContextsOther}
+								placeholder="Please specify the context"
+								class="w-full mt-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+								required
+							/>
+						{/if}
 					</div>
 				{/if}
 
@@ -1142,8 +1322,18 @@ let parentLLMMonitoringLevel: string = '';
 						<label class="flex items-center"><input type="radio" bind:group={parentLLMMonitoringLevel} value="occasional_guidance" class="mr-3" />Yes — occasional reminders or guidance</label>
 						<label class="flex items-center"><input type="radio" bind:group={parentLLMMonitoringLevel} value="plan_to" class="mr-3" />Not yet, but I plan to</label>
 						<label class="flex items-center"><input type="radio" bind:group={parentLLMMonitoringLevel} value="no_monitoring" class="mr-3" />No — I have not monitored or adjusted</label>
+						<label class="flex items-center"><input type="radio" bind:group={parentLLMMonitoringLevel} value="other" class="mr-3" />Other</label>
 						<label class="flex items-center"><input type="radio" bind:group={parentLLMMonitoringLevel} value="prefer_not_to_say" class="mr-3" />Prefer not to say</label>
 					</div>
+					{#if parentLLMMonitoringLevel === 'other'}
+						<input
+							type="text"
+							bind:value={parentLLMMonitoringOther}
+							placeholder="Please specify how you have monitored or adjusted your child's AI use"
+							class="w-full mt-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+							required
+						/>
+					{/if}
 				</div>
 			</div>
 				</div>

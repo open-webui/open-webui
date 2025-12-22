@@ -1,11 +1,14 @@
 import time
 import uuid
+import logging
 from typing import Optional
 
 from open_webui.internal.db import Base, get_db
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, Index, Boolean, Integer
+from sqlalchemy import BigInteger, Column, String, Text, Index, Boolean, Integer, inspect
 from open_webui.internal.db import JSONField
+
+log = logging.getLogger(__name__)
 
 ####################
 # CHILD PROFILE: Database schema for storing child profiles linked to parent users
@@ -30,6 +33,11 @@ class ChildProfile(Base):
     child_has_ai_use = Column(String, nullable=True)  # 'yes' | 'no' | 'unsure'
     child_ai_use_contexts = Column(JSONField, nullable=True)  # list[str]
     parent_llm_monitoring_level = Column(String, nullable=True)  # enum-like string
+    
+    # "Other" text fields for additional information
+    child_gender_other = Column(Text, nullable=True)  # Text when gender is "Other"
+    child_ai_use_contexts_other = Column(Text, nullable=True)  # Text when contexts includes "other"
+    parent_llm_monitoring_other = Column(Text, nullable=True)  # Text when monitoring level is "other"
 
     # Reset/attempt tracking
     attempt_number = Column(Integer, nullable=False, default=1)
@@ -62,6 +70,9 @@ class ChildProfileModel(BaseModel):
     child_has_ai_use: Optional[str] = None
     child_ai_use_contexts: Optional[list[str]] = None
     parent_llm_monitoring_level: Optional[str] = None
+    child_gender_other: Optional[str] = None
+    child_ai_use_contexts_other: Optional[str] = None
+    parent_llm_monitoring_other: Optional[str] = None
     attempt_number: int
     is_current: bool
     session_number: int
@@ -78,6 +89,10 @@ class ChildProfileForm(BaseModel):
     child_has_ai_use: Optional[str] = None
     child_ai_use_contexts: Optional[list[str]] = None
     parent_llm_monitoring_level: Optional[str] = None
+    # "Other" text fields for additional information
+    child_gender_other: Optional[str] = None
+    child_ai_use_contexts_other: Optional[str] = None
+    parent_llm_monitoring_other: Optional[str] = None
 
 class ChildProfileTable:
     def insert_new_child_profile(
@@ -100,6 +115,9 @@ class ChildProfileTable:
                     "child_has_ai_use": form_data.child_has_ai_use,
                     "child_ai_use_contexts": form_data.child_ai_use_contexts,
                     "parent_llm_monitoring_level": form_data.parent_llm_monitoring_level,
+                    "child_gender_other": form_data.child_gender_other,
+                    "child_ai_use_contexts_other": form_data.child_ai_use_contexts_other,
+                    "parent_llm_monitoring_other": form_data.parent_llm_monitoring_other,
                     "attempt_number": attempt_number,
                     "is_current": True,
                     "session_number": session_number,
@@ -107,6 +125,21 @@ class ChildProfileTable:
                     "updated_at": ts,
                 }
             )
+            
+            # Verify the table has the expected columns by inspecting the database
+            # This helps catch schema mismatches early
+            try:
+                inspector = inspect(db.bind)
+                db_columns = [col['name'] for col in inspector.get_columns('child_profile')]
+                required_columns = ['child_gender_other', 'child_ai_use_contexts_other', 'parent_llm_monitoring_other']
+                missing_columns = [col for col in required_columns if col not in db_columns]
+                if missing_columns:
+                    log.error(f"Database table 'child_profile' is missing columns: {missing_columns}. "
+                             f"Available columns: {db_columns}. "
+                             f"Please run migrations: alembic upgrade head")
+                    raise ValueError(f"Database schema mismatch: missing columns {missing_columns}")
+            except Exception as e:
+                log.warning(f"Could not verify table schema: {e}. Proceeding with insert...")
             
             result = ChildProfile(**child_profile.model_dump())
             db.add(result)
@@ -155,6 +188,9 @@ class ChildProfileTable:
                 profile.child_has_ai_use = updated.child_has_ai_use
                 profile.child_ai_use_contexts = updated.child_ai_use_contexts
                 profile.parent_llm_monitoring_level = updated.parent_llm_monitoring_level
+                profile.child_gender_other = updated.child_gender_other
+                profile.child_ai_use_contexts_other = updated.child_ai_use_contexts_other
+                profile.parent_llm_monitoring_other = updated.parent_llm_monitoring_other
                 profile.updated_at = ts
                 
                 db.commit()
@@ -229,6 +265,13 @@ class ChildProfileTable:
                 child_age=current.child_age,
                 child_gender=current.child_gender,
                 child_characteristics=current.child_characteristics,
+                is_only_child=current.is_only_child,
+                child_has_ai_use=current.child_has_ai_use,
+                child_ai_use_contexts=current.child_ai_use_contexts,
+                parent_llm_monitoring_level=current.parent_llm_monitoring_level,
+                child_gender_other=current.child_gender_other,
+                child_ai_use_contexts_other=current.child_ai_use_contexts_other,
+                parent_llm_monitoring_other=current.parent_llm_monitoring_other,
                 attempt_number=current.attempt_number,
                 is_current=True,
                 session_number=new_session_number,

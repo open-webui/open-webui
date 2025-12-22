@@ -20,8 +20,14 @@ depends_on = None
 
 
 def upgrade():
+    # Check if column already exists (idempotent migration)
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    file_columns = [col["name"] for col in inspector.get_columns("file")]
+    
     # 1. Add the `path` column to the "file" table.
-    op.add_column("file", sa.Column("path", sa.Text(), nullable=True))
+    if "path" not in file_columns:
+        op.add_column("file", sa.Column("path", sa.Text(), nullable=True))
 
     # 2. Convert the `meta` column from Text/JSONField to `JSON()`
     # Use Alembic's default batch_op for dialect compatibility.

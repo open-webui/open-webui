@@ -12,7 +12,11 @@ export interface ChildProfile {
 	is_only_child?: boolean;
 	child_has_ai_use?: 'yes' | 'no' | 'unsure';
 	child_ai_use_contexts?: string[];
-	parent_llm_monitoring_level?: 'active_rules' | 'occasional_guidance' | 'plan_to' | 'no_monitoring' | 'prefer_not_to_say';
+	parent_llm_monitoring_level?: 'active_rules' | 'occasional_guidance' | 'plan_to' | 'no_monitoring' | 'prefer_not_to_say' | 'other';
+	// "Other" text fields for additional information
+	child_gender_other?: string;
+	child_ai_use_contexts_other?: string;
+	parent_llm_monitoring_other?: string;
 	created_at: number;
 	updated_at: number;
 }
@@ -26,7 +30,11 @@ export interface ChildProfileForm {
 	is_only_child?: boolean;
 	child_has_ai_use?: 'yes' | 'no' | 'unsure';
 	child_ai_use_contexts?: string[];
-	parent_llm_monitoring_level?: 'active_rules' | 'occasional_guidance' | 'plan_to' | 'no_monitoring' | 'prefer_not_to_say';
+	parent_llm_monitoring_level?: 'active_rules' | 'occasional_guidance' | 'plan_to' | 'no_monitoring' | 'prefer_not_to_say' | 'other';
+	// "Other" text fields for additional information
+	child_gender_other?: string;
+	child_ai_use_contexts_other?: string;
+	parent_llm_monitoring_other?: string;
 }
 
 export const getChildProfiles = async (token: string = '') => {

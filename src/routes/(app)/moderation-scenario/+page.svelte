@@ -1850,7 +1850,7 @@ function cancelReset() {}
 							session_number: sessionNumber,
 							scenario_prompt: childPrompt1,
 							original_response: originalResponse1,
-							initial_decision: null,
+							initial_decision: undefined,
 							strategies: [],
 							custom_instructions: [],
 							highlighted_texts: [...highlightedTexts1],
@@ -2127,6 +2127,38 @@ function cancelReset() {}
 			// User has highlighted (or chosen not to highlight)
 			step1Completed = true;
 			initialDecisionStep = 2;
+			
+			// Save highlights to backend immediately so they persist across page refreshes
+			try {
+				const sessionId = `scenario_${selectedScenarioIndex}`;
+				await saveModerationSession(localStorage.token, {
+					session_id: sessionId,
+					user_id: $user?.id || 'unknown',
+					child_id: selectedChildId || 'unknown',
+					scenario_index: selectedScenarioIndex,
+					attempt_number: 1,
+					version_number: 0,
+					session_number: sessionNumber,
+					scenario_prompt: childPrompt1,
+					original_response: originalResponse1,
+					initial_decision: undefined, // No decision yet, just saving highlights
+					strategies: [],
+					custom_instructions: [],
+					highlighted_texts: [...highlightedTexts1],
+					refactored_response: undefined,
+					is_final_version: false,
+					session_metadata: {
+						highlights_saved_at: Date.now()
+					},
+					is_attention_check: isAttentionCheckScenario,
+					attention_check_selected: attentionCheckSelected,
+					attention_check_passed: false
+				});
+				console.log('Highlights saved to backend successfully');
+			} catch (e) {
+				console.error('Failed to save highlights (non-blocking):', e);
+				// Don't throw - allow step to complete even if backend save fails
+			}
 		}
 		saveCurrentScenarioState();
 	}
@@ -2165,7 +2197,7 @@ function cancelReset() {}
 				session_number: sessionNumber,
 				scenario_prompt: childPrompt1,
 				original_response: originalResponse1,
-				initial_decision: null, // No decision yet, just saving reflection
+				initial_decision: undefined, // No decision yet, just saving reflection
 				strategies: [],
 				custom_instructions: [],
 				highlighted_texts: [...highlightedTexts1],
@@ -3822,7 +3854,7 @@ onMount(async () => {
 												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
 											</svg>
 											<p class="text-sm font-semibold text-blue-900 dark:text-blue-200">
-												Drag over text above to highlight concerns
+												Drag over text above to highlight sections that stood out to you
 											</p>
 										</div>
 									</div>
@@ -3830,7 +3862,7 @@ onMount(async () => {
 									{#if highlightedTexts1.length > 0}
 										<div class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
 											<p class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-												✓ {highlightedTexts1.length} concern{highlightedTexts1.length === 1 ? '' : 's'} highlighted
+												✓ {highlightedTexts1.length} section{highlightedTexts1.length === 1 ? '' : 's'} highlighted
 											</p>
 											<div class="flex flex-wrap gap-2">
 												{#each highlightedTexts1 as highlight}
@@ -3853,7 +3885,7 @@ onMount(async () => {
 									{:else}
 										<div class="mb-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
 											<p class="text-xs text-gray-600 dark:text-gray-400">
-												💡 No concerns? Click "Continue" to proceed. ❌ Not relevant? Click "Skip Scenario".
+												💡 Nothing to highlight? Click "Continue" to proceed. ❌ Not relevant? Click "Skip Scenario".
 											</p>
 										</div>
 									{/if}

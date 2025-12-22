@@ -8,6 +8,7 @@ Create Date: 2024-11-14 03:00:00.000000
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.engine.reflection import Inspector
 
 revision = "922e7a387820"
 down_revision = "4ace53fd72c8"
@@ -16,6 +17,30 @@ depends_on = None
 
 
 def upgrade():
+    # Check if table already exists (idempotent migration)
+    conn = op.get_bind()
+    inspector = Inspector.from_engine(conn)
+    existing_tables = inspector.get_table_names()
+    
+    if "group" in existing_tables:
+        # Table exists, just check if columns need to be added to other tables
+        model_columns = [col["name"] for col in inspector.get_columns("model")]
+        knowledge_columns = [col["name"] for col in inspector.get_columns("knowledge")]
+        prompt_columns = [col["name"] for col in inspector.get_columns("prompt")]
+        tool_columns = [col["name"] for col in inspector.get_columns("tool")]
+        
+        if "access_control" not in model_columns:
+            op.add_column("model", sa.Column("access_control", sa.JSON(), nullable=True))
+        if "is_active" not in model_columns:
+            op.add_column("model", sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.sql.expression.true()))
+        if "access_control" not in knowledge_columns:
+            op.add_column("knowledge", sa.Column("access_control", sa.JSON(), nullable=True))
+        if "access_control" not in prompt_columns:
+            op.add_column("prompt", sa.Column("access_control", sa.JSON(), nullable=True))
+        if "access_control" not in tool_columns:
+            op.add_column("tool", sa.Column("access_control", sa.JSON(), nullable=True))
+        return
+    
     op.create_table(
         "group",
         sa.Column("id", sa.Text(), nullable=False, primary_key=True, unique=True),

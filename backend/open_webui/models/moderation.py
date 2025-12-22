@@ -152,7 +152,14 @@ class ModerationSessionTable:
                 obj.highlighted_texts = form.highlighted_texts
                 obj.refactored_response = form.refactored_response
                 obj.is_final_version = bool(form.is_final_version)
-                obj.session_metadata = form.session_metadata
+                # Merge session_metadata instead of replacing it to preserve data from previous steps
+                if form.session_metadata:
+                    if obj.session_metadata:
+                        # Merge existing metadata with new metadata (new values take precedence)
+                        merged_metadata = {**obj.session_metadata, **form.session_metadata}
+                        obj.session_metadata = merged_metadata
+                    else:
+                        obj.session_metadata = form.session_metadata
                 obj.is_attention_check = bool(form.is_attention_check)
                 obj.attention_check_selected = bool(form.attention_check_selected)
                 obj.attention_check_passed = bool(form.attention_check_passed)

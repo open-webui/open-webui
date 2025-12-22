@@ -56,10 +56,57 @@ class JSONField(types.TypeDecorator):
             return json.loads(value)
 
 
+def is_alembic_detected(database_url: str) -> bool:
+    """
+    Check if Alembic migrations have been applied by detecting the alembic_version table.
+    
+    Returns True if Alembic is detected, False otherwise.
+    If detection fails, returns False (safe fallback to run Peewee migrations).
+    """
+    try:
+        import peewee as pw
+        
+        # Replace postgresql:// with postgres:// for Peewee compatibility
+        peewee_url = database_url.replace("postgresql://", "postgres://")
+        db = register_connection(peewee_url)
+        
+        try:
+            if isinstance(db, pw.SqliteDatabase):
+                # For SQLite, check sqlite_master for alembic_version table
+                cursor = db.execute_sql(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name='alembic_version'"
+                )
+                result = cursor.fetchone()
+                alembic_detected = result is not None
+            else:
+                # For PostgreSQL and other databases, query information_schema
+                cursor = db.execute_sql(
+                    "SELECT table_name FROM information_schema.tables "
+                    "WHERE table_name = 'alembic_version'"
+                )
+                result = cursor.fetchone()
+                alembic_detected = result is not None
+            
+            return alembic_detected
+        finally:
+            if not db.is_closed():
+                db.close()
+    except Exception as e:
+        # If detection fails, assume Alembic is not present (safe fallback)
+        log.debug(f"Could not detect Alembic version table: {e}")
+        return False
+
+
 # Workaround to handle the peewee migration
 # This is required to ensure the peewee migration is handled before the alembic migration
+# However, if Alembic is already detected, we skip Peewee migrations to avoid conflicts
 def handle_peewee_migration(DATABASE_URL):
-    # db = None
+    # Check if Alembic migrations have been applied
+    if is_alembic_detected(DATABASE_URL):
+        log.info("Alembic migrations detected - skipping Peewee migrations to avoid conflicts")
+        return
+    
+    db = None
     try:
         # Replace the postgresql:// with postgres:// to handle the peewee migration
         db = register_connection(DATABASE_URL.replace("postgresql://", "postgres://"))
@@ -79,8 +126,9 @@ def handle_peewee_migration(DATABASE_URL):
         if db and not db.is_closed():
             db.close()
 
-        # Assert if db connection has been closed
-        assert db.is_closed(), "Database connection is still open."
+        # Assert if db connection has been closed (only if db was created)
+        if db:
+            assert db.is_closed(), "Database connection is still open."
 
 
 handle_peewee_migration(DATABASE_URL)

@@ -126,54 +126,53 @@ class ChildProfileSyncService {
 
     /**
      * Create a new child profile
+     * 
+     * IMPORTANT: This function will throw an error if the backend save fails.
+     * No local fallback is provided - data must be saved to the backend to be usable.
      */
     async createChildProfile(formData: ChildProfileForm): Promise<ChildProfile> {
-        // Try to create on backend first if online and authenticated
-        if (this.isOnline && this.isUserAuthenticated()) {
-            try {
-                let token = get(user)?.token as string | undefined;
-                if (!token && typeof localStorage !== 'undefined') {
-                    const lt = localStorage.getItem('token');
-                    if (lt && lt.length > 0) token = lt;
-                }
-                if (token) {
-                    const newProfile = await createChildProfile(token, formData);
-                    // Update cache
-                    let profiles = this.getFromCache();
-                    // Extra safety check
-                    if (!Array.isArray(profiles)) {
-                        profiles = [];
-                    }
-                    profiles.push(newProfile);
-                    this.saveToCache(profiles);
-                    return newProfile;
-                }
-            } catch (error) {
-                console.warn('Failed to create child profile on backend:', error);
+        // Must be online and authenticated to create a profile
+        if (!this.isOnline || !this.isUserAuthenticated()) {
+            throw new Error('Cannot create child profile: user is offline or not authenticated');
+        }
+
+        let token = get(user)?.token as string | undefined;
+        if (!token && typeof localStorage !== 'undefined') {
+            const lt = localStorage.getItem('token');
+            if (lt && lt.length > 0) token = lt;
+        }
+        
+        if (!token) {
+            throw new Error('Cannot create child profile: authentication token not found');
+        }
+
+        try {
+            const newProfile = await createChildProfile(token, formData);
+            
+            // Update cache with the new profile from backend
+            let profiles = this.getFromCache();
+            // Extra safety check
+            if (!Array.isArray(profiles)) {
+                profiles = [];
+            }
+            profiles.push(newProfile);
+            this.saveToCache(profiles);
+            
+            return newProfile;
+        } catch (error) {
+            // Log the error for debugging
+            console.error('Failed to create child profile on backend:', error);
+            
+            // Re-throw the error so the UI can display it to the user
+            // Extract error message if available
+            if (error && typeof error === 'object' && 'detail' in error) {
+                throw new Error(typeof error.detail === 'string' ? error.detail : 'Failed to create child profile on backend');
+            } else if (error instanceof Error) {
+                throw error;
+            } else {
+                throw new Error('Failed to create child profile on backend');
             }
         }
-
-        // Fallback: create locally (will be synced later)
-        const localProfile: ChildProfile = {
-            id: crypto.randomUUID(),
-            user_id: get(user)?.id || 'local',
-            name: formData.name,
-            child_age: formData.child_age,
-            child_gender: formData.child_gender,
-            child_characteristics: formData.child_characteristics,
-            created_at: Date.now(),
-            updated_at: Date.now()
-        };
-
-        let profiles = this.getFromCache();
-        // Extra safety check
-        if (!Array.isArray(profiles)) {
-            profiles = [];
-        }
-        profiles.push(localProfile);
-        this.saveToCache(profiles);
-        
-        return localProfile;
     }
 
     /**

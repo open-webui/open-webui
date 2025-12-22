@@ -731,7 +731,7 @@ export const personalityTraits: PersonalityTrait[] = [
 	},
 	{
 		id: 'neuroticism',
-		name: 'Neuroticism (Emotional Stability)',
+		name: 'Emotional Stability',
 		description: 'How emotionally stable and resilient the child is',
 		subCharacteristics: [
 			{

@@ -9,6 +9,7 @@ Create Date: 2024-10-01 14:02:35.241684
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.sql import table, column, select
+from sqlalchemy.engine.reflection import Inspector
 import json
 
 
@@ -19,6 +20,15 @@ depends_on = None
 
 
 def upgrade():
+    # Check if table already exists (idempotent migration)
+    conn = op.get_bind()
+    inspector = Inspector.from_engine(conn)
+    existing_tables = inspector.get_table_names()
+    
+    if "knowledge" in existing_tables:
+        print("Knowledge table already exists, skipping creation")
+        return
+    
     # Creating the 'knowledge' table
     print("Creating knowledge table")
     knowledge_table = op.create_table(

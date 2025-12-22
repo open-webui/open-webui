@@ -10,6 +10,7 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.engine.reflection import Inspector
 
 # revision identifiers, used by Alembic.
 revision: str = "ca81bd47c050"
@@ -19,22 +20,28 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade():
-    op.create_table(
-        "config",
-        sa.Column("id", sa.Integer, primary_key=True),
-        sa.Column("data", sa.JSON(), nullable=False),
-        sa.Column("version", sa.Integer, nullable=False),
-        sa.Column(
-            "created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()
-        ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(),
-            nullable=True,
-            server_default=sa.func.now(),
-            onupdate=sa.func.now(),
-        ),
-    )
+    # Check if table already exists (idempotent migration)
+    conn = op.get_bind()
+    inspector = Inspector.from_engine(conn)
+    existing_tables = inspector.get_table_names()
+    
+    if "config" not in existing_tables:
+        op.create_table(
+            "config",
+            sa.Column("id", sa.Integer, primary_key=True),
+            sa.Column("data", sa.JSON(), nullable=False),
+            sa.Column("version", sa.Integer, nullable=False),
+            sa.Column(
+                "created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()
+            ),
+            sa.Column(
+                "updated_at",
+                sa.DateTime(),
+                nullable=True,
+                server_default=sa.func.now(),
+                onupdate=sa.func.now(),
+            ),
+        )
 
 
 def downgrade():

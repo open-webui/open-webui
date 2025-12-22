@@ -26,6 +26,15 @@ class ChildProfileResponse(BaseModel):
     child_gender: Optional[str] = None
     child_characteristics: Optional[str] = None
     # parenting_style removed - now collected in exit survey (migration gg11hh22ii33)
+    # Research fields
+    is_only_child: Optional[bool] = None
+    child_has_ai_use: Optional[str] = None
+    child_ai_use_contexts: Optional[list[str]] = None
+    parent_llm_monitoring_level: Optional[str] = None
+    # "Other" text fields
+    child_gender_other: Optional[str] = None
+    child_ai_use_contexts_other: Optional[str] = None
+    parent_llm_monitoring_other: Optional[str] = None
     created_at: int
     updated_at: int
 
@@ -45,9 +54,14 @@ async def create_child_profile(
             raise HTTPException(status_code=500, detail="Failed to create child profile")
         
         return ChildProfileResponse(**child_profile.model_dump())
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is (they already have proper error messages)
+        raise
     except Exception as e:
         log.error(f"Error creating child profile: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        # Include the actual error message in the response for debugging
+        error_detail = str(e) if e else "Internal server error"
+        raise HTTPException(status_code=500, detail=f"Failed to create child profile: {error_detail}")
 
 @router.get("/child-profiles", response_model=List[ChildProfileResponse])
 async def get_child_profiles(
@@ -56,7 +70,10 @@ async def get_child_profiles(
     """Get all child profiles for the current user"""
     try:
         profiles = ChildProfiles.get_child_profiles_by_user(current_user.id)
-        return [ChildProfileResponse(**profile.model_dump()) for profile in profiles]
+        return [
+            ChildProfileResponse(**profile.model_dump())
+            for profile in profiles
+        ]
     except Exception as e:
         log.error(f"Error getting child profiles: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
