@@ -336,7 +336,11 @@ class ChatTable:
         chat = chat.chat
         history = chat.get("history", {})
 
-        if message_id in history.get("messages", {}):
+        # history["messages"]가 없으면 생성
+        if "messages" not in history:
+            history["messages"] = {}
+
+        if message_id in history["messages"]:
             history["messages"][message_id] = {
                 **history["messages"][message_id],
                 **message,
