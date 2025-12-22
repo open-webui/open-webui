@@ -415,7 +415,7 @@
 				}}
 			>
 				<div class="w-full">
-					<div class="flex gap-4 w-full">
+					<div class="flex flex-col md:flex-row gap-4 w-full">
 						<div class="self-center md:self-start flex justify-center my-2 shrink-0">
 							<div class="self-center">
 								<button
@@ -432,13 +432,13 @@
 										<img
 											src={info.meta.profile_image_url}
 											alt="model profile"
-											class="rounded-xl sm:size-60 size-max object-cover shrink-0"
+											class="rounded-xl size-60 object-cover shrink-0"
 										/>
 									{:else}
 										<img
 											src="{WEBUI_BASE_URL}/static/favicon.png"
 											alt="model profile"
-											class=" rounded-xl sm:size-60 size-max object-cover shrink-0"
+											class=" rounded-xl size-60 object-cover shrink-0"
 										/>
 									{/if}
 
