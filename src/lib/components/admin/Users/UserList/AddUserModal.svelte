@@ -3,19 +3,20 @@
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, getContext } from 'svelte';
 	import { addUser } from '$lib/apis/auths';
+	import type { Readable } from 'svelte/store';
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<Readable<any>>('i18n');
 	const dispatch = createEventDispatcher();
 
 	export let show = false;
 
 	let loading = false;
 	let tab = '';
-	let inputFiles;
+	let inputFiles: FileList | null = null;
 
 	let _user = {
 		name: '',
@@ -63,8 +64,13 @@
 				const file = inputFiles[0];
 				const reader = new FileReader();
 
-				reader.onload = async (e) => {
-					const csv = e.target.result;
+				reader.onload = async (e: ProgressEvent<FileReader>) => {
+					const csv = e.target?.result;
+					if (typeof csv !== 'string') {
+						toast.error($i18n.t('Invalid file.'));
+						stopLoading();
+						return;
+					}
 					const rows = csv.split('\n');
 
 					let userCount = 0;
@@ -74,16 +80,25 @@
 						console.log(idx, columns);
 
 						if (idx > 0) {
+							// CSV format: Name, Email, Role, Group
+							const name = columns[0] || '';
+							const email = columns[1] || '';
+							const role = (columns[2] || '').toLowerCase();
+							const groupName = columns[3] || '';
+
 							if (
 								columns.length === 4 &&
-								['admin', 'user', 'pending'].includes(columns[3].toLowerCase())
+								name.length > 0 &&
+								email.length > 0 &&
+								['admin', 'user', 'pending'].includes(role)
 							) {
 								const res = await addUser(
 									localStorage.token,
-									columns[0],
-									columns[1],
-									columns[2],
-									columns[3].toLowerCase()
+									name,
+									email,
+									'',
+									role,
+									groupName
 								).catch((error) => {
 									toast.error(`Row ${idx + 1}: ${error}`);
 									return null;
@@ -103,7 +118,7 @@
 					const uploadInputElement = document.getElementById('upload-user-csv-input');
 
 					if (uploadInputElement) {
-						uploadInputElement.value = null;
+						(uploadInputElement as HTMLInputElement).value = '';
 					}
 
 					stopLoading();
@@ -267,7 +282,7 @@
 
 								<div class=" text-xs text-gray-600 dark:text-gray-500">
 									ⓘ {$i18n.t(
-										'Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.'
+										'Ensure your CSV file includes 4 columns in this order: Name, Email, Role, Group.'
 									)}
 									<a
 										class="underline dark:text-gray-200"

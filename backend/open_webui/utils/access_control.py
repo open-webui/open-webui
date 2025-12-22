@@ -39,6 +39,8 @@ def get_permissions(
         permissions: Dict[str, Any], group_permissions: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Combine permissions from multiple groups by taking the most permissive value."""
+        if not group_permissions:
+            return permissions
         for key, value in group_permissions.items():
             if isinstance(value, dict):
                 if key not in permissions:
@@ -60,7 +62,7 @@ def get_permissions(
 
     # Combine permissions from all user groups
     for group in user_groups:
-        group_permissions = group.permissions
+        group_permissions = group.permissions or {}
         permissions = combine_permissions(permissions, group_permissions)
 
     # Ensure all fields from default_permissions are present and filled in
@@ -96,7 +98,7 @@ def has_permission(
     user_groups = Groups.get_groups_by_member_id(user_id)
 
     for group in user_groups:
-        group_permissions = group.permissions
+        group_permissions = group.permissions or {}
         if get_permission(group_permissions, permission_hierarchy):
             return True
 

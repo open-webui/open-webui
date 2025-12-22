@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Optional
 
 from open_webui.models.auths import Auths
@@ -10,6 +11,7 @@ from open_webui.models.users import (
     UserSettings,
     UserUpdateForm,
 )
+from open_webui.models.groups import Groups, GroupUpdateForm
 
 
 from open_webui.socket.main import get_active_status_by_user_id
@@ -17,13 +19,110 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
-from open_webui.utils.auth import get_admin_user, get_password_hash, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_current_user, get_password_hash, get_verified_user
 from open_webui.utils.super_admin import is_email_super_admin
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
+
+############################
+# Terms & Conditions (Pilot GenAI)
+############################
+
+
+class AcceptTermsForm(BaseModel):
+    accepted: bool = True
+    version: Optional[int] = None
+
+
+@router.post("/terms/accept", response_model=UserModel)
+async def accept_terms(
+    form_data: AcceptTermsForm,
+    request: Request,
+    user=Depends(get_current_user),  # allow pending users
+):
+    if not form_data.accepted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Terms must be accepted to proceed.",
+        )
+
+    existing = Users.get_user_by_id(user.id)
+    if not existing:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
+
+    info = existing.info or {}
+    if not isinstance(info, dict):
+        info = {}
+
+    pilot = info.get("pilot_genai", {})
+    if not isinstance(pilot, dict):
+        pilot = {}
+
+    terms = pilot.get("terms", {})
+    if not isinstance(terms, dict):
+        terms = {}
+
+    # If no terms gate was configured for this user, treat as prohibited
+    if not terms.get("required", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+        )
+
+    # Mark accepted
+    current_version = getattr(request.app.state.config, "PILOT_GENAI_TERMS_VERSION", 1)
+    terms["required"] = False
+    terms["accepted"] = True
+    terms["accepted_at"] = int(time.time())
+    terms["version"] = current_version
+    pilot["terms"] = terms
+
+    # Promote role if a target was stored; otherwise keep current role.
+    target_role = pilot.get("pending_role_target") or existing.role or "pending"
+    if target_role not in ["user", "admin", "pending"]:
+        target_role = "pending"
+    pilot.pop("pending_role_target", None)
+
+    # Post-acceptance provisioning: add user to instructor group if configured during CSV import.
+    pending_group_name = (pilot.get("pending_group_name") or "").strip()
+    assigned_group_id = None
+    if pending_group_name:
+        group = Groups.get_group_by_name(pending_group_name)
+        if group:
+            current_ids = group.user_ids or []
+            if existing.id not in current_ids:
+                updated_ids = [*current_ids, existing.id]
+                Groups.update_group_by_id(
+                    group.id,
+                    GroupUpdateForm(
+                        name=group.name,
+                        description=group.description,
+                        permissions=group.permissions,
+                        user_ids=updated_ids,
+                    ),
+                )
+            assigned_group_id = group.id
+            pilot["assigned_group_id"] = assigned_group_id
+        # clear pending group regardless (prevents repeated attempts)
+        pilot.pop("pending_group_name", None)
+
+    info["pilot_genai"] = pilot
+
+    updated = Users.update_user_by_id(existing.id, {"role": target_role, "info": info})
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update user terms status.",
+        )
+
+    return updated
+
 
 ############################
 # GetUsers

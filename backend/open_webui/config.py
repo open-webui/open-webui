@@ -448,6 +448,16 @@ JWT_EXPIRES_IN = PersistentConfig(
 )
 
 ####################################
+# Pilot GenAI Terms & Conditions
+####################################
+
+PILOT_GENAI_TERMS_VERSION = PersistentConfig(
+    "PILOT_GENAI_TERMS_VERSION",
+    "pilot_genai.terms.version",
+    int(os.environ.get("PILOT_GENAI_TERMS_VERSION", "1")),
+)
+
+####################################
 # OAuth config
 ####################################
 

@@ -139,6 +139,22 @@ class GroupTable:
                     .all()
                 ]
 
+    def get_group_by_name(self, name: str) -> Optional[GroupModel]:
+        """
+        Return the most recently updated group matching this name (case-insensitive).
+        """
+        try:
+            with get_db() as db:
+                group = (
+                    db.query(Group)
+                    .filter(func.lower(Group.name) == name.lower())
+                    .order_by(Group.updated_at.desc())
+                    .first()
+                )
+                return GroupModel.model_validate(group) if group else None
+        except Exception:
+            return None
+
     def get_groups_by_member_id(self, user_id: str) -> list[GroupModel]:
         with get_db() as db:
             dialect = db.bind.dialect.name
