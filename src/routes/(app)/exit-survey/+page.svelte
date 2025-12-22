@@ -55,28 +55,30 @@ function completedKey(userId: string, childId: string) {
 }
 
 async function resolveChildId(token: string): Promise<string> {
-    const selectedIdxStr = localStorage.getItem('selectedChildForQuestions');
     let child_id = '';
 
-    const currentChild = childProfileSync.getCurrentChild();
-    if (currentChild?.id) {
-        child_id = currentChild.id;
+    // Primary source: backend-persisted current child ID
+    const currentChildId = childProfileSync.getCurrentChildId();
+    if (currentChildId) {
+        child_id = currentChildId;
     } else {
-        const profiles = await childProfileSync.getChildProfiles();
-        if (profiles && Array.isArray(profiles) && profiles.length > 0) {
-            const raw = selectedIdxStr !== null ? parseInt(selectedIdxStr, 10) : 0;
-            const safeIdx = Number.isFinite(raw) && raw >= 0 && raw < profiles.length ? raw : 0;
-            const sel = profiles[safeIdx];
-            child_id = sel?.id || '';
+        // Fallback: use cached child profile
+        const currentChild = childProfileSync.getCurrentChild();
+        if (currentChild?.id) {
+            child_id = currentChild.id;
         } else {
-            try {
-                const apiProfiles = await apiGetChildProfiles(token);
-                if (apiProfiles && Array.isArray(apiProfiles) && apiProfiles.length > 0) {
-                    const raw = selectedIdxStr !== null ? parseInt(selectedIdxStr, 10) : 0;
-                    const safeIdx = Number.isFinite(raw) && raw >= 0 && raw < apiProfiles.length ? raw : 0;
-                    child_id = apiProfiles[safeIdx]?.id || '';
-                }
-            } catch {}
+            // Fallback: use first available profile
+            const profiles = await childProfileSync.getChildProfiles();
+            if (profiles && Array.isArray(profiles) && profiles.length > 0) {
+                child_id = profiles[0]?.id || '';
+            } else {
+                try {
+                    const apiProfiles = await apiGetChildProfiles(token);
+                    if (apiProfiles && Array.isArray(apiProfiles) && apiProfiles.length > 0) {
+                        child_id = apiProfiles[0]?.id || '';
+                    }
+                } catch {}
+            }
         }
     }
     return child_id;
@@ -188,38 +190,9 @@ onMount(async () => {
 				return;
 			}
 
-            // Resolve child_id: prefer selection saved by earlier steps, else pick first
+            // Resolve child_id using the consolidated resolveChildId function
             const token = localStorage.token || '';
-            const selectedIdxStr = localStorage.getItem('selectedChildForQuestions');
-            let child_id = '';
-
-            // Prefer persisted current child via user settings
-            const currentChild = childProfileSync.getCurrentChild();
-            if (currentChild?.id) {
-                child_id = currentChild.id;
-            } else {
-                // Fallback: use cached or backend-synced profiles and the saved index
-                const profiles = await childProfileSync.getChildProfiles();
-                if (profiles && Array.isArray(profiles) && profiles.length > 0) {
-                    const raw = selectedIdxStr !== null ? parseInt(selectedIdxStr, 10) : 0;
-                    const safeIdx = Number.isFinite(raw) && raw >= 0 && raw < profiles.length ? raw : 0;
-                    const sel = profiles[safeIdx];
-                    child_id = sel?.id || '';
-                }
-            }
-            if (!child_id) {
-                // Final fallback: directly query backend using token
-                try {
-                    const apiProfiles = await apiGetChildProfiles(token);
-                    if (apiProfiles && Array.isArray(apiProfiles) && apiProfiles.length > 0) {
-                        const raw = selectedIdxStr !== null ? parseInt(selectedIdxStr, 10) : 0;
-                        const safeIdx = Number.isFinite(raw) && raw >= 0 && raw < apiProfiles.length ? raw : 0;
-                        child_id = apiProfiles[safeIdx]?.id || '';
-                    }
-                } catch (e) {
-                    // ignore and fall through to error
-                }
-            }
+            let child_id = await resolveChildId(token);
 
             if (!child_id) {
                 toast.error('No child profile found. Please create/select a child on the Child Profile page.');
@@ -311,7 +284,7 @@ $: saveDraft();
 		? 'md:max-w-[calc(100%-260px)]'
 		: ''} max-w-full"
 >
-	<nav class="px-2.5 pt-1 backdrop-blur-xl w-full drag-region">
+	<nav class="px-2.5 pt-1.5 pb-2 backdrop-blur-xl w-full drag-region bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
 		<div class="flex items-center justify-between">
 			<div class="flex items-center">
 				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">

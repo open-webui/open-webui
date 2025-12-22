@@ -90,8 +90,14 @@
 	let currentChild: ChildProfile | null = null;
 	let selectedChildIndex: number = 0;
 
-	// Reactive statement to update currentChild when childProfiles changes
+	// Reactive statement to update currentChild when childProfiles or settings change
 	$: {
+		// IMPORTANT: Watch $settings.selectedChildId, NOT $user.settings.ui.selectedChildId
+		// The user store doesn't include settings data (only auth data from /auths/ endpoint).
+		// The settings store (populated from /users/user/settings) is the source of truth.
+		// Reference $settings store to make this reactive to settings changes
+		const _ = $settings?.selectedChildId;
+		
 		if (childProfiles && childProfiles.length > 0) {
 			const currentChildId = childProfileSync.getCurrentChildId();
 			if (currentChildId) {
@@ -100,16 +106,16 @@
 					selectedChildIndex = index;
 					currentChild = childProfiles[index];
 				} else {
-					// Current child ID doesn't exist in profiles, use first available
+					// Current child ID doesn't exist in profiles, use first available for display
 					selectedChildIndex = 0;
 					currentChild = childProfiles[0];
-					childProfileSync.setCurrentChildId(childProfiles[0].id);
+					// Don't set currentChildId here - only read, never write from Sidebar
 				}
 			} else {
-				// No current child selected, use first available
+				// No current child selected yet, use first available for display
 				selectedChildIndex = 0;
 				currentChild = childProfiles[0];
-				childProfileSync.setCurrentChildId(childProfiles[0].id);
+				// Don't set currentChildId here - only read, never write from Sidebar
 			}
 		} else {
 			// No child profiles available
@@ -304,8 +310,23 @@
 	}
 
 	function goToStep(step: number) {
-		// Only allow going to previous steps or current step
-		const currentStep = parseInt(localStorage.getItem('assignmentStep') || '1');
+		// Allow navigation to step 1 if it's unlocked (instructionsCompleted && unlock_kids)
+		// Otherwise, only allow going to previous steps or current step
+		if (step === 1) {
+			const instructionsDone = localStorage.getItem('instructionsCompleted') === 'true';
+			const kidsUnlocked = localStorage.getItem('unlock_kids') === 'true';
+			if (instructionsDone && kidsUnlocked) {
+				assignmentStep = step;
+				goto(getStepRoute(step));
+				return;
+			}
+		}
+		
+		// For other steps, check current step from both localStorage and reactive state
+		const currentStep = Math.max(
+			parseInt(localStorage.getItem('assignmentStep') || '1'),
+			assignmentStep
+		);
 		if (step <= currentStep) {
 			assignmentStep = step;
 			goto(getStepRoute(step));
@@ -1193,7 +1214,7 @@
 
 					<!-- Step 1: Child Profile -->
 					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-						<div class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {assignmentStep >= 1 && instructionsCompleted && unlock_kids ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}">
+						<div class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {(instructionsCompleted || (typeof window !== 'undefined' && localStorage.getItem('instructionsCompleted') === 'true')) && (unlock_kids || (typeof window !== 'undefined' && localStorage.getItem('unlock_kids') === 'true')) ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}">
 							<button
 								class="flex items-center space-x-3 flex-1"
 								on:click={() => {
@@ -1201,9 +1222,9 @@
 									if (typeof window !== 'undefined') {
 										window.dispatchEvent(new CustomEvent('save-moderation-state'));
 									}
-									goto('/kids/profile');
+									goToStep(1);
 								}}
-								disabled={assignmentStep < 1 || !instructionsCompleted || !unlock_kids}
+								disabled={!(instructionsCompleted || (typeof window !== 'undefined' && localStorage.getItem('instructionsCompleted') === 'true')) || !(unlock_kids || (typeof window !== 'undefined' && localStorage.getItem('unlock_kids') === 'true'))}
 							>
 								<div class="self-center">
 									<div class="w-6 h-6 rounded-full flex items-center justify-center {assignmentStep >= 1 ? 'bg-blue-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-500'}">

@@ -68,11 +68,9 @@ const handleResetWorkflow = async () => {
         // Explicitly set starting step so sidebar can immediately reflect reset
         localStorage.setItem('assignmentStep', '1');
 			
-			// Clear child-specific moderation state
-        const childId = localStorage.getItem('selectedChildId');
-        // Now remove selectedChildId after capturing
-        localStorage.removeItem('selectedChildId');
-			if (childId) {
+		// Clear child-specific moderation state
+        const childId = childProfileSync.getCurrentChildId();
+		if (childId) {
 				localStorage.removeItem(`moderationScenarioStates_${childId}`);
 				localStorage.removeItem(`moderationScenarioTimers_${childId}`);
 				localStorage.removeItem(`moderationCurrentScenario_${childId}`);

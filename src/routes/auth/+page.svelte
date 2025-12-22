@@ -14,6 +14,7 @@
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
+import { childProfileSync } from '$lib/services/childProfileSync';
 
 	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
 
@@ -246,7 +247,7 @@ const prolificAuthHandler = async () => {
                 // Pass the redirect path to setSessionUser
                 await setSessionUser(sessionUser, prolificRedirectPath);
                 if (authResponse.new_child_id) {
-                    localStorage.setItem('selectedChildId', authResponse.new_child_id);
+                    await childProfileSync.setCurrentChildId(authResponse.new_child_id);
                 }
                 if (authResponse.has_exit_quiz) {
                     localStorage.setItem('unlock_exit', 'true');
@@ -321,9 +322,6 @@ const clearAllWorkflowKeysForNewUser = () => {
     }
     keysToRemove.forEach((k) => localStorage.removeItem(k));
 
-    // Child linkage
-    localStorage.removeItem('selectedChildId');
-
     // Prolific bookkeeping
     localStorage.removeItem('lastProlificSessionId');
     localStorage.removeItem('lastUserId');
@@ -338,8 +336,6 @@ const resetModerationKeysForNewSession = () => {
     localStorage.removeItem('assignmentCompleted');
     localStorage.removeItem('moderationScenariosAccessed');
     localStorage.removeItem('unlock_exit');
-    // Unselect current child so user reviews but doesn't re-fill
-    localStorage.removeItem('selectedChildId');
 
     // Clear per-scenario UI state
     const keysToRemove: string[] = [];
