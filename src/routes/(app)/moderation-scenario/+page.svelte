@@ -3265,7 +3265,7 @@ onMount(async () => {
 
 	<div class="flex-1 flex bg-white dark:bg-gray-900 overflow-hidden">
 		<!-- Left Sidebar: Scenario List -->
-		<div class="w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-gray-50 dark:bg-gray-900 {sidebarOpen ? 'flex' : 'hidden'}">
+		<div class="w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-gray-50 dark:bg-gray-900 {sidebarOpen ? 'md:flex' : 'hidden md:hidden'}">
 			<div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-800 p-4">
 				<div class="flex items-center justify-between">
 					<h1 class="text-xl font-bold text-gray-900 dark:text-white">Scenarios</h1>
