@@ -114,7 +114,7 @@ def process_uploaded_file(request, file, file_path, file_item, file_metadata, us
         if file.content_type:
             stt_supported_content_types = getattr(
                 request.app.state.config, "STT_SUPPORTED_CONTENT_TYPES", []
-            ) or ["audio/*", "video/webm"]
+            )
 
             if strict_match_mime_type(stt_supported_content_types, file.content_type):
                 file_path = Storage.get_file(file_path)
