@@ -1190,6 +1190,7 @@
 		}
 	};
 	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
+		console.log("Session ID in chatCompletedHandler:", $socket?.id);
 		const res = await chatCompleted(localStorage.token, {
 			model: modelId,
 			messages: messages.map((m) => ({
@@ -1969,6 +1970,7 @@
 			}
 		}
 		console.log("chapter_id:", toolbarChapterId);
+		console.log("Session ID before API call:", $socket?.id);
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
 			{

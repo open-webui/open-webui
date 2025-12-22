@@ -115,14 +115,14 @@
 		}}
 	/>
 
-	<div class="flex flex-col gap-1 px-1 mt-1.5 mb-3">
+	<div class="flex flex-col gap-1 px-1 mt-1.5 mb-3 text-gray-900">
 		<div class="flex justify-between items-center">
 			<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2 shrink-0">
 				<div>
 					{$i18n.t('Knowledge')}
 				</div>
 
-				<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+				<div class="text-lg font-medium text-gray-900">
 					{filteredItems.length}
 				</div>
 			</div>
@@ -223,7 +223,7 @@
 												{/if}
 											</div>
 
-											<div class=" text-xs text-gray-500 line-clamp-1">
+											<div class=" text-xs text-gray-900 line-clamp-1">
 												{$i18n.t('Updated')}
 												{dayjs(item.updated_at * 1000).fromNow()}
 											</div>
@@ -247,7 +247,7 @@
 										</div>
 
 										<div>
-											<div class="text-xs text-gray-500">
+											<div class="text-xs text-gray-900">
 												<Tooltip
 													content={item?.user?.email ?? $i18n.t('Deleted User')}
 													className="flex shrink-0"
@@ -273,7 +273,7 @@
 				<div class="max-w-md text-center">
 					<div class=" text-3xl mb-3">😕</div>
 					<div class=" text-lg font-medium mb-1">{$i18n.t('No knowledge found')}</div>
-					<div class=" text-gray-500 text-center text-xs">
+					<div class=" text-gray-900 text-center text-xs">
 						{$i18n.t('Try adjusting your search or filter to find what you are looking for.')}
 					</div>
 				</div>
@@ -281,7 +281,7 @@
 		{/if}
 	</div>
 
-	<div class=" text-gray-500 text-xs m-2">
+	<div class=" text-gray-900 text-xs m-2">
 		ⓘ {$i18n.t("Use '#' in the prompt input to load and include your knowledge.")}
 	</div>
 {:else}

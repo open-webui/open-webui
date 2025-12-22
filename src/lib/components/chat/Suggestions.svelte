@@ -12,6 +12,7 @@
 	export let className = '';
 	export let inputValue = '';
 	export let onSelect = (e) => {};
+	export let isPersonalized = true; // true: 개인화 탭 (check만 표시), false: all user 탭 (버튼 없음)
 
 	let sortedPrompts = [];
 
@@ -93,7 +94,7 @@
 			: 'flex flex-row gap-4 overflow-x-auto scrollbar-thin px-12 pb-4'} {className}">
 			{#each filteredPrompts as prompt, idx (prompt.id || `${prompt.content}-${idx}`)}
 				<div
-					class="waterfall box-border flex flex-col items-start p-5 gap-4
+					class="waterfall box-border flex flex-col items-start py-3 px-4 gap-2.5
 						{$mobile ? 'w-full' : 'min-w-[270px] w-[270px]'}
 						bg-[rgba(253,254,254,0.7)] dark:bg-[rgba(39,40,44,0.5)]
 						shadow-lg rounded-2xl backdrop-blur-[20px]"
@@ -196,50 +197,32 @@
 
 					<!-- Action Buttons -->
 					<div class="flex items-center justify-between w-full">
-						<!-- Left: X and Check buttons -->
+						<!-- Left: Check button (only for personalized tab) -->
 						<div class="flex gap-2">
-							<button
-								class="w-5 h-5 p-0 border-none bg-transparent cursor-pointer flex items-center justify-center transition-transform duration-200 hover:scale-110 active:scale-95"
-								on:click|stopPropagation={() => handleDismiss(prompt)}
-								aria-label="Dismiss"
-							>
-								<svg
-									width="20"
-									height="20"
-									viewBox="0 0 20 20"
-									fill="none"
-									xmlns="http://www.w3.org/2000/svg"
+							{#if isPersonalized}
+								<button
+									class="w-5 h-5 p-0 border-none bg-transparent cursor-pointer flex items-center justify-center transition-transform duration-200 hover:scale-110 active:scale-95"
+									on:click|stopPropagation={() => handleComplete(prompt)}
+									aria-label="Complete"
 								>
-									<path
-										d="M5 5L15 15M5 15L15 5"
-										stroke="#FF4D6A"
-										stroke-width="2"
-										stroke-linecap="round"
-									/>
-								</svg>
-							</button>
-							<button
-								class="w-5 h-5 p-0 border-none bg-transparent cursor-pointer flex items-center justify-center transition-transform duration-200 hover:scale-110 active:scale-95"
-								on:click|stopPropagation={() => handleComplete(prompt)}
-								aria-label="Complete"
-							>
-								<svg
-									width="20"
-									height="20"
-									viewBox="0 0 20 20"
-									fill="none"
-									xmlns="http://www.w3.org/2000/svg"
-								>
-									<circle cx="10" cy="10" r="8" stroke="#34BE89" stroke-width="1.5" />
-									<path
-										d="M6 10L9 13L14 7"
-										stroke="#34BE89"
-										stroke-width="1.5"
-										stroke-linecap="round"
-										stroke-linejoin="round"
-									/>
-								</svg>
-							</button>
+									<svg
+										width="20"
+										height="20"
+										viewBox="0 0 20 20"
+										fill="none"
+										xmlns="http://www.w3.org/2000/svg"
+									>
+										<circle cx="10" cy="10" r="8" stroke="#34BE89" stroke-width="1.5" />
+										<path
+											d="M6 10L9 13L14 7"
+											stroke="#34BE89"
+											stroke-width="1.5"
+											stroke-linecap="round"
+											stroke-linejoin="round"
+										/>
+									</svg>
+								</button>
+							{/if}
 						</div>
 
 						<!-- Right: Practice button -->

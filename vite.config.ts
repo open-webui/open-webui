@@ -26,6 +26,23 @@ export default defineConfig({
 	worker: {
 		format: 'es'
 	},
+
+	server: {
+		proxy: {
+			// forward API requests to the given backend
+			'/api': {
+				target: 'http://175.45.204.157:8080',
+				changeOrigin: true,
+				rewrite: (path: string) => path.replace(/^\/api/, '/api')
+			},
+			// forward websocket or socket requests if any
+			'/socket': {
+				target: 'ws://175.45.204.157:8080',
+				ws: true,
+				changeOrigin: true
+			}
+		}
+	},
 	esbuild: {
 		pure: process.env.ENV === 'dev' ? [] : ['console.log', 'console.debug', 'console.error']
 	}

@@ -347,7 +347,7 @@ export const chatCompletion = async (
 		},
 		body: JSON.stringify(body)
 	}).catch((err) => {
-		console.error(err);
+		console.error("Chat completion return error " ,err);
 		error = err;
 		return null;
 	});
@@ -355,7 +355,7 @@ export const chatCompletion = async (
 	if (error) {
 		throw error;
 	}
-
+	console.log('chatCompletion called', res);
 	return [res, controller];
 };
 
@@ -385,6 +385,7 @@ export const generateOpenAIChatCompletion = async (
 			return res.json();
 		})
 		.catch((err) => {
+			console.error("Generate OpenAI Chat Completion error", err);
 			error = err?.detail ?? err;
 			return null;
 		});

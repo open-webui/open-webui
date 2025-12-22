@@ -1260,7 +1260,7 @@
 									>
 										<div
 											id="input-menu-button"
-											class="w-12 h-12 rounded-full text-gray-900 bg-white/50 dark:bg-[rgba(39,40,44,0.2)] shadow-[4px_4px_20px_rgba(0,0,0,0.1),inset_2px_2px_6px_rgba(206,212,229,0.2),inset_6px_6px_25px_rgba(206,212,229,0.15)] backdrop-blur-[10px] flex justify-center items-center hover:bg-[rgba(39,40,44,0.3)] transition outline-hidden focus:outline-hidden"
+											class="w-12 h-12 rounded-full text-gray-900 dark:text-gray-50 bg-white/50 dark:bg-[rgba(39,40,44,0.2)] shadow-[4px_4px_20px_rgba(0,0,0,0.1),inset_2px_2px_6px_rgba(206,212,229,0.2),inset_6px_6px_25px_rgba(206,212,229,0.15)] backdrop-blur-[10px] flex justify-center items-center hover:bg-[rgba(39,40,44,0.3)] transition outline-hidden focus:outline-hidden"
 										>
 											<PlusAlt className="size-10" />
 										</div>

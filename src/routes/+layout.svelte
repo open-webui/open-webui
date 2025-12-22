@@ -99,7 +99,6 @@
 			transports: enableWebsocket ? ['websocket'] : ['polling', 'websocket'],
 			auth: { token: localStorage.token }
 		});
-		await socket.set(_socket);
 
 		_socket.on('connect_error', (err) => {
 			console.log('connect_error', err);
@@ -107,6 +106,8 @@
 
 		_socket.on('connect', async () => {
 			console.log('connected', _socket.id);
+			// 연결 후 socket.id가 설정된 상태에서 store 업데이트
+			await socket.set(_socket);
 			const res = await getVersion(localStorage.token);
 
 			const deploymentId = res?.deployment_id ?? null;

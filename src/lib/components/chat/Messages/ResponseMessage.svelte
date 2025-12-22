@@ -765,74 +765,190 @@
 							</div>
 						{/if}
 
-						<div
-							bind:this={contentContainerElement}
-							class="w-[80%] flex flex-col relative {edit ? 'hidden' : ''}  glass-callout dark:glass-callout-dark text-gray-900 dark:text-gray-100 p-4"
-							id="response-content-container"
-						>
-							{#if message.content === '' && !message.error && ((model?.info?.meta?.capabilities?.status_updates ?? true) ? (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 || (message?.statusHistory?.at(-1)?.hidden ?? false) : true)}
-								<Skeleton />
-							{:else if message.content && message.error !== true}
-								<!-- always show message contents even if there's an error -->
-								<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
-								<ContentRenderer
-									id={`${chatId}-${message.id}`}
-									messageId={message.id}
-									{history}
-									{selectedModels}
-									content={message.content}
-									sources={message.sources}
-									floatingButtons={message?.done &&
-										!readOnly &&
-										($settings?.showFloatingActionButtons ?? true)}
-									save={!readOnly}
-									preview={!readOnly}
-									{editCodeBlock}
-									{topPadding}
-									done={($settings?.chatFadeStreamingText ?? true)
-										? (message?.done ?? false)
-										: true}
-									{model}
-									onTaskClick={async (e) => {
-										console.log(e);
-									}}
-									onSourceClick={async (id) => {
-										console.log(id);
+						<!-- Message + Regenerate Button Row -->
+						<div class="flex flex-row items-end gap-2">
+							<div
+								bind:this={contentContainerElement}
+								class="max-w-[80%] w-fit flex flex-col relative {edit ? 'hidden' : ''}
+								bg-white/50 dark:bg-white/5
+								border border-gray-200/30 dark:border-gray-200/20
+								backdrop-blur-md
+								shadow-[0.25rem_0.25rem_1.25rem_rgba(0,0,0,0.1),inset_0.125rem_0.125rem_0.625rem_rgba(255,255,255,0.05),inset_0.125rem_0.125rem_1rem_rgba(206,212,229,0.12)]
+								rounded-[1.25rem] rounded-bl-[0.25rem]
+								text-gray-900 dark:text-gray-100
+								py-5 px-7"
+								id="response-content-container"
+							>
+								{#if message.content === '' && !message.error && ((model?.info?.meta?.capabilities?.status_updates ?? true) ? (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 || (message?.statusHistory?.at(-1)?.hidden ?? false) : true)}
+									<Skeleton />
+								{:else if message.content && message.error !== true}
+									<!-- always show message contents even if there's an error -->
+									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
+									<ContentRenderer
+										id={`${chatId}-${message.id}`}
+										messageId={message.id}
+										{history}
+										{selectedModels}
+										content={message.content}
+										sources={message.sources}
+										floatingButtons={message?.done &&
+											!readOnly &&
+											($settings?.showFloatingActionButtons ?? true)}
+										save={!readOnly}
+										preview={!readOnly}
+										{editCodeBlock}
+										{topPadding}
+										done={($settings?.chatFadeStreamingText ?? true)
+											? (message?.done ?? false)
+											: true}
+										{model}
+										onTaskClick={async (e) => {
+											console.log(e);
+										}}
+										onSourceClick={async (id) => {
+											console.log(id);
 
-										if (citationsElement) {
-											citationsElement?.showSourceModal(id);
-										}
-									}}
-									onAddMessages={({ modelId, parentId, messages }) => {
-										addMessages({ modelId, parentId, messages });
-									}}
-									onSave={({ raw, oldContent, newContent }) => {
-										history.messages[message.id].content = history.messages[
-											message.id
-										].content.replace(raw, raw.replace(oldContent, newContent));
+											if (citationsElement) {
+												citationsElement?.showSourceModal(id);
+											}
+										}}
+										onAddMessages={({ modelId, parentId, messages }) => {
+											addMessages({ modelId, parentId, messages });
+										}}
+										onSave={({ raw, oldContent, newContent }) => {
+											history.messages[message.id].content = history.messages[
+												message.id
+											].content.replace(raw, raw.replace(oldContent, newContent));
 
-										updateChat();
-									}}
-								/>
-							{/if}
+											updateChat();
+										}}
+									/>
+								{/if}
 
-							{#if message?.error}
-								<Error content={message?.error?.content ?? message.content} />
-							{/if}
+								{#if message?.error}
+									<Error content={message?.error?.content ?? message.content} />
+								{/if}
 
-							{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}
-								<Citations
-									bind:this={citationsElement}
-									id={message?.id}
-									sources={message?.sources ?? message?.citations}
-									{readOnly}
-								/>
-							{/if}
+								{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}
+									<Citations
+										bind:this={citationsElement}
+										id={message?.id}
+										sources={message?.sources ?? message?.citations}
+										{readOnly}
+									/>
+								{/if}
 
-							{#if message.code_executions}
-								<CodeExecutions codeExecutions={message.code_executions} />
+								{#if message.code_executions}
+									<CodeExecutions codeExecutions={message.code_executions} />
+								{/if}
+							</div>
+
+							<!-- Regenerate Button (Right side of message) -->
+							{#if message.done && !readOnly && ($user?.role === 'admin' || ($user?.permissions?.chat?.regenerate_response ?? true))}
+								<Tooltip content={$i18n.t('Regenerate')} placement="right">
+									<button
+										type="button"
+										aria-label={$i18n.t('Regenerate')}
+										class="p-1 text-gray-950 dark:text-gray-50 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition regenerate-response-button"
+										on:click={() => {
+											showRateComment = false;
+											regenerateResponse(message);
+
+											(model?.actions ?? []).forEach((action) => {
+												dispatch('action', {
+													id: action.id,
+													event: {
+														id: 'regenerate-response',
+														data: {
+															messageId: message.id
+														}
+													}
+												});
+											});
+										}}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke-width="2"
+											aria-hidden="true"
+											stroke="currentColor"
+											class="w-5 h-5"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+											/>
+										</svg>
+									</button>
+								</Tooltip>
 							{/if}
 						</div>
+
+						<!-- Feedback Section: 답변이 이해되셨나요? -->
+						{#if message.done && !readOnly}
+							<div class="flex flex-row items-center gap-2 mt-2.5 w-full justify-start">
+								<span class="text-caption text-gray-700 dark:text-gray-300">
+									{$i18n.t('Did you understand the answer?')}
+								</span>
+								<!-- No Button -->
+								<Tooltip content={$i18n.t('No')} placement="bottom">
+									<button
+										type="button"
+										aria-label={$i18n.t('No')}
+										class="p-0.5 hover:opacity-80 transition"
+										on:click={() => {
+											// TODO: Backend integration
+											console.log('Feedback: No');
+										}}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke-width="2"
+											stroke="#FF4D6A"
+											class="w-5 h-5"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												d="M6 18L18 6M6 6l12 12"
+											/>
+										</svg>
+									</button>
+								</Tooltip>
+								<!-- Yes Button -->
+								<Tooltip content={$i18n.t('Yes')} placement="bottom">
+									<button
+										type="button"
+										aria-label={$i18n.t('Yes')}
+										class="p-0.5 hover:opacity-80 transition"
+										on:click={() => {
+											// TODO: Backend integration
+											console.log('Feedback: Yes');
+										}}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke-width="2"
+											stroke="#34BE89"
+											class="w-5 h-5"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+											/>
+										</svg>
+									</button>
+								</Tooltip>
+							</div>
+						{/if}
 					</div>
 				</div>
 
@@ -940,7 +1056,7 @@
 							{/if}
 
 							{#if message.done}
-								{#if !readOnly}
+								<!-- {#if !readOnly}
 									{#if $user?.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true}
 										<Tooltip content={$i18n.t('Edit')} placement="bottom">
 											<button
@@ -970,9 +1086,9 @@
 											</button>
 										</Tooltip>
 									{/if}
-								{/if}
+								{/if} -->
 
-								<Tooltip content={$i18n.t('Copy')} placement="bottom">
+								<!-- <Tooltip content={$i18n.t('Copy')} placement="bottom">
 									<button
 										aria-label={$i18n.t('Copy')}
 										class="{isLastMessage || ($settings?.highContrastMode ?? false)
@@ -998,9 +1114,9 @@
 											/>
 										</svg>
 									</button>
-								</Tooltip>
+								</Tooltip> -->
 
-								{#if $user?.role === 'admin' || ($user?.permissions?.chat?.tts ?? true)}
+								<!-- {#if $user?.role === 'admin' || ($user?.permissions?.chat?.tts ?? true)}
 									<Tooltip content={$i18n.t('Read Aloud')} placement="bottom">
 										<button
 											aria-label={$i18n.t('Read Aloud')}
@@ -1086,7 +1202,7 @@
 											{/if}
 										</button>
 									</Tooltip>
-								{/if}
+								{/if} -->
 
 								{#if $config?.features.enable_image_generation && ($user?.role === 'admin' || $user?.permissions?.features?.image_generation) && !readOnly}
 									<Tooltip content={$i18n.t('Generate Image')} placement="bottom">
@@ -1155,7 +1271,7 @@
 									</Tooltip>
 								{/if}
 
-								{#if message.usage}
+								<!-- {#if message.usage}
 									<Tooltip
 										content={message.usage
 											? `<pre>${sanitizeResponseContent(
@@ -1197,10 +1313,10 @@
 											</svg>
 										</button>
 									</Tooltip>
-								{/if}
+								{/if} -->
 
 								{#if !readOnly}
-									{#if !$temporaryChatEnabled && ($config?.features.enable_message_rating ?? true) && ($user?.role === 'admin' || ($user?.permissions?.chat?.rate_response ?? true))}
+									<!-- {#if !$temporaryChatEnabled && ($config?.features.enable_message_rating ?? true) && ($user?.role === 'admin' || ($user?.permissions?.chat?.rate_response ?? true))}
 										<Tooltip content={$i18n.t('Good Response')} placement="bottom">
 											<button
 												aria-label={$i18n.t('Good Response')}
@@ -1313,9 +1429,10 @@
 												</svg>
 											</button>
 										</Tooltip>
-									{/if}
+									{/if} -->
 
-									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.regenerate_response ?? true)}
+									<!-- Regenerate button moved to right side of message -->
+									<!-- {#if $user?.role === 'admin' || ($user?.permissions?.chat?.regenerate_response ?? true)}
 										{#if $settings?.regenerateMenu ?? true}
 											<button
 												type="button"
@@ -1424,9 +1541,9 @@
 												</button>
 											</Tooltip>
 										{/if}
-									{/if}
+									{/if} -->
 
-									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete_message ?? true)}
+									<!-- {#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete_message ?? true)}
 										{#if siblings.length > 1}
 											<Tooltip content={$i18n.t('Delete')} placement="bottom">
 												<button
@@ -1458,7 +1575,7 @@
 												</button>
 											</Tooltip>
 										{/if}
-									{/if}
+									{/if} -->
 
 									{#if isLastMessage}
 										{#each model?.actions ?? [] as action}

@@ -279,6 +279,7 @@
 						suggestionPrompts={allSuggestions}
 						inputValue={prompt}
 						suggestionTitle={$i18n.t('전체 학생')}
+						isPersonalized={false}
 						{onSelect}
 					/>
 				</div>
@@ -436,6 +437,7 @@
 						suggestionPrompts={allSuggestions}
 						inputValue={prompt}
 						suggestionTitle={$i18n.t('전체 학생')}
+						isPersonalized={false}
 						{onSelect}
 					/>
 				</div>

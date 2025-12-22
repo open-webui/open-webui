@@ -484,7 +484,7 @@
 						</Tooltip>
 					{/if}
 
-					{#if message?.content}
+					<!-- {#if message?.content}
 						<Tooltip content={$i18n.t('Copy')} placement="bottom">
 							<button
 								class="{($settings?.highContrastMode ?? false)
@@ -540,7 +540,7 @@
 								</button>
 							</Tooltip>
 						{/if}
-					{/if}
+					{/if} -->
 
 					{#if $settings?.chatBubble ?? true}
 						{#if siblings.length > 1}

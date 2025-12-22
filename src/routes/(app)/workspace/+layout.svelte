@@ -36,6 +36,10 @@
 				goto('/');
 			} else if ($page.url.pathname.includes('/tools') && !$user?.permissions?.workspace?.tools) {
 				goto('/');
+			} else if ($page.url.pathname.includes('/online-knowledge') && $user?.role !== 'admin') {
+				goto('/');
+			} else if ($page.url.pathname.includes('/online-chapter') && $user?.role !== 'admin') {
+				goto('/');
 			}
 		}
 
@@ -85,7 +89,7 @@
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
 							<a
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/models')
-									? ''
+									? 'text-gray-900'
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 								href="/workspace/models">{$i18n.t('Models')}</a
 							>
@@ -94,7 +98,7 @@
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge}
 							<a
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/knowledge')
-									? ''
+									? 'text-gray-900'
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 								href="/workspace/knowledge"
 							>
@@ -105,7 +109,7 @@
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts}
 							<a
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/prompts')
-									? ''
+									? 'text-gray-900'
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 								href="/workspace/prompts">{$i18n.t('Prompts')}</a
 							>
@@ -114,11 +118,30 @@
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.tools}
 							<a
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/tools')
-									? ''
+									? 'text-gray-900'
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 								href="/workspace/tools"
 							>
 								{$i18n.t('Tools')}
+							</a>
+						{/if}
+
+						{#if $user?.role === 'admin'}
+							<a
+								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/online-knowledge')
+									? 'text-gray-900'
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								href="/workspace/online-knowledge"
+							>
+								{$i18n.t('온라인 지식기반')}
+							</a>
+							<a
+								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/online-chapter')
+									? 'text-gray-900'
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								href="/workspace/online-chapter"
+							>
+								{$i18n.t('온라인 챕터')}
 							</a>
 						{/if}
 					</div>
