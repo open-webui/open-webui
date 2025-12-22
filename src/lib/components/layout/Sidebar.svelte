@@ -90,10 +90,13 @@
 	let currentChild: ChildProfile | null = null;
 	let selectedChildIndex: number = 0;
 
-	// Reactive statement to update currentChild when childProfiles or user settings change
+	// Reactive statement to update currentChild when childProfiles or settings change
 	$: {
-		// Reference $user store to make this reactive to user settings changes
-		const _ = $user?.settings?.ui?.selectedChildId;
+		// IMPORTANT: Watch $settings.selectedChildId, NOT $user.settings.ui.selectedChildId
+		// The user store doesn't include settings data (only auth data from /auths/ endpoint).
+		// The settings store (populated from /users/user/settings) is the source of truth.
+		// Reference $settings store to make this reactive to settings changes
+		const _ = $settings?.selectedChildId;
 		
 		if (childProfiles && childProfiles.length > 0) {
 			const currentChildId = childProfileSync.getCurrentChildId();

@@ -3,6 +3,27 @@
  * 
  * Manages child profile data with localStorage caching and backend synchronization.
  * Provides offline support and cross-device sync via user settings.
+ * 
+ * ARCHITECTURE NOTE - Store Separation Rule:
+ * ===========================================
+ * This service manages the currently selected child ID using the following stores:
+ * 
+ * - `settings` store: The SINGLE SOURCE OF TRUTH for selectedChildId
+ *   - Populated from /users/user/settings endpoint
+ *   - Contains UI preferences (theme, selectedChildId, etc.)
+ *   - Persists across page refresh
+ * 
+ * - `user` store: Auth/identity data ONLY (id, token, role, permissions)
+ *   - Populated from /auths/ endpoint
+ *   - Does NOT include UI settings data
+ *   - DO NOT read/write selectedChildId from user.settings
+ * 
+ * - localStorage: Used ONLY for child profile cache, NOT for selectedChildId
+ *   - DO NOT use localStorage.selectedChildId or localStorage.selectedChildForQuestions
+ * 
+ * IMPORTANT: Always use getCurrentChildId() and setCurrentChildId() methods in this
+ * service - they handle the correct store routing. Never directly access user.settings
+ * or localStorage for child selection state.
  */
 
 import { 
@@ -14,7 +35,7 @@ import {
     type ChildProfileForm 
 } from '$lib/apis/child-profiles';
 import { updateUserSettings } from '$lib/apis/users';
-import { user } from '$lib/stores';
+import { user, settings } from '$lib/stores';
 import { get } from 'svelte/store';
 
 class ChildProfileSyncService {
@@ -265,43 +286,66 @@ class ChildProfileSyncService {
     }
 
     /**
-     * Get the currently selected child ID from user settings
+     * Get the currently selected child ID from settings store
+     * 
+     * IMPORTANT: Reads from `settings` store, NOT `user.settings`.
+     * The user store doesn't include settings data on page refresh (only auth data).
+     * The settings store is populated from /users/user/settings endpoint and persists correctly.
+     * 
+     * @returns The selected child ID, or null if none selected
      */
     getCurrentChildId(): string | null {
-        const userData = get(user);
-        if (!userData?.settings?.ui?.selectedChildId) return null;
-        
-        return userData.settings.ui.selectedChildId;
+        const settingsData = get(settings);
+        return settingsData?.selectedChildId ?? null;
     }
 
     /**
-     * Set the currently selected child ID in user settings
+     * Set the currently selected child ID in settings store and backend
+     * 
+     * IMPORTANT: Updates `settings` store, NOT `user.settings`.
+     * Flow: Backend API (updateUserSettings) → settings store (local state)
+     * The settings store is what getCurrentChildId() reads from.
+     * 
+     * @param childId The child ID to select, or null to deselect
      */
     async setCurrentChildId(childId: string | null): Promise<void> {
         const userData = get(user);
         if (!userData?.token) return;
 
         try {
-            const currentSettings = userData.settings || {};
-            const currentUI = currentSettings.ui || {};
+            // Get current settings from the settings store
+            const currentSettingsData = get(settings) || {};
             
-            if (childId) {
-                currentUI.selectedChildId = childId;
-            } else {
-                delete currentUI.selectedChildId;
+            // Build the backend payload (needs ui.selectedChildId structure)
+            const backendPayload = {
+                ui: {
+                    ...currentSettingsData,
+                    selectedChildId: childId
+                }
+            };
+            
+            // Remove selectedChildId from payload if null
+            if (!childId) {
+                delete backendPayload.ui.selectedChildId;
             }
-            
-            currentSettings.ui = currentUI;
 
-            await updateUserSettings(userData.token, currentSettings);
+            // Save to backend
+            await updateUserSettings(userData.token, backendPayload);
             
-            // Update local user store
-            user.update(u => ({
-                ...u,
-                settings: currentSettings
-            }));
+            // Update local settings store (this is what getCurrentChildId reads from)
+            if (childId) {
+                settings.update(s => ({
+                    ...s,
+                    selectedChildId: childId
+                }));
+            } else {
+                settings.update(s => {
+                    const { selectedChildId, ...rest } = s as Record<string, unknown>;
+                    return rest;
+                });
+            }
         } catch (error) {
-            console.error('Failed to update selected child in user settings:', error);
+            console.error('Failed to update selected child in settings:', error);
             throw error;
         }
     }

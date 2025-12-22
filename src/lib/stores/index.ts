@@ -9,6 +9,13 @@ import emojiShortCodes from '$lib/emoji-shortcodes.json';
 // Backend
 export const WEBUI_NAME = writable(APP_NAME);
 export const config: Writable<Config | undefined> = writable(undefined);
+/**
+ * User store: Auth/identity data only (id, token, role, permissions)
+ * Populated from /auths/ endpoint
+ * 
+ * IMPORTANT: Does NOT include UI settings data (use `settings` store for that)
+ * Do NOT read/write UI preferences like selectedChildId from user.settings
+ */
 export const user: Writable<SessionUser | undefined> = writable(undefined);
 
 // Electron App
@@ -65,6 +72,14 @@ export const toolServers = writable([]);
 
 export const banners: Writable<Banner[]> = writable([]);
 
+/**
+ * Settings store: UI preferences (theme, selectedChildId, etc.)
+ * Populated from /users/user/settings endpoint
+ * 
+ * This is the SINGLE SOURCE OF TRUTH for selectedChildId and other UI preferences.
+ * Use childProfileSync.getCurrentChildId() and setCurrentChildId() methods to
+ * read/write selectedChildId - they handle the correct store routing.
+ */
 export const settings: Writable<Settings> = writable({});
 
 export const showSidebar = writable(false);

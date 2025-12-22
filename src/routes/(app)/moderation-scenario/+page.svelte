@@ -1206,7 +1206,7 @@ let currentRequestId: number = 0;
 					message_id: `${scenarioId}:${source}`,
 					role,
 					selected_text: text,
-					child_id: localStorage.getItem('selectedChildId') || 'unknown',
+					child_id: selectedChildId || 'unknown',
 					scenario_id: scenarioId,
 					source,
 					context: null,

@@ -345,14 +345,13 @@ let parentLLMMonitoringLevel: string = '';
 			selectedChildIndex = childProfiles.length - 1;
 			showForm = true;
 			
-			// Automatically select the newly created child for questions
-			const newChildId = newChild.id;
-			if (newChildId) {
-				childSelectedForQuestions = selectedChildIndex;
-				await childProfileSync.setCurrentChildId(newChildId);
-				localStorage.setItem('selectedChildForQuestions', newChildId.toString());
-				
-				// Unlock Step 2
+		// Automatically select the newly created child for questions
+		const newChildId = newChild.id;
+		if (newChildId) {
+			childSelectedForQuestions = selectedChildIndex;
+			await childProfileSync.setCurrentChildId(newChildId);
+			
+			// Unlock Step 2
 				localStorage.setItem('assignmentStep', '2');
 				localStorage.setItem('moderationScenariosAccessed', 'true');
 				localStorage.setItem('unlock_moderation', 'true');
@@ -406,11 +405,10 @@ let parentLLMMonitoringLevel: string = '';
 			await childProfileSync.setCurrentChildId(childId);
 			console.log('Selected child profile:', childId);
 			
-			// Set this child as selected for questions (same as selectChildForQuestions)
-			childSelectedForQuestions = index;
-			localStorage.setItem('selectedChildForQuestions', childId.toString());
-			
-			// Unlock Step 2 (but don't show modal yet - that happens after save)
+		// Set this child as selected for questions (same as selectChildForQuestions)
+		childSelectedForQuestions = index;
+		
+		// Unlock Step 2 (but don't show modal yet - that happens after save)
 			localStorage.setItem('assignmentStep', '2');
 			localStorage.setItem('moderationScenariosAccessed', 'true');
 			localStorage.setItem('unlock_moderation', 'true');
@@ -430,31 +428,34 @@ let parentLLMMonitoringLevel: string = '';
 				childProfiles = [];
 			}
 			
-			// Check for currently selected child from user settings
-			if (childProfiles.length > 0) {
-				const currentChildId = childProfileSync.getCurrentChildId();
-				if (currentChildId) {
-					const index = childProfiles.findIndex(c => c.id === currentChildId);
-					if (index !== -1) {
-						selectedChildIndex = index;
-					} else {
-						// Current child ID doesn't exist in profiles, use first available
-						selectedChildIndex = 0;
-					}
+		// Check for currently selected child from user settings (single source of truth)
+		if (childProfiles.length > 0) {
+			const currentChildId = childProfileSync.getCurrentChildId();
+			if (currentChildId) {
+				const index = childProfiles.findIndex(c => c.id === currentChildId);
+				if (index !== -1) {
+					// Backend has a valid selected child - set both states to this index
+					selectedChildIndex = index;
+					childSelectedForQuestions = index;
 				} else {
-					// No current child selected, use first available
-					selectedChildIndex = 0;
+					// Current child ID doesn't exist in profiles, no selection
+					selectedChildIndex = 0; // Show first profile for viewing
+					childSelectedForQuestions = -1; // But no child selected for questions
 				}
-				hydrateFormFromSelectedChild();
-				showForm = false; // Don't show form initially, wait for Edit click
-				isProfileCompleted = true; // Profile exists
-				childSelectedForQuestions = -1; // Reset selection state
 			} else {
-				selectedChildIndex = -1;
-				showForm = false;
-				isProfileCompleted = false;
-				childSelectedForQuestions = -1;
+				// No current child selected in backend
+				selectedChildIndex = 0; // Show first profile for viewing
+				childSelectedForQuestions = -1; // No child selected for questions
 			}
+			hydrateFormFromSelectedChild();
+			showForm = false; // Don't show form initially, wait for Edit click
+			isProfileCompleted = true; // Profile exists
+		} else {
+			selectedChildIndex = -1;
+			showForm = false;
+			isProfileCompleted = false;
+			childSelectedForQuestions = -1;
+		}
 		} catch (error) {
 			console.error('Failed to load child profiles:', error);
 			// Fallback to empty array
@@ -624,12 +625,11 @@ let parentLLMMonitoringLevel: string = '';
 	async function selectChildForQuestions(index: number) {
 		childSelectedForQuestions = index;
 		const childId = childProfiles[index]?.id;
-		if (childId) {
-			// Use the childProfileSync service to set the current child ID
-			await childProfileSync.setCurrentChildId(childId);
-			localStorage.setItem('selectedChildForQuestions', childId.toString());
-			console.log('Selected child for moderation:', childId);
-		}
+	if (childId) {
+		// Use the childProfileSync service to set the current child ID
+		await childProfileSync.setCurrentChildId(childId);
+		console.log('Selected child for moderation:', childId);
+	}
 		// Unlock Step 2 immediately before showing the modal
 		localStorage.setItem('assignmentStep', '2');
 		localStorage.setItem('moderationScenariosAccessed', 'true');
@@ -670,34 +670,26 @@ let parentLLMMonitoringLevel: string = '';
 		}
 		
 			// Wait for user store to be loaded with settings
-			const waitForUser = () => {
-				return new Promise<void>((resolve) => {
-					const currentUser = get(user);
-					if (currentUser && currentUser.id && currentUser.settings) {
-						resolve();
-						return;
-					}
-					const unsubscribe = user.subscribe((userData) => {
-						if (userData && userData.id && userData.settings) {
-							unsubscribe();
-							resolve();
-						}
-					});
-				});
-			};
-			
-			await waitForUser();
-			await loadChildProfile();
-			
-			// Check if child has been selected for questions
-			const savedChildId = localStorage.getItem('selectedChildForQuestions');
-			if (savedChildId) {
-				const index = childProfiles.findIndex(c => c.id?.toString() === savedChildId);
-				if (index !== -1) {
-					childSelectedForQuestions = index;
+		const waitForUser = () => {
+			return new Promise<void>((resolve) => {
+				const currentUser = get(user);
+				if (currentUser && currentUser.id) {
+					resolve();
+					return;
 				}
-			}
-		})();
+				const unsubscribe = user.subscribe((userData) => {
+					if (userData && userData.id) {
+						unsubscribe();
+						resolve();
+					}
+				});
+			});
+		};
+			
+		await waitForUser();
+		await loadChildProfile();
+		// childSelectedForQuestions is now set from backend in loadChildProfile()
+	})();
 		
 		// Set up scroll indicator
 		const timer = setTimeout(() => {
