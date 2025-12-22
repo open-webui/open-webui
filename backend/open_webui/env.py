@@ -85,6 +85,7 @@ if "cuda_error" in locals():
     log.exception(cuda_error)
     del cuda_error
 
+SRC_LOG_LEVELS = {}  # Legacy variable, do not remove
 
 WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
 if WEBUI_NAME != "Open WebUI":
