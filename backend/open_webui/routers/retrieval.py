@@ -22,6 +22,7 @@ from fastapi import (
     Request,
     status,
     APIRouter,
+    BackgroundTasks
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import run_in_threadpool
@@ -102,6 +103,8 @@ from open_webui.config import (
     DEFAULT_LOCALE,
     RAG_EMBEDDING_CONTENT_PREFIX,
     RAG_EMBEDDING_QUERY_PREFIX,
+    STORAGE_DELETE_LOCAL_AFTER_UPLOAD,
+    STORAGE_PROVIDER
 )
 from open_webui.env import (
     DEVICE_TYPE,
@@ -121,6 +124,10 @@ log = logging.getLogger(__name__)
 # Utility functions
 #
 ##########################################
+
+def remove_single_file(path: str) -> None:
+    if os.path.exists(path):
+        os.remove(path)
 
 
 def get_ef(
@@ -1482,6 +1489,7 @@ class ProcessFileForm(BaseModel):
 @router.post("/process/file")
 def process_file(
     request: Request,
+    background_tasks: BackgroundTasks,
     form_data: ProcessFileForm,
     user=Depends(get_verified_user),
 ):
@@ -1614,6 +1622,12 @@ def process_file(
                         )
                         for doc in docs
                     ]
+                    
+                    if STORAGE_PROVIDER in ("s3", "gcs", "azure") and STORAGE_DELETE_LOCAL_AFTER_UPLOAD:
+                        if background_tasks:
+                            background_tasks.add_task(remove_single_file, file_path)
+                        else:
+                            remove_single_file(file_path)
                 else:
                     docs = [
                         Document(

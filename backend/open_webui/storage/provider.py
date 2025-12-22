@@ -178,7 +178,8 @@ class S3StorageProvider(StorageProvider):
         try:
             s3_key = self._extract_s3_key(file_path)
             local_file_path = self._get_local_file_path(s3_key)
-            self.s3_client.download_file(self.bucket_name, s3_key, local_file_path)
+            if not os.path.exists(local_file_path):
+                self.s3_client.download_file(self.bucket_name, s3_key, local_file_path)
             return local_file_path
         except ClientError as e:
             raise RuntimeError(f"Error downloading file from S3: {e}")
@@ -253,8 +254,9 @@ class GCSStorageProvider(StorageProvider):
         try:
             filename = file_path.removeprefix("gs://").split("/")[1]
             local_file_path = f"{UPLOAD_DIR}/{filename}"
-            blob = self.bucket.get_blob(filename)
-            blob.download_to_filename(local_file_path)
+            if not os.path.exists(local_file_path):
+                blob = self.bucket.get_blob(filename)
+                blob.download_to_filename(local_file_path)
 
             return local_file_path
         except NotFound as e:
@@ -325,9 +327,10 @@ class AzureStorageProvider(StorageProvider):
         try:
             filename = file_path.split("/")[-1]
             local_file_path = f"{UPLOAD_DIR}/{filename}"
-            blob_client = self.container_client.get_blob_client(filename)
-            with open(local_file_path, "wb") as download_file:
-                download_file.write(blob_client.download_blob().readall())
+            if not os.path.exists(local_file_path):
+                blob_client = self.container_client.get_blob_client(filename)
+                with open(local_file_path, "wb") as download_file:
+                    download_file.write(blob_client.download_blob().readall())
             return local_file_path
         except ResourceNotFoundError as e:
             raise RuntimeError(f"Error downloading file from Azure Blob Storage: {e}")

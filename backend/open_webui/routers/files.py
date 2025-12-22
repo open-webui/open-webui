@@ -43,6 +43,11 @@ from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.routers.audio import transcribe
 
 from open_webui.storage.provider import Storage
+from open_webui.config import (
+    STORAGE_DELETE_LOCAL_AFTER_UPLOAD,
+    STORAGE_PROVIDER,
+    UPLOAD_DIR
+)
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -54,6 +59,10 @@ log = logging.getLogger(__name__)
 
 router = APIRouter()
 
+
+def remove_single_file(path: str) -> None:
+    if os.path.exists(path):
+        os.remove(path)
 
 ############################
 # Check if the current user has access to a file through any knowledge bases the user may be in.
@@ -109,7 +118,7 @@ def has_access_to_file(
 ############################
 
 
-def process_uploaded_file(request, file, file_path, file_item, file_metadata, user):
+def process_uploaded_file(request, file, file_path, file_item, file_metadata, user, background_tasks=None):
     try:
         if file.content_type:
             stt_supported_content_types = getattr(
@@ -117,11 +126,12 @@ def process_uploaded_file(request, file, file_path, file_item, file_metadata, us
             )
 
             if strict_match_mime_type(stt_supported_content_types, file.content_type):
-                file_path = Storage.get_file(file_path)
-                result = transcribe(request, file_path, file_metadata, user)
+                local_file_path = Storage.get_file(file_path)
+                result = transcribe(request, local_file_path, file_metadata, user)
 
                 process_file(
                     request,
+                    background_tasks,
                     ProcessFileForm(
                         file_id=file_item.id, content=result.get("text", "")
                     ),
@@ -130,7 +140,7 @@ def process_uploaded_file(request, file, file_path, file_item, file_metadata, us
             elif (not file.content_type.startswith(("image/", "video/"))) or (
                 request.app.state.config.CONTENT_EXTRACTION_ENGINE == "external"
             ):
-                process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
+                process_file(request, background_tasks, ProcessFileForm(file_id=file_item.id), user=user)
             else:
                 raise Exception(
                     f"File type {file.content_type} is not supported for processing"
@@ -139,7 +149,7 @@ def process_uploaded_file(request, file, file_path, file_item, file_metadata, us
             log.info(
                 f"File type {file.content_type} is not provided, but trying to process anyway"
             )
-            process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
+            process_file(request, background_tasks, ProcessFileForm(file_id=file_item.id), user=user)
 
     except Exception as e:
         log.error(f"Error processing file: {file_item.id}")
@@ -258,6 +268,7 @@ def upload_file_handler(
                 Channels.add_file_to_channel_by_id(channel.id, file_item.id, user.id)
 
         if process:
+            # For Avoding nested background tasks, pass None background_tasks parameter on process_uploaded_file function
             if background_tasks and process_in_background:
                 background_tasks.add_task(
                     process_uploaded_file,
@@ -267,6 +278,7 @@ def upload_file_handler(
                     file_item,
                     file_metadata,
                     user,
+                    None
                 )
                 return {"status": True, **file_item.model_dump()}
             else:
@@ -277,10 +289,17 @@ def upload_file_handler(
                     file_item,
                     file_metadata,
                     user,
+                    background_tasks
                 )
                 return {"status": True, **file_item.model_dump()}
         else:
             if file_item:
+                if STORAGE_PROVIDER in ("s3", "gcs", "azure") and STORAGE_DELETE_LOCAL_AFTER_UPLOAD:
+                    local_file_path = f"{UPLOAD_DIR}/{filename}"
+                    if background_tasks:
+                        background_tasks.add_task(remove_single_file, local_file_path)
+                    else:
+                        remove_single_file(local_file_path)
                 return file_item
             else:
                 raise HTTPException(
@@ -509,7 +528,11 @@ class ContentForm(BaseModel):
 
 @router.post("/{id}/data/content/update")
 async def update_file_data_content_by_id(
-    request: Request, id: str, form_data: ContentForm, user=Depends(get_verified_user)
+    request: Request,
+    background_tasks :BackgroundTasks,
+    id: str,
+    form_data: ContentForm,
+    user=Depends(get_verified_user)
 ):
     file = Files.get_file_by_id(id)
 
@@ -527,6 +550,7 @@ async def update_file_data_content_by_id(
         try:
             process_file(
                 request,
+                background_tasks,
                 ProcessFileForm(file_id=id, content=form_data.content),
                 user=user,
             )
@@ -550,7 +574,7 @@ async def update_file_data_content_by_id(
 
 @router.get("/{id}/content")
 async def get_file_content_by_id(
-    id: str, user=Depends(get_verified_user), attachment: bool = Query(False)
+    background_tasks: BackgroundTasks, id: str, user=Depends(get_verified_user), attachment: bool = Query(False)
 ):
     file = Files.get_file_by_id(id)
 
@@ -597,6 +621,8 @@ async def get_file_content_by_id(
                             f"attachment; filename*=UTF-8''{encoded_filename}"
                         )
 
+                if STORAGE_PROVIDER in ("s3", "gcs", "azure") and STORAGE_DELETE_LOCAL_AFTER_UPLOAD:
+                    background_tasks.add_task(remove_single_file, file_path)
                 return FileResponse(file_path, headers=headers, media_type=content_type)
 
             else:
@@ -619,7 +645,7 @@ async def get_file_content_by_id(
 
 
 @router.get("/{id}/content/html")
-async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user)):
+async def get_html_file_content_by_id(background_tasks: BackgroundTasks, id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)
 
     if not file:
@@ -646,6 +672,8 @@ async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user)):
 
             # Check if the file already exists in the cache
             if file_path.is_file():
+                if STORAGE_PROVIDER in ("s3", "gcs", "azure") and STORAGE_DELETE_LOCAL_AFTER_UPLOAD:
+                    background_tasks.add_task(remove_single_file, file_path)
                 log.info(f"file_path: {file_path}")
                 return FileResponse(file_path)
             else:
@@ -668,7 +696,7 @@ async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user)):
 
 
 @router.get("/{id}/content/{file_name}")
-async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
+async def get_file_content_by_id(background_tasks: BackgroundTasks, id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)
 
     if not file:
@@ -697,6 +725,8 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
 
             # Check if the file already exists in the cache
             if file_path.is_file():
+                if STORAGE_PROVIDER in ("s3", "gcs", "azure") and STORAGE_DELETE_LOCAL_AFTER_UPLOAD:
+                    background_tasks.add_task(remove_single_file, file_path)
                 return FileResponse(file_path, headers=headers)
             else:
                 raise HTTPException(

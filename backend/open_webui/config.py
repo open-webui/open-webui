@@ -943,6 +943,8 @@ AZURE_STORAGE_ENDPOINT = os.environ.get("AZURE_STORAGE_ENDPOINT", None)
 AZURE_STORAGE_CONTAINER_NAME = os.environ.get("AZURE_STORAGE_CONTAINER_NAME", None)
 AZURE_STORAGE_KEY = os.environ.get("AZURE_STORAGE_KEY", None)
 
+STORAGE_DELETE_LOCAL_AFTER_UPLOAD = os.getenv("STORAGE_DELETE_LOCAL_AFTER_UPLOAD", "false").lower() == "true"
+
 ####################################
 # File Upload DIR
 ####################################

@@ -1,6 +1,6 @@
 from typing import List, Optional
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query, BackgroundTasks
 from fastapi.concurrency import run_in_threadpool
 import logging
 
@@ -196,7 +196,7 @@ async def create_new_knowledge(
 
 
 @router.post("/reindex", response_model=bool)
-async def reindex_knowledge_files(request: Request, user=Depends(get_verified_user)):
+async def reindex_knowledge_files(request: Request, background_tasks: BackgroundTasks, user=Depends(get_verified_user)):
     if user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -225,6 +225,7 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
                     await run_in_threadpool(
                         process_file,
                         request,
+                        background_tasks,
                         ProcessFileForm(
                             file_id=file.id, collection_name=knowledge_base.id
                         ),
@@ -407,6 +408,7 @@ class KnowledgeFileIdForm(BaseModel):
 @router.post("/{id}/file/add", response_model=Optional[KnowledgeFilesResponse])
 def add_file_to_knowledge_by_id(
     request: Request,
+    background_tasks: BackgroundTasks,
     id: str,
     form_data: KnowledgeFileIdForm,
     user=Depends(get_verified_user),
@@ -444,6 +446,7 @@ def add_file_to_knowledge_by_id(
     try:
         process_file(
             request,
+            background_tasks,
             ProcessFileForm(file_id=form_data.file_id, collection_name=id),
             user=user,
         )
@@ -474,6 +477,7 @@ def add_file_to_knowledge_by_id(
 @router.post("/{id}/file/update", response_model=Optional[KnowledgeFilesResponse])
 def update_file_from_knowledge_by_id(
     request: Request,
+    background_tasks: BackgroundTasks,
     id: str,
     form_data: KnowledgeFileIdForm,
     user=Depends(get_verified_user),
@@ -512,6 +516,7 @@ def update_file_from_knowledge_by_id(
     try:
         process_file(
             request,
+            background_tasks,
             ProcessFileForm(file_id=form_data.file_id, collection_name=id),
             user=user,
         )
