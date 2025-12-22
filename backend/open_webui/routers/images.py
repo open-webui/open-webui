@@ -531,11 +531,17 @@ def upload_image(request, image_data, content_type, metadata, user):
 
 
 @router.post("/generations")
+async def generate_images(
+    request: Request, form_data: CreateImageForm, user=Depends(get_verified_user)
+):
+    return await image_generations(request, form_data, user=user)
+
+
 async def image_generations(
     request: Request,
     form_data: CreateImageForm,
     metadata: Optional[dict] = None,
-    user=Depends(get_verified_user),
+    user=None,
 ):
     # if IMAGE_SIZE = 'auto', default WidthxHeight to the 512x512 default
     # This is only relevant when the user has set IMAGE_SIZE to 'auto' with an
