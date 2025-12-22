@@ -3284,15 +3284,19 @@ async def process_chat_response(
                     "title": title,
                 }
 
-                if not ENABLE_REALTIME_CHAT_SAVE:
-                    # Save message in the database
-                    Chats.upsert_message_to_chat_by_id_and_message_id(
-                        metadata["chat_id"],
-                        metadata["message_id"],
-                        {
-                            "content": serialize_content_blocks(content_blocks),
-                        },
-                    )
+                # 항상 DB에 저장 (WebSocket 경로)
+                if metadata.get("chat_id") and metadata.get("message_id") and not metadata.get("chat_id", "").startswith("local:"):
+                    try:
+                        Chats.upsert_message_to_chat_by_id_and_message_id(
+                            metadata["chat_id"],
+                            metadata["message_id"],
+                            {
+                                "content": serialize_content_blocks(content_blocks),
+                                "role": "assistant",
+                            },
+                        )
+                    except Exception as e:
+                        log.error(f"Failed to save assistant message: {e}")
 
                 # Send a webhook notification if the user is not active
                 if not get_active_status_by_user_id(user.id):
@@ -3338,10 +3342,12 @@ async def process_chat_response(
         return await response_handler(response, events)
 
     else:
-        # Fallback to the original response
+        # Fallback to the original response (no session_id / no WebSocket)
         async def stream_wrapper(original_generator, events):
             def wrap_item(item):
                 return f"data: {item}\n\n"
+
+            collected_content = []
 
             for event in events:
                 event, _ = await process_filter_functions(
@@ -3366,6 +3372,36 @@ async def process_chat_response(
 
                 if data:
                     yield data
+                    # 스트리밍 데이터에서 content 추출
+                    try:
+                        data_str = data.decode('utf-8') if isinstance(data, bytes) else str(data)
+                        if data_str.startswith("data: "):
+                            json_str = data_str[6:].strip()
+                            if json_str and json_str != "[DONE]":
+                                chunk = json.loads(json_str)
+                                if "choices" in chunk:
+                                    for choice in chunk["choices"]:
+                                        delta = choice.get("delta", {})
+                                        if "content" in delta:
+                                            collected_content.append(delta["content"])
+                    except Exception:
+                        pass
+
+            # 스트리밍 완료 후 DB에 저장
+            if collected_content and metadata.get("chat_id") and metadata.get("message_id"):
+                if not metadata.get("chat_id", "").startswith("local:"):
+                    full_content = "".join(collected_content)
+                    try:
+                        Chats.upsert_message_to_chat_by_id_and_message_id(
+                            metadata["chat_id"],
+                            metadata["message_id"],
+                            {
+                                "content": full_content,
+                                "role": "assistant",
+                            },
+                        )
+                    except Exception as e:
+                        log.error(f"Failed to save assistant message: {e}")
 
         return StreamingResponse(
             stream_wrapper(response.body_iterator, events),
