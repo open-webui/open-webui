@@ -68,75 +68,7 @@
 		{/if}
 	</div>
 
-	<!-- Buttons Section (Right) -->
-	<div class="flex items-center gap-3 flex-shrink-0 whitespace-nowrap">
-		<!-- Proficiency Level Dropdown -->
-		 <span class="text-caption text-gray-800 dark:text-gray-200">수준</span>
-		<div class="relative w-20">
-			
-			<button
-				on:click={() => {
-					showProficiencyDropdown = !showProficiencyDropdown;
-					showResponseStyleDropdown = false;
-				}}
-				class={glassDropdownBtn}
-			>
-				<span class={glassDropdownText}>{proficiencyLevels[proficiencyLevel]}</span>
-				<svg class={glassDropdownIcon(showProficiencyDropdown)} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path
-						d="M9.99595 12.75C9.89595 12.75 9.8022 12.7326 9.7147 12.6979C9.6272 12.6632 9.54873 12.6111 9.47928 12.5416L5.52803 8.59038C5.37053 8.43288 5.29525 8.25343 5.3022 8.05204C5.30914 7.85065 5.389 7.67357 5.54178 7.52079C5.69456 7.36801 5.87164 7.29163 6.07303 7.29163C6.27442 7.29163 6.4515 7.36801 6.60428 7.52079L10.0001 10.9375L13.4168 7.52079C13.5696 7.36801 13.7466 7.2951 13.948 7.30204C14.1494 7.30899 14.3265 7.38885 14.4793 7.54163C14.6321 7.6944 14.7084 7.87149 14.7084 8.07288C14.7084 8.27426 14.6297 8.45329 14.4722 8.60996L10.5209 12.5416C10.4459 12.6111 10.3647 12.6632 10.2772 12.6979C10.1897 12.7326 10.0959 12.75 9.99595 12.75Z"
-						fill="currentColor"
-					/>
-				</svg>
-			</button>
 
-			{#if showProficiencyDropdown}
-				<div class={glassDropdownMenu}>
-					{#each Object.entries(proficiencyLevels) as [key, label]}
-						<button
-							on:click={() => setProficiencyLevel(key)}
-							class="{glassDropdownOption} {proficiencyLevel === key ? glassDropdownOptionActive : ''}"
-						>
-							{label}
-						</button>
-					{/each}
-				</div>
-			{/if}
-		</div>
-
-		<!-- Response Style Dropdown -->
-		<span class="text-caption text-gray-800 dark:text-gray-200">응답 스타일</span>
-		<div class="relative w-28">
-			<button
-				on:click={() => {
-					showResponseStyleDropdown = !showResponseStyleDropdown;
-					showProficiencyDropdown = false;
-				}}
-				class={glassDropdownBtn}
-			>
-				<span class={glassDropdownText}>{responseStyles[responseStyle]}</span>
-				<svg class={glassDropdownIcon(showResponseStyleDropdown)} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path
-						d="M9.99595 12.75C9.89595 12.75 9.8022 12.7326 9.7147 12.6979C9.6272 12.6632 9.54873 12.6111 9.47928 12.5416L5.52803 8.59038C5.37053 8.43288 5.29525 8.25343 5.3022 8.05204C5.30914 7.85065 5.389 7.67357 5.54178 7.52079C5.69456 7.36801 5.87164 7.29163 6.07303 7.29163C6.27442 7.29163 6.4515 7.36801 6.60428 7.52079L10.0001 10.9375L13.4168 7.52079C13.5696 7.36801 13.7466 7.2951 13.948 7.30204C14.1494 7.30899 14.3265 7.38885 14.4793 7.54163C14.6321 7.6944 14.7084 7.87149 14.7084 8.07288C14.7084 8.27426 14.6297 8.45329 14.4722 8.60996L10.5209 12.5416C10.4459 12.6111 10.3647 12.6632 10.2772 12.6979C10.1897 12.7326 10.0959 12.75 9.99595 12.75Z"
-						fill="currentColor"
-					/>
-				</svg>
-			</button>
-
-			{#if showResponseStyleDropdown}
-				<div class={glassDropdownMenu}>
-					{#each Object.entries(responseStyles) as [key, label]}
-						<button
-							on:click={() => setResponseStyle(key)}
-							class="{glassDropdownOption} {responseStyle === key ? glassDropdownOptionActive : ''}"
-						>
-							{label}
-						</button>
-					{/each}
-				</div>
-			{/if}
-		</div>
-	</div>
 </div>
 
 <style>

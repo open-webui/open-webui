@@ -106,29 +106,41 @@
 		{:else if textbookData}
 			<!-- Textbook Card - Click to clear chapter selection -->
 			<button
-				class="mx-2 px-5 py-4 rounded-2xl bg-[rgba(253,254,254,0.7)] border-0 shadow-[4px_4px_20px_rgba(0,0,0,0.1)] backdrop-blur-[20px] hover:bg-[rgba(253,254,254,0.85)] transition cursor-pointer text-left flex-1"
+				class="mx-2 px-5 py-4 rounded-2xl
+					bg-white/70 dark:bg-white/5
+					border border-gray-200/30 dark:border-gray-200/20
+					shadow-[0.25rem_0.25rem_1.25rem_rgba(0,0,0,0.1)] dark:shadow-[0.25rem_0.25rem_1.25rem_rgba(0,0,0,0.2)]
+					backdrop-blur-lg
+					hover:bg-white/85 dark:hover:bg-white/10
+					transition cursor-pointer text-left flex-1"
 				on:click={clearSection}
 			>
-				<div class="w-[220px] text-sm font-normal text-[#1A1B1C] dark:text-white mb-1">{textbookData.title}</div>
-				<div class="flex flex-col gap-1 w-[220px]">
-					<div class="text-xs font-normal text-[#596172] dark:text-gray-400">저자: {textbookData.author}</div>
-					<div class="text-xs font-normal text-[#596172] dark:text-gray-400">판: {textbookData.edition}</div>
+				<div class="w-56 text-sm font-normal text-gray-950 dark:text-white mb-1">{textbookData.title}</div>
+				<div class="flex flex-col gap-1 w-56">
+					<div class="text-xs font-normal text-gray-700 dark:text-gray-400">저자: {textbookData.author}</div>
+					<div class="text-xs font-normal text-gray-700 dark:text-gray-400">판: {textbookData.edition}</div>
 				</div>
 			</button>
 
 			<!-- Sections -->
 			{#each textbookData.sections as section}
 				<div class="mx-2">
-					<div class="{expandedSections[section.id] ? 'bg-[rgba(253,254,254,0.5)] shadow-[4px_4px_20px_rgba(0,0,0,0.1),inset_2px_2px_16px_rgba(206,212,229,0.1)] backdrop-blur-[10px] rounded-2xl' : ''}">
+					<div class="{expandedSections[section.id] ? 'bg-white/50 dark:bg-white/5 shadow-[0.25rem_0.25rem_1.25rem_rgba(0,0,0,0.1),inset_0.125rem_0.125rem_1rem_rgba(206,212,229,0.1)] dark:shadow-[0.25rem_0.25rem_1.25rem_rgba(0,0,0,0.2)] backdrop-blur-md border border-gray-200/30 dark:border-gray-200/20 rounded-2xl' : ''}">
 						<!-- Section Button Wrapper -->
 						<div>
 							<button
-								class="w-full flex items-center justify-between px-4 py-2 gap-2 rounded-full bg-[rgba(253,254,254,0.5)] shadow-[4px_4px_20px_rgba(0,0,0,0.1),inset_2px_2px_16px_rgba(206,212,229,0.1)] backdrop-blur-[10px] hover:bg-[rgba(253,254,254,0.6)] transition text-left"
+								class="w-full flex items-center justify-between px-4 py-2 gap-2 rounded-full
+									bg-white/50 dark:bg-white/5
+									border border-gray-200/30 dark:border-gray-200/20
+									shadow-[0.25rem_0.25rem_1.25rem_rgba(0,0,0,0.1),inset_0.125rem_0.125rem_1rem_rgba(206,212,229,0.1)] dark:shadow-[0.25rem_0.25rem_1.25rem_rgba(0,0,0,0.2)]
+									backdrop-blur-md
+									hover:bg-white/60 dark:hover:bg-white/10
+									transition text-left"
 								on:click={() => toggleSection(section.id)}
 							>
-								<span class="text-xs leading-[18px] text-[#1A1B1C] dark:text-[#FDFEFE] font-pretendard font-normal flex-1 truncate">{section.title}</span>
+								<span class="text-xs leading-tight text-gray-950 dark:text-gray-50 font-pretendard font-normal flex-1 truncate">{section.title}</span>
 								<ChevronDown
-									className="size-5 flex-shrink-0 transition-transform duration-200 text-[#1A1B1C] dark:text-[#FDFEFE] {expandedSections[section.id]
+									className="size-5 flex-shrink-0 transition-transform duration-200 text-gray-950 dark:text-gray-50 {expandedSections[section.id]
 										? 'rotate-180'
 										: ''}"
 									strokeWidth="1.5"
@@ -141,10 +153,10 @@
 							<div class="w-full flex flex-col items-start px-1 py-1 gap-1" transition:slide={{ duration: 200 }}>
 								{#each section.subsections as subsection}
 									<button
-										class="w-full flex items-center px-1 py-4 h-[25px] rounded-xl hover:bg-black/10 dark:hover:bg-white/10 transition text-left"
+										class="w-full flex items-center px-1 py-4 h-6 rounded-xl hover:bg-black/10 dark:hover:bg-white/10 transition text-left"
 										on:click={() => selectSubsection(subsection)}
 									>
-										<span class="text-xs text-[#1A1B1C] dark:text-gray-200 flex-1 truncate">{subsection.title}</span>
+										<span class="text-xs text-gray-950 dark:text-gray-200 flex-1 truncate">{subsection.title}</span>
 									</button>
 								{/each}
 							</div>

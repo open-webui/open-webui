@@ -305,7 +305,7 @@
 						</Tooltip>
 					{/if}
 
-					{#if ($knowledge ?? []).length > 0}
+					<!-- {#if ($knowledge ?? []).length > 0}
 						<Tooltip
 							content={fileUploadCapableModels.length !== selectedModels.length
 								? $i18n.t('Model(s) do not support file upload')
@@ -335,9 +335,9 @@
 								</div>
 							</button>
 						</Tooltip>
-					{/if}
+					{/if} -->
 
-					{#if ($chats ?? []).length > 0}
+					<!-- {#if ($chats ?? []).length > 0}
 						<Tooltip
 							content={fileUploadCapableModels.length !== selectedModels.length
 								? $i18n.t('Model(s) do not support file upload')
@@ -367,7 +367,7 @@
 								</div>
 							</button>
 						</Tooltip>
-					{/if}
+					{/if} -->
 
 					{#if fileUploadEnabled}
 						{#if $config?.features?.enable_google_drive_integration}

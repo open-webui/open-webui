@@ -100,13 +100,15 @@ textarea::placeholder {
 
 /* Glass Morphism Styles */
 .glass-callout-dark {
-	background: rgba(39, 40, 44, 0.2);
-	box-shadow: 
-		4px 4px 20px rgba(0, 0, 0, 0.1),
-		inset 2px 2px 6px rgba(206, 212, 229, 0.2),
-		inset 6px 6px 25px rgba(206, 212, 229, 0.15);
-	backdrop-filter: blur(10px);
-	border-radius: 40px 40px 40px 4px;
+	background: rgba(255, 255, 255, 0.05);
+	border: 0.0625rem solid rgba(206, 212, 229, 0.2);
+	box-shadow:
+		0.25rem 0.25rem 1.25rem rgba(0, 0, 0, 0.1),
+		inset 0.125rem 0.125rem 0.625rem rgba(255, 255, 255, 0.05),
+		inset 0.125rem 0.125rem 1rem rgba(206, 212, 229, 0.12);
+	-webkit-backdrop-filter: blur(0.625rem);
+	backdrop-filter: blur(0.625rem);
+	border-radius: 1.25rem 1.25rem 1.25rem 0.25rem;
 }
 .glass-callout {
 	box-sizing: border-box;
@@ -114,13 +116,18 @@ textarea::placeholder {
 	flex-direction: column;
 	justify-content: center;
 	align-items: flex-start;
-	padding: 20px 28px;
-	gap: 16px;
+	padding: 1.25rem 1.75rem;
+	gap: 1rem;
 
 	background: rgba(253, 254, 254, 0.5);
-	box-shadow: 4px 4px 20px rgba(0, 0, 0, 0.1), inset 2px 2px 16px rgba(206, 212, 229, 0.1);
-	backdrop-filter: blur(10px);
-	border-radius: 20px 20px 20px 4px;
+	border: 0.0625rem solid rgba(206, 212, 229, 0.3);
+	box-shadow:
+		0.25rem 0.25rem 1.25rem rgba(0, 0, 0, 0.1),
+		inset 0.125rem 0.125rem 0.625rem rgba(255, 255, 255, 0.05),
+		inset 0.125rem 0.125rem 1rem rgba(206, 212, 229, 0.12);
+	-webkit-backdrop-filter: blur(0.625rem);
+	backdrop-filter: blur(0.625rem);
+	border-radius: 1.25rem 1.25rem 1.25rem 0.25rem;
 
 	flex: none;
 	order: 0;

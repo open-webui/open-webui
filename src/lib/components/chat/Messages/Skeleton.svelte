@@ -1,38 +1,43 @@
 <script lang="ts">
+	import { getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+
+	const i18n = getContext<Writable<i18nType>>('i18n');
+
 	export let size = 'md';
 </script>
 
-<span
-	class="relative flex {size === 'md'
-		? 'size-3 my-2'
-		: size === 'xs'
-			? 'size-1.5 my-1'
-			: 'size-2 my-1'} mx-1"
->
-	<span
-		class="absolute inline-flex h-full w-full animate-pulse rounded-full bg-gray-700 dark:bg-gray-200 opacity-75"
-	></span>
-	<span
-		class="relative inline-flex {size === 'md'
-			? 'size-3'
-			: size === 'xs'
-				? 'size-1.5'
-				: 'size-2'} rounded-full bg-black dark:bg-white animate-size"
-	></span>
-</span>
+<div class="flex flex-row items-center gap-3">
+	<!-- Circular Rotation Progress Bar -->
+	<div class="relative w-7 h-7">
+		<svg class="w-7 h-7 animate-spin" viewBox="0 0 28 28" fill="none">
+			<!-- Background track circle -->
+			<circle
+				cx="14"
+				cy="14"
+				r="12"
+				stroke="currentColor"
+				stroke-width="3"
+				class="text-gray-200 dark:text-gray-700"
+			/>
+			<!-- Rotating progress arc -->
+			<circle
+				cx="14"
+				cy="14"
+				r="12"
+				stroke="#076EF4"
+				stroke-width="3"
+				stroke-linecap="round"
+				stroke-dasharray="75.4"
+				stroke-dashoffset="56.5"
+				class="origin-center"
+			/>
+		</svg>
+	</div>
 
-<style>
-	@keyframes size {
-		0%,
-		100% {
-			transform: scale(1);
-		}
-		50% {
-			transform: scale(1.25);
-		}
-	}
-
-	.animate-size {
-		animation: size 1.5s ease-in-out infinite;
-	}
-</style>
+	<!-- Loading Text -->
+	<span class="text-body-4 text-gray-950 dark:text-gray-50">
+		{$i18n.t('Generating response...')}
+	</span>
+</div>

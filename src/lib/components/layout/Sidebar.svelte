@@ -895,8 +895,10 @@
 						</div>
 					{/if}
 
-					{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
-						<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+					
+				</div> -->
+				<!-- {#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
+						<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200 ">
 							<a
 								id="sidebar-workspace-button"
 								class="grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
@@ -905,7 +907,7 @@
 								draggable="false"
 								aria-label={$i18n.t('Workspace')}
 							>
-								<div class="self-center">
+								<div class="self-center ">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
 										fill="none"
@@ -927,8 +929,7 @@
 								</div>
 							</a>
 						</div>
-					{/if}
-				</div> -->
+					{/if} -->
 
 				<!-- {#if ($models ?? []).length > 0 && (($settings?.pinnedModels ?? []).length > 0 || $config?.default_pinned_models)}
 					<Folder
@@ -1093,6 +1094,66 @@
 							</svg>
 						</button>
 					</Tooltip>
+
+					<!-- Online Knowledge Tab (Admin only) -->
+					{#if $user?.role === 'admin'}
+						<Tooltip content="온라인 지식기반" placement="bottom">
+							<a
+								href="/workspace/online-knowledge"
+								class="p-2 rounded-lg transition text-gray-900 dark:text-gray-400 hover:bg-gray-800/30 hover:text-gray-200"
+								on:click={() => {
+									if ($mobile) {
+										showSidebar.set(false);
+									}
+								}}
+								aria-label="온라인 지식기반"
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke-width="1.5"
+									stroke="currentColor"
+									class="size-5"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"
+									/>
+								</svg>
+							</a>
+						</Tooltip>
+
+						<!-- Online Chapter Tab (Admin only) -->
+						<Tooltip content="온라인 챕터" placement="bottom">
+							<a
+								href="/workspace/online-chapter"
+								class="p-2 rounded-lg transition text-gray-900 dark:text-gray-400 hover:bg-gray-800/30 hover:text-gray-200"
+								on:click={() => {
+									if ($mobile) {
+										showSidebar.set(false);
+									}
+								}}
+								aria-label="온라인 챕터"
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke-width="1.5"
+									stroke="currentColor"
+									class="size-5"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
+									/>
+								</svg>
+							</a>
+						</Tooltip>
+					{/if}
 				</div>
 
 				<!-- Tab Content -->
