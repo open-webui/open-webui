@@ -150,7 +150,6 @@ all = [
     "elasticsearch==9.2.0",
 
     "qdrant-client==1.16.2",
-    "pymilvus==2.6.4",
     "weaviate-client==4.19.0",
     "pymilvus==2.6.5",
     "pinecone==6.0.2",
