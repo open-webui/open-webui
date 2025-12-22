@@ -156,6 +156,11 @@ class AuditLoggingMiddleware:
         async with self._audit_context(request) as context:
 
             async def send_wrapper(message: ASGISendEvent) -> None:
+                # Always capture status code for all audit levels
+                if message["type"] == "http.response.start":
+                    context.metadata["response_status_code"] = message["status"]
+                
+                # Capture response body only for REQUEST_RESPONSE level
                 if self.audit_level == AuditLevel.REQUEST_RESPONSE:
                     await self._capture_response(message, context)
 
@@ -239,10 +244,8 @@ class AuditLoggingMiddleware:
             context.add_request_chunk(body)
 
     async def _capture_response(self, message: ASGISendEvent, context: AuditContext):
-        if message["type"] == "http.response.start":
-            context.metadata["response_status_code"] = message["status"]
-
-        elif message["type"] == "http.response.body":
+        # Only capture response body (status code is captured in send_wrapper)
+        if message["type"] == "http.response.body":
             body = message.get("body", b"")
             context.add_response_chunk(body)
 
