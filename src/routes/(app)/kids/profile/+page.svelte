@@ -10,6 +10,7 @@
 	import { toast } from 'svelte-sonner';
 	import { personalityTraits, type PersonalityTrait, type SubCharacteristic } from '$lib/data/personalityTraits';
 	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
+	import VideoModal from '$lib/components/common/VideoModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -50,6 +51,9 @@ let parentLLMMonitoringLevel: string = '';
 
 	// Assignment time tracking
 	$: sessionNumber = $user?.session_number || 1;
+
+	// Video modal state
+	let showHelpVideo: boolean = false;
 
 	// Function to generate and store shuffled scenarios for a child
 	async function generateAndStoreScenarios(selectedCharacteristics: string[]) {
@@ -758,6 +762,14 @@ let parentLLMMonitoringLevel: string = '';
 
 			<!-- Navigation Buttons -->
 			<div class="flex items-center space-x-2">
+				<!-- Help Button -->
+				<button
+					on:click={() => showHelpVideo = true}
+					class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+					aria-label="Show help video"
+				>
+					Help
+				</button>
 				<button
 					on:click={() => goto('/assignment-instructions')}
 					class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center space-x-2"
@@ -1214,5 +1226,12 @@ let parentLLMMonitoringLevel: string = '';
 		userId={get(user)?.id || ''} 
 		sessionNumber={sessionNumber}
 		enabled={true}
+	/>
+
+	<!-- Help Video Modal -->
+	<VideoModal
+		isOpen={showHelpVideo}
+		videoSrc="/video/Child-Profile-Demo.mp4"
+		title="Child Profile Tutorial"
 	/>
 </div>

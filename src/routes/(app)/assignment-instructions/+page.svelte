@@ -242,26 +242,22 @@
 				</div>
 			</div>
 
-			<!-- Demo Video -->
-			<div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 mb-8">
-				<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-					Demo Video
+			<!-- Help Videos Notice -->
+			<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6 mb-8">
+				<h3 class="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-3">
+					📹 Tutorial Videos Available
 				</h3>
-				<p class="text-gray-600 dark:text-gray-300 mb-4">
-					Watch this demonstration video to see how the workflow operates before you begin:
+				<p class="text-blue-700 dark:text-blue-300 mb-3">
+					Each task page includes a help button (ℹ️) in the top-right corner that opens a tutorial video specific to that task:
 				</p>
-				<div class="w-full max-w-4xl mx-auto">
-					<!-- svelte-ignore a11y-media-has-caption -->
-					<video
-						controls
-						class="w-full rounded-lg shadow-md"
-						poster=""
-						preload="metadata"
-					>
-						<source src="/video/Demo-Video.mp4" type="video/mp4" />
-						Your browser does not support the video tag.
-					</video>
-				</div>
+				<ul class="list-disc list-inside space-y-2 text-blue-700 dark:text-blue-300 text-sm">
+					<li><strong>Task 1 - Child Profile:</strong> Learn how to create and manage child profiles</li>
+					<li><strong>Task 2 - Moderation Scenarios:</strong> Understand how to review and moderate AI responses</li>
+					<li><strong>Task 3 - Exit Survey:</strong> Complete the survey with confidence</li>
+				</ul>
+				<p class="text-blue-700 dark:text-blue-300 mt-3 text-sm">
+					Look for the help button (ℹ️) in the navigation bar of each task page to access the tutorial videos.
+				</p>
 			</div>
 
 			<!-- Important Notes -->

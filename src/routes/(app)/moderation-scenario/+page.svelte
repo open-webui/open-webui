@@ -15,6 +15,7 @@ import { finalizeModeration } from '$lib/apis/workflow';
 	import { generateScenariosFromPersonalityData } from '$lib/data/personalityQuestions';
 	import { childProfileSync } from '$lib/services/childProfileSync';
 	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
+	import VideoModal from '$lib/components/common/VideoModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -1133,6 +1134,7 @@ function clearModerationLocalKeys() {
 	// UI state
 	let showOriginal1: boolean = false;
 	let showComparisonView: boolean = false;
+	let showHelpVideo: boolean = false;
 	let showConfirmationModal: boolean = false;
 	// Local restart removed; use global sidebar reset
 	let showResetConfirmationModal: boolean = false; // keep for template compatibility, always false
@@ -3322,6 +3324,14 @@ onMount(async () => {
 			
 			<!-- Controls -->
 			<div class="flex items-center space-x-3 {!sidebarOpen ? 'max-md:hidden' : ''}">
+				<!-- Help Button -->
+				<button
+					on:click={() => showHelpVideo = true}
+					class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+					aria-label="Show help video"
+				>
+					Help
+				</button>
 				<!-- Navigation Buttons -->
 				<div class="flex items-center space-x-2">
 					<!-- Previous Task Button -->
@@ -4698,6 +4708,13 @@ onMount(async () => {
 		userId={get(user)?.id || ''} 
 		sessionNumber={sessionNumber}
 		enabled={true}
+	/>
+
+	<!-- Help Video Modal -->
+	<VideoModal
+		isOpen={showHelpVideo}
+		videoSrc="/video/Moderation-Scenario-Demo.mp4"
+		title="Moderation Scenario Tutorial"
 	/>
 
 <style>
