@@ -109,10 +109,17 @@
 
 		webhookUrl = $settings?.notifications?.webhook_url ?? '';
 
-		APIKey = await getAPIKey(localStorage.token).catch((error) => {
-			console.log(error);
-			return '';
-		});
+		// Only fetch API key if the feature is enabled and user has permission
+		if (
+			user &&
+			($config?.features?.enable_api_keys ?? true) &&
+			(user?.role === 'admin' || (user?.permissions?.features?.api_keys ?? false))
+		) {
+			APIKey = await getAPIKey(localStorage.token).catch((error) => {
+				console.log(error);
+				return '';
+			});
+		}
 
 		loaded = true;
 	});
@@ -168,7 +175,7 @@
 
 							<div class="flex-1">
 								<select
-									class="w-full text-sm dark:text-gray-300 bg-transparent outline-hidden"
+									class="dark:bg-gray-900 w-full text-sm dark:text-gray-300 bg-transparent outline-hidden"
 									bind:value={_gender}
 									on:change={(e) => {
 										console.log(_gender);
@@ -234,7 +241,7 @@
 			</div>
 		{/if}
 
-		<hr class="border-gray-50 dark:border-gray-850 my-4" />
+		<hr class="border-gray-50 dark:border-gray-850/30 my-4" />
 
 		{#if $config?.features.enable_login_form}
 			<div class="mt-2">

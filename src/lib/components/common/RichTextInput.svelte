@@ -169,7 +169,7 @@
 
 	export let documentId = '';
 
-	export let className = 'input-prose';
+	export let className = 'input-prose min-h-fit h-full';
 	export let placeholder = $i18n.t('Type here...');
 	let _placeholder = placeholder;
 
@@ -1156,7 +1156,5 @@
 
 <div
 	bind:this={element}
-	class="relative w-full min-w-full h-full min-h-fit {className} {!editable
-		? 'cursor-not-allowed'
-		: ''}"
+	class="relative w-full min-w-full {className} {!editable ? 'cursor-not-allowed' : ''}"
 />

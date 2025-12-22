@@ -2,7 +2,6 @@ import logging
 import os
 from contextvars import ContextVar
 
-from open_webui.env import SRC_LOG_LEVELS
 from peewee import *
 from peewee import InterfaceError as PeeWeeInterfaceError
 from peewee import PostgresqlDatabase
@@ -10,7 +9,6 @@ from playhouse.db_url import connect, parse
 from playhouse.shortcuts import ReconnectMixin
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["DB"])
 
 db_state_default = {"closed": None, "conn": None, "ctx": None, "transactions": None}
 db_state = ContextVar("db_state", default=db_state_default.copy())
@@ -56,8 +54,6 @@ def register_connection(db_url):
         # Parse the database path from SQLCipher URL
         # Convert sqlite+sqlcipher:///path/to/db.sqlite to /path/to/db.sqlite
         db_path = db_url.replace("sqlite+sqlcipher://", "")
-        if db_path.startswith("/"):
-            db_path = db_path[1:]  # Remove leading slash for relative paths
 
         # Use Peewee's native SqlCipherDatabase with encryption
         db = SqlCipherDatabase(db_path, passphrase=database_password)

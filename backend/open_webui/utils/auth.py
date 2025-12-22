@@ -37,7 +37,6 @@ from open_webui.env import (
     WEBUI_SECRET_KEY,
     TRUSTED_SIGNATURE_KEY,
     STATIC_DIR,
-    SRC_LOG_LEVELS,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
 )
 
@@ -46,7 +45,6 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["OAUTH"])
 
 SESSION_SECRET = WEBUI_SECRET_KEY
 ALGORITHM = "HS256"
@@ -235,7 +233,7 @@ async def invalidate_token(request, token):
         jti = decoded.get("jti")
         exp = decoded.get("exp")
 
-        if jti:
+        if jti and exp:
             ttl = exp - int(
                 datetime.now(UTC).timestamp()
             )  # Calculate time-to-live for the token
@@ -344,9 +342,7 @@ async def get_current_user(
                 # Refresh the user's last active timestamp asynchronously
                 # to prevent blocking the request
                 if background_tasks:
-                    background_tasks.add_task(
-                        Users.update_user_last_active_by_id, user.id
-                    )
+                    background_tasks.add_task(Users.update_last_active_by_id, user.id)
             return user
         else:
             raise HTTPException(
@@ -397,8 +393,7 @@ def get_current_user_by_api_key(request, api_key: str):
         current_span.set_attribute("client.user.role", user.role)
         current_span.set_attribute("client.auth.type", "api_key")
 
-    Users.update_user_last_active_by_id(user.id)
-
+    Users.update_last_active_by_id(user.id)
     return user
 
 

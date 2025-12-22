@@ -1,8 +1,8 @@
 services:
   playwright:
-    image: mcr.microsoft.com/playwright:v1.49.1-noble # Version must match requirements.txt
+    image: mcr.microsoft.com/playwright:v1.57.0-noble # Version must match requirements.txt
     container_name: playwright
-    command: npx -y playwright@1.49.1 run-server --port 3000 --host 0.0.0.0
+    command: npx -y playwright@1.57.0 run-server --port 3000 --host 0.0.0.0
 
   open-webui:
     environment:

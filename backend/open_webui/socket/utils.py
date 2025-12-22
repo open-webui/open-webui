@@ -86,6 +86,15 @@ class RedisDict:
     def items(self):
         return [(k, json.loads(v)) for k, v in self.redis.hgetall(self.name).items()]
 
+    def set(self, mapping: dict):
+        pipe = self.redis.pipeline()
+
+        pipe.delete(self.name)
+        if mapping:
+            pipe.hset(self.name, mapping={k: json.dumps(v) for k, v in mapping.items()})
+
+        pipe.execute()
+
     def get(self, key, default=None):
         try:
             return self[key]
@@ -181,7 +190,11 @@ class YdocManager:
 
     async def remove_user_from_all_documents(self, user_id: str):
         if self._redis:
-            keys = await self._redis.keys(f"{self._redis_key_prefix}:*")
+            keys = []
+            async for key in self._redis.scan_iter(
+                match=f"{self._redis_key_prefix}:*", count=100
+            ):
+                keys.append(key)
             for key in keys:
                 if key.endswith(":users"):
                     await self._redis.srem(key, user_id)

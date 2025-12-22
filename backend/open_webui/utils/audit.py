@@ -194,7 +194,7 @@ class AuditLoggingMiddleware:
         auth_header = request.headers.get("Authorization")
 
         try:
-            user = get_current_user(
+            user = await get_current_user(
                 request, None, None, get_http_authorization_cred(auth_header)
             )
             return user

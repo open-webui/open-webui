@@ -21,7 +21,6 @@ from open_webui.models.knowledge import Knowledges
 
 
 from open_webui.config import UPLOAD_DIR
-from open_webui.env import SRC_LOG_LEVELS
 from open_webui.constants import ERROR_MESSAGES
 
 
@@ -34,7 +33,6 @@ from open_webui.utils.access_control import has_permission
 
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 
 router = APIRouter()
@@ -46,7 +44,23 @@ router = APIRouter()
 
 
 @router.get("/", response_model=list[FolderNameIdResponse])
-async def get_folders(user=Depends(get_verified_user)):
+async def get_folders(request: Request, user=Depends(get_verified_user)):
+    if request.app.state.config.ENABLE_FOLDERS is False:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    if user.role != "admin" and not has_permission(
+        user.id,
+        "features.folders",
+        request.app.state.config.USER_PERMISSIONS,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
     folders = Folders.get_folders_by_user_id(user.id)
 
     # Verify folder data integrity

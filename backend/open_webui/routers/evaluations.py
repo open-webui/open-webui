@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from open_webui.models.users import Users, UserModel
 from open_webui.models.feedbacks import (
+    FeedbackIdResponse,
     FeedbackModel,
     FeedbackResponse,
     FeedbackForm,
@@ -64,6 +65,12 @@ async def get_all_feedbacks(user=Depends(get_admin_user)):
     return feedbacks
 
 
+@router.get("/feedbacks/all/ids", response_model=list[FeedbackIdResponse])
+async def get_all_feedback_ids(user=Depends(get_admin_user)):
+    feedbacks = Feedbacks.get_all_feedbacks()
+    return feedbacks
+
+
 @router.delete("/feedbacks/all")
 async def delete_all_feedbacks(user=Depends(get_admin_user)):
     success = Feedbacks.delete_all_feedbacks()
@@ -71,7 +78,7 @@ async def delete_all_feedbacks(user=Depends(get_admin_user)):
 
 
 @router.get("/feedbacks/all/export", response_model=list[FeedbackModel])
-async def get_all_feedbacks(user=Depends(get_admin_user)):
+async def export_all_feedbacks(user=Depends(get_admin_user)):
     feedbacks = Feedbacks.get_all_feedbacks()
     return feedbacks
 

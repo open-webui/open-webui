@@ -9,11 +9,9 @@ import urllib.request
 from typing import Optional
 
 import websocket  # NOTE: websocket-client (https://github.com/websocket-client/websocket-client)
-from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["COMFYUI"])
 
 default_headers = {"User-Agent": "Mozilla/5.0"}
 

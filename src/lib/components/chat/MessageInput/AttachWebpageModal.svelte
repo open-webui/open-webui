@@ -7,7 +7,7 @@
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
-	import { isValidHttpUrl, isYoutubeUrl } from '$lib/utils';
+	import { isValidHttpUrl } from '$lib/utils';
 
 	export let show = false;
 	export let onSubmit: (e) => void;
@@ -15,17 +15,22 @@
 	let url = '';
 
 	const submitHandler = () => {
-		if (isValidHttpUrl(url)) {
-			onSubmit({
-				type: isYoutubeUrl(url) ? 'youtube' : 'web',
-				data: url
-			});
+		let urls = url
+			.split('\n')
+			.map((u) => u.trim())
+			.filter((u) => u !== '')
+			.filter((u) => isValidHttpUrl(u));
 
-			show = false;
-			url = '';
-		} else {
+		urls = [...new Set(urls)];
+
+		if (urls.length === 0) {
 			toast.error($i18n.t('Please enter a valid URL.'));
+			return;
 		}
+
+		onSubmit({ type: 'web', data: urls });
+		show = false;
+		url = '';
 	};
 </script>
 
@@ -57,15 +62,16 @@
 					<label
 						for="webpage-url"
 						class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-						>{$i18n.t('Webpage URL')}</label
+						>{$i18n.t('Webpage URLs')}</label
 					>
 				</div>
 
-				<input
+				<textarea
 					id="webpage-url"
 					class={`w-full flex-1 text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 					type="text"
 					bind:value={url}
+					rows="3"
 					placeholder={'https://example.com'}
 					autocomplete="off"
 					required

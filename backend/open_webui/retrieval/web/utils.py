@@ -33,6 +33,7 @@ from open_webui.config import (
     PLAYWRIGHT_WS_URL,
     PLAYWRIGHT_TIMEOUT,
     WEB_LOADER_ENGINE,
+    WEB_LOADER_TIMEOUT,
     FIRECRAWL_API_BASE_URL,
     FIRECRAWL_API_KEY,
     TAVILY_API_KEY,
@@ -41,11 +42,9 @@ from open_webui.config import (
     EXTERNAL_WEB_LOADER_API_KEY,
     WEB_FETCH_FILTER_LIST,
 )
-from open_webui.env import SRC_LOG_LEVELS
 from open_webui.utils.misc import is_string_allowed
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def resolve_hostname(hostname):
@@ -674,6 +673,20 @@ def get_web_loader(
 
     if WEB_LOADER_ENGINE.value == "" or WEB_LOADER_ENGINE.value == "safe_web":
         WebLoaderClass = SafeWebBaseLoader
+
+        request_kwargs = {}
+        if WEB_LOADER_TIMEOUT.value:
+            try:
+                timeout_value = float(WEB_LOADER_TIMEOUT.value)
+            except ValueError:
+                timeout_value = None
+
+            if timeout_value:
+                request_kwargs["timeout"] = timeout_value
+
+        if request_kwargs:
+            web_loader_args["requests_kwargs"] = request_kwargs
+
     if WEB_LOADER_ENGINE.value == "playwright":
         WebLoaderClass = SafePlaywrightURLLoader
         web_loader_args["playwright_timeout"] = PLAYWRIGHT_TIMEOUT.value

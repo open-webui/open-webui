@@ -58,7 +58,6 @@ from open_webui.config import (
 )
 from open_webui.env import (
     ENV,
-    SRC_LOG_LEVELS,
     MODELS_CACHE_TTL,
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
@@ -68,7 +67,6 @@ from open_webui.env import (
 from open_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["OLLAMA"])
 
 
 ##########################################
@@ -879,6 +877,7 @@ async def delete_model(
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
     key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
 
+    r = None
     try:
         headers = {
             "Content-Type": "application/json",
@@ -892,7 +891,7 @@ async def delete_model(
             method="DELETE",
             url=f"{url}/api/delete",
             headers=headers,
-            data=form_data.model_dump_json(exclude_none=True).encode(),
+            json=form_data,
         )
         r.raise_for_status()
 
@@ -949,10 +948,7 @@ async def show_model_info(
             headers = include_user_info_headers(headers, user)
 
         r = requests.request(
-            method="POST",
-            url=f"{url}/api/show",
-            headers=headers,
-            data=form_data.model_dump_json(exclude_none=True).encode(),
+            method="POST", url=f"{url}/api/show", headers=headers, json=form_data
         )
         r.raise_for_status()
 
@@ -1282,7 +1278,12 @@ async def generate_chat_completion(
 
     if model_info:
         if model_info.base_model_id:
-            payload["model"] = model_info.base_model_id
+            base_model_id = (
+                request.base_model_id
+                if hasattr(request, "base_model_id")
+                else model_info.base_model_id
+            )  # Use request's base_model_id if available
+            payload["model"] = base_model_id
 
         params = model_info.params.model_dump()
 

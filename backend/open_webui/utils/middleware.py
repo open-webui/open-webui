@@ -32,7 +32,6 @@ from open_webui.models.users import Users
 from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
-    get_active_status_by_user_id,
 )
 from open_webui.routers.tasks import (
     generate_queries,
@@ -61,6 +60,7 @@ from open_webui.utils.webhook import post_webhook
 from open_webui.utils.files import (
     convert_markdown_base64_images,
     get_file_url_from_base64,
+    get_image_base64_from_url,
     get_image_url_from_base64,
 )
 
@@ -111,7 +111,6 @@ from open_webui.config import (
     CODE_INTERPRETER_BLOCKED_MODULES,
 )
 from open_webui.env import (
-    SRC_LOG_LEVELS,
     GLOBAL_LOG_LEVEL,
     ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION,
     CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE,
@@ -125,7 +124,6 @@ from open_webui.constants import TASKS
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 DEFAULT_REASONING_TAGS = [
@@ -346,7 +344,7 @@ async def chat_completion_tools_handler(
     sources = []
 
     specs = [tool["spec"] for tool in tools.values()]
-    tools_specs = json.dumps(specs)
+    tools_specs = json.dumps(specs, ensure_ascii=False)
 
     if request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE != "":
         template = request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
@@ -459,12 +457,6 @@ async def chat_completion_tools_handler(
                             }
                         )
 
-                print(
-                    f"Tool {tool_function_name} result: {tool_result}",
-                    tool_result_files,
-                    tool_result_embeds,
-                )
-
                 if tool_result:
                     tool = tools[tool_function_name]
                     tool_id = tool.get("tool_id", "")
@@ -490,12 +482,6 @@ async def chat_completion_tools_handler(
                             ],
                             "tool_result": True,
                         }
-                    )
-
-                    # Citation is not enabled for this tool
-                    body["messages"] = add_or_update_user_message(
-                        f"\nTool `{tool_name}` Output: {tool_result}",
-                        body["messages"],
                     )
 
                     if (
@@ -729,17 +715,18 @@ async def chat_web_search_handler(
     return form_data
 
 
-def get_last_images(message_list):
+def get_images_from_messages(message_list):
     images = []
+
     for message in reversed(message_list):
-        images_flag = False
+
+        message_images = []
         for file in message.get("files", []):
             if file.get("type") == "image":
-                images.append(file.get("url"))
-                images_flag = True
+                message_images.append(file.get("url"))
 
-        if images_flag:
-            break
+        if message_images:
+            images.append(message_images)
 
     return images
 
@@ -770,26 +757,39 @@ async def chat_image_generation_handler(
 ):
     metadata = extra_params.get("__metadata__", {})
     chat_id = metadata.get("chat_id", None)
-    if not chat_id:
+    __event_emitter__ = extra_params.get("__event_emitter__", None)
+
+    if not chat_id or not isinstance(chat_id, str) or not __event_emitter__:
         return form_data
 
-    chat = Chats.get_chat_by_id_and_user_id(chat_id, user.id)
+    if chat_id.startswith("local:"):
+        message_list = form_data.get("messages", [])
+    else:
+        chat = Chats.get_chat_by_id_and_user_id(chat_id, user.id)
+        await __event_emitter__(
+            {
+                "type": "status",
+                "data": {"description": "Creating image", "done": False},
+            }
+        )
 
-    __event_emitter__ = extra_params["__event_emitter__"]
-    await __event_emitter__(
-        {
-            "type": "status",
-            "data": {"description": "Creating image", "done": False},
-        }
-    )
+        messages_map = chat.chat.get("history", {}).get("messages", {})
+        message_id = chat.chat.get("history", {}).get("currentId")
+        message_list = get_message_list(messages_map, message_id)
 
-    messages_map = chat.chat.get("history", {}).get("messages", {})
-    message_id = chat.chat.get("history", {}).get("currentId")
-    message_list = get_message_list(messages_map, message_id)
     user_message = get_last_user_message(message_list)
 
     prompt = user_message
-    input_images = get_last_images(message_list)
+    message_images = get_images_from_messages(message_list)
+
+    # Limit to first 2 sets of images
+    # We may want to change this in the future to allow more images
+    input_images = []
+    for idx, images in enumerate(message_images):
+        if idx >= 2:
+            break
+        for image in images:
+            input_images.append(image)
 
     system_message_content = ""
 
@@ -799,6 +799,10 @@ async def chat_image_generation_handler(
             images = await image_edits(
                 request=request,
                 form_data=EditImageForm(**{"prompt": prompt, "image": input_images}),
+                metadata={
+                    "chat_id": metadata.get("chat_id", None),
+                    "message_id": metadata.get("message_id", None),
+                },
                 user=user,
             )
 
@@ -824,7 +828,7 @@ async def chat_image_generation_handler(
                 }
             )
 
-            system_message_content = "<context>The requested image has been created and is now being shown to the user. Let them know that it has been generated.</context>"
+            system_message_content = "<context>The requested image has been edited and created and is now being shown to the user. Let them know that it has been generated.</context>"
         except Exception as e:
             log.debug(e)
 
@@ -845,7 +849,7 @@ async def chat_image_generation_handler(
                 }
             )
 
-            system_message_content = f"<context>Image generation was attempted but failed. The system is currently unable to generate the image. Tell the user that an error occurred: {error_message}</context>"
+            system_message_content = f"<context>Image generation was attempted but failed. The system is currently unable to generate the image. Tell the user that the following error occurred: {error_message}</context>"
 
     else:
         # Create image(s)
@@ -883,6 +887,10 @@ async def chat_image_generation_handler(
             images = await image_generations(
                 request=request,
                 form_data=CreateImageForm(**{"prompt": prompt}),
+                metadata={
+                    "chat_id": metadata.get("chat_id", None),
+                    "message_id": metadata.get("message_id", None),
+                },
                 user=user,
             )
 
@@ -908,7 +916,7 @@ async def chat_image_generation_handler(
                 }
             )
 
-            system_message_content = "<context>The requested image has been created and is now being shown to the user. Let them know that it has been generated.</context>"
+            system_message_content = "<context>The requested image has been created by the system successfully and is now being shown to the user. Let the user know that the image they requested has been generated and is now shown in the chat.</context>"
         except Exception as e:
             log.debug(e)
 
@@ -929,7 +937,7 @@ async def chat_image_generation_handler(
                 }
             )
 
-            system_message_content = f"<context>Image generation was attempted but failed. The system is currently unable to generate the image. Tell the user that an error occurred: {error_message}</context>"
+            system_message_content = f"<context>Image generation was attempted but failed because of an error. The system is currently unable to generate the image. Tell the user that the following error occurred: {error_message}</context>"
 
     if system_message_content:
         form_data["messages"] = add_or_update_system_message(
@@ -1099,11 +1107,51 @@ def apply_params_to_form_data(form_data, model):
 
         if "logit_bias" in params and params["logit_bias"] is not None:
             try:
-                form_data["logit_bias"] = json.loads(
-                    convert_logit_bias_input_to_json(params["logit_bias"])
-                )
+                logit_bias = convert_logit_bias_input_to_json(params["logit_bias"])
+
+                if logit_bias:
+                    form_data["logit_bias"] = json.loads(logit_bias)
             except Exception as e:
                 log.exception(f"Error parsing logit_bias: {e}")
+
+    return form_data
+
+
+async def convert_url_images_to_base64(form_data):
+    messages = form_data.get("messages", [])
+
+    for message in messages:
+        content = message.get("content")
+        if not isinstance(content, list):
+            continue
+
+        new_content = []
+
+        for item in content:
+            if not isinstance(item, dict) or item.get("type") != "image_url":
+                new_content.append(item)
+                continue
+
+            image_url = item.get("image_url", {}).get("url", "")
+            if image_url.startswith("data:image/"):
+                new_content.append(item)
+                continue
+
+            try:
+                base64_data = await asyncio.to_thread(
+                    get_image_base64_from_url, image_url
+                )
+                new_content.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": base64_data},
+                    }
+                )
+            except Exception as e:
+                log.debug(f"Error converting image URL to base64: {e}")
+                new_content.append(item)
+
+        message["content"] = new_content
 
     return form_data
 
@@ -1124,6 +1172,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             )  # Required to handle system prompt variables
         except:
             pass
+
+    form_data = await convert_url_images_to_base64(form_data)
 
     event_emitter = get_event_emitter(metadata)
     event_caller = get_event_call(metadata)
@@ -1409,11 +1459,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         headers=headers if headers else None,
                     )
 
-                    function_name_filter_list = (
-                        mcp_server_connection.get("config", {})
-                        .get("function_name_filter_list", "")
-                        .split(",")
-                    )
+                    function_name_filter_list = mcp_server_connection.get(
+                        "config", {}
+                    ).get("function_name_filter_list", "")
+
+                    if isinstance(function_name_filter_list, str):
+                        function_name_filter_list = function_name_filter_list.split(",")
 
                     tool_specs = await mcp_clients[server_id].list_tool_specs()
                     for tool_spec in tool_specs:
@@ -1914,7 +1965,7 @@ async def process_chat_response(
                             )
 
                             # Send a webhook notification if the user is not active
-                            if not get_active_status_by_user_id(user.id):
+                            if not Users.is_user_active(user.id):
                                 webhook_url = Users.get_user_webhook_url_by_id(user.id)
                                 if webhook_url:
                                     await post_webhook(
@@ -2694,7 +2745,17 @@ async def process_chat_response(
 
                                         if ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION:
                                             value = convert_markdown_base64_images(
-                                                request, value, metadata, user
+                                                request,
+                                                value,
+                                                {
+                                                    "chat_id": metadata.get(
+                                                        "chat_id", None
+                                                    ),
+                                                    "message_id": metadata.get(
+                                                        "message_id", None
+                                                    ),
+                                                },
+                                                user,
                                             )
 
                                         content = f"{content}{value}"
@@ -3209,7 +3270,7 @@ async def process_chat_response(
                     )
 
                 # Send a webhook notification if the user is not active
-                if not get_active_status_by_user_id(user.id):
+                if not Users.is_user_active(user.id):
                     webhook_url = Users.get_user_webhook_url_by_id(user.id)
                     if webhook_url:
                         await post_webhook(

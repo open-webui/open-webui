@@ -2,12 +2,11 @@
 	import { toast } from 'svelte-sonner';
 
 	import { onMount, getContext, tick } from 'svelte';
-	import { models, tools, functions, knowledge as knowledgeCollections, user } from '$lib/stores';
+	import { models, tools, functions, user } from '$lib/stores';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import { getTools } from '$lib/apis/tools';
 	import { getFunctions } from '$lib/apis/functions';
-	import { getKnowledgeBases } from '$lib/apis/knowledge';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
@@ -23,6 +22,8 @@
 	import DefaultFiltersSelector from './DefaultFiltersSelector.svelte';
 	import DefaultFeatures from './DefaultFeatures.svelte';
 	import PromptSuggestions from './PromptSuggestions.svelte';
+	import AccessControlModal from '../common/AccessControlModal.svelte';
+	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -42,6 +43,7 @@
 
 	let showAdvanced = false;
 	let showPreview = false;
+	let showAccessControlModal = false;
 
 	let loaded = false;
 
@@ -103,19 +105,6 @@
 
 	let actionIds = [];
 	let accessControl = {};
-
-	const addUsage = (base_model_id) => {
-		const baseModel = $models.find((m) => m.id === base_model_id);
-
-		if (baseModel) {
-			if (baseModel.owned_by === 'openai') {
-				capabilities.usage = baseModel?.meta?.capabilities?.usage ?? false;
-			} else {
-				delete capabilities.usage;
-			}
-			capabilities = capabilities;
-		}
-	};
 
 	const submitHandler = async () => {
 		loading = true;
@@ -220,7 +209,6 @@
 	onMount(async () => {
 		await tools.set(await getTools(localStorage.token));
 		await functions.set(await getFunctions(localStorage.token));
-		await knowledgeCollections.set([...(await getKnowledgeBases(localStorage.token))]);
 
 		// Scroll to top 'workspace-container' element
 		const workspaceContainer = document.getElementById('workspace-container');
@@ -317,6 +305,14 @@
 </script>
 
 {#if loaded}
+	<AccessControlModal
+		bind:show={showAccessControlModal}
+		bind:accessControl
+		accessRoles={['read', 'write']}
+		share={$user?.permissions?.sharing?.models || $user?.role === 'admin'}
+		sharePublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin'}
+	/>
+
 	{#if onBack}
 		<button
 			class="flex space-x-1"
@@ -352,7 +348,7 @@
 			on:change={() => {
 				let reader = new FileReader();
 				reader.onload = (event) => {
-					let originalImageUrl = `${event.target.result}`;
+					let originalImageUrl = `${event.target?.result}`;
 
 					const img = new Image();
 					img.src = originalImageUrl;
@@ -400,12 +396,12 @@
 					inputFiles &&
 					inputFiles.length > 0 &&
 					['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/svg+xml'].includes(
-						inputFiles[0]['type']
+						(inputFiles[0] as any)?.['type']
 					)
 				) {
 					reader.readAsDataURL(inputFiles[0]);
 				} else {
-					console.log(`Unsupported File Type '${inputFiles[0]['type']}'.`);
+					console.log(`Unsupported File Type '${(inputFiles[0] as any)?.['type']}'.`);
 					inputFiles = null;
 				}
 			}}
@@ -434,13 +430,13 @@
 								<img
 									src={info.meta.profile_image_url}
 									alt="model profile"
-									class="rounded-xl size-72 md:size-60 object-cover shrink-0"
+									class="rounded-xl sm:size-60 size-max object-cover shrink-0"
 								/>
 							{:else}
 								<img
 									src="{WEBUI_BASE_URL}/static/favicon.png"
 									alt="model profile"
-									class=" rounded-xl size-72 md:size-60 object-cover shrink-0"
+									class=" rounded-xl sm:size-60 size-max object-cover shrink-0"
 								/>
 							{/if}
 
@@ -485,124 +481,134 @@
 				</div>
 
 				<div class="w-full">
-					<div class="mt-2 my-2 flex flex-col">
-						<div class="flex-1">
-							<div>
-								<input
-									class="text-3xl font-medium w-full bg-transparent outline-hidden"
-									placeholder={$i18n.t('Model Name')}
-									bind:value={name}
-									required
-								/>
+					<div class="flex flex-col">
+						<div class="flex justify-between items-start my-2">
+							<div class=" flex flex-col w-full">
+								<div class="flex-1 w-full">
+									<input
+										class="text-4xl font-medium w-full bg-transparent outline-hidden"
+										placeholder={$i18n.t('Model Name')}
+										bind:value={name}
+										required
+									/>
+								</div>
+
+								<div class="flex-1 w-full">
+									<div>
+										<input
+											class="text-xs w-full bg-transparent outline-hidden"
+											placeholder={$i18n.t('Model ID')}
+											bind:value={id}
+											disabled={edit}
+											required
+										/>
+									</div>
+								</div>
 							</div>
-						</div>
 
-						<div class="flex-1">
-							<div>
-								<input
-									class="text-xs w-full bg-transparent text-gray-500 outline-hidden"
-									placeholder={$i18n.t('Model ID')}
-									bind:value={id}
-									disabled={edit}
-									required
-								/>
-							</div>
-						</div>
-					</div>
-
-					{#if preset}
-						<div class="my-1">
-							<div class=" text-sm font-medium mb-1">{$i18n.t('Base Model (From)')}</div>
-
-							<div>
-								<select
-									class="text-sm w-full bg-transparent outline-hidden"
-									placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
-									bind:value={info.base_model_id}
-									on:change={(e) => {
-										addUsage(e.target.value);
+							<div class="shrink-0">
+								<button
+									class="bg-gray-50 shrink-0 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
+									type="button"
+									on:click={() => {
+										showAccessControlModal = true;
 									}}
-									required
 								>
-									<option value={null} class=" text-gray-900"
-										>{$i18n.t('Select a base model')}</option
-									>
-									{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena' && !(m?.direct ?? false)) as model}
-										<option value={model.id} class=" text-gray-900">{model.name}</option>
-									{/each}
-								</select>
+									<LockClosed strokeWidth="2.5" className="size-3.5 shrink-0" />
+
+									<div class="text-sm font-medium shrink-0">
+										{$i18n.t('Access')}
+									</div>
+								</button>
 							</div>
 						</div>
-					{/if}
 
-					<div class="my-1">
-						<div class="mb-1 flex w-full justify-between items-center">
-							<div class=" self-center text-sm font-medium">{$i18n.t('Description')}</div>
+						{#if preset}
+							<div class="mb-1">
+								<div class=" text-xs font-medium mb-1 text-gray-500">
+									{$i18n.t('Base Model (From)')}
+								</div>
 
-							<button
-								class="p-1 text-xs flex rounded-sm transition"
-								type="button"
-								aria-pressed={enableDescription ? 'true' : 'false'}
-								aria-label={enableDescription
-									? $i18n.t('Custom description enabled')
-									: $i18n.t('Default description enabled')}
-								on:click={() => {
-									enableDescription = !enableDescription;
-								}}
-							>
-								{#if !enableDescription}
-									<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-								{:else}
-									<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
-								{/if}
-							</button>
-						</div>
-
-						{#if enableDescription}
-							<Textarea
-								className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
-								placeholder={$i18n.t('Add a short description about what this model does')}
-								bind:value={info.meta.description}
-							/>
+								<div>
+									<select
+										class="dark:bg-gray-900 text-sm w-full bg-transparent outline-hidden"
+										placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
+										bind:value={info.base_model_id}
+										required
+									>
+										<option value={null} class=" text-gray-900"
+											>{$i18n.t('Select a base model')}</option
+										>
+										{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena' && !(m?.direct ?? false)) as model}
+											<option value={model.id} class=" text-gray-900">{model.name}</option>
+										{/each}
+									</select>
+								</div>
+							</div>
 						{/if}
-					</div>
 
-					<div class=" mt-2 my-1">
-						<div class="">
-							<Tags
-								tags={info?.meta?.tags ?? []}
-								on:delete={(e) => {
-									const tagName = e.detail;
-									info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
-								}}
-								on:add={(e) => {
-									const tagName = e.detail;
-									if (!(info?.meta?.tags ?? null)) {
-										info.meta.tags = [{ name: tagName }];
-									} else {
-										info.meta.tags = [...info.meta.tags, { name: tagName }];
-									}
-								}}
-							/>
+						<div class="mb-1">
+							<div class="mb-1 flex w-full justify-between items-center">
+								<div class=" self-center text-xs font-medium text-gray-500">
+									{$i18n.t('Description')}
+								</div>
+
+								<button
+									class="p-1 text-xs flex rounded-sm transition"
+									type="button"
+									aria-pressed={enableDescription ? 'true' : 'false'}
+									aria-label={enableDescription
+										? $i18n.t('Custom description enabled')
+										: $i18n.t('Default description enabled')}
+									on:click={() => {
+										enableDescription = !enableDescription;
+									}}
+								>
+									{#if !enableDescription}
+										<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+									{:else}
+										<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+									{/if}
+								</button>
+							</div>
+
+							{#if enableDescription}
+								<Textarea
+									className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
+									placeholder={$i18n.t('Add a short description about what this model does')}
+									bind:value={info.meta.description}
+								/>
+							{/if}
+						</div>
+
+						<div class="w-full mb-1 max-w-full">
+							<div class="">
+								<Tags
+									tags={info?.meta?.tags ?? []}
+									on:delete={(e) => {
+										const tagName = e.detail;
+										info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
+									}}
+									on:add={(e) => {
+										const tagName = e.detail;
+										if (!(info?.meta?.tags ?? null)) {
+											info.meta.tags = [{ name: tagName }];
+										} else {
+											info.meta.tags = [...info.meta.tags, { name: tagName }];
+										}
+									}}
+								/>
+							</div>
 						</div>
 					</div>
 
-					<div class="my-2">
-						<div class="px-4 py-3 bg-gray-50 dark:bg-gray-950 rounded-3xl">
-							<AccessControl
-								bind:accessControl
-								accessRoles={['read', 'write']}
-								share={$user?.permissions?.sharing?.models || $user?.role === 'admin'}
-								sharePublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin'}
-							/>
-						</div>
-					</div>
-
-					<hr class=" border-gray-100 dark:border-gray-850 my-1.5" />
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="my-2">
 						<div class="flex w-full justify-between">
-							<div class=" self-center text-sm font-medium">{$i18n.t('Model Params')}</div>
+							<div class=" self-center text-xs font-medium text-gray-500">
+								{$i18n.t('Model Params')}
+							</div>
 						</div>
 
 						<div class="mt-2">
@@ -648,12 +654,12 @@
 						</div>
 					</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="my-2">
 						<div class="flex w-full justify-between items-center">
 							<div class="flex w-full justify-between items-center">
-								<div class=" self-center text-sm font-medium">
+								<div class=" self-center text-xs font-medium text-gray-500">
 									{$i18n.t('Prompts')}
 								</div>
 
@@ -682,47 +688,57 @@
 						{/if}
 					</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-1.5" />
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="my-2">
 						<Knowledge bind:selectedItems={knowledge} />
 					</div>
 
-					<div class="my-2">
-						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
-					</div>
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="my-2">
-						<FiltersSelector
-							bind:selectedFilterIds={filterIds}
-							filters={$functions.filter((func) => func.type === 'filter')}
-						/>
+						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools ?? []} />
 					</div>
 
-					{#if filterIds.length > 0}
-						{@const toggleableFilters = $functions.filter(
-							(func) =>
-								func.type === 'filter' &&
-								(filterIds.includes(func.id) || func?.is_global) &&
-								func?.meta?.toggle
-						)}
+					{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0 || ($functions ?? []).filter((func) => func.type === 'action').length > 0}
+						<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
-						{#if toggleableFilters.length > 0}
+						{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0}
 							<div class="my-2">
-								<DefaultFiltersSelector
-									bind:selectedFilterIds={defaultFilterIds}
-									filters={toggleableFilters}
+								<FiltersSelector
+									bind:selectedFilterIds={filterIds}
+									filters={($functions ?? []).filter((func) => func.type === 'filter')}
+								/>
+							</div>
+
+							{@const toggleableFilters = $functions.filter(
+								(func) =>
+									func.type === 'filter' &&
+									(filterIds.includes(func.id) || func?.is_global) &&
+									func?.meta?.toggle
+							)}
+
+							{#if toggleableFilters.length > 0}
+								<div class="my-2">
+									<DefaultFiltersSelector
+										bind:selectedFilterIds={defaultFilterIds}
+										filters={toggleableFilters}
+									/>
+								</div>
+							{/if}
+						{/if}
+
+						{#if ($functions ?? []).filter((func) => func.type === 'action').length > 0}
+							<div class="my-2">
+								<ActionsSelector
+									bind:selectedActionIds={actionIds}
+									actions={($functions ?? []).filter((func) => func.type === 'action')}
 								/>
 							</div>
 						{/if}
 					{/if}
 
-					<div class="my-2">
-						<ActionsSelector
-							bind:selectedActionIds={actionIds}
-							actions={$functions.filter((func) => func.type === 'action')}
-						/>
-					</div>
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="my-2">
 						<Capabilities bind:capabilities />
@@ -743,7 +759,33 @@
 						{/if}
 					{/if}
 
-					<div class="my-2 text-gray-300 dark:text-gray-700">
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+
+					<div class="my-2 flex justify-end">
+						<button
+							class=" text-sm px-3 py-2 transition rounded-lg {loading
+								? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'
+								: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
+							type="submit"
+							disabled={loading}
+						>
+							<div class=" self-center font-medium">
+								{#if edit}
+									{$i18n.t('Save & Update')}
+								{:else}
+									{$i18n.t('Save & Create')}
+								{/if}
+							</div>
+
+							{#if loading}
+								<div class="ml-1.5 self-center">
+									<Spinner />
+								</div>
+							{/if}
+						</button>
+					</div>
+
+					<div class="my-2 text-gray-300 dark:text-gray-700 pb-20">
 						<div class="flex w-full justify-between mb-2">
 							<div class=" self-center text-sm font-medium">{$i18n.t('JSON Preview')}</div>
 
@@ -773,30 +815,6 @@
 								/>
 							</div>
 						{/if}
-					</div>
-
-					<div class="my-2 flex justify-end pb-20">
-						<button
-							class=" text-sm px-3 py-2 transition rounded-lg {loading
-								? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'
-								: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
-							type="submit"
-							disabled={loading}
-						>
-							<div class=" self-center font-medium">
-								{#if edit}
-									{$i18n.t('Save & Update')}
-								{:else}
-									{$i18n.t('Save & Create')}
-								{/if}
-							</div>
-
-							{#if loading}
-								<div class="ml-1.5 self-center">
-									<Spinner />
-								</div>
-							{/if}
-						</button>
 					</div>
 				</div>
 			</form>

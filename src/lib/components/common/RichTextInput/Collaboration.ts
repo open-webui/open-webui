@@ -8,7 +8,6 @@ import {
 	prosemirrorJSONToYDoc
 } from 'y-prosemirror';
 import type { Socket } from 'socket.io-client';
-import type { Awareness } from 'y-protocols/awareness';
 import type { SessionUser } from '$lib/stores';
 import { Editor, Extension } from '@tiptap/core';
 import { keymap } from 'prosemirror-keymap';
@@ -72,7 +71,8 @@ export class SocketIOCollaborationProvider {
 					})
 				];
 
-				plugins.push(yCursorPlugin(this.awareness as unknown as Awareness));
+				// @ts-ignore
+				plugins.push(yCursorPlugin(this.awareness));
 
 				return plugins;
 			}

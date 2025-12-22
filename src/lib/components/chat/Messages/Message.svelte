@@ -100,29 +100,31 @@
 				{topPadding}
 			/>
 		{:else}
-			<MultiResponseMessages
-				bind:history
-				{chatId}
-				{messageId}
-				{selectedModels}
-				isLastMessage={messageId === history?.currentId}
-				{setInputText}
-				{updateChat}
-				{editMessage}
-				{saveMessage}
-				{rateMessage}
-				{actionMessage}
-				{submitMessage}
-				{deleteMessage}
-				{continueResponse}
-				{regenerateResponse}
-				{mergeResponses}
-				{triggerScroll}
-				{addMessages}
-				{readOnly}
-				{editCodeBlock}
-				{topPadding}
-			/>
+			{#key messageId}
+				<MultiResponseMessages
+					bind:history
+					{chatId}
+					{messageId}
+					{selectedModels}
+					isLastMessage={messageId === history?.currentId}
+					{setInputText}
+					{updateChat}
+					{editMessage}
+					{saveMessage}
+					{rateMessage}
+					{actionMessage}
+					{submitMessage}
+					{deleteMessage}
+					{continueResponse}
+					{regenerateResponse}
+					{mergeResponses}
+					{triggerScroll}
+					{addMessages}
+					{readOnly}
+					{editCodeBlock}
+					{topPadding}
+				/>
+			{/key}
 		{/if}
 	{/if}
 </div>

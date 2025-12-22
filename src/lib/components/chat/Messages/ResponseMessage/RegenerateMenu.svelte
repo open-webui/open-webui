@@ -76,7 +76,7 @@
 					</button>
 				</div>
 			</div>
-			<hr class="border-gray-50 dark:border-gray-800 my-1 mx-2" />
+			<hr class="border-gray-50/30 dark:border-gray-800/30 my-1 mx-2" />
 			<DropdownMenu.Item
 				class="flex  gap-2  items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 				on:click={() => {

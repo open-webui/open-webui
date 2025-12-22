@@ -291,7 +291,7 @@
 			/>
 		</div>
 
-		<!-- <hr class="border-gray-50 dark:border-gray-850 my-1" /> -->
+		<!-- <hr class="border-gray-50 dark:border-gray-850/30 my-1" /> -->
 
 		<div class="flex px-4 pb-1">
 			<div
@@ -328,7 +328,7 @@
 				{/each}
 
 				{#if chatList}
-					<hr class="border-gray-50 dark:border-gray-850 my-3" />
+					<hr class="border-gray-50 dark:border-gray-850/30 my-3" />
 
 					{#if chatList.length === 0}
 						<div class="text-xs text-gray-500 dark:text-gray-400 text-center px-5 py-4">

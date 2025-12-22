@@ -3,10 +3,12 @@ import logging
 from typing import Optional
 
 
+from open_webui.utils.misc import get_message_list
 from open_webui.socket.main import get_event_emitter
 from open_webui.models.chats import (
     ChatForm,
     ChatImportForm,
+    ChatUsageStatsListResponse,
     ChatsImportForm,
     ChatResponse,
     Chats,
@@ -17,7 +19,6 @@ from open_webui.models.folders import Folders
 
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SRC_LOG_LEVELS
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 
@@ -26,7 +27,6 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_permission
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
 
@@ -59,6 +59,132 @@ def get_session_user_chat_list(
             return Chats.get_chat_title_id_list_by_user_id(
                 user.id, include_folders=include_folders, include_pinned=include_pinned
             )
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+
+############################
+# GetChatUsageStats
+# EXPERIMENTAL: may be removed in future releases
+############################
+
+
+@router.get("/stats/usage", response_model=ChatUsageStatsListResponse)
+def get_session_user_chat_usage_stats(
+    items_per_page: Optional[int] = 50,
+    page: Optional[int] = 1,
+    user=Depends(get_verified_user),
+):
+    try:
+        limit = items_per_page
+        skip = (page - 1) * limit
+
+        result = Chats.get_chats_by_user_id(user.id, skip=skip, limit=limit)
+
+        chats = result.items
+        total = result.total
+
+        chat_stats = []
+        for chat in chats:
+            messages_map = chat.chat.get("history", {}).get("messages", {})
+            message_id = chat.chat.get("history", {}).get("currentId")
+
+            if messages_map and message_id:
+                try:
+                    history_models = {}
+                    history_message_count = len(messages_map)
+                    history_user_messages = []
+                    history_assistant_messages = []
+
+                    for message in messages_map.values():
+                        if message.get("role", "") == "user":
+                            history_user_messages.append(message)
+                        elif message.get("role", "") == "assistant":
+                            history_assistant_messages.append(message)
+                            model = message.get("model", None)
+                            if model:
+                                if model not in history_models:
+                                    history_models[model] = 0
+                                history_models[model] += 1
+
+                    average_user_message_content_length = (
+                        sum(
+                            len(message.get("content", ""))
+                            for message in history_user_messages
+                        )
+                        / len(history_user_messages)
+                        if len(history_user_messages) > 0
+                        else 0
+                    )
+                    average_assistant_message_content_length = (
+                        sum(
+                            len(message.get("content", ""))
+                            for message in history_assistant_messages
+                        )
+                        / len(history_assistant_messages)
+                        if len(history_assistant_messages) > 0
+                        else 0
+                    )
+
+                    response_times = []
+                    for message in history_assistant_messages:
+                        user_message_id = message.get("parentId", None)
+                        if user_message_id and user_message_id in messages_map:
+                            user_message = messages_map[user_message_id]
+                            response_time = message.get(
+                                "timestamp", 0
+                            ) - user_message.get("timestamp", 0)
+
+                            response_times.append(response_time)
+
+                    average_response_time = (
+                        sum(response_times) / len(response_times)
+                        if len(response_times) > 0
+                        else 0
+                    )
+
+                    message_list = get_message_list(messages_map, message_id)
+                    message_count = len(message_list)
+
+                    models = {}
+                    for message in reversed(message_list):
+                        if message.get("role") == "assistant":
+                            model = message.get("model", None)
+                            if model:
+                                if model not in models:
+                                    models[model] = 0
+                                models[model] += 1
+
+                            annotation = message.get("annotation", {})
+
+                    chat_stats.append(
+                        {
+                            "id": chat.id,
+                            "models": models,
+                            "message_count": message_count,
+                            "history_models": history_models,
+                            "history_message_count": history_message_count,
+                            "history_user_message_count": len(history_user_messages),
+                            "history_assistant_message_count": len(
+                                history_assistant_messages
+                            ),
+                            "average_response_time": average_response_time,
+                            "average_user_message_content_length": average_user_message_content_length,
+                            "average_assistant_message_content_length": average_assistant_message_content_length,
+                            "tags": chat.meta.get("tags", []),
+                            "last_message_at": message_list[-1].get("timestamp", None),
+                            "updated_at": chat.updated_at,
+                            "created_at": chat.created_at,
+                        }
+                    )
+                except Exception as e:
+                    pass
+
+        return ChatUsageStatsListResponse(items=chat_stats, total=total)
+
     except Exception as e:
         log.exception(e)
         raise HTTPException(

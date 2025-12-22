@@ -8,10 +8,8 @@ import aiohttp
 import websockets
 from pydantic import BaseModel
 
-from open_webui.env import SRC_LOG_LEVELS
 
 logger = logging.getLogger(__name__)
-logger.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 class ResultModel(BaseModel):

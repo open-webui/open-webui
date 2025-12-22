@@ -1,11 +1,14 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import CitationModal from './Citations/CitationModal.svelte';
 	import { embed, showControls, showEmbeds } from '$lib/stores';
+
+	import CitationModal from './Citations/CitationModal.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let id = '';
+	export let chatId = '';
+
 	export let sources = [];
 	export let readOnly = false;
 
@@ -35,8 +38,11 @@
 						showControls.set(true);
 						showEmbeds.set(true);
 						embed.set({
+							url: embedUrl,
 							title: citations[sourceIdx]?.source?.name || 'Embedded Content',
-							url: embedUrl
+							source: citations[sourceIdx],
+							chatId: chatId,
+							messageId: id
 						});
 					}
 				} else {
@@ -141,7 +147,7 @@
 	{@const urlCitations = citations.filter((c) => c?.source?.name?.startsWith('http'))}
 	<div class=" py-1 -mx-0.5 w-full flex gap-1 items-center flex-wrap">
 		<button
-			class="text-xs font-medium text-gray-600 dark:text-gray-300 px-3.5 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition flex items-center gap-1 border border-gray-50 dark:border-gray-850"
+			class="text-xs font-medium text-gray-600 dark:text-gray-300 px-3.5 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition flex items-center gap-1 border border-gray-50 dark:border-gray-850/30"
 			on:click={() => {
 				showCitations = !showCitations;
 			}}

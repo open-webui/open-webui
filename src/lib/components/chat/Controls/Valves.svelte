@@ -190,7 +190,7 @@
 			</div>
 
 			{#if selectedId}
-				<hr class="border-gray-50 dark:border-gray-800 my-1 w-full" />
+				<hr class="border-gray-50/30 dark:border-gray-800/30 my-1 w-full" />
 
 				<div class="my-2 text-xs">
 					{#if !loading}

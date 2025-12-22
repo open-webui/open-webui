@@ -5,6 +5,7 @@ import json
 import asyncio
 import logging
 
+from open_webui.models.groups import Groups
 from open_webui.models.models import (
     ModelForm,
     ModelModel,
@@ -78,6 +79,10 @@ async def get_models(
         filter["direction"] = direction
 
     if not user.role == "admin" or not BYPASS_ADMIN_ACCESS_CONTROL:
+        groups = Groups.get_groups_by_member_id(user.id)
+        if groups:
+            filter["group_ids"] = [group.id for group in groups]
+
         filter["user_id"] = user.id
 
     return Models.search_models(user.id, filter=filter, skip=skip, limit=limit)
@@ -286,12 +291,15 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user)):
 @router.get("/model/profile/image")
 async def get_model_profile_image(id: str, user=Depends(get_verified_user)):
     model = Models.get_model_by_id(id)
+    # Cache-control headers to prevent stale cached images
+    cache_headers = {"Cache-Control": "no-cache, must-revalidate"}
+
     if model:
         if model.meta.profile_image_url:
             if model.meta.profile_image_url.startswith("http"):
                 return Response(
                     status_code=status.HTTP_302_FOUND,
-                    headers={"Location": model.meta.profile_image_url},
+                    headers={"Location": model.meta.profile_image_url, **cache_headers},
                 )
             elif model.meta.profile_image_url.startswith("data:image"):
                 try:
@@ -302,14 +310,17 @@ async def get_model_profile_image(id: str, user=Depends(get_verified_user)):
                     return StreamingResponse(
                         image_buffer,
                         media_type="image/png",
-                        headers={"Content-Disposition": "inline; filename=image.png"},
+                        headers={
+                            "Content-Disposition": "inline; filename=image.png",
+                            **cache_headers,
+                        },
                     )
                 except Exception as e:
                     pass
 
-        return FileResponse(f"{STATIC_DIR}/favicon.png")
+        return FileResponse(f"{STATIC_DIR}/favicon.png", headers=cache_headers)
     else:
-        return FileResponse(f"{STATIC_DIR}/favicon.png")
+        return FileResponse(f"{STATIC_DIR}/favicon.png", headers=cache_headers)
 
 
 ############################

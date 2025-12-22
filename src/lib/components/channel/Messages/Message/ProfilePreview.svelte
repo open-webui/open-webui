@@ -11,11 +11,21 @@
 	export let align = 'center';
 	export let side = 'right';
 	export let sideOffset = 8;
+
+	let openPreview = false;
 </script>
 
-<LinkPreview.Root openDelay={0} closeDelay={0}>
-	<LinkPreview.Trigger class=" cursor-pointer no-underline! font-normal! ">
-		<slot />
+<LinkPreview.Root openDelay={0} closeDelay={200} bind:open={openPreview}>
+	<LinkPreview.Trigger class="flex items-center">
+		<button
+			type="button"
+			class=" cursor-pointer no-underline! font-normal!"
+			on:click={() => {
+				openPreview = !openPreview;
+			}}
+		>
+			<slot />
+		</button>
 	</LinkPreview.Trigger>
 
 	<UserStatusLinkPreview id={user?.id} {side} {align} {sideOffset} />
