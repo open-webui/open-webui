@@ -3265,7 +3265,7 @@ onMount(async () => {
 
 	<div class="flex-1 flex bg-white dark:bg-gray-900 overflow-hidden">
 		<!-- Left Sidebar: Scenario List -->
-		<div class="w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-gray-50 dark:bg-gray-900 {sidebarOpen ? '' : 'hidden'} md:flex">
+		<div class="w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-gray-50 dark:bg-gray-900 {sidebarOpen ? 'flex' : 'hidden'}">
 			<div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-800 p-4">
 				<div class="flex items-center justify-between">
 					<h1 class="text-xl font-bold text-gray-900 dark:text-white">Scenarios</h1>
@@ -3281,7 +3281,7 @@ onMount(async () => {
 							</svg>
 							<span class="hidden sm:inline">Tutorial</span>
 						</button>
-						<button class="text-xs px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800" on:click={() => { sidebarOpen = !sidebarOpen; }} aria-label="Toggle scenarios">{sidebarOpen ? 'Hide' : 'Show'}</button>
+						<button class="md:hidden text-xs px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800" on:click={() => { sidebarOpen = !sidebarOpen; }} aria-label="Toggle scenarios">{sidebarOpen ? 'Hide' : 'Show'}</button>
 					</div>
 				</div>
 				<p class="text-sm text-gray-600 dark:text-gray-400">
