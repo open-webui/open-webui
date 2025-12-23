@@ -1023,6 +1023,7 @@ async def model_response_handler(request, channel, message, user):
                 if res:
                     if res.get("choices", []) and len(res["choices"]) > 0:
                         await update_message_by_id(
+                            request,
                             channel.id,
                             response_message.id,
                             MessageForm(
@@ -1037,6 +1038,7 @@ async def model_response_handler(request, channel, message, user):
                         )
                     elif res.get("error", None):
                         await update_message_by_id(
+                            request,
                             channel.id,
                             response_message.id,
                             MessageForm(
