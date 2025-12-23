@@ -61,12 +61,14 @@ class MCPClient:
         return tool_specs
 
     async def call_tool(
-        self, function_name: str, function_args: dict
+            self, function_name: str, meta: dict, function_args: dict
     ) -> Optional[dict]:
+        
         if not self.session:
             raise RuntimeError("MCP client is not connected.")
 
-        result = await self.session.call_tool(function_name, function_args)
+        result = await self.session.call_tool(function_name, function_args, meta=meta)
+
         if not result:
             raise Exception("No result returned from MCP tool call.")
 

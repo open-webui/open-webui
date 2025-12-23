@@ -57,6 +57,7 @@
 	let oauthClientInfo = null;
 
 	let enable = true;
+    let enable_mcp_meta = false;
 	let loading = false;
 
 	const registerOAuthClientHandler = async () => {
@@ -149,6 +150,7 @@
 				key,
 				config: {
 					enable: enable,
+                    enable_mcp_meta: enable_mcp_meta,
 					access_control: accessControl
 				},
 				info: {
@@ -206,6 +208,7 @@
 
 				if (data.config) {
 					enable = data.config.enable ?? true;
+					enable_mcp_meta = data.config.enable_mcp_meta ?? true;
 					accessControl = data.config.access_control ?? {};
 				}
 
@@ -304,6 +307,7 @@
 			key,
 			config: {
 				enable: enable,
+				enable_mcp_meta: enable_mcp_meta,
 				function_name_filter_list: functionNameFilterList,
 				access_control: accessControl
 			},
@@ -338,6 +342,7 @@
 		oauthClientInfo = null;
 
 		enable = true;
+		enable_mcp_meta = true;
 		functionNameFilterList = '';
 		accessControl = null;
 	};
@@ -362,6 +367,7 @@
 			oauthClientInfo = connection.info?.oauth_client_info ?? null;
 
 			enable = connection.config?.enable ?? true;
+			enable_mcp_meta = connection.config?.enable_mcp_meta ?? false;
 			functionNameFilterList = connection.config?.function_name_filter_list ?? '';
 			accessControl = connection.config?.access_control ?? null;
 		}
@@ -796,7 +802,6 @@
 									/>
 								</div>
 							</div>
-
 							<div class="flex flex-col w-full mt-2">
 								<label
 									for="function-name-filter-list"
@@ -815,6 +820,24 @@
 									/>
 								</div>
 							</div>
+
+                            {#if type === 'mcp'}
+                            <div class="flex gap-2">
+                                <div class="flex flex-col w-full">
+                                    <div class="flex justify-between mt-2">
+                                        <label
+                                            for="enable_mcp_meta"
+                                            class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+                                            >{$i18n.t('Meta information')}</label
+                                        >
+
+                                        <Tooltip content={enable_mcp_meta ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
+                                            <Switch bind:state={enable_mcp_meta} />
+                                        </Tooltip>
+                                    </div>
+                                </div>
+                            </div>
+                            {/if}
 
 							<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 

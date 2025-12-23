@@ -124,7 +124,6 @@ from open_webui.constants import TASKS
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 DEFAULT_REASONING_TAGS = [
@@ -1408,12 +1407,33 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         function_name_filter_list = function_name_filter_list.split(",")
 
                     tool_specs = await mcp_clients[server_id].list_tool_specs()
+
+                    def build_mcp_meta(extra_params: dict) -> dict:
+                        meta = {}
+
+                        if "__user__" in extra_params:
+                            meta["__user__"] = extra_params["__user__"]
+                        if "__metadata__" in extra_params:
+                            meta["__metadata__"] = extra_params["__metadata__"]
+                        if "files" in extra_params:
+                            meta["__files__"] = extra_params["files"]
+                        if "__oauth_token__" in extra_params:
+                            meta["__oauth_token__"] = extra_params["__oauth_token__"]
+
+                        return meta
+
+                    if mcp_server_connection.get("config").get("enable_mcp_meta"): 
+                        mcp_meta = build_mcp_meta(extra_params)
+                    else:
+                        mcp_meta = None
+
                     for tool_spec in tool_specs:
 
                         def make_tool_function(client, function_name):
                             async def tool_function(**kwargs):
                                 return await client.call_tool(
                                     function_name,
+                                    mcp_meta,
                                     function_args=kwargs,
                                 )
 
