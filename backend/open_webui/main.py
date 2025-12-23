@@ -440,6 +440,7 @@ from open_webui.config import (
     reset_config,
 )
 from open_webui.env import (
+    ENABLE_CUSTOM_MODEL_FALLBACK,
     LICENSE_KEY,
     AUDIT_EXCLUDED_PATHS,
     AUDIT_LOG_LEVEL,
@@ -1541,6 +1542,7 @@ async def chat_completion(
 
     metadata = {}
     try:
+        model_info = None
         if not model_item.get("direct", False):
             if model_id not in request.app.state.MODELS:
                 raise Exception("Model not found")
@@ -1558,7 +1560,6 @@ async def chat_completion(
                     raise e
         else:
             model = model_item
-            model_info = None
 
             request.state.direct = True
             request.state.model = model
@@ -1566,6 +1567,26 @@ async def chat_completion(
         model_info_params = (
             model_info.params.model_dump() if model_info and model_info.params else {}
         )
+
+        # Check base model existence for custom models
+        if model_info_params.get("base_model_id"):
+            base_model_id = model_info_params.get("base_model_id")
+            if base_model_id not in request.app.state.MODELS:
+                if ENABLE_CUSTOM_MODEL_FALLBACK:
+                    default_models = (
+                        request.app.state.config.DEFAULT_MODELS or ""
+                    ).split(",")
+
+                    fallback_model_id = (
+                        default_models[0].strip() if default_models[0] else None
+                    )
+
+                    if fallback_model_id:
+                        request.base_model_id = fallback_model_id
+                    else:
+                        raise Exception("Model not found")
+                else:
+                    raise Exception("Model not found")
 
         # Chat Params
         stream_delta_chunk_size = form_data.get("params", {}).get(
@@ -1587,6 +1608,7 @@ async def chat_completion(
             "user_id": user.id,
             "chat_id": form_data.pop("chat_id", None),
             "message_id": form_data.pop("id", None),
+            "parent_message": form_data.pop("parent_message", None),
             "parent_message_id": form_data.pop("parent_id", None),
             "session_id": form_data.pop("session_id", None),
             "filter_ids": form_data.pop("filter_ids", []),
@@ -1611,14 +1633,37 @@ async def chat_completion(
             },
         }
 
-        if metadata.get("chat_id") and (user and user.role != "admin"):
-            if not metadata["chat_id"].startswith("local:"):
+        if metadata.get("chat_id") and user:
+            if not metadata["chat_id"].startswith(
+                "local:"
+            ):  # temporary chats are not stored
+
+                # Verify chat ownership
                 chat = Chats.get_chat_by_id_and_user_id(metadata["chat_id"], user.id)
-                if chat is None:
+                if chat is None and user.role != "admin":  # admins can access any chat
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
                         detail=ERROR_MESSAGES.DEFAULT(),
                     )
+
+                # Insert chat files from parent message if any
+                parent_message = metadata.get("parent_message", {})
+                parent_message_files = parent_message.get("files", [])
+                if parent_message_files:
+                    try:
+                        Chats.insert_chat_files(
+                            metadata["chat_id"],
+                            parent_message.get("id"),
+                            [
+                                file_item.get("id")
+                                for file_item in parent_message_files
+                                if file_item.get("type") == "file"
+                            ],
+                            user.id,
+                        )
+                    except Exception as e:
+                        log.debug(f"Error inserting chat files: {e}")
+                        pass
 
         request.state.metadata = metadata
         form_data["metadata"] = metadata

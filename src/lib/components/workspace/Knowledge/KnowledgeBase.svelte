@@ -33,7 +33,9 @@
 		updateKnowledgeById,
 		searchKnowledgeFilesById
 	} from '$lib/apis/knowledge';
-	import { blobToFile } from '$lib/utils';
+	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
+
+	import { blobToFile, isYoutubeUrl } from '$lib/utils';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Files from './KnowledgeBase/Files.svelte';
@@ -51,13 +53,16 @@
 	import FilesOverlay from '$lib/components/chat/MessageInput/FilesOverlay.svelte';
 	import DropdownOptions from '$lib/components/common/DropdownOptions.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
+	import AttachWebpageModal from '$lib/components/chat/MessageInput/AttachWebpageModal.svelte';
 
 	let largeScreen = true;
 
 	let pane;
 	let showSidepanel = true;
 
+	let showAddWebpageModal = false;
 	let showAddTextContentModal = false;
+
 	let showSyncConfirmModal = false;
 	let showAccessControlModal = false;
 
@@ -166,10 +171,85 @@
 		return file;
 	};
 
+	const uploadWeb = async (urls) => {
+		if (!Array.isArray(urls)) {
+			urls = [urls];
+		}
+
+		const newFileItems = urls.map((url) => ({
+			type: 'file',
+			file: '',
+			id: null,
+			url: url,
+			name: url,
+			size: null,
+			status: 'uploading',
+			error: '',
+			itemId: uuidv4()
+		}));
+
+		// Display all items at once
+		fileItems = [...newFileItems, ...(fileItems ?? [])];
+
+		for (const fileItem of newFileItems) {
+			try {
+				console.log(fileItem);
+				const res = await processWeb(localStorage.token, '', fileItem.url, false).catch((e) => {
+					console.error('Error processing web URL:', e);
+					return null;
+				});
+
+				if (res) {
+					console.log(res);
+					const file = createFileFromText(
+						// Use URL as filename, sanitized
+						fileItem.url
+							.replace(/[^a-z0-9]/gi, '_')
+							.toLowerCase()
+							.slice(0, 50),
+						res.content
+					);
+
+					const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
+						toast.error(`${e}`);
+						return null;
+					});
+
+					if (uploadedFile) {
+						console.log(uploadedFile);
+						fileItems = fileItems.map((item) => {
+							if (item.itemId === fileItem.itemId) {
+								item.id = uploadedFile.id;
+							}
+							return item;
+						});
+
+						if (uploadedFile.error) {
+							console.warn('File upload warning:', uploadedFile.error);
+							toast.warning(uploadedFile.error);
+							fileItems = fileItems.filter((file) => file.id !== uploadedFile.id);
+						} else {
+							await addFileHandler(uploadedFile.id);
+						}
+					} else {
+						toast.error($i18n.t('Failed to upload file.'));
+					}
+				} else {
+					// remove the item from fileItems
+					fileItems = fileItems.filter((item) => item.itemId !== fileItem.itemId);
+					toast.error($i18n.t('Failed to process URL: {{url}}', { url: fileItem.url }));
+				}
+			} catch (e) {
+				// remove the item from fileItems
+				fileItems = fileItems.filter((item) => item.itemId !== fileItem.itemId);
+				toast.error(`${e}`);
+			}
+		}
+	};
+
 	const uploadFileHandler = async (file) => {
 		console.log(file);
 
-		const tempItemId = uuidv4();
 		const fileItem = {
 			type: 'file',
 			file: '',
@@ -179,7 +259,7 @@
 			size: file.size,
 			status: 'uploading',
 			error: '',
-			itemId: tempItemId
+			itemId: uuidv4()
 		};
 
 		if (fileItem.size == 0) {
@@ -203,7 +283,7 @@
 			return;
 		}
 
-		fileItems = [...(fileItems ?? []), fileItem];
+		fileItems = [fileItem, ...(fileItems ?? [])];
 		try {
 			let metadata = {
 				knowledge_id: knowledge.id,
@@ -224,12 +304,9 @@
 			if (uploadedFile) {
 				console.log(uploadedFile);
 				fileItems = fileItems.map((item) => {
-					if (item.itemId === tempItemId) {
+					if (item.itemId === fileItem.itemId) {
 						item.id = uploadedFile.id;
 					}
-
-					// Remove temporary item id
-					delete item.itemId;
 					return item;
 				});
 
@@ -696,6 +773,13 @@
 	}}
 />
 
+<AttachWebpageModal
+	bind:show={showAddWebpageModal}
+	onSubmit={async (e) => {
+		uploadWeb(e.data);
+	}}
+/>
+
 <AddTextContentModal
 	bind:show={showAddTextContentModal}
 	on:submit={(e) => {
@@ -759,8 +843,9 @@
 							<div class="shrink-0 mr-2.5">
 								{#if fileItemsTotal}
 									<div class="text-xs text-gray-500">
-										{$i18n.t('{{count}} files', {
-											count: fileItemsTotal
+										<!-- {$i18n.t('{{COUNT}} files')} -->
+										{$i18n.t('{{COUNT}} files', {
+											COUNT: fileItemsTotal
 										})}
 									</div>
 								{/if}
@@ -826,16 +911,18 @@
 					{#if knowledge?.write_access}
 						<div>
 							<AddContentMenu
-								on:upload={(e) => {
-									if (e.detail.type === 'directory') {
+								onUpload={(data) => {
+									if (data.type === 'directory') {
 										uploadDirectoryHandler();
-									} else if (e.detail.type === 'text') {
+									} else if (data.type === 'web') {
+										showAddWebpageModal = true;
+									} else if (data.type === 'text') {
 										showAddTextContentModal = true;
 									} else {
 										document.getElementById('files-input').click();
 									}
 								}}
-								on:sync={(e) => {
+								onSync={() => {
 									showSyncConfirmModal = true;
 								}}
 							/>

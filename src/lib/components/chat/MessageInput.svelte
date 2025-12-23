@@ -93,7 +93,9 @@
 
 	const i18n = getContext('i18n');
 
+	export let onUpload: Function = (e) => {};
 	export let onChange: Function = () => {};
+
 	export let createMessagePair: Function;
 	export let stopResponse: Function;
 
@@ -189,17 +191,11 @@
 				for (const type of item.types) {
 					if (type.startsWith('image/')) {
 						const blob = await item.getType(type);
-						const reader = new FileReader();
-						reader.onload = (event) => {
-							files = [
-								...files,
-								{
-									type: 'image',
-									url: event.target.result as string
-								}
-							];
-						};
-						reader.readAsDataURL(blob);
+						const file = new File([blob], `clipboard-image.${type.split('/')[1]}`, {
+							type: type
+						});
+
+						inputFilesHandler([file]);
 					}
 				}
 			}
@@ -525,8 +521,9 @@
 
 			// Convert the canvas to a Base64 image URL
 			const imageUrl = canvas.toDataURL('image/png');
-			// Add the captured image to the files array to render it
-			files = [...files, { type: 'image', url: imageUrl }];
+			const blob = await (await fetch(imageUrl)).blob();
+			const file = new File([blob], `screen-capture-${Date.now()}.png`, { type: 'image/png' });
+			inputFilesHandler([file]);
 			// Clean memory: Clear video srcObject
 			video.srcObject = null;
 		} catch (error) {
@@ -535,7 +532,7 @@
 		}
 	};
 
-	const uploadFileHandler = async (file, fullContext: boolean = false) => {
+	const uploadFileHandler = async (file, process = true, itemData = {}) => {
 		if ($_user?.role !== 'admin' && !($_user?.permissions?.chat?.file_upload ?? true)) {
 			toast.error($i18n.t('You do not have permission to upload files.'));
 			return null;
@@ -558,7 +555,7 @@
 			size: file.size,
 			error: '',
 			itemId: tempItemId,
-			...(fullContext ? { context: 'full' } : {})
+			...itemData
 		};
 
 		if (fileItem.size == 0) {
@@ -582,7 +579,7 @@
 				}
 
 				// During the file upload, file content is automatically extracted.
-				const uploadedFile = await uploadFile(localStorage.token, file, metadata);
+				const uploadedFile = await uploadFile(localStorage.token, file, metadata, process);
 
 				if (uploadedFile) {
 					console.log('File upload completed:', {
@@ -601,7 +598,8 @@
 					fileItem.id = uploadedFile.id;
 					fileItem.collection_name =
 						uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
-					fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+					fileItem.content_type = uploadedFile.meta?.content_type || uploadedFile.content_type;
+					fileItem.url = `${uploadedFile.id}`;
 
 					files = files;
 				} else {
@@ -724,19 +722,31 @@
 				};
 
 				let reader = new FileReader();
+
 				reader.onload = async (event) => {
 					let imageUrl = event.target.result;
 
-					imageUrl = await compressImageHandler(imageUrl, $settings, $config);
+					// Compress the image if settings or config require it
+					if ($settings?.imageCompression && $settings?.imageCompressionInChannels) {
+						imageUrl = await compressImageHandler(imageUrl, $settings, $config);
+					}
 
-					files = [
-						...files,
-						{
-							type: 'image',
-							url: `${imageUrl}`
-						}
-					];
+					if ($temporaryChatEnabled) {
+						files = [
+							...files,
+							{
+								type: 'image',
+								url: imageUrl
+							}
+						];
+					} else {
+						const blob = await (await fetch(imageUrl)).blob();
+						const compressedFile = new File([blob], file.name, { type: file.type });
+
+						uploadFileHandler(compressedFile, false);
+					}
 				};
+
 				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
 			} else {
 				uploadFileHandler(file);
@@ -848,7 +858,7 @@
 								}
 							];
 						} else {
-							dispatch('upload', e);
+							onUpload(e);
 						}
 					}
 				})
@@ -883,7 +893,7 @@
 								}
 							];
 						} else {
-							dispatch('upload', e);
+							onUpload(e);
 						}
 					}
 				})
@@ -918,7 +928,7 @@
 								}
 							];
 						} else {
-							dispatch('upload', e);
+							onUpload(e);
 						}
 					}
 				})
@@ -1144,11 +1154,15 @@
 									dir={$settings?.chatDirection ?? 'auto'}
 								>
 									{#each files as file, fileIdx}
-										{#if file.type === 'image'}
+										{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
+											{@const fileUrl =
+												file.url.startsWith('data') || file.url.startsWith('http')
+													? file.url
+													: `${WEBUI_API_BASE_URL}/files/${file.url}${file?.content_type ? '/content' : ''}`}
 											<div class=" relative group">
 												<div class="relative flex items-center">
 													<Image
-														src={file.url}
+														src={fileUrl}
 														alt=""
 														imageClassName=" size-10 rounded-xl object-cover"
 													/>
@@ -1390,29 +1404,7 @@
 
 														if (clipboardData && clipboardData.items) {
 															for (const item of clipboardData.items) {
-																if (item.type.indexOf('image') !== -1) {
-																	const blob = item.getAsFile();
-																	const reader = new FileReader();
-
-																	reader.onload = function (e) {
-																		files = [
-																			...files,
-																			{
-																				type: 'image',
-																				url: `${e.target.result}`
-																			}
-																		];
-																	};
-
-																	reader.readAsDataURL(blob);
-																} else if (item?.kind === 'file') {
-																	const file = item.getAsFile();
-																	if (file) {
-																		const _files = [file];
-																		await inputFilesHandler(_files);
-																		e.preventDefault();
-																	}
-																} else if (item.type === 'text/plain') {
+																if (item.type === 'text/plain') {
 																	if (($settings?.largeTextAsFile ?? false) && !shiftKey) {
 																		const text = clipboardData.getData('text/plain');
 
@@ -1427,8 +1419,14 @@
 																				}
 																			);
 
-																			await uploadFileHandler(file, true);
+																			await uploadFileHandler(file, true, { context: 'full' });
 																		}
+																	}
+																} else {
+																	const file = item.getAsFile();
+																	if (file) {
+																		await inputFilesHandler([file]);
+																		e.preventDefault();
 																	}
 																}
 															}
@@ -1487,9 +1485,7 @@
 												console.error('OneDrive Error:', error);
 											}
 										}}
-										onUpload={async (e) => {
-											dispatch('upload', e);
-										}}
+										{onUpload}
 										onClose={async () => {
 											await tick();
 
@@ -1716,6 +1712,7 @@
 										</div>
 									{:else}
 										{#if prompt !== '' && !history?.currentId && ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
+											<!-- {$i18n.t('Create Note')}  -->
 											<Tooltip content={$i18n.t('Create note')} className=" flex items-center">
 												<button
 													id="send-message-button"

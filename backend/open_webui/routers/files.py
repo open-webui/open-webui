@@ -34,6 +34,7 @@ from open_webui.models.files import (
     FileModelResponse,
     Files,
 )
+from open_webui.models.chats import Chats
 from open_webui.models.knowledge import Knowledges
 from open_webui.models.groups import Groups
 
@@ -71,9 +72,9 @@ def has_access_to_file(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
+    # Check if the file is associated with any knowledge bases the user has access to
     knowledge_bases = Knowledges.get_knowledges_by_file_id(file_id)
     user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
-
     for knowledge_base in knowledge_bases:
         if knowledge_base.user_id == user.id or has_access(
             user.id, access_type, knowledge_base.access_control, user_group_ids
@@ -89,8 +90,15 @@ def has_access_to_file(
             if knowledge_base.id == knowledge_base_id:
                 return True
 
+    # Check if the file is associated with any channels the user has access to
     channels = Channels.get_channels_by_file_id_and_user_id(file_id, user.id)
     if access_type == "read" and channels:
+        return True
+
+    # Check if the file is associated with any chats the user has access to
+    # TODO: Granular access control for chats
+    chats = Chats.get_shared_chats_by_file_id(file_id)
+    if chats:
         return True
 
     return False
@@ -106,7 +114,7 @@ def process_uploaded_file(request, file, file_path, file_item, file_metadata, us
         if file.content_type:
             stt_supported_content_types = getattr(
                 request.app.state.config, "STT_SUPPORTED_CONTENT_TYPES", []
-            ) or ["audio/*", "video/webm"]
+            )
 
             if strict_match_mime_type(stt_supported_content_types, file.content_type):
                 file_path = Storage.get_file(file_path)

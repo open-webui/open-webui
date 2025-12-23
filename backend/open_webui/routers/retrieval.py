@@ -14,6 +14,7 @@ from typing import Iterator, List, Optional, Sequence, Union
 from fastapi import (
     Depends,
     FastAPI,
+    Query,
     File,
     Form,
     HTTPException,
@@ -87,6 +88,7 @@ from open_webui.retrieval.utils import (
 from open_webui.retrieval.vector.utils import filter_metadata
 from open_webui.utils.misc import (
     calculate_sha256_string,
+    sanitize_text_for_db,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
 
@@ -154,7 +156,9 @@ def get_rf(
 ):
     rf = None
     # Convert timeout string to int or None (system default)
-    timeout_value = int(external_reranker_timeout) if external_reranker_timeout else None
+    timeout_value = (
+        int(external_reranker_timeout) if external_reranker_timeout else None
+    )
     if reranking_model:
         if any(model in reranking_model for model in ["jinaai/jina-colbert-v2"]):
             try:
@@ -1382,7 +1386,7 @@ def save_docs_to_vector_db(
     if len(docs) == 0:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
-    texts = [doc.page_content for doc in docs]
+    texts = [sanitize_text_for_db(doc.page_content) for doc in docs]
     metadatas = [
         {
             **doc.metadata,
@@ -1753,44 +1757,53 @@ async def process_text(
 @router.post("/process/youtube")
 @router.post("/process/web")
 async def process_web(
-    request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)
+    request: Request,
+    form_data: ProcessUrlForm,
+    process: bool = Query(True, description="Whether to process and save the content"),
+    user=Depends(get_verified_user),
 ):
     try:
-        collection_name = form_data.collection_name
-        if not collection_name:
-            collection_name = calculate_sha256_string(form_data.url)[:63]
-
         content, docs = await run_in_threadpool(
             get_content_from_url, request, form_data.url
         )
         log.debug(f"text_content: {content}")
 
-        if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
-            await run_in_threadpool(
-                save_docs_to_vector_db,
-                request,
-                docs,
-                collection_name,
-                overwrite=True,
-                user=user,
-            )
-        else:
-            collection_name = None
+        if process:
+            collection_name = form_data.collection_name
+            if not collection_name:
+                collection_name = calculate_sha256_string(form_data.url)[:63]
 
-        return {
-            "status": True,
-            "collection_name": collection_name,
-            "filename": form_data.url,
-            "file": {
-                "data": {
-                    "content": content,
+            if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
+                await run_in_threadpool(
+                    save_docs_to_vector_db,
+                    request,
+                    docs,
+                    collection_name,
+                    overwrite=True,
+                    user=user,
+                )
+            else:
+                collection_name = None
+
+            return {
+                "status": True,
+                "collection_name": collection_name,
+                "filename": form_data.url,
+                "file": {
+                    "data": {
+                        "content": content,
+                    },
+                    "meta": {
+                        "name": form_data.url,
+                        "source": form_data.url,
+                    },
                 },
-                "meta": {
-                    "name": form_data.url,
-                    "source": form_data.url,
-                },
-            },
-        }
+            }
+        else:
+            return {
+                "status": True,
+                "content": content,
+            }
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -2108,16 +2121,38 @@ async def process_web_search(
             f"trying to web search with {request.app.state.config.WEB_SEARCH_ENGINE, form_data.queries}"
         )
 
-        search_tasks = [
-            run_in_threadpool(
-                search_web,
-                request,
-                request.app.state.config.WEB_SEARCH_ENGINE,
-                query,
-                user,
-            )
-            for query in form_data.queries
-        ]
+        # Use semaphore to limit concurrent requests based on WEB_SEARCH_CONCURRENT_REQUESTS
+        # 0 or None = unlimited (previous behavior), positive number = limited concurrency
+        # Set to 1 for sequential execution (rate-limited APIs like Brave free tier)
+        concurrent_limit = request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS
+
+        if concurrent_limit:
+            # Limited concurrency with semaphore
+            semaphore = asyncio.Semaphore(concurrent_limit)
+
+            async def search_with_limit(query):
+                async with semaphore:
+                    return await run_in_threadpool(
+                        search_web,
+                        request,
+                        request.app.state.config.WEB_SEARCH_ENGINE,
+                        query,
+                        user,
+                    )
+
+            search_tasks = [search_with_limit(query) for query in form_data.queries]
+        else:
+            # Unlimited parallel execution (previous behavior)
+            search_tasks = [
+                run_in_threadpool(
+                    search_web,
+                    request,
+                    request.app.state.config.WEB_SEARCH_ENGINE,
+                    query,
+                    user,
+                )
+                for query in form_data.queries
+            ]
 
         search_results = await asyncio.gather(*search_tasks)
 

@@ -577,10 +577,14 @@ class OAuthClientManager:
         return True
 
     def get_client(self, client_id):
+        if client_id not in self.clients:
+            self.ensure_client_from_config(client_id)
         client = self.clients.get(client_id)
         return client["client"] if client else None
 
     def get_client_info(self, client_id):
+        if client_id not in self.clients:
+            self.ensure_client_from_config(client_id)
         client = self.clients.get(client_id)
         return client["client_info"] if client else None
 
@@ -786,16 +790,22 @@ class OAuthClientManager:
         try:
             client_info = self.get_client_info(client_id)
 
-            auth_params = {}
-            if (
-                client_info
-                and hasattr(client_info, "client_id")
-                and hasattr(client_info, "client_secret")
-            ):
-                auth_params["client_id"] = client_info.client_id
-                auth_params["client_secret"] = client_info.client_secret
+            # Note: Do NOT pass client_id/client_secret explicitly here.
+            # The Authlib client already has these configured during add_client().
+            # Passing them again causes Authlib to concatenate them (e.g., "ID1,ID1"),
+            # which results in 401 errors from the token endpoint. (Fix for #19823)
+            token = await client.authorize_access_token(request)
 
-            token = await client.authorize_access_token(request, **auth_params)
+            # Validate that we received a proper token response
+            # If token exchange failed (e.g., 401), we may get an error response instead
+            if token and not token.get("access_token"):
+                error_desc = token.get(
+                    "error_description", token.get("error", "Unknown error")
+                )
+                error_message = f"Token exchange failed: {error_desc}"
+                log.error(f"Invalid token response for client_id {client_id}: {token}")
+                token = None
+
             if token:
                 try:
                     # Add timestamp for tracking
@@ -825,7 +835,8 @@ class OAuthClientManager:
                     error_message = "Failed to store OAuth session server-side"
                     log.error(f"Failed to store OAuth session server-side: {e}")
             else:
-                error_message = "Failed to obtain OAuth token"
+                if not error_message:
+                    error_message = "Failed to obtain OAuth token"
                 log.warning(error_message)
         except Exception as e:
             error_message = _build_oauth_callback_error_message(e)

@@ -6,7 +6,7 @@ authors = [
 ]
 license = { file = "LICENSE" }
 dependencies = [
-    "fastapi==0.125.0",
+    "fastapi==0.126.0",
     "uvicorn[standard]==0.37.0",
     "pydantic==2.12.5",
     "python-multipart==0.0.21",
@@ -52,14 +52,16 @@ dependencies = [
     "google-genai==1.56.0",
     "google-generativeai==0.8.6",
 
-    "langchain==0.3.27",
-    "langchain-community==0.3.29",
+    "langchain==1.2.0",
+    "langchain-community==0.4.1",
+    "langchain-classic==1.0.0",
+    "langchain-text-splitters==1.1.0",
 
     "fake-useragent==2.2.0",
     "chromadb==1.3.7",
     "opensearch-py==3.1.0",
     "PyMySQL==1.1.2",
-    "boto3==1.42.13",
+    "boto3==1.42.14",
     
     "transformers==4.57.3",
     "sentence-transformers==5.2.0",
@@ -69,7 +71,7 @@ dependencies = [
 
     "ftfy==6.3.1",
     "chardet==5.2.0",
-    "pypdf==6.4.2",
+    "pypdf==6.5.0",
     "fpdf2==2.8.5",
     "pymdown-extensions==10.19.1",
     "docx2txt==0.9",
@@ -148,7 +150,7 @@ all = [
     "elasticsearch==9.2.0",
 
     "qdrant-client==1.16.2",
-    "pymilvus==2.6.4",
+    
     "weaviate-client==4.19.0",
     "pymilvus==2.6.5",
     "pinecone==6.0.2",

@@ -193,9 +193,13 @@
 						dir={$settings?.chatDirection ?? 'auto'}
 					>
 						{#each message.files as file}
+							{@const fileUrl =
+								file.url.startsWith('data') || file.url.startsWith('http')
+									? file.url
+									: `${WEBUI_API_BASE_URL}/files/${file.url}${file?.content_type ? '/content' : ''}`}
 							<div class={($settings?.chatBubble ?? true) ? 'self-end' : ''}>
-								{#if file.type === 'image'}
-									<Image src={file.url} imageClassName=" max-h-96 rounded-lg" />
+								{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
+									<Image src={fileUrl} imageClassName=" max-h-96 rounded-lg" />
 								{:else}
 									<FileItem
 										item={file}

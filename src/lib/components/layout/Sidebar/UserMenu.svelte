@@ -78,10 +78,7 @@
 />
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<DropdownMenu.Root
-	bind:open={show}
-	onOpenChange={handleDropdownChange}
->
+<DropdownMenu.Root bind:open={show} onOpenChange={handleDropdownChange}>
 	<DropdownMenu.Trigger>
 		<slot />
 	</DropdownMenu.Trigger>

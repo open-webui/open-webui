@@ -366,6 +366,12 @@ def get_filtered_models(models, user):
         user.role == "user"
         or (user.role == "admin" and not BYPASS_ADMIN_ACCESS_CONTROL)
     ) and not BYPASS_MODEL_ACCESS_CONTROL:
+        model_ids = [model["id"] for model in models if not model.get("arena")]
+        model_infos = {
+            model_info.id: model_info
+            for model_info in Models.get_models_by_ids(model_ids)
+        }
+
         filtered_models = []
         user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
         for model in models:
@@ -381,7 +387,7 @@ def get_filtered_models(models, user):
                     filtered_models.append(model)
                 continue
 
-            model_info = Models.get_model_by_id(model["id"])
+            model_info = model_infos.get(model["id"], None)
             if model_info:
                 if (
                     (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)

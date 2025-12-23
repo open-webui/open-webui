@@ -812,8 +812,13 @@ async def generate_chat_completion(
     # Check model info and override the payload
     if model_info:
         if model_info.base_model_id:
-            payload["model"] = model_info.base_model_id
-            model_id = model_info.base_model_id
+            base_model_id = (
+                request.base_model_id
+                if hasattr(request, "base_model_id")
+                else model_info.base_model_id
+            )  # Use request's base_model_id if available
+            payload["model"] = base_model_id
+            model_id = base_model_id
 
         params = model_info.params.model_dump()
 

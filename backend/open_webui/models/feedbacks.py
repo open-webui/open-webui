@@ -60,6 +60,13 @@ class FeedbackResponse(BaseModel):
     updated_at: int
 
 
+class FeedbackIdResponse(BaseModel):
+    id: str
+    user_id: str
+    created_at: int
+    updated_at: int
+
+
 class RatingData(BaseModel):
     rating: Optional[str | int] = None
     model_id: Optional[str] = None
