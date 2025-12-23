@@ -117,6 +117,8 @@ VERSION = PACKAGE_DATA["version"]
 DEPLOYMENT_ID = os.environ.get("DEPLOYMENT_ID", "")
 INSTANCE_ID = os.environ.get("INSTANCE_ID", str(uuid4()))
 
+ENABLE_DB_MIGRATIONS = os.environ.get("ENABLE_DB_MIGRATIONS", "True").lower() == "true"
+
 
 # Function to parse each section
 def parse_section(section):

@@ -19,6 +19,7 @@ from authlib.integrations.starlette_client import OAuth
 from open_webui.env import (
     DATA_DIR,
     DATABASE_URL,
+    ENABLE_DB_MIGRATIONS,
     ENV,
     REDIS_URL,
     REDIS_KEY_PREFIX,
@@ -67,7 +68,8 @@ def run_migrations():
         log.exception(f"Error running migrations: {e}")
 
 
-run_migrations()
+if ENABLE_DB_MIGRATIONS:
+    run_migrations()
 
 
 class Config(Base):
