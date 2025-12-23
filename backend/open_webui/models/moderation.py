@@ -28,6 +28,10 @@ class ModerationSession(Base):
     # Initial decision and confirmation flags
     initial_decision = Column(Text, nullable=True)  # 'accept_original' | 'moderate' | 'not_applicable'
     is_final_version = Column(Boolean, nullable=False, default=False)
+    
+    # Pre-moderation judgment fields (Step 3)
+    concern_level = Column(Integer, nullable=True)  # 1-5 Likert scale
+    would_show_child = Column(Text, nullable=True)  # 'yes' | 'no'
 
     strategies = Column(JSONField, nullable=True)  # Array of strategy names
     custom_instructions = Column(JSONField, nullable=True)  # Array of strings
@@ -67,6 +71,8 @@ class ModerationSessionModel(BaseModel):
     original_response: str
     initial_decision: Optional[str] = None
     is_final_version: bool
+    concern_level: Optional[int] = None
+    would_show_child: Optional[str] = None
     strategies: Optional[List[str]] = None
     custom_instructions: Optional[List[str]] = None
     highlighted_texts: Optional[List[str]] = None
@@ -90,6 +96,8 @@ class ModerationSessionForm(BaseModel):
     scenario_prompt: str
     original_response: str
     initial_decision: Optional[str] = None
+    concern_level: Optional[int] = None
+    would_show_child: Optional[str] = None
     strategies: Optional[List[str]] = None
     custom_instructions: Optional[List[str]] = None
     highlighted_texts: Optional[List[str]] = None
@@ -147,6 +155,8 @@ class ModerationSessionTable:
                 obj.scenario_prompt = form.scenario_prompt
                 obj.original_response = form.original_response
                 obj.initial_decision = form.initial_decision
+                obj.concern_level = form.concern_level
+                obj.would_show_child = form.would_show_child
                 obj.strategies = form.strategies
                 obj.custom_instructions = form.custom_instructions
                 obj.highlighted_texts = form.highlighted_texts
@@ -179,6 +189,8 @@ class ModerationSessionTable:
                     scenario_prompt=form.scenario_prompt,
                     original_response=form.original_response,
                     initial_decision=form.initial_decision,
+                    concern_level=form.concern_level,
+                    would_show_child=form.would_show_child,
                     is_final_version=bool(form.is_final_version),
                     strategies=form.strategies,
                     custom_instructions=form.custom_instructions,

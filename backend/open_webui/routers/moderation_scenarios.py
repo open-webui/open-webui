@@ -33,6 +33,8 @@ class ModerationSessionPayload(BaseModel):
     scenario_prompt: str
     original_response: str
     initial_decision: Optional[str] = None
+    concern_level: Optional[int] = None
+    would_show_child: Optional[str] = None
     strategies: Optional[List[str]] = None
     custom_instructions: Optional[List[str]] = None
     highlighted_texts: Optional[List[str]] = None
@@ -66,6 +68,8 @@ async def create_or_update_session(
             scenario_prompt=form_data.scenario_prompt,
             original_response=form_data.original_response,
             initial_decision=form_data.initial_decision,
+            concern_level=form_data.concern_level,
+            would_show_child=form_data.would_show_child,
             strategies=form_data.strategies,
             custom_instructions=form_data.custom_instructions,
             highlighted_texts=form_data.highlighted_texts,

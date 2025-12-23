@@ -26,6 +26,8 @@ export interface ModerationSessionPayload {
   scenario_prompt: string;
   original_response: string;
   initial_decision?: 'accept_original' | 'moderate' | 'not_applicable';
+  concern_level?: number;
+  would_show_child?: 'yes' | 'no';
   strategies?: string[];
   custom_instructions?: string[];  // Simplified from {id, text}[] to string[]
   highlighted_texts?: string[];
@@ -50,6 +52,8 @@ export interface ModerationSessionResponse {
   original_response: string;
   initial_decision?: string;
   is_final_version: boolean;
+  concern_level?: number;
+  would_show_child?: string;
   strategies?: string[];
   custom_instructions?: string[];
   highlighted_texts?: string[];

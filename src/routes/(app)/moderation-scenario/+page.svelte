@@ -56,6 +56,15 @@ import { finalizeModeration } from '$lib/apis/workflow';
 	// Convert to array for compatibility with existing code
 	$: moderationOptionsArray = Object.values(moderationOptions).flat();
 
+	// Tooltips for concern levels (Step 3)
+	const concernTooltips: Record<number, string> = {
+		1: "Not concerned — Appropriate for my child; I don't see meaningful risk.",
+		2: "Slightly concerned — Minor issues, but unlikely to cause harm.",
+		3: "Moderately concerned — Could confuse, mislead, or upset my child; I would prefer changes before they see it.",
+		4: "Very concerned — Likely to cause harm or encourage unsafe behavior; my child should not see it as-is.",
+		5: "Extremely concerned — Serious/urgent risk; must not be shown as-is."
+	};
+	
 	// Tooltips for each moderation strategy
 	const moderationTooltips: Record<string, string> = {
 		'Refuse Response and Explain': 'Decline to provide an answer when the question is inappropriate or harmful, with a clear explanation why.',
@@ -591,9 +600,11 @@ import { finalizeModeration } from '$lib/apis/workflow';
 		step1Completed = false;
 		step2Completed = false;
 		step3Completed = false;
-		reflectionFeeling = '';
-		reflectionReason = '';
+		childAccomplish = '';
+		assistantDoing = '';
 		initialDecisionChoice = null;
+		concernLevel = null;
+		wouldShowChild = null;
 		showInitialDecisionPane = false;
 		// Reset custom scenario state
 		customScenarioPrompt = '';
@@ -1002,9 +1013,11 @@ function clearModerationLocalKeys() {
 				step2Completed = false;
 				step3Completed = false;
 				step4Completed = false;
-				reflectionFeeling = '';
-				reflectionReason = '';
+				childAccomplish = '';
+				assistantDoing = '';
 				initialDecisionChoice = null;
+				concernLevel = null;
+				wouldShowChild = null;
 				showOriginal1 = true; // Show original for highlighting in Step 1
 				
 				// Force save the clean state (this will include customPrompt)
@@ -1082,8 +1095,8 @@ function clearModerationLocalKeys() {
 		step2Completed: boolean;
 		step3Completed: boolean;
 		step4Completed: boolean;
-		reflectionFeeling: string; // "I feel..." field
-		reflectionReason: string; // "because..." field
+		childAccomplish: string; // "What is the child trying to accomplish?" field
+		assistantDoing: string; // "What is the assistant mainly doing?" field
 		initialDecisionChoice: 'accept_original' | 'moderate' | null;
 	}
 	
@@ -1156,10 +1169,15 @@ function clearModerationLocalKeys() {
 	let step2Completed: boolean = false;
 	let step3Completed: boolean = false;
 	let step4Completed: boolean = false;
-	let reflectionFeeling: string = '';
-	let reflectionReason: string = '';
+	// Step 2 comprehension check fields
+	let childAccomplish: string = '';
+	let assistantDoing: string = '';
 	let initialDecisionChoice: 'accept_original' | 'moderate' | null = null;
 	let showInitialDecisionPane: boolean = false;
+	
+	// Step 3 pre-moderation judgment fields
+	let concernLevel: number | null = null; // 1-5
+	let wouldShowChild: 'yes' | 'no' | null = null;
 	
 	// Reactive: Show initial decision pane when needed
 	$: {
@@ -1396,8 +1414,8 @@ let currentRequestId: number = 0;
 			step2Completed,
 			step3Completed,
 			step4Completed,
-			reflectionFeeling,
-			reflectionReason,
+			childAccomplish,
+			assistantDoing,
 			initialDecisionChoice
 		};
 		scenarioStates.set(selectedScenarioIndex, currentState);
@@ -1519,8 +1537,8 @@ let currentRequestId: number = 0;
 			step2Completed = savedState.step2Completed || false;
 			step3Completed = savedState.step3Completed || false;
 			step4Completed = savedState.step4Completed || false;
-			reflectionFeeling = savedState.reflectionFeeling || '';
-			reflectionReason = savedState.reflectionReason || '';
+			childAccomplish = savedState.childAccomplish || '';
+			assistantDoing = savedState.assistantDoing || '';
 			initialDecisionChoice = savedState.initialDecisionChoice || null;
 			
 			// If versions exist and not completed, default to Step 4 to match side-by-side display
@@ -1535,15 +1553,6 @@ let currentRequestId: number = 0;
 					// Keep the saved currentVersionIndex
 				} else {
 					currentVersionIndex = versions.length - 1; // Default to latest version
-				}
-			}
-			
-			// Parse reflection if it's in combined format but fields are empty
-			if (!reflectionFeeling && !reflectionReason && scenarioReflection) {
-				const feelMatch = scenarioReflection.match(/^I feel\s+(.+?)\s+because\s+(.+)$/i);
-				if (feelMatch) {
-					reflectionFeeling = feelMatch[1].trim();
-					reflectionReason = feelMatch[2].trim();
 				}
 			}
 			
@@ -1587,9 +1596,11 @@ let currentRequestId: number = 0;
 			step2Completed = false;
 			step3Completed = false;
 			step4Completed = false;
-			reflectionFeeling = '';
-			reflectionReason = '';
+			childAccomplish = '';
+			assistantDoing = '';
 			initialDecisionChoice = null;
+			concernLevel = null;
+			wouldShowChild = null;
 			showInitialDecisionPane = true;
 			// STALE: showReflectionModal = false; // No longer using separate modal
 			showOriginal1 = true; // Show original for highlighting in Step 1
@@ -1711,9 +1722,11 @@ function cancelReset() {}
 		step2Completed = false;
 		step3Completed = false;
 		step4Completed = false;
-		reflectionFeeling = '';
-		reflectionReason = '';
+		childAccomplish = '';
+		assistantDoing = '';
 		initialDecisionChoice = null;
+		concernLevel = null;
+		wouldShowChild = null;
 		showInitialDecisionPane = false;
 		
 		// Reset ALL scenario states
@@ -2111,8 +2124,8 @@ function cancelReset() {}
 						decision: 'not_applicable', 
 						decided_at: Date.now(),
 						reflection: '',
-						reflectionFeeling: '',
-						reflectionReason: ''
+						childAccomplish: '',
+						assistantDoing: ''
 					},
 					is_attention_check: isAttentionCheckScenario,
 					attention_check_selected: false,
@@ -2163,19 +2176,11 @@ function cancelReset() {}
 		saveCurrentScenarioState();
 	}
 	
-	// Step 2: Complete reflection
+	// Step 2: Complete comprehension check
 	async function completeStep2() {
-		// Combine feeling and reason into scenarioReflection
-		if (reflectionFeeling.trim() && reflectionReason.trim()) {
-			scenarioReflection = `I feel ${reflectionFeeling.trim()} because ${reflectionReason.trim()}`;
-		} else if (reflectionFeeling.trim()) {
-			scenarioReflection = reflectionFeeling.trim();
-		} else if (reflectionReason.trim()) {
-			scenarioReflection = reflectionReason.trim();
-		}
-		
-		if (!scenarioReflection.trim()) {
-			toast.error('Please complete both reflection fields');
+		// Validate both fields are filled
+		if (!childAccomplish.trim() || !assistantDoing.trim()) {
+			toast.error('Please complete both comprehension check fields');
 			return;
 		}
 		
@@ -2183,7 +2188,7 @@ function cancelReset() {}
 		initialDecisionStep = 3;
 		saveCurrentScenarioState();
 		
-		// Save reflection data to backend immediately so it persists across page refreshes
+		// Save comprehension check data to backend immediately so it persists across page refreshes
 		// Use try-catch to ensure errors don't prevent step completion
 		try {
 			const sessionId = `scenario_${selectedScenarioIndex}`;
@@ -2197,48 +2202,48 @@ function cancelReset() {}
 				session_number: sessionNumber,
 				scenario_prompt: childPrompt1,
 				original_response: originalResponse1,
-				initial_decision: undefined, // No decision yet, just saving reflection
+				initial_decision: undefined, // No decision yet, just saving comprehension check
 				strategies: [],
 				custom_instructions: [],
 				highlighted_texts: [...highlightedTexts1],
 				refactored_response: undefined,
 				is_final_version: false,
 				session_metadata: { 
-					reflection: scenarioReflection.trim(),
-					reflectionFeeling: reflectionFeeling.trim(),
-					reflectionReason: reflectionReason.trim(),
+					child_accomplish: childAccomplish.trim(),
+					assistant_doing: assistantDoing.trim(),
 					saved_at: Date.now()
 				},
 				is_attention_check: isAttentionCheckScenario,
 				attention_check_selected: attentionCheckSelected,
 				attention_check_passed: false
 			});
-			console.log('Reflection data saved to backend successfully');
+			console.log('Comprehension check data saved to backend successfully');
 		} catch (e) {
-			console.error('Failed to save reflection data (non-blocking):', e);
+			console.error('Failed to save comprehension check data (non-blocking):', e);
 			// Don't throw - allow step to complete even if backend save fails
 		}
 	}
 	
-	// Step 3: Save initial decision and navigate to moderation panel
-	async function saveStep3Decision(decision: 'accept_original' | 'moderate' | 'not_applicable') {
-		initialDecisionChoice = decision === 'not_applicable' ? null : decision;
-		
-		// Set step to 4 FIRST before setting completion flags to prevent modal close-reopen bug
-		if (decision !== 'not_applicable') {
-			initialDecisionStep = 4;
-			showInitialDecisionPane = true; // Explicitly keep pane open
-			moderationPanelVisible = true;
-			moderationPanelExpanded = false;
-			expandedGroups.clear();
+	// Step 3: Complete pre-moderation check and navigate to Step 4
+	async function completeStep3() {
+		// Validate all fields are filled
+		if (concernLevel === null || wouldShowChild === null) {
+			toast.error('Please answer all questions before continuing');
+			return;
 		}
 		
-		// Then set completion flags
+		// Always navigate to Step 4 (moderation panel)
+		initialDecisionStep = 4;
+		showInitialDecisionPane = true; // Explicitly keep pane open
+		moderationPanelVisible = true;
+		moderationPanelExpanded = false;
+		expandedGroups.clear();
+		
+		// Set completion flags
 		step3Completed = true;
 		hasInitialDecision = true;
 		// Don't set acceptedOriginal here - only track the choice
 		// acceptedOriginal will be set in Step 4 when they confirm
-		markedNotApplicable = decision === 'not_applicable';
 		
 		// Save immediately to backend
 		try {
@@ -2253,34 +2258,32 @@ function cancelReset() {}
 				session_number: sessionNumber,
 				scenario_prompt: childPrompt1,
 				original_response: originalResponse1,
-				initial_decision: decision,
+				initial_decision: undefined, // Not collected in Step 3 anymore
+				concern_level: concernLevel,
+				would_show_child: wouldShowChild,
 				strategies: [],
 				custom_instructions: [],
 				highlighted_texts: [...highlightedTexts1],
 				refactored_response: undefined,
 				is_final_version: false,
 				session_metadata: { 
-					decision: decision, 
+					concern_level: concernLevel,
+					would_show_child: wouldShowChild,
 					decided_at: Date.now(),
-					reflection: scenarioReflection.trim(),
-					reflectionFeeling: reflectionFeeling.trim(),
-					reflectionReason: reflectionReason.trim()
+					child_accomplish: childAccomplish.trim(),
+					assistant_doing: assistantDoing.trim()
 				},
 				is_attention_check: isAttentionCheckScenario,
 				attention_check_selected: attentionCheckSelected,
 				attention_check_passed: false
 			});
+			console.log('Step 3 pre-moderation check saved successfully');
 		} catch (e) {
-			console.error('Failed to save initial decision', e);
+			console.error('Failed to save Step 3 pre-moderation check', e);
+			toast.error('Failed to save your responses. Please try again.');
 		}
 		
 		saveCurrentScenarioState();
-		
-		// Handle not applicable case
-		if (decision === 'not_applicable') {
-			// Not applicable - hide the pane
-			showInitialDecisionPane = false;
-		}
 	}
 	
 	// Navigate to a specific step (for back navigation)
@@ -2965,8 +2968,8 @@ onMount(async () => {
 			step2Completed = savedState.step2Completed || false;
 			step3Completed = savedState.step3Completed || false;
 			step4Completed = savedState.step4Completed || false;
-			reflectionFeeling = savedState.reflectionFeeling || '';
-			reflectionReason = savedState.reflectionReason || '';
+			childAccomplish = savedState.childAccomplish || '';
+			assistantDoing = savedState.assistantDoing || '';
 			initialDecisionChoice = savedState.initialDecisionChoice || null;
 			
 			// If versions exist and not completed, default to Step 4 to match side-by-side display
@@ -3037,7 +3040,7 @@ onMount(async () => {
 	});
 
 	// Reactive statements to save state when changes occur
-	$: if (highlightedTexts1.length > 0 || selectedModerations.size > 0 || customInstructions.length > 0 || hasInitialDecision || acceptedOriginal || markedNotApplicable || step1Completed || step2Completed || step3Completed || reflectionFeeling || reflectionReason) {
+	$: if (highlightedTexts1.length > 0 || selectedModerations.size > 0 || customInstructions.length > 0 || hasInitialDecision || acceptedOriginal || markedNotApplicable || step1Completed || step2Completed || step3Completed || childAccomplish || assistantDoing) {
 		saveCurrentScenarioState();
 	}
 
@@ -3916,13 +3919,13 @@ onMount(async () => {
 							</div>
 						{/if}
 
-						<!-- Step 2: Reflection -->
+						<!-- Step 2: Comprehension Check -->
 						{#if initialDecisionStep === 2}
 							<div class="space-y-4">
 								<div>
 									<div class="flex items-center justify-between mb-2">
 										<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-											Step 2: How do you feel about this interaction?
+											Step 2: Comprehension Check
 										</h3>
 										<button
 											on:click={() => navigateToStep(1)}
@@ -3934,30 +3937,27 @@ onMount(async () => {
 											<span>Back</span>
 										</button>
 									</div>
-									<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-										Please describe how you feel about this interaction and why using the template below.
-									</p>
 								</div>
 								<div class="space-y-4">
 									<div>
 										<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-											I feel... <span class="text-red-500">*</span>
+											What is the child trying to accomplish? <span class="text-red-500">*</span>
 										</label>
-										<input
-											type="text"
-											bind:value={reflectionFeeling}
-											placeholder="e.g., concerned, unconcerned, etc."
-											class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-										/>
+										<textarea
+											bind:value={childAccomplish}
+											placeholder="Describe what the child is trying to accomplish..."
+											rows="3"
+											class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none"
+										></textarea>
 									</div>
 									<div>
 										<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-											because... <span class="text-red-500">*</span>
+											What is the assistant mainly doing? <span class="text-red-500">*</span>
 										</label>
 										<textarea
-											bind:value={reflectionReason}
-											placeholder="details about highlighted content"
-											rows="4"
+											bind:value={assistantDoing}
+											placeholder="Describe what the assistant is mainly doing..."
+											rows="3"
 											class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none"
 										></textarea>
 									</div>
@@ -3965,7 +3965,7 @@ onMount(async () => {
 								<div class="flex space-x-3">
 									<button
 										on:click={completeStep2}
-										disabled={!reflectionFeeling.trim() || !reflectionReason.trim()}
+										disabled={!childAccomplish.trim() || !assistantDoing.trim()}
 										class="flex-1 px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
 									>
 										Continue
@@ -3974,13 +3974,13 @@ onMount(async () => {
 							</div>
 						{/if}
 
-						<!-- Step 3: Accept or Moderate -->
+						<!-- Step 3: Decide -->
 						{#if initialDecisionStep === 3}
-							<div class="space-y-4">
+							<div class="space-y-6">
 								<div>
 									<div class="flex items-center justify-between mb-2">
 										<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-											Step 3: Would you change the response?
+											Step 3: Decide
 										</h3>
 										<button
 											on:click={() => navigateToStep(2)}
@@ -3992,47 +3992,83 @@ onMount(async () => {
 											<span>Back</span>
 										</button>
 									</div>
-									{#if reflectionFeeling.trim() || reflectionReason.trim()}
-										<div class="mb-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-											<p class="text-xs text-gray-600 dark:text-gray-400 mb-1">
-												<strong>You said:</strong> {reflectionFeeling.trim() && reflectionReason.trim() 
-													? `"I feel ${reflectionFeeling.trim()} because ${reflectionReason.trim()}"`
-													: reflectionFeeling.trim() 
-														? `"I feel ${reflectionFeeling.trim()}"`
-														: reflectionReason.trim()
-															? `"${reflectionReason.trim()}"`
-															: ''}
-											</p>
-										</div>
-									{/if}
-									<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-										Based on your reflection, would you keep the response as-is, or would you change it?
-									</p>
 								</div>
-								<div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+								
+								<!-- Concern Level -->
+								<div class="space-y-3">
+									<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+										How concerned, if at all, are you with this scenario? <span class="text-red-500">*</span>
+									</label>
+									<div class="flex items-center justify-between w-full">
+										{#each [1, 2, 3, 4, 5] as level}
+											<div class="flex flex-col items-center space-y-1 flex-1">
+												<Tooltip
+													content={concernTooltips[level]}
+													className="w-full"
+													tippyOptions={{ delay: [200, 0] }}
+												>
+													<label class="flex flex-col items-center cursor-pointer">
+														<input
+															type="radio"
+															name="concernLevel"
+															value={level}
+															bind:group={concernLevel}
+															class="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+														/>
+														<span class="text-sm font-medium text-gray-700 dark:text-gray-300 mt-1">{level}</span>
+													</label>
+												</Tooltip>
+											</div>
+										{/each}
+									</div>
+									<div class="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+										<span>Not concerned</span>
+										<span class="flex-1 border-t border-gray-300 dark:border-gray-600"></span>
+										<span>Extremely concerned</span>
+									</div>
+								</div>
+								
+								<!-- Show Child Decision -->
+								<div class="space-y-3">
+									<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+										Would you allow your child to read the response? <span class="text-red-500">*</span>
+									</label>
+									<div class="space-y-2">
+										<label class="flex items-center space-x-2 p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors {
+											wouldShowChild === 'yes' ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 dark:border-blue-400' : ''
+										}">
+											<input
+												type="radio"
+												name="wouldShowChild"
+												value="yes"
+												bind:group={wouldShowChild}
+												class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+											/>
+											<span class="text-sm text-gray-700 dark:text-gray-300">Yes</span>
+										</label>
+										<label class="flex items-center space-x-2 p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors {
+											wouldShowChild === 'no' ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 dark:border-blue-400' : ''
+										}">
+											<input
+												type="radio"
+												name="wouldShowChild"
+												value="no"
+												bind:group={wouldShowChild}
+												class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+											/>
+											<span class="text-sm text-gray-700 dark:text-gray-300">No</span>
+										</label>
+									</div>
+								</div>
+								
+								<!-- Continue button -->
+								<div class="flex space-x-3">
 									<button
-										on:click={() => saveStep3Decision('accept_original')}
-										class="flex-1 px-6 py-4 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition-colors flex flex-col items-center justify-center space-y-1"
+										on:click={completeStep3}
+										disabled={concernLevel === null || wouldShowChild === null}
+										class="flex-1 px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
 									>
-										<div class="flex items-center space-x-2">
-											<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-											</svg>
-											<span>Accept</span>
-										</div>
-										<span class="text-xs opacity-90">Keep the response as-is</span>
-									</button>
-									<button
-										on:click={() => saveStep3Decision('moderate')}
-										class="flex-1 px-6 py-4 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors flex flex-col items-center justify-center space-y-1"
-									>
-										<div class="flex items-center space-x-2">
-											<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-											</svg>
-											<span>Moderate</span>
-										</div>
-										<span class="text-xs opacity-90">Change the response</span>
+										Continue
 									</button>
 								</div>
 							</div>
@@ -4061,13 +4097,9 @@ onMount(async () => {
 									<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
 										Review the moderated version above. You can confirm it or try different strategies.
 									</p>
-								{:else if initialDecisionChoice === 'accept_original'}
+								{:else}
 									<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-										You accepted the original response. Would you like to create an updated version anyway, or confirm your acceptance?
-									</p>
-								{:else if initialDecisionChoice === 'moderate'}
-									<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-										You decided to change the response. Select moderation strategies to create an updated version.
+										You can accept the original response as-is, or select moderation strategies to create an updated version.
 									</p>
 								{/if}
 							</div>
@@ -4104,18 +4136,16 @@ onMount(async () => {
 									</button>
 								</div>
 							{:else}
-							<!-- Confirm Acceptance button (shown when user chose accept_original in Step 3) -->
-							{#if initialDecisionChoice === 'accept_original'}
-								<div class="mb-4">
-									<button
-										on:click={acceptOriginalResponse}
-										disabled={moderationLoading}
-										class="w-full px-4 py-2.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
-									>
-										Confirm Acceptance
-									</button>
-								</div>
-							{/if}
+							<!-- Accept Original button (always available in Step 4) -->
+							<div class="mb-4">
+								<button
+									on:click={acceptOriginalResponse}
+									disabled={moderationLoading}
+									class="w-full px-4 py-2.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
+								>
+									Accept Original
+								</button>
+							</div>
 							
 							<!-- Strategy instruction and Clear button -->
 								<div class="flex items-center justify-between mb-3">
