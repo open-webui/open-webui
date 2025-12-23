@@ -2092,7 +2092,6 @@ def search_web(
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             timeout=request.app.state.config.FIRECRAWL_TIMEOUT,
-            search_args={},
         )
     elif engine == "external":
         return search_external(

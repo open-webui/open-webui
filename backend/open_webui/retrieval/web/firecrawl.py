@@ -14,12 +14,11 @@ def search_firecrawl(
     count: int,
     filter_list: Optional[List[str]] = None,
     timeout: Optional[Union[str, int]] = None,
-    search_args: Dict[str, Any] = {},
 ) -> List[SearchResult]:
     try:
         from firecrawl import FirecrawlApp
 
-        if timeout is not None and timeout != "" and timeout != " ":
+        if timeout and timeout != "" and timeout != " ":
             try:
                 timeout = int(timeout)
             except ValueError:
