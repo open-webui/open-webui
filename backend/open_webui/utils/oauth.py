@@ -589,14 +589,14 @@ class OAuthClientManager:
         return client["client_info"] if client else None
 
     def get_server_metadata_url(self, client_id):
-        if client_id in self.clients:
-            client = self.clients[client_id]
-            return (
+        client = self.get_client(client_id)
+        if not client:
+            return None
+        return (
                 client._server_metadata_url
                 if hasattr(client, "_server_metadata_url")
                 else None
             )
-        return None
 
     async def get_oauth_token(
         self, user_id: str, client_id: str, force_refresh: bool = False
