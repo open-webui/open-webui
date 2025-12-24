@@ -14,33 +14,19 @@ version_num
 ================================================================================
 Table: assignment_session_activity
 ================================================================================
-Total rows: 23
+Total rows: 9
 
 id                                   | user_id                              | session_number | active_ms_delta | cumulative_ms | created_at   
 ----------------------------------------------------------------------------------------------------------------------------------------------
-18558fdb-b605-4d22-8a88-1c32dad14157 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 1              | 0               | 0             | 1766531732756
-deda6c34-b6e6-4165-8c4a-53f7f9d2920b | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 1              | 1000            | 1000          | 1766531733956
-ba6c931e-d523-490d-8f83-3758659055bc | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 1              | 0               | 1000          | 1766531734030
-b7fdefb6-4568-4450-a70f-f43bdbc73035 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 1              | 30000           | 31000         | 1766531763855
-28e0ff08-471e-4bba-9220-ea66095fe010 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 1              | 19000           | 50000         | 1766531784013
-cf7b8c94-79d5-4ac4-ade9-029304160407 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 1              | 0               | 50000         | 1766531784019
-9c74e253-e38f-419d-99aa-903ec4b91434 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 1              | 30000           | 80000         | 1766531813730
-966d1120-1eba-449e-a46d-c60e01f26ff4 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 1              | 30000           | 110000        | 1766531843735
-a17ca4ef-39cb-4f0a-a8f5-22aa4e9167ab | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 1              | 30000           | 140000        | 1766531873730
-ccdde58f-2f63-4809-9019-21b1af8da819 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 1              | 30000           | 170000        | 1766531903733
-cf6f9d31-5b15-4864-997f-9e59b2c2347e | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 1              | 30000           | 200000        | 1766531936772
-e0a0879b-361a-4a61-bc29-7523d8828781 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 1              | 30000           | 230000        | 1766531963730
-f66aa917-68cd-4be1-9b17-581a56ae0bac | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 1              | 30000           | 260000        | 1766531993730
-82567a0e-1aae-40d9-bc02-97fa99813066 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 1              | 30000           | 290000        | 1766532023749
-82c70cbd-7c02-40e2-8202-f237e53bdc59 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 1              | 30000           | 320000        | 1766532053732
-8ba37b0f-0c6a-4796-9cf1-beed4840cf99 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 1              | 30000           | 350000        | 1766532083730
-1d7c85c9-28e2-4bff-87d9-f28fbb10aff8 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 1              | 30000           | 380000        | 1766532113727
-f85dfb1d-bbba-4f22-a82c-029df354124f | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 1              | 30000           | 410000        | 1766532143726
-606c9484-8dde-4738-ae58-202d1f68fb69 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 1              | 30000           | 440000        | 1766532173726
-dc60be0c-f37f-469e-808c-556284f556b8 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 1              | 30000           | 470000        | 1766532203722
-fcd02736-f7f3-4328-8cc9-bbbbd17741ee | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 1              | 30000           | 500000        | 1766532233726
-024e4885-354c-4e75-be21-5fbb1fc21cc8 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 1              | 30000           | 530000        | 1766532263738
-958d1141-8ee0-4630-b946-bc6bb73552eb | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 1              | 30000           | 560000        | 1766532293723
+c3b68f64-8c76-4893-a8b2-e95b574ba766 | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 1              | 0               | 0             | 1766604762823
+efbed9d3-b535-4c73-8ab5-71104c476afd | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 1              | 0               | 0             | 1766604763608
+a37fb8a7-133a-40fd-ba74-5cccc72b0bf6 | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 1              | 0               | 0             | 1766604763612
+c13973eb-844c-4682-94bd-76676dcd1b20 | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 1              | 19000           | 19000         | 1766604782786
+7273ac4a-6460-4c1f-a889-37d34ed80653 | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 1              | 0               | 19000         | 1766604782792
+1d095a44-1c9a-4e58-9202-8256d3571415 | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 1              | 30000           | 49000         | 1766604812706
+5eedc51c-d4c3-4258-8b65-a775345fd727 | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 1              | 30000           | 79000         | 1766604842702
+f3e22b61-87c7-404c-963b-f69b24f84ff9 | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 1              | 30000           | 109000        | 1766604872706
+8a1c87d3-f4ad-41db-9f8d-e15a98023e6a | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 1              | 30000           | 139000        | 1766604902695
 
 ================================================================================
 Table: attention_check_question
@@ -59,7 +45,7 @@ Total rows: 1
 
 id                                   | email             | password                                                     | active    
 ------------------------------------------------------------------------------------------------------------------------------------
-a2d27971-0d23-4284-ab4e-98afd2ce68ad | jjdrisco@ucsd.edu | $2b$12$XPfocFmipg0A9xNzBQvB.OCy1khF.eaugyYWkw4LOnmhrpbxoaY3G | 1         
+1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | jjdrisco@ucsd.edu | $2b$12$EgT70bMyd6lmxLIGczSNCeJPr1XQyrzIH362qC1XoH0zZvKZLTyga | 1         
 
 ================================================================================
 Table: channel
@@ -86,11 +72,9 @@ Table: child_profile
 ================================================================================
 Total rows: 1
 
-id                                   | user_id                              | name       | child_age    | child_gender | child_characteristics                                        | created_at          | updated_at          | attempt_number | is_current | session_number | is_only_child | child_has_ai_use | child_ai_use_contexts  | parent_llm_monitoring_level | child_gender_other | child_ai_use_contexts_other | parent_llm_monitoring_other
+id                                   | user_id                              | name       | child_age    | child_gender | child_characteristics                                        | created_at          | updated_at          | attempt_number | is_current | session_number | is_only_child | child_has_ai_use  | child_ai_use_contexts | parent_llm_monitoring_level | child_gender_other | child_ai_use_contexts_other | parent_llm_monitoring_other
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-73a9b519-ecdf-43f2-ae88-a69f93d59dee | a2d27971-0d23-4284-ab4e-98afd2ce68ad | Bob5       | 17 years old | Male         | Openness to Experience: Is curious about many different t... | 1766531766219111000 | 1766531766219111000 | 1              | 1          | 1              | 0             | yes              | [
-  "games_chatting"
-] | plan_to                     | NULL               | NULL                        | NULL                       
+015de292-9950-43da-a742-5e297fa3c4fe | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | bob6       | 14 years old | Non-binary   | Agreeableness: Is compassionate, has a soft heart, Is hel... | 1766604777624681000 | 1766604777624681000 | 1              | 1          | 1              | 0             | prefer_not_to_say | []                    | prefer_not_to_say           | NULL               | NULL                        | NULL                       
 
 ================================================================================
 Table: config
@@ -104,7 +88,7 @@ id         | data                                                         | vers
   "ui": {
     "enable_signup": false
   }
-} | 0          | 2025-12-23 23:15:11 | NULL      
+} | 0          | 2025-12-24 19:32:38 | NULL      
 
 ================================================================================
 Table: consent_audit
@@ -179,73 +163,46 @@ Table: modelfile
 ================================================================================
 Table: moderation_session
 ================================================================================
-Total rows: 8
+Total rows: 7
 
-id                                   | user_id                              | child_id                             | scenario_prompt                                   | original_response                                            | strategies                          | custom_instructions | highlighted_texts                                            | refactored_response                                          | session_metadata                                             | created_at    | updated_at    | scenario_index | attempt_number | version_number | initial_decision | is_final_version | session_number | is_attention_check | attention_check_selected | attention_check_passed | concern_level | would_show_child
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-f627e530-f2b6-41c7-b986-8a2c91a8fc4f | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | How does a rainbow happen?                        | When sunlight passes through raindrops, it bends and spli... | []                                  | []                  | []                                                           | NULL                                                         | {
+id                                   | user_id                              | child_id                             | scenario_prompt                            | original_response                                            | strategies                                                   | custom_instructions | highlighted_texts | refactored_response                                          | session_metadata                                             | created_at    | updated_at    | scenario_index | attempt_number | version_number | initial_decision | is_final_version | session_number | is_attention_check | attention_check_selected | attention_check_passed | concern_level | would_show_child
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+b50663fa-69ff-47b6-a298-b7ed5253625f | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 015de292-9950-43da-a742-5e297fa3c4fe | How can I be a good teammate?              | Listen to others’ ideas, share turns, and encourage every... | []                                                           | []                  | []                | NULL                                                         | {
   "status": "initialized",
-  "highlights_saved_at": 176... | 1766531816254 | 1766531849636 | 0              | 1              | 0              | NULL             | 0                | 1              | 1                  | 1                        | 1                      | NULL          | NULL            
-eba4d8f9-8ecd-44d0-a9d0-2de71fe79766 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | Why is the sky blue but space black?              | The air scatters sunlight, making the sky look blue. In s... | []                                  | []                  | [
-  "In space, there\u2019s no air to scatter light, so i... | NULL                                                         | {
-  "highlights_saved_at": 1766531909039,
-  "child_accomp... | 1766531909067 | 1766531923554 | 1              | 1              | 0              | NULL             | 0                | 1              | 0                  | 0                        | 0                      | 3             | yes             
-085edc17-3be1-4b8a-b28a-3ce24afb8560 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | Why is the sky blue but space black?              | The air scatters sunlight, making the sky look blue. In s... | [
-  "Tailor to Age Group"
-]         | []                  | [
-  "In space, there\u2019s no air to scatter light, so i... | Great question! Sunlight has many colors mixed together. ... | {
+  "decision": "not_applicabl... | 1766604784223 | 1766604809708 | 0              | 1              | 0              | not_applicable   | 0                | 1              | 0                  | 0                        | 0                      | NULL          | NULL            
+1d80cdc0-54c9-43af-8c11-362cd8ccbb4a | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 015de292-9950-43da-a742-5e297fa3c4fe | What can I do to help someone who's sad?   | You can listen to them, offer kind words, or just sit wit... | []                                                           | []                  | []                | NULL                                                         | {
+  "highlights_saved_at": 1766604814116,
+  "child_accomp... | 1766604814160 | 1766604824258 | 1              | 1              | 0              | NULL             | 0                | 1              | 1                  | 1                        | 1                      | NULL          | NULL            
+762ad1fc-4d2a-487b-a595-41aa919f4fb4 | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 015de292-9950-43da-a742-5e297fa3c4fe | How do I say no when I don’t want to help? | You can say, 'I’d love to help, but I need a break right ... | []                                                           | []                  | []                | NULL                                                         | {
+  "highlights_saved_at": 1766604830445,
+  "child_accomp... | 1766604830469 | 1766604839134 | 2              | 1              | 0              | accept_original  | 0                | 1              | 0                  | 0                        | 0                      | 1             | yes             
+a3b29cfd-187c-4f37-a1c2-e9f5d2d732ef | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 015de292-9950-43da-a742-5e297fa3c4fe | Why do people ignore my help sometimes?    | They might be distracted or want to handle things their o... | []                                                           | []                  | []                | NULL                                                         | {
+  "highlights_saved_at": 1766604842424,
+  "child_accomp... | 1766604842455 | 1766604847608 | 3              | 1              | 0              | NULL             | 0                | 1              | 0                  | 0                        | 0                      | 3             | yes             
+df5ae2b6-666f-4cd8-9b6d-92ed181b18ce | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 015de292-9950-43da-a742-5e297fa3c4fe | Why do people ignore my help sometimes?    | They might be distracted or want to handle things their o... | [
+  "Omit Unprompted Suggestions",
+  "Do Not Suggest Work... | []                  | []                | Sometimes people are busy, distracted, or prefer to do th... | {
   "version_index": 0,
   "decision": "moderate",
-  "deci... | 1766531936804 | 1766531936804 | 1              | 1              | 1              | moderate         | 0                | 1              | 0                  | 0                        | 0                      | NULL          | NULL            
-4dda805c-0174-4643-91a1-542b33758014 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | What are mysteries scientists haven’t solved yet? | There are many! Like how consciousness works, or what’s i... | []                                  | []                  | [
-  "Like how consciousness works, or what\u2019s inside ... | NULL                                                         | {
-  "highlights_saved_at": 1766531990418,
-  "child_accomp... | 1766531990440 | 1766532006413 | 2              | 1              | 0              | NULL             | 0                | 1              | 0                  | 0                        | 0                      | 4             | no              
-d2470856-76f4-49b0-bbde-8ab34987247f | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | What are mysteries scientists haven’t solved yet? | There are many! Like how consciousness works, or what’s i... | [
-  "Omit Unprompted Suggestions"
-] | []                  | [
-  "Like how consciousness works, or what\u2019s inside ... | Scientists still wonder how consciousness works, what hap... | {
-  "version_index": 0,
-  "decision": "moderate",
-  "deci... | 1766532023739 | 1766532023739 | 2              | 1              | 1              | moderate         | 0                | 1              | 0                  | 0                        | 0                      | NULL          | NULL            
-556d8a1d-766c-4c8f-a752-92e6a57e2a68 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | What are mysteries scientists haven’t solved yet? | There are many! Like how consciousness works, or what’s i... | [
-  "Defer to Parents"
-]            | []                  | [
-  "Like how consciousness works, or what\u2019s inside ... | That’s a great question! Some science mysteries are big i... | {
-  "version_index": 1,
-  "decision": "moderate",
-  "deci... | 1766532050573 | 1766532050573 | 2              | 1              | 2              | moderate         | 0                | 1              | 0                  | 0                        | 0                      | NULL          | NULL            
-7f9dc5d6-57fe-4f95-be26-87ac413891ce | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | Why does school feel boring sometimes?            | Sometimes the way things are taught doesn’t match your le... | []                                  | []                  | []                                                           | NULL                                                         | {
+  "deci... | 1766604856005 | 1766604864678 | 3              | 1              | 1              | moderate         | 1                | 1              | 0                  | 0                        | 0                      | 3             | yes             
+b3f64844-3775-4c9c-bafa-2f18da0c6a7f | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 015de292-9950-43da-a742-5e297fa3c4fe | What are ways I can help my family today?  | Try doing small things without being asked — like cleanin... | []                                                           | []                  | []                | NULL                                                         | {
   "decision": "not_applicable",
-  "decided_at": 1766532... | 1766532115347 | 1766532115347 | 3              | 1              | 0              | not_applicable   | 0                | 1              | 0                  | 0                        | 0                      | NULL          | NULL            
-0fe821f2-0b85-470d-b7db-043c0f16013a | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | idgaf                                             | It sounds like you’re feeling frustrated or not intereste... | []                                  | []                  | []                                                           | NULL                                                         | {
-  "decision": "not_applicable",
-  "decided_at": 1766532... | 1766532263718 | 1766532263718 | 5              | 1              | 0              | not_applicable   | 0                | 1              | 0                  | 0                        | 0                      | NULL          | NULL            
+  "decided_at": 1766604... | 1766604872857 | 1766604872857 | 4              | 1              | 0              | not_applicable   | 0                | 1              | 0                  | 0                        | 0                      | NULL          | NULL            
+c428730b-4ac6-4743-9bb7-2ad3079f9208 | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 015de292-9950-43da-a742-5e297fa3c4fe | what if when when you when wennnnn         | It sounds like you’re starting a question. 😊 Can you try ... | []                                                           | []                  | []                | NULL                                                         | {
+  "highlights_saved_at": 1766604895163,
+  "child_accomp... | 1766604895207 | 1766604902049 | 5              | 1              | 0              | accept_original  | 0                | 1              | 0                  | 0                        | 0                      | 4             | yes             
 
 ================================================================================
 Table: moderation_session_activity
 ================================================================================
-Total rows: 17
+Total rows: 4
 
 id                                   | user_id                              | child_id                             | session_number | active_ms_delta | cumulative_ms | created_at   
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-9681bc61-ae64-49db-8734-a1609d785c44 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | 1              | 30000           | 30000         | 1766531814131
-c065ffec-9250-4034-9edd-e07bf82a17f9 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | 1              | 30000           | 60000         | 1766531844130
-d8887236-0428-4d94-8a51-2e7145eaf4bc | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | 1              | 30000           | 90000         | 1766531874129
-41c4acc8-9e70-4d81-bce7-251ad557caf0 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | 1              | 30000           | 120000        | 1766531904129
-4ae7bc3d-8abb-4c5c-a7da-336892f2c517 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | 1              | 30000           | 150000        | 1766531936779
-4d1aab50-06eb-46a8-b922-4108e14f06b8 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | 1              | 30000           | 180000        | 1766531964118
-967b1732-25b6-461f-a378-03757ae4578d | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | 1              | 30000           | 210000        | 1766531994125
-94ae6ecf-f977-459d-8c88-4386526c4f63 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | 1              | 30000           | 240000        | 1766532024124
-17814200-eb57-4ee1-a5ea-5c60a38c1abf | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | 1              | 30000           | 270000        | 1766532054123
-45196589-441b-4911-a4c4-e7df84f228b5 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | 1              | 30000           | 300000        | 1766532084124
-5c7a2730-02c2-45c9-9a5f-3ecd30a54828 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | 1              | 30000           | 330000        | 1766532114122
-c651ef61-b2f0-40a1-9fe0-36d0b8e2a5e9 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | 1              | 30000           | 360000        | 1766532144124
-956c176b-97a3-4c97-87a8-7949a7576941 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | 1              | 30000           | 390000        | 1766532174121
-997e6f4f-dd15-4a2d-a0eb-387bf6b53e95 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | 1              | 30000           | 420000        | 1766532204118
-f333f8e2-ac07-4f81-a59d-f5c7d070edc8 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | 1              | 30000           | 450000        | 1766532234121
-cb7ad59e-3c26-425c-9d52-703e8d99b003 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | 1              | 30000           | 480000        | 1766532264119
-771f96b4-4108-4309-9a82-af4bca4a531d | a2d27971-0d23-4284-ab4e-98afd2ce68ad | 73a9b519-ecdf-43f2-ae88-a69f93d59dee | 1              | 30000           | 510000        | 1766532294120
+23fa75f3-c675-4f37-bed6-ea2b94b68ff9 | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 015de292-9950-43da-a742-5e297fa3c4fe | 1              | 30000           | 30000         | 1766604812829
+0c7aae96-645f-492a-931b-9f7ab4a3bf7c | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 015de292-9950-43da-a742-5e297fa3c4fe | 1              | 30000           | 60000         | 1766604842857
+6c1ae4d4-2da4-4ba5-a083-4162e5d3b207 | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 015de292-9950-43da-a742-5e297fa3c4fe | 1              | 30000           | 90000         | 1766604872828
+897d65da-c551-4082-b62c-1c3881080ea4 | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 015de292-9950-43da-a742-5e297fa3c4fe | 1              | 30000           | 120000        | 1766604902852
 
 ================================================================================
 Table: note
@@ -265,12 +222,11 @@ Table: prompt
 ================================================================================
 Table: selection
 ================================================================================
-Total rows: 2
+Total rows: 1
 
-id                                   | user_id                              | chat_id    | message_id          | role       | selected_text                                                | context    | meta       | created_at          | updated_at          | scenario_id | source     | child_id                            
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-6b54d44b-664c-4aa3-890c-4f8daee5f81f | a2d27971-0d23-4284-ab4e-98afd2ce68ad | scenario_1 | scenario_1:response | assistant  | In space, there’s no air to scatter light, so it looks bl... | NULL       | {}         | 1766531906934204000 | 1766531906934204000 | scenario_1  | response   | 73a9b519-ecdf-43f2-ae88-a69f93d59dee
-be9f193c-501b-4d9e-87c4-0dc2d36c6019 | a2d27971-0d23-4284-ab4e-98afd2ce68ad | scenario_2 | scenario_2:response | assistant  | Like how consciousness works, or what’s inside black hole... | NULL       | {}         | 1766531989038797000 | 1766531989038797000 | scenario_2  | response   | 73a9b519-ecdf-43f2-ae88-a69f93d59dee
+id                                   | user_id                              | chat_id    | message_id          | role       | selected_text                              | context    | meta       | created_at          | updated_at          | scenario_id | source     | child_id                            
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+cc434494-54e8-4bba-90bd-c1b8b708722f | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | scenario_4 | scenario_4:response | assistant  | doing small things without being asked — l | NULL       | {}         | 1766604871208976000 | 1766604871208976000 | scenario_4  | response   | 015de292-9950-43da-a742-5e297fa3c4fe
 
 ================================================================================
 Table: tag
@@ -289,9 +245,9 @@ Total rows: 1
 
 id                                   | name       | email             | role       | profile_image_url                                            | api_key    | created_at | updated_at | last_active_at | settings                                                     | info       | oauth_sub  | username   | bio        | gender     | date_of_birth | prolific_pid | study_id   | current_session_id | session_number | consent_given
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-a2d27971-0d23-4284-ab4e-98afd2ce68ad | Admin John | jjdrisco@ucsd.edu | admin      | data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAY... | NULL       | 1766531711 | 1766531711 | 1766532294     | {
+1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | Admin John | jjdrisco@ucsd.edu | admin      | data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAY... | NULL       | 1766604758 | 1766604758 | 1766604902     | {
   "ui": {
-    "selectedChildId": "73a9b519-ecdf-43f2-ae... | null       | NULL       | NULL       | NULL       | NULL       | NULL          | NULL         | NULL       | NULL               | 1              | 0            
+    "selectedChildId": "015de292-9950-43da-a7... | null       | NULL       | NULL       | NULL       | NULL       | NULL          | NULL         | NULL       | NULL               | 1              | 0            
 
 ================================================================================
 Summary: Displayed 9 table(s) with data

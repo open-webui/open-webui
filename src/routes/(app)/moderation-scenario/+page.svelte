@@ -1162,6 +1162,8 @@ function clearModerationLocalKeys() {
 	let markedNotApplicable: boolean = false;
 	// STALE: showReflectionModal - no longer used, reflection now in Step 2
 	// let showReflectionModal: boolean = false;
+	// DEPRECATED: scenarioReflection - no longer used in backend saves (replaced by Step 2 comprehension check)
+	// Kept for localStorage state compatibility only
 	let scenarioReflection: string = '';
 	
 	// Unified initial decision flow state
@@ -1598,17 +1600,13 @@ let currentRequestId: number = 0;
 				}
 			}
 			
-			// Step 3: Restore pre-moderation judgment from backend (prefer direct fields)
+			// Step 3: Restore pre-moderation judgment from backend (direct columns only)
 			if (backendSession.concern_level !== null && backendSession.concern_level !== undefined) {
 				concernLevel = backendSession.concern_level;
-			} else if (backendSession.session_metadata?.concern_level !== null && backendSession.session_metadata?.concern_level !== undefined) {
-				concernLevel = backendSession.session_metadata.concern_level;
 			}
 			
 			if (backendSession.would_show_child) {
 				wouldShowChild = backendSession.would_show_child as 'yes' | 'no';
-			} else if (backendSession.session_metadata?.would_show_child) {
-				wouldShowChild = backendSession.session_metadata.would_show_child as 'yes' | 'no';
 			}
 			
 			if (concernLevel !== null && wouldShowChild !== null) {
@@ -2046,17 +2044,77 @@ function cancelReset() {}
 		// Users should understand they're creating new versions from the original, not editing the viewed version
 	}
 
-	function confirmCurrentVersion() {
+	/**
+	 * Confirm a version as the final version (original or moderated).
+	 * 
+	 * Saves to backend with is_final_version: true on the specific version row.
+	 * 
+	 * Row operation:
+	 *   - If confirming original (confirmedVersionIndex === -1): UPDATE version_number: 0
+	 *   - If confirming moderated version: UPDATE version_number: confirmedVersionIndex + 1
+	 * 
+	 * Saves:
+	 *   - is_final_version: true (marks this version as the selected final version)
+	 *   - initial_decision: 'accept_original' or 'moderate' based on version type
+	 *   - concern_level: From Step 3 if completed (using getCurrentStepData())
+	 *   - would_show_child: From Step 3 if completed (using getCurrentStepData())
+	 *   - child_accomplish: From Step 2 if completed (to session_metadata)
+	 *   - assistant_doing: From Step 2 if completed (to session_metadata)
+	 *   - strategies, custom_instructions, refactored_response: From version if moderated
+	 *   - highlighted_texts: Current highlights
+	 * 
+	 * Also clears is_final_version on other versions for this scenario/attempt.
+	 */
+	async function confirmCurrentVersion() {
 		if (confirmedVersionIndex === null) {
 			// Confirm current version
 			confirmedVersionIndex = currentVersionIndex;
 			step4Completed = true;
 			moderationPanelVisible = false;
 			moderationPanelExpanded = false;
-		expandedGroups.clear();
+			expandedGroups.clear();
 			// STALE: highlightingMode = false;
 			console.log('Confirm version - state:', { hasInitialDecision, confirmedVersionIndex, acceptedOriginal, markedNotApplicable });
 			saveCurrentScenarioState(); // Save the decision
+			
+			// Save to backend with is_final_version: true
+			try {
+				const stepData = getCurrentStepData();
+				const sessionId = `scenario_${selectedScenarioIndex}`;
+				// Get the version number for the confirmed version (0 = original, 1+ = moderated versions)
+				const versionNumber = confirmedVersionIndex === -1 ? 0 : confirmedVersionIndex + 1;
+				await saveModerationSession(localStorage.token, {
+					session_id: sessionId,
+					user_id: $user?.id || 'unknown',
+					child_id: selectedChildId || 'unknown',
+					scenario_index: selectedScenarioIndex,
+					attempt_number: 1,
+					version_number: versionNumber,
+					session_number: sessionNumber,
+					scenario_prompt: childPrompt1,
+					original_response: originalResponse1,
+					initial_decision: confirmedVersionIndex === -1 ? 'accept_original' : 'moderate',
+					concern_level: stepData.concern_level,
+					would_show_child: stepData.would_show_child,
+					strategies: confirmedVersionIndex >= 0 && versions[confirmedVersionIndex] ? versions[confirmedVersionIndex].strategies : [],
+					custom_instructions: confirmedVersionIndex >= 0 && versions[confirmedVersionIndex] ? versions[confirmedVersionIndex].customInstructions.map(c => c.text) : [],
+					highlighted_texts: [...highlightedTexts1],
+					refactored_response: confirmedVersionIndex >= 0 && versions[confirmedVersionIndex] ? versions[confirmedVersionIndex].response : undefined,
+					is_final_version: true,
+					session_metadata: {
+						decision: confirmedVersionIndex === -1 ? 'accept_original' : 'moderate',
+						decided_at: Date.now(),
+						child_accomplish: stepData.child_accomplish,
+						assistant_doing: stepData.assistant_doing
+					},
+					is_attention_check: isAttentionCheckScenario,
+					attention_check_selected: attentionCheckSelected,
+					attention_check_passed: isAttentionCheckScenario && attentionCheckSelected && selectedModerations.size > 0
+				});
+				console.log('Final version confirmed and saved to backend');
+			} catch (e) {
+				console.error('Failed to save final version to backend', e);
+			}
 		} else {
 			// Unconfirm - navigate back to Step 4
 			confirmedVersionIndex = null;
@@ -2268,6 +2326,21 @@ function cancelReset() {}
 		customInstructionInput = '';
 	}
 
+	/**
+	 * Accept original response without moderation.
+	 * 
+	 * Saves to backend with version_number: 0 (UPDATE existing row).
+	 * 
+	 * Saves:
+	 *   - initial_decision: 'accept_original'
+	 *   - concern_level: From Step 3 if completed (using getCurrentStepData())
+	 *   - would_show_child: From Step 3 if completed (using getCurrentStepData())
+	 *   - child_accomplish: From Step 2 if completed (to session_metadata)
+	 *   - assistant_doing: From Step 2 if completed (to session_metadata)
+	 *   - highlighted_texts: Cleared (empty array)
+	 * 
+	 * Marks scenario as completed and closes moderation panel.
+	 */
 	async function acceptOriginalResponse() {
 		// No special-casing for attention check; behave like normal acceptance
 		hasInitialDecision = true;
@@ -2285,6 +2358,7 @@ function cancelReset() {}
 
 		// Save complete session data
 		try {
+			const stepData = getCurrentStepData();
 			const sessionId = `scenario_${selectedScenarioIndex}`;
 			await saveModerationSession(localStorage.token, {
 				session_id: sessionId,
@@ -2297,6 +2371,8 @@ function cancelReset() {}
 				scenario_prompt: childPrompt1,
 				original_response: originalResponse1,
 				initial_decision: 'accept_original',
+				concern_level: stepData.concern_level,
+				would_show_child: stepData.would_show_child,
 				strategies: [],
 				custom_instructions: [],
 				highlighted_texts: [],
@@ -2305,7 +2381,8 @@ function cancelReset() {}
 				session_metadata: { 
 					decision: 'accept_original', 
 					decided_at: Date.now(),
-					reflection: scenarioReflection.trim()
+					child_accomplish: stepData.child_accomplish,
+					assistant_doing: stepData.assistant_doing
 				},
 				is_attention_check: isAttentionCheckScenario,
 				attention_check_selected: attentionCheckSelected,
@@ -2354,9 +2431,129 @@ function cancelReset() {}
 	// 	showReflectionModal = false;
 	// }
 	
+	// ============================================================================
+	// MODERATION SESSION BACKEND SAVE FLOW - DOCUMENTATION
+	// ============================================================================
+	//
+	// DATABASE CONVENTIONS:
+	// ---------------------
+	// The moderation_session table uses a hybrid storage approach:
+	//
+	// DIRECT COLUMNS (use for frequently queried, structured data):
+	//   - concern_level (Integer): Pre-moderation judgment concern level (1-5)
+	//   - would_show_child (Text): Pre-moderation judgment decision ('yes' | 'no')
+	//   - initial_decision (Text): Final decision ('accept_original' | 'moderate' | 'not_applicable')
+	//   - highlighted_texts (JSONField): Array of highlighted concern phrases
+	//   - strategies (JSONField): Array of moderation strategy names
+	//   - custom_instructions (JSONField): Array of custom instruction texts
+	//   - refactored_response (Text): Final moderated response text
+	//   - is_final_version (Boolean): Marks which version was selected as final
+	//
+	// SESSION_METADATA (JSONField, use for flexible, evolving data):
+	//   - child_accomplish (string): Step 2 comprehension check - what child is trying to accomplish
+	//   - assistant_doing (string): Step 2 comprehension check - what GenAI Chatbot is doing
+	//   - decision (string): Final decision type (for metadata tracking)
+	//   - decided_at (number): Timestamp when decision was made
+	//   - version_index (number): Index of version in versions array (for version rows)
+	//   - highlights_saved_at (number): Timestamp when highlights were saved
+	//   - saved_at (number): Timestamp when step data was saved
+	//
+	// ROW OPERATIONS:
+	// ---------------
+	// All Steps 1-4 operate on version_number: 0 (UPDATE existing row or CREATE if first time)
+	// Version creation (applySelectedModerations) creates NEW rows with version_number: 1, 2, 3...
+	// Each moderated version is a separate row, allowing version history tracking
+	//
+	// VERSION NUMBER LOGIC:
+	// ---------------------
+	// - version_number: 0 = Original scenario state (Steps 1-4, accept original, skip)
+	// - version_number: 1+ = Moderated versions (each new moderation creates a new row)
+	// - When confirming a version, set is_final_version: true on that specific version row
+	//
+	// SAVE FLOW SUMMARY:
+	// -----------------
+	// Step 1 (completeStep1):
+	//   - skipped=true: Saves initial_decision='not_applicable', concern_level/would_show_child=undefined
+	//   - skipped=false: Saves highlighted_texts only
+	//
+	// Step 2 (completeStep2):
+	//   - Saves child_accomplish and assistant_doing to session_metadata
+	//   - Updates version_number: 0 row
+	//
+	// Step 3 (completeStep3):
+	//   - Saves concern_level and would_show_child to DIRECT COLUMNS
+	//   - Saves child_accomplish and assistant_doing to session_metadata (re-saves for consistency)
+	//   - Updates version_number: 0 row
+	//
+	// Step 4 Final Decisions:
+	//   - acceptOriginalResponse(): Saves initial_decision='accept_original' + all step data
+	//   - markNotApplicable(): Saves initial_decision='not_applicable' + all step data (if completed)
+	//   - confirmCurrentVersion(): Saves is_final_version=true + all step data on specific version row
+	//
+	// Version Creation (applySelectedModerations):
+	//   - Creates NEW row with version_number: currentVersionIndex + 1
+	//   - Includes all step data (concern_level, would_show_child, child_accomplish, assistant_doing)
+	//   - Saves strategies, custom_instructions, highlighted_texts, refactored_response
+	//
+	// ============================================================================
+	
 	// Unified Initial Decision Flow Functions
 	
-	// Step 1: Complete highlighting or skip
+	/**
+	 * Helper function to get current step data for saving to backend.
+	 * 
+	 * Returns an object containing all step-related data that should be included
+	 * in backend save operations. Fields from steps not yet reached are set to
+	 * undefined (not null) to match TypeScript API expectations.
+	 * 
+	 * @returns {Object} Step data object with:
+	 *   - concern_level: number | undefined - Pre-moderation concern level (1-5) if Step 3 completed
+	 *   - would_show_child: 'yes' | 'no' | undefined - Show child decision if Step 3 completed
+	 *   - child_accomplish: string | undefined - What child is trying to accomplish if Step 2 completed
+	 *   - assistant_doing: string | undefined - What GenAI Chatbot is doing if Step 2 completed
+	 * 
+	 * @example
+	 * // Use in all save operations to ensure consistency:
+	 * const stepData = getCurrentStepData();
+	 * await saveModerationSession(token, {
+	 *   concern_level: stepData.concern_level,
+	 *   would_show_child: stepData.would_show_child,
+	 *   session_metadata: {
+	 *     child_accomplish: stepData.child_accomplish,
+	 *     assistant_doing: stepData.assistant_doing
+	 *   }
+	 * });
+	 */
+	function getCurrentStepData(): {
+		concern_level: number | undefined;
+		would_show_child: 'yes' | 'no' | undefined;
+		child_accomplish: string | undefined;
+		assistant_doing: string | undefined;
+	} {
+		return {
+			concern_level: step3Completed && concernLevel !== null && concernLevel !== undefined ? concernLevel : undefined,
+			would_show_child: step3Completed && wouldShowChild !== null && wouldShowChild !== undefined ? wouldShowChild : undefined,
+			child_accomplish: step2Completed && childAccomplish?.trim() ? childAccomplish.trim() : undefined,
+			assistant_doing: step2Completed && assistantDoing?.trim() ? assistantDoing.trim() : undefined
+		};
+	}
+	
+	/**
+	 * Step 1: Complete highlighting or skip scenario.
+	 * 
+	 * Saves to backend with version_number: 0 (UPDATE existing row or CREATE if first time).
+	 * 
+	 * @param {boolean} skipped - If true, marks scenario as not applicable and skips all remaining steps
+	 * 
+	 * When skipped=true:
+	 *   - Saves initial_decision='not_applicable'
+	 *   - Sets concern_level and would_show_child to undefined (steps not reached)
+	 *   - Omits child_accomplish and assistant_doing from session_metadata
+	 * 
+	 * When skipped=false:
+	 *   - Saves highlighted_texts only
+	 *   - No step 2-3 data saved yet
+	 */
 	async function completeStep1(skipped: boolean = false) {
 		if (skipped) {
 			markedNotApplicable = true;
@@ -2381,6 +2578,8 @@ function cancelReset() {}
 					scenario_prompt: childPrompt1,
 					original_response: originalResponse1,
 					initial_decision: 'not_applicable',
+					concern_level: undefined, // Steps not reached
+					would_show_child: undefined, // Steps not reached
 					strategies: [],
 					custom_instructions: [],
 					highlighted_texts: [],
@@ -2388,10 +2587,8 @@ function cancelReset() {}
 					is_final_version: false,
 					session_metadata: { 
 						decision: 'not_applicable', 
-						decided_at: Date.now(),
-						reflection: '',
-						childAccomplish: '',
-						assistantDoing: ''
+						decided_at: Date.now()
+						// child_accomplish and assistant_doing omitted since steps not reached
 					},
 					is_attention_check: isAttentionCheckScenario,
 					attention_check_selected: false,
@@ -2442,7 +2639,18 @@ function cancelReset() {}
 		saveCurrentScenarioState();
 	}
 	
-	// Step 2: Complete comprehension check
+	/**
+	 * Step 2: Complete comprehension check.
+	 * 
+	 * Saves to backend with version_number: 0 (UPDATE existing row).
+	 * 
+	 * Saves:
+	 *   - child_accomplish: What the child is trying to accomplish (to session_metadata)
+	 *   - assistant_doing: What the GenAI Chatbot is mainly doing (to session_metadata)
+	 *   - highlighted_texts: Preserves highlights from Step 1
+	 * 
+	 * Does NOT save concern_level or would_show_child yet (Step 3 not reached).
+	 */
 	async function completeStep2() {
 		// Validate both fields are filled
 		if (!childAccomplish.trim() || !assistantDoing.trim()) {
@@ -2490,7 +2698,20 @@ function cancelReset() {}
 		}
 	}
 	
-	// Step 3: Complete pre-moderation check and navigate to Step 4
+	/**
+	 * Step 3: Complete pre-moderation judgment and navigate to Step 4.
+	 * 
+	 * Saves to backend with version_number: 0 (UPDATE existing row).
+	 * 
+	 * Saves:
+	 *   - concern_level: Pre-moderation concern level 1-5 (to DIRECT COLUMN)
+	 *   - would_show_child: Show child decision 'yes'|'no' (to DIRECT COLUMN)
+	 *   - child_accomplish: Re-saves Step 2 data (to session_metadata for consistency)
+	 *   - assistant_doing: Re-saves Step 2 data (to session_metadata for consistency)
+	 *   - highlighted_texts: Preserves highlights from Step 1
+	 * 
+	 * Always navigates to Step 4 (moderation panel) after saving.
+	 */
 	async function completeStep3() {
 		// Validate all fields are filled
 		if (concernLevel === null || wouldShowChild === null) {
@@ -2533,8 +2754,6 @@ function cancelReset() {}
 				refactored_response: undefined,
 				is_final_version: false,
 				session_metadata: { 
-					concern_level: concernLevel,
-					would_show_child: wouldShowChild,
 					decided_at: Date.now(),
 					child_accomplish: childAccomplish.trim(),
 					assistant_doing: assistantDoing.trim()
@@ -2611,6 +2830,21 @@ function cancelReset() {}
 	// 	console.log('User selected "I\'m Satisfied With Original" from moderation panel');
 	// }
 
+	/**
+	 * Mark scenario as not applicable (skip).
+	 * 
+	 * Saves to backend with version_number: 0 (UPDATE existing row).
+	 * 
+	 * Saves:
+	 *   - initial_decision: 'not_applicable'
+	 *   - concern_level: From Step 3 if completed before marking (using getCurrentStepData())
+	 *   - would_show_child: From Step 3 if completed before marking (using getCurrentStepData())
+	 *   - child_accomplish: From Step 2 if completed before marking (to session_metadata)
+	 *   - assistant_doing: From Step 2 if completed before marking (to session_metadata)
+	 *   - highlighted_texts: Cleared (empty array)
+	 * 
+	 * Marks scenario as completed and closes moderation panel.
+	 */
 	async function markNotApplicable() {
 		// No blocking for attention check; allow normal flow
 		hasInitialDecision = true;
@@ -2627,6 +2861,7 @@ function cancelReset() {}
 
 		// Save complete session data
 		try {
+			const stepData = getCurrentStepData();
 			const sessionId = `scenario_${selectedScenarioIndex}`;
 			await saveModerationSession(localStorage.token, {
 				session_id: sessionId,
@@ -2639,6 +2874,8 @@ function cancelReset() {}
 				scenario_prompt: childPrompt1,
 				original_response: originalResponse1,
 				initial_decision: 'not_applicable',
+				concern_level: stepData.concern_level,
+				would_show_child: stepData.would_show_child,
 				strategies: [],
 				custom_instructions: [],
 				highlighted_texts: [],
@@ -2647,7 +2884,8 @@ function cancelReset() {}
 				session_metadata: { 
 					decision: 'not_applicable', 
 					decided_at: Date.now(),
-					reflection: scenarioReflection.trim()
+					child_accomplish: stepData.child_accomplish,
+					assistant_doing: stepData.assistant_doing
 				},
 				is_attention_check: isAttentionCheckScenario,
 				attention_check_selected: attentionCheckSelected,
@@ -2681,6 +2919,29 @@ function cancelReset() {}
 		selectedModerations = selectedModerations;  // Trigger reactivity
 	}
 
+	/**
+	 * Apply selected moderation strategies and create a new moderated version.
+	 * 
+	 * Saves to backend by CREATING a NEW row with version_number: currentVersionIndex + 1.
+	 * Each moderated version is a separate row, allowing version history tracking.
+	 * 
+	 * Row operation: CREATE (new row for each version)
+	 * 
+	 * Saves:
+	 *   - version_number: currentVersionIndex + 1 (new version)
+	 *   - initial_decision: 'moderate'
+	 *   - concern_level: From Step 3 if completed (using getCurrentStepData())
+	 *   - would_show_child: From Step 3 if completed (using getCurrentStepData())
+	 *   - child_accomplish: From Step 2 if completed (to session_metadata)
+	 *   - assistant_doing: From Step 2 if completed (to session_metadata)
+	 *   - strategies: Array of selected moderation strategy names
+	 *   - custom_instructions: Array of custom instruction texts
+	 *   - highlighted_texts: Current highlights
+	 *   - refactored_response: Generated moderated response text
+	 *   - is_final_version: false (will be set to true when confirmed)
+	 * 
+	 * Creates a new version in the versions array and updates UI to show comparison view.
+	 */
 	async function applySelectedModerations() {
 		// If this is an attention check scenario and attention check is selected, it should have already navigated
 		// So if we reach here, it means they're trying to generate without selecting attention check
@@ -2780,6 +3041,7 @@ function cancelReset() {}
 
                 // Save complete session data with the new version (use snapshot)
 				try {
+					const stepData = getCurrentStepData();
 					const sessionId = `scenario_${selectedScenarioIndex}`;
 					await saveModerationSession(localStorage.token, {
 						session_id: sessionId,
@@ -2792,6 +3054,8 @@ function cancelReset() {}
 						scenario_prompt: childPrompt1,
 						original_response: originalResponse1,
 						initial_decision: 'moderate',
+						concern_level: stepData.concern_level,
+						would_show_child: stepData.would_show_child,
 						strategies: [...standardStrategies],
 						custom_instructions: usedCustomInstructions.map(c => c.text), // Convert to string array
 						highlighted_texts: [...highlightedTexts1],
@@ -2801,7 +3065,8 @@ function cancelReset() {}
 							version_index: currentVersionIndex,
 							decision: 'moderate',
 							decided_at: Date.now(),
-							reflection: scenarioReflection.trim()
+							child_accomplish: stepData.child_accomplish,
+							assistant_doing: stepData.assistant_doing
 						},
                         is_attention_check: isAttentionCheckScenario,
                         attention_check_selected: attentionSelectedSnapshot,
@@ -3788,7 +4053,7 @@ onMount(async () => {
 		<div class="flex-1 overflow-y-auto p-6 space-y-4" bind:this={mainContentContainer}>
 			<!-- Custom Scenario Input (only shown for custom scenario before generation) -->
 			{#if isCustomScenario && !customScenarioGenerated}
-				<div class="max-w-3xl mx-auto mt-12 space-y-6">
+				<div class="max-w-3xl mx-auto mt-2 space-y-6">
 					<div class="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-8 border border-purple-200 dark:border-purple-800 shadow-lg">
 						<div class="flex items-start space-x-3 mb-6">
 							<svg class="w-8 h-8 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
