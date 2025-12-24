@@ -17,6 +17,8 @@ export interface ChildProfile {
 	child_gender_other?: string;
 	child_ai_use_contexts_other?: string;
 	parent_llm_monitoring_other?: string;
+	// Current attempt flag - only children with is_current: true are selectable
+	is_current?: boolean;
 	created_at: number;
 	updated_at: number;
 }

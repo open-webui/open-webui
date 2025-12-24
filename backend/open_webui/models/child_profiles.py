@@ -148,11 +148,11 @@ class ChildProfileTable:
             return ChildProfileModel.model_validate(result) if result else None
 
     def get_child_profiles_by_user(self, user_id: str) -> list[ChildProfileModel]:
-        """Get all child profiles for a specific parent user (all sessions)."""
+        """Get all current child profiles for a specific parent user (only is_current=True)."""
         with get_db() as db:
             profiles = (
                 db.query(ChildProfile)
-                .filter(ChildProfile.user_id == user_id)
+                .filter(ChildProfile.user_id == user_id, ChildProfile.is_current == True)
                 .order_by(ChildProfile.updated_at.desc())
                 .all()
             )

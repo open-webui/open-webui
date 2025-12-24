@@ -68,18 +68,37 @@ const handleResetWorkflow = async () => {
         // Explicitly set starting step so sidebar can immediately reflect reset
         localStorage.setItem('assignmentStep', '1');
 			
-		// Clear child-specific moderation state
-        const childId = childProfileSync.getCurrentChildId();
-		if (childId) {
-				localStorage.removeItem(`moderationScenarioStates_${childId}`);
-				localStorage.removeItem(`moderationScenarioTimers_${childId}`);
-				localStorage.removeItem(`moderationCurrentScenario_${childId}`);
+		// Clear all child-specific moderation state
+		// Since we don't know all child IDs, iterate through localStorage keys
+		// and remove any that match child-specific patterns
+		const keysToRemove: string[] = [];
+		for (let i = 0; i < localStorage.length; i++) {
+			const key = localStorage.key(i);
+			if (key) {
+				// Match child-specific moderation keys
+				if (
+					key.startsWith('moderationScenarioStates_') ||
+					key.startsWith('moderationScenarioTimers_') ||
+					key.startsWith('moderationCurrentScenario_') ||
+					key.startsWith('moderationSessionNumber_') ||
+					key.startsWith('scenarioPkg_') ||
+					key.startsWith('scenarios_') ||
+					key.startsWith('moderationWarmupCompleted_')
+				) {
+					keysToRemove.push(key);
+				}
 			}
+		}
+		keysToRemove.forEach(key => localStorage.removeItem(key));
 
         // Clear cached child profiles and deselect current child in user settings
         try {
             childProfileSync.clearCache();
             await childProfileSync.setCurrentChildId(null);
+            
+            // Dispatch event to notify Sidebar to reload child profiles
+            // This ensures the Sidebar immediately reflects that no children are current
+            window.dispatchEvent(new Event('child-profiles-updated'));
         } catch (e) {
             console.warn('Non-fatal: could not clear selected child in settings:', e);
         }

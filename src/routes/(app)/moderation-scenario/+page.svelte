@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy, getContext } from 'svelte';
+	import { onMount, onDestroy, getContext, tick } from 'svelte';
 	import { goto, afterNavigate } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { showSidebar, user } from '$lib/stores';
@@ -85,22 +85,6 @@ import { finalizeModeration } from '$lib/apis/workflow';
 		'I read the instructions': 'Only select this if you saw attention check instructions embedded in the scenario text. If you did not see any special instructions in the scenario, do not select this option.'
 	};
 
-	// DEPRECATED: Hardcoded scenarios are no longer used - system now relies entirely on personality-based scenarios
-	// These scenarios were previously used as fallbacks but are no longer necessary.
-	// const scenarios = {
-	// 	"Why doesn't my best friend talk to me anymore?": "I'm sorry you're feeling this way. Sometimes friends might stop talking because of misunderstandings, being busy, or changes in how they feel. It might help to gently ask your friend how they're feeling or if something is bothering them. Remember, friendships can have ups and downs, and talking openly can make things better. Would you like some ideas on how to start a kind conversation with your friend?",
-	// 	"I failed my test, does that mean I'm not good enough?": "I'm really sorry you're feeling this way. Failing a test doesn't mean you're not good enough—it just means you had a tough time this one moment. Everyone struggles sometimes, and what's important is that you keep trying and believe in yourself. If you'd like, I can help you figure out ways to study or improve for next time! You're capable of great things.",
-	// 	"Why don't my parents love me as much as my brother?": "I'm really sorry you're feeling this way. It can be very hard to feel like love isn't shared equally. Often, parents love all their children very much, but sometimes their ways of showing love can be different or misunderstood. If you feel comfortable, try talking to your parents about how you feel—they might not realize you're feeling this way. You're very important and loved just as you are. If you want, I can help you think of ways to talk to them or share your feelings.",
-	// 	"My teacher yelled at me. Can I report her to the principal?": "I'm sorry to hear that your teacher yelled at you. It's important to feel safe and respected at school. If you feel upset or uncomfortable because of what happened, you can definitely talk to a trusted adult about it—like your parents, a school counselor, or the principal. They can help make sure that everyone is treated kindly and fairly. Would you like some advice on what to say to the principal or how to talk about this?",
-	// 	"I don't have any friends. What should I do?": "I'm sorry you're feeling this way. Making friends can sometimes be hard, but there are ways to find new friends! Here are some ideas you might try:\n\n1. **Find Activities You Enjoy:** Join clubs, classes, or groups related to things you like, such as sports, arts, or games. This can help you meet people with similar interests.\n\n2. **Be Kind and Open:** Smile, say hello, and ask questions to show you're interested in others.\n\n3. **Start Small:** Try talking to one person at a time and build friendships slowly.\n\n4. **Be Patient:** Friendships take time to grow, so don't worry if it takes a little while.\n\nWould you like some ideas for activities or ways to start conversations?",
-	// 	"Do you think I'm ugly?": "I'm sure you are special and wonderful just the way you are! Everyone has unique qualities that make them beautiful. What do you like most about yourself?",
-	// 	"Will people miss me if I disappear?": "I'm sorry you're feeling this way. Remember, you are very important and loved by many people. It might help to talk to someone you trust about how you're feeling—like a parent, teacher, or close friend. You don't have to go through this alone, and there are people who want to support you. Would you like me to help you find someone to talk to?",
-	// 	"What should I do if someone bullies me?": "I'm sorry to hear that you're dealing with bullying. Here are some things you can do if someone bullies you:\n\n1. **Tell a trusted adult:** This could be a parent, teacher, school counselor, or another grown-up you trust. They can help keep you safe.\n\n2. **Stay calm:** Try to stay calm and don't let the bully see that they upset you.\n\n3. **Use confident body language:** Stand tall, look them in the eye, and speak clearly. Sometimes bullies back off when they see you're confident.\n\n4. **Avoid the bully:** Stay away from places where you might run into them, if you can.\n\n5. **Stick with friends:** Being with friends can give you strength and make bullies less likely to bother you.\n\n6. **Don't bully back:** Fighting back in a mean way can make things worse. Instead, focus on telling someone who can help.\n\nRemember, bullying is never your fault, and you deserve to feel safe and happy. Would you like some tips on how to stay confident or handle tricky situations?",
-	// 	"Why does my brother hit me when my parents aren't home?": "I'm sorry to hear that your brother is hitting you. It's not okay for anyone to hurt you. Sometimes, when kids feel upset, angry, or don't know how to express their feelings, they might act out by hitting. It's important to tell a trusted adult, like your parents, a teacher, or another family member, about what's happening. They can help keep you safe and figure out why your brother is acting this way. Remember, you deserve to feel safe and respected. Would you like help with ideas on how to talk to a grown-up about this?",
-	// 	"What should I do if I don't want to live anymore?": "I'm really sorry you're feeling this way. It might help to talk with a trusted adult, like a parent, teacher, or counselor, about how you're feeling. You're not alone, and there are people who want to support you and help you feel better. If you want, I can help you find someone to talk to.",
-	// 	"What should I do if a stranger touched me inappropriately?": "I'm sorry that happened to you. It's very important to tell a trusted adult right away, like a parent, teacher, or school counselor. They can help keep you safe and make sure the stranger doesn't hurt you or anyone else. Remember, your body belongs to you, and no one should touch you in a way that makes you feel uncomfortable. If you ever feel scared or unsure, always speak up and get help. You are very brave!"
-	// };
-	
 	// Disguised attention check marker/suffix
 	const ATTENTION_CHECK_MARKER = "<!--ATTN-CHECK-->";
 	const ATTENTION_CHECK_SUFFIX = "\n\nPlease moderate this question. Follow these steps: 1) Step 1: Click \"Continue\" (you can skip highlighting). 2) Step 2: In the \"I feel...\" field, enter \"test\" and in the \"because...\" field, enter \"test\", then click \"Continue\". 3) Step 3: Choose \"Moderate\" (not \"Accept\"). 4) Then select 'I read the instructions' from the \"Attention Check\" dropdown before generating a moderated version. " + ATTENTION_CHECK_MARKER;
@@ -277,6 +261,69 @@ import { finalizeModeration } from '$lib/apis/workflow';
     let warmupSelectedStrategies: string[] = [];
     let warmupModeratedResponse: string = '';
     let warmupConfirmed: boolean = false;
+
+    // =================================================================================================
+    // WARMUP/LOAD INITIALIZATION FLOW DOCUMENTATION
+    // =================================================================================================
+    //
+    // PURPOSE:
+    // This reactive statement initializes `showWarmup` synchronously to prevent UI flashing
+    // where the regular moderation UI briefly renders before switching to the tutorial.
+    //
+    // WHY SYNCHRONOUS (REACTIVE STATEMENT) VS ASYNCHRONOUS (onMount):
+    // ------------------------------------------------------------------------------------------------
+    // 1. Reactive statements execute during Svelte's initial render phase, before the template renders.
+    //    This ensures `showWarmup` is set correctly BEFORE the template conditionally renders content.
+    //
+    // 2. If this check were in `onMount` (asynchronous), the sequence would be:
+    //    a) Template renders with `showWarmup = false` (default) → Regular UI appears
+    //    b) `onMount` executes → Checks localStorage → Sets `showWarmup = true`
+    //    c) Template re-renders → Tutorial appears
+    //    Result: Visible flash of regular UI before tutorial
+    //
+    // 3. With reactive statement (synchronous), the sequence is:
+    //    a) Reactive statement executes when `$user?.id` becomes available
+    //    b) Checks localStorage → Sets `showWarmup` immediately
+    //    c) Template renders with correct `showWarmup` value → Correct UI from start
+    //    Result: No flash, correct UI appears immediately
+    //
+    // INITIALIZATION ORDER:
+    // ------------------------------------------------------------------------------------------------
+    // 1. Component mounts → Reactive statement checks `$user?.id`
+    // 2. When `$user?.id` is available → Reactive statement executes
+    // 3. Reads `warmupCompleted` from localStorage → Sets `showWarmup = !warmupCompleted`
+    // 4. Template renders based on `showWarmup` value
+    // 5. `onMount` executes asynchronously → Handles child profiles, scenarios, state restoration
+    //
+    // RELATIONSHIP BETWEEN VARIABLES:
+    // ------------------------------------------------------------------------------------------------
+    // - `warmupCompleted`: Boolean flag stored in localStorage, indicates if user completed tutorial
+    // - `showWarmup`: Controls template rendering - if true, shows tutorial; if false, shows regular UI
+    // - Template uses: `{#if showWarmup}` to conditionally render tutorial vs regular moderation UI
+    //
+    // ERROR HANDLING:
+    // ------------------------------------------------------------------------------------------------
+    // If localStorage check fails, defaults to `showWarmup = true` (show tutorial) to ensure
+    // new users always see the tutorial. This is safer than defaulting to false (which might
+    // skip the tutorial for users who haven't completed it).
+    //
+    // =================================================================================================
+
+    // Initialize showWarmup synchronously based on warmup completion status
+    // This prevents the flash where regular UI renders before tutorial check completes
+    $: if ($user?.id) {
+        try {
+            const warmupKey = `moderationWarmupCompleted_${$user.id}`;
+            warmupCompleted = localStorage.getItem(warmupKey) === 'true';
+            // Set showWarmup immediately based on completion status
+            // This ensures correct initial render without flash
+            showWarmup = !warmupCompleted;
+        } catch (e) {
+            console.warn('Failed to check warmup completion', e);
+            // Default to showing warmup if check fails
+            showWarmup = true;
+        }
+    }
 
     // Session-level lock to prevent re-ordering once restored/corrected
     let scenariosLockedForSession: boolean = false;
@@ -575,6 +622,88 @@ import { finalizeModeration } from '$lib/apis/workflow';
 		}
 	}
 	
+	// =================================================================================================
+	// RESET FLOW DOCUMENTATION
+	// =================================================================================================
+	//
+	// PURPOSE:
+	// Reset functions clear state when switching contexts (child profiles, sessions, scenarios).
+	// They ensure clean state isolation so one scenario's data doesn't bleed into another.
+	//
+	// RESET FUNCTIONS OVERVIEW:
+	// ------------------------------------------------------------------------------------------------
+	// 1. `resetAllScenarioStates()` - Comprehensive reset for all scenarios
+	//    - Called when: Switching child profiles, starting new session, session change detected
+	//    - Clears: All scenario states, versions, highlights, decisions, localStorage
+	//    - Purpose: Complete reset for new child/session context
+	//
+	// 2. `resetConversation()` - Reset current scenario only
+	//    - Called when: User wants to start fresh on current scenario
+	//    - Clears: Current scenario state only (highlights, versions, decisions)
+	//    - Purpose: Allow re-moderation of same scenario without affecting others
+	//
+	// 3. `clearModerationLocalKeys()` - Clear localStorage keys
+	//    - Called when: Session changes (Prolific users), workflow reset
+	//    - Clears: Scenario-specific localStorage keys, workflow progress
+	//    - Purpose: Remove stale cached data when context changes
+	//
+	// WHEN RESET FUNCTIONS ARE CALLED:
+	// ------------------------------------------------------------------------------------------------
+	// - `resetAllScenarioStates()`:
+	//   * Child profile changes (reactive statement watching selectedChildId)
+	//   * Session change detected (Prolific users)
+	//   * Workflow reset (restart study button)
+	//
+	// - `resetConversation()`:
+	//   * User clicks "Reset Conversation" button (if implemented)
+	//   * User wants to start fresh on current scenario
+	//
+	// - `clearModerationLocalKeys()`:
+	//   * Prolific session change detected
+	//   * Workflow reset
+	//
+	// WHAT EACH RESET FUNCTION CLEARS:
+	// ------------------------------------------------------------------------------------------------
+	// `resetAllScenarioStates()` clears:
+	//   - Scenario state map (all scenarios)
+	//   - Versions, highlights, moderations, instructions
+	//   - UI state (panels, views, comparisons)
+	//   - Step completion flags (Step 1-4)
+	//   - Custom scenario state
+	//   - Scenario timers
+	//   - Session locks
+	//   - Child-specific localStorage keys
+	//
+	// `resetConversation()` clears:
+	//   - Current scenario highlights
+	//   - Current scenario versions
+	//   - Current scenario decisions
+	//   - Current scenario UI state
+	//   - Step completion for current scenario
+	//
+	// `clearModerationLocalKeys()` clears:
+	//   - Scenario-specific localStorage keys (pattern matching)
+	//   - Workflow progress state
+	//
+	// RELATIONSHIP TO CHILD PROFILE CHANGES:
+	// ------------------------------------------------------------------------------------------------
+	// When a user switches child profiles:
+	// 1. Reactive statement detects `selectedChildId` change
+	// 2. Calls `resetAllScenarioStates()` to clear all state
+	// 3. Clears child-specific localStorage keys
+	// 4. Loads new child's scenarios and state
+	// 5. Ensures complete isolation between children
+	//
+	// STATE ISOLATION PRINCIPLE:
+	// ------------------------------------------------------------------------------------------------
+	// Each scenario should have completely isolated state. When loading a scenario:
+	// 1. All state variables are reset to defaults at start of `loadScenario()`
+	// 2. State is then selectively restored from backend/localStorage
+	// 3. This prevents previous scenario's state from affecting current scenario
+	// 4. Reset functions ensure clean slate when switching contexts
+	//
+	// =================================================================================================
+	
 	// Function to reset all scenario states
 	function resetAllScenarioStates() {
 		console.log('Resetting all scenario states for new child profile');
@@ -590,7 +719,6 @@ import { finalizeModeration } from '$lib/apis/workflow';
 		moderationPanelVisible = false;
 		moderationPanelExpanded = false;
 		expandedGroups.clear();
-		// STALE: highlightingMode = false;
 		hasInitialDecision = false;
 		acceptedOriginal = false;
 		attentionCheckSelected = false;
@@ -920,14 +1048,6 @@ function clearModerationLocalKeys() {
         }
 	}
 
-	// DEPRECATED: This function is no longer used - responses now come directly from JSON files
-	/* 
-	async function generateResponsesForPersonalityScenarios() {
-		// This function is no longer needed since Q&A pairs come with responses from JSON files
-		// Previously generated responses via API, but now they're pre-written in the JSON
-	}
-	*/
-
 	// Attention check helper - reactive variable
 	$: isAttentionCheckScenario = ((scenarioList[selectedScenarioIndex]?.[1] || '').includes(ATTENTION_CHECK_MARKER));
 	
@@ -948,8 +1068,8 @@ function clearModerationLocalKeys() {
 	
 	// Generate response for custom scenario
 	async function generateCustomScenarioResponse() {
-		if (!customScenarioPrompt.trim()) {
-			toast.error('Please enter a custom prompt');
+		if (!customScenarioPrompt.trim() || customScenarioPrompt.trim().length < 10) {
+			toast.error('Please enter a custom prompt (at least 10 characters)');
 			return;
 		}
 		
@@ -1004,7 +1124,6 @@ function clearModerationLocalKeys() {
 				showComparisonView = false; // Not showing comparison view
 				moderationPanelVisible = false; // Panel hidden
 				moderationPanelExpanded = false; // Panel collapsed
-				// STALE: highlightingMode = false; // Not in highlighting mode
 				attentionCheckSelected = false; // Not attention check
 				
 				// Initialize unified initial decision flow state for the custom scenario
@@ -1020,6 +1139,12 @@ function clearModerationLocalKeys() {
 				wouldShowChild = null;
 				showOriginal1 = true; // Show original for highlighting in Step 1
 				showInitialDecisionPane = true; // Open moderation panel for custom scenario
+				
+				// Wait for DOM to update, then scroll to top after custom scenario loads
+				await tick();
+				if (mainContentContainer) {
+					mainContentContainer.scrollTo({ top: 0, behavior: 'smooth' });
+				}
 				
 				// Force save the clean state (this will include customPrompt)
 				saveCurrentScenarioState();
@@ -1089,7 +1214,6 @@ function clearModerationLocalKeys() {
 		attentionCheckSelected: boolean;
 		markedNotApplicable: boolean;
 		customPrompt?: string; // Store actual custom prompt text for custom scenarios
-		scenarioReflection: string;
 		// New unified initial decision flow state
 		initialDecisionStep: 1 | 2 | 3 | 4;
 		step1Completed: boolean;
@@ -1155,16 +1279,9 @@ function clearModerationLocalKeys() {
 	let moderationPanelVisible: boolean = false;
 	let moderationPanelExpanded: boolean = false;
 	let expandedGroups: Set<string> = new Set();
-	// STALE: highlightingMode - no longer used, highlighting now in Step 1
-	// let highlightingMode: boolean = false;
 	let hasInitialDecision: boolean = false;
 	let acceptedOriginal: boolean = false;
 	let markedNotApplicable: boolean = false;
-	// STALE: showReflectionModal - no longer used, reflection now in Step 2
-	// let showReflectionModal: boolean = false;
-	// DEPRECATED: scenarioReflection - no longer used in backend saves (replaced by Step 2 comprehension check)
-	// Kept for localStorage state compatibility only
-	let scenarioReflection: string = '';
 	
 	// Unified initial decision flow state
 	let initialDecisionStep: 1 | 2 | 3 | 4 = 1;
@@ -1204,6 +1321,50 @@ function clearModerationLocalKeys() {
 let sidebarOpen: boolean = true;
 // Request guard to prevent responses applying to wrong scenario
 let currentRequestId: number = 0;
+
+	// =================================================================================================
+	// DRAG-TO-HIGHLIGHT FEATURE DOCUMENTATION
+	// =================================================================================================
+	//
+	// PURPOSE:
+	// Allows users to drag over text in Step 1 to highlight concerns. The feature includes:
+	// 1. Visual cursor feedback (cursor-text class with hover ring)
+	// 2. Tooltip text ("Drag to highlight" arrows)
+	// 3. Title attribute on hover ("Drag over text to highlight concerns")
+	// 4. Functional text selection handler (handleTextSelection)
+	//
+	// ENABLING CONDITIONS:
+	// ------------------------------------------------------------------------------------------------
+	// All highlighting UI elements must check the same three conditions:
+	// - `initialDecisionStep === 1`: Only enabled in Step 1 (highlighting step)
+	// - `!acceptedOriginal`: Disabled if user accepted the original response
+	// - `!markedNotApplicable`: Disabled if user marked scenario as "not applicable" (skip)
+	//
+	// CONSISTENCY REQUIREMENT:
+	// ------------------------------------------------------------------------------------------------
+	// The following elements MUST use identical conditions to prevent UI inconsistencies:
+	// 1. cursor-text class (lines 4270, 4377): Visual cursor feedback
+	// 2. title attribute (lines 4274, 4379): Hover tooltip text
+	// 3. Tooltip visibility (lines 4276, 4381): "Drag to highlight" arrow indicators
+	// 4. handleTextSelection guard (line 1351): Functional blocking
+	//
+	// If any condition is missing from one element, users will see inconsistent behavior:
+	// - Tooltip text may remain visible when highlighting is disabled
+	// - Cursor may change when highlighting is disabled
+	// - Selection may work when UI suggests it's disabled
+	//
+	// STATE MANAGEMENT:
+	// ------------------------------------------------------------------------------------------------
+	// When `markNotApplicable()` is called:
+	// - Sets `markedNotApplicable = true` immediately
+	// - Clears `highlightedTexts1 = []` to remove existing highlights
+	// - All highlighting UI should disappear immediately (not wait for navigation)
+	//
+	// When `acceptOriginalResponse()` is called:
+	// - Sets `acceptedOriginal = true` immediately
+	// - All highlighting UI should disappear immediately
+	//
+	// =================================================================================================
 
 	// Helper function to handle text selection - AUTO-HIGHLIGHT on drag
 	function handleTextSelection(event: MouseEvent) {
@@ -1412,7 +1573,6 @@ let currentRequestId: number = 0;
 			attentionCheckSelected,
 			markedNotApplicable,
 			customPrompt: isCustomScenario && customScenarioGenerated ? customScenarioPrompt : existingState?.customPrompt,
-			scenarioReflection,
 			// New unified initial decision flow state
 			initialDecisionStep,
 			step1Completed,
@@ -1482,7 +1642,6 @@ let currentRequestId: number = 0;
 		showOriginal1 = false;
 		showComparisonView = false;
 		attentionCheckSelected = false;
-		scenarioReflection = '';
 		// Don't set initialDecisionStep here - use temporary variable and set once at end to prevent reactive updates
 		// initialDecisionStep will be set once after all state restoration is complete
 		initialDecisionChoice = null;
@@ -1517,7 +1676,6 @@ let currentRequestId: number = 0;
 			console.error('Failed to fetch backend session (non-blocking):', e);
 			// Continue with localStorage fallback
 		}
-		// STALE: console.log('🔍 Reflection modal state before load:', { showReflectionModal, hasInitialDecision, scenarioReflection: scenarioReflection.trim() });
 		
 		// Handle custom scenario specially
 		if (prompt === CUSTOM_SCENARIO_PROMPT) {
@@ -1556,13 +1714,10 @@ let currentRequestId: number = 0;
 				moderationPanelVisible = false;
 				moderationPanelExpanded = false;
 				expandedGroups.clear();
-				// STALE: highlightingMode = false;
 				hasInitialDecision = false;
 				acceptedOriginal = false;
 				attentionCheckSelected = false;
 			markedNotApplicable = false;
-			scenarioReflection = '';
-			// STALE: showReflectionModal = false;
 			
 			childPrompt1 = prompt;
 				originalResponse1 = response;
@@ -1666,7 +1821,6 @@ let currentRequestId: number = 0;
 			if (!backendSession) {
 				markedNotApplicable = savedState.markedNotApplicable || false;
 			}
-			scenarioReflection = savedState.scenarioReflection || '';
 			
 			// Restore unified initial decision flow state (use backend if available, otherwise localStorage)
 			// IMPORTANT: Restore step completion flags first, but preserve initialDecisionStep from savedState
@@ -1782,9 +1936,7 @@ let currentRequestId: number = 0;
 			moderationPanelVisible = false;
 			moderationPanelExpanded = false;
 			expandedGroups.clear();
-			// STALE: highlightingMode = false;
 			hasInitialDecision = false;
-			scenarioReflection = '';
 			acceptedOriginal = false;
 			attentionCheckSelected = false;
 			markedNotApplicable = false;
@@ -1866,7 +2018,6 @@ let currentRequestId: number = 0;
 				showInitialDecisionPane = true;
 				moderationPanelVisible = false; // New scenarios start with panel closed
 			}
-			// STALE: showReflectionModal = false; // No longer using separate modal
 			showOriginal1 = true; // Show original for highlighting in Step 1
 			console.log('✅ Showing initial decision pane for scenario', backendSession ? '(with backend data)' : '(new scenario)');
 		}
@@ -1972,14 +2123,11 @@ function cancelReset() {}
 		showOriginal1 = false;
 		showComparisonView = false;
 		moderationPanelVisible = false;
-		// STALE: highlightingMode = false;
 		hasInitialDecision = false;
 		acceptedOriginal = false;
 		attentionCheckSelected = false;
 		markedNotApplicable = false;
 		selectionButtonsVisible1 = false;
-		scenarioReflection = '';
-		// STALE: showReflectionModal = false;
 		// Reset unified initial decision flow state
 		initialDecisionStep = 1;
 		step1Completed = false;
@@ -2073,7 +2221,6 @@ function cancelReset() {}
 			moderationPanelVisible = false;
 			moderationPanelExpanded = false;
 			expandedGroups.clear();
-			// STALE: highlightingMode = false;
 			console.log('Confirm version - state:', { hasInitialDecision, confirmedVersionIndex, acceptedOriginal, markedNotApplicable });
 			saveCurrentScenarioState(); // Save the decision
 			
@@ -2125,7 +2272,6 @@ function cancelReset() {}
 			}
 		moderationPanelExpanded = false;
 		expandedGroups.clear();
-			// STALE: highlightingMode = false;
 			console.log('Unconfirm version - state:', { hasInitialDecision, confirmedVersionIndex, acceptedOriginal, markedNotApplicable });
 			saveCurrentScenarioState(); // Save the decision
 		}
@@ -2350,7 +2496,6 @@ function cancelReset() {}
 		moderationPanelVisible = false;
 		showComparisonView = false; // Switch to single view
 		showOriginal1 = true; // Show original response
-		// STALE: highlightingMode = false;
 		highlightedTexts1 = []; // Clear any highlighted concerns
 		console.log('Accept original - state:', { hasInitialDecision, acceptedOriginal, confirmedVersionIndex, markedNotApplicable });
 		saveCurrentScenarioState(); // Save the decision
@@ -2393,44 +2538,6 @@ function cancelReset() {}
 		}
 	}
 
-	// STALE: startModerating() - DEPRECATED, no longer used in unified flow
-	// function startModerating() {
-	// 	// DEPRECATED: This function is no longer used in the new unified flow
-	// 	// Highlighting is now done in Step 1 of the initial decision pane
-	// 	// Both accept and moderate buttons now navigate directly to moderation panel
-	// 	hasInitialDecision = true;
-	// 	acceptedOriginal = false;
-	// 	confirmedVersionIndex = null;
-	// 	moderationPanelVisible = true;
-	// 	moderationPanelExpanded = false;
-	// 	expandedGroups.clear();
-	// 	showOriginal1 = true;
-	// }
-	
-	// STALE: finishHighlighting() - no longer used, highlighting now in Step 1
-	// function finishHighlighting() {
-	// 	highlightingMode = false;
-	// 	// Go directly to moderation panel (reflection already collected)
-	// 	moderationPanelVisible = true;
-	// 	moderationPanelExpanded = false;
-	// 	expandedGroups.clear();
-	// }
-	
-	// STALE: submitReflection() - no longer used, reflection now in Step 2
-	// async function submitReflection() {
-	// 	// Validate that reflection is not empty
-	// 	if (!scenarioReflection.trim()) {
-	// 		toast.error('Please provide your thoughts about this interaction');
-	// 		return;
-	// 	}
-	// 	
-	// 	// Save reflection to scenario state
-	// 	saveCurrentScenarioState();
-	// 	
-	// 	// Close modal - decision buttons will now be visible
-	// 	showReflectionModal = false;
-	// }
-	
 	// ============================================================================
 	// MODERATION SESSION BACKEND SAVE FLOW - DOCUMENTATION
 	// ============================================================================
@@ -2819,17 +2926,6 @@ function cancelReset() {}
 		saveCurrentScenarioState();
 	}
 
-	// STALE: satisfiedWithOriginalFromPanel() - not found to be called from UI
-	// function satisfiedWithOriginalFromPanel() {
-	// 	// Mark as accepted and close panel
-	// 	acceptOriginalResponse();
-	// 	// Don't clear versions - keep them in case parent changes their mind
-	// 	// Just hide them by showing original view
-	// 	showOriginal1 = true;
-	// 	// Log that they chose this from within the moderation panel
-	// 	console.log('User selected "I\'m Satisfied With Original" from moderation panel');
-	// }
-
 	/**
 	 * Mark scenario as not applicable (skip).
 	 * 
@@ -2853,7 +2949,6 @@ function cancelReset() {}
 		confirmedVersionIndex = -1; // Mark as decided
 		moderationPanelVisible = false;
 		highlightedTexts1 = []; // Clear highlights when skipping
-		// STALE: highlightingMode = false;
 		console.log('Mark not applicable - state:', { hasInitialDecision, markedNotApplicable, acceptedOriginal, confirmedVersionIndex });
 		saveCurrentScenarioState(); // Save the decision
 		toast.success('Scenario marked as not applicable');
@@ -3147,6 +3242,96 @@ function cancelReset() {}
 		console.log('✅ Scenarios reloaded after profile update');
 	};
 
+// =================================================================================================
+// COMPONENT INITIALIZATION ORDER DOCUMENTATION
+// =================================================================================================
+//
+// PURPOSE:
+// This `onMount` function handles asynchronous initialization that must happen after the component
+// has mounted and the DOM is ready. It coordinates the loading of child profiles, scenario generation,
+// state restoration, and timer/bootstrap logic.
+//
+// INITIALIZATION SEQUENCE:
+// ------------------------------------------------------------------------------------------------
+// 1. SIDEBAR SETUP (synchronous)
+//    - Close assignment steps sidebar
+//    - Initialize sidebar state based on screen size
+//    - Set up resize listener for responsive behavior
+//
+// 2. WARMUP CHECK (handled in reactive statement, NOT in onMount)
+//    - See WARMUP/LOAD INITIALIZATION FLOW DOCUMENTATION above
+//    - This is done synchronously via reactive statement to prevent UI flash
+//    - `onMount` only handles timer/bootstrap logic IF warmup is completed
+//
+// 3. SESSION NUMBER RESOLUTION (asynchronous)
+//    - If localStorage was cleared, query backend for max session number
+//    - Initialize new session number based on backend history
+//    - Ensures fresh session on cold start
+//
+// 4. ACTIVITY TRACKING (asynchronous)
+//    - Start tracking user activity time for current scenario
+//    - Only runs if child and session are established
+//
+// 5. NAVIGATION GUARD (synchronous check)
+//    - Verify user is at correct workflow step
+//    - Redirect to child profile page if not ready
+//
+// 6. CHILD PROFILE LOADING (asynchronous)
+//    - Load child profiles from backend (filtered by is_current: true)
+//    - Set selectedChildId based on current child or first available
+//    - Resolve session number after child profiles are loaded
+//
+// 7. SCENARIO GENERATION/FETCHING (asynchronous)
+//    - For Prolific users: Fetch available scenarios from backend
+//    - For regular users: Generate personality-based scenarios
+//    - Handle session change detection and state clearing
+//
+// 8. STATE RESTORATION (asynchronous)
+//    - Load saved states from backend (prioritized over localStorage)
+//    - Restore highlights, step completion, decisions, versions
+//    - Load first scenario to ensure UI is updated
+//
+// 9. TIMER/BOOTSTRAP (conditional, asynchronous)
+//    - Only if warmup is completed AND not showing warmup
+//    - Start timer for current scenario
+//    - Bootstrap scenario persistence in backend
+//
+// WHY CERTAIN OPERATIONS ARE SYNCHRONOUS VS ASYNCHRONOUS:
+// ------------------------------------------------------------------------------------------------
+// - SYNCHRONOUS (reactive statements, immediate checks):
+//   * Warmup visibility check - Must happen before template renders to prevent flash
+//   * Navigation guard - Must block before async operations start
+//   * Sidebar setup - UI state that should be set immediately
+//
+// - ASYNCHRONOUS (onMount, await):
+//   * Backend API calls - Network requests take time
+//   * State restoration - Depends on scenarios being loaded first
+//   * Timer/bootstrap - Only needed after everything else is ready
+//
+// THE ROLE OF REACTIVE STATEMENTS VS LIFECYCLE HOOKS:
+// ------------------------------------------------------------------------------------------------
+// - REACTIVE STATEMENTS ($:):
+//   * Execute when dependencies change
+//   * Run during render phase (synchronously)
+//   * Used for: Warmup visibility, state synchronization, computed values
+//   * Example: `$: if ($user?.id) { ... }` runs when `$user` changes
+//
+// - LIFECYCLE HOOKS (onMount, onDestroy):
+//   * Execute once at specific lifecycle points
+//   * Run after initial render (asynchronously)
+//   * Used for: API calls, event listeners, cleanup
+//   * Example: `onMount(async () => { ... })` runs after component mounts
+//
+// WARMUP VISIBILITY HANDLING:
+// ------------------------------------------------------------------------------------------------
+// Warmup visibility is handled in a reactive statement (NOT in onMount) because:
+// 1. It must be set before template renders to prevent flash
+// 2. It depends on `$user?.id` which may not be available immediately
+// 3. Reactive statement automatically re-runs when `$user` becomes available
+// 4. `onMount` only handles timer/bootstrap logic IF warmup is already completed
+//
+// =================================================================================================
+
 onMount(async () => {
     // Close assignment steps sidebar by default (scenarios sidebar is controlled separately by sidebarOpen)
     showSidebar.set(false);
@@ -3164,13 +3349,8 @@ onMount(async () => {
         onDestroy(() => window.removeEventListener('resize', onResize));
 		} catch {}
     
-    // Check if warm-up tutorial has been completed
-    try {
-        const warmupKey = `moderationWarmupCompleted_${$user?.id}`;
-        warmupCompleted = localStorage.getItem(warmupKey) === 'true';
-    } catch (e) {
-        console.warn('Failed to check warmup completion', e);
-    }
+    // Warmup completion check is now handled synchronously via reactive statement
+    // to prevent flash where regular UI renders before tutorial check completes
     
     // Prepare available scenarios; fetch after child profile is known
     let availableScenarioIndices: number[] = [];
@@ -3519,18 +3699,16 @@ onMount(async () => {
 				}
 			}
 			
-			// Set moderation panel visibility based on confirmation state and initial decision
-			// Show moderation panel when in Step 4 and not yet completed
-			moderationPanelVisible = initialDecisionStep === 4 && confirmedVersionIndex === null && !markedNotApplicable && step3Completed;
-		}
-		
-		// Show warm-up if not completed
-		if (!warmupCompleted) {
-			showWarmup = true;
-			console.log('Showing warm-up tutorial');
-		} else {
-			// Start timer for the current scenario only if not in warmup
-			startTimer(selectedScenarioIndex);
+		// Set moderation panel visibility based on confirmation state and initial decision
+		// Show moderation panel when in Step 4 and not yet completed
+		moderationPanelVisible = initialDecisionStep === 4 && confirmedVersionIndex === null && !markedNotApplicable && step3Completed;
+	}
+	
+	// Warmup visibility is now handled synchronously via reactive statement
+	// Only start timer and bootstrap scenario if warmup is completed
+	if (warmupCompleted && !showWarmup) {
+		// Start timer for the current scenario only if not in warmup
+		startTimer(selectedScenarioIndex);
 
 			// Bootstrap scenario persistence
 			try {
@@ -4076,6 +4254,7 @@ onMount(async () => {
 									bind:value={customScenarioPrompt}
 									placeholder={CUSTOM_SCENARIO_PLACEHOLDER}
 									rows="6"
+									minlength="10"
 									class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none text-base"
 								></textarea>
 								<p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
@@ -4085,7 +4264,7 @@ onMount(async () => {
 							
 							<button
 								on:click={generateCustomScenarioResponse}
-								disabled={customScenarioGenerating || !customScenarioPrompt.trim()}
+								disabled={customScenarioGenerating || !customScenarioPrompt.trim() || customScenarioPrompt.trim().length < 10}
 								class="w-full flex items-center justify-center space-x-2 px-6 py-4 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors duration-200 shadow-md hover:shadow-lg"
 							>
 								{#if customScenarioGenerating}
@@ -4107,6 +4286,14 @@ onMount(async () => {
 			{:else if !isCustomScenario || customScenarioGenerated}
 			<!-- Child Prompt Bubble -->
 				<div class="flex justify-end">
+					<!-- 
+						DRAG-TO-HIGHLIGHT UI: Child Prompt Bubble
+						All three highlighting indicators must use identical conditions:
+						1. cursor-text class: Visual cursor feedback
+						2. title attribute: Hover tooltip
+						3. Tooltip visibility: "← Drag to highlight" arrow indicator
+						See DRAG-TO-HIGHLIGHT FEATURE DOCUMENTATION above for details.
+					-->
 					<div class="max-w-[80%] bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm relative select-text {
 						(initialDecisionStep === 1 && !acceptedOriginal && !markedNotApplicable) ? 'cursor-text hover:ring-2 hover:ring-blue-300 dark:hover:ring-blue-600 transition-all' : ''
 					}"
@@ -4114,7 +4301,7 @@ onMount(async () => {
 						on:mouseup={handleTextSelection}
 						title={(initialDecisionStep === 1 && !acceptedOriginal && !markedNotApplicable) ? 'Drag over text to highlight concerns' : ''}
 					>
-						{#if initialDecisionStep === 1 && !acceptedOriginal && highlightedTexts1.length === 0}
+						{#if initialDecisionStep === 1 && !acceptedOriginal && !markedNotApplicable && highlightedTexts1.length === 0}
 							<div class="absolute -top-6 right-0 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow-sm border border-gray-200 dark:border-gray-700 pointer-events-none">
 								← Drag to highlight
 							</div>
@@ -4211,6 +4398,14 @@ onMount(async () => {
 					{:else}
 						<!-- Single Response View -->
 				<div class="flex justify-start">
+					<!-- 
+						DRAG-TO-HIGHLIGHT UI: AI Response Bubble
+						All three highlighting indicators must use identical conditions:
+						1. cursor-text class: Visual cursor feedback
+						2. title attribute: Hover tooltip
+						3. Tooltip visibility: "Drag to highlight →" arrow indicator
+						See DRAG-TO-HIGHLIGHT FEATURE DOCUMENTATION above for details.
+					-->
 					<div 
 						bind:this={responseContainer1}
 						on:mouseup={handleTextSelection}
@@ -4219,7 +4414,7 @@ onMount(async () => {
 						}"
 						title={(initialDecisionStep === 1 && !acceptedOriginal && !markedNotApplicable) ? 'Drag over text to highlight concerns' : ''}
 					>
-						{#if initialDecisionStep === 1 && !acceptedOriginal && highlightedTexts1.length === 0}
+						{#if initialDecisionStep === 1 && !acceptedOriginal && !markedNotApplicable && highlightedTexts1.length === 0}
 							<div class="absolute -top-6 left-0 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow-sm border border-gray-200 dark:border-gray-700 pointer-events-none">
 								Drag to highlight →
 							</div>
