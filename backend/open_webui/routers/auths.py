@@ -293,9 +293,21 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             )
         log.info(f"LDAP search attributes: {search_attributes}")
 
+        # Escape the username for safe LDAP filter usage
+        escaped_username = escape_filter_chars(form_data.user.lower())
+
+        # Process LDAP_SEARCH_FILTERS to substitute user placeholders
+        # Supports %s and %(user)s as placeholders for the username
+        processed_filters = LDAP_SEARCH_FILTERS
+        if processed_filters:
+            # Replace %(user)s placeholder with escaped username
+            processed_filters = processed_filters.replace("%(user)s", escaped_username)
+            # Replace %s placeholder with escaped username
+            processed_filters = processed_filters.replace("%s", escaped_username)
+
         search_success = connection_app.search(
             search_base=LDAP_SEARCH_BASE,
-            search_filter=f"(&({LDAP_ATTRIBUTE_FOR_USERNAME}={escape_filter_chars(form_data.user.lower())}){LDAP_SEARCH_FILTERS})",
+            search_filter=f"(&({LDAP_ATTRIBUTE_FOR_USERNAME}={escaped_username}){processed_filters})",
             attributes=search_attributes,
         )
         if not search_success or not connection_app.entries:
