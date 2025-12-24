@@ -54,3 +54,4 @@ def downgrade() -> None:
         if "would_show_child" in existing_columns:
             batch_op.drop_column("would_show_child")
 
+

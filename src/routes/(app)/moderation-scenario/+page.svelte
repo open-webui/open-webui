@@ -764,7 +764,7 @@ function clearModerationLocalKeys() {
                     persistScenarioPackage(selectedChildId, sessionNumber, scenarioList);
                     scenariosLockedForSession = true;
                     loadSavedStates();
-                    loadScenario(0, true);
+                    await loadScenario(0, true);
                 } else {
                     console.warn('Built scenarioList is empty, not persisting package');
                     scenariosLockedForSession = false; // Don't lock if scenarios are empty
@@ -910,7 +910,7 @@ function clearModerationLocalKeys() {
                 loadSavedStates();
                 
                 // Load the first scenario to ensure UI is updated (force reload)
-                loadScenario(0, true);
+                await loadScenario(0, true);
             } else {
                 console.warn('Built scenarioList is empty, not persisting package. basePairs length:', basePairs.length);
                 scenariosLockedForSession = false; // Don't lock if scenarios are empty
@@ -1019,6 +1019,7 @@ function clearModerationLocalKeys() {
 				concernLevel = null;
 				wouldShowChild = null;
 				showOriginal1 = true; // Show original for highlighting in Step 1
+				showInitialDecisionPane = true; // Open moderation panel for custom scenario
 				
 				// Force save the clean state (this will include customPrompt)
 				saveCurrentScenarioState();
@@ -1179,22 +1180,24 @@ function clearModerationLocalKeys() {
 	let concernLevel: number | null = null; // 1-5
 	let wouldShowChild: 'yes' | 'no' | null = null;
 	
-	// Reactive: Show initial decision pane when needed
-	$: {
-		// Keep pane open for any step (1-4) as long as Step 4 is not completed and scenario is not marked as not applicable
-		const shouldShowPane = !step4Completed && !markedNotApplicable && 
-			(initialDecisionStep >= 1 && initialDecisionStep <= 4) &&
-			selectedScenarioIndex >= 0 &&
-			scenarioList.length > 0 &&
-			(!isCustomScenario || customScenarioGenerated);
-		
-		if (shouldShowPane && !showInitialDecisionPane) {
-			showInitialDecisionPane = true;
-			console.log('🔄 Reactive: Showing initial decision pane');
-		} else if (!shouldShowPane && showInitialDecisionPane) {
-			showInitialDecisionPane = false;
-		}
-	}
+	// DISABLED: Reactive statement that was causing panel to flash during state restoration
+	// Panel visibility is now set explicitly in loadScenario after all state is restored
+	// This prevents the panel from opening/closing during the async backend check
+	// $: {
+	// 	// Keep pane open for any step (1-4) as long as Step 4 is not completed and scenario is not marked as not applicable
+	// 	const shouldShowPane = !step4Completed && !markedNotApplicable && 
+	// 		(initialDecisionStep >= 1 && initialDecisionStep <= 4) &&
+	// 		selectedScenarioIndex >= 0 &&
+	// 		scenarioList.length > 0 &&
+	// 		(!isCustomScenario || customScenarioGenerated);
+	// 	
+	// 	if (shouldShowPane && !showInitialDecisionPane) {
+	// 		showInitialDecisionPane = true;
+	// 		console.log('🔄 Reactive: Showing initial decision pane');
+	// 	} else if (!shouldShowPane && showInitialDecisionPane) {
+	// 		showInitialDecisionPane = false;
+	// 	}
+	// }
 // Mobile sidebar toggle for scenario list
 let sidebarOpen: boolean = true;
 // Request guard to prevent responses applying to wrong scenario
@@ -1202,7 +1205,7 @@ let currentRequestId: number = 0;
 
 	// Helper function to handle text selection - AUTO-HIGHLIGHT on drag
 	function handleTextSelection(event: MouseEvent) {
-		if (acceptedOriginal) return; // Don't allow highlighting when original is accepted
+		if (acceptedOriginal || markedNotApplicable) return; // Don't allow highlighting when original is accepted or scenario is skipped
 		const container = (event.currentTarget as HTMLElement) || responseContainer1;
 		if (!container) return;
 		
@@ -1444,7 +1447,7 @@ let currentRequestId: number = 0;
 		}
 	}
 
-	function loadScenario(index: number, forceReload: boolean = false) {
+	async function loadScenario(index: number, forceReload: boolean = false) {
 		// Skip if same scenario and not forcing reload
 		if (index === selectedScenarioIndex && !forceReload) return;
 		
@@ -1457,6 +1460,61 @@ let currentRequestId: number = 0;
 		const [prompt, response] = scenarioList[index];
 		
 		console.log('🔍 Loading scenario:', index, 'Prompt:', prompt, 'Is custom:', prompt === CUSTOM_SCENARIO_PROMPT);
+		
+		// Reset content variables to defaults at the start to prevent persisting from previous scenario
+		// BUT: Don't reset completion flags yet - wait until after backend check to preserve skip/accept states
+		// This ensures clean content state before loading backend/localStorage data for THIS specific scenario
+		highlightedTexts1 = [];
+		childAccomplish = '';
+		assistantDoing = '';
+		concernLevel = null;
+		wouldShowChild = null;
+		step1Completed = false;
+		step2Completed = false;
+		step3Completed = false;
+		versions = [];
+		currentVersionIndex = -1;
+		confirmedVersionIndex = null;
+		selectedModerations = new Set();
+		customInstructions = [];
+		showOriginal1 = false;
+		showComparisonView = false;
+		attentionCheckSelected = false;
+		scenarioReflection = '';
+		// Don't set initialDecisionStep here - use temporary variable and set once at end to prevent reactive updates
+		// initialDecisionStep will be set once after all state restoration is complete
+		initialDecisionChoice = null;
+		// Reset completion flags - these will be restored from backend/localStorage if they exist
+		markedNotApplicable = false;
+		step4Completed = false;
+		acceptedOriginal = false;
+		hasInitialDecision = false;
+		// Initialize panel visibility to false - will be set correctly after state restoration
+		moderationPanelVisible = false;
+		showInitialDecisionPane = false;
+		
+		// Fetch session data from backend (primary source of truth) FIRST
+		let backendSession = null;
+		try {
+			if (selectedChildId && $user?.id) {
+				const sessions = await getModerationSessions(localStorage.token, selectedChildId);
+				// Find session matching current scenario_index and session_number
+				backendSession = sessions.find((s: any) => 
+					s.scenario_index === index && 
+					s.session_number === sessionNumber &&
+					s.attempt_number === 1 &&
+					s.version_number === 0
+				);
+				if (backendSession) {
+					console.log('✅ Found backend session for scenario', index, backendSession);
+				} else {
+					console.log('ℹ️ No backend session found for scenario', index, '- using localStorage fallback');
+				}
+			}
+		} catch (e) {
+			console.error('Failed to fetch backend session (non-blocking):', e);
+			// Continue with localStorage fallback
+		}
 		// STALE: console.log('🔍 Reflection modal state before load:', { showReflectionModal, hasInitialDecision, scenarioReflection: scenarioReflection.trim() });
 		
 		// Handle custom scenario specially
@@ -1516,34 +1574,165 @@ let currentRequestId: number = 0;
 		
 		const savedState = scenarioStates.get(index);
 		
+		// Restore data from backend first (primary source), then fall back to localStorage
+		if (backendSession) {
+			// Step 1: Restore highlights from backend
+			if (backendSession.highlighted_texts && Array.isArray(backendSession.highlighted_texts) && backendSession.highlighted_texts.length > 0) {
+				highlightedTexts1 = [...backendSession.highlighted_texts];
+				step1Completed = true;
+				console.log('✅ Restored highlights from backend:', highlightedTexts1.length);
+			}
+			
+			// Step 2: Restore comprehension check from backend
+			if (backendSession.session_metadata) {
+				const metadata = backendSession.session_metadata;
+				if (metadata.child_accomplish) {
+					childAccomplish = metadata.child_accomplish;
+				}
+				if (metadata.assistant_doing) {
+					assistantDoing = metadata.assistant_doing;
+				}
+				if (childAccomplish && assistantDoing) {
+					step2Completed = true;
+					console.log('✅ Restored Step 2 data from backend');
+				}
+			}
+			
+			// Step 3: Restore pre-moderation judgment from backend (prefer direct fields)
+			if (backendSession.concern_level !== null && backendSession.concern_level !== undefined) {
+				concernLevel = backendSession.concern_level;
+			} else if (backendSession.session_metadata?.concern_level !== null && backendSession.session_metadata?.concern_level !== undefined) {
+				concernLevel = backendSession.session_metadata.concern_level;
+			}
+			
+			if (backendSession.would_show_child) {
+				wouldShowChild = backendSession.would_show_child as 'yes' | 'no';
+			} else if (backendSession.session_metadata?.would_show_child) {
+				wouldShowChild = backendSession.session_metadata.would_show_child as 'yes' | 'no';
+			}
+			
+			if (concernLevel !== null && wouldShowChild !== null) {
+				step3Completed = true;
+				console.log('✅ Restored Step 3 data from backend:', { concernLevel, wouldShowChild });
+			}
+			
+			// Restore other fields from backend if available
+			if (backendSession.initial_decision === 'not_applicable') {
+				markedNotApplicable = true;
+				step1Completed = true;
+				step2Completed = true;
+				step3Completed = true;
+				step4Completed = true;
+				hasInitialDecision = true;
+			} else if (backendSession.initial_decision === 'accept_original') {
+				// Restore "accept original" state from backend
+				acceptedOriginal = true;
+				step4Completed = true;
+				hasInitialDecision = true;
+				confirmedVersionIndex = -1; // Mark as confirmed (original accepted)
+				showOriginal1 = true;
+				// Don't set initialDecisionStep to 4 - keep it at the step where they accepted
+				// We'll determine the appropriate step below based on completed steps
+			}
+		}
+		
+		// Then restore from localStorage (fallback or additional state)
 		if (savedState) {
+			// Only use localStorage data if backend didn't provide it
+			if (!backendSession || !backendSession.highlighted_texts || backendSession.highlighted_texts.length === 0) {
+				highlightedTexts1 = [...savedState.highlightedTexts1];
+			}
+			
 			versions = [...savedState.versions];
 			currentVersionIndex = savedState.currentVersionIndex;
-			confirmedVersionIndex = savedState.confirmedVersionIndex;
-			highlightedTexts1 = [...savedState.highlightedTexts1];
+			// Only restore confirmedVersionIndex from localStorage if backend didn't set acceptedOriginal
+			if (!backendSession || backendSession.initial_decision !== 'accept_original') {
+				confirmedVersionIndex = savedState.confirmedVersionIndex;
+			}
 			selectedModerations = new Set(savedState.selectedModerations);
 			customInstructions = [...savedState.customInstructions];
 			showOriginal1 = savedState.showOriginal1;
 			showComparisonView = savedState.showComparisonView || false;
-			hasInitialDecision = savedState.hasInitialDecision;
-			acceptedOriginal = savedState.acceptedOriginal;
+			// Only restore hasInitialDecision from localStorage if backend didn't set it
+			// hasInitialDecision should only be true if the scenario actually has a decision (markedNotApplicable, acceptedOriginal, or confirmedVersionIndex)
+			if (!backendSession || (backendSession.initial_decision !== 'not_applicable' && backendSession.initial_decision !== 'accept_original')) {
+				hasInitialDecision = savedState.hasInitialDecision;
+			}
+			// Only restore acceptedOriginal from localStorage if backend didn't set it
+			if (!backendSession || backendSession.initial_decision !== 'accept_original') {
+				acceptedOriginal = savedState.acceptedOriginal;
+			}
 			attentionCheckSelected = savedState.attentionCheckSelected || false;
-			markedNotApplicable = savedState.markedNotApplicable || false;
+			// Only restore markedNotApplicable from localStorage if there's no backend session
+			// (markedNotApplicable was already reset to false at start, and set to true if backend says 'not_applicable')
+			if (!backendSession) {
+				markedNotApplicable = savedState.markedNotApplicable || false;
+			}
 			scenarioReflection = savedState.scenarioReflection || '';
 			
-			// Restore unified initial decision flow state
-			initialDecisionStep = savedState.initialDecisionStep || 1;
-			step1Completed = savedState.step1Completed || false;
-			step2Completed = savedState.step2Completed || false;
-			step3Completed = savedState.step3Completed || false;
-			step4Completed = savedState.step4Completed || false;
-			childAccomplish = savedState.childAccomplish || '';
-			assistantDoing = savedState.assistantDoing || '';
+			// Restore unified initial decision flow state (use backend if available, otherwise localStorage)
+			// IMPORTANT: Restore step completion flags first, but preserve initialDecisionStep from savedState
+			if (!backendSession || (!step1Completed && !step2Completed && !step3Completed)) {
+				step1Completed = savedState.step1Completed || false;
+				step2Completed = savedState.step2Completed || false;
+				step3Completed = savedState.step3Completed || false;
+			}
+			// Only restore step4Completed from localStorage if backend didn't set it
+			if (!backendSession || (backendSession.initial_decision !== 'accept_original' && backendSession.initial_decision !== 'not_applicable')) {
+				step4Completed = savedState.step4Completed || false;
+			}
+			
+			// Only use localStorage for Step 2 if backend didn't provide it
+			if (!backendSession || !backendSession.session_metadata?.child_accomplish) {
+				childAccomplish = savedState.childAccomplish || '';
+			}
+			if (!backendSession || !backendSession.session_metadata?.assistant_doing) {
+				assistantDoing = savedState.assistantDoing || '';
+			}
 			initialDecisionChoice = savedState.initialDecisionChoice || null;
 			
+			// Calculate final initialDecisionStep in a temporary variable to prevent reactive updates during restoration
+			// Only set initialDecisionStep once at the end after all state is restored
+			let finalInitialDecisionStep: 1 | 2 | 3 | 4 = 1;
+			
+			// Restore initialDecisionStep from savedState FIRST (trust the saved state)
+			// Only override if there's a specific reason (completed scenario or no saved state)
+			if (acceptedOriginal || markedNotApplicable) {
+				// For completed scenarios (accepted original or skipped), don't show step 4
+				// Keep at step 3 if they completed step 3, otherwise step 2 or 1
+				if (step3Completed) {
+					finalInitialDecisionStep = 3;
+				} else if (step2Completed) {
+					finalInitialDecisionStep = 2;
+				} else if (step1Completed) {
+					finalInitialDecisionStep = 1;
+				} else {
+					finalInitialDecisionStep = 1;
+				}
+			} else if (savedState.initialDecisionStep !== undefined && savedState.initialDecisionStep !== null) {
+				// Trust the saved initialDecisionStep from localStorage
+				finalInitialDecisionStep = savedState.initialDecisionStep as 1 | 2 | 3 | 4;
+			} else {
+				// No saved state - determine initialDecisionStep based on completed steps
+				if (step3Completed) {
+					finalInitialDecisionStep = 4; // If step 3 is completed, go to step 4 (moderation panel)
+				} else if (step2Completed) {
+					finalInitialDecisionStep = 3;
+				} else if (step1Completed) {
+					finalInitialDecisionStep = 2;
+				} else {
+					finalInitialDecisionStep = 1;
+				}
+			}
+			
 			// If versions exist and not completed, default to Step 4 to match side-by-side display
-			if (versions.length > 0 && !step4Completed) {
-				initialDecisionStep = 4;
+			// BUT: Don't do this if acceptedOriginal or markedNotApplicable (scenario is completed)
+			// AND: Only override if we don't have a saved initialDecisionStep (trust saved state)
+			if (versions.length > 0 && !step4Completed && !acceptedOriginal && !markedNotApplicable) {
+				// Only override finalInitialDecisionStep if we don't have a saved value
+				if (savedState.initialDecisionStep === undefined || savedState.initialDecisionStep === null) {
+					finalInitialDecisionStep = 4;
+				}
 				// Ensure all previous steps are marked complete to allow navigation back
 				step1Completed = true;
 				step2Completed = true;
@@ -1556,33 +1745,45 @@ let currentRequestId: number = 0;
 				}
 			}
 			
+			// FINAL: Set initialDecisionStep ONCE after all state restoration is complete
+			// This prevents reactive updates during restoration that cause UI flashing (highlight mode, etc.)
+			initialDecisionStep = finalInitialDecisionStep;
+			
 			// Show original response if in Step 1 for highlighting
 			if (initialDecisionStep === 1) {
 				showOriginal1 = true;
 			}
 			
-			// Show initial decision pane if not completed (keep open for any step 1-4 until step4Completed) and not marked as not applicable
-			showInitialDecisionPane = !step4Completed && !markedNotApplicable && (initialDecisionStep >= 1 && initialDecisionStep <= 4);
-			// STALE: showReflectionModal = false; // No longer using separate modal
+			// FINAL: Determine panel visibility based on COMPLETE state - this is the ONLY place it should be set after loading
+			// End states: markedNotApplicable, acceptedOriginal, step4Completed, or confirmedVersionIndex
+			const isEndState = markedNotApplicable || acceptedOriginal || step4Completed || (confirmedVersionIndex !== null && confirmedVersionIndex >= 0);
 			
-			// Set moderation panel visibility based on confirmation state and initial decision
-			// Show moderation panel when in Step 4 and not yet completed
-			moderationPanelVisible = initialDecisionStep === 4 && confirmedVersionIndex === null && !markedNotApplicable && step3Completed;
+			if (isEndState) {
+				// Scenario is in an end state - close panels
+				moderationPanelVisible = false;
+				showInitialDecisionPane = false;
+			} else {
+				// Scenario is not completed - show appropriate panels based on step
+				// Show initial decision pane if not completed (keep open for any step 1-4 until step4Completed) and not marked as not applicable
+				showInitialDecisionPane = !step4Completed && !markedNotApplicable && (initialDecisionStep >= 1 && initialDecisionStep <= 4);
+				// Show moderation panel when in Step 4 and not yet completed
+				moderationPanelVisible = initialDecisionStep === 4 && confirmedVersionIndex === null && !markedNotApplicable && step3Completed;
+			}
 			
 			// Don't auto-populate moderation panel - keep it clear to avoid confusion
 			// Users should understand they're creating new versions from the original, not editing the viewed version
 		} else {
+			// No localStorage state - initialize from backend if available, otherwise defaults
 			versions = [];
 			currentVersionIndex = -1;
 			confirmedVersionIndex = null;
-			highlightedTexts1 = [];
 			selectedModerations = new Set();
 			customInstructions = [];
 			showOriginal1 = false;
 			showComparisonView = false;
 			moderationPanelVisible = false;
 			moderationPanelExpanded = false;
-		expandedGroups.clear();
+			expandedGroups.clear();
 			// STALE: highlightingMode = false;
 			hasInitialDecision = false;
 			scenarioReflection = '';
@@ -1590,21 +1791,86 @@ let currentRequestId: number = 0;
 			attentionCheckSelected = false;
 			markedNotApplicable = false;
 			
-			// Initialize unified initial decision flow state for new scenario
-			initialDecisionStep = 1;
-			step1Completed = false;
-			step2Completed = false;
-			step3Completed = false;
+			// Calculate final initialDecisionStep in a temporary variable to prevent reactive updates during restoration
+			// Declare outside both blocks so it can be used in both
+			let finalInitialDecisionStepNoState: 1 | 2 | 3 | 4 = 1;
+			
+			// If backend data exists, use it; otherwise initialize to defaults
+			if (backendSession) {
+				// Highlights already restored above if backendSession exists
+				// Step 2 and Step 3 already restored above if backendSession exists
+				
+				// Determine initialDecisionStep based on what was restored
+				// BUT: If acceptedOriginal is true, don't set to step 4 - keep it at the step where they accepted
+				if (acceptedOriginal || markedNotApplicable) {
+					// For completed scenarios (accepted original or skipped), don't show step 4
+					if (step3Completed) {
+						finalInitialDecisionStepNoState = 3;
+					} else if (step2Completed) {
+						finalInitialDecisionStepNoState = 2;
+					} else if (step1Completed) {
+						finalInitialDecisionStepNoState = 1;
+					} else {
+						finalInitialDecisionStepNoState = 1;
+					}
+				} else if (step3Completed) {
+					finalInitialDecisionStepNoState = 4;
+				} else if (step2Completed) {
+					finalInitialDecisionStepNoState = 3;
+				} else if (step1Completed) {
+					finalInitialDecisionStepNoState = 2;
+				} else {
+					finalInitialDecisionStepNoState = 1;
+				}
+				
+				if (backendSession.initial_decision === 'not_applicable') {
+					markedNotApplicable = true;
+					hasInitialDecision = true;
+				} else if (backendSession.initial_decision === 'accept_original') {
+					// Restore "accept original" state from backend (already set above, but ensure flags are correct)
+					acceptedOriginal = true;
+					step4Completed = true;
+					hasInitialDecision = true;
+					confirmedVersionIndex = -1;
+					showOriginal1 = true;
+				}
+			} else {
+				// No backend data - initialize to defaults
+				highlightedTexts1 = [];
+				step1Completed = false;
+				step2Completed = false;
+				step3Completed = false;
+				childAccomplish = '';
+				assistantDoing = '';
+				concernLevel = null;
+				wouldShowChild = null;
+				// Set finalInitialDecisionStepNoState to 1 for new scenarios
+				finalInitialDecisionStepNoState = 1;
+			}
+			
 			step4Completed = false;
-			childAccomplish = '';
-			assistantDoing = '';
 			initialDecisionChoice = null;
-			concernLevel = null;
-			wouldShowChild = null;
-			showInitialDecisionPane = true;
+			
+			// FINAL: Set initialDecisionStep ONCE after all state restoration is complete (both paths)
+			// This prevents reactive updates during restoration that cause UI flashing (highlight mode, etc.)
+			initialDecisionStep = finalInitialDecisionStepNoState;
+			
+			// Determine panel visibility based on state - check all end states
+			// End states: markedNotApplicable, acceptedOriginal, step4Completed, or confirmedVersionIndex
+			const isEndState = markedNotApplicable || acceptedOriginal || step4Completed || (confirmedVersionIndex !== null && confirmedVersionIndex >= 0);
+			
+			if (isEndState) {
+				// Scenario is in an end state - close panels
+				moderationPanelVisible = false;
+				showInitialDecisionPane = false;
+			} else {
+				// New scenario or in-progress scenario - show initial decision pane
+				showInitialDecisionPane = true;
+				moderationPanelVisible = false; // New scenarios start with panel closed
+			}
 			// STALE: showReflectionModal = false; // No longer using separate modal
 			showOriginal1 = true; // Show original for highlighting in Step 1
-			console.log('✅ Showing initial decision pane for new scenario');
+			console.log('✅ Showing initial decision pane for scenario', backendSession ? '(with backend data)' : '(new scenario)');
 		}
 		
 		// Only set childPrompt1 if it wasn't already set for a custom scenario
@@ -2352,6 +2618,7 @@ function cancelReset() {}
 		acceptedOriginal = false;
 		confirmedVersionIndex = -1; // Mark as decided
 		moderationPanelVisible = false;
+		highlightedTexts1 = []; // Clear highlights when skipping
 		// STALE: highlightingMode = false;
 		console.log('Mark not applicable - state:', { hasInitialDecision, markedNotApplicable, acceptedOriginal, confirmedVersionIndex });
 		saveCurrentScenarioState(); // Save the decision
@@ -3576,11 +3843,11 @@ onMount(async () => {
 			<!-- Child Prompt Bubble -->
 				<div class="flex justify-end">
 					<div class="max-w-[80%] bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm relative select-text {
-						(initialDecisionStep === 1 && !acceptedOriginal) ? 'cursor-text hover:ring-2 hover:ring-blue-300 dark:hover:ring-blue-600 transition-all' : ''
+						(initialDecisionStep === 1 && !acceptedOriginal && !markedNotApplicable) ? 'cursor-text hover:ring-2 hover:ring-blue-300 dark:hover:ring-blue-600 transition-all' : ''
 					}"
 						bind:this={promptContainer1}
 						on:mouseup={handleTextSelection}
-						title={(initialDecisionStep === 1 && !acceptedOriginal) ? 'Drag over text to highlight concerns' : ''}
+						title={(initialDecisionStep === 1 && !acceptedOriginal && !markedNotApplicable) ? 'Drag over text to highlight concerns' : ''}
 					>
 						{#if initialDecisionStep === 1 && !acceptedOriginal && highlightedTexts1.length === 0}
 							<div class="absolute -top-6 right-0 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow-sm border border-gray-200 dark:border-gray-700 pointer-events-none">
@@ -3683,9 +3950,9 @@ onMount(async () => {
 						bind:this={responseContainer1}
 						on:mouseup={handleTextSelection}
 						class="max-w-[80%] bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm relative select-text {
-							(initialDecisionStep === 1 && !acceptedOriginal) ? 'cursor-text hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-600 transition-all' : ''
+							(initialDecisionStep === 1 && !acceptedOriginal && !markedNotApplicable) ? 'cursor-text hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-600 transition-all' : ''
 						}"
-						title={(initialDecisionStep === 1 && !acceptedOriginal) ? 'Drag over text to highlight concerns' : ''}
+						title={(initialDecisionStep === 1 && !acceptedOriginal && !markedNotApplicable) ? 'Drag over text to highlight concerns' : ''}
 					>
 						{#if initialDecisionStep === 1 && !acceptedOriginal && highlightedTexts1.length === 0}
 							<div class="absolute -top-6 left-0 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow-sm border border-gray-200 dark:border-gray-700 pointer-events-none">
@@ -3742,7 +4009,7 @@ onMount(async () => {
 					{/if}
 							
 							
-						{#if highlightedTexts1.length > 0 && showOriginal1}
+						{#if highlightedTexts1.length > 0 && showOriginal1 && !markedNotApplicable}
 							<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
 								<div class="flex items-center justify-between mb-1">
 									<p class="text-xs font-semibold text-gray-700 dark:text-gray-300">Highlighted Concerns ({highlightedTexts1.length}):</p>
@@ -3952,11 +4219,11 @@ onMount(async () => {
 									</div>
 									<div>
 										<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-											What is the assistant mainly doing? <span class="text-red-500">*</span>
+											What is the GenAI Chatbot mainly doing? <span class="text-red-500">*</span>
 										</label>
 										<textarea
 											bind:value={assistantDoing}
-											placeholder="Describe what the assistant is mainly doing..."
+											placeholder="Describe what the GenAI Chatbot is mainly doing..."
 											rows="3"
 											class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none"
 										></textarea>

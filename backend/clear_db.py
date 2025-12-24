@@ -8,10 +8,12 @@ It only works with SQLite databases and will exit with an error if a PostgreSQL
 database is detected.
 
 Usage:
-    python clear_db.py              # Prompts for confirmation
-    python clear_db.py --yes         # Skips confirmation prompt
+    python clear_db.py                           # Prompts for confirmation, uses DATABASE_URL
+    python clear_db.py --yes                     # Skips confirmation prompt
+    python clear_db.py --db-path /path/to/db.db  # Specify database path directly
+    python clear_db.py --db-path /path/to/db.db --yes  # Specify path and skip confirmation
     
-    # Use DB_ABS environment variable to specify absolute database path
+    # Alternative: Use DB_ABS environment variable to specify absolute database path
     DB_ABS="/path/to/webui.db" python clear_db.py
 """
 
@@ -161,30 +163,43 @@ def main():
         action="store_true",
         help="Skip confirmation prompt"
     )
+    parser.add_argument(
+        "--db-path", "--database",
+        dest="db_path",
+        type=str,
+        default=None,
+        help="Path to the SQLite database file (overrides DB_ABS env var and DATABASE_URL)"
+    )
     args = parser.parse_args()
     
-    # Check for DB_ABS environment variable first
-    db_abs = os.environ.get("DB_ABS")
-    if db_abs:
-        # Use absolute path from environment variable
-        db_path = os.path.abspath(db_abs)
-        print(f"Using DB_ABS environment variable: {db_path}")
+    # Priority: command-line argument > environment variable > DATABASE_URL
+    if args.db_path:
+        # Use path from command-line argument
+        db_path = os.path.abspath(args.db_path)
+        print(f"Using --db-path argument: {db_path}")
     else:
-        # Fall back to DATABASE_URL parsing
-        # Check if database URL is SQLite
-        if "sqlite" not in DATABASE_URL.lower():
-            print(f"Error: This script only works with SQLite databases.")
-            print(f"Current DATABASE_URL: {DATABASE_URL}")
-            print("If you're using PostgreSQL, this script cannot be used.")
-            print("Alternatively, set DB_ABS environment variable to specify the database path directly.")
-            sys.exit(1)
-        
-        # Extract database path
-        try:
-            db_path = extract_sqlite_path(DATABASE_URL)
-        except ValueError as e:
-            print(f"Error parsing DATABASE_URL: {e}")
-            sys.exit(1)
+        # Check for DB_ABS environment variable
+        db_abs = os.environ.get("DB_ABS")
+        if db_abs:
+            # Use absolute path from environment variable
+            db_path = os.path.abspath(db_abs)
+            print(f"Using DB_ABS environment variable: {db_path}")
+        else:
+            # Fall back to DATABASE_URL parsing
+            # Check if database URL is SQLite
+            if "sqlite" not in DATABASE_URL.lower():
+                print(f"Error: This script only works with SQLite databases.")
+                print(f"Current DATABASE_URL: {DATABASE_URL}")
+                print("If you're using PostgreSQL, this script cannot be used.")
+                print("Use --db-path argument or set DB_ABS environment variable to specify the database path directly.")
+                sys.exit(1)
+            
+            # Extract database path
+            try:
+                db_path = extract_sqlite_path(DATABASE_URL)
+            except ValueError as e:
+                print(f"Error parsing DATABASE_URL: {e}")
+                sys.exit(1)
     
     print(f"Database path: {db_path}")
     
