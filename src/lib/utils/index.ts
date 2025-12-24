@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import isToday from 'dayjs/plugin/isToday';
 import isYesterday from 'dayjs/plugin/isYesterday';
+import sanitizeHtml from 'sanitize-html';
 
 dayjs.extend(relativeTime);
 dayjs.extend(isToday);
@@ -68,15 +69,50 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 	return content;
 };
 
-export const sanitizeResponseContent = (content: string) => {
-	return content
+export const sanitizeResponseContent = (content: string): string => {
+	const cleaned = content
 		.replace(/<\|[a-z]*$/, '')
 		.replace(/<\|[a-z]+\|$/, '')
 		.replace(/<$/, '')
-		.replaceAll(/<\|[a-z]+\|>/g, ' ')
-		.replaceAll('<', '&lt;')
-		.replaceAll('>', '&gt;')
-		.trim();
+		.replace(/<\|[a-z]+\|>/g, ' ');
+
+	return sanitizeHtml(cleaned, {
+		allowedTags: [
+			'b',
+			'i',
+			'em',
+			'strong',
+			'u',
+			'a',
+			'p',
+			'br',
+			'ul',
+			'ol',
+			'li',
+			'blockquote',
+			'pre',
+			'code',
+			'span'
+		],
+		allowedAttributes: {
+			a: ['href', 'title', 'target', 'rel'],
+			code: ['class'], // e.g., class="language-js"
+			span: ['class'] // for inline syntax highlighting
+		},
+		// Prevent target="_blank" security issues
+		transformTags: {
+			a: (tagName, attribs) => {
+				return {
+					tagName: 'a',
+					attribs: {
+						...attribs,
+						target: '_blank',
+						rel: 'noopener noreferrer'
+					}
+				};
+			}
+		}
+	}).trim();
 };
 
 export const processResponseContent = (content: string) => {
