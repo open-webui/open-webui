@@ -1348,10 +1348,11 @@ export const getUsage = async (token: string = '') => {
 	return res;
 };
 
-export const getBackendConfig = async () => {
+export const getBackendConfig = async (tenantId: string | null = null) => {
 	let error = null;
+	const query = tenantId ? `?tenant_id=${encodeURIComponent(tenantId)}` : '';
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/config`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/config${query}`, {
 		method: 'GET',
 		credentials: 'include',
 		headers: {

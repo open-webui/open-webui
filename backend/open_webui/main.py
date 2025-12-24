@@ -110,6 +110,7 @@ from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 from open_webui.models.users import UserModel, Users
 from open_webui.models.chats import Chats
+from open_webui.models.tenants import Tenants
 
 from open_webui.config import (
     # Ollama
@@ -342,6 +343,8 @@ from open_webui.config import (
     ENABLE_WEB_LOADER_SSL_VERIFICATION,
     ENABLE_GOOGLE_DRIVE_INTEGRATION,
     UPLOAD_DIR,
+    STORAGE_PROVIDER,
+    S3_BUCKET_NAME,
     EXTERNAL_WEB_SEARCH_URL,
     EXTERNAL_WEB_SEARCH_API_KEY,
     EXTERNAL_WEB_LOADER_URL,
@@ -372,6 +375,7 @@ from open_webui.config import (
     PENDING_USER_OVERLAY_CONTENT,
     PENDING_USER_OVERLAY_TITLE,
     DEFAULT_PROMPT_SUGGESTIONS,
+    DEFAULT_PROMPT_SUGGESTIONS_LIST,
     DEFAULT_MODELS,
     DEFAULT_ARENA_MODEL,
     MODEL_ORDER_LIST,
@@ -475,6 +479,13 @@ from open_webui.env import (
     ENABLE_STAR_SESSIONS_MIDDLEWARE,
 )
 
+from open_webui.routers.luxor import rag_master_request
+from open_webui.utils.prompt_suggestions import (
+    DEFAULT_PROMPT_SUGGESTIONS_KEY,
+    build_prompt_suggestions_entry,
+    normalize_prompt_suggestions,
+    is_prompt_suggestions_stale,
+)
 
 from open_webui.utils.models import (
     get_all_models,
@@ -1743,6 +1754,104 @@ async def list_tasks_by_chat_id_endpoint(
 #
 ##################################
 
+PROMPT_SUGGESTIONS_TTL_SECONDS = int(
+    os.environ.get("PROMPT_SUGGESTIONS_TTL_SECONDS", str(7 * 24 * 60 * 60))
+)
+
+
+def _get_prompt_suggestions_map(app: FastAPI) -> dict:
+    current = app.state.config.DEFAULT_PROMPT_SUGGESTIONS
+    normalized = normalize_prompt_suggestions(current, DEFAULT_PROMPT_SUGGESTIONS_LIST)
+    if normalized != current:
+        app.state.config.DEFAULT_PROMPT_SUGGESTIONS = normalized
+    return normalized
+
+
+async def _fetch_prompt_suggestions_for_tenant(tenant_bucket: str) -> Optional[dict]:
+    if STORAGE_PROVIDER != "s3" or not S3_BUCKET_NAME:
+        return None
+
+    payload = {
+        "task": "prompt-suggestions",
+        "bucket": S3_BUCKET_NAME,
+        "tenant": tenant_bucket,
+    }
+
+    response = await rag_master_request(payload)
+    if not isinstance(response, dict):
+        return None
+
+    data = response.get("data")
+    if not isinstance(data, dict):
+        return None
+
+    suggestions = data.get("suggestions")
+    if not isinstance(suggestions, list) or not suggestions:
+        return None
+
+    generated_at = data.get("generated_at")
+    if not isinstance(generated_at, (int, float)):
+        generated_at = int(time.time())
+
+    doc_hash = data.get("doc_hash", "")
+    return build_prompt_suggestions_entry(
+        suggestions, generated_at=int(generated_at), doc_hash=str(doc_hash)
+    )
+
+
+async def _refresh_prompt_suggestions(app: FastAPI, tenant_id: str, tenant_bucket: str):
+    try:
+        entry = await _fetch_prompt_suggestions_for_tenant(tenant_bucket)
+        if not entry:
+            return
+        suggestions_map = _get_prompt_suggestions_map(app)
+        suggestions_map[tenant_id] = entry
+        app.state.config.DEFAULT_PROMPT_SUGGESTIONS = suggestions_map
+    except Exception as exc:
+        log.exception(
+            "Failed to refresh prompt suggestions for tenant %s: %s",
+            tenant_id,
+            exc,
+        )
+
+
+async def _get_prompt_suggestions_for_user(
+    request: Request, user: Optional[UserModel], tenant_override_id: Optional[str] = None
+):
+    suggestions_map = _get_prompt_suggestions_map(request.app)
+    default_entry = suggestions_map.get(DEFAULT_PROMPT_SUGGESTIONS_KEY)
+    default_suggestions = (
+        default_entry.get("suggestions", DEFAULT_PROMPT_SUGGESTIONS_LIST)
+        if isinstance(default_entry, dict)
+        else DEFAULT_PROMPT_SUGGESTIONS_LIST
+    )
+
+    tenant_id = getattr(user, "tenant_id", None) if user else None
+    if tenant_override_id and user and getattr(user, "role", None) == "admin":
+        tenant_id = tenant_override_id
+    if not tenant_id:
+        return default_suggestions
+
+    entry = suggestions_map.get(tenant_id)
+    tenant = Tenants.get_tenant_by_id(tenant_id)
+    if not tenant or not tenant.s3_bucket:
+        return default_suggestions
+
+    if not entry or not entry.get("suggestions"):
+        entry = await _fetch_prompt_suggestions_for_tenant(tenant.s3_bucket)
+        if entry:
+            suggestions_map[tenant_id] = entry
+            request.app.state.config.DEFAULT_PROMPT_SUGGESTIONS = suggestions_map
+            return entry.get("suggestions", default_suggestions)
+        return default_suggestions
+
+    if is_prompt_suggestions_stale(entry, PROMPT_SUGGESTIONS_TTL_SECONDS):
+        asyncio.create_task(
+            _refresh_prompt_suggestions(request.app, tenant_id, tenant.s3_bucket)
+        )
+
+    return entry.get("suggestions", default_suggestions)
+
 
 @app.get("/api/config")
 async def get_app_config(request: Request):
@@ -1775,6 +1884,8 @@ async def get_app_config(request: Request):
 
     if user is None:
         onboarding = user_count == 0
+
+    tenant_override_id = request.query_params.get("tenant_id") or None
 
     return {
         **({"onboarding": True} if onboarding else {}),
@@ -1832,7 +1943,9 @@ async def get_app_config(request: Request):
         **(
             {
                 "default_models": app.state.config.DEFAULT_MODELS,
-                "default_prompt_suggestions": app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
+                "default_prompt_suggestions": await _get_prompt_suggestions_for_user(
+                    request, user, tenant_override_id
+                ),
                 "user_count": user_count,
                 "code": {
                     "engine": app.state.config.CODE_EXECUTION_ENGINE,
