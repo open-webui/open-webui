@@ -12,6 +12,7 @@ from open_webui.models.channels import Channels, ChannelMember
 from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
 from sqlalchemy import or_, func, select, and_, text
+from sqlalchemy.orm import Session
 from sqlalchemy.sql import exists
 
 ####################
@@ -169,66 +170,113 @@ class MessageTable:
             db.refresh(result)
             return MessageModel.model_validate(result) if result else None
 
-    def get_message_by_id(self, id: str) -> Optional[MessageResponse]:
-        with get_db() as db:
-            message = db.get(Message, id)
-            if not message:
-                return None
+    def get_message_by_id(
+        self, id: str, db: Session = None
+    ) -> Optional[MessageResponse]:
+        if db is None:
+            with get_db() as new_db:
+                return self.get_message_by_id(id, new_db)
 
-            reply_to_message = (
-                self.get_message_by_id(message.reply_to_id)
-                if message.reply_to_id
-                else None
-            )
+        message = db.get(Message, id)
+        if not message:
+            return None
 
-            reactions = self.get_reactions_by_message_id(id)
-            thread_replies = self.get_thread_replies_by_message_id(id)
-
-            user = Users.get_user_by_id(message.user_id)
-            return MessageResponse.model_validate(
-                {
-                    **MessageModel.model_validate(message).model_dump(),
-                    "user": user.model_dump() if user else None,
-                    "reply_to_message": (
-                        reply_to_message.model_dump() if reply_to_message else None
-                    ),
-                    "latest_reply_at": (
-                        thread_replies[0].created_at if thread_replies else None
-                    ),
-                    "reply_count": len(thread_replies),
-                    "reactions": reactions,
-                }
-            )
-
-    def get_thread_replies_by_message_id(self, id: str) -> list[MessageReplyToResponse]:
-        with get_db() as db:
-            all_messages = (
-                db.query(Message)
-                .filter_by(parent_id=id)
-                .order_by(Message.created_at.desc())
-                .all()
-            )
-
-            messages = []
-            for message in all_messages:
-                reply_to_message = (
-                    self.get_message_by_id(message.reply_to_id)
-                    if message.reply_to_id
-                    else None
+        reply_to_message = None
+        if message.reply_to_id:
+            reply_to_message_obj = db.get(Message, message.reply_to_id)
+            if reply_to_message_obj:
+                reply_to_message_user = (
+                    db.query(User).filter_by(id=reply_to_message_obj.user_id).first()
                 )
-                messages.append(
-                    MessageReplyToResponse.model_validate(
+                reply_to_message = MessageUserSlimResponse.model_validate(
+                    {
+                        **MessageModel.model_validate(
+                            reply_to_message_obj
+                        ).model_dump(),
+                        "user": (
+                            UserNameResponse.model_validate(
+                                reply_to_message_user, from_attributes=True
+                            ).model_dump()
+                            if reply_to_message_user
+                            else None
+                        ),
+                    }
+                )
+
+        reactions = self.get_reactions_by_message_id(id, db)
+        thread_replies = self.get_thread_replies_by_message_id(id, db)
+
+        user = db.query(User).filter_by(id=message.user_id).first()
+        return MessageResponse.model_validate(
+            {
+                **MessageModel.model_validate(message).model_dump(),
+                "user": UserNameResponse.model_validate(
+                    user, from_attributes=True
+                ).model_dump()
+                if user
+                else None,
+                "reply_to_message": (
+                    reply_to_message.model_dump() if reply_to_message else None
+                ),
+                "latest_reply_at": (
+                    thread_replies[0].created_at if thread_replies else None
+                ),
+                "reply_count": len(thread_replies),
+                "reactions": reactions,
+            }
+        )
+
+    def get_thread_replies_by_message_id(
+        self, id: str, db: Session = None
+    ) -> list[MessageReplyToResponse]:
+        if db is None:
+            with get_db() as new_db:
+                return self.get_thread_replies_by_message_id(id, new_db)
+
+        all_messages = (
+            db.query(Message)
+            .filter_by(parent_id=id)
+            .order_by(Message.created_at.desc())
+            .all()
+        )
+
+        messages = []
+        for message in all_messages:
+            reply_to_message = None
+            if message.reply_to_id:
+                reply_to_message_obj = db.get(Message, message.reply_to_id)
+                if reply_to_message_obj:
+                    reply_to_message_user = (
+                        db.query(User)
+                        .filter_by(id=reply_to_message_obj.user_id)
+                        .first()
+                    )
+                    reply_to_message = MessageUserSlimResponse.model_validate(
                         {
-                            **MessageModel.model_validate(message).model_dump(),
-                            "reply_to_message": (
-                                reply_to_message.model_dump()
-                                if reply_to_message
+                            **MessageModel.model_validate(
+                                reply_to_message_obj
+                            ).model_dump(),
+                            "user": (
+                                UserNameResponse.model_validate(
+                                    reply_to_message_user, from_attributes=True
+                                ).model_dump()
+                                if reply_to_message_user
                                 else None
                             ),
                         }
                     )
+
+            messages.append(
+                MessageReplyToResponse.model_validate(
+                    {
+                        **MessageModel.model_validate(message).model_dump(),
+                        "reply_to_message": (
+                            reply_to_message.model_dump() if reply_to_message else None
+                        ),
+                    }
                 )
-            return messages
+            )
+        return messages
 
     def get_reply_user_ids_by_message_id(self, id: str) -> list[str]:
         with get_db() as db:
@@ -409,8 +457,10 @@ class MessageTable:
             db.refresh(result)
             return MessageReactionModel.model_validate(result) if result else None
 
-    def get_reactions_by_message_id(self, id: str) -> list[Reactions]:
-        with get_db() as db:
+    def get_reactions_by_message_id(
+        self, id: str, db: Session = None
+    ) -> list[Reactions]:
+        if db:
             # JOIN User so all user info is fetched in one query
             results = (
                 db.query(MessageReaction, User)
@@ -438,6 +488,9 @@ class MessageTable:
                 reactions[reaction.name]["count"] += 1
 
             return [Reactions(**reaction) for reaction in reactions.values()]
+        else:
+            with get_db() as db:
+                return self.get_reactions_by_message_id(id, db)
 
     def remove_reaction_by_id_and_user_id_and_name(
         self, id: str, user_id: str, name: str
