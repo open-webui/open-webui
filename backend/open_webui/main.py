@@ -73,6 +73,7 @@ from open_webui.socket.main import (
     get_token_usage,
 )
 from open_webui.routers import (
+    analytics,
     audio,
     images,
     ollama,
@@ -1240,6 +1241,9 @@ app.include_router(
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 
+# Analytics API for token usage "Wrapped" feature
+app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
+
 # SCIM 2.0 API for identity management
 if SCIM_ENABLED:
     app.include_router(scim.router, prefix="/api/v1/scim/v2", tags=["scim"])
@@ -2020,55 +2024,44 @@ class TokenGroupUpdate(BaseModel):
 # Token Usage API Endpoints
 @app.get("/api/usage/groups")
 async def get_usage_groups(user=Depends(get_verified_user)):
-    """Get all token groups with their usage"""
+    """
+    Get all token groups with their usage.
+
+    This endpoint now proactively checks for and applies resets,
+    ensuring clients always see the correct token counts even if
+    no messages have been sent since the reset time.
+
+    Response includes:
+    - models: list of model IDs in the group
+    - limit: token limit
+    - usage: {in, out, total}
+    - next_reset_at: Unix timestamp of next reset (for client-side scheduling)
+    - reset_type: 'daily' or 'rolling_window'
+    """
+    # get_token_groups now handles reset checks and returns full data
     groups = get_token_groups()
-    usage = get_token_usage()
-    
-    response = {"groups": {}}
-    
-    for group_name, group_data in groups.items():
-        usage_data = usage.get(group_name, {"in": 0, "out": 0, "total": 0})
-        
-        response["groups"][group_name] = {
-            "models": group_data.get("models", []),
-            "limit": group_data.get("limit"),
-            "usage": {
-                "in": usage_data.get("in", 0),
-                "out": usage_data.get("out", 0),
-                "total": usage_data.get("total", 0),
-            }
-        }
-    
-    return response
+
+    return {"groups": groups}
 
 
 @app.post("/api/usage/groups")
 async def create_usage_group(
-    form_data: TokenGroupCreate, 
+    form_data: TokenGroupCreate,
     user=Depends(get_verified_user)
 ):
     """Create a new token group"""
     try:
         set_token_group(form_data.name, form_data.models, form_data.limit, form_data.resetTime, form_data.resetTimezone)
-        
-        # Get the created group data
+
+        # Get the created group data (includes usage and reset info)
         groups = get_token_groups()
-        usage = get_token_usage()
-        
         group_data = groups.get(form_data.name, {})
-        usage_data = usage.get(form_data.name, {"in": 0, "out": 0, "total": 0})
-        
+
         return {
             "status": True,
             "group": {
                 "name": form_data.name,
-                "models": group_data.get("models", []),
-                "limit": group_data.get("limit"),
-                "usage": {
-                    "in": usage_data.get("in", 0),
-                    "out": usage_data.get("out", 0), 
-                    "total": usage_data.get("total", 0),
-                }
+                **group_data
             }
         }
     except Exception as e:
@@ -2086,25 +2079,16 @@ async def update_usage_group(
         success = update_token_group(name, form_data.models, form_data.limit)
         if not success:
             raise HTTPException(status_code=404, detail="Group not found")
-        
-        # Get the updated group data
+
+        # Get the updated group data (includes usage and reset info)
         groups = get_token_groups()
-        usage = get_token_usage()
-        
         group_data = groups.get(name, {})
-        usage_data = usage.get(name, {"in": 0, "out": 0, "total": 0})
-        
+
         return {
             "status": True,
             "group": {
                 "name": name,
-                "models": group_data.get("models", []),
-                "limit": group_data.get("limit"),
-                "usage": {
-                    "in": usage_data.get("in", 0),
-                    "out": usage_data.get("out", 0),
-                    "total": usage_data.get("total", 0),
-                }
+                **group_data
             }
         }
     except HTTPException:
