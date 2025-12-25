@@ -40,6 +40,14 @@ IMAGE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 router = APIRouter()
 
 
+def is_valid_uuid(string):
+    try:
+        uuid.UUID(string)
+        return True
+    except ValueError:
+        return False
+
+
 def set_image_model(request: Request, model: str):
     log.info(f"Setting image model to {model}")
     request.app.state.config.IMAGE_GENERATION_MODEL = model
@@ -843,6 +851,16 @@ async def image_edits(
 
     try:
 
+        async def load_url_image_by_id(file_id):
+            file_response = await get_file_content_by_id(file_id, user)
+            if isinstance(file_response, FileResponse):
+                file_path = file_response.path
+                with open(file_path, "rb") as f:
+                    file_bytes = f.read()
+                    image_data = base64.b64encode(file_bytes).decode("utf-8")
+                    mime_type, _ = mimetypes.guess_type(file_path)
+                return f"data:{mime_type};base64,{image_data}"
+
         async def load_url_image(data):
             if data.startswith("http://") or data.startswith("https://"):
                 r = await asyncio.to_thread(requests.get, data)
@@ -853,17 +871,10 @@ async def image_edits(
 
             elif data.startswith("/api/v1/files"):
                 file_id = data.split("/api/v1/files/")[1].split("/content")[0]
-                file_response = await get_file_content_by_id(file_id, user)
+                return await load_url_image_by_id(file_id)
 
-                if isinstance(file_response, FileResponse):
-                    file_path = file_response.path
-
-                    with open(file_path, "rb") as f:
-                        file_bytes = f.read()
-                        image_data = base64.b64encode(file_bytes).decode("utf-8")
-                        mime_type, _ = mimetypes.guess_type(file_path)
-
-                    return f"data:{mime_type};base64,{image_data}"
+            elif is_valid_uuid(data):
+                return await load_url_image_by_id(data)
 
             return data
 
