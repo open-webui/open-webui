@@ -918,6 +918,21 @@ async def model_response_handler(request, channel, message, user):
                     message.parent_id if message.parent_id else message.id,
                 )[::-1]
 
+                if message.reply_to_id:
+                    if not any(m.id == message.reply_to_id for m in thread_messages):
+                        reply_to_message = Messages.get_message_by_id(
+                            message.reply_to_id
+                        )
+                        if reply_to_message:
+                            # Insert reply_to_message before the current message
+                            for i, m in enumerate(thread_messages):
+                                if m.id == message.id:
+                                    thread_messages.insert(i, reply_to_message)
+                                    break
+                            else:
+                                # If the message is not found, append it to the beginning
+                                thread_messages.insert(0, reply_to_message)
+
                 response_message, channel = await new_message_handler(
                     request,
                     channel.id,
