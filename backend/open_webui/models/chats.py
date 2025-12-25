@@ -806,7 +806,20 @@ class ChatTable:
                 if filter.get("end_time"):
                     query = query.filter(Chat.created_at <= filter.get("end_time"))
 
-            query = query.order_by(Chat.updated_at.desc())
+                order_by = filter.get("order_by")
+                direction = filter.get("direction")
+
+                if order_by and direction:
+                    if hasattr(Chat, order_by):
+                        if direction.lower() == "asc":
+                            query = query.order_by(getattr(Chat, order_by).asc())
+                        elif direction.lower() == "desc":
+                            query = query.order_by(getattr(Chat, order_by).desc())
+                else:
+                    query = query.order_by(Chat.updated_at.desc())
+
+            else:
+                query = query.order_by(Chat.updated_at.desc())
 
             total = query.count()
 

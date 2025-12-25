@@ -206,6 +206,7 @@ def get_session_user_chat_usage_stats(
 @router.get("/stats/export", response_model=list[ChatStatsExport])
 async def export_chat_stats(
     request: Request,
+    chat_id: Optional[str] = None,
     start_time: Optional[int] = None,
     end_time: Optional[int] = None,
     page: Optional[int] = 1,
@@ -226,7 +227,13 @@ async def export_chat_stats(
         skip = (page - 1) * limit
 
         # Fetch chats with date filtering
-        filter = {}
+        filter = {"order_by": "created_at", "direction": "asc"}
+
+        if chat_id:
+            chat = Chats.get_chat_by_id(chat_id)
+            if chat:
+                filter["start_time"] = chat.created_at
+
         if start_time:
             filter["start_time"] = start_time
         if end_time:
