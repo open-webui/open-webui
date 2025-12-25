@@ -918,6 +918,15 @@ async def model_response_handler(request, channel, message, user):
                     message.parent_id if message.parent_id else message.id,
                 )[::-1]
 
+                parent_id = message.parent_id if message.parent_id else message.id
+
+                # Ensure context always includes the parent message (thread starter)
+                if parent_id:
+                    if not any(m.id == parent_id for m in thread_messages):
+                        parent_message = Messages.get_message_by_id(parent_id)
+                        if parent_message:
+                            thread_messages.insert(0, parent_message)
+
                 if message.reply_to_id:
                     if not any(m.id == message.reply_to_id for m in thread_messages):
                         reply_to_message = Messages.get_message_by_id(
@@ -978,12 +987,9 @@ async def model_response_handler(request, channel, message, user):
                     else:
                         username = message_user.name if message_user else "Unknown"
 
-                    thread_history.append(
-                        f"{username}: {replace_mentions(thread_message.content)}"
-                    )
-
-                    # Reactions
+                    # Fetch current reactions FIRST
                     reactions = Messages.get_reactions_by_message_id(thread_message.id)
+                    reaction_context = ""
                     if reactions:
                         reaction_strings = []
                         for reaction in reactions:
@@ -991,10 +997,14 @@ async def model_response_handler(request, channel, message, user):
                             reaction_strings.append(
                                 f"{reaction.name} from {', '.join(user_names)}"
                             )
-
-                        thread_history[-1] += (
-                            f"\n[Reactions: {'; '.join(reaction_strings)}]"
+                        reaction_context = (
+                            f"[CURRENT REACTIONS: {'; '.join(reaction_strings)}]\n"
                         )
+
+                    # Build message entry with reactions BEFORE content
+                    thread_history.append(
+                        f"{reaction_context}{username}: {replace_mentions(thread_message.content)}"
+                    )
 
                     thread_message_files = thread_message.data.get("files", [])
                     for file in thread_message_files:
@@ -1010,7 +1020,7 @@ async def model_response_handler(request, channel, message, user):
                     "role": "system",
                     "content": f"You are {model.get('name', model_id)}, participating in a threaded conversation. Be concise and conversational."
                     + (
-                        f"Here's the thread history:\n\n\n{thread_history_string}\n\n\nContinue the conversation naturally as {model.get('name', model_id)}, addressing the most recent message while being aware of the full context."
+                        f"Here's the thread history:\n\n\n{thread_history_string}\n\n\nContinue the conversation naturally as {model.get('name', model_id)}, addressing the most recent message while being aware of the full context.\n\nIMPORTANT: [CURRENT REACTIONS: ...] tags show the live, up-to-date state of emoji reactions on each message. These tags are the ONLY authoritative source for reaction data. Ignore any textual descriptions of reactions within message content, as those may be outdated. Always refer to the [CURRENT REACTIONS: ...] tags when discussing or analyzing reactions."
                         if thread_history
                         else ""
                     ),
