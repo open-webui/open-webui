@@ -2509,6 +2509,7 @@ async def process_chat_response(
                         ),
                     )
                     last_delta_data = None
+                    annotations_emitted = False
 
                     async def flush_pending_delta_data(threshold: int = 0):
                         nonlocal delta_count
@@ -2605,6 +2606,27 @@ async def process_chat_response(
                                         continue
 
                                     delta = choices[0].get("delta", {})
+                                    message = choices[0].get("message", {})
+
+                                    # Check for OpenAI-style annotations in delta or message and convert to sources
+                                    annotations = delta.get("annotations") or message.get("annotations")
+                                    if annotations and not annotations_emitted:
+                                        annotation_sources = []
+                                        for annotation in annotations:
+                                            if annotation.get("type") == "url_citation" and "url_citation" in annotation:
+                                                url_citation = annotation["url_citation"]
+                                                url = url_citation.get("url", "")
+                                                title = url_citation.get("title", url)
+                                                source = {
+                                                    "source": {"name": title, "url": url},
+                                                    "document": [title],
+                                                    "metadata": [{"source": url, "name": title}]
+                                                }
+                                                annotation_sources.append(source)
+                                        if annotation_sources:
+                                            annotations_emitted = True
+                                            await event_emitter({"type": "chat:completion", "data": {"sources": annotation_sources}})
+
                                     delta_tool_calls = delta.get("tool_calls", None)
 
                                     if delta_tool_calls:
