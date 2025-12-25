@@ -16,6 +16,7 @@
 
 	import { config } from '$lib/stores';
 	import Link from '$lib/components/icons/Link.svelte';
+	import ChatIcon from '$lib/components/icons/ChatBubble.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -25,6 +26,7 @@
 	export let shareHandler: Function;
 	export let cloneHandler: Function;
 	export let exportHandler: Function;
+	export let exportChatsHandler: Function; /* He definido esto */
 	export let copyLinkHandler: Function;
 
 	export let hideHandler: Function;
@@ -150,6 +152,19 @@
 
 				<div class="flex items-center">{$i18n.t('Export')}</div>
 			</DropdownMenu.Item>
+
+			<!-- Aqui empieza lo que he añadido para el front -->
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+				on:click={() => {
+					exportChatsHandler(model);
+				}}
+			>
+				<ChatIcon />
+
+				<div class="flex items-center">{$i18n.t('Export Chats')}</div>
+			</DropdownMenu.Item>
+			<!-- Hasta aqui -->
 
 			<hr class="border-gray-100 dark:border-gray-850 my-1" />
 

@@ -10,6 +10,8 @@ from open_webui.models.chats import (
     ChatResponse,
     Chats,
     ChatTitleIdResponse,
+    ChatExportResponse, 
+    simplify_chat,
 )
 from open_webui.models.tags import TagModel, Tags
 from open_webui.models.folders import Folders
@@ -28,6 +30,34 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
+
+
+############################
+# GetChatsOfAModel  - Esta es la funcion implementada
+############################
+@router.get("/model/{model_id}/all", response_model=list[ChatExportResponse])
+async def get_all_chats_by_model(model_id: str, user=Depends(get_admin_user)):
+
+    # Permite a un admin obtener todos los chats de los usuarios que usan un modelo específico.
+
+    if not ENABLE_ADMIN_CHAT_ACCESS:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Acceso prohibido",
+        )
+
+    # Llama a la función que devuelve todos los chats de un modelo
+    log.info(f"get_all_chats_by_model called with model_id={model_id}, user={user.id}")
+    try:
+        chats = Chats.get_chats_by_model_id(model_id)
+        log.info(f"Found {len(chats)} chats for model_id={model_id}")
+        return [simplify_chat(chat) for chat in chats]
+    except Exception as e:
+        log.exception(f"Error fetching chats by model_id={model_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 
 ############################
 # GetChatList

@@ -38,6 +38,8 @@
 	import EyeSlash from '../icons/EyeSlash.svelte';
 	import Eye from '../icons/Eye.svelte';
 
+	import { getChatsByModelId } from '$lib/apis/chats'; // Importar la funcion definida en apis/chats/index.ts
+
 	let shiftKey = false;
 
 	let importFiles;
@@ -165,6 +167,25 @@
 		});
 		saveAs(blob, `${model.id}-${Date.now()}.json`);
 	};
+
+		// Funcion que usa la llamada de API
+	const exportModelChatsHandler = async (model) => {
+		try {
+			const chats = await getChatsByModelId(localStorage.token, model.id);
+
+			let blob = new Blob([JSON.stringify(chats, null, 2)], {
+				type: 'application/json'
+			});
+
+			saveAs(blob, `${model.id}-chats-${Date.now()}.json`);
+
+			toast.success($i18n.t('Chats Exported'));
+		} catch (e) {
+			console.error(e);
+			toast.error($i18n.t('Failed to export chats', e));
+		}
+	};
+
 
 	onMount(async () => {
 		models = await getWorkspaceModels(localStorage.token);
@@ -390,6 +411,9 @@
 								}}
 								exportHandler={() => {
 									exportModelHandler(model);
+								}}
+								exportChatsHandler={() => {
+									exportModelChatsHandler(model);
 								}}
 								hideHandler={() => {
 									hideModelHandler(model);

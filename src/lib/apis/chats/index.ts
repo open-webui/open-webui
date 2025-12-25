@@ -283,6 +283,37 @@ export const getChatListBySearchText = async (token: string, text: string, page:
 	}));
 };
 
+
+// Esto define la llamada de la API
+export const getChatsByModelId = async (token: string, modelId: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/model/${modelId}/all`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+
 export const getChatsByFolderId = async (token: string, folderId: string) => {
 	let error = null;
 

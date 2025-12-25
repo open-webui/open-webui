@@ -1,4 +1,5 @@
 {
+	"Failed to export chats": "Error al exportar los chats",
 	" or contact the team in charge by writing to ": " o ponerte en contacto con el equipo responsable escribiendo a",
 	"-1 for no limit, or a positive integer for a specific limit": "-1 para ilimitado, o un número entero positivo para un límite específico.",
 	"'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.": "'s', 'm', 'h', 'd', 'w' o '-1' para evitar expiración.",
@@ -549,6 +550,7 @@
 	"Export All Chats (All Users)": "Exportar Todos los Chats (Todos los Usuarios)",
 	"Export chat (.json)": "Exportar chat (.json)",
 	"Export Chats": "Exportar Chats",
+	"Chats Exported":"Chats Exportados",
 	"Export Config to JSON File": "Exportar Configuración a archivo JSON",
 	"Export Functions": "Exportar Funciones",
 	"Export Models": "Exportar Modelos",
