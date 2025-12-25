@@ -97,6 +97,7 @@ class ChatResponse(BaseModel):
     meta: dict = {}
     folder_id: Optional[str] = None
 
+
 class ChatExportResponse(BaseModel):
     id: str
     title: str
@@ -105,13 +106,16 @@ class ChatExportResponse(BaseModel):
     updated_at: int
     messages: list[dict]
 
+
 class ChatTitleIdResponse(BaseModel):
     id: str
     title: str
     updated_at: int
     created_at: int
 
+
 RE_REASONING = re.compile(r"<details[\s\S]*?</details>", re.IGNORECASE)
+
 
 def simplify_chat(chat: ChatModel) -> ChatExportResponse:
     history = chat.chat.get("history", {})
@@ -140,10 +144,7 @@ def simplify_chat(chat: ChatModel) -> ChatExportResponse:
         if not content:
             continue
 
-        messages.append({
-            "role": role,
-            "content": content
-        })
+        messages.append({"role": role, "content": content})
 
     models = chat.chat.get("models", [])
     model = models[0] if isinstance(models, list) and models else None
@@ -157,14 +158,17 @@ def simplify_chat(chat: ChatModel) -> ChatExportResponse:
         messages=messages,
     )
 
+
 class ChatTable:
-    #Este es el codigo añadido
+    # Este es el codigo añadido
     def get_chats_by_model_id(self, model_id: str) -> list[ChatModel]:
         with get_db() as db:
             # Filtra los chats cuyo JSON 'chat' tenga 'models' que contenga 'model_id'
-            query = db.query(Chat).filter(
-                Chat.chat["models"].contains([model_id])
-            ).order_by(Chat.updated_at.desc())
+            query = (
+                db.query(Chat)
+                .filter(Chat.chat["models"].contains([model_id]))
+                .order_by(Chat.updated_at.desc())
+            )
 
             all_chats = query.all()
             return [ChatModel.model_validate(chat) for chat in all_chats]

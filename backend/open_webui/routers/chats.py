@@ -10,7 +10,7 @@ from open_webui.models.chats import (
     ChatResponse,
     Chats,
     ChatTitleIdResponse,
-    ChatExportResponse, 
+    ChatExportResponse,
     simplify_chat,
 )
 from open_webui.models.tags import TagModel, Tags
@@ -55,8 +55,6 @@ async def get_all_chats_by_model(model_id: str, user=Depends(get_admin_user)):
     except Exception as e:
         log.exception(f"Error fetching chats by model_id={model_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
 
 
 ############################
