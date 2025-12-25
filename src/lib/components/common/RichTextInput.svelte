@@ -925,6 +925,8 @@
 
 								const { state } = view;
 								const { $from } = state.selection;
+								if ($from.depth === 0) return false;
+
 								const lineStart = $from.before($from.depth);
 								const lineEnd = $from.after($from.depth);
 								const lineText = state.doc.textBetween(lineStart, lineEnd, '\n', '\0').trim();

@@ -967,6 +967,20 @@ async def model_response_handler(request, channel, message, user):
                         f"{username}: {replace_mentions(thread_message.content)}"
                     )
 
+                    # Reactions
+                    reactions = Messages.get_reactions_by_message_id(thread_message.id)
+                    if reactions:
+                        reaction_strings = []
+                        for reaction in reactions:
+                            user_names = [user["name"] for user in reaction.users]
+                            reaction_strings.append(
+                                f"{reaction.name} from {', '.join(user_names)}"
+                            )
+
+                        thread_history[-1] += (
+                            f"\n[Reactions: {'; '.join(reaction_strings)}]"
+                        )
+
                     thread_message_files = thread_message.data.get("files", [])
                     for file in thread_message_files:
                         if file.get("type", "") == "image":
