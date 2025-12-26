@@ -1,9 +1,12 @@
 <script lang="ts">
+	import { Confetti } from 'svelte-confetti';
+
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
 
 	import { exportChatStats } from '$lib/apis/chats';
-	import { Confetti } from 'svelte-confetti';
+	import { getVersion } from '$lib/apis';
+
 	import Check from '$lib/components/icons/Check.svelte';
 
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -14,6 +17,7 @@
 
 	export let show = false;
 	export let params = {};
+
 	let loading = false;
 	let completed = false;
 	let processedItemsCount = 0;
@@ -24,13 +28,20 @@
 			window.opener.focus();
 		}
 
+		const res = await getVersion(localStorage.token).catch(() => {
+			return null;
+		});
+
+		if (res) {
+			window.opener.postMessage({ type: 'sync:version', data: res.version }, '*');
+		}
+
 		loading = true;
 		processedItemsCount = 0;
 		total = 0;
 		let page = 1;
 
 		let allItemsLoaded = false;
-
 		while (!allItemsLoaded) {
 			const res = await exportChatStats(localStorage.token, page, params).catch(() => {
 				return null;
@@ -42,7 +53,7 @@
 
 				if (window.opener) {
 					if (res.items.length > 0) {
-						window.opener.postMessage({ type: 'export:stats:chats', data: res }, '*');
+						window.opener.postMessage({ type: 'sync:stats:chats', data: res }, '*');
 					}
 				} else {
 					console.log('No opener found to send stats back to.');
@@ -118,7 +129,8 @@
 						{$i18n.t('What is shared:')}
 					</div>
 					<ul class="list-disc list-inside space-y-0.5 ml-1 mb-2">
-						<li>{$i18n.t('Model usage counts and preferences')}</li>
+						<li>{$i18n.t('Open WebUI version')}</li>
+						<li>{$i18n.t('Model names and usage frequency')}</li>
 						<li>{$i18n.t('Message counts and response timestamps')}</li>
 						<li>{$i18n.t('Content lengths (character counts only)')}</li>
 						<li>{$i18n.t('User ratings (thumbs up/down)')}</li>
