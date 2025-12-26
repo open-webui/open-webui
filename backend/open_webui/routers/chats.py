@@ -222,6 +222,18 @@ def calculate_chat_stats(user_id, skip=0, limit=10, filter=None):
 
     chat_stats_export_list = []
 
+    def get_message_content_length(message):
+        content = message.get("content", "")
+        if isinstance(content, str):
+            return len(content)
+        elif isinstance(content, list):
+            return sum(
+                len(item.get("text", ""))
+                for item in content
+                if item.get("type") == "text"
+            )
+        return 0
+
     for chat in result.items:
         try:
             messages_map = chat.chat.get("history", {}).get("messages", {})
@@ -235,13 +247,7 @@ def calculate_chat_stats(user_id, skip=0, limit=10, filter=None):
             export_messages = {}
             for key, message in messages_map.items():
                 try:
-                    content = message.get("content", "")
-                    if isinstance(content, str):
-                        content_length = len(content)
-                    else:
-                        content_length = (
-                            0  # Handle cases where content might be None or not string
-                        )
+                    content_length = get_message_content_length(message)
 
                     # Extract rating safely
                     rating = message.get("annotation", {}).get("rating")
@@ -277,22 +283,14 @@ def calculate_chat_stats(user_id, skip=0, limit=10, filter=None):
 
             # Calculate Averages
             average_user_message_content_length = (
-                sum(
-                    len(m.get("content", ""))
-                    for m in history_user_messages
-                    if isinstance(m.get("content"), str)
-                )
+                sum(get_message_content_length(m) for m in history_user_messages)
                 / len(history_user_messages)
                 if history_user_messages
                 else 0
             )
 
             average_assistant_message_content_length = (
-                sum(
-                    len(m.get("content", ""))
-                    for m in history_assistant_messages
-                    if isinstance(m.get("content"), str)
-                )
+                sum(get_message_content_length(m) for m in history_assistant_messages)
                 / len(history_assistant_messages)
                 if history_assistant_messages
                 else 0
