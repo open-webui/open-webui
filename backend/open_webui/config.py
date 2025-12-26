@@ -2711,6 +2711,12 @@ RAG_FULL_CONTEXT = PersistentConfig(
     os.getenv("RAG_FULL_CONTEXT", "False").lower() == "true",
 )
 
+RAG_TOKEN_THRESHOLD = PersistentConfig(
+    "RAG_TOKEN_THRESHOLD",
+    "rag.token_threshold",
+    int(os.environ.get("RAG_TOKEN_THRESHOLD", "0")),
+)
+
 RAG_FILE_MAX_COUNT = PersistentConfig(
     "RAG_FILE_MAX_COUNT",
     "rag.file.max_count",

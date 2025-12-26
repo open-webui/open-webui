@@ -1026,9 +1026,15 @@ async def get_sources_from_items(
                     "metadatas": [[{"url": item.get("url"), "name": item.get("url")}]],
                 }
         elif item.get("type") == "file":
+            file_bypassed_rag = False
+            if item.get("id"):
+                file_object = Files.get_file_by_id(item.get("id"))
+                if file_object and file_object.meta:
+                    file_bypassed_rag = file_object.meta.get("bypass_rag", False)
             if (
                 item.get("context") == "full"
                 or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
+                or file_bypassed_rag
             ):
                 if item.get("file", {}).get("data", {}).get("content", ""):
                     # Manual Full Mode Toggle
