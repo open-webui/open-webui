@@ -414,7 +414,7 @@
 					submitHandler();
 				}}
 			>
-				<div class="w-full">
+				<div class="w-full px-1">
 					<div class="flex flex-col md:flex-row gap-4 w-full">
 						<div class="self-center md:self-start flex justify-center my-2 shrink-0">
 							<div class="self-center">
@@ -604,8 +604,6 @@
 						</div>
 					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
-
 					<div class="my-2">
 						<div class="flex w-full justify-between">
 							<div class=" self-center text-xs font-medium text-gray-500">
@@ -690,13 +688,9 @@
 						{/if}
 					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
-
 					<div class="my-2">
 						<Knowledge bind:selectedItems={knowledge} />
 					</div>
-
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="my-2">
 						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools ?? []} />
