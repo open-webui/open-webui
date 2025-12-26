@@ -26,12 +26,12 @@
 	const syncStats = async () => {
 		if (window.opener) {
 			window.opener.focus();
+			window.opener.postMessage({ type: 'sync:start' }, '*');
 		}
 
 		const res = await getVersion(localStorage.token).catch(() => {
 			return null;
 		});
-
 		if (res) {
 			window.opener.postMessage({ type: 'sync:version', data: res }, '*');
 		}
@@ -69,6 +69,10 @@
 			}
 		}
 
+		// send sync complete message
+		if (window.opener) {
+			window.opener.postMessage({ type: 'sync:complete' }, '*');
+		}
 		loading = false;
 		completed = true;
 	};
