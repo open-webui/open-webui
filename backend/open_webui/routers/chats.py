@@ -274,6 +274,8 @@ async def export_chat_stats(
 
                         # Extract rating safely
                         rating = message.get("annotation", {}).get("rating")
+                        tags = message.get("annotation", {}).get("tags")
+
                         message_stat = MessageStats(
                             id=message.get("id"),
                             role=message.get("role"),
@@ -282,6 +284,7 @@ async def export_chat_stats(
                             content_length=content_length,
                             token_count=None,  # Populate if available, e.g. message.get("info", {}).get("token_count")
                             rating=rating,
+                            tags=tags,
                         )
 
                         export_messages[key] = message_stat

@@ -218,6 +218,7 @@ class MessageStats(BaseModel):
     token_count: Optional[int] = None
     timestamp: Optional[int] = None
     rating: Optional[int] = None  # Derived from message.annotation.rating
+    tags: Optional[list[str]] = None  # Derived from message.annotation.tags
 
 
 class ChatHistoryStats(BaseModel):
