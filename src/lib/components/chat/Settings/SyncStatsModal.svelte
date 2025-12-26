@@ -33,7 +33,7 @@
 		});
 
 		if (res) {
-			window.opener.postMessage({ type: 'sync:version', data: res.version }, '*');
+			window.opener.postMessage({ type: 'sync:version', data: res }, '*');
 		}
 
 		loading = true;
