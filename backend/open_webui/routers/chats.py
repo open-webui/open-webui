@@ -210,7 +210,7 @@ class ChatStatsExportList(BaseModel):
 
 
 @router.get("/stats/export", response_model=ChatStatsExportList)
-async def export_chat_stats(
+def export_chat_stats(
     request: Request,
     chat_id: Optional[str] = None,
     start_time: Optional[int] = None,
