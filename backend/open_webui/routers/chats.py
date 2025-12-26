@@ -197,13 +197,19 @@ def get_session_user_chat_usage_stats(
         )
 
 
-
 ############################
 # GetChatStatsExport
 ############################
 
 
-@router.get("/stats/export", response_model=list[ChatStatsExport])
+class ChatStatsExportList(BaseModel):
+    type: str = "chats"
+    items: list[ChatStatsExport]
+    total: int
+    page: int
+
+
+@router.get("/stats/export", response_model=ChatStatsExportList)
 async def export_chat_stats(
     request: Request,
     chat_id: Optional[str] = None,
@@ -264,7 +270,9 @@ async def export_chat_stats(
                 if isinstance(content, str):
                     content_length = len(content)
                 else:
-                    content_length = 0  # Handle cases where content might be None or not string
+                    content_length = (
+                        0  # Handle cases where content might be None or not string
+                    )
 
                 # Extract rating safely
                 rating = message.get("annotation", {}).get("rating")
@@ -372,14 +380,15 @@ async def export_chat_stats(
                 )
             )
 
-        return chat_stats_export_list
+        return ChatStatsExportList(
+            items=chat_stats_export_list, total=result.total, page=page
+        )
 
     except Exception as e:
         log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
         )
-
 
 
 @router.delete("/", response_model=bool)
