@@ -350,7 +350,7 @@ def group_to_scim(group: GroupModel, request: Request) -> SCIMGroup:
     member_ids = Groups.get_group_user_ids_by_id(group.id)
     members = []
 
-    for user_id in member_ids:
+    for user_id in (member_ids or []):
         user = Users.get_user_by_id(user_id)
         if user:
             members.append(
