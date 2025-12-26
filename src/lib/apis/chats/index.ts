@@ -1166,3 +1166,44 @@ export const archiveAllChats = async (token: string) => {
 
 	return res;
 };
+export const exportChatStats = async (token: string, page: number = 1, params: object = {}) => {
+	let error = null;
+
+	const searchParams = new URLSearchParams();
+	searchParams.append('page', `${page}`);
+
+	if (params) {
+		for (const [key, value] of Object.entries(params)) {
+			searchParams.append(key, `${value}`);
+		}
+	}
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/stats/export?${searchParams.toString()}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+

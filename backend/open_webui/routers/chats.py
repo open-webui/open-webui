@@ -228,8 +228,7 @@ async def export_chat_stats(
         )
 
     try:
-        # Default pagination
-        limit = 50
+        limit = 100
         skip = (page - 1) * limit
 
         # Fetch chats with date filtering
@@ -255,121 +254,125 @@ async def export_chat_stats(
         chat_stats_export_list = []
 
         for chat in result.items:
-            messages_map = chat.chat.get("history", {}).get("messages", {})
-            message_id = chat.chat.get("history", {}).get("currentId")
+            try:
+                messages_map = chat.chat.get("history", {}).get("messages", {})
+                message_id = chat.chat.get("history", {}).get("currentId")
 
-            history_models = {}
-            history_message_count = len(messages_map)
-            history_user_messages = []
-            history_assistant_messages = []
+                history_models = {}
+                history_message_count = len(messages_map)
+                history_user_messages = []
+                history_assistant_messages = []
 
-            # --- Detailed Message Stats ---
-            export_messages = {}
-            for key, message in messages_map.items():
-                content = message.get("content", "")
-                if isinstance(content, str):
-                    content_length = len(content)
-                else:
-                    content_length = (
-                        0  # Handle cases where content might be None or not string
+                export_messages = {}
+                for key, message in messages_map.items():
+                    try:
+                        content = message.get("content", "")
+                        if isinstance(content, str):
+                            content_length = len(content)
+                        else:
+                            content_length = 0  # Handle cases where content might be None or not string
+
+                        # Extract rating safely
+                        rating = message.get("annotation", {}).get("rating")
+                        message_stat = MessageStats(
+                            id=message.get("id"),
+                            role=message.get("role"),
+                            model=message.get("model"),
+                            timestamp=message.get("timestamp"),
+                            content_length=content_length,
+                            token_count=None,  # Populate if available, e.g. message.get("info", {}).get("token_count")
+                            rating=rating,
+                        )
+
+                        export_messages[key] = message_stat
+
+                        # --- Aggregation Logic (copied/adapted from usage stats) ---
+                        role = message.get("role", "")
+                        if role == "user":
+                            history_user_messages.append(message)
+                        elif role == "assistant":
+                            history_assistant_messages.append(message)
+                            model = message.get("model")
+                            if model:
+                                if model not in history_models:
+                                    history_models[model] = 0
+                                history_models[model] += 1
+                    except Exception as e:
+                        log.debug(f"Error processing message {key}: {e}")
+                        continue
+
+                # Calculate Averages
+                average_user_message_content_length = (
+                    sum(
+                        len(m.get("content", ""))
+                        for m in history_user_messages
+                        if isinstance(m.get("content"), str)
                     )
-
-                # Extract rating safely
-                rating = message.get("annotation", {}).get("rating")
-
-                export_messages[key] = MessageStats(
-                    id=message.get("id"),
-                    role=message.get("role"),
-                    model=message.get("model"),
-                    timestamp=message.get("timestamp"),
-                    content_length=content_length,
-                    token_count=None,  # Populate if available, e.g. message.get("info", {}).get("token_count")
-                    rating=rating,
+                    / len(history_user_messages)
+                    if history_user_messages
+                    else 0
                 )
 
-                # --- Aggregation Logic (copied/adapted from usage stats) ---
-                role = message.get("role", "")
-                if role == "user":
-                    history_user_messages.append(message)
-                elif role == "assistant":
-                    history_assistant_messages.append(message)
-                    model = message.get("model")
-                    if model:
-                        if model not in history_models:
-                            history_models[model] = 0
-                        history_models[model] += 1
-
-            # Calculate Averages
-            average_user_message_content_length = (
-                sum(
-                    len(m.get("content", ""))
-                    for m in history_user_messages
-                    if isinstance(m.get("content"), str)
+                average_assistant_message_content_length = (
+                    sum(
+                        len(m.get("content", ""))
+                        for m in history_assistant_messages
+                        if isinstance(m.get("content"), str)
+                    )
+                    / len(history_assistant_messages)
+                    if history_assistant_messages
+                    else 0
                 )
-                / len(history_user_messages)
-                if history_user_messages
-                else 0
-            )
 
-            average_assistant_message_content_length = (
-                sum(
-                    len(m.get("content", ""))
-                    for m in history_assistant_messages
-                    if isinstance(m.get("content"), str)
+                # Response Times
+                response_times = []
+                for message in history_assistant_messages:
+                    user_message_id = message.get("parentId", None)
+                    if user_message_id and user_message_id in messages_map:
+                        user_message = messages_map[user_message_id]
+                        # Ensure timestamps exist
+                        t1 = message.get("timestamp")
+                        t0 = user_message.get("timestamp")
+                        if t1 and t0:
+                            response_times.append(t1 - t0)
+
+                average_response_time = (
+                    sum(response_times) / len(response_times) if response_times else 0
                 )
-                / len(history_assistant_messages)
-                if history_assistant_messages
-                else 0
-            )
 
-            # Response Times
-            response_times = []
-            for message in history_assistant_messages:
-                user_message_id = message.get("parentId", None)
-                if user_message_id and user_message_id in messages_map:
-                    user_message = messages_map[user_message_id]
-                    # Ensure timestamps exist
-                    t1 = message.get("timestamp")
-                    t0 = user_message.get("timestamp")
-                    if t1 and t0:
-                        response_times.append(t1 - t0)
+                # Current Message List Logic (Main path)
+                message_list = get_message_list(messages_map, message_id)
+                message_count = len(message_list)
+                models = {}
+                for message in reversed(message_list):
+                    if message.get("role") == "assistant":
+                        model = message.get("model")
+                        if model:
+                            if model not in models:
+                                models[model] = 0
+                            models[model] += 1
 
-            average_response_time = (
-                sum(response_times) / len(response_times) if response_times else 0
-            )
+                # Construct Aggregate Stats
+                stats = AggregateChatStats(
+                    average_response_time=average_response_time,
+                    average_user_message_content_length=average_user_message_content_length,
+                    average_assistant_message_content_length=average_assistant_message_content_length,
+                    models=models,
+                    message_count=message_count,
+                    history_models=history_models,
+                    history_message_count=history_message_count,
+                    history_user_message_count=len(history_user_messages),
+                    history_assistant_message_count=len(history_assistant_messages),
+                )
 
-            # Current Message List Logic (Main path)
-            message_list = get_message_list(messages_map, message_id)
-            message_count = len(message_list)
-            models = {}
-            for message in reversed(message_list):
-                if message.get("role") == "assistant":
-                    model = message.get("model")
-                    if model:
-                        if model not in models:
-                            models[model] = 0
-                        models[model] += 1
+                # Construct Chat Body
+                chat_body = ChatBody(
+                    history=ChatHistoryStats(
+                        messages=export_messages, currentId=message_id
+                    )
+                )
 
-            # Construct Aggregate Stats
-            stats = AggregateChatStats(
-                average_response_time=average_response_time,
-                average_user_message_content_length=average_user_message_content_length,
-                average_assistant_message_content_length=average_assistant_message_content_length,
-                models=models,
-                message_count=message_count,
-                history_models=history_models,
-                history_message_count=history_message_count,
-                history_user_message_count=len(history_user_messages),
-                history_assistant_message_count=len(history_assistant_messages),
-            )
-
-            # Construct Chat Body
-            chat_body = ChatBody(
-                history=ChatHistoryStats(messages=export_messages, currentId=message_id)
-            )
-
-            chat_stats_export_list.append(
-                ChatStatsExport(
+                chat_stat = ChatStatsExport(
                     id=chat.id,
                     user_id=chat.user_id,
                     created_at=chat.created_at,
@@ -378,7 +381,11 @@ async def export_chat_stats(
                     stats=stats,
                     chat=chat_body,
                 )
-            )
+
+                chat_stats_export_list.append(chat_stat)
+            except Exception as e:
+                log.debug(f"Error exporting stats for chat {chat.id}: {e}")
+                continue
 
         return ChatStatsExportList(
             items=chat_stats_export_list, total=result.total, page=page
