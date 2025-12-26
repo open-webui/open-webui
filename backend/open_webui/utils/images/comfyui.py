@@ -79,9 +79,10 @@ def get_images(ws, prompt, client_id, base_url, api_key):
             continue  # previews are binary data
 
     history = get_history(prompt_id, base_url, api_key)[prompt_id]
-    for o in history["outputs"]:
-        for node_id in history["outputs"]:
-            node_output = history["outputs"][node_id]
+    for node_id in history["outputs"]:
+        node_output = history["outputs"][node_id]
+        # Only include images from SaveImage or PreviewImage nodes (not intermediate outputs)
+        if node_id in prompt and prompt[node_id].get("class_type") in ["SaveImage", "PreviewImage"]:
             if "images" in node_output:
                 for image in node_output["images"]:
                     url = get_image_url(
