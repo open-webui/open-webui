@@ -90,8 +90,9 @@
 	let tokenTimer = null;
 
 	let showRefresh = false;
+
 	let showSyncStatsModal = false;
-	let syncStatsParams = {};
+	let syncStatsEventData = null;
 
 	let heartbeatInterval = null;
 
@@ -613,7 +614,7 @@
 		}
 
 		if (event.data === 'export:stats' || event.data?.type === 'export:stats') {
-			syncStatsParams = event.data?.searchParams ?? {};
+			syncStatsEventData = event.data;
 			showSyncStatsModal = true;
 		}
 	};
@@ -886,7 +887,7 @@
 {/if}
 
 {#if $config?.features.enable_community_sharing}
-	<SyncStatsModal bind:show={showSyncStatsModal} params={syncStatsParams} />
+	<SyncStatsModal bind:show={showSyncStatsModal} eventData={syncStatsEventData} />
 {/if}
 
 <Toaster

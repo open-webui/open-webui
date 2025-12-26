@@ -16,7 +16,7 @@
 	const i18n = getContext('i18n');
 
 	export let show = false;
-	export let params = {};
+	export let eventData = null;
 
 	let loading = false;
 	let completed = false;
@@ -26,14 +26,20 @@
 	const syncStats = async () => {
 		if (window.opener) {
 			window.opener.focus();
-			window.opener.postMessage({ type: 'sync:start' }, '*');
+			window.opener.postMessage(
+				{ type: 'sync:start', requestId: eventData?.requestId ?? null },
+				'*'
+			);
 		}
 
 		const res = await getVersion(localStorage.token).catch(() => {
 			return null;
 		});
 		if (res) {
-			window.opener.postMessage({ type: 'sync:version', data: res }, '*');
+			window.opener.postMessage(
+				{ type: 'sync:version', data: res, requestId: eventData?.requestId ?? null },
+				'*'
+			);
 		}
 
 		loading = true;
@@ -43,7 +49,11 @@
 
 		let allItemsLoaded = false;
 		while (!allItemsLoaded) {
-			const res = await exportChatStats(localStorage.token, page, params).catch(() => {
+			const res = await exportChatStats(
+				localStorage.token,
+				page,
+				eventData?.searchParams ?? {}
+			).catch(() => {
 				return null;
 			});
 
@@ -53,7 +63,10 @@
 
 				if (window.opener) {
 					if (res.items.length > 0) {
-						window.opener.postMessage({ type: 'sync:stats:chats', data: res }, '*');
+						window.opener.postMessage(
+							{ type: 'sync:stats:chats', data: res, requestId: eventData?.requestId ?? null },
+							'*'
+						);
 					}
 				} else {
 					console.log('No opener found to send stats back to.');
@@ -71,7 +84,10 @@
 
 		// send sync complete message
 		if (window.opener) {
-			window.opener.postMessage({ type: 'sync:complete' }, '*');
+			window.opener.postMessage(
+				{ type: 'sync:complete', requestId: eventData?.requestId ?? null },
+				'*'
+			);
 		}
 		loading = false;
 		completed = true;
