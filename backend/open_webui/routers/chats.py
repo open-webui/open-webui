@@ -228,7 +228,7 @@ def export_chat_stats(
         )
 
     try:
-        limit = 100
+        limit = 40
         skip = (page - 1) * limit
 
         # Fetch chats with date filtering
