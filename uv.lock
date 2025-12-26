@@ -1501,24 +1501,6 @@ wheels = [
 ]
 
 [[package]]
-name = "google-generativeai"
-version = "0.8.5"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "google-ai-generativelanguage" },
-    { name = "google-api-core" },
-    { name = "google-api-python-client" },
-    { name = "google-auth" },
-    { name = "protobuf" },
-    { name = "pydantic" },
-    { name = "tqdm" },
-    { name = "typing-extensions" },
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/6e/40/c42ff9ded9f09ec9392879a8e6538a00b2dc185e834a3392917626255419/google_generativeai-0.8.5-py3-none-any.whl", hash = "sha256:22b420817fb263f8ed520b33285f45976d5b21e904da32b80d4fd20c055123a2", size = 155427, upload-time = "2025-04-17T00:40:00.67Z" },
-]
-
-[[package]]
 name = "google-resumable-media"
 version = "2.7.2"
 source = { registry = "https://pypi.org/simple" }
@@ -2701,7 +2683,6 @@ dependencies = [
     { name = "google-auth-oauthlib" },
     { name = "google-cloud-storage" },
     { name = "google-genai" },
-    { name = "google-generativeai" },
     { name = "googleapis-common-protos" },
     { name = "httpx", extra = ["brotli", "cli", "http2", "socks", "zstd"] },
     { name = "langchain" },
@@ -2812,7 +2793,6 @@ requires-dist = [
     { name = "google-auth-oauthlib" },
     { name = "google-cloud-storage", specifier = "==2.19.0" },
     { name = "google-genai", specifier = "==1.15.0" },
-    { name = "google-generativeai", specifier = "==0.8.5" },
     { name = "googleapis-common-protos", specifier = "==1.63.2" },
     { name = "httpx", extras = ["brotli", "cli", "http2", "socks", "zstd"], specifier = "==0.28.1" },
     { name = "langchain", specifier = "==0.3.26" },
