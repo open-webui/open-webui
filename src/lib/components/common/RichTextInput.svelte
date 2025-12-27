@@ -32,8 +32,7 @@
 	import { gfm } from '@joplin/turndown-plugin-gfm';
 	const turndownService = new TurndownService({
 		codeBlockStyle: 'fenced',
-		headingStyle: 'atx',
-		br: '\n'
+		headingStyle: 'atx'
 	});
 	turndownService.escape = (string) => string;
 
@@ -783,17 +782,13 @@
 				if (richText) {
 					mdValue = turndownService
 						.turndown(
-							htmlValue
-								.replace(/<p><\/p>/g, '<br/>')
-								.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
+							htmlValue.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
 						)
 						.replace(/\u00a0/g, ' ');
 				} else {
 					mdValue = turndownService
 						.turndown(
 							htmlValue
-								// Replace empty paragraphs with line breaks
-								.replace(/<p><\/p>/g, '<br/>')
 								// Replace multiple spaces with non-breaking spaces
 								.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
 								// Replace tabs with non-breaking spaces (preserve indentation)
