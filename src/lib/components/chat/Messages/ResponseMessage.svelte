@@ -697,7 +697,7 @@
 											src={embed}
 											allowScripts={true}
 											allowForms={true}
-											allowSameOrigin={true}
+											allowSameOrigin={false}
 											allowPopups={true}
 										/>
 									</div>
