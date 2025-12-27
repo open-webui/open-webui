@@ -110,17 +110,19 @@
 			cancelDownload();
 			return;
 		}
+		downloading = true;
+		syncing = true;
 
 		// Get total count first
-		const _res = await exportChatStats(localStorage.token, 1, eventData?.searchParams ?? {}).catch(() => {
-			return null;
-		});
+		const _res = await exportChatStats(localStorage.token, 1, eventData?.searchParams ?? {}).catch(
+			() => {
+				return null;
+			}
+		);
 		if (_res) {
 			total = _res.total;
 		}
 
-		downloading = true;
-		syncing = true;
 		processedItemsCount = 0;
 		const resVersion = await getVersion(localStorage.token).catch(() => {
 			return null;
