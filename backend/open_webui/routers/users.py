@@ -53,13 +53,8 @@ router = APIRouter()
 # Create API Key
 @router.post("/{user_id}/api_key", response_model=ApiKey)
 async def generate_api_key(request: Request, user_id: str, admin_user=Depends(get_admin_user)):
-    # Check if API Key feature is enabled in config
-    if not request.app.state.config.ENABLE_API_KEY:
-        raise HTTPException(
-            status.HTTP_403_FORBIDDEN,
-            detail=ERROR_MESSAGES.API_KEY_CREATION_NOT_ALLOWED,
-        )
-
+    # Config check removed to force enable for Admins
+    
     api_key = create_api_key()
 
     user = Users.get_user_by_id(user_id)
