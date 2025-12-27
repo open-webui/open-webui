@@ -4,7 +4,7 @@
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
 
-	import { exportChatStats } from '$lib/apis/chats';
+	import { exportChatStats, downloadChatStats } from '$lib/apis/chats';
 	import { getVersion } from '$lib/apis';
 
 	import Check from '$lib/components/icons/Check.svelte';
@@ -18,7 +18,19 @@
 	export let show = false;
 	export let eventData = null;
 
-	let loading = false;
+	let syncing = false;
+	let downloading = false;
+	let downloadController = null;
+
+	const cancelDownload = () => {
+		if (downloadController) {
+			downloadController.abort();
+			downloading = false;
+			syncing = false;
+			downloadController = null;
+		}
+	};
+
 	let completed = false;
 	let processedItemsCount = 0;
 	let total = 0;
@@ -42,7 +54,7 @@
 			);
 		}
 
-		loading = true;
+		syncing = true;
 		processedItemsCount = 0;
 		total = 0;
 		let page = 1;
@@ -89,8 +101,105 @@
 				'*'
 			);
 		}
-		loading = false;
+		syncing = false;
 		completed = true;
+	};
+
+	const downloadHandler = async () => {
+		if (downloading) {
+			cancelDownload();
+			return;
+		}
+
+		// Get total count first
+		const _res = await exportChatStats(localStorage.token, 1, eventData?.searchParams ?? {}).catch(() => {
+			return null;
+		});
+		if (_res) {
+			total = _res.total;
+		}
+
+		downloading = true;
+		syncing = true;
+		processedItemsCount = 0;
+		const resVersion = await getVersion(localStorage.token).catch(() => {
+			return null;
+		});
+
+		const version = resVersion ? resVersion.version : '0.0.0';
+		const filename = `open-webui-stats-${version}-${Date.now()}.json`;
+
+		const searchParams = eventData?.searchParams ?? {};
+		const [res, controller] = await downloadChatStats(
+			localStorage.token,
+			searchParams.chat_id,
+			searchParams.start_time,
+			searchParams.end_time
+		).catch((error) => {
+			toast.error(error?.detail || $i18n.t('An error occurred while downloading your stats.'));
+			return [null, null];
+		});
+
+		if (res) {
+			downloadController = controller;
+			const reader = res.body.getReader();
+			const decoder = new TextDecoder();
+
+			const items = [];
+			let buffer = '';
+
+			try {
+				while (true) {
+					const { done, value } = await reader.read();
+					if (done) break;
+
+					buffer += decoder.decode(value, { stream: true });
+					const lines = buffer.split('\n');
+					buffer = lines.pop() || '';
+
+					for (const line of lines) {
+						if (line.trim() !== '') {
+							try {
+								items.push(JSON.parse(line));
+								processedItemsCount++;
+							} catch (e) {
+								console.error('Error parsing line', e);
+							}
+						}
+					}
+				}
+
+				if (buffer.trim() !== '') {
+					try {
+						items.push(JSON.parse(buffer));
+						processedItemsCount++;
+					} catch (e) {
+						console.error('Error parsing buffer', e);
+					}
+				}
+
+				if (downloading) {
+					const blob = new Blob([JSON.stringify(items)], { type: 'application/json' });
+					const url = window.URL.createObjectURL(blob);
+					const a = document.createElement('a');
+					a.href = url;
+					a.download = filename;
+					document.body.appendChild(a);
+					a.click();
+					window.URL.revokeObjectURL(url);
+				}
+			} catch (e) {
+				console.error('Download error:', e);
+			} finally {
+				downloading = false;
+				syncing = false;
+				downloadController = null;
+			}
+		} else {
+			downloading = false;
+			syncing = false;
+			downloadController = null;
+		}
 	};
 </script>
 
@@ -127,7 +236,7 @@
 					on:click={() => {
 						show = false;
 					}}
-					disabled={loading}
+					disabled={syncing}
 				>
 					<XMark className={'size-5'} />
 				</button>
@@ -166,10 +275,12 @@
 					</ul>
 				</div>
 
-				{#if loading}
-					<div class="mt-3">
+				{#if syncing}
+					<div class="mt-3 mx-1.5">
 						<div class="text-xs text-gray-500 mb-1 flex justify-between">
-							<div>{$i18n.t('Syncing stats...')}</div>
+							<div>
+								{downloading ? $i18n.t('Downloading stats...') : $i18n.t('Syncing stats...')}
+							</div>
 							<div>{Math.round((processedItemsCount / total) * 100) || 0}%</div>
 						</div>
 						<div class="w-full bg-gray-200 rounded-full h-1.5 dark:bg-gray-700">
@@ -181,23 +292,51 @@
 					</div>
 				{/if}
 
-				<div class="mt-5 flex justify-end gap-2">
+				<div class="mt-5 flex justify-between items-center gap-2">
+					<div class="text-xs text-gray-400 text-center mr-auto">
+						<button
+							class=" hover:underline px-2"
+							type="button"
+							on:click={async () => {
+								downloadHandler();
+							}}
+						>
+							{downloading ? $i18n.t('Stop Download') : $i18n.t('Download as JSON')}
+						</button>
+					</div>
+
 					<button
 						class="px-4 py-2 rounded-full text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 transition disabled:cursor-not-allowed"
-						on:click={() => (show = false)}
-						disabled={loading}
+						on:click={() => {
+							if (syncing) {
+								cancelDownload();
+								if (downloading) {
+									cancelDownload();
+								} else {
+									syncing = false;
+								}
+							} else {
+								show = false;
+							}
+						}}
 					>
 						{$i18n.t('Cancel')}
 					</button>
-					<button
-						class="px-4 py-2 rounded-full text-sm font-medium bg-black hover:bg-gray-900 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black transition flex items-center gap-2 disabled:cursor-not-allowed"
-						on:click={syncStats}
-						disabled={loading}
-					>
-						{$i18n.t('Sync')}
 
-						{#if loading}
-							<Spinner className="size-4" />
+					<button
+						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition-colors rounded-full"
+						on:click={() => {
+							syncStats();
+						}}
+						disabled={syncing}
+					>
+						{#if syncing && !downloading}
+							<div class="flex items-center gap-2">
+								<Spinner className="size-3" />
+								<span>{$i18n.t('Syncing...')}</span>
+							</div>
+						{:else}
+							{$i18n.t('Sync')}
 						{/if}
 					</button>
 				</div>

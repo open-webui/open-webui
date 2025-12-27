@@ -91,7 +91,7 @@
 
 	let showRefresh = false;
 
-	let showSyncStatsModal = false;
+	let showSyncStatsModal = true;
 	let syncStatsEventData = null;
 
 	let heartbeatInterval = null;
