@@ -381,10 +381,8 @@ async def get_user_pinned_chats(user=Depends(get_verified_user)):
 
 @router.get("/all", response_model=list[ChatResponse])
 async def get_user_chats(user=Depends(get_verified_user)):
-    return [
-        ChatResponse(**chat.model_dump())
-        for chat in Chats.get_chats_by_user_id(user.id)
-    ]
+    result = Chats.get_chats_by_user_id(user.id)
+    return [ChatResponse(**chat.model_dump()) for chat in result.items]
 
 
 ############################
