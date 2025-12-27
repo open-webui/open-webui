@@ -10,7 +10,7 @@ from fastapi.responses import Response, StreamingResponse, FileResponse
 from pydantic import BaseModel, ConfigDict
 
 
-from open_webui.models.auths import Auths
+from open_webui.models.auths import Auths, ApiKey
 from open_webui.models.oauth_sessions import OAuthSessions
 
 from open_webui.models.groups import Groups
@@ -19,7 +19,6 @@ from open_webui.models.users import (
     UserModel,
     UserGroupIdsModel,
     UserGroupIdsListResponse,
-    UserInfoListResponse,
     UserInfoListResponse,
     UserRoleUpdateForm,
     UserStatus,
@@ -38,6 +37,7 @@ from open_webui.utils.auth import (
     get_password_hash,
     get_verified_user,
     validate_password,
+    create_api_key,
 )
 from open_webui.utils.access_control import get_permissions, has_permission
 
@@ -45,6 +45,85 @@ from open_webui.utils.access_control import get_permissions, has_permission
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+############################
+# API Key Management (Admin)
+############################
+
+# Create API Key
+@router.post("/{user_id}/api_key", response_model=ApiKey)
+async def generate_api_key(request: Request, user_id: str, admin_user=Depends(get_admin_user)):
+    # Check if API Key feature is enabled in config
+    if not request.app.state.config.ENABLE_API_KEY:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.API_KEY_CREATION_NOT_ALLOWED,
+        )
+
+    api_key = create_api_key()
+
+    user = Users.get_user_by_id(user_id)
+    if user:
+        # Note: Users.update_user_api_key_by_id must be implemented in models/users.py
+        success = Users.update_user_api_key_by_id(user_id, api_key)
+        if success:
+            log.info(f"Admin {admin_user.email} created API key for user {user.email}")
+            return {
+                "api_key": api_key,
+            }
+        else:
+            raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_API_KEY_ERROR)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
+
+
+# Get API Key
+@router.get("/{user_id}/api_key", response_model=ApiKey)
+async def get_api_key(user_id: str, admin_user=Depends(get_admin_user)):
+    user = Users.get_user_by_id(user_id)
+    # Ensure we have the user object
+    if user:
+        # Check if the user has an API key set
+        # Note: Users.get_user_api_key_by_id must be implemented in models/users.py 
+        # OR ensure get_user_by_id returns the api_key field (uncommon in default models)
+        
+        # We try to fetch it specifically if the model doesn't carry it
+        api_key = Users.get_user_api_key_by_id(user_id)
+        
+        if api_key:
+            log.info(f"Admin {admin_user.email} retrieved API key for user {user.email}")
+            return {
+                "api_key": api_key,
+            }
+        else:
+            raise HTTPException(404, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
+
+
+# Delete API Key
+@router.delete("/{user_id}/api_key", response_model=bool)
+async def delete_api_key(user_id: str, admin_user=Depends(get_admin_user)):
+    user = Users.get_user_by_id(user_id)
+    if user:
+        success = Users.update_user_api_key_by_id(user_id, None)
+        if success:
+            log.info(f"Admin {admin_user.email} deleted API key for user {user.email}")
+            return success
+        else:
+            # If update returned false/None but user exists, it might be a DB error
+            raise HTTPException(500, detail="Failed to delete API Key") 
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
 
 
 ############################
