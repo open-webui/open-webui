@@ -430,7 +430,7 @@ def run_prune(form_data: PruneDataForm):
                 for kb in knowledge_bases
                 if kb.user_id in active_user_ids
             }
-            active_file_ids = get_active_file_ids(knowledge_bases)
+            active_file_ids = get_active_file_ids(knowledge_bases, active_user_ids)
 
             orphaned_counts = count_orphaned_records(form_data, active_file_ids, active_user_ids)
 
@@ -531,7 +531,7 @@ def run_prune(form_data: PruneDataForm):
 
         log.info(f"Found {len(active_kb_ids)} active knowledge bases")
 
-        active_file_ids = get_active_file_ids(knowledge_bases)
+        active_file_ids = get_active_file_ids(knowledge_bases, active_user_ids)
 
         # Stage 3: Delete orphaned database records
         log.info("Deleting orphaned database records")
@@ -657,9 +657,10 @@ def run_prune(form_data: PruneDataForm):
         # Stage 4: Clean up orphaned physical files
         log.info("Cleaning up orphaned physical files")
 
-        final_active_file_ids = get_active_file_ids()
-        final_active_kb_ids = {kb.id for kb in Knowledges.get_knowledge_bases()}
         final_active_user_ids = {user.id for user in Users.get_users()["users"]}
+        final_knowledge_bases = Knowledges.get_knowledge_bases()
+        final_active_kb_ids = {kb.id for kb in final_knowledge_bases if kb.user_id in final_active_user_ids}
+        final_active_file_ids = get_active_file_ids(final_knowledge_bases, final_active_user_ids)
 
         deleted_uploads = cleanup_orphaned_uploads(final_active_file_ids)
         if deleted_uploads > 0:

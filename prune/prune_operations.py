@@ -285,12 +285,13 @@ def count_audio_cache_files(max_age_days: Optional[int]) -> int:
     return count
 
 
-def get_active_file_ids(knowledge_bases=None) -> Set[str]:
+def get_active_file_ids(knowledge_bases=None, active_user_ids=None) -> Set[str]:
     """
     Get all file IDs that are actively referenced by knowledge bases, chats, folders, and messages.
 
     Args:
         knowledge_bases: Optional pre-fetched list of knowledge bases to avoid duplicate queries
+        active_user_ids: Optional set of active user IDs to filter knowledge bases
     """
     active_file_ids = set()
 
@@ -311,6 +312,14 @@ def get_active_file_ids(knowledge_bases=None) -> Set[str]:
         # Memory-safe processing: iterate through KBs and extract file IDs incrementally
         # We don't keep file objects in memory, just collect IDs
         for kb in knowledge_bases:
+            # CRITICAL FIX: Skip KBs owned by inactive/deleted users to maintain
+            # consistency with active_kb_ids filtering. This prevents false positives
+            # where files are considered "active" but their KB is marked as orphaned,
+            # leading to incorrectly deleted vector collections.
+            if active_user_ids is not None and kb.user_id not in active_user_ids:
+                log.debug(f"Skipping KB {kb.id} - owner {kb.user_id} not in active users")
+                continue
+
             try:
                 # Use existing API method that queries knowledge_file table
                 # get_files_by_id() performs:

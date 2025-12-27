@@ -460,7 +460,7 @@ class InteractivePruneUI:
                     for kb in knowledge_bases
                     if kb.user_id in active_user_ids
                 }
-                active_file_ids = get_active_file_ids(knowledge_bases)
+                active_file_ids = get_active_file_ids(knowledge_bases, active_user_ids)
 
                 orphaned_counts = count_orphaned_records(self.form_data, active_file_ids, active_user_ids)
 
@@ -624,7 +624,7 @@ class InteractivePruneUI:
             active_user_ids = {user.id for user in Users.get_users()["users"]}
             knowledge_bases = Knowledges.get_knowledge_bases()
             active_kb_ids = {kb.id for kb in knowledge_bases if kb.user_id in active_user_ids}
-            active_file_ids = get_active_file_ids(knowledge_bases)
+            active_file_ids = get_active_file_ids(knowledge_bases, active_user_ids)
             progress.update(task, completed=True)
 
             # Delete orphaned files
@@ -676,9 +676,10 @@ class InteractivePruneUI:
 
             # Stage 4: Cleanup physical files
             task = progress.add_task("Cleaning up orphaned uploads...", total=None)
-            final_active_file_ids = get_active_file_ids()
-            final_active_kb_ids = {kb.id for kb in Knowledges.get_knowledge_bases()}
             final_active_user_ids = {user.id for user in Users.get_users()["users"]}
+            final_knowledge_bases = Knowledges.get_knowledge_bases()
+            final_active_kb_ids = {kb.id for kb in final_knowledge_bases if kb.user_id in final_active_user_ids}
+            final_active_file_ids = get_active_file_ids(final_knowledge_bases, final_active_user_ids)
             deleted_uploads = cleanup_orphaned_uploads(final_active_file_ids)
             progress.update(task, completed=True)
             console.print(f"[green]✓[/green] Deleted {deleted_uploads} orphaned upload files")
