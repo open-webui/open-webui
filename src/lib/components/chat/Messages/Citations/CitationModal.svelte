@@ -163,7 +163,7 @@
 							{#if document.metadata?.html}
 								<iframe
 									class="w-full border-0 h-auto rounded-none"
-									sandbox="allow-scripts allow-forms allow-same-origin"
+									sandbox="allow-scripts allow-forms"
 									srcdoc={document.document}
 									title={$i18n.t('Content')}
 								></iframe>
