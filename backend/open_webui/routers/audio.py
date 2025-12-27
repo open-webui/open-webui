@@ -1151,7 +1151,6 @@ def transcription(
     user=Depends(get_verified_user),
 ):
     log.info(f"file.content_type: {file.content_type}")
-
     stt_supported_content_types = getattr(
         request.app.state.config, "STT_SUPPORTED_CONTENT_TYPES", []
     ) or ["audio/*", "video/webm"]

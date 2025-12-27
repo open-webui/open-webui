@@ -461,11 +461,12 @@ async def get_user_profile_image_by_id(user_id: str, user=Depends(get_verified_u
                     header, base64_data = user.profile_image_url.split(",", 1)
                     image_data = base64.b64decode(base64_data)
                     image_buffer = io.BytesIO(image_data)
+                    media_type = header.split(";")[0].lstrip("data:")
 
                     return StreamingResponse(
                         image_buffer,
-                        media_type="image/png",
-                        headers={"Content-Disposition": "inline; filename=image.png"},
+                        media_type=media_type,
+                        headers={"Content-Disposition": "inline"},
                     )
                 except Exception as e:
                     pass

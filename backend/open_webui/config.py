@@ -19,6 +19,7 @@ from authlib.integrations.starlette_client import OAuth
 from open_webui.env import (
     DATA_DIR,
     DATABASE_URL,
+    ENABLE_DB_MIGRATIONS,
     ENV,
     REDIS_URL,
     REDIS_KEY_PREFIX,
@@ -67,7 +68,8 @@ def run_migrations():
         log.exception(f"Error running migrations: {e}")
 
 
-run_migrations()
+if ENABLE_DB_MIGRATIONS:
+    run_migrations()
 
 
 class Config(Base):
@@ -2339,6 +2341,51 @@ else:
         PGVECTOR_IVFFLAT_LISTS = int(PGVECTOR_IVFFLAT_LISTS)
     except Exception:
         PGVECTOR_IVFFLAT_LISTS = 100
+
+# openGauss
+OPENGAUSS_DB_URL = os.environ.get("OPENGAUSS_DB_URL", DATABASE_URL)
+
+OPENGAUSS_INITIALIZE_MAX_VECTOR_LENGTH = int(
+    os.environ.get("OPENGAUSS_INITIALIZE_MAX_VECTOR_LENGTH", "1536")
+)
+
+OPENGAUSS_POOL_SIZE = os.environ.get("OPENGAUSS_POOL_SIZE", None)
+
+if OPENGAUSS_POOL_SIZE != None:
+    try:
+        OPENGAUSS_POOL_SIZE = int(OPENGAUSS_POOL_SIZE)
+    except Exception:
+        OPENGAUSS_POOL_SIZE = None
+
+OPENGAUSS_POOL_MAX_OVERFLOW = os.environ.get("OPENGAUSS_POOL_MAX_OVERFLOW", 0)
+
+if OPENGAUSS_POOL_MAX_OVERFLOW == "":
+    OPENGAUSS_POOL_MAX_OVERFLOW = 0
+else:
+    try:
+        OPENGAUSS_POOL_MAX_OVERFLOW = int(OPENGAUSS_POOL_MAX_OVERFLOW)
+    except Exception:
+        OPENGAUSS_POOL_MAX_OVERFLOW = 0
+
+OPENGAUSS_POOL_TIMEOUT = os.environ.get("OPENGAUSS_POOL_TIMEOUT", 30)
+
+if OPENGAUSS_POOL_TIMEOUT == "":
+    OPENGAUSS_POOL_TIMEOUT = 30
+else:
+    try:
+        OPENGAUSS_POOL_TIMEOUT = int(OPENGAUSS_POOL_TIMEOUT)
+    except Exception:
+        OPENGAUSS_POOL_TIMEOUT = 30
+
+OPENGAUSS_POOL_RECYCLE = os.environ.get("OPENGAUSS_POOL_RECYCLE", 3600)
+
+if OPENGAUSS_POOL_RECYCLE == "":
+    OPENGAUSS_POOL_RECYCLE = 3600
+else:
+    try:
+        OPENGAUSS_POOL_RECYCLE = int(OPENGAUSS_POOL_RECYCLE)
+    except Exception:
+        OPENGAUSS_POOL_RECYCLE = 3600
 
 # Pinecone
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY", None)

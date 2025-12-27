@@ -760,6 +760,30 @@ class PGVectorDatabaseCleaner(VectorDatabaseCleaner):
                     # Continue with other collections even if one fails
                     continue
 
+            # CRITICAL: Clean up orphaned chunks within active KB collections
+            # KB collections may contain chunks referencing deleted files
+            # This handles the case where a file is deleted but the KB collection remains active
+            orphaned_chunks_deleted = 0
+            try:
+                if self.session:
+                    log.debug("Cleaning orphaned chunks from active KB collections")
+                    result = self.session.execute(text("""
+                        DELETE FROM document_chunk dc
+                        WHERE dc.vmetadata ? 'file_id'
+                          AND NOT EXISTS (
+                            SELECT 1 FROM file f
+                            WHERE f.id = (dc.vmetadata->>'file_id')
+                          )
+                    """))
+                    orphaned_chunks_deleted = result.rowcount
+                    self.session.commit()
+                    if orphaned_chunks_deleted > 0:
+                        log.info(f"Deleted {orphaned_chunks_deleted} orphaned chunks from active collections")
+            except Exception as e:
+                log.error(f"Failed to clean orphaned chunks: {e}")
+                if self.session:
+                    self.session.rollback()
+
             # PostgreSQL-specific optimization (if we have access to session)
             try:
                 if self.session:
@@ -769,9 +793,10 @@ class PGVectorDatabaseCleaner(VectorDatabaseCleaner):
             except Exception as e:
                 log.warning(f"Failed to VACUUM PGVector table: {e}")
 
-            if deleted_count > 0:
+            total_deleted = deleted_count + orphaned_chunks_deleted
+            if total_deleted > 0:
                 log.info(
-                    f"Successfully deleted {deleted_count} orphaned PGVector collections"
+                    f"Successfully deleted {deleted_count} orphaned collections and {orphaned_chunks_deleted} orphaned chunks"
                 )
 
             return (deleted_count, None)

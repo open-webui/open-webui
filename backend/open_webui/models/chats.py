@@ -210,6 +210,48 @@ class ChatUsageStatsListResponse(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
+class MessageStats(BaseModel):
+    id: str
+    role: str
+    model: Optional[str] = None
+    content_length: int
+    token_count: Optional[int] = None
+    timestamp: Optional[int] = None
+    rating: Optional[int] = None  # Derived from message.annotation.rating
+    tags: Optional[list[str]] = None  # Derived from message.annotation.tags
+
+
+class ChatHistoryStats(BaseModel):
+    messages: dict[str, MessageStats]
+    currentId: Optional[str] = None
+
+
+class ChatBody(BaseModel):
+    history: ChatHistoryStats
+
+
+class AggregateChatStats(BaseModel):
+    average_response_time: float
+    average_user_message_content_length: float
+    average_assistant_message_content_length: float
+    models: dict[str, int]
+    message_count: int
+    history_models: dict[str, int]
+    history_message_count: int
+    history_user_message_count: int
+    history_assistant_message_count: int
+
+
+class ChatStatsExport(BaseModel):
+    id: str
+    user_id: str
+    created_at: int
+    updated_at: int
+    tags: list[str] = []
+    stats: AggregateChatStats
+    chat: ChatBody
+
+
 class ChatTable:
     def _clean_null_bytes(self, obj):
         """Recursively remove null bytes from strings in dict/list structures."""
@@ -750,14 +792,35 @@ class ChatTable:
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
     def get_chats_by_user_id(
-        self, user_id: str, skip: Optional[int] = None, limit: Optional[int] = None
+        self,
+        user_id: str,
+        filter: Optional[dict] = None,
+        skip: Optional[int] = None,
+        limit: Optional[int] = None,
     ) -> ChatListResponse:
         with get_db() as db:
-            query = (
-                db.query(Chat)
-                .filter_by(user_id=user_id)
-                .order_by(Chat.updated_at.desc())
-            )
+            query = db.query(Chat).filter_by(user_id=user_id)
+
+            if filter:
+                if filter.get("start_time"):
+                    query = query.filter(Chat.created_at >= filter.get("start_time"))
+                if filter.get("end_time"):
+                    query = query.filter(Chat.created_at <= filter.get("end_time"))
+
+                order_by = filter.get("order_by")
+                direction = filter.get("direction")
+
+                if order_by and direction:
+                    if hasattr(Chat, order_by):
+                        if direction.lower() == "asc":
+                            query = query.order_by(getattr(Chat, order_by).asc())
+                        elif direction.lower() == "desc":
+                            query = query.order_by(getattr(Chat, order_by).desc())
+                else:
+                    query = query.order_by(Chat.updated_at.desc())
+
+            else:
+                query = query.order_by(Chat.updated_at.desc())
 
             total = query.count()
 
