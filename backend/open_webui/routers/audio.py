@@ -121,27 +121,100 @@ def convert_audio_to_mp3(file_path):
         return None
 
 
-def set_faster_whisper_model(model: str, auto_update: bool = False):
+def normalize_whisper_compute_type(
+    device: str, compute_type: Optional[str]
+) -> Optional[str]:
+    """
+    Normalize compute_type input and handle device-specific remapping.
+    Returns None when the user requests auto-selection.
+    """
+    if compute_type is None:
+        return None
+
+    compute_type_str = str(compute_type).strip()
+    if not compute_type_str:
+        return None
+
+    compute_type_normalized = compute_type_str.lower()
+
+    if compute_type_normalized == "auto":
+        return None
+
+    if device == "cuda" and compute_type_normalized == "int8":
+        log.info(
+            "Mapping whisper compute_type 'int8' to 'int8_float16' for CUDA devices"
+        )
+        return "int8_float16"
+
+    return compute_type_normalized
+
+
+def select_whisper_compute_type(device: str, requested_compute_type: Optional[str]) -> str:
+    """
+    Resolve the compute_type to use by combining:
+    - user/requested compute_type (if provided)
+    - device-aware defaults (CUDA -> float16, CPU -> int8)
+    """
+    user_choice = normalize_whisper_compute_type(device, requested_compute_type)
+    compute_type = user_choice
+
+    if compute_type is None:
+        if device == "cuda":
+            compute_type = "float16"
+        elif device == "cpu":
+            compute_type = "int8"
+        else:
+            compute_type = "float32"
+
+    return compute_type
+
+
+def set_faster_whisper_model(
+    model: str, auto_update: bool = False, compute_type: Optional[str] = None
+):
     whisper_model = None
     if model:
         from faster_whisper import WhisperModel
 
-        faster_whisper_kwargs = {
-            "model_size_or_path": model,
-            "device": DEVICE_TYPE if DEVICE_TYPE and DEVICE_TYPE == "cuda" else "cpu",
-            "compute_type": "int8",
-            "download_root": WHISPER_MODEL_DIR,
-            "local_files_only": not auto_update,
-        }
+        device = "cuda" if DEVICE_TYPE == "cuda" else "cpu"
+        resolved_compute_type = select_whisper_compute_type(device, compute_type)
+        local_files_only = not auto_update
+
+        def attempt_init(local_only: bool):
+            kwargs = {
+                "model_size_or_path": model,
+                "device": device,
+                "compute_type": resolved_compute_type,
+                "download_root": WHISPER_MODEL_DIR,
+                "local_files_only": local_only,
+            }
+            try:
+                return WhisperModel(**kwargs)
+            except ValueError as e:
+                if device == "cuda" and kwargs["compute_type"] != "float16":
+                    log.warning(
+                        "WhisperModel failed with compute_type '%s' on CUDA; "
+                        "retrying with float16. Error: %s",
+                        kwargs["compute_type"],
+                        e,
+                    )
+                    kwargs["compute_type"] = "float16"
+                    return WhisperModel(**kwargs)
+                raise
 
         try:
-            whisper_model = WhisperModel(**faster_whisper_kwargs)
-        except Exception:
+            whisper_model = attempt_init(local_files_only)
+        except Exception as e:
             log.warning(
-                "WhisperModel initialization failed, attempting download with local_files_only=False"
+                "WhisperModel initialization failed with local_files_only=%s (%s); "
+                "retrying with local_files_only=False",
+                local_files_only,
+                e,
             )
-            faster_whisper_kwargs["local_files_only"] = False
-            whisper_model = WhisperModel(**faster_whisper_kwargs)
+            if local_files_only:
+                whisper_model = attempt_init(False)
+            else:
+                raise
     return whisper_model
 
 
@@ -173,6 +246,7 @@ class STTConfigForm(BaseModel):
     MODEL: str
     SUPPORTED_CONTENT_TYPES: list[str] = []
     WHISPER_MODEL: str
+    WHISPER_COMPUTE_TYPE: Optional[str] = None
     DEEPGRAM_API_KEY: str
     AZURE_API_KEY: str
     AZURE_REGION: str
@@ -212,6 +286,7 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             "MODEL": request.app.state.config.STT_MODEL,
             "SUPPORTED_CONTENT_TYPES": request.app.state.config.STT_SUPPORTED_CONTENT_TYPES,
             "WHISPER_MODEL": request.app.state.config.WHISPER_MODEL,
+            "WHISPER_COMPUTE_TYPE": request.app.state.config.WHISPER_COMPUTE_TYPE,
             "DEEPGRAM_API_KEY": request.app.state.config.DEEPGRAM_API_KEY,
             "AZURE_API_KEY": request.app.state.config.AUDIO_STT_AZURE_API_KEY,
             "AZURE_REGION": request.app.state.config.AUDIO_STT_AZURE_REGION,
@@ -253,6 +328,12 @@ async def update_audio_config(
         form_data.stt.SUPPORTED_CONTENT_TYPES
     )
 
+    normalized_compute_type = normalize_whisper_compute_type(
+        "cuda" if DEVICE_TYPE == "cuda" else "cpu",
+        form_data.stt.WHISPER_COMPUTE_TYPE,
+    )
+    request.app.state.config.WHISPER_COMPUTE_TYPE = normalized_compute_type or ""
+
     request.app.state.config.WHISPER_MODEL = form_data.stt.WHISPER_MODEL
     request.app.state.config.DEEPGRAM_API_KEY = form_data.stt.DEEPGRAM_API_KEY
     request.app.state.config.AUDIO_STT_AZURE_API_KEY = form_data.stt.AZURE_API_KEY
@@ -272,7 +353,9 @@ async def update_audio_config(
 
     if request.app.state.config.STT_ENGINE == "":
         request.app.state.faster_whisper_model = set_faster_whisper_model(
-            form_data.stt.WHISPER_MODEL, WHISPER_MODEL_AUTO_UPDATE
+            form_data.stt.WHISPER_MODEL,
+            WHISPER_MODEL_AUTO_UPDATE,
+            request.app.state.config.WHISPER_COMPUTE_TYPE or None,
         )
     else:
         request.app.state.faster_whisper_model = None
@@ -298,6 +381,7 @@ async def update_audio_config(
             "MODEL": request.app.state.config.STT_MODEL,
             "SUPPORTED_CONTENT_TYPES": request.app.state.config.STT_SUPPORTED_CONTENT_TYPES,
             "WHISPER_MODEL": request.app.state.config.WHISPER_MODEL,
+            "WHISPER_COMPUTE_TYPE": request.app.state.config.WHISPER_COMPUTE_TYPE,
             "DEEPGRAM_API_KEY": request.app.state.config.DEEPGRAM_API_KEY,
             "AZURE_API_KEY": request.app.state.config.AUDIO_STT_AZURE_API_KEY,
             "AZURE_REGION": request.app.state.config.AUDIO_STT_AZURE_REGION,
@@ -578,7 +662,9 @@ def transcription_handler(request, file_path, metadata, user=None):
     if request.app.state.config.STT_ENGINE == "":
         if request.app.state.faster_whisper_model is None:
             request.app.state.faster_whisper_model = set_faster_whisper_model(
-                request.app.state.config.WHISPER_MODEL
+                request.app.state.config.WHISPER_MODEL,
+                WHISPER_MODEL_AUTO_UPDATE,
+                request.app.state.config.WHISPER_COMPUTE_TYPE or None,
             )
 
         model = request.app.state.faster_whisper_model
