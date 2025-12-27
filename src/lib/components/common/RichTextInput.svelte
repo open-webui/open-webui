@@ -32,7 +32,8 @@
 	import { gfm } from '@joplin/turndown-plugin-gfm';
 	const turndownService = new TurndownService({
 		codeBlockStyle: 'fenced',
-		headingStyle: 'atx'
+		headingStyle: 'atx',
+		br: '\n'
 	});
 	turndownService.escape = (string) => string;
 
