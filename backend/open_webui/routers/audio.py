@@ -140,11 +140,12 @@ def normalize_whisper_compute_type(
     if compute_type_normalized == "auto":
         return None
 
-    if device == "cuda" and compute_type_normalized == "int8":
+    if device == "cuda" and compute_type_normalized in {"int8", "int8_float16"}:
         log.info(
-            "Mapping whisper compute_type 'int8' to 'int8_float16' for CUDA devices"
+            "Mapping whisper compute_type '%s' to 'float16' for CUDA devices",
+            compute_type_normalized,
         )
-        return "int8_float16"
+        return "float16"
 
     return compute_type_normalized
 
