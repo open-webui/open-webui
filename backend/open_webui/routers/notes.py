@@ -142,7 +142,7 @@ async def create_new_note(
         )
 
     try:
-        note = Notes.insert_new_note(form_data, user.id)
+        note = Notes.insert_new_note(user.id, form_data)
         return note
     except Exception as e:
         log.exception(e)

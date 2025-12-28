@@ -160,3 +160,13 @@ def get_session():
 
 
 get_db = contextmanager(get_session)
+
+
+@contextmanager
+def get_db_context(db: Optional[Session] = None):
+    if db:
+        yield db
+    else:
+        with get_db() as session:
+            yield session
+

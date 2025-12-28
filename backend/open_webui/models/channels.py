@@ -1,9 +1,11 @@
+
 import json
 import time
 import uuid
 from typing import Optional
 
-from open_webui.internal.db import Base, get_db
+from sqlalchemy.orm import Session
+from open_webui.internal.db import Base, JSONField, get_db, get_db_context
 from open_webui.models.groups import Groups
 
 from pydantic import BaseModel, ConfigDict
@@ -337,8 +339,8 @@ class ChannelTable:
             db.commit()
             return channel
 
-    def get_channels(self) -> list[ChannelModel]:
-        with get_db() as db:
+    def get_channels(self, db: Optional[Session] = None) -> list[ChannelModel]:
+        with get_db_context(db) as db:
             channels = db.query(Channel).all()
             return [ChannelModel.model_validate(channel) for channel in channels]
 
@@ -384,8 +386,8 @@ class ChannelTable:
 
         return query
 
-    def get_channels_by_user_id(self, user_id: str) -> list[ChannelModel]:
-        with get_db() as db:
+    def get_channels_by_user_id(self, user_id: str, db: Optional[Session] = None) -> list[ChannelModel]:
+        with get_db_context(db) as db:
             user_group_ids = [
                 group.id for group in Groups.get_groups_by_member_id(user_id)
             ]
@@ -683,10 +685,13 @@ class ChannelTable:
             )
             return membership is not None
 
-    def get_channel_by_id(self, id: str) -> Optional[ChannelModel]:
-        with get_db() as db:
-            channel = db.query(Channel).filter(Channel.id == id).first()
-            return ChannelModel.model_validate(channel) if channel else None
+    def get_channel_by_id(self, id: str, db: Optional[Session] = None) -> Optional[ChannelModel]:
+        try:
+            with get_db_context(db) as db:
+                channel = db.query(Channel).filter(Channel.id == id).first()
+                return ChannelModel.model_validate(channel) if channel else None
+        except Exception:
+            return None
 
     def get_channels_by_file_id(self, file_id: str) -> list[ChannelModel]:
         with get_db() as db:
