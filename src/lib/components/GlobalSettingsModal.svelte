@@ -13,9 +13,33 @@
 	import Search from '$lib/components/icons/Search.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
-	import SettingsAlt from '$lib/components/icons/SettingsAlt.svelte';
-	import UserCircle from '$lib/components/icons/UserCircle.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
+
+	// Admin Icons
+	import Cog6 from '$lib/components/icons/Cog6.svelte';
+	import Cloud from '$lib/components/icons/Cloud.svelte';
+	import Sparkles from '$lib/components/icons/Sparkles.svelte';
+	import DocumentChartBar from '$lib/components/icons/DocumentChartBar.svelte';
+	import Wrench from '$lib/components/icons/Wrench.svelte';
+	import BookOpen from '$lib/components/icons/BookOpen.svelte';
+	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
+	import CommandLine from '$lib/components/icons/CommandLine.svelte';
+	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
+	import Headphone from '$lib/components/icons/Headphone.svelte';
+	import Photo from '$lib/components/icons/Photo.svelte';
+	import AdjustmentsHorizontal from '$lib/components/icons/AdjustmentsHorizontal.svelte';
+	import Database from '$lib/components/icons/Database.svelte';
+
+	// User Icons
+	import SettingsAlt from '$lib/components/icons/SettingsAlt.svelte';
+	import AppNotification from '$lib/components/icons/AppNotification.svelte';
+	import Link from '$lib/components/icons/Link.svelte';
+	import WrenchAlt from '$lib/components/icons/WrenchAlt.svelte';
+	import Face from '$lib/components/icons/Face.svelte';
+	import SoundHigh from '$lib/components/icons/SoundHigh.svelte';
+	import DatabaseSettings from '$lib/components/icons/DatabaseSettings.svelte';
+	import UserCircle from '$lib/components/icons/UserCircle.svelte';
+	import InfoCircle from '$lib/components/icons/InfoCircle.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -32,6 +56,7 @@
 			title: 'General',
 			route: '/admin/settings/general',
 			type: 'admin',
+			icon: Cog6,
 			keywords: ['general', 'admin', 'settings', 'version', 'update', 'language', 'theme', 'data', 'users', 'roles', 'ldap', 'auth']
 		},
 		{
@@ -39,6 +64,7 @@
 			title: 'Connections',
 			route: '/admin/settings/connections',
 			type: 'admin',
+			icon: Cloud,
 			keywords: ['connections', 'ollama', 'openai', 'api', 'base url', 'proxy', 'key']
 		},
 		{
@@ -46,6 +72,7 @@
 			title: 'Models',
 			route: '/admin/settings/models',
 			type: 'admin',
+			icon: Sparkles,
 			keywords: ['models', 'pull', 'delete', 'create', 'edit', 'modelfile', 'gguf', 'import', 'export']
 		},
 		{
@@ -53,6 +80,7 @@
 			title: 'Evaluations',
 			route: '/admin/settings/evaluations',
 			type: 'admin',
+			icon: DocumentChartBar,
 			keywords: ['evaluations', 'feedback', 'rating', 'arena', 'leaderboard']
 		},
 		{
@@ -60,6 +88,7 @@
 			title: 'External Tools',
 			route: '/admin/settings/tools',
 			type: 'admin',
+			icon: Wrench,
 			keywords: ['tools', 'plugins', 'extensions', 'functions', 'openapi']
 		},
 		{
@@ -67,6 +96,7 @@
 			title: 'Documents',
 			route: '/admin/settings/documents',
 			type: 'admin',
+			icon: BookOpen,
 			keywords: ['documents', 'files', 'rag', 'knowledge', 'embedding', 'vector', 'pdf', 'ocr']
 		},
 		{
@@ -74,6 +104,7 @@
 			title: 'Web Search',
 			route: '/admin/settings/web',
 			type: 'admin',
+			icon: GlobeAlt,
 			keywords: ['web search', 'google', 'bing', 'duckduckgo', 'serp', 'searxng']
 		},
 		{
@@ -81,6 +112,7 @@
 			title: 'Code Execution',
 			route: '/admin/settings/code-execution',
 			type: 'admin',
+			icon: CommandLine,
 			keywords: ['code execution', 'python', 'sandbox', 'jupyter']
 		},
 		{
@@ -88,6 +120,7 @@
 			title: 'Interface',
 			route: '/admin/settings/interface',
 			type: 'admin',
+			icon: ChatBubbleOval,
 			keywords: ['interface', 'ui', 'appearance', 'banners', 'tasks']
 		},
 		{
@@ -95,6 +128,7 @@
 			title: 'Audio',
 			route: '/admin/settings/audio',
 			type: 'admin',
+			icon: Headphone,
 			keywords: ['audio', 'voice', 'speech', 'tts', 'stt', 'whisper']
 		},
 		{
@@ -102,6 +136,7 @@
 			title: 'Images',
 			route: '/admin/settings/images',
 			type: 'admin',
+			icon: Photo,
 			keywords: ['images', 'generation', 'dalle', 'stable diffusion', 'comfyui']
 		},
 		{
@@ -109,6 +144,7 @@
 			title: 'Pipelines',
 			route: '/admin/settings/pipelines',
 			type: 'admin',
+			icon: AdjustmentsHorizontal,
 			keywords: ['pipelines', 'workflows', 'filters', 'valves']
 		},
 		{
@@ -116,6 +152,7 @@
 			title: 'Database',
 			route: '/admin/settings/db',
 			type: 'admin',
+			icon: Database,
 			keywords: ['database', 'export', 'import', 'backup', 'chats']
 		}
 	];
@@ -126,54 +163,63 @@
 			id: 'general',
 			title: 'General',
 			type: 'user',
+			icon: SettingsAlt,
 			keywords: ['general', 'settings', 'language', 'theme', 'notifications', 'system']
 		},
 		{
 			id: 'interface',
 			title: 'Interface',
 			type: 'user',
+			icon: AppNotification,
 			keywords: ['interface', 'ui', 'appearance', 'chat', 'model', 'haptic', 'response']
 		},
 		{
 			id: 'connections',
 			title: 'Connections',
 			type: 'user',
+			icon: Link,
 			keywords: ['connections', 'api', 'manage']
 		},
 		{
 			id: 'tools',
 			title: 'External Tools',
 			type: 'user',
+			icon: WrenchAlt,
 			keywords: ['tools', 'manage']
 		},
 		{
 			id: 'personalization',
 			title: 'Personalization',
 			type: 'user',
+			icon: Face,
 			keywords: ['personalization', 'memory', 'profile', 'custom']
 		},
 		{
 			id: 'audio',
 			title: 'Audio',
 			type: 'user',
+			icon: SoundHigh,
 			keywords: ['audio', 'voice', 'speech', 'tts', 'stt']
 		},
 		{
 			id: 'data_controls',
 			title: 'Data Controls',
 			type: 'user',
+			icon: DatabaseSettings,
 			keywords: ['data', 'history', 'chats', 'export', 'delete', 'archive']
 		},
 		{
 			id: 'account',
 			title: 'Account',
 			type: 'user',
+			icon: UserCircle,
 			keywords: ['account', 'profile', 'password', 'security', 'api key']
 		},
 		{
 			id: 'about',
 			title: 'About',
 			type: 'user',
+			icon: InfoCircle,
 			keywords: ['about', 'version', 'update', 'info']
 		}
 	];
@@ -287,11 +333,7 @@
 						on:mouseenter={() => selectedIndex = index}
 					>
 						<div class="flex-shrink-0 text-gray-400 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">
-							{#if item.type === 'admin'}
-								<SettingsAlt className="size-5" />
-							{:else}
-								<UserCircle className="size-5" />
-							{/if}
+							<svelte:component this={item.icon} className="size-5" />
 						</div>
 						<div class="flex-1 min-w-0">
 							<div class="font-medium flex items-center gap-2">
