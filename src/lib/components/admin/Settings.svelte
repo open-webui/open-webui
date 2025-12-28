@@ -75,79 +75,174 @@
 			id: 'general',
 			title: 'General',
 			route: '/admin/settings/general',
-			keywords: ['general', 'admin', 'settings', 'version', 'update', 'language', 'theme']
+			keywords: [
+				'general',
+				'admin',
+				'settings',
+				'version',
+				'update',
+				'language',
+				'theme',
+				'data',
+				'users',
+				'roles',
+				'ldap',
+				'authentication',
+				'reverse proxy',
+				'webhook',
+				'community',
+				'channels'
+			]
 		},
 		{
 			id: 'connections',
 			title: 'Connections',
 			route: '/admin/settings/connections',
-			keywords: ['connections', 'ollama', 'openai', 'api', 'base url']
+			keywords: [
+				'connections',
+				'ollama',
+				'openai',
+				'api',
+				'base url',
+				'direct connections',
+				'proxy',
+				'key'
+			]
 		},
 		{
 			id: 'models',
 			title: 'Models',
 			route: '/admin/settings/models',
-			keywords: ['models', 'pull', 'delete', 'create', 'edit']
+			keywords: [
+				'models',
+				'pull',
+				'delete',
+				'create',
+				'edit',
+				'modelfile',
+				'gguf',
+				'import',
+				'export'
+			]
 		},
 		{
 			id: 'evaluations',
 			title: 'Evaluations',
 			route: '/admin/settings/evaluations',
-			keywords: ['evaluations', 'feedback', 'rating', 'arena']
+			keywords: ['evaluations', 'feedback', 'rating', 'arena', 'leaderboard', 'preference']
 		},
 		{
 			id: 'tools',
 			title: 'External Tools',
 			route: '/admin/settings/tools',
-			keywords: ['tools', 'plugins', 'extensions', 'functions']
+			keywords: ['tools', 'plugins', 'extensions', 'functions', 'openapi', 'server']
 		},
 		{
 			id: 'documents',
 			title: 'Documents',
 			route: '/admin/settings/documents',
-			keywords: ['documents', 'files', 'rag', 'knowledge', 'upload']
+			keywords: [
+				'documents',
+				'files',
+				'rag',
+				'knowledge',
+				'upload',
+				'embedding',
+				'vector db',
+				'chunk',
+				'overlap',
+				'splitter',
+				'pdf',
+				'ocr',
+				'tika',
+				'docling',
+				'unstructured'
+			]
 		},
 		{
 			id: 'web',
 			title: 'Web Search',
 			route: '/admin/settings/web',
-			keywords: ['web search', 'google', 'bing', 'duckduckgo', 'serp']
+			keywords: [
+				'web search',
+				'google',
+				'bing',
+				'duckduckgo',
+				'serp',
+				'searxng',
+				'moojeh',
+				'yacy',
+				'serper',
+				'serply',
+				'tavily',
+				'exa',
+				'perplexity',
+				'firecrawl'
+			]
 		},
 		{
 			id: 'code-execution',
 			title: 'Code Execution',
 			route: '/admin/settings/code-execution',
-			keywords: ['code execution', 'python', 'sandbox', 'compiler']
+			keywords: ['code execution', 'python', 'sandbox', 'compiler', 'jupyter', 'interpreter']
 		},
 		{
 			id: 'interface',
 			title: 'Interface',
 			route: '/admin/settings/interface',
-			keywords: ['interface', 'ui', 'appearance', 'banners', 'tasks']
+			keywords: [
+				'interface',
+				'ui',
+				'appearance',
+				'banners',
+				'tasks',
+				'prompt suggestions',
+				'title generation',
+				'tags'
+			]
 		},
 		{
 			id: 'audio',
 			title: 'Audio',
 			route: '/admin/settings/audio',
-			keywords: ['audio', 'voice', 'speech', 'tts', 'stt']
+			keywords: [
+				'audio',
+				'voice',
+				'speech',
+				'tts',
+				'stt',
+				'whisper',
+				'deepgram',
+				'azure',
+				'openai',
+				'elevenlabs'
+			]
 		},
 		{
 			id: 'images',
 			title: 'Images',
 			route: '/admin/settings/images',
-			keywords: ['images', 'generation', 'dalle', 'stable diffusion']
+			keywords: [
+				'images',
+				'generation',
+				'dalle',
+				'stable diffusion',
+				'comfyui',
+				'automatic1111',
+				'gemini'
+			]
 		},
 		{
 			id: 'pipelines',
 			title: 'Pipelines',
 			route: '/admin/settings/pipelines',
-			keywords: ['pipelines', 'workflows', 'filters']
+			keywords: ['pipelines', 'workflows', 'filters', 'valves', 'middleware']
 		},
 		{
 			id: 'db',
 			title: 'Database',
 			route: '/admin/settings/db',
-			keywords: ['database', 'export', 'import', 'backup']
+			keywords: ['database', 'export', 'import', 'backup', 'chats', 'users']
 		}
 	];
 
