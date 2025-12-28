@@ -2,7 +2,8 @@ import logging
 import time
 from typing import Optional
 
-from open_webui.internal.db import Base, JSONField, get_db
+from sqlalchemy.orm import Session
+from open_webui.internal.db import Base, JSONField, get_db, get_db_context
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, JSON
 
@@ -108,8 +109,10 @@ class FileListResponse(BaseModel):
 
 
 class FilesTable:
-    def insert_new_file(self, user_id: str, form_data: FileForm) -> Optional[FileModel]:
-        with get_db() as db:
+    def insert_new_file(
+        self, user_id: str, form_data: FileForm, db: Optional[Session] = None
+    ) -> Optional[FileModel]:
+        with get_db_context(db) as db:
             file = FileModel(
                 **{
                     **form_data.model_dump(),
@@ -132,16 +135,23 @@ class FilesTable:
                 log.exception(f"Error inserting a new file: {e}")
                 return None
 
-    def get_file_by_id(self, id: str) -> Optional[FileModel]:
-        with get_db() as db:
-            try:
-                file = db.get(File, id)
-                return FileModel.model_validate(file)
-            except Exception:
-                return None
+    def get_file_by_id(
+        self, id: str, db: Optional[Session] = None
+    ) -> Optional[FileModel]:
+        try:
+            with get_db_context(db) as db:
+                try:
+                    file = db.get(File, id)
+                    return FileModel.model_validate(file)
+                except Exception:
+                    return None
+        except Exception:
+            return None
 
-    def get_file_by_id_and_user_id(self, id: str, user_id: str) -> Optional[FileModel]:
-        with get_db() as db:
+    def get_file_by_id_and_user_id(
+        self, id: str, user_id: str, db: Optional[Session] = None
+    ) -> Optional[FileModel]:
+        with get_db_context(db) as db:
             try:
                 file = db.query(File).filter_by(id=id, user_id=user_id).first()
                 if file:
@@ -151,8 +161,10 @@ class FilesTable:
             except Exception:
                 return None
 
-    def get_file_metadata_by_id(self, id: str) -> Optional[FileMetadataResponse]:
-        with get_db() as db:
+    def get_file_metadata_by_id(
+        self, id: str, db: Optional[Session] = None
+    ) -> Optional[FileMetadataResponse]:
+        with get_db_context(db) as db:
             try:
                 file = db.get(File, id)
                 return FileMetadataResponse(
@@ -165,12 +177,14 @@ class FilesTable:
             except Exception:
                 return None
 
-    def get_files(self) -> list[FileModel]:
-        with get_db() as db:
+    def get_files(self, db: Optional[Session] = None) -> list[FileModel]:
+        with get_db_context(db) as db:
             return [FileModel.model_validate(file) for file in db.query(File).all()]
 
-    def check_access_by_user_id(self, id, user_id, permission="write") -> bool:
-        file = self.get_file_by_id(id)
+    def check_access_by_user_id(
+        self, id, user_id, permission="write", db: Optional[Session] = None
+    ) -> bool:
+        file = self.get_file_by_id(id, db=db)
         if not file:
             return False
         if file.user_id == user_id:
@@ -178,8 +192,10 @@ class FilesTable:
         # Implement additional access control logic here as needed
         return False
 
-    def get_files_by_ids(self, ids: list[str]) -> list[FileModel]:
-        with get_db() as db:
+    def get_files_by_ids(
+        self, ids: list[str], db: Optional[Session] = None
+    ) -> list[FileModel]:
+        with get_db_context(db) as db:
             return [
                 FileModel.model_validate(file)
                 for file in db.query(File)
@@ -188,8 +204,10 @@ class FilesTable:
                 .all()
             ]
 
-    def get_file_metadatas_by_ids(self, ids: list[str]) -> list[FileMetadataResponse]:
-        with get_db() as db:
+    def get_file_metadatas_by_ids(
+        self, ids: list[str], db: Optional[Session] = None
+    ) -> list[FileMetadataResponse]:
+        with get_db_context(db) as db:
             return [
                 FileMetadataResponse(
                     id=file.id,
@@ -206,17 +224,19 @@ class FilesTable:
                 .all()
             ]
 
-    def get_files_by_user_id(self, user_id: str) -> list[FileModel]:
-        with get_db() as db:
+    def get_files_by_user_id(
+        self, user_id: str, db: Optional[Session] = None
+    ) -> list[FileModel]:
+        with get_db_context(db) as db:
             return [
                 FileModel.model_validate(file)
                 for file in db.query(File).filter_by(user_id=user_id).all()
             ]
 
     def update_file_by_id(
-        self, id: str, form_data: FileUpdateForm
+        self, id: str, form_data: FileUpdateForm, db: Optional[Session] = None
     ) -> Optional[FileModel]:
-        with get_db() as db:
+        with get_db_context(db) as db:
             try:
                 file = db.query(File).filter_by(id=id).first()
 
@@ -236,8 +256,10 @@ class FilesTable:
                 log.exception(f"Error updating file completely by id: {e}")
                 return None
 
-    def update_file_hash_by_id(self, id: str, hash: str) -> Optional[FileModel]:
-        with get_db() as db:
+    def update_file_hash_by_id(
+        self, id: str, hash: str, db: Optional[Session] = None
+    ) -> Optional[FileModel]:
+        with get_db_context(db) as db:
             try:
                 file = db.query(File).filter_by(id=id).first()
                 file.hash = hash
@@ -248,8 +270,10 @@ class FilesTable:
             except Exception:
                 return None
 
-    def update_file_data_by_id(self, id: str, data: dict) -> Optional[FileModel]:
-        with get_db() as db:
+    def update_file_data_by_id(
+        self, id: str, data: dict, db: Optional[Session] = None
+    ) -> Optional[FileModel]:
+        with get_db_context(db) as db:
             try:
                 file = db.query(File).filter_by(id=id).first()
                 file.data = {**(file.data if file.data else {}), **data}
@@ -260,8 +284,10 @@ class FilesTable:
 
                 return None
 
-    def update_file_metadata_by_id(self, id: str, meta: dict) -> Optional[FileModel]:
-        with get_db() as db:
+    def update_file_metadata_by_id(
+        self, id: str, meta: dict, db: Optional[Session] = None
+    ) -> Optional[FileModel]:
+        with get_db_context(db) as db:
             try:
                 file = db.query(File).filter_by(id=id).first()
                 file.meta = {**(file.meta if file.meta else {}), **meta}
@@ -271,8 +297,10 @@ class FilesTable:
             except Exception:
                 return None
 
-    def delete_file_by_id(self, id: str) -> bool:
-        with get_db() as db:
+                return False
+
+    def delete_file_by_id(self, id: str, db: Optional[Session] = None) -> bool:
+        with get_db_context(db) as db:
             try:
                 db.query(File).filter_by(id=id).delete()
                 db.commit()
@@ -281,8 +309,8 @@ class FilesTable:
             except Exception:
                 return False
 
-    def delete_all_files(self) -> bool:
-        with get_db() as db:
+    def delete_all_files(self, db: Optional[Session] = None) -> bool:
+        with get_db_context(db) as db:
             try:
                 db.query(File).delete()
                 db.commit()

@@ -19,7 +19,7 @@ from open_webui.env import (
 from peewee_migrate import Router
 from sqlalchemy import Dialect, create_engine, MetaData, event, types
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy.orm import scoped_session, sessionmaker, Session
 from sqlalchemy.pool import QueuePool, NullPool
 from sqlalchemy.sql.type_api import _T
 from typing_extensions import Self
@@ -148,7 +148,7 @@ SessionLocal = sessionmaker(
 )
 metadata_obj = MetaData(schema=DATABASE_SCHEMA)
 Base = declarative_base(metadata=metadata_obj)
-Session = scoped_session(SessionLocal)
+ScopedSession = scoped_session(SessionLocal)
 
 
 def get_session():
@@ -160,3 +160,12 @@ def get_session():
 
 
 get_db = contextmanager(get_session)
+
+
+@contextmanager
+def get_db_context(db: Optional[Session] = None):
+    if db:
+        yield db
+    else:
+        with get_db() as session:
+            yield session

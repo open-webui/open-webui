@@ -112,7 +112,7 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class=" text-black dark:text-white rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-70 p-1.5"
+			class="z-[10000] text-black dark:text-white rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-70 p-1.5"
 			sideOffset={8}
 			side="bottom"
 			align="start"
