@@ -87,10 +87,14 @@
 
 		if (e.key === 'ArrowDown') {
 			e.preventDefault();
-			selectedIndex = (selectedIndex + 1) % filteredResults.length;
+			if (filteredResults.length > 0) {
+				selectedIndex = (selectedIndex + 1) % filteredResults.length;
+			}
 		} else if (e.key === 'ArrowUp') {
 			e.preventDefault();
-			selectedIndex = (selectedIndex - 1 + filteredResults.length) % filteredResults.length;
+			if (filteredResults.length > 0) {
+				selectedIndex = (selectedIndex - 1 + filteredResults.length) % filteredResults.length;
+			}
 		} else if (e.key === 'Enter') {
 			e.preventDefault();
 			if (filteredResults[selectedIndex]) {
