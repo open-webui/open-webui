@@ -421,14 +421,14 @@ async def get_all_models(request: Request, user: UserModel = None):
     return models
 
 
-async def get_filtered_models(models, user):
+async def get_filtered_models(models, user, db=None):
     # Filter models based on user access control
     filtered_models = []
     for model in models.get("models", []):
         model_info = Models.get_model_by_id(model["model"])
         if model_info:
             if user.id == model_info.user_id or has_access(
-                user.id, type="read", access_control=model_info.access_control
+                user.id, type="read", access_control=model_info.access_control, db=db
             ):
                 filtered_models.append(model)
     return filtered_models

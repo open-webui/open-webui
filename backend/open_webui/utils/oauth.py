@@ -1132,7 +1132,7 @@ class OAuthManager:
 
         return role
 
-    def update_user_groups(self, user, user_data, default_permissions):
+    def update_user_groups(self, user, user_data, default_permissions, db=None):
         log.debug("Running OAUTH Group management")
         oauth_claim = auth_manager_config.OAUTH_GROUPS_CLAIM
 
@@ -1161,8 +1161,8 @@ class OAuthManager:
             else:
                 user_oauth_groups = []
 
-        user_current_groups: list[GroupModel] = Groups.get_groups_by_member_id(user.id)
-        all_available_groups: list[GroupModel] = Groups.get_all_groups()
+        user_current_groups: list[GroupModel] = Groups.get_groups_by_member_id(user.id, db=db)
+        all_available_groups: list[GroupModel] = Groups.get_all_groups(db=db)
 
         # Create groups if they don't exist and creation is enabled
         if auth_manager_config.ENABLE_OAUTH_GROUP_CREATION:
@@ -1188,7 +1188,7 @@ class OAuthManager:
                         )
                         # Use determined creator ID (admin or fallback to current user)
                         created_group = Groups.insert_new_group(
-                            creator_id, new_group_form
+                            creator_id, new_group_form, db=db
                         )
                         if created_group:
                             log.info(
@@ -1206,7 +1206,7 @@ class OAuthManager:
 
             # Refresh the list of all available groups if any were created
             if groups_created:
-                all_available_groups = Groups.get_all_groups()
+                all_available_groups = Groups.get_all_groups(db=db)
                 log.debug("Refreshed list of all available groups after creation.")
 
         log.debug(f"Oauth Groups claim: {oauth_claim}")
@@ -1227,7 +1227,7 @@ class OAuthManager:
                 log.debug(
                     f"Removing user from group {group_model.name} as it is no longer in their oauth groups"
                 )
-                Groups.remove_users_from_group(group_model.id, [user.id])
+                Groups.remove_users_from_group(group_model.id, [user.id], db=db)
 
                 # In case a group is created, but perms are never assigned to the group by hitting "save"
                 group_permissions = group_model.permissions
@@ -1242,6 +1242,7 @@ class OAuthManager:
                         permissions=group_permissions,
                     ),
                     overwrite=False,
+                    db=db,
                 )
 
         # Add user to new groups
@@ -1257,7 +1258,7 @@ class OAuthManager:
                     f"Adding user to group {group_model.name} as it was found in their oauth groups"
                 )
 
-                Groups.add_users_to_group(group_model.id, [user.id])
+                Groups.add_users_to_group(group_model.id, [user.id], db=db)
 
                 # In case a group is created, but perms are never assigned to the group by hitting "save"
                 group_permissions = group_model.permissions
@@ -1272,6 +1273,7 @@ class OAuthManager:
                         permissions=group_permissions,
                     ),
                     overwrite=False,
+                    db=db,
                 )
 
     async def _process_picture_url(
@@ -1566,6 +1568,7 @@ class OAuthManager:
                     user=user,
                     user_data=user_data,
                     default_permissions=request.app.state.config.USER_PERMISSIONS,
+                    db=db,
                 )
 
         except Exception as e:

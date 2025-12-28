@@ -382,14 +382,14 @@ async def get_channel_by_id(
         )
     else:
         if user.role != "admin" and not has_access(
-            user.id, type="read", access_control=channel.access_control
+            user.id, type="read", access_control=channel.access_control, db=db
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
 
         write_access = has_access(
-            user.id, type="write", access_control=channel.access_control, strict=False
+            user.id, type="write", access_control=channel.access_control, strict=False, db=db
         )
 
         user_count = len(get_users_with_access("read", channel.access_control))
@@ -762,7 +762,7 @@ async def get_channel_messages(
             )
     else:
         if user.role != "admin" and not has_access(
-            user.id, type="read", access_control=channel.access_control
+            user.id, type="read", access_control=channel.access_control, db=db
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -830,7 +830,7 @@ async def get_pinned_channel_messages(
             )
     else:
         if user.role != "admin" and not has_access(
-            user.id, type="read", access_control=channel.access_control
+            user.id, type="read", access_control=channel.access_control, db=db
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -1228,7 +1228,7 @@ async def get_channel_message(
             )
     else:
         if user.role != "admin" and not has_access(
-            user.id, type="read", access_control=channel.access_control
+            user.id, type="read", access_control=channel.access_control, db=db
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -1282,7 +1282,7 @@ async def get_channel_message_data(
             )
     else:
         if user.role != "admin" and not has_access(
-            user.id, type="read", access_control=channel.access_control
+            user.id, type="read", access_control=channel.access_control, db=db
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -1336,7 +1336,7 @@ async def pin_channel_message(
             )
     else:
         if user.role != "admin" and not has_access(
-            user.id, type="read", access_control=channel.access_control
+            user.id, type="read", access_control=channel.access_control, db=db
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -1402,7 +1402,7 @@ async def get_channel_thread_messages(
             )
     else:
         if user.role != "admin" and not has_access(
-            user.id, type="read", access_control=channel.access_control
+            user.id, type="read", access_control=channel.access_control, db=db
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -1476,7 +1476,7 @@ async def update_message_by_id(
             user.role != "admin"
             and message.user_id != user.id
             and not has_access(
-                user.id, type="read", access_control=channel.access_control
+                user.id, type="read", access_control=channel.access_control, db=db
             )
         ):
             raise HTTPException(
@@ -1543,7 +1543,7 @@ async def add_reaction_to_message(
             )
     else:
         if user.role != "admin" and not has_access(
-            user.id, type="write", access_control=channel.access_control, strict=False
+            user.id, type="write", access_control=channel.access_control, strict=False, db=db
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -1618,7 +1618,7 @@ async def remove_reaction_by_id_and_user_id_and_name(
             )
     else:
         if user.role != "admin" and not has_access(
-            user.id, type="write", access_control=channel.access_control, strict=False
+            user.id, type="write", access_control=channel.access_control, strict=False, db=db
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -1713,6 +1713,7 @@ async def delete_message_by_id(
                 type="write",
                 access_control=channel.access_control,
                 strict=False,
+                db=db,
             )
         ):
             raise HTTPException(
