@@ -76,22 +76,22 @@
 			title: 'General',
 			route: '/admin/settings/general',
 			keywords: [
-				'general',
 				'admin',
-				'settings',
-				'version',
-				'update',
-				'language',
-				'theme',
-				'data',
-				'users',
-				'roles',
-				'ldap',
 				'authentication',
-				'reverse proxy',
-				'webhook',
+				'channels',
 				'community',
-				'channels'
+				'data',
+				'general',
+				'language',
+				'ldap',
+				'reverse proxy',
+				'roles',
+				'settings',
+				'theme',
+				'update',
+				'users',
+				'version',
+				'webhook'
 			]
 		},
 		{
@@ -99,14 +99,14 @@
 			title: 'Connections',
 			route: '/admin/settings/connections',
 			keywords: [
-				'connections',
-				'ollama',
-				'openai',
 				'api',
 				'base url',
+				'connections',
 				'direct connections',
-				'proxy',
-				'key'
+				'key',
+				'ollama',
+				'openai',
+				'proxy'
 			]
 		},
 		{
@@ -114,49 +114,69 @@
 			title: 'Models',
 			route: '/admin/settings/models',
 			keywords: [
-				'models',
-				'pull',
-				'delete',
 				'create',
+				'delete',
 				'edit',
-				'modelfile',
+				'export',
 				'gguf',
 				'import',
-				'export'
+				'modelfile',
+				'models',
+				'pull'
 			]
 		},
 		{
 			id: 'evaluations',
 			title: 'Evaluations',
 			route: '/admin/settings/evaluations',
-			keywords: ['evaluations', 'feedback', 'rating', 'arena', 'leaderboard', 'preference']
+			keywords: [
+				'arena models',
+				'arena',
+				'evaluations',
+				'feedback',
+				'leaderboard',
+				'preference',
+				'rating'
+			]
 		},
 		{
 			id: 'tools',
 			title: 'External Tools',
 			route: '/admin/settings/tools',
-			keywords: ['tools', 'plugins', 'extensions', 'functions', 'openapi', 'server']
+			keywords: [
+				'extensions',
+				'functions',
+				'mcp',
+				'openapi',
+				'plugins',
+				'server',
+				'tool servers',
+				'tools'
+			]
 		},
 		{
 			id: 'documents',
 			title: 'Documents',
 			route: '/admin/settings/documents',
 			keywords: [
-				'documents',
-				'files',
-				'rag',
-				'knowledge',
-				'upload',
-				'embedding',
-				'vector db',
 				'chunk',
-				'overlap',
-				'splitter',
-				'pdf',
-				'ocr',
-				'tika',
 				'docling',
-				'unstructured'
+				'documents',
+				'embedding',
+				'files',
+				'hybrid search',
+				'knowledge',
+				'ocr',
+				'overlap',
+				'pdf',
+				'query params',
+				'rag',
+				'splitter',
+				'tika',
+				'top k',
+				'unstructured',
+				'upload',
+				'vector db'
 			]
 		},
 		{
@@ -164,41 +184,50 @@
 			title: 'Web Search',
 			route: '/admin/settings/web',
 			keywords: [
-				'web search',
-				'google',
 				'bing',
 				'duckduckgo',
-				'serp',
-				'searxng',
+				'exa',
+				'firecrawl',
+				'google',
 				'moojeh',
-				'yacy',
+				'perplexity',
+				'searxng',
+				'serp',
 				'serper',
 				'serply',
 				'tavily',
-				'exa',
-				'perplexity',
-				'firecrawl'
+				'web search',
+				'yacy'
 			]
 		},
 		{
 			id: 'code-execution',
 			title: 'Code Execution',
 			route: '/admin/settings/code-execution',
-			keywords: ['code execution', 'python', 'sandbox', 'compiler', 'jupyter', 'interpreter']
+			keywords: [
+				'code execution',
+				'compiler',
+				'interpreter',
+				'jupyter',
+				'python',
+				'sandbox',
+				'unsafe mode'
+			]
 		},
 		{
 			id: 'interface',
 			title: 'Interface',
 			route: '/admin/settings/interface',
 			keywords: [
-				'interface',
-				'ui',
 				'appearance',
 				'banners',
-				'tasks',
+				'default models',
+				'interface',
 				'prompt suggestions',
+				'tags',
+				'tasks',
 				'title generation',
-				'tags'
+				'ui'
 			]
 		},
 		{
@@ -207,15 +236,17 @@
 			route: '/admin/settings/audio',
 			keywords: [
 				'audio',
-				'voice',
-				'speech',
-				'tts',
-				'stt',
-				'whisper',
-				'deepgram',
 				'azure',
+				'deepgram',
+				'elevenlabs',
 				'openai',
-				'elevenlabs'
+				'speech to text',
+				'speech',
+				'stt',
+				'text to speech',
+				'tts',
+				'voice',
+				'whisper'
 			]
 		},
 		{
@@ -223,26 +254,45 @@
 			title: 'Images',
 			route: '/admin/settings/images',
 			keywords: [
-				'images',
-				'generation',
-				'dalle',
-				'stable diffusion',
-				'comfyui',
 				'automatic1111',
-				'gemini'
+				'comfyui',
+				'dalle',
+				'gemini',
+				'generation',
+				'image generation',
+				'image size',
+				'images',
+				'stable diffusion',
+				'steps'
 			]
 		},
 		{
 			id: 'pipelines',
 			title: 'Pipelines',
 			route: '/admin/settings/pipelines',
-			keywords: ['pipelines', 'workflows', 'filters', 'valves', 'middleware']
+			keywords: [
+				'filters',
+				'middleware',
+				'pipelines',
+				'plugins',
+				'valves',
+				'workflows'
+			]
 		},
 		{
 			id: 'db',
 			title: 'Database',
 			route: '/admin/settings/db',
-			keywords: ['database', 'export', 'import', 'backup', 'chats', 'users']
+			keywords: [
+				'backup',
+				'chats',
+				'database',
+				'download',
+				'export',
+				'import',
+				'reset',
+				'users'
+			]
 		}
 	];
 

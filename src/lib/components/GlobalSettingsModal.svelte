@@ -41,12 +41,14 @@
 	import UserCircle from '$lib/components/icons/UserCircle.svelte';
 	import InfoCircle from '$lib/components/icons/InfoCircle.svelte';
 
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+
+	const i18n: Writable<any> = getContext('i18n');
 
 	export let show = false;
 
 	let search = '';
-	let searchInput;
+	let searchInput: HTMLInputElement;
 	let selectedIndex = 0;
 
 	// Admin Settings Data
@@ -57,7 +59,24 @@
 			route: '/admin/settings/general',
 			type: 'admin',
 			icon: Cog6,
-			keywords: ['general', 'admin', 'settings', 'version', 'update', 'language', 'theme', 'data', 'users', 'roles', 'ldap', 'auth']
+			keywords: [
+				'admin',
+				'authentication',
+				'channels',
+				'community',
+				'data',
+				'general',
+				'language',
+				'ldap',
+				'reverse proxy',
+				'roles',
+				'settings',
+				'theme',
+				'update',
+				'users',
+				'version',
+				'webhook'
+			]
 		},
 		{
 			id: 'connections',
@@ -65,7 +84,16 @@
 			route: '/admin/settings/connections',
 			type: 'admin',
 			icon: Cloud,
-			keywords: ['connections', 'ollama', 'openai', 'api', 'base url', 'proxy', 'key']
+			keywords: [
+				'api',
+				'base url',
+				'connections',
+				'direct connections',
+				'key',
+				'ollama',
+				'openai',
+				'proxy'
+			]
 		},
 		{
 			id: 'models',
@@ -73,7 +101,17 @@
 			route: '/admin/settings/models',
 			type: 'admin',
 			icon: Sparkles,
-			keywords: ['models', 'pull', 'delete', 'create', 'edit', 'modelfile', 'gguf', 'import', 'export']
+			keywords: [
+				'create',
+				'delete',
+				'edit',
+				'export',
+				'gguf',
+				'import',
+				'modelfile',
+				'models',
+				'pull'
+			]
 		},
 		{
 			id: 'evaluations',
@@ -81,7 +119,15 @@
 			route: '/admin/settings/evaluations',
 			type: 'admin',
 			icon: DocumentChartBar,
-			keywords: ['evaluations', 'feedback', 'rating', 'arena', 'leaderboard']
+			keywords: [
+				'arena models',
+				'arena',
+				'evaluations',
+				'feedback',
+				'leaderboard',
+				'preference',
+				'rating'
+			]
 		},
 		{
 			id: 'tools',
@@ -89,7 +135,16 @@
 			route: '/admin/settings/tools',
 			type: 'admin',
 			icon: Wrench,
-			keywords: ['tools', 'plugins', 'extensions', 'functions', 'openapi']
+			keywords: [
+				'extensions',
+				'functions',
+				'mcp',
+				'openapi',
+				'plugins',
+				'server',
+				'tool servers',
+				'tools'
+			]
 		},
 		{
 			id: 'documents',
@@ -97,7 +152,26 @@
 			route: '/admin/settings/documents',
 			type: 'admin',
 			icon: BookOpen,
-			keywords: ['documents', 'files', 'rag', 'knowledge', 'embedding', 'vector', 'pdf', 'ocr']
+			keywords: [
+				'chunk',
+				'docling',
+				'documents',
+				'embedding',
+				'files',
+				'hybrid search',
+				'knowledge',
+				'ocr',
+				'overlap',
+				'pdf',
+				'query params',
+				'rag',
+				'splitter',
+				'tika',
+				'top k',
+				'unstructured',
+				'upload',
+				'vector db'
+			]
 		},
 		{
 			id: 'web',
@@ -105,7 +179,22 @@
 			route: '/admin/settings/web',
 			type: 'admin',
 			icon: GlobeAlt,
-			keywords: ['web search', 'google', 'bing', 'duckduckgo', 'serp', 'searxng']
+			keywords: [
+				'bing',
+				'duckduckgo',
+				'exa',
+				'firecrawl',
+				'google',
+				'moojeh',
+				'perplexity',
+				'searxng',
+				'serp',
+				'serper',
+				'serply',
+				'tavily',
+				'web search',
+				'yacy'
+			]
 		},
 		{
 			id: 'code-execution',
@@ -113,7 +202,15 @@
 			route: '/admin/settings/code-execution',
 			type: 'admin',
 			icon: CommandLine,
-			keywords: ['code execution', 'python', 'sandbox', 'jupyter']
+			keywords: [
+				'code execution',
+				'compiler',
+				'interpreter',
+				'jupyter',
+				'python',
+				'sandbox',
+				'unsafe mode'
+			]
 		},
 		{
 			id: 'interface',
@@ -121,7 +218,17 @@
 			route: '/admin/settings/interface',
 			type: 'admin',
 			icon: ChatBubbleOval,
-			keywords: ['interface', 'ui', 'appearance', 'banners', 'tasks']
+			keywords: [
+				'appearance',
+				'banners',
+				'default models',
+				'interface',
+				'prompt suggestions',
+				'tags',
+				'tasks',
+				'title generation',
+				'ui'
+			]
 		},
 		{
 			id: 'audio',
@@ -129,7 +236,20 @@
 			route: '/admin/settings/audio',
 			type: 'admin',
 			icon: Headphone,
-			keywords: ['audio', 'voice', 'speech', 'tts', 'stt', 'whisper']
+			keywords: [
+				'audio',
+				'azure',
+				'deepgram',
+				'elevenlabs',
+				'openai',
+				'speech to text',
+				'speech',
+				'stt',
+				'text to speech',
+				'tts',
+				'voice',
+				'whisper'
+			]
 		},
 		{
 			id: 'images',
@@ -137,7 +257,18 @@
 			route: '/admin/settings/images',
 			type: 'admin',
 			icon: Photo,
-			keywords: ['images', 'generation', 'dalle', 'stable diffusion', 'comfyui']
+			keywords: [
+				'automatic1111',
+				'comfyui',
+				'dalle',
+				'gemini',
+				'generation',
+				'image generation',
+				'image size',
+				'images',
+				'stable diffusion',
+				'steps'
+			]
 		},
 		{
 			id: 'pipelines',
@@ -145,7 +276,14 @@
 			route: '/admin/settings/pipelines',
 			type: 'admin',
 			icon: AdjustmentsHorizontal,
-			keywords: ['pipelines', 'workflows', 'filters', 'valves']
+			keywords: [
+				'filters',
+				'middleware',
+				'pipelines',
+				'plugins',
+				'valves',
+				'workflows'
+			]
 		},
 		{
 			id: 'db',
@@ -153,7 +291,16 @@
 			route: '/admin/settings/db',
 			type: 'admin',
 			icon: Database,
-			keywords: ['database', 'export', 'import', 'backup', 'chats']
+			keywords: [
+				'backup',
+				'chats',
+				'database',
+				'download',
+				'export',
+				'import',
+				'reset',
+				'users'
+			]
 		}
 	];
 
@@ -164,67 +311,327 @@
 			title: 'General',
 			type: 'user',
 			icon: SettingsAlt,
-			keywords: ['general', 'settings', 'language', 'theme', 'notifications', 'system']
+			keywords: [
+				'advanced parameters',
+				'advanced params',
+				'advanced',
+				'configuration',
+				'default parameters',
+				'default settings',
+				'general settings',
+				'general',
+				'keep alive',
+				'languages',
+				'notifications',
+				'params',
+				'repeat penalty',
+				'request mode',
+				'stream response',
+				'system parameters',
+				'system prompt',
+				'system settings',
+				'temperature',
+				'theme',
+				'top k',
+				'top p',
+				'translate',
+				'webui settings'
+			]
 		},
 		{
 			id: 'interface',
 			title: 'Interface',
 			type: 'user',
 			icon: AppNotification,
-			keywords: ['interface', 'ui', 'appearance', 'chat', 'model', 'haptic', 'response']
+			keywords: [
+				'allow user location',
+				'allow voice interruption in call',
+				'always collapse code blocks',
+				'always expand details',
+				'always on web search',
+				'always play notification sound',
+				'android',
+				'auto chat tags',
+				'auto copy response to clipboard',
+				'auto title',
+				'beta',
+				'call',
+				'changelog',
+				'chat background image',
+				'chat bubble ui',
+				'chat bubble',
+				'chat direction',
+				'chat tags',
+				'chat ui',
+				'copy formatted text',
+				'dark mode',
+				'default model',
+				'design',
+				'detect artifacts automatically',
+				'display emoji in call',
+				'display username',
+				'enter key behavior',
+				'expand mode',
+				'file',
+				'floating action buttons',
+				'followup autogeneration',
+				'full width',
+				'fullscreen',
+				'haptic feedback',
+				'high contrast mode',
+				'high contrast',
+				'iframe sandbox',
+				'image compression',
+				'interface customization',
+				'interface options',
+				'landing page mode',
+				'landing page',
+				'language',
+				'layout',
+				'light mode',
+				'ltr',
+				'notifications',
+				'oled',
+				'paste large text as file',
+				'reset background',
+				'response auto copy',
+				'rich text input',
+				'rtl',
+				'scroll behavior',
+				'scroll on branch change',
+				'select model',
+				'settings',
+				'show username',
+				'stream large chunks',
+				'stylized pdf export',
+				'temporary chat',
+				'text scale',
+				'theme',
+				'title autogeneration',
+				'toast notifications',
+				'toast',
+				'ui scale',
+				'upload background',
+				'user interface',
+				'user location',
+				'vibration',
+				'voice control',
+				'web search in chat',
+				'whats new',
+				'widescreen mode',
+				'widescreen'
+			]
 		},
 		{
 			id: 'connections',
 			title: 'Connections',
 			type: 'user',
 			icon: Link,
-			keywords: ['connections', 'api', 'manage']
+			keywords: [
+				'add connection',
+				'api key',
+				'base url',
+				'connections',
+				'direct connection',
+				'manage connections',
+				'manage direct connections',
+				'ollama',
+				'openai',
+				'settings'
+			]
 		},
 		{
 			id: 'tools',
 			title: 'External Tools',
 			type: 'user',
 			icon: WrenchAlt,
-			keywords: ['tools', 'manage']
+			keywords: [
+				'add connection',
+				'external tools',
+				'manage tool servers',
+				'manage tools',
+				'mcp',
+				'settings',
+				'tool servers'
+			]
 		},
 		{
 			id: 'personalization',
 			title: 'Personalization',
 			type: 'user',
 			icon: Face,
-			keywords: ['personalization', 'memory', 'profile', 'custom']
+			keywords: [
+				'account preferences',
+				'account settings',
+				'custom instructions',
+				'custom settings',
+				'experimental',
+				'manage memories',
+				'memories',
+				'memory',
+				'personal settings',
+				'personalization',
+				'personalize',
+				'profile',
+				'user preferences'
+			]
 		},
 		{
 			id: 'audio',
 			title: 'Audio',
 			type: 'user',
 			icon: SoundHigh,
-			keywords: ['audio', 'voice', 'speech', 'tts', 'stt']
+			keywords: [
+				'audio config',
+				'audio control',
+				'audio features',
+				'audio input',
+				'audio output',
+				'audio playback',
+				'audio voice',
+				'auto playback response',
+				'auto playback',
+				'auto send',
+				'auto transcribe',
+				'instant auto send',
+				'kokoro',
+				'language',
+				'non local voices',
+				'playback speed',
+				'save settings',
+				'set voice',
+				'sound settings',
+				'speech config',
+				'speech playback speed',
+				'speech rate',
+				'speech recognition',
+				'speech settings',
+				'speech synthesis',
+				'speech to text',
+				'stt settings',
+				'stt',
+				'text to speech',
+				'tts settings',
+				'tts',
+				'voice control',
+				'voice options',
+				'voice playback',
+				'voice recognition',
+				'voice speed',
+				'voice',
+				'volume',
+				'whisper'
+			]
 		},
 		{
 			id: 'data_controls',
 			title: 'Data Controls',
 			type: 'user',
 			icon: DatabaseSettings,
-			keywords: ['data', 'history', 'chats', 'export', 'delete', 'archive']
+			keywords: [
+				'archive all chats',
+				'archive chats',
+				'archived chats',
+				'archive',
+				'chat activity',
+				'chat history',
+				'chat settings',
+				'chats',
+				'conversation activity',
+				'conversation history',
+				'conversations',
+				'delete all chats',
+				'delete chats',
+				'delete',
+				'export chats',
+				'export',
+				'history',
+				'import chats',
+				'import',
+				'message activity',
+				'message archive',
+				'message history',
+				'reset'
+			]
 		},
 		{
 			id: 'account',
 			title: 'Account',
 			type: 'user',
 			icon: UserCircle,
-			keywords: ['account', 'profile', 'password', 'security', 'api key']
+			keywords: [
+				'account preferences',
+				'account settings',
+				'api keys',
+				'api key',
+				'avatar',
+				'bio',
+				'change password',
+				'jwt token',
+				'jwt',
+				'login',
+				'name',
+				'new password',
+				'notification webhook',
+				'password',
+				'personal settings',
+				'privacy settings',
+				'profile avatar',
+				'profile details',
+				'profile image',
+				'profile picture',
+				'security settings',
+				'security',
+				'update account',
+				'update password',
+				'user account',
+				'user data',
+				'user preferences',
+				'user profile',
+				'webhook url',
+				'webhook'
+			]
 		},
 		{
 			id: 'about',
 			title: 'About',
 			type: 'user',
 			icon: InfoCircle,
-			keywords: ['about', 'version', 'update', 'info']
+			keywords: [
+				'about app',
+				'about me',
+				'about open webui',
+				'about page',
+				'about us',
+				'changelog',
+				'check for updates',
+				'contact',
+				'copyright',
+				'details',
+				'discord',
+				'documentation',
+				'github',
+				'help',
+				'information',
+				'license',
+				'redistributions',
+				'release',
+				'see whats new',
+				'settings',
+				'software info',
+				'support',
+				'terms and conditions',
+				'terms of use',
+				'twitter',
+				'update info',
+				'update',
+				'version info',
+				'version'
+			]
 		}
 	];
 
-	let filteredResults = [];
+	let filteredResults: any[] = [];
 
 	$: if (show) {
 		search = '';
@@ -237,7 +644,7 @@
 
 	const filterSettings = () => {
 		const query = search.toLowerCase().trim();
-		let results = [];
+		let results: any[] = [];
 
 		if (query === '') {
 			filteredResults = [];
@@ -267,7 +674,7 @@
 		selectedIndex = 0;
 	};
 
-	const handleSelect = async (item) => {
+	const handleSelect = async (item: any) => {
 		show = false;
 		if (item.type === 'admin') {
 			goto(item.route);
@@ -277,7 +684,7 @@
 		}
 	};
 
-	const handleKeydown = (e) => {
+	const handleKeydown = (e: KeyboardEvent) => {
 		if (!show) return;
 
 		if (e.key === 'ArrowDown') {
@@ -300,7 +707,7 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-<Modal size="lg" bind:show>
+<Modal size="lg" bind:show className="bg-transparent dark:bg-transparent rounded-xl">
 	<div class="flex flex-col max-h-[500px] bg-white dark:bg-gray-900 rounded-xl overflow-hidden text-gray-700 dark:text-gray-100">
 		<!-- Search Input Header -->
 		<div class="flex items-center p-3 border-b border-gray-100 dark:border-gray-800">

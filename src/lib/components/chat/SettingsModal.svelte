@@ -29,7 +29,9 @@
 	import AppNotification from '../icons/AppNotification.svelte';
 	import UserBadgeCheck from '../icons/UserBadgeCheck.svelte';
 
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+
+	const i18n: Writable<any> = getContext('i18n');
 
 	export let show = false;
 
@@ -50,31 +52,29 @@
 			id: 'general',
 			title: 'General',
 			keywords: [
-				'advancedparams',
-				'advancedparameters',
-				'advanced params',
 				'advanced parameters',
+				'advanced params',
+				'advanced',
 				'configuration',
-				'defaultparameters',
 				'default parameters',
-				'defaultsettings',
 				'default settings',
+				'general settings',
 				'general',
-				'keepalive',
 				'keep alive',
 				'languages',
 				'notifications',
-				'requestmode',
+				'params',
+				'repeat penalty',
 				'request mode',
-				'systemparameters',
+				'stream response',
 				'system parameters',
-				'systemprompt',
 				'system prompt',
-				'systemsettings',
 				'system settings',
+				'temperature',
 				'theme',
+				'top k',
+				'top p',
 				'translate',
-				'webuisettings',
 				'webui settings'
 			]
 		},
@@ -84,138 +84,95 @@
 			keywords: [
 				'allow user location',
 				'allow voice interruption in call',
-				'allowuserlocation',
-				'allowvoiceinterruptionincall',
-				'always collapse codeblocks',
 				'always collapse code blocks',
 				'always expand details',
 				'always on web search',
 				'always play notification sound',
-				'alwayscollapsecodeblocks',
-				'alwaysexpanddetails',
-				'alwaysonwebsearch',
-				'alwaysplaynotificationsound',
 				'android',
 				'auto chat tags',
 				'auto copy response to clipboard',
 				'auto title',
-				'autochattags',
-				'autocopyresponsetoclipboard',
-				'autotitle',
 				'beta',
 				'call',
+				'changelog',
 				'chat background image',
 				'chat bubble ui',
+				'chat bubble',
 				'chat direction',
-				'chat tags autogen',
-				'chat tags autogeneration',
+				'chat tags',
 				'chat ui',
-				'chatbackgroundimage',
-				'chatbubbleui',
-				'chatdirection',
-				'chat tags autogeneration',
-				'chattagsautogeneration',
-				'chatui',
 				'copy formatted text',
-				'copyformattedtext',
+				'dark mode',
 				'default model',
-				'defaultmodel',
 				'design',
 				'detect artifacts automatically',
-				'detectartifactsautomatically',
 				'display emoji in call',
 				'display username',
-				'displayemojiincall',
-				'displayusername',
 				'enter key behavior',
-				'enterkeybehavior',
 				'expand mode',
-				'expandmode',
 				'file',
+				'floating action buttons',
 				'followup autogeneration',
-				'followupautogeneration',
+				'full width',
 				'fullscreen',
-				'fullwidthmode',
-				'full width mode',
 				'haptic feedback',
-				'hapticfeedback',
 				'high contrast mode',
-				'highcontrastmode',
-				'iframe sandbox allow forms',
-				'iframe sandbox allow same origin',
-				'iframesandboxallowforms',
-				'iframesandboxallowsameorigin',
-				'imagecompression',
+				'high contrast',
+				'iframe sandbox',
 				'image compression',
-				'imagemaxcompressionsize',
-				'image max compression size',
 				'interface customization',
 				'interface options',
-				'interfacecustomization',
-				'interfaceoptions',
 				'landing page mode',
-				'landingpagemode',
+				'landing page',
+				'language',
 				'layout',
-				'left to right',
-				'left-to-right',
-				'lefttoright',
+				'light mode',
 				'ltr',
+				'notifications',
+				'oled',
 				'paste large text as file',
-				'pastelargetextasfile',
 				'reset background',
-				'resetbackground',
 				'response auto copy',
-				'responseautocopy',
-				'rich text input for chat',
-				'richtextinputforchat',
-				'right to left',
-				'right-to-left',
-				'righttoleft',
+				'rich text input',
 				'rtl',
 				'scroll behavior',
 				'scroll on branch change',
-				'scrollbehavior',
-				'scrollonbranchchange',
 				'select model',
-				'selectmodel',
 				'settings',
 				'show username',
-				'showusername',
 				'stream large chunks',
-				'streamlargechunks',
 				'stylized pdf export',
-				'stylizedpdfexport',
+				'temporary chat',
+				'text scale',
+				'theme',
 				'title autogeneration',
-				'titleautogeneration',
-				'toast notifications for new updates',
-				'toastnotificationsfornewupdates',
+				'toast notifications',
+				'toast',
+				'ui scale',
 				'upload background',
-				'uploadbackground',
 				'user interface',
-				'user location access',
-				'userinterface',
-				'userlocationaccess',
+				'user location',
 				'vibration',
 				'voice control',
-				'voicecontrol',
-				'widescreen mode',
-				'widescreenmode',
-				'whatsnew',
+				'web search in chat',
 				'whats new',
-				'websearchinchat',
-				'web search in chat'
+				'widescreen mode',
+				'widescreen'
 			]
 		},
 		{
 			id: 'connections',
 			title: 'Connections',
 			keywords: [
-				'addconnection',
 				'add connection',
-				'manageconnections',
+				'api key',
+				'base url',
+				'connections',
+				'direct connection',
 				'manage connections',
 				'manage direct connections',
-				'managedirectconnections',
+				'ollama',
+				'openai',
 				'settings'
 			]
 		},
@@ -223,13 +180,13 @@
 			id: 'tools',
 			title: 'External Tools',
 			keywords: [
-				'addconnection',
 				'add connection',
-				'managetools',
-				'manage tools',
+				'external tools',
 				'manage tool servers',
-				'managetoolservers',
-				'settings'
+				'manage tools',
+				'mcp',
+				'settings',
+				'tool servers'
 			]
 		},
 
@@ -239,20 +196,17 @@
 			keywords: [
 				'account preferences',
 				'account settings',
-				'accountpreferences',
-				'accountsettings',
+				'custom instructions',
 				'custom settings',
-				'customsettings',
 				'experimental',
+				'manage memories',
 				'memories',
 				'memory',
+				'personal settings',
 				'personalization',
 				'personalize',
-				'personal settings',
-				'personalsettings',
 				'profile',
-				'user preferences',
-				'userpreferences'
+				'user preferences'
 			]
 		},
 		{
@@ -266,69 +220,38 @@
 				'audio output',
 				'audio playback',
 				'audio voice',
-				'audioconfig',
-				'audiocontrol',
-				'audiofeatures',
-				'audioinput',
-				'audiooutput',
-				'audioplayback',
-				'audiovoice',
 				'auto playback response',
-				'autoplaybackresponse',
+				'auto playback',
+				'auto send',
 				'auto transcribe',
-				'autotranscribe',
-				'instant auto send after voice transcription',
-				'instantautosendaftervoicetranscription',
+				'instant auto send',
+				'kokoro',
 				'language',
 				'non local voices',
-				'nonlocalvoices',
+				'playback speed',
 				'save settings',
-				'savesettings',
 				'set voice',
-				'setvoice',
 				'sound settings',
-				'soundsettings',
 				'speech config',
-				'speech mode',
 				'speech playback speed',
 				'speech rate',
 				'speech recognition',
 				'speech settings',
-				'speech speed',
 				'speech synthesis',
-				'speech to text engine',
-				'speechconfig',
-				'speechmode',
-				'speechplaybackspeed',
-				'speechrate',
-				'speechrecognition',
-				'speechsettings',
-				'speechspeed',
-				'speechsynthesis',
-				'speechtotextengine',
-				'speedch playback rate',
-				'speedchplaybackrate',
+				'speech to text',
 				'stt settings',
-				'sttsettings',
-				'text to speech engine',
+				'stt',
 				'text to speech',
-				'textospeechengine',
-				'texttospeech',
-				'texttospeechvoice',
-				'text to speech voice',
+				'tts settings',
+				'tts',
 				'voice control',
-				'voice modes',
 				'voice options',
 				'voice playback',
 				'voice recognition',
 				'voice speed',
-				'voicecontrol',
-				'voicemodes',
-				'voiceoptions',
-				'voiceplayback',
-				'voicerecognition',
-				'voicespeed',
-				'volume'
+				'voice',
+				'volume',
+				'whisper'
 			]
 		},
 		{
@@ -337,35 +260,27 @@
 			keywords: [
 				'archive all chats',
 				'archive chats',
-				'archiveallchats',
-				'archivechats',
 				'archived chats',
-				'archivedchats',
+				'archive',
 				'chat activity',
 				'chat history',
 				'chat settings',
-				'chatactivity',
-				'chathistory',
-				'chatsettings',
+				'chats',
 				'conversation activity',
 				'conversation history',
-				'conversationactivity',
-				'conversationhistory',
 				'conversations',
-				'convos',
 				'delete all chats',
 				'delete chats',
-				'deleteallchats',
-				'deletechats',
+				'delete',
 				'export chats',
-				'exportchats',
+				'export',
+				'history',
 				'import chats',
-				'importchats',
+				'import',
 				'message activity',
 				'message archive',
 				'message history',
-				'messagearchive',
-				'messagehistory'
+				'reset'
 			]
 		},
 		{
@@ -374,48 +289,34 @@
 			keywords: [
 				'account preferences',
 				'account settings',
-				'accountpreferences',
-				'accountsettings',
 				'api keys',
-				'apikeys',
+				'api key',
+				'avatar',
+				'bio',
 				'change password',
-				'changepassword',
 				'jwt token',
-				'jwttoken',
+				'jwt',
 				'login',
+				'name',
 				'new password',
-				'newpassword',
-				'notification webhook url',
-				'notificationwebhookurl',
+				'notification webhook',
+				'password',
 				'personal settings',
-				'personalsettings',
 				'privacy settings',
-				'privacysettings',
-				'profileavatar',
 				'profile avatar',
 				'profile details',
 				'profile image',
 				'profile picture',
-				'profiledetails',
-				'profileimage',
-				'profilepicture',
 				'security settings',
-				'securitysettings',
+				'security',
 				'update account',
 				'update password',
-				'updateaccount',
-				'updatepassword',
 				'user account',
 				'user data',
 				'user preferences',
 				'user profile',
-				'useraccount',
-				'userdata',
-				'username',
-				'userpreferences',
-				'userprofile',
 				'webhook url',
-				'webhookurl'
+				'webhook'
 			]
 		},
 		{
@@ -427,13 +328,8 @@
 				'about open webui',
 				'about page',
 				'about us',
-				'aboutapp',
-				'aboutme',
-				'aboutopenwebui',
-				'aboutpage',
-				'aboutus',
+				'changelog',
 				'check for updates',
-				'checkforupdates',
 				'contact',
 				'copyright',
 				'details',
@@ -446,33 +342,25 @@
 				'redistributions',
 				'release',
 				'see whats new',
-				'seewhatsnew',
 				'settings',
 				'software info',
-				'softwareinfo',
 				'support',
 				'terms and conditions',
 				'terms of use',
-				'termsandconditions',
-				'termsofuse',
-				'timothy jae ryang baek',
-				'timothy j baek',
-				'timothyjaeryangbaek',
-				'timothyjbaek',
 				'twitter',
 				'update info',
-				'updateinfo',
+				'update',
 				'version info',
-				'versioninfo'
+				'version'
 			]
 		}
 	];
 
-	let availableSettings = [];
-	let filteredSettings = [];
+	let availableSettings: SettingsTab[] = [];
+	let filteredSettings: string[] = [];
 
 	let search = '';
-	let searchDebounceTimeout;
+	let searchDebounceTimeout: NodeJS.Timeout;
 
 	const getAvailableSettings = () => {
 		return allSettings.filter((tab) => {
@@ -517,7 +405,16 @@
 		}, 100);
 	};
 
-	const saveSettings = async (updated) => {
+	// Function to handle sideways scrolling
+	const scrollHandler = (event: WheelEvent) => {
+		const settingsTabsContainer = document.getElementById('settings-tabs-container');
+		if (settingsTabsContainer) {
+			event.preventDefault(); // Prevent default vertical scrolling
+			settingsTabsContainer.scrollLeft += event.deltaY; // Scroll sideways
+		}
+	};
+
+	const saveSettings = async (updated: Record<string, any>) => {
 		console.log(updated);
 		await settings.set({ ...$settings, ...updated });
 		await models.set(await getModels());
@@ -527,7 +424,7 @@
 	const getModels = async () => {
 		return await _getModels(
 			localStorage.token,
-			$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			$config?.features?.enable_direct_connections && $settings?.directConnections ? $settings.directConnections : null
 		);
 	};
 
@@ -538,15 +435,6 @@
 	$: if ($activeSettingsTab && show) {
 		selectedTab = $activeSettingsTab;
 	}
-
-	// Function to handle sideways scrolling
-	const scrollHandler = (event) => {
-		const settingsTabsContainer = document.getElementById('settings-tabs-container');
-		if (settingsTabsContainer) {
-			event.preventDefault(); // Prevent default vertical scrolling
-			settingsTabsContainer.scrollLeft += event.deltaY; // Scroll sideways
-		}
-	};
 
 	const addScrollListener = async () => {
 		await tick();
