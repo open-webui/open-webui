@@ -7,9 +7,6 @@ from typing import Optional
 from open_webui.models.memories import Memories, MemoryModel
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.utils.auth import get_verified_user
-
-
-from open_webui.utils.auth import get_verified_user
 from open_webui.internal.db import get_session
 from sqlalchemy.orm import Session
 

@@ -806,7 +806,7 @@ class ChannelTable:
 
             # Determine user groups
             user_group_ids = [
-                group.id for group in Groups.get_groups_by_member_id(user_id)
+                group.id for group in Groups.get_groups_by_member_id(user_id, db=db)
             ]
 
             # Apply ACL rules

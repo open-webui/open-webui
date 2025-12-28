@@ -343,7 +343,7 @@ class NoteTable:
     ) -> list[NoteModel]:
         with get_db_context(db) as db:
             user_group_ids = [
-                group.id for group in Groups.get_groups_by_member_id(user_id)
+                group.id for group in Groups.get_groups_by_member_id(user_id, db=db)
             ]
 
             query = db.query(Note).order_by(Note.updated_at.desc())
