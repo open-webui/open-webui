@@ -181,27 +181,48 @@ def set_faster_whisper_model(
         resolved_compute_type = select_whisper_compute_type(device, compute_type)
         local_files_only = not auto_update
 
+        if device == "cuda":
+            compute_type_candidates = []
+            for candidate in [
+                resolved_compute_type,
+                "float16",
+                "int8_float16",
+                "int8",
+            ]:
+                if candidate and candidate not in compute_type_candidates:
+                    compute_type_candidates.append(candidate)
+        else:
+            compute_type_candidates = [resolved_compute_type]
+
         def attempt_init(local_only: bool):
-            kwargs = {
+            base_kwargs = {
                 "model_size_or_path": model,
                 "device": device,
-                "compute_type": resolved_compute_type,
                 "download_root": WHISPER_MODEL_DIR,
                 "local_files_only": local_only,
             }
-            try:
-                return WhisperModel(**kwargs)
-            except ValueError as e:
-                if device == "cuda" and kwargs["compute_type"] != "float16":
-                    log.warning(
-                        "WhisperModel failed with compute_type '%s' on CUDA; "
-                        "retrying with float16. Error: %s",
-                        kwargs["compute_type"],
-                        e,
+            last_error = None
+            for candidate in compute_type_candidates:
+                try:
+                    return WhisperModel(
+                        **{
+                            **base_kwargs,
+                            "compute_type": candidate,
+                        }
                     )
-                    kwargs["compute_type"] = "float16"
-                    return WhisperModel(**kwargs)
-                raise
+                except ValueError as e:
+                    last_error = e
+                    if device == "cuda":
+                        log.warning(
+                            "WhisperModel failed with compute_type '%s' on CUDA; "
+                            "trying next fallback. Error: %s",
+                            candidate,
+                            e,
+                        )
+                    else:
+                        raise
+            if last_error is not None:
+                raise last_error
 
         try:
             whisper_model = attempt_init(local_files_only)
