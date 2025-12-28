@@ -533,6 +533,12 @@
 
 	let selectedTab = 'general';
 
+	// Subscribe to activeSettingsTab store
+	import { activeSettingsTab } from '$lib/stores';
+	$: if ($activeSettingsTab && show) {
+		selectedTab = $activeSettingsTab;
+	}
+
 	// Function to handle sideways scrolling
 	const scrollHandler = (event) => {
 		const settingsTabsContainer = document.getElementById('settings-tabs-container');

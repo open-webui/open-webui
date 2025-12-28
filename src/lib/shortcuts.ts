@@ -19,6 +19,7 @@ export enum Shortcut {
 
 	//Global
 	SEARCH = 'search',
+	SEARCH_SETTINGS = 'searchSettings',
 	OPEN_SETTINGS = 'openSettings',
 	SHOW_SHORTCUTS = 'showShortcuts',
 	TOGGLE_SIDEBAR = 'toggleSidebar',
@@ -63,6 +64,11 @@ export const shortcuts: ShortcutRegistry = {
 	[Shortcut.SEARCH]: {
 		name: 'Search',
 		keys: ['mod', 'K'],
+		category: 'Global'
+	},
+	[Shortcut.SEARCH_SETTINGS]: {
+		name: 'Search Settings',
+		keys: ['mod', 'shift', 'F'],
 		category: 'Global'
 	},
 	[Shortcut.OPEN_SETTINGS]: {
