@@ -646,14 +646,10 @@
 		const query = search.toLowerCase().trim();
 		let results: any[] = [];
 
-		if (query === '') {
-			filteredResults = [];
-			return;
-		}
-
 		// Filter Admin Settings
 		if ($user?.role === 'admin') {
 			const adminMatches = adminSettings.filter(item => 
+				query === '' || 
 				item.title.toLowerCase().includes(query) || 
 				item.keywords.some(k => k.includes(query))
 			);
@@ -665,7 +661,8 @@
 			if (item.id === 'connections' && !$config?.features?.enable_direct_connections) return false;
 			if (item.id === 'tools' && !($user?.role === 'admin' || $user?.permissions?.features?.direct_tool_servers)) return false;
 
-			return item.title.toLowerCase().includes(query) || 
+			return query === '' ||
+				   item.title.toLowerCase().includes(query) || 
 				   item.keywords.some(k => k.includes(query));
 		});
 		results = [...results, ...userMatches];
