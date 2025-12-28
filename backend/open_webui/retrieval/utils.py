@@ -913,9 +913,15 @@ def get_reranking_function(reranking_engine, reranking_model, reranking_function
             [(query, doc.page_content) for doc in documents], user=user
         )
     else:
-        return lambda query, documents, user=None: reranking_function.predict(
-            [(query, doc.page_content) for doc in documents]
-        )
+        import math
+        def sigmoid(x):
+            return 1 / (1 + math.exp(-x))
+        
+        return lambda query, documents, user=None: [
+            sigmoid(s) for s in reranking_function.predict(
+                [(query, doc.page_content) for doc in documents]
+            )
+        ]
 
 
 async def get_sources_from_items(
