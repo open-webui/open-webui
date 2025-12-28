@@ -18,7 +18,7 @@
 	import XMark from '../icons/XMark.svelte';
 	import Connections from './Settings/Connections.svelte';
 	import Tools from './Settings/Tools.svelte';
-	import UserBadgeCheck from '../icons/UserBadgeCheck.svelte';
+	import SettingsSolid from '../icons/SettingsSolid.svelte';
 
 	import { USER_SETTINGS } from '$lib/constants/settings';
 	import type { Writable } from 'svelte/store';
@@ -101,7 +101,6 @@
 	};
 
 	const saveSettings = async (updated: Record<string, any>) => {
-		console.log(updated);
 		await settings.set({ ...$settings, ...updated });
 		await models.set(await getModels());
 		await updateUserSettings(localStorage.token, { ui: $settings });
@@ -222,8 +221,8 @@
 					</div>
 				{/if}
 				{#if $user?.role === 'admin'}
-					<a
-						href="/admin/settings"
+					<button
+						type="button"
 						class="px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none md:mt-auto flex text-left transition {$settings?.highContrastMode
 							? 'hover:bg-gray-200 dark:hover:bg-gray-800'
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -234,10 +233,10 @@
 						}}
 					>
 						<div class=" self-center mr-2">
-							<UserBadgeCheck strokeWidth="2" />
+							<SettingsSolid className="size-4" strokeWidth="2" />
 						</div>
 						<div class=" self-center">{$i18n.t('Admin Settings')}</div>
-					</a>
+					</button>
 				{/if}
 			</div>
 			<div class="flex-1 px-3.5 md:pl-0 md:pr-4.5 md:min-h-[42rem] max-h-[42rem]">

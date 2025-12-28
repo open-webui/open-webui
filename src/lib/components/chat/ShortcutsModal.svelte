@@ -1,19 +1,18 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
+	import type { Writable } from 'svelte/store';
 	import Modal from '../common/Modal.svelte';
 	import { shortcuts } from '$lib/shortcuts';
+	import type { ShortcutDef } from '$lib/shortcuts';
 	import { settings } from '$lib/stores';
 	import ShortcutItem from './ShortcutItem.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
 	type CategorizedShortcuts = {
-		[category: string]: {
-			left: Shortcut[];
-			right: Shortcut[];
-		};
+		[category: string]: ShortcutDef[];
 	};
 
-	const i18n = getContext('i18n');
+	const i18n: Writable<any> = getContext('i18n');
 
 	export let show = false;
 
@@ -26,20 +25,21 @@
 
 	$: {
 		const allShortcuts = Object.values(shortcuts).filter((shortcut) => {
-			if (!shortcut.setting) {
+			if (!shortcut?.setting) {
 				return true;
 			}
-			return $settings[shortcut.setting.id] === shortcut.setting.value;
-		});
+			return ($settings as Record<string, any>)[shortcut.setting.id] === shortcut.setting.value;
+		}) as ShortcutDef[];
 
 		categorizedShortcuts = allShortcuts.reduce((acc, shortcut) => {
+			if (!shortcut) return acc;
 			const category = shortcut.category;
 			if (!acc[category]) {
 				acc[category] = [];
 			}
 			acc[category].push(shortcut);
 			return acc;
-		}, {});
+		}, {} as CategorizedShortcuts);
 	}
 </script>
 
