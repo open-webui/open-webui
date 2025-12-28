@@ -18,17 +18,9 @@
 	import XMark from '../icons/XMark.svelte';
 	import Connections from './Settings/Connections.svelte';
 	import Tools from './Settings/Tools.svelte';
-	import DatabaseSettings from '../icons/DatabaseSettings.svelte';
-	import SettingsAlt from '../icons/SettingsAlt.svelte';
-	import Link from '../icons/Link.svelte';
-	import UserCircle from '../icons/UserCircle.svelte';
-	import SoundHigh from '../icons/SoundHigh.svelte';
-	import InfoCircle from '../icons/InfoCircle.svelte';
-	import WrenchAlt from '../icons/WrenchAlt.svelte';
-	import Face from '../icons/Face.svelte';
-	import AppNotification from '../icons/AppNotification.svelte';
 	import UserBadgeCheck from '../icons/UserBadgeCheck.svelte';
 
+	import { USER_SETTINGS } from '$lib/constants/settings';
 	import type { Writable } from 'svelte/store';
 
 	const i18n: Writable<any> = getContext('i18n');
@@ -45,319 +37,14 @@
 		id: string;
 		title: string;
 		keywords: string[];
+		icon?: any;
+		type?: string;
 	}
 
-	const allSettings: SettingsTab[] = [
-		{
-			id: 'general',
-			title: 'General',
-			keywords: [
-				'advanced parameters',
-				'advanced params',
-				'advanced',
-				'configuration',
-				'default parameters',
-				'default settings',
-				'general settings',
-				'general',
-				'keep alive',
-				'languages',
-				'notifications',
-				'params',
-				'repeat penalty',
-				'request mode',
-				'stream response',
-				'system parameters',
-				'system prompt',
-				'system settings',
-				'temperature',
-				'theme',
-				'top k',
-				'top p',
-				'translate',
-				'webui settings'
-			]
-		},
-		{
-			id: 'interface',
-			title: 'Interface',
-			keywords: [
-				'allow user location',
-				'allow voice interruption in call',
-				'always collapse code blocks',
-				'always expand details',
-				'always on web search',
-				'always play notification sound',
-				'android',
-				'auto chat tags',
-				'auto copy response to clipboard',
-				'auto title',
-				'beta',
-				'call',
-				'changelog',
-				'chat background image',
-				'chat bubble ui',
-				'chat bubble',
-				'chat direction',
-				'chat tags',
-				'chat ui',
-				'copy formatted text',
-				'dark mode',
-				'default model',
-				'design',
-				'detect artifacts automatically',
-				'display emoji in call',
-				'display username',
-				'enter key behavior',
-				'expand mode',
-				'file',
-				'floating action buttons',
-				'followup autogeneration',
-				'full width',
-				'fullscreen',
-				'haptic feedback',
-				'high contrast mode',
-				'high contrast',
-				'iframe sandbox',
-				'image compression',
-				'interface customization',
-				'interface options',
-				'landing page mode',
-				'landing page',
-				'language',
-				'layout',
-				'light mode',
-				'ltr',
-				'notifications',
-				'oled',
-				'paste large text as file',
-				'reset background',
-				'response auto copy',
-				'rich text input',
-				'rtl',
-				'scroll behavior',
-				'scroll on branch change',
-				'select model',
-				'settings',
-				'show username',
-				'stream large chunks',
-				'stylized pdf export',
-				'temporary chat',
-				'text scale',
-				'theme',
-				'title autogeneration',
-				'toast notifications',
-				'toast',
-				'ui scale',
-				'upload background',
-				'user interface',
-				'user location',
-				'vibration',
-				'voice control',
-				'web search in chat',
-				'whats new',
-				'widescreen mode',
-				'widescreen'
-			]
-		},
-		{
-			id: 'connections',
-			title: 'Connections',
-			keywords: [
-				'add connection',
-				'api key',
-				'base url',
-				'connections',
-				'direct connection',
-				'manage connections',
-				'manage direct connections',
-				'ollama',
-				'openai',
-				'settings'
-			]
-		},
-		{
-			id: 'tools',
-			title: 'External Tools',
-			keywords: [
-				'add connection',
-				'external tools',
-				'manage tool servers',
-				'manage tools',
-				'mcp',
-				'settings',
-				'tool servers'
-			]
-		},
-
-		{
-			id: 'personalization',
-			title: 'Personalization',
-			keywords: [
-				'account preferences',
-				'account settings',
-				'custom instructions',
-				'custom settings',
-				'experimental',
-				'manage memories',
-				'memories',
-				'memory',
-				'personal settings',
-				'personalization',
-				'personalize',
-				'profile',
-				'user preferences'
-			]
-		},
-		{
-			id: 'audio',
-			title: 'Audio',
-			keywords: [
-				'audio config',
-				'audio control',
-				'audio features',
-				'audio input',
-				'audio output',
-				'audio playback',
-				'audio voice',
-				'auto playback response',
-				'auto playback',
-				'auto send',
-				'auto transcribe',
-				'instant auto send',
-				'kokoro',
-				'language',
-				'non local voices',
-				'playback speed',
-				'save settings',
-				'set voice',
-				'sound settings',
-				'speech config',
-				'speech playback speed',
-				'speech rate',
-				'speech recognition',
-				'speech settings',
-				'speech synthesis',
-				'speech to text',
-				'stt settings',
-				'stt',
-				'text to speech',
-				'tts settings',
-				'tts',
-				'voice control',
-				'voice options',
-				'voice playback',
-				'voice recognition',
-				'voice speed',
-				'voice',
-				'volume',
-				'whisper'
-			]
-		},
-		{
-			id: 'data_controls',
-			title: 'Data Controls',
-			keywords: [
-				'archive all chats',
-				'archive chats',
-				'archived chats',
-				'archive',
-				'chat activity',
-				'chat history',
-				'chat settings',
-				'chats',
-				'conversation activity',
-				'conversation history',
-				'conversations',
-				'delete all chats',
-				'delete chats',
-				'delete',
-				'export chats',
-				'export',
-				'history',
-				'import chats',
-				'import',
-				'message activity',
-				'message archive',
-				'message history',
-				'reset'
-			]
-		},
-		{
-			id: 'account',
-			title: 'Account',
-			keywords: [
-				'account preferences',
-				'account settings',
-				'api keys',
-				'api key',
-				'avatar',
-				'bio',
-				'change password',
-				'jwt token',
-				'jwt',
-				'login',
-				'name',
-				'new password',
-				'notification webhook',
-				'password',
-				'personal settings',
-				'privacy settings',
-				'profile avatar',
-				'profile details',
-				'profile image',
-				'profile picture',
-				'security settings',
-				'security',
-				'update account',
-				'update password',
-				'user account',
-				'user data',
-				'user preferences',
-				'user profile',
-				'webhook url',
-				'webhook'
-			]
-		},
-		{
-			id: 'about',
-			title: 'About',
-			keywords: [
-				'about app',
-				'about me',
-				'about open webui',
-				'about page',
-				'about us',
-				'changelog',
-				'check for updates',
-				'contact',
-				'copyright',
-				'details',
-				'discord',
-				'documentation',
-				'github',
-				'help',
-				'information',
-				'license',
-				'redistributions',
-				'release',
-				'see whats new',
-				'settings',
-				'software info',
-				'support',
-				'terms and conditions',
-				'terms of use',
-				'twitter',
-				'update info',
-				'update',
-				'version info',
-				'version'
-			]
-		}
-	];
+	const allSettings: SettingsTab[] = USER_SETTINGS;
 
 	let availableSettings: SettingsTab[] = [];
-	let filteredSettings: string[] = [];
+	let filteredSettings: SettingsTab[] = [];
 
 	let search = '';
 	let searchDebounceTimeout: NodeJS.Timeout;
@@ -387,11 +74,10 @@
 					tab.title.toLowerCase().includes(search.toLowerCase().trim()) ||
 					tab.keywords.some((keyword) => keyword.includes(search.toLowerCase().trim()))
 				);
-			})
-			.map((tab) => tab.id);
+			});
 
-		if (filteredSettings.length > 0 && !filteredSettings.includes(selectedTab)) {
-			selectedTab = filteredSettings[0];
+		if (filteredSettings.length > 0 && !filteredSettings.some((tab) => tab.id === selectedTab)) {
+			selectedTab = filteredSettings[0].id;
 		}
 	};
 
@@ -505,228 +191,30 @@
 					/>
 				</div>
 				{#if filteredSettings.length > 0}
-					{#each filteredSettings as tabId (tabId)}
-						{#if tabId === 'general'}
-							<button
-								role="tab"
-								aria-controls="tab-general"
-								aria-selected={selectedTab === 'general'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'general'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-								on:click={() => {
-									selectedTab = 'general';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<SettingsAlt strokeWidth="2" />
-								</div>
-								<div class=" self-center">{$i18n.t('General')}</div>
-							</button>
-						{:else if tabId === 'interface'}
-							<button
-								role="tab"
-								aria-controls="tab-interface"
-								aria-selected={selectedTab === 'interface'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'interface'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-								on:click={() => {
-									selectedTab = 'interface';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<AppNotification strokeWidth="2" />
-								</div>
-								<div class=" self-center">{$i18n.t('Interface')}</div>
-							</button>
-						{:else if tabId === 'connections'}
-							{#if $user?.role === 'admin' || ($user?.role === 'user' && $config?.features?.enable_direct_connections)}
-								<button
-									role="tab"
-									aria-controls="tab-connections"
-									aria-selected={selectedTab === 'connections'}
-									class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'connections'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-									on:click={() => {
-										selectedTab = 'connections';
-									}}
-								>
-									<div class=" self-center mr-2">
-										<Link strokeWidth="2" />
-									</div>
-									<div class=" self-center">{$i18n.t('Connections')}</div>
-								</button>
-							{/if}
-						{:else if tabId === 'tools'}
-							{#if $user?.role === 'admin' || ($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)}
-								<button
-									role="tab"
-									aria-controls="tab-tools"
-									aria-selected={selectedTab === 'tools'}
-									class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'tools'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-									on:click={() => {
-										selectedTab = 'tools';
-									}}
-								>
-									<div class=" self-center mr-2">
-										<WrenchAlt strokeWidth="2" />
-									</div>
-									<div class=" self-center">{$i18n.t('External Tools')}</div>
-								</button>
-							{/if}
-						{:else if tabId === 'personalization'}
-							<button
-								role="tab"
-								aria-controls="tab-personalization"
-								aria-selected={selectedTab === 'personalization'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'personalization'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-								on:click={() => {
-									selectedTab = 'personalization';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<Face strokeWidth="2" />
-								</div>
-								<div class=" self-center">{$i18n.t('Personalization')}</div>
-							</button>
-						{:else if tabId === 'audio'}
-							<button
-								role="tab"
-								aria-controls="tab-audio"
-								aria-selected={selectedTab === 'audio'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'audio'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-								on:click={() => {
-									selectedTab = 'audio';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<SoundHigh strokeWidth="2" />
-								</div>
-								<div class=" self-center">{$i18n.t('Audio')}</div>
-							</button>
-						{:else if tabId === 'data_controls'}
-							<button
-								role="tab"
-								aria-controls="tab-data-controls"
-								aria-selected={selectedTab === 'data_controls'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'data_controls'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-								on:click={() => {
-									selectedTab = 'data_controls';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<DatabaseSettings strokeWidth="2" />
-								</div>
-								<div class=" self-center">{$i18n.t('Data Controls')}</div>
-							</button>
-						{:else if tabId === 'account'}
-							<button
-								role="tab"
-								aria-controls="tab-account"
-								aria-selected={selectedTab === 'account'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'account'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-								on:click={() => {
-									selectedTab = 'account';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<UserCircle strokeWidth="2" />
-								</div>
-								<div class=" self-center">{$i18n.t('Account')}</div>
-							</button>
-						{:else if tabId === 'about'}
-							<button
-								role="tab"
-								aria-controls="tab-about"
-								aria-selected={selectedTab === 'about'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'about'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-								on:click={() => {
-									selectedTab = 'about';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<InfoCircle strokeWidth="2" />
-								</div>
-								<div class=" self-center">{$i18n.t('About')}</div>
-							</button>
-						{/if}
+					{#each filteredSettings as tab (tab.id)}
+						<button
+							role="tab"
+							aria-controls={`tab-${tab.id}`}
+							aria-selected={selectedTab === tab.id}
+							class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
+							${
+								selectedTab === tab.id
+									? ($settings?.highContrastMode ?? false)
+										? 'dark:bg-gray-800 bg-gray-200'
+										: ''
+									: ($settings?.highContrastMode ?? false)
+										? 'hover:bg-gray-200 dark:hover:bg-gray-800'
+										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
+							}`}
+							on:click={() => {
+								selectedTab = tab.id;
+							}}
+						>
+							<div class=" self-center mr-2">
+								<svelte:component this={tab.icon} className="size-4" strokeWidth="2" />
+							</div>
+							<div class=" self-center">{$i18n.t(tab.title)}</div>
+						</button>
 					{/each}
 				{:else}
 					<div class="text-center text-gray-500 mt-4">
