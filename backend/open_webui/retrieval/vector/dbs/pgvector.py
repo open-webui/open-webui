@@ -90,9 +90,9 @@ class PgvectorClient(VectorDBBase):
 
         # if no pgvector uri, use the existing database connection
         if not PGVECTOR_DB_URL:
-            from open_webui.internal.db import Session
+            from open_webui.internal.db import ScopedSession
 
-            self.session = Session
+            self.session = ScopedSession
         else:
             if isinstance(PGVECTOR_POOL_SIZE, int):
                 if PGVECTOR_POOL_SIZE > 0:

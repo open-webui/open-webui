@@ -1166,3 +1166,76 @@ export const archiveAllChats = async (token: string) => {
 
 	return res;
 };
+export const exportChatStats = async (token: string, page: number = 1, params: object = {}) => {
+	let error = null;
+
+	const searchParams = new URLSearchParams();
+	searchParams.append('page', `${page}`);
+
+	if (params) {
+		for (const [key, value] of Object.entries(params)) {
+			searchParams.append(key, `${value}`);
+		}
+	}
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/stats/export?${searchParams.toString()}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const downloadChatStats = async (
+	token: string = '',
+	chat_id: string | null = null,
+	start_time: number | null = null,
+	end_time: number | null = null
+): Promise<[Response | null, AbortController]> => {
+	const controller = new AbortController();
+	let error = null;
+
+	let url = `${WEBUI_API_BASE_URL}/chats/stats/export?stream=true`;
+	if (chat_id) url += `&chat_id=${chat_id}`;
+	if (start_time) url += `&start_time=${start_time}`;
+	if (end_time) url += `&end_time=${end_time}`;
+
+	const res = await fetch(url, {
+		signal: controller.signal,
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	}).catch((err) => {
+		console.error(err);
+		error = err;
+		return null;
+	});
+
+	if (error) {
+		throw error;
+	}
+
+	return [res, controller];
+};

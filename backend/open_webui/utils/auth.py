@@ -42,6 +42,8 @@ from open_webui.env import (
 
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.orm import Session
+from open_webui.internal.db import get_session
 
 
 log = logging.getLogger(__name__)
@@ -271,6 +273,7 @@ async def get_current_user(
     response: Response,
     background_tasks: BackgroundTasks,
     auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
+    db: Session = Depends(get_session),
 ):
     token = None
 
@@ -285,7 +288,7 @@ async def get_current_user(
 
     # auth by api key
     if token.startswith("sk-"):
-        user = get_current_user_by_api_key(request, token)
+        user = get_current_user_by_api_key(request, token, db=db)
 
         # Add user info to current span
         current_span = trace.get_current_span()
@@ -314,7 +317,7 @@ async def get_current_user(
                     detail="Invalid token",
                 )
 
-            user = Users.get_user_by_id(data["id"])
+            user = Users.get_user_by_id(data["id"], db=db)
             if user is None:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -364,8 +367,8 @@ async def get_current_user(
         raise e
 
 
-def get_current_user_by_api_key(request, api_key: str):
-    user = Users.get_user_by_api_key(api_key)
+def get_current_user_by_api_key(request, api_key: str, db: Session = None):
+    user = Users.get_user_by_api_key(api_key, db=db)
 
     if user is None:
         raise HTTPException(
@@ -393,7 +396,7 @@ def get_current_user_by_api_key(request, api_key: str):
         current_span.set_attribute("client.user.role", user.role)
         current_span.set_attribute("client.auth.type", "api_key")
 
-    Users.update_last_active_by_id(user.id)
+    Users.update_last_active_by_id(user.id, db=db)
     return user
 
 

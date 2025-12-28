@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.43] - 2025-12-22
+
+### Fixed
+
+- 🐍 **Python dependency installation issues** were resolved by correcting pip dependency handling, preventing installation failures in certain environments and improving setup reliability. [Commit](https://github.com/open-webui/open-webui/commit/5c5f87a)
+- 🎙️ **Speech-to-Text default content type handling** was fixed and refactored to ensure correct MIME type usage, improving compatibility across STT providers and preventing transcription errors caused by incorrect defaults. [Commit](https://github.com/open-webui/open-webui/commit/4ab917c)
+- 🖼️ **Temporary chat image handling** was fixed and refactored, ensuring images generated or edited in temporary chats are correctly processed, stored, and displayed without inconsistencies or missing references. [Commit](https://github.com/open-webui/open-webui/commit/423983f)
+- 🎨 **Image action button fixed**, restoring the ability to trigger image generation, editing, and related image actions from the chat UI. [Commit](https://github.com/open-webui/open-webui/commit/def8a00)
+
 ## [0.6.42] - 2025-12-21
 
 ### Added
