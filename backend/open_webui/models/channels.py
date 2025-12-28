@@ -824,6 +824,135 @@ class ChannelTable:
                 else None
             )
 
+    def get_channels_by_file_id(self, file_id: str) -> list[ChannelModel]:
+        with get_db() as db:
+            channel_files = (
+                db.query(ChannelFile).filter(ChannelFile.file_id == file_id).all()
+            )
+            channel_ids = [cf.channel_id for cf in channel_files]
+            channels = db.query(Channel).filter(Channel.id.in_(channel_ids)).all()
+            return [ChannelModel.model_validate(channel) for channel in channels]
+
+    def get_channels_by_file_id_and_user_id(
+        self, file_id: str, user_id: str
+    ) -> list[ChannelModel]:
+        with get_db() as db:
+            # 1. Determine which channels have this file
+            channel_file_rows = (
+                db.query(ChannelFile).filter(ChannelFile.file_id == file_id).all()
+            )
+            channel_ids = [row.channel_id for row in channel_file_rows]
+
+            if not channel_ids:
+                return []
+
+            # 2. Load all channel rows that still exist
+            channels = (
+                db.query(Channel)
+                .filter(
+                    Channel.id.in_(channel_ids),
+                    Channel.deleted_at.is_(None),
+                    Channel.archived_at.is_(None),
+                )
+                .all()
+            )
+            if not channels:
+                return []
+
+            # Preload user's group membership
+            user_group_ids = [g.id for g in Groups.get_groups_by_member_id(user_id)]
+
+            allowed_channels = []
+
+            for channel in channels:
+                # --- Case A: group or dm => user must be an active member ---
+                if channel.type in ["group", "dm"]:
+                    membership = (
+                        db.query(ChannelMember)
+                        .filter(
+                            ChannelMember.channel_id == channel.id,
+                            ChannelMember.user_id == user_id,
+                            ChannelMember.is_active.is_(True),
+                        )
+                        .first()
+                    )
+                    if membership:
+                        allowed_channels.append(ChannelModel.model_validate(channel))
+                    continue
+
+                # --- Case B: standard channel => rely on ACL permissions ---
+                query = db.query(Channel).filter(Channel.id == channel.id)
+
+                query = self._has_permission(
+                    db,
+                    query,
+                    {"user_id": user_id, "group_ids": user_group_ids},
+                    permission="read",
+                )
+
+                allowed = query.first()
+                if allowed:
+                    allowed_channels.append(ChannelModel.model_validate(allowed))
+
+            return allowed_channels
+
+    def get_channel_by_id_and_user_id(
+        self, id: str, user_id: str
+    ) -> Optional[ChannelModel]:
+        with get_db() as db:
+            # Fetch the channel
+            channel: Channel = (
+                db.query(Channel)
+                .filter(
+                    Channel.id == id,
+                    Channel.deleted_at.is_(None),
+                    Channel.archived_at.is_(None),
+                )
+                .first()
+            )
+
+            if not channel:
+                return None
+
+            # If the channel is a group or dm, read access requires membership (active)
+            if channel.type in ["group", "dm"]:
+                membership = (
+                    db.query(ChannelMember)
+                    .filter(
+                        ChannelMember.channel_id == id,
+                        ChannelMember.user_id == user_id,
+                        ChannelMember.is_active.is_(True),
+                    )
+                    .first()
+                )
+                if membership:
+                    return ChannelModel.model_validate(channel)
+                else:
+                    return None
+
+            # For channels that are NOT group/dm, fall back to ACL-based read access
+            query = db.query(Channel).filter(Channel.id == id)
+
+            # Determine user groups
+            user_group_ids = [
+                group.id for group in Groups.get_groups_by_member_id(user_id)
+            ]
+
+            # Apply ACL rules
+            query = self._has_permission(
+                db,
+                query,
+                {"user_id": user_id, "group_ids": user_group_ids},
+                permission="read",
+            )
+
+            channel_allowed = query.first()
+            return (
+                ChannelModel.model_validate(channel_allowed)
+                if channel_allowed
+                else None
+            )
+
     def update_channel_by_id(
         self, id: str, form_data: ChannelForm
     ) -> Optional[ChannelModel]:
