@@ -26,6 +26,10 @@
 
 	const i18n = getContext('i18n');
 
+	const showSuccessToast = () => {
+		toast.success($i18n.t('Settings saved successfully!'));
+	};
+
 	let selectedTab = 'general';
 
 	// Get current tab from URL pathname, default to 'general'
@@ -439,7 +443,7 @@
 		{#if selectedTab === 'general'}
 			<General
 				saveHandler={async () => {
-					toast.success($i18n.t('Settings saved successfully!'));
+					showSuccessToast();
 
 					await tick();
 					await config.set(await getBackendConfig());
@@ -448,7 +452,7 @@
 		{:else if selectedTab === 'connections'}
 			<Connections
 				on:save={() => {
-					toast.success($i18n.t('Settings saved successfully!'));
+					showSuccessToast();
 				}}
 			/>
 		{:else if selectedTab === 'models'}
@@ -460,7 +464,7 @@
 		{:else if selectedTab === 'documents'}
 			<Documents
 				on:save={async () => {
-					toast.success($i18n.t('Settings saved successfully!'));
+					showSuccessToast();
 
 					await tick();
 					await config.set(await getBackendConfig());
@@ -469,7 +473,7 @@
 		{:else if selectedTab === 'web'}
 			<WebSearch
 				saveHandler={async () => {
-					toast.success($i18n.t('Settings saved successfully!'));
+					showSuccessToast();
 
 					await tick();
 					await config.set(await getBackendConfig());
@@ -478,7 +482,7 @@
 		{:else if selectedTab === 'code-execution'}
 			<CodeExecution
 				saveHandler={async () => {
-					toast.success($i18n.t('Settings saved successfully!'));
+					showSuccessToast();
 
 					await tick();
 					await config.set(await getBackendConfig());
@@ -487,31 +491,31 @@
 		{:else if selectedTab === 'interface'}
 			<Interface
 				on:save={() => {
-					toast.success($i18n.t('Settings saved successfully!'));
+					showSuccessToast();
 				}}
 			/>
 		{:else if selectedTab === 'audio'}
 			<Audio
 				saveHandler={() => {
-					toast.success($i18n.t('Settings saved successfully!'));
+					showSuccessToast();
 				}}
 			/>
 		{:else if selectedTab === 'images'}
 			<Images
 				on:save={() => {
-					toast.success($i18n.t('Settings saved successfully!'));
+					showSuccessToast();
 				}}
 			/>
 		{:else if selectedTab === 'db'}
 			<Database
 				saveHandler={() => {
-					toast.success($i18n.t('Settings saved successfully!'));
+					showSuccessToast();
 				}}
 			/>
 		{:else if selectedTab === 'pipelines'}
 			<Pipelines
 				saveHandler={() => {
-					toast.success($i18n.t('Settings saved successfully!'));
+					showSuccessToast();
 				}}
 			/>
 		{/if}
