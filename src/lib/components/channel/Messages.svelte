@@ -16,7 +16,13 @@
 	import Message from './Messages/Message.svelte';
 	import Loader from '../common/Loader.svelte';
 	import Spinner from '../common/Spinner.svelte';
-	import { addReaction, deleteMessage, removeReaction, updateMessage } from '$lib/apis/channels';
+	import {
+		addReaction,
+		deleteMessage,
+		pinMessage,
+		removeReaction,
+		updateMessage
+	} from '$lib/apis/channels';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	const i18n = getContext('i18n');
@@ -120,13 +126,15 @@
 		{#each messageList as message, messageIdx (id ? `${id}-${message.id}` : message.id)}
 			<Message
 				{message}
+				{channel}
 				{thread}
 				replyToMessage={replyToMessage?.id === message.id}
-				disabled={!channel?.write_access}
+				disabled={!channel?.write_access || message?.temp_id}
+				pending={!!message?.temp_id}
 				showUserProfile={messageIdx === 0 ||
 					messageList.at(messageIdx - 1)?.user_id !== message.user_id ||
 					messageList.at(messageIdx - 1)?.meta?.model_id !== message?.meta?.model_id ||
-					message?.reply_to_message}
+					message?.reply_to_message !== null}
 				onDelete={() => {
 					messages = messages.filter((m) => m.id !== message.id);
 
@@ -155,6 +163,26 @@
 				onReply={(message) => {
 					onReply(message);
 				}}
+				onPin={async (message) => {
+					messages = messages.map((m) => {
+						if (m.id === message.id) {
+							m.is_pinned = !m.is_pinned;
+							m.pinned_by = !m.is_pinned ? null : $user?.id;
+							m.pinned_at = !m.is_pinned ? null : Date.now() * 1000000;
+						}
+						return m;
+					});
+
+					const updatedMessage = await pinMessage(
+						localStorage.token,
+						message.channel_id,
+						message.id,
+						message.is_pinned
+					).catch((error) => {
+						toast.error(`${error}`);
+						return null;
+					});
+				}}
 				onThread={(id) => {
 					onThread(id);
 				}}
@@ -162,7 +190,7 @@
 					if (
 						(message?.reactions ?? [])
 							.find((reaction) => reaction.name === name)
-							?.user_ids?.includes($user?.id) ??
+							?.users?.some((u) => u.id === $user?.id) ??
 						false
 					) {
 						messages = messages.map((m) => {
@@ -170,8 +198,8 @@
 								const reaction = m.reactions.find((reaction) => reaction.name === name);
 
 								if (reaction) {
-									reaction.user_ids = reaction.user_ids.filter((id) => id !== $user?.id);
-									reaction.count = reaction.user_ids.length;
+									reaction.users = reaction.users.filter((u) => u.id !== $user?.id);
+									reaction.count = reaction.users.length;
 
 									if (reaction.count === 0) {
 										m.reactions = m.reactions.filter((r) => r.name !== name);
@@ -197,12 +225,12 @@
 									const reaction = m.reactions.find((reaction) => reaction.name === name);
 
 									if (reaction) {
-										reaction.user_ids.push($user?.id);
-										reaction.count = reaction.user_ids.length;
+										reaction.users.push({ id: $user?.id, name: $user?.name });
+										reaction.count = reaction.users.length;
 									} else {
 										m.reactions.push({
 											name: name,
-											user_ids: [$user?.id],
+											users: [{ id: $user?.id, name: $user?.name }],
 											count: 1
 										});
 									}

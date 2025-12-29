@@ -13,6 +13,8 @@ from pydantic import BaseModel, ConfigDict
 
 from sqlalchemy import String, cast, or_, and_, func
 from sqlalchemy.dialects import postgresql, sqlite
+
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
 
 
@@ -53,7 +55,7 @@ class ModelMeta(BaseModel):
 class Model(Base):
     __tablename__ = "model"
 
-    id = Column(Text, primary_key=True)
+    id = Column(Text, primary_key=True, unique=True)
     """
         The model's id as used in the API. If set to an existing model, it will override the model.
     """
@@ -220,30 +222,44 @@ class ModelsTable:
             or has_access(user_id, permission, model.access_control, user_group_ids)
         ]
 
-    def _has_write_permission(self, query, filter: dict):
-        if filter.get("group_ids") or filter.get("user_id"):
-            conditions = []
+    def _has_permission(self, db, query, filter: dict, permission: str = "read"):
+        group_ids = filter.get("group_ids", [])
+        user_id = filter.get("user_id")
 
-            # --- ANY group_ids match ("write".group_ids) ---
-            if filter.get("group_ids"):
-                group_ids = filter["group_ids"]
-                like_clauses = []
+        dialect_name = db.bind.dialect.name
 
-                for gid in group_ids:
-                    like_clauses.append(
-                        cast(Model.access_control, String).like(
-                            f'%"write"%"group_ids"%"{gid}"%'
-                        )
+        # Public access
+        conditions = []
+        if group_ids or user_id:
+            conditions.extend(
+                [
+                    Model.access_control.is_(None),
+                    cast(Model.access_control, String) == "null",
+                ]
+            )
+
+        # User-level permission
+        if user_id:
+            conditions.append(Model.user_id == user_id)
+
+        # Group-level permission
+        if group_ids:
+            group_conditions = []
+            for gid in group_ids:
+                if dialect_name == "sqlite":
+                    group_conditions.append(
+                        Model.access_control[permission]["group_ids"].contains([gid])
                     )
+                elif dialect_name == "postgresql":
+                    group_conditions.append(
+                        cast(
+                            Model.access_control[permission]["group_ids"],
+                            JSONB,
+                        ).contains([gid])
+                    )
+            conditions.append(or_(*group_conditions))
 
-                # ANY → OR
-                conditions.append(or_(*like_clauses))
-
-            # --- user_id match (owner) ---
-            if filter.get("user_id"):
-                conditions.append(Model.user_id == filter["user_id"])
-
-            # Apply OR across the two groups of conditions
+        if conditions:
             query = query.filter(or_(*conditions))
 
         return query
@@ -266,14 +282,19 @@ class ModelsTable:
                         )
                     )
 
-                # Apply access control filtering
-                query = self._has_write_permission(query, filter)
-
                 view_option = filter.get("view_option")
                 if view_option == "created":
                     query = query.filter(Model.user_id == user_id)
                 elif view_option == "shared":
                     query = query.filter(Model.user_id != user_id)
+
+                # Apply access control filtering
+                query = self._has_permission(
+                    db,
+                    query,
+                    filter,
+                    permission="write",
+                )
 
                 tag = filter.get("tag")
                 if tag:

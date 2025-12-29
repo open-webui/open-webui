@@ -5,11 +5,11 @@ from typing import Optional
 
 from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
-from open_webui.models.users import Users, UserNameResponse
+from open_webui.models.users import Users, User, UserNameResponse
 from open_webui.models.channels import Channels, ChannelMember
 
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
 from sqlalchemy import or_, func, select, and_, text
 from sqlalchemy.sql import exists
@@ -40,7 +40,7 @@ class MessageReactionModel(BaseModel):
 
 class Message(Base):
     __tablename__ = "message"
-    id = Column(Text, primary_key=True)
+    id = Column(Text, primary_key=True, unique=True)
 
     user_id = Column(Text)
     channel_id = Column(Text, nullable=True)
@@ -90,6 +90,7 @@ class MessageModel(BaseModel):
 
 
 class MessageForm(BaseModel):
+    temp_id: Optional[str] = None
     content: str
     reply_to_id: Optional[str] = None
     parent_id: Optional[str] = None
@@ -99,7 +100,7 @@ class MessageForm(BaseModel):
 
 class Reactions(BaseModel):
     name: str
-    user_ids: list[str]
+    users: list[dict]
     count: int
 
 
@@ -107,8 +108,25 @@ class MessageUserResponse(MessageModel):
     user: Optional[UserNameResponse] = None
 
 
+class MessageUserSlimResponse(MessageUserResponse):
+    data: bool | None = None
+
+    @field_validator("data", mode="before")
+    def convert_data_to_bool(cls, v):
+        # No data or not a dict → False
+        if not isinstance(v, dict):
+            return False
+
+        # True if ANY value in the dict is non-empty
+        return any(bool(val) for val in v.values())
+
+
 class MessageReplyToResponse(MessageUserResponse):
-    reply_to_message: Optional[MessageUserResponse] = None
+    reply_to_message: Optional[MessageUserSlimResponse] = None
+
+
+class MessageWithReactionsResponse(MessageUserSlimResponse):
+    reactions: list[Reactions]
 
 
 class MessageResponse(MessageReplyToResponse):
@@ -306,6 +324,20 @@ class MessageTable:
             )
             return MessageModel.model_validate(message) if message else None
 
+    def get_pinned_messages_by_channel_id(
+        self, channel_id: str, skip: int = 0, limit: int = 50
+    ) -> list[MessageModel]:
+        with get_db() as db:
+            all_messages = (
+                db.query(Message)
+                .filter_by(channel_id=channel_id, is_pinned=True)
+                .order_by(Message.pinned_at.desc())
+                .offset(skip)
+                .limit(limit)
+                .all()
+            )
+            return [MessageModel.model_validate(message) for message in all_messages]
+
     def update_message_by_id(
         self, id: str, form_data: MessageForm
     ) -> Optional[MessageModel]:
@@ -325,7 +357,7 @@ class MessageTable:
             db.refresh(message)
             return MessageModel.model_validate(message) if message else None
 
-    def update_message_pin_by_id(
+    def update_is_pinned_by_id(
         self, id: str, is_pinned: bool, pinned_by: Optional[str] = None
     ) -> Optional[MessageModel]:
         with get_db() as db:
@@ -333,7 +365,6 @@ class MessageTable:
             message.is_pinned = is_pinned
             message.pinned_at = int(time.time_ns()) if is_pinned else None
             message.pinned_by = pinned_by if is_pinned else None
-            message.updated_at = int(time.time_ns())
             db.commit()
             db.refresh(message)
             return MessageModel.model_validate(message) if message else None
@@ -355,6 +386,15 @@ class MessageTable:
         self, id: str, user_id: str, name: str
     ) -> Optional[MessageReactionModel]:
         with get_db() as db:
+            # check for existing reaction
+            existing_reaction = (
+                db.query(MessageReaction)
+                .filter_by(message_id=id, user_id=user_id, name=name)
+                .first()
+            )
+            if existing_reaction:
+                return MessageReactionModel.model_validate(existing_reaction)
+
             reaction_id = str(uuid.uuid4())
             reaction = MessageReactionModel(
                 id=reaction_id,
@@ -371,17 +411,30 @@ class MessageTable:
 
     def get_reactions_by_message_id(self, id: str) -> list[Reactions]:
         with get_db() as db:
-            all_reactions = db.query(MessageReaction).filter_by(message_id=id).all()
+            # JOIN User so all user info is fetched in one query
+            results = (
+                db.query(MessageReaction, User)
+                .join(User, MessageReaction.user_id == User.id)
+                .filter(MessageReaction.message_id == id)
+                .all()
+            )
 
             reactions = {}
-            for reaction in all_reactions:
+
+            for reaction, user in results:
                 if reaction.name not in reactions:
                     reactions[reaction.name] = {
                         "name": reaction.name,
-                        "user_ids": [],
+                        "users": [],
                         "count": 0,
                     }
-                reactions[reaction.name]["user_ids"].append(reaction.user_id)
+
+                reactions[reaction.name]["users"].append(
+                    {
+                        "id": user.id,
+                        "name": user.name,
+                    }
+                )
                 reactions[reaction.name]["count"] += 1
 
             return [Reactions(**reaction) for reaction in reactions.values()]

@@ -32,7 +32,6 @@ from open_webui.models.users import Users
 from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
-    get_active_status_by_user_id,
 )
 from open_webui.routers.tasks import (
     generate_queries,
@@ -459,12 +458,6 @@ async def chat_completion_tools_handler(
                             }
                         )
 
-                print(
-                    f"Tool {tool_function_name} result: {tool_result}",
-                    tool_result_files,
-                    tool_result_embeds,
-                )
-
                 if tool_result:
                     tool = tools[tool_function_name]
                     tool_id = tool.get("tool_id", "")
@@ -490,12 +483,6 @@ async def chat_completion_tools_handler(
                             ],
                             "tool_result": True,
                         }
-                    )
-
-                    # Citation is not enabled for this tool
-                    body["messages"] = add_or_update_user_message(
-                        f"\nTool `{tool_name}` Output: {tool_result}",
-                        body["messages"],
                     )
 
                     if (
@@ -729,17 +716,18 @@ async def chat_web_search_handler(
     return form_data
 
 
-def get_last_images(message_list):
+def get_images_from_messages(message_list):
     images = []
+
     for message in reversed(message_list):
-        images_flag = False
+
+        message_images = []
         for file in message.get("files", []):
             if file.get("type") == "image":
-                images.append(file.get("url"))
-                images_flag = True
+                message_images.append(file.get("url"))
 
-        if images_flag:
-            break
+        if message_images:
+            images.append(message_images)
 
     return images
 
@@ -773,23 +761,36 @@ async def chat_image_generation_handler(
     if not chat_id:
         return form_data
 
-    chat = Chats.get_chat_by_id_and_user_id(chat_id, user.id)
-
     __event_emitter__ = extra_params["__event_emitter__"]
-    await __event_emitter__(
-        {
-            "type": "status",
-            "data": {"description": "Creating image", "done": False},
-        }
-    )
 
-    messages_map = chat.chat.get("history", {}).get("messages", {})
-    message_id = chat.chat.get("history", {}).get("currentId")
-    message_list = get_message_list(messages_map, message_id)
+    if chat_id.startswith("local:"):
+        message_list = form_data.get("messages", [])
+    else:
+        chat = Chats.get_chat_by_id_and_user_id(chat_id, user.id)
+        await __event_emitter__(
+            {
+                "type": "status",
+                "data": {"description": "Creating image", "done": False},
+            }
+        )
+
+        messages_map = chat.chat.get("history", {}).get("messages", {})
+        message_id = chat.chat.get("history", {}).get("currentId")
+        message_list = get_message_list(messages_map, message_id)
+
     user_message = get_last_user_message(message_list)
 
     prompt = user_message
-    input_images = get_last_images(message_list)
+    message_images = get_images_from_messages(message_list)
+
+    # Limit to first 2 sets of images
+    # We may want to change this in the future to allow more images
+    input_images = []
+    for idx, images in enumerate(message_images):
+        if idx >= 2:
+            break
+        for image in images:
+            input_images.append(image)
 
     system_message_content = ""
 
@@ -845,7 +846,7 @@ async def chat_image_generation_handler(
                 }
             )
 
-            system_message_content = f"<context>Image generation was attempted but failed. The system is currently unable to generate the image. Tell the user that an error occurred: {error_message}</context>"
+            system_message_content = f"<context>Image generation was attempted but failed. The system is currently unable to generate the image. Tell the user that the following error occurred: {error_message}</context>"
 
     else:
         # Create image(s)
@@ -908,7 +909,7 @@ async def chat_image_generation_handler(
                 }
             )
 
-            system_message_content = "<context>The requested image has been created and is now being shown to the user. Let them know that it has been generated.</context>"
+            system_message_content = "<context>The requested image has been created by the system successfully and is now being shown to the user. Let the user know that the image they requested has been generated and is now shown in the chat.</context>"
         except Exception as e:
             log.debug(e)
 
@@ -929,7 +930,7 @@ async def chat_image_generation_handler(
                 }
             )
 
-            system_message_content = f"<context>Image generation was attempted but failed. The system is currently unable to generate the image. Tell the user that an error occurred: {error_message}</context>"
+            system_message_content = f"<context>Image generation was attempted but failed because of an error. The system is currently unable to generate the image. Tell the user that the following error occurred: {error_message}</context>"
 
     if system_message_content:
         form_data["messages"] = add_or_update_system_message(
@@ -1915,7 +1916,7 @@ async def process_chat_response(
                             )
 
                             # Send a webhook notification if the user is not active
-                            if not get_active_status_by_user_id(user.id):
+                            if not Users.is_user_active(user.id):
                                 webhook_url = Users.get_user_webhook_url_by_id(user.id)
                                 if webhook_url:
                                     await post_webhook(
@@ -3210,7 +3211,7 @@ async def process_chat_response(
                     )
 
                 # Send a webhook notification if the user is not active
-                if not get_active_status_by_user_id(user.id):
+                if not Users.is_user_active(user.id):
                     webhook_url = Users.get_user_webhook_url_by_id(user.id)
                     if webhook_url:
                         await post_webhook(
