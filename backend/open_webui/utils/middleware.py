@@ -722,7 +722,11 @@ def get_images_from_messages(message_list):
 
         message_images = []
         for file in message.get("files", []):
-            if file.get("type") == "image":
+            # Check for type == "image" OR content_type starting with "image/"
+            # Uploaded images have type="file" but content_type="image/..."
+            if file.get("type") == "image" or (
+                file.get("content_type") or ""
+            ).startswith("image/"):
                 message_images.append(file.get("url"))
 
         if message_images:

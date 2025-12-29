@@ -868,6 +868,27 @@ async def image_edits(
 
                     return f"data:{mime_type};base64,{image_data}"
 
+            elif data.startswith("data:"):
+                # Already base64 encoded, return as-is
+                return data
+
+            else:
+                # Assume it's a raw file ID (frontend sends file.url = file_id)
+                try:
+                    file_response = await get_file_content_by_id(data, user)
+
+                    if isinstance(file_response, FileResponse):
+                        file_path = file_response.path
+
+                        with open(file_path, "rb") as f:
+                            file_bytes = f.read()
+                            image_data = base64.b64encode(file_bytes).decode("utf-8")
+                            mime_type, _ = mimetypes.guess_type(file_path)
+
+                        return f"data:{mime_type};base64,{image_data}"
+                except Exception:
+                    pass
+
             return data
 
         # Load image(s) from URL(s) if necessary
