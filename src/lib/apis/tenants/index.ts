@@ -215,6 +215,36 @@ export const getTenantPromptFiles = async (
 	return res;
 };
 
+export const getTenantById = async (
+	token: string,
+	tenantId: string
+): Promise<TenantInfo> => {
+	let error: string | null = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/tenants/${tenantId}`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err?.detail ?? 'Failed to load tenant.';
+			return null;
+		});
+
+	if (error || !res) {
+		throw error ?? 'Failed to load tenant.';
+	}
+
+	return res;
+};
+
 export const deleteTenantPromptFile = async (token: string, tenantId: string, key: string): Promise<void> => {
 	let error: string | null = null;
 

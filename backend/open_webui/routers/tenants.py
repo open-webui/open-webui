@@ -16,7 +16,7 @@ from open_webui.services.s3 import (
     delete_object,
     generate_presigned_url,
 )
-from open_webui.utils.auth import get_admin_user
+from open_webui.utils.auth import get_admin_user, get_verified_user
 
 router = APIRouter()
 
@@ -276,3 +276,21 @@ def delete_tenant_prompt(
         )
 
     return {"status": "deleted", "key": key}
+
+
+@router.get("/{tenant_id}", response_model=TenantInfo)
+def get_tenant_detail(tenant_id: str, user=Depends(get_verified_user)):
+    tenant = Tenants.get_tenant_by_id(tenant_id)
+    if not tenant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tenant not found.",
+        )
+
+    if user.role != "admin" and user.tenant_id != tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access this tenant.",
+        )
+
+    return TenantInfo(**tenant.model_dump())

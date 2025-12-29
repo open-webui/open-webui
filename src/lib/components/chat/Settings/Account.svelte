@@ -3,7 +3,8 @@
 	import { onMount, getContext } from 'svelte';
 
 	import { user } from '$lib/stores';
-	import { updateUserProfile, getSessionUser } from '$lib/apis/auths';
+import { updateUserProfile, getSessionUser } from '$lib/apis/auths';
+import { getTenantById } from '$lib/apis/tenants';
 	import { generateInitialsImage } from '$lib/utils';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import UserProfileImage from './Account/UserProfileImage.svelte';
@@ -12,11 +13,12 @@
 
 	export let saveHandler: Function;
 
-	let profileImageUrl = '';
-	let name = '';
-	let jobTitle = '';
-	let primaryLocation = '';
-	let jobDescription = '';
+let profileImageUrl = '';
+let name = '';
+let jobTitle = '';
+let primaryLocation = '';
+let jobDescription = '';
+let tenantLogoUrl = '';
 
 	const submitHandler = async () => {
 		if (name !== $user?.name) {
@@ -42,6 +44,13 @@
 			});
 
 			await user.set(sessionUser);
+			if (sessionUser) {
+				jobTitle = sessionUser?.job_title ?? '';
+				primaryLocation = sessionUser?.primary_location ?? '';
+				jobDescription = sessionUser?.job_description ?? '';
+				profileImageUrl = sessionUser?.profile_image_url ?? profileImageUrl;
+				tenantLogoUrl = sessionUser?.tenant_logo_image_url ?? tenantLogoUrl;
+			}
 			return true;
 		}
 		return false;
@@ -59,6 +68,21 @@
 			jobTitle = sessionUser?.job_title ?? '';
 			primaryLocation = sessionUser?.primary_location ?? '';
 			jobDescription = sessionUser?.job_description ?? '';
+			tenantLogoUrl = sessionUser?.tenant_logo_image_url ?? '';
+
+			if (!tenantLogoUrl && sessionUser?.tenant_id) {
+				const tenant = await getTenantById(localStorage.token, sessionUser.tenant_id).catch(
+					(error) => {
+						console.error(error);
+						return null;
+					}
+				);
+				if (tenant?.logo_image_url) {
+					tenantLogoUrl = tenant.logo_image_url;
+				}
+			}
+		} else {
+			tenantLogoUrl = '';
 		}
 	});
 </script>
@@ -79,11 +103,11 @@
 			<div class="flex space-x-5 my-4">
 				<div class="flex flex-col items-center gap-3">
 					<UserProfileImage bind:profileImageUrl user={$user} />
-					{#if $user?.tenant_logo_image_url}
+					{#if tenantLogoUrl}
 						<div class="flex flex-col items-center space-y-1">
 							<div class="max-h-16 max-w-[10rem] rounded-xl border border-gray-100 bg-white px-3 py-2 dark:border-gray-800 dark:bg-gray-900">
 								<img
-									src={$user.tenant_logo_image_url}
+									src={tenantLogoUrl}
 									alt={$i18n.t('Tenant Logo')}
 									class="max-h-12 w-auto object-contain"
 								/>
