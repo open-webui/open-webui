@@ -43,7 +43,9 @@
 	import Eye from '../icons/Eye.svelte';
 	import ViewSelector from './common/ViewSelector.svelte';
 	import TagSelector from './common/TagSelector.svelte';
+	import TagSelector from './common/TagSelector.svelte';
 	import Pagination from '../common/Pagination.svelte';
+	import Badge from '$lib/components/common/Badge.svelte';
 
 	let shiftKey = false;
 
@@ -490,14 +492,22 @@
 									<div class="flex h-full w-full flex-1 flex-col justify-start self-center group">
 										<div class="flex-1 w-full">
 											<div class="flex items-center justify-between w-full">
-												<Tooltip content={model.name} className=" w-fit" placement="top-start">
-													<a
-														class=" font-medium line-clamp-1 hover:underline capitalize"
-														href={`/?models=${encodeURIComponent(model.id)}`}
-													>
-														{model.name}
-													</a>
-												</Tooltip>
+												<div class="flex items-center gap-2">
+													<Tooltip content={model.name} className=" w-fit" placement="top-start">
+														<a
+															class=" font-medium line-clamp-1 hover:underline capitalize"
+															href={`/?models=${encodeURIComponent(model.id)}`}
+														>
+															{model.name}
+														</a>
+													</Tooltip>
+
+													{#if !model.write_access}
+														<div class="self-center">
+															<Badge type="info" content={$i18n.t('Read')} />
+														</div>
+													{/if}
+												</div>
 
 												<div class=" flex items-center gap-1">
 													<div

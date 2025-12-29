@@ -1,7 +1,7 @@
 <script>
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { getToolById, getTools, updateToolById } from '$lib/apis/tools';
+	import { getToolById, getTools, getToolList, updateToolById } from '$lib/apis/tools';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ToolkitEditor from '$lib/components/workspace/Tools/ToolkitEditor.svelte';
 	import { WEBUI_VERSION } from '$lib/constants';
@@ -13,6 +13,7 @@
 	const i18n = getContext('i18n');
 
 	let tool = null;
+	let write_access = true;
 
 	const saveHandler = async (data) => {
 		console.log(data);
@@ -56,6 +57,11 @@
 		const id = $page.url.searchParams.get('id');
 
 		if (id) {
+			// Get tool list to check write_access
+			const toolList = await getToolList(localStorage.token).catch(() => []);
+			const toolWithAccess = toolList.find(t => t.id === id);
+			write_access = toolWithAccess?.write_access ?? true;
+
 			tool = await getToolById(localStorage.token, id).catch((error) => {
 				toast.error(`${error}`);
 				goto('/workspace/tools');
@@ -70,6 +76,7 @@
 {#if tool}
 	<ToolkitEditor
 		edit={true}
+		{write_access}
 		id={tool.id}
 		name={tool.name}
 		meta={tool.meta}
@@ -86,3 +93,4 @@
 		</div>
 	</div>
 {/if}
+

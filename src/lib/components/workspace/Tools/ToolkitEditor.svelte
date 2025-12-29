@@ -1,5 +1,6 @@
 <script>
 	import { getContext, onMount, tick } from 'svelte';
+	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
 
@@ -21,6 +22,7 @@
 
 	export let edit = false;
 	export let clone = false;
+	export let write_access = true;
 
 	export let onSave = () => {};
 
@@ -155,6 +157,10 @@ class Tools:
 `;
 
 	const saveHandler = async () => {
+		if (!write_access) {
+			toast.error($i18n.t('You do not have permission to edit this tool.'));
+			return;
+		}
 		loading = true;
 		onSave({
 			id,
@@ -231,25 +237,32 @@ class Tools:
 									placeholder={$i18n.t('Tool Name')}
 									bind:value={name}
 									required
+									disabled={!write_access}
 								/>
 							</Tooltip>
 						</div>
 
-						<div class="self-center shrink-0">
-							<button
-								class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
-								type="button"
-								on:click={() => {
-									showAccessControlModal = true;
-								}}
-							>
-								<LockClosed strokeWidth="2.5" className="size-3.5" />
+						{#if write_access}
+							<div class="self-center shrink-0">
+								<button
+									class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
+									type="button"
+									on:click={() => {
+										showAccessControlModal = true;
+									}}
+								>
+									<LockClosed strokeWidth="2.5" className="size-3.5" />
 
-								<div class="text-sm font-medium shrink-0">
-									{$i18n.t('Access')}
-								</div>
-							</button>
-						</div>
+									<div class="text-sm font-medium shrink-0">
+										{$i18n.t('Access')}
+									</div>
+								</button>
+							</div>
+						{:else}
+							<div class="text-xs shrink-0 text-gray-500">
+								{$i18n.t('Read Only')}
+							</div>
+						{/if}
 					</div>
 
 					<div class=" flex gap-2 px-1 items-center">
@@ -281,6 +294,7 @@ class Tools:
 								placeholder={$i18n.t('Tool Description')}
 								bind:value={meta.description}
 								required
+								disabled={!write_access}
 							/>
 						</Tooltip>
 					</div>
@@ -314,12 +328,17 @@ class Tools:
 						</div>
 					</div>
 
-					<button
-						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-						type="submit"
-					>
-						{$i18n.t('Save')}
-					</button>
+					<Tooltip content={!write_access ? $i18n.t('You do not have permission to save this tool.') : ''}>
+						<button
+							class="px-3.5 py-1.5 text-sm font-medium {!write_access
+								? 'cursor-not-allowed bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+								: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100'} transition rounded-full"
+							type="submit"
+							disabled={!write_access}
+						>
+							{$i18n.t('Save')}
+						</button>
+					</Tooltip>
 				</div>
 			</div>
 		</form>

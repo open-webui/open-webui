@@ -16,6 +16,7 @@
 	import ActionsSelector from '$lib/components/workspace/Models/ActionsSelector.svelte';
 	import Capabilities from '$lib/components/workspace/Models/Capabilities.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import AccessControl from '../common/AccessControl.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -32,6 +33,7 @@
 
 	export let model = null;
 	export let edit = false;
+	export let write_access = true;
 
 	export let preset = true;
 
@@ -107,6 +109,11 @@
 	let accessControl = {};
 
 	const submitHandler = async () => {
+		if (!write_access) {
+			toast.error($i18n.t('You do not have permission to edit this model.'));
+			return;
+		}
+
 		loading = true;
 
 		info.id = id;
@@ -491,6 +498,7 @@
 											placeholder={$i18n.t('Model Name')}
 											bind:value={name}
 											required
+											disabled={!write_access}
 										/>
 									</div>
 
@@ -508,19 +516,25 @@
 								</div>
 
 								<div class="shrink-0">
-									<button
-										class="bg-gray-50 shrink-0 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
-										type="button"
-										on:click={() => {
-											showAccessControlModal = true;
-										}}
-									>
-										<LockClosed strokeWidth="2.5" className="size-3.5 shrink-0" />
+									{#if write_access}
+										<button
+											class="bg-gray-50 shrink-0 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
+											type="button"
+											on:click={() => {
+												showAccessControlModal = true;
+											}}
+										>
+											<LockClosed strokeWidth="2.5" className="size-3.5 shrink-0" />
 
-										<div class="text-sm font-medium shrink-0">
-											{$i18n.t('Access')}
+											<div class="text-sm font-medium shrink-0">
+												{$i18n.t('Access')}
+											</div>
+										</button>
+									{:else}
+										<div class="text-xs shrink-0 text-gray-500">
+											{$i18n.t('Read Only')}
 										</div>
-									</button>
+									{/if}
 								</div>
 							</div>
 
@@ -758,27 +772,29 @@
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="my-2 flex justify-end">
-						<button
-							class=" text-sm px-3 py-2 transition rounded-lg {loading
-								? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'
-								: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
-							type="submit"
-							disabled={loading}
-						>
-							<div class=" self-center font-medium">
-								{#if edit}
-									{$i18n.t('Save & Update')}
-								{:else}
-									{$i18n.t('Save & Create')}
-								{/if}
-							</div>
-
-							{#if loading}
-								<div class="ml-1.5 self-center">
-									<Spinner />
+						<Tooltip content={!write_access ? $i18n.t('You do not have permission to save this model.') : ''}>
+							<button
+								class=" text-sm px-3 py-2 transition rounded-lg {loading || !write_access
+									? ' cursor-not-allowed bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+									: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
+								type="submit"
+								disabled={loading || !write_access}
+							>
+								<div class=" self-center font-medium">
+									{#if edit}
+										{$i18n.t('Save & Update')}
+									{:else}
+										{$i18n.t('Save & Create')}
+									{/if}
 								</div>
-							{/if}
-						</button>
+
+								{#if loading}
+									<div class="ml-1.5 self-center">
+										<Spinner />
+									</div>
+								{/if}
+							</button>
+						</Tooltip>
 					</div>
 
 					<div class="my-2 text-gray-300 dark:text-gray-700 pb-20">

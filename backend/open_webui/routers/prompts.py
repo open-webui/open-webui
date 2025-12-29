@@ -4,9 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from open_webui.models.prompts import (
     PromptForm,
     PromptUserResponse,
+    PromptAccessResponse,
     PromptModel,
     Prompts,
 )
+from open_webui.models.groups import Groups
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
@@ -31,14 +33,23 @@ async def get_prompts(user=Depends(get_verified_user), db: Session = Depends(get
     return prompts
 
 
-@router.get("/list", response_model=list[PromptUserResponse])
+@router.get("/list", response_model=list[PromptAccessResponse])
 async def get_prompt_list(user=Depends(get_verified_user), db: Session = Depends(get_session)):
     if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
         prompts = Prompts.get_prompts(db=db)
     else:
-        prompts = Prompts.get_prompts_by_user_id(user.id, "write", db=db)
+        prompts = Prompts.get_prompts_by_user_id(user.id, "read", db=db)
 
-    return prompts
+    return [
+        PromptAccessResponse(
+            **prompt.model_dump(),
+            write_access=(
+                user.id == prompt.user_id
+                or has_access(user.id, "write", prompt.access_control, db=db)
+            ),
+        )
+        for prompt in prompts
+    ]
 
 
 ############################

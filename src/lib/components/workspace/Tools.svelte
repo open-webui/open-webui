@@ -36,7 +36,9 @@
 	import XMark from '../icons/XMark.svelte';
 	import AddToolMenu from './Tools/AddToolMenu.svelte';
 	import ImportModal from '../ImportModal.svelte';
+	import ImportModal from '../ImportModal.svelte';
 	import ViewSelector from './common/ViewSelector.svelte';
+	import Badge from '$lib/components/common/Badge.svelte';
 
 	let shiftKey = false;
 	let loaded = false;
@@ -370,6 +372,9 @@
 												<div class="line-clamp-1 text-sm">
 													{tool.name}
 												</div>
+												{#if !tool.write_access}
+													<Badge type="info" content={$i18n.t('Read')} />
+												{/if}
 												{#if tool?.meta?.manifest?.version}
 													<div class=" text-gray-500 text-xs font-medium shrink-0">
 														v{tool?.meta?.manifest?.version ?? ''}

@@ -97,6 +97,10 @@ class ToolUserResponse(ToolResponse):
     model_config = ConfigDict(extra="allow")
 
 
+class ToolAccessResponse(ToolUserResponse):
+    write_access: Optional[bool] = False
+
+
 class ToolForm(BaseModel):
     id: str
     name: str
