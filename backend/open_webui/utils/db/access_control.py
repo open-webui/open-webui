@@ -3,13 +3,14 @@ from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
 from sqlalchemy.dialects.postgresql import JSONB
 
 
-from sqlalchemy import or_, func, select, and_, text, cast, or_, and_, func
+from sqlalchemy import or_, func, select, and_, text, cast, or_, and_, func, bindparam
 
 
 def has_permission(db, DocumentModel, query, filter: dict, permission: str = "read"):
     group_ids = filter.get("group_ids", [])
     user_id = filter.get("user_id")
     dialect_name = db.bind.dialect.name
+    table_name = DocumentModel.__tablename__
 
     conditions = []
 
@@ -25,12 +26,12 @@ def has_permission(db, DocumentModel, query, filter: dict, permission: str = "re
         # Group-level read permission
         if group_ids:
             group_read_conditions = []
-            for gid in group_ids:
+            for idx, gid in enumerate(group_ids):
                 if dialect_name == "sqlite":
                     group_read_conditions.append(
-                        DocumentModel.access_control["read"]["group_ids"].contains(
-                            [gid]
-                        )
+                        text(
+                            f"EXISTS (SELECT 1 FROM json_each({table_name}.access_control, '$.read.group_ids') WHERE json_each.value = :gid_read_{idx})"
+                        ).bindparams(bindparam(f"gid_read_{idx}", value=gid))
                     )
                 elif dialect_name == "postgresql":
                     group_read_conditions.append(
@@ -60,12 +61,12 @@ def has_permission(db, DocumentModel, query, filter: dict, permission: str = "re
         # Exclude items where user has explicit write permission via groups
         if group_ids:
             group_write_conditions = []
-            for gid in group_ids:
+            for idx, gid in enumerate(group_ids):
                 if dialect_name == "sqlite":
                     group_write_conditions.append(
-                        DocumentModel.access_control["write"]["group_ids"].contains(
-                            [gid]
-                        )
+                        text(
+                            f"EXISTS (SELECT 1 FROM json_each({table_name}.access_control, '$.write.group_ids') WHERE json_each.value = :gid_write_{idx})"
+                        ).bindparams(bindparam(f"gid_write_{idx}", value=gid))
                     )
                 elif dialect_name == "postgresql":
                     group_write_conditions.append(
@@ -108,12 +109,12 @@ def has_permission(db, DocumentModel, query, filter: dict, permission: str = "re
     # Group-level permission
     if group_ids:
         group_conditions = []
-        for gid in group_ids:
+        for idx, gid in enumerate(group_ids):
             if dialect_name == "sqlite":
                 group_conditions.append(
-                    DocumentModel.access_control[permission]["group_ids"].contains(
-                        [gid]
-                    )
+                    text(
+                        f"EXISTS (SELECT 1 FROM json_each({table_name}.access_control, '$.{permission}.group_ids') WHERE json_each.value = :gid_perm_{idx})"
+                    ).bindparams(bindparam(f"gid_perm_{idx}", value=gid))
                 )
             elif dialect_name == "postgresql":
                 group_conditions.append(
