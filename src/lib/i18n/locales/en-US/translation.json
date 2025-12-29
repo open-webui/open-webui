@@ -1770,5 +1770,10 @@
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"YouTube": "",
 	"Youtube Language": "",
-	"Youtube Proxy URL": ""
+	"Youtube Proxy URL": "",
+	"Primary Location": "Primary Location",
+	"Enter your primary location": "Enter your primary location",
+	"Enter your title": "Enter your title",
+	"Job Description": "Job Description",
+	"Describe your role and responsibilities": "Describe your role and responsibilities"
 }

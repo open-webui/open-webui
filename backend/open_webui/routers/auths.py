@@ -81,6 +81,9 @@ class SessionUserInfoResponse(SessionUserResponse):
     bio: Optional[str] = None
     gender: Optional[str] = None
     date_of_birth: Optional[datetime.date] = None
+    job_title: Optional[str] = None
+    primary_location: Optional[str] = None
+    job_description: Optional[str] = None
 
 
 @router.get("/", response_model=SessionUserInfoResponse)
@@ -136,6 +139,9 @@ async def get_session_user(
         "name": user.name,
         "role": user.role,
         "profile_image_url": user.profile_image_url,
+        "job_title": user.job_title,
+        "primary_location": user.primary_location,
+        "job_description": user.job_description,
         "bio": user.bio,
         "gender": user.gender,
         "date_of_birth": user.date_of_birth,

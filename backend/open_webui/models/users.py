@@ -10,7 +10,7 @@ from open_webui.models.groups import Groups
 from open_webui.utils.misc import throttle
 
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, constr
 from sqlalchemy import BigInteger, Column, String, Text, Date
 from sqlalchemy import or_
 
@@ -32,6 +32,10 @@ class User(Base):
 
     role = Column(String)
     profile_image_url = Column(Text)
+
+    job_title = Column(String(255), nullable=True)
+    primary_location = Column(String(255), nullable=True)
+    job_description = Column(String(2500), nullable=True)
 
     bio = Column(Text, nullable=True)
     gender = Column(Text, nullable=True)
@@ -66,6 +70,10 @@ class UserModel(BaseModel):
     role: str = "pending"
     profile_image_url: str
 
+    job_title: Optional[str] = None
+    primary_location: Optional[str] = None
+    job_description: Optional[str] = None
+
     bio: Optional[str] = None
     gender: Optional[str] = None
     date_of_birth: Optional[datetime.date] = None
@@ -92,6 +100,9 @@ class UserModel(BaseModel):
 class UpdateProfileForm(BaseModel):
     profile_image_url: str
     name: str
+    job_title: Optional[constr(max_length=255)] = None
+    primary_location: Optional[constr(max_length=255)] = None
+    job_description: Optional[constr(max_length=2500)] = None
     bio: Optional[str] = None
     gender: Optional[str] = None
     date_of_birth: Optional[datetime.date] = None

@@ -214,7 +214,10 @@
 		}
 
 		if (text.includes('{{USER_BIO}}')) {
-			const bio = sessionUser?.bio || '';
+			const bio =
+				sessionUser?.job_description ??
+				sessionUser?.bio ??
+				'';
 
 			if (bio) {
 				text = text.replaceAll('{{USER_BIO}}', bio);
