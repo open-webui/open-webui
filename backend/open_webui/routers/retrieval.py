@@ -190,6 +190,7 @@ def get_rf(
                     raise Exception(ERROR_MESSAGES.DEFAULT(e))
             else:
                 import sentence_transformers
+                import torch
 
                 try:
                     rf = sentence_transformers.CrossEncoder(
