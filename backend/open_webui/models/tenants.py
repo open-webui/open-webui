@@ -3,7 +3,8 @@ import uuid
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String
+from sqlalchemy import BigInteger, Column, String, Text
+from sqlalchemy.dialects.mysql import MEDIUMTEXT
 
 from open_webui.internal.db import Base, get_db
 
@@ -16,6 +17,7 @@ class Tenant(Base):
     s3_bucket = Column(String, unique=True, nullable=False)
     table_name = Column(String(255), nullable=True)
     system_config_client_name = Column(String(255), nullable=True)
+    logo_image_url = Column(Text().with_variant(MEDIUMTEXT, "mysql"), nullable=True)
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
@@ -27,6 +29,7 @@ class TenantModel(BaseModel):
     s3_bucket: str
     table_name: Optional[str] = None
     system_config_client_name: Optional[str] = None
+    logo_image_url: Optional[str] = None
     created_at: int
     updated_at: int
 
@@ -38,6 +41,7 @@ class TenantForm(BaseModel):
     s3_bucket: Optional[str] = None
     table_name: Optional[str] = None
     system_config_client_name: Optional[str] = None
+    logo_image_url: Optional[str] = None
 
 
 class TenantUpdateForm(BaseModel):
@@ -45,6 +49,7 @@ class TenantUpdateForm(BaseModel):
     s3_bucket: Optional[str] = None
     table_name: Optional[str] = None
     system_config_client_name: Optional[str] = None
+    logo_image_url: Optional[str] = None
 
 
 class TenantsTable:
@@ -64,6 +69,7 @@ class TenantsTable:
                     "s3_bucket": bucket_name,
                     "table_name": form_data.table_name,
                     "system_config_client_name": form_data.system_config_client_name,
+                    "logo_image_url": form_data.logo_image_url,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                 }
@@ -91,7 +97,9 @@ class TenantsTable:
                 for tenant in db.query(Tenant).order_by(Tenant.updated_at.desc()).all()
             ]
 
-    def update_tenant(self, tenant_id: str, form_data: TenantUpdateForm) -> Optional[TenantModel]:
+    def update_tenant(
+        self, tenant_id: str, form_data: TenantUpdateForm
+    ) -> Optional[TenantModel]:
         with get_db() as db:
             update_payload = {}
             if form_data.name is not None:
@@ -104,6 +112,9 @@ class TenantsTable:
                 update_payload["system_config_client_name"] = (
                     form_data.system_config_client_name
                 )
+            if form_data.logo_image_url is not None:
+                update_payload["logo_image_url"] = form_data.logo_image_url
+
             if not update_payload:
                 return self.get_tenant_by_id(tenant_id)
 
